@@ -1,0 +1,16 @@
+{
+    "name": "Outlet",
+    "alias": "outlet",
+    "description": "",
+    "keywords": [],
+    "active": 1,
+    "order": 0,
+    "providers": [
+        "Modules\\Outlet\\Providers\\OutletServiceProvider"
+    ],
+    "aliases": {},
+    "files": [
+        "start.php"
+    ],
+    "requires": []
+}

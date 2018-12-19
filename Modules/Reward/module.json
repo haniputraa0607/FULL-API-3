@@ -1,0 +1,16 @@
+{
+    "name": "Reward",
+    "alias": "reward",
+    "description": "",
+    "keywords": [],
+    "active": 1,
+    "order": 0,
+    "providers": [
+        "Modules\\Reward\\Providers\\RewardServiceProvider"
+    ],
+    "aliases": {},
+    "files": [
+        "start.php"
+    ],
+    "requires": []
+}

@@ -1,0 +1,16 @@
+{
+    "name": "Transaction",
+    "alias": "transaction",
+    "description": "",
+    "keywords": [],
+    "active": 1,
+    "order": 0,
+    "providers": [
+        "Modules\\Transaction\\Providers\\TransactionServiceProvider"
+    ],
+    "aliases": {},
+    "files": [
+        "start.php"
+    ],
+    "requires": []
+}

@@ -1,0 +1,16 @@
+{
+    "name": "SpinTheWheel",
+    "alias": "spinthewheel",
+    "description": "",
+    "keywords": [],
+    "active": 1,
+    "order": 0,
+    "providers": [
+        "Modules\\SpinTheWheel\\Providers\\SpinTheWheelServiceProvider"
+    ],
+    "aliases": {},
+    "files": [
+        "start.php"
+    ],
+    "requires": []
+}

@@ -1,0 +1,16 @@
+{
+    "name": "Campaign",
+    "alias": "campaign",
+    "description": "",
+    "keywords": [],
+    "active": 1,
+    "order": 0,
+    "providers": [
+        "Modules\\Campaign\\Providers\\CampaignServiceProvider"
+    ],
+    "aliases": {},
+    "files": [
+        "start.php"
+    ],
+    "requires": []
+}

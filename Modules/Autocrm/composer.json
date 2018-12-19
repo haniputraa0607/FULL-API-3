@@ -1,0 +1,25 @@
+{
+    "name": "nwidart/autocrm",
+    "description": "",
+    "authors": [
+        {
+            "name": "Nicolas Widart",
+            "email": "n.widart@gmail.com"
+        }
+    ],
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Modules\\Autocrm\\Providers\\AutocrmServiceProvider"
+            ],
+            "aliases": {
+                
+            }
+        }
+    },
+    "autoload": {
+        "psr-4": {
+            "Modules\\Autocrm\\": ""
+        }
+    }
+}

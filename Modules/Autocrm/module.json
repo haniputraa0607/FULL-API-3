@@ -1,0 +1,16 @@
+{
+    "name": "Autocrm",
+    "alias": "autocrm",
+    "description": "",
+    "keywords": [],
+    "active": 1,
+    "order": 0,
+    "providers": [
+        "Modules\\Autocrm\\Providers\\AutocrmServiceProvider"
+    ],
+    "aliases": {},
+    "files": [
+        "start.php"
+    ],
+    "requires": []
+}
