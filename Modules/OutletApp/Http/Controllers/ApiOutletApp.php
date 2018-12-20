@@ -11,7 +11,12 @@ use App\Http\Models\Transaction;
 use App\Http\Models\TransactionPickup;
 use App\Http\Models\Setting;
 use App\Http\Models\User;
+use App\Http\Models\Product;
+use App\Http\Models\ProductCategory;
+use App\Http\Models\ProductPrice;
+
 use Modules\OutletApp\Http\Requests\DetailOrder;
+use Modules\OutletApp\Http\Requests\productSoldOut;
 
 use App\Lib\MyHelper;
 use DB;
@@ -426,6 +431,108 @@ class ApiOutletApp extends Controller
         $profile['outlet_code'] = $outlet['outlet_code'];
 
         return response()->json($profile);
+    }
+
+    public function productSoldOut(ProductSoldOut $request){
+        $post = $request->json()->all();
+        $outlet = $request->user();
+        
+        $product = ProductPrice::where('id_outlet', $outlet['id_outlet'])
+                                ->where('id_product', $post['id_product'])
+                                ->update(['product_sold_out' => $post['product_sold_out']]);
+
+        return response()->json(MyHelper::checkUpdate($product));
+    }
+
+    public function listProduct(Request $request){
+        $outlet = $request->user();
+        $listCategory = ProductCategory::join('products', 'product_categories.id_product_category', 'products.id_product_category')
+                                        ->join('product_prices', 'product_prices.id_product', 'products.id_product')
+                                        ->where('id_outlet', $outlet['id_outlet'])
+                                        ->with('product_category')
+                                        // ->select('id_product_category', 'product_category_name')
+                                        ->get();
+
+        $result = [];
+        $idParent = [];
+        $idParent2 = [];
+        foreach($listCategory as $i => $category){
+            $dataCategory = [];
+            $dataProduct = [];
+            if(isset($category['product_category']['id_product_category'])){
+                //masukin ke array result
+                $position = array_search($category['product_category']['id_product_category'], $idParent);
+			    if(!is_integer($position)){
+
+                    $dataProduct['id_product'] = $category['id_product']; 
+                    $dataProduct['product_code'] = $category['product_code'];
+                    $dataProduct['product_name'] = $category['product_name']; 
+                    $dataProduct['product_sold_out'] = $category['product_sold_out']; 
+
+                    $child['id_product_category'] = $category['id_product_category'];
+                    $child['product_category_name'] = $category['product_category_name'];
+                    $child['products'][] = $dataProduct;
+
+                    $dataCategory['id_product_category'] = $category['product_category']['id_product_category'];
+                    $dataCategory['product_category_name'] = $category['product_category']['product_category_name'];
+                    $dataCategory['child_category'][] = $child;
+
+                    $categorized[] = $dataCategory;
+                    $idParent[] = $category['product_category']['id_product_category'];
+                    $idParent2[][] = $category['id_product_category'];
+                }else{
+                    $positionChild = array_search($category['id_product_category'], $idParent2[$position]);
+                    if(!is_integer($positionChild)){
+                        //masukin product ke child baru
+                        $idParent2[$position][] = $category['id_product_category'];
+
+                        $dataCategory['id_product_category'] = $category['id_product_category'];
+                        $dataCategory['product_category_name'] = $category['product_category_name'];
+
+                        $dataProduct['id_product'] = $category['id_product'];
+                        $dataProduct['product_code'] = $category['product_code']; 
+                        $dataProduct['product_name'] = $category['product_name']; 
+                        $dataProduct['product_sold_out'] = $category['product_sold_out']; 
+
+                        $dataCategory['products'][] = $dataProduct;
+                        $categorized[$position]['child_category'][] = $dataCategory;
+
+                    }else{
+                        //masukin product child yang sudah ada
+                        $dataProduct['id_product'] = $category['id_product']; 
+                        $dataProduct['product_code'] = $category['product_code'];
+                        $dataProduct['product_name'] = $category['product_name']; 
+                        $dataProduct['product_sold_out'] = $category['product_sold_out']; 
+
+                        $categorized[$position]['child_category'][$positionChild]['products'][]= $dataProduct;
+                    }
+                }
+            }else{
+                $dataProduct['id_product'] = $category['id_product']; 
+                $dataProduct['product_code'] = $category['product_code']; 
+                $dataProduct['product_name'] = $category['product_name']; 
+                $dataProduct['product_sold_out'] = $category['product_sold_out']; 
+
+                $dataCategory['id_product_category'] = $category['id_product_category'];
+                $dataCategory['product_category_name'] = $category['product_category_name'];
+                $dataCategory['products'][] = $dataProduct;
+
+                $categorized[] = $dataCategory;
+                $idParent[] = $category['id_product_category'];
+                $idParent2[][] = [];
+            }
+
+        }
+
+        $uncategorized = ProductPrice::join('products', 'product_prices.id_product', 'products.id_product')
+                                        ->whereIn('products.id_product', function($query){
+                                            $query->select('id_product')->from('products')->whereNull('id_product_category');
+                                        })->where('id_outlet', $outlet['id_outlet'])
+                                        ->select('products.id_product', 'product_code', 'product_name', 'product_sold_out')->get();
+
+        $result['categorized'] = $categorized;
+        $result['uncategorized'] = $uncategorized;
+        return response()->json(MyHelper::checkGet($result));
     }
 
 }

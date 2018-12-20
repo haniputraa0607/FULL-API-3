@@ -38,7 +38,7 @@ class ApiProductController extends Controller
 
     public $saveImage = "img/product/item/";
 
-    function checkInputProduct($post=[]) {
+    function checkInputProduct($post=[], $type=null) {
     	$data = [];
 
     	if (empty($post['id_product_category']) || isset($post['id_product_category'])) {
@@ -80,7 +80,47 @@ class ApiProductController extends Controller
     		$data['product_order'] = $post['product_order'];
     	}
 
+        // search position
+        if ($type == "create") {
+            if (isset($post['id_product_category'])) {
+                $data['position'] = $this->searchLastSorting($post['id_product_category']);
+            }
+            else {
+                $data['position'] = $this->searchLastSorting(null);
+            }    
+        }
+
     	return $data;
+    }
+
+    /**
+     * cari urutan ke berapa
+     */
+    function searchLastSorting($id_product_category=null) {
+        $sorting = Product::select('position')->orderBy('position', 'DESC');
+        
+        if (is_null($id_product_category)) {
+            $sorting->whereNull('id_product_category');
+        }
+        else {
+            $sorting->where('id_product_category', $id_product_category);
+        }
+
+        $sorting = $sorting->first();
+
+        if (empty($sorting)) {
+            return 1;
+        }
+        else {
+            // kalo kosong otomatis jadiin nomer 1
+            if (empty($sorting->position)) {
+                return 1;
+            }
+            else {
+                $sorting = $sorting->position + 1;
+                return $sorting;
+            }
+        }
     }
 
     public function priceUpdate(Request $request) {
@@ -90,10 +130,11 @@ class ApiProductController extends Controller
 				$update = ProductPrice::create(['id_product' => $post['id_product'],
 												'id_outlet' => $post['id_outlet'][$key],
 												'product_price' => $post['product_price'][$key],
+												'product_sold_out' => $post['product_sold_out'][$key],
 												'product_visibility' => "'".$post['product_visibility'][$key]."'"]);
 			}
 			else{
-				$update = ProductPrice::where('id_product_price','=',$id_product_price)->update(['product_price' => $post['product_price'][$key], 'product_visibility' => $post['product_visibility'][$key]]);
+				$update = ProductPrice::where('id_product_price','=',$id_product_price)->update(['product_price' => $post['product_price'][$key], 'product_sold_out' => $post['product_sold_out'][$key],'product_visibility' => $post['product_visibility'][$key]]);
 			}
 		}
 		return response()->json(MyHelper::checkUpdate($update));
@@ -212,6 +253,8 @@ class ApiProductController extends Controller
             $product->where('products.product_name', 'LIKE', '%'.$post['product_name'].'%');
         }
 
+        $product = $product->orderBy('position');
+
         if(isset($post['pagination'])){
             $product = $product->paginate(10);
         }else{
@@ -248,7 +291,7 @@ class ApiProductController extends Controller
         $post = $request->json()->all();
 
         // check data
-        $data = $this->checkInputProduct($post);
+        $data = $this->checkInputProduct($post, $type="create");
         
         $save = Product::create($data);
 		
@@ -508,6 +551,10 @@ class ApiProductController extends Controller
             $data['id_outlet'] = $post['id_outlet'];
         }
 
+        if (isset($post['product_sold_out'])) {
+            $data['product_sold_out'] = $post['product_sold_out'];
+        }
+
         $save = ProductPrice::updateOrCreate([
             'id_product' => $data['id_product'], 
             'id_outlet'  => $data['id_outlet']
@@ -543,4 +590,23 @@ class ApiProductController extends Controller
         return response()->json(MyHelper::checkUpdate($save));
     }
 
+
+    /* product position */
+    public function positionProductAssign(Request $request)
+    {
+        $post = $request->json()->all();
+
+        if (!isset($post['product_ids'])) {
+            return [
+                'status' => 'fail',
+                'messages' => ['Product id is required']
+            ];
+        }
+        // update position
+        foreach ($post['product_ids'] as $key => $product_id) {
+            $update = Product::find($product_id)->update(['position'=>$key+1]);
+        }
+
+        return ['status' => 'success'];
+    }
 }

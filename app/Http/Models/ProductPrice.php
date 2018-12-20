@@ -38,6 +38,7 @@ class ProductPrice extends Model
 		'product_price',
 		'product_visibility',
 		'product_status',
+		'product_sold_out',
 		'created_at',
 		'updated_at'
 	];
@@ -51,4 +52,5 @@ class ProductPrice extends Model
 	{
 		return $this->belongsTo(\App\Http\Models\Product::class, 'id_product');
 	}
+
 }
