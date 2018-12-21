@@ -17,6 +17,7 @@ use App\Http\Models\City;
 use App\Http\Models\User;
 use App\Http\Models\UserOutlet;
 use App\Http\Models\Configs;
+use App\Http\Models\OutletSchedule;
 
 use App\Lib\MyHelper;
 use Validator;
@@ -330,7 +331,13 @@ class ApiOutletController extends Controller
      */
     function listOutlet(Request $request) {
         $post = $request->json()->all();
-        $outlet = Outlet::with(['city', 'outlet_photos', 'product_prices', 'product_prices.product']);
+
+        if (isset($post['webview'])) {
+            $outlet = Outlet::with(['today']);
+        } else {
+            $outlet = Outlet::with(['city', 'outlet_photos', 'product_prices', 'product_prices.product', 'outlet_schedules', 'today']);
+        }
+        
         if (isset($post['outlet_code'])) {
             $outlet->with(['holidays', 'holidays.date_holidays'])->where('outlet_code', $post['outlet_code']);
         }
@@ -351,6 +358,10 @@ class ApiOutletController extends Controller
 
         if(isset($post['type']) && $post['type'] == 'transaction'){
             $outlet = $this->setAvailableOutlet($outlet);
+        }
+
+        if (isset($post['webview'])) {
+            $outlet[0]['url'] = env('VIEW_URL').'/outlet/webview/'.$post['id_outlet'];
         }
 
         return response()->json(MyHelper::checkGet($outlet));
@@ -923,5 +934,28 @@ class ApiOutletController extends Controller
         $post = $request->json()->all();
         $delete = UserOutlet::where('id_user_outlet', $post['id_user_outlet'])->delete();
         return response()->json(MyHelper::checkDelete($delete));
+    }
+
+    public function scheduleSave(Request $request)
+    {
+        $post = $request->json()->all();
+        DB::beginTransaction();
+        foreach ($post['day'] as $key => $value) {
+            $data = [
+                'day'       => $value,
+                'open'      => $post['open'][$key],
+                'close'     => $post['close'][$key],
+                'id_outlet' => $post['id_outlet']
+            ];
+
+            $save = OutletSchedule::updateOrCreate(['id_outlet' => $post['id_outlet'], 'day' => $value], $data);
+            if (!$save) {
+                DB::rollBack();
+                return response()->json(['status' => 'fail']);
+            }
+        }
+
+        DB::commit();
+        return response()->json(['status' => 'success']);
     }
 }

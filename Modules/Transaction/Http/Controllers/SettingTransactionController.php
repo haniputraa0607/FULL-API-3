@@ -26,6 +26,15 @@ class SettingTransactionController extends Controller
             ]);
         }
 
+        $totalDisProduct = 0;
+
+        $productDis = $this->countDis($post);
+        if ($productDis) {
+            $totalDisProduct = $productDis;
+        }
+
+        $post['dis_sem'] = $totalDisProduct;
+
         $count = $this->count($post);
         $order = Setting::where('key', 'transaction_grand_total_order')->value('value');
         $exp   = explode(',', $order);
@@ -128,6 +137,77 @@ class SettingTransactionController extends Controller
         ]);
     }
 
+    public function countDis($data)
+    {
+        $discountTotal = 0;
+        $discount = 0;
+        $totalAllDiscount = 0;
+        $countSemen = 0;
+        $discountFormula = $this->convertFormula('discount');
+        // return $discountFormula;
+        foreach ($data['item'] as $keyData => $valueData) {
+            $product = Product::with('product_discounts')->where('id_product', $valueData['id_product'])->first();
+            if (empty($product)) {
+                DB::rollback();
+                return response()->json([
+                    'status' => 'fail', 
+                    'messages' => ['Product Not Found']
+                ]);
+            }
+
+            $priceProduct = ProductPrice::where('id_product', $valueData['id_product'])->where('id_outlet', $data['id_outlet'])->first();
+            if (empty($priceProduct)) {
+                DB::rollback();
+                return response()->json([
+                    'status' => 'fail', 
+                    'messages' => ['Product Price Not Found']
+                ]);
+            }
+
+            if (count($product['product_discounts']) > 0) {
+                foreach ($product['product_discounts'] as $keyDiscount => $valueDiscount) {
+                    if (!empty($valueDiscount['discount_percentage'])) {
+                        $jat = $valueDiscount['discount_percentage'];
+
+                        $count = $priceProduct['product_price'] * $jat / 100;
+                    } else {
+                        $count = $valueDiscount['discount_nominal'];
+                    }
+
+                    $now = date('Y-m-d');
+                    $time = date('H:i:s');
+                    $day = date('l');
+
+                    if ($now < $valueDiscount['discount_start']) {
+                        $count = 0;
+                    }
+
+                    if ($now > $valueDiscount['discount_end']) {
+                        $count = 0;
+                    }
+
+                    if ($time < $valueDiscount['discount_time_start']) {
+                        $count = 0;
+                    }
+
+                    if ($time > $valueDiscount['discount_time_end']) {
+                        $count = 0;
+                    }
+
+                    if (strpos($valueDiscount['discount_days'], $day) === false) {
+                        $count = 0;
+                    }
+
+                    $discountTotal = $valueData['qty'] * $count;
+                    $countSemen += $discountTotal;
+                    $discountTotal = 0;
+                }
+            }
+        }
+
+        return $countSemen;
+    }
+
     function count($post) {
         $grandTotal = $this->grandTotal();
 
@@ -145,14 +225,8 @@ class SettingTransactionController extends Controller
                 $post['subtotal'] = array_sum($post['sub']);
             } elseif ($valueTotal == 'discount') {
                 $post['dis'] = $this->countTransaction($valueTotal, $post);
-                if (gettype($post['dis']) != 'array') {
-                    DB::rollback();
-                    return response()->json([
-                        'status'    => 'fail',
-                        'messages'  => ['Data not valid']
-                    ]);
-                }
-                $post['discount'] = array_sum($post['dis']);
+
+                $post['discount'] = $post['dis'] + $post['dis_sem'];
             } else {
                 $post[$valueTotal] = $this->countTransaction($valueTotal, $post);
             }
@@ -224,47 +298,24 @@ class SettingTransactionController extends Controller
             $discountTotal = 0;
             $discount = [];
             $discountFormula = $this->convertFormula('discount');
-            // return $discountFormula;
-            foreach ($data['item'] as $keyData => $valueData) {
-                $product = Product::with('product_discounts', 'product_prices')->where('id_product', $valueData['id_product'])->first();
-                if (empty($product)) {
-                    DB::rollback();
-                    return response()->json([
-                        'status' => 'fail', 
-                        'messages' => ['Product Not Found']
-                    ]);
+            
+            $checkSettingPercent = Setting::where('key', 'discount_percent')->first();
+            $checkSettingNominal = Setting::where('key', 'discount_nominal')->first();
+            $count = 0;
+
+            if (!empty($checkSettingPercent)) {
+                if ($checkSettingPercent['value'] != '0' && $checkSettingPercent['value'] != '') {
+                    $count = (eval('return ' . preg_replace('/([a-zA-Z0-9]+)/', '\$$1', $discountFormula) . ';'));
                 }
-
-                if (count($product['product_discounts']) > 0) {
-                    foreach ($product['product_discounts'] as $keyDiscount => $valueDiscount) {
-                        if (!empty($valueDiscount['discount_percentage'])) {
-                            $value = $valueDiscount['discount_percentage'];
-                            $subtotal = $data['sub'][$keyData];
-                            $count = (eval('return ' . preg_replace('/([a-zA-Z0-9]+)/', '\$$1', $discountFormula) . ';')) / 100;
-                        } else {
-                            $count = $valueDiscount['discount_nominal'];
-                        }
-
-                        $discountTotal += $count;
+            } else {
+                if (!empty($checkSettingNominal)) {
+                    if ($checkSettingNominal['value'] != '0' && $checkSettingNominal['value'] != '') {
+                        $count = $checkSettingNominal;
                     }
-                } else {
-                    $discountTotal = 0;
                 }
-
-                array_push($discount, $discountTotal);
             }
 
-            return $discount;
-        }
-
-        if ($value == 'service') {
-            $subtotal = $data['subtotal'];
-            $serviceFormula = $this->convertFormula('service');
-            $value = $this->serviceValue();
-
-            $count = (eval('return ' . preg_replace('/([a-zA-Z0-9]+)/', '\$$1', $serviceFormula) . ';'));
             return $count;
-
         }
 
         if ($value == 'service') {

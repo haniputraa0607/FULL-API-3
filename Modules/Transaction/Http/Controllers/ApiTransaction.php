@@ -79,6 +79,8 @@ class ApiTransaction extends Controller
         $settingServiceValue = Setting::where('key', 'service')->first();
 
         $settingDiscount = Setting::where('key', 'transaction_discount_formula')->first();
+        $settingPercent = Setting::where('key', 'discount_percent')->first();
+        $settingNom = Setting::where('key', 'discount_nominal')->first();
 
         $settingTax = Setting::where('key', 'transaction_tax_formula')->first();
         $settingTaxValue = Setting::where('key', 'tax')->first();
@@ -108,7 +110,9 @@ class ApiTransaction extends Controller
                 'value' => $settingServiceValue['value']
             ],
             'discount'      => [
-                'data'  => explode(' ', $settingDiscount['value'])
+                'data'    => explode(' ', $settingDiscount['value']),
+                'percent' => $settingPercent['value'],
+                'nominal' => $settingNom['value'],
             ],
             'tax'       => [
                 'data'  => explode(' ', $settingTax['value']),
@@ -132,7 +136,6 @@ class ApiTransaction extends Controller
 
     public function transactionRuleUpdate(RuleUpdate $request) {
         $post = $request->json()->all();
-
         DB::beginTransaction();
         if ($post['key'] == 'grand_total') {
             $merge = implode(',', $post['item']);
@@ -387,6 +390,41 @@ class ApiTransaction extends Controller
                 return response()->json([
                     'status'    => 'fail',
                     'messages'  => ['Data setting update failed']
+                ]);
+            }
+
+            $checkPercent = Setting::where('key', 'discount_percent')->first();
+            if (!$checkPercent) {
+                return response()->json([
+                    'status'    => 'fail',
+                    'messages'  => ['Data setting not found']
+                ]);
+            }
+
+            $checkNominal = Setting::where('key', 'discount_nominal')->first();
+            if (!$checkNominal) {
+                return response()->json([
+                    'status'    => 'fail',
+                    'messages'  => ['Data setting not found']
+                ]);
+            }
+
+            $checkPercent->value = $post['percent'];
+            $checkPercent->save();
+            if (!$checkPercent) {
+                return response()->json([
+                    'status'    => 'fail',
+                    'messages'  => ['Data setting not found']
+                ]);
+            }
+
+
+            $checkNominal->value = $post['nominal'];
+            $checkNominal->save();
+            if (!$checkNominal) {
+                return response()->json([
+                    'status'    => 'fail',
+                    'messages'  => ['Data setting not found']
                 ]);
             }
 

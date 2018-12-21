@@ -1,4 +1,8 @@
 <?php
+Route::group(['prefix' => 'api/outlet', 'namespace' => 'Modules\Outlet\Http\Controllers'], function()
+{
+    Route::any('list', 'ApiOutletController@listOutlet');
+});
 
 Route::group(['prefix' => 'api/outlet', 'namespace' => 'Modules\Outlet\Http\Controllers'], function()
 {
@@ -6,10 +10,10 @@ Route::group(['prefix' => 'api/outlet', 'namespace' => 'Modules\Outlet\Http\Cont
      * outlet
      */
     Route::group(['middleware' => 'auth_client'], function() {
-        Route::any('list', 'ApiOutletController@listOutlet');
         Route::get('city', 'ApiOutletController@cityOutlet');
         Route::any('nearme', 'ApiOutletController@nearMe');
         Route::any('filter', 'ApiOutletController@filter');
+        Route::any('schedule/save', 'ApiOutletController@scheduleSave');
         /* SYNC */
         Route::any('sync', 'ApiSyncOutletController@sync');
     });

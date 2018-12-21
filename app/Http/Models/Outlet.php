@@ -125,4 +125,46 @@ class Outlet extends Authenticatable
 	{
 		return $this->hasMany(\App\Http\Models\UserOutlet::class, 'id_outlet');
 	}
+
+	public function outlet_schedules()
+	{
+		return $this->hasMany(\App\Http\Models\OutletSchedule::class, 'id_outlet');
+	}
+
+	public function today()
+	{
+		$hari = date ("D");
+ 
+		switch($hari){
+			case 'Sun':
+				$hari_ini = "Minggu";
+			break;
+	 
+			case 'Mon':			
+				$hari_ini = "Senin";
+			break;
+	 
+			case 'Tue':
+				$hari_ini = "Selasa";
+			break;
+	 
+			case 'Wed':
+				$hari_ini = "Rabu";
+			break;
+	 
+			case 'Thu':
+				$hari_ini = "Kamis";
+			break;
+	 
+			case 'Fri':
+				$hari_ini = "Jumat";
+			break;
+	 
+			default:
+				$hari_ini = "Sabtu";
+			break;
+		}
+
+		return $this->belongsTo(OutletSchedule::class, 'id_outlet', 'id_outlet')->where('day', $hari_ini);
+	}
 }
