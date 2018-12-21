@@ -36,6 +36,8 @@ class ProductPrice extends Model
 		'id_product',
 		'id_outlet',
 		'product_price',
+		'product_price_base',
+		'product_price_tax',
 		'product_visibility',
 		'product_status',
 		'product_sold_out',
