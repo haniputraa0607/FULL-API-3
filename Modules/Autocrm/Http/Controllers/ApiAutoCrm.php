@@ -175,7 +175,6 @@ class ApiAutoCrm extends Controller
 						'callbackurl' => env('APP_URL'), 
 						'datapacket'=>array()
 					);
-					
 					$content 	= $this->TextReplace($crm['autocrm_sms_content'], $user['phone'], $variables);
 					array_push($senddata['datapacket'],array(
 							'number' => trim($user['phone']),
@@ -619,6 +618,15 @@ class ApiAutoCrm extends Controller
 		}
 		
 		DB::beginTransaction();
+
+		//add <#> and Hash Key in pin sms content
+		$autocrm = $query = Autocrm::where('id_autocrm','=',$id_autocrm)->first();
+		if(strpos($autocrm['autocrm_title'], 'Pin') !== false){
+			if(isset($post['autocrm_sms_content'])){
+				$post['autocrm_sms_content'] = '<#> '.$post['autocrm_sms_content'].' '.ENV('HASH_KEY_DEBUG');
+				// $post['autocrm_sms_content'] = '<#> '.$post['autocrm_sms_content'].' '.ENV('HASH_KEY_RELEASE');
+			}
+		}
 
 		$query = Autocrm::where('id_autocrm','=',$id_autocrm)->update($post);
 		if(!$query){
