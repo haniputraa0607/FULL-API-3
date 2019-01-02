@@ -54,6 +54,8 @@ class Outlet extends Authenticatable
 
 	protected $primaryKey = 'id_outlet';
 
+	protected $hidden = ['outlet_pin'];
+
 	protected $casts = [
 		'id_city' => 'int'
 	];

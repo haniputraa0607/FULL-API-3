@@ -354,7 +354,32 @@ class ApiOutletController extends Controller
             $outlet->with(['user_outlets', 'product_prices.product']); 
         }
 
-        $outlet = $outlet->orderBy('outlet_name')->get()->toArray();
+        // qrcode
+        if (isset($post['qrcode'])){
+            if(isset($post['qrcode_paginate'])){
+                $outlet = $outlet->orderBy('outlet_name')->paginate(5)->toArray();
+                foreach ($outlet['data'] as $key => $value) {
+                    $qr      = $value['outlet_code'];
+                    
+                    $qrCode = 'https://chart.googleapis.com/chart?chl='.$qr.'&chs=250x250&cht=qr&chld=H%7C0';
+                    $qrCode = html_entity_decode($qrCode);
+    
+                    $outlet['data'][$key]['qrcode'] = $qrCode; 
+                }
+            }else{
+                $outlet = $outlet->orderBy('outlet_name')->get()->toArray();
+                foreach ($outlet as $key => $value) {
+                    $qr      = $value['outlet_code'];
+                    
+                    $qrCode = 'https://chart.googleapis.com/chart?chl='.$qr.'&chs=250x250&cht=qr&chld=H%7C0';
+                    $qrCode = html_entity_decode($qrCode);
+    
+                    $outlet[$key]['qrcode'] = $qrCode; 
+                }
+            }
+        }else{
+            $outlet = $outlet->orderBy('outlet_name')->get()->toArray();
+        }
 
         if(isset($post['type']) && $post['type'] == 'transaction'){
             $outlet = $this->setAvailableOutlet($outlet);
@@ -465,7 +490,7 @@ class ApiOutletController extends Controller
         return response()->json(MyHelper::checkGet($urutan));
     }
 
-    // unset outlet yang tutp dan libur
+    // unset outlet yang tutup dan libur
     function setAvailableOutlet($listOutlet){
         $outlet = $listOutlet;
         foreach($listOutlet as $index => $dataOutlet){
@@ -491,6 +516,10 @@ class ApiOutletController extends Controller
 
                 }
             }
+            unset($outlet[$index]['product_prices']);
+            unset($outlet[$index]['outlet_schedules']);
+            unset($outlet[$index]['outlet_photos']);
+            unset($outlet[$index]['outlet_pin']);
         }
         return array_values($outlet);
     }
