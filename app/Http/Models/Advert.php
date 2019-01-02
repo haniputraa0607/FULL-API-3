@@ -16,9 +16,15 @@ class Advert extends Model
 	protected $primaryKey = 'id_advert';
 	
 	protected $fillable   = [
+		'id_news',
 		'page',
 		'value',
 		'type',
 		'order'
 	];
+
+	public function news()
+	{
+		return $this->belongsTo(\App\Http\Models\News::class, 'id_news');
+	}
 }

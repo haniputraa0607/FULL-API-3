@@ -12,7 +12,7 @@ class ProductSoldOut extends FormRequest
     {
         return [
             'id_product'        => 'required',
-            'product_sold_out'  => 'required|in:Available,Sold Out',
+            'product_stock_status'  => 'required|in:Available,Sold Out',
         ];
     }
 

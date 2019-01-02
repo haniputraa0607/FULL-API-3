@@ -832,16 +832,16 @@ class ApiSetting extends Controller
         $complete_profiles = array_combine($key, $value);
 
         if (!isset($complete_profiles['complete_profile_point'])) {
-            $complete_profiles['complete_profile_point'] = 0;
+            $complete_profiles['complete_profile_point'] = '';
         }
         if (!isset($complete_profiles['complete_profile_cashback'])) {
-            $complete_profiles['complete_profile_cashback'] = 0;
+            $complete_profiles['complete_profile_cashback'] = '';
         }
         if (!isset($complete_profiles['complete_profile_count'])) {
-            $complete_profiles['complete_profile_count'] = 0;
+            $complete_profiles['complete_profile_count'] = '';
         }
         if (!isset($complete_profiles['complete_profile_interval'])) {
-            $complete_profiles['complete_profile_interval'] = 0;
+            $complete_profiles['complete_profile_interval'] = '';
         }
 
         return response()->json(MyHelper::checkGet($complete_profiles));
@@ -868,5 +868,21 @@ class ApiSetting extends Controller
                 'messages' => ['Some data may not saved.']
             ];
         }
+    }
+
+    public function faqWebview(Request $request)
+    {
+        $faq = Faq::get()->toArray();
+        if (empty($faq)) {
+            return response()->json([
+                'status' => 'fail',
+                'messages' => ['Faq is empty']
+            ]);
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'url' => env('VIEW_URL').'/setting/faq/webview'
+        ]);
     }
 }

@@ -29,11 +29,11 @@ Route::group(['middleware' => 'api', 'prefix' => 'api/setting', 'namespace' => '
     Route::any('/holiday/delete', 'ApiSetting@holidayDelete');
     Route::any('/holiday/detail', 'ApiSetting@holidayDetail');
 
-    Route::get('/faq', 'ApiSetting@faqList');
     Route::post('/faq/create', 'ApiSetting@faqCreate');
     Route::post('/faq/edit', 'ApiSetting@faqEdit');
     Route::post('/faq/update', 'ApiSetting@faqUpdate');
     Route::post('/faq/delete', 'ApiSetting@faqDelete');
+    Route::get('/webview/faq', 'ApiSetting@faqWebview');
 
     Route::post('email', 'ApiSetting@settingEmail');
     Route::get('email', 'ApiSetting@getSettingEmail');
@@ -101,4 +101,9 @@ Route::group(['middleware' => 'auth_client', 'prefix' => 'api/setting', 'namespa
 	Route::get('/navigation-logo', 'ApiSetting@NavigationLogo');
 	Route::get('/navigation-sidebar', 'ApiSetting@NavigationSidebar');
 	Route::get('/navigation-navbar', 'ApiSetting@NavigationNavbar');
+});
+
+Route::group(['prefix' => 'api/setting', 'namespace' => 'Modules\Setting\Http\Controllers'], function()
+{
+    Route::get('/faq', 'ApiSetting@faqList');
 });

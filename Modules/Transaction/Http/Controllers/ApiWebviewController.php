@@ -30,6 +30,9 @@ class ApiWebviewController extends Controller
         $id = $request->json('transaction_receipt_number');
         $type = $request->json('type');
         $check = $request->json('check');
+        $button = '';
+
+        $success = $request->json('trx_success');
         // return 'a';
 
         if (empty($check)) {
@@ -42,16 +45,21 @@ class ApiWebviewController extends Controller
 
                 $dataEncode = [
                     'transaction_receipt_number'   => $id,
-                    'type' => $type
+                    'type' => $type,
                 ];
+
+                if (isset($success)) {
+                    $dataEncode['trx_success'] = $success;
+                    $button = 'LIHAT NOTA';
+                }
 
                 $encode = json_encode($dataEncode);
                 $base = base64_encode($encode);
-                // return $base;
 
                 $send = [
                     'status' => 'success',
                     'result' => [
+                        'button'                     => $button,
                         'payment_status'             => $list['transaction_payment_status'],
                         'transaction_receipt_number' => $list['transaction_receipt_number'],
                         'transaction_grandtotal'     => $list['transaction_grandtotal'],
@@ -200,8 +208,11 @@ class ApiWebviewController extends Controller
 
             $detail = [];
 
+            $qrTest= '';
+
             if ($list['trasaction_type'] == 'Pickup Order') {
                 $detail = TransactionPickup::where('id_transaction', $list['id_transaction'])->first();
+                $qrTest = $detail['order_id'];
             } elseif ($list['trasaction_type'] == 'Delivery') {
                 $detail = TransactionShipment::with('city.province')->where('id_transaction', $list['id_transaction'])->first();
             }
@@ -217,6 +228,20 @@ class ApiWebviewController extends Controller
             $list['type'] = 'trx';
 
             $list['kind'] = $list['trasaction_type'];
+
+            if (isset($success)) {
+                $list['success'] = 1;
+            
+                $qrCode = 'https://chart.googleapis.com/chart?chl='.$qrTest.'&chs=250x250&cht=qr&chld=H%7C0';
+                $qrCode = html_entity_decode($qrCode);
+                $list['qr'] = $qrCode;
+            }
+
+            $settingService = Setting::where('key', 'service')->first();
+            $settingTax = Setting::where('key', 'tax')->first();
+
+            $list['valueService'] = 100 * $settingService['value'];
+            $list['valueTax'] = 100 * $settingTax['value'];
 
             return response()->json(MyHelper::checkGet($list));
         } else {
@@ -303,5 +328,19 @@ class ApiWebviewController extends Controller
 
         $data['detail'] = $select;
         return response()->json(MyHelper::checkGet($data));
+    }
+
+    public function trxSuccess(Request $request)
+    {
+        $post = $request->json()->all();
+        $check = Transaction::where('transaction_receipt_number', $post['id'])->first();
+        if (empty($check)) {
+            return response()->json([
+                'status' => 'fail', 
+                'messages' => ['Transaction not found']
+            ]);
+        }
+
+
     }
 }

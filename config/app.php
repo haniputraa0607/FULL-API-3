@@ -182,6 +182,7 @@ return [
 		Maatwebsite\Excel\ExcelServiceProvider::class,
 		Bogardo\Mailgun\MailgunServiceProvider::class,
         SMartins\PassportMultiauth\Providers\MultiauthServiceProvider::class,
+        App\Providers\ValidatorServiceProvider::class,
     ],
 
     /*

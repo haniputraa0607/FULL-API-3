@@ -27,12 +27,12 @@ class users_profile extends FormRequest
 	{
 		return [
 			'phone'		=> 'required|string|max:18',
-			'pin'		=> 'required|string|digits:6',
-			'name'		=> 'required|max:200',
-			'email'		=> 'required|email',
-			'gender'	=> 'required|in:Male,Female',
-			'birthday'	=> 'required|date',
-			'id_city'	=> 'required|integer|max:501'
+			'pin'		=> 'nullable|string|digits:6',
+			'name'		=> 'nullable|max:200',
+			'email'		=> 'nullable|email',
+			'gender'	=> 'nullable|in:Male,Female',
+			'birthday'	=> 'nullable|date',
+			'id_city'	=> 'nullable|integer|max:501'
         ];
     }
 

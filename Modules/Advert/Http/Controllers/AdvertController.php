@@ -21,7 +21,7 @@ class AdvertController extends Controller
     /* INDEX */
     public function index(Iklan $request) {
         
-        $advert = Advert::select('*');
+        $advert = Advert::with('news')->select('*');
 
         if ($request->json('id_advert')) {
             $advert->where('id_advert', $request->json('id_advert'));
@@ -44,19 +44,19 @@ class AdvertController extends Controller
 
             foreach ($advert as $key => $value) {
                 if ($value['type'] == "img_top") {
-                    array_push($newAdv['img_top'], ['id_advert' => $value['id_advert'], 'value' => $value['value']]);
+                    array_push($newAdv['img_top'], ['id_advert' => $value['id_advert'], 'value' => $value['value'], 'news' => $value['news']]);
                 }
 
                 if ($value['type'] == "img_bottom") {
-                    array_push($newAdv['img_bottom'], ['id_advert' => $value['id_advert'], 'value' => $value['value']]);
+                    array_push($newAdv['img_bottom'], ['id_advert' => $value['id_advert'], 'value' => $value['value'], 'news' => $value['news']]);
                 }
 
                 if ($value['type'] == "text_top") {
-                    array_push($newAdv['text_top'], ['id_advert' => $value['id_advert'], 'value' => $value['value']]);
+                    array_push($newAdv['text_top'], ['id_advert' => $value['id_advert'], 'value' => $value['value'], 'news' => $value['news']]);
                 }
 
                 if ($value['type'] == "text_bottom") {
-                    array_push($newAdv['text_bottom'], ['id_advert' => $value['id_advert'], 'value' => $value['value']]);
+                    array_push($newAdv['text_bottom'], ['id_advert' => $value['id_advert'], 'value' => $value['value'], 'news' => $value['news']]);
                 }
             }
         }
@@ -80,6 +80,12 @@ class AdvertController extends Controller
 
         if (isset($post['order'])) {
             $data['order'] = $post['order'];
+        }
+
+        if (isset($post['id_news']) && $post['id_news'] != null ){
+            $data['id_news'] = $post['id_news'];
+        }else{
+            $data['id_news'] = null;
         }
 
         // IMAGE

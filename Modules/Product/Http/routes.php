@@ -1,4 +1,4 @@
- <?php
+<?php
 
 Route::group(['prefix' => 'api/product', 'namespace' => 'Modules\Product\Http\Controllers'], function()
 {
@@ -22,6 +22,9 @@ Route::group(['prefix' => 'api/product', 'namespace' => 'Modules\Product\Http\Co
         Route::post('update', 'ApiProductController@update');
         Route::post('update/allow_sync', 'ApiProductController@updateAllowSync');
         Route::post('update/visibility', 'ApiProductController@visibility');
+
+        /* product position */
+        Route::post('position/assign', 'ApiProductController@positionProductAssign');
 
         Route::group(['middleware' => 'log_request'], function() {
             Route::post('delete', 'ApiProductController@delete');
@@ -68,6 +71,7 @@ Route::group(['prefix' => 'api/product', 'namespace' => 'Modules\Product\Http\Co
     	
     	Route::any('list', 'ApiCategoryController@listCategory');
     	Route::any('list/tree', 'ApiCategoryController@listCategoryTree');
+        Route::post('position/assign', 'ApiCategoryController@positionCategoryAssign');
         
     	/**
     	 * auth

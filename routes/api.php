@@ -25,6 +25,8 @@ Route::group(['middleware' => ['auth:api'] ], function(){
 	Route::get('config', 'Controller@getConfig');
 	// Route::any('city/list', 'Controller@listCity');
 	// Route::get('province/list', 'Controller@listProvince');
+	Route::post('summernote/upload/image', 'Controller@uploadImageSummernote');
+	Route::post('summernote/delete/image', 'Controller@deleteImageSummernote');
 });
 
 /* NO AUTH */

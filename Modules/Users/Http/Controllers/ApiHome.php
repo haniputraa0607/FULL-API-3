@@ -71,7 +71,7 @@ class ApiHome extends Controller
             $item['image_url'] = url($banner->image);
             $item['id_news']   = $banner->id_news;
             $item['url']       = $banner->url;
-            $item['position']  = $banner->position;
+            // $item['position']  = $banner->position;
             return $item;
         });
         $banners->all();
@@ -245,15 +245,12 @@ class ApiHome extends Controller
             $webview_url = "";
             $webview_link = env('APP_URL') . '/webview/complete-profile/' . $user->phone;
 
-            // check user profile completeness
-            $user_profile = false;
+            // check user profile completeness (if there is null data)
             if ($user->id_city=="" || $user->gender=="" || $user->birthday=="") {
                 $user_profile = true;
             }
 
-            // if there is null data
-            if ($user_profile) {
-                // get setting user profile
+                // get setting user profile value
                 $complete_profile_interval = 0;
                 $complete_profile_count = 0;
                 $setting_profile_point = Setting::where('key', 'complete_profile_interval')->first();
@@ -282,24 +279,23 @@ class ApiHome extends Controller
                 else {  // never pop up before
                     $webview_url = $webview_link;
                 }
-            }
 
 
             $result = [
                 'status' => 'success',
                 'result' => [
-                    'greetings'     => $greetingss,
-                    'greetings2'    => $greetingss2,
-                    'background'    => $background,
+                    // 'greetings'     => $greetingss,
+                    // 'greetings2'    => $greetingss2,
+                    // 'background'    => $background,
                     'banners'       => $banners,
                     'splash_screen_url' => $splash."?",
                     'total_point'   => (int) $point,
                     'total_balance' => (int) $balance,
-                    'notification'  =>[
-                        'total' => $countUnread + $transactionPending,
-                        'count_unread_inbox' => $countUnread,
-                        'count_transaction_pending' => $transactionPending,
-                    ],
+                    // 'notification'  =>[
+                    //     'total' => $countUnread + $transactionPending,
+                    //     'count_unread_inbox' => $countUnread,
+                    //     'count_transaction_pending' => $transactionPending,
+                    // ],
                     'user_info'     => [
                         'name'  => $user->name,
                         'phone' => $user->phone,

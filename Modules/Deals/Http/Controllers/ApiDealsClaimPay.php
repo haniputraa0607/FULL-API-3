@@ -17,9 +17,12 @@ use App\Http\Models\DealsUser;
 use App\Http\Models\DealsVoucher;
 use App\Http\Models\User;
 use App\Http\Models\LogBalance;
+use App\Http\Models\Setting;
 
 use Modules\Deals\Http\Controllers\ApiDealsVoucher;
 use Modules\Deals\Http\Controllers\ApiDealsClaim;
+use Modules\Balance\Http\Controllers\NewTopupController;
+use Modules\Balance\Http\Controllers\BalanceController;
 
 use Modules\Deals\Http\Requests\Deals\Voucher;
 use Modules\Deals\Http\Requests\Claim\Paid;
@@ -28,6 +31,7 @@ use Modules\Deals\Http\Requests\Claim\PayNow;
 use Illuminate\Support\Facades\Schema;
 
 use DB;
+use Hash;
 
 class ApiDealsClaimPay extends Controller
 {
@@ -423,6 +427,7 @@ class ApiDealsClaimPay extends Controller
                 return $this->midtrans($deals, $voucher, $dataDealsUserUpdate['balance_nominal']);
             }
         } else {
+            // update log balance
             if ($this->updateLogPoint($myBalance, $voucher)) {
                 $dataDealsUserUpdate = [
                     'payment_method'  => 'Balance',
@@ -449,27 +454,15 @@ class ApiDealsClaimPay extends Controller
     {
         $user = User::with('memberships')->where('id', $voucher->id_user)->first();
 
-        $balance_after = $myBalance - $voucher->voucher_price_cash;
+        $balance_nominal = -$voucher->voucher_price_cash;
+        $grand_total = $voucher->voucher_price_cash;
+        $id_reference = $voucher->id_deals_user;
 
-        if (!empty($user['memberships'][0]['membership_name'])) {
-            $level = $user['memberships'][0]['membership_name'];
-        } else {
-            $level = null;
-        }
+        // add log balance (with balance hash check) & update user balance
+        $balanceController = new BalanceController();
+        $addLogBalance = $balanceController->addLogBalance($user->id, $balance_nominal, $id_reference, "Deals Balance", $grand_total);
 
-        $dataLogBalance                     = [];
-        $dataLogBalance['id_user']          = $voucher->id_user;
-        $dataLogBalance['balance']          = - $voucher->voucher_price_cash;
-        $dataLogBalance['balance_before']   = $myBalance;
-        $dataLogBalance['balance_after']    = $balance_after;
-        $dataLogBalance['id_reference']     = $voucher->id_deals_user;
-        $dataLogBalance['source']           = "Deals Balance";
-        $dataLogBalance['grand_total']      = $voucher->voucher_price_cash;
-        $dataLogBalance['membership_level'] = $level;
-
-        $save = LogBalance::create($dataLogBalance);
-
-        return $save;
+        return $addLogBalance;
     }
 
     /* UPDATE HARGA BALANCE */

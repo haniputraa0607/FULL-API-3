@@ -100,5 +100,47 @@ class Controller extends BaseController
 		];
 
       return response()->json($result);
+	}
+	
+	function uploadImageSummernote(Request $request) {
+		$post = $request->json()->all();
+
+		if (!file_exists('img/summernote/'.$post['type'])) {
+			mkdir('img/summernote/'.$post['type'], 0777, true);
+		}
+
+        $upload = MyHelper::uploadPhoto($request->json('image'), 'img/summernote/'.$post['type'].'/');
+        
+        if ($upload['status'] == "success") {
+            $result = [
+                'status' => 'success',
+                'result' => [
+                    'pathinfo' => url('/').'/'.$upload['path'],
+                    'path' => $upload['path']
+                ]
+            ];
+        }
+        else {
+            $result = [
+                'status' => 'fail'
+            ];
+        }
+
+        return response()->json($result);
+	}
+	
+    function deleteImageSummernote(Request $request) {
+        if (MyHelper::deletePhoto($request->json('image'))) {
+            $result = [
+                'status' => 'success'
+            ];
+        }
+        else {
+            $result = [
+                'status' => 'fail'
+            ];
+        }
+
+        return response()->json($result);
     }
 }

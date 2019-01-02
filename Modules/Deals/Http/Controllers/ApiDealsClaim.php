@@ -15,6 +15,7 @@ use App\Http\Models\DealsPaymentMidtran;
 use App\Http\Models\DealsUser;
 use App\Http\Models\DealsVoucher;
 use App\Http\Models\LogPoint;
+use App\Http\Models\User;
 
 use Modules\Deals\Http\Controllers\ApiDealsVoucher;
 
@@ -439,18 +440,36 @@ class ApiDealsClaim extends Controller
 
     function updatePoint($voucher) 
     {
+        $user = User::with('memberships')->where('id', $voucher->id_user)->first();
+
+        $user_member = $user->toArray();
+        $level = null;
+        $point_percentage = 0;
+        if (!empty($user_member['memberships'][0]['membership_name'])) {
+            $level = $user_member['memberships'][0]['membership_name'];
+        }
+        if (isset($user_member['memberships'][0]['benefit_point_multiplier'])) {
+            $point_percentage = $user_member['memberships'][0]['benefit_point_multiplier'];
+        }
+
         $setting = app($this->setting)->setting('point_conversion_value');
 
         $dataCreate        = [
             'id_user'          => $voucher->id_user,
             'id_reference'     => $voucher->id_deals_user,
-            'source'           => "deals user",
+            'source'           => "Deals User",
             'point'            => -$voucher->voucher_price_point,
             'voucher_price'    => $voucher->voucher_price_point,
-            'point_conversion' => $setting,            
+            'point_conversion' => $setting,
+            'membership_level'            => $level,
+            'membership_point_percentage' => $point_percentage            
         ];
-
         $save = LogPoint::create($dataCreate);
+
+        // update user point
+        $new_user_point = LogPoint::where('id_user', $user->id)->sum('point');
+        $user->update(['points' => $new_user_point]);
+
         return $save;
     }
 

@@ -1089,14 +1089,14 @@ class ApiUser extends Controller
 				if(stristr($_SERVER['HTTP_USER_AGENT'],'okhttp')) $useragent = 'Android';
 				if(stristr($_SERVER['HTTP_USER_AGENT'],'GuzzleHttp')) $useragent = 'Browser';
 			
-				/* 
+				
 				if(\Module::collections()->has('Autocrm')) {
 					$autocrm = app($this->autocrm)->SendAutoCRM('Pin Sent', $request->json('phone'), 
 																	['pin' => $pinnya,
 																	'useragent' => $useragent, 
 																	 'now' => date('Y-m-d H:i:s')]); 
 				}
-				*/
+				
 				$result = [
 							'status'	=> 'success',
 							'result'	=> ['phone'	=>	$data[0]['phone'],
@@ -1128,29 +1128,16 @@ class ApiUser extends Controller
 			return response()->json($result);
 		}
 
-		if($user['email'] == null){
+		if($user['birthday'] == null){
 			$result = [
 				'status'	=> 'fail',
-				'messages'	=> ['User email is empty.']
+				'messages'	=> ['User birthday is empty.']
 			];
 			return response()->json($result);
 		}
-
-		// if($user['birthday'] == null){
-		// 	$result = [
-		// 		'status'	=> 'fail',
-		// 		'messages'	=> ['User birthday is empty.']
-		// 	];
-		// 	return response()->json($result);
-		// }
 		
-        // $data = User::where('phone', '=', $request->json('phone'))
-		// 			->where('birthday', '=', date('Y-m-d', strtotime($request->json('birthday'))))
-		// 			->get()
-		// 			->toArray();
-
-		$data = User::where('phone', '=', $request->json('phone'))
-					->where('email', '=', $request->json('email'))
+        $data = User::where('phone', '=', $request->json('phone'))
+					->where('birthday', '=', date('Y-m-d', strtotime($request->json('birthday'))))
 					->get()
 					->toArray();
 
@@ -1185,7 +1172,7 @@ class ApiUser extends Controller
 		} else {
 			$result = [
                         'status'	=> 'fail',
-                        'messages'	=> ['Email didn\'t match. Please check Your input.']
+                        'messages'	=> ['Birthday didn\'t match. Please check Your input.']
                     ];
 			return response()->json($result);
 		}
@@ -1361,19 +1348,30 @@ class ApiUser extends Controller
 				}
 			}
 			if($data[0]['phone_verified'] == 1){
-				if(Auth::attempt(['phone' => $request->json('phone'), 'password' => $request->json('pin')])){
-					$update = User::where('id','=',$data[0]['id'])->update(['name' => $request->json('name'),
-																					   'email' => $request->json('email'),
-																					   'gender' => $request->json('gender'),
-																					   'birthday' => $request->json('birthday'),
-																					   'id_city' => $request->json('id_city')
-																					   ]);
+				// if(Auth::attempt(['phone' => $request->json('phone'), 'password' => $request->json('pin')])){
+					$dataupdate = [];
+					if($request->json('name')){
+						$dataupdate['name'] = $request->json('name');
+					}
+					if($request->json('email')){
+						$dataupdate['email'] = $request->json('email');
+					}
+					if($request->json('gender')){
+						$dataupdate['gender'] = $request->json('gender');
+					}
+					if($request->json('birthday')){
+						$dataupdate['birthday'] = $request->json('birthday');
+					}
+					if($request->json('id_city')){
+						$dataupdate['id_city'] = $request->json('id_city');
+					}
+					$update = User::where('id','=',$data[0]['id'])->update($dataupdate);
 
 					$datauser = User::where('id','=',$data[0]['id'])->get()->toArray();
 					$result = [
 							'status'	=> 'success',
 							'result'	=> ['phone'	=>	$data[0]['phone'],
-											'pin'	=>	$request->json('pin'),
+											// 'pin'	=>	$request->json('pin'),
 											'name' => $datauser[0]['name'],
 											'email' => $datauser[0]['email'],
 											'gender' => $datauser[0]['gender'],
@@ -1381,12 +1379,12 @@ class ApiUser extends Controller
 											'id_city' => $datauser[0]['id_city']
 										   ]
 						];
-				} else {
-					$result = [
-                        'status'	=> 'fail',
-                        'messages'	=> ['Current PIN doesn\'t match']
-                    ];
-				}
+				// } else {
+				// 	$result = [
+                //         'status'	=> 'fail',
+                //         'messages'	=> ['Current PIN doesn\'t match']
+                //     ];
+				// }
 			} else {
 				$result = [
                         'status'	=> 'fail',

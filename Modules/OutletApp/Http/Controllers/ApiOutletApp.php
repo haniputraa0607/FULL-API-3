@@ -439,7 +439,7 @@ class ApiOutletApp extends Controller
         
         $product = ProductPrice::where('id_outlet', $outlet['id_outlet'])
                                 ->where('id_product', $post['id_product'])
-                                ->update(['product_sold_out' => $post['product_sold_out']]);
+                                ->update(['product_stock_status' => $post['product_stock_status']]);
 
         return response()->json(MyHelper::checkUpdate($product));
     }
@@ -467,7 +467,7 @@ class ApiOutletApp extends Controller
                     $dataProduct['id_product'] = $category['id_product']; 
                     $dataProduct['product_code'] = $category['product_code'];
                     $dataProduct['product_name'] = $category['product_name']; 
-                    $dataProduct['product_sold_out'] = $category['product_sold_out']; 
+                    $dataProduct['product_stock_status'] = $category['product_stock_status']; 
 
                     $child['id_product_category'] = $category['id_product_category'];
                     $child['product_category_name'] = $category['product_category_name'];
@@ -492,7 +492,7 @@ class ApiOutletApp extends Controller
                         $dataProduct['id_product'] = $category['id_product'];
                         $dataProduct['product_code'] = $category['product_code']; 
                         $dataProduct['product_name'] = $category['product_name']; 
-                        $dataProduct['product_sold_out'] = $category['product_sold_out']; 
+                        $dataProduct['product_stock_status'] = $category['product_stock_status']; 
 
                         $dataCategory['products'][] = $dataProduct;
                         $categorized[$position]['child_category'][] = $dataCategory;
@@ -502,24 +502,37 @@ class ApiOutletApp extends Controller
                         $dataProduct['id_product'] = $category['id_product']; 
                         $dataProduct['product_code'] = $category['product_code'];
                         $dataProduct['product_name'] = $category['product_name']; 
-                        $dataProduct['product_sold_out'] = $category['product_sold_out']; 
+                        $dataProduct['product_stock_status'] = $category['product_stock_status']; 
 
                         $categorized[$position]['child_category'][$positionChild]['products'][]= $dataProduct;
                     }
                 }
             }else{
-                $dataProduct['id_product'] = $category['id_product']; 
-                $dataProduct['product_code'] = $category['product_code']; 
-                $dataProduct['product_name'] = $category['product_name']; 
-                $dataProduct['product_sold_out'] = $category['product_sold_out']; 
+                $position = array_search($category['id_product_category'], $idParent);
+			    if(!is_integer($position)){
+                    $dataProduct['id_product'] = $category['id_product']; 
+                    $dataProduct['product_code'] = $category['product_code']; 
+                    $dataProduct['product_name'] = $category['product_name']; 
+                    $dataProduct['product_stock_status'] = $category['product_stock_status']; 
+    
+                    $dataCategory['id_product_category'] = $category['id_product_category'];
+                    $dataCategory['product_category_name'] = $category['product_category_name'];
+                    $dataCategory['products'][] = $dataProduct;
+    
+                    $categorized[] = $dataCategory;
+                    $idParent[] = $category['id_product_category'];
+                    $idParent2[][] = [];
+                }else{
+                    $idParent2[$position][] = $category['id_product_category'];
 
-                $dataCategory['id_product_category'] = $category['id_product_category'];
-                $dataCategory['product_category_name'] = $category['product_category_name'];
-                $dataCategory['products'][] = $dataProduct;
+                    $dataProduct['id_product'] = $category['id_product'];
+                    $dataProduct['product_code'] = $category['product_code']; 
+                    $dataProduct['product_name'] = $category['product_name']; 
+                    $dataProduct['product_stock_status'] = $category['product_stock_status']; 
 
-                $categorized[] = $dataCategory;
-                $idParent[] = $category['id_product_category'];
-                $idParent2[][] = [];
+                    $categorized[$position]['products'][] = $dataProduct;
+                }
+
             }
 
         }
@@ -528,7 +541,7 @@ class ApiOutletApp extends Controller
                                         ->whereIn('products.id_product', function($query){
                                             $query->select('id_product')->from('products')->whereNull('id_product_category');
                                         })->where('id_outlet', $outlet['id_outlet'])
-                                        ->select('products.id_product', 'product_code', 'product_name', 'product_sold_out')->get();
+                                        ->select('products.id_product', 'product_code', 'product_name', 'product_stock_status')->get();
 
         $result['categorized'] = $categorized;
         $result['uncategorized'] = $uncategorized;

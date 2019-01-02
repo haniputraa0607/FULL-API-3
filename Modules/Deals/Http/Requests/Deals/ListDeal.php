@@ -16,7 +16,10 @@ class ListDeal extends FormRequest
     public function rules()
     {
         return [
-            'deals_type'                => 'required|in:Deals,Hidden,Point,Spin,Subscription',
+            // 'deals_type'                => 'required|in:Deals,Hidden,Point,Spin,Subscription',
+            
+            // deals_type: custom validator from ValidatorServiceProvider
+            'deals_type'                => 'required|deals_type',
             'publish'                   => '',
             'voucher_type'              => 'nullable|in:point,paid,free',
             'price_range_start'         => 'nullable|integer',

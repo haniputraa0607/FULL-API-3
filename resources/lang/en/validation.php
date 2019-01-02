@@ -87,6 +87,8 @@ return [
     'unique'               => 'The :attribute has already been taken.',
     'uploaded'             => 'The :attribute failed to upload.',
     'url'                  => 'The :attribute format is invalid.',
+    // custom validator error message
+    'deals_type' => 'The deals type is invalid',
 
     /*
     |--------------------------------------------------------------------------

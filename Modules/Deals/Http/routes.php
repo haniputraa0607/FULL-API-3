@@ -75,3 +75,12 @@ Route::group(['middleware' => 'auth:api', 'prefix' => 'api/deals-subscription', 
     Route::post('update', 'ApiDealsSubscription@update');
     Route::get('delete/{id_deals}', 'ApiDealsSubscription@destroy');
 });
+
+
+/* WEBVIEW */
+Route::group(['middleware' => 'api', 'prefix' => 'api/webview', 'namespace' => 'Modules\Deals\Http\Controllers'], function()
+{
+    /* deals detail */
+    Route::get('/deals/{id_deals}/{deals_type}', 'ApiDealsWebview@dealsDetail');
+    Route::get('/voucher/{id_deals_user}', 'ApiDealsWebview@voucherDetail');
+});

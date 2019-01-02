@@ -12,7 +12,9 @@ Route::group(['prefix' => 'api/news', 'namespace' => 'Modules\News\Http\Controll
     	Route::post('create/relation', 'ApiNews@createRelation');
     	Route::post('delete/relation', 'ApiNews@deleteRelation');
     	Route::post('update', 'ApiNews@update');
-		Route::post('delete', 'ApiNews@delete');
+        Route::post('delete', 'ApiNews@delete');
+        // get news form data
+		Route::post('form-data', 'ApiNews@formData');
 	});
     
     // get news for custom form webview

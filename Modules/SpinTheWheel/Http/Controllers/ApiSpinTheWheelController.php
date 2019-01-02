@@ -117,6 +117,17 @@ class ApiSpinTheWheelController extends Controller
 
         $spin_items = SpinTheWheel::with('deals')->orderBy('created_at')->get()->toArray();
         $setting_point_spin = Setting::where('key', 'spin_the_wheel_point')->first();
+        $spin_the_wheel_point = $setting_point_spin->value;
+
+        // calc user point from log
+        $user_point = LogPoint::where( ['id_user' => $user->id] )->sum('point');
+        if (!$user_point) {
+            $user_point = 0;
+        }
+        // calc point balance
+        if ($user_point < $spin_the_wheel_point) {
+            return ['status' => 'fail', 'messages' => 'Your point is not enough.'];
+        }
 
         $items = [];
         foreach ($spin_items as $key => $spin) {
@@ -141,7 +152,7 @@ class ApiSpinTheWheelController extends Controller
         
         $deals = Deal::findOrFail( ['id_deals' => $prize] )->first()->toArray();
 
-        $data['spin_point'] = $setting_point_spin->value;
+        $data['spin_point'] = $spin_the_wheel_point;
         $data['spin_items'] = $spin_items;
         $data['spin_prize'] = $deals;
 

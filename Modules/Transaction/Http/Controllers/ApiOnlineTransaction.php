@@ -23,6 +23,7 @@ use App\Http\Models\ManualPaymentMethod;
 use App\Http\Models\UserOutlet;
 use App\Http\Models\TransactionSetting;
 use App\Http\Models\FraudSetting;
+use App\Http\Models\Configs;
 
 use GuzzleHttp\Exception\GuzzleException;
 use GuzzleHttp\Client;
@@ -493,31 +494,39 @@ class ApiOnlineTransaction extends Controller
             $post['id_admin_outlet_receive'] = null;
         }
 
-        $adminOutlet = UserOutlet::where('id_outlet', $insertTransaction['id_outlet'])->orderBy('id_user_outlet');
+        $configAdminOutlet = Configs::where('config_name', 'admin outlet')->first();
+
+        if($configAdminOutlet && $configAdminOutlet['is_active'] == '1'){
+            $adminOutlet = UserOutlet::where('id_outlet', $insertTransaction['id_outlet'])->orderBy('id_user_outlet');
+        }
+
 
         if ($post['type'] == 'Delivery') {
-            $totalAdmin = $adminOutlet->where('delivery', 1)->first();
-            if (empty($totalAdmin)) {
-                DB::rollback();
-                return response()->json([
-                    'status'    => 'fail',
-                    'messages'  => ['Admin outlet is empty']
-                ]);
-            }
+            $link = '';
+            if($configAdminOutlet && $configAdminOutlet['is_active'] == '1'){
+                $totalAdmin = $adminOutlet->where('delivery', 1)->first();
+                if (empty($totalAdmin)) {
+                    DB::rollback();
+                    return response()->json([
+                        'status'    => 'fail',
+                        'messages'  => ['Admin outlet is empty']
+                    ]);
+                }
 
-            $link = env('APP_URL').'/transaction/admin/'.$insertTransaction['transaction_receipt_number'].'/'.$totalAdmin['phone'];
+                $link = env('APP_URL').'/transaction/admin/'.$insertTransaction['transaction_receipt_number'].'/'.$totalAdmin['phone'];
+            }
 
             $order_id = MyHelper::createrandom(4, 'Besar Angka');
             
             //cek unique order id today
-            $cekOrderId = TransactionPickup::join('transactions', 'transactions.id_transaction', 'transaction_pickup.id_transaction')
+            $cekOrderId = TransactionShipment::join('transactions', 'transactions.id_transaction', 'transaction_shipments.id_transaction')
                                             ->where('order_id', $order_id)
                                             ->whereDate('transaction_date', date('Y-m-d'))
                                             ->first();
             while($cekOrderId){
                 $order_id = MyHelper::createrandom(4, 'Besar Angka');
 
-                $cekOrderId = TransactionPickup::join('transactions', 'transactions.id_transaction', 'transaction_pickup.id_transaction')
+                $cekOrderId = TransactionShipment::join('transactions', 'transactions.id_transaction', 'transaction_shipments.id_transaction')
                                                 ->where('order_id', $order_id)
                                                 ->whereDate('transaction_date', date('Y-m-d'))
                                                 ->first();
@@ -567,18 +576,34 @@ class ApiOnlineTransaction extends Controller
                 ]);
             }
         } elseif ($post['type'] == 'Pickup Order') {
-            $totalAdmin = $adminOutlet->where('pickup_order', 1)->first();
-            if (empty($totalAdmin)) {
-                DB::rollback();
-                return response()->json([
-                    'status'    => 'fail',
-                    'messages'  => ['Admin outlet is empty']
-                ]);
+            $link = '';
+            if($configAdminOutlet && $configAdminOutlet['is_active'] == '1'){
+                $totalAdmin = $adminOutlet->where('pickup_order', 1)->first();
+                if (empty($totalAdmin)) {
+                    DB::rollback();
+                    return response()->json([
+                        'status'    => 'fail',
+                        'messages'  => ['Admin outlet is empty']
+                    ]);
+                }
+
+                $link = env('APP_URL').'/transaction/admin/'.$insertTransaction['transaction_receipt_number'].'/'.$totalAdmin['phone'];
             }
-
-            $link = env('APP_URL').'/transaction/admin/'.$insertTransaction['transaction_receipt_number'].'/'.$totalAdmin['phone'];
-
             $order_id = MyHelper::createrandom(4, 'Besar Angka');
+
+            //cek unique order id today
+            $cekOrderId = TransactionPickup::join('transactions', 'transactions.id_transaction', 'transaction_pickups.id_transaction')
+                                            ->where('order_id', $order_id)
+                                            ->whereDate('transaction_date', date('Y-m-d'))
+                                            ->first();
+            while($cekOrderId){
+                $order_id = MyHelper::createrandom(4, 'Besar Angka');
+
+                $cekOrderId = TransactionPickup::join('transactions', 'transactions.id_transaction', 'transaction_pickups.id_transaction')
+                                                ->where('order_id', $order_id)
+                                                ->whereDate('transaction_date', date('Y-m-d'))
+                                                ->first();
+            }
 
             if (isset($post['taken_at'])) {
                 $post['taken_at'] = date('Y-m-d H:i:s', strtotime($post['taken_at']));

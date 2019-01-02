@@ -240,10 +240,10 @@ class ApiCategoryController extends Controller
         if (!empty($post)) {
             $list = $this->getData($post);
         } else {
-            $list = ProductCategory::where('id_parent_category', null)->get();
+            $list = ProductCategory::where('id_parent_category', null)->orderBy('product_category_order')->get();
 
             foreach ($list as $key => $value) {
-                $child = ProductCategory::where('id_parent_category', $value['id_product_category'])->get();
+                $child = ProductCategory::where('id_parent_category', $value['id_product_category'])->orderBy('product_category_order')->get();
                 $list[$key]['child'] = $child;
             }
         }
@@ -271,6 +271,7 @@ class ApiCategoryController extends Controller
 									->where('product_prices.product_status','=','Active')
 									->whereNull('products.id_product_category')
 									->with(['photos'])
+                                    ->orderBy('products.position')
 									->get()
 									->toArray();
 			
@@ -282,6 +283,7 @@ class ApiCategoryController extends Controller
 									->where('product_prices.product_status','=','Active')
 									->whereNull('products.id_product_category')
 									->with(['photos'])
+                                    ->orderBy('products.position')
 									->get()
 									->toArray();
 		}
@@ -350,6 +352,7 @@ class ApiCategoryController extends Controller
 									->where('product_prices.product_status','=','Active')
 									->where('products.id_product_category', $id)
 									->with(['photos'])
+                                    ->orderBy('products.position')
 									->get();
         } else {
 			$defaultoutlet = Setting::where('key','=','default_outlet')->first();
@@ -359,8 +362,29 @@ class ApiCategoryController extends Controller
 									->where('product_prices.product_status','=','Active')
 									->where('products.id_product_category', $id)
 									->with(['photos'])
+                                    ->orderBy('products.position')
 									->get();
 		}
         return $product;
     }
+
+    /* product category position */
+    public function positionCategoryAssign(Request $request)
+    {
+        $post = $request->json()->all();
+
+        if (!isset($post['category_ids'])) {
+            return [
+                'status' => 'fail',
+                'messages' => ['Category id is required']
+            ];
+        }
+        // update position
+        foreach ($post['category_ids'] as $key => $category_id) {
+            $update = ProductCategory::find($category_id)->update(['product_category_order'=>$key+1]);
+        }
+
+        return ['status' => 'success'];
+    }
+
 }

@@ -88,16 +88,16 @@ class ApiDeals extends Controller
             $data['id_product'] = $post['id_product'];
         }
         if (isset($post['deals_start'])) { 
-            $data['deals_start'] = date('Y-m-d 00:00:00', strtotime($post['deals_start']));
+            $data['deals_start'] = date('Y-m-d H:i:s', strtotime($post['deals_start']));
         }
         if (isset($post['deals_end'])) { 
-            $data['deals_end'] = date('Y-m-d 23:59:59', strtotime($post['deals_end']));
+            $data['deals_end'] = date('Y-m-d H:i:s', strtotime($post['deals_end']));
         }
         if (isset($post['deals_publish_start'])) { 
-            $data['deals_publish_start'] = date('Y-m-d 00:00:00', strtotime($post['deals_publish_start']));
+            $data['deals_publish_start'] = date('Y-m-d H:i:s', strtotime($post['deals_publish_start']));
         }
         if (isset($post['deals_publish_end'])) { 
-            $data['deals_publish_end'] = date('Y-m-d 23:59:59', strtotime($post['deals_publish_end']));
+            $data['deals_publish_end'] = date('Y-m-d H:i:s', strtotime($post['deals_publish_end']));
         }
 
         // ---------------------------- DURATION 
@@ -161,7 +161,6 @@ class ApiDeals extends Controller
             unset($data['error']);
             return response()->json($data);
         }
-
         $save = Deal::create($data);
 
         if ($save) {
@@ -194,6 +193,7 @@ class ApiDeals extends Controller
     /* LIST */
     function listDeal(ListDeal $request) {
 
+        // return $request->json()->all();
         $deals = Deal::with(['outlets', 'outlets.city', 'product']);
         
         // deals subscription
@@ -213,7 +213,13 @@ class ApiDeals extends Controller
         }
 
         if ($request->json('deals_type')) {
-            $deals->where('deals_type', $request->json('deals_type'));
+            // get > 1 deals types
+            if (is_array($request->json('deals_type'))) {
+                $deals->whereIn('deals_type', $request->json('deals_type'));
+            }
+            else {
+                $deals->where('deals_type', $request->json('deals_type'));
+            }
         }
 
         if ($request->json('deals_promo_id')) {

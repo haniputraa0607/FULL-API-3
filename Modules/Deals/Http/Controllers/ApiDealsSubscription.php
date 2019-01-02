@@ -119,16 +119,16 @@ class ApiDealsSubscription extends Controller
             $data['deals_total_voucher'] = 0;
         }
         if (isset($post['deals_start'])) { 
-            $data['deals_start'] = date('Y-m-d 00:00:00', strtotime($post['deals_start']));
+            $data['deals_start'] = date('Y-m-d H:i:s', strtotime($post['deals_start']));
         }
         if (isset($post['deals_end'])) { 
-            $data['deals_end'] = date('Y-m-d 23:59:59', strtotime($post['deals_end']));
+            $data['deals_end'] = date('Y-m-d H:i:s', strtotime($post['deals_end']));
         }
         if (isset($post['deals_publish_start'])) { 
-            $data['deals_publish_start'] = date('Y-m-d 00:00:00', strtotime($post['deals_publish_start']));
+            $data['deals_publish_start'] = date('Y-m-d H:i:s', strtotime($post['deals_publish_start']));
         }
         if (isset($post['deals_publish_end'])) { 
-            $data['deals_publish_end'] = date('Y-m-d 23:59:59', strtotime($post['deals_publish_end']));
+            $data['deals_publish_end'] = date('Y-m-d H:i:s', strtotime($post['deals_publish_end']));
         }
 
         // ---------------------------- DURATION

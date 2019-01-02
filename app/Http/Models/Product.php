@@ -50,7 +50,8 @@ class Product extends Model
 		'product_description',
 		'product_video',
 		'product_weight',
-		'product_allow_sync'
+		'product_allow_sync',
+		'position'
 	];
 
 	public function product_category()

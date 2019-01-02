@@ -628,7 +628,7 @@ class ApiNews extends Controller
                 $value = date('Y-m-d H:i', strtotime($input_value));
                 break;*/
             case 'Multiple Choice':
-                $value = implode(',', $input_value);
+                $value = implode(', ', $input_value);
                 break;
             case 'Image Upload':
                 $value = "";
@@ -677,5 +677,39 @@ class ApiNews extends Controller
                     ];
             return response()->json($result);
         }
+    }
+
+    public function formData(Request $request)
+    {
+        $post = $request->json()->all();
+
+        $news_form_structures = NewsFormStructure::where('id_news', $post['id_news'])->pluck('form_input_label');
+        $form_data = NewsFormData::with('news_form_data_details')->select('id_news_form_data', 'id_news', 'id_user', 'created_at')->where('id_news', $post['id_news'])->get();
+        $news_form_data = $form_data->map(function ($item, $key) use ($news_form_structures) {
+            // get user if not null
+            if ($item->id_user != null) {
+                $item['user'] = $item->user;
+            }
+
+            // assign form value based on form structure
+            foreach ($news_form_structures as $form_structure) {
+                $item[$form_structure] = "";
+                foreach ($item->news_form_data_details as $detail) {
+                    if ($detail->form_input_label == $form_structure) {
+                        $item[$form_structure] = $detail->form_input_value;
+                    }
+                }
+            }
+
+            unset($item['news_form_data_details']);
+
+            return $item;
+        });
+        $news_form_data->all();
+
+        $data['news_form_structures'] = $news_form_structures;
+        $data['news_form_data'] = $news_form_data;
+
+        return response()->json(MyHelper::checkGet($data));
     }
 }

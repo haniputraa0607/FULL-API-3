@@ -10,6 +10,7 @@ use App\Lib\MyHelper;
 use App\Lib\Midtrans;
 use App\Lib\Membership;
 
+use App\Http\Models\User;
 use App\Http\Models\LogBalance;
 use App\Http\Models\LogTopup;
 use App\Http\Models\UsersMembership;
@@ -17,11 +18,14 @@ use App\Http\Models\Setting;
 use App\Http\Models\Transaction;
 use App\Http\Models\LogTopupMidtrans;
 
+use Modules\Balance\Http\Controllers\NewTopupController;
+
 use Modules\Deals\Http\Requests\Deals\Voucher;
 use Modules\Deals\Http\Requests\Claim\Paid;
 
 use Illuminate\Support\Facades\Schema;
 use DB;
+use Hash;
 
 class BalanceController extends Controller
 {
@@ -29,6 +33,84 @@ class BalanceController extends Controller
         date_default_timezone_set('Asia/Jakarta');
 
         $this->notif   = "Modules\Transaction\Http\Controllers\ApiNotification";
+    }
+
+    /* add log balance, check the hash
+     * this function is created as a helper (for another controller),
+     * not for api
+    */
+    public function addLogBalance($id_user, $balance_nominal, $id_reference=null, $source=null, $grand_total=0)
+    {
+        $user = User::with('memberships')->where('id', $id_user)->first();
+
+        $user_member = $user->toArray();
+        $level = null;
+        if (!empty($user_member['memberships'][0]['membership_name'])) {
+            $level = $user_member['memberships'][0]['membership_name'];
+        }
+        $cashback_percentage = 0;
+        if (isset($user_member['memberships'][0]['benefit_cashback_multiplier'])) {
+            $cashback_percentage = $user_member['memberships'][0]['benefit_cashback_multiplier'];
+        }
+
+        $setting_cashback = Setting::where('key', 'cashback_conversion_value')->first();
+        $balance_before = LogBalance::where('id_user', $id_user)->sum('balance');
+        $balance_after = $balance_before + $balance_nominal;
+
+        // check balance data from hashed text
+        $newTopupController = new NewTopupController();
+        $checkHashBefore = $newTopupController->checkHash('log_balances', $id_user);
+        if (!$checkHashBefore) {
+            return false;
+        }
+
+        DB::beginTransaction();
+            $LogBalance = [
+                'id_user'                        => $id_user,
+                'balance'                        => $balance_nominal,
+                'balance_before'                 => $balance_before,
+                'balance_after'                  => $balance_after,
+                'id_reference'                   => $id_reference,
+                'source'                         => $source,
+                'grand_total'                    => $grand_total,
+                'ccashback_conversion'           => $setting_cashback->value,
+                'membership_level'               => $level,
+                'membership_cashback_percentage' => $cashback_percentage
+            ];
+            $create = LogBalance::create($LogBalance);
+
+            // get inserted data to hash
+            $log_balance = LogBalance::find($create->id_log_balance);
+            // hash the inserted data
+            $dataHashBalance = [
+                'id_log_balance'                 => $log_balance->id_log_balance,
+                'id_user'                        => $log_balance->id_user,
+                'balance'                        => $log_balance->balance,
+                'balance_before'                 => $log_balance->balance_before,
+                'balance_after'                  => $log_balance->balance_after,
+                'id_reference'                   => $log_balance->id_reference,
+                'source'                         => $log_balance->source,
+                'grand_total'                    => $log_balance->grand_total,
+                'ccashback_conversion'           => $log_balance->ccashback_conversion,
+                'membership_level'               => $log_balance->membership_level,
+                'membership_cashback_percentage' => $log_balance->membership_cashback_percentage
+            ];
+            $encodeCheck = json_encode($dataHashBalance);
+            $enc = Hash::make($encodeCheck);
+            // update enc column
+            $log_balance->update(['enc' => $enc]);
+            
+            $new_user_balance = LogBalance::where('id_user', $user->id)->sum('balance');
+            $update_user = $user->update(['balance' => $new_user_balance]);
+
+            if (!($log_balance && $update_user)) {
+                DB::rollback();
+                return false;
+            }
+
+        DB::commit();
+
+        return $log_balance;
     }
 
     /* REQUEST */

@@ -130,11 +130,11 @@ class ApiProductController extends Controller
 				$update = ProductPrice::create(['id_product' => $post['id_product'],
 												'id_outlet' => $post['id_outlet'][$key],
 												'product_price' => $post['product_price'][$key],
-												'product_sold_out' => $post['product_sold_out'][$key],
+												'product_stock_status' => $post['product_stock_status'][$key],
 												'product_visibility' => "'".$post['product_visibility'][$key]."'"]);
 			}
 			else{
-				$update = ProductPrice::where('id_product_price','=',$id_product_price)->update(['product_price' => $post['product_price'][$key], 'product_sold_out' => $post['product_sold_out'][$key],'product_visibility' => $post['product_visibility'][$key]]);
+				$update = ProductPrice::where('id_product_price','=',$id_product_price)->update(['product_price' => $post['product_price'][$key], 'product_stock_status' => $post['product_stock_status'][$key],'product_visibility' => $post['product_visibility'][$key]]);
 			}
 		}
 		return response()->json(MyHelper::checkUpdate($update));
@@ -551,8 +551,8 @@ class ApiProductController extends Controller
             $data['id_outlet'] = $post['id_outlet'];
         }
 
-        if (isset($post['product_sold_out'])) {
-            $data['product_sold_out'] = $post['product_sold_out'];
+        if (isset($post['product_stock_status'])) {
+            $data['product_stock_status'] = $post['product_stock_status'];
         }
 
         $save = ProductPrice::updateOrCreate([

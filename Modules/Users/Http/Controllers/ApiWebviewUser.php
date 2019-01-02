@@ -11,7 +11,7 @@ use App\Http\Models\Setting;
 use App\Http\Models\LogPoint;
 use App\Http\Models\LogBalance;
 
-use Modules\Balance\Http\Controllers\NewTopupController;
+use Modules\Balance\Http\Controllers\BalanceController;
 
 use App\Lib\MyHelper;
 use DB;
@@ -36,7 +36,7 @@ class ApiWebviewUser extends Controller
                 ];
             }
 
-            $user = User::where('phone', $phone)->first();
+            $user = User::with('memberships')->where('phone', $phone)->first();
 
             // get point and cashback from setting
             $complete_profile_point = 0;
@@ -53,17 +53,13 @@ class ApiWebviewUser extends Controller
             // membership level
             $level = null;
             $point_percentage = 0;
-            $cashback_percentage = 0;
-            if ($user->memberships->count() > 0) {
-                if (isset($user->memberships->membership_name)) {
-                    $level = $user->memberships->membership_name;
-                }
-                if (isset($user->memberships->benefit_point_multiplier)) {
-                    $point_percentage = $user->memberships->benefit_point_multiplier;
-                }
-                if (isset($user->memberships->benefit_cashback_multiplier)) {
-                    $cashback_percentage = $user->memberships->benefit_cashback_multiplier;
-                }
+            // $cashback_percentage = 0;
+            $user_member = $user->toArray();
+            if (isset($user_member['memberships'][0]['membership_name'])) {
+                $level = $user_member['memberships'][0]['membership_name'];
+            }
+            if (isset($user_member['memberships'][0]['benefit_point_multiplier'])) {
+                $point_percentage = $user_member['memberships'][0]['benefit_point_multiplier'];
             }
 
             // add point
@@ -80,55 +76,17 @@ class ApiWebviewUser extends Controller
             ];
             $insert_log_point = LogPoint::create($log_point);
 
-            // add cashback
-            $setting_cashback = Setting::where('key', 'cashback_conversion_value')->first();
-            $balance_before = LogBalance::where('id_user', $user->id)->sum('balance');
-            $balance_after = $balance_before + $complete_profile_cashback;
+            // update user point
+            $new_user_point = LogPoint::where('id_user', $user->id)->sum('point');
+            $user_update = $user->update(['points' => $new_user_point]);
 
-            // check balance data from hashed text
-            $newTopupController = new NewTopupController();
-            $checkHashBefore = $newTopupController->checkHash('log_balances', $user->id);
-            if (!$checkHashBefore) {
-                DB::rollback();
-                return response()->json(['status' => 'fail', 'messages' => ['Invalid transaction data']]);
-            }
+            /* add cashback */
+            $balance_nominal = $complete_profile_cashback;
+            // add log balance & update user balance
+            $balanceController = new BalanceController();
+            $addLogBalance = $balanceController->addLogBalance($user->id, $balance_nominal, null, "Completing User Profile", 0);
 
-            $log_cashback = [
-                'id_user'                        => $user->id,
-                'balance'                        => $complete_profile_cashback,
-                'balance_before'                 => $balance_before,
-                'balance_after'                  => $balance_after,
-                'id_reference'                   => null,
-                'source'                         => 'Completing User Profile',
-                'grand_total'                    => 0,
-                'ccashback_conversion'           => $setting_cashback->value,
-                'membership_level'               => $level,
-                'membership_cashback_percentage' => $cashback_percentage
-            ];
-            $insert_log_cashback = LogBalance::create($log_cashback);
-
-            // hash the inserted data
-            $dataHashBalance = [
-                'id_log_balance'                 => $insert_log_cashback->id_log_balance,
-                'id_user'                        => $insert_log_cashback->id_user,
-                'balance'                        => $insert_log_cashback->balance,
-                'balance_before'                 => $insert_log_cashback->balance_before,
-                'balance_after'                  => $insert_log_cashback->balance_after,
-                'id_reference'                   => $insert_log_cashback->id_reference,
-                'source'                         => $insert_log_cashback->source,
-                'grand_total'                    => $insert_log_cashback->grand_total,
-                'ccashback_conversion'           => $insert_log_cashback->ccashback_conversion,
-                'membership_level'               => $insert_log_cashback->membership_level,
-                'membership_cashback_percentage' => $insert_log_cashback->membership_cashback_percentage
-            ];
-            $encodeCheck = json_encode($dataHashBalance);
-            $enc = Hash::make($encodeCheck);
-
-            // update enc column
-            $insert_log_cashback->enc = $enc;
-            $insert_log_cashback->update();
-
-            if ( !($update && $insert_log_point && $insert_log_cashback) ) {
+            if ( !($user_update && $insert_log_point && $addLogBalance) ) {
                 DB::rollback();
                 return [
                     'status' => 'fail',

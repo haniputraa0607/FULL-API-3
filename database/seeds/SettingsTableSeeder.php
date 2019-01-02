@@ -308,6 +308,15 @@ class SettingsTableSeeder extends Seeder
                 'created_at' => '2018-05-15 13:55:55',
                 'updated_at' => '2018-05-15 13:55:55',
             ),
+            33 => 
+            array (
+                'id_setting' => 34,
+                'key' => 'processing_time',
+                'value' => 10,
+                'value_text' => NULL,
+                'created_at' => '2018-05-15 13:55:55',
+                'updated_at' => '2018-05-15 13:55:55',
+            ),
         ));
         
         
