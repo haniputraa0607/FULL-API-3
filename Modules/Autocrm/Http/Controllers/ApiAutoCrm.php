@@ -383,6 +383,12 @@ class ApiAutoCrm extends Controller
 		}
 		
 		if($user){
+
+			//add - to pin 
+			if(isset($variables['pin'])){
+				$variables['pin'] = substr($variables['pin'], 0, 3).'-'.substr($variables['pin'], 3, 3);
+			}
+
 			foreach($query as $replace){
 				$replaced = "";
 				if($replace['type'] == 'String'){
