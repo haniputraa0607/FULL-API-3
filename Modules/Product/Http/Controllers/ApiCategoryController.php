@@ -259,7 +259,6 @@ class ApiCategoryController extends Controller
         $post = $request->json()->all();
 
         $category = $this->getData($post);
-        
         if (!empty($category)) {
             $category = $this->createTree($category, $post);
         }
@@ -268,7 +267,8 @@ class ApiCategoryController extends Controller
 			$uncategorized = Product::join('product_prices','product_prices.id_product','=','products.id_product')
 									->where('product_prices.id_outlet','=',$post['id_outlet'])
 									->where('product_prices.product_visibility','=','Visible')
-									->where('product_prices.product_status','=','Active')
+                                    ->where('product_prices.product_status','=','Active')
+                                    ->whereNotNull('product_prices.product_price')
 									->whereNull('products.id_product_category')
 									->with(['photos'])
                                     ->orderBy('products.position')
@@ -280,7 +280,8 @@ class ApiCategoryController extends Controller
 			$uncategorized = Product::join('product_prices','product_prices.id_product','=','products.id_product')
 									->where('product_prices.id_outlet','=',$defaultoutlet['value'])
 									->where('product_prices.product_visibility','=','Visible')
-									->where('product_prices.product_status','=','Active')
+                                    ->where('product_prices.product_status','=','Active')
+									->whereNotNull('product_prices.product_price')
 									->whereNull('products.id_product_category')
 									->with(['photos'])
                                     ->orderBy('products.position')
@@ -289,9 +290,12 @@ class ApiCategoryController extends Controller
 		}
 		
 		$result = array();
-		$result['categorized'] = $category;
-		$result['uncategorized_name'] = "Product";
-		$result['uncategorized'] = $uncategorized;
+        $result['categorized'] = $category;
+        
+        if(!isset($post['id_product_category'])){
+            $result['uncategorized_name'] = "Product";
+            $result['uncategorized'] = $uncategorized;
+        }
 
         return response()->json(MyHelper::checkGet($result));
     }
@@ -308,6 +312,8 @@ class ApiCategoryController extends Controller
             else {
                 $category->parents($post['id_parent_category']);
             }
+        }else{
+            $category->master();
         }
 
         if (isset($post['id_product_category'])) {
@@ -329,37 +335,40 @@ class ApiCategoryController extends Controller
 
         foreach($root as $i => $r){
             $child = $this->getData(['id_parent_category' => $r['id_product_category']]);
-
             if(count($child) > 0){
                 $r['child'] = $this->createTree($child, $post);
             }
-            else $r['child'] = [];
-
+            else {
+                $r['child'] = [];
+            }
+            
             $product = $this->getDataProduk($r['id_product_category'], $post);
+            $r['product_count'] = count($product);
             $r['product'] = $product;
 
             array_push($node,$r);
         }
-
         return $node;
     }
 
     public function getDataProduk($id, $post=[]) {
         if (isset($post['id_outlet'])) { 
-			$product = Product::join('product_prices','product_prices.id_product','=','products.id_product')
+			$product = Product::select('products.*', 'product_prices.product_price', 'product_prices.product_visibility', 'product_prices.product_status', 'product_prices.product_stock_status')->join('product_prices','product_prices.id_product','=','products.id_product')
 									->where('product_prices.id_outlet','=',$post['id_outlet'])
 									->where('product_prices.product_visibility','=','Visible')
 									->where('product_prices.product_status','=','Active')
+									->whereNotNull('product_prices.product_price')
 									->where('products.id_product_category', $id)
 									->with(['photos'])
                                     ->orderBy('products.position')
 									->get();
         } else {
 			$defaultoutlet = Setting::where('key','=','default_outlet')->first();
-			$product = Product::join('product_prices','product_prices.id_product','=','products.id_product')
+			$product = Product::select('products.*', 'product_prices.product_price', 'product_prices.product_visibility', 'product_prices.product_status', 'product_prices.product_stock_status')->join('product_prices','product_prices.id_product','=','products.id_product')
 									->where('product_prices.id_outlet','=',$defaultoutlet['value'])
 									->where('product_prices.product_visibility','=','Visible')
-									->where('product_prices.product_status','=','Active')
+                                    ->where('product_prices.product_status','=','Active')
+                                    ->whereNotNull('product_prices.product_price')
 									->where('products.id_product_category', $id)
 									->with(['photos'])
                                     ->orderBy('products.position')

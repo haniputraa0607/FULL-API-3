@@ -60,16 +60,15 @@ class Outlet extends Authenticatable
 		'id_city' => 'int'
 	];
 
-	protected $dates = [
-		'outlet_open_hours' => 'datetime:H:i:s',
-		'outlet_close_hours' => 'datetime:H:i:s'
-	];
+	// protected $dates = [
+	// 	'outlet_open_hours' => 'datetime:H:i:s',
+	// 	'outlet_close_hours' => 'datetime:H:i:s'
+	// ];
 
 	protected $fillable = [
 		'outlet_code',
 		'outlet_pin',
 		'outlet_name',
-		'outlet_fax',
 		'outlet_address',
 		'id_city',
 		'outlet_postal_code',
@@ -77,8 +76,8 @@ class Outlet extends Authenticatable
 		'outlet_email',
 		'outlet_latitude',
 		'outlet_longitude',
-		'outlet_open_hours',
-		'outlet_close_hours'
+		// 'outlet_open_hours',
+		// 'outlet_close_hours'
 	];
 
 	protected $appends  = ['call'];
@@ -86,7 +85,7 @@ class Outlet extends Authenticatable
 	public function getCallAttribute() {
 		$call = preg_replace("/[^0-9]/", "", $this->outlet_phone);
 		return $call;
-    }
+	}
 
 	public function city()
 	{

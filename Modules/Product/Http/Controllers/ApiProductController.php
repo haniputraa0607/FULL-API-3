@@ -217,7 +217,7 @@ class ApiProductController extends Controller
             $product = Product::join('product_prices','product_prices.id_product','=','products.id_product')
 									->where('product_prices.id_outlet','=',$post['id_outlet'])
 									->where('product_prices.product_visibility','=','Visible')
-									->where('product_prices.product_status','=','Active')
+                                    ->where('product_prices.product_status','=','Active')
                                     ->with(['category', 'discount']);
                                     
             if (isset($post['visibility'])) {
@@ -264,18 +264,9 @@ class ApiProductController extends Controller
 
         if (!empty($product)) {
             foreach ($product as $key => $value) {
-                
+                unset($product[$key]['product_price_base']);
+                unset($product[$key]['product_price_tax']);
                 $product[$key]['photos'] = ProductPhoto::select('*', DB::raw('if(product_photo is not null, (select concat("'.env('APP_API_URL').'", product_photo)), "'.env('APP_API_URL').'img/default.jpg") as url_product_photo'))->where('id_product', $value['id_product'])->orderBy('product_photo_order', 'ASC')->get()->toArray();
-
-                 if (isset($post['id_outlet'])) {
-                    $price = ProductPrice::where(['id_product' => $value['id_product'], 'id_outlet' => $post['id_outlet'], 'product_visibility' => 'Visible', 'product_status' => 'Active'])->where('product_price', '>', 0)->get()->toArray();
-                    // jika $price kosong maka product tidak ditampilkan ke list
-                    if($price){
-                        $product[$key]['product_prices'] = $price;
-                    }else{
-                        unset($product[$key]);
-                    }
-                }
             }
         }
 
@@ -580,10 +571,12 @@ class ApiProductController extends Controller
     {
         $post = $request->json()->all();
         foreach ($post['id_visibility'] as $key => $value) {
-            $id = explode('/', $value);
-            $save = ProductPrice::updateOrCreate(['id_product' => $id[0], 'id_outlet' => $id[1]], ['product_visibility' => $post['visibility']]);
-            if(!$save){
-                return response()->json(MyHelper::checkUpdate($save));
+            if($value){
+                $id = explode('/', $value);
+                $save = ProductPrice::updateOrCreate(['id_product' => $id[0], 'id_outlet' => $id[1]], ['product_visibility' => $post['visibility']]);
+                if(!$save){
+                    return response()->json(MyHelper::checkUpdate($save));
+                }
             }
         }
 

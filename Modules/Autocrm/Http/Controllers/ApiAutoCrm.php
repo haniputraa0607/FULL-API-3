@@ -621,7 +621,7 @@ class ApiAutoCrm extends Controller
 
 		//add <#> and Hash Key in pin sms content
 		$autocrm = $query = Autocrm::where('id_autocrm','=',$id_autocrm)->first();
-		if(strpos($autocrm['autocrm_title'], 'Pin') !== false){
+		if($autocrm['autocrm_title'] == 'Pin Sent'){
 			if(isset($post['autocrm_sms_content'])){
 				$post['autocrm_sms_content'] = '<#> '.$post['autocrm_sms_content'].' '.ENV('HASH_KEY_DEBUG');
 				// $post['autocrm_sms_content'] = '<#> '.$post['autocrm_sms_content'].' '.ENV('HASH_KEY_RELEASE');

@@ -35,6 +35,7 @@ use Modules\Outlet\Http\Requests\outlet\Delete;
 use Modules\Outlet\Http\Requests\outlet\DeletePhoto;
 use Modules\Outlet\Http\Requests\outlet\Nearme;
 use Modules\Outlet\Http\Requests\outlet\Filter;											   
+use Modules\Outlet\Http\Requests\outlet\OutletList;
 
 use Modules\Outlet\Http\Requests\UserOutlet\Create as CreateUserOutlet;
 use Modules\Outlet\Http\Requests\UserOutlet\Update as UpdateUserOutlet;
@@ -55,9 +56,6 @@ class ApiOutletController extends Controller
     function checkInputOutlet($post=[]) {
         $data = [];
 
-        if (isset($post['outlet_type'])) {
-            $data['outlet_type'] = $post['outlet_type'];
-        }
         if (isset($post['outlet_code'])) {
             $data['outlet_code'] = $post['outlet_code'];
         }
@@ -133,7 +131,30 @@ class ApiOutletController extends Controller
                 $code = Outlet::where('outlet_code', $post['outlet_code'])->first();
             }while($code != null);
         }
+
+        DB::beginTransaction();
         $save = Outlet::create($post);
+        if (!$save) {
+            DB::rollBack();
+        }
+
+        //schedule
+        if($request->json('day') && $request->json('open') && $request->json('close')){
+            $days = $request->json('day');
+            $opens = $request->json('open');
+            $closes = $request->json('close');
+            foreach($days as $key => $value){
+                $data['open'] = $opens[$key];
+                $data['close'] = $closes[$key];
+                $saveSchedule = OutletSchedule::updateOrCreate(['id_outlet' => $save['id_outlet'], 'day' => $value], $data);
+                if (!$saveSchedule) {
+                    DB::rollBack();
+                    return response()->json(['status' => 'fail']);
+                }
+            }
+        }
+
+        DB::commit();
         return response()->json(MyHelper::checkCreate($save));
     }
 
@@ -329,11 +350,11 @@ class ApiOutletController extends Controller
     /**
      * list
      */
-    function listOutlet(Request $request) {
+    function listOutlet(OutletList $request) {
         $post = $request->json()->all();
 
         if (isset($post['webview'])) {
-            $outlet = Outlet::with(['today']);
+            $outlet = Outlet::with(['today', 'outlet_schedules']);
         } else {
             $outlet = Outlet::with(['city', 'outlet_photos', 'product_prices', 'product_prices.product', 'outlet_schedules', 'today']);
         }
@@ -386,7 +407,16 @@ class ApiOutletController extends Controller
         }
 
         if (isset($post['webview'])) {
-            $outlet[0]['url'] = env('VIEW_URL').'/outlet/webview/'.$post['id_outlet'];
+            if(isset($outlet[0])){
+                $latitude  = $post['latitude'];
+                $longitude = $post['longitude'];
+                $jaraknya = number_format((float)$this->distance($latitude, $longitude, $outlet[0]['outlet_latitude'], $outlet[0]['outlet_longitude'], "K"), 2, '.', '');
+                $outlet[0]['distance'] = $jaraknya." km";   
+                
+                $outlet[0]['url'] = env('VIEW_URL').'/outlet/webview/'.$post['id_outlet'];
+    
+                if(isset($outlet[0]['holidays'])) unset($outlet[0]['holidays']);
+            }
         }
 
         return response()->json(MyHelper::checkGet($outlet));
@@ -409,7 +439,7 @@ class ApiOutletController extends Controller
         $longitude = $request->json('longitude');
         
         // outlet
-        $outlet = Outlet::with(['city', 'outlet_photos'])->orderBy('outlet_name')->get()->toArray();
+        $outlet = Outlet::with(['today', 'city', 'outlet_photos'])->orderBy('outlet_name')->get()->toArray();
 
         if (!empty($outlet)) {
             foreach ($outlet as $key => $value) {
@@ -440,7 +470,7 @@ class ApiOutletController extends Controller
         $sort = $request->json('sort');
         
         // outlet
-        $outlet = Outlet::with(['city', 'outlet_photos'])->orderBy('outlet_name','asc')->get()->toArray();
+        $outlet = Outlet::with(['today', 'city', 'outlet_photos'])->orderBy('outlet_name','asc')->get()->toArray();
 		
 		
         if (!empty($outlet)) {
@@ -494,9 +524,9 @@ class ApiOutletController extends Controller
     function setAvailableOutlet($listOutlet){
         $outlet = $listOutlet;
         foreach($listOutlet as $index => $dataOutlet){
-            if($dataOutlet['outlet_open_hours'] && date('H:i:01') < date('H:i', strtotime($dataOutlet['outlet_open_hours']))){
+            if($dataOutlet['today']['open'] && date('H:i:01') < date('H:i', strtotime($dataOutlet['today']['open']))){
                 unset($outlet[$index]);
-            }elseif($dataOutlet['outlet_close_hours'] && date('H:i') >= date('H:i', strtotime($dataOutlet['outlet_close_hours']))){
+            }elseif($dataOutlet['today']['close'] && date('H:i') >= date('H:i', strtotime($dataOutlet['today']['close']))){
                 unset($outlet[$index]);
             }else{
                 $holiday = Holiday::join('outlet_holidays', 'holidays.id_holiday', 'outlet_holidays.id_holiday')->join('date_holidays', 'holidays.id_holiday', 'date_holidays.id_holiday')

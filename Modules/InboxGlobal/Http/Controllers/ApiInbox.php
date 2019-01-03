@@ -138,13 +138,13 @@ class ApiInbox extends Controller
 				$content['status'] = 'read';
 			}
 
-			$position = array_search(date('Y-m-d', strtotime($content['created_at'])), $arrDate);
-			if($position == false){
+			if(!in_array(date('Y-m-d', strtotime($content['created_at'])), $arrDate)){
 				$arrDate[] = date('Y-m-d', strtotime($content['created_at']));
 				$temp['created'] =  date('Y-m-d', strtotime($content['created_at']));
 				$temp['list'][0] =  $content;
 				$arrInbox[] = $temp;
 			}else{
+				$position = array_search(date('Y-m-d', strtotime($content['created_at'])), $arrDate);
 				$arrInbox[$position]['list'][] = $content;
 			}
 			

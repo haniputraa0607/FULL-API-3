@@ -27,8 +27,8 @@ class Update extends FormRequest
             'outlet_email'       => 'email',
             'outlet_latitude'    => '',
             'outlet_longitude'   => '',
-            'outlet_open_hours'  => 'date_format:"H:i:s"',
-            'outlet_close_hours' => 'date_format:"H:i:s"|after:outlet_open_hours',
+            // 'outlet_open_hours'  => 'date_format:"H:i:s"',
+            // 'outlet_close_hours' => 'date_format:"H:i:s"|after:outlet_open_hours',
         ];
     }
 
