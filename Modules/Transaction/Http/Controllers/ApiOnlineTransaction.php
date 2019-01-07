@@ -207,13 +207,15 @@ class ApiOnlineTransaction extends Controller
             }
         }
 
+        $maxCash = Setting::where('key', 'cashback_maximum')->first();
+
         if (count($user['memberships']) > 0) {
             $post['point'] = $post['point'] * ($user['memberships'][0]['benefit_point_multiplier']) / 100;
+            $maxCash = $user['memberships'][0]['cashback_maximum'];
         }
 
         $statusCashMax = 'no';
 
-        $maxCash = Setting::where('key', 'cashback_maximum')->first();
         if (!empty($maxCash) && !empty($maxCash['value'])) {
             $statusCashMax = 'yes';
             $totalCashMax = $maxCash['value'];
@@ -224,7 +226,7 @@ class ApiOnlineTransaction extends Controller
                 $post['cashback'] = $totalCashMax;
             }
         } else {
-            $post['cashback'] = 0;
+            $post['cashback'] = $post['cashback'];
         }
 
         if (!isset($post['payment_type'])) {
@@ -402,8 +404,8 @@ class ApiOnlineTransaction extends Controller
                 'id_outlet'                    => $insertTransaction['id_outlet'],
                 'id_user'                      => $insertTransaction['id_user'],
                 'transaction_product_qty'      => $valueProduct['qty'],
-                'transaction_product_price'    => $checkPriceProduct['product_price'],
-                'transaction_product_subtotal' => $valueProduct['qty'] * $checkPriceProduct['product_price'],
+                'transaction_product_price'    => $checkPriceProduct['product_price_base'],
+                'transaction_product_subtotal' => $valueProduct['qty'] * $checkPriceProduct['product_price_base'],
                 'transaction_product_note'     => $valueProduct['note'],
                 'created_at'                   => date('Y-m-d', strtotime($insertTransaction['transaction_date'])).' '.date('H:i:s'),
                 'updated_at'                   => date('Y-m-d H:i:s')
@@ -411,7 +413,7 @@ class ApiOnlineTransaction extends Controller
 
             $dataProductMidtrans = [
                 'id'       => $checkProduct['id_product'],
-                'price'    => $checkPriceProduct['product_price'],
+                'price'    => $checkPriceProduct['product_price_base'],
                 'name'     => $checkProduct['product_name'],
                 'quantity' => $valueProduct['qty'],
             ];
@@ -497,7 +499,16 @@ class ApiOnlineTransaction extends Controller
         $configAdminOutlet = Configs::where('config_name', 'admin outlet')->first();
 
         if($configAdminOutlet && $configAdminOutlet['is_active'] == '1'){
-            $adminOutlet = UserOutlet::where('id_outlet', $insertTransaction['id_outlet'])->orderBy('id_user_outlet');
+
+            if ($post['type'] == 'Delivery') {
+                $configAdminOutlet = Configs::where('config_name', 'admin outlet delivery order')->first();
+            }else{
+                $configAdminOutlet = Configs::where('config_name', 'admin outlet pickup order')->first(); 
+            }
+
+            if($configAdminOutlet && $configAdminOutlet['is_active'] == '1'){
+                $adminOutlet = UserOutlet::where('id_outlet', $insertTransaction['id_outlet'])->orderBy('id_user_outlet');
+            }
         }
 
 
@@ -617,18 +628,30 @@ class ApiOnlineTransaction extends Controller
                 $post['id_admin_outlet_taken'] = null;
             }
 
-            if (date('Y-m-d H:i:s', strtotime($post['pickup_at'])) <= date('Y-m-d H:i:s')) {
-                $settingTime = Setting::where('key', 'processing_time')->first();
+            if(isset($post['pickup_type'])){
+                $pickupType = $post['pickup_type'];
+            }else{
+                $pickupType = 'set time';
+            }
 
-                $pickup = date('Y-m-d H:i:s', strtotime('+ '.$settingTime['value'].'minutes'));
-            } else {
-                $pickup = date('Y-m-d H:i:s', strtotime($post['pickup_at']));
+            if($pickupType == 'set time'){
+
+                if (date('Y-m-d H:i:s', strtotime($post['pickup_at'])) <= date('Y-m-d H:i:s')) {
+                    $settingTime = Setting::where('key', 'processing_time')->first();
+
+                    $pickup = date('Y-m-d H:i:s', strtotime('+ '.$settingTime['value'].'minutes'));
+                } else {
+                    $pickup = date('Y-m-d H:i:s', strtotime($post['pickup_at']));
+                }
+            }else{
+                $pickup = null;
             }
 
             $dataPickup = [
                 'id_transaction'          => $insertTransaction['id_transaction'],
                 'order_id'                => $order_id,
                 'short_link'              => env('APP_URL').'/transaction/'.$order_id.'/status',
+                'pickup_type'             => $pickupType,
                 'pickup_at'               => $pickup,
                 'receive_at'              => $post['receive_at'],
                 'taken_at'                => $post['taken_at'],
@@ -984,11 +1007,9 @@ class ApiOnlineTransaction extends Controller
                         'product' => $product['product_name']
                     ]);
                 }
-        
-                $price = $productPrice['product_price'] * $valueData['qty'];
+                $price = $productPrice['product_price_base'] * $valueData['qty'];
                 array_push($dataSubtotal, $price);
             }
-
             return $dataSubtotal;
         }
 
@@ -1031,13 +1052,45 @@ class ApiOnlineTransaction extends Controller
         }
 
         if ($value == 'tax') {
-            $subtotal = $data['subtotal'];
-            $taxFormula = $this->convertFormula('tax');
-            $value = $this->taxValue();
-            // return $taxFormula;
+            // $subtotal = $data['subtotal'];
+            // $taxFormula = $this->convertFormula('tax');
+            // $value = $this->taxValue();
+            // // return $taxFormula;
 
-            $count = (eval('return ' . preg_replace('/([a-zA-Z0-9]+)/', '\$$1', $taxFormula) . ';'));
-            return $count;
+            // $count = (eval('return ' . preg_replace('/([a-zA-Z0-9]+)/', '\$$1', $taxFormula) . ';'));
+            // return $count;
+
+            //tax dari product price tax
+            $productTax = 0;
+            foreach ($data['item'] as $keyProduct => $valueProduct) {
+                $checkProduct = Product::where('id_product', $valueProduct['id_product'])->first();
+                if (empty($checkProduct)) {
+                    DB::rollback();
+                    return response()->json([
+                        'status'    => 'fail',
+                        'messages'  => ['Product Not Found']
+                    ]);
+                }
+    
+                $checkPriceProduct = ProductPrice::where(['id_product' => $checkProduct['id_product'], 'id_outlet' => $data['id_outlet']])->first();
+                if (empty($checkPriceProduct)) {
+                    return response()->json([
+                        'status'    => 'fail',
+                        'messages'  => ['Product Price Not Valid']
+                    ]);
+                }
+
+                if($checkPriceProduct['product_price'] == null || $checkPriceProduct['product_price_base'] == null || $checkPriceProduct['product_price_tax'] == null){
+                    return response()->json([
+                        'status'    => 'fail',
+                        'messages'  => ['Product Price Not Valid']
+                    ]);
+                }
+
+                $productTax += $checkPriceProduct['product_price_tax'] * $valueProduct['qty'];
+            }
+
+            return $productTax;
 
         }
 

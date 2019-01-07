@@ -220,6 +220,17 @@ class ApiNotification extends Controller {
                     'messages'  => ['Insert Point Failed']
                 ]);
             }
+
+            //update point user
+            $totalPoint = LogPoint::where('id_user',$data['id_user'])->sum('point');
+            $updateUserPoint = User::where('id', $data['id_user'])->update(['points' => $totalPoint]);
+            if (!$updateUserPoint) {
+                DB::rollback();
+                return response()->json([
+                    'status'    => 'fail',
+                    'messages'  => ['Update User Point Failed']
+                ]);
+            }
         }
 
         if ($data['trasaction_payment_type'] != 'Balance') {
@@ -243,6 +254,17 @@ class ApiNotification extends Controller {
                     return response()->json([
                         'status'    => 'fail',
                         'messages'  => ['Insert Cashback Failed']
+                    ]);
+                }
+
+                //update balance user
+                $totalBalance = LogBalance::where('id_user',$data['id_user'])->sum('balance');
+                $updateUserBalance = User::where('id', $data['id_user'])->update(['balance' => $totalBalance]);
+                if (!$updateUserBalance) {
+                    DB::rollback();
+                    return response()->json([
+                        'status'    => 'fail',
+                        'messages'  => ['Update User Balance Failed']
                     ]);
                 }
             }

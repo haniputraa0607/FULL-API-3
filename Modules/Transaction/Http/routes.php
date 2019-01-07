@@ -84,6 +84,8 @@ Route::group(['prefix' => 'api/transaction', 'namespace' => 'Modules\Transaction
     Route::any('/notif', 'ApiNotification@receiveNotification');
     Route::post('/detail/webview', 'ApiWebviewController@webview');
     Route::post('/detail/webview/point', 'ApiWebviewController@webviewPoint');
+    
+    Route::post('/detail/webview/success', 'ApiWebviewController@trxSuccess');
 });
 
 Route::group(['middleware' => 'auth:api', 'prefix' => 'api/transaction', 'namespace' => 'Modules\Transaction\Http\Controllers'], function()
