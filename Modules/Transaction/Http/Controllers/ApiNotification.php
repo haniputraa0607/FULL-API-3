@@ -212,7 +212,7 @@ class ApiNotification extends Controller {
                 'membership_point_percentage' => $percentageP * 100
             ];
 
-            $insertDataLog = LogPoint::updateOrCreate(['id_reference' => $data['id_transaction']], $dataLog);
+            $insertDataLog = LogPoint::updateOrCreate(['id_reference' => $data['id_transaction'], 'source' => 'Transaction'], $dataLog);
             if (!$insertDataLog) {
                 DB::rollback();
                 return response()->json([

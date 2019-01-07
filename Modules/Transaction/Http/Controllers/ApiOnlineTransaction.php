@@ -149,6 +149,12 @@ class ApiOnlineTransaction extends Controller
                                 $mes = ['Price Product Not Found with product '.$post['sub']->original['product'].' at outlet '.$outlet['outlet_name']];
                             }
                         }
+
+                        if ($post['sub']->original['messages'] == ['Price Product Not Valid']) {
+                            if (isset($post['sub']->original['product'])) {
+                                $mes = ['Price Product Not Valid with product '.$post['sub']->original['product'].' at outlet '.$outlet['outlet_name']];
+                            }
+                        }
                     }
 
                     DB::rollback();
@@ -269,7 +275,6 @@ class ApiOnlineTransaction extends Controller
         ];
 
         // return $detailPayment;
-
         $post['grandTotal'] = $post['subtotal'] + $post['discount'] + $post['service'] + $post['tax'] + $post['shipping'];
         // return $post;
         if ($post['type'] == 'Delivery') {
@@ -1007,6 +1012,15 @@ class ApiOnlineTransaction extends Controller
                         'product' => $product['product_name']
                     ]);
                 }
+
+                if($productPrice['product_price'] == null || $productPrice['product_price_base'] == null || $productPrice['product_price_tax'] == null){
+                    return response()->json([
+                        'status'    => 'fail',
+                        'messages'  => ['Price Product Not Valid'],
+                        'product' => $product['product_name']
+                    ]);
+                }
+
                 $price = $productPrice['product_price_base'] * $valueData['qty'];
                 array_push($dataSubtotal, $price);
             }

@@ -14,6 +14,7 @@ use App\Http\Models\User;
 use App\Http\Models\Product;
 use App\Http\Models\ProductCategory;
 use App\Http\Models\ProductPrice;
+use App\Http\Models\LogBalance;
 
 use Modules\OutletApp\Http\Requests\DetailOrder;
 use Modules\OutletApp\Http\Requests\productSoldOut;
@@ -33,7 +34,7 @@ class ApiOutletApp extends Controller
         $outlet = $request->user();
 
         $list = Transaction::join('transaction_pickups', 'transactions.id_transaction', 'transaction_pickups.id_transaction')
-                            ->select('transactions.id_transaction', 'transaction_receipt_number', 'order_id', 'transaction_date', 'pickup_type', 'pickup_at', 'receive_at', 'ready_at', 'taken_at')
+                            ->select('transactions.id_transaction', 'transaction_receipt_number', 'order_id', 'transaction_date', 'pickup_type', 'pickup_at', 'receive_at', 'ready_at', 'taken_at', 'reject_at')
                             ->where('id_outlet', $outlet->id_outlet)
                             ->whereDate('transaction_date', date('Y-m-d'))
                             ->where('transaction_payment_status', 'Completed')
@@ -77,7 +78,7 @@ class ApiOutletApp extends Controller
         $listCompleted = [];
         foreach($list as $i => $dataList){
 
-            $qr     = $dataList['order_id'].strtotime($dataList['transaction_date']);
+            $qr     = $dataList['order_id'];
             $qrCode = 'https://chart.googleapis.com/chart?chl='.$qr.'&chs=250x250&cht=qr&chld=H%7C0';
             $qrCode = html_entity_decode($qrCode);
 
@@ -86,24 +87,26 @@ class ApiOutletApp extends Controller
             array_slice($dataList->toArray(), 3, count($dataList->toArray()) - 1, true) ;
 
             $dataList['order_id'] = strtoupper($dataList['order_id']);
-            if($dataList['receive_at'] == null){
-                $dataList['status']  = 'Pending';
-                $listPending[] = $dataList;
-            }elseif($dataList['receive_at'] != null && $dataList['ready_at'] == null){
-                $dataList['status']  = 'Accepted';
-                if($dataList['pickup_type'] == 'set time'){
-                    $listOnGoingSet[] = $dataList;
-                }elseif($dataList['pickup_type'] == 'right now'){
-                    $listOnGoingNow[] = $dataList;
-                }elseif($dataList['pickup_type'] == 'at arrival'){
-                    $listOnGoingArrival[] = $dataList;
+            if($dataList['reject_at'] == null){
+                if($dataList['receive_at'] == null){
+                    $dataList['status']  = 'Pending';
+                    $listPending[] = $dataList;
+                }elseif($dataList['receive_at'] != null && $dataList['ready_at'] == null){
+                    $dataList['status']  = 'Accepted';
+                    if($dataList['pickup_type'] == 'set time'){
+                        $listOnGoingSet[] = $dataList;
+                    }elseif($dataList['pickup_type'] == 'right now'){
+                        $listOnGoingNow[] = $dataList;
+                    }elseif($dataList['pickup_type'] == 'at arrival'){
+                        $listOnGoingArrival[] = $dataList;
+                    }
+                }elseif($dataList['receive_at'] != null && $dataList['ready_at'] != null && $dataList['taken_at'] == null){
+                    $dataList['status']  = 'Ready';
+                    $listReady[] = $dataList;
+                }elseif($dataList['receive_at'] != null && $dataList['ready_at'] != null && $dataList['taken_at'] != null){
+                    $dataList['status']  = 'Completed';
+                    $listCompleted[] = $dataList;
                 }
-            }elseif($dataList['receive_at'] != null && $dataList['ready_at'] != null && $dataList['taken_at'] == null){
-                $dataList['status']  = 'Ready';
-                $listReady[] = $dataList;
-            }elseif($dataList['receive_at'] != null && $dataList['ready_at'] != null && $dataList['taken_at'] != null){
-                $dataList['status']  = 'Completed';
-                $listCompleted[] = $dataList;
             }
         }
 
@@ -160,25 +163,25 @@ class ApiOutletApp extends Controller
     public function detailOrder(DetailOrder $request){
         $post = $request->json()->all();
 
-        if(isset($post['qrcode'])){
-            $post['order_id'] = substr($post['qrcode'], 0, 4);
+        // if(isset($post['qrcode'])){
+        //     $post['order_id'] = substr($post['qrcode'], 0, 4);
 
-            if(strlen($post['qrcode']) != 14){
-                return response()->json([
-                    'status' => 'fail',
-                    'messages' => ['QRCode Is Not Valid']
-                ]);
-            }
+        //     if(strlen($post['qrcode']) != 14){
+        //         return response()->json([
+        //             'status' => 'fail',
+        //             'messages' => ['QRCode Is Not Valid']
+        //         ]);
+        //     }
 
-            $timestamp = str_replace($post['order_id'],'',$post['qrcode']);
-            if(date('Y-m-d', $timestamp) != date('Y-m-d')){
-                return response()->json([
-                    'status' => 'fail',
-                    'messages' => ['Order ID Is Not Valid']
-                ]);
-            }
+        //     $timestamp = str_replace($post['order_id'],'',$post['qrcode']);
+        //     if(date('Y-m-d', $timestamp) != date('Y-m-d')){
+        //         return response()->json([
+        //             'status' => 'fail',
+        //             'messages' => ['Order ID Is Not Valid']
+        //         ]);
+        //     }
 
-        }
+        // }
         
         $list = Transaction::join('transaction_pickups', 'transactions.id_transaction', 'transaction_pickups.id_transaction')
                             ->where('order_id', $post['order_id'])
@@ -546,6 +549,107 @@ class ApiOutletApp extends Controller
         $result['categorized'] = $categorized;
         $result['uncategorized'] = $uncategorized;
         return response()->json(MyHelper::checkGet($result));
+    }
+
+    public function rejectOrder(DetailOrder $request){
+        $post = $request->json()->all();
+
+        $outlet = $request->user();
+
+        $order = Transaction::join('transaction_pickups', 'transactions.id_transaction', 'transaction_pickups.id_transaction')
+                            ->where('order_id', $post['order_id'])
+                            ->whereDate('transaction_date', date('Y-m-d'))
+                            ->first();
+
+        if(!$order){
+            return response()->json([
+                'status' => 'fail',
+                'messages' => ['Data Transaction Not Found']
+            ]);
+        }
+
+        if($order->id_outlet != $request->user()->id_outlet){
+            return response()->json([
+                'status' => 'fail',
+                'messages' => ['Data Transaction Outlet Does Not Match']
+            ]);
+        }
+
+        if($order->ready_at){
+            return response()->json([
+                'status' => 'fail',
+                'messages' => ['Order Has Been Ready']
+            ]);
+        }
+
+        if($order->taken_at){
+            return response()->json([
+                'status' => 'fail',
+                'messages' => ['Order Has Been Taken']
+            ]);
+        }
+
+        DB::beginTransaction();
+
+        if(!isset($post['reason'])){
+            $post['reason'] = null;
+        }
+
+        $pickup = TransactionPickup::where('id_transaction', $order->id_transaction)->update([
+            'reject_at' => date('Y-m-d H:i:s'),
+            'reject_reason'   => $post['reason']
+        ]);
+        
+        if($pickup){
+            //refund ke balance
+            $user = User::where('id', $order['id_user'])->with('memberships')->first()->toArray();
+            if (!empty($user['memberships'][0]['membership_name'])) {
+                $level = $user['memberships'][0]['membership_name'];
+                $percentageP = $user['memberships'][0]['benefit_point_multiplier'] / 100;
+                $percentageB = $user['memberships'][0]['benefit_cashback_multiplier'] / 100;
+            } else {
+                $level = null;
+                $percentageP = 0;
+                $percentageB = 0;
+            }
+
+            $settingCashback = Setting::where('key', 'cashback_conversion_value')->first();
+
+            $dataLogCash = [
+                'id_user'                        => $user['id'],
+                'balance'                        => $order['transaction_grandtotal'],
+                'id_reference'                   => $order['id_transaction'],
+                'source'                         => 'Rejected Order',
+                'grand_total'                    => $order['transaction_grandtotal'],
+                'ccashback_conversion'           => $settingCashback['value'],
+                'membership_level'               => $level,
+                'membership_cashback_percentage' => $percentageB * 100
+            ];
+            
+            $insertDataLogCash = LogBalance::updateOrCreate(['id_reference' => $order['id_transaction'], 'source' => 'Rejected Order'], $dataLogCash);
+            if (!$insertDataLogCash) {
+                DB::rollback();
+                return response()->json([
+                    'status'    => 'fail',
+                    'messages'  => ['Insert Cashback Failed']
+                ]);
+            }
+
+            //send notif to customer
+            $send = app($this->autocrm)->SendAutoCRM('Order Reject', $user['phone'], ["outlet_name" => $outlet['outlet_name'], "id_reference" => $order->id_transaction, "transaction_date" => $order->transaction_date]);
+            if($send != true){
+                DB::rollback();
+                return response()->json([
+                        'status' => 'fail',
+                        'messages' => ['Failed Send notification to customer']
+                    ]);
+            }
+
+            DB::commit();
+        }
+
+
+        return response()->json(MyHelper::checkUpdate($pickup));
     }
 
 }

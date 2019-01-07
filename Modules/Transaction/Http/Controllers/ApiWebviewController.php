@@ -232,10 +232,10 @@ class ApiWebviewController extends Controller
             if (isset($success)) {
                 $list['success'] = 1;
             
-                $qrCode = 'https://chart.googleapis.com/chart?chl='.$qrTest.'&chs=250x250&cht=qr&chld=H%7C0';
-                $qrCode = html_entity_decode($qrCode);
-                $list['qr'] = $qrCode;
             }
+            $qrCode = 'https://chart.googleapis.com/chart?chl='.$qrTest.'&chs=250x250&cht=qr&chld=H%7C0';
+            $qrCode = html_entity_decode($qrCode);
+            $list['qr'] = $qrCode;
 
             $settingService = Setting::where('key', 'service')->first();
             $settingTax = Setting::where('key', 'tax')->first();

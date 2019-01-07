@@ -21,6 +21,8 @@ class TransactionPickup extends Model
 		'receive_at',
 		'ready_at',
 		'taken_at',
+		'reject_at',
+		'reject_reason',
 		'id_admin_outlet_receive',
 		'id_admin_outlet_taken',
 		'created_at',
