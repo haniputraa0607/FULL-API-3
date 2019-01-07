@@ -175,6 +175,12 @@ class ApiAutoCrm extends Controller
 						'callbackurl' => env('APP_URL'), 
 						'datapacket'=>array()
 					);
+
+					//add <#> and Hash Key in pin sms content
+					if($crm['autocrm_title'] == 'Pin Sent'){
+						$crm['autocrm_sms_content'] = '<#> '.$crm['autocrm_sms_content'].' '.ENV('HASH_KEY_'.ENV('HASH_KEY_TYPE'));
+					}
+
 					$content 	= $this->TextReplace($crm['autocrm_sms_content'], $user['phone'], $variables);
 					array_push($senddata['datapacket'],array(
 							'number' => trim($user['phone']),
@@ -333,9 +339,20 @@ class ApiAutoCrm extends Controller
 						$inbox['inboxes_link'] = $crm['autocrm_inbox_link'];
 					}
 
-					if(!empty($crm['autocrm_inbox_id_reference'])){
-						$inbox['inboxes_id_reference'] = $crm['autocrm_inbox_id_reference'];
+					if (isset($crm['autocrm_inbox_id_reference']) && $crm['autocrm_inbox_id_reference'] != null) {
+						$inbox['inboxes_id_reference'] = (int)$crm['autocrm_inbox_id_reference'];
+					} else{
+						if ($crm['autocrm_inbox_clickto'] == 'Transaction') {
+							if (isset($variables['id_reference'])) {
+								$inbox['inboxes_id_reference'] = $variables['id_reference'];
+							} else {
+								$inbox['inboxes_id_reference'] = 0;
+							}
+						} else {
+							$inbox['inboxes_id_reference'] = 0;
+						}
 					}
+
 					$inbox['inboxes_send_at'] = date("Y-m-d H:i:s");
 					$inbox['created_at'] = date("Y-m-d H:i:s");
 					$inbox['updated_at'] = date("Y-m-d H:i:s");
@@ -618,16 +635,6 @@ class ApiAutoCrm extends Controller
 		}
 		
 		DB::beginTransaction();
-
-		//add <#> and Hash Key in pin sms content
-		$autocrm = $query = Autocrm::where('id_autocrm','=',$id_autocrm)->first();
-		if($autocrm['autocrm_title'] == 'Pin Sent'){
-			if(isset($post['autocrm_sms_content'])){
-				$post['autocrm_sms_content'] = '<#> '.$post['autocrm_sms_content'].' '.ENV('HASH_KEY_DEBUG');
-				// $post['autocrm_sms_content'] = '<#> '.$post['autocrm_sms_content'].' '.ENV('HASH_KEY_RELEASE');
-			}
-		}
-
 		$query = Autocrm::where('id_autocrm','=',$id_autocrm)->update($post);
 		if(!$query){
 			DB::rollBack();

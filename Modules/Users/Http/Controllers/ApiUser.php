@@ -826,7 +826,11 @@ class ApiUser extends Controller
     }
 	
 	function check(users_phone $request){
-        $data = User::where('phone', '=', $request->json('phone'))->get()->toArray();
+		$phone = $request->json('phone');
+		if(substr($phone, 0, 1) != '0'){
+			$phone = '0'.$phone;
+		}
+        $data = User::where('phone', '=', $phone)->get()->toArray();
         return MyHelper::checkGet($data);
     }
     /**

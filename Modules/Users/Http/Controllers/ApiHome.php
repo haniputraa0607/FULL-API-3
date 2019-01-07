@@ -307,7 +307,7 @@ class ApiHome extends Controller
                     ],
                     'qr_code'       => $qrCode,
                     'uid'           => $qr,
-                    'webview_url'   => $webview_url
+                    'webview_complete_profile_url'   => $webview_url
                 ]
             ]; 
             

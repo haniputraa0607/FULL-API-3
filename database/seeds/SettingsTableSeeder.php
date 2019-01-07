@@ -317,6 +317,42 @@ class SettingsTableSeeder extends Seeder
                 'created_at' => '2018-05-15 13:55:55',
                 'updated_at' => '2018-05-15 13:55:55',
             ),
+            34 => 
+            array (
+                'id_setting' => 35,
+                'key' => 'complete_profile_point',
+                'value' => 10,
+                'value_text' => NULL,
+                'created_at' => '2018-05-15 13:55:55',
+                'updated_at' => '2018-05-15 13:55:55',
+            ),
+            35 => 
+            array (
+                'id_setting' => 36,
+                'key' => 'complete_profile_cashback',
+                'value' => 1000,
+                'value_text' => NULL,
+                'created_at' => '2018-05-15 13:55:55',
+                'updated_at' => '2018-05-15 13:55:55',
+            ),
+            36 => 
+            array (
+                'id_setting' => 37,
+                'key' => 'complete_profile_interval',
+                'value' => 10,
+                'value_text' => NULL,
+                'created_at' => '2018-05-15 13:55:55',
+                'updated_at' => '2018-05-15 13:55:55',
+            ),
+            37 => 
+            array (
+                'id_setting' => 38,
+                'key' => 'complete_profile_count',
+                'value' => 5,
+                'value_text' => NULL,
+                'created_at' => '2018-05-15 13:55:55',
+                'updated_at' => '2018-05-15 13:55:55',
+            ),
         ));
         
         
