@@ -55,8 +55,8 @@ class ApiSettingFraud extends Controller
             $recipient_email = explode(',', str_replace(' ', ',', str_replace(';', ',', $fraudSetting['email_recipient'])));
             foreach($recipient_email as $key => $recipient){
                 $to		 = $recipient;
-                $subject = app($this->autocrm)->TextReplace($fraudSetting['email_subject'], $user['phone'], ['transaction_count_day' => $user['count_transaction_day'], 'transaction_count_week' => $user['count_transaction_week'], 'last_device_id' => $lastDeviceId]);
-                $content = app($this->autocrm)->TextReplace($fraudSetting['email_content'], $user['phone'], ['transaction_count_day' => $user['count_transaction_day'], 'transaction_count_week' => $user['count_transaction_week'], 'last_device_id' => $lastDeviceId]);
+                $subject = app($this->autocrm)->TextReplace($fraudSetting['email_subject'], $user['phone'], ['transaction_count_day' => $user['count_transaction_day'], 'transaction_count_week' => $user['count_transaction_week'], 'last_device_id' => $idDeviceUser]);
+                $content = app($this->autocrm)->TextReplace($fraudSetting['email_content'], $user['phone'], ['transaction_count_day' => $user['count_transaction_day'], 'transaction_count_week' => $user['count_transaction_week'], 'last_device_id' => $idDeviceUser]);
                 
                 //get setting email
                 $getSetting = Setting::where('key', 'LIKE', 'email%')->get()->toArray();
