@@ -23,6 +23,7 @@ class ApiBanner extends Controller
         $banners = DB::table('banners')
             ->leftJoin('news', 'news.id_news', '=', 'banners.id_news')
             ->select('banners.*', 'news.news_title')
+            ->orderBy('banners.position')
             ->get();
 
         // add full url to collection
@@ -51,7 +52,6 @@ class ApiBanner extends Controller
         }
 
         // img 4:3
-        // $upload = MyHelper::uploadPhoto($post['image'], $path);
         $upload = MyHelper::uploadPhotoStrict($post['image'], $path, 400, 300);
 
         if (isset($upload['status']) && $upload['status'] == "success") {
