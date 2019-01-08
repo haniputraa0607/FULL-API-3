@@ -243,7 +243,7 @@ class ApiHome extends Controller
 
             // webview: user profile form
             $webview_url = "";
-            $webview_link = env('APP_URL') . '/webview/complete-profile/' . $user->phone;
+            $webview_link = env('APP_URL') . '/webview/complete-profile';
 
             // check user profile completeness (if there is null data)
             if ($user->id_city=="" || $user->gender=="" || $user->birthday=="") {

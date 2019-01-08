@@ -70,13 +70,23 @@ Route::group(['prefix' => 'api'], function(){
 	    Route::any('notloggedin', 'ApiHome@homeNotLoggedIn');
 	});
 
-	// get user profile for news custom form autofill
-	Route::post('users/get', 'Modules\Users\Http\Controllers\ApiUser@getUserByPhone');
+	Route::group(['middleware' => 'auth:api', 'prefix' => 'users', 'namespace' => 'Modules\Users\Http\Controllers'], function()
+	{
+		// get user profile
+	    Route::get('get', 'ApiUser@getUserDetail');
+	    
+	    // skip completes user profile
+		Route::get('complete-profile/later', 'ApiWebviewUser@completeProfileLater');
+		// submit complete user profile
+		// Route::post('users/complete-profile', 'ApiWebviewUser@completeProfile');
+	});
 
 	// submit complete user profile
 	Route::post('users/complete-profile', 'Modules\Users\Http\Controllers\ApiWebviewUser@completeProfile');
-	Route::post('users/complete-profile/later', 'Modules\Users\Http\Controllers\ApiWebviewUser@completeProfileLater');
+	
+	// Route::post('users/complete-profile/later', 'Modules\Users\Http\Controllers\ApiWebviewUser@completeProfileLater');
 });
+
 Route::group(['prefix' => 'user-delete', 'namespace' => 'Modules\Users\Http\Controllers'], function()
 {
 	Route::get('/{phone}', 'ApiUser@deleteUser');

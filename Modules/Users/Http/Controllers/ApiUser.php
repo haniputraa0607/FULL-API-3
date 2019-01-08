@@ -2065,11 +2065,11 @@ class ApiUser extends Controller
 		return response()->json($result);
 	}
 
-	// get user profile for news custom form autofill
-	public function getUserByPhone(Request $request)
+	// get user profile
+	public function getUserDetail()
 	{
-		$post = $request->json()->all();
-		$user = User::where('phone', $post['phone'])->first();
+		$user = Auth::user();
+
 		if ($user->id_city != null) {
 			$user = $user->setAttribute('city_name', $user->city->city_name);
 		}
