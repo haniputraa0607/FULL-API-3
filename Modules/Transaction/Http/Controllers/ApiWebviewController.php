@@ -330,6 +330,68 @@ class ApiWebviewController extends Controller
         return response()->json(MyHelper::checkGet($data));
     }
 
+    public function webviewBalance(Request $request)
+    {
+        $id     = $request->json('id');
+        $select = [];
+        $check = $request->json('check');
+        $receipt = null;
+
+        $data   = LogBalance::where('id_log_balance', $id)->first();
+        if ($data['source'] == 'Transaction') {
+            $select = Transaction::with('outlet')->where('id_transaction', $data['id_reference'])->first();
+            $receipt = $select['transaction_receipt_number']; 
+            $type = 'trx';
+        } else {
+            $type = 'voucher';
+        }
+
+        if (empty($check)) {
+            $dataEncode = [
+                'id'   => $id
+            ];
+
+            $encode = json_encode($dataEncode);
+            $base = base64_encode($encode);
+            // return $base;
+
+            $send = [
+                'status'                     => 'success',
+                'result' => [
+                    'type'                       => $type,
+                    'transaction_receipt_number' => $receipt,
+                    'url'                        => env('VIEW_URL').'/transaction/web/view/detail/balance?data='.$base
+                ],
+            ];
+
+            return response()->json($send);
+        }
+
+        $data   = LogBalance::where('id_log_balance', $id)->first();
+        if ($data['source'] == 'Transaction' || $data['source'] == 'Rejected Order') {
+            $select = Transaction::with(['outlet', 'productTransaction'])->where('id_transaction', $data['id_reference'])->first();
+
+            $data['date'] = $select['transaction_date'];
+            $data['type'] = 'trx';
+            $data['outlet'] = $select['outlet']['outlet_name'];
+            if ($select['trasaction_type'] == 'Offline') {
+                $data['online'] = 0;
+            } else {
+                $data['online'] = 1;
+            }
+            
+        } else {
+            $select = DealsUser::with('dealVoucher.deal')->where('id_deals_user', $data['id_reference'])->first();
+            $data['type']   = 'voucher';
+            $data['date']   = date('Y-m-d H:i:s', strtotime($select['claimed_at']));
+            $data['outlet'] = $select['outlet']['outlet_name'];
+            $data['online'] = 1;
+        }
+
+        $data['detail'] = $select;
+        return response()->json(MyHelper::checkGet($data));
+    }
+
     public function trxSuccess(Request $request)
     {
         $post = $request->json()->all();

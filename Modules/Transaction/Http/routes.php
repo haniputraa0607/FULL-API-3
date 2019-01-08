@@ -49,9 +49,11 @@ Route::group(['middleware' => 'auth:api', 'prefix' => 'api/transaction', 'namesp
     Route::any('/filter', 'ApiTransaction@transactionFilter');
     Route::post('/detail', 'ApiTransaction@transactionDetail');
     Route::post('/point/detail', 'ApiTransaction@transactionPointDetail');
+    Route::post('/balance/detail', 'ApiTransaction@transactionBalanceDetail');
 
     Route::post('history-trx', 'ApiHistoryController@historyTrx');
     Route::post('history-point', 'ApiHistoryController@historyPoint');
+    Route::post('history-balance', 'ApiHistoryController@historyBalance');
 
     Route::post('/shipping', 'ApiTransaction@getShippingFee');
     Route::get('/address', 'ApiTransaction@getAddress');
@@ -84,6 +86,7 @@ Route::group(['prefix' => 'api/transaction', 'namespace' => 'Modules\Transaction
     Route::any('/notif', 'ApiNotification@receiveNotification');
     Route::post('/detail/webview', 'ApiWebviewController@webview');
     Route::post('/detail/webview/point', 'ApiWebviewController@webviewPoint');
+    Route::post('/detail/webview/balance', 'ApiWebviewController@webviewBalance');
     
     Route::post('/detail/webview/success', 'ApiWebviewController@trxSuccess');
 });
