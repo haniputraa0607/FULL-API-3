@@ -354,7 +354,7 @@ class ApiOutletController extends Controller
         $post = $request->json()->all();
 
         if (isset($post['webview'])) {
-            $outlet = Outlet::with(['today', 'outlet_schedules']);
+            $outlet = Outlet::with(['today']);
         } else {
             $outlet = Outlet::with(['city', 'outlet_photos', 'product_prices', 'product_prices.product', 'outlet_schedules', 'today']);
         }

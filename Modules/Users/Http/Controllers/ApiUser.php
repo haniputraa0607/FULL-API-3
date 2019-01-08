@@ -840,7 +840,11 @@ class ApiUser extends Controller
 	 *
 	 */
 	function createPin(users_phone $request){
-        $data = User::where('phone', '=', $request->json('phone'))
+		$phone = $request->json('phone');
+		if(substr($phone, 0, 1) != '0'){
+			$phone = '0'.$phone;
+		}
+        $data = User::where('phone', '=', $phone)
 						->get()
 						->toArray();
 		
@@ -848,7 +852,7 @@ class ApiUser extends Controller
 			$pin = MyHelper::createRandomPIN(6, 'angka');
 			// $pin = '777777';
 			
-			$provider = MyHelper::cariOperator($request->json('phone'));
+			$provider = MyHelper::cariOperator($phone);
 			$is_android 	= null;
 			$is_ios 		= null;
 			$device_id = $request->json('device_id');
@@ -865,7 +869,7 @@ class ApiUser extends Controller
 				$device_token = $request->json('device_token');
 			}
 			
-			$create = User::create(['phone' => $request->json('phone'),
+			$create = User::create(['phone' => $phone,
 					'provider' 		=> $provider,
 					'password'		=> bcrypt($pin),
 					'android_device' => $is_android,
@@ -884,14 +888,14 @@ class ApiUser extends Controller
 						
 			
 			if(\Module::collections()->has('Autocrm')) {
-			$autocrm = app($this->autocrm)->SendAutoCRM('Pin Sent', $request->json('phone'), 
+			$autocrm = app($this->autocrm)->SendAutoCRM('Pin Sent', $phone, 
 																	['pin' => $pin, 
 																	 'useragent' => $useragent, 
 																	 'now' => date('Y-m-d H:i:s')
 																	]); 
 			}
 			
-			app($this->membership)->calculateMembership($request->json('phone'));
+			app($this->membership)->calculateMembership($phone);
 			
 			$result = ['status'	=> 'success',
                         'result'	=> ['phone'	=>	$create->phone,
@@ -2084,10 +2088,10 @@ class ApiUser extends Controller
 
 		//reset transaction week
 		foreach($user as $dataUser){
-			$countTrx = Transaction::whereDate('transaction_date', date('Y-m-d', strtotime(' - 7 days')))->where('id_user', $dataUser->id)->count();
+			$countTrx = Transaction::whereDate('transaction_date', '>=' ,date('Y-m-d', strtotime(' - 7 days')))->whereDate('transaction_date', '<=' ,date('Y-m-d'))->where('id_user', $dataUser->id)->count();
 			if($countTrx > 0){
 				$newCountTrx = $dataUser->count_transaction_week - $countTrx;
-				$update = User::where('id_user', $dataUser->id_user)->update(['count_transaction_week' => $newCountTrx]);
+				$update = User::where('id', $dataUser->id)->update(['count_transaction_week' => $newCountTrx]);
 				if(!$update){
 					DB::rollBack();
 					return response()->json([
