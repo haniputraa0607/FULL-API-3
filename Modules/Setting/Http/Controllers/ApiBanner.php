@@ -52,7 +52,7 @@ class ApiBanner extends Controller
         }
 
         // img 4:3
-        $upload = MyHelper::uploadPhotoStrict($post['image'], $path, 400, 300);
+        $upload = MyHelper::uploadPhotoStrict($post['image'], $path, 800, 600);
 
         if (isset($upload['status']) && $upload['status'] == "success") {
             $post['image'] = $upload['path'];
@@ -117,7 +117,7 @@ class ApiBanner extends Controller
             }
 
             // upload image
-            $upload = MyHelper::uploadPhotoStrict($post['image'], $path, 400, 300);
+            $upload = MyHelper::uploadPhotoStrict($post['image'], $path, 800, 600);
 
             if (isset($upload['status']) && $upload['status'] == "success") {
                 $post['image'] = $upload['path'];
