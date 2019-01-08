@@ -2114,4 +2114,35 @@ class ApiUser extends Controller
 		]);
 
 	}
+
+	public function deleteUser($phone, Request $request)
+    {
+		$data['phone'] = $phone;
+		return view('users::delete', $data);
+	}
+	
+	public function deleteUserAction(Request $request)
+    {
+		$post = $request->except('_token');
+			$checkUser = User::where('phone','=',$post['phone'])->get()->toArray();
+			if($checkUser){
+				$deleteUser = User::where('phone','=',$post['phone'])->delete();
+					if($deleteUser == 1){
+						$result = ['status'	=> 'success',
+								   'result'	=> ['User '.$post['phone'].' has been deleted']
+								  ];
+					} else{
+						$result = [
+							'status'	=> 'fail',
+							'messages'	=> ['User Not Found']
+							];
+					}
+			} else {
+				$result = [
+							'status'	=> 'fail',
+							'messages'	=> ['User Not Found']
+							];
+			}
+			return $result;
+    }
 }
