@@ -1082,7 +1082,12 @@ class ApiUser extends Controller
     }
 	
 	function resendPin(users_phone $request){
-        $data = User::where('phone', '=', $request->json('phone'))
+		$phone = $request->json('phone');
+		if(substr($phone, 0, 1) != '0'){
+			$phone = '0'.$phone;
+		}
+
+        $data = User::where('phone', '=', $phone)
 						->get()
 						->toArray();
 
@@ -1090,7 +1095,7 @@ class ApiUser extends Controller
 			$pinnya = rand(100000,999999);
 			$pin = bcrypt($pinnya);
 			/*if($data[0]['phone_verified'] == 0){*/
-				$update = User::where('phone','=',$request->json('phone'))->update(['password' => $pin]);
+				$update = User::where('phone','=',$phone)->update(['password' => $pin]);
 				
 				$useragent = $_SERVER['HTTP_USER_AGENT'];
 				if(stristr($_SERVER['HTTP_USER_AGENT'],'iOS')) $useragent = 'iOS';
@@ -1099,7 +1104,7 @@ class ApiUser extends Controller
 			
 				
 				if(\Module::collections()->has('Autocrm')) {
-					$autocrm = app($this->autocrm)->SendAutoCRM('Pin Sent', $request->json('phone'), 
+					$autocrm = app($this->autocrm)->SendAutoCRM('Pin Sent', $phone, 
 																	['pin' => $pinnya,
 																	'useragent' => $useragent, 
 																	 'now' => date('Y-m-d H:i:s')]); 
