@@ -628,7 +628,10 @@ class ApiNews extends Controller
                 $value = date('Y-m-d H:i', strtotime($input_value));
                 break;*/
             case 'Multiple Choice':
-                $value = implode(', ', $input_value);
+                $value = "";
+                if ($input_value != "") {
+                    $value = implode(', ', $input_value);
+                }
                 break;
             case 'Image Upload':
                 $value = "";
@@ -679,6 +682,7 @@ class ApiNews extends Controller
         }
     }
 
+    // get the results of news custom form
     public function formData(Request $request)
     {
         $post = $request->json()->all();
