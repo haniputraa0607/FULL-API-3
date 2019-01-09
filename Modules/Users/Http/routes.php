@@ -84,7 +84,6 @@ Route::group(['prefix' => 'api'], function(){
 	// submit complete user profile
 	Route::post('users/complete-profile', 'Modules\Users\Http\Controllers\ApiWebviewUser@completeProfile');
 	
-	// Route::post('users/complete-profile/later', 'Modules\Users\Http\Controllers\ApiWebviewUser@completeProfileLater');
 });
 
 Route::group(['prefix' => 'user-delete', 'namespace' => 'Modules\Users\Http\Controllers'], function()

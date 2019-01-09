@@ -16,9 +16,14 @@ use Modules\Balance\Http\Controllers\BalanceController;
 use App\Lib\MyHelper;
 use DB;
 use Hash;
+use Auth;
 
 class ApiWebviewUser extends Controller
 {
+    function __construct() {
+        date_default_timezone_set('Asia/Jakarta');
+    }
+    
     // update profile, point, balance
     public function completeProfile(Request $request)
     {
@@ -98,20 +103,17 @@ class ApiWebviewUser extends Controller
         return MyHelper::checkUpdate($update);
     }
 
-    public function completeProfileLater(Request $request)
+    public function completeProfileLater()
     {
-        $post = $request->json()->all();
+        $user = Auth::user();
 
-        $user = User::where('phone', $post['phone'])->first();
         $data = [
             'count_complete_profile' => $user->count_complete_profile + 1,
             'last_complete_profile'  => date('Y-m-d H:i:s')
         ];
 
-        $update = User::where('phone', $post['phone'])->update($data);
+        $update = User::where('phone', $user->phone)->update($data);
 
-        return [
-            'status' => 'success'
-        ];
+        return MyHelper::checkUpdate($update);
     }
 }
