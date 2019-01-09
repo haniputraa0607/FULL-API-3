@@ -106,4 +106,5 @@ Route::group(['middleware' => 'auth_client', 'prefix' => 'api/setting', 'namespa
 Route::group(['prefix' => 'api/setting', 'namespace' => 'Modules\Setting\Http\Controllers'], function()
 {
     Route::get('/faq', 'ApiSetting@faqList');
+    Route::post('webview', 'ApiSetting@settingWebview');
 });
