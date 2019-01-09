@@ -24,6 +24,7 @@ use App\Http\Models\UserOutlet;
 use App\Http\Models\TransactionSetting;
 use App\Http\Models\FraudSetting;
 use App\Http\Models\Configs;
+use App\Http\Models\Holiday;
 
 use GuzzleHttp\Exception\GuzzleException;
 use GuzzleHttp\Client;
@@ -118,15 +119,49 @@ class ApiOnlineTransaction extends Controller
                 ]);
             }
         }
-
-        $outlet = Outlet::where('id_outlet', $post['id_outlet'])->first();
+        
+        $outlet = Outlet::where('id_outlet', $post['id_outlet'])->with('today')->first();
         if (empty($outlet)) {
             DB::rollback();
             return response()->json([
                 'status'    => 'fail',
                 'messages'  => ['Outlet Not Found']
-            ]);
+                ]);
+            }
+            
+        //cek outlet holiday
+        $holiday = Holiday::join('outlet_holidays', 'holidays.id_holiday', 'outlet_holidays.id_holiday')->join('date_holidays', 'holidays.id_holiday', 'date_holidays.id_holiday')
+                ->where('id_outlet', $outlet['id_outlet'])->whereDay('date_holidays.date', date('d'))->whereMonth('date_holidays.date', date('m'))->get();
+        if(count($holiday) > 0){
+            foreach($holiday as $i => $holi){
+                if($holi['yearly'] == '0'){
+                    if($holi['date'] == date('Y-m-d')){
+                        DB::rollback();
+                        return response()->json([
+                            'status'    => 'fail',
+                            'messages'  => ['Outlet Is Closed']
+                        ]);
+                    }
+                }else{
+                    DB::rollback();
+                    return response()->json([
+                        'status'    => 'fail',
+                        'messages'  => ['Outlet Is Closed']
+                    ]);
+                }
+            }
         }
+
+        //cek outlet open - close hour
+        if(($outlet['today']['open'] && date('H:i') < date('H:i', strtotime($outlet['today']['open']))) || ($outlet['today']['close'] && date('H:i') > date('H:i', strtotime($outlet['today']['close'])))){
+            DB::rollback();
+            return response()->json([
+                'status'    => 'fail',
+                'messages'  => ['Outlet Is Closed']
+            ]);    
+        }
+
+
 
         $totalDisProduct = 0;
 
