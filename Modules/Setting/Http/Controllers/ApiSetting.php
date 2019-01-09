@@ -885,4 +885,18 @@ class ApiSetting extends Controller
             'url' => env('VIEW_URL').'/setting/faq/webview'
         ]);
     }
+
+    public function settingWebview(SettingList $request){
+        $post = $request->json()->all();
+        if(isset($post['data'])){
+            $setting = Setting::where('key', $post['key'])->first();
+            return response()->json(MyHelper::checkGet($setting));
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'url' => env('VIEW_URL').'/setting/webview/'.$post['key']
+        ]);
+
+    }
 }
