@@ -1579,6 +1579,35 @@ class ApiTransaction extends Controller
         return response()->json(MyHelper::checkGet($data));
     }
 
+    public function transactionBalanceDetail(Request $request) {
+        $id     = $request->json('id');
+        $select = [];
+        $data   = LogBalance::where('id_log_balance', $id)->first();
+
+        if ($data['source'] == 'Transaction' || $data['source'] == 'Rejected Order') {
+            $select = Transaction::with('outlet')->where('id_transaction', $data['id_reference'])->first();
+
+            $data['date'] = $select['transaction_date'];
+            $data['type'] = 'trx';
+            $data['outlet'] = $select['outlet']['outlet_name'];
+            if ($select['trasaction_type'] == 'Offline') {
+                $data['online'] = 0;
+            } else {
+                $data['online'] = 1;
+            }
+            
+        } else {
+            $select = DealsUser::with('dealVoucher.deal')->where('id_deals_user', $data['id_reference'])->first();
+            $data['type']   = 'voucher';
+            $data['date']   = date('Y-m-d H:i:s', strtotime($select['claimed_at']));
+            $data['outlet'] = $select['outlet']['outlet_name'];
+            $data['online'] = 1;
+        }
+
+        $data['detail'] = $select;
+        return response()->json(MyHelper::checkGet($data));
+    }
+
     public function setting($value) {
         $setting = Setting::where('key', $value)->first();
         

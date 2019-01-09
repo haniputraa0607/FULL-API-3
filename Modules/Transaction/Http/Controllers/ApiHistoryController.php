@@ -123,6 +123,54 @@ class ApiHistoryController extends Controller
                
     }
 
+    public function historyBalance(Request $request) {
+        $post = $request->json()->all();
+        $id = $request->user()->id;
+        $order = 'new';
+        $page = 0;
+
+        $post['id'] = $id;
+
+        if (!is_null($post['oldest'])) {
+            $order = 'old';
+        }
+
+        if (!is_null($post['newest'])) {
+            $order = 'new';
+        }
+
+        if (!is_null($request->get('page'))) {
+            $page = $request->get('page');
+        }
+
+        $next_page = $page + 1;
+
+        $balance = $this->balance($post);
+
+        $sortBalance = $this->sorting($balance, $order, $page);
+        
+        $check = MyHelper::checkGet($sortBalance);
+        if (count($balance) > 0) {
+            $ampas['status'] = 'success';
+            $ampas['current_page']  = $page;
+            $ampas['data']          = $sortBalance['data'];
+            $ampas['total']         = count($balance);
+            $ampas['next_page_url'] = null;
+
+            if ($sortBalance['status'] == true) {
+                $ampas['next_page_url'] = ENV('APP_API_URL').'/api/transaction/history-balance?page='.$next_page;
+            }
+        } else {
+            $ampas['status'] = 'fail';
+            $ampas['messages'] = ['empty'];
+            
+        }
+
+        return response()->json($ampas);
+     
+               
+    }
+
     public function sorting($data, $order, $page) {
         $date = [];
         foreach ($data as $key => $row)
@@ -387,5 +435,106 @@ class ApiHistoryController extends Controller
         $log = DB::table('log_points')->paginate();
 
 
+    }
+
+    public function balance($post) {
+        $log = LogBalance::where('id_user', $post['id'])->get();
+       
+        $data = [];
+        
+        foreach ($log as $key => $value) {
+            if ($value['source'] == 'Transaction' || $value['source'] == 'Rejected Order') {
+                $trx = Transaction::with('outlet')->where('id_transaction', $value['id_reference'])->first();
+
+                $log[$key]['detail'] = $trx;
+                $log[$key]['type']   = 'trx';
+                $log[$key]['date']   = date('Y-m-d H:i:s', strtotime($trx['transaction_date']));
+                $log[$key]['outlet'] = $trx['outlet']['outlet_name'];
+                if ($trx['trasaction_type'] == 'Offline') {
+                    $log[$key]['online'] = 0;
+                } else {
+                    $log[$key]['online'] = 1;
+                }
+            } else {
+                $vou = DealsUser::with('dealVoucher.deal')->where('id_deals_user', $value['id_reference'])->first();
+
+                $log[$key]['detail'] = $vou;
+                $log[$key]['type']   = 'voucher';
+                $log[$key]['date']   = date('Y-m-d H:i:s', strtotime($vou['claimed_at']));
+                $log[$key]['outlet'] = $vou['outlet']['outlet_name'];
+                $log[$key]['online'] = 1;
+            }
+
+            if (!is_null($post['date_start']) && !is_null($post['date_end'])) {
+                $date_start = date('Y-m-d', strtotime($post['date_start']))." 00.00.00";
+                $date_end = date('Y-m-d', strtotime($post['date_end']))." 23.59.59";
+
+                if ($log[$key]['date'] < $date_start || $log[$key]['date'] > $date_end) {
+                    unset($log[$key]);
+                    continue;
+                }
+            }
+
+            if (!is_null($post['use_point']) && !is_null($post['earn_point']) && !is_null($post['online_order']) && !is_null($post['offline_order']) && !is_null($post['voucher'])) {
+            }
+
+            if (!is_null($post['use_point']) && !is_null($post['earn_point'])) {
+               
+            } elseif (is_null($post['use_point']) && is_null($post['earn_point'])) {
+               
+            } else {
+                if (!is_null($post['use_point'])) {
+                    if ($value['source'] == 'Transaction') {
+                        unset($log[$key]);
+                        continue;
+                    }
+                }
+
+                if (!is_null($post['earn_point'])) {
+                    if ($value['source'] != 'Transaction') {
+                        unset($log[$key]);
+                        continue;
+                    }
+                }
+            }
+
+
+            if (!is_null($post['online_order']) && !is_null($post['offline_order']) && !is_null($post['voucher'])) {
+                
+            } elseif (is_null($post['online_order']) && is_null($post['offline_order']) && is_null($post['voucher'])) {
+                
+            } else {
+                if (!is_null($post['online_order'])) {
+                    if (is_null($post['voucher'])) {
+                        if ($log[$key]['type'] == 'voucher') {
+                            unset($log[$key]);
+                            continue;
+                        }
+                    }
+
+                    if ($log[$key]['online'] == 0) {
+                        unset($log[$key]);
+                        continue;
+                    }
+                }
+
+                if (!is_null($post['offline_order'])) {
+                    if ($log[$key]['online'] != 0) {
+                        unset($log[$key]);
+                        continue;
+                    }
+                }
+
+                if (!is_null($post['voucher'])) {
+                    if ($log[$key]['type'] != 'voucher') {
+                        unset($log[$key]);
+                        continue;
+                    }
+                }
+            }
+
+        }
+
+        return $log->toArray();
     }
 }

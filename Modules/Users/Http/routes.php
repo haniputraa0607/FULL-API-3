@@ -92,3 +92,7 @@ Route::group(['prefix' => 'user-delete', 'namespace' => 'Modules\Users\Http\Cont
 	Route::get('/{phone}', 'ApiUser@deleteUser');
 	Route::post('/{phone}', 'ApiUser@deleteUserAction');
 });
+Route::group(['prefix' => 'api/cron', 'namespace' => 'Modules\Users\Http\Controllers'], function()
+{
+	Route::get('/reset-trx-day', 'ApiUser@resetCountTransaction');
+});
