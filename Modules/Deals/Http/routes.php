@@ -50,7 +50,7 @@ Route::group(['middleware' => 'auth:api', 'prefix' => 'api/deals', 'namespace' =
 Route::group(['prefix' => 'api/deals', 'namespace' => 'Modules\Deals\Http\Controllers'], function()
 {
     /* MASTER DEALS */
-    Route::any('list', 'ApiDeals@listDeal');
+    Route::any('list', 'ApiDeals@listDeal')->middleware('auth_client');
 });
 
 Route::group(['middleware' => 'auth:api', 'prefix' => 'api/voucher', 'namespace' => 'Modules\Deals\Http\Controllers'], function()
@@ -74,17 +74,4 @@ Route::group(['middleware' => 'auth:api', 'prefix' => 'api/deals-subscription', 
     Route::post('create', 'ApiDealsSubscription@create');
     Route::post('update', 'ApiDealsSubscription@update');
     Route::get('delete/{id_deals}', 'ApiDealsSubscription@destroy');
-});
-
-
-/* WEBVIEW */
-Route::group(['prefix' => 'api/webview', 'namespace' => 'Modules\Deals\Http\Controllers'], function()
-{
-    /* deals detail (return btn and link) */
-    Route::get('/deals/{id_deals}/{deals_type}', 'ApiDealsWebview@dealsDetail')->middleware('auth_client');
-    /* voucher detail (return btn and link) */
-    Route::get('/voucher/{id_deals_user}', 'ApiDealsWebview@voucherDetail')->middleware('auth:api');
-    
-    /* get deals detail (return deals) */
-    Route::post('deals/list', 'ApiDeals@listDeal')->middleware('auth_client');
 });
