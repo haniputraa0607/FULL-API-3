@@ -27,12 +27,12 @@ class ApiWebviewUser extends Controller
     // update profile, point, balance
     public function completeProfile(Request $request)
     {
+        $user = Auth::user();
+
         $post = $request->json()->all();
-        $phone = $post['phone'];
-        unset($post['phone']);
 
         DB::beginTransaction();
-            $update = User::where('phone', $phone)->update($post);
+            $update = User::where('id', $user->id)->update($post);
             if ( !$update ) {
                 DB::rollback();
                 return [
@@ -41,7 +41,7 @@ class ApiWebviewUser extends Controller
                 ];
             }
 
-            $user = User::with('memberships')->where('phone', $phone)->first();
+            $user = User::with('memberships')->where('id', $user->id)->first();
 
             // get point and cashback from setting
             $complete_profile_point = 0;

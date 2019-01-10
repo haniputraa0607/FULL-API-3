@@ -411,7 +411,13 @@ class ApiDeals extends Controller
 
             $deals = $tempDeals;
         }
-        
+
+        // if deals detail, add webview url & btn text
+        if ($request->json('id_deals') && !empty($deals)) {
+            $deals[0]['webview_url'] = env('APP_URL') ."/webview/deals/". $deals[0]['id_deals'] ."/". $deals[0]['deals_type'];
+            $deals[0]['button_text'] = 'BELI';
+        }
+
         // print_r($deals); exit();
         return response()->json(MyHelper::checkGet($deals));
     }

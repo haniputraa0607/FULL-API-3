@@ -20,6 +20,7 @@ use Hash;
 use DB;
 use Mail;
 use File;
+use Auth;
 
 use Modules\News\Http\Requests\Create;
 use Modules\News\Http\Requests\Update;
@@ -547,12 +548,18 @@ class ApiNews extends Controller
     {
         $post = $request->json()->all();
 
+        $user = Auth::user();
+
+        $id_user = null;
+        if (!empty($user)) {
+            $id_user = $user->id;
+        }
+
         DB::beginTransaction();
             $newsFormData = NewsFormData::create([
                 'id_news' => $post['id_news'],
-                'id_user' => $post['id_user']
+                'id_user' => $id_user
             ]);
-            // dd($newsFormData);
 
             $id_news = $post['id_news'];
 
@@ -628,7 +635,10 @@ class ApiNews extends Controller
                 $value = date('Y-m-d H:i', strtotime($input_value));
                 break;*/
             case 'Multiple Choice':
-                $value = implode(', ', $input_value);
+                $value = "";
+                if ($input_value != "") {
+                    $value = implode(', ', $input_value);
+                }
                 break;
             case 'Image Upload':
                 $value = "";
@@ -679,6 +689,7 @@ class ApiNews extends Controller
         }
     }
 
+    // get the results of news custom form
     public function formData(Request $request)
     {
         $post = $request->json()->all();

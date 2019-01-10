@@ -9,7 +9,7 @@ use Illuminate\Routing\Controller;
 class ApiDealsWebview extends Controller
 {
     // deals detail webview
-    public function dealsDetail($id_deals, $deals_type)
+    /*public function dealsDetail($id_deals, $deals_type)
     {
         // return url webview and button text for mobile (native button)
         $response = [
@@ -20,10 +20,10 @@ class ApiDealsWebview extends Controller
             ]
         ];
         return response()->json($response);
-    }
+    }*/
     
     // voucher detail webview
-    public function voucherDetail($id_deals_user)
+    /*public function voucherDetail($id_deals_user)
     {
         // return url webview and button text for mobile (native button)
         $response = [
@@ -34,6 +34,6 @@ class ApiDealsWebview extends Controller
             ]
         ];
         return response()->json($response);
-    }
+    }*/
     
 }
