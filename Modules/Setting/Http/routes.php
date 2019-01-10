@@ -11,6 +11,7 @@ Route::group(['middleware' => 'api', 'prefix' => 'api/setting', 'namespace' => '
     Route::any('/', 'ApiSetting@settingList');
     Route::post('/edit', 'ApiSetting@settingEdit');
     Route::post('/update', 'ApiSetting@settingUpdate');
+    Route::post('{type}/update', 'ApiSetting@pointResetUpdate');
     Route::post('/date', 'ApiSetting@date');
 	Route::any('/app_logo', 'ApiSetting@appLogo');
     Route::any('/app_navbar', 'ApiSetting@appNavbar');
@@ -107,4 +108,6 @@ Route::group(['prefix' => 'api/setting', 'namespace' => 'Modules\Setting\Http\Co
 {
     Route::get('/faq', 'ApiSetting@faqList');
     Route::post('webview', 'ApiSetting@settingWebview');
+    
+    Route::get('/cron/point-reset', 'ApiSetting@cronPointReset');
 });
