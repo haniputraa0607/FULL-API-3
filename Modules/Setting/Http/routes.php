@@ -11,7 +11,6 @@ Route::group(['middleware' => 'api', 'prefix' => 'api/setting', 'namespace' => '
     Route::any('/', 'ApiSetting@settingList');
     Route::post('/edit', 'ApiSetting@settingEdit');
     Route::post('/update', 'ApiSetting@settingUpdate');
-    Route::post('{type}/update', 'ApiSetting@pointResetUpdate');
     Route::post('/date', 'ApiSetting@date');
 	Route::any('/app_logo', 'ApiSetting@appLogo');
     Route::any('/app_navbar', 'ApiSetting@appNavbar');
@@ -69,6 +68,8 @@ Route::group(['middleware' => 'api', 'prefix' => 'api/setting', 'namespace' => '
         Route::post('/', 'ApiSetting@completeProfile');
     });
 
+    // point reset
+    Route::post('{type}/update', 'ApiSetting@pointResetUpdate');
 });
 
 Route::group(['middleware' => 'api', 'prefix' => 'api/timesetting', 'namespace' => 'Modules\Setting\Http\Controllers'], function()
