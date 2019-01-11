@@ -830,6 +830,12 @@ class ApiSetting extends Controller
         $key = array_pluck(Setting::where('key', 'LIKE', '%complete_profile%')->get()->toArray(), 'key');
         $value = array_pluck(Setting::where('key', 'LIKE', '%complete_profile%')->get()->toArray(), 'value');
         $complete_profiles = array_combine($key, $value);
+        
+        // $complete_profiles['complete_profile_point'] = Setting::where('key', 'complete_profile_point')->pluck('value')->first();
+        // $complete_profiles['complete_profile_cashback'] = Setting::where('key', 'complete_profile_cashback')->pluck('value')->first();
+        // $complete_profiles['complete_profile_count'] = Setting::where('key', 'complete_profile_count')->pluck('value')->first();
+        // $complete_profiles['complete_profile_interval'] = Setting::where('key', 'complete_profile_interval')->pluck('value')->first();
+
 
         if (!isset($complete_profiles['complete_profile_point'])) {
             $complete_profiles['complete_profile_point'] = '';
@@ -851,10 +857,10 @@ class ApiSetting extends Controller
     {
         $post = $request->json()->all();
 
-        $update[] = Setting::updateOrCreate(['key' => 'complete_profile_point'], ['value' => $post['complete_profile_point']]);
-        $update[] = Setting::updateOrCreate(['key' => 'complete_profile_cashback'], ['value' => $post['complete_profile_cashback']]);
-        $update[] = Setting::updateOrCreate(['key' => 'complete_profile_count'], ['value' => $post['complete_profile_count']]);
-        $update[] = Setting::updateOrCreate(['key' => 'complete_profile_interval'], ['value' => $post['complete_profile_interval']]);
+        $update[] = Setting::updateOrCreate(['key' => 'complete_profile_point'], ['key' => 'complete_profile_point', 'value' => $post['complete_profile_point']]);
+        $update[] = Setting::updateOrCreate(['key' => 'complete_profile_cashback'], ['key' => 'complete_profile_cashback', 'value' => $post['complete_profile_cashback']]);
+        $update[] = Setting::updateOrCreate(['key' => 'complete_profile_count'], ['key' => 'complete_profile_count', 'value' => $post['complete_profile_count']]);
+        $update[] = Setting::updateOrCreate(['key' => 'complete_profile_interval'], ['key' => 'complete_profile_interval', 'value' => $post['complete_profile_interval']]);
 
         if (count($update) == 4) {
             return [
