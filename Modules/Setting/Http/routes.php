@@ -63,10 +63,10 @@ Route::group(['middleware' => 'api', 'prefix' => 'api/setting', 'namespace' => '
     });
 
     // complete profile
-    Route::group(['middleware' => 'auth:api'], function()
+    Route::group(['middleware' => 'auth:api', 'prefix' => 'complete-profile'], function()
     {
-        Route::get('complete-profile', 'ApiSetting@getCompleteProfile');
-        Route::post('complete-profile/update', 'ApiSetting@completeProfile');
+        Route::get('/', 'ApiSetting@getCompleteProfile');
+        Route::post('/', 'ApiSetting@completeProfile');
     });
 
 });

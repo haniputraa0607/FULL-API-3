@@ -73,7 +73,7 @@ class ApiDealsClaimPay extends Controller
                 if (!empty($dataDeals->deals_voucher_price_cash) || $dataDeals->deals_promo_id_type == "nominal") {
                     if (app($this->claim)->checkDealsPoint($dataDeals, $request->user()->id)) {
                         // CEK USER ALREADY CLAIMED
-                        // if (app($this->claim)->checkUserClaimed($request->user(), $dataDeals->id_deals)) {
+                        if (app($this->claim)->checkUserClaimed($request->user(), $dataDeals->id_deals)) {
 
                         // if deals subscription
                         if ($dataDeals->deals_type == "Subscription") {
@@ -199,13 +199,13 @@ class ApiDealsClaimPay extends Controller
                         }
 
                         return response()->json(MyHelper::checkCreate($voucher));
-                        // }
-                        // else {
-                        //     return response()->json([
-                        //         'status'   => 'fail',
-                        //         'messages' => ['You have participated.']
-                        //     ]);
-                        // }
+                        }
+                        else {
+                            return response()->json([
+                                'status'   => 'fail',
+                                'messages' => ['You have participated.']
+                            ]);
+                        }
                     }
                     else {
                         DB::rollback();

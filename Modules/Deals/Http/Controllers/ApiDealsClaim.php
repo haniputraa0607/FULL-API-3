@@ -61,7 +61,7 @@ class ApiDealsClaim extends Controller
                 else {
                     if ($this->checkDealsPoint($dataDeals, $request->user()->id)) {
                         // CEK USER ALREADY CLAIMED
-                        // if ($this->checkUserClaimed($request->user(), $dataDeals->id_deals)) {
+                        if ($this->checkUserClaimed($request->user(), $dataDeals->id_deals)) {
 
                         if ($dataDeals->deals_type == "Subscription") {
                             $id_deals = $dataDeals->id_deals;
@@ -188,14 +188,14 @@ class ApiDealsClaim extends Controller
                         }
 
                         return response()->json(MyHelper::checkCreate($voucher));
-                        // }
-                        // else {
-                        //     DB::rollback();
-                        //     return response()->json([
-                        //         'status'   => 'fail',
-                        //         'messages' => ['You have participated.']
-                        //     ]);
-                        // }
+                        }
+                        else {
+                            DB::rollback();
+                            return response()->json([
+                                'status'   => 'fail',
+                                'messages' => ['You have participated.']
+                            ]);
+                        }
                     }
                     else {
                         DB::rollback();
@@ -219,7 +219,7 @@ class ApiDealsClaim extends Controller
 
     /* CHEK USER ALREADY CLAIMED */
     function checkUserClaimed($user, $id_deals) {
-        $claimed = DealsUser::join('deals_vouchers', 'deals_vouchers.id_deals_voucher', '=', 'deals_users.id_deals_voucher')->where('id_user', $user->id)->where('id_deals', $id_deals)->first();
+        $claimed = DealsUser::join('deals_vouchers', 'deals_vouchers.id_deals_voucher', '=', 'deals_users.id_deals_voucher')->where('id_user', $user->id)->where('deals_vouchers.id_deals', $id_deals)->first();
 
         if (empty($claimed)) {
             return true;
