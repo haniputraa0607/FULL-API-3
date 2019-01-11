@@ -2091,11 +2091,12 @@ class ApiUser extends Controller
 
 		DB::beginTransaction();
 
+
 		//reset transaction week
 		foreach($user as $dataUser){
-			$countTrx = Transaction::whereDate('transaction_date', '>=' ,date('Y-m-d', strtotime(' - 7 days')))->whereDate('transaction_date', '<=' ,date('Y-m-d'))->where('id_user', $dataUser->id)->count();
+			$countTrx = Transaction::whereDate('transaction_date', '>=' ,date('Y-m-d', strtotime(' - 8 days')))->whereDate('transaction_date', '<=' ,date('Y-m-d', strtotime(' - 1 days')))->where('id_user', $dataUser->id)->count();
 			if($countTrx > 0){
-				$newCountTrx = $dataUser->count_transaction_week - $countTrx;
+				$newCountTrx = $countTrx;
 				$update = User::where('id', $dataUser->id)->update(['count_transaction_week' => $newCountTrx]);
 				if(!$update){
 					DB::rollBack();

@@ -3,6 +3,9 @@
 namespace Modules\Setting\Http\Controllers;
 
 use App\Http\Models\Setting;
+use App\Http\Models\User;
+use App\Http\Models\LogPoint;
+use App\Http\Models\LogBalance;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -169,6 +172,146 @@ class ApiSetting extends Controller
         $update = Setting::where('id_setting', $id)->update($post);
 
         return response()->json(MyHelper::checkUpdate($update));		
+    }
+
+    public function pointResetUpdate(Request $request, $type){
+        $post = $request->json()->all();
+
+        if(isset($post['setting'])){
+            DB::beginTransaction();
+    
+            $idSetting = [];
+            foreach($post['setting'] as $key => $value){
+                if($value['value']){
+                    if($value['id_setting']){
+                        $save = Setting::where('id_setting', $value['id_setting'])->update(['value' => $value['value']]);
+                        if(!$save){
+                            DB::rollback();
+                            return response()->json(MyHelper::checkUpdate($save));
+                        }
+        
+                        $idSetting[] = $value['id_setting'];
+                    }else{
+                        $save = Setting::create([
+                            'key' => $type,
+                            'value' => $value['value']
+                        ]);
+        
+                        if(!$save){
+                            DB::rollback();
+                            return response()->json(MyHelper::checkCreate($save));
+                        }
+        
+                        $idSetting[] = $save['id_setting'];
+                    }
+                }
+            }
+    
+            $delete = Setting::where('key', $type)->whereNotIn('id_setting', $idSetting)->delete();
+    
+            DB::commit();
+            return response()->json(['status' => 'success']);
+        }else{
+            $delete = Setting::where('key', $type)->delete();
+        }
+
+        return response()->json(['status' => 'success']);
+
+    }
+
+    public function cronPointReset(){
+        $user = User::get();
+
+        //point reset
+        $setting = Setting::where('key', 'point_reset')->get();
+         
+        DB::beginTransaction();
+        if($setting){
+            foreach($setting as $date){
+                if($date['value'] == date('d F')){
+                    foreach($user as $datauser){
+                        $totalPoint = LogPoint::where('id_user', $datauser['id'])->sum('point');
+                        if($totalPoint){
+                            $dataLog = [
+                                'id_user'                     => $datauser['id'],
+                                'point'                       => -$totalPoint,
+                                'source'                      => 'Point Reset',
+                            ];
+                
+                            $insertDataLog = LogPoint::create($dataLog);
+                            if (!$insertDataLog) {
+                                DB::rollback();
+                                return response()->json([
+                                    'status'    => 'fail',
+                                    'messages'  => ['Insert Point Failed']
+                                ]);
+                            }
+
+                            //update point user
+                            $totalPoint = LogPoint::where('id_user',$datauser['id'])->sum('point');
+                            $updateUserPoint = User::where('id', $datauser['id'])->update(['points' => $totalPoint]);
+                            if (!$updateUserPoint) {
+                                DB::rollback();
+                                return response()->json([
+                                    'status'    => 'fail',
+                                    'messages'  => ['Update User Point Failed']
+                                ]);
+                            }
+                        }
+                    }
+                }
+            }
+
+            DB::commit();
+        }
+
+        //point reset
+        $setting = Setting::where('key', 'balance_reset')->get();
+         
+        DB::beginTransaction();
+        if($setting){
+            foreach($setting as $date){
+                if($date['value'] == date('d F')){
+                    foreach($user as $datauser){
+                        $totalBalance = LogBalance::where('id_user', $datauser['id'])->sum('balance');
+                        if($totalBalance){
+                            $dataLog = [
+                                'id_user'                     => $datauser['id'],
+                                'balance'                       => -$totalBalance,
+                                'source'                      => 'Balance Reset',
+                            ];
+                
+                            $insertDataLog = LogBalance::create($dataLog);
+                            if (!$insertDataLog) {
+                                DB::rollback();
+                                return response()->json([
+                                    'status'    => 'fail',
+                                    'messages'  => ['Insert Balance Failed']
+                                ]);
+                            }
+
+                            //update balance user
+                            $totalBalance = LogBalance::where('id_user',$datauser['id'])->sum('balance');
+                            $updateUserBalance = User::where('id', $datauser['id'])->update(['balance' => $totalBalance]);
+                            if (!$updateUserBalance) {
+                                DB::rollback();
+                                return response()->json([
+                                    'status'    => 'fail',
+                                    'messages'  => ['Update User Balance Failed']
+                                ]);
+                            }
+                        }
+                    }
+                }
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'status' => 'success'
+            ]);
+        }
+
     }
 
     public function levelList(LevelList $request) {

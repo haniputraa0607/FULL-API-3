@@ -684,6 +684,33 @@ class ConfigsTableSeeder extends Seeder
                 'created_at' => date('Y-m-d H:i:s'),
                 'updated_at' => date('Y-m-d H:i:s'),
             ),
+            75 => 
+            array (
+                'id_config' => 76,
+                'config_name' => 'spin the wheel',
+                'description' => '',
+                'is_active' => 1,
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ),
+            76 => 
+            array (
+                'id_config' => 77,
+                'config_name' => 'point reset',
+                'description' => '',
+                'is_active' => 1,
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ),
+            77 => 
+            array (
+                'id_config' => 78,
+                'config_name' => 'balance reset',
+                'description' => '',
+                'is_active' => 1,
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ),
         ));
     }
 }

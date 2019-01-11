@@ -252,7 +252,10 @@ class ApiOnlineTransaction extends Controller
 
         if (count($user['memberships']) > 0) {
             $post['point'] = $post['point'] * ($user['memberships'][0]['benefit_point_multiplier']) / 100;
-            $maxCash = $user['memberships'][0]['cashback_maximum'];
+
+            if($user['memberships'][0]['cashback_maximum']){
+                $maxCash['value'] = $user['memberships'][0]['cashback_maximum'];
+            }
         }
 
         $statusCashMax = 'no';
