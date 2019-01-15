@@ -19,6 +19,7 @@ use App\Http\Models\SpinPrizeTemporary;
 
 use App\Lib\MyHelper;
 use DB;
+use Auth;
 
 class ApiSpinTheWheelController extends Controller
 {
@@ -113,7 +114,7 @@ class ApiSpinTheWheelController extends Controller
     public function getItems(Request $request)
     {
         $post = $request->json()->all();
-        $user = User::where('phone', $post['phone'])->first();
+        $user = Auth::user();
 
         $spin_items = SpinTheWheel::with('deals')->orderBy('created_at')->get()->toArray();
         $setting_point_spin = Setting::where('key', 'spin_the_wheel_point')->first();
@@ -159,12 +160,12 @@ class ApiSpinTheWheelController extends Controller
         return response()->json(MyHelper::checkGet($data));
     }
 
-    // calc user point and get spin prize from temp prize
+    // calc user point and claim spin prize from temp prize
     public function spin(Request $request)
     {
         $post = $request->json()->all();
 
-        $user = User::where('phone', $post['phone'])->first();
+        $user = Auth::user();
 
         $setting = Setting::where('key', 'spin_the_wheel_point')->first();
         $spin_the_wheel_point = $setting->value;
