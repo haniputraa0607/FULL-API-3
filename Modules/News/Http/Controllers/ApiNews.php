@@ -626,23 +626,19 @@ class ApiNews extends Controller
     private function checkCustomFormValue($news_form)
     {
         $input_value = $news_form['input_value'];
-
-        switch ($news_form['input_type']) {
-            case 'Date':
-                $value = date('Y-m-d', strtotime($input_value));
-                break;
-            /*case 'Date & Time':
-                $value = date('Y-m-d H:i', strtotime($input_value));
-                break;*/
-            case 'Multiple Choice':
-                $value = "";
-                if ($input_value != "") {
+        $value = "";
+        if ($input_value != "") {
+            switch ($news_form['input_type']) {
+                case 'Date':
+                    $value = date('Y-m-d', strtotime($input_value));
+                    break;
+                /*case 'Date & Time':
+                    $value = date('Y-m-d H:i', strtotime($input_value));
+                    break;*/
+                case 'Multiple Choice':
                     $value = implode(', ', $input_value);
-                }
-                break;
-            case 'Image Upload':
-                $value = "";
-                if ($input_value != "") {
+                    break;
+                case 'Image Upload':
                     $path = 'img/news-custom-form/';
                     $upload = MyHelper::uploadPhoto($input_value, $path);
                     if (isset($upload['status']) && $upload['status'] == "success") {
@@ -650,12 +646,12 @@ class ApiNews extends Controller
                     } else {
                         return false;
                     }
-                }
-                break;
-            
-            default:
-                $value = $input_value;
-                break;
+                    break;
+                
+                default:
+                    $value = $input_value;
+                    break;
+            }
         }
 
         return $value;
