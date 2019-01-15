@@ -16,6 +16,7 @@ use App\Http\Models\Transaction;
 use App\Http\Models\TransactionProduct;
 use App\Http\Models\TransactionShipment;
 use App\Http\Models\TransactionPickup;
+use App\Http\Models\TransactionPickupGoSend;
 use App\Http\Models\TransactionPaymentMidtran;
 use App\Http\Models\LogPoint;
 use App\Http\Models\LogBalance;
@@ -36,6 +37,7 @@ use Guzzle\Http\Exception\ServerErrorResponseException;
 use DB;
 use App\Lib\MyHelper;
 use App\Lib\Midtrans;
+use App\Lib\GoSend;
 
 use Modules\Transaction\Http\Requests\Transaction\NewTransaction;
 use Modules\Transaction\Http\Requests\Transaction\ConfirmPayment;
@@ -54,6 +56,7 @@ class ApiOnlineTransaction extends Controller
         $this->transaction = "Modules\Transaction\Http\Controllers\ApiTransaction";
         $this->notif       = "Modules\Transaction\Http\Controllers\ApiNotification";
         $this->setting_fraud = "Modules\SettingFraud\Http\Controllers\ApiSettingFraud";
+        $this->setting_trx   = "Modules\Transaction\Http\Controllers\ApiSettingTransactionV2";
     }
 
     public function newTransaction(NewTransaction $request) {
@@ -61,7 +64,9 @@ class ApiOnlineTransaction extends Controller
         $totalPrice = 0;
         $totalWeight = 0;
         $totalDiscount = 0;
-        $grandTotal = $this->grandTotal();
+        $grandTotal = app($this->setting_trx)->grandTotal();
+        $order_id = null;
+        $id_pickup_go_send = null;
 
         if (isset($post['headers'])) {
             unset($post['headers']);
@@ -161,18 +166,18 @@ class ApiOnlineTransaction extends Controller
             ]);    
         }
 
-
-
         $totalDisProduct = 0;
 
-        $productDis = $this->countDis($post);
+        // $productDis = $this->countDis($post);
+        $productDis = app($this->setting_trx)->discountProduct($post);
         if ($productDis) {
             $totalDisProduct = $productDis;
         }
 
         foreach ($grandTotal as $keyTotal => $valueTotal) {
             if ($valueTotal == 'subtotal') {
-                $post['sub'] = $this->countTransaction($valueTotal, $post);
+                $post['sub'] = app($this->setting_trx)->countTransaction($valueTotal, $post);
+                // $post['sub'] = $this->countTransaction($valueTotal, $post);
                 if (gettype($post['sub']) != 'array') {
                     $mes = ['Data Not Valid'];
 
@@ -202,7 +207,8 @@ class ApiOnlineTransaction extends Controller
                 $post['subtotal'] = array_sum($post['sub']);
                 $post['subtotal'] = $post['subtotal'] - $totalDisProduct;
             } elseif ($valueTotal == 'discount') {
-                $post['dis'] = $this->countTransaction($valueTotal, $post);
+                // $post['dis'] = $this->countTransaction($valueTotal, $post);
+                $post['dis'] = app($this->setting_trx)->countTransaction($valueTotal, $post);
                 $mes = ['Data Not Valid'];
 
                 if (isset($post['sub']->original['messages'])) {
@@ -224,12 +230,12 @@ class ApiOnlineTransaction extends Controller
                 
                 $post['discount'] = $post['dis'] + $totalDisProduct;
             } else {
-                $post[$valueTotal] = $this->countTransaction($valueTotal, $post);
+                $post[$valueTotal] = app($this->setting_trx)->countTransaction($valueTotal, $post);
             }
         }
 
-        $post['point'] = $this->countTransaction('point', $post);
-        $post['cashback'] = $this->countTransaction('cashback', $post);
+        $post['point'] = app($this->setting_trx)->countTransaction('point', $post);
+        $post['cashback'] = app($this->setting_trx)->countTransaction('cashback', $post);
 
         //count some trx user
         $countUserTrx = Transaction::where('id_user', $id)->count();
@@ -304,6 +310,37 @@ class ApiOnlineTransaction extends Controller
             $post['point']    = 0;
         }
 
+        //cek free delivery
+        $isFree = '0';
+        if($post['type'] == 'GO-SEND'){
+            $setting = Setting::where('key', 'like', '%free_delivery%')->get();
+            if($setting){
+                $freeDev = [];
+                foreach($setting as $dataSetting){
+                    $freeDev[$dataSetting['key']] = $dataSetting['value'];
+                }
+     
+                if(isset($freeDev['free_delivery_type'])){
+                    if($freeDev['free_delivery_type'] == 'free' || isset($freeDev['free_delivery_nominal'])){
+                        if(isset($freeDev['free_delivery_requirement_type']) && $freeDev['free_delivery_requirement_type'] == 'total item' && isset($freeDev['free_delivery_min_item'])){
+                            $totalItem = 0;
+                            foreach ($post['item'] as $keyProduct => $valueProduct) {
+                                $totalItem += $valueProduct['qty'];
+                            }
+             
+                            if($totalItem >= $freeDev['free_delivery_min_item']){
+                                $isFree = '1';
+                            }
+                        }elseif(isset($freeDev['free_delivery_requirement_type']) && $freeDev['free_delivery_requirement_type'] == 'subtotal' && isset($freeDev['free_delivery_min_subtotal'])){
+                            if($post['subtotal'] >= $freeDev['free_delivery_min_subtotal']){
+                                $isFree = '1';
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         $detailPayment = [
             'subtotal' => $post['subtotal'],
             'shipping' => $post['shipping'],
@@ -334,7 +371,7 @@ class ApiOnlineTransaction extends Controller
                 'address'     => $userAddress['address'],
                 'postal_code' => $userAddress['postal_code']
             ];
-        } else {
+        } elseif($post['type'] == 'Pickup Order') {
             $dataUser = [
                 'first_name'      => $user['name'],
                 'email'           => $user['email'],
@@ -343,6 +380,28 @@ class ApiOnlineTransaction extends Controller
                     'first_name'  => $user['name'],
                     'phone'       => $user['phone']
                 ],
+            ];
+        } elseif($post['type'] == 'GO-SEND'){
+            //check key GO-SEND
+            $checkKey = Gosend::checkKey();
+            if(isset($checkKey) && $checkKey['status'] == 'fail'){
+                DB::rollback();
+                return response()->json($checkKey);
+            }
+
+            $dataUser = [
+                'first_name'      => $user['name'],
+                'email'           => $user['email'],
+                'phone'           => $user['phone'],
+                'billing_address' => [
+                    'first_name'  => $user['name'],
+                    'phone'       => $user['phone']
+                ],
+            ];
+            $dataShipping = [
+                'name'        => $post['destination']['name'],
+                'phone'       => $user['destination']['phone'],
+                'address'     => $post['destination']['address']
             ];
         }
 
@@ -354,16 +413,26 @@ class ApiOnlineTransaction extends Controller
             $post['longitude'] = null;
         }
 
+        if (!isset($post['notes'])) {
+            $post['notes'] = null;
+        }
+
+        $type = $post['type'];
+        if($post['type'] == 'GO-SEND'){
+            $type = 'Pickup Order';
+        }
+
         DB::beginTransaction();
         $transaction = [
             'id_outlet'                   => $post['id_outlet'],
             'id_user'                     => $id,
             'transaction_date'            => $post['transaction_date'],
-            'transaction_receipt_number'  => 'TRX-'.$post['transaction_date'].'-'.date('YmdHis'),
-            'trasaction_type'             => $post['type'],
+            'transaction_receipt_number'  => 'TRX-'.app($this->setting_trx)->getrandomnumber(15).'-'.date('YmdHis'),
+            'trasaction_type'             => $type,
             'transaction_notes'           => $post['notes'],
             'transaction_subtotal'        => $post['subtotal'],
             'transaction_shipment'        => $post['shipping'],
+            'transaction_is_free'         => $isFree,
             'transaction_service'         => $post['service'],
             'transaction_discount'        => $post['discount'],
             'transaction_tax'             => $post['tax'],
@@ -629,7 +698,7 @@ class ApiOnlineTransaction extends Controller
                     'messages'  => ['Insert Shipment Transaction Failed']
                 ]);
             }
-        } elseif ($post['type'] == 'Pickup Order') {
+        } elseif ($post['type'] == 'Pickup Order' || $post['type'] == 'GO-SEND') {
             $link = '';
             if($configAdminOutlet && $configAdminOutlet['is_active'] == '1'){
                 $totalAdmin = $adminOutlet->where('pickup_order', 1)->first();
@@ -673,6 +742,8 @@ class ApiOnlineTransaction extends Controller
 
             if(isset($post['pickup_type'])){
                 $pickupType = $post['pickup_type'];
+            }elseif($post['type'] == 'GO-SEND'){
+                $pickupType = 'right now';
             }else{
                 $pickupType = 'set time';
             }
@@ -703,6 +774,12 @@ class ApiOnlineTransaction extends Controller
                 'short_link'              => $link
             ];
 
+            if($post['type'] == 'GO-SEND'){
+                $dataPickup['pickup_by'] = 'GO-SEND';
+            }else{
+                $dataPickup['pickup_by'] = 'Customer';
+            }
+
             $insertPickup = TransactionPickup::create($dataPickup);
            
             if (!$insertPickup) {
@@ -711,6 +788,37 @@ class ApiOnlineTransaction extends Controller
                     'status'    => 'fail',
                     'messages'  => ['Insert Pickup Order Transaction Failed']
                 ]);
+            }
+
+            //insert pickup go-send
+            if($post['type'] == 'GO-SEND'){
+                $dataGoSend['id_transaction_pickup'] = $insertPickup['id_transaction_pickup'];
+                $dataGoSend['origin_name']           = $outlet['outlet_name'];
+                $dataGoSend['origin_phone']          = $outlet['outlet_phone'];
+                $dataGoSend['origin_address']        = $outlet['outlet_address'];
+                $dataGoSend['origin_latitude']       = $outlet['outlet_latitude'];
+                $dataGoSend['origin_longitude']      = $outlet['outlet_longitude'];
+                $dataGoSend['origin_note']           = '';
+                $dataGoSend['destination_name']      = $post['destination']['name'];
+                $dataGoSend['destination_phone']     = $post['destination']['phone'];
+                $dataGoSend['destination_address']   = $post['destination']['address'];
+                $dataGoSend['destination_latitude']  = $post['destination']['latitude'];
+                $dataGoSend['destination_longitude'] = $post['destination']['longitude'];
+
+                if(isset($post['destination_note'])){
+                    $dataGoSend['destination_note'] = $post['destination']['note'];
+                }
+
+                $gosend = TransactionPickupGoSend::create($dataGoSend);
+                if (!$gosend) {
+                    DB::rollback();
+                    return response()->json([
+                        'status'    => 'fail',
+                        'messages'  => ['Insert Transaction GO-SEND Failed']
+                    ]);
+                }
+
+                $id_pickup_go_send = $gosend->id_transaction_pickup_go_send;
             }
         }
 
@@ -777,95 +885,127 @@ class ApiOnlineTransaction extends Controller
         }
 
         if (isset($post['payment_type'])) {
-            if ($post['payment_type'] == 'Midtrans') {
-                if ($post['transaction_payment_status'] == 'Completed') {
-                    //bank
-                    $bank = ['BNI', 'Mandiri', 'BCA'];
-                    $getBank = array_rand($bank);
 
-                    //payment_method
-                    $method = ['credit_card', 'bank_transfer', 'direct_debit'];
-                    $getMethod = array_rand($method);
-
-                    $dataInsertMidtrans = [
-                        'id_transaction'     => $insertTransaction['id_transaction'],
-                        'approval_code'      => 000000,
-                        'bank'               => $bank[$getBank],
-                        'eci'                => $this->getrandomnumber(2),
-                        'transaction_time'   => $insertTransaction['transaction_date'].' 22:00:00',
-                        'gross_amount'       => $insertTransaction['transaction_grandtotal'],
-                        'order_id'           => $insertTransaction['transaction_receipt_number'],
-                        'payment_type'       => $method[$getMethod],
-                        'signature_key'      => $this->getrandomstring(),
-                        'status_code'        => 200,
-                        'vt_transaction_id'  => $this->getrandomstring(8).'-'.$this->getrandomstring(4).'-'.$this->getrandomstring(4).'-'.$this->getrandomstring(12),
-                        'transaction_status' => 'capture',
-                        'fraud_status'       => 'accept',
-                        'status_message'     => 'Veritrans payment notification'
-                    ];
-
-                    $insertDataMidtrans = TransactionPaymentMidtran::create($dataInsertMidtrans);
-                    if (!$insertDataMidtrans) {
-                        DB::rollback();
-                        return response()->json([
-                            'status'    => 'fail',
-                            'messages'  => ['Insert Data Midtrans Failed']
-                        ]);
-                    }
-
-                    DB::commit();
-                    return ['status' => 'success'];
-                } else {
-                    DB::commit();
-                    return response()->json([
-                        'status' => 'success',
-                        'result' => $insertTransaction
-                    ]);
-                }
-            } elseif ($post['payment_type'] == 'Manual') {
-                DB::commit();
-                return response()->json([
-                    'status' => 'success',
-                    'result' => $insertTransaction
-                ]);
-
-            } else {
+            if ($post['payment_type'] == 'Balance') {
                 $save = app($this->balance)->topUp($insertTransaction['id_user'], $insertTransaction['transaction_grandtotal'], $insertTransaction['id_transaction']);
+
+                if (!isset($save['status'])) {
+                    DB::rollback();
+                    return response()->json(['status' => 'fail', 'messages' => ['Transaction failed']]);
+                }
 
                 if ($save['status'] == 'fail') {
                     DB::rollback();
                     return response()->json($save);
                 }
 
-                if ($save['status'] == 'success') {
-                    if ($save['type'] == 'no_topup') {
-                        $mid['order_id'] = $insertTransaction['transaction_receipt_number'];
+                if ($save['type'] == 'no_topup') {
+                    $mid['order_id'] = $insertTransaction['transaction_receipt_number'];
 
-                        $newTrx = Transaction::with('user.memberships', 'outlet', 'productTransaction')->where('transaction_receipt_number', $insertTransaction['transaction_receipt_number'])->first();
-                        $send = app($this->notif)->notification($mid, $newTrx);
+                    $insertTransaction = Transaction::with('user.memberships', 'outlet', 'productTransaction')->where('transaction_receipt_number', $insertTransaction['transaction_receipt_number'])->first();
 
-                        DB::commit();
+                    $send = app($this->notif)->notification($mid, $insertTransaction);
+
+                    if (!$send) {
+                        DB::rollback();
                         return response()->json([
-                            'status' => 'success',
-                            'result' => $insertTransaction
-                        ]);
-                    } else {
-                        DB::commit();
-                        return response()->json([
-                            'status' => 'success',
-                            'type'   => 'topup',
-                            'result' => $insertTransaction
+                            'status'    => 'fail',
+                            'messages'  => ['Transaction failed']
                         ]);
                     }
                 }
             }
-        } else {
+
+            // if ($post['payment_type'] == 'Midtrans') {
+            //     if ($post['transaction_payment_status'] == 'Completed') {
+            //         //bank
+            //         $bank = ['BNI', 'Mandiri', 'BCA'];
+            //         $getBank = array_rand($bank);
+
+            //         //payment_method
+            //         $method = ['credit_card', 'bank_transfer', 'direct_debit'];
+            //         $getMethod = array_rand($method);
+
+            //         $dataInsertMidtrans = [
+            //             'id_transaction'     => $insertTransaction['id_transaction'],
+            //             'approval_code'      => 000000,
+            //             'bank'               => $bank[$getBank],
+            //             'eci'                => $this->getrandomnumber(2),
+            //             'transaction_time'   => $insertTransaction['transaction_date'].' 22:00:00',
+            //             'gross_amount'       => $insertTransaction['transaction_grandtotal'],
+            //             'order_id'           => $insertTransaction['transaction_receipt_number'],
+            //             'payment_type'       => $method[$getMethod],
+            //             'signature_key'      => $this->getrandomstring(),
+            //             'status_code'        => 200,
+            //             'vt_transaction_id'  => $this->getrandomstring(8).'-'.$this->getrandomstring(4).'-'.$this->getrandomstring(4).'-'.$this->getrandomstring(12),
+            //             'transaction_status' => 'capture',
+            //             'fraud_status'       => 'accept',
+            //             'status_message'     => 'Veritrans payment notification'
+            //         ];
+
+            //         $insertDataMidtrans = TransactionPaymentMidtran::create($dataInsertMidtrans);
+            //         if (!$insertDataMidtrans) {
+            //             DB::rollback();
+            //             return response()->json([
+            //                 'status'    => 'fail',
+            //                 'messages'  => ['Insert Data Midtrans Failed']
+            //             ]);
+            //         }
+
+            //         DB::commit();
+            //         return ['status' => 'success'];
+            //     } else {
+            //         DB::commit();
+            //         return response()->json([
+            //             'status' => 'success',
+            //             'result' => $insertTransaction
+            //         ]);
+            //     }
+            // } elseif ($post['payment_type'] == 'Manual') {
+            //     DB::commit();
+            //     return response()->json([
+            //         'status' => 'success',
+            //         'result' => $insertTransaction
+            //     ]);
+
+            // } else {
+            //     $save = app($this->balance)->topUp($insertTransaction['id_user'], $insertTransaction['transaction_grandtotal'], $insertTransaction['id_transaction']);
+
+            //     if ($save['status'] == 'fail') {
+            //         DB::rollback();
+            //         return response()->json($save);
+            //     }
+
+            //     if ($save['status'] == 'success') {
+            //         if ($save['type'] == 'no_topup') {
+            //             $mid['order_id'] = $insertTransaction['transaction_receipt_number'];
+
+            //             $newTrx = Transaction::with('user.memberships', 'outlet', 'productTransaction')->where('transaction_receipt_number', $insertTransaction['transaction_receipt_number'])->first();
+            //             $send = app($this->notif)->notification($mid, $newTrx);
+
+            //             DB::commit();
+            //             return response()->json([
+            //                 'status' => 'success',
+            //                 'result' => $insertTransaction
+            //             ]);
+            //         } else {
+            //             DB::commit();
+            //             return response()->json([
+            //                 'status' => 'success',
+            //                 'type'   => 'topup',
+            //                 'result' => $insertTransaction
+            //             ]);
+            //         }
+            //     }
+            // }
+        } 
+        // else {
             DB::commit();
             return response()->json([
                 'status' => 'success',
                 'result' => $insertTransaction
             ]);
-        }
+        // }
         
     }
 
@@ -914,368 +1054,5 @@ class ApiOnlineTransaction extends Controller
                 return ['status' => 'fail', 'messages' => [0 => 'Check your internet connection.']];
             }
         }
-    }
-
-    public function setting($value) {
-        $setting = Setting::where('key', $value)->first();
-        
-        if (empty($setting->value)) {
-            return response()->json(['Setting Not Found']);
-        }
-
-        return $setting->value;
-    }
-
-    public function grandTotal() {
-        $grandTotal = $this->setting('transaction_grand_total_order');
-        
-        $grandTotal = explode(',', $grandTotal);
-        foreach ($grandTotal as $key => $value) {
-            if (substr($grandTotal[$key], 0, 5) == 'empty') {
-                unset($grandTotal[$key]);
-            }
-        }
-
-        $grandTotal = array_values($grandTotal);
-        return $grandTotal;
-    }
-
-    public function discount() {
-        $discount = $this->setting('transaction_discount_formula');
-        return $discount;
-    }
-
-    public function tax() {
-        $tax = $this->setting('transaction_tax_formula');
-
-        $tax = preg_replace('/\s+/', '', $tax);
-        return $tax;
-    }
-
-    public function service() {
-        $service = $this->setting('transaction_service_formula');
-
-        $service = preg_replace('/\s+/', '', $service);
-        return $service;
-    }
-
-    public function point() {
-        $point = $this->setting('point_acquisition_formula');
-
-        $point = preg_replace('/\s+/', '', $point);
-        return $point;
-    }
-
-    public function cashback() {
-        $cashback = $this->setting('cashback_acquisition_formula');
-
-        $cashback = preg_replace('/\s+/', '', $cashback);
-        return $cashback;
-    }
-
-    public function pointCount() {
-        $point = $this->setting('point_acquisition_formula');
-        return $point;
-    }
-
-    public function cashbackCount() {
-        $cashback = $this->setting('cashback_acquisition_formula');
-        return $cashback;
-    }
-
-    public function pointValue() {
-        $point = $this->setting('point_conversion_value');
-        return $point;
-    }
-
-    public function cashbackValue() {
-        $cashback = $this->setting('cashback_conversion_value');
-        return $cashback;
-    }
-
-    public function cashbackValueMax() {
-        $cashback = $this->setting('cashback_maximum');
-        return $cashback;
-    }
-
-    public function serviceValue() {
-        $service = $this->setting('service');
-        return $service;
-    }
-
-    public function taxValue() {
-        $tax = $this->setting('tax');
-        return $tax;
-    }
-
-    public function convertFormula($value) {
-        $convert = $this->$value();
-        
-        // $convert = explode(' ', $convert);
-        // foreach ($convert as $key => $value) {
-        //     if ($convert[$key] != '*' && $convert[$key] != '/' && $convert[$key] != '+' && $convert[$key] != '-' && $convert[$key] != '^' && $convert[$key] != '(' && $convert[$key] != ')') {
-        //         $convert[$key] = '$'.$convert[$key];
-        //     }
-        // }
-
-        // return implode('', $convert);
-        return $convert;
-    }
-
-    public function countTransaction($value, $data) {
-        $subtotal = isset($data['subtotal']) ? $data['subtotal'] : 0;
-        $service  = isset($data['service']) ? $data['service'] : 0;
-        $tax      = isset($data['tax']) ? $data['tax'] : 0;
-        $shipping = isset($data['shipping']) ? $data['shipping'] : 0;
-        $discount = isset($data['discount']) ? $data['discount'] : 0;
-        // return $data;
-        if ($value == 'subtotal') {
-            $dataSubtotal = [];
-            foreach ($data['item'] as $keyData => $valueData) {
-                $product = Product::with('product_discounts', 'product_prices')->where('id_product', $valueData['id_product'])->first();
-                if (empty($product)) {
-                    DB::rollback();
-                    return response()->json([
-                        'status' => 'fail', 
-                        'messages' => ['Product Not Found']
-                    ]);
-                }
-                
-                $productPrice = ProductPrice::where(['id_product' => $valueData['id_product'], 'id_outlet' => $data['id_outlet']])->first();
-                if (empty($productPrice)) {
-                    DB::rollback();
-                    return response()->json([
-                        'status' => 'fail',
-                        'messages' => ['Price Product Not Found'],
-                        'product' => $product['product_name']
-                    ]);
-                }
-
-                if($productPrice['product_price'] == null || $productPrice['product_price_base'] == null || $productPrice['product_price_tax'] == null){
-                    return response()->json([
-                        'status'    => 'fail',
-                        'messages'  => ['Price Product Not Valid'],
-                        'product' => $product['product_name']
-                    ]);
-                }
-
-                $price = $productPrice['product_price_base'] * $valueData['qty'];
-                array_push($dataSubtotal, $price);
-            }
-            return $dataSubtotal;
-        }
-
-        if ($value == 'discount') {
-            $discountTotal = 0;
-            $discount = [];
-            $discountFormula = $this->convertFormula('discount');
-
-            $checkSettingPercent = Setting::where('key', 'discount_percent')->first();
-            $checkSettingNominal = Setting::where('key', 'discount_nominal')->first();
-            $count = 0;
-
-            if (!empty($checkSettingPercent)) {
-                if ($checkSettingPercent['value'] != '0' && $checkSettingPercent['value'] != '') {
-                    $count = (eval('return ' . preg_replace('/([a-zA-Z0-9]+)/', '\$$1', $discountFormula) . ';'));
-                }
-            } else {
-                if (!empty($checkSettingNominal)) {
-                    if ($checkSettingNominal['value'] != '0' && $checkSettingNominal['value'] != '') {
-                        $count = $checkSettingNominal;
-                    }
-                }
-            }
-
-            return $count;
-        }
-
-        if ($value == 'service') {
-            $subtotal = $data['subtotal'];
-            $serviceFormula = $this->convertFormula('service');
-            $value = $this->serviceValue();
-
-            $count = (eval('return ' . preg_replace('/([a-zA-Z0-9]+)/', '\$$1', $serviceFormula) . ';'));
-            return $count;
-
-        }
-
-        if ($value == 'shipping') {
-            return $shipping;
-        }
-
-        if ($value == 'tax') {
-            // $subtotal = $data['subtotal'];
-            // $taxFormula = $this->convertFormula('tax');
-            // $value = $this->taxValue();
-            // // return $taxFormula;
-
-            // $count = (eval('return ' . preg_replace('/([a-zA-Z0-9]+)/', '\$$1', $taxFormula) . ';'));
-            // return $count;
-
-            //tax dari product price tax
-            $productTax = 0;
-            foreach ($data['item'] as $keyProduct => $valueProduct) {
-                $checkProduct = Product::where('id_product', $valueProduct['id_product'])->first();
-                if (empty($checkProduct)) {
-                    DB::rollback();
-                    return response()->json([
-                        'status'    => 'fail',
-                        'messages'  => ['Product Not Found']
-                    ]);
-                }
-    
-                $checkPriceProduct = ProductPrice::where(['id_product' => $checkProduct['id_product'], 'id_outlet' => $data['id_outlet']])->first();
-                if (empty($checkPriceProduct)) {
-                    return response()->json([
-                        'status'    => 'fail',
-                        'messages'  => ['Product Price Not Valid']
-                    ]);
-                }
-
-                if($checkPriceProduct['product_price'] == null || $checkPriceProduct['product_price_base'] == null || $checkPriceProduct['product_price_tax'] == null){
-                    return response()->json([
-                        'status'    => 'fail',
-                        'messages'  => ['Product Price Not Valid']
-                    ]);
-                }
-
-                $productTax += $checkPriceProduct['product_price_tax'] * $valueProduct['qty'];
-            }
-
-            return $productTax;
-
-        }
-
-        if ($value == 'point') {
-            $subtotal = $data['subtotal'];
-            $pointFormula = $this->convertFormula('point');
-            $value = $this->pointValue();
-
-            $count = floor(eval('return ' . preg_replace('/([a-zA-Z0-9]+)/', '\$$1', $pointFormula) . ';'));
-            return $count;
-
-        }
-
-        if ($value == 'cashback') {
-            $subtotal = $data['subtotal'];
-            $cashbackFormula = $this->convertFormula('cashback');
-            $value = $this->cashbackValue();
-            $max = $this->cashbackValueMax();
-
-            $count = floor(eval('return ' . preg_replace('/([a-zA-Z0-9]+)/', '\$$1', $cashbackFormula) . ';'));
-
-            return $count;
-        }
-    }
-
-    public function countDis($data)
-    {
-        $discountTotal = 0;
-        $discount = 0;
-        $totalAllDiscount = 0;
-        $countSemen = 0;
-        $discountFormula = $this->convertFormula('discount');
-        // return $discountFormula;
-        foreach ($data['item'] as $keyData => $valueData) {
-            $product = Product::with('product_discounts')->where('id_product', $valueData['id_product'])->first();
-            if (empty($product)) {
-                DB::rollback();
-                return response()->json([
-                    'status' => 'fail', 
-                    'messages' => ['Product Not Found']
-                ]);
-            }
-
-            $priceProduct = ProductPrice::where('id_product', $valueData['id_product'])->where('id_outlet', $data['id_outlet'])->first();
-            if (empty($priceProduct)) {
-                DB::rollback();
-                return response()->json([
-                    'status' => 'fail', 
-                    'messages' => ['Product Price Not Found']
-                ]);
-            }
-
-            if (count($product['product_discounts']) > 0) {
-                foreach ($product['product_discounts'] as $keyDiscount => $valueDiscount) {
-                    if (!empty($valueDiscount['discount_percentage'])) {
-                        $jat = $valueDiscount['discount_percentage'];
-
-                        $count = $priceProduct['product_price'] * $jat / 100;
-                    } else {
-                        $count = $valueDiscount['discount_nominal'];
-                    }
-
-                    $now = date('Y-m-d');
-                    $time = date('H:i:s');
-                    $day = date('l');
-
-                    if ($now < $valueDiscount['discount_start']) {
-                        $count = 0;
-                    }
-
-                    if ($now > $valueDiscount['discount_end']) {
-                        $count = 0;
-                    }
-
-                    if ($time < $valueDiscount['discount_time_start']) {
-                        $count = 0;
-                    }
-
-                    if ($time > $valueDiscount['discount_time_end']) {
-                        $count = 0;
-                    }
-
-                    if (strpos($valueDiscount['discount_days'], $day) === false) {
-                        $count = 0;
-                    }
-
-                    $discountTotal = $valueData['qty'] * $count;
-                    $countSemen += $discountTotal;
-                    $discountTotal = 0;
-                }
-            }
-        }
-
-        return $countSemen;
-    }
-
-    public function getrandomstring($length = 120) {
-
-       global $template;
-       settype($template, "string");
-
-       $template = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
-
-       settype($length, "integer");
-       settype($rndstring, "string");
-       settype($a, "integer");
-       settype($b, "integer");
-
-       for ($a = 0; $a <= $length; $a++) {
-               $b = rand(0, strlen($template) - 1);
-               $rndstring .= $template[$b];
-       }
-
-       return $rndstring; 
-    }
-
-    public function getrandomnumber($length) {
-
-       global $template;
-       settype($template, "string");
-
-       $template = "0987654321";
-
-       settype($length, "integer");
-       settype($rndstring, "string");
-       settype($a, "integer");
-       settype($b, "integer");
-
-       for ($a = 0; $a <= $length; $a++) {
-               $b = rand(0, strlen($template) - 1);
-               $rndstring .= $template[$b];
-       }
-
-       return $rndstring; 
     }
 }

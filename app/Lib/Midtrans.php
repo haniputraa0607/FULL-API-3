@@ -34,11 +34,11 @@ class Midtrans {
     }
 
     static function bearer() {
-        return 'Basic ' . base64_encode('SB-Mid-server-ode5bp0rUKf87v7VX-hQvFX1:');
+        return 'Basic ' . base64_encode(env('MIDTRANS_SANDBOX_BEARER'));
     }
     
     static function token($receipt, $grandTotal, $user=null, $shipping=null, $product=null) {
-		$url    = 'https://app.sandbox.midtrans.com/snap/v1/transactions';
+		$url    = env('MIDTRANS_SANDBOX');
 
         $transaction_details = array(
             'order_id'      => $receipt,

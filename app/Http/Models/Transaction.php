@@ -65,6 +65,7 @@ class Transaction extends Model
 		'transaction_notes',
 		'transaction_subtotal',
 		'transaction_shipment',
+		'transaction_is_free',
 		'transaction_service',
 		'transaction_discount',
 		'transaction_tax',

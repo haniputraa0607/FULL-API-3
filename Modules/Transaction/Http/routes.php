@@ -12,7 +12,9 @@ Route::group(['middleware' => 'auth:api', 'prefix' => 'api/transaction', 'namesp
     Route::post('/balance', 'ApiTransaction@balanceUser');
     Route::post('/balance/filter', 'ApiTransaction@balanceUserFilter');
     Route::post('/admin', 'ApiNotification@adminOutletNotification');
-    Route::post('/setting', 'SettingTransactionController@settingTrx');
+    Route::post('/setting', 'ApiSettingTransaction@settingTrx');
+    Route::post('/setting/free-delivery', 'ApiSettingTransaction@updateFreeDelivery');
+    Route::post('/setting/go-send-package-detail', 'ApiSettingTransaction@updateGoSendPackage');
 
     Route::group(['prefix' => 'manualpayment'], function()
     {
@@ -51,6 +53,7 @@ Route::group(['middleware' => 'auth:api', 'prefix' => 'api/transaction', 'namesp
     Route::post('/point/detail', 'ApiTransaction@transactionPointDetail');
     Route::post('/balance/detail', 'ApiTransaction@transactionBalanceDetail');
 
+    Route::post('history', 'ApiHistoryController@historyAll');
     Route::post('history-trx', 'ApiHistoryController@historyTrx');
     Route::post('history-point', 'ApiHistoryController@historyPoint');
     Route::post('history-balance', 'ApiHistoryController@historyBalance');
@@ -63,7 +66,7 @@ Route::group(['middleware' => 'auth:api', 'prefix' => 'api/transaction', 'namesp
     Route::post('/void', 'ApiTransaction@transactionVoid');
 
     Route::post('/new', 'ApiOnlineTransaction@newTransaction');
-    Route::post('/confirm', 'ConfirmController@confirmTransaction');
+    Route::post('/confirm', 'ApiConfirm@confirmTransaction');
     Route::get('/{key}', 'ApiTransaction@transactionList');
 });
 
@@ -74,8 +77,10 @@ Route::group(['middleware' => 'auth_client', 'prefix' => 'api/transaction', 'nam
     Route::post('/subdistrict', 'ApiTransaction@getSubdistrict');
     Route::post('/courier', 'ApiTransaction@getCourier');
     Route::any('/grand-total', 'ApiOnlineTransaction@grandTotal');
-
+    
     Route::post('/new-transaction', 'ApiTransaction@transaction');
+
+    Route::post('/shipping/gosend', 'ApiTransaction@shippingCostGoSend');
 });
 
 Route::group(['prefix' => 'api/transaction', 'namespace' => 'Modules\Transaction\Http\Controllers'], function()
@@ -84,10 +89,14 @@ Route::group(['prefix' => 'api/transaction', 'namespace' => 'Modules\Transaction
     Route::any('/cancel', 'ApiTransaction@transactionCancel');
     Route::any('/error', 'ApiTransaction@transactionError');
     Route::any('/notif', 'ApiNotification@receiveNotification');
+});
+    
+Route::group(['prefix' => 'api/transaction', 'namespace' => 'Modules\Transaction\Http\Controllers'], function()
+{
     Route::post('/detail/webview', 'ApiWebviewController@webview');
     Route::post('/detail/webview/point', 'ApiWebviewController@webviewPoint');
     Route::post('/detail/webview/balance', 'ApiWebviewController@webviewBalance');
-    
+
     Route::post('/detail/webview/success', 'ApiWebviewController@trxSuccess');
 });
 

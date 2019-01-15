@@ -9,6 +9,7 @@ use Illuminate\Routing\Controller;
 use App\Http\Models\Outlet;
 use App\Http\Models\Transaction;
 use App\Http\Models\TransactionPickup;
+use App\Http\Models\TransactionPickupGoSend;
 use App\Http\Models\Setting;
 use App\Http\Models\User;
 use App\Http\Models\Product;
@@ -34,7 +35,7 @@ class ApiOutletApp extends Controller
         $outlet = $request->user();
 
         $list = Transaction::join('transaction_pickups', 'transactions.id_transaction', 'transaction_pickups.id_transaction')
-                            ->select('transactions.id_transaction', 'transaction_receipt_number', 'order_id', 'transaction_date', 'pickup_type', 'pickup_at', 'receive_at', 'ready_at', 'taken_at', 'reject_at')
+                            ->select('transactions.id_transaction', 'transaction_receipt_number', 'order_id', 'transaction_date', 'pickup_by', 'pickup_type', 'pickup_at', 'receive_at', 'ready_at', 'taken_at', 'reject_at')
                             ->where('id_outlet', $outlet->id_outlet)
                             ->whereDate('transaction_date', date('Y-m-d'))
                             ->where('transaction_payment_status', 'Completed')
@@ -53,7 +54,7 @@ class ApiOutletApp extends Controller
             if($post['status'] == 'Pending'){
                 $list = $list->whereNull('receive_at')
                              ->whereNull('ready_at')             
-                             ->whereNull('taken_at');             
+                             ->whereNull('taken_at');
             }
             if($post['status'] == 'Accepted'){
                 $list = $list->whereNull('ready_at')             
@@ -67,7 +68,7 @@ class ApiOutletApp extends Controller
             }
         }
                             
-        $list = $list->get();
+        $list = $list->get()->toArray();
 
         //dikelompokkan sesuai status
         $listPending = [];
@@ -76,37 +77,35 @@ class ApiOutletApp extends Controller
         $listOnGoingArrival = [];
         $listReady = [];
         $listCompleted = [];
-        foreach($list as $i => $dataList){
 
+        foreach($list as $i => $dataList){
             $qr     = $dataList['order_id'];
             $qrCode = 'https://chart.googleapis.com/chart?chl='.$qr.'&chs=250x250&cht=qr&chld=H%7C0';
             $qrCode = html_entity_decode($qrCode);
 
-            $dataList = array_slice($dataList->toArray(), 0, 3, true) +
+            $dataList = array_slice($dataList, 0, 3, true) +
             array("order_id_qrcode" => $qrCode) +
-            array_slice($dataList->toArray(), 3, count($dataList->toArray()) - 1, true) ;
+            array_slice($dataList, 3, count($dataList) - 1, true) ;
 
             $dataList['order_id'] = strtoupper($dataList['order_id']);
-            if($dataList['reject_at'] == null){
-                if($dataList['receive_at'] == null){
-                    $dataList['status']  = 'Pending';
-                    $listPending[] = $dataList;
-                }elseif($dataList['receive_at'] != null && $dataList['ready_at'] == null){
-                    $dataList['status']  = 'Accepted';
-                    if($dataList['pickup_type'] == 'set time'){
-                        $listOnGoingSet[] = $dataList;
-                    }elseif($dataList['pickup_type'] == 'right now'){
-                        $listOnGoingNow[] = $dataList;
-                    }elseif($dataList['pickup_type'] == 'at arrival'){
-                        $listOnGoingArrival[] = $dataList;
-                    }
-                }elseif($dataList['receive_at'] != null && $dataList['ready_at'] != null && $dataList['taken_at'] == null){
-                    $dataList['status']  = 'Ready';
-                    $listReady[] = $dataList;
-                }elseif($dataList['receive_at'] != null && $dataList['ready_at'] != null && $dataList['taken_at'] != null){
-                    $dataList['status']  = 'Completed';
-                    $listCompleted[] = $dataList;
+            if($dataList['receive_at'] == null){
+                $dataList['status']  = 'Pending';
+                $listPending[] = $dataList;
+            }elseif($dataList['receive_at'] != null && $dataList['ready_at'] == null){
+                $dataList['status']  = 'Accepted';
+                if($dataList['pickup_type'] == 'set time'){
+                    $listOnGoingSet[] = $dataList;
+                }elseif($dataList['pickup_type'] == 'right now'){
+                    $listOnGoingNow[] = $dataList;
+                }elseif($dataList['pickup_type'] == 'at arrival'){
+                    $listOnGoingArrival[] = $dataList;
                 }
+            }elseif($dataList['receive_at'] != null && $dataList['ready_at'] != null && $dataList['taken_at'] == null){
+                $dataList['status']  = 'Ready';
+                $listReady[] = $dataList;
+            }elseif($dataList['receive_at'] != null && $dataList['ready_at'] != null && $dataList['taken_at'] != null){
+                $dataList['status']  = 'Completed';
+                $listCompleted[] = $dataList;
             }
         }
 
@@ -195,6 +194,28 @@ class ApiOutletApp extends Controller
             ]);
         }
 
+        if($list['reject_at'] != null){
+            $statusPickup  = 'Reject';
+        }
+        elseif($list['taken_at'] != null){
+            $statusPickup  = 'Taken';
+        }
+        elseif($list['ready_at'] != null){
+            $statusPickup  = 'Ready';
+        }
+        elseif($list['receive_at'] != null){
+            $statusPickup  = 'On Going';
+        }
+        else{
+            $statusPickup  = 'Pending';
+        }
+
+        $list = array_slice($list->toArray(), 0, 29, true) +
+        array("status" => $statusPickup) +
+        array_slice($list->toArray(), 29, count($list->toArray()) - 1, true) ;
+
+
+
         $label = [];
 
         $order = Setting::where('key', 'transaction_grand_total_order')->value('value');
@@ -278,6 +299,13 @@ class ApiOutletApp extends Controller
             ]);
         }
 
+        if($order->reject_at != null){
+            return response()->json([
+                'status' => 'fail',
+                'messages' => ['Order Has Been Rejected']
+            ]);
+        }
+
         if($order->receive_at != null){
             return response()->json([
                 'status' => 'fail',
@@ -285,12 +313,14 @@ class ApiOutletApp extends Controller
             ]);
         }
 
+        DB::beginTransaction();
+
         $pickup = TransactionPickup::where('id_transaction', $order->id_transaction)->update(['receive_at' => date('Y-m-d H:i:s')]);
 
         if($pickup){
             //send notif to customer
             $user = User::find($order->id_user);
-            $send = app($this->autocrm)->SendAutoCRM('Order Accepted', $user['phone'], ["outlet_name" => $outlet['outlet_name'], "id_reference" => $order->id_transaction, "transaction_date" => $order->transaction_date]);
+            $send = app($this->autocrm)->SendAutoCRM('Order Accepted', $user['phone'], ["outlet_name" => $outlet['outlet_name'], "id_reference" => $order->transaction_receipt_number, "transaction_date" => $order->transaction_date]);
             if($send != true){
                 DB::rollback();
                 return response()->json([
@@ -328,6 +358,13 @@ class ApiOutletApp extends Controller
             ]);
         }
 
+        if($order->reject_at != null){
+            return response()->json([
+                'status' => 'fail',
+                'messages' => ['Order Has Been Rejected']
+            ]);
+        }
+
         if($order->receive_at == null){
             return response()->json([
                 'status' => 'fail',
@@ -347,7 +384,7 @@ class ApiOutletApp extends Controller
         if($pickup){
             //send notif to customer
             $user = User::find($order->id_user);
-            $send = app($this->autocrm)->SendAutoCRM('Order Ready', $user['phone'], ["outlet_name" => $outlet['outlet_name'], "id_reference" => $order->id_transaction,  "transaction_date" => $order->transaction_date]);
+            $send = app($this->autocrm)->SendAutoCRM('Order Ready', $user['phone'], ["outlet_name" => $outlet['outlet_name'], "id_reference" => $order->transaction_receipt_number,  "transaction_date" => $order->transaction_date]);
             if($send != true){
                 DB::rollback();
                 return response()->json([
@@ -385,6 +422,13 @@ class ApiOutletApp extends Controller
             ]);
         }
 
+        if($order->reject_at != null){
+            return response()->json([
+                'status' => 'fail',
+                'messages' => ['Order Has Been Rejected']
+            ]);
+        }
+
         if($order->receive_at == null){
             return response()->json([
                 'status' => 'fail',
@@ -412,7 +456,7 @@ class ApiOutletApp extends Controller
         if($pickup){
             //send notif to customer
             $user = User::find($order->id_user);
-            $send = app($this->autocrm)->SendAutoCRM('Order Taken', $user['phone'], ["outlet_name" => $outlet['outlet_name'], "id_reference" => $order->id_transaction, "transaction_date" => $order->transaction_date]);
+            $send = app($this->autocrm)->SendAutoCRM('Order Taken', $user['phone'], ["outlet_name" => $outlet['outlet_name'], "id_reference" => $order->transaction_receipt_number, "transaction_date" => $order->transaction_date]);
             if($send != true){
                 DB::rollback();
                 return response()->json([
@@ -575,6 +619,7 @@ class ApiOutletApp extends Controller
             ]);
         }
 
+        
         if($order->ready_at){
             return response()->json([
                 'status' => 'fail',
@@ -636,7 +681,7 @@ class ApiOutletApp extends Controller
             }
 
             //send notif to customer
-            $send = app($this->autocrm)->SendAutoCRM('Order Reject', $user['phone'], ["outlet_name" => $outlet['outlet_name'], "id_reference" => $order->id_transaction, "transaction_date" => $order->transaction_date]);
+            $send = app($this->autocrm)->SendAutoCRM('Order Reject', $user['phone'], ["outlet_name" => $outlet['outlet_name'], "id_reference" => $order->transaction_receipt_number, "transaction_date" => $order->transaction_date]);
             if($send != true){
                 DB::rollback();
                 return response()->json([
