@@ -289,6 +289,10 @@ class ApiWebviewController extends Controller
         $receipt = null;
 
         $data   = LogPoint::where('id_log_point', $id)->first();
+        if (empty($data)) {
+            return response()->json(['status' => 'fail', 'messages' => ['Point not found']]);
+        }
+
         if ($data['source'] == 'Transaction') {
             $select = Transaction::with('outlet')->where('id_transaction', $data['id_reference'])->first();
             $receipt = $select['transaction_receipt_number']; 

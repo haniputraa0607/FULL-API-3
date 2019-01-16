@@ -844,37 +844,36 @@ class ApiOnlineTransaction extends Controller
             }
         }
 
-            //insert pickup go-send
-            if($post['type'] == 'GO-SEND'){
-                $dataGoSend['id_transaction_pickup'] = $insertPickup['id_transaction_pickup'];
-                $dataGoSend['origin_name']           = $outlet['outlet_name'];
-                $dataGoSend['origin_phone']          = $outlet['outlet_phone'];
-                $dataGoSend['origin_address']        = $outlet['outlet_address'];
-                $dataGoSend['origin_latitude']       = $outlet['outlet_latitude'];
-                $dataGoSend['origin_longitude']      = $outlet['outlet_longitude'];
-                $dataGoSend['origin_note']           = '';
-                $dataGoSend['destination_name']      = $post['destination']['name'];
-                $dataGoSend['destination_phone']     = $post['destination']['phone'];
-                $dataGoSend['destination_address']   = $post['destination']['address'];
-                $dataGoSend['destination_latitude']  = $post['destination']['latitude'];
-                $dataGoSend['destination_longitude'] = $post['destination']['longitude'];
+        //insert pickup go-send
+        if($post['type'] == 'GO-SEND'){
+            $dataGoSend['id_transaction_pickup'] = $insertPickup['id_transaction_pickup'];
+            $dataGoSend['origin_name']           = $outlet['outlet_name'];
+            $dataGoSend['origin_phone']          = $outlet['outlet_phone'];
+            $dataGoSend['origin_address']        = $outlet['outlet_address'];
+            $dataGoSend['origin_latitude']       = $outlet['outlet_latitude'];
+            $dataGoSend['origin_longitude']      = $outlet['outlet_longitude'];
+            $dataGoSend['origin_note']           = '';
+            $dataGoSend['destination_name']      = $post['destination']['name'];
+            $dataGoSend['destination_phone']     = $post['destination']['phone'];
+            $dataGoSend['destination_address']   = $post['destination']['address'];
+            $dataGoSend['destination_latitude']  = $post['destination']['latitude'];
+            $dataGoSend['destination_longitude'] = $post['destination']['longitude'];
 
-                if(isset($post['destination_note'])){
-                    $dataGoSend['destination_note'] = $post['destination']['note'];
-                }
-
-                $gosend = TransactionPickupGoSend::create($dataGoSend);
-                if (!$gosend) {
-                    DB::rollback();
-                    return response()->json([
-                        'status'    => 'fail',
-                        'messages'  => ['Insert Transaction GO-SEND Failed']
-                    ]);
-                }
-
-                $id_pickup_go_send = $gosend->id_transaction_pickup_go_send;
+            if(isset($post['destination_note'])){
+                $dataGoSend['destination_note'] = $post['destination']['note'];
             }
-        } 
+
+            $gosend = TransactionPickupGoSend::create($dataGoSend);
+            if (!$gosend) {
+                DB::rollback();
+                return response()->json([
+                    'status'    => 'fail',
+                    'messages'  => ['Insert Transaction GO-SEND Failed']
+                ]);
+            }
+
+            $id_pickup_go_send = $gosend->id_transaction_pickup_go_send;
+        }
 
         if ($post['transaction_payment_status'] == 'Completed') {
 
@@ -978,97 +977,13 @@ class ApiOnlineTransaction extends Controller
                     }
                 }
             }
-
-            // if ($post['payment_type'] == 'Midtrans') {
-            //     if ($post['transaction_payment_status'] == 'Completed') {
-            //         //bank
-            //         $bank = ['BNI', 'Mandiri', 'BCA'];
-            //         $getBank = array_rand($bank);
-
-            //         //payment_method
-            //         $method = ['credit_card', 'bank_transfer', 'direct_debit'];
-            //         $getMethod = array_rand($method);
-
-            //         $dataInsertMidtrans = [
-            //             'id_transaction'     => $insertTransaction['id_transaction'],
-            //             'approval_code'      => 000000,
-            //             'bank'               => $bank[$getBank],
-            //             'eci'                => $this->getrandomnumber(2),
-            //             'transaction_time'   => $insertTransaction['transaction_date'].' 22:00:00',
-            //             'gross_amount'       => $insertTransaction['transaction_grandtotal'],
-            //             'order_id'           => $insertTransaction['transaction_receipt_number'],
-            //             'payment_type'       => $method[$getMethod],
-            //             'signature_key'      => $this->getrandomstring(),
-            //             'status_code'        => 200,
-            //             'vt_transaction_id'  => $this->getrandomstring(8).'-'.$this->getrandomstring(4).'-'.$this->getrandomstring(4).'-'.$this->getrandomstring(12),
-            //             'transaction_status' => 'capture',
-            //             'fraud_status'       => 'accept',
-            //             'status_message'     => 'Veritrans payment notification'
-            //         ];
-
-            //         $insertDataMidtrans = TransactionPaymentMidtran::create($dataInsertMidtrans);
-            //         if (!$insertDataMidtrans) {
-            //             DB::rollback();
-            //             return response()->json([
-            //                 'status'    => 'fail',
-            //                 'messages'  => ['Insert Data Midtrans Failed']
-            //             ]);
-            //         }
-
-            //         DB::commit();
-            //         return ['status' => 'success'];
-            //     } else {
-            //         DB::commit();
-            //         return response()->json([
-            //             'status' => 'success',
-            //             'result' => $insertTransaction
-            //         ]);
-            //     }
-            // } elseif ($post['payment_type'] == 'Manual') {
-            //     DB::commit();
-            //     return response()->json([
-            //         'status' => 'success',
-            //         'result' => $insertTransaction
-            //     ]);
-
-            // } else {
-            //     $save = app($this->balance)->topUp($insertTransaction['id_user'], $insertTransaction['transaction_grandtotal'], $insertTransaction['id_transaction']);
-
-            //     if ($save['status'] == 'fail') {
-            //         DB::rollback();
-            //         return response()->json($save);
-            //     }
-
-            //     if ($save['status'] == 'success') {
-            //         if ($save['type'] == 'no_topup') {
-            //             $mid['order_id'] = $insertTransaction['transaction_receipt_number'];
-
-            //             $newTrx = Transaction::with('user.memberships', 'outlet', 'productTransaction')->where('transaction_receipt_number', $insertTransaction['transaction_receipt_number'])->first();
-            //             $send = app($this->notif)->notification($mid, $newTrx);
-
-            //             DB::commit();
-            //             return response()->json([
-            //                 'status' => 'success',
-            //                 'result' => $insertTransaction
-            //             ]);
-            //         } else {
-            //             DB::commit();
-            //             return response()->json([
-            //                 'status' => 'success',
-            //                 'type'   => 'topup',
-            //                 'result' => $insertTransaction
-            //             ]);
-            //         }
-            //     }
-            // }
-        } 
-        // else {
-            DB::commit();
-            return response()->json([
-                'status' => 'success',
-                'result' => $insertTransaction
-            ]);
-        // }
+        }
+        
+        DB::commit();
+        return response()->json([
+            'status' => 'success',
+            'result' => $insertTransaction
+        ]);
         
     }
 
