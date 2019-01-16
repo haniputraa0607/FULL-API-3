@@ -966,6 +966,17 @@ class ApiOnlineTransaction extends Controller
 
                     $insertTransaction = Transaction::with('user.memberships', 'outlet', 'productTransaction')->where('transaction_receipt_number', $insertTransaction['transaction_receipt_number'])->first();
 
+                    if ($configAdminOutlet && $configAdminOutlet['is_active'] == '1') {
+                        $sendAdmin = app($this->notif)->sendNotif($insertTransaction);
+                        if (!$sendAdmin) {
+                            DB::rollback();
+                            return response()->json([
+                                'status'    => 'fail',
+                                'messages'  => ['Transaction failed']
+                            ]);
+                        }
+                    }
+
                     $send = app($this->notif)->notification($mid, $insertTransaction);
 
                     if (!$send) {

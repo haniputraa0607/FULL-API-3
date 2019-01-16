@@ -10,6 +10,8 @@ use App\Http\Models\Setting;
 use App\Http\Models\Product;
 use App\Http\Models\ProductPrice;
 
+use DB;
+
 class ApiSettingTransactionV2 extends Controller
 {
     public function setting($value) {

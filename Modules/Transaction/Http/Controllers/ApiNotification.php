@@ -337,7 +337,7 @@ class ApiNotification extends Controller {
         
         $detail = DB::table($table)->where('id_transaction', $data['id_transaction'])->first();
         $link = MyHelper::get(env('SHORT_LINK_URL').'/?key='.env('SHORT_LINK_KEY').'&url='.$detail->short_link);
-        return $link;
+      
         if ($link['error'] == 0) {
             $admin = UserOutlet::with('outlet')->where('id_outlet', $data['id_outlet'])->where($field, 1)->get()->toArray();
 

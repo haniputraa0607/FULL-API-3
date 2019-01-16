@@ -35,7 +35,7 @@ class ApiConfirm extends Controller
         $dataDetailProduct = [];
 
         $check = Transaction::with('transaction_shipments', 'productTransaction.product')->where('transaction_receipt_number', $post['id'])->first();
-        // return $check;
+
         if (empty($check)) {
             DB::rollback();
             return response()->json([
@@ -55,7 +55,6 @@ class ApiConfirm extends Controller
         $checkPayment = TransactionMultiplePayment::where('id_transaction', $check['id_transaction'])->first();
         $countGrandTotal = $check['transaction_grandtotal'];
 
-        // return $checkPayment;
         if (isset($check['productTransaction'])) {
             foreach ($check['productTransaction'] as $key => $value) {
                 $dataProductMidtrans = [
@@ -113,7 +112,6 @@ class ApiConfirm extends Controller
         if (!empty($checkPayment)) {
             if ($checkPayment['type'] == 'Balance') {
                 $checkPaymentBalance = TransactionPaymentBalance::where('id_transaction', $check['id_transaction'])->first();
-                // return $checkPaymentBalance;
                 if (empty($checkPaymentBalance)) {
                     DB::rollback();
                     return response()->json([
@@ -180,7 +178,6 @@ class ApiConfirm extends Controller
                 );
 
                 $connectMidtrans = Midtrans::token($check['transaction_receipt_number'], $countGrandTotal, $dataUser, $dataShipping, $dataDetailProduct);
-                // return $connectMidtrans;
             } else {
                 $dataMidtrans = array(
                     'transaction_details' => $transaction_details,
