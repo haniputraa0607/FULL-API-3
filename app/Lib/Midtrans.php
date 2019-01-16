@@ -29,8 +29,8 @@ use App\Lib\MyHelper;
 
 class Midtrans {
 
-	public function __construct() {
-		date_default_timezone_set('Asia/Jakarta');
+    public function __construct() {
+        date_default_timezone_set('Asia/Jakarta');
     }
 
     static function bearer() {
@@ -38,7 +38,7 @@ class Midtrans {
     }
     
     static function token($receipt, $grandTotal, $user=null, $shipping=null, $product=null) {
-		$url    = env('MIDTRANS_SANDBOX');
+        $url    = env('MIDTRANS_SANDBOX');
 
         $transaction_details = array(
             'order_id'      => $receipt,
@@ -54,11 +54,11 @@ class Midtrans {
         }
 
         if (!is_null($shipping)) {
-        	$dataMidtrans['shipping_address'] = $shipping;
+            $dataMidtrans['shipping_address'] = $shipping;
         }
 
         if (!is_null($product)) {
-        	$dataMidtrans['item_details'] = $product;
+            $dataMidtrans['item_details'] = $product;
         }
 
         $token = MyHelper::post($url, Self::bearer(), $dataMidtrans);
@@ -67,11 +67,11 @@ class Midtrans {
     }
 
     static function checkStatus($orderId) {
-    	$url = 'https://api.sandbox.midtrans.com/v2/'.$orderId.'/status';
-    	
-    	$status = MyHelper::get($url, Self::bearer());
+        $url = 'https://api.sandbox.midtrans.com/v2/'.$orderId.'/status';
+        
+        $status = MyHelper::get($url, Self::bearer());
 
-    	return $status;
+        return $status;
     }
 }
 ?>

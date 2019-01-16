@@ -50,17 +50,18 @@ class ApiOnlineTransaction extends Controller
         ini_set('max_execution_time', 0);
         date_default_timezone_set('Asia/Jakarta');
 
-        $this->balance     = "Modules\Balance\Http\Controllers\BalanceController";
-        $this->membership  = "Modules\Membership\Http\Controllers\ApiMembership";
-        $this->autocrm     = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
-        $this->transaction = "Modules\Transaction\Http\Controllers\ApiTransaction";
-        $this->notif       = "Modules\Transaction\Http\Controllers\ApiNotification";
+        $this->balance       = "Modules\Balance\Http\Controllers\BalanceController";
+        $this->membership    = "Modules\Membership\Http\Controllers\ApiMembership";
+        $this->autocrm       = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
+        $this->transaction   = "Modules\Transaction\Http\Controllers\ApiTransaction";
+        $this->notif         = "Modules\Transaction\Http\Controllers\ApiNotification";
         $this->setting_fraud = "Modules\SettingFraud\Http\Controllers\ApiSettingFraud";
         $this->setting_trx   = "Modules\Transaction\Http\Controllers\ApiSettingTransactionV2";
     }
 
     public function newTransaction(NewTransaction $request) {
         $post = $request->json()->all();
+        // return $post;
         $totalPrice = 0;
         $totalWeight = 0;
         $totalDiscount = 0;
@@ -96,7 +97,6 @@ class ApiOnlineTransaction extends Controller
         }
 
         $user = User::with('memberships')->where('id', $id)->first();
-    
         if (empty($user)) {
             DB::rollback();
             return response()->json([
@@ -174,6 +174,8 @@ class ApiOnlineTransaction extends Controller
             $totalDisProduct = $productDis;
         }
 
+        // return $totalDiscount;
+
         foreach ($grandTotal as $keyTotal => $valueTotal) {
             if ($valueTotal == 'subtotal') {
                 $post['sub'] = app($this->setting_trx)->countTransaction($valueTotal, $post);
@@ -242,11 +244,13 @@ class ApiOnlineTransaction extends Controller
 
         $countSettingCashback = TransactionSetting::get();
 
+        // return $countSettingCashback;
         if ($countUserTrx < count($countSettingCashback)) {
-            $post['cashback'] = $post['cashback'] * $countSettingCashback[$countUserTrx + 1]['cashback_percent'] / 100;
+            // return $countUserTrx;
+            $post['cashback'] = $post['cashback'] * $countSettingCashback[$countUserTrx]['cashback_percent'] / 100;
 
-            if ($post['cashback'] > $countSettingCashback[$countUserTrx + 1]['cashback_maximum']) {
-                $post['cashback'] = $countSettingCashback[$countUserTrx + 1]['cashback_maximum'];
+            if ($post['cashback'] > $countSettingCashback[$countUserTrx]['cashback_maximum']) {
+                $post['cashback'] = $countSettingCashback[$countUserTrx]['cashback_maximum'];
             }
         } else {
             if (count($user['memberships']) > 0) {
@@ -270,7 +274,7 @@ class ApiOnlineTransaction extends Controller
             $statusCashMax = 'yes';
             $totalCashMax = $maxCash['value'];
         }
-
+        
         if ($statusCashMax == 'yes') {
             if ($totalCashMax < $post['cashback']) {
                 $post['cashback'] = $totalCashMax;
@@ -278,7 +282,7 @@ class ApiOnlineTransaction extends Controller
         } else {
             $post['cashback'] = $post['cashback'];
         }
-
+        
         if (!isset($post['payment_type'])) {
             $post['payment_type'] = null;
         }
@@ -449,7 +453,7 @@ class ApiOnlineTransaction extends Controller
         ];
 
         $insertTransaction = Transaction::create($transaction);
-        // return $insertTransaction;
+
         if (!$insertTransaction) {
             DB::rollback();
             return response()->json([
@@ -459,7 +463,7 @@ class ApiOnlineTransaction extends Controller
         }
 
         // Fraud Detection
-        if($post['transaction_payment_status'] == 'Completed'){
+        if ($post['transaction_payment_status'] == 'Completed') {
             //update count transaction
             $updateCountTrx = User::where('id', $user['id'])->update(['count_transaction_day' => $user['count_transaction_day'] + 1, 'count_transaction_week' => $user['count_transaction_week'] + 1]);
             if (!$updateCountTrx) {
@@ -650,7 +654,7 @@ class ApiOnlineTransaction extends Controller
                                             ->where('order_id', $order_id)
                                             ->whereDate('transaction_date', date('Y-m-d'))
                                             ->first();
-            while($cekOrderId){
+            while ($cekOrderId) {
                 $order_id = MyHelper::createrandom(4, 'Besar Angka');
 
                 $cekOrderId = TransactionShipment::join('transactions', 'transactions.id_transaction', 'transaction_shipments.id_transaction')
@@ -724,6 +728,20 @@ class ApiOnlineTransaction extends Controller
                                             ->whereDate('transaction_date', date('Y-m-d'))
                                             ->first();
             while($cekOrderId){
+                $order_id = MyHelper::createrandom(4, 'Besar Angka');
+
+                $cekOrderId = TransactionPickup::join('transactions', 'transactions.id_transaction', 'transaction_pickups.id_transaction')
+                                                ->where('order_id', $order_id)
+                                                ->whereDate('transaction_date', date('Y-m-d'))
+                                                ->first();
+            }
+
+            //cek unique order id today
+            $cekOrderId = TransactionPickup::join('transactions', 'transactions.id_transaction', 'transaction_pickups.id_transaction')
+                                            ->where('order_id', $order_id)
+                                            ->whereDate('transaction_date', date('Y-m-d'))
+                                            ->first();
+            while ($cekOrderId) {
                 $order_id = MyHelper::createrandom(4, 'Besar Angka');
 
                 $cekOrderId = TransactionPickup::join('transactions', 'transactions.id_transaction', 'transaction_pickups.id_transaction')
@@ -826,7 +844,41 @@ class ApiOnlineTransaction extends Controller
             }
         }
 
+            //insert pickup go-send
+            if($post['type'] == 'GO-SEND'){
+                $dataGoSend['id_transaction_pickup'] = $insertPickup['id_transaction_pickup'];
+                $dataGoSend['origin_name']           = $outlet['outlet_name'];
+                $dataGoSend['origin_phone']          = $outlet['outlet_phone'];
+                $dataGoSend['origin_address']        = $outlet['outlet_address'];
+                $dataGoSend['origin_latitude']       = $outlet['outlet_latitude'];
+                $dataGoSend['origin_longitude']      = $outlet['outlet_longitude'];
+                $dataGoSend['origin_note']           = '';
+                $dataGoSend['destination_name']      = $post['destination']['name'];
+                $dataGoSend['destination_phone']     = $post['destination']['phone'];
+                $dataGoSend['destination_address']   = $post['destination']['address'];
+                $dataGoSend['destination_latitude']  = $post['destination']['latitude'];
+                $dataGoSend['destination_longitude'] = $post['destination']['longitude'];
+
+                if(isset($post['destination_note'])){
+                    $dataGoSend['destination_note'] = $post['destination']['note'];
+                }
+
+                $gosend = TransactionPickupGoSend::create($dataGoSend);
+                if (!$gosend) {
+                    DB::rollback();
+                    return response()->json([
+                        'status'    => 'fail',
+                        'messages'  => ['Insert Transaction GO-SEND Failed']
+                    ]);
+                }
+
+                $id_pickup_go_send = $gosend->id_transaction_pickup_go_send;
+            }
+        } 
+
         if ($post['transaction_payment_status'] == 'Completed') {
+
+            //check membership
             if (!empty($user['memberships'][0]['membership_name'])) {
                 $level = $user['memberships'][0]['membership_name'];
                 $percentageP = $user['memberships'][0]['benefit_point_multiplier'] / 100;
@@ -886,6 +938,13 @@ class ApiOnlineTransaction extends Controller
             }
 
             $checkMembership = app($this->membership)->calculateMembership($user['phone']);
+            if (!$checkMembership) {
+                DB::rollback();
+                return response()->json([
+                    'status'    => 'fail',
+                    'messages'  => ['Recount membership failed']
+                ]);
+            }
         }
 
         if (isset($post['payment_type'])) {

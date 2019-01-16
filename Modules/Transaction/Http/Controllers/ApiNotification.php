@@ -15,6 +15,7 @@ use App\Http\Models\UsersMembership;
 use App\Http\Models\Setting;
 use App\Http\Models\UserOutlet;
 use App\Http\Models\TransactionPickup;
+use App\Http\Models\TransactionPickupGoSend;
 use App\Http\Models\TransactionShipment;
 use App\Http\Models\LogPoint;
 use App\Http\Models\FraudSetting;
@@ -28,6 +29,7 @@ use Illuminate\Routing\Controller;
 use App\Lib\MyHelper;
 use App\Lib\PushNotificationHelper;
 use App\Lib\Midtrans;
+use App\Lib\GoSend;
 use Validator;
 use Hash;
 use DB;
@@ -37,9 +39,9 @@ class ApiNotification extends Controller {
 
     function __construct() {
         date_default_timezone_set('Asia/Jakarta');
-        $this->balance    = "Modules\Balance\Http\Controllers\BalanceController";
-        $this->autocrm    = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
-        $this->membership = "Modules\Membership\Http\Controllers\ApiMembership";
+        $this->balance       = "Modules\Balance\Http\Controllers\BalanceController";
+        $this->autocrm       = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
+        $this->membership    = "Modules\Membership\Http\Controllers\ApiMembership";
         $this->setting_fraud = "Modules\SettingFraud\Http\Controllers\ApiSettingFraud";
     }
 
@@ -53,7 +55,7 @@ class ApiNotification extends Controller {
         if (stristr($midtrans['order_id'], "TRX")) {
             // TRANSACTION
             $transac = Transaction::with('user.memberships', 'logTopup')->where('transaction_receipt_number', $midtrans['order_id'])->first();
-
+            
             if (empty($transac)) {
                 DB::rollback();
                 return response()->json([
@@ -64,7 +66,7 @@ class ApiNotification extends Controller {
 
             // PROCESS
             $checkPayment = $this->checkPayment($transac, $midtrans);
-
+            
             if (!$checkPayment) {
                 DB::rollback();
                 return response()->json([
@@ -74,12 +76,20 @@ class ApiNotification extends Controller {
             }
 
             $sendNotif = $this->sendNotif($transac);
+            if (!$sendNotif) {
+                return response()->json([
+                    'status'   => 'fail',
+                    'messages' => ['Transaction failed']
+                ]);
+            }
 
             $newTrx = Transaction::with('user.memberships', 'outlet', 'productTransaction')->where('transaction_receipt_number', $midtrans['order_id'])->first();
 
-            if ($newTrx['trasaction_payment_type'] != 'Balance') {
-                $savePoint = $this->savePoint($newTrx);
+            $checkType = TransactionMultiplePayment::where('id_transaction', $midtrans['order_id'])->get()->toArray();
+            $column = array_column($checkType, 'type');
 
+            if (!in_array('Balance', $column)) {
+                $savePoint = $this->savePoint($newTrx);
                 if (!$savePoint) {
                     DB::rollback();
                     return response()->json([
@@ -88,18 +98,18 @@ class ApiNotification extends Controller {
                     ]);
                 }
             }
-
+                    
             //booking GO-SEND
-            if($newTrx['trasaction_type'] == 'Pickup Order'){
+            if ($newTrx['trasaction_type'] == 'Pickup Order') {
                 $newTrx['detail'] = TransactionPickup::with('transactionPickupGoSend')->where('id_transaction', $newTrx['id_transaction'])->first();
-                if($newTrx['detail']){
-                    if($newTrx['detail']['pickup_by'] == 'GO-SEND'){
+                if ($newTrx['detail']) {
+                    if ($newTrx['detail']['pickup_by'] == 'GO-SEND') {
                         $booking = $this->bookGoSend($newTrx);
-                        if(isset($booking['status'])){
+                        if (isset($booking['status'])) {
                             return response()->json($booking);
                         }
                     }
-                }else{
+                } else {
                     DB::rollback();
                     return response()->json([
                         'status'   => 'fail',
@@ -107,11 +117,17 @@ class ApiNotification extends Controller {
                     ]);
                 }
             }
+
             
-            $this->notification($midtrans, $newTrx);
+            $notif = $this->notification($midtrans, $newTrx);
+            if (!$notif) {
+                return response()->json([
+                    'status'   => 'fail',
+                    'messages' => ['Transaction failed']
+                ]);
+            }
 
             DB::commit();
-            // langsung
             return response()->json(['status' => 'success']);
         }
         else {
@@ -215,7 +231,7 @@ class ApiNotification extends Controller {
         $detail = $this->getHtml($trx, $trx['productTransaction'], $name, $phone, $date, $outlet, $receipt);
 
         $send = app($this->autocrm)->SendAutoCRM('Transaction Success', $trx->user->phone, ['notif_type' => 'trx', 'date' => $trx['transaction_date'], 'status' => $trx['transaction_payment_status'], 'name'  => $trx->user->name, 'id' => $mid['order_id'], 'outlet_name' => $outlet, 'detail' => $detail, 'id_reference' => $mid['order_id']]);
-    
+
         return $send;
     }
 
@@ -281,7 +297,7 @@ class ApiNotification extends Controller {
                     'membership_cashback_percentage' => $percentageB * 100
                 ];
 
-                $insertDataLogCash = LogBalance::updateOrCreate(['id_reference' => $data['id_transaction']], $dataLogCash);
+                $insertDataLogCash = LogBalance::updateOrCreate(['id_reference' => $data['id_transaction'], 'source' => 'Transaction'], $dataLogCash);
                 if (!$insertDataLogCash) {
                     DB::rollback();
                     return response()->json([
@@ -320,9 +336,8 @@ class ApiNotification extends Controller {
         }
         
         $detail = DB::table($table)->where('id_transaction', $data['id_transaction'])->first();
-        return $detail;
-
-        $link = MyHelper::get(env('SHORT_LINK_URL').'/?key'.env('SHORT_LINK_KEY').'&url='.$detail['short_link']);
+        $link = MyHelper::get(env('SHORT_LINK_URL').'/?key='.env('SHORT_LINK_KEY').'&url='.$detail->short_link);
+        return $link;
         if ($link['error'] == 0) {
             $admin = UserOutlet::with('outlet')->where('id_outlet', $data['id_outlet'])->where($field, 1)->get()->toArray();
 
@@ -334,6 +349,10 @@ Order ID: ".$detail['order_id']."
 Tanggal: ".$data['transaction_date']."
 Detail: ".$link['short'],
                 ]);
+
+                if (!$send) {
+                    return false;
+                }
             }
         }
 
@@ -342,8 +361,6 @@ Detail: ".$link['short'],
 
     /* CHECK PAYMENT */
     function checkPayment($trx, $midtrans) {
-        DB::beginTransaction();
-
         if (isset($trx['logTopup'])) {
             $mid = $this->processMidtrans($midtrans);
 
@@ -351,7 +368,6 @@ Detail: ".$link['short'],
 
             $saMid = LogTopupMidtrans::create($mid);
             if (!$saMid) {
-                DB::rollback();
                 return false;
             }
 
@@ -362,7 +378,6 @@ Detail: ".$link['short'],
                     if ($check) {
                         $upTrx = Transaction::where('id_transaction', $trx['id_transaction'])->update(['transaction_payment_status' => 'Completed']);
                         if (!$upTrx) {
-                            DB::rollback();
                             return false;
                         }
 
@@ -384,22 +399,17 @@ Detail: ".$link['short'],
             return false;
         } else {
             $check = TransactionPaymentMidtran::where('order_id', $midtrans['order_id'])->where('id_transaction', $trx->id_transaction)->get()->first();
-
-            if ($check) {
-                $save = $this->paymentMidtrans($trx, $midtrans);
-
-                if ($save) {        
-                    DB::commit();
-                    return true;
-                }
+            if (!$check) {
+                return false;
             }
+
+            $save = $this->paymentMidtrans($trx, $midtrans);
+            if (!$save) {
+                return false;
+            }
+
+            return true;
         }
-
-        // CEK PAYMENT MIDTRANS
-        
-
-        DB::rollback();
-        return false;
     }
 
     /* CHECNK DEALS PAYMENT */
@@ -466,27 +476,30 @@ Detail: ".$link['short'],
 
         // UPDATE
         $update = TransactionPaymentMidtran::where('id_transaction', $trx->id_transaction)->where('order_id', $midtrans['order_id'])->update($data);
+        if (!$update) {
+            return false;
+        }
 
-        if ($update) {
-            // update trx
-            if (isset($midtrans['status_code']) && $midtrans['status_code'] == 200) {
-                if ($midtrans['transaction_status'] == 'capture' || $midtrans['transaction_status'] == 'settlement') {
-                    $check = Transaction::where('id_transaction', $trx->id_transaction)->update(['transaction_payment_status' => 'Completed']);
-                    
-                    if($check){
-                        $fraud = $this->checkFraud($trx);
-                        if ($fraud == false) {
-                            return false;
-                        }
-                    }
-
-                } else {
-                    $check = Transaction::where('id_transaction', $trx->id_transaction)->update(['transaction_payment_status' => ucwords($midtrans['transaction_status'])]);
+        if (isset($midtrans['status_code']) && $midtrans['status_code'] == 200) {
+            if ($midtrans['transaction_status'] == 'capture' || $midtrans['transaction_status'] == 'settlement') {
+                $check = Transaction::where('id_transaction', $trx->id_transaction)->update(['transaction_payment_status' => 'Completed']);
+                if (!$check) {
+                    return false;
                 }
 
-                return true;
+                $fraud = $this->checkFraud($trx);
+                if (!$fraud) {
+                    return false;
+                }
+            } else {
+                $check = Transaction::where('id_transaction', $trx->id_transaction)->update(['transaction_payment_status' => ucwords($midtrans['transaction_status'])]);
+
+                if (!$check) {
+                    return false;
+                }
             }
 
+            return true;
         }
 
         return false;
@@ -617,7 +630,11 @@ Detail: ".$link['short'],
     }
 
     function balanceNotif($data) {
-        $this->sendNotif($data);
+        $sendAdmin = $this->sendNotif($data);
+
+        if (!$sendAdmin) {
+            return false;
+        }
 
         $user = User::with('memberships')->where('id', $data['id_user'])->first();
 
@@ -633,10 +650,11 @@ Detail: ".$link['short'],
         
         $trxBalance = TransactionMultiplePayment::where('id_transaction', $data['id_transaction'])->first();
 
+        $trxBalance = TransactionMultiplePayment::where('id_transaction', $data['id_transaction'])->first();
+
         $balanceNow = app($this->balance)->balanceNow($data['id_user']);
 
         if (empty($trxBalance)) {
-
             $settingCashback = Setting::where('key', 'cashback_conversion_value')->first();
             $dataLogCash = [
                 'id_user'                        => $data['id_user'],
@@ -669,7 +687,6 @@ Detail: ".$link['short'],
 
         $insertDataLogCash = LogBalance::create($dataLogCash);
         if (!$insertDataLogCash) {
-            DB::rollback();
             return false;
         }
 
