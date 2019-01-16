@@ -190,8 +190,6 @@ class ApiConfirm extends Controller
                 $connectMidtrans = Midtrans::token($check['transaction_receipt_number'], $countGrandTotal, $dataUser, $ship=null, $dataDetailProduct);
             }
 
-            $connectMidtrans['token'] = '123';
-
             if (empty($connectMidtrans['token'])) {
                 DB::rollback();
                 return response()->json([

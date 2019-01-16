@@ -128,7 +128,44 @@ class ApiHistoryController extends Controller
         // return $post;
         $id = $request->user()->id;
         $order = 'new';
-        $page = 0;
+        $page = 1;
+
+        if(!isset($post['pickup_order'])){
+            $post['pickup_order'] = null;
+        }
+
+        if(!isset($post['delivery_order'])){
+            $post['delivery_order'] = null;
+        }
+
+        if(!isset($post['online_order'])){
+            $post['online_order'] = null;
+        }
+
+        if(!isset($post['offline_order'])){
+            $post['offline_order'] = null;
+        }
+
+        if(!isset($post['pending'])){
+            $post['pending'] = null;
+        }
+
+        if(!isset($post['paid'])){
+            $post['paid'] = null;
+        }
+
+        if(!isset($post['completed'])){
+            $post['completed'] = null;
+        }
+
+        if(!isset($post['cancel'])){
+            $post['cancel'] = null;
+        }
+
+        if(!isset($post['buy_voucher'])){
+            $post['buy_voucher'] = null;
+        }
+
 
         $transaction = $this->transaction($post, $id);
         $voucher = [];
@@ -186,9 +223,24 @@ class ApiHistoryController extends Controller
         $post = $request->json()->all();
         $id = $request->user()->id;
         $order = 'new';
-        $page = 0;
+        $page = 1;
 
-        $post['id'] = $id;
+        if(!isset($post['use_point'])){
+            $post['use_point'] = null;
+        }
+        if(!isset($post['earn_point'])){
+            $post['earn_point'] = null;
+        }
+        if(!isset($post['offline_order'])){
+            $post['offline_order'] = null;
+        }
+        if(!isset($post['voucher'])){
+            $post['voucher'] = null;
+        }
+
+        if(!isset($post['buy_voucher'])){
+            $post['buy_voucher'] = null;
+        }
 
         if (!is_null($post['oldest'])) {
             $order = 'old';
@@ -204,7 +256,7 @@ class ApiHistoryController extends Controller
 
         $next_page = $page + 1;
 
-        $point = $this->point($post);
+        $point = $this->point($post, $id);
 
         $sortPoint = $this->sorting($point, $order, $page);
         
@@ -236,7 +288,18 @@ class ApiHistoryController extends Controller
         $order = 'new';
         $page = 0;
 
-        $post['id'] = $id;
+        if(!isset($post['use_point'])){
+            $post['use_point'] = null;
+        }
+        if(!isset($post['earn_point'])){
+            $post['earn_point'] = null;
+        }
+        if(!isset($post['offline_order'])){
+            $post['offline_order'] = null;
+        }
+        if(!isset($post['voucher'])){
+            $post['voucher'] = null;
+        }
 
         if (!is_null($post['oldest'])) {
             $order = 'old';
@@ -252,7 +315,7 @@ class ApiHistoryController extends Controller
 
         $next_page = $page + 1;
 
-        $balance = $this->balance($post);
+        $balance = $this->balance($post, $id);
 
         $sortBalance = $this->sorting($balance, $order, $page);
         

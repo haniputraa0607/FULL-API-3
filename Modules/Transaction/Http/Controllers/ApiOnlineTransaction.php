@@ -510,6 +510,10 @@ class ApiOnlineTransaction extends Controller
                 ]);
             }
 
+            if(!isset($valueProduct['note'])){
+                $valueProduct['note'] = null;
+            }
+
             $dataProduct = [
                 'id_transaction'               => $insertTransaction['id_transaction'],
                 'id_product'                   => $checkProduct['id_product'],
