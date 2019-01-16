@@ -14,7 +14,7 @@ use App\Http\Models\Outlet;
 use DB;
 use App\Lib\MyHelper;
 
-class SettingTransactionController extends Controller
+class ApiSettingTransaction extends Controller
 {
     public function settingTrx(Request $request) {
         $post = $request->json()->all();
