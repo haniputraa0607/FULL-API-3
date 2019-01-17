@@ -271,7 +271,7 @@ class ApiDealsVoucher extends Controller
 
         // if voucher detail, add webview url & btn text
         if (isset($post['used']) && $post['used'] == 0) {
-            $voucher[0]['webview_url'] = env('APP_URL') ."/webview/voucher/". $voucher[0]['id_deals_user'];
+            $voucher[0]['webview_url'] = env('APP_URL') ."webview/voucher/". $voucher[0]['id_deals_user'];
             $voucher[0]['button_text'] = 'INVALIDATE';
         }
 

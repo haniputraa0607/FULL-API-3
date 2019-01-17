@@ -414,7 +414,7 @@ class ApiDeals extends Controller
 
         // if deals detail, add webview url & btn text
         if ($request->json('id_deals') && !empty($deals)) {
-            $deals[0]['webview_url'] = env('APP_URL') ."/webview/deals/". $deals[0]['id_deals'] ."/". $deals[0]['deals_type'];
+            $deals[0]['webview_url'] = env('APP_URL') ."webview/deals/". $deals[0]['id_deals'] ."/". $deals[0]['deals_type'];
             $deals[0]['button_text'] = 'BELI';
         }
 
