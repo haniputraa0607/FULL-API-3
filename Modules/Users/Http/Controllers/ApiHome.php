@@ -70,8 +70,16 @@ class ApiHome extends Controller
         $banners = $banners->map(function ($banner, $key) {
             $item['image_url'] = url($banner->image);
             $item['id_news']   = $banner->id_news;
-            $item['url']       = $banner->url;
-            // $item['position']  = $banner->position;
+
+            $item['news_title'] = "";
+            $item['url']        = $banner->url;
+
+            if ($banner->id_news != "") {
+                $item['news_title'] = $banner->news->news_title;
+                // if news, generate webview news detail url
+                $item['url']        = env('APP_URL') .'news/webview/'. $banner->id_news;
+            }
+
             return $item;
         });
         $banners->all();
