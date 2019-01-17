@@ -827,6 +827,12 @@ class ApiUser extends Controller
 	
 	function check(users_phone $request){
 		$phone = $request->json('phone');
+		if(substr($phone, 0, 2) == '62'){
+			$phone = substr($phone,2);
+		}elseif(substr($phone, 0, 3) == '+62'){
+			$phone = substr($phone,3);
+		}
+		
 		if(substr($phone, 0, 1) != '0'){
 			$phone = '0'.$phone;
 		}
@@ -841,6 +847,12 @@ class ApiUser extends Controller
 	 */
 	function createPin(users_phone $request){
 		$phone = $request->json('phone');
+		if(substr($phone, 0, 2) == '62'){
+			$phone = substr($phone,2);
+		}elseif(substr($phone, 0, 3) == '+62'){
+			$phone = substr($phone,3);
+		}
+
 		if(substr($phone, 0, 1) != '0'){
 			$phone = '0'.$phone;
 		}
@@ -1083,6 +1095,12 @@ class ApiUser extends Controller
 	
 	function resendPin(users_phone $request){
 		$phone = $request->json('phone');
+		if(substr($phone, 0, 2) == '62'){
+			$phone = substr($phone,2);
+		}elseif(substr($phone, 0, 3) == '+62'){
+			$phone = substr($phone,3);
+		}
+
 		if(substr($phone, 0, 1) != '0'){
 			$phone = '0'.$phone;
 		}

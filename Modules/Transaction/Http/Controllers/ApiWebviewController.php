@@ -165,7 +165,7 @@ class ApiWebviewController extends Controller
             }
 
             if ($list['trasaction_payment_type'] == 'Balance') {
-                $log = LogBalance::where('id_reference', $list['id_transaction'])->first();
+                $log = LogBalance::where('id_reference', $list['id_transaction'])->where('source', 'Transaction')->where('balance', '<', 0)->first();
                 if ($log['balance'] < 0) {
                     $list['balance'] = $log['balance'];
                     $list['check'] = 'tidak topup';
@@ -193,7 +193,9 @@ class ApiWebviewController extends Controller
                         $payment = TransactionPaymentMidtran::find($dataPay['id_payment']);
                     }
                 }
-                $list['payment'] = $payment;
+                if(isset($payment)){
+                    $list['payment'] = $payment;
+                }
             }
 
             if ($list['trasaction_payment_type'] == 'Offline') {
@@ -224,7 +226,7 @@ class ApiWebviewController extends Controller
             $qrTest= '';
 
             if ($list['trasaction_type'] == 'Pickup Order') {
-                $detail = TransactionPickup::where('id_transaction', $list['id_transaction'])->first();
+                $detail = TransactionPickup::where('id_transaction', $list['id_transaction'])->with('transaction_pickup_go_send')->first();
                 $qrTest = $detail['order_id'];
             } elseif ($list['trasaction_type'] == 'Delivery') {
                 $detail = TransactionShipment::with('city.province')->where('id_transaction', $list['id_transaction'])->first();

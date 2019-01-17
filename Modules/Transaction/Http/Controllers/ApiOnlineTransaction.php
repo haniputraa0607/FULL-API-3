@@ -314,37 +314,6 @@ class ApiOnlineTransaction extends Controller
             $post['point']    = 0;
         }
 
-        //cek free delivery
-        $isFree = '0';
-        if($post['type'] == 'GO-SEND'){
-            $setting = Setting::where('key', 'like', '%free_delivery%')->get();
-            if($setting){
-                $freeDev = [];
-                foreach($setting as $dataSetting){
-                    $freeDev[$dataSetting['key']] = $dataSetting['value'];
-                }
-     
-                if(isset($freeDev['free_delivery_type'])){
-                    if($freeDev['free_delivery_type'] == 'free' || isset($freeDev['free_delivery_nominal'])){
-                        if(isset($freeDev['free_delivery_requirement_type']) && $freeDev['free_delivery_requirement_type'] == 'total item' && isset($freeDev['free_delivery_min_item'])){
-                            $totalItem = 0;
-                            foreach ($post['item'] as $keyProduct => $valueProduct) {
-                                $totalItem += $valueProduct['qty'];
-                            }
-             
-                            if($totalItem >= $freeDev['free_delivery_min_item']){
-                                $isFree = '1';
-                            }
-                        }elseif(isset($freeDev['free_delivery_requirement_type']) && $freeDev['free_delivery_requirement_type'] == 'subtotal' && isset($freeDev['free_delivery_min_subtotal'])){
-                            if($post['subtotal'] >= $freeDev['free_delivery_min_subtotal']){
-                                $isFree = '1';
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
         $detailPayment = [
             'subtotal' => $post['subtotal'],
             'shipping' => $post['shipping'],
@@ -422,8 +391,16 @@ class ApiOnlineTransaction extends Controller
         }
 
         $type = $post['type'];
+        $isFree = '0';
+        $shippingGoSend = null;
+
         if($post['type'] == 'GO-SEND'){
             $type = 'Pickup Order';
+            $shippingGoSend = $post['shipping_go_send'];
+            //cek free delivery
+            if($post['is_free'] == 'yes'){
+                $isFree = '1';
+            }
         }
 
         DB::beginTransaction();
@@ -436,6 +413,7 @@ class ApiOnlineTransaction extends Controller
             'transaction_notes'           => $post['notes'],
             'transaction_subtotal'        => $post['subtotal'],
             'transaction_shipment'        => $post['shipping'],
+            'transaction_shipment_go_send'=> $shippingGoSend,
             'transaction_is_free'         => $isFree,
             'transaction_service'         => $post['service'],
             'transaction_discount'        => $post['discount'],

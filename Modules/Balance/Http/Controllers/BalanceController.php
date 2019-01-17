@@ -67,6 +67,16 @@ class BalanceController extends Controller
         }
 
         DB::beginTransaction();
+            $checkLog = LogBalance::where('source', $source)->where('id_reference', $id_reference)->first();
+            if($checkLog){
+                $balance_before = $checkLog->balance_before;
+                if($balance_nominal == $checkLog->balance){
+                    $balance_after = $checkLog->balance_after;
+                }else{
+                    $balance_after = $balance_before + $balance_nominal; 
+                }
+            }   
+
             $LogBalance = [
                 'id_user'                        => $id_user,
                 'balance'                        => $balance_nominal,
@@ -79,7 +89,8 @@ class BalanceController extends Controller
                 'membership_level'               => $level,
                 'membership_cashback_percentage' => $cashback_percentage
             ];
-            $create = LogBalance::create($LogBalance);
+
+            $create = LogBalance::updateOrCreate(['id_reference' => $id_reference, 'source' => $source], $LogBalance);
 
             // get inserted data to hash
             $log_balance = LogBalance::find($create->id_log_balance);

@@ -20,6 +20,8 @@ use App\Http\Models\ManualPaymentMethod;
 use App\Http\Models\ManualPaymentTutorial;
 use App\Http\Models\TransactionPaymentManual;
 use App\Http\Models\TransactionPaymentOffline;
+use App\Http\Models\TransactionPaymentBalance;
+use App\Http\Models\TransactionMultiplePayment;
 use App\Http\Models\Outlet;
 use App\Http\Models\LogPoint;
 use App\Http\Models\LogBalance;
@@ -57,8 +59,10 @@ use Modules\Transaction\Http\Requests\ManualPaymentDelete;
 use Modules\Transaction\Http\Requests\MethodSave;
 use Modules\Transaction\Http\Requests\MethodDelete;
 use Modules\Transaction\Http\Requests\ManualPaymentConfirm;
+use Modules\Transaction\Http\Requests\ShippingGoSend;
 
 use App\Lib\MyHelper;
+use App\Lib\GoSend;
 use Validator;
 use Hash;
 use DB;
@@ -1464,7 +1468,16 @@ class ApiTransaction extends Controller
             }
 
             if ($list['trasaction_payment_type'] == 'Midtrans') {
-                $payment = TransactionPaymentMidtran::where('id_transaction', $list['id_transaction'])->first();
+                //cek multi payment
+                $multiPayment = TransactionMultiplePayment::where('id_transaction', $list['id_transaction'])->get();
+                $payment = [];
+                foreach($multiPayment as $dataPay){
+                    if($dataPay['type'] == 'Midtrans'){
+                        $payment[] = TransactionPaymentMidtran::find($dataPay['id_payment']);
+                    }else{
+                        $payment[] = TransactionPaymentBalance::find($dataPay['id_payment']);
+                    }
+                }
                 $list['payment'] = $payment;
             }
 
@@ -1830,7 +1843,7 @@ class ApiTransaction extends Controller
             } else {
                 $data = [
                     'status'      => 'empty',
-                    'messages'    => ['Service is not ready']
+                    'messages'    => ['Maaf, pengiriman ke kota tersebut belum tersedia']
                 ];
             }
             
@@ -2043,6 +2056,84 @@ class ApiTransaction extends Controller
             }
         }
         return 'success';
+    }
+
+    public function shippingCostGoSend(ShippingGosend $request){
+        $post = $request->json()->all();
+        $shipping = GoSend::getPrice($post['origin'], $post['destination']);
+        if(isset($shipping['Instant']['price']['total_price'])){
+            $shippingCost = $shipping['Instant']['price']['total_price'];
+            $shippingFree = null;
+            $isFree = '0';
+            $setting = Setting::where('key', 'like', '%free_delivery%')->get();
+            if($setting){
+                $freeDev = [];
+                foreach($setting as $dataSetting){
+                    $freeDev[$dataSetting['key']] = $dataSetting['value'];
+                }
+    
+                if(isset($freeDev['free_delivery_type'])){
+                    if($freeDev['free_delivery_type'] == 'free' || isset($freeDev['free_delivery_nominal'])){
+                        if(isset($freeDev['free_delivery_requirement_type']) && $freeDev['free_delivery_requirement_type'] == 'total item' && isset($freeDev['free_delivery_min_item'])){
+                            if($post['total_item'] >= $freeDev['free_delivery_min_item']){
+                                $isFree = '1';
+                            }
+                        }elseif(isset($freeDev['free_delivery_requirement_type']) && $freeDev['free_delivery_requirement_type'] == 'subtotal' && isset($freeDev['free_delivery_min_subtotal'])){
+                            if($post['subtotal'] >= $freeDev['free_delivery_min_subtotal']){
+                                $isFree = '1';
+                            }
+                        }
+
+                        if($isFree == '1'){
+                            if($freeDev['free_delivery_type'] == 'free'){
+                                $shippingFree = 'FREE';
+                            }else{
+                                $shippingFree = $freeDev['free_delivery_nominal'];
+                            }
+                        }
+                    }
+                }
+
+            }
+
+            $result['shipping_cost_go_send'] = $shippingCost;
+            
+            if($shippingFree != null){
+                if($shippingFree == 'FREE'){
+                    $result['shipping_cost_discount'] = $shippingCost;
+                    $result['is_free'] = 'yes';
+                    $result['shipping_cost'] = 'FREE';
+                }else{
+                    if($shippingFree > $shippingCost){
+                        $result['shipping_cost_discount'] = $shippingCost;
+                        $result['is_free'] = 'no';
+                        $result['shipping_cost'] = 0;
+                    }else{
+                        $result['shipping_cost_discount'] = (int)$shippingFree;
+                        $result['is_free'] = 'no';
+                        $result['shipping_cost'] = $shippingCost - $shippingFree;
+                    }
+                }
+            }else{
+                $result['shipping_cost_discount'] = 0;
+                $result['is_free'] = 'no';
+                $result['shipping_cost'] = $shippingCost;
+            }
+
+            return response()->json([
+                'status' => 'success',
+                'result' => $result
+            ]);
+        }else{
+            if(isset($shipping['status']) && $shipping['status'] == 'fail'){
+                return response()->json($shipping);
+            }
+            return response()->json([
+                'status' => 'fail',
+                'messages' => [$shipping]
+            ]);
+        }
+
     }
 
 }
