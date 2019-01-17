@@ -68,8 +68,12 @@ Route::group(['middleware' => 'api', 'prefix' => 'api/setting', 'namespace' => '
         Route::post('/', 'ApiSetting@completeProfile');
     });
 
+    
+    Route::post('/free-delivery', 'ApiSetting@updateFreeDelivery');
+    Route::post('/go-send-package-detail', 'ApiSetting@updateGoSendPackage');
+
     // point reset
-    Route::post('{type}/update', 'ApiSetting@pointResetUpdate');
+    Route::post('reset/{type}/update', 'ApiSetting@pointResetUpdate');
 });
 
 Route::group(['middleware' => 'api', 'prefix' => 'api/timesetting', 'namespace' => 'Modules\Setting\Http\Controllers'], function()

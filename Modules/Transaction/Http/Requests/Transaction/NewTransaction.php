@@ -13,7 +13,7 @@ class NewTransaction extends FormRequest
         return [
             'item'                     => 'required|array',
             'id_outlet'                => 'required|integer',
-            'type'                     => 'required|in:Delivery,Pickup Order',
+            'type'                     => 'required|in:Delivery,Pickup Order,GO-SEND',
             'notes'                    => 'nullable|string',
             'pickup_type'              => 'required_if:type,Pickup Order|in:set time,right now,at arrival',
             'pickup_at'                => 'required_if:pickup_type,set time|date_format:Y-m-d H:i:s',
@@ -23,6 +23,16 @@ class NewTransaction extends FormRequest
             'cour_service'             => 'nullable|string',
             'cour_etd'                 => 'nullable|string',
             'id_user_address'          => 'required_if:type,Delivery|integer',
+            
+            'destination.name'         => 'required_if:type,GO-SEND',
+            'destination.phone'        => 'required_if:type,GO-SEND',
+            'destination.address'      => 'required_if:type,GO-SEND',
+            'destination.latitude'     => 'required_if:type,GO-SEND',
+            'destination.longitude'    => 'required_if:type,GO-SEND',
+            'destination.note'         => 'nullable',
+            'is_free'                  => 'required_if:type,GO-SEND|in:yes,no',
+            'shipping'                 => 'required_if:type,GO-SEND', 
+            'shipping_go_send'         => 'required_if:type,GO-SEND' ,
             
             // 'id_manual_payment_method' => 'required_if:payment_type,Manual|integer',
             // 'payment_date'             => 'required_if:payment_type,Manual|date_format:Y-m-d',

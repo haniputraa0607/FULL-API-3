@@ -101,7 +101,7 @@ class ApiNotification extends Controller {
                     
             //booking GO-SEND
             if ($newTrx['trasaction_type'] == 'Pickup Order') {
-                $newTrx['detail'] = TransactionPickup::with('transactionPickupGoSend')->where('id_transaction', $newTrx['id_transaction'])->first();
+                $newTrx['detail'] = TransactionPickup::with('transaction_pickup_go_send')->where('id_transaction', $newTrx['id_transaction'])->first();
                 if ($newTrx['detail']) {
                     if ($newTrx['detail']['pickup_by'] == 'GO-SEND') {
                         $booking = $this->bookGoSend($newTrx);
@@ -273,47 +273,17 @@ class ApiNotification extends Controller {
             //update point user
             $totalPoint = LogPoint::where('id_user',$data['id_user'])->sum('point');
             $updateUserPoint = User::where('id', $data['id_user'])->update(['points' => $totalPoint]);
-            if (!$updateUserPoint) {
-                DB::rollback();
-                return response()->json([
-                    'status'    => 'fail',
-                    'messages'  => ['Update User Point Failed']
-                ]);
-            }
         }
 
         if ($data['trasaction_payment_type'] != 'Balance') {
             if ($data['transaction_cashback_earned'] != 0) {
-                $settingCashback = Setting::where('key', 'cashback_conversion_value')->first();
-
-                $dataLogCash = [
-                    'id_user'                        => $data['id_user'],
-                    'balance'                        => $data['transaction_cashback_earned'],
-                    'id_reference'                   => $data['id_transaction'],
-                    'source'                         => 'Transaction',
-                    'grand_total'                    => $data['transaction_grandtotal'],
-                    'ccashback_conversion'           => $settingCashback['value'],
-                    'membership_level'               => $level,
-                    'membership_cashback_percentage' => $percentageB * 100
-                ];
-
-                $insertDataLogCash = LogBalance::updateOrCreate(['id_reference' => $data['id_transaction'], 'source' => 'Transaction'], $dataLogCash);
+                
+                $insertDataLogCash = app($this->balance)->addLogBalance( $data['id_user'], $data['transaction_cashback_earned'], $data['id_transaction'], 'Transaction', $data['transaction_grandtotal']);
                 if (!$insertDataLogCash) {
                     DB::rollback();
                     return response()->json([
                         'status'    => 'fail',
                         'messages'  => ['Insert Cashback Failed']
-                    ]);
-                }
-
-                //update balance user
-                $totalBalance = LogBalance::where('id_user',$data['id_user'])->sum('balance');
-                $updateUserBalance = User::where('id', $data['id_user'])->update(['balance' => $totalBalance]);
-                if (!$updateUserBalance) {
-                    DB::rollback();
-                    return response()->json([
-                        'status'    => 'fail',
-                        'messages'  => ['Update User Balance Failed']
                     ]);
                 }
             }
@@ -650,43 +620,16 @@ Detail: ".$link['short'],
         
         $trxBalance = TransactionMultiplePayment::where('id_transaction', $data['id_transaction'])->first();
 
-        $trxBalance = TransactionMultiplePayment::where('id_transaction', $data['id_transaction'])->first();
-
         $balanceNow = app($this->balance)->balanceNow($data['id_user']);
 
         if (empty($trxBalance)) {
-            $settingCashback = Setting::where('key', 'cashback_conversion_value')->first();
-            $dataLogCash = [
-                'id_user'                        => $data['id_user'],
-                'balance'                        => -$data['transaction_grandtotal'],
-                'balance_before'                 => $balanceNow,
-                'balance_after'                  => $balanceNow - $data['transaction_grandtotal'],
-                'id_reference'                   => $data['id_transaction'],
-                'source'                         => 'Transaction',
-                'grand_total'                    => $data['transaction_grandtotal'],
-                'ccashback_conversion'           => $settingCashback['value'],
-                'membership_level'               => $level,
-                'membership_cashback_percentage' => $percentageB * 100
-            ];
+            $insertDataLogCash = app($this->balance)->addLogBalance( $data['id_user'], -$data['transaction_grandtotal'], $data['id_transaction'], 'Transaction', $data['transaction_grandtotal']);
         } else {
-            $settingCashback = Setting::where('key', 'cashback_conversion_value')->first();
             $paymentBalanceTrx = TransactionPaymentBalance::where('id_transaction', $data['id_transaction'])->first();
-            $dataLogCash = [
-                'id_user'                        => $data['id_user'],
-                'balance'                        => -$paymentBalanceTrx['balance_nominal'],
-                'balance_before'                 => $balanceNow,
-                'balance_after'                  => $balanceNow - $paymentBalanceTrx['balance_nominal'],
-                'id_reference'                   => $data['id_transaction'],
-                'source'                         => 'Transaction',
-                'grand_total'                    => $data['transaction_grandtotal'],
-                'ccashback_conversion'           => $settingCashback['value'],
-                'membership_level'               => $level,
-                'membership_cashback_percentage' => $percentageB * 100
-            ];
+            $insertDataLogCash = app($this->balance)->addLogBalance( $data['id_user'], -$paymentBalanceTrx['balance_nominal'], $data['id_transaction'], 'Transaction', $data['transaction_grandtotal']);
         }
 
-        $insertDataLogCash = LogBalance::create($dataLogCash);
-        if (!$insertDataLogCash) {
+        if ($insertDataLogCash == false) {
             return false;
         }
 
@@ -729,19 +672,19 @@ Detail: ".$link['short'],
 
     function bookGoSend($trx){
         //create booking GO-SEND    
-        $origin['name']             = $trx['detail']['transactionPickupGoSend']['origin_name'];
-        $origin['phone']            = $trx['detail']['transactionPickupGoSend']['origin_phone'];
-        $origin['latitude']         = $trx['detail']['transactionPickupGoSend']['origin_latitude'];
-        $origin['longitude']        = $trx['detail']['transactionPickupGoSend']['origin_longitude'];
-        $origin['address']          = $trx['detail']['transactionPickupGoSend']['origin_address'];
-        $origin['note']             = $trx['detail']['transactionPickupGoSend']['origin_note'];
+        $origin['name']             = $trx['detail']['transaction_pickup_go_send']['origin_name'];
+        $origin['phone']            = $trx['detail']['transaction_pickup_go_send']['origin_phone'];
+        $origin['latitude']         = $trx['detail']['transaction_pickup_go_send']['origin_latitude'];
+        $origin['longitude']        = $trx['detail']['transaction_pickup_go_send']['origin_longitude'];
+        $origin['address']          = $trx['detail']['transaction_pickup_go_send']['origin_address'];
+        $origin['note']             = $trx['detail']['transaction_pickup_go_send']['origin_note'];
 
-        $destination['name']        = $trx['detail']['transactionPickupGoSend']['destination_name'];
-        $destination['phone']       = $trx['detail']['transactionPickupGoSend']['destination_phone'];
-        $destination['latitude']    = $trx['detail']['transactionPickupGoSend']['destination_latitude'];
-        $destination['longitude']   = $trx['detail']['transactionPickupGoSend']['destination_longitude'];
-        $destination['address']     = $trx['detail']['transactionPickupGoSend']['destination_address'];
-        $destination['note']        = $trx['detail']['transactionPickupGoSend']['destination_note'];
+        $destination['name']        = $trx['detail']['transaction_pickup_go_send']['destination_name'];
+        $destination['phone']       = $trx['detail']['transaction_pickup_go_send']['destination_phone'];
+        $destination['latitude']    = $trx['detail']['transaction_pickup_go_send']['destination_latitude'];
+        $destination['longitude']   = $trx['detail']['transaction_pickup_go_send']['destination_longitude'];
+        $destination['address']     = $trx['detail']['transaction_pickup_go_send']['destination_address'];
+        $destination['note']        = $trx['detail']['transaction_pickup_go_send']['destination_note'];
 
         $packageDetail = Setting::where('key', 'go_send_package_detail')->first();
         if($packageDetail){
@@ -759,7 +702,7 @@ Detail: ".$link['short'],
             return ['status' => 'fail', 'messages' => ['failed booking GO-SEND']];
         }
         //update id from go-send
-        $updateGoSend = TransactionPickupGoSend::find($trx['detail']['transactionPickupGoSend']['id_transaction_pickup_go_send']);
+        $updateGoSend = TransactionPickupGoSend::find($trx['detail']['transaction_pickup_go_send']['id_transaction_pickup_go_send']);
         if($updateGoSend){
             $updateGoSend->go_send_id = $booking['id'];
             $updateGoSend->go_send_order_no = $booking['orderNo'];

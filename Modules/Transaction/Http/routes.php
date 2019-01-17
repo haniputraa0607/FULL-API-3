@@ -13,8 +13,6 @@ Route::group(['middleware' => 'auth:api', 'prefix' => 'api/transaction', 'namesp
     Route::post('/balance/filter', 'ApiTransaction@balanceUserFilter');
     Route::post('/admin', 'ApiNotification@adminOutletNotification');
     Route::post('/setting', 'ApiSettingTransaction@settingTrx');
-    Route::post('/setting/free-delivery', 'ApiSettingTransaction@updateFreeDelivery');
-    Route::post('/setting/go-send-package-detail', 'ApiSettingTransaction@updateGoSendPackage');
 
     Route::group(['prefix' => 'manualpayment'], function()
     {

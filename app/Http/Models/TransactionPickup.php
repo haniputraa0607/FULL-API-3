@@ -35,7 +35,7 @@ class TransactionPickup extends Model
 		return $this->belongsTo(\App\Http\Models\Transaction::class, 'id_transaction');
 	}
 
-	public function transactionPickupGoSend()
+	public function transaction_pickup_go_send()
 	{
 		return $this->hasOne(\App\Http\Models\TransactionPickupGoSend::class, 'id_transaction_pickup');
 	}

@@ -18,7 +18,7 @@ use App\Http\Models\ProductPrice;
 use App\Http\Models\LogBalance;
 
 use Modules\OutletApp\Http\Requests\DetailOrder;
-use Modules\OutletApp\Http\Requests\productSoldOut;
+use Modules\OutletApp\Http\Requests\ProductSoldOut;
 
 use App\Lib\MyHelper;
 use DB;
@@ -28,6 +28,7 @@ class ApiOutletApp extends Controller
     function __construct() {
         date_default_timezone_set('Asia/Jakarta');
         $this->autocrm  = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
+        $this->balance  = "Modules\Balance\Http\Controllers\BalanceController";
     }
 
     public function listOrder(Request $request){
@@ -634,6 +635,13 @@ class ApiOutletApp extends Controller
             ]);
         }
 
+        if($order->reject_at){
+            return response()->json([
+                'status' => 'fail',
+                'messages' => ['Order Has Been Rejected']
+            ]);
+        }
+
         DB::beginTransaction();
 
         if(!isset($post['reason'])){
@@ -647,32 +655,8 @@ class ApiOutletApp extends Controller
         
         if($pickup){
             //refund ke balance
-            $user = User::where('id', $order['id_user'])->with('memberships')->first()->toArray();
-            if (!empty($user['memberships'][0]['membership_name'])) {
-                $level = $user['memberships'][0]['membership_name'];
-                $percentageP = $user['memberships'][0]['benefit_point_multiplier'] / 100;
-                $percentageB = $user['memberships'][0]['benefit_cashback_multiplier'] / 100;
-            } else {
-                $level = null;
-                $percentageP = 0;
-                $percentageB = 0;
-            }
-
-            $settingCashback = Setting::where('key', 'cashback_conversion_value')->first();
-
-            $dataLogCash = [
-                'id_user'                        => $user['id'],
-                'balance'                        => $order['transaction_grandtotal'],
-                'id_reference'                   => $order['id_transaction'],
-                'source'                         => 'Rejected Order',
-                'grand_total'                    => $order['transaction_grandtotal'],
-                'ccashback_conversion'           => $settingCashback['value'],
-                'membership_level'               => $level,
-                'membership_cashback_percentage' => $percentageB * 100
-            ];
-            
-            $insertDataLogCash = LogBalance::updateOrCreate(['id_reference' => $order['id_transaction'], 'source' => 'Rejected Order'], $dataLogCash);
-            if (!$insertDataLogCash) {
+            $refund = app($this->balance)->addLogBalance( $order['id_user'], $order['transaction_grandtotal'], $order['id_transaction'], 'Rejected Order', $order['transaction_grandtotal']);
+            if ($refund == false) {
                 DB::rollback();
                 return response()->json([
                     'status'    => 'fail',
@@ -681,6 +665,7 @@ class ApiOutletApp extends Controller
             }
 
             //send notif to customer
+            $user = User::where('id', $order['id_user'])->first()->toArray();
             $send = app($this->autocrm)->SendAutoCRM('Order Reject', $user['phone'], ["outlet_name" => $outlet['outlet_name'], "id_reference" => $order->transaction_receipt_number, "transaction_date" => $order->transaction_date]);
             if($send != true){
                 DB::rollback();

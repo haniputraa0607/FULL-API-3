@@ -1043,4 +1043,36 @@ class ApiSetting extends Controller
         ]);
 
     }
+
+    public function updateFreeDelivery(Request $request){
+        $post = $request->json()->all();
+
+        DB::beginTransaction();
+
+        foreach($post as $key => $value){
+            $data['key'] = $key;
+            $data['value'] = $value;
+
+            $update = Setting::updateOrCreate(['key' => $data['key']], $data);
+            if (!$update) {
+                DB::rollback();
+                return response()->json(MyHelper::checkUpdate($update));
+            }
+        }
+
+        DB::commit();
+        return response()->json(MyHelper::checkUpdate($update));
+    }
+
+    public function updateGoSendPackage(Request $request){
+        $post = $request->json()->all();
+
+        $update = Setting::updateOrCreate(['key' => 'go_send_package_detail'], ['value' => $post['value']]);
+        if (!$update) {
+            DB::rollback();
+            return response()->json(MyHelper::checkUpdate($update));
+        }
+
+        return response()->json(MyHelper::checkUpdate($update));
+    }
 }
