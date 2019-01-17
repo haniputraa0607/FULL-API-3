@@ -2060,8 +2060,7 @@ class ApiTransaction extends Controller
 
     public function shippingCostGoSend(ShippingGosend $request){
         $post = $request->json()->all();
-        // $shipping = GoSend::getPrice($post['origin'], $post['destination']);
-        $shipping['Instant']['price']['total_price'] = 50000;
+        $shipping = GoSend::getPrice($post['origin'], $post['destination']);
         if(isset($shipping['Instant']['price']['total_price'])){
             $shippingCost = $shipping['Instant']['price']['total_price'];
             $shippingFree = null;
