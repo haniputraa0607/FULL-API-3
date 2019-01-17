@@ -37,6 +37,16 @@ class ApiDumpController extends Controller
     public function dumpData(DumpData $request) {
         $post = $request->json()->all();
 
+        $totalBalance = LogBalance::where('id_user',23)->sum('balance');
+                $updateUserBalance = User::where('id', 23)->update(['balance' => $totalBalance]);
+                if (!$updateUserBalance) {
+                    // DB::rollback();
+                    return response()->json([
+                        'status'    => 'fail',
+                        'messages'  => ['Update User Balance Failed']
+                    ]);
+                }
+DB::commit();
         for ($dataCount=0; $dataCount < $post['how_many']; $dataCount++) {
             $dataItem = [];
 

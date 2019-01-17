@@ -13,7 +13,7 @@ use App\Http\Models\Outlet;
 
 use DB;
 
-class SettingTransactionController extends Controller
+class ApiSettingTransaction extends Controller
 {
     public function settingTrx(Request $request) {
         $post = $request->json()->all();

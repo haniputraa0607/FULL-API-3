@@ -334,7 +334,7 @@ class ApiPromotion extends Controller
 								}
 							}
 							if($cek == false){
-								$shortLink = MyHelper::get('http://ssl.co.id/api/?key=xNF25ZPjZ3Bc&url='.$value);
+								$shortLink = MyHelper::get(env('SHORT_LINK_URL').'/?key='.env('SHORT_LINK_KEY').'&url='.$value);
 								if(isset($shortLink['short'])){
 									$dataLink['original_link'] = $value;
 									$dataLink['short_link'] = $shortLink['short'];
@@ -370,7 +370,7 @@ class ApiPromotion extends Controller
 								}
 							}
 							if($cek == false){
-								$shortLink = MyHelper::get('http://ssl.co.id/api/?key=xNF25ZPjZ3Bc&url='.$value);
+								$shortLink = MyHelper::get(env('SHORT_LINK_URL').'/?key='.env('SHORT_LINK_KEY').'&url='.$value);
 								if(isset($shortLink['short'])){
 									$dataLink['original_link'] = $value;
 									$dataLink['short_link'] = $shortLink['short'];
@@ -529,7 +529,7 @@ class ApiPromotion extends Controller
 												}
 											}
 											if($cek == false){
-												$shortLink = MyHelper::get('http://ssl.co.id/api/?key=xNF25ZPjZ3Bc&url='.$value);
+												$shortLink = MyHelper::get(env('SHORT_LINK_URL').'/?key='.env('SHORT_LINK_KEY').'&url='.$value);
 												if(isset($shortLink['short'])){
 													$dataLink['original_link'] = $value;
 													$dataLink['short_link'] = $shortLink['short'];
@@ -856,7 +856,7 @@ class ApiPromotion extends Controller
 							}
 						}
 						if($cek == false){
-							$shortLink = MyHelper::get('http://ssl.co.id/api/?key=xNF25ZPjZ3Bc&url='.$value);
+							$shortLink = MyHelper::get(env('SHORT_LINK_URL').'/?key='.env('SHORT_LINK_KEY').'&url='.$value);
 							if(isset($shortLink['short'])){
 								$dataLink['original_link'] = $value;
 								$dataLink['short_link'] = $shortLink['short'];
@@ -892,7 +892,7 @@ class ApiPromotion extends Controller
 							}
 						}
 						if($cek == false){
-							$shortLink = MyHelper::get('http://ssl.co.id/api/?key=xNF25ZPjZ3Bc&url='.$value);
+							$shortLink = MyHelper::get(env('SHORT_LINK_URL').'/?key='.env('SHORT_LINK_KEY').'&url='.$value);
 							if(isset($shortLink['short'])){
 								$dataLink['original_link'] = $value;
 								$dataLink['short_link'] = $shortLink['short'];
@@ -1055,11 +1055,11 @@ class ApiPromotion extends Controller
 											}
 										}
 										if($cek == false){
-											$shortLink = MyHelper::get('http://ssl.co.id/api/?key=xNF25ZPjZ3Bc&url='.$value);
+											$shortLink = MyHelper::get(env('SHORT_LINK_URL').'/?key='.env('SHORT_LINK_KEY').'&url='.$value);
 											if(isset($shortLink['short'])){
-												$dataLink['original_link'] = $value;
-												$dataLink['short_link'] = $shortLink['short'];
-												$dataLink['type'] = 'whatsapp';
+												$dataLink['original_link'] 	= $value;
+												$dataLink['short_link'] 	= $shortLink['short'];
+												$dataLink['type'] 			= 'whatsapp';
 												array_push($arrayShorten, $dataLink);
 											}
 										}

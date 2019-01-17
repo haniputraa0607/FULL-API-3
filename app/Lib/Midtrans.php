@@ -29,16 +29,16 @@ use App\Lib\MyHelper;
 
 class Midtrans {
 
-	public function __construct() {
-		date_default_timezone_set('Asia/Jakarta');
+    public function __construct() {
+        date_default_timezone_set('Asia/Jakarta');
     }
 
     static function bearer() {
-        return 'Basic ' . base64_encode('SB-Mid-server-ode5bp0rUKf87v7VX-hQvFX1:');
+        return 'Basic ' . base64_encode(env('MIDTRANS_SANDBOX_BEARER'));
     }
     
     static function token($receipt, $grandTotal, $user=null, $shipping=null, $product=null) {
-		$url    = 'https://app.sandbox.midtrans.com/snap/v1/transactions';
+        $url    = env('MIDTRANS_SANDBOX');
 
         $transaction_details = array(
             'order_id'      => $receipt,
@@ -54,11 +54,11 @@ class Midtrans {
         }
 
         if (!is_null($shipping)) {
-        	$dataMidtrans['shipping_address'] = $shipping;
+            $dataMidtrans['shipping_address'] = $shipping;
         }
 
         if (!is_null($product)) {
-        	$dataMidtrans['item_details'] = $product;
+            $dataMidtrans['item_details'] = $product;
         }
 
         $token = MyHelper::post($url, Self::bearer(), $dataMidtrans);
@@ -67,11 +67,11 @@ class Midtrans {
     }
 
     static function checkStatus($orderId) {
-    	$url = 'https://api.sandbox.midtrans.com/v2/'.$orderId.'/status';
-    	
-    	$status = MyHelper::get($url, Self::bearer());
+        $url = 'https://api.sandbox.midtrans.com/v2/'.$orderId.'/status';
+        
+        $status = MyHelper::get($url, Self::bearer());
 
-    	return $status;
+        return $status;
     }
 }
 ?>

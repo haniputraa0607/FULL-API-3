@@ -775,7 +775,7 @@ class MyHelper{
 			}
 	}
 
-	public static function get($url, $bearer=null){
+	public static function get($url, $bearer=null, $header=null){
 		$client = new Client;
 
 		$content = array(
@@ -787,6 +787,14 @@ class MyHelper{
 
 		if (!is_null($bearer)) {
 			$content['headers']['Authorization'] = $bearer;
+		}
+
+		if(!is_null($header)){
+			if(is_array($header)){
+				foreach($header as $key => $dataHeader){
+					$content['headers'][$key] = $dataHeader;
+				}
+			}
 		}
 
 		try {
@@ -807,7 +815,7 @@ class MyHelper{
 		}
 	}
 
-	public static function post($url, $bearer=null, $post, $form_type=0){
+	public static function post($url, $bearer=null, $post, $form_type=0, $header=null){
 		$client = new Client;
 		
 		$content = array(
@@ -828,6 +836,14 @@ class MyHelper{
 		// if null bearer
 		if (!is_null($bearer)) {
 			$content['headers']['Authorization'] = $bearer;
+		}
+
+		if(!is_null($header)){
+			if(is_array($header)){
+				foreach($header as $key => $dataHeader){
+					$content['headers'][$key] = $dataHeader;
+				}
+			}
 		}
 
 		try {

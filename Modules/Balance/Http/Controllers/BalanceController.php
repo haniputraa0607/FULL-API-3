@@ -17,6 +17,8 @@ use App\Http\Models\UsersMembership;
 use App\Http\Models\Setting;
 use App\Http\Models\Transaction;
 use App\Http\Models\LogTopupMidtrans;
+use App\Http\Models\TransactionPaymentBalance;
+use App\Http\Models\TransactionMultiplePayment;
 
 use Modules\Balance\Http\Controllers\NewTopupController;
 
@@ -192,6 +194,12 @@ class BalanceController extends Controller
         }
 
         $data['balance_before'] = $this->balanceNow($id_user);
+        if ($data['balance_before'] < 1) {
+            return [
+                'status'   => 'fail',
+                'messages' => ['You need more balance']
+            ];
+        }
 
         if ($data['balance_before'] >= $grandTotal) {
 
@@ -206,7 +214,7 @@ class BalanceController extends Controller
                 }
 
                 $balanceNotif = app($this->notif)->balanceNotif($dataTrx);
-                // return response()->json($balanceNotif);
+
                 if ($balanceNotif) {
                     $update = Transaction::where('id_transaction', $dataTrx['id_transaction'])->update(['transaction_payment_status' => 'Completed']);
 
@@ -219,34 +227,108 @@ class BalanceController extends Controller
 
                     $dataCheck = Transaction::where('id_transaction', $idTrx)->first();
 
+                    $dataPaymentBalance = [
+                        'id_transaction'  => $idTrx,
+                        'balance_nominal' => $grandTotal
+                    ];
+
+                    $savePaymentBalance = TransactionPaymentBalance::create($dataPaymentBalance);
+                    if (!$savePaymentBalance) {
+                        return [
+                            'status'   => 'fail',
+                            'messages' => ['fail to create transaction']
+                        ];
+                    }
+
+                    $dataMultiple = [
+                        'id_transaction' => $idTrx,
+                        'type'           => 'Balance',
+                        'id_payment'     => $savePaymentBalance['id_transaction_payment_balance']
+                    ];
+
+                    $saveMultiple = TransactionMultiplePayment::create($dataMultiple);
+                    if (!$saveMultiple) {
+                        return [
+                            'status'   => 'fail',
+                            'messages' => ['fail to create transaction']
+                        ];
+                    }
+
                     return [
                         'status'   => 'success',
                         'type'     => 'no_topup',
                         'result'   => $dataCheck
                     ];
                 }
+
+                return [
+                    'status'   => 'fail',
+                    'messages' => ['transaction invalid']
+                ];
             }
         } else {
-            $data['topup_value']    = $grandTotal - $data['balance_before'];
-            $data['balance_after']  = $grandTotal;
+            if (!is_null($idTrx)) {
+                $dataTrx = Transaction::where('id_transaction', $idTrx)->first();
 
-            DB::beginTransaction();
-            $saveTopUp = LogTopup::create($data);
-            if ($saveTopUp) {
-                DB::commit();
-                return ['status' => 'success', 'type' => 'topup'];
-                // $midtrans = $this->midtrans($saveTopUp);
-                // if ($midtrans) {
-                //     DB::commit();
-                //     return $midtrans;
-                // }
+                if (empty($dataTrx)) {
+                    return [
+                        'status'   => 'fail',
+                        'messages' => ['transaction not found']
+                    ];
+                }
+
+                $dataBalance = [
+                    'id_transaction'         => $dataTrx['id_transaction'],
+                    'id_user'                => $dataTrx['id_user'],
+                    'balance'                => -$dataTrx['balance_before'],
+                    'id_reference'           => $dataTrx['id_transaction'],
+                    'grand_total'            => $dataTrx['transaction_grandtotal'],
+                    'trasaction_type'        => $dataTrx['trasaction_type'],
+                    'transaction_grandtotal' => $dataTrx['transaction_grandtotal'],
+                ];
+
+                $dataPaymentBalance = [
+                    'id_transaction'  => $idTrx,
+                    'balance_nominal' => $data['balance_before']
+                ];
+
+                $savePaymentBalance = TransactionPaymentBalance::create($dataPaymentBalance);
+                // return $savePaymentBalance;
+                if (!$savePaymentBalance) {
+                    return [
+                        'status'   => 'fail',
+                        'messages' => ['fail to create transaction']
+                    ];
+                }
+
+                $dataMultiple = [
+                    'id_transaction' => $idTrx,
+                    'type'           => 'Balance',
+                    'id_payment'     => $savePaymentBalance['id_transaction_payment_balance']
+                ];
+
+                $saveMultiple = TransactionMultiplePayment::create($dataMultiple);
+                if (!$saveMultiple) {
+                    return [
+                        'status'   => 'fail',
+                        'messages' => ['fail to create transaction']
+                    ];
+                }
+
+                $balanceNotif = app($this->notif)->balanceNotif($dataTrx);
+                if (!$balanceNotif) {
+                    return [
+                        'status'   => 'fail',
+                        'messages' => ['transaction not found']
+                    ];
+                }
+
+                return [
+                    'status'   => 'success',
+                    'type'     => 'topup',
+                    'result'   => $dataTrx
+                ];
             }
-            
-            DB::rollback();
-            return [
-                'status'   => 'fail',
-                'messages' => ['fail to save topup']
-            ];
         }
     }
 

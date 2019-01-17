@@ -16,6 +16,7 @@ class TransactionPickup extends Model
 		'id_transaction',
 		'order_id',
 		'short_link',
+		'pickup_by',
 		'pickup_type',
 		'pickup_at',
 		'receive_at',
@@ -34,6 +35,11 @@ class TransactionPickup extends Model
 		return $this->belongsTo(\App\Http\Models\Transaction::class, 'id_transaction');
 	}
 
+	public function transactionPickupGoSend()
+	{
+		return $this->hasOne(\App\Http\Models\TransactionPickupGoSend::class, 'id_transaction_pickup');
+	}
+	
 	public function admin_receive() 
 	{
 		return $this->belongsTo(UserOutlet::class, 'id_admin_outlet_receive', 'id_user_outlet');

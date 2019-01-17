@@ -11,11 +11,13 @@ use App\Http\Models\Setting;
 use App\Http\Models\DealsUser;
 use App\Http\Models\TransactionPaymentManual;
 use App\Http\Models\TransactionPaymentOffline;
+use App\Http\Models\TransactionPaymentBalance;
+use App\Http\Models\TransactionMultiplePayment;
+use App\Http\Models\TransactionPaymentMidtran;
 use App\Http\Models\LogBalance;
 use App\Http\Models\LogPoint;
 use App\Http\Models\TransactionShipment;
 use App\Http\Models\TransactionPickup;
-use App\Http\Models\TransactionPaymentMidtran;
 use App\Http\Models\DealsPaymentMidtran;
 use App\Http\Models\DealsPaymentManual;
 
@@ -179,7 +181,18 @@ class ApiWebviewController extends Controller
             }
 
             if ($list['trasaction_payment_type'] == 'Midtrans') {
-                $payment = TransactionPaymentMidtran::where('id_transaction', $list['id_transaction'])->first();
+                //cek multi payment
+                $multiPayment = TransactionMultiplePayment::where('id_transaction', $list['id_transaction'])->get();
+                foreach($multiPayment as $dataPay){
+                    if($dataPay['type'] == 'Balance'){
+                        $paymentBalance = TransactionPaymentBalance::find($dataPay['id_payment']);
+                        if($paymentBalance){
+                            $list['balance'] = -$paymentBalance['balance_nominal'];
+                        }
+                    }else{
+                        $payment = TransactionPaymentMidtran::find($dataPay['id_payment']);
+                    }
+                }
                 $list['payment'] = $payment;
             }
 
@@ -276,6 +289,10 @@ class ApiWebviewController extends Controller
         $receipt = null;
 
         $data   = LogPoint::where('id_log_point', $id)->first();
+        if (empty($data)) {
+            return response()->json(['status' => 'fail', 'messages' => ['Point not found']]);
+        }
+
         if ($data['source'] == 'Transaction') {
             $select = Transaction::with('outlet')->where('id_transaction', $data['id_reference'])->first();
             $receipt = $select['transaction_receipt_number']; 
@@ -360,6 +377,7 @@ class ApiWebviewController extends Controller
                 'result' => [
                     'type'                       => $type,
                     'transaction_receipt_number' => $receipt,
+                    'button'                     => 'LIHAT DETAIL',
                     'url'                        => env('VIEW_URL').'/transaction/web/view/detail/balance?data='.$base
                 ],
             ];
