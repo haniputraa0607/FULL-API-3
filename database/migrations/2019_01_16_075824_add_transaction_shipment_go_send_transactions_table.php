@@ -14,7 +14,7 @@ class AddTransactionShipmentGoSendTransactionsTable extends Migration
     public function up()
     {
         Schema::table('transactions', function (Blueprint $table) {
-            $table->string('transaction_shipment_go_send')->nullable()->after('transaction_shipment');
+            $table->integer('transaction_shipment_go_send')->nullable()->after('transaction_shipment');
         });
     }
 
