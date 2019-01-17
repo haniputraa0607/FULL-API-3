@@ -1,3 +1,6 @@
+<head>
+      <link href="https://fonts.googleapis.com/css?family=Open+Sans|Source+Sans+Pro" rel="stylesheet">
+</head>
 <table style="border-collapse:collapse;margin:0;padding:0;background-color:#f2f2f2;height:100%!important;width:100%!important" align="center" border="0" cellpadding="0" cellspacing="0" height="100%" width="100%">
     <tbody><tr>
           <td style="margin:0;padding:20px;border-top:0;height:100%!important;width:100%!important" align="center" valign="top">
