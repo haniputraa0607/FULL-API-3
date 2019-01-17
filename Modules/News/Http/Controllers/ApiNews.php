@@ -689,21 +689,27 @@ class ApiNews extends Controller
     public function formData(Request $request)
     {
         $post = $request->json()->all();
+        // get label from structure
+        $news_form_structures = NewsFormStructure::where('id_news', $post['id_news'])->pluck('form_input_label')->toArray();
+        // get label from submitted data
+        // if label from structure modified by admin, we can still know the label from submitted data
+        $form_data_labels = NewsFormDataDetail::where('id_news', $post['id_news'])->distinct('form_input_label')->pluck('form_input_label')->toArray();
+        // union 2 arrays
+        $form_labels = array_unique(array_merge($news_form_structures, $form_data_labels));
 
-        $news_form_structures = NewsFormStructure::where('id_news', $post['id_news'])->pluck('form_input_label');
         $form_data = NewsFormData::with('news_form_data_details')->select('id_news_form_data', 'id_news', 'id_user', 'created_at')->where('id_news', $post['id_news'])->get();
-        $news_form_data = $form_data->map(function ($item, $key) use ($news_form_structures) {
+        $news_form_data = $form_data->map(function ($item, $key) use ($form_labels) {
             // get user if not null
             if ($item->id_user != null) {
                 $item['user'] = $item->user;
             }
 
-            // assign form value based on form structure
-            foreach ($news_form_structures as $form_structure) {
-                $item[$form_structure] = "";
+            // assign form value based on form label
+            foreach ($form_labels as $label) {
+                $item[$label] = "";
                 foreach ($item->news_form_data_details as $detail) {
-                    if ($detail->form_input_label == $form_structure) {
-                        $item[$form_structure] = $detail->form_input_value;
+                    if ($detail->form_input_label == $label) {
+                        $item[$label] = $detail->form_input_value;
                     }
                 }
             }
@@ -714,7 +720,7 @@ class ApiNews extends Controller
         });
         $news_form_data->all();
 
-        $data['news_form_structures'] = $news_form_structures;
+        $data['news_form_structures'] = $form_labels;
         $data['news_form_data'] = $news_form_data;
 
         return response()->json(MyHelper::checkGet($data));
