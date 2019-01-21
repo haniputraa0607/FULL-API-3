@@ -452,7 +452,8 @@ class ApiDealsClaim extends Controller
             $point_percentage = $user_member['memberships'][0]['benefit_point_multiplier'];
         }
 
-        $setting = app($this->setting)->setting('point_conversion_value');
+        // $setting = app($this->setting)->setting('point_conversion_value');
+        $setting = Setting::where('key', 'point_conversion_value')->pluck('value')->first();
 
         $dataCreate        = [
             'id_user'          => $voucher->id_user,
