@@ -307,8 +307,8 @@ class ApiNotification extends Controller {
         
         $detail = DB::table($table)->where('id_transaction', $data['id_transaction'])->first();
         $link = MyHelper::get(env('SHORT_LINK_URL').'/?key='.env('SHORT_LINK_KEY').'&url='.$detail->short_link);
-      
-        if ($link['error'] == 0) {
+        
+        if (isset($link['error']) && $link['error'] == 0) {
             $admin = UserOutlet::with('outlet')->where('id_outlet', $data['id_outlet'])->where($field, 1)->get()->toArray();
 
             foreach ($admin as $key => $value) {
@@ -640,8 +640,17 @@ Detail: ".$link['short'],
 
         $userData = User::find($trx['id_user']);
 
+        $totalTrx = Transaction::where('id_user', $trx['id_user'])->where('transaction_payment_status', 'Completed')->sum('transaction_subtotal');
+        $countTrx = Transaction::where('id_user', $trx['id_user'])->where('transaction_payment_status', 'Completed')->count('*');
+        
         //update count transaction
-        $updateCountTrx = User::where('id', $userData['id'])->update(['count_transaction_day' => $userData['count_transaction_day'] + 1, 'count_transaction_week' => $userData['count_transaction_week'] + 1]);
+        $updateCountTrx = User::where('id', $userData['id'])->update([
+            'count_transaction_day' => $userData['count_transaction_day'] + 1, 
+            'count_transaction_week' => $userData['count_transaction_week'] + 1,
+            'subtotal_transaction'  => $totalTrx,
+            'count_transaction'  => $countTrx
+        ]);
+
         if (!$updateCountTrx) {
             DB::rollback();
             return false;

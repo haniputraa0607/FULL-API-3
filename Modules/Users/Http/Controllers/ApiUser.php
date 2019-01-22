@@ -2173,4 +2173,10 @@ class ApiUser extends Controller
 			}
 			return $result;
     }
+
+	function getAllName(){
+		$user = User::select('id', 'name', 'phone')->get();
+
+		return response()->json(MyHelper::checkGet($user));
+	}
 }

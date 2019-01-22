@@ -345,6 +345,8 @@ class ApiPOS extends Controller
                                 }
     
                                 $dataProductPrice['product_price'] = (int)$menu['price'];
+                                $dataProductPrice['product_price_base'] = (int)$menu['price_base'];
+                                $dataProductPrice['product_price_tax'] = (int)$menu['price_tax'];
                                 $dataProductPrice['product_status'] = $menu['status'];
                                 
                                 $updateProductPrice = ProductPrice::updateOrCreate([
@@ -460,6 +462,8 @@ class ApiPOS extends Controller
 					if($create){
                         // update price
 						$dataProductPrice['product_price'] = (int)$menu['price'];
+						$dataProductPrice['product_price_base'] = (int)$menu['price_base'];
+						$dataProductPrice['product_price_tax'] = (int)$menu['price_tax'];
                         $dataProductPrice['product_status'] = $menu['status'];
                        
 						$updateProductPrice = ProductPrice::updateOrCreate([
@@ -695,7 +699,7 @@ class ApiPOS extends Controller
 
     public function syncMenuReturn(reqMenu $request){
         // call function syncMenu
-        $url = env('API_URL').'/api/v1/pos/menu/sync';
+        $url = env('API_URL').'api/v1/pos/menu/sync';
         $syncMenu = MyHelper::post($url, MyHelper::getBearerToken(), $request->json()->all());
 
         // return sesuai api raptor
@@ -829,8 +833,27 @@ class ApiPOS extends Controller
 				foreach ($trx['menu'] as $row => $menu) {
 					$checkProduct = Product::where('product_code', $menu['plu_id'])->first();
 					if (empty($checkProduct)) {
-						DB::rollback();
-						return response()->json(['status' => 'fail', 'messages' => ['Menu not found']]);
+						//create new product
+						$dataProduct['product_code'] 	 = $menu['plu_id'];
+						$dataProduct['product_name'] 	 = $menu['name'];
+						$dataProduct['product_name_pos'] = $menu['name'];
+
+						$newProduct = Product::create($dataProduct);
+						if(!$newProduct){
+							DB::rollback();
+							return response()->json(['status' => 'fail', 'messages' => ['Transaction sync failed']]);
+						}
+
+						$productPriceData['id_product'] 		= $newProduct['id_product'];
+						$productPriceData['id_outlet'] 			= $checkOutlet['id_outlet'];
+						$productPriceData['product_price_base'] = $menu['price'];
+						$newProductPrice = ProductPrice::create($productPriceData);
+						if(!$newProductPrice){
+							DB::rollback();
+							return response()->json(['status' => 'fail', 'messages' => ['Transaction sync failed']]);
+						}
+
+						$checkProduct = $newProduct;
 					}
 					
 					$dataProduct = [
@@ -842,6 +865,9 @@ class ApiPOS extends Controller
 						'transaction_product_price'    => $menu['price'],
 						'transaction_product_subtotal' => $menu['qty'] * $menu['price']
 					];
+					if(isset($menu['open_modifier'])){
+						$dataProduct['transaction_product_note'] = $menu['open_modifier'];
+					}
 
 					$createProduct = TransactionProduct::updateOrCreate(['id_transaction' => $createTrx['id_transaction'], 'id_product' => $checkProduct['id_product']], $dataProduct);
 					

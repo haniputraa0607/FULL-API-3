@@ -140,7 +140,14 @@ class ApiSettingTransactionV2 extends Controller
                         'product' => $product['product_name']
                     ]);
                 }
-        
+
+                if($productPrice['product_price'] == null || $productPrice['product_price_base'] == null || $productPrice['product_price_tax'] == null){
+                    return response()->json([
+                        'status'    => 'fail',
+                        'messages'  => ['Price Product Not Valid'],
+                        'product' => $product['product_name']
+                    ]);
+                }
                 $price = $productPrice['product_price_base'] * $valueData['qty'];
                 array_push($dataSubtotal, $price);
             }
@@ -203,7 +210,8 @@ class ApiSettingTransactionV2 extends Controller
                     DB::rollback();
                     return response()->json([
                         'status'    => 'fail',
-                        'messages'  => ['Product Not Found']
+                        'messages'  => ['Product Not Found'],
+                        'product' => $checkProduct['product_name']
                     ]);
                 }
     
@@ -211,14 +219,16 @@ class ApiSettingTransactionV2 extends Controller
                 if (empty($checkPriceProduct)) {
                     return response()->json([
                         'status'    => 'fail',
-                        'messages'  => ['Product Price Not Valid']
+                        'messages'  => ['Price Product Not Valid'],
+                        'product' => $checkProduct['product_name']
                     ]);
                 }
 
                 if($checkPriceProduct['product_price'] == null || $checkPriceProduct['product_price_base'] == null || $checkPriceProduct['product_price_tax'] == null){
                     return response()->json([
                         'status'    => 'fail',
-                        'messages'  => ['Product Price Not Valid']
+                        'messages'  => ['Price Product Not Valid'],
+                        'product' => $checkProduct['product_name']
                     ]);
                 }
 

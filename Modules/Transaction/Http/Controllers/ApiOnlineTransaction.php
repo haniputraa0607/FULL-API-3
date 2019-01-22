@@ -185,7 +185,7 @@ class ApiOnlineTransaction extends Controller
 
                     if (isset($post['sub']->original['messages'])) {
                         $mes = $post['sub']->original['messages'];
-
+                        
                         if ($post['sub']->original['messages'] == ['Price Product Not Found']) {
                             if (isset($post['sub']->original['product'])) {
                                 $mes = ['Price Product Not Found with product '.$post['sub']->original['product'].' at outlet '.$outlet['outlet_name']];
@@ -213,12 +213,12 @@ class ApiOnlineTransaction extends Controller
                 $post['dis'] = app($this->setting_trx)->countTransaction($valueTotal, $post);
                 $mes = ['Data Not Valid'];
 
-                if (isset($post['sub']->original['messages'])) {
-                    $mes = $post['sub']->original['messages'];
+                if (isset($post['dis']->original['messages'])) {
+                    $mes = $post['dis']->original['messages'];
 
-                    if ($post['sub']->original['messages'] == ['Price Product Not Found']) {
-                        if (isset($post['sub']->original['product'])) {
-                            $mes = ['Price Product Not Found with product '.$post['sub']->original['product'].' at outlet '.$outlet['outlet_name']];
+                    if ($post['dis']->original['messages'] == ['Price Product Not Found']) {
+                        if (isset($post['dis']->original['product'])) {
+                            $mes = ['Price Product Not Found with product '.$post['dis']->original['product'].' at outlet '.$outlet['outlet_name']];
                         }
                     }
 
@@ -231,7 +231,33 @@ class ApiOnlineTransaction extends Controller
 
                 
                 $post['discount'] = $post['dis'] + $totalDisProduct;
-            } else {
+            }elseif($valueTotal == 'tax'){
+                $post['tax'] = app($this->setting_trx)->countTransaction($valueTotal, $post);
+                $mes = ['Data Not Valid'];
+
+                    if (isset($post['tax']->original['messages'])) {
+                        $mes = $post['tax']->original['messages'];
+
+                        if ($post['tax']->original['messages'] == ['Price Product Not Found']) {
+                            if (isset($post['tax']->original['product'])) {
+                                $mes = ['Price Product Not Found with product '.$post['tax']->original['product'].' at outlet '.$outlet['outlet_name']];
+                            }
+                        }
+
+                        if ($post['sub']->original['messages'] == ['Price Product Not Valid']) {
+                            if (isset($post['tax']->original['product'])) {
+                                $mes = ['Price Product Not Valid with product '.$post['tax']->original['product'].' at outlet '.$outlet['outlet_name']];
+                            }
+                        }
+
+                        DB::rollback();
+                        return response()->json([
+                            'status'    => 'fail',
+                            'messages'  => $mes
+                        ]);
+                    }
+            } 
+            else {
                 $post[$valueTotal] = app($this->setting_trx)->countTransaction($valueTotal, $post);
             }
         }
@@ -442,8 +468,15 @@ class ApiOnlineTransaction extends Controller
 
         // Fraud Detection
         if ($post['transaction_payment_status'] == 'Completed') {
+            $totalTrx = Transaction::where('id_user', $user['id'])->where('transaction_payment_status', 'Completed')->sum('transaction_subtotal');
+            $countTrx = Transaction::where('id_user', $user['id'])->where('transaction_payment_status', 'Completed')->count('*');
             //update count transaction
-            $updateCountTrx = User::where('id', $user['id'])->update(['count_transaction_day' => $user['count_transaction_day'] + 1, 'count_transaction_week' => $user['count_transaction_week'] + 1]);
+            $updateCountTrx = User::where('id', $user['id'])->update([
+                'count_transaction_day' => $user['count_transaction_day'] + 1, 
+                'count_transaction_week' => $user['count_transaction_week'] + 1,
+                'subtotal_transaction'  => $totalTrx,
+                'count_transaction'  => $countTrx
+            ]);
             if (!$updateCountTrx) {
                 DB::rollback();
                 return response()->json([
@@ -582,7 +615,7 @@ class ApiOnlineTransaction extends Controller
             ]);
         }
 
-        if (isset($post['receive_at'])) {
+        if (isset($post['receive_at']) && $post['receive_at']) {
             $post['receive_at'] = date('Y-m-d H:i:s', strtotime($post['receive_at']));
         } else {
             $post['receive_at'] = null;
@@ -728,7 +761,7 @@ class ApiOnlineTransaction extends Controller
                                                 ->first();
             }
 
-            if (isset($post['taken_at'])) {
+            if (isset($post['taken_at']) && $post['taken_at']) {
                 $post['taken_at'] = date('Y-m-d H:i:s', strtotime($post['taken_at']));
             } else {
                 $post['taken_at'] = null;
@@ -855,23 +888,23 @@ class ApiOnlineTransaction extends Controller
 
         if ($post['transaction_payment_status'] == 'Completed') {
 
-            //check membership
-            if (!empty($user['memberships'][0]['membership_name'])) {
-                $level = $user['memberships'][0]['membership_name'];
-                $percentageP = $user['memberships'][0]['benefit_point_multiplier'] / 100;
-                $percentageB = $user['memberships'][0]['benefit_cashback_multiplier'] / 100;
-            } else {
-                $level = null;
-                $percentageP = 0;
-                $percentageB = 0;
-            }
-
             if ($insertTransaction['transaction_point_earned'] != 0) {
                 $settingPoint = Setting::where('key', 'point_conversion_value')->first();
 
+                //check membership
+                if (!empty($user['memberships'][0]['membership_name'])) {
+                    $level = $user['memberships'][0]['membership_name'];
+                    $percentageP = $user['memberships'][0]['benefit_point_multiplier'] / 100;
+                    $percentageB = $user['memberships'][0]['benefit_cashback_multiplier'] / 100;
+                } else {
+                    $level = null;
+                    $percentageP = 0;
+                    $percentageB = 0;
+                }
+
                 $dataLog = [
                     'id_user'                     => $insertTransaction['id_user'],
-                    'point'                       => $insertTransaction['transaction_point_earned'] * $percentageP,
+                    'point'                       => $insertTransaction['transaction_point_earned'],
                     'id_reference'                => $insertTransaction['id_transaction'],
                     'source'                      => 'Transaction',
                     'grand_total'                 => $insertTransaction['transaction_grandtotal'],
@@ -888,23 +921,15 @@ class ApiOnlineTransaction extends Controller
                         'messages'  => ['Insert Point Failed']
                     ]);
                 }
+
+                //update point user
+                $totalPoint = LogPoint::where('id_user',$insertTransaction['id_user'])->sum('point');
+                $updateUserPoint = User::where('id', $insertTransaction['id_user'])->update(['points' => $totalPoint]);
             }
 
             if ($insertTransaction['transaction_cashback_earned'] != 0) {
-                $settingCashback = Setting::where('key', 'cashback_conversion_value')->first();
 
-                $dataLogCash = [
-                    'id_user'                        => $insertTransaction['id_user'],
-                    'balance'                        => $insertTransaction['transaction_cashback_earned'] * $percentageB,
-                    'id_reference'                   => $insertTransaction['id_transaction'],
-                    'source'                         => 'Transaction',
-                    'grand_total'                    => $insertTransaction['transaction_grandtotal'],
-                    'ccashback_conversion'           => $settingCashback['value'],
-                    'membership_level'               => $level,
-                    'membership_cashback_percentage' => $percentageB * 100
-                ];
-
-                $insertDataLogCash = LogBalance::create($dataLogCash);
+                $insertDataLogCash = app($this->balance)->addLogBalance( $insertTransaction['id_user'], $insertTransaction['transaction_cashback_earned'], $insertTransaction['id_transaction'], 'Transaction', $insertTransaction['transaction_grandtotal']);
                 if (!$insertDataLogCash) {
                     DB::rollback();
                     return response()->json([
@@ -912,6 +937,7 @@ class ApiOnlineTransaction extends Controller
                         'messages'  => ['Insert Cashback Failed']
                     ]);
                 }
+
             }
 
             $checkMembership = app($this->membership)->calculateMembership($user['phone']);

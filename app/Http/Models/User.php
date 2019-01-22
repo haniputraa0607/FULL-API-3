@@ -17,6 +17,16 @@ class User extends Authenticatable
     use HasApiTokens, Notifiable;
 	
 	public function findForPassport($username) {
+		if(substr($username, 0, 2) == '62'){
+			$username = substr($username,2);
+		}elseif(substr($username, 0, 3) == '+62'){
+			$username = substr($username,3);
+		}
+
+		if(substr($username, 0, 1) != '0'){
+			$username = '0'.$username;
+		}
+
         return $this->where('phone', $username)->first();
     }
 	protected $primaryKey = "id";
@@ -57,7 +67,9 @@ class User extends Authenticatable
 		'is_suspended',
 		'remember_token',
 		'count_transaction_day',
-		'count_transaction_week'
+		'count_transaction_week',
+		'subtotal_transaction',
+		'count_transaction'
 	];
 
 	public function city()
