@@ -95,7 +95,8 @@ class Deal extends Model
 		'deals_total_claimed',
 		'deals_total_redeemed',
 		'deals_total_used',
-		'claim_allowed'
+		'claim_allowed',
+		'user_limit'
 	];
 
 	protected $appends  = ['url_deals_image'];
