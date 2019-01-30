@@ -148,6 +148,9 @@ class ApiDeals extends Controller
         if (isset($post['id_outlet'])) {
             $data['id_outlet'] = $post['id_outlet'];
         }
+        if (isset($post['user_limit'])) {
+            $data['user_limit'] = $post['user_limit'];
+        }
 
         return $data;
     }

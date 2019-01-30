@@ -419,6 +419,31 @@ class ApiOutletController extends Controller
             }
         }
 
+        if(isset($request['page']) && $request['page'] > 0){
+            $page = $request['page'];
+            $next_page = $page + 1;
+
+            $dataOutlet = $outlet;
+            $outlet = [];
+
+            $pagingOutlet = $this->pagingOutlet($dataOutlet, $page);
+            if (count($pagingOutlet) > 0) {
+                $outlet['status'] = 'success';
+                $outlet['current_page']  = $page;
+                $outlet['data']          = $pagingOutlet['data'];
+                $outlet['total']         = count($dataOutlet);
+                $outlet['next_page_url'] = null;
+    
+                if ($pagingOutlet['status'] == true) {
+                    $outlet['next_page_url'] = ENV('APP_API_URL').'api/outlet/nearme?page='.$next_page;
+                }
+            } else {
+                $outlet['status'] = 'fail';
+                $outlet['messages'] = ['empty'];
+                
+            }
+        }
+
         return response()->json(MyHelper::checkGet($outlet));
      
     }
@@ -458,7 +483,59 @@ class ApiOutletController extends Controller
             }
         }
 
+        if(isset($request['page']) && $request['page'] > 0){
+            $page = $request['page'];
+            $next_page = $page + 1;
+
+            $dataOutlet = $outlet;
+            $outlet = [];
+
+            $pagingOutlet = $this->pagingOutlet($dataOutlet, $page);
+            if (count($pagingOutlet) > 0) {
+                $outlet['status'] = 'success';
+                $outlet['current_page']  = $page;
+                $outlet['data']          = $pagingOutlet['data'];
+                $outlet['total']         = count($dataOutlet);
+                $outlet['next_page_url'] = null;
+    
+                if ($pagingOutlet['status'] == true) {
+                    $outlet['next_page_url'] = ENV('APP_API_URL').'api/outlet/nearme?page='.$next_page;
+                }
+            } else {
+                $outlet['status'] = 'fail';
+                $outlet['messages'] = ['empty'];
+                
+            }
+        }
+
         return response()->json(MyHelper::checkGet($outlet));
+    }
+
+    public function pagingOutlet($data, $page) {
+        $next = false;
+
+        if ($page > 0) {
+            $resultData = [];
+            $paginate   = 10;
+            $start      = $paginate * ($page - 1);
+            $all        = $paginate * $page;
+            $end        = $all;
+            $next       = true;
+
+            if ($all > count($data)) {
+                $end = count($data);
+                $next = false;
+            }
+
+            for ($i=$start; $i < $end; $i++) {
+                array_push($resultData, $data[$i]);
+            }
+
+            return ['data' => $resultData, 'status' => $next];
+        }
+        
+
+        return ['data' => $data, 'status' => $next];
     }
 
 	 /* Filter*/

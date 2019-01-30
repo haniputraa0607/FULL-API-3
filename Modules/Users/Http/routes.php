@@ -57,6 +57,7 @@ Route::group(['prefix' => 'api'], function(){
 	    Route::post('inbox', 'ApiUser@inboxUser');
 		Route::post('outlet', 'ApiUser@outletUser');
 		Route::any('notification', 'ApiUser@getUserNotification');
+		Route::get('api/user/get-all', 'ApiUser@getAllName');
 	    
 	});
 	Route::group(['middleware' => 'auth:api', 'prefix' => 'home', 'namespace' => 'Modules\Users\Http\Controllers'], function()
@@ -83,11 +84,12 @@ Route::group(['prefix' => 'api'], function(){
 
 });
 
-Route::group(['prefix' => 'user-delete', 'namespace' => 'Modules\Users\Http\Controllers'], function()
+Route::group(['namespace' => 'Modules\Users\Http\Controllers'], function()
 {
-	Route::get('/{phone}', 'ApiUser@deleteUser');
-	Route::post('/{phone}', 'ApiUser@deleteUserAction');
+	Route::get('user-delete/{phone}', 'ApiUser@deleteUser');
+	Route::post('user-delete/{phone}', 'ApiUser@deleteUserAction');
 });
+
 Route::group(['prefix' => 'api/cron', 'namespace' => 'Modules\Users\Http\Controllers'], function()
 {
 	Route::get('/reset-trx-day', 'ApiUser@resetCountTransaction');

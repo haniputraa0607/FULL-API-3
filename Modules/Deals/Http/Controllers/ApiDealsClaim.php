@@ -221,12 +221,20 @@ class ApiDealsClaim extends Controller
     function checkUserClaimed($user, $id_deals) {
         $claimed = DealsUser::join('deals_vouchers', 'deals_vouchers.id_deals_voucher', '=', 'deals_users.id_deals_voucher')->where('id_user', $user->id)->where('deals_vouchers.id_deals', $id_deals)->first();
 
-        if (empty($claimed)) {
-            return true;
-        }
-        else {
+        $checkLimit = Deal::where('id_deals', $id_deals)->first();
+        if (empty($checkLimit)) {
             return false;
         }
+
+        if ($checkLimit['user_limit'] != 0) {
+            if (!empty($claimed)) {
+                 if (count($claimed) >= $checkLimit['user_limit']) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
     }
 
     /* CHECK USER HAVE ENOUGH POINT */

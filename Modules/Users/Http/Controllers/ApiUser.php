@@ -1159,16 +1159,16 @@ class ApiUser extends Controller
 			return response()->json($result);
 		}
 
-		if($user['birthday'] == null){
+		if($user['email'] == null){
 			$result = [
 				'status'	=> 'fail',
-				'messages'	=> ['User birthday is empty.']
+				'messages'	=> ['User email is empty.']
 			];
 			return response()->json($result);
 		}
 		
         $data = User::where('phone', '=', $request->json('phone'))
-					->where('birthday', '=', date('Y-m-d', strtotime($request->json('birthday'))))
+					->where('email', '=', $request->json('email'))
 					->get()
 					->toArray();
 
@@ -1203,7 +1203,7 @@ class ApiUser extends Controller
 		} else {
 			$result = [
                         'status'	=> 'fail',
-                        'messages'	=> ['Birthday didn\'t match. Please check Your input.']
+                        'messages'	=> ['Email didn\'t match. Please check Your input.']
                     ];
 			return response()->json($result);
 		}
@@ -2173,4 +2173,10 @@ class ApiUser extends Controller
 			}
 			return $result;
     }
+
+	function getAllName(){
+		$user = User::select('id', 'name', 'phone')->get();
+
+		return response()->json(MyHelper::checkGet($user));
+	}
 }

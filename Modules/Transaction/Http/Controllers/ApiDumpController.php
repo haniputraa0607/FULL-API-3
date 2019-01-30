@@ -9,10 +9,12 @@ use Illuminate\Routing\Controller;
 use App\Http\Models\User;
 use App\Http\Models\Outlet;
 use App\Http\Models\Product;
+use App\Http\Models\ProductPrice;
 use App\Http\Models\Courier;
 use App\Http\Models\UserAddress;
 use App\Http\Models\ManualPaymentMethod;
 use App\Http\Models\UserOutlet;
+use App\Http\Models\Configs;
 
 use GuzzleHttp\Exception\GuzzleException;
 use GuzzleHttp\Client;
@@ -37,16 +39,6 @@ class ApiDumpController extends Controller
     public function dumpData(DumpData $request) {
         $post = $request->json()->all();
 
-        $totalBalance = LogBalance::where('id_user',23)->sum('balance');
-                $updateUserBalance = User::where('id', 23)->update(['balance' => $totalBalance]);
-                if (!$updateUserBalance) {
-                    // DB::rollback();
-                    return response()->json([
-                        'status'    => 'fail',
-                        'messages'  => ['Update User Balance Failed']
-                    ]);
-                }
-DB::commit();
         for ($dataCount=0; $dataCount < $post['how_many']; $dataCount++) {
             $dataItem = [];
 
@@ -54,45 +46,74 @@ DB::commit();
             $date_end   = strtotime($post['date_end']);
             $date       = date('Y-m-d H:i:s', rand($date_start, $date_end));
             
-            $time_start = strtotime('14:00:00');
-            $time_end   = strtotime('20:00:00');
+            $time_start = strtotime('08:00:00');
+            $time_end   = strtotime('22:00:00');
             $time       = date('H:i:s', rand($time_start, $time_end));
 
             //user
-            $dataUser = User::get()->toArray();
-            if (empty($dataUser)) {
-                return response()->json([
-                    'status'    => 'fail',
-                    'messages' => ['User is empty']
-                ]);
+            if(isset($post['id_user'])){
+                if(is_array($post['id_user'])){
+                    $idUser = $post['id_user'][array_rand($post['id_user'])];
+                    return $idUser;
+                }else{
+                    $idUser = $post['id_user'];
+                }
+            }else{
+                $dataUser = User::get()->toArray();
+                if (empty($dataUser)) {
+                    return response()->json([
+                        'status'    => 'fail',
+                        'messages' => ['User is empty']
+                    ]);
+                }
+                $splitUser = array_column($dataUser, 'id');
+                $idUser = $splitUser[array_rand($splitUser)];
             }
 
-            $splitUser = array_column($dataUser, 'id');
-            $getUser = array_rand($splitUser);
+            $user = User::where('id', $idUser)->first();
+
+            $configDeliveryOrder = Configs::where('config_name', 'delivery order')->first(); 
+            $configPickupOrder = Configs::where('config_name', 'pickup order')->first(); 
 
             //user address
-            $dataUserAddress = UserAddress::where('id_user', 1)->get()->toArray();
-
-            $user = User::where('id', 1)->first();
-            if (empty($dataUserAddress)) {
-                return response()->json([
-                    'status'    => 'fail',
-                    'messages' => [$user['name'].' dont have user address']
-                ]);
+            if($configDeliveryOrder && $configDeliveryOrder->is_active == '1'){
+                $dataUserAddress = UserAddress::where('id_user', $idUser)->get()->toArray();
+                if (empty($dataUserAddress)) {
+                    return response()->json([
+                        'status'    => 'fail',
+                        'messages' => [$user['name'].' dont have user address']
+                    ]);
+                }
+                $splitUserAddress = array_column($dataUserAddress, 'id_user_address');
+                $getUserAddress = array_rand($splitUserAddress);
             }
 
-            $splitUserAddress = array_column($dataUserAddress, 'id_user_address');
-            $getUserAddress = array_rand($splitUserAddress);
-
+            //outlet
+            $dataOutlet = Outlet::select('outlets.id_outlet')
+                                ->join('product_prices', 'outlets.id_outlet', 'product_prices.id_outlet')
+                                ->whereNotNull('product_price')->whereNotNull('product_price_base')->whereNotNull('product_price_tax')
+                                ->distinct()
+                                ->get()->toArray();
+            if (empty($dataOutlet)) {
+                return response()->json([
+                    'status'    => 'fail',
+                    'messages' => ['Outlet is empty']
+                ]);
+            }
+            
+            $splitOutlet = array_column($dataOutlet, 'id_outlet');
+            $getOutlet = array_rand($splitOutlet);
+            
+            
             //product
-            $dataProduct = Product::get()->toArray();
+            $dataProduct = ProductPrice::where('id_outlet', $splitOutlet[$getOutlet])->whereNotNull('product_price')->whereNotNull('product_price_base')->whereNotNull('product_price_tax')->get()->toArray();
             if (empty($dataProduct)) {
                 return response()->json([
                     'status'    => 'fail',
                     'messages' => ['Product is empty']
                 ]);
             }
-
+                
             $splitProduct = array_column($dataProduct, 'id_product');
             $getProduct = array_rand($splitProduct);
             
@@ -126,63 +147,66 @@ DB::commit();
                 }
             }
 
-            //outlet
-            $dataOutlet = Outlet::get()->toArray();
-            if (empty($dataOutlet)) {
-                return response()->json([
-                    'status'    => 'fail',
-                    'messages' => ['Outlet is empty']
-                ]);
+            $type = [];
+            if($configDeliveryOrder && $configDeliveryOrder->is_active == '1'){
+                $type[] = 'Delivery';
+
+                //courier
+                $getCourier = $this->courierSet();
+                if (isset($getCourier['status']) && $getCourier['status'] == 'success') {
+                    $setCourier = $getCourier['courier'];
+                    if (!empty($getCourier['service'])) {
+                        $splitService = array_rand($getCourier['service']);
+                        $setCourierService = $getCourier['service'][$splitService];
+                    } else {
+                        $setCourierService = [];
+                    }
+                } elseif (isset($getCourier['status']) && $getCourier['status'] == 'fail') {
+                    return response()->json([
+                        'status'    => 'fail',
+                        'messages' => [$getCourier['messages']]
+                    ]);
+                } else {
+                    return response()->json([
+                        'status'    => 'fail',
+                        'messages' => ['Data Not Valid']
+                    ]);
+                }
             }
 
-            $splitOutlet = array_column($dataOutlet, 'id_outlet');
-            $getOutlet = array_rand($splitOutlet);
+            if($configPickupOrder && $configPickupOrder->is_active == '1'){
+                $type[] = 'Pickup Order';
+            }
 
-            //type
-            $type = ['Pickup Order', 'Delivery'];
             $getType = array_rand($type);
 
             //payment
-            $payment = ['Midtrans', 'Manual'];
+            $payment = ['Midtrans'];
+
+            $configManualPayment = Configs::where('config_name', 'manual payment')->first(); 
+            if($configManualPayment && $configManualPayment->is_active == '1'){
+                $payment[] = 'Manual';
+            }
+
             $getPayment = array_rand($payment);
 
-            //courier
-            $getCourier = $this->courierSet();
-            if (isset($getCourier['status']) && $getCourier['status'] == 'success') {
-                $setCourier = $getCourier['courier'];
-                if (!empty($getCourier['service'])) {
-                    $splitService = array_rand($getCourier['service']);
-                    $setCourierService = $getCourier['service'][$splitService];
-                } else {
-                    $setCourierService = [];
-                }
-            } elseif (isset($getCourier['status']) && $getCourier['status'] == 'fail') {
-                return response()->json([
-                    'status'    => 'fail',
-                    'messages' => [$getCourier['messages']]
-                ]);
-            } else {
-                return response()->json([
-                    'status'    => 'fail',
-                    'messages' => ['Data Not Valid']
-                ]);
-            }
-
             //manual_payment_method
-            $dataManualMethod = ManualPaymentMethod::get()->toArray();
-            if (empty($dataManualMethod)) {
-                return response()->json([
-                    'status'    => 'fail',
-                    'messages' => ['Manual Payment Method is empty']
-                ]);
+            if($payment[$getPayment] == 'Manual'){
+                $dataManualMethod = ManualPaymentMethod::get()->toArray();
+                if (empty($dataManualMethod)) {
+                    return response()->json([
+                        'status'    => 'fail',
+                        'messages' => ['Manual Payment Method is empty']
+                    ]);
+                }
+    
+                $splitManualMethod = array_column($dataManualMethod, 'id_manual_payment_method');
+                $getManualMethod = array_rand($splitManualMethod);
+
+                //bank_payment
+                $accountBank = ManualPaymentMethod::with('manual_payment')->where('id_manual_payment_method', $splitManualMethod[$getManualMethod])->first();
             }
-
-            $splitManualMethod = array_column($dataManualMethod, 'id_manual_payment_method');
-            $getManualMethod = array_rand($splitManualMethod);
-
-            //bank_payment
-            $accountBank = ManualPaymentMethod::with('manual_payment')->where('id_manual_payment_method', $splitManualMethod[$getManualMethod])->first();
-
+            
             //tax
             $setShip =  [ '15000', '16000', '17000', '18000', '19000', '20000', '21000', '22000', '23000', '24000', '25000', '26000', '27000', '28000', '29000', '30000', '31000', '32000', '33000', '34000', '35000', '36000', '37000', '38000', '39000', '40000', '41000', '42000', '43000', '44000', '45000', '46000', '47000', '48000', '49000', '50000', '51000', '52000', '53000', '54000', '55000', '56000', '57000', '58000', '59000', '60000', '61000', '62000', '63000', '64000'];
 
@@ -191,7 +215,7 @@ DB::commit();
             if ($type[$getType] == 'Delivery') {
                 $data = [
                     'id_outlet'                  => $splitOutlet[$getOutlet],
-                    'id_user'                    => 1,
+                    'id_user'                    => $idUser,
                     'type'                       => 'Delivery',
                     'notes'                      => $this->getrandomstring(),
                     'shipping'                   => $setShip[$getShip],
@@ -204,23 +228,30 @@ DB::commit();
                     'transaction_payment_status' => 'Completed'
                 ];
 
-                $adminOutlet = UserOutlet::where('id_outlet', $data['id_outlet'])->where('delivery', 1)->get()->toArray();
-                if (empty($adminOutlet)) {
-                    return response()->json([
-                        'status'    => 'fail',
-                        'messages' => ['Admin Outlet is empty']
-                    ]);
+                $configAdminOutlet = Configs::where('config_name', 'admin outlet')->first();
+                if($configAdminOutlet && $configAdminOutlet->is_active == '1'){
+                    $configAdminOutlet = Configs::where('config_name', 'admin outlet delivery order')->first();
+
+                    if($configAdminOutlet && $configAdminOutlet->is_active == '1'){
+                        $adminOutlet = UserOutlet::where('id_outlet', $data['id_outlet'])->where('delivery', 1)->get()->toArray();
+                        if (empty($adminOutlet)) {
+                            return response()->json([
+                                'status'    => 'fail',
+                                'messages' => ['Admin Outlet is empty']
+                            ]);
+                        }
+        
+                        $splitAdminOutlet = array_column($adminOutlet, 'id_user_outlet');
+                        $getAdminOutlet = array_rand($splitAdminOutlet);
+        
+                        // return $splitAdminOutlet[$getAdminOutlet];
+        
+                        $data['receive_at']              = $date.' '.$time;
+                        $data['id_admin_outlet_receive'] = $splitAdminOutlet[$getAdminOutlet];
+                        $data['send_at']                 = $date.' '.$time;
+                        $data['id_admin_outlet_send']    = $splitAdminOutlet[$getAdminOutlet];
+                    }
                 }
-
-                $splitAdminOutlet = array_column($adminOutlet, 'id_user_outlet');
-                $getAdminOutlet = array_rand($splitAdminOutlet);
-
-                // return $splitAdminOutlet[$getAdminOutlet];
-
-                $data['receive_at']              = $date.' '.$time;
-                $data['id_admin_outlet_receive'] = $splitAdminOutlet[$getAdminOutlet];
-                $data['send_at']                 = $date.' '.$time;
-                $data['id_admin_outlet_send']    = $splitAdminOutlet[$getAdminOutlet];
 
                 $data['item'] = $dataItem;
 
@@ -253,36 +284,46 @@ DB::commit();
                     ]);
                 }
             } else {
+                $pickupType = ['set time', 'right now', 'at arrival'];
+                $getPickupType = array_rand($pickupType);
+
                 $data = [
                     'id_outlet'                  => $splitOutlet[$getOutlet],
-                    'id_user'                    => 1,
+                    'id_user'                    => $idUser,
                     'type'                       => 'Pickup Order',
                     'notes'                      => $this->getrandomstring(),
+                    'pickup_type'                => $pickupType[$getPickupType],
                     'pickup_at'                  => date('Y-m-d', strtotime($date)).' '.$time,
-                    'receive_at'                 => date('Y-m-d', strtotime($date)).' '.$time,
-                    'taken_at'                   => date('Y-m-d', strtotime($date)).' '.$time,
-                    'transaction_date'           => date('Y-m-d', strtotime($date)),
+                    'transaction_date'           => date('Y-m-d', strtotime($date)).' '.$time,
                     'payment_type'               => $payment[$getPayment],
                     'transaction_payment_status' => 'Completed'
                 ];
 
                 $data['item'] = $dataItem;
 
-                $adminOutlet = UserOutlet::where('id_outlet', $data['id_outlet'])->where('pickup_order', 1)->get()->toArray();
-                if (empty($adminOutlet)) {
-                    return response()->json([
-                        'status'    => 'fail',
-                        'messages' => ['Admin Outlet is empty']
-                    ]);
+                $configAdminOutlet = Configs::where('config_name', 'admin outlet')->first();
+                if($configAdminOutlet && $configAdminOutlet->is_active == '1'){
+                    $configAdminOutlet = Configs::where('config_name', 'admin outlet pickup order')->first();
+
+                    if($configAdminOutlet && $configAdminOutlet->is_active == '1'){
+
+                        $adminOutlet = UserOutlet::where('id_outlet', $data['id_outlet'])->where('pickup_order', 1)->get()->toArray();
+                        if (empty($adminOutlet)) {
+                            return response()->json([
+                                'status'    => 'fail',
+                                'messages' => ['Admin Outlet is empty']
+                            ]);
+                        }
+
+                        $splitAdminOutlet = array_column($adminOutlet, 'id_user_outlet');
+                        $getAdminOutlet = array_rand($splitAdminOutlet);
+
+                        $data['receive_at']              = $date.' '.$time;
+                        $data['id_admin_outlet_receive'] = $splitAdminOutlet[$getAdminOutlet];
+                        $data['taken_at']                = $date.' '.$time;
+                        $data['id_admin_outlet_taken']   = $splitAdminOutlet[$getAdminOutlet];
+                    }
                 }
-
-                $splitAdminOutlet = array_column($adminOutlet, 'id_user_outlet');
-                $getAdminOutlet = array_rand($splitAdminOutlet);
-
-                $data['receive_at']              = $date.' '.$time;
-                $data['id_admin_outlet_receive'] = $splitAdminOutlet[$getAdminOutlet];
-                $data['taken_at']                = $date.' '.$time;
-                $data['id_admin_outlet_taken']   = $splitAdminOutlet[$getAdminOutlet];
 
                 if ($payment[$getPayment] == 'Manual') {
                     $data['id_manual_payment_method'] = $splitManualMethod[$getManualMethod];
@@ -297,7 +338,6 @@ DB::commit();
                 }
 
                 $insertTransaction = $this->insert($data);
-                // return $insertTransaction;
                 if (isset($insertTransaction['status']) && $insertTransaction['status'] == 'success') {
                     continue;
                 } elseif (isset($insertTransaction['status']) && $insertTransaction['status'] == 'fail') {
@@ -321,7 +361,7 @@ DB::commit();
     }
 
     public function insert($data) {
-        $url = env('API_URL').'/api/transaction/new';
+        $url = env('API_URL').'api/transaction/new';
 
         $create = $this->sendStatus($url, $data);
 
