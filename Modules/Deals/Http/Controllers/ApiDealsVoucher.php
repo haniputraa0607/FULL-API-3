@@ -265,6 +265,19 @@ class ApiDealsVoucher extends Controller
             $voucher[$index] = array_slice($voucher[$index], 0, 4, true) +
             array("outlet_name" => $outlet) +
             array_slice($voucher[$index], 4, count($voucher[$index]) - 1, true) ;
+            
+            // get new voucher code
+            // beetwen "https://chart.googleapis.com/chart?chl="
+            // and "&chs=250x250&cht=qr&chld=H%7C0"
+            preg_match("/chart.googleapis.com\/chart\?chl=(.*)&chs=250x250/", $datavoucher['voucher_hash'], $matches);
+            // replace voucher_code with code from voucher_hash
+            if (isset($matches[1])) {
+                $voucher[$index]['deal_voucher']['voucher_code'] = $matches[1];
+            }
+            else {
+                $voucher[$index]['deal_voucher']['voucher_code'] = "";
+            }
+            
         }
         
         $voucher = $this->kotacuks($voucher);
