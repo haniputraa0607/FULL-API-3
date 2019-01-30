@@ -7,6 +7,7 @@ use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
 
 use App\Http\Models\Outlet;
+use App\Http\Models\OutletToken;
 use App\Http\Models\Transaction;
 use App\Http\Models\TransactionPickup;
 use App\Http\Models\TransactionPickupGoSend;
@@ -17,6 +18,7 @@ use App\Http\Models\ProductCategory;
 use App\Http\Models\ProductPrice;
 use App\Http\Models\LogBalance;
 
+use Modules\OutletApp\Http\Requests\UpdateToken;
 use Modules\OutletApp\Http\Requests\DetailOrder;
 use Modules\OutletApp\Http\Requests\ProductSoldOut;
 
@@ -31,6 +33,22 @@ class ApiOutletApp extends Controller
         $this->balance  = "Modules\Balance\Http\Controllers\BalanceController";
     }
 
+    public function updateToken(UpdateToken $request){
+		$post = $request->json()->all();
+        $outlet = $request->user();
+		
+		$check = OutletToken::where('id_outlet','=',$outlet['id_outlet'])
+							->where('token','=',$post['token'])
+							->get()
+							->toArray();
+							
+		if($check){
+			return response()->json(['status' => 'success']);
+		} else {
+			$query = OutletToken::create(['id_outlet' => $outlet['id_outlet'], 'token' => $post['token']]);		return response()->json(MyHelper::checkUpdate($query));	
+		}
+	}
+	
     public function listOrder(Request $request){
         $post = $request->json()->all();
         $outlet = $request->user();
