@@ -48,6 +48,9 @@ class ApiMembership extends Controller
 					}
 					
 					if (isset($membership['membership_image'])) {
+						if (!file_exists('img/membership/')) {
+							mkdir('img/membership/', 0777, true);
+						}
 						$upload = MyHelper::uploadPhoto($membership['membership_image'], $path = 'img/membership/', 600);
 
 						if ($upload['status'] == "success") {
@@ -79,29 +82,19 @@ class ApiMembership extends Controller
 						$data['retain_min_total_count'] = $membership['min_retain_value'];
 					}
 
-					if(isset($data['retain_days'])){
+					if(isset($post['retain_days'])){
 						$data['retain_days'] = $post['retain_days'];
 					}
 
-					if(isset($data['benefit_point_multiplier'])){
-						$data['benefit_point_multiplier'] = $membership['benefit_point_multiplier'];
-					}
+					$data['benefit_point_multiplier'] = $membership['benefit_point_multiplier'];
+					$data['benefit_cashback_multiplier'] = $membership['benefit_cashback_multiplier'];
+					$data['benefit_discount'] = $membership['benefit_discount'];
+					$data['benefit_promo_id'] = $membership['benefit_promo_id'];
 
-					if(isset($data['benefit_point_multiplier'])){
-						$data['benefit_cashback_multiplier'] = $membership['benefit_cashback_multiplier'];
-					}
-
-					if(isset($data['benefit_discount'])){
-						$data['benefit_discount'] = $membership['benefit_discount'];
-					}
-
-					if(isset($data['benefit_promo_id'])){
-						$data['benefit_promo_id'] = $membership['benefit_promo_id'];
-					}
-
-					if(isset($data['cashback_maximum'])){
+					if(isset($membership['cashback_maximum'])){
 						$data['cashback_maximum'] = $membership['cashback_maximum'];
 					}
+					
 					$query = Membership::where('id_membership', $membership['id_membership'])->update($data);
 					break;
 				}
@@ -121,6 +114,9 @@ class ApiMembership extends Controller
 				}
 				
 				if (isset($post['membership_image'])) {
+					if (!file_exists('img/membership/')) {
+						mkdir('img/membership/', 0777, true);
+					}
 					$upload = MyHelper::uploadPhoto($post['membership_image'], $path = 'img/membership/', 600);
 
 					if ($upload['status'] == "success") {
@@ -154,7 +150,10 @@ class ApiMembership extends Controller
 				$data['retain_days'] = $post['retain_days'];
 				$data['benefit_discount'] = $membership['benefit_discount'];
 				$data['benefit_promo_id'] = $membership['benefit_promo_id'];
-				$data['cashback_maximum'] = $membership['cashback_maximum'];
+
+				if(isset($membership['cashback_maximum'])){
+					$data['cashback_maximum'] = $membership['cashback_maximum'];
+				}
 				$query = Membership::create($data);
 			}
 		}
