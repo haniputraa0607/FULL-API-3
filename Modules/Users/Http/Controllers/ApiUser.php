@@ -18,6 +18,7 @@ use App\Http\Models\LogPoint;
 use App\Http\Models\UserNotification;
 use App\Http\Models\Transaction;
 use App\Http\Models\FraudSetting;
+use App\Http\Models\Setting;
 
 use Modules\Users\Http\Requests\users_list;
 use Modules\Users\Http\Requests\users_forgot;
@@ -1062,6 +1063,12 @@ class ApiUser extends Controller
 																		 'now' => date('Y-m-d H:i:s')
 																		]);
 				}
+
+				//update count login failed
+				if($datauser[0]['count_login_failed'] > 0){
+					$updateCountFailed = User::where('phone', $request->json('phone'))->update(['count_login_failed' => 0]);
+				}
+				
 				$result 			= [];
 				$result['status'] 	= 'success';
 				$result['date'] 	= date('Y-m-d H:i:s');
@@ -1070,11 +1077,21 @@ class ApiUser extends Controller
 			} else{
 				//kalo login gagal
 				if($datauser){
-					$autocrm = app($this->autocrm)->SendAutoCRM('Login Failed', $request->json('phone'), 
-																	['ip' => $ip, 
-																	 'useragent' => $useragent, 
-																	 'now' => date('Y-m-d H:i:s')
-																	]);
+					//update count login failed
+					$updateCountFailed = User::where('phone', $request->json('phone'))->update(['count_login_failed' => $datauser[0]['count_login_failed'] + 1]);
+
+					$failedLogin = $datauser[0]['count_login_failed']+1;
+					//get setting login failed
+					$getSet = Setting::where('key', 'count_login_failed')->first();
+					if($getSet && $getSet->value){
+						if($failedLogin >= $getSet->value){
+							$autocrm = app($this->autocrm)->SendAutoCRM('Login Failed', $request->json('phone'), 
+																			['ip' => $ip, 
+																			 'useragent' => $useragent, 
+																			 'now' => date('Y-m-d H:i:s')
+																			]);
+						}
+					}
 				}
 				
 				$result 			= [];
