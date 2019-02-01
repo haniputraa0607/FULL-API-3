@@ -43,6 +43,7 @@ class ApiNotification extends Controller {
         $this->autocrm       = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
         $this->membership    = "Modules\Membership\Http\Controllers\ApiMembership";
         $this->setting_fraud = "Modules\SettingFraud\Http\Controllers\ApiSettingFraud";
+        $this->trx = "Modules\Transaction\Http\Controllers\ApiOnlineTransaction";
     }
 
     /* RECEIVE NOTIFICATION */
@@ -126,6 +127,8 @@ class ApiNotification extends Controller {
                     'messages' => ['Transaction failed']
                 ]);
             }
+
+            $sendNotifOutlet = app($this->trx)->outletNotif($newTrx['id_outlet'], $newTrx['trasaction_type'], $newTrx['detail']['order_id'], $newTrx['transaction_grandtotal']);
 
             DB::commit();
             return response()->json(['status' => 'success']);

@@ -55,6 +55,23 @@ class ApiWebviewController extends Controller
                     $button = 'LIHAT NOTA';
                 }
 
+                $title = 'Sukses';
+                if ($list['transaction_payment_status'] == 'Pending') {
+                    $title = 'Pending';
+                }
+
+                if ($list['transaction_payment_status'] == 'Terbayar') {
+                    $title = 'Terbayar';
+                }
+
+                if ($list['transaction_payment_status'] == 'Sukses') {
+                    $title = 'Sukses';
+                }
+
+                if ($list['transaction_payment_status'] == 'Gagal') {
+                    $title = 'Gagal';
+                }
+
                 $encode = json_encode($dataEncode);
                 $base = base64_encode($encode);
 
@@ -62,6 +79,7 @@ class ApiWebviewController extends Controller
                     'status' => 'success',
                     'result' => [
                         'button'                     => $button,
+                        'title'                      => $title,
                         'payment_status'             => $list['transaction_payment_status'],
                         'transaction_receipt_number' => $list['transaction_receipt_number'],
                         'transaction_grandtotal'     => $list['transaction_grandtotal'],

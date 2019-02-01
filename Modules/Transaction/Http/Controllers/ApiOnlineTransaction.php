@@ -26,6 +26,7 @@ use App\Http\Models\TransactionSetting;
 use App\Http\Models\FraudSetting;
 use App\Http\Models\Configs;
 use App\Http\Models\Holiday;
+use App\Http\Models\OutletToken;
 
 use GuzzleHttp\Exception\GuzzleException;
 use GuzzleHttp\Client;
@@ -525,6 +526,14 @@ class ApiOnlineTransaction extends Controller
                 ]);
             }
 
+            if ($checkPriceProduct['product_stock_status'] == 'Sold Out') {
+                DB::rollback();
+                return response()->json([
+                    'status'    => 'fail',
+                    'messages'  => ['Product '.$checkProduct['product_name'].' sudah habis, silahkan pilih yang lain']
+                ]);
+            }
+
             if(!isset($valueProduct['note'])){
                 $valueProduct['note'] = null;
             }
@@ -990,39 +999,132 @@ class ApiOnlineTransaction extends Controller
                             'messages'  => ['Transaction failed']
                         ]);
                     }
+
+                    if ($post['type'] == 'Pickup Order' || $post['type'] == 'Pickup Order') {
+                        $orderIdSend = $insertPickup['order_id'];
+                    } else {
+                        $orderIdSend = $insertShipment['order_id'];
+                    }
+
+                    $sendNotifOutlet = $this->outletNotif($insertTransaction['id_outlet'], $post['type'], $orderIdSend, $insertTransaction['transaction_grandtotal']);
+
+                    $dataRedirect = $this->dataRedirect($insertTransaction['transaction_receipt_number'], 'trx', '1');
+
+                    DB::commit();
+                    return response()->json([
+                        'status'     => 'success',
+                        'redirect'   => false,
+                        'result'     => $insertTransaction,
+                        'additional' => $dataRedirect
+                    ]);
                 }
             }
         }
         
         DB::commit();
         return response()->json([
-            'status' => 'success',
-            'result' => $insertTransaction
+            'status'   => 'success',
+            'redirect' => true,
+            'result'   => $insertTransaction
         ]);
         
+    }
+
+    public function dataRedirect($id, $type, $success)
+    {
+        $button = '';
+
+        $list = Transaction::where('transaction_receipt_number', $id)->first();
+        if (empty($list)) {
+            return response()->json(['status' => 'fail', 'messages' => ['Transaction not found']]);
+        }
+
+        $dataEncode = [
+            'transaction_receipt_number'   => $id,
+            'type' => $type,
+        ];
+
+        if (isset($success)) {
+            $dataEncode['trx_success'] = $success;
+            $button = 'LIHAT NOTA';
+        }
+
+        $title = 'Sukses';
+        if ($list['transaction_payment_status'] == 'Pending') {
+            $title = 'Pending';
+        }
+
+        if ($list['transaction_payment_status'] == 'Terbayar') {
+            $title = 'Terbayar';
+        }
+
+        if ($list['transaction_payment_status'] == 'Sukses') {
+            $title = 'Sukses';
+        }
+
+        if ($list['transaction_payment_status'] == 'Gagal') {
+            $title = 'Gagal';
+        }
+
+        $encode = json_encode($dataEncode);
+        $base = base64_encode($encode);
+
+        $send = [
+            'button'                     => $button,
+            'title'                      => $title,
+            'payment_status'             => $list['transaction_payment_status'],
+            'transaction_receipt_number' => $list['transaction_receipt_number'],
+            'transaction_grandtotal'     => $list['transaction_grandtotal'],
+            'type'                       => $type,
+            'url'                        => env('VIEW_URL').'/transaction/web/view/detail?data='.$base
+        ];
+
+        return $send;
+    }
+
+    public function outletNotif($id_outlet, $type, $order_id, $grand_total)
+    {
+        $outletToken = OutletToken::where('id_outlet', $id_outlet)->get();
+        if (!empty($outletToken)) {
+            $dataArraySend = [];
+            
+            foreach ($outletToken as $key => $value) {
+                $dataOutletSend = [
+                    'to'    => $value['token'],
+                    'title' => 'Order Baru - '.$order_id.' - '.$grand_total.'',
+                    'body'  => 'Order Baru - '.$order_id.' - '.$grand_total.'',
+                    'data'  => ['order_id' => $order_id]
+                ];
+
+                array_push($dataArraySend, $dataOutletSend);
+
+            }
+
+            $curl = $this->sendStatus('https://exp.host/--/api/v2/push/send', 'POST', $dataArraySend);
+            if (!$curl) {
+                DB::rollback();
+                return response()->json([
+                    'status'    => 'fail',
+                    'messages'  => ['Transaction failed']
+                ]);
+            }
+        }
+
+        return true;
     }
 
     public function sendStatus($url, $method, $data=null) {
         $client = new Client;
 
-        if ($method == 'GET') {
-            $content = array(
-                'headers' => [
-                    'Authorization' => 'Basic ' . base64_encode('SB-Mid-server-ode5bp0rUKf87v7VX-hQvFX1:'),
-                    'Accept'        => 'application/json',
-                    'Content-Type'  => 'application/json'
-                ]
-            );
-        } else {
-            $content = array(
-                'headers' => [
-                    'Authorization' => 'Basic ' . base64_encode('SB-Mid-server-ode5bp0rUKf87v7VX-hQvFX1:'),
-                    'Accept'        => 'application/json',
-                    'Content-Type'  => 'application/json'
-                ],
-                'json' => (array) $data
-            );
-        }
+        $content = array(
+            'headers' => [
+                'host'            => 'exp.host',
+                'accept'          => 'application/json',
+                'accept-encoding' => 'gzip, deflate',
+                'content-type'    => 'application/json'
+            ],
+            'json' => (array) $data
+        );
   
         try {
             $response =  $client->request($method, $url, $content);
