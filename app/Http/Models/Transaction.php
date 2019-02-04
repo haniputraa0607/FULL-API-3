@@ -72,6 +72,7 @@ class Transaction extends Model
 		'transaction_tax',
 		'trasaction_type',
 		'sales_type',
+		'transaction_device_type',
 		'transaction_grandtotal',
 		'transaction_point_earned',
 		'transaction_cashback_earned',

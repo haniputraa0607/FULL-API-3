@@ -107,7 +107,10 @@ class ApiOutletApp extends Controller
             array_slice($dataList, 3, count($dataList) - 1, true) ;
 
             $dataList['order_id'] = strtoupper($dataList['order_id']);
-            if($dataList['receive_at'] == null){
+            if($dataList['reject_at'] != null){
+                $dataList['status']  = 'Rejected';
+                $listCompleted[] = $dataList;
+            }elseif($dataList['receive_at'] == null){
                 $dataList['status']  = 'Pending';
                 $listPending[] = $dataList;
             }elseif($dataList['receive_at'] != null && $dataList['ready_at'] == null){

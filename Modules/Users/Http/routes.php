@@ -57,7 +57,7 @@ Route::group(['prefix' => 'api'], function(){
 	    Route::post('inbox', 'ApiUser@inboxUser');
 		Route::post('outlet', 'ApiUser@outletUser');
 		Route::any('notification', 'ApiUser@getUserNotification');
-		Route::get('api/user/get-all', 'ApiUser@getAllName');
+		Route::get('get-all', 'ApiUser@getAllName');
 	    
 	});
 	Route::group(['middleware' => 'auth:api', 'prefix' => 'home', 'namespace' => 'Modules\Users\Http\Controllers'], function()

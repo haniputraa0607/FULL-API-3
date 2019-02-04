@@ -136,6 +136,13 @@ class ApiHome extends Controller
                 $this->updateDeviceUser($user, $request->json('device_id'), $request->json('device_token'), $request->json('device_type'));
             }
 
+            if($request->user()->email == null || $request->user()->name == null){
+                return response()->json([
+                    'status' => 'fail',
+                    'messages' => ['User email or user name is empty.', 'Please complete name and email first']
+                ]);
+            }
+
             if ($request->json('time')) {
                 $time = $request->json('time');
             }

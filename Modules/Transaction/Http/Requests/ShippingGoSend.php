@@ -11,8 +11,7 @@ class ShippingGoSend extends FormRequest
     public function rules()
     {
         return [
-            'origin.latitude'       => 'required',
-            'origin.longitude'      => 'required',
+            'id_outlet'             => 'required|integer',
             'destination.latitude'  => 'required',
             'destination.longitude' => 'required',
             'subtotal'              => 'required|integer',

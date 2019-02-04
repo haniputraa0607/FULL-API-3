@@ -54,7 +54,6 @@ class ApiDumpController extends Controller
             if(isset($post['id_user'])){
                 if(is_array($post['id_user'])){
                     $idUser = $post['id_user'][array_rand($post['id_user'])];
-                    return $idUser;
                 }else{
                     $idUser = $post['id_user'];
                 }
@@ -117,35 +116,89 @@ class ApiDumpController extends Controller
             $splitProduct = array_column($dataProduct, 'id_product');
             $getProduct = array_rand($splitProduct);
             
-            $getItem = rand(1,count($dataProduct));
+            $totalItem = 0;
+            $totalPrice = 0;
 
-            for ($i=1; $i <= $getItem; $i++) {
-                $setProduct = array_column($dataProduct, 'id_product');
-                $insertProduct = array_rand($setProduct);
+            $priceMin = 0; 
+            if(isset($post['price_start'])){
+                $priceMin = $post['price_start'];
+            }
 
-                if (!empty($dataItem)) {
-                    $checkIdProduct = array_column($dataItem, 'id_product');
-                    if (!in_array($setProduct[$insertProduct], $checkIdProduct)) {
+            $qtyMin = 0; 
+            if(isset($post['qty_start'])){
+                $qtyMin = $post['qty_start'];
+            }
+            
+            do{
+                $getItem = rand(1,count($dataProduct));
+    
+                for ($i=1; $i <= $getItem; $i++) {
+                    $setProduct = array_column($dataProduct, 'id_product');
+                    $insertProduct = array_rand($setProduct);
+    
+                    if (!empty($dataItem)) {
+                        $checkIdProduct = array_column($dataItem, 'id_product');
+                        if (!in_array($setProduct[$insertProduct], $checkIdProduct)) {
+                            $setItem = [
+                                'id_product' => $setProduct[$insertProduct],
+                                'qty'        => rand(1,4),
+                                'note'       => $this->getrandomstring(),
+                            ];
+                            $totalItem += $setItem['qty'];
+                            $totalPrice += ($setItem['qty'] * $dataProduct[$insertProduct]['product_price']);
+                        } else {
+                            $setItem = [];
+                        }
+                    } else {
                         $setItem = [
                             'id_product' => $setProduct[$insertProduct],
                             'qty'        => rand(1,4),
                             'note'       => $this->getrandomstring(),
                         ];
-                    } else {
-                        $setItem = [];
+                        $totalItem += $setItem['qty'];
+                        $totalPrice += ($setItem['qty'] * $dataProduct[$insertProduct]['product_price']);
                     }
-                } else {
-                    $setItem = [
-                        'id_product' => $setProduct[$insertProduct],
-                        'qty'        => rand(1,4),
-                        'note'       => $this->getrandomstring(),
-                    ];
+    
+                    if (!empty($setItem)) {
+                        array_push($dataItem, $setItem);
+                    }
+    
+                    //harga sudah melebihi maksimal
+                    if(isset($post['price_end'])){
+                        if($totalPrice >= $post['price_end']){
+                            break;
+                        }
+                    }
+    
+                    //jumlah item sudah melebihi maksimal
+                    if(isset($post['qty_end'])){
+                        if($totalItem >= $post['qty_end']){
+                            break;
+                        }
+                    }
                 }
+            }while(($totalPrice < $priceMin) || ($totalItem < $qtyMin));
 
-                if (!empty($setItem)) {
-                    array_push($dataItem, $setItem);
+            if(isset($post['price_end'])){
+                if($totalPrice > $post['price_end']){
+                    if($dataItem[0]['qty'] > 1){
+                        $dataItem[0]['qty'] -= 1;
+                    }else{
+                        unset($dataItem[0]);
+                    }
                 }
             }
+
+            if(isset($post['qty_end'])){
+                if($totalItem > $post['qty_end']){
+                    if($dataItem[0]['qty'] > 1){
+                        $dataItem[0]['qty'] -= 1;
+                    }else{
+                        unset($dataItem[0]);
+                    }
+                }
+            }
+
 
             $type = [];
             if($configDeliveryOrder && $configDeliveryOrder->is_active == '1'){
