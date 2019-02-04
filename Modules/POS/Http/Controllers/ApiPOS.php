@@ -10,6 +10,7 @@ use App\Http\Models\Membership;
 use App\Http\Models\UsersMembership;
 use App\Http\Models\Transaction;
 use App\Http\Models\TransactionProduct;
+use App\Http\Models\TransactionPickup;
 use App\Http\Models\TransactionProductModifier;
 use App\Http\Models\TransactionPaymentOffline;
 use App\Http\Models\TransactionVoucher;
@@ -67,10 +68,10 @@ class ApiPOS extends Controller
 							->where('order_id','=',$post['order_id'])
 							->where('transactions.created_at','>=',date("Y-m-d")." 00:00:00")
 							->where('transactions.created_at','<=',date("Y-m-d")." 23:59:59")
-							->first()
-							->toArray();
+							->first();
 
 		if($check){
+			$check = $check->toArray();
 			$user = User::where('id','=',$check['id_user'])->first()->toArray();
 			
 			$qrCode = 'https://chart.googleapis.com/chart?chl='.$check['order_id'].'&chs=250x250&cht=qr&chld=H%7C0';
@@ -736,7 +737,7 @@ class ApiPOS extends Controller
 				if(!empty($trx['order_id'])){
 					$trx = Transaction::join('transaction_pickups','transactions.id_transaction','=','transaction_pickups.id_transaction')
 										->where('transaction_pickups.order_id','=',$trx['order_id'])
-										->where('transactions.created_at','=',date("Y-m-d H:i:s"))
+										->whereDate('transactions.transaction_date','=',date("Y-m-d"))
 										->first();
 					if($trx){
 						$r = ['id_transaction'    => $trx['id_transaction']
@@ -883,14 +884,22 @@ class ApiPOS extends Controller
 									$type = $detailMod['type'];
 									$text = $detailMod['text'];
 								} else {
-									ProductModifier::create(['id_product' => $checkProduct['id_product'],
-															 'type' => null,
+									if(isset($mod['text'])){
+										$text = $mod['text'];
+									}else{
+										$text = null;
+									}
+									if(isset($mod['type'])){
+										$type = $mod['type'];
+									}else{
+										$type="";
+									}
+									$newModifier = ProductModifier::create(['id_product' => $checkProduct['id_product'],
+															 'type' => $mod['type'],
 															 'code' => $mod['code'],
-															 'text' => null
+															 'text' => $text
 															]);
-									$id_product_modifier = null;
-									$type = null;
-									$text = null;
+									$id_product_modifier = $newModifier['id_product_modifier'];
 								}
 								$dataProductMod['id_transaction_product'] = $createProduct['id_transaction_product'];
 								$dataProductMod['id_transaction'] = $createTrx['id_transaction'];
@@ -1543,5 +1552,35 @@ class ApiPOS extends Controller
     {
         $cashback = $this->setting('cashback_maximum');
         return $cashback;
-    }
+	}
+	
+	public function getLastTransaction(Request $request){
+		$post = $request->json()->all();
+
+        $api = $this->checkApi($post['api_key'], $post['api_secret']);
+        if ($api['status'] != 'success') {
+            return response()->json($api);
+        }
+
+        $checkOutlet = Outlet::where('outlet_code', $post['store_code'])->first();
+        if (empty($checkOutlet)) {
+            return response()->json(['status' => 'fail', 'messages' => ['Store not found']]);
+		}
+		
+		$trx = TransactionPickup::join('transactions', 'transactions.id_transaction', 'transaction_pickups.id_transaction')
+								->select('transactions.id_transaction', 'transaction_date', 'transaction_receipt_number', 'order_id')
+								->where('id_outlet', $checkOutlet['id_outlet'])
+								->whereDate('transaction_date', date('Y-m-d'))
+								->orderBy('transactions.id_transaction', 'DESC')
+								->limit(10)->get();
+
+		foreach($trx as $key => $dataTrx){
+			$qrCode = 'https://chart.googleapis.com/chart?chl='.$dataTrx['order_id'].'&chs=250x250&cht=qr&chld=H%7C0';
+			$qrCode = html_entity_decode($qrCode);
+
+			$trx[$key]['qrcode'] = $qrCode; 
+		}
+		
+		return response()->json(MyHelper::checkGet($trx));
+	}
 }

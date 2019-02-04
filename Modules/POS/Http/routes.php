@@ -19,5 +19,6 @@ Route::group(['prefix' => 'api/v1/pos/', 'namespace' => 'Modules\POS\Http\Contro
     });
     Route::group(['middleware' => 'auth_client'], function() {
         Route::any('menu', 'ApiPOS@syncMenuReturn');
+        Route::post('transaction/last', 'ApiPOS@getLastTransaction');
     });
 });
