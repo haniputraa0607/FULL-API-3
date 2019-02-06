@@ -128,7 +128,16 @@ class ApiNotification extends Controller {
                 ]);
             }
 
-            $sendNotifOutlet = app($this->trx)->outletNotif($newTrx['id_outlet'], $newTrx['trasaction_type'], $newTrx['detail']['order_id'], $newTrx['transaction_grandtotal']);
+            $user = User::where('id', $newTrx['id_user'])->first();
+            if (empty($user)) {
+                DB::rollback();
+                return response()->json([
+                    'status'   => 'fail',
+                    'messages' => ['Data Transaction Not Valid']
+                ]);
+            }
+
+            $sendNotifOutlet = app($this->trx)->outletNotif($newTrx['id_transaction']);
 
             DB::commit();
             return response()->json(['status' => 'success']);

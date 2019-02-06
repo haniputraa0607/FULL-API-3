@@ -100,6 +100,7 @@ class ApiHistoryController extends Controller
         
         $merge = array_merge($transaction, $balance);
         $merge = array_merge($merge, $point);
+        // return $merge;
         $sortTrx = $this->sorting($merge, $order, $page);
 
         $check = MyHelper::checkGet($sortTrx);
@@ -628,13 +629,13 @@ class ApiHistoryController extends Controller
 
     public function balance($post, $id) {
         $log = LogBalance::where('id_user', $id)->get();
-       
-        $lisBalance = [];
+        // return $log;
+        $listBalance = [];
         
         foreach ($log as $key => $value) {
             if ($value['source'] == 'Transaction' || $value['source'] == 'Rejected Order') {
                 $trx = Transaction::with('outlet')->where('id_transaction', $value['id_reference'])->first();
-
+                // return $trx;
                 // $log[$key]['detail'] = $trx;
                 // $log[$key]['type']   = 'trx';
                 // $log[$key]['date']   = date('Y-m-d H:i:s', strtotime($trx['transaction_date']));
@@ -654,16 +655,25 @@ class ApiHistoryController extends Controller
                 $listBalance[$key] = $dataList;
 
 
-            } else {
+            } elseif ($value['source'] == 'Voucher') {
                 $vou = DealsUser::with('dealVoucher.deal')->where('id_deals_user', $value['id_reference'])->first();
 
                 // $log[$key]['detail'] = $vou;
-                $log[$key]['type']   = 'voucher';
+                $dataList['type']   = 'voucher';
                 $dataList['id']      = $value['id_log_balance'];
-                $log[$key]['date']   = date('Y-m-d H:i:s', strtotime($vou['claimed_at']));
-                $log[$key]['outlet'] = $vou['outlet']['outlet_name'];
+                $dataList['date']   = date('Y-m-d H:i:s', strtotime($vou['claimed_at']));
+                $dataList['outlet'] = $vou['outlet']['outlet_name'];
                 $dataList['amount'] = $value['balance'];
-                // $log[$key]['online'] = 1;
+                // $dataList['online'] = 1;
+
+                $listBalance[$key] = $dataList;
+            } else {
+                // return 'a';
+                $dataList['type']   = 'profile';
+                $dataList['id']      = $value['id_log_balance'];
+                $dataList['date']   = date('Y-m-d H:i:s', strtotime($value['created_at']));
+                $dataList['outlet'] = 'Completing User Profile';
+                $dataList['amount'] = $value['balance'];
 
                 $listBalance[$key] = $dataList;
             }

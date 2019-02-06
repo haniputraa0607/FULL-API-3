@@ -998,15 +998,15 @@ class ApiOnlineTransaction extends Controller
                         }
                     }
 
-                    $send = app($this->notif)->notification($mid, $insertTransaction);
+                    // $send = app($this->notif)->notification($mid, $insertTransaction);
 
-                    if (!$send) {
-                        DB::rollback();
-                        return response()->json([
-                            'status'    => 'fail',
-                            'messages'  => ['Transaction failed']
-                        ]);
-                    }
+                    // if (!$send) {
+                    //     DB::rollback();
+                    //     return response()->json([
+                    //         'status'    => 'fail',
+                    //         'messages'  => ['Transaction failed']
+                    //     ]);
+                    // }
 
                     if ($post['type'] == 'Pickup Order' || $post['type'] == 'Pickup Order') {
                         $orderIdSend = $insertPickup['order_id'];
@@ -1014,8 +1014,8 @@ class ApiOnlineTransaction extends Controller
                         $orderIdSend = $insertShipment['order_id'];
                     }
 
-                    $sendNotifOutlet = $this->outletNotif($insertTransaction['id_outlet'], $post['type'], $orderIdSend, $insertTransaction['transaction_grandtotal']);
-
+                    $sendNotifOutlet = $this->outletNotif($insertTransaction['id_transaction']);
+                    // return $sendNotifOutlet;
                     $dataRedirect = $this->dataRedirect($insertTransaction['transaction_receipt_number'], 'trx', '1');
 
                     DB::commit();
@@ -1090,18 +1090,57 @@ class ApiOnlineTransaction extends Controller
         return $send;
     }
 
-    public function outletNotif($id_outlet, $type, $order_id, $grand_total)
+    public function outletNotif($id_trx)
     {
-        $outletToken = OutletToken::where('id_outlet', $id_outlet)->get();
+        $trx = Transaction::where('id_transaction', $id_trx)->first();
+        if ($trx['trasaction_type'] == 'Pickup Order') {
+            $detail = TransactionPickup::where('id_transaction', $id_trx)->first();
+        } else {
+            $detail = TransactionShipment::where('id_transaction', $id_trx)->first();
+        }
+
+        $dataProduct = TransactionProduct::where('id_transaction', $id_trx)->with('product')->get();
+
+        $count = count($dataProduct);
+        $stringBody = "";
+        $totalSemua = 0;
+
+        foreach ($dataProduct as $key => $value) {
+            $totalSemua += $value['transaction_product_qty'];
+            $stringBody .= $value['product']['product_name']." - ".$value['transaction_product_qty']." pcs \r\n";
+        }
+
+        // return $stringBody;
+
+        $outletToken = OutletToken::where('id_outlet', $trx['id_outlet'])->get();
+
+        if (isset($detail['pickup_type'])) {
+            if ($detail['pickup_type'] == 'at arrival') {
+                $type = 'Saat Kedatangan';
+            }
+
+            if ($detail['pickup_type'] == 'right now') {
+                $type = 'Saat Ini';
+            }
+
+            if ($detail['pickup_type'] == 'set time') {
+                $type = 'Pickup';
+            }
+        } else {
+            $type = 'Delivery';
+        }
+        
+        $user = User::where('id', $trx['id_user'])->first();
+
         if (!empty($outletToken)) {
             $dataArraySend = [];
             
             foreach ($outletToken as $key => $value) {
                 $dataOutletSend = [
                     'to'    => $value['token'],
-                    'title' => 'Order Baru - '.$order_id.' - '.$grand_total.'',
-                    'body'  => 'Order Baru - '.$order_id.' - '.$grand_total.'',
-                    'data'  => ['order_id' => $order_id]
+                    'title' => $type.' - Rp. '.number_format($trx['transaction_grandtotal'], 0, ',', '.').' - '.$totalSemua.' pcs - '.$detail['order_id'].' - '.$user['name'].'',
+                    'body'  => $stringBody,
+                    'data'  => ['order_id' => $detail['order_id']]
                 ];
 
                 array_push($dataArraySend, $dataOutletSend);
