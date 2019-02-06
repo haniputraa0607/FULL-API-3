@@ -19,6 +19,7 @@ use App\Http\Models\ProductPrice;
 use App\Http\Models\LogBalance;
 
 use Modules\OutletApp\Http\Requests\UpdateToken;
+use Modules\OutletApp\Http\Requests\DeleteToken;
 use Modules\OutletApp\Http\Requests\DetailOrder;
 use Modules\OutletApp\Http\Requests\ProductSoldOut;
 
@@ -31,6 +32,20 @@ class ApiOutletApp extends Controller
         date_default_timezone_set('Asia/Jakarta');
         $this->autocrm  = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
         $this->balance  = "Modules\Balance\Http\Controllers\BalanceController";
+    }
+
+    public function deleteToken(DeleteToken $request)
+    {
+        $post = $request->json()->all();
+        $delete = OutletToken::where('token', $post['token'])->first();
+        if (!empty($delete)) {
+            $delete->delete();
+            if (!$delete) {
+                return response()->json(['status' => 'fail', 'messages' => ['Delete token failed']]);
+            }
+        }
+
+        return response()->json(['status' => 'success', 'messages' => ['Delete token success']]);
     }
 
     public function updateToken(UpdateToken $request){

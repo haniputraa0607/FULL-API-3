@@ -3,6 +3,7 @@
 Route::group(['middleware' => 'auth:outlet-app', 'prefix' => 'api/outletapp', 'namespace' => 'Modules\OutletApp\Http\Controllers'], function()
 {
     Route::any('/update-token', 'ApiOutletApp@updateToken');
+    Route::any('/delete-token', 'ApiOutletApp@deleteToken');
     Route::any('/order', 'ApiOutletApp@listOrder');
     Route::post('order/detail', 'ApiOutletApp@detailOrder');
     Route::post('order/accept', 'ApiOutletApp@acceptOrder');
