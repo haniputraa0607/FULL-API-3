@@ -14,6 +14,7 @@ use App\Http\Models\TransactionPickup;
 use App\Http\Models\TransactionProductModifier;
 use App\Http\Models\TransactionPaymentOffline;
 use App\Http\Models\TransactionVoucher;
+use App\Http\Models\TransactionSetting;
 use App\Http\Models\User;
 use App\Http\Models\Product;
 use App\Http\Models\ProductPrice;
@@ -27,6 +28,7 @@ use App\Http\Models\LogPoint;
 use App\Http\Models\LogBalance;
 use App\Http\Models\SpecialMembership;
 use App\Http\Models\DealsVoucher;
+use App\Http\Models\Configs;
 use App\Lib\MyHelper;
 use Mailgun;
 
@@ -48,6 +50,7 @@ class ApiPOS extends Controller
         date_default_timezone_set('Asia/Jakarta');
         $this->balance    = "Modules\Balance\Http\Controllers\BalanceController";
         $this->membership = "Modules\Membership\Http\Controllers\ApiMembership";
+        $this->balance    = "Modules\Balance\Http\Controllers\BalanceController";
     }
 	
     public function transactionDetail(reqPreOrderDetail $request){
@@ -114,6 +117,9 @@ class ApiPOS extends Controller
 				$val['price'] = $menu['pivot']['transaction_product_price'];
 				$val['qty'] = $menu['pivot']['transaction_product_qty'];
 				$val['category'] = $menu['product_category_name'];
+				if($menu['pivot']['transaction_product_note'] != null){
+					$val['open_modifier'] = $menu['pivot']['transaction_product_note'];
+				}
 				$val['modifiers'] = $check['product_transaction'][$key]['modifiers'];
 				
 				array_push($transactions['menu'], $val);
@@ -1055,12 +1061,12 @@ class ApiPOS extends Controller
 
 					if ($createTrx['transaction_payment_status'] == 'Completed') {
 						 //get last point 
-						 $pointBefore = LogPoint::where('id_user', $user['id'])->whereNotIn('id_log_point', function($q) use($createTrx){
-							$q->from('log_points')
+						 $pointBefore = LogBalance::where('id_user', $user['id'])->whereNotIn('id_log_balance', function($q) use($createTrx){
+							$q->from('log_balances')
 							  ->where('source', 'Transaction')
 							  ->where('id_reference', $createTrx->id_transaction)
-							  ->select('id_log_point');
-						})->sum('point');
+							  ->select('id_log_balance');
+						})->sum('balance');
 
 						 //cek jika menggunakan voucher tidak dapat point / cashback
 						 if (count($idDealVouUsed) > 0) {
@@ -1118,17 +1124,28 @@ class ApiPOS extends Controller
 									 $cashback = $cashMax;
 								 }
 		 
-								 //update point & cashback earned
-								 $createTrx->transaction_point_earned = $point;
-								 $createTrx->transaction_cashback_earned = $cashback;
-								 $createTrx->update();
-								 if (!$createTrx) {
-									 DB::rollback();
-									 return response()->json([
-										 'status'    => 'fail',
-										 'messages'  => ['Insert Point Failed']
-									 ]);
-								 }
+								//update point & cashback earned
+								$configPoint = Configs::where('config_name', 'point')->first();
+								if($configPoint && isset($configPoint['is_active']) && $configPoint['is_active'] == '1'){
+									$createTrx->transaction_point_earned = $point;
+								}else{
+									$createTrx->transaction_point_earned = null;
+								}
+								$configBalance = Configs::where('config_name', 'balance')->first();
+								if($configBalance && isset($configBalance['is_active']) && $configBalance['is_active'] == '1'){
+									$createTrx->transaction_cashback_earned = $cashback;
+								}else{
+									$createTrx->transaction_cashback_earned = null;
+								}
+								
+								$createTrx->update();
+								if (!$createTrx) {
+									DB::rollback();
+									return response()->json([
+										'status'    => 'fail',
+										'messages'  => ['Insert Point Failed']
+									]);
+								}
 		 
 								if ($createTrx['transaction_point_earned']) {
 									 $settingPoint = Setting::where('key', 'point_conversion_value')->first();
@@ -1168,20 +1185,8 @@ class ApiPOS extends Controller
 								}
 		 
 								if ($createTrx['transaction_cashback_earned']) {
-									$settingCashback = Setting::where('key', 'cashback_conversion_value')->first();
 
-									$dataLogCash = [
-										'id_user'                        => $createTrx['id_user'],
-										'balance'                        => $createTrx['transaction_cashback_earned'],
-										'id_reference'                   => $createTrx['id_transaction'],
-										'source'                         => 'Transaction',
-										'grand_total'                    => $createTrx['transaction_grandtotal'],
-										'ccashback_conversion'           => $settingCashback['value'],
-										'membership_level'               => $level,
-										'membership_cashback_percentage' => $percentageB * 100
-									];
-
-									$insertDataLogCash = LogBalance::updateOrCreate(['id_user' => $createTrx['id_user'], 'id_reference' => $createTrx['id_transaction']], $dataLogCash);
+									$insertDataLogCash = app($this->balance)->addLogBalance( $createTrx['id_user'], $createTrx['transaction_cashback_earned'], $createTrx['id_transaction'], 'Transaction', $createTrx['transaction_grandtotal']);
 									if (!$insertDataLogCash) {
 										DB::rollback();
 										return response()->json([
@@ -1190,17 +1195,7 @@ class ApiPOS extends Controller
 										]);
 									}
 
-									//update user balance
-									$sumBalance = LogBalance::where('id_user', $user['id'])->sum('balance');
-									$user->balance = $sumBalance;
-									$user->update();
-									if (!$user) {
-										DB::rollback();
-										return response()->json([
-											'status'    => 'fail',
-											'messages'  => ['Insert Cashback Failed']
-										]);
-									}
+									$pointValue = $insertDataLogCash->balance;
 								}
 		 
 								$createTrx->special_memberships = 1;
@@ -1213,41 +1208,66 @@ class ApiPOS extends Controller
 									]);
 								}
 							 } else {
-								 if (!empty($user['memberships'][0]['membership_name'])) {
-									 $level = $user['memberships'][0]['membership_name'];
-									 $percentageP = $user['memberships'][0]['benefit_point_multiplier'] / 100;
-									 $percentageB = $user['memberships'][0]['benefit_cashback_multiplier'] / 100;
-									 $cashMax = $user['memberships'][0]['cashback_maximum'];
-								 } else {
-									 $level = null;
-									 $percentageP = 0;
-									 $percentageB = 0;
+								if (!empty($user['memberships'][0]['membership_name'])) {
+									$level = $user['memberships'][0]['membership_name'];
+									$percentageP = $user['memberships'][0]['benefit_point_multiplier'] / 100;
+									$percentageB = $user['memberships'][0]['benefit_cashback_multiplier'] / 100;
+									$cashMax = $user['memberships'][0]['cashback_maximum'];
+								} else {
+									$level = null;
+									$percentageP = 0;
+									$percentageB = 0;
+		
+									$getSet = Setting::where('key', 'cashback_maximum')->first();
+									if($getSet){
+										$cashMax = (int)$getSet->value;
+									}
+								}
+
+								$point = floor($this->count('point', $trx) * $percentageP);
+								$cashback = floor($this->count('cashback', $trx) * $percentageB);
+
+								//count some trx user
+								$countUserTrx = Transaction::where('id_user', $user['id'])->count();
+
+								$countSettingCashback = TransactionSetting::get();
+
+								// return $countSettingCashback;
+								if ($countUserTrx < count($countSettingCashback)) {
+									// return $countUserTrx;
+									$cashback = $cashback * $countSettingCashback[$countUserTrx]['cashback_percent'] / 100;
+
+									if ($cashback > $countSettingCashback[$countUserTrx]['cashback_maximum']) {
+										$cashback = $countSettingCashback[$countUserTrx]['cashback_maximum'];
+									}
+								} else{
+									if(isset($cashMax) && $cashback > $cashMax){
+										$cashback = $cashMax;
+									}
+								}
 		 
-									 $getSet = Setting::where('key', 'cashback_maximum')->first();
-									 if($getSet){
-										 $cashMax = (int)$getSet->value;
-									 }
-								 }
-		 
-								 $point = floor($this->count('point', $trx) * $percentageP);
-								 $cashback = floor($this->count('cashback', $trx) * $percentageB);
-		 
-								 if(isset($cashMax) && $cashback > $cashMax){
-									 $cashback = $cashMax;
-								 }
-		 
-								 //update point & cashback earned
-								 $createTrx->transaction_point_earned = $point;
-								 $createTrx->transaction_cashback_earned = $cashback;
-								 $createTrx->update();
-								 if (!$createTrx) {
-									 DB::rollback();
-									 return response()->json([
-										 'status'    => 'fail',
-										 'messages'  => ['Insert Point Failed']
-									 ]);
-								 }
-		 
+								//update point & cashback earned
+								$configPoint = Configs::where('config_name', 'point')->first();
+								if($configPoint && isset($configPoint['is_active']) && $configPoint['is_active'] == '1'){
+									$createTrx->transaction_point_earned = $point;
+								}else{
+									$createTrx->transaction_point_earned = null;
+								}
+								$configBalance = Configs::where('config_name', 'balance')->first();
+								if($configBalance && isset($configBalance['is_active']) && $configBalance['is_active'] == '1'){
+									$createTrx->transaction_cashback_earned = $cashback;
+								}else{
+									$createTrx->transaction_cashback_earned = null;
+								}
+								$createTrx->update();
+								if (!$createTrx) {
+									DB::rollback();
+									return response()->json([
+										'status'    => 'fail',
+										'messages'  => ['Insert Point Failed']
+									]);
+								}
+
 								 if ($createTrx['transaction_point_earned']) {
 									 $settingPoint = Setting::where('key', 'point_conversion_value')->first();
 		 
@@ -1287,40 +1307,19 @@ class ApiPOS extends Controller
 								 }
 		 
 								 if ($createTrx['transaction_cashback_earned']) {
-									 $settingCashback = Setting::where('key', 'cashback_conversion_value')->first();
-		 
-									 $dataLogCash = [
-										 'id_user'                        => $createTrx['id_user'],
-										 'balance'                        => $createTrx['transaction_cashback_earned'],
-										 'id_reference'                   => $createTrx['id_transaction'],
-										 'source'                         => 'Transaction',
-										 'grand_total'                    => $createTrx['transaction_grandtotal'],
-										 'ccashback_conversion'           => $settingCashback['value'],
-										 'membership_level'               => $level,
-										 'membership_cashback_percentage' => $percentageB * 100
-									 ];
-		 
-									 $insertDataLogCash = LogBalance::updateOrCreate(['id_user' => $createTrx['id_user'], 'id_reference' => $createTrx['id_transaction']], $dataLogCash);
-									 if (!$insertDataLogCash) {
-										 DB::rollback();
-										 return response()->json([
-											 'status'    => 'fail',
-											 'messages'  => ['Insert Cashback Failed']
-										 ]);
-									 }
-		 
-									 //update user balance
-									 $sumBalance = LogBalance::where('id_user', $user['id'])->sum('balance');
-									 $user->balance = $sumBalance;
-									 $user->update();
-									 if (!$user) {
-										 DB::rollback();
-										 return response()->json([
-											 'status'    => 'fail',
-											 'messages'  => ['Insert Cashback Failed']
-										 ]);
-									 }
-								 }
+
+									$insertDataLogCash = app($this->balance)->addLogBalance( $createTrx['id_user'], $createTrx['transaction_cashback_earned'], $createTrx['id_transaction'], 'Transaction', $createTrx['transaction_grandtotal']);
+									if (!$insertDataLogCash) {
+										DB::rollback();
+										return response()->json([
+											'status'    => 'fail',
+											'messages'  => ['Insert Cashback Failed']
+										]);
+									}
+
+									$pointValue = $insertDataLogCash->balance;
+
+								}
 		 
 								 $checkMembership = app($this->membership)->calculateMembership($user['phone']);
 							 }
