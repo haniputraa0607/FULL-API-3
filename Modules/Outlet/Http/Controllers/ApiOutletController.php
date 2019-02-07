@@ -592,6 +592,33 @@ class ApiOutletController extends Controller
             if($request->json('type') && $request->json('type') == 'transaction'){
                 $urutan = $this->setAvailableOutlet($urutan);
             }
+        } else {
+            return response()->json(MyHelper::checkGet($outlet));
+        }
+
+        if(isset($request['page']) && $request['page'] > 0){
+            $page = $request['page'];
+            $next_page = $page + 1;
+
+            $dataOutlet = $urutan;
+            $urutan = [];
+
+            $pagingOutlet = $this->pagingOutlet($dataOutlet, $page);
+            if (count($pagingOutlet) > 0) {
+                $urutan['status'] = 'success';
+                $urutan['current_page']  = $page;
+                $urutan['data']          = $pagingOutlet['data'];
+                $urutan['total']         = count($dataOutlet);
+                $urutan['next_page_url'] = null;
+    
+                if ($pagingOutlet['status'] == true) {
+                    $urutan['next_page_url'] = ENV('APP_API_URL').'api/outlet/nearme?page='.$next_page;
+                }
+            } else {
+                $urutan['status'] = 'fail';
+                $urutan['messages'] = ['empty'];
+                
+            }
         }
 
         return response()->json(MyHelper::checkGet($urutan));

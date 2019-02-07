@@ -80,11 +80,16 @@ class Outlet extends Authenticatable
 		// 'outlet_close_hours'
 	];
 
-	protected $appends  = ['call'];
+	protected $appends  = ['call', 'url'];
 
 	public function getCallAttribute() {
 		$call = preg_replace("/[^0-9]/", "", $this->outlet_phone);
 		return $call;
+	}
+
+	public function getUrlAttribute()
+	{
+		return 'http://kk.staging.co.id/outlet/webview/'.$this->id_outlet;
 	}
 
 	public function city()
