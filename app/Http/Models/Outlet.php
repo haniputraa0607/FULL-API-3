@@ -89,7 +89,7 @@ class Outlet extends Authenticatable
 
 	public function getUrlAttribute()
 	{
-		return 'http://kk.staging.co.id/outlet/webview/'.$this->id_outlet;
+		return env('VIEW_URL').'/outlet/webview/'.$this->id_outlet;
 	}
 
 	public function city()

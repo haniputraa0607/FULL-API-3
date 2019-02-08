@@ -105,9 +105,11 @@ class ApiHiddenDeals extends Controller
 
             if (!empty($id_deals)) {
                 foreach ($user as $key => $value) {
-                    $deals = DealsUser::join('deals_vouchers', 'deals_users.id_deals_voucher', '=', 'deals_vouchers.id_deals_voucher')->where('id_user', $value)->where('id_deals', $id_deals)->first();    
+                    // $deals = DealsUser::join('deals_vouchers', 'deals_users.id_deals_voucher', '=', 'deals_vouchers.id_deals_voucher')->where('id_user', $value)->where('deals_vouchers.id_deals', $id_deals)->first();    
+                    $dataUser = User::find($value);
 
-                    if (!empty($deals)) {
+                    $checkLimitUser = app($this->dealsClaim)->checkUserClaimed($dataUser, $id_deals);
+                    if($checkLimitUser == false){
                         unset($user[$key]);
                     }
                 }

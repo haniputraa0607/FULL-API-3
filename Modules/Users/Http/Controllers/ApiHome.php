@@ -235,7 +235,25 @@ class ApiHome extends Controller
 										->where('id_user','=',$user->id)
 										->orderBy('id_log_membership','desc')
 										->first();
+			                             
 			if(isset($membership) && $membership != ""){
+                if($membership && $membership['membership_name'] != null){
+                    $idMembership = $membership['id_log_membership'];
+                }else{
+                    $idMembership = null;
+                }
+
+                unset($membership['id_log_membership']);
+    
+                $dataEncode = [
+                    'id_user_membership' => $idMembership,
+                    'id_user' => $user->id,
+                ];
+    
+                $encode = json_encode($dataEncode);
+                $base = base64_encode($encode);
+    
+                $membership['webview_detail_membership'] = env('VIEW_URL').'/membership/web/view?data='.$base;
 				if(isset($membership['membership_image']))
 					$membership['membership_image'] = env('APP_API_URL').$membership['membership_image'];
 			} else {

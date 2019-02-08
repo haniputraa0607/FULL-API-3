@@ -66,6 +66,10 @@ class ApiDeals extends Controller
         }
         if (isset($post['deals_image'])) { 
 
+            if (!file_exists($this->saveImage)) {
+                mkdir($this->saveImage, 0777, true);
+            }
+
             $upload = MyHelper::uploadPhotoStrict($post['deals_image'], $this->saveImage, 300, 300);
 
             if (isset($upload['status']) && $upload['status'] == "success") {
@@ -541,7 +545,7 @@ class ApiDeals extends Controller
         $deals = DealsUser::join('deals_vouchers', 'deals_vouchers.id_deals_voucher', '=', 'deals_users.id_deals_voucher');
 
         if ($request->json('id_deals')) {
-            $deals->where('id_deals', $request->json('id_deals'));
+            $deals->where('deals_vouchers.id_deals', $request->json('id_deals'));
         }
 
         $deals = $deals->with(['user', 'outlet'])->orderBy('claimed_at', "ASC")->paginate(10);
