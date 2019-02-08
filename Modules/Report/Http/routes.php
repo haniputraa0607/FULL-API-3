@@ -21,6 +21,7 @@ Route::group(['middleware' => 'api', 'prefix' => 'api/report', 'namespace' => 'M
     /* OUTLET */
     Route::post('trx/outlet', 'ApiReportDua@transactionOutlet');
     Route::post('trx/outlet/detail', 'ApiReportDua@transactionOutletDetail');
+    Route::post('outlet/detail/trx', 'ApiReportDua@outletTransactionDetail');
 
     /* MAGIC REPORT */
     Route::post('magic', 'ApiMagicReport@magicReport');
