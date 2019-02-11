@@ -66,6 +66,7 @@ Route::group(['middleware' => 'api', 'prefix' => 'api/setting', 'namespace' => '
     {
         Route::get('/', 'ApiSetting@getCompleteProfile');
         Route::post('/', 'ApiSetting@completeProfile');
+        Route::post('/success-page', 'ApiSetting@completeProfileSuccessPage');
     });
 
     

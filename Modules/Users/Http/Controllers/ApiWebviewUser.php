@@ -99,8 +99,13 @@ class ApiWebviewUser extends Controller
                 ];
             }
         DB::commit();
-
-        return MyHelper::checkUpdate($update);
+        // get user profile success page content
+        $success_page = Setting::where('key', 'complete_profile_success_page')->get()->pluck('value_text');
+        return [
+                'status' => 'success',
+                'result' => $success_page[0]
+        ];
+        // return MyHelper::checkUpdate($update);
     }
 
     public function completeProfileLater()

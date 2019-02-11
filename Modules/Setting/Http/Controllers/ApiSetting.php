@@ -974,6 +974,10 @@ class ApiSetting extends Controller
         $value = array_pluck(Setting::where('key', 'LIKE', '%complete_profile%')->get()->toArray(), 'value');
         $complete_profiles = array_combine($key, $value);
 
+        // get user profile success page content
+        $value_text = Setting::where('key', 'complete_profile_success_page')->get()->pluck('value_text');
+        $complete_profiles['complete_profile_success_page'] = $value_text[0];
+
         if (!isset($complete_profiles['complete_profile_point'])) {
             $complete_profiles['complete_profile_point'] = '';
         }
@@ -985,6 +989,10 @@ class ApiSetting extends Controller
         }
         if (!isset($complete_profiles['complete_profile_interval'])) {
             $complete_profiles['complete_profile_interval'] = '';
+        }
+        // success page
+        if (!isset($complete_profiles['complete_profile_success_page'])) {
+            $complete_profiles['complete_profile_success_page'] = '';
         }
 
         return response()->json(MyHelper::checkGet($complete_profiles));
@@ -1010,6 +1018,25 @@ class ApiSetting extends Controller
             return [
                 'status' => 'fail',
                 'messages' => ['Some data may not saved.']
+            ];
+        }
+    }
+
+    public function completeProfileSuccessPage(Request $request)
+    {
+        $post = $request->json()->all();
+        
+        $update = Setting::updateOrCreate(['key' => 'complete_profile_success_page'], ['value_text' => $post['complete_profile_success_page']]);
+        if ($update) {
+            return [
+                'status' => 'success',
+                'result' => $update
+            ];
+        }
+        else {
+            return [
+                'status' => 'fail',
+                'messages' => ['Failed to save data.']
             ];
         }
     }
