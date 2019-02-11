@@ -430,13 +430,6 @@ class ApiOnlineTransaction extends Controller
             }
         }
 
-        $deviceType = null;
-        $useragent = $_SERVER['HTTP_USER_AGENT'];
-        if(stristr($useragent, 'iOS'))
-            $deviceType = 'IOS';
-        if(stristr($useragent, 'okhttp'))
-            $deviceType = 'Android';
-
         DB::beginTransaction();
         $transaction = [
             'id_outlet'                   => $post['id_outlet'],
@@ -444,7 +437,6 @@ class ApiOnlineTransaction extends Controller
             'transaction_date'            => $post['transaction_date'],
             'transaction_receipt_number'  => 'TRX-'.app($this->setting_trx)->getrandomnumber(15).'-'.date('YmdHis'),
             'trasaction_type'             => $type,
-            'transaction_device_type'     => $deviceType,
             'transaction_notes'           => $post['notes'],
             'transaction_subtotal'        => $post['subtotal'],
             'transaction_shipment'        => $post['shipping'],

@@ -74,7 +74,7 @@ Route::group(['middleware' => 'auth_client', 'prefix' => 'api/transaction', 'nam
     Route::post('/city', 'ApiTransaction@getCity');
     Route::post('/subdistrict', 'ApiTransaction@getSubdistrict');
     Route::post('/courier', 'ApiTransaction@getCourier');
-    Route::any('/grand-total', 'ApiOnlineTransaction@grandTotal');
+    Route::any('/grand-total', 'ApiSettingTransactionV2@grandTotal');
     
     Route::post('/new-transaction', 'ApiTransaction@transaction');
 
