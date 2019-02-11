@@ -650,7 +650,11 @@ class ApiHistoryController extends Controller
                 $dataList['id']      = $value['id_log_balance'];
                 $dataList['date']    = date('Y-m-d H:i:s', strtotime($trx['transaction_date']));
                 $dataList['outlet']  = $trx['outlet']['outlet_name'];
-                $dataList['amount'] = $value['balance'];
+                if ($value['balance'] < 0) {
+                    $dataList['amount'] = '- '.ltrim(number_format($value['balance'], 0, ',', '.'), '-');
+                } else {
+                    $dataList['amount'] = '+ '.number_format($value['balance'], 0, ',', '.');
+                }
 
                 $listBalance[$key] = $dataList;
 
@@ -663,7 +667,8 @@ class ApiHistoryController extends Controller
                 $dataList['id']      = $value['id_log_balance'];
                 $dataList['date']   = date('Y-m-d H:i:s', strtotime($vou['claimed_at']));
                 $dataList['outlet'] = $vou['outlet']['outlet_name'];
-                $dataList['amount'] = $value['balance'];
+                $dataList['amount'] = '- '.ltrim(number_format($value['balance'], 0, ',', '.'), '-');
+                // $dataList['amount'] = number_format($value['balance'], 0, ',', '.');
                 // $dataList['online'] = 1;
 
                 $listBalance[$key] = $dataList;
@@ -673,7 +678,7 @@ class ApiHistoryController extends Controller
                 $dataList['id']      = $value['id_log_balance'];
                 $dataList['date']   = date('Y-m-d H:i:s', strtotime($value['created_at']));
                 $dataList['outlet'] = 'Completing User Profile';
-                $dataList['amount'] = $value['balance'];
+                $dataList['amount'] = '+ '.number_format($value['balance'], 0, ',', '.');
 
                 $listBalance[$key] = $dataList;
             }

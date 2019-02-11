@@ -248,6 +248,7 @@ class ApiConfirm extends Controller
             return response()->json([
                 'status'           => 'success',
                 'snap_token'       => $connectMidtrans['token'],
+                'redirect_url'     => $connectMidtrans['redirect_url'],
                 'transaction_data' => $dataMidtrans,
             ]);
         } else {

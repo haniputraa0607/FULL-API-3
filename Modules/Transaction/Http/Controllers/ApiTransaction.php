@@ -1282,8 +1282,9 @@ class ApiTransaction extends Controller
                     ->leftJoin('products','products.id_product','=','transaction_products.id_product')
                     ->leftJoin('product_categories','products.id_product_category','=','product_categories.id_product_category')
                     ->where('trasaction_type', $post['key'])
-                    ->where('transactions.created_at', '>=', $start)
-                    ->where('transactions.created_at', '<=', $end)
+                    ->whereDate('transactions.transaction_date', '>=', $start)
+                    ->whereDate('transactions.transaction_date', '<=', $end)
+                    ->with('user')
                     ->orderBy('transactions.id_transaction', 'DESC')
                     ->groupBy('transactions.id_transaction');
                     // ->orderBy('transactions.id_transaction', 'DESC');
