@@ -279,7 +279,7 @@ class ApiHome extends Controller
             $webview_link = env('APP_URL') . 'webview/complete-profile';
 
             // check user profile completeness (if there is null data)
-            if ($user->id_city=="" || $user->gender=="" || $user->birthday=="") {
+            if ($user->id_city=="" && $user->gender=="" && $user->birthday=="") {
                 // get setting user profile value
                 $complete_profile_interval = 0;
                 $complete_profile_count = 0;
