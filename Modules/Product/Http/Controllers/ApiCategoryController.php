@@ -290,6 +290,15 @@ class ApiCategoryController extends Controller
 		}
 		
 		$result = array();
+
+        if (!empty($category)) {
+            foreach ($category as $key => $value) {
+                if (count($value['product']) < 1) {
+                        unset($category[$key]);
+                }
+            }
+        }
+
         $result['categorized'] = $category;
         
         if(!isset($post['id_product_category'])){
