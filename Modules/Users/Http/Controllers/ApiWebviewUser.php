@@ -44,13 +44,13 @@ class ApiWebviewUser extends Controller
             $user = User::with('memberships')->where('id', $user->id)->first();
 
             // get point and cashback from setting
-            $complete_profile_point = 0;
+            // $complete_profile_point = 0;
             $complete_profile_cashback = 0;
-            $setting_profile_point = Setting::where('key', 'complete_profile_point')->first();
+            // $setting_profile_point = Setting::where('key', 'complete_profile_point')->first();
             $setting_profile_cashback = Setting::where('key', 'complete_profile_cashback')->first();
-            if (isset($setting_profile_point->value)) {
+            /*if (isset($setting_profile_point->value)) {
                 $complete_profile_point = $setting_profile_point->value;
-            }
+            }*/
             if (isset($setting_profile_cashback->value)) {
                 $complete_profile_cashback = $setting_profile_cashback->value;
             }
@@ -67,6 +67,7 @@ class ApiWebviewUser extends Controller
                 $point_percentage = $user_member['memberships'][0]['benefit_point_multiplier'];
             }
 
+            /*** uncomment this if point feature is active
             // add point
             $setting_point = Setting::where('key', 'point_conversion_value')->first();
             $log_point = [
@@ -84,6 +85,7 @@ class ApiWebviewUser extends Controller
             // update user point
             $new_user_point = LogPoint::where('id_user', $user->id)->sum('point');
             $user_update = $user->update(['points' => $new_user_point]);
+            */
 
             /* add cashback */
             $balance_nominal = $complete_profile_cashback;
@@ -91,7 +93,8 @@ class ApiWebviewUser extends Controller
             $balanceController = new BalanceController();
             $addLogBalance = $balanceController->addLogBalance($user->id, $balance_nominal, null, "Completing User Profile", 0);
 
-            if ( !($user_update && $insert_log_point && $addLogBalance) ) {
+            // if ( !($user_update && $insert_log_point && $addLogBalance) ) {
+            if ( !$addLogBalance ) {
                 DB::rollback();
                 return [
                     'status' => 'fail',
