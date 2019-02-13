@@ -67,7 +67,6 @@ class ApiNotification extends Controller {
 
             // PROCESS
             $checkPayment = $this->checkPayment($transac, $midtrans);
-            
             if (!$checkPayment) {
                 DB::rollback();
                 return response()->json([
@@ -76,13 +75,13 @@ class ApiNotification extends Controller {
                 ]);
             }
 
-            $sendNotif = $this->sendNotif($transac);
-            if (!$sendNotif) {
-                return response()->json([
-                    'status'   => 'fail',
-                    'messages' => ['Transaction failed']
-                ]);
-            }
+            // $sendNotif = $this->sendNotif($transac);
+            // if (!$sendNotif) {
+            //     return response()->json([
+            //         'status'   => 'fail',
+            //         'messages' => ['Transaction failed']
+            //     ]);
+            // }
 
             $newTrx = Transaction::with('user.memberships', 'outlet', 'productTransaction')->where('transaction_receipt_number', $midtrans['order_id'])->first();
 
@@ -119,13 +118,32 @@ class ApiNotification extends Controller {
                 }
             }
 
-            
-            $notif = $this->notification($midtrans, $newTrx);
-            if (!$notif) {
-                return response()->json([
-                    'status'   => 'fail',
-                    'messages' => ['Transaction failed']
-                ]);
+            if ($midtrans['status_code'] == 200) {
+                $notif = $this->notification($midtrans, $newTrx);
+                if (!$notif) {
+                    return response()->json([
+                        'status'   => 'fail',
+                        'messages' => ['Transaction failed']
+                    ]);
+                }
+
+                $sendNotifOutlet = app($this->trx)->outletNotif($newTrx['id_transaction']);
+            } elseif ($midtrans['status_code'] == 201) {
+                $notifPending = $this->notificationPending($midtrans, $newTrx);
+                if (!$notifPending) {
+                    return response()->json([
+                        'status'   => 'fail',
+                        'messages' => ['Transaction failed']
+                    ]);
+                }
+            } elseif ($midtrans['status_code'] == 202) {
+                $notifExpired = $this->notificationExpired($midtrans, $newTrx);
+                if (!$notifExpired) {
+                    return response()->json([
+                        'status'   => 'fail',
+                        'messages' => ['Transaction failed']
+                    ]);
+                }
             }
 
             $user = User::where('id', $newTrx['id_user'])->first();
@@ -137,7 +155,7 @@ class ApiNotification extends Controller {
                 ]);
             }
 
-            $sendNotifOutlet = app($this->trx)->outletNotif($newTrx['id_transaction']);
+            
 
             DB::commit();
             return response()->json(['status' => 'success']);
@@ -226,6 +244,36 @@ class ApiNotification extends Controller {
             'status'   => 'fail',
             'messages' => ['Transaction not found']
         ]);
+    }
+
+    public function notificationPending($mid, $trx)
+    {
+        $name    = $trx['user']['name'];
+        $phone   = $trx['user']['phone'];
+        $date    = $trx['transaction_date'];
+        $outlet  = $trx['outlet']['outlet_name'];
+        $receipt = $trx['transaction_receipt_number'];
+        $detail = $this->getHtml($trx, $trx['productTransaction'], $name, $phone, $date, $outlet, $receipt);
+
+        $payment = $this->getPayment($mid);
+
+        $send = app($this->autocrm)->SendAutoCRM('Transaction Payment', $trx->user->phone, ['notif_type' => 'trx', 'date' => $trx['transaction_date'], 'status' => $trx['transaction_payment_status'], 'name'  => $trx->user->name, 'id' => $mid['order_id'], 'outlet_name' => $outlet, 'detail' => $detail, 'payment' => $payment, 'id_reference' => $mid['order_id']]);
+
+        return $send;
+    }
+
+    public function notificationExpired($mid, $trx)
+    {
+        $name    = $trx['user']['name'];
+        $phone   = $trx['user']['phone'];
+        $date    = $trx['transaction_date'];
+        $outlet  = $trx['outlet']['outlet_name'];
+        $receipt = $trx['transaction_receipt_number'];
+        $detail = $this->getHtml($trx, $trx['productTransaction'], $name, $phone, $date, $outlet, $receipt);
+
+        $send = app($this->autocrm)->SendAutoCRM('Transaction Expired', $trx->user->phone, ['notif_type' => 'trx', 'date' => $trx['transaction_date'], 'status' => $trx['transaction_payment_status'], 'name'  => $trx->user->name, 'id' => $mid['order_id'], 'outlet_name' => $outlet, 'detail' => $detail, 'id_reference' => $mid['order_id']]);
+
+        return $send;
     }
 
     public function notifTopup($data, $user, $mid)
@@ -429,8 +477,14 @@ Detail: ".$link['short'],
         $gross_amount       = isset($midtrans['gross_amount']) ? $midtrans['gross_amount'] : null;
         $fraud_status       = isset($midtrans['fraud_status']) ? $midtrans['fraud_status'] : null;
         $approval_code      = isset($midtrans['approval_code']) ? $midtrans['approval_code'] : null;
-        $bank               = isset($midtrans['va_numbers'][0]['bank']) ? $midtrans['va_numbers'][0]['bank'] : null;
-        $eci                = isset($midtrans['va_numbers'][0]['va_number']) ? $midtrans['va_numbers'][0]['va_number'] : null;
+
+        if (isset($midtrans['permata_va_number'])) {
+            $eci  = isset($midtrans['permata_va_number']) ? $midtrans['permata_va_number'] : null;
+            $bank = 'Permata';
+        } else {
+            $bank = isset($midtrans['va_numbers'][0]['bank']) ? $midtrans['va_numbers'][0]['bank'] : null;
+            $eci  = isset($midtrans['va_numbers'][0]['va_number']) ? $midtrans['va_numbers'][0]['va_number'] : null;
+        }
         
         $data = [
             'masked_card'        => $masked_card,
@@ -480,11 +534,15 @@ Detail: ".$link['short'],
                     return false;
                 }
             }
+        } elseif (isset($midtrans['status_code']) && $midtrans['status_code'] == 202) {
+            $check = Transaction::where('id_transaction', $trx->id_transaction)->update(['transaction_payment_status' => 'Cancelled']);
 
-            return true;
+            if (!$check) {
+                return false;
+            }
         }
 
-        return false;
+        return true;
     }
 
     /* CHECK PAYMENT BALANCE */
@@ -735,6 +793,56 @@ Detail: ".$link['short'],
         }
     }
 
+    public function getPayment($mid)
+    {
+        if (isset($mid['permata_va_number'])) {
+            $number = $mid['permata_va_number'];
+            $bank = 'Permata';
+        } else {
+            $number = $mid['va_numbers'][0]['va_number'];
+            $bank = strtoupper($mid['va_numbers'][0]['bank']);
+        }
+
+        $type   = ucwords(str_replace('_', ' ', $mid['payment_type']));
+
+        return '<table style="padding:0;margin-bottom: -50px;" width="800" cellspacing="0" cellpadding="0" border="0">
+ <tbody>
+    <tr>
+       <td style="color:#999;font-family:\'Source Sans Pro\',sans-serif;line-height:1.5;margin:0;padding:0" bgcolor="#ffffff">
+          <table style="margin:0;padding:0" width="100%" align="left">
+             <tbody>
+              <tr>
+                <td style="background:#ffffff;color:#555;font-family:\'Source Sans Pro\',sans-serif;line-height:1.5;margin:0;padding:5px 10px;width: 100px" valign="top" bgcolor="#FFFFFF" align="left">
+                   <span style="color:#555;font-family:\'Source Sans Pro\',sans-serif;font-size:14px;line-height:1.5;margin:0;padding:0">Bank </span>
+                </td>
+                <td colspan="3" style="background:#ffffff;color:#555;font-family:\'Source Sans Pro\',sans-serif;line-height:1.5;margin:0;padding:5px 10px" valign="top" bgcolor="#FFFFFF" align="left">
+                    <span style="color:#555;font-family:\'Source Sans Pro\',sans-serif;font-size:14px;line-height:1.5;margin:0;padding:0">:  <b>'.$bank.'</b> </span>
+                </td>
+             </tr>
+             <tr>
+                <td style="background:#ffffff;color:#555;font-family:\'Source Sans Pro\',sans-serif;line-height:1.5;margin:0;padding:5px 10px" valign="top" bgcolor="#FFFFFF" align="left">
+                   <span style="color:#555;font-family:\'Source Sans Pro\',sans-serif;font-size:14px;line-height:1.5;margin:0;padding:0">Virtual Number</span>
+                </td>
+                <td colspan="3" style="background:#ffffff;color:#555;font-family:\'Source Sans Pro\',sans-serif;line-height:1.5;margin:0;padding:5px 10px" valign="top" bgcolor="#FFFFFF" align="left">
+                    <span style="color:#555;font-family:\'Source Sans Pro\',sans-serif;font-size:14px;line-height:1.5;margin:0;padding:0">:  <b>'.$number.' </span>
+                </td>
+             </tr>
+             <tr>
+                <td style="background:#ffffff;color:#555;font-family:\'Source Sans Pro\',sans-serif;line-height:1.5;margin:0;padding:5px 10px" valign="top" bgcolor="#FFFFFF" align="left">
+                   <span style="color:#555;font-family:\'Source Sans Pro\',sans-serif;font-size:14px;line-height:1.5;margin:0;padding:0">Metode</span>
+                </td>
+                <td colspan="3" style="background:#ffffff;color:#555;font-family:\'Source Sans Pro\',sans-serif;line-height:1.5;margin:0;padding:5px 10px" valign="top" bgcolor="#FFFFFF" align="left">
+                    <span style="color:#555;font-family:\'Source Sans Pro\',sans-serif;font-size:14px;line-height:1.5;margin:0;padding:0">:  <b>'.$type.' </span>
+                </td>
+             </tr>
+             </tbody>
+          </table>
+       </td>
+    </tr>
+ </tbody>
+</table>';
+    }
+
     function getHtml($trx, $item, $name, $phone, $date, $outlet, $receipt)
     {
         $dataItem = '';
@@ -791,7 +899,8 @@ Detail: ".$link['short'],
         $dataOrder = '';
 
         foreach ($manna as $row => $m) {
-            $dataOrder .= '<tr style="text-align:right">
+            if ($m != 0) {
+                $dataOrder .= '<tr style="text-align:right">
                         <td colspan="3" style="background:#ffffff;border-collapse:collapse;border-spacing:0;color:#555;font-family:\'Source Sans Pro\',sans-serif;line-height:1.5;margin:0;padding:15px 10px" valign="top" bgcolor="#FFFFFF" align="right">
                            <span style="color:#555;font-family:\'Source Sans Pro\',sans-serif;font-size:14px;line-height:1.5;margin:0;padding:0">'.ucwords($row).'</span>
                         </td>
@@ -799,6 +908,7 @@ Detail: ".$link['short'],
                            <span style="color:#555;font-family:\'Source Sans Pro\',sans-serif;font-size:14px;line-height:1.5;margin:0;padding:0">IDR</span> <span style="color:#555;font-family:\'Source Sans Pro\',sans-serif;font-size:14px;line-height:1.5;margin:0;padding:0">'.number_format($m).'</span>
                         </td>
                     </tr>';
+            }
         }
 
         return '<table style="border-collapse:collapse;border-spacing:0;margin:0 auto;padding:0" width="800" cellspacing="0" cellpadding="0" border="0" align="center">
@@ -847,7 +957,7 @@ Detail: ".$link['short'],
                   <tbody>
                      <tr>
                         <th colspan="4" style="background:#6C5648;border-bottom-style:none;color:#ffffff;padding-left:10px;padding-right:10px" bgcolor="background: rgb(40, 141, 73)">
-                           <h2 style="color:#ffffff;font-family:\'Source Sans Pro\',sans-serif;font-size:14px;line-height:1.5;margin:0;padding:5px 0">Detail Delivery</h2>
+                           <h2 style="color:#ffffff;font-family:\'Source Sans Pro\',sans-serif;font-size:14px;line-height:1.5;margin:0;padding:5px 0">Customer</h2>
                         </th>
                      </tr>
                      <tr>

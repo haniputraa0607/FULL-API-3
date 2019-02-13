@@ -230,7 +230,6 @@ class ApiOnlineTransaction extends Controller
                     ]);
                 }
 
-                
                 $post['discount'] = $post['dis'] + $totalDisProduct;
             }elseif($valueTotal == 'tax'){
                 $post['tax'] = app($this->setting_trx)->countTransaction($valueTotal, $post);
@@ -435,7 +434,7 @@ class ApiOnlineTransaction extends Controller
             'id_outlet'                   => $post['id_outlet'],
             'id_user'                     => $id,
             'transaction_date'            => $post['transaction_date'],
-            'transaction_receipt_number'  => 'TRX-'.app($this->setting_trx)->getrandomnumber(15).'-'.date('YmdHis'),
+            'transaction_receipt_number'  => 'TRX-'.app($this->setting_trx)->getrandomnumber(8).'-'.date('YmdHis'),
             'trasaction_type'             => $type,
             'transaction_notes'           => $post['notes'],
             'transaction_subtotal'        => $post['subtotal'],
@@ -990,15 +989,15 @@ class ApiOnlineTransaction extends Controller
                         }
                     }
 
-                    // $send = app($this->notif)->notification($mid, $insertTransaction);
+                    $send = app($this->notif)->notification($mid, $insertTransaction);
 
-                    // if (!$send) {
-                    //     DB::rollback();
-                    //     return response()->json([
-                    //         'status'    => 'fail',
-                    //         'messages'  => ['Transaction failed']
-                    //     ]);
-                    // }
+                    if (!$send) {
+                        DB::rollback();
+                        return response()->json([
+                            'status'    => 'fail',
+                            'messages'  => ['Transaction failed']
+                        ]);
+                    }
 
                     if ($post['type'] == 'Pickup Order' || $post['type'] == 'Pickup Order') {
                         $orderIdSend = $insertPickup['order_id'];

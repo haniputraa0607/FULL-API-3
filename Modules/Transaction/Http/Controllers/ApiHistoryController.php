@@ -454,7 +454,7 @@ class ApiHistoryController extends Controller
             $dataList['id'] = $value['transaction_receipt_number'];
             $dataList['date'] = $value['transaction_date'];
             $dataList['outlet'] = $value['outlet']['outlet_name'];
-            $dataList['amount'] = $value['transaction_grandtotal'];
+            $dataList['amount'] = number_format($value['transaction_grandtotal'], 0, ',', '.');
 
             $listTransaction[] = $dataList;
         }
