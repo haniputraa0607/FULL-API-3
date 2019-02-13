@@ -1126,6 +1126,7 @@ class ApiSetting extends Controller
 			if($device == 'android') {
 				$compare_version = $setting['version_android'];
 				if($post['version'] != $compare_version){
+                    $setting['version_text_alert'] = str_replace('%version_app%', $setting['version_android'], $setting['version_text_alert']);
 					if($setting['version_rule_android'] != 'allow'){
 						return response()->json(['status' => 'fail', 
 												'text' => $setting['version_text_alert'],
@@ -1142,6 +1143,7 @@ class ApiSetting extends Controller
 				$compare_version = $setting['version_ios'];
 				if($post['version'] != $compare_version){
 					if($setting['version_rule_ios'] != 'allow'){
+                        $setting['version_text_alert'] = str_replace('%version_app%', $setting['version_ios'], $setting['version_text_alert']);
 						return response()->json(['status' => 'fail', 
 												'text' => $setting['version_text_alert'],
 												'button_text' => $setting['version_text_button'],
@@ -1157,6 +1159,7 @@ class ApiSetting extends Controller
 				$compare_version = $setting['version_outletapp'];
 				if($post['version'] != $compare_version){
 					if($setting['version_rule_outletapp'] != 'allow'){
+                        $setting['version_text_alert'] = str_replace('%version_app%', $setting['version_outletapp'], $setting['version_text_alert']);
 						return response()->json(['status' => 'fail', 
 												'text' => $setting['version_text_alert'],
 												'button_text' => $setting['version_text_button'],
