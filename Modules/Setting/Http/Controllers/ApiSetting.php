@@ -42,6 +42,8 @@ use Modules\Setting\Http\Requests\SettingEdit;
 use Modules\Setting\Http\Requests\SettingUpdate;
 use Modules\Setting\Http\Requests\DatePost;
 
+use Modules\Setting\Http\Requests\Version\VersionList;
+
 use App\Lib\MyHelper;
 use Validator;
 use Hash;
@@ -1101,5 +1103,99 @@ class ApiSetting extends Controller
         }
 
         return response()->json(MyHelper::checkUpdate($update));
+    }
+
+    public function Version(VersionList $request){
+		$post = $request->json()->all();
+		$q = Setting::where('key', 'like', '%version%')->get()->toArray();
+		$setting = array();
+		foreach($q as $val){
+			$setting[$val['key']] = $val['value'];
+		}
+		$device = null;
+		if(isset($post['device'])){
+			$device = $post['device'];
+		} else {
+			$agent = $_SERVER['HTTP_USER_AGENT'];
+			if(stristr($agent, 'okhttp')) $device = 'android';
+			if(stristr($agent, 'android')) $device = 'android';
+			if(stristr($agent, 'ios')) $device = 'ios';
+		}
+		
+		if($device != null){
+			if($device == 'android') {
+				$compare_version = $setting['version_android'];
+				if($post['version'] != $compare_version){
+					if($setting['version_rule_android'] != 'allow'){
+						return response()->json(['status' => 'fail', 
+												'text' => $setting['version_text_alert'],
+												'button_text' => $setting['version_text_button'],
+												'button_url' => $setting['version_playstore']]);
+					} else {
+						return response()->json(['status' => 'success']);
+					}
+				} else {
+					return response()->json(['status' => 'success']);
+				}
+			}
+			if($device == 'ios') {
+				$compare_version = $setting['version_ios'];
+				if($post['version'] != $compare_version){
+					if($setting['version_rule_ios'] != 'allow'){
+						return response()->json(['status' => 'fail', 
+												'text' => $setting['version_text_alert'],
+												'button_text' => $setting['version_text_button'],
+												'button_url' => $setting['version_appstore']]);
+					} else {
+						return response()->json(['status' => 'success']);
+					}
+				} else {
+					return response()->json(['status' => 'success']);
+				}
+			}
+			if($device == 'outlet') {
+				$compare_version = $setting['version_outletapp'];
+				if($post['version'] != $compare_version){
+					if($setting['version_rule_outletapp'] != 'allow'){
+						return response()->json(['status' => 'fail', 
+												'text' => $setting['version_text_alert'],
+												'button_text' => $setting['version_text_button'],
+												'button_url' => $setting['version_outletstore']]);
+					} else {
+						return response()->json(['status' => 'success']);
+					}
+				} else {
+					return response()->json(['status' => 'success']);
+				}
+			}
+		} else {
+			return response()->json(['status' => 'fail', 'message' => 'Device tidak teridentifikasi']);
+		}
+		
+	}
+
+    function getVersion(){
+        $version = Setting::where('key', 'LIKE', 'version%')->get();
+        $result = [];
+        foreach($version as $data){
+            $result[$data['key']] = $data['value'];
+        }
+        return response()->json(MyHelper::checkGet($result));
+    }
+
+    function updateVersion(Request $request){
+        $post = $request->json()->all();
+
+        DB::beginTransaction();
+        foreach($post as $key => $data){
+            $setting = Setting::updateOrCreate(['key' => $key], ['value' => $data]);
+            if(!$setting){
+                DB::rollBack();
+                return response()->json(['status' => 'fail', 'messages' => $setting]);
+            }
+        }
+
+        DB::commit();
+        return response()->json(['status' => 'success']);
     }
 }

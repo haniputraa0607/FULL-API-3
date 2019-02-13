@@ -19,7 +19,7 @@ class Create extends FormRequest
             'id_outlet'       => 'required',
             'enquiry_name'    => '',
             'enquiry_phone'   => 'required',
-            'enquiry_email'   => '',
+            'enquiry_email'   => 'required',
             'enquiry_subject' => 'required|in:Question,Complaint,Partnership',
             'enquiry_content' => 'required',
             'enquiry_photo'   => ''

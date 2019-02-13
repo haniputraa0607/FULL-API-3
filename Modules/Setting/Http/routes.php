@@ -107,13 +107,17 @@ Route::group(['middleware' => 'auth_client', 'prefix' => 'api/setting', 'namespa
 	Route::get('/navigation', 'ApiSetting@Navigation');
 	Route::get('/navigation-logo', 'ApiSetting@NavigationLogo');
 	Route::get('/navigation-sidebar', 'ApiSetting@NavigationSidebar');
-	Route::get('/navigation-navbar', 'ApiSetting@NavigationNavbar');
+    Route::get('/navigation-navbar', 'ApiSetting@NavigationNavbar');
+
+    Route::get('/version/list', 'ApiSetting@getVersion');
+    Route::post('/version/update', 'ApiSetting@updateVersion');
 });
 
 Route::group(['prefix' => 'api/setting', 'namespace' => 'Modules\Setting\Http\Controllers'], function()
 {
     Route::get('/faq', 'ApiSetting@faqList');
     Route::post('webview', 'ApiSetting@settingWebview');
+    Route::post('/version', 'ApiSetting@Version');
     
     Route::get('/cron/point-reset', 'ApiSetting@cronPointReset');
 });
