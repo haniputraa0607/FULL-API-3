@@ -13,6 +13,10 @@ use App\Lib\MyHelper;
 
 class ApiMembership extends Controller
 {
+	function __construct() {
+		date_default_timezone_set('Asia/Jakarta');
+	}
+	
     public function listMembership(Request $request){
 		$post = $request->json()->all();
 		if(isset($post['id_membership'])){
@@ -226,61 +230,11 @@ class ApiMembership extends Controller
 											->sum('transaction_subtotal');
 					
 					$membership_baru = null;
+
 					if(strtotime($check['retain_date']) > strtotime(date('Y-m-d'))){
 						//belum waktunya dicek untuk retain
 						//cek naik level
-						foreach($membership_all as $all){
-
-							//cek refund
-							if($membership['min_total_value']){
-								if($all['min_total_value'] == $membership['min_total_value']){
-									if($trx_value < $all['min_total_value']){
-										//delete membership terakhir
-										$delete = UsersMembership::where('id_log_membership', $check['id_log_membership'])->delete();
-										
-										$data = UsersMembership::where('id_user', $check['id'])->orderBy('id_log_membership', 'desc')->first();
-										if($data){
-											//update membership user
-											$user = User::where('phone', $phone)->update(['id_membership' => $data['id_membership']]);
-
-											return [
-												'status'   => 'success',
-												'membership' => $data
-											];
-										}else{
-											return [
-												'status'   => 'success',
-												'membership' => null
-											];
-										}
-									}
-								}
-							}
-
-							if($membership['min_total_count']){
-								if($all['min_total_count'] == $membership['min_total_count']){
-									if($trx_count < $all['min_total_count']){
-										//delete membership terakhir
-										$delete = UsersMembership::where('id_log_membership', $check['id_log_membership'])->delete();
-
-										$data = UserMembership::where('id_user', $check['id'])->orderBy('id_log_membership', 'desc')->first();
-										if($data){
-											//update membership user
-											$user = User::where('phone', $phone)->update(['id_membership'=>$data['id_membership']]);
-
-											return [
-												'status'   => 'success',
-												'membership' => $data
-											];
-										}else{
-											return [
-												'status'   => 'success',
-												'membership' => null
-											];
-										}
-									}
-								}
-							}
+						foreach($membership_all as $i => $all){
 
 							//cek cuma kalo lebih dari membership yang sekarang
 							//cek total transaction value
@@ -464,5 +418,5 @@ class ApiMembership extends Controller
         }
 
         return $data;
-    }
+	}
 }

@@ -20,17 +20,7 @@ class ApiMembershipWebview extends Controller
 		
         if (empty($check)) {
 			$user = $request->user();
-			$membership = UsersMembership::where('id_user', $user['id'])->orderBy('id_log_membership', 'DESC')->first();
-			if($membership && $membership['membership_name'] != null){
-				$membershipName = $membership['membership_name'];
-				$idMembership = $membership['id_log_membership'];
-			}else{
-				$membershipName = ""; 
-				$idMembership = null;
-			}
-
 			$dataEncode = [
-				'id_user_membership' => $idMembership,
 				'id_user' => $user->id,
 			];
 
@@ -40,7 +30,6 @@ class ApiMembershipWebview extends Controller
 			$send = [
 				'status' => 'success',
 				'result' => [
-					'membership_name'  => $membershipName,
 					'url'              => env('VIEW_URL').'/membership/web/view?data='.$base
 				],
 			];
@@ -51,9 +40,8 @@ class ApiMembershipWebview extends Controller
 
 		$post = $request->json()->all();
 		$result = [];
-		if($post['id_user_membership']){
-			$result['user_membership'] = UsersMembership::with('user')->find($post['id_user_membership']);
-		}
+
+		$result['user_membership'] = UsersMembership::with('user')->where('id_user', $post['id_user'])->orderBy('id_log_membership', 'desc')->first();
 
 		$settingCashback = Setting::where('key', 'cashback_conversion_value')->first();
 		if(!$settingCashback || !$settingCashback->value){
@@ -69,20 +57,20 @@ class ApiMembershipWebview extends Controller
 		$nextTrx = 0;
 		$nextTrxType = '';
 		if(count($allMembership) > 0){
-			if(isset($result['user_membership'])){
+			if($result['user_membership']){
 				foreach($allMembership as $index => $dataMembership){
-					if($dataMembership['min_total_count']){
+					if(is_integer($dataMembership['min_total_count'])){
 						if($dataMembership['min_total_count'] > $result['user_membership']['min_total_count']){
-							if(!$nextMembershipName){
+							if($nextMembershipName == ""){
 								$nextTrx = $dataMembership['min_total_count'];
 								$nextTrxType = 'count';
 								$nextMembershipName = $dataMembership['membership_name']; 
 							}
 						}
 					}
-					if($dataMembership['min_total_value']){
+					if(is_integer($dataMembership['min_total_value'])){
 						if($dataMembership['min_total_value'] > $result['user_membership']['min_total_value']){
-							if(!$nextMembershipName){
+							if($nextMembershipName == ""){
 								$nextTrx = $dataMembership['min_total_value'];
 								$nextTrxType = 'value';
 								$nextMembershipName = $dataMembership['membership_name']; 
@@ -94,16 +82,14 @@ class ApiMembershipWebview extends Controller
 				}
 			}else{
 				$result['user_membership']['user'] = User::find($post['id_user']);
-				if(count($allMembership) > 0){
-					$nextMembershipName = $allMembership[0]['membership_name'];
-					if($allMembership[0]['min_total_count'] != null){
-						$nextTrx = $allMembership[0]['min_total_count'];
-						$nextTrxType = 'count';
-					}
-					if($allMembership[0]['min_total_value'] != null){
-						$nextTrx = $allMembership[0]['min_total_value'];
-						$nextTrxType = 'value';
-					}
+				$nextMembershipName = $allMembership[0]['membership_name'];
+				if(is_integer($allMembership[0]['min_total_count'])){
+					$nextTrx = $allMembership[0]['min_total_count'];
+					$nextTrxType = 'count';
+				}
+				if(is_integer($allMembership[0]['min_total_value'])){
+					$nextTrx = $allMembership[0]['min_total_value'];
+					$nextTrxType = 'value';
 				}
 
 				foreach($allMembership as $j => $dataMember){
@@ -114,7 +100,6 @@ class ApiMembershipWebview extends Controller
 		}
 
 		$result['next_membership_name'] = $nextMembershipName;
-
 		if(isset($result['user_membership'])){
 			if($nextTrxType == 'count'){
 				$result['progress_active'] = $result['user_membership']['user']['count_transaction'] / $nextTrx * 100;
@@ -128,7 +113,7 @@ class ApiMembershipWebview extends Controller
 		$result['all_membership'] = $allMembership;
 		
 		//user dengan level tertinggi
-		if(!isset($result['progress_active'])){
+		if($nextMembershipName == ""){
 			$result['progress_active'] = 100;
 			$result['next_trx'] = 0;
 		}

@@ -362,7 +362,7 @@ class ApiCategoryController extends Controller
 
     public function getDataProduk($id, $post=[]) {
         if (isset($post['id_outlet'])) { 
-			$product = Product::select('products.*', 'product_prices.product_price', 'product_prices.product_visibility', 'product_prices.product_status', 'product_prices.product_stock_status')->join('product_prices','product_prices.id_product','=','products.id_product')
+			$product = Product::select('products.*', 'product_prices.product_price', 'product_prices.product_visibility', 'product_prices.product_status', 'product_prices.product_stock_status', 'product_prices.id_outlet')->join('product_prices','product_prices.id_product','=','products.id_product')
 									->where('product_prices.id_outlet','=',$post['id_outlet'])
 									->where('product_prices.product_visibility','=','Visible')
 									->where('product_prices.product_status','=','Active')

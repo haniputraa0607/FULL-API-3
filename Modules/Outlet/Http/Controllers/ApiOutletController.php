@@ -516,7 +516,7 @@ class ApiOutletController extends Controller
 
         if ($page > 0) {
             $resultData = [];
-            $paginate   = 10;
+            $paginate   = 15;
             $start      = $paginate * ($page - 1);
             $all        = $paginate * $page;
             $end        = $all;

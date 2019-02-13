@@ -128,6 +128,12 @@ class ApiDumpController extends Controller
             if(isset($post['qty_start'])){
                 $qtyMin = $post['qty_start'];
             }
+
+            if(isset($post['qty_end'])){
+                $qtyEnd = $post['qty_end'];
+            }else{
+                $qtyEnd = 4;
+            }
             
             do{
                 $getItem = rand(1,count($dataProduct));
@@ -141,8 +147,9 @@ class ApiDumpController extends Controller
                         if (!in_array($setProduct[$insertProduct], $checkIdProduct)) {
                             $setItem = [
                                 'id_product' => $setProduct[$insertProduct],
-                                'qty'        => rand(1,4),
+                                'qty'        => rand(1,$qtyEnd),
                                 'note'       => $this->getrandomstring(),
+                                'price'      => $dataProduct[$insertProduct]['product_price']
                             ];
                             $totalItem += $setItem['qty'];
                             $totalPrice += ($setItem['qty'] * $dataProduct[$insertProduct]['product_price']);
@@ -152,8 +159,9 @@ class ApiDumpController extends Controller
                     } else {
                         $setItem = [
                             'id_product' => $setProduct[$insertProduct],
-                            'qty'        => rand(1,4),
+                            'qty'        => rand(1,$qtyEnd),
                             'note'       => $this->getrandomstring(),
+                            'price'      => $dataProduct[$insertProduct]['product_price']
                         ];
                         $totalItem += $setItem['qty'];
                         $totalPrice += ($setItem['qty'] * $dataProduct[$insertProduct]['product_price']);
@@ -180,21 +188,28 @@ class ApiDumpController extends Controller
             }while(($totalPrice < $priceMin) || ($totalItem < $qtyMin));
 
             if(isset($post['price_end'])){
-                if($totalPrice > $post['price_end']){
-                    if($dataItem[0]['qty'] > 1){
-                        $dataItem[0]['qty'] -= 1;
-                    }else{
-                        unset($dataItem[0]);
+                while($totalPrice > $post['price_end']){
+                    if(count($dataItem) > 1 || (count($dataItem) == 1 && $dataItem[0]['qty'] > 1)){
+                        if($dataItem[0]['qty'] > 1){
+                            $dataItem[0]['qty'] -= 1;
+                            $totalPrice -= $dataItem[0]['price'];
+                        }else{
+                            $totalPrice -= $dataItem[0]['price'];
+                            array_splice($dataItem, 0, 1); 
+                        }
                     }
                 }
             }
 
             if(isset($post['qty_end'])){
-                if($totalItem > $post['qty_end']){
-                    if($dataItem[0]['qty'] > 1){
-                        $dataItem[0]['qty'] -= 1;
-                    }else{
-                        unset($dataItem[0]);
+                while($totalItem > $post['qty_end']){
+                    if($totalItem > $post['qty_end'] && (count($dataItem) > 1 || (count($dataItem) == 1 && $dataItem[0]['qty'] > 1))){
+                        if($dataItem[0]['qty'] > 1){
+                            $dataItem[0]['qty'] -= 1;
+                        }else{
+                            array_splice($dataItem, 0, 1); 
+                        }
+                        $totalItem -= 1;
                     }
                 }
             }
