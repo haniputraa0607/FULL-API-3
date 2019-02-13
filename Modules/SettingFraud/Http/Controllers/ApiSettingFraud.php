@@ -45,8 +45,8 @@ class ApiSettingFraud extends Controller
         return response()->json(MyHelper::checkUpdate($update));
     }
 
-    function SendFraudDetection($id_fraud_setting, $user, $idTransaction = null, $idDeviceUser = null){
-        $fraudSetting = FraudSetting::find($id_fraud_setting)->first();
+    function SendFraudDetection($id_fraud_setting, $user, $idTransaction = null, $deviceUser = null){
+        $fraudSetting = FraudSetting::find($id_fraud_setting);
         if(!$fraudSetting){
             return false;
         }
@@ -54,69 +54,73 @@ class ApiSettingFraud extends Controller
         if($fraudSetting['email_toogle'] == '1'){
             $recipient_email = explode(',', str_replace(' ', ',', str_replace(';', ',', $fraudSetting['email_recipient'])));
             foreach($recipient_email as $key => $recipient){
-                $to		 = $recipient;
-                $subject = app($this->autocrm)->TextReplace($fraudSetting['email_subject'], $user['phone'], ['transaction_count_day' => $user['count_transaction_day'], 'transaction_count_week' => $user['count_transaction_week'], 'last_device_id' => $idDeviceUser]);
-                $content = app($this->autocrm)->TextReplace($fraudSetting['email_content'], $user['phone'], ['transaction_count_day' => $user['count_transaction_day'], 'transaction_count_week' => $user['count_transaction_week'], 'last_device_id' => $idDeviceUser]);
-                
-                //get setting email
-                $getSetting = Setting::where('key', 'LIKE', 'email%')->get()->toArray();
-                $setting = array();
-                foreach ($getSetting as $key => $value) {
-                    $setting[$value['key']] = $value['value']; 
+                if($recipient != ' ' && $recipient != ""){
+                    $to		 = $recipient;
+                    $subject = app($this->autocrm)->TextReplace($fraudSetting['email_subject'], $user['phone'], ['transaction_count_day' => $user['count_transaction_day'], 'transaction_count_week' => $user['count_transaction_week'], 'last_device_id' => $deviceUser['device_id'], 'last_device_token' => $deviceUser['device_token'], 'last_device_type' => $deviceUser['device_type']]);
+                    $content = app($this->autocrm)->TextReplace($fraudSetting['email_content'], $user['phone'], ['transaction_count_day' => $user['count_transaction_day'], 'transaction_count_week' => $user['count_transaction_week'], 'last_device_id' => $deviceUser['device_id'], 'last_device_token' => $deviceUser['device_token'], 'last_device_type' => $deviceUser['device_type']]);
+                    
+                    //get setting email
+                    $getSetting = Setting::where('key', 'LIKE', 'email%')->get()->toArray();
+                    $setting = array();
+                    foreach ($getSetting as $key => $value) {
+                        $setting[$value['key']] = $value['value']; 
+                    }
+                    
+                    $em_arr = explode('@',$recipient);
+                    $name = ucwords(str_replace("_"," ", str_replace("-"," ", str_replace("."," ", $em_arr[0]))));
+    
+                    $data = array(
+                        'customer' => $name,
+                        'html_message' => $content,
+                        'setting' => $setting
+                    );
+                    
+                    Mailgun::send('emails.test', $data, function($message) use ($to,$subject,$name,$setting)
+                    {
+                        $message->to($to, $name)->subject($subject)
+                                        ->trackClicks(true)
+                                        ->trackOpens(true);
+                        if(!empty($setting['email_from']) && !empty($setting['email_sender'])){
+                            $message->from($setting['email_from'], $setting['email_sender']);
+                        }else if(!empty($setting['email_from'])){
+                            $message->from($setting['email_from']);
+                        }
+    
+                        if(!empty($setting['email_reply_to'])){
+                            $message->replyTo($setting['email_reply_to'], $setting['email_reply_to_name']);
+                        }
+    
+                        if(!empty($setting['email_cc']) && !empty($setting['email_cc_name'])){
+                            $message->cc($setting['email_cc'], $setting['email_cc_name']);
+                        }
+    
+                        if(!empty($setting['email_bcc']) && !empty($setting['email_bcc_name'])){
+                            $message->bcc($setting['email_bcc'], $setting['email_bcc_name']);
+                        }
+                    });
                 }
-                
-                $em_arr = explode('@',$recipient);
-                $name = ucwords(str_replace("_"," ", str_replace("-"," ", str_replace("."," ", $em_arr[0]))));
-
-                $data = array(
-                    'customer' => $name,
-                    'html_message' => $content,
-                    'setting' => $setting
-                );
-                
-                Mailgun::send('emails.test', $data, function($message) use ($to,$subject,$name,$setting)
-                {
-                    $message->to($to, $name)->subject($subject)
-                                    ->trackClicks(true)
-                                    ->trackOpens(true);
-                    if(!empty($setting['email_from']) && !empty($setting['email_sender'])){
-                        $message->from($setting['email_from'], $setting['email_sender']);
-                    }else if(!empty($setting['email_from'])){
-                        $message->from($setting['email_from']);
-                    }
-
-                    if(!empty($setting['email_reply_to'])){
-                        $message->replyTo($setting['email_reply_to'], $setting['email_reply_to_name']);
-                    }
-
-                    if(!empty($setting['email_cc']) && !empty($setting['email_cc_name'])){
-                        $message->cc($setting['email_cc'], $setting['email_cc_name']);
-                    }
-
-                    if(!empty($setting['email_bcc']) && !empty($setting['email_bcc_name'])){
-                        $message->bcc($setting['email_bcc'], $setting['email_bcc_name']);
-                    }
-                });
             }
         }
 			
         if($fraudSetting['sms_toogle'] == '1'){
             $recipient_sms = explode(',', str_replace(' ', ',', str_replace(';', ',', $fraudSetting['sms_recipient'])));
             foreach($recipient_sms as $key => $recipient){
-                $senddata = array(
-                    'apikey' => 'd49091c827903ef28a07cca2c4e99064',  
-                    'callbackurl' => env('APP_URL'), 
-                    'datapacket'=>array()
-                );
-                
-                $content 	= app($this->autocrm)->TextReplace($fraudSetting['sms_content'], $user['phone'], ['transaction_count_day' => $user['count_transaction_day'], 'transaction_count_week' => $user['count_transaction_week'], 'last_device_id' => $lastDeviceId]);
-                array_push($senddata['datapacket'],array(
-                        'number' => trim($recipient),
-                        'message' => urlencode(stripslashes(utf8_encode($content))),
-                        'sendingdatetime' => ""));
-                        
-                $this->rajasms->setData($senddata);
-                $send = $this->rajasms->send();
+                if($recipient != ' ' && $recipient != ""){
+                    $senddata = array(
+                        'apikey' => 'd49091c827903ef28a07cca2c4e99064',  
+                        'callbackurl' => env('APP_URL'), 
+                        'datapacket'=>array()
+                    );
+                    
+                    $content 	= app($this->autocrm)->TextReplace($fraudSetting['sms_content'], $user['phone'], ['transaction_count_day' => $user['count_transaction_day'], 'transaction_count_week' => $user['count_transaction_week'], 'last_device_id' => $deviceUser['device_id'], 'last_device_token' => $deviceUser['device_token'], 'last_device_type' => $deviceUser['device_type']]);
+                    array_push($senddata['datapacket'],array(
+                            'number' => trim($recipient),
+                            'message' => urlencode(stripslashes(utf8_encode($content))),
+                            'sendingdatetime' => ""));
+                            
+                    $this->rajasms->setData($senddata);
+                    $send = $this->rajasms->send();
+                }
             }
         }
 
@@ -127,18 +131,20 @@ class ApiSettingFraud extends Controller
                 $api_key = Setting::where('key', 'api_key_whatsapp')->first();
                 if($api_key){
                     if($api_key->value){
-                        $content = $this->TextReplace($fraudSetting['whatsapp_content'], $user['phone'], ['transaction_count_day' => $user['count_transaction_day'], 'transaction_count_week' => $user['count_transaction_week'], 'last_device_id' => $lastDeviceId]);
-                            
-                        // add country code in number
-                        $ptn = "/^0/";  
-                        $rpltxt = "62"; 
-                        $phone = preg_replace($ptn, $rpltxt, $recipient);
+                        if($recipient != ' ' && $recipient != ""){
+                            $content = $this->TextReplace($fraudSetting['whatsapp_content'], $user['phone'], ['transaction_count_day' => $user['count_transaction_day'], 'transaction_count_week' => $user['count_transaction_week'], 'last_device_id' => $deviceUser['device_id'], 'last_device_token' => $deviceUser['device_token'], 'last_device_type' => $deviceUser['device_type']]);
+                                
+                            // add country code in number
+                            $ptn = "/^0/";  
+                            $rpltxt = "62"; 
+                            $phone = preg_replace($ptn, $rpltxt, $recipient);
 
-                        $send = $this->apiwha->send($api_key->value, $phone, $content);
+                            $send = $this->apiwha->send($api_key->value, $phone, $content);
 
-                        //api key whatsapp not valid
-                        if(isset($send['result_code']) && $send['result_code'] == -1){
-                            break 1;
+                            //api key whatsapp not valid
+                            if(isset($send['result_code']) && $send['result_code'] == -1){
+                                break 1;
+                            }
                         }
                     }
                 }
@@ -154,8 +160,8 @@ class ApiSettingFraud extends Controller
             $log['id_transaction'] = $idTransaction;
         }
 
-        if($idDeviceUser){
-            $log['id_device_user'] = $idDeviceUser;
+        if($deviceUser){
+            $log['id_device_user'] = $deviceUser['id_device_user'];
         }
 
         $insertLog = FraudDetectionLog::create($log);

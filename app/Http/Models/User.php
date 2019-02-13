@@ -70,7 +70,8 @@ class User extends Authenticatable
 		'count_transaction_week',
 		'subtotal_transaction',
 		'count_transaction',
-		'count_login_failed'
+		'count_login_failed',
+		'new_login'
 	];
 
 	public function city()
