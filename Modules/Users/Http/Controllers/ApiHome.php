@@ -306,6 +306,11 @@ class ApiHome extends Controller
 
             $updateUserLogin = User::where('phone', $user->phone)->update(['new_login' => '0']);
 
+            $birthday = "";
+            if ($user->birthday != "") {
+                $birthday = date("d F Y", strtotime($user->birthday));
+            }
+            
             $result = [
                 'status' => 'success',
                 'result' => [
@@ -325,8 +330,9 @@ class ApiHome extends Controller
                         'name'  => $user->name,
                         'phone' => $user->phone,
                         'email' => $user->email,
-                        'birthday' => date("d F Y", strtotime($user->birthday)),
+                        'birthday' => $birthday,
                         'gender' => $user->gender,
+                        'relationship'  => $user->relationship,
                         'city'  => $user->city,
                         'membership'  => $membership,
                     ],

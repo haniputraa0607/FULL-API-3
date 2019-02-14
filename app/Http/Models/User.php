@@ -57,6 +57,7 @@ class User extends Authenticatable
 		'gender',
 		'provider',
 		'birthday',
+		'relationship',
 		'phone_verified',
 		'email_verified',
 		'level',

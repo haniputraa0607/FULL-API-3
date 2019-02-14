@@ -1430,6 +1430,9 @@ class ApiUser extends Controller
 					if($request->json('id_city')){
 						$dataupdate['id_city'] = $request->json('id_city');
 					}
+					if($request->json('relationship')){
+						$dataupdate['relationship'] = $request->json('relationship');
+					}
 					$update = User::where('id','=',$data[0]['id'])->update($dataupdate);
 
 					$datauser = User::where('id','=',$data[0]['id'])->get()->toArray();
@@ -1441,7 +1444,8 @@ class ApiUser extends Controller
 											'email' => $datauser[0]['email'],
 											'gender' => $datauser[0]['gender'],
 											'birthday' => $datauser[0]['birthday'],
-											'id_city' => $datauser[0]['id_city']
+											'id_city' => $datauser[0]['id_city'],
+											'relationship' => $datauser[0]['relationship']
 										   ]
 						];
 				// } else {
