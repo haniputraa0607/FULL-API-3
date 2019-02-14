@@ -199,30 +199,14 @@ class ApiOutletApp extends Controller
     public function detailOrder(DetailOrder $request){
         $post = $request->json()->all();
 
-        // if(isset($post['qrcode'])){
-        //     $post['order_id'] = substr($post['qrcode'], 0, 4);
-
-        //     if(strlen($post['qrcode']) != 14){
-        //         return response()->json([
-        //             'status' => 'fail',
-        //             'messages' => ['QRCode Is Not Valid']
-        //         ]);
-        //     }
-
-        //     $timestamp = str_replace($post['order_id'],'',$post['qrcode']);
-        //     if(date('Y-m-d', $timestamp) != date('Y-m-d')){
-        //         return response()->json([
-        //             'status' => 'fail',
-        //             'messages' => ['Order ID Is Not Valid']
-        //         ]);
-        //     }
-
-        // }
-        
         $list = Transaction::join('transaction_pickups', 'transactions.id_transaction', 'transaction_pickups.id_transaction')
                             ->where('order_id', $post['order_id'])
                             ->whereDate('transaction_date', date('Y-m-d'))
-                            ->with('user.city.province', 'productTransaction.product.product_category', 'productTransaction.product.product_discounts')->first();
+                            ->with('user.city.province', 'productTransaction.product.product_category', 'productTransaction.product.product_discounts', 'outlet')->first();
+
+        $qr     = $list['order_id'];
+        $qrCode = 'https://chart.googleapis.com/chart?chl='.$qr.'&chs=250x250&cht=qr&chld=H%7C0';
+        $list['qr'] = html_entity_decode($qrCode);
 
         if(!$list){
             return response()->json([
@@ -311,6 +295,54 @@ class ApiOutletApp extends Controller
         $list['order_label'] = $order_label;
 
         return response()->json(MyHelper::checkGet($list));
+    }
+
+    public function detailWebview(DetailOrder $request){
+        $post = $request->json()->all();
+            $list = Transaction::join('transaction_pickups', 'transactions.id_transaction', 'transaction_pickups.id_transaction')
+                                ->where('order_id', $post['order_id'])
+                                ->whereDate('transaction_date', date('Y-m-d'))->first();
+
+            if(!$list){
+                return response()->json([
+                    'status' => 'fail',
+                    'messages' => ['Data Order Not Found']
+                ]);
+            }
+
+            if($list['reject_at'] != null){
+                $statusPickup  = 'Reject';
+            }
+            elseif($list['taken_at'] != null){
+                $statusPickup  = 'Taken';
+            }
+            elseif($list['ready_at'] != null){
+                $statusPickup  = 'Ready';
+            }
+            elseif($list['receive_at'] != null){
+                $statusPickup  = 'On Going';
+            }
+            else{
+                $statusPickup  = 'Pending';
+            }
+    
+            
+			$dataEncode = [
+				'order_id' => $list->order_id,
+			];
+
+			$encode = json_encode($dataEncode);
+			$base = base64_encode($encode);
+
+			$send = [
+				'status' => 'success',
+				'result' => [
+                    'status' => $statusPickup,
+					'url'    => env('VIEW_URL').'/transaction/web/view/outletapp?data='.$base
+				],
+			];
+
+			return response()->json($send);
     }
 
     public function acceptOrder(DetailOrder $request){
