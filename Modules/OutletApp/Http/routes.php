@@ -5,7 +5,7 @@ Route::group(['middleware' => 'auth:outlet-app', 'prefix' => 'api/outletapp', 'n
     Route::any('/update-token', 'ApiOutletApp@updateToken');
     Route::any('/delete-token', 'ApiOutletApp@deleteToken');
     Route::any('/order', 'ApiOutletApp@listOrder');
-    Route::post('order/detail', 'ApiOutletApp@detailOrder');
+    Route::post('order/detail', 'ApiOutletApp@detailWebview');
     Route::post('order/accept', 'ApiOutletApp@acceptOrder');
     Route::post('order/ready', 'ApiOutletApp@setReady');
     Route::post('order/taken', 'ApiOutletApp@takenOrder');
@@ -13,4 +13,9 @@ Route::group(['middleware' => 'auth:outlet-app', 'prefix' => 'api/outletapp', 'n
     Route::get('profile', 'ApiOutletApp@profile');
     Route::get('product', 'ApiOutletApp@listProduct');
     Route::post('product/sold-out', 'ApiOutletApp@productSoldOut');
+});
+
+Route::group(['prefix' => 'api/outletapp', 'namespace' => 'Modules\OutletApp\Http\Controllers'], function()
+{
+    Route::post('order/detail/view', 'ApiOutletApp@detailWebviewPage');
 });

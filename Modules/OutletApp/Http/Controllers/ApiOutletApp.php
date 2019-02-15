@@ -11,6 +11,8 @@ use App\Http\Models\OutletToken;
 use App\Http\Models\Transaction;
 use App\Http\Models\TransactionPickup;
 use App\Http\Models\TransactionPickupGoSend;
+use App\Http\Models\TransactionMultiplePayment;
+use App\Http\Models\TransactionPaymentMidtran;
 use App\Http\Models\Setting;
 use App\Http\Models\User;
 use App\Http\Models\Product;
@@ -49,21 +51,21 @@ class ApiOutletApp extends Controller
     }
 
     public function updateToken(UpdateToken $request){
-		$post = $request->json()->all();
+        $post = $request->json()->all();
         $outlet = $request->user();
-		
-		$check = OutletToken::where('id_outlet','=',$outlet['id_outlet'])
-							->where('token','=',$post['token'])
-							->get()
-							->toArray();
-							
-		if($check){
-			return response()->json(['status' => 'success']);
-		} else {
-			$query = OutletToken::create(['id_outlet' => $outlet['id_outlet'], 'token' => $post['token']]);		return response()->json(MyHelper::checkUpdate($query));	
-		}
-	}
-	
+        
+        $check = OutletToken::where('id_outlet','=',$outlet['id_outlet'])
+                            ->where('token','=',$post['token'])
+                            ->get()
+                            ->toArray();
+                            
+        if($check){
+            return response()->json(['status' => 'success']);
+        } else {
+            $query = OutletToken::create(['id_outlet' => $outlet['id_outlet'], 'token' => $post['token']]);     return response()->json(MyHelper::checkUpdate($query)); 
+        }
+    }
+    
     public function listOrder(Request $request){
         $post = $request->json()->all();
         $outlet = $request->user();
@@ -297,8 +299,188 @@ class ApiOutletApp extends Controller
         return response()->json(MyHelper::checkGet($list));
     }
 
+    public function detailWebviewPage(Request $request)
+    {
+        $id = $request->json('receipt');
+
+        $list = Transaction::where('transaction_receipt_number', $id)->with('user.city.province', 'productTransaction.product.product_category', 'productTransaction.product.product_photos', 'productTransaction.product.product_discounts', 'transaction_payment_offlines', 'outlet.city')->first();
+        $label = [];
+        $label2 = [];
+
+        $cart = $list['transaction_subtotal'] + $list['transaction_shipment'] + $list['transaction_service'] + $list['transaction_tax'] - $list['transaction_discount'];
+
+        $list['transaction_carttotal'] = $cart;
+
+        $order = Setting::where('key', 'transaction_grand_total_order')->value('value');
+        $exp   = explode(',', $order);
+        $exp2   = explode(',', $order);
+        
+        foreach ($exp as $i => $value) {
+            if ($exp[$i] == 'subtotal') {
+                unset($exp[$i]);
+                unset($exp2[$i]);
+                continue;
+            } 
+
+            if ($exp[$i] == 'tax') {
+                $exp[$i] = 'transaction_tax';
+                $exp2[$i] = 'transaction_tax';
+                array_push($label, 'Tax');
+                array_push($label2, 'Tax');
+            } 
+
+            if ($exp[$i] == 'service') {
+                $exp[$i] = 'transaction_service';
+                $exp2[$i] = 'transaction_service';
+                array_push($label, 'Service Fee');
+                array_push($label2, 'Service Fee');
+            } 
+
+            if ($exp[$i] == 'shipping') {
+                if ($list['trasaction_type'] == 'Pickup Order') {
+                    unset($exp[$i]);
+                    unset($exp2[$i]);
+                    continue;
+                } else {
+                    $exp[$i] = 'transaction_shipment';
+                    $exp2[$i] = 'transaction_shipment';
+                    array_push($label, 'Delivery Cost');
+                    array_push($label2, 'Delivery Cost');
+                }
+            } 
+
+            if ($exp[$i] == 'discount') {
+                $exp2[$i] = 'transaction_discount';
+                array_push($label2, 'Discount');
+                unset($exp[$i]);
+                continue;
+            }
+
+            if (stristr($exp[$i], 'empty')) {
+                unset($exp[$i]);
+                unset($exp2[$i]);
+                continue;
+            } 
+        }
+
+        if ($list['trasaction_payment_type'] == 'Balance') {
+            $log = LogBalance::where('id_reference', $list['id_transaction'])->where('source', 'Transaction')->where('balance', '<', 0)->first();
+            if ($log['balance'] < 0) {
+                $list['balance'] = $log['balance'];
+                $list['check'] = 'tidak topup';
+            } else {
+                $list['balance'] = $list['transaction_grandtotal'] - $log['balance'];
+                $list['check'] = 'topup';
+            }
+        }
+
+        if ($list['trasaction_payment_type'] == 'Manual') {
+            $payment = TransactionPaymentManual::with('manual_payment_method.manual_payment')->where('id_transaction', $list['id_transaction'])->first();
+            $list['payment'] = $payment;
+        }
+
+        if ($list['trasaction_payment_type'] == 'Midtrans') {
+            //cek multi payment
+            $multiPayment = TransactionMultiplePayment::where('id_transaction', $list['id_transaction'])->get();
+            foreach($multiPayment as $dataPay){
+                if($dataPay['type'] == 'Balance'){
+                    $paymentBalance = TransactionPaymentBalance::find($dataPay['id_payment']);
+                    if($paymentBalance){
+                        $list['balance'] = -$paymentBalance['balance_nominal'];
+                    }
+                }else{
+                    $payment = TransactionPaymentMidtran::find($dataPay['id_payment']);
+                }
+            }
+            if(isset($payment)){
+                $list['payment'] = $payment;
+            }
+        }
+
+        if ($list['trasaction_payment_type'] == 'Offline') {
+            $payment = TransactionPaymentOffline::where('id_transaction', $list['id_transaction'])->get();
+            $list['payment_offline'] = $payment;
+        }
+
+        array_splice($exp, 0, 0, 'transaction_subtotal');
+        array_splice($label, 0, 0, 'Cart Total');
+
+        array_splice($exp2, 0, 0, 'transaction_subtotal');
+        array_splice($label2, 0, 0, 'Cart Total');
+
+        array_values($exp);
+        array_values($label);
+
+        array_values($exp2);
+        array_values($label2);
+
+        $imp = implode(',', $exp);
+        $order_label = implode(',', $label);
+
+        $imp2 = implode(',', $exp2);
+        $order_label2 = implode(',', $label2);
+
+        $detail = [];
+
+        $qrTest= '';
+
+        if ($list['trasaction_type'] == 'Pickup Order') {
+            $detail = TransactionPickup::where('id_transaction', $list['id_transaction'])->with('transaction_pickup_go_send')->first();
+            $qrTest = $detail['order_id'];
+        } elseif ($list['trasaction_type'] == 'Delivery') {
+            $detail = TransactionShipment::with('city.province')->where('id_transaction', $list['id_transaction'])->first();
+        }
+
+        $list['detail'] = $detail;
+        $list['order'] = $imp;
+        $list['order_label'] = $order_label;
+
+        $list['order_v2'] = $imp2;
+        $list['order_label_v2'] = $order_label2;
+
+        $list['date'] = $list['transaction_date'];
+        $list['type'] = 'trx';
+
+        $list['kind'] = $list['trasaction_type'];
+
+        if($detail['reject_at'] != null){
+            $statusPickup  = 'Reject';
+        }
+        elseif($detail['taken_at'] != null){
+            $statusPickup  = 'Taken';
+        }
+        elseif($detail['ready_at'] != null){
+            $statusPickup  = 'Ready';
+        }
+        elseif($detail['receive_at'] != null){
+            $statusPickup  = 'On Going';
+        }
+        else{
+            $statusPickup  = 'Pending';
+        }
+
+        if (isset($success)) {
+            $list['success'] = 1;
+        
+        }
+        $qrCode = 'https://chart.googleapis.com/chart?chl='.$qrTest.'&chs=250x250&cht=qr&chld=H%7C0';
+        $qrCode = html_entity_decode($qrCode);
+        $list['qr'] = $qrCode;
+
+        $settingService = Setting::where('key', 'service')->first();
+        $settingTax = Setting::where('key', 'tax')->first();
+
+        $list['valueService'] = 100 * $settingService['value'];
+        $list['valueTax'] = 100 * $settingTax['value'];
+        $list['status'] = $statusPickup;
+
+        return response()->json(MyHelper::checkGet($list));
+    }
+
     public function detailWebview(DetailOrder $request){
         $post = $request->json()->all();
+
+        if (empty($check)) {
             $list = Transaction::join('transaction_pickups', 'transactions.id_transaction', 'transaction_pickups.id_transaction')
                                 ->where('order_id', $post['order_id'])
                                 ->whereDate('transaction_date', date('Y-m-d'))->first();
@@ -325,24 +507,29 @@ class ApiOutletApp extends Controller
             else{
                 $statusPickup  = 'Pending';
             }
-    
+
             
-			$dataEncode = [
-				'order_id' => $list->order_id,
-			];
+            $dataEncode = [
+                'order_id' => $list->order_id,
+                'receipt'  => $list->transaction_receipt_number,
+            ];
 
-			$encode = json_encode($dataEncode);
-			$base = base64_encode($encode);
+            $encode = json_encode($dataEncode);
+            $base = base64_encode($encode);
 
-			$send = [
-				'status' => 'success',
-				'result' => [
-                    'status' => $statusPickup,
-					'url'    => env('VIEW_URL').'/transaction/web/view/outletapp?data='.$base
-				],
-			];
+            $send = [
+                'status' => 'success',
+                'result' => [
+                    'status'    => $statusPickup,
+                    'date'      => $list->transaction_date,
+                    'reject_at' => $list->reject_at,
+                    'url'       => env('VIEW_URL').'/transaction/web/view/outletapp?data='.$base
+                ],
+            ];
 
-			return response()->json($send);
+            return response()->json($send);
+        }
+
     }
 
     public function acceptOrder(DetailOrder $request){
@@ -578,7 +765,7 @@ class ApiOutletApp extends Controller
             if(isset($category['product_category']['id_product_category'])){
                 //masukin ke array result
                 $position = array_search($category['product_category']['id_product_category'], $idParent);
-			    if(!is_integer($position)){
+                if(!is_integer($position)){
 
                     $dataProduct['id_product'] = $category['id_product']; 
                     $dataProduct['product_code'] = $category['product_code'];
@@ -625,7 +812,7 @@ class ApiOutletApp extends Controller
                 }
             }else{
                 $position = array_search($category['id_product_category'], $idParent);
-			    if(!is_integer($position)){
+                if(!is_integer($position)){
                     $dataProduct['id_product'] = $category['id_product']; 
                     $dataProduct['product_code'] = $category['product_code']; 
                     $dataProduct['product_name'] = $category['product_name']; 

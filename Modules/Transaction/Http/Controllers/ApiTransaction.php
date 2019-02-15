@@ -556,7 +556,7 @@ class ApiTransaction extends Controller
                 array_push($dataResult, '');
             }
             array_push($dataResult, ')');
-            array_push($dataResult, '/');
+            array_push($dataResult, '*');
             array_push($dataResult, 'value');
 
             $join = implode(' ', $dataResult);
@@ -639,7 +639,7 @@ class ApiTransaction extends Controller
                 array_push($dataResult, '');
             }
             array_push($dataResult, ')');
-            array_push($dataResult, '/');
+            array_push($dataResult, '*');
             array_push($dataResult, 'value');
 
             $join = implode(' ', $dataResult);
@@ -672,7 +672,7 @@ class ApiTransaction extends Controller
                 ]);
             }
 
-            $updateCashback->value = $post['value'];
+            $updateCashback->value = $post['value']/100;
             $updateCashback->save();
             if (!$updateCashback) {
                 DB::rollback();

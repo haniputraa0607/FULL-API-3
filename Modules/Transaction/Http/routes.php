@@ -96,6 +96,8 @@ Route::group(['prefix' => 'api/transaction', 'namespace' => 'Modules\Transaction
     Route::post('/detail/webview/balance', 'ApiWebviewController@webviewBalance');
 
     Route::post('/detail/webview/success', 'ApiWebviewController@trxSuccess');
+
+    Route::get('/cron/expire', 'ApiCronTrxController@cron');
 });
 
 Route::group(['middleware' => 'auth:api', 'prefix' => 'api/transaction', 'namespace' => 'Modules\Transaction\Http\Controllers'], function()
