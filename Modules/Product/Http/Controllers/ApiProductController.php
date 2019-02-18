@@ -130,11 +130,13 @@ class ApiProductController extends Controller
 				$update = ProductPrice::create(['id_product' => $post['id_product'],
 												'id_outlet' => $post['id_outlet'][$key],
 												'product_price' => $post['product_price'][$key],
+												'product_price_base' => $post['product_price_base'][$key],
+												'product_price_tax' => $post['product_price_tax'][$key],
 												'product_stock_status' => $post['product_stock_status'][$key],
 												'product_visibility' => "'".$post['product_visibility'][$key]."'"]);
 			}
 			else{
-				$update = ProductPrice::where('id_product_price','=',$id_product_price)->update(['product_price' => $post['product_price'][$key], 'product_stock_status' => $post['product_stock_status'][$key],'product_visibility' => $post['product_visibility'][$key]]);
+				$update = ProductPrice::where('id_product_price','=',$id_product_price)->update(['product_price' => $post['product_price'][$key], 'product_price_base' => $post['product_price_base'][$key], 'product_price_tax' => $post['product_price_tax'][$key],'product_stock_status' => $post['product_stock_status'][$key],'product_visibility' => $post['product_visibility'][$key]]);
 			}
 		}
 		return response()->json(MyHelper::checkUpdate($update));
@@ -532,6 +534,14 @@ class ApiProductController extends Controller
 
         if (isset($post['product_price'])) {
             $data['product_price'] = $post['product_price'];
+        }
+
+        if (isset($post['product_price_base'])) {
+            $data['product_price_base'] = $post['product_price_base'];
+        }
+
+        if (isset($post['product_price_tax'])) {
+            $data['product_price_tax'] = $post['product_price_tax'];
         }
 
         if (isset($post['product_visibility'])) {
