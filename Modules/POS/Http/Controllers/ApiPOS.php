@@ -69,8 +69,8 @@ class ApiPOS extends Controller
 		$check = Transaction::join('transaction_pickups','transactions.id_transaction','=','transaction_pickups.id_transaction')
 							->with(['products','product_detail','vouchers','productTransaction.modifiers'])
 							->where('order_id','=',$post['order_id'])
-							->where('transactions.created_at','>=',date("Y-m-d")." 00:00:00")
-							->where('transactions.created_at','<=',date("Y-m-d")." 23:59:59")
+							->where('transactions.transaction_date','>=',date("Y-m-d")." 00:00:00")
+							->where('transactions.transaction_date','<=',date("Y-m-d")." 23:59:59")
 							->first();
 
 		if($check){
@@ -798,6 +798,10 @@ class ApiPOS extends Controller
 					'transaction_payment_status'  => 'Completed'
 				];
 
+				if($qr['device']){
+					$dataTrx['transaction_device_type'] = $qr['device'];
+				}
+
 				$createTrx = Transaction::updateOrCreate(['transaction_receipt_number' => $trx['trx_id']], $dataTrx);
 
 				if (!$createTrx) {
@@ -951,8 +955,17 @@ class ApiPOS extends Controller
 								]);
 							}
 
-							//cek voucher sudah di invalidate
 							foreach ($checkUsed['deals_user'] as $valueDealUser) {
+								//cek voucher user
+								if($valueDealUser->id_user != $user['id']){
+									DB::rollback();
+									return response()->json([
+										'status'    => 'fail',
+										'messages'  => ['Voucher '.$valueV['voucher_code'].' not valid']
+									]);
+								}
+
+								//cek voucher sudah di invalidate
 								if($valueDealUser->redeemed_at == null){
 									DB::rollback();
 									return response()->json([
@@ -960,10 +973,8 @@ class ApiPOS extends Controller
 										'messages'  => ['Voucher '.$valueV['voucher_code'].' not valid']
 									]);
 								}
-							}
 
-							//cek voucher outlet
-							foreach ($checkUsed['deals_user'] as $valueDealUser) {
+								//cek voucher outlet
 								if($valueDealUser->id_outlet !=  $checkOutlet['id_outlet']){
 									DB::rollback();
 									return response()->json([

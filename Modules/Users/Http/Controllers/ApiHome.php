@@ -104,8 +104,13 @@ class ApiHome extends Controller
             }
 
             $timestamp = strtotime('+'.$expired.' minutes');
+
+            $useragent = $_SERVER['HTTP_USER_AGENT'];
+            if(stristr($useragent,'iOS')) $useragent = 'iOS';
+            if(stristr($useragent,'okhttp')) $useragent = 'Android';
+            else $useragent = null;
         
-            $qr = MyHelper::createQR($timestamp, $user->phone);
+            $qr = MyHelper::createQR($timestamp, $user->phone, $useragent);
 
             $qrCode = 'https://chart.googleapis.com/chart?chl='.$qr.'&chs=250x250&cht=qr&chld=H%7C0';
             $qrCode = html_entity_decode($qrCode);
@@ -224,7 +229,13 @@ class ApiHome extends Controller
             }
 
             $timestamp = strtotime('+'.$expired.' minutes');
-            $qr = MyHelper::createQR($timestamp, $user->phone);
+
+            $useragent = $_SERVER['HTTP_USER_AGENT'];
+            if(stristr($useragent,'iOS')) $useragent = 'iOS';
+            if(stristr($useragent,'okhttp')) $useragent = 'Android';
+            else $useragent = null;
+
+            $qr = MyHelper::createQR($timestamp, $user->phone, $useragent);
             
             $qrCode = 'https://chart.googleapis.com/chart?chl='.$qr.'&chs=250x250&cht=qr&chld=H%7C0';
             $qrCode = html_entity_decode($qrCode);
@@ -490,7 +501,7 @@ class ApiHome extends Controller
         if($user->new_login == '1'){
             $deviceCus = UserDevice::where('device_type','=',$device_type)
             ->where('device_id','=',$device_id)
-            ->where('device_token','=',$device_token)
+            // ->where('device_token','=',$device_token)
             ->orderBy('id_device_user', 'ASC')
             ->first();
     
