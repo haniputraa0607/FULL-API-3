@@ -78,7 +78,7 @@ class ApiMembershipWebview extends Controller
 						}
 					}
 					$allMembership[$index]['membership_image'] = env('APP_API_URL').$allMembership[$index]['membership_image']; 
-					$allMembership[$index]['benefit_cashback_multiplier'] = $allMembership[$index]['benefit_cashback_multiplier']/100 * $settingCashback->value;
+					$allMembership[$index]['benefit_cashback_multiplier'] = $allMembership[$index]['benefit_cashback_multiplier']/100 * $settingCashback->value * 100;
 				}
 			}else{
 				$result['user_membership']['user'] = User::find($post['id_user']);
@@ -94,19 +94,23 @@ class ApiMembershipWebview extends Controller
 
 				foreach($allMembership as $j => $dataMember){
 					$allMembership[$j]['membership_image'] = env('APP_API_URL').$allMembership[$j]['membership_image']; 
-					$allMembership[$j]['benefit_cashback_multiplier'] = $allMembership[$j]['benefit_cashback_multiplier']/100 * $settingCashback->value;
+					$allMembership[$j]['benefit_cashback_multiplier'] = $allMembership[$j]['benefit_cashback_multiplier']/100 * $settingCashback->value * 100;
 				}
 			}
 		}
 
 		$result['next_membership_name'] = $nextMembershipName;
+		$count_transaction = Transaction::where('id_user', $post['id_user'])->where('transaction_payment_status', 'Completed')->count('transaction_subtotal');
+		$subtotal_transaction = Transaction::where('id_user', $post['id_user'])->where('transaction_payment_status', 'Completed')->sum('transaction_subtotal');
+		$result['user_membership']['user']['count_transaction'] = $count_transaction;
+		$result['user_membership']['user']['subtotal_transaction'] = $subtotal_transaction;
 		if(isset($result['user_membership'])){
 			if($nextTrxType == 'count'){
-				$result['progress_active'] = $result['user_membership']['user']['count_transaction'] / $nextTrx * 100;
-				$result['next_trx']	= $nextTrx - $result['user_membership']['user']['count_transaction'];
+				$result['progress_active'] = $count_transaction / $nextTrx * 100;
+				$result['next_trx']	= $nextTrx - $count_transaction;
 			}elseif($nextTrxType == 'value'){
-				$result['progress_active'] = $result['user_membership']['user']['subtotal_transaction'] / $nextTrx * 100;
-				$result['next_trx']	= $nextTrx - $result['user_membership']['user']['subtotal_transaction'];
+				$result['progress_active'] = $subtotal_transaction / $nextTrx * 100;
+				$result['next_trx']	= $nextTrx - $subtotal_transaction;
 			}
 		}
 

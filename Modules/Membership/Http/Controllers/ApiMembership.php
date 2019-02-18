@@ -10,6 +10,7 @@ use App\Http\Models\UsersMembership;
 use App\Http\Models\Transaction;
 use App\Http\Models\User;
 use App\Lib\MyHelper;
+use App\Http\Models\Configs;
 
 class ApiMembership extends Controller
 {
@@ -212,7 +213,14 @@ class ApiMembership extends Controller
 				$membership = Membership::where('id_membership', $check['id_membership'])->first();
 				
 				// untuk membership yang pakai retain 
-				if($membership['retain_days'] > 0){
+				// cek config retain 
+				$retain = 1;
+				$config = Configs::where('config_name', 'retain membership')->first();
+				if($config && $config['is_active'] == '0'){
+					$retain = 0;
+				}
+
+				if($retain == 1 && $membership['retain_days'] > 0){
 				
 					//ambil batas tanggal terhitung diceknya
 					$date_start = date('Y-m-d', strtotime($check['retain_date'].' -'.$membership['retain_days'].' days'));
