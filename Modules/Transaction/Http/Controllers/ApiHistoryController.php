@@ -174,9 +174,9 @@ class ApiHistoryController extends Controller
         if (is_null($post['pickup_order']) && is_null($post['delivery_order']) && is_null($post['offline_order'])) {
             if (!is_null($post['buy_voucher'])) {
                 $transaction = [];
+                $voucher = $this->voucher($post, $id);
             }
             
-            $voucher = $this->voucher($post, $id);
         } elseif (!is_null($post['pickup_order']) || !is_null($post['delivery_order']) || !is_null($post['offline_order'])) {
             if (!is_null($post['buy_voucher'])) {
                 $voucher = $this->voucher($post, $id);
@@ -210,6 +210,52 @@ class ApiHistoryController extends Controller
 
             if ($sortTrx['status'] == true) {
                 $ampas['next_page_url'] = ENV('APP_API_URL').'/api/transaction/history-trx?page='.$next_page;
+            }
+        } else {
+            $ampas['status'] = 'fail';
+            $ampas['messages'] = ['empty'];
+            
+        }
+
+        return response()->json($ampas);
+    }
+
+    public function historyTrxOnGoing(Request $request) {
+
+        $post = $request->json()->all();
+        // return $post;
+        $id = $request->user()->id;
+        $order = 'new';
+        $page = 1;
+
+        $transaction = $this->transactionOnGoingPickup($post, $id);
+
+        if (!is_null($post['oldest'])) {
+            $order = 'old';
+        }
+
+        if (!is_null($post['newest'])) {
+            $order = 'new';
+        }
+
+        if (!is_null($request->get('page'))) {
+            $page = $request->get('page');
+        }
+
+        $next_page = $page + 1;
+        
+        $sortTrx = $this->sorting($transaction, $order, $page);
+
+        $check = MyHelper::checkGet($sortTrx);
+        if (count($transaction) > 0) {
+            $ampas['status'] = 'success';
+            $ampas['current_page']  = $page;
+            $ampas['data']          = $sortTrx['data'];
+            $ampas['total']         = count($transaction);
+            $ampas['next_page_url'] = null;
+
+            if ($sortTrx['status'] == true) {
+                $ampas['next_page_url'] = ENV('APP_API_URL').'/api/transaction/history-ongoing?page='.$next_page;
             }
         } else {
             $ampas['status'] = 'fail';
@@ -455,6 +501,41 @@ class ApiHistoryController extends Controller
             $dataList['date'] = $value['transaction_date'];
             $dataList['outlet'] = $value['outlet']['outlet_name'];
             $dataList['amount'] = number_format($value['transaction_grandtotal'], 0, ',', '.');
+
+            $listTransaction[] = $dataList;
+        }
+
+        return $listTransaction;
+    }
+
+    public function transactionOnGoingPickup($post, $id) {
+        $transaction = Transaction::join('transaction_pickups', 'transactions.id_transaction', 'transaction_pickups.id_transaction')
+                                    ->with('outlet')
+                                    ->where('transaction_payment_status', 'Completed')
+                                    ->whereDate('transaction_date', date('Y-m-d'))
+                                    ->whereNull('taken_at')
+                                    ->whereNull('reject_at')
+                                    ->where('id_user', $id)
+                                    ->orderBy('transaction_date', 'DESC')
+                                    ->get()->toArray();
+
+        $listTransaction = [];
+
+        foreach ($transaction as $key => $value) {
+            $dataList['type'] = 'trx';
+            $dataList['id'] = $value['transaction_receipt_number'];
+            $dataList['date'] = $value['transaction_date'];
+            $dataList['outlet'] = $value['outlet']['outlet_name'];
+            $dataList['amount'] = number_format($value['transaction_grandtotal'], 0, ',', '.');
+
+            if($value['ready_at'] != null){
+                $dataList['status'] = "Pesanan Sudah Siap";
+            }
+            elseif($value['receive_at'] != null){
+                $dataList['status'] = "Pesanan Sudah Diterima";
+            }else{
+                $dataList['status'] = "Pesanan Menunggu Konfirmasi";
+            }
 
             $listTransaction[] = $dataList;
         }

@@ -481,6 +481,9 @@ Detail: ".$link['short'],
         if (isset($midtrans['permata_va_number'])) {
             $eci  = isset($midtrans['permata_va_number']) ? $midtrans['permata_va_number'] : null;
             $bank = 'Permata';
+        } elseif (isset($midtrans['bill_key'])) {
+            $eci = $midtrans['biller_code'].$midtrans['bill_key'];
+            $bank = 'Mandiri';
         } else {
             $bank = isset($midtrans['va_numbers'][0]['bank']) ? $midtrans['va_numbers'][0]['bank'] : null;
             $eci  = isset($midtrans['va_numbers'][0]['va_number']) ? $midtrans['va_numbers'][0]['va_number'] : null;
@@ -798,9 +801,18 @@ Detail: ".$link['short'],
         if (isset($mid['permata_va_number'])) {
             $number = $mid['permata_va_number'];
             $bank = 'Permata';
+        } elseif (isset($mid['biller_code'])) {
+            $number = $mid['bill_key'];
+            $bank = 'Mandiri';
         } else {
             $number = $mid['va_numbers'][0]['va_number'];
             $bank = strtoupper($mid['va_numbers'][0]['bank']);
+        }
+
+        $kode = '';
+
+        if ($bank == 'Mandiri') {
+            $kode = "Kode : ".$mid['biller_code'];
         }
 
         $type   = ucwords(str_replace('_', ' ', $mid['payment_type']));
@@ -824,7 +836,7 @@ Detail: ".$link['short'],
                    <span style="color:#555;font-family:\'Source Sans Pro\',sans-serif;font-size:14px;line-height:1.5;margin:0;padding:0">Virtual Number</span>
                 </td>
                 <td colspan="3" style="background:#ffffff;color:#555;font-family:\'Source Sans Pro\',sans-serif;line-height:1.5;margin:0;padding:5px 10px" valign="top" bgcolor="#FFFFFF" align="left">
-                    <span style="color:#555;font-family:\'Source Sans Pro\',sans-serif;font-size:14px;line-height:1.5;margin:0;padding:0">:  <b>'.$number.' </span>
+                    <span style="color:#555;font-family:\'Source Sans Pro\',sans-serif;font-size:14px;line-height:1.5;margin:0;padding:0">:  <b>'.$number.' '.$kode.' </span>
                 </td>
              </tr>
              <tr>

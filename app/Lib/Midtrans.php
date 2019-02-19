@@ -66,6 +66,14 @@ class Midtrans {
         return $token;
     }
 
+    static function expire($order_id)
+    {
+        $url    = env('BASE_MIDTRANS_SANDBOX').'/v2/'.$order_id.'/expire';
+        $status = MyHelper::post($url, Self::bearer(), ['data' => 'expired']);
+
+        return $status;
+    }
+
     static function checkStatus($orderId) {
         $url = 'https://api.sandbox.midtrans.com/v2/'.$orderId.'/status';
         

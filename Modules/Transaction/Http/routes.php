@@ -53,6 +53,7 @@ Route::group(['middleware' => 'auth:api', 'prefix' => 'api/transaction', 'namesp
 
     Route::post('history', 'ApiHistoryController@historyAll');
     Route::post('history-trx', 'ApiHistoryController@historyTrx');
+    Route::post('history-ongoing', 'ApiHistoryController@historyTrxOnGoing');
     Route::post('history-point', 'ApiHistoryController@historyPoint');
     Route::post('history-balance', 'ApiHistoryController@historyBalance');
 
@@ -96,6 +97,8 @@ Route::group(['prefix' => 'api/transaction', 'namespace' => 'Modules\Transaction
     Route::post('/detail/webview/balance', 'ApiWebviewController@webviewBalance');
 
     Route::post('/detail/webview/success', 'ApiWebviewController@trxSuccess');
+
+    Route::get('/cron/expire', 'ApiCronTrxController@cron');
 });
 
 Route::group(['middleware' => 'auth:api', 'prefix' => 'api/transaction', 'namespace' => 'Modules\Transaction\Http\Controllers'], function()
@@ -116,4 +119,9 @@ Route::group(['middleware' => 'auth:api', 'prefix' => 'api/transaction', 'namesp
 {
     Route::get('setting/cashback', 'ApiSettingCashbackController@list');
     Route::post('setting/cashback/update', 'ApiSettingCashbackController@update');
+});
+
+Route::group(['prefix' => 'api/cron', 'namespace' => 'Modules\Transaction\Http\Controllers'], function()
+{
+    Route::get('transaction/pickup/completed', 'ApiTransaction@completeTransactionPickup');
 });

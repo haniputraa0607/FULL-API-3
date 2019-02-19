@@ -1315,20 +1315,24 @@ class MyHelper{
 				$condition['id_'.$type.'_rule_parent'] = $createRuleParent['id_'.$type.'_rule_parent']; 
 				$condition[$type.'_rule_subject'] = $row['subject']; 
 			
-				if(in_array($row['subject'], $operatorexception)){
+				if($row['subject'] == 'all_user'){
+					$condition[$type.'_rule_operator'] = "";
+				}elseif(in_array($row['subject'], $operatorexception)){
 					$condition[$type.'_rule_operator'] = '=';
 				} else {
 					$condition[$type.'_rule_operator'] = $row['operator'];
 				}
 
-				if(in_array($row['subject'], $operatorexception)){
+				if($row['subject'] == 'all_user'){
+					$condition[$type.'_rule_param'] = "";
+				}elseif(in_array($row['subject'], $operatorexception)){
 					$condition[$type.'_rule_param'] = $row['operator'];
 				} else {
 					$condition[$type.'_rule_param'] = $row['parameter'];
 				}
 				
-				$condition['created_at'] =  date('Y-m-d h:i:s');  
-				$condition['updated_at'] =  date('Y-m-d h:i:s'); 
+				$condition['created_at'] =  date('Y-m-d H:i:s');  
+				$condition['updated_at'] =  date('Y-m-d H:i:s'); 
 				 
 				array_push($data_rule, $condition); 
 			} 
@@ -1363,7 +1367,7 @@ class MyHelper{
 		return $str;
 	}
 
-	public static function createQR($timestamp, $phone){
+	public static function createQR($timestamp, $phone, $useragent = null){
 		$arrtime = str_split($timestamp);
 
 		$arrphone = str_split($phone);
@@ -1407,12 +1411,32 @@ class MyHelper{
 			$qr[] = rand(0,9); 
 		}
 
+		if($useragent == "Android"){
+			$qr[] = 2;
+		}elseif($useragent == "iOS"){
+			$qr[] = 1;
+		}else{
+			$qr[] = 0;
+		}
+
 		$qr = implode('', $qr);
 		
 		return $qr;
 	}
 
 	public static function readQR($qrcode){
+		$useragent = substr($qrcode, -1);
+		if($useragent == 1){
+			$device = 'IOS';
+		}elseif($useragent == 2){
+			$device = "Android";
+		}else{
+			$device = null;
+		}
+
+		//remove 1 digit terakhir
+		$qrcode = substr($qrcode, 0, -1);
+
 		//remove 5 digit terakhir
 		$qrcode = substr($qrcode, 0, -5);
 
@@ -1447,8 +1471,15 @@ class MyHelper{
 
 		$result['timestamp'] = implode('', $arrtimestamp);
 		$result['phone'] = implode('', $arrphone);
+		$result['device'] = $device;
 		
 		return $result;
+	}
+
+	public static function dateFormatInd($date){
+		$bulan = ['','Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+		
+		return date('d', strtotime($date)).' '.$bulan[date('n', strtotime($date))].' '.date('Y', strtotime($date)).' '.date('H:i', strtotime($date));
 	}
 }
 ?>

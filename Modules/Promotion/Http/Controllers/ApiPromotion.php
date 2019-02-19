@@ -215,8 +215,9 @@ class ApiPromotion extends Controller
 				// filter user 
 				if(count($promotion->promotion_rule_parents) >0){
 					$cond = Promotion::with(['user', 'promotion_rule_parents', 'promotion_rule_parents.rules'])->where('id_promotion','=',$post['id_promotion'])->get()->first();
-					$users = app($this->user)->UserFilter($cond['promotion_rule_parents']);
 					
+					$users = app($this->user)->UserFilter($cond['promotion_rule_parents']);
+
 					$promotion = Promotion::where('id_promotion','=',$post['id_promotion'])->with(['user', 'promotion_rule_parents', 'promotion_rule_parents.rules', 'schedules', 'contents', 'contents.deals','contents.deals.outlets','contents.deals.deals_vouchers', 'contents.whatsapp_content'])->first(); 
 					if($users['status'] == 'success'){
 						// exclude user in queue
@@ -254,7 +255,7 @@ class ApiPromotion extends Controller
 					$idUsers = array_diff(array_pluck($promotion['users'], 'id'), array_pluck($exUser, 'id_user'));
 					$idUsers = array_diff($idUsers, array_pluck($exUserQueue, 'id_user'));
 					
-					$promotion['users'] = User::join('cities', 'cities.id_city', 'users.id_city')->whereIn('id', $idUsers)->get();
+					$promotion['users'] = User::leftJoin('cities', 'cities.id_city', 'users.id_city')->whereIn('id', $idUsers)->get();
 				}
 			}
 
@@ -1402,7 +1403,9 @@ class ApiPromotion extends Controller
 				// filter user
 				else{
 					$cond = Promotion::with(['promotion_rule_parents', 'promotion_rule_parents.rules'])->where('id_promotion','=',$promotion['id_promotion'])->first();
+					
 					$userFilter = app($this->user)->UserFilter($cond['promotion_rule_parents']);
+
 					$users = [];
 					if($userFilter){
 						$users = $userFilter['result'];

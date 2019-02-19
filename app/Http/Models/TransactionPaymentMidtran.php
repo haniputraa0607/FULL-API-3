@@ -49,6 +49,7 @@ class TransactionPaymentMidtran extends Model
 		'approval_code',
 		'bank',
 		'eci',
+		'store',
 		'transaction_time',
 		'gross_amount',
 		'order_id',

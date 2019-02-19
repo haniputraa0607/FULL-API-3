@@ -35,10 +35,8 @@ class ApiWebviewController extends Controller
         $button = '';
 
         $success = $request->json('trx_success');
-        // return 'a';
 
         if (empty($check)) {
-            // return 'b';
             if ($type == 'trx') {
                 $list = Transaction::where('transaction_receipt_number', $id)->first();
                 if (empty($list)) {
@@ -103,7 +101,6 @@ class ApiWebviewController extends Controller
 
                 $encode = json_encode($dataEncode);
                 $base = base64_encode($encode);
-                // return $base;
 
                 $send = [
                     'status'         => 'success',
@@ -182,44 +179,80 @@ class ApiWebviewController extends Controller
                 } 
             }
 
-            if ($list['trasaction_payment_type'] == 'Balance') {
-                $log = LogBalance::where('id_reference', $list['id_transaction'])->where('source', 'Transaction')->where('balance', '<', 0)->first();
-                if ($log['balance'] < 0) {
-                    $list['balance'] = $log['balance'];
-                    $list['check'] = 'tidak topup';
-                } else {
-                    $list['balance'] = $list['transaction_grandtotal'] - $log['balance'];
-                    $list['check'] = 'topup';
-                }
-            }
+            $dataPayment = [];
 
-            if ($list['trasaction_payment_type'] == 'Manual') {
-                $payment = TransactionPaymentManual::with('manual_payment_method.manual_payment')->where('id_transaction', $list['id_transaction'])->first();
-                $list['payment'] = $payment;
-            }
-
-            if ($list['trasaction_payment_type'] == 'Midtrans') {
-                //cek multi payment
-                $multiPayment = TransactionMultiplePayment::where('id_transaction', $list['id_transaction'])->get();
-                foreach($multiPayment as $dataPay){
-                    if($dataPay['type'] == 'Balance'){
-                        $paymentBalance = TransactionPaymentBalance::find($dataPay['id_payment']);
-                        if($paymentBalance){
-                            $list['balance'] = -$paymentBalance['balance_nominal'];
+            $multiPayment = TransactionMultiplePayment::where('id_transaction', $list['id_transaction'])->get();
+            // return $multiPayment;
+            if (isset($multiPayment)) {
+                foreach ($multiPayment as $key => $value) {
+                    if ($value->type == 'Midtrans') {
+                        $getPayment = TransactionPaymentMidtran::where('id_transaction_payment', $value->id_payment)->first();
+                        if (!empty($getPayment)) {
+                            $getPayment['type'] = 'Midtrans';
+                            array_push($dataPayment, $getPayment);
                         }
-                    }else{
-                        $payment = TransactionPaymentMidtran::find($dataPay['id_payment']);
+                    } elseif ($value->type == 'Balance') {
+                        $getPayment = TransactionPaymentBalance::where('id_transaction_payment_balance', $value->id_payment)->first();
+                        if (!empty($getPayment)) {
+                            $getPayment['type'] = 'Balance';
+                            array_push($dataPayment, $getPayment);
+                        }
+                    } elseif ($value->type == 'Manual') {
+                        $getPayment = TransactionPaymentManual::where('id_transaction_payment_manual', $value->id_payment)->first();
+                        if (!empty($getPayment)) {
+                            $getPayment['type'] = 'Manual';
+                            array_push($dataPayment, $getPayment);
+                        }
+                    } elseif ($value->type == 'Offline') {
+                        $getPayment = TransactionPaymentManual::where('id_transaction_payment_offline', $value->id_payment)->first();
+                        if (!empty($getPayment)) {
+                            $getPayment['type'] = 'Offline';
+                            array_push($dataPayment, $getPayment);
+                        }
                     }
                 }
-                if(isset($payment)){
-                    $list['payment'] = $payment;
-                }
             }
 
-            if ($list['trasaction_payment_type'] == 'Offline') {
-                $payment = TransactionPaymentOffline::where('id_transaction', $list['id_transaction'])->get();
-                $list['payment_offline'] = $payment;
-            }
+            // if ($list['trasaction_payment_type'] == 'Balance') {
+            //     $log = LogBalance::where('id_reference', $list['id_transaction'])->where('source', 'Transaction')->where('balance', '<', 0)->first();
+            //     if ($log['balance'] < 0) {
+            //         $list['balance'] = $log['balance'];
+            //         $list['check'] = 'tidak topup';
+            //     } else {
+            //         $list['balance'] = $list['transaction_grandtotal'] - $log['balance'];
+            //         $list['check'] = 'topup';
+            //     }
+            // }
+
+            // if ($list['trasaction_payment_type'] == 'Manual') {
+            //     $payment = TransactionPaymentManual::with('manual_payment_method.manual_payment')->where('id_transaction', $list['id_transaction'])->first();
+            //     $list['payment'] = $payment;
+            // }
+
+            // if ($list['trasaction_payment_type'] == 'Midtrans') {
+            //     //cek multi payment
+            //     $multiPayment = TransactionMultiplePayment::where('id_transaction', $list['id_transaction'])->get();
+            //     foreach($multiPayment as $dataPay){
+            //         if($dataPay['type'] == 'Balance'){
+            //             $paymentBalance = TransactionPaymentBalance::find($dataPay['id_payment']);
+            //             if($paymentBalance){
+            //                 $list['balance'] = -$paymentBalance['balance_nominal'];
+            //             }
+            //         }else{
+            //             $payment = TransactionPaymentMidtran::find($dataPay['id_payment']);
+            //         }
+            //     }
+            //     if(isset($payment)){
+            //         $list['payment'] = $payment;
+            //     }
+            // }
+
+            // if ($list['trasaction_payment_type'] == 'Offline') {
+            //     $payment = TransactionPaymentOffline::where('id_transaction', $list['id_transaction'])->get();
+            //     $list['payment_offline'] = $payment;
+            // }
+            
+            
 
             array_splice($exp, 0, 0, 'transaction_subtotal');
             array_splice($label, 0, 0, 'Cart Total');
@@ -250,6 +283,8 @@ class ApiWebviewController extends Controller
                 $detail = TransactionShipment::with('city.province')->where('id_transaction', $list['id_transaction'])->first();
             }
 
+            $list['data_payment'] = $dataPayment;
+
             $list['detail'] = $detail;
             $list['order'] = $imp;
             $list['order_label'] = $order_label;
@@ -266,6 +301,7 @@ class ApiWebviewController extends Controller
                 $list['success'] = 1;
             
             }
+
             $qrCode = 'https://chart.googleapis.com/chart?chl='.$qrTest.'&chs=250x250&cht=qr&chld=H%7C0';
             $qrCode = html_entity_decode($qrCode);
             $list['qr'] = $qrCode;
