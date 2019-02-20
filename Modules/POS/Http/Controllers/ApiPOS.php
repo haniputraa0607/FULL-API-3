@@ -736,7 +736,8 @@ class ApiPOS extends Controller
         if (empty($checkOutlet)) {
             DB::rollback();
             return response()->json(['status' => 'fail', 'messages' => ['Store not found']]);
-        }
+		}
+		
 		$result = array();
         foreach ($post['transactions'] as $key => $trx) {
 			if(isset($trx['order_id'])){
@@ -773,6 +774,13 @@ class ApiPOS extends Controller
 						$post['membership_promo_id'] = null;
 					}
 				} else {
+
+					//transaction with voucher but non member
+					if(isset($trx['voucher']) && !empty($trx['voucher']) ){
+						DB::rollback();
+						return response()->json(['status' => 'fail', 'messages' => ['Transactions with vouchers must be with member UID', 'trx id : '.$trx['trx_id'].' does not have a member UID']]);
+					}
+
 					$user['id'] = null;
 					$post['membership_level']    = null;
 					$post['membership_promo_id'] = null;
@@ -798,7 +806,7 @@ class ApiPOS extends Controller
 					'transaction_payment_status'  => 'Completed'
 				];
 
-				if($qr['device']){
+				if(isset($qr['device'])){
 					$dataTrx['transaction_device_type'] = $qr['device'];
 				}
 
@@ -951,7 +959,7 @@ class ApiPOS extends Controller
 								DB::rollback();
 								return response()->json([
 									'status'    => 'fail',
-									'messages'  => ['Voucher not found']
+									'messages'  => ['Voucher '.$valueV['voucher_code'].' not found']
 								]);
 							}
 
@@ -1015,7 +1023,7 @@ class ApiPOS extends Controller
 									DB::rollback();
 									return response()->json([
 										'status'    => 'fail',
-										'messages'  => ['Voucher not valid']
+										'messages'  => ['Voucher '.$valueV['voucher_code'].' not valid']
 									]);
 								}
 							}
@@ -1026,7 +1034,7 @@ class ApiPOS extends Controller
 								DB::rollback();
 								return response()->json([
 									'status'    => 'fail',
-									'messages'  => ['Voucher not valid']
+									'messages'  => ['Voucher '.$valueV['voucher_code'].' not valid']
 								]);
 							}
 						}
@@ -1377,11 +1385,13 @@ class ApiPOS extends Controller
             return response()->json(['status' => 'fail', 'messages' => ['Transaction cannot be refund. This transaction use voucher']]);
         }
 
-        $user = User::where('id', $checkTrx->id_user)->first();
-        if (empty($user)) {
-            DB::rollback();
-            return response()->json(['status' => 'fail', 'messages' => ['User not found']]);
-        }
+		if($checkTrx->id_user){
+			$user = User::where('id', $checkTrx->id_user)->first();
+			if (empty($user)) {
+				DB::rollback();
+				return response()->json(['status' => 'fail', 'messages' => ['User not found']]);
+			}
+		}
 
         $checkTrx->transaction_payment_status = 'Cancelled';
         $checkTrx->void_date = date('Y-m-d H:i:s');
@@ -1392,51 +1402,54 @@ class ApiPOS extends Controller
             return response()->json(['status' => 'fail', 'messages' => ['Transaction refund sync failed1']]);
         }
 
-        $point = LogPoint::where('id_reference', $checkTrx->id_transaction)->where('source', 'Transaction')->first();
-        if (!empty($point)) {
-            $point->delete();
-            if (!$point) {
-                DB::rollback();
-                return response()->json(['status' => 'fail', 'messages' => ['Transaction refund sync failed2']]);
-            }
+		$user = User::where('id', $checkTrx->id_user)->first();
+        if ($user) {
+			$point = LogPoint::where('id_reference', $checkTrx->id_transaction)->where('source', 'Transaction')->first();
+			if (!empty($point)) {
+				$point->delete();
+				if (!$point) {
+					DB::rollback();
+					return response()->json(['status' => 'fail', 'messages' => ['Transaction refund sync failed2']]);
+				}
 
-             //update user point
-             $sumPoint = LogPoint::where('id_user', $user['id'])->sum('point');
-             $user->points = $sumPoint;
-             $user->update();
-             if (!$user) {
-                 DB::rollback();
-                 return response()->json([
-                     'status'    => 'fail',
-                     'messages'  => ['Update point failed']
-                 ]);
-             }
-        }
+				//update user point
+				$sumPoint = LogPoint::where('id_user', $user['id'])->sum('point');
+				$user->points = $sumPoint;
+				$user->update();
+				if (!$user) {
+					DB::rollback();
+					return response()->json([
+						'status'    => 'fail',
+						'messages'  => ['Update point failed']
+					]);
+				}
+			}
 
-        $balance = LogBalance::where('id_reference', $checkTrx->id_transaction)->where('source', 'Transaction')->first();
-        if (!empty($balance)) {
-            $balance->delete();
-            if (!$balance) {
-                DB::rollback();
-                return response()->json(['status' => 'fail', 'messages' => ['Transaction refund sync failed3']]);
-            }
+			$balance = LogBalance::where('id_reference', $checkTrx->id_transaction)->where('source', 'Transaction')->first();
+			if (!empty($balance)) {
+				$balance->delete();
+				if (!$balance) {
+					DB::rollback();
+					return response()->json(['status' => 'fail', 'messages' => ['Transaction refund sync failed3']]);
+				}
 
-             //update user balance
-             $sumBalance = LogBalance::where('id_user', $user['id'])->sum('balance');
-             $user->balance = $sumBalance;
-             $user->update();
-             if (!$user) {
-                 DB::rollback();
-                 return response()->json([
-                     'status'    => 'fail',
-                     'messages'  => ['Update cashback failed']
-                 ]);
-             }
-        }
+				//update user balance
+				$sumBalance = LogBalance::where('id_user', $user['id'])->sum('balance');
+				$user->balance = $sumBalance;
+				$user->update();
+				if (!$user) {
+					DB::rollback();
+					return response()->json([
+						'status'    => 'fail',
+						'messages'  => ['Update cashback failed']
+					]);
+				}
+			}
+			$checkMembership = app($this->membership)->calculateMembership($user['phone']);
+		}
 
         DB::commit();
 
-        $checkMembership = app($this->membership)->calculateMembership($user['phone']);
         return response()->json(['status' => 'success']);
     }
 

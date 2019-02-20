@@ -398,6 +398,7 @@ class ApiOutletController extends Controller
                     $outlet[$key]['qrcode'] = $qrCode; 
                 }
             }
+            $request['page'] = 0;
         }else{
             $outlet = $outlet->orderBy('outlet_name')->get()->toArray();
         }
@@ -435,7 +436,7 @@ class ApiOutletController extends Controller
                 $outlet['next_page_url'] = null;
     
                 if ($pagingOutlet['status'] == true) {
-                    $outlet['next_page_url'] = ENV('APP_API_URL').'api/outlet/nearme?page='.$next_page;
+                    $outlet['next_page_url'] = ENV('APP_API_URL').'api/outlet/list?page='.$next_page;
                 }
             } else {
                 $outlet['status'] = 'fail';
@@ -464,14 +465,18 @@ class ApiOutletController extends Controller
         $longitude = $request->json('longitude');
         
         // outlet
-        $outlet = Outlet::with(['today', 'city', 'outlet_photos'])->orderBy('outlet_name')->get()->toArray();
+        $outlet = Outlet::with(['today', 'city', 'outlet_photos'])->orderBy('outlet_name','asc');
+        if($request->json('search') && $request->json('search') != ""){
+            $outlet = $outlet->where('outlet_name', 'LIKE', '%'.$request->json('search').'%');
+        }
+        $outlet = $outlet->get()->toArray();
 
         if (!empty($outlet)) {
             foreach ($outlet as $key => $value) {
                 $jaraknya =   number_format((float)$this->distance($latitude, $longitude, $value['outlet_latitude'], $value['outlet_longitude'], "K"), 2, '.', '');
                 settype($jaraknya, "float");
 
-                $outlet[$key]['distance'] = $jaraknya." km";
+                $outlet[$key]['distance'] = number_format($jaraknya, 2, '.', ',')." km";
                 $outlet[$key]['dist']     = (float) $jaraknya;
             }
             usort($outlet, function($a, $b) { 
@@ -547,7 +552,11 @@ class ApiOutletController extends Controller
         $sort = $request->json('sort');
         
         // outlet
-        $outlet = Outlet::with(['today', 'city', 'outlet_photos'])->orderBy('outlet_name','asc')->get()->toArray();
+        $outlet = Outlet::with(['today', 'city', 'outlet_photos'])->orderBy('outlet_name','asc');
+        if($request->json('search') && $request->json('search') != ""){
+            $outlet = $outlet->where('outlet_name', 'LIKE', '%'.$request->json('search').'%');
+        }
+        $outlet = $outlet->get()->toArray();
 		
 		
         if (!empty($outlet)) {
@@ -555,7 +564,7 @@ class ApiOutletController extends Controller
                 $jaraknya =   number_format((float)$this->distance($latitude, $longitude, $value['outlet_latitude'], $value['outlet_longitude'], "K"), 2, '.', '');
                 settype($jaraknya, "float");
 				
-                $outlet[$key]['distance'] = $jaraknya." km";
+                $outlet[$key]['distance'] = number_format($jaraknya, 2, '.', ',')." km";
                 $outlet[$key]['dist']     = (float) $jaraknya;
 				
 				if($distance == "0-2km"){
@@ -612,7 +621,7 @@ class ApiOutletController extends Controller
                 $urutan['next_page_url'] = null;
     
                 if ($pagingOutlet['status'] == true) {
-                    $urutan['next_page_url'] = ENV('APP_API_URL').'api/outlet/nearme?page='.$next_page;
+                    $urutan['next_page_url'] = ENV('APP_API_URL').'api/outlet/filter?page='.$next_page;
                 }
             } else {
                 $urutan['status'] = 'fail';
@@ -630,7 +639,7 @@ class ApiOutletController extends Controller
         foreach($listOutlet as $index => $dataOutlet){
             if($dataOutlet['today']['open'] && date('H:i:01') < date('H:i', strtotime($dataOutlet['today']['open']))){
                 unset($outlet[$index]);
-            }elseif($dataOutlet['today']['close'] && date('H:i') >= date('H:i', strtotime($dataOutlet['today']['close']))){
+            }elseif($dataOutlet['today']['close'] && date('H:i') >= date('H:i', strtotime('+1 minutes', strtotime($dataOutlet['today']['close'])))){
                 unset($outlet[$index]);
             }else{
                 $holiday = Holiday::join('outlet_holidays', 'holidays.id_holiday', 'outlet_holidays.id_holiday')->join('date_holidays', 'holidays.id_holiday', 'date_holidays.id_holiday')

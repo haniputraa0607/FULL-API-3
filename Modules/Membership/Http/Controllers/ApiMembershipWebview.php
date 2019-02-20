@@ -78,7 +78,7 @@ class ApiMembershipWebview extends Controller
 						}
 					}
 					$allMembership[$index]['membership_image'] = env('APP_API_URL').$allMembership[$index]['membership_image']; 
-					$allMembership[$index]['benefit_cashback_multiplier'] = $allMembership[$index]['benefit_cashback_multiplier']/100 * $settingCashback->value * 100;
+					$allMembership[$index]['benefit_cashback_multiplier'] = $allMembership[$index]['benefit_cashback_multiplier'] * $settingCashback->value;
 				}
 			}else{
 				$result['user_membership']['user'] = User::find($post['id_user']);
@@ -94,7 +94,7 @@ class ApiMembershipWebview extends Controller
 
 				foreach($allMembership as $j => $dataMember){
 					$allMembership[$j]['membership_image'] = env('APP_API_URL').$allMembership[$j]['membership_image']; 
-					$allMembership[$j]['benefit_cashback_multiplier'] = $allMembership[$j]['benefit_cashback_multiplier']/100 * $settingCashback->value * 100;
+					$allMembership[$j]['benefit_cashback_multiplier'] = $allMembership[$j]['benefit_cashback_multiplier'] * $settingCashback->value;
 				}
 			}
 		}
