@@ -477,6 +477,8 @@ Detail: ".$link['short'],
         $gross_amount       = isset($midtrans['gross_amount']) ? $midtrans['gross_amount'] : null;
         $fraud_status       = isset($midtrans['fraud_status']) ? $midtrans['fraud_status'] : null;
         $approval_code      = isset($midtrans['approval_code']) ? $midtrans['approval_code'] : null;
+        $bank = null;
+        $store = null;
 
         if (isset($midtrans['permata_va_number'])) {
             $eci  = isset($midtrans['permata_va_number']) ? $midtrans['permata_va_number'] : null;
@@ -484,6 +486,9 @@ Detail: ".$link['short'],
         } elseif (isset($midtrans['bill_key'])) {
             $eci = $midtrans['biller_code'].$midtrans['bill_key'];
             $bank = 'Mandiri';
+        } elseif (isset($midtrans['payment_code'])) {
+            $eci = $midtrans['payment_code'];
+            $store = $midtrans['store'];
         } else {
             $bank = isset($midtrans['va_numbers'][0]['bank']) ? $midtrans['va_numbers'][0]['bank'] : null;
             $eci  = isset($midtrans['va_numbers'][0]['va_number']) ? $midtrans['va_numbers'][0]['va_number'] : null;
@@ -494,6 +499,7 @@ Detail: ".$link['short'],
             'approval_code'      => $approval_code,
             'bank'               => $bank,
             'eci'                => $eci,
+            'store'              => $store,
             'transaction_time'   => $transaction_time,
             'gross_amount'       => $gross_amount,
             'order_id'           => $order_id,
@@ -798,12 +804,17 @@ Detail: ".$link['short'],
 
     public function getPayment($mid)
     {
+        $label_place = 'Bank';
         if (isset($mid['permata_va_number'])) {
             $number = $mid['permata_va_number'];
             $bank = 'Permata';
         } elseif (isset($mid['biller_code'])) {
             $number = $mid['bill_key'];
             $bank = 'Mandiri';
+        } elseif (isset($mid['payment_code'])) {
+            $number = $mid['payment_code'];
+            $bank = $mid['store'];
+            $label_place = 'Store';
         } else {
             $number = $mid['va_numbers'][0]['va_number'];
             $bank = strtoupper($mid['va_numbers'][0]['bank']);
@@ -825,7 +836,7 @@ Detail: ".$link['short'],
              <tbody>
               <tr>
                 <td style="background:#ffffff;color:#555;font-family:\'Source Sans Pro\',sans-serif;line-height:1.5;margin:0;padding:5px 10px;width: 100px" valign="top" bgcolor="#FFFFFF" align="left">
-                   <span style="color:#555;font-family:\'Source Sans Pro\',sans-serif;font-size:14px;line-height:1.5;margin:0;padding:0">Bank </span>
+                   <span style="color:#555;font-family:\'Source Sans Pro\',sans-serif;font-size:14px;line-height:1.5;margin:0;padding:0">'.$label_place.' </span>
                 </td>
                 <td colspan="3" style="background:#ffffff;color:#555;font-family:\'Source Sans Pro\',sans-serif;line-height:1.5;margin:0;padding:5px 10px" valign="top" bgcolor="#FFFFFF" align="left">
                     <span style="color:#555;font-family:\'Source Sans Pro\',sans-serif;font-size:14px;line-height:1.5;margin:0;padding:0">:  <b>'.$bank.'</b> </span>
