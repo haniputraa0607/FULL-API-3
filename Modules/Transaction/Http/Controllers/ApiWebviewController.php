@@ -58,15 +58,15 @@ class ApiWebviewController extends Controller
                     $title = 'Pending';
                 }
 
-                if ($list['transaction_payment_status'] == 'Terbayar') {
+                if ($list['transaction_payment_status'] == 'Paid') {
                     $title = 'Terbayar';
                 }
 
-                if ($list['transaction_payment_status'] == 'Sukses') {
+                if ($list['transaction_payment_status'] == 'Completed') {
                     $title = 'Sukses';
                 }
 
-                if ($list['transaction_payment_status'] == 'Gagal') {
+                if ($list['transaction_payment_status'] == 'Cancelled') {
                     $title = 'Gagal';
                 }
 
