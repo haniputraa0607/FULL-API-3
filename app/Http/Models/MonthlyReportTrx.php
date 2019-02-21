@@ -4,7 +4,7 @@ namespace App\Http\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class DailyReportTrxMenu extends Model
+class MonthlyReportTrx extends Model
 {
 	protected $connection = 'mysql';
     /**
@@ -12,20 +12,28 @@ class DailyReportTrxMenu extends Model
      * 
      * @var string
      */
-    protected $table = 'daily_report_trx_menu';
+    protected $table = 'monthly_report_trx';
 
-    protected $primaryKey = 'id_report_trx_menu';
+    protected $primaryKey = 'id_monthly_report_trx';
 
     /**
      * @var array
      */
     protected $fillable = [
-        'trx_date',
         'id_outlet',
-        'id_product',
-        'total_rec',
-        'total_qty',
-        'total_nominal',
+        'trx_month',
+        'trx_year',
+        'trx_count',
+        'trx_tax',
+        'trx_shipment',
+        'trx_service',
+        'trx_discount',
+        'trx_subtotal',
+        'trx_grand',
+        'trx_cashback_earned',
+        'trx_point_earned',
+        'trx_max',
+        'trx_average',
         'cust_male',
         'cust_female',
         'cust_android',
@@ -42,12 +50,10 @@ class DailyReportTrxMenu extends Model
         'cust_old'
     ];
 	
-    public function product()
-    {
-        return $this->belongsTo(Product::class, 'id_product', 'id_product')->select('id_product', 'product_code', 'product_name');
-    }
-
-    public function outlet() 
+	/**
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
+     */
+    public function outlet()
     {
         return $this->belongsTo(Outlet::class, 'id_outlet', 'id_outlet');
     }

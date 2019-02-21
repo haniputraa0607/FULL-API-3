@@ -32,7 +32,21 @@ class DailyReportTrx extends Model
         'trx_cashback_earned',
         'trx_point_earned',
         'trx_max',
-        'trx_average'
+        'trx_average',
+        'cust_male',
+        'cust_female',
+        'cust_android',
+        'cust_ios',
+        'cust_telkomsel',
+        'cust_xl',
+        'cust_indosat',
+        'cust_tri',
+        'cust_axis',
+        'cust_smart',
+        'cust_teens',
+        'cust_young_adult',
+        'cust_adult',
+        'cust_old'
     ];
 	
 	/**
