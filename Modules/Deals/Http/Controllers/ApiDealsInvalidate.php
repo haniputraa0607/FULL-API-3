@@ -65,8 +65,11 @@ class ApiDealsInvalidate extends Controller
                         $totalRedeem = $this->updateTotalRedemeedDeals($deals->id_deals);
 
                         if ($totalRedeem) {
-                        // query lagi
+                            // query lagi
                             $deals = $this->outletAvailable($request->user(), $request->json('id_deals_user'), $request->json('outlet_code'))->toArray();
+                            
+                            // add voucher invalidate success webview url
+                            $deals['webview_url'] = env('APP_URL') ."webview/voucher/". $deals['id_deals_user'];
 
                             // SEND NOTIFICATION
                             $send = app($this->autocrm)->SendAutoCRM('Deals', 
@@ -89,7 +92,8 @@ class ApiDealsInvalidate extends Controller
                             $fail['messages'] = ['Redeem voucher failed.'];
                         }
                     }else{
-                        $fail['messages'] = ['Voucher is expired.'];
+                        $fail['messages'] = ['Redeem voucher failed.', 'Voucher has been redeemed.'];
+                        // $fail['messages'] = ['Voucher is expired.'];
                     }
                 }
                 else {
