@@ -250,7 +250,27 @@ class ApiDealsVoucher extends Controller
 		$voucher->where('voucher_expired_at', '>=',date('Y-m-d H:i:s'));
 		$voucher->orderBy('id_deals_user', 'desc');
         
-        $voucher = $voucher->get()->toArray();
+        // if voucher detail, no need pagination
+        if (isset($post['id_deals_user']) && $post['id_deals_user'] != "") {
+            $voucher = $voucher->get()->toArray();
+        }
+        else {
+            $voucher = $voucher->paginate(10);
+
+            // get pagination attributes
+            $current_page = $voucher->currentPage();
+            $next_page_url = $voucher->nextPageUrl();
+            $per_page = $voucher->perPage();
+            $prev_page_url = $voucher->previousPageUrl();
+            $total = $voucher->count();
+
+            $voucher_temp = [];
+            // convert paginate collection to array data of vouchers
+            foreach ($voucher as $key => $value) {
+                $voucher_temp[] = $value->toArray();
+            }
+            $voucher = $voucher_temp;
+        }
 
         //add outlet name
         foreach($voucher as $index => $datavoucher){
@@ -282,7 +302,7 @@ class ApiDealsVoucher extends Controller
         
         $voucher = $this->kotacuks($voucher);
 
-        // if voucher detail, add webview url & btn text
+        // add webview url & btn text
         if (isset($post['used'])) {
             if ($post['used'] == 0) {
                 foreach($voucher as $index => $dataVou){
@@ -296,8 +316,22 @@ class ApiDealsVoucher extends Controller
                 }
             }
         }
-        
-        return response()->json(MyHelper::checkGet($voucher));
+
+        // if voucher detail, no need pagination
+        if (isset($post['id_deals_user']) && $post['id_deals_user'] != "") {
+            $result = $voucher;
+        }
+        else {
+            // add pagination attributes
+            $result['data'] = $voucher;
+            $result['current_page'] = $current_page;
+            $result['next_page_url'] = $next_page_url;
+            $result['prev_page_url'] = $prev_page_url;
+            $result['per_page'] = $per_page;
+            $result['total'] = $total;
+        }
+
+        return response()->json(MyHelper::checkGet($result));
     }
 
     function kotacuks($deals)
