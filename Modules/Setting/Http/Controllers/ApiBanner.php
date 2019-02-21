@@ -71,7 +71,11 @@ class ApiBanner extends Controller
         }
         $post['position'] = $last_position + 1;
 
+        $deep_url = env('APP_URL').'/outlet/webview/gofood/list';
 
+        if ($post['type'] == 'gofood') {
+            $post['url'] = $deep_url;
+        }
 
         $create = Banner::create($post);
 

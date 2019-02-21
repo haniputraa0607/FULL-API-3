@@ -75,11 +75,11 @@ class ApiHome extends Controller
         }
         // add full url to collection
         $banners = $banners->map(function ($banner, $key) use ($gofood, $banners) {
-            $item['image_url'] = url($banner->image);
-            $item['id_news']   = $banner->id_news;
-
+            $item['image_url']  = url($banner->image);
+            $item['id_news']    = $banner->id_news;
             $item['news_title'] = "";
             $item['url']        = $banner->url;
+            $item['type']       = $banner->type;
 
             if ($banner->id_news != "") {
                 $item['news_title'] = $banner->news->news_title;
