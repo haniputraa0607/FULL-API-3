@@ -146,14 +146,14 @@ class ApiNotification extends Controller {
                 }
             }
 
-            $user = User::where('id', $newTrx['id_user'])->first();
-            if (empty($user)) {
-                DB::rollback();
-                return response()->json([
-                    'status'   => 'fail',
-                    'messages' => ['Data Transaction Not Valid']
-                ]);
-            }
+            // $user = User::where('id', $newTrx['id_user'])->first();
+            // if (empty($user)) {
+            //     DB::rollback();
+            //     return response()->json([
+            //         'status'   => 'fail',
+            //         'messages' => ['Data Transaction Not Valid']
+            //     ]);
+            // }
 
             
 
@@ -255,9 +255,25 @@ class ApiNotification extends Controller {
         $receipt = $trx['transaction_receipt_number'];
         $detail = $this->getHtml($trx, $trx['productTransaction'], $name, $phone, $date, $outlet, $receipt);
 
+        if ($trx['transaction_payment_status'] == 'Pending') {
+            $title = 'Pending';
+        }
+
+        if ($trx['transaction_payment_status'] == 'Paid') {
+            $title = 'Terbayar';
+        }
+
+        if ($trx['transaction_payment_status'] == 'Completed') {
+            $title = 'Sukses';
+        }
+
+        if ($trx['transaction_payment_status'] == 'Cancelled') {
+            $title = 'Gagal';
+        }
+
         $payment = $this->getPayment($mid);
 
-        $send = app($this->autocrm)->SendAutoCRM('Transaction Payment', $trx->user->phone, ['notif_type' => 'trx', 'date' => $trx['transaction_date'], 'status' => $trx['transaction_payment_status'], 'name'  => $trx->user->name, 'id' => $mid['order_id'], 'outlet_name' => $outlet, 'detail' => $detail, 'payment' => $payment, 'id_reference' => $mid['order_id']]);
+        $send = app($this->autocrm)->SendAutoCRM('Transaction Payment', $trx->user->phone, ['notif_type' => 'trx', 'header_label' => $title, 'date' => $trx['transaction_date'], 'status' => $trx['transaction_payment_status'], 'name'  => $trx->user->name, 'id' => $mid['order_id'], 'outlet_name' => $outlet, 'detail' => $detail, 'payment' => $payment, 'id_reference' => $mid['order_id']]);
 
         return $send;
     }
@@ -271,7 +287,23 @@ class ApiNotification extends Controller {
         $receipt = $trx['transaction_receipt_number'];
         $detail = $this->getHtml($trx, $trx['productTransaction'], $name, $phone, $date, $outlet, $receipt);
 
-        $send = app($this->autocrm)->SendAutoCRM('Transaction Expired', $trx->user->phone, ['notif_type' => 'trx', 'date' => $trx['transaction_date'], 'status' => $trx['transaction_payment_status'], 'name'  => $trx->user->name, 'id' => $mid['order_id'], 'outlet_name' => $outlet, 'detail' => $detail, 'id_reference' => $mid['order_id']]);
+        if ($trx['transaction_payment_status'] == 'Pending') {
+            $title = 'Pending';
+        }
+
+        if ($trx['transaction_payment_status'] == 'Paid') {
+            $title = 'Terbayar';
+        }
+
+        if ($trx['transaction_payment_status'] == 'Completed') {
+            $title = 'Sukses';
+        }
+
+        if ($trx['transaction_payment_status'] == 'Cancelled') {
+            $title = 'Gagal';
+        }
+
+        $send = app($this->autocrm)->SendAutoCRM('Transaction Expired', $trx->user->phone, ['notif_type' => 'trx', 'header_label' => $title, 'date' => $trx['transaction_date'], 'status' => $trx['transaction_payment_status'], 'name'  => $trx->user->name, 'id' => $mid['order_id'], 'outlet_name' => $outlet, 'detail' => $detail, 'id_reference' => $mid['order_id']]);
 
         return $send;
     }
@@ -290,7 +322,23 @@ class ApiNotification extends Controller {
         $receipt = $trx['transaction_receipt_number'];
         $detail = $this->getHtml($trx, $trx['productTransaction'], $name, $phone, $date, $outlet, $receipt);
 
-        $send = app($this->autocrm)->SendAutoCRM('Transaction Success', $trx->user->phone, ['notif_type' => 'trx', 'date' => $trx['transaction_date'], 'status' => $trx['transaction_payment_status'], 'name'  => $trx->user->name, 'id' => $mid['order_id'], 'outlet_name' => $outlet, 'detail' => $detail, 'id_reference' => $mid['order_id']]);
+        if ($trx['transaction_payment_status'] == 'Pending') {
+            $title = 'Pending';
+        }
+
+        if ($trx['transaction_payment_status'] == 'Paid') {
+            $title = 'Terbayar';
+        }
+
+        if ($trx['transaction_payment_status'] == 'Completed') {
+            $title = 'Sukses';
+        }
+
+        if ($trx['transaction_payment_status'] == 'Cancelled') {
+            $title = 'Gagal';
+        }
+
+        $send = app($this->autocrm)->SendAutoCRM('Transaction Success', $trx->user->phone, ['notif_type' => 'trx', 'header_label' => $title, 'date' => $trx['transaction_date'], 'status' => $trx['transaction_payment_status'], 'name'  => $trx->user->name, 'id' => $mid['order_id'], 'outlet_name' => $outlet, 'detail' => $detail, 'id_reference' => $mid['order_id']]);
 
         return $send;
     }

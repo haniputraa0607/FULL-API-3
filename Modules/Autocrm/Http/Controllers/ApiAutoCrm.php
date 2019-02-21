@@ -296,6 +296,10 @@ class ApiAutoCrm extends Controller
 							$dataOptional['notif_type'] = $variables['notif_type'];
 						}
 
+						if (isset($variables['header_label'])) {
+							$dataOptional['header_label'] = $variables['header_label'];
+						}
+
 						$deviceToken = PushNotificationHelper::searchDeviceToken("phone", $user['phone']);
 						// print_r($deviceToken);exit;
 						$subject = $this->TextReplace($crm['autocrm_push_subject'], $receipient, $variables);

@@ -76,6 +76,7 @@ class Outlet extends Authenticatable
 		'outlet_email',
 		'outlet_latitude',
 		'outlet_longitude',
+		'deep_link',
 		// 'outlet_open_hours',
 		// 'outlet_close_hours'
 	];

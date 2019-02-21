@@ -44,7 +44,7 @@ class ApiBanner extends Controller
         ]);
 
         $post = $request->json()->all();
-
+        
         // upload image
         $path = "img/banner/";
         if(!file_exists($path)){
@@ -70,6 +70,8 @@ class ApiBanner extends Controller
             $last_position = 0;
         }
         $post['position'] = $last_position + 1;
+
+
 
         $create = Banner::create($post);
 

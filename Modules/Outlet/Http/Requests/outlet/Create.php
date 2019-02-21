@@ -16,7 +16,7 @@ class Create extends FormRequest
     public function rules()
     {
         return [
-            'outlet_code'        => 'unique:outlets,outlet_code|max:3',
+            'outlet_code'        => 'unique:outlets,outlet_code|max:10',
             'outlet_name'        => 'required',
             'outlet_address'     => '',
             'id_city'            => 'required|integer',

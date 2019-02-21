@@ -68,8 +68,13 @@ class ApiHome extends Controller
     {
         // banner
         $banners = Banner::orderBy('position')->get();
+        $gofood = 0;
+        $setting = Setting::where('key', 'banner-gofood')->first();
+        if (!empty($setting)) {
+            $gofood = $setting->value;
+        }
         // add full url to collection
-        $banners = $banners->map(function ($banner, $key) {
+        $banners = $banners->map(function ($banner, $key) use ($gofood, $banners) {
             $item['image_url'] = url($banner->image);
             $item['id_news']   = $banner->id_news;
 
@@ -82,9 +87,24 @@ class ApiHome extends Controller
                 $item['url']        = env('APP_URL') .'news/webview/'. $banner->id_news;
             }
 
-            return $item;
+            if ($gofood == 0) {
+                if ($banner->type == 'general') {
+                    return $item;
+                } else {
+                    unset($banners[$key]);
+                }
+            } else {
+                return $item;
+            }
         });
+
         $banners->all();
+
+        foreach ($banners as $key => $value) {
+            if (empty($value)) {
+                unset($banners[$key]);
+            }
+        }
 
         return $banners;
     }
