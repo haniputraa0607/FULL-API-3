@@ -140,6 +140,12 @@ class ApiBanner extends Controller
             $delete = MyHelper::deletePhoto($banner->image);
         }
 
+        $deep_url = env('APP_URL').'/outlet/webview/gofood/list';
+
+        if ($post['type'] == 'gofood') {
+            $post['url'] = $deep_url;
+        }
+
         $update = $banner->update($post);
 
         return response()->json(MyHelper::checkCreate($update));
