@@ -15,8 +15,8 @@ class CreateMonthlyCustomerReportRegistrationTable extends Migration
     {
         Schema::create('monthly_customer_report_registration', function (Blueprint $table) {
             $table->increments('id_monthly_customer_report_registration');
-            $table->tinyInteger('trx_month')->nullable();
-            $table->year('trx_year')->nullable();
+            $table->tinyInteger('reg_month')->nullable();
+            $table->year('reg_year')->nullable();
 			$table->integer('cust_male')->nullable();
             $table->integer('cust_female')->nullable();
             $table->integer('cust_android')->nullable();
