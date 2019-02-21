@@ -18,22 +18,22 @@
                                  @if(isset($setting) && $setting['email_logo'] != null)
                                      <td id="logoheader_center" style="border-collapse:collapse;border-spacing:0;color:#000;font-family:'Arial',sans-serif;line-height:1.5;margin:0;padding:0;text-align:center" width="33%">
                                          @if($setting['email_logo_position'] == 'left')
-                                             <img class="CToWUd" id="detail_logo_center" src="{{url('/')}}/{{$setting['email_logo']}}" style="border:0 none;line-height:100%;outline:none;text-decoration:none;height: 100px;width: 150px;" alt="" height="50px">
+                                             <img class="CToWUd" id="detail_logo_center" src="{{url('/')}}/{{$setting['email_logo']}}" style="border:0 none;line-height:100%;outline:none;text-decoration:none;height: 100px;margin-bottom: -60px;width: 150px;" alt="" height="50px">
                                          @endif
                                      </td>
                                      <td id="logoheader_center" style="border-collapse:collapse;border-spacing:0;color:#000;font-family:'Arial',sans-serif;line-height:1.5;margin:0;padding:0;text-align:center" width="33%">
                                          @if($setting['email_logo_position'] == 'center')
-                                             <img class="CToWUd" id="detail_logo_center" src="{{url('/')}}/{{$setting['email_logo']}}" style="border:0 none;line-height:100%;outline:none;text-decoration:none;height: 100px;width: 150px;" alt="" height="50px">
+                                             <img class="CToWUd" id="detail_logo_center" src="{{url('/')}}/{{$setting['email_logo']}}" style="border:0 none;line-height:100%;outline:none;text-decoration:none;height: 100px;margin-bottom: -60px;width: 150px;" alt="" height="50px">
                                          @endif
                                      </td>
                                      <td id="logoheader_center" style="border-collapse:collapse;border-spacing:0;color:#000;font-family:'Arial',sans-serif;line-height:1.5;margin:0;padding:0;text-align:center" width="33%">
                                          @if($setting['email_logo_position'] == 'right')
-                                             <img class="CToWUd" id="detail_logo_center" src="{{url('/')}}/{{$setting['email_logo']}}" style="border:0 none;line-height:100%;outline:none;text-decoration:none;height: 100px;width: 150px;" alt="" height="50px">
+                                             <img class="CToWUd" id="detail_logo_center" src="{{url('/')}}/{{$setting['email_logo']}}" style="border:0 none;line-height:100%;outline:none;text-decoration:none;height: 100px;margin-bottom: -60px;width: 150px;" alt="" height="50px">
                                          @endif
                                      </td>
                                  @else
                                      <td id="logoheader_center" style="border-collapse:collapse;border-spacing:0;color:#000;font-family:'Arial',sans-serif;line-height:1.5;margin:0;padding:0;text-align:center" width="100%">
-                                             <img class="CToWUd" id="detail_logo_center" src="{{url('img/logo.jpg')}}" style="border:0 none;line-height:100%;outline:none;text-decoration:none;height: 100px;width: 150px;" alt="" height="50px">
+                                             <img class="CToWUd" id="detail_logo_center" src="{{url('img/logo.jpg')}}" style="border:0 none;line-height:100%;outline:none;text-decoration:none;height: 100px;margin-bottom: -60px;width: 150px;" alt="" height="50px">
                                      </td>
                                  @endif
                                </tr>
