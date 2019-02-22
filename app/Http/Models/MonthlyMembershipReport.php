@@ -23,7 +23,7 @@ class MonthlyMembershipReport extends Model
         'mem_month',
         'mem_year',
         'id_membership',
-        'cust_total',,
+        'cust_total',
         'cust_male',
         'cust_female',
         'cust_android',

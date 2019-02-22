@@ -11,6 +11,8 @@ use App\Http\Models\MonthlyReportTrx;
 use App\Http\Models\DailyReportTrx;
 use App\Http\Models\MonthlyReportTrxMenu;
 use App\Http\Models\DailyReportTrxMenu;
+use App\Http\Models\DailyMembershipReport;
+use App\Http\Models\MonthlyMembershipReport;
 
 use App\Http\Models\GlobalMonthlyReportTrx;
 use App\Http\Models\GlobalDailyReportTrx;
@@ -61,7 +63,8 @@ class ApiCronReport extends Controller
         // }
         // else {
             // DATE START
-            $dateStart = $this->firstTrx();
+            // $dateStart = $this->firstTrx();
+            $dateStart = "2019-01-01";
 
             if ($dateStart) {
                 // UP TO YESTERDAY
@@ -134,7 +137,7 @@ class ApiCronReport extends Controller
     /* CALCULATION */
     function calculation($date) 
     {
-        // DAILY
+        // TRANSACTION & PRODUCT DAILY
         $daily = $this->newDailyReport($date);
         if (!$daily) {
             return false;
@@ -148,7 +151,7 @@ class ApiCronReport extends Controller
             }
         }
 		
-		// MONTHLY
+		// TRANSACTION & PRODUCT MONTHLY
         $monthly = $this->newMonthlyReport($date);
         if (!$monthly) {
             return false;
@@ -165,6 +168,24 @@ class ApiCronReport extends Controller
 		// MEMBERSHIP REGISTRATION DAILY
         $daily = $this->newCustomerRegistrationDailyReport($date);
         if (!$daily) {
+            return false;
+        }
+		
+		// MEMBERSHIP REGISTRATION MONTHLY
+        $monthly = $this->newCustomerRegistrationMonthlyReport($date);
+        if (!$monthly) {
+            return false;
+        }
+		
+		// MEMBERSHIP LEVEL DAILY
+        $daily = $this->customerLevelDailyReport($date);
+        if (!$daily) {
+            return false;
+        }
+		
+		// MEMBERSHIP LEVEL MONTHLY
+        $monthly = $this->customerLevelMonthlyReport($date);
+        if (!$monthly) {
             return false;
         }
 		
@@ -190,19 +211,138 @@ class ApiCronReport extends Controller
         return null;        
     }
 	
-	 /* NEW DAILY REPORT */
-    function newCustomerRegistrationDailyReport($date) 
+	/* CUSTOMER LEVEL DAILY REPORT */
+    function customerLevelDailyReport($date) 
     {
+		// $date = date('Y-m-d', strtotime("-7 days", strtotime($date)));
+		
 		$now = time(); // or your date as well
 		$your_date = strtotime($date);
 		$datediff = $now - $your_date;
 
 		$diff = round($datediff / (60 * 60 * 24));
-
+		
 		for($x = 0;$x <= $diff; $x++){
 			$start = date('Y-m-d', strtotime("+ ".$x." days", strtotime($date)));
+			
 			$trans = DB::select(DB::raw('
-					SELECT (select SUM(Case When users.gender = \'Male\' Then 1 Else 0 End)) as cust_male, 
+					SELECT COUNT(id), id_membership,
+					(select COUNT(users.id)) as cust_total,
+					(select SUM(Case When users.gender = \'Male\' Then 1 Else 0 End)) as cust_male, 
+					(select SUM(Case When users.gender = \'Female\' Then 1 Else 0 End)) as cust_female, 
+					(select SUM(Case When users.android_device is not null Then 1 Else 0 End)) as cust_android, 
+					(select SUM(Case When users.ios_device is not null Then 1 Else 0 End)) as cust_ios, 
+					(select SUM(Case When users.provider = \'Telkomsel\' Then 1 Else 0 End)) as cust_telkomsel, 
+					(select SUM(Case When users.provider = \'XL\' Then 1 Else 0 End)) as cust_xl, 
+					(select SUM(Case When users.provider = \'Indosat\' Then 1 Else 0 End)) as cust_indosat, 
+					(select SUM(Case When users.provider = \'Tri\' Then 1 Else 0 End)) as cust_tri, 
+					(select SUM(Case When users.provider = \'Axis\' Then 1 Else 0 End)) as cust_axis, 
+					(select SUM(Case When users.provider = \'Smart\' Then 1 Else 0 End)) as cust_smart, 
+					(select SUM(Case When floor(datediff (now(), users.birthday)/365) >= 11 && floor(datediff (now(), users.birthday)/365) <= 17 Then 1 Else 0 End)) as cust_teens, 
+					(select SUM(Case When floor(datediff (now(), users.birthday)/365) >= 18 && floor(datediff (now(), users.birthday)/365) <= 24 Then 1 Else 0 End)) as cust_young_adult, 
+					(select SUM(Case When floor(datediff (now(), users.birthday)/365) >= 25 && floor(datediff (now(), users.birthday)/365) <= 34 Then 1 Else 0 End)) as cust_adult,
+					(select SUM(Case When floor(datediff (now(), users.birthday)/365) >= 35 && floor(datediff (now(), users.birthday)/365) <= 100 Then 1 Else 0 End)) as cust_old,
+					(select DATE(created_at)) as mem_date
+					FROM users 
+					WHERE users.created_at BETWEEN "'. $start .' 00:00:00" AND "'. $start .' 23:59:59"
+					GROUP BY users.id_membership
+				'));
+			$trans = json_decode(json_encode($trans), true);
+			
+			if(!empty($trans[0]['cust_total'])){
+				foreach ($trans as $key => $value) {
+					$save = DailyMembershipReport::updateOrCreate([
+							'mem_date'  => $start,
+							'id_membership' => $value['id_membership']
+						], $value);
+
+					if (!$save) {
+						return false;
+					}
+				}
+				return $trans;
+			}
+		}
+		return true;
+	}
+	
+	/* CUSTOMER LEVEL MONTHLY REPORT */
+    function customerLevelMonthlyReport($date) 
+    {
+		$d1 = new DateTime($date);
+		$d2 = new DateTime(date('Y-m-d'));
+		$interval = date_diff($d1, $d2);
+		$diff = $interval->m + ($interval->y * 12);
+		
+		for($x = 0;$x <= $diff; $x++){
+			$start = date('Y-m-1', strtotime("+ ".$x." month", strtotime($date)));
+			if($x != $diff){
+				$end = date('Y-m-t', strtotime("+ ".$x." month", strtotime($date)));
+			} else {
+				$end = date('Y-m-d');
+			}
+			
+			$trans = DB::select(DB::raw('
+					SELECT COUNT(id), id_membership,
+					(select COUNT(users.id)) as cust_total,
+					(select SUM(Case When users.gender = \'Male\' Then 1 Else 0 End)) as cust_male, 
+					(select SUM(Case When users.gender = \'Female\' Then 1 Else 0 End)) as cust_female, 
+					(select SUM(Case When users.android_device is not null Then 1 Else 0 End)) as cust_android, 
+					(select SUM(Case When users.ios_device is not null Then 1 Else 0 End)) as cust_ios, 
+					(select SUM(Case When users.provider = \'Telkomsel\' Then 1 Else 0 End)) as cust_telkomsel, 
+					(select SUM(Case When users.provider = \'XL\' Then 1 Else 0 End)) as cust_xl, 
+					(select SUM(Case When users.provider = \'Indosat\' Then 1 Else 0 End)) as cust_indosat, 
+					(select SUM(Case When users.provider = \'Tri\' Then 1 Else 0 End)) as cust_tri, 
+					(select SUM(Case When users.provider = \'Axis\' Then 1 Else 0 End)) as cust_axis, 
+					(select SUM(Case When users.provider = \'Smart\' Then 1 Else 0 End)) as cust_smart, 
+					(select SUM(Case When floor(datediff (now(), users.birthday)/365) >= 11 && floor(datediff (now(), users.birthday)/365) <= 17 Then 1 Else 0 End)) as cust_teens, 
+					(select SUM(Case When floor(datediff (now(), users.birthday)/365) >= 18 && floor(datediff (now(), users.birthday)/365) <= 24 Then 1 Else 0 End)) as cust_young_adult, 
+					(select SUM(Case When floor(datediff (now(), users.birthday)/365) >= 25 && floor(datediff (now(), users.birthday)/365) <= 34 Then 1 Else 0 End)) as cust_adult,
+					(select SUM(Case When floor(datediff (now(), users.birthday)/365) >= 35 && floor(datediff (now(), users.birthday)/365) <= 100 Then 1 Else 0 End)) as cust_old,
+					(select DATE(created_at)) as mem_date
+					FROM users 
+					WHERE users.created_at BETWEEN "'. $start .' 00:00:00" AND "'. $end .' 23:59:59"
+					GROUP BY users.id_membership
+				'));
+			$trans = json_decode(json_encode($trans), true);
+			
+			if(!empty($trans[0]['cust_total'])){
+				foreach ($trans as $key => $value) {
+					$value['mem_month'] = date('n', strtotime($end));
+					$value['mem_year'] = date('Y', strtotime($end));
+					$save = MonthlyMembershipReport::updateOrCreate([
+							'mem_month'  => date('n', strtotime($end)),
+							'mem_year'  => date('Y', strtotime($end)),
+							'id_membership' => $value['id_membership']
+						], $value);
+
+					if (!$save) {
+						return false;
+					}
+				}
+				return $trans;
+			}
+		}
+		return true;
+	}
+	
+	/* NEW CUSTOMER REGISTRATION DAILY REPORT */
+    function newCustomerRegistrationDailyReport($date) 
+    {
+		$date = date('Y-m-d', strtotime("-7 days", strtotime($date)));
+		
+		$now = time(); // or your date as well
+		$your_date = strtotime($date);
+		$datediff = $now - $your_date;
+
+		$diff = round($datediff / (60 * 60 * 24));
+		
+		for($x = 0;$x <= $diff; $x++){
+			$start = date('Y-m-d', strtotime("+ ".$x." days", strtotime($date)));
+			
+			$trans = DB::select(DB::raw('
+					SELECT (select COUNT(users.id)) as total,
+					(select SUM(Case When users.gender = \'Male\' Then 1 Else 0 End)) as cust_male, 
 					(select SUM(Case When users.gender = \'Female\' Then 1 Else 0 End)) as cust_female, 
 					(select SUM(Case When users.android_device is not null Then 1 Else 0 End)) as cust_android, 
 					(select SUM(Case When users.ios_device is not null Then 1 Else 0 End)) as cust_ios, 
@@ -221,8 +361,8 @@ class ApiCronReport extends Controller
 					WHERE created_at BETWEEN "'. $start .' 00:00:00" 
 					AND "'. $start .' 23:59:59"
 				'));
-			if(!empty($trans)){
-				$trans = json_decode(json_encode($trans), true);
+			$trans = json_decode(json_encode($trans), true);
+			if(!empty($trans[0]['reg_date'])){
 				foreach ($trans as $key => $value) {
 					$save = DailyCustomerReportRegistration::updateOrCreate([
 							'reg_date'  => $start
@@ -232,9 +372,73 @@ class ApiCronReport extends Controller
 						return false;
 					}
 				}
+				return $trans;
 			}
 		}
+		return true;
 	}
+	
+	/* NEW CUSTOMER REGISTRATION MONTHLY REPORT */
+    function newCustomerRegistrationMonthlyReport($date) 
+    {
+		$date = date('Y-m-d', strtotime("-1 month", strtotime($date)));
+		
+		$d1 = new DateTime($date);
+		$d2 = new DateTime(date('Y-m-d'));
+		$interval = date_diff($d1, $d2);
+		$diff = $interval->m + ($interval->y * 12);
+		// print_r(['diff' => $diff]);exit;
+		for($x = 0;$x <= $diff; $x++){
+			$start = date('Y-m-1', strtotime("+ ".$x." month", strtotime($date)));
+			if($x != $diff){
+				$end = date('Y-m-t', strtotime("+ ".$x." month", strtotime($date)));
+			} else {
+				$end = date('Y-m-d');
+			}
+			
+			$trans = DB::select(DB::raw('
+					SELECT (select COUNT(users.id)) as total,
+					(select SUM(Case When users.gender = \'Male\' Then 1 Else 0 End)) as cust_male, 
+					(select SUM(Case When users.gender = \'Female\' Then 1 Else 0 End)) as cust_female, 
+					(select SUM(Case When users.android_device is not null Then 1 Else 0 End)) as cust_android, 
+					(select SUM(Case When users.ios_device is not null Then 1 Else 0 End)) as cust_ios, 
+					(select SUM(Case When users.provider = \'Telkomsel\' Then 1 Else 0 End)) as cust_telkomsel, 
+					(select SUM(Case When users.provider = \'XL\' Then 1 Else 0 End)) as cust_xl, 
+					(select SUM(Case When users.provider = \'Indosat\' Then 1 Else 0 End)) as cust_indosat, 
+					(select SUM(Case When users.provider = \'Tri\' Then 1 Else 0 End)) as cust_tri, 
+					(select SUM(Case When users.provider = \'Axis\' Then 1 Else 0 End)) as cust_axis, 
+					(select SUM(Case When users.provider = \'Smart\' Then 1 Else 0 End)) as cust_smart, 
+					(select SUM(Case When floor(datediff (now(), users.birthday)/365) >= 11 && floor(datediff (now(), users.birthday)/365) <= 17 Then 1 Else 0 End)) as cust_teens, 
+					(select SUM(Case When floor(datediff (now(), users.birthday)/365) >= 18 && floor(datediff (now(), users.birthday)/365) <= 24 Then 1 Else 0 End)) as cust_young_adult, 
+					(select SUM(Case When floor(datediff (now(), users.birthday)/365) >= 25 && floor(datediff (now(), users.birthday)/365) <= 34 Then 1 Else 0 End)) as cust_adult,
+					(select SUM(Case When floor(datediff (now(), users.birthday)/365) >= 35 && floor(datediff (now(), users.birthday)/365) <= 100 Then 1 Else 0 End)) as cust_old
+					FROM users
+					WHERE created_at BETWEEN "'. $start .' 00:00:00" 
+					AND "'. $end .' 23:59:59"
+					
+				'));
+			$trans = json_decode(json_encode($trans), true);
+			
+			if(!empty($trans[0]['total'])){
+				foreach ($trans as $key => $value) {
+					$value['reg_month'] = date('n', strtotime($end));
+					$value['reg_year'] = date('Y', strtotime($end));
+
+					$save = MonthlyCustomerReportRegistration::updateOrCreate([
+							'reg_month'  => date('n', strtotime($end)),
+							'reg_year'  => date('Y', strtotime($end))
+						], $value);
+
+					if (!$save) {
+						return false;
+					}
+				}
+				return $trans;
+			}
+		}
+		return true;
+	}
+	
     /* NEW DAILY REPORT */
     function newDailyReport($date) 
     {

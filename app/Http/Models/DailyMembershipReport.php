@@ -22,7 +22,7 @@ class DailyMembershipReport extends Model
     protected $fillable = [
         'mem_date',
         'id_membership',
-        'cust_total',,
+        'cust_total',
         'cust_male',
         'cust_female',
         'cust_android',

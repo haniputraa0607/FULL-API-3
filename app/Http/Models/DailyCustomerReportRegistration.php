@@ -21,7 +21,7 @@ class DailyCustomerReportRegistration extends Model
      */
     protected $fillable = [
         'reg_date',
-        'cust_total',
+        'total',
         'cust_male',
         'cust_female',
         'cust_android',
