@@ -40,6 +40,7 @@ use Modules\POS\Http\Requests\reqOutlet;
 use Modules\POS\Http\Requests\reqTransaction;
 use Modules\POS\Http\Requests\reqTransactionRefund;
 use Modules\POS\Http\Requests\reqPreOrderDetail;
+use Modules\POS\Http\Requests\reqBulkMenu;
 
 use Modules\POS\Http\Controllers\CheckVoucher;
 
@@ -147,7 +148,8 @@ class ApiPOS extends Controller
         $qr = MyHelper::readQR($post['uid']);
 		$timestamp = $qr['timestamp'];
 		$phoneqr = $qr['phone'];
-        if(date('Y-m-d H:i:s') < $timestamp){
+		
+        if(date('Y-m-d H:i:s') > date('Y-m-d H:i:s',$timestamp)){
             return response()->json(['status' => 'fail', 'messages' => ['Mohon refresh qrcode dan ulangi scan member']]); 
         }
 
@@ -264,8 +266,14 @@ class ApiPOS extends Controller
 
         foreach ($outlet as $key => $value) {
           
-            $data['outlet_name'] = $value['store_name'];
-            $data['outlet_status'] = $value['store_status'];
+			$data['outlet_name'] = $value['store_name'];
+			if(isset($value['store_address'])){
+				$data['outlet_address'] = $value['store_address'];
+			}
+			if(isset($value['store_phone'])){
+				$data['outlet_phone'] = $value['store_phone'];
+			}
+            // $data['outlet_status'] = $value['store_status'];
 
             $save = Outlet::updateOrCreate(['outlet_code' => $value['store_code']], $data);
 
@@ -302,7 +310,7 @@ class ApiPOS extends Controller
 			]);
 		}
 
-		$outlet = Outlet::where('outlet_code', $post['store_code'])->first();
+		$outlet = Outlet::where('outlet_code', strtoupper($post['store_code']))->first();
 		if($outlet){
 			DB::beginTransaction();
 			$countInsert = 0;
@@ -554,7 +562,7 @@ class ApiPOS extends Controller
                     $emailSync = explode(',', $emailSync->value);
                     foreach ($emailSync as $key => $to) {
     
-                        $subject = 'Rejected product form menu sync raptor';
+                        $subject = 'Rejected product from menu sync raptor';
                         
                         $content['sync_datetime'] = $syncDatetime;
                         $content['outlet_code'] = $outlet->outlet_code;
@@ -732,7 +740,7 @@ class ApiPOS extends Controller
             return response()->json($api);
         }
 
-        $checkOutlet = Outlet::where('outlet_code', $post['store_code'])->first();
+        $checkOutlet = Outlet::where('outlet_code', strtoupper($post['store_code']))->first();
         if (empty($checkOutlet)) {
             DB::rollback();
             return response()->json(['status' => 'fail', 'messages' => ['Store not found']]);
@@ -987,7 +995,7 @@ class ApiPOS extends Controller
 									DB::rollback();
 									return response()->json([
 										'status'    => 'fail',
-										'messages'  => ['Voucher '.$valueV['voucher_code']. ' cannot be used at this outlet.']
+										'messages'  => ['Voucher '.$valueV['voucher_code']. ' cannot be used at this store.']
 									]);
 								}
 							}
@@ -1585,7 +1593,7 @@ class ApiPOS extends Controller
             return response()->json($api);
         }
 
-        $checkOutlet = Outlet::where('outlet_code', $post['store_code'])->first();
+        $checkOutlet = Outlet::where('outlet_code', strtoupper($post['store_code']))->first();
         if (empty($checkOutlet)) {
             return response()->json(['status' => 'fail', 'messages' => ['Store not found']]);
 		}
@@ -1606,4 +1614,426 @@ class ApiPOS extends Controller
 		
 		return response()->json(MyHelper::checkGet($trx));
 	}
+
+	public function syncOutletMenu(reqBulkMenu $request){
+		$post = $request->json()->all();
+
+        $syncDatetime = date('d F Y h:i');
+
+		$apikey = Setting::where('key', 'api_key')->first()->value;
+		$apisecret = Setting::where('key', 'api_secret')->first()->value;
+		if($post['api_key'] != $apikey){
+			return response()->json([
+				'status'    => 'fail',
+				'messages'  => ['Api key doesn\'t match.']
+			]);
+		}
+		if($post['api_secret'] != $apisecret){
+			return response()->json([
+				'status'    => 'fail',
+				'messages'  => ['Api secret doesn\'t match.']
+			]);
+		}
+
+		DB::beginTransaction();
+		$hasil = [];
+		$isReject = false;
+		foreach($post['store'] as $dataoutlet){
+			$outlet = Outlet::where('outlet_code', strtoupper($dataoutlet['store_code']))->first();
+			//update
+			if($outlet){
+				if(isset($dataoutlet['store_name'])){
+					$outlet->outlet_name = $dataoutlet['store_name'];
+				}
+				if(isset($dataoutlet['store_address'])){
+					$outlet->outlet_address = $dataoutlet['store_address'];
+				}
+				if(isset($dataoutlet['store_phone'])){
+					$outlet->outlet_phone = $dataoutlet['store_phone'];
+				}
+				$outlet->save();
+			}
+			//insert
+			else{
+				$dataInsert['outlet_code'] = strtoupper($dataoutlet['store_code']);
+				if(!isset($dataoutlet['store_name'])){
+					DB::rollback();
+					return response()->json([
+						'status'   => 'fail',
+						'messages' => ['Store with code '.$dataoutlet['store_code'].' not found.', 'Add store_name to create a new data store.']
+					]);
+				}
+				$dataInsert['outlet_name'] = $dataoutlet['store_name'];
+				if(isset($dataoutlet['store_address'])){
+					$outlet->outlet_address = $dataoutlet['store_address'];
+				}
+				if(isset($dataoutlet['store_phone'])){
+					$outlet->outlet_phone = $dataoutlet['store_phone'];
+				}
+				$dataInsert['outlet_status'] = 'Inactive';
+				$outlet = Outlet::create($dataInsert);
+			}
+			
+            if (!$outlet) {
+				DB::rollback();
+				return response()->json([
+					'status'   => 'fail',
+					'messages' => ['fail to sync']
+				]);
+			}
+			    
+			if($outlet){
+				$countInsert = 0;
+				$countUpdate = 0;
+				$rejectedProduct = [];
+				$updatedProduct = [];
+				$insertedProduct = [];
+				
+				foreach($dataoutlet['menu'] as $key => $menu){
+					$product = Product::where('product_code', $menu['plu_id'])->first();
+					// return response()->json($menu);
+					// update product
+					if($product){
+						// cek allow sync, jika 0 product tidak di update
+						if($product->product_allow_sync == '1'){
+	
+							// cek name pos, jika beda product tidak di update
+							if(empty($product->product_name_pos) || $product->product_name_pos == $menu['name']){
+								$update = $product->update(['product_name_pos' => $menu['name']]);
+								if($update){
+									// update modifiers 
+									if(isset($menu['modifiers'])){
+										if(!empty($menu['modifiers'])){
+											foreach($menu['modifiers'] as $mod){
+												$dataProductMod['type'] = $mod['type'];
+												if(isset($mod['text']))
+													$dataProductMod['text'] = $mod['text'];
+												else
+													$dataProductMod['text'] = null;
+												
+												$updateProductMod = ProductModifier::updateOrCreate([
+															'id_product' => $product->id_product, 
+															'code'  => $mod['code']
+															], $dataProductMod);
+											}
+										}
+									}
+									
+									// update price 
+									$productPrice = ProductPrice::where('id_product', $product->id_product)->where('id_outlet', $outlet->id_outlet)->first();
+									if($productPrice){
+										$oldPrice =  $productPrice->product_price;
+										$oldUpdatedAt =  $productPrice->updated_at->format('Y-m-d H:i:s');
+									}else{
+										$oldPrice = null;
+										$oldUpdatedAt = null;
+									}
+		
+									$dataProductPrice['product_price'] = (int)$menu['price'];
+									$dataProductPrice['product_price_base'] = (int)$menu['price_base'];
+									$dataProductPrice['product_price_tax'] = (int)$menu['price_tax'];
+									$dataProductPrice['product_status'] = $menu['status'];
+									
+									$updateProductPrice = ProductPrice::updateOrCreate([
+														'id_product' => $product->id_product, 
+														'id_outlet'  => $outlet->id_outlet
+														], $dataProductPrice); 
+			
+									if(!$updateProductPrice){
+										DB::rollBack();
+										return response()->json([
+											'status'    => 'fail',
+											'messages'  => ['Something went wrong.']
+										]);
+									}else{
+	
+										//upload photo
+										$imageUpload = [];
+										if(isset($menu['photo'])){
+											foreach($menu['photo'] as $photo){
+												$image = file_get_contents($photo['url']);
+												$img = base64_encode($image);
+												if (!file_exists('img/product/item/')) {
+													mkdir('img/product/item/', 0777, true);
+												}
+	
+												$upload = MyHelper::uploadPhotoStrict($img, 'img/product/item/', 300, 300);
+		
+												if (isset($upload['status']) && $upload['status'] == "success") {
+													$orderPhoto = ProductPhoto::where('id_product', $product->id_product)->orderBy('product_photo_order', 'desc')->first();
+													if($orderPhoto){
+														$orderPhoto = $orderPhoto->product_photo_order + 1;
+													}else{
+														$orderPhoto = 1;
+													}
+													$dataPhoto['id_product'] = $product->id_product;
+													$dataPhoto['product_photo'] = $upload['path'];
+													$dataPhoto['product_photo_order'] = $orderPhoto;
+	
+													$photo = ProductPhoto::create($dataPhoto);
+													if(!$photo){
+														DB::rollBack();
+														$result = [
+															'status'   => 'fail',
+															'messages' => ['fail upload image']
+														];
+			
+														return response()->json($result);
+													}
+	
+													//add in array photo
+													$imageUpload[] = $photo['product_photo'];  
+												}else{
+													DB::rollBack();
+													$result = [
+														'status'   => 'fail',
+														'messages' => ['fail upload image']
+													];
+		
+													return response()->json($result);
+												}
+											}
+										}
+	
+										$countUpdate++;
+										
+										// list updated product utk data log
+										$newProductPrice = ProductPrice::where('id_product', $product->id_product)->where('id_outlet', $outlet->id_outlet)->first();
+										$newUpdatedAt =  $newProductPrice->updated_at->format('Y-m-d H:i:s');
+		
+										$updateProd['id_product'] = $product['id_product']; 
+										$updateProd['plu_id'] = $product['product_code']; 
+										$updateProd['product_name'] = $product['product_name']; 
+										$updateProd['old_price'] = $oldPrice;
+										$updateProd['new_price'] = (int)$menu['price'];
+										$updateProd['old_updated_at'] = $oldUpdatedAt;
+										$updateProd['new_updated_at'] = $newUpdatedAt;
+										if(count($imageUpload) > 0){
+											$updateProd['new_photo'] = $imageUpload;
+										}
+	
+										$updatedProduct[] = $updateProd;
+									}
+								}else{
+									DB::rollBack();
+									return response()->json([
+										'status'    => 'fail',
+										'messages'  =>  ['Something went wrong.']
+									]);
+								}
+							}else{
+								// Add product to rejected product
+								$productPrice = ProductPrice::where('id_outlet', $outlet->id_outlet)->where('id_product', $product->id_product)->first();
+								
+								$dataBackend['plu_id'] = $product->product_code;
+								$dataBackend['name'] = $product->product_name_pos;
+								if(empty($productPrice)){
+									$dataBackend['price'] = '';
+								}else{
+									$dataBackend['price'] = number_format($productPrice->product_price,0,',','.');
+								}
+		
+								$dataRaptor['plu_id'] = $menu['plu_id'];
+								$dataRaptor['name'] = $menu['name'];
+								$dataRaptor['price'] = number_format($menu['price'],0,',','.');
+								array_push($rejectedProduct, ['backend' => $dataBackend, 'raptor' => $dataRaptor]);
+								$isReject = true;
+							}
+						}
+					}
+					
+					// insert product
+					else{
+						$create = Product::create([ 'product_code' => $menu['plu_id'], 'product_name_pos' => $menu['name'], 'product_name' => $menu['name']]);
+						if($create){
+							// update price
+							$dataProductPrice['product_price'] = (int)$menu['price'];
+							$dataProductPrice['product_price_base'] = (int)$menu['price_base'];
+							$dataProductPrice['product_price_tax'] = (int)$menu['price_tax'];
+							$dataProductPrice['product_status'] = $menu['status'];
+						   
+							$updateProductPrice = ProductPrice::updateOrCreate([
+													'id_product' => $create->id_product, 
+													'id_outlet'  => $outlet->id_outlet
+												  ], $dataProductPrice); 
+							
+							if(!$updateProductPrice){
+								DB::rollBack();
+								return response()->json([
+									'status'    => 'fail',
+									'messages'  => ['Something went wrong.']
+								]);
+							}else{
+	
+								 //upload photo
+								 $imageUpload = [];
+								 if(isset($menu['photo'])){
+									 foreach($menu['photo'] as $photo){
+										 $image = file_get_contents($photo['url']);
+										 $img = base64_encode($image);
+										 if (!file_exists('img/product/item/')) {
+											 mkdir('img/product/item/', 0777, true);
+										 }
+	
+										 $upload = MyHelper::uploadPhotoStrict($img, 'img/product/item/', 300, 300);
+	
+										 if (isset($upload['status']) && $upload['status'] == "success") {
+											 $dataPhoto['id_product'] = $product->id_product;
+											 $dataPhoto['product_photo'] = $upload['path'];
+											 $dataPhoto['product_photo_order'] = 1;
+	
+											 $photo = ProductPhoto::create($dataPhoto);
+											 if(!$photo){
+												 DB::rollBack();
+												 $result = [
+													 'status'   => 'fail',
+													 'messages' => ['fail upload image']
+												 ];
+	 
+												 return response()->json($result);
+											 }
+	
+											 //add in array photo
+											 $imageUpload[] = $photo['product_photo']; 
+										 }else{
+											 DB::rollBack();
+											 $result = [
+												 'status'   => 'fail',
+												 'messages' => ['fail upload image']
+											 ];
+	
+											 return response()->json($result);
+										 }
+									 }
+								 }
+	
+								$countInsert++;
+	
+								// list new product utk data log
+								$insertProd['id_product'] = $create['id_product']; 
+								$insertProd['plu_id'] = $create['product_code']; 
+								$insertProd['product_name'] = $create['product_name']; 
+								$insertProd['price'] = (int)$menu['price'];
+								if(count($imageUpload) > 0){
+									$updateProd['new_photo'] = $imageUpload;
+								}
+	
+								$insertedProduct[] = $insertProd;
+							}
+						}
+					}
+				}
+
+				$hasil[] = [
+					"outlet"  => [
+						"id_outlet" => $outlet->id_outlet,
+						"outlet_code" => $outlet->outlet_code,
+						"outlet_name" => $outlet->outlet_name
+					],
+					"new_product" => [
+					    "total" => $countInsert,
+					    "list_product" => $insertedProduct
+					 ],
+					"updated_product" => [
+					    "total" => $countUpdate,
+					    "list_product" => $updatedProduct
+					 ],
+					"rejected_product" => [
+						"total" => count($rejectedProduct),
+						"list_product" => $rejectedProduct,
+					]
+				];
+	
+			}else{
+				DB::rollback();
+				return response()->json([
+					'status'    => 'fail',
+					'messages'  => ['store_code '.$dataoutlet['store_code'].' isn\'t match']
+				]);
+			}
+		}
+		
+		DB::commit();
+
+		// send email rejected product
+		if($isReject == true){
+
+			$emailSync = Setting::where('key', 'email_sync_menu')->first();
+			if(!empty($emailSync) && $emailSync->value != null){
+				$emailSync = explode(',', $emailSync->value);
+				foreach ($emailSync as $key => $to) {
+
+					$subject = 'Rejected product from outlet menu sync raptor';
+					
+					$content['sync_datetime'] = $syncDatetime;
+					$content['data'] = $hasil;
+
+					// get setting email
+					$getSetting = Setting::where('key', 'LIKE', 'email%')->get()->toArray();
+					$setting = array();
+					foreach ($getSetting as $key => $value) {
+						$setting[$value['key']] = $value['value']; 
+					}
+
+					$data = array(
+						'content' => $content,
+						'setting' => $setting
+					);
+
+					Mailgun::send('pos::email_sync_outlet_menu', $data, function($message) use ($to,$subject,$setting)
+					{
+						$message->to($to)->subject($subject)
+										->trackClicks(true)
+										->trackOpens(true);
+						if(!empty($setting['email_from']) && !empty($setting['email_sender'])){
+							$message->from($setting['email_from'], $setting['email_sender']);
+						}else if(!empty($setting['email_from'])){
+							$message->from($setting['email_from']);
+						}
+
+						if(!empty($setting['email_reply_to'])){
+							$message->replyTo($setting['email_reply_to'], $setting['email_reply_to_name']);
+						}
+
+						if(!empty($setting['email_cc']) && !empty($setting['email_cc_name'])){
+							$message->cc($setting['email_cc'], $setting['email_cc_name']);
+						}
+
+						if(!empty($setting['email_bcc']) && !empty($setting['email_bcc_name'])){
+							$message->bcc($setting['email_bcc'], $setting['email_bcc_name']);
+						}
+					});
+				}
+			}
+		}
+		
+		return response()->json([
+			'status'    => 'success',
+			'result'  => $hasil,
+		]);
+    }
+
+    public function syncOutletMenuReturn(reqBulkMenu $request){
+        // call function syncMenu
+        $url = env('API_URL').'api/v1/pos/outlet/menu/sync';
+        $syncMenu = MyHelper::post($url, MyHelper::getBearerToken(), $request->json()->all());
+
+        // return sesuai api raptor
+        if(isset($syncMenu['status']) && $syncMenu['status'] == 'success'){
+			$hasil = [];
+			foreach($syncMenu['result'] as $result){
+				$hasil[] = [
+					"store_code" => $result['outlet']['outlet_code'],
+					"inserted" => $result['new_product']['total'],
+					"updated" => $result['updated_product']['total'],
+					"rejected" => $result['rejected_product']['total'],
+				];
+			}
+            return response()->json([
+				'status'    => 'success',
+                'result'  => $hasil
+			]);
+        }
+        return $syncMenu;
+    }
 }

@@ -308,9 +308,11 @@ class ApiMembership extends Controller
 				// untuk membership yang gak pakai retain 
 				else{
 					$trx_count = Transaction::where('id_user',$check['id'])
+											->where('transaction_payment_status', 'Completed')
 											->count('transaction_subtotal');
 					
 					$trx_value = Transaction::where('id_user',$check['id'])
+											->where('transaction_payment_status', 'Completed')
 											->sum('transaction_subtotal');
 
 					$membership_baru = null;

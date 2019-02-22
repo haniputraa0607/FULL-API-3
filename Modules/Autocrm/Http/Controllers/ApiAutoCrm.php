@@ -41,7 +41,7 @@ class ApiAutoCrm extends Controller
 		$this->apiwha = new apiwha();
     }
 	
-	function SendAutoCRM($autocrm_title, $receipient, $variables = null){
+	function SendAutoCRM($autocrm_title, $receipient, $variables = null, $useragent = null){
 		$query = Autocrm::where('autocrm_title','=',$autocrm_title)->with('whatsapp_content')->get()->toArray();
 		$users = User::where('phone','=',$receipient)->get()->toArray();
 		if(empty($users)){
@@ -178,7 +178,9 @@ class ApiAutoCrm extends Controller
 
 					//add <#> and Hash Key in pin sms content
 					if($crm['autocrm_title'] == 'Pin Sent'){
-						$crm['autocrm_sms_content'] = '<#> '.$crm['autocrm_sms_content'].' '.ENV('HASH_KEY_'.ENV('HASH_KEY_TYPE'));
+						if($useragent && $useragent == "Android"){
+							$crm['autocrm_sms_content'] = '<#> '.$crm['autocrm_sms_content'].' '.ENV('HASH_KEY_'.ENV('HASH_KEY_TYPE'));
+						}
 					}
 
 					$content 	= $this->TextReplace($crm['autocrm_sms_content'], $user['phone'], $variables);
@@ -287,7 +289,15 @@ class ApiAutoCrm extends Controller
 								} else {
 									$dataOptional['id_reference'] = 0;
 								}
-							} else {
+							}
+							elseif ($dataOptional['type'] == 'Voucher') {
+								if (isset($variables['id_deals_user'])) {
+									$dataOptional['id_reference'] = $variables['id_deals_user'];
+								} else {
+									$dataOptional['id_reference'] = 0;
+								}
+							} 
+							else {
 								$dataOptional['id_reference'] = 0;
 							}
 						}
@@ -352,7 +362,15 @@ class ApiAutoCrm extends Controller
 							} else {
 								$inbox['inboxes_id_reference'] = 0;
 							}
-						} else {
+						} 
+						elseif ($dataOptional['type'] == 'Voucher') {
+							if (isset($variables['id_deals_user'])) {
+								$dataOptional['id_reference'] = $variables['id_deals_user'];
+							} else {
+								$dataOptional['id_reference'] = 0;
+							}
+						} 
+						else {
 							$inbox['inboxes_id_reference'] = 0;
 						}
 					}

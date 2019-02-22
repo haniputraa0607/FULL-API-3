@@ -767,15 +767,10 @@ Detail: ".$link['short'],
 
         $userData = User::find($trx['id_user']);
 
-        $totalTrx = Transaction::where('id_user', $trx['id_user'])->where('transaction_payment_status', 'Completed')->sum('transaction_subtotal');
-        $countTrx = Transaction::where('id_user', $trx['id_user'])->where('transaction_payment_status', 'Completed')->count('*');
-        
         //update count transaction
         $updateCountTrx = User::where('id', $userData['id'])->update([
             'count_transaction_day' => $userData['count_transaction_day'] + 1, 
             'count_transaction_week' => $userData['count_transaction_week'] + 1,
-            'subtotal_transaction'  => $totalTrx,
-            'count_transaction'  => $countTrx
         ]);
 
         if (!$updateCountTrx) {
@@ -797,9 +792,9 @@ Detail: ".$link['short'],
         //cek fraud detection transaction per week (last 7 days)
         $fraudTrxWeek = FraudSetting::where('parameter', 'LIKE', '%transactions in 1 week%')->first();
         if($fraudTrxWeek && $fraudTrxWeek['parameter_detail'] != null){
-            if($userData['count_transaction_day'] >= $fraudTrxWeek['parameter_detail']){
+            if($userData['count_transaction_week'] >= $fraudTrxWeek['parameter_detail']){
                 //send fraud detection to admin
-                $sendFraud = app($this->setting_fraud)->SendFraudDetection($fraudTrxDay['id_fraud_setting'], $userData, $trx['id_transaction'], null);
+                $sendFraud = app($this->setting_fraud)->SendFraudDetection($fraudTrxWeek['id_fraud_setting'], $userData, $trx['id_transaction'], null);
             }
         }
 
