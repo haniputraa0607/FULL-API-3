@@ -13,6 +13,8 @@ Route::group(['prefix' => 'api/outlet', 'namespace' => 'Modules\Outlet\Http\Cont
         Route::get('city', 'ApiOutletController@cityOutlet');
         Route::any('nearme', 'ApiOutletController@nearMe');
         Route::any('filter', 'ApiOutletController@filter');
+        Route::any('nearme/geolocation', 'ApiOutletController@nearMeGeolocation');
+        Route::any('filter/geolocation', 'ApiOutletController@filterGeolocation');
         Route::any('schedule/save', 'ApiOutletController@scheduleSave');
         /* SYNC */
         Route::any('sync', 'ApiSyncOutletController@sync');

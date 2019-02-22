@@ -516,6 +516,70 @@ class ApiOutletController extends Controller
         return response()->json(MyHelper::checkGet($outlet));
     }
 
+    /* Near Me Geolocation, return geojson */
+    function nearMeGeolocation(Nearme $request) {
+        $latitude  = $request->json('latitude');
+        $longitude = $request->json('longitude');
+        
+        // outlet
+        $outlet = Outlet::with(['today', 'city', 'outlet_photos'])->orderBy('outlet_name','asc');
+        if($request->json('search') && $request->json('search') != ""){
+            $outlet = $outlet->where('outlet_name', 'LIKE', '%'.$request->json('search').'%');
+        }
+        $outlet = $outlet->get()->toArray();
+
+        if (!empty($outlet)) {
+            foreach ($outlet as $key => $value) {
+                $jaraknya =   number_format((float)$this->distance($latitude, $longitude, $value['outlet_latitude'], $value['outlet_longitude'], "K"), 2, '.', '');
+                settype($jaraknya, "float");
+
+                $outlet[$key]['distance'] = number_format($jaraknya, 2, '.', ',')." km";
+                $outlet[$key]['dist']     = (float) $jaraknya;
+            }
+            usort($outlet, function($a, $b) { 
+                return $a['dist'] <=> $b['dist']; 
+            }); 
+
+            if($request->json('type') && $request->json('type') == 'transaction'){
+                $outlet = $this->setAvailableOutlet($outlet);
+            }
+        }
+
+        if(isset($request['page']) && $request['page'] > 0){
+            $page = $request['page'];
+            $next_page = $page + 1;
+
+            $dataOutlet = $outlet;
+            $outlet = [];
+
+            $pagingOutlet = $this->pagingOutlet($dataOutlet, $page);
+            // format outlet data into geojson
+            $pagingOutlet['data'] = $this->geoJson($pagingOutlet['data']);
+
+            if (count($pagingOutlet) > 0) {
+                $outlet['status'] = 'success';
+                $outlet['current_page']  = $page;
+                $outlet['data']          = $pagingOutlet['data'];
+                $outlet['total']         = count($dataOutlet);
+                $outlet['next_page_url'] = null;
+    
+                if ($pagingOutlet['status'] == true) {
+                    $outlet['next_page_url'] = ENV('APP_API_URL').'api/outlet/nearme?page='.$next_page;
+                }
+            } else {
+                $outlet['status'] = 'fail';
+                $outlet['messages'] = ['empty'];
+                
+            }
+        }
+        else {
+            // format result into geojson
+            $outlet = $this->geoJson($outlet);
+        }
+
+        return response()->json(MyHelper::checkGet($outlet));
+    }
+
     public function pagingOutlet($data, $page) {
         $next = false;
 
@@ -543,7 +607,43 @@ class ApiOutletController extends Controller
         return ['data' => $data, 'status' => $next];
     }
 
-	 /* Filter*/
+    // create geojson format
+    private function geoJson ($locales) 
+    {
+        $original_data = $locales;
+        $features = array();
+
+        foreach($original_data as $key => $value) { 
+            $features[] = array(
+                    'type' => 'Feature',
+                    'geometry' => array(
+                        'type' => 'Point',
+                        'coordinates' => array(
+                            (float) $value['outlet_longitude'],
+                            (float) $value['outlet_latitude']
+                        )
+                    ),
+                    'properties' => array(
+                        'title' => $value['outlet_name'],
+                        'id_outlet' => $value['id_outlet'],
+                        'url' => $value['url'],
+                        'today' => $value['today'],
+                        // 'outlet_name' => $value['outlet_name'],
+                        // 'outlet_address' => $value['outlet_address'],
+                        // 'outlet_phone' => $value['outlet_phone'],
+                        // 'url' => $value['url'],
+                        // 'city_name' => $value['city']['city_name'],
+                        'distance' => $value['distance'],
+                        'dist' => $value['dist']
+                    ),
+                );
+            };   
+
+        $allfeatures = array('type' => 'FeatureCollection', 'features' => $features);
+        return $allfeatures;
+    }
+
+	/* Filter*/
     function filter(Filter $request) {
         $latitude  = $request->json('latitude');
         $longitude = $request->json('longitude');
@@ -628,6 +728,103 @@ class ApiOutletController extends Controller
                 $urutan['messages'] = ['empty'];
                 
             }
+        }
+
+        return response()->json(MyHelper::checkGet($urutan));
+    }
+
+    /* Filter Geolocation, return geojson */
+    function filterGeolocation(Filter $request) {
+        $latitude  = $request->json('latitude');
+        $longitude = $request->json('longitude');
+        $distance = $request->json('distance');
+        $id_city = $request->json('id_city');
+        $sort = $request->json('sort');
+        
+        // outlet
+        $outlet = Outlet::with(['today', 'city', 'outlet_photos'])->orderBy('outlet_name','asc');
+        if($request->json('search') && $request->json('search') != ""){
+            $outlet = $outlet->where('outlet_name', 'LIKE', '%'.$request->json('search').'%');
+        }
+        $outlet = $outlet->get()->toArray();
+        
+        
+        if (!empty($outlet)) {
+            foreach ($outlet as $key => $value) {
+                $jaraknya =   number_format((float)$this->distance($latitude, $longitude, $value['outlet_latitude'], $value['outlet_longitude'], "K"), 2, '.', '');
+                settype($jaraknya, "float");
+                
+                $outlet[$key]['distance'] = number_format($jaraknya, 2, '.', ',')." km";
+                $outlet[$key]['dist']     = (float) $jaraknya;
+                
+                if($distance == "0-2km"){
+                    if((float) $jaraknya < 0.01 || (float) $jaraknya > 2.00)
+                        unset($outlet[$key]);
+                }
+                
+                if($distance == "2-5km"){
+                    if((float) $jaraknya < 2.00 || (float) $jaraknya > 5.00)
+                        unset($outlet[$key]);
+                }
+                
+                if($distance == ">5km"){
+                    if((float) $jaraknya < 5.00)
+                        unset($outlet[$key]);
+                }
+                
+                if($id_city != "" && $id_city != $value['id_city']){
+                    unset($outlet[$key]);
+                }
+            }
+            if($sort != 'Alphabetical'){
+                usort($outlet, function($a, $b) { 
+                    return $a['dist'] <=>  $b['dist'];
+                }); 
+            }
+            $urutan = array();
+            if($outlet){
+                foreach($outlet as $o){
+                    array_push($urutan, $o);
+                }
+            }
+            
+            if($request->json('type') && $request->json('type') == 'transaction'){
+                $urutan = $this->setAvailableOutlet($urutan);
+            }
+        } else {
+            return response()->json(MyHelper::checkGet($outlet));
+        }
+
+        if(isset($request['page']) && $request['page'] > 0){
+            $page = $request['page'];
+            $next_page = $page + 1;
+
+            $dataOutlet = $urutan;
+            $urutan = [];
+
+            $pagingOutlet = $this->pagingOutlet($dataOutlet, $page);
+            // format outlet data into geojson
+            $pagingOutlet['data'] = $this->geoJson($pagingOutlet['data']);
+
+            if (count($pagingOutlet) > 0) {
+                $urutan['status'] = 'success';
+                $urutan['current_page']  = $page;
+                $urutan['data']          = $pagingOutlet['data'];
+                $urutan['total']         = count($dataOutlet);
+                $urutan['next_page_url'] = null;
+    
+                if ($pagingOutlet['status'] == true) {
+                    $urutan['next_page_url'] = ENV('APP_API_URL').'api/outlet/filter?page='.$next_page;
+                }
+            } else {
+                $urutan['status'] = 'fail';
+                $urutan['messages'] = ['empty'];
+                
+            }
+        }
+        else{
+            // format result into geojson
+            $urutan = $this->geoJson($urutan);
         }
 
         return response()->json(MyHelper::checkGet($urutan));
