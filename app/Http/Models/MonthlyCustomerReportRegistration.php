@@ -4,7 +4,7 @@ namespace App\Http\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class DailyReportTrxMenu extends Model
+class MonthlyCustomerReportRegistration extends Model
 {
 	protected $connection = 'mysql';
     /**
@@ -12,20 +12,17 @@ class DailyReportTrxMenu extends Model
      * 
      * @var string
      */
-    protected $table = 'daily_report_trx_menu';
+    protected $table = 'monthly_customer_report_registration';
 
-    protected $primaryKey = 'id_report_trx_menu';
+    protected $primaryKey = 'id_monthly_customer_report_registration';
 
     /**
      * @var array
      */
     protected $fillable = [
-        'trx_date',
-        'id_outlet',
-        'id_product',
-        'total_rec',
-        'total_qty',
-        'total_nominal',
+        'reg_month',
+        'reg_year',
+        'cust_total',
         'cust_male',
         'cust_female',
         'cust_android',
@@ -42,13 +39,8 @@ class DailyReportTrxMenu extends Model
         'cust_old'
     ];
 	
-    public function product()
+    public function membership()
     {
-        return $this->belongsTo(Product::class, 'id_product', 'id_product')->select('id_product', 'product_code', 'product_name');
-    }
-
-    public function outlet() 
-    {
-        return $this->belongsTo(Outlet::class, 'id_outlet', 'id_outlet');
+        return $this->belongsTo(Membership::class, 'id_membership', 'id_membership')->select('id_membership', 'membership_name');
     }
 }

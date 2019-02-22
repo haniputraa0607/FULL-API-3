@@ -4,7 +4,7 @@ namespace App\Http\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class DailyReportTrxMenu extends Model
+class MonthlyReportTrxMenu extends Model
 {
 	protected $connection = 'mysql';
     /**
@@ -12,15 +12,16 @@ class DailyReportTrxMenu extends Model
      * 
      * @var string
      */
-    protected $table = 'daily_report_trx_menu';
+    protected $table = 'monthly_report_trx_menu';
 
-    protected $primaryKey = 'id_report_trx_menu';
+    protected $primaryKey = 'id_monthly_report_trx_menu';
 
     /**
      * @var array
      */
     protected $fillable = [
-        'trx_date',
+        'trx_month',
+        'trx_year',
         'id_outlet',
         'id_product',
         'total_rec',
