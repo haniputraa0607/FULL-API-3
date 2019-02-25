@@ -7,6 +7,7 @@ use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
 
 use App\Http\Models\Transaction;
+use App\Http\Models\TransactionPaymentBalance;
 use App\Http\Models\DealsUser;
 use App\Http\Models\LogPoint;
 use App\Http\Models\LogBalance;
@@ -752,7 +753,7 @@ class ApiHistoryController extends Controller
 
                 $dataList['type']    = 'balance';
                 $dataList['id']      = $value['id_log_balance'];
-                $dataList['date']    = date('Y-m-d H:i:s', strtotime($value['cerated_at']));
+                $dataList['date']    = date('Y-m-d H:i:s', strtotime($value['created_at']));
                 $dataList['outlet']  = $trx['outlet']['outlet_name'];
                 if ($value['balance'] < 0) {
                     $dataList['amount'] = '- '.ltrim(number_format($value['balance'], 0, ',', '.'), '-');

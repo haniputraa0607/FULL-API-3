@@ -15,7 +15,7 @@ class ApiOutletGofoodController extends Controller
     {
         $post = $request->json()->all();
 
-        $list = Outlet::whereNotNull('deep_link')->get();
+        $list = Outlet::whereNotNull('deep_link')->where('outlet_status', 'Active')->get();
         $list = $list->map(function ($item, $key) use ($post) {
             $data['deep_link'] = $item->deep_link;
             $data['outlet'] = $item->outlet_name;
