@@ -19,7 +19,11 @@ use App\Http\Models\GlobalMonthlyReportTrxMenu;
 use App\Http\Models\DailyCustomerReportRegistration;
 use App\Http\Models\MonthlyCustomerReportRegistration;
 
+use App\Http\Models\DailyMembershipReport;
+use App\Http\Models\MonthlyMembershipReport;
+
 use App\Http\Models\Outlet;
+use App\Http\Models\Membership;
 
 use Modules\Report\Http\Controllers\ApiReportDua;
 use App\Lib\MyHelper;
@@ -38,6 +42,14 @@ class ApiSingleReport extends Controller
     public function getOutletList()
     {
         $data = Outlet::select('id_outlet', 'outlet_name', 'outlet_code')->get();
+
+        return response()->json(MyHelper::checkGet($data));
+    }
+
+    // get outlet list for report filter
+    public function getMembershipList()
+    {
+        $data = Membership::select('id_membership', 'membership_name')->get();
 
         return response()->json(MyHelper::checkGet($data));
     }
@@ -61,6 +73,7 @@ class ApiSingleReport extends Controller
                 $transactions = $this->trxDay($params);
                 $products = $this->productDay($params);
                 $registrations = $this->registrationDay($params);
+                $memberships = $this->membershipDay($params);
                 break;
 
             case 'month':
@@ -74,6 +87,7 @@ class ApiSingleReport extends Controller
                 $transactions = $this->trxMonth($params);
                 $products = $this->productMonth($params);
                 $registrations = $this->registrationMonth($params);
+                $memberships = $this->membershipMonth($params);
                 break;
 
             case 'year':
@@ -86,16 +100,22 @@ class ApiSingleReport extends Controller
                 $transactions = $this->trxYear($params);
                 $products = $this->productYear($params);
                 $registrations = $this->registrationMonth($params);
+                $memberships = $this->membershipMonth($params);
                 break;
 
             default:
+                return [
+                    'status' => 'fail',
+                    'messages' => ['Invalid time type']
+                ];
                 // day
-                $params['start_date'] = date("Y-m-d", strtotime("-1 week"));
+                /*$params['start_date'] = date("Y-m-d", strtotime("-1 week"));
                 $params['end_date']   = date('Y-m-d');
                 
                 $transactions = $this->trxDay($params);
                 $products = $this->productDay($params);
                 $registrations = $this->registrationDay($params);
+                $memberships = $this->membershipDay($params);*/
                 break;
         }
         // trx
@@ -103,16 +123,6 @@ class ApiSingleReport extends Controller
         $total_qty    = 0;
         $total_male   = 0;
         $total_female = 0;
-        // product
-        $product_total_nominal= 0;
-        $product_total_qty    = 0;
-        $product_total_male   = 0;
-        $product_total_female = 0;
-        // registration
-        $reg_total_male   = 0;
-        $reg_total_female = 0;
-        $reg_total_android= 0;
-        $reg_total_ios    = 0;
 
         // trx
         $trx_chart = [];
@@ -184,6 +194,11 @@ class ApiSingleReport extends Controller
         }
 
         // product
+        $product_total_nominal= 0;
+        $product_total_qty    = 0;
+        $product_total_male   = 0;
+        $product_total_female = 0;
+
         $product_chart = [];
         $product_gender_chart = [];
         $product_age_chart = [];
@@ -254,9 +269,14 @@ class ApiSingleReport extends Controller
         }
 
         // registration
-        $reg_chart = [];
+        $reg_total_male   = 0;
+        $reg_total_female = 0;
+        $reg_total_android= 0;
+        $reg_total_ios    = 0;
+
         $reg_gender_chart = [];
         $reg_age_chart = [];
+        $reg_device_chart = [];
         $reg_provider_chart = [];
         foreach ($registrations as $key => $item) {
             // set date for chart & table data
@@ -309,11 +329,86 @@ class ApiSingleReport extends Controller
                 'axis'      => (is_null($item['cust_axis']) ? 0 : $item['cust_axis']),
                 'smart'     => (is_null($item['cust_smart']) ? 0 : $item['cust_smart'])
             ];
-            // product card data
+            // reg card data
             $reg_total_male += $item['cust_male'];
             $reg_total_female += $item['cust_female'];
             $reg_total_android += $item['cust_android'];
             $reg_total_ios += $item['cust_ios'];
+        }
+
+        // membership
+        $mem_total_male   = 0;
+        $mem_total_female = 0;
+        $mem_total_android= 0;
+        $mem_total_ios    = 0;
+
+        $mem_chart = [];
+        $mem_gender_chart = [];
+        $mem_age_chart = [];
+        $mem_device_chart = [];
+        $mem_provider_chart = [];
+        foreach ($memberships as $key => $item) {
+            // set date for chart & table data
+            switch ($post['time_type']) {
+                case 'day':
+                    $item_date = date('d-m-Y', strtotime($item['mem_date']));
+                    $chart_date = $item['mem_date'];
+                    break;
+                case 'month':
+                    $item_date = date('F', strtotime($item['mem_month']));
+                    $chart_date = $item['mem_month'];
+                    break;
+                case 'year':
+                    $item_date = $item['mem_month'] ."-". $item['mem_year'];
+                    $chart_date = $item['mem_year'] ."-". $item['mem_month'];
+                    break;
+                default:
+                    break;
+            }
+
+            $memberships[$key]['date'] = $item_date;
+            
+            // membership chart data
+            $mem_chart[] = [
+                'date'      => $chart_date,
+                'cust_total'=> (is_null($item['cust_total']) ? 0 : $item['cust_total']),
+                'membership_name'=> (empty($item['membership']) ? "" : $item['membership']['membership_name'])
+            ];
+            // membership gender chart data
+            $mem_gender_chart[] = [
+                'date'      => $chart_date,
+                'male'      => (is_null($item['cust_male']) ? 0 : $item['cust_male']),
+                'female'    => (is_null($item['cust_female']) ? 0 : $item['cust_female'])
+            ];
+            // membership age chart data
+            $mem_age_chart[] = [
+                'date'      => $chart_date,
+                'teens'     => (is_null($item['cust_teens']) ? 0 : $item['cust_teens']),
+                'young_adult' => (is_null($item['cust_young_adult']) ? 0 : $item['cust_young_adult']),
+                'adult'     => (is_null($item['cust_adult']) ? 0 : $item['cust_adult']),
+                'old'       => (is_null($item['cust_old']) ? 0 : $item['cust_old'])
+            ];
+            // membership device chart data
+            $mem_device_chart[] = [
+                'date'      => $chart_date,
+                'android'   => (is_null($item['cust_android']) ? 0 : $item['cust_android']),
+                'ios'       => (is_null($item['cust_ios']) ? 0 : $item['cust_ios'])
+            ];
+            // membership provider chart data
+            $mem_provider_chart[] = [
+                'date'      => $chart_date,
+                'telkomsel' => (is_null($item['cust_telkomsel']) ? 0 : $item['cust_telkomsel']),
+                'xl'        => (is_null($item['cust_xl']) ? 0 : $item['cust_xl']),
+                'indosat'   => (is_null($item['cust_indosat']) ? 0 : $item['cust_indosat']),
+                'tri'       => (is_null($item['cust_tri']) ? 0 : $item['cust_tri']),
+                'axis'      => (is_null($item['cust_axis']) ? 0 : $item['cust_axis']),
+                'smart'     => (is_null($item['cust_smart']) ? 0 : $item['cust_smart'])
+            ];
+            // membership card data
+            $mem_total_male += $item['cust_male'];
+            $mem_total_female += $item['cust_female'];
+            $mem_total_android += $item['cust_android'];
+            $mem_total_ios += $item['cust_ios'];
         }
 
         // trx
@@ -351,6 +446,18 @@ class ApiSingleReport extends Controller
         $data['registrations']['reg_total_female'] = number_format($reg_total_female , 0, '', ',');
         $data['registrations']['reg_total_android'] = number_format($reg_total_android , 0, '', ',');
         $data['registrations']['reg_total_ios'] = number_format($reg_total_ios , 0, '', ',');
+
+        // membership
+        $data['memberships']['data'] = $memberships;
+        $data['memberships']['mem_chart'] = $mem_chart;
+        $data['memberships']['mem_gender_chart'] = $mem_gender_chart;
+        $data['memberships']['mem_age_chart'] = $mem_age_chart;
+        $data['memberships']['mem_device_chart'] = $mem_device_chart;
+        $data['memberships']['mem_provider_chart'] = $mem_provider_chart;
+        $data['memberships']['mem_total_male'] = number_format($mem_total_male , 0, '', ',');
+        $data['memberships']['mem_total_female'] = number_format($mem_total_female , 0, '', ',');
+        $data['memberships']['mem_total_android'] = number_format($mem_total_android , 0, '', ',');
+        $data['memberships']['mem_total_ios'] = number_format($mem_total_ios , 0, '', ',');
 
         return response()->json(MyHelper::checkGet($data));
     }
@@ -493,6 +600,53 @@ class ApiSingleReport extends Controller
         $trans = MonthlyCustomerReportRegistration::whereBetween('reg_year', [$params['start_year'], $params['end_year']])
             ->orderBy('reg_year')
             ->orderBy('reg_month')
+            ->get()->toArray();
+
+        return $trans;
+    }
+
+
+    // get membership report by date
+    public function membershipDay($params)
+    {
+        if (isset($params['id_membership'])) {
+            $trans = DailyMembershipReport::with('membership')
+                ->where('id_membership', $params['id_membership'])
+                ->whereBetween('mem_date', [
+                    date('Y-m-d', strtotime($params['start_date'])), 
+                    date('Y-m-d', strtotime($params['end_date']))
+                ])
+                ->orderBy('mem_date')->get()->toArray();
+        }
+        else {
+            $trans = DailyMembershipReport::with('membership')
+                ->whereBetween('mem_date', [
+                    date('Y-m-d', strtotime($params['start_date'])), 
+                    date('Y-m-d', strtotime($params['end_date']))
+                ])
+                ->orderBy('mem_date')->get()->toArray();
+        }
+
+        return $trans;
+    }
+    // get membership report by month
+    public function membershipMonth($params) 
+    {
+        $trans = MonthlyMembershipReport::with('membership')
+            ->where('mem_year', $params['year'])
+            ->whereBetween('mem_month', [$params['start_month'], $params['end_month']])
+            ->orderBy('mem_month')
+            ->get()->toArray();
+
+        return $trans;
+    }
+    // get membership report by year
+    public function membershipYear($params) 
+    {
+        $trans = MonthlyMembershipReport::with('membership')
+            ->whereBetween('mem_year', [$params['start_year'], $params['end_year']])
+            ->orderBy('mem_year')
+            ->orderBy('mem_month')
             ->get()->toArray();
 
         return $trans;

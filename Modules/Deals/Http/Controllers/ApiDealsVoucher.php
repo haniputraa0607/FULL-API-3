@@ -303,7 +303,7 @@ class ApiDealsVoucher extends Controller
         $voucher = $this->kotacuks($voucher);
 
         // add webview url & btn text
-        if (isset($post['used'])) {
+        /*if (isset($post['used'])) {
             if ($post['used'] == 0) {
                 foreach($voucher as $index => $dataVou){
                     $voucher[$index]['webview_url'] = env('APP_URL') ."webview/voucher/". $dataVou['id_deals_user'];
@@ -315,6 +315,14 @@ class ApiDealsVoucher extends Controller
                     $voucher[$index]['webview_url'] = env('APP_URL') ."webview/voucher/used/". $dataVou['id_deals_user'];
                 }
             }
+        }*/
+        if (isset($post['used']) && $post['used'] == 0) {
+            
+                foreach($voucher as $index => $dataVou){
+                    $voucher[$index]['webview_url'] = env('APP_URL') ."webview/voucher/". $dataVou['id_deals_user'];
+                    $voucher[$index]['button_text'] = 'INVALIDATE';
+                }
+            
         }
 
         // if voucher detail, no need pagination
