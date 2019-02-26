@@ -7,10 +7,13 @@ use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
 
 use App\Http\Models\Transaction;
+use App\Http\Models\TransactionPaymentBalance;
 use App\Http\Models\DealsUser;
 use App\Http\Models\LogPoint;
 use App\Http\Models\LogBalance;
 use App\Http\Models\Configs;
+use App\Http\Models\TransactionMultiplePayment;
+use App\Http\Models\TransactionPaymentMidtran;
 
 use App\Lib\MyHelper;
 
@@ -496,13 +499,34 @@ class ApiHistoryController extends Controller
             // $transaction[$key]['type'] = 'trx';
             // $transaction[$key]['outlet'] = $value['outlet']['outlet_name'];
             
-            $dataList['type'] = 'trx';
-            $dataList['id'] = $value['transaction_receipt_number'];
-            $dataList['date'] = $value['transaction_date'];
-            $dataList['outlet'] = $value['outlet']['outlet_name'];
-            $dataList['amount'] = number_format($value['transaction_grandtotal'], 0, ',', '.');
+            //cek payment
+            if($value['trasaction_payment_type']){
+                $found = false;
+                if($value['trasaction_type'] == 'Midtrans'){
+                    $pay = TransactionMultiplePayment::where('id_transaction', $value['id_transaction'])->first();
+                    if($pay){
+                        $found = true;
+                    }else{
+                        $payMidtrans = TransactionPaymentMidtran::where('id_transaction', $value['id_transaction'])->first();
+                        if($payMidtrans){
+                            $found = true;
+                        }
+                    }
+                }else{
+                    $found = true;
+                }
 
-            $listTransaction[] = $dataList;
+                if($found == true){
+                    $dataList['type'] = 'trx';
+                    $dataList['id'] = $value['transaction_receipt_number'];
+                    $dataList['date'] = $value['transaction_date'];
+                    $dataList['outlet'] = $value['outlet']['outlet_name'];
+                    $dataList['amount'] = number_format($value['transaction_grandtotal'], 0, ',', '.');
+        
+                    $listTransaction[] = $dataList;
+                }
+            }
+
         }
 
         return $listTransaction;
@@ -729,7 +753,7 @@ class ApiHistoryController extends Controller
 
                 $dataList['type']    = 'balance';
                 $dataList['id']      = $value['id_log_balance'];
-                $dataList['date']    = date('Y-m-d H:i:s', strtotime($trx['transaction_date']));
+                $dataList['date']    = date('Y-m-d H:i:s', strtotime($value['created_at']));
                 $dataList['outlet']  = $trx['outlet']['outlet_name'];
                 if ($value['balance'] < 0) {
                     $dataList['amount'] = '- '.ltrim(number_format($value['balance'], 0, ',', '.'), '-');

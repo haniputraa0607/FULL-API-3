@@ -73,40 +73,38 @@ class ApiHome extends Controller
         if (!empty($setting)) {
             $gofood = $setting->value;
         }
-        // add full url to collection
-        $banners = $banners->map(function ($banner, $key) use ($gofood, $banners) {
-            $item['image_url']  = url($banner->image);
-            $item['id_news']    = $banner->id_news;
-            $item['news_title'] = "";
-            $item['url']        = $banner->url;
-            $item['type']       = $banner->type;
 
-            if ($banner->id_news != "") {
-                $item['news_title'] = $banner->news->news_title;
-                // if news, generate webview news detail url
-                $item['url']        = env('APP_URL') .'news/webview/'. $banner->id_news;
-            }
-
-            if ($gofood == 0) {
-                if ($banner->type == 'general') {
-                    return $item;
-                } else {
-                    unset($banners[$key]);
-                }
-            } else {
-                return $item;
-            }
-        });
-
-        $banners->all();
+        if (empty($banners)) {
+            return $banners;
+        }
+        $array = [];
 
         foreach ($banners as $key => $value) {
-            if (empty($value)) {
-                unset($banners[$key]);
+            if ($gofood == 0) {
+                continue;
             }
+
+            $item['image_url']  = url($value->image);
+            $item['id_news']    = $value->id_news;
+            $item['news_title'] = "";
+            $item['url']        = $value->url;
+
+            if ($value->id_news != "") {
+                $item['news_title'] = $value->news->news_title;
+                // if news, generate webview news detail url
+                $item['url']        = env('APP_URL') .'news/webview/'. $value->id_news;
+            }
+
+            if ($value->type == 'gofood') {
+                $item['id_news'] = 99999999;
+                $item['news_title'] = "GO-FOOD";
+                $item['url']     = env('APP_URL').'outlet/webview/gofood/list';
+            }
+
+            array_push($array, $item);
         }
 
-        return $banners;
+        return $array;
     }
 	
     public function refreshPointBalance(Request $request) {

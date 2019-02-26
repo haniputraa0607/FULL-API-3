@@ -22,7 +22,7 @@ class MonthlyCustomerReportRegistration extends Model
     protected $fillable = [
         'reg_month',
         'reg_year',
-        'cust_total',
+        'total',
         'cust_male',
         'cust_female',
         'cust_android',

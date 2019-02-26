@@ -131,7 +131,7 @@ class ApiDealsInvalidate extends Controller
         $deals = DealsUser::join('deals_vouchers', 'deals_vouchers.id_deals_voucher', '=', 'deals_users.id_deals_voucher')
         ->leftjoin('deals_outlets', 'deals_vouchers.id_deals', '=', 'deals_outlets.id_deals')
         ->leftjoin('outlets', 'outlets.id_outlet', '=', 'deals_outlets.id_outlet')
-        ->where('outlet_code', $outlet_code)
+        ->where('outlet_code', strtoupper($outlet_code))
         ->where('id_user', $user->id)
         ->where('id_deals_user', $id_deals_user)
         ->with('user', 'dealVoucher', 'dealVoucher.deal')

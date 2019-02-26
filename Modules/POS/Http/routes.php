@@ -13,12 +13,14 @@ Route::group(['prefix' => 'api/v1/pos/', 'namespace' => 'Modules\POS\Http\Contro
         Route::any('voucher/void', 'ApiPOS@voidVoucher');
         Route::post('outlet/sync', 'ApiPOS@syncOutlet');
         Route::post('menu/sync', 'ApiPOS@syncMenu');
+        Route::post('outlet/menu/sync', 'ApiPOS@syncOutletMenu');
         Route::any('transaction', 'ApiPOS@transaction');
         Route::any('transaction/refund', 'ApiPOS@transactionRefund');
         Route::any('transaction/detail', 'ApiPOS@transactionDetail');
     });
     Route::group(['middleware' => 'auth_client'], function() {
         Route::any('menu', 'ApiPOS@syncMenuReturn');
+        Route::post('outlet/menu', 'ApiPOS@syncOutletMenuReturn');
         Route::post('transaction/last', 'ApiPOS@getLastTransaction');
     });
 });

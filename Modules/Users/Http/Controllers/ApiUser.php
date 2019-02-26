@@ -843,6 +843,15 @@ class ApiUser extends Controller
 		if(substr($phone, 0, 1) != '0'){
 			$phone = '0'.$phone;
 		}
+
+		$charAt2 = substr($phone, 1, 1);
+		if($charAt2 != '8'){
+			return response()->json([
+				'status' => 'fail',
+				'messages' => ['Hanya dapat digunakan untuk nomor Indonesia dengan format 08xxx atau +628xxx']
+			]);
+		}
+
         $data = User::with('city')->where('phone', '=', $phone)->get()->toArray();
         return MyHelper::checkGet($data);
     }
@@ -911,7 +920,9 @@ class ApiUser extends Controller
 																	['pin' => $pin, 
 																	 'useragent' => $useragent, 
 																	 'now' => date('Y-m-d H:i:s')
-																	]); 
+																	],
+																	$useragent
+																); 
 			}
 			
 			app($this->membership)->calculateMembership($phone);
@@ -1159,7 +1170,7 @@ class ApiUser extends Controller
 					$autocrm = app($this->autocrm)->SendAutoCRM('Pin Sent', $phone, 
 																	['pin' => $pinnya,
 																	'useragent' => $useragent, 
-																	 'now' => date('Y-m-d H:i:s')]); 
+																	 'now' => date('Y-m-d H:i:s')], $useragent); 
 				}
 				
 				$result = [
@@ -1224,7 +1235,7 @@ class ApiUser extends Controller
 			$autocrm = app($this->autocrm)->SendAutoCRM('Pin Sent', $request->json('phone'), 
 																	['pin' => $pin,
 																	'useragent' => $useragent, 
-																	 'now' => date('Y-m-d H:i:s')]);
+																	 'now' => date('Y-m-d H:i:s')], $useragent);
 			
 			$result = [
                         'status'	=> 'success',
@@ -1384,7 +1395,7 @@ class ApiUser extends Controller
 																		['pin' => $pin, 
 																		 'useragent' => $useragent, 
 																		 'now' => date('Y-m-d H:i:s')
-																		]); 
+																		], $useragent); 
 				}
 			}
 		}

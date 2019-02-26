@@ -79,10 +79,66 @@ class ApiOnlineTransaction extends Controller
         $dataDetailProduct = [];
         $userTrxProduct = [];
 
+        $outlet = Outlet::where('id_outlet', $post['id_outlet'])->with('today')->first();
+        if (empty($outlet)) {
+            DB::rollback();
+            return response()->json([
+                'status'    => 'fail',
+                'messages'  => ['Outlet Not Found']
+                ]);
+        }
+
+        $issetDate = false;
         if (isset($post['transaction_date'])) {
+            $issetDate = true;
             $post['transaction_date'] = date('Y-m-d H:i:s', strtotime($post['transaction_date']));
         } else {
             $post['transaction_date'] = date('Y-m-d H:i:s');
+        }
+
+        //cek outlet holiday
+        if($issetDate == false){
+            $holiday = Holiday::join('outlet_holidays', 'holidays.id_holiday', 'outlet_holidays.id_holiday')->join('date_holidays', 'holidays.id_holiday', 'date_holidays.id_holiday')
+                    ->where('id_outlet', $outlet['id_outlet'])->whereDay('date_holidays.date', date('d'))->whereMonth('date_holidays.date', date('m'))->get();
+            if(count($holiday) > 0){
+                foreach($holiday as $i => $holi){
+                    if($holi['yearly'] == '0'){
+                        if($holi['date'] == date('Y-m-d')){
+                            DB::rollback();
+                            return response()->json([
+                                'status'    => 'fail',
+                                'messages'  => ['Outlet tutup']
+                            ]);
+                        }
+                    }else{
+                        DB::rollback();
+                        return response()->json([
+                            'status'    => 'fail',
+                            'messages'  => ['Outlet tutup']
+                        ]);
+                    }
+                }
+            }
+    
+            $settingTime = Setting::where('key', 'processing_time')->first();
+            if($settingTime && $settingTime->value){
+                if($outlet['today']['close'] && date('H:i') > date('H:i', strtotime('+'.$settingTime->value.' minutes' ,strtotime($outlet['today']['close'])))){
+                    DB::rollback();
+                    return response()->json([
+                        'status'    => 'fail',
+                        'messages'  => ['Outlet tutup']
+                    ]);    
+                }
+            }
+    
+            //cek outlet open - close hour
+            if(($outlet['today']['open'] && date('H:i') < date('H:i', strtotime($outlet['today']['open']))) || ($outlet['today']['close'] && date('H:i') > date('H:i', strtotime($outlet['today']['close'])))){
+                DB::rollback();
+                return response()->json([
+                    'status'    => 'fail',
+                    'messages'  => ['Outlet tutup']
+                ]);    
+            }
         }
 
         if (isset($post['transaction_payment_status'])) {
@@ -126,47 +182,6 @@ class ApiOnlineTransaction extends Controller
             }
         }
         
-        $outlet = Outlet::where('id_outlet', $post['id_outlet'])->with('today')->first();
-        if (empty($outlet)) {
-            DB::rollback();
-            return response()->json([
-                'status'    => 'fail',
-                'messages'  => ['Outlet Not Found']
-                ]);
-            }
-            
-        //cek outlet holiday
-        $holiday = Holiday::join('outlet_holidays', 'holidays.id_holiday', 'outlet_holidays.id_holiday')->join('date_holidays', 'holidays.id_holiday', 'date_holidays.id_holiday')
-                ->where('id_outlet', $outlet['id_outlet'])->whereDay('date_holidays.date', date('d'))->whereMonth('date_holidays.date', date('m'))->get();
-        if(count($holiday) > 0){
-            foreach($holiday as $i => $holi){
-                if($holi['yearly'] == '0'){
-                    if($holi['date'] == date('Y-m-d')){
-                        DB::rollback();
-                        return response()->json([
-                            'status'    => 'fail',
-                            'messages'  => ['Outlet Is Closed']
-                        ]);
-                    }
-                }else{
-                    DB::rollback();
-                    return response()->json([
-                        'status'    => 'fail',
-                        'messages'  => ['Outlet Is Closed']
-                    ]);
-                }
-            }
-        }
-
-        //cek outlet open - close hour
-        if(($outlet['today']['open'] && date('H:i') < date('H:i', strtotime($outlet['today']['open']))) || ($outlet['today']['close'] && date('H:i') > date('H:i', strtotime($outlet['today']['close'])))){
-            DB::rollback();
-            return response()->json([
-                'status'    => 'fail',
-                'messages'  => ['Outlet Is Closed']
-            ]);    
-        }
-
         $totalDisProduct = 0;
 
         // $productDis = $this->countDis($post);
@@ -456,6 +471,15 @@ class ApiOnlineTransaction extends Controller
             'void_date'                   => null,
         ];
 
+        $useragent = $_SERVER['HTTP_USER_AGENT'];
+        if(stristr($useragent,'iOS')) $useragent = 'IOS';
+        if(stristr($useragent,'okhttp')) $useragent = 'Android';
+        else $useragent = null;
+
+        if($useragent){
+            $transaction['transaction_device_type'] = $useragent;
+        }
+
         $insertTransaction = Transaction::create($transaction);
 
         if (!$insertTransaction) {
@@ -464,46 +488,6 @@ class ApiOnlineTransaction extends Controller
                 'status'    => 'fail',
                 'messages'  => ['Insert Transaction Failed']
             ]);
-        }
-
-        // Fraud Detection
-        if ($post['transaction_payment_status'] == 'Completed') {
-            $totalTrx = Transaction::where('id_user', $user['id'])->where('transaction_payment_status', 'Completed')->sum('transaction_subtotal');
-            $countTrx = Transaction::where('id_user', $user['id'])->where('transaction_payment_status', 'Completed')->count('*');
-            //update count transaction
-            $updateCountTrx = User::where('id', $user['id'])->update([
-                'count_transaction_day' => $user['count_transaction_day'] + 1, 
-                'count_transaction_week' => $user['count_transaction_week'] + 1,
-                'subtotal_transaction'  => $totalTrx,
-                'count_transaction'  => $countTrx
-            ]);
-            if (!$updateCountTrx) {
-                DB::rollback();
-                return response()->json([
-                    'status'    => 'fail',
-                    'messages'  => ['Update User Count Transaction Failed']
-                ]);
-            }
-    
-            $userData = User::find($user['id']);
-            
-            //cek fraud detection transaction per day
-            $fraudTrxDay = FraudSetting::where('parameter', 'LIKE', '%transactions in 1 day%')->first();
-            if($fraudTrxDay && $fraudTrxDay['parameter_detail'] != null){
-                if($userData['count_transaction_day'] >= $fraudTrxDay['parameter_detail']){
-                    //send fraud detection to admin
-                    $sendFraud = app($this->setting_fraud)->SendFraudDetection($fraudTrxDay['id_fraud_setting'], $userData, $insertTransaction['id_transaction'], null);
-                }
-            }
-    
-            //cek fraud detection transaction per week (last 7 days)
-            $fraudTrxDay = FraudSetting::where('parameter', 'LIKE', '%transactions in 1 week%')->first();
-            if($fraudTrxDay && $fraudTrxDay['parameter_detail'] != null){
-                if($userData['count_transaction_day'] >= $fraudTrxDay['parameter_detail']){
-                    //send fraud detection to admin
-                    $sendFraud = app($this->setting_fraud)->SendFraudDetection($fraudTrxDay['id_fraud_setting'], $userData, $insertTransaction['id_transaction'], $lastDeviceId = null);
-                }
-            }
         }
 
         foreach ($post['item'] as $keyProduct => $valueProduct) {
@@ -795,8 +779,15 @@ class ApiOnlineTransaction extends Controller
                     $settingTime = Setting::where('key', 'processing_time')->first();
 
                     $pickup = date('Y-m-d H:i:s', strtotime('+ '.$settingTime['value'].'minutes'));
-                } else {
-                    $pickup = date('Y-m-d H:i:s', strtotime($post['pickup_at']));
+                } 
+                else {
+                    if(isset($outlet['today']['close'])){
+                        if(date('Y-m-d H:i', strtotime($post['pickup_at']) > date('Y-m-d').' '.date('H:i', strtotime($outlet['today']['close'])))){
+                            $pickup =  date('Y-m-d').' '.date('H:i:s', strtotime($outlet['today']['close']));
+                        }
+                    }else{
+                        $pickup = date('Y-m-d H:i:s', strtotime($post['pickup_at']));
+                    }
                 }
             }else{
                 $pickup = null;
@@ -971,6 +962,42 @@ class ApiOnlineTransaction extends Controller
                 if ($save['status'] == 'fail') {
                     DB::rollback();
                     return response()->json($save);
+                }
+
+                // Fraud Detection
+                if ($post['transaction_payment_status'] == 'Completed' || $save['type'] == 'no_topup') {
+                    //update count transaction
+                    $updateCountTrx = User::where('id', $user['id'])->update([
+                        'count_transaction_day' => $user['count_transaction_day'] + 1, 
+                        'count_transaction_week' => $user['count_transaction_week'] + 1,
+                    ]);
+                    if (!$updateCountTrx) {
+                        DB::rollback();
+                        return response()->json([
+                            'status'    => 'fail',
+                            'messages'  => ['Update User Count Transaction Failed']
+                        ]);
+                    }
+            
+                    $userData = User::find($user['id']);
+                    
+                    //cek fraud detection transaction per day
+                    $fraudTrxDay = FraudSetting::where('parameter', 'LIKE', '%transactions in 1 day%')->first();
+                    if($fraudTrxDay && $fraudTrxDay['parameter_detail'] != null){
+                        if($userData['count_transaction_day'] >= $fraudTrxDay['parameter_detail']){
+                            //send fraud detection to admin
+                            $sendFraud = app($this->setting_fraud)->SendFraudDetection($fraudTrxDay['id_fraud_setting'], $userData, $insertTransaction['id_transaction'], null);
+                        }
+                    }
+            
+                    //cek fraud detection transaction per week (last 7 days)
+                    $fraudTrxDay = FraudSetting::where('parameter', 'LIKE', '%transactions in 1 week%')->first();
+                    if($fraudTrxDay && $fraudTrxDay['parameter_detail'] != null){
+                        if($userData['count_transaction_week'] >= $fraudTrxDay['parameter_detail']){
+                            //send fraud detection to admin
+                            $sendFraud = app($this->setting_fraud)->SendFraudDetection($fraudTrxDay['id_fraud_setting'], $userData, $insertTransaction['id_transaction'], $lastDeviceId = null);
+                        }
+                    }
                 }
 
                 if ($save['type'] == 'no_topup') {

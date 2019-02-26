@@ -18,6 +18,7 @@ use App\Http\Models\User;
 use App\Http\Models\UserOutlet;
 use App\Http\Models\Configs;
 use App\Http\Models\OutletSchedule;
+use App\Http\Models\Setting;
 
 use App\Lib\MyHelper;
 use Validator;
@@ -28,6 +29,7 @@ use Excel;
 
 use Modules\Outlet\Http\Requests\outlet\Upload;
 use Modules\Outlet\Http\Requests\outlet\Update;
+use Modules\Outlet\Http\Requests\outlet\UpdateStatus;
 use Modules\Outlet\Http\Requests\outlet\UpdatePhoto;
 use Modules\Outlet\Http\Requests\outlet\UploadPhoto;
 use Modules\Outlet\Http\Requests\outlet\Create;
@@ -57,7 +59,7 @@ class ApiOutletController extends Controller
         $data = [];
 
         if (isset($post['outlet_code'])) {
-            $data['outlet_code'] = $post['outlet_code'];
+            $data['outlet_code'] = strtoupper($post['outlet_code']);
         }
         if (isset($post['outlet_name'])) {
             $data['outlet_name'] = $post['outlet_name'];
@@ -92,11 +94,11 @@ class ApiOutletController extends Controller
         if (isset($post['outlet_close_hours'])) {
             $data['outlet_close_hours'] = date('Y-m-d H:i:s', strtotime( $post['outlet_close_hours']));
         }
-        if (isset($post['outlet_limit_reservation'])) {
-            $data['outlet_limit_reservation'] = $post['outlet_limit_reservation'];
-        }
         if (isset($post['outlet_pin'])) {
             $data['outlet_pin'] = bcrypt($post['outlet_pin']);
+        }
+        if (isset($post['outlet_status'])) {
+            $data['outlet_status'] = $post['outlet_status'];
         }
 
         return $data;
@@ -104,7 +106,7 @@ class ApiOutletController extends Controller
 
     /* Pengecekan code unique */
     function cekUnique($id, $code) {
-        $cek = Outlet::where('outlet_code', $code)->first();
+        $cek = Outlet::where('outlet_code', strtoupper($code))->first();
 
         if (empty($cek)) {
             return true;
@@ -128,7 +130,7 @@ class ApiOutletController extends Controller
         if(!isset($post['outlet_code'])){
             do{
                 $post['outlet_code'] = MyHelper::createRandomPIN(3);
-                $code = Outlet::where('outlet_code', $post['outlet_code'])->first();
+                $code = Outlet::where('outlet_code', strtoupper($post['outlet_code']))->first();
             }while($code != null);
         }
 
@@ -162,6 +164,14 @@ class ApiOutletController extends Controller
      * update
      */
     function update(Update $request) {
+        $post = $this->checkInputOutlet($request->json()->all());
+        $save = Outlet::where('id_outlet', $request->json('id_outlet'))->update($post);
+        // return Outlet::where('id_outlet', $request->json('id_outlet'))->first();
+
+        return response()->json(MyHelper::checkUpdate($save));
+    }
+
+    function updateStatus(UpdateStatus $request) {
         $post = $this->checkInputOutlet($request->json()->all());
         $save = Outlet::where('id_outlet', $request->json('id_outlet'))->update($post);
         // return Outlet::where('id_outlet', $request->json('id_outlet'))->first();
@@ -375,6 +385,13 @@ class ApiOutletController extends Controller
             $outlet->with(['user_outlets', 'product_prices.product']); 
         }
 
+        $useragent = $_SERVER['HTTP_USER_AGENT'];
+        if(stristr($_SERVER['HTTP_USER_AGENT'],'iOS')) $useragent = 'iOS';
+        if(stristr($_SERVER['HTTP_USER_AGENT'],'okhttp')) $useragent = 'Android';
+        if($useragent == 'Android' || $useragent == 'iOS'){
+            $outlet = $outlet->where('outlet_status', 'Active')->whereNotNull('id_city');
+        }
+
         // qrcode
         if (isset($post['qrcode'])){
             if(isset($post['qrcode_paginate'])){
@@ -465,7 +482,7 @@ class ApiOutletController extends Controller
         $longitude = $request->json('longitude');
         
         // outlet
-        $outlet = Outlet::with(['today', 'city', 'outlet_photos'])->orderBy('outlet_name','asc');
+        $outlet = Outlet::with(['today', 'city', 'outlet_photos'])->where('outlet_status', 'Active')->whereNotNull('id_city')->orderBy('outlet_name','asc');
         if($request->json('search') && $request->json('search') != ""){
             $outlet = $outlet->where('outlet_name', 'LIKE', '%'.$request->json('search').'%');
         }
@@ -522,7 +539,7 @@ class ApiOutletController extends Controller
         $longitude = $request->json('longitude');
         
         // outlet
-        $outlet = Outlet::with(['today', 'city', 'outlet_photos'])->orderBy('outlet_name','asc');
+        $outlet = Outlet::with(['today', 'city', 'outlet_photos'])->orderBy('outlet_name','asc')->where('outlet_status', 'Active')->whereNotNull('id_city');
         if($request->json('search') && $request->json('search') != ""){
             $outlet = $outlet->where('outlet_name', 'LIKE', '%'.$request->json('search').'%');
         }
@@ -652,7 +669,7 @@ class ApiOutletController extends Controller
         $sort = $request->json('sort');
         
         // outlet
-        $outlet = Outlet::with(['today', 'city', 'outlet_photos'])->orderBy('outlet_name','asc');
+        $outlet = Outlet::with(['today', 'city', 'outlet_photos'])->where('outlet_status', 'Active')->whereNotNull('id_city')->orderBy('outlet_name','asc');
         if($request->json('search') && $request->json('search') != ""){
             $outlet = $outlet->where('outlet_name', 'LIKE', '%'.$request->json('search').'%');
         }
@@ -742,7 +759,7 @@ class ApiOutletController extends Controller
         $sort = $request->json('sort');
         
         // outlet
-        $outlet = Outlet::with(['today', 'city', 'outlet_photos'])->orderBy('outlet_name','asc');
+        $outlet = Outlet::with(['today', 'city', 'outlet_photos'])->where('outlet_status', 'Active')->whereNotNull('id_city')->orderBy('outlet_name','asc');
         if($request->json('search') && $request->json('search') != ""){
             $outlet = $outlet->where('outlet_name', 'LIKE', '%'.$request->json('search').'%');
         }
@@ -832,28 +849,38 @@ class ApiOutletController extends Controller
 
     // unset outlet yang tutup dan libur
     function setAvailableOutlet($listOutlet){
+        $processing = '0';
+        $settingTime = Setting::where('key', 'processing_time')->first();
+        if($settingTime && $settingTime->value){
+            $processing = $settingTime->value;
+        }
+
         $outlet = $listOutlet;
         foreach($listOutlet as $index => $dataOutlet){
-            if($dataOutlet['today']['open'] && date('H:i:01') < date('H:i', strtotime($dataOutlet['today']['open']))){
-                unset($outlet[$index]);
-            }elseif($dataOutlet['today']['close'] && date('H:i') >= date('H:i', strtotime('+1 minutes', strtotime($dataOutlet['today']['close'])))){
+            if($dataOutlet['today']['open'] == null || $dataOutlet['today']['close'] == null){
                 unset($outlet[$index]);
             }else{
-                $holiday = Holiday::join('outlet_holidays', 'holidays.id_holiday', 'outlet_holidays.id_holiday')->join('date_holidays', 'holidays.id_holiday', 'date_holidays.id_holiday')
-                ->where('id_outlet', $dataOutlet['id_outlet'])->whereDay('date_holidays.date', date('d'))->whereMonth('date_holidays.date', date('m'))->get();
-                if(count($holiday) > 0){
-                    foreach($holiday as $i => $holi){
-                        if($holi['yearly'] == '0'){
-                            if($holi['date'] == date('Y-m-d')){
+                if($dataOutlet['today']['open'] && date('H:i:01') < date('H:i', strtotime($dataOutlet['today']['open']))){
+                    unset($outlet[$index]);
+                }elseif($dataOutlet['today']['close'] && date('H:i') > date('H:i', strtotime('-'.$processing.' minutes', strtotime($dataOutlet['today']['close'])))){
+                    unset($outlet[$index]);
+                }else{
+                    $holiday = Holiday::join('outlet_holidays', 'holidays.id_holiday', 'outlet_holidays.id_holiday')->join('date_holidays', 'holidays.id_holiday', 'date_holidays.id_holiday')
+                    ->where('id_outlet', $dataOutlet['id_outlet'])->whereDay('date_holidays.date', date('d'))->whereMonth('date_holidays.date', date('m'))->get();
+                    if(count($holiday) > 0){
+                        foreach($holiday as $i => $holi){
+                            if($holi['yearly'] == '0'){
+                                if($holi['date'] == date('Y-m-d')){
+                                    unset($outlet[$index]);
+                                    break;
+                                }
+                            }else{
                                 unset($outlet[$index]);
                                 break;
                             }
-                        }else{
-                            unset($outlet[$index]);
-                            break;
                         }
+    
                     }
-
                 }
             }
             unset($outlet[$index]['product_prices']);

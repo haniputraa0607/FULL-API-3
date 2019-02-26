@@ -323,6 +323,38 @@ class ApiProductController extends Controller
         }
 
     	$save = Product::where('id_product', $post['id_product'])->update($data);
+    	
+    	if($save){
+            if(isset($post['photo'])){
+                //delete all photo
+                $delete = $this->deletePhoto($post['id_product']);
+                
+                if($delete){
+
+                    //create photo
+                    $upload = MyHelper::uploadPhotoStrict($post['photo'], $this->saveImage, 300, 300);
+                   
+                    if (isset($upload['status']) && $upload['status'] == "success") {
+                        $dataPhoto['product_photo'] = $upload['path'];
+                    }
+                    else {
+                        $result = [
+                            'status'   => 'fail',
+                            'messages' => ['fail upload image']
+                        ];
+    
+                        return response()->json($result);
+                    }
+    
+                    $dataPhoto['id_product']          = $post['id_product'];
+                    $dataPhoto['product_photo_order'] = $this->cekUrutanPhoto($post['id_product']);
+                    $save                        = ProductPhoto::create($dataPhoto);
+                }
+                
+
+            }
+        }
+
 
     	return response()->json(MyHelper::checkUpdate($save));
     }

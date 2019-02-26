@@ -17,6 +17,14 @@ class OutletSchedule extends Model
 		'updated_at',
 	];
 
+	public function getOpenAttribute($value) {
+		return date('H:i', strtotime($value));
+	}
+
+	public function getCloseAttribute($value) {
+		return date('H:i', strtotime($value));
+	}
+
 	public function outlet()
 	{
 		return $this->belongsTo(\App\Http\Models\Outlet::class, 'id_outlet');

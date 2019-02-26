@@ -71,7 +71,7 @@ class ApiBanner extends Controller
         }
         $post['position'] = $last_position + 1;
 
-        $deep_url = env('APP_URL').'/outlet/webview/gofood/list';
+        $deep_url = env('APP_URL').'outlet/webview/gofood/list';
 
         if ($post['type'] == 'gofood') {
             $post['url'] = $deep_url;
@@ -140,7 +140,7 @@ class ApiBanner extends Controller
             $delete = MyHelper::deletePhoto($banner->image);
         }
 
-        $deep_url = env('APP_URL').'/outlet/webview/gofood/list';
+        $deep_url = env('APP_URL').'outlet/webview/gofood/list';
 
         if ($post['type'] == 'gofood') {
             $post['url'] = $deep_url;
