@@ -122,7 +122,7 @@ class ApiOnlineTransaction extends Controller
     
             $settingTime = Setting::where('key', 'processing_time')->first();
             if($settingTime && $settingTime->value){
-                if($outlet['today']['close'] && date('H:i') > date('H:i', strtotime('+'.$settingTime->value.' minutes' ,strtotime($outlet['today']['close'])))){
+                if($outlet['today']['close'] && date('H:i') > date('H:i', strtotime('-'.$settingTime->value.' minutes' ,strtotime($outlet['today']['close'])))){
                     DB::rollback();
                     return response()->json([
                         'status'    => 'fail',
@@ -782,8 +782,10 @@ class ApiOnlineTransaction extends Controller
                 } 
                 else {
                     if(isset($outlet['today']['close'])){
-                        if(date('Y-m-d H:i', strtotime($post['pickup_at']) > date('Y-m-d').' '.date('H:i', strtotime($outlet['today']['close'])))){
+                        if(date('Y-m-d H:i', strtotime($post['pickup_at'])) > date('Y-m-d').' '.date('H:i', strtotime($outlet['today']['close']))){
                             $pickup =  date('Y-m-d').' '.date('H:i:s', strtotime($outlet['today']['close']));
+                        }else{
+                            $pickup = date('Y-m-d H:i:s', strtotime($post['pickup_at']));
                         }
                     }else{
                         $pickup = date('Y-m-d H:i:s', strtotime($post['pickup_at']));

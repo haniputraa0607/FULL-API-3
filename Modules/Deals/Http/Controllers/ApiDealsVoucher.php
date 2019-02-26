@@ -248,7 +248,7 @@ class ApiDealsVoucher extends Controller
         }
 		
 		$voucher->where('voucher_expired_at', '>=',date('Y-m-d H:i:s'));
-		$voucher->orderBy('id_deals_user', 'desc');
+		$voucher->orderBy('voucher_expired_at', 'asc');
         
         // if voucher detail, no need pagination
         if (isset($post['id_deals_user']) && $post['id_deals_user'] != "") {
@@ -296,6 +296,11 @@ class ApiDealsVoucher extends Controller
             }
             else {
                 $voucher[$index]['deal_voucher']['voucher_code'] = "";
+            }
+
+            $useragent = $_SERVER['HTTP_USER_AGENT'];
+            if(stristr($useragent,'okhttp')){
+                $voucher[$index]['voucher_expired_at'] = date('d/m/Y H:i',strtotime($voucher[$index]['voucher_expired_at']));
             }
             
         }

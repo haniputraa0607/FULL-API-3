@@ -347,7 +347,7 @@ class ApiHome extends Controller
                     // 'greetings2'    => $greetingss2,
                     // 'background'    => $background,
                     'banners'       => $banners,
-                    'splash_screen_url' => $splash."?",
+                    'splash_screen_url' => $splash."?update=".time(),
                     // 'total_point'   => (int) $point,
                     'total_kopi_point' => (int) $balance,
                     // 'notification'  =>[

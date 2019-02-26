@@ -9,6 +9,7 @@ use Illuminate\Routing\Controller;
 use App\Http\Models\User;
 use App\Http\Models\UserFeature;
 use App\Http\Models\UserDevice;
+use App\Http\Models\UserLocation;
 use App\Http\Models\Level;
 use App\Http\Models\Doctor;
 use App\Http\Models\UserOutlet;
@@ -926,6 +927,17 @@ class ApiUser extends Controller
 			}
 			
 			app($this->membership)->calculateMembership($phone);
+
+			//create user location when register
+			if($request->json('latitude') && $request->json('longitude')){
+				$userLocation = UserLocation::create([
+					'id_user' => $create['id'],
+					'lat' => $request->json('latitude'),
+					'lng' => $request->json('longitude'),
+					'action' => 'Register'
+				]);
+
+			}
 			
 			$result = ['status'	=> 'success',
                         'result'	=> ['phone'	=>	$create->phone,
@@ -1135,6 +1147,12 @@ class ApiUser extends Controller
 			$result['messages'] = ['The user credentials were incorrect'];
 		}
 		
+		if($datauser[0]['pin_changed'] == '0'){
+			$result['pin_changed'] = false; 
+		}else{
+			$result['pin_changed'] = true; 
+		}
+		
         return response()->json($result);
     }
 	
@@ -1306,7 +1324,7 @@ class ApiUser extends Controller
 		if($data){
 			if(Auth::attempt(['phone' => $request->json('phone'), 'password' => $request->json('pin_old')])){
 				$pin 	= bcrypt($request->json('pin_new'));
-				$update = User::where('id','=',$data[0]['id'])->update(['password' => $pin, 'phone_verified' => '1']);
+				$update = User::where('id','=',$data[0]['id'])->update(['password' => $pin, 'phone_verified' => '1', 'pin_changed' => '1']);
 				if(\Module::collections()->has('Autocrm')) {
 					$autocrm = app($this->autocrm)->SendAutoCRM('Pin Changed', $request->json('phone'));
 				}

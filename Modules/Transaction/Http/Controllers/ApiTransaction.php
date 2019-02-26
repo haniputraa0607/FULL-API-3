@@ -1476,7 +1476,9 @@ class ApiTransaction extends Controller
                     if($dataPay['type'] == 'Midtrans'){
                         $payment[] = TransactionPaymentMidtran::find($dataPay['id_payment']);
                     }else{
-                        $payment[] = TransactionPaymentBalance::find($dataPay['id_payment']);
+                        $dataPay = TransactionPaymentBalance::find($dataPay['id_payment']);
+                        $payment[] = $dataPay;
+                        $list['balance'] = $dataPay['balance_nominal'];
                     }
                 }
                 $list['payment'] = $payment;

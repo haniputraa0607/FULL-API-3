@@ -353,7 +353,7 @@ class ApiPOS extends Controller
                                 $productPrice = ProductPrice::where('id_product', $product->id_product)->where('id_outlet', $outlet->id_outlet)->first();
                                 if($productPrice){
                                     $oldPrice =  $productPrice->product_price;
-                                    $oldUpdatedAt =  $productPrice->updated_at->format('Y-m-d H:i:s');
+                                    $oldUpdatedAt =  $productPrice->updated_at;
                                 }else{
                                     $oldPrice = null;
                                     $oldUpdatedAt = null;
@@ -429,7 +429,7 @@ class ApiPOS extends Controller
                                     
                                     // list updated product utk data log
                                     $newProductPrice = ProductPrice::where('id_product', $product->id_product)->where('id_outlet', $outlet->id_outlet)->first();
-                                    $newUpdatedAt =  $newProductPrice->updated_at->format('Y-m-d H:i:s');
+                                    $newUpdatedAt =  $newProductPrice->updated_at;
     
                                     $updateProd['id_product'] = $product['id_product']; 
                                     $updateProd['plu_id'] = $product['product_code']; 
@@ -1689,6 +1689,7 @@ class ApiPOS extends Controller
 				$updatedProduct = [];
 				$insertedProduct = [];
 				
+				$idProduct = [];
 				foreach($dataoutlet['menu'] as $key => $menu){
 					$product = Product::where('product_code', $menu['plu_id'])->first();
 					// return response()->json($menu);
@@ -1723,7 +1724,7 @@ class ApiPOS extends Controller
 									$productPrice = ProductPrice::where('id_product', $product->id_product)->where('id_outlet', $outlet->id_outlet)->first();
 									if($productPrice){
 										$oldPrice =  $productPrice->product_price;
-										$oldUpdatedAt =  $productPrice->updated_at->format('Y-m-d H:i:s');
+										$oldUpdatedAt =  $productPrice->updated_at;
 									}else{
 										$oldPrice = null;
 										$oldUpdatedAt = null;
@@ -1799,7 +1800,7 @@ class ApiPOS extends Controller
 										
 										// list updated product utk data log
 										$newProductPrice = ProductPrice::where('id_product', $product->id_product)->where('id_outlet', $outlet->id_outlet)->first();
-										$newUpdatedAt =  $newProductPrice->updated_at->format('Y-m-d H:i:s');
+										$newUpdatedAt =  $newProductPrice->updated_at;
 		
 										$updateProd['id_product'] = $product['id_product']; 
 										$updateProd['plu_id'] = $product['product_code']; 
@@ -1840,6 +1841,8 @@ class ApiPOS extends Controller
 								$isReject = true;
 							}
 						}
+						array_push($idProduct, $product->id_product);
+						// $idProduct[] = $product->id_product; 
 					}
 					
 					// insert product
@@ -1920,10 +1923,15 @@ class ApiPOS extends Controller
 	
 								$insertedProduct[] = $insertProd;
 							}
+
+							array_push($idProduct, $create->id_product);
+							// $idProduct = $create->id_product;
 						}
 					}
 				}
 
+				//update inactive
+				$inactive = ProductPrice::where('id_outlet', $outlet->id_outlet)->whereNotIn('id_product', $idProduct)->update(['product_status' => 'Inactive']);
 				$hasil[] = [
 					"outlet"  => [
 						"id_outlet" => $outlet->id_outlet,
@@ -1941,7 +1949,8 @@ class ApiPOS extends Controller
 					"rejected_product" => [
 						"total" => count($rejectedProduct),
 						"list_product" => $rejectedProduct,
-					]
+					],
+					"inactive_product" => $inactive
 				];
 	
 			}else{
@@ -2026,7 +2035,7 @@ class ApiPOS extends Controller
 					"store_code" => $result['outlet']['outlet_code'],
 					"inserted" => $result['new_product']['total'],
 					"updated" => $result['updated_product']['total'],
-					"rejected" => $result['rejected_product']['total'],
+					"rejected" => $result['rejected_product']['total']
 				];
 			}
             return response()->json([

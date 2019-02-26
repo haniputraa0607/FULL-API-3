@@ -90,7 +90,7 @@ class BalanceController extends Controller
                 'membership_cashback_percentage' => $cashback_percentage
             ];
 
-            $create = LogBalance::updateOrCreate(['id_reference' => $id_reference, 'source' => $source], $LogBalance);
+            $create = LogBalance::updateOrCreate(['id_user' => $id_user, 'id_reference' => $id_reference, 'source' => $source], $LogBalance);
 
             // get inserted data to hash
             $log_balance = LogBalance::find($create->id_log_balance);
