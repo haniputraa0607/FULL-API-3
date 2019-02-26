@@ -11,6 +11,8 @@ use App\Lib\MyHelper;
 use App\Lib\Midtrans;
 
 use App\Http\Models\Transaction;
+use App\Http\Models\TransactionProduct;
+use App\Http\Models\User;
 
 class ApiCronTrxController extends Controller
 {
@@ -22,15 +24,19 @@ class ApiCronTrxController extends Controller
 
         $getTrx = Transaction::where('transaction_payment_status', 'Pending')->where('created_at', '>=', $crossLine)->where('created_at', '<=', $now)->get();
 
+        if (empty($getTrx)) {
+            return response()->json(['empty']);
+        }
+
         foreach ($getTrx as $key => $value) {
             $singleTrx = Transaction::where('id_transaction', $value->id_transaction)->first();
             if (empty($singleTrx)) {
                 continue;
             }
 
-            $singleTrx->expired_at = date('Y-m-d H:i:s', strtotime('+ 1days', strtotime($singleTrx->transaction_date)));
+            $expired_at = date('Y-m-d H:i:s', strtotime('+ 1days', strtotime($singleTrx->transaction_date)));
 
-            if ($singleTrx->expired_at >= $now) {
+            if ($expired_at >= $now) {
                 continue;
             }
 
@@ -44,28 +50,21 @@ class ApiCronTrxController extends Controller
                 continue;
             }
 
-            $detail = $this->getHtml($singleTrx, $productTrx, $user->name, $user->phone, $singleTrx->created_at, $singleTrx->transaction_receipt_number);
+            $connectMidtrans = Midtrans::expire($singleTrx->transaction_receipt_number);
+            // $detail = $this->getHtml($singleTrx, $productTrx, $user->name, $user->phone, $singleTrx->created_at, $singleTrx->transaction_receipt_number);
 
-            $autoCrm = app($this->autocrm)->SendAutoCRM('Transaction Online Cancel', $user->phone, ['date' => $singleTrx->created_at, 'status' => $singleTrx->transaction_payment_status, 'name'  => $user->name, 'id' => $singleTrx->transaction_receipt_number, 'receipt' => $detail, 'id_reference' => $singleTrx->transaction_receipt_number]);
-            if (!$autoCrm) {
-                continue;
-            }
+            // $autoCrm = app($this->autocrm)->SendAutoCRM('Transaction Online Cancel', $user->phone, ['date' => $singleTrx->created_at, 'status' => $singleTrx->transaction_payment_status, 'name'  => $user->name, 'id' => $singleTrx->transaction_receipt_number, 'receipt' => $detail, 'id_reference' => $singleTrx->transaction_receipt_number]);
+            // if (!$autoCrm) {
+            //     continue;
+            // }
 
-            $singleTrx->transaction_payment_status = 'Cancel';
-            $singleTrx->processing_status = 'Cancel';
+            $singleTrx->transaction_payment_status = 'Cancelled';
             $singleTrx->save();
             if (!$singleTrx) {
                 continue;
             }
         }
 
-        if (empty($getTrx)) {
-            return response()->json(['empty']);
-        }
-
-        $id = $request->get('id');
-        $trx = Transaction::where('transaction_receipt_number', $id)->first();
-        $connectMidtrans = Midtrans::expire($id);
-        return $connectMidtrans;
+        return response()->json(['success']);
     }
 }
