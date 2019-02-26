@@ -31,6 +31,12 @@ Route::group(['middleware' => 'api', 'prefix' => 'api/report', 'namespace' => 'M
 
     Route::get('min_year', 'ApiMagicReport@getMinYear');
     Route::post('trx/tag/detail', 'ApiMagicReport@transactionTagDetail');
+
+    /* SINGLE REPORT */
+    Route::post('/single', 'ApiSingleReport@getReport');
+    Route::get('/single/year-list', 'ApiSingleReport@getReportYear');
+    Route::get('/single/outlet-list', 'ApiSingleReport@getOutletList');
+
 });
 
 Route::group(['prefix' => 'api/cron', 'namespace' => 'Modules\Report\Http\Controllers'], function()
