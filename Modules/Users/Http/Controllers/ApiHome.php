@@ -97,6 +97,7 @@ class ApiHome extends Controller
 
             if ($value->type == 'gofood') {
                 $item['id_news'] = 99999999;
+                $item['news_title'] = "GO-FOOD";
                 $item['url']     = env('APP_URL').'outlet/webview/gofood/list';
             }
 
