@@ -366,7 +366,6 @@ class ApiHistoryController extends Controller
         $next_page = $page + 1;
 
         $balance = $this->balance($post, $id);
-
         $sortBalance = $this->sorting($balance, $order, $page);
         
         $check = MyHelper::checkGet($sortBalance);
@@ -752,12 +751,12 @@ class ApiHistoryController extends Controller
 
     public function balance($post, $id) {
         $log = LogBalance::where('id_user', $id)->get();
-        // return $log;
         $listBalance = [];
         
         foreach ($log as $key => $value) {
             if ($value['source'] == 'Transaction' || $value['source'] == 'Rejected Order') {
                 $trx = Transaction::with('outlet')->where('id_transaction', $value['id_reference'])->first();
+                
                 // return $trx;
                 // $log[$key]['detail'] = $trx;
                 // $log[$key]['type']   = 'trx';
@@ -768,6 +767,10 @@ class ApiHistoryController extends Controller
                 // } else {
                 //     $log[$key]['online'] = 1;
                 // }
+
+                if (empty($trx)) {
+                    continue;
+                }
 
                 $dataList['type']    = 'balance';
                 $dataList['id']      = $value['id_log_balance'];
@@ -789,7 +792,6 @@ class ApiHistoryController extends Controller
 
             } elseif ($value['source'] == 'Voucher') {
                 $vou = DealsUser::with('dealVoucher.deal')->where('id_deals_user', $value['id_reference'])->first();
-
                 // $log[$key]['detail'] = $vou;
                 $dataList['type']   = 'voucher';
                 $dataList['id']      = $value['id_log_balance'];
@@ -886,6 +888,6 @@ class ApiHistoryController extends Controller
 
         }
 
-        return $listBalance;
+        return array_values($listBalance);
     }
 }

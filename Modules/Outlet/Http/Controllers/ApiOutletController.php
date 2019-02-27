@@ -100,6 +100,9 @@ class ApiOutletController extends Controller
         if (isset($post['outlet_status'])) {
             $data['outlet_status'] = $post['outlet_status'];
         }
+        if (isset($post['deep_link'])) {
+            $data['deep_link'] = $post['deep_link'];
+        }
 
         return $data;
     }
