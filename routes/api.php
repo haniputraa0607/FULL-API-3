@@ -36,5 +36,5 @@ Route::get('courier/list', 'Controller@listCourier');
 Route::get('time', function() {
 	date_default_timezone_set('Asia/Jakarta');
 	$am = App\Http\Models\Setting::where('key', 'processing_time')->first();
-	return response()->json(['time' => date('Y-m-d H:i:s'), 'processing' => $am['value']]);
+	return response()->json(['time' => date('Y-m-d H:i:s'), 'processing' => $am['value'], 'new_format' => date('Y-m-d H:i:s+0000'), 'time_add' => date('Y-m-d H:i:s+0000', strtotime('+ '.$am['value'].' minutes'))]);
 });
