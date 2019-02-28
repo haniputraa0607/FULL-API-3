@@ -134,8 +134,8 @@ class TextReplacesTableSeeder extends Seeder
             10 => 
             array (
                 'id_text_replace' => 11,
-                'keyword' => '%points%',
-                'reference' => 'points',
+                'keyword' => '%kopi_points%',
+                'reference' => 'balance',
                 'type' => 'String',
                 'default_value' => NULL,
                 'custom_rule' => NULL,

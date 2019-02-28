@@ -331,7 +331,6 @@ class ApiAutoCrm extends Controller
 								}
 							}
 						}
-						return true;
 					} catch (\Exception $e) {
 						return response()->json(MyHelper::throwError($e));
 					}

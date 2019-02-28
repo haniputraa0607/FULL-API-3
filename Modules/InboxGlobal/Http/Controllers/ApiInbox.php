@@ -12,6 +12,7 @@ use App\Http\Models\InboxGlobal;
 use App\Http\Models\InboxGlobalRule;
 use App\Http\Models\InboxGlobalRuleParent;
 use App\Http\Models\InboxGlobalRead;
+use App\Http\Models\News;
 
 use Modules\InboxGlobal\Http\Requests\MarkedInbox;
 
@@ -53,17 +54,27 @@ class ApiInbox extends Controller
 			array_push($global['inbox_global_rule_parents'], ['rule' => 'and', 'rule_next' => 'and', 'rules' => [$cons]]);
 			$users = app($this->user)->UserFilter($global['inbox_global_rule_parents']);
 			
-			if($users){
+			if(isset($users['status']) && $users['status'] == 'success'){
 				$content = [];
 				$content['type'] 		 = 'global';
 				$content['id_inbox'] 	 = $global['id_inbox_global'];
 				$content['subject'] 	 = app($this->autocrm)->TextReplace($global['inbox_global_subject'], $user['phone']);
 				$content['clickto'] 	 = $global['inbox_global_clickto'];
 				
-				if($content['clickto'] == 'Product' || $content['clickto'] == 'Outlet' || $content['clickto'] == 'News'){
+				if($content['clickto'] == 'Product' || $content['clickto'] == 'Outlet'){
 					$content['id_reference'] = $global['inbox_global_id_reference'];
 				}else{
 					$content['id_reference'] = null;
+				}
+
+				if($content['clickto'] == 'News'){
+					$news = News::find($global['inbox_global_id_reference']);
+					if(!$news){
+						continue;
+					}
+
+					$content['news_title'] = $news->news_title;
+					$content['url'] = env('APP_URL').'news/webview/'.$news->id_news;
 				}
 				
 				if($content['clickto'] == 'Content'){
@@ -111,10 +122,20 @@ class ApiInbox extends Controller
 			$content['subject'] 	 = $private['inboxes_subject'];
 			$content['clickto'] 	 = $private['inboxes_clickto'];
 			
-			if($content['clickto'] == 'Product' || $content['clickto'] == 'Outlet' || $content['clickto'] == 'News'){
+			if($private['inboxes_id_reference']){
 				$content['id_reference'] = $private['inboxes_id_reference'];
 			}else{
 				$content['id_reference'] = null;
+			}
+			
+			if($content['clickto'] == 'News'){
+				$news = News::find($private['inboxes_id_reference']);
+				if(!$news){
+					continue;
+				}
+
+				$content['news_title'] = $news->news_title;
+				$content['url'] = env('APP_URL').'news/webview/'.$news->id_news;
 			}
 			
 			if($content['clickto'] == 'Content'){

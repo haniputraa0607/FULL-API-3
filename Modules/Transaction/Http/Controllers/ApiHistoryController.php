@@ -421,6 +421,10 @@ class ApiHistoryController extends Controller
             }
 
             for ($i=$start; $i < $end; $i++) {
+                $useragent = $_SERVER['HTTP_USER_AGENT'];
+                if(stristr($useragent,'okhttp')){
+                    $data[$i]['date'] = MyHelper::dateFormatInd($data[$i]['date']);
+                }
                 array_push($resultData, $data[$i]);
             }
 
@@ -508,6 +512,11 @@ class ApiHistoryController extends Controller
                         if($payMidtrans && $payMidtrans['transaction_status']){
                             $found = true;
                         }
+                    }else{
+                        $payMidtrans = TransactionPaymentMidtran::where('id_transaction', $value['id_transaction'])->first();
+                        if($payMidtrans && $payMidtrans['transaction_status']){
+                            $found = true;
+                        }
                     }
                 }else{
                     $found = true;
@@ -516,12 +525,7 @@ class ApiHistoryController extends Controller
                 if($found == true){
                     $dataList['type'] = 'trx';
                     $dataList['id'] = $value['transaction_receipt_number'];
-                    $useragent = $_SERVER['HTTP_USER_AGENT'];
-                    if(stristr($useragent,'okhttp')){
-                        $dataList['date']    = MyHelper::dateFormatInd($value['transaction_date']);
-                    }else{
-                        $dataList['date']    = date('Y-m-d H:i:s', strtotime($value['transaction_date']));
-                    }
+                    $dataList['date']    = date('Y-m-d H:i:s', strtotime($value['transaction_date']));
                     $dataList['outlet'] = $value['outlet']['outlet_name'];
                     $dataList['amount'] = number_format($value['transaction_grandtotal'], 0, ',', '.');
         
@@ -550,12 +554,7 @@ class ApiHistoryController extends Controller
         foreach ($transaction as $key => $value) {
             $dataList['type'] = 'trx';
             $dataList['id'] = $value['transaction_receipt_number'];
-            $useragent = $_SERVER['HTTP_USER_AGENT'];
-            if(stristr($useragent,'okhttp')){
-                $dataList['date']    = MyHelper::dateFormatInd($value['transaction_date']);
-            }else{
-                $dataList['date']    = date('Y-m-d H:i:s', strtotime($value['transaction_date']));
-            }
+            $dataList['date']    = date('Y-m-d H:i:s', strtotime($value['transaction_date']));
             $dataList['outlet'] = $value['outlet']['outlet_name'];
             $dataList['amount'] = number_format($value['transaction_grandtotal'], 0, ',', '.');
 
@@ -635,12 +634,7 @@ class ApiHistoryController extends Controller
                 $dataList['type']    = 'point';
                 $dataList['detail_type']    = 'trx';
                 $dataList['id']      = $value['id_log_point'];
-                $useragent = $_SERVER['HTTP_USER_AGENT'];
-                if(stristr($useragent,'okhttp')){
-                    $dataList['date']    = MyHelper::dateFormatInd($trx['transaction_date']);
-                }else{
-                    $dataList['date']    = date('Y-m-d H:i:s', strtotime($trx['transaction_date']));
-                }
+                $dataList['date']    = date('Y-m-d H:i:s', strtotime($trx['transaction_date']));
                 $dataList['outlet']  = $trx['outlet']['outlet_name'];
                 $dataList['amount'] = $value['point'];
 
@@ -657,12 +651,7 @@ class ApiHistoryController extends Controller
                 $dataList['type']        = 'point';
                 $dataList['detail_type'] = 'voucher';
                 $dataList['id']          = $value['id_log_point'];
-                $useragent = $_SERVER['HTTP_USER_AGENT'];
-                if(stristr($useragent,'okhttp')){
-                    $dataList['date']    = MyHelper::dateFormatInd($vou['claimed_at']);
-                }else{
-                    $dataList['date']    = date('Y-m-d H:i:s', strtotime($vou['claimed_at']));
-                }
+                $dataList['date']    = date('Y-m-d H:i:s', strtotime($vou['claimed_at']));
                 $dataList['outlet']      = $trx['outlet']['outlet_name'];
                 $dataList['amount']     = $value['point'];
                 $log[$key]['online']     = 1;
@@ -774,12 +763,7 @@ class ApiHistoryController extends Controller
 
                 $dataList['type']    = 'balance';
                 $dataList['id']      = $value['id_log_balance'];
-                $useragent = $_SERVER['HTTP_USER_AGENT'];
-                if(stristr($useragent,'okhttp')){
-                    $dataList['date']    = MyHelper::dateFormatInd($value['created_at']);
-                }else{
-                    $dataList['date']    = date('Y-m-d H:i:s', strtotime($value['created_at']));
-                }
+                $dataList['date']    = date('Y-m-d H:i:s', strtotime($value['created_at']));
                 $dataList['outlet']  = $trx['outlet']['outlet_name'];
                 if ($value['balance'] < 0) {
                     $dataList['amount'] = '- '.ltrim(number_format($value['balance'], 0, ',', '.'), '-');
@@ -806,12 +790,7 @@ class ApiHistoryController extends Controller
                 // return 'a';
                 $dataList['type']   = 'profile';
                 $dataList['id']      = $value['id_log_balance'];
-                $useragent = $_SERVER['HTTP_USER_AGENT'];
-                if(stristr($useragent,'okhttp')){
-                    $dataList['date']    = MyHelper::dateFormatInd($value['created_at']);
-                }else{
-                    $dataList['date']    = date('Y-m-d H:i:s', strtotime($value['created_at']));
-                }
+                $dataList['date']    = date('Y-m-d H:i:s', strtotime($value['created_at']));
                 $dataList['outlet'] = 'Completing User Profile';
                 $dataList['amount'] = '+ '.number_format($value['balance'], 0, ',', '.');
 

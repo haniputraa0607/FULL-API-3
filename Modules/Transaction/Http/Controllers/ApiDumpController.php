@@ -429,7 +429,7 @@ class ApiDumpController extends Controller
     }
 
     public function insert($data) {
-        $url = env('API_URL').'/api/transaction/new';
+        $url = env('API_URL').'api/transaction/new';
 
         $create = $this->sendStatus($url, $data);
 

@@ -166,8 +166,12 @@ class ApiPOS extends Controller
                                 $query->where('id_outlet', $outlet->id_outlet) 
                                     ->orWhereNull('id_outlet'); 
                             }) 
-                            ->whereNull('used_at')->whereDate('voucher_expired_at', '>=', date("Y-m-d")) 
-                            ->where('paid_status', 'Completed')->get(); 
+                            ->whereNull('used_at')->whereDate('voucher_expired_at', '>=', date("Y-m-d"))
+                            ->where(function ($q) { 
+                                $q->where('paid_status', 'Completed') 
+                                    ->orWhere('paid_status', 'Free');
+                            }) 
+                            ->get(); 
         if(count($voucher) <= 0){ 
             $result['vouchers'] = []; 
         }else{ 
@@ -195,7 +199,7 @@ class ApiPOS extends Controller
             $result['promo_id'] = ""; 
         }else{ 
             $result['customer_level'] = $membership->membership_name; 
-            $result['promo_id'] = $membership->benefit_promo_id; 
+            $result['promo_id'] = explode(',',$membership->benefit_promo_id); 
         } 
 
         $result['saldo'] = $user->balance; 
