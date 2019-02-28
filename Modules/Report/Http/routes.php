@@ -36,6 +36,7 @@ Route::group(['middleware' => 'api', 'prefix' => 'api/report', 'namespace' => 'M
     Route::post('/single', 'ApiSingleReport@getReport');
     Route::get('/single/year-list', 'ApiSingleReport@getReportYear');
     Route::get('/single/outlet-list', 'ApiSingleReport@getOutletList');
+    Route::get('/single/product-list', 'ApiSingleReport@getProductList');
     Route::get('/single/membership-list', 'ApiSingleReport@getMembershipList');
 
 });
