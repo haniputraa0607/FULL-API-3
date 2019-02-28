@@ -7,13 +7,13 @@ use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
 
 use App\Http\Models\Transaction;
-use App\Http\Models\TransactionPaymentBalance;
 use App\Http\Models\DealsUser;
 use App\Http\Models\LogPoint;
 use App\Http\Models\LogBalance;
 use App\Http\Models\Configs;
 use App\Http\Models\TransactionMultiplePayment;
 use App\Http\Models\TransactionPaymentMidtran;
+use App\Http\Models\TransactionPaymentBalance;
 
 use App\Lib\MyHelper;
 
@@ -366,7 +366,6 @@ class ApiHistoryController extends Controller
         $next_page = $page + 1;
 
         $balance = $this->balance($post, $id);
-
         $sortBalance = $this->sorting($balance, $order, $page);
         
         $check = MyHelper::checkGet($sortBalance);
@@ -422,6 +421,10 @@ class ApiHistoryController extends Controller
             }
 
             for ($i=$start; $i < $end; $i++) {
+                $useragent = $_SERVER['HTTP_USER_AGENT'];
+                if(stristr($useragent,'okhttp')){
+                    $data[$i]['date'] = MyHelper::dateFormatInd($data[$i]['date']);
+                }
                 array_push($resultData, $data[$i]);
             }
 
@@ -502,13 +505,16 @@ class ApiHistoryController extends Controller
             //cek payment
             if($value['trasaction_payment_type']){
                 $found = false;
-                if($value['trasaction_type'] == 'Midtrans'){
+                if($value['trasaction_payment_type'] == 'Midtrans'){
                     $pay = TransactionMultiplePayment::where('id_transaction', $value['id_transaction'])->first();
                     if($pay){
-                        $found = true;
+                        $payMidtrans = TransactionPaymentMidtran::where('id_transaction', $value['id_transaction'])->first();
+                        if($payMidtrans && $payMidtrans['transaction_status']){
+                            $found = true;
+                        }
                     }else{
                         $payMidtrans = TransactionPaymentMidtran::where('id_transaction', $value['id_transaction'])->first();
-                        if($payMidtrans){
+                        if($payMidtrans && $payMidtrans['transaction_status']){
                             $found = true;
                         }
                     }
@@ -519,7 +525,7 @@ class ApiHistoryController extends Controller
                 if($found == true){
                     $dataList['type'] = 'trx';
                     $dataList['id'] = $value['transaction_receipt_number'];
-                    $dataList['date'] = $value['transaction_date'];
+                    $dataList['date']    = date('Y-m-d H:i:s', strtotime($value['transaction_date']));
                     $dataList['outlet'] = $value['outlet']['outlet_name'];
                     $dataList['amount'] = number_format($value['transaction_grandtotal'], 0, ',', '.');
         
@@ -548,7 +554,7 @@ class ApiHistoryController extends Controller
         foreach ($transaction as $key => $value) {
             $dataList['type'] = 'trx';
             $dataList['id'] = $value['transaction_receipt_number'];
-            $dataList['date'] = $value['transaction_date'];
+            $dataList['date']    = date('Y-m-d H:i:s', strtotime($value['transaction_date']));
             $dataList['outlet'] = $value['outlet']['outlet_name'];
             $dataList['amount'] = number_format($value['transaction_grandtotal'], 0, ',', '.');
 
@@ -645,7 +651,7 @@ class ApiHistoryController extends Controller
                 $dataList['type']        = 'point';
                 $dataList['detail_type'] = 'voucher';
                 $dataList['id']          = $value['id_log_point'];
-                $dataList['date']        = date('Y-m-d H:i:s', strtotime($vou['claimed_at']));
+                $dataList['date']    = date('Y-m-d H:i:s', strtotime($vou['claimed_at']));
                 $dataList['outlet']      = $trx['outlet']['outlet_name'];
                 $dataList['amount']     = $value['point'];
                 $log[$key]['online']     = 1;
@@ -734,12 +740,12 @@ class ApiHistoryController extends Controller
 
     public function balance($post, $id) {
         $log = LogBalance::where('id_user', $id)->get();
-        // return $log;
         $listBalance = [];
         
         foreach ($log as $key => $value) {
             if ($value['source'] == 'Transaction' || $value['source'] == 'Rejected Order') {
                 $trx = Transaction::with('outlet')->where('id_transaction', $value['id_reference'])->first();
+                
                 // return $trx;
                 // $log[$key]['detail'] = $trx;
                 // $log[$key]['type']   = 'trx';
@@ -750,6 +756,10 @@ class ApiHistoryController extends Controller
                 // } else {
                 //     $log[$key]['online'] = 1;
                 // }
+
+                if (empty($trx)) {
+                    continue;
+                }
 
                 $dataList['type']    = 'balance';
                 $dataList['id']      = $value['id_log_balance'];
@@ -766,7 +776,6 @@ class ApiHistoryController extends Controller
 
             } elseif ($value['source'] == 'Voucher') {
                 $vou = DealsUser::with('dealVoucher.deal')->where('id_deals_user', $value['id_reference'])->first();
-
                 // $log[$key]['detail'] = $vou;
                 $dataList['type']   = 'voucher';
                 $dataList['id']      = $value['id_log_balance'];
@@ -781,7 +790,7 @@ class ApiHistoryController extends Controller
                 // return 'a';
                 $dataList['type']   = 'profile';
                 $dataList['id']      = $value['id_log_balance'];
-                $dataList['date']   = date('Y-m-d H:i:s', strtotime($value['created_at']));
+                $dataList['date']    = date('Y-m-d H:i:s', strtotime($value['created_at']));
                 $dataList['outlet'] = 'Completing User Profile';
                 $dataList['amount'] = '+ '.number_format($value['balance'], 0, ',', '.');
 
@@ -858,6 +867,6 @@ class ApiHistoryController extends Controller
 
         }
 
-        return $listBalance;
+        return array_values($listBalance);
     }
 }

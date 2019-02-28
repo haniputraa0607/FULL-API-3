@@ -29,7 +29,7 @@ class users_phone_pin_new extends FormRequest
 			'phone'			=> 'required|string|max:18',
 			'pin_old'		=> 'required|string|digits:6',
 			'pin_new'		=> 'required|string|digits:6',
-			'device_id'		=> 'max:20',
+			'device_id'		=> 'max:200',
 			'device_token'	=> 'max:160'
         ];
     }

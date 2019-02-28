@@ -505,6 +505,10 @@ class ApiCampaign extends Controller
 							} else{
 								$dataOptional['id_reference'] = 0;
 							}
+
+							if($campaign['campaign_push_clickto'] == 'News' && $campaign['campaign_push_id_reference'] != null){
+								$dataOptional['url'] = env('APP_URL').'news/webview/'.$campaign['campaign_push_id_reference'];
+							}
 							
 							$deviceToken = PushNotificationHelper::searchDeviceToken("phone", $receipient);
 							

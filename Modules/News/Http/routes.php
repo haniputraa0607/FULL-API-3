@@ -31,6 +31,7 @@ Route::group(['prefix' => 'api/news', 'namespace' => 'Modules\News\Http\Controll
 
 Route::group(['prefix' => 'api/news', 'namespace' => 'Modules\News\Http\Controllers'], function()
 {
+        Route::any('list/test', 'ApiNews@listNews');
         // Route::any('list/web', 'ApiNews@listNews');
         // Route::any('list', 'ApiNews@listNews');
         Route::any('webview', 'ApiNews@webview');

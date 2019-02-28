@@ -122,7 +122,7 @@ class ApiOnlineTransaction extends Controller
     
             $settingTime = Setting::where('key', 'processing_time')->first();
             if($settingTime && $settingTime->value){
-                if($outlet['today']['close'] && date('H:i') > date('H:i', strtotime('+'.$settingTime->value.' minutes' ,strtotime($outlet['today']['close'])))){
+                if($outlet['today']['close'] && date('H:i') > date('H:i', strtotime('-'.$settingTime->value.' minutes' ,strtotime($outlet['today']['close'])))){
                     DB::rollback();
                     return response()->json([
                         'status'    => 'fail',
@@ -782,8 +782,10 @@ class ApiOnlineTransaction extends Controller
                 } 
                 else {
                     if(isset($outlet['today']['close'])){
-                        if(date('Y-m-d H:i', strtotime($post['pickup_at']) > date('Y-m-d').' '.date('H:i', strtotime($outlet['today']['close'])))){
+                        if(date('Y-m-d H:i', strtotime($post['pickup_at'])) > date('Y-m-d').' '.date('H:i', strtotime($outlet['today']['close']))){
                             $pickup =  date('Y-m-d').' '.date('H:i:s', strtotime($outlet['today']['close']));
+                        }else{
+                            $pickup = date('Y-m-d H:i:s', strtotime($post['pickup_at']));
                         }
                     }else{
                         $pickup = date('Y-m-d H:i:s', strtotime($post['pickup_at']));
@@ -1045,6 +1047,46 @@ class ApiOnlineTransaction extends Controller
                     ]);
                 }
             }
+
+            if ($post['payment_type'] == 'Midtrans') {
+                if ($post['transaction_payment_status'] == 'Completed') {
+                    //bank
+                    $bank = ['BNI', 'Mandiri', 'BCA'];
+                    $getBank = array_rand($bank);
+
+                    //payment_method
+                    $method = ['credit_card', 'bank_transfer', 'direct_debit'];
+                    $getMethod = array_rand($method);
+
+                    $dataInsertMidtrans = [
+                        'id_transaction'     => $insertTransaction['id_transaction'],
+                        'approval_code'      => 000000,
+                        'bank'               => $bank[$getBank],
+                        'eci'                => $this->getrandomnumber(2),
+                        'transaction_time'   => $insertTransaction['transaction_date'],
+                        'gross_amount'       => $insertTransaction['transaction_grandtotal'],
+                        'order_id'           => $insertTransaction['transaction_receipt_number'],
+                        'payment_type'       => $method[$getMethod],
+                        'signature_key'      => $this->getrandomstring(),
+                        'status_code'        => 200,
+                        'vt_transaction_id'  => $this->getrandomstring(8).'-'.$this->getrandomstring(4).'-'.$this->getrandomstring(4).'-'.$this->getrandomstring(12),
+                        'transaction_status' => 'capture',
+                        'fraud_status'       => 'accept',
+                        'status_message'     => 'Veritrans payment notification'
+                    ];
+
+                    $insertDataMidtrans = TransactionPaymentMidtran::create($dataInsertMidtrans);
+                    if (!$insertDataMidtrans) {
+                        DB::rollback();
+                        return response()->json([
+                            'status'    => 'fail',
+                            'messages'  => ['Insert Data Midtrans Failed']
+                        ]);
+                    }
+
+                }
+
+            } 
         }
         
         DB::commit();
@@ -1215,4 +1257,44 @@ class ApiOnlineTransaction extends Controller
             }
         }
     }
+
+    public function getrandomstring($length = 120) {
+
+        global $template;
+        settype($template, "string");
+ 
+        $template = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+ 
+        settype($length, "integer");
+        settype($rndstring, "string");
+        settype($a, "integer");
+        settype($b, "integer");
+ 
+        for ($a = 0; $a <= $length; $a++) {
+                $b = rand(0, strlen($template) - 1);
+                $rndstring .= $template[$b];
+        }
+ 
+        return $rndstring; 
+    }
+
+    public function getrandomnumber($length) {
+
+        global $template;
+        settype($template, "string");
+ 
+        $template = "0987654321";
+ 
+        settype($length, "integer");
+        settype($rndstring, "string");
+        settype($a, "integer");
+        settype($b, "integer");
+ 
+        for ($a = 0; $a <= $length; $a++) {
+                $b = rand(0, strlen($template) - 1);
+                $rndstring .= $template[$b];
+        }
+ 
+        return $rndstring; 
+     }
 }

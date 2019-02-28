@@ -28,7 +28,7 @@ class users_phone_pin extends FormRequest
 		return [
 			'phone'			=> 'required|string|max:18',
 			'pin'			=> 'required|string|digits:6',
-			'device_id'		=> 'max:20',
+			'device_id'		=> 'max:200',
 			'device_token'	=> 'max:255'
         ];
     }

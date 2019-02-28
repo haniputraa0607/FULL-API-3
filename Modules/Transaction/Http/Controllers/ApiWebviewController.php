@@ -196,6 +196,7 @@ class ApiWebviewController extends Controller
                         if (!empty($getPayment)) {
                             $getPayment['type'] = 'Balance';
                             array_push($dataPayment, $getPayment);
+                            $list['balance'] = $getPayment['balance_nominal'];
                         }
                     } elseif ($value->type == 'Manual') {
                         $getPayment = TransactionPaymentManual::where('id_transaction_payment_manual', $value->id_payment)->first();
