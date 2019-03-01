@@ -78,7 +78,7 @@ class DealsUser extends Model
 	}
 
 	function outlet() {
-		return $this->belongsTo(Outlet::class, 'id_outlet', 'id_outlet')->select('outlet_code', 'outlet_name', 'outlet_address');
+		return $this->belongsTo(Outlet::class, 'id_outlet', 'id_outlet')->select('id_outlet', 'outlet_code', 'outlet_name', 'outlet_address');
 	}
 
 	function dealVoucher() {
@@ -88,4 +88,5 @@ class DealsUser extends Model
 	function deals() {
 		return $this->belongsTo(Deal::class, 'id_deals', 'id_deals');
 	}
+
 }

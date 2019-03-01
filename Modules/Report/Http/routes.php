@@ -38,6 +38,12 @@ Route::group(['middleware' => 'api', 'prefix' => 'api/report', 'namespace' => 'M
     Route::get('/single/outlet-list', 'ApiSingleReport@getOutletList');
     Route::get('/single/product-list', 'ApiSingleReport@getProductList');
     Route::get('/single/membership-list', 'ApiSingleReport@getMembershipList');
+    Route::get('/single/deals-list', 'ApiSingleReport@getDealsList');
+
+    Route::post('/single/trx', 'ApiSingleReport@getTrxReport');
+    Route::post('/single/product', 'ApiSingleReport@getProductReport');
+    Route::post('/single/membership', 'ApiSingleReport@getMembershipReport');
+    Route::post('/single/voucher', 'ApiSingleReport@getVoucherReport');
 
 });
 
