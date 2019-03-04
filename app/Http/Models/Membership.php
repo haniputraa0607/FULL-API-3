@@ -37,9 +37,11 @@ class Membership extends Model
 	protected $casts = [
 		'min_total_value' => 'int',
 		'min_total_count' => 'int',
+		'min_total_balance' => 'int',
 		'retain_days' => 'int',
 		'retain_min_total_value' => 'int',
 		'retain_min_total_count' => 'int',
+		'retain_min_total_balance' => 'int',
 		'benefit_point_multiplier' => 'float',
 		'benefit_cashback_multiplier' => 'float',
 		'benefit_discount' => 'float',
@@ -48,13 +50,16 @@ class Membership extends Model
 
 	protected $fillable = [
 		'membership_name',
+		'membership_type',
 		'membership_name_color',
 		'membership_image',
 		'min_total_value',
 		'min_total_count',
+		'min_total_balance',
 		'retain_days',
 		'retain_min_total_value',
 		'retain_min_total_count',
+		'retain_min_total_balance',
 		'benefit_point_multiplier',
 		'benefit_cashback_multiplier',
 		'benefit_promo_id',
@@ -67,5 +72,10 @@ class Membership extends Model
 		return $this->belongsToMany(\App\Http\Models\User::class, 'users_memberships', 'id_membership', 'id_user')
 					->withPivot('id_log_membership', 'min_total_value', 'min_total_count', 'retain_date', 'retain_min_total_value', 'retain_min_total_count', 'benefit_point_multiplier', 'benefit_cashback_multiplier', 'benefit_promo_id', 'benefit_discount')
 					->withTimestamps();
+	}
+
+	public function membership_promo_id()
+	{
+	    return $this->hasMany(MembershipPromoId::class, 'id_membership', 'id_membership');
 	}
 }

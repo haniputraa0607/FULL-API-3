@@ -7,4 +7,5 @@ Route::group(['middleware' => 'auth:api', 'prefix' => 'api/membership', 'namespa
     Route::post('delete', 'ApiMembership@delete');
     Route::get('/detail/webview', 'ApiMembershipWebview@webview');
     Route::post('/detail/webview', 'ApiMembershipWebview@webview');
+    Route::get('update/transaction', 'ApiMembership@updateSubtotalTrxUser');
 });

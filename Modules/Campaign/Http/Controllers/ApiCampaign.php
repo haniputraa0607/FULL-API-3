@@ -25,6 +25,7 @@ use App\Http\Models\WhatsappContent;
 use App\Http\Models\CampaignWhatsappQueue;
 use App\Http\Models\CampaignWhatsappSent;
 use App\Http\Models\CampaignWhatsappSentContent;
+use App\Http\Models\News;
 //use Modules\Campaign\Http\Requests\campaign_list;
 //use Modules\Campaign\Http\Requests\campaign_create;
 //use Modules\Campaign\Http\Requests\campaign_update;
@@ -507,6 +508,10 @@ class ApiCampaign extends Controller
 							}
 
 							if($campaign['campaign_push_clickto'] == 'News' && $campaign['campaign_push_id_reference'] != null){
+								$news = News::find($campaign['campaign_push_id_reference']);
+								if($news){
+									$dataOptional['news_title'] = $news->news_title;
+								}
 								$dataOptional['url'] = env('APP_URL').'news/webview/'.$campaign['campaign_push_id_reference'];
 							}
 							
@@ -1077,6 +1082,14 @@ class ApiCampaign extends Controller
 				$dataOptional['id_reference'] = (int)$pushQueue['campaign']['campaign_push_id_reference'];
 			} else{
 				$dataOptional['id_reference'] = 0;
+			}
+
+			if($pushQueue['campaign']['campaign_push_clickto'] == 'News' && $pushQueue['campaign']['campaign_push_id_reference'] != null){
+				$news = News::find($campaign['campaign_push_id_reference']);
+				if($news){
+					$dataOptional['news_title'] = $news->news_title;
+				}
+				$dataOptional['url'] = env('APP_URL').'news/webview/'.$campaign['campaign_push_id_reference'];
 			}
 			
 			$deviceToken = PushNotificationHelper::searchDeviceToken("phone", $receipient);

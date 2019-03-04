@@ -329,7 +329,6 @@ class ApiProductController extends Controller
                 //delete all photo
                 $delete = $this->deletePhoto($post['id_product']);
                 
-                if($delete){
 
                     //create photo
                     $upload = MyHelper::uploadPhotoStrict($post['photo'], $this->saveImage, 300, 300);
@@ -349,7 +348,6 @@ class ApiProductController extends Controller
                     $dataPhoto['id_product']          = $post['id_product'];
                     $dataPhoto['product_photo_order'] = $this->cekUrutanPhoto($post['id_product']);
                     $save                        = ProductPhoto::create($dataPhoto);
-                }
                 
 
             }

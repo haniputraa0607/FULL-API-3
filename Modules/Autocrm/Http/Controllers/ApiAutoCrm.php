@@ -17,6 +17,7 @@ use App\Http\Models\AutocrmWhatsappLogContent;
 use App\Http\Models\WhatsappContent;
 use App\Http\Models\UserInbox;
 use App\Http\Models\Setting;
+use App\Http\Models\News;
 
 use App\Lib\MyHelper;
 use App\Lib\PushNotificationHelper;
@@ -267,6 +268,15 @@ class ApiAutoCrm extends Controller
 						
 						if (isset($crm['autocrm_push_clickto']) && $crm['autocrm_push_clickto'] != null) {
 							$dataOptional['type'] = $crm['autocrm_push_clickto'];
+							if($crm['autocrm_push_clickto'] == 'News'){
+								if($crm['autocrm_push_id_reference']){
+									$news = News::find($crm['autocrm_push_id_reference']);
+									if($news){
+										$dataOptional['news_title'] = $news->news_title;
+									}
+									$dataOptional['url'] = env('APP_URL').'news/webview/'.$crm['autocrm_push_id_reference'];
+								}
+							}
 						} else {
 							$dataOptional['type'] = 'Home';
 						}

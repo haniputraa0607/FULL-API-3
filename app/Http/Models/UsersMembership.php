@@ -34,7 +34,7 @@ use Illuminate\Database\Eloquent\Model;
 class UsersMembership extends Model
 {
 	protected $primaryKey = 'id_log_membership';
-	public $incrementing = false;
+	public $incrementing = true;
 
 	protected $casts = [
 		'id_log_membership' => 'int',
@@ -42,8 +42,10 @@ class UsersMembership extends Model
 		'id_membership' => 'int',
 		'min_total_value' => 'int',
 		'min_total_count' => 'int',
+		'min_total_balance' => 'int',
 		'retain_min_total_value' => 'int',
 		'retain_min_total_count' => 'int',
+		'retain_min_total_balance' => 'int',
 		'benefit_point_multiplier' => 'int',
 		'benefit_cashback_multiplier' => 'int',
 		'benefit_discount' => 'int',
@@ -60,11 +62,14 @@ class UsersMembership extends Model
 		'membership_name',
 		'membership_name_color',
 		'membership_image',
+		'membership_type',
 		'min_total_value',
 		'min_total_count',
+		'min_total_balance',
 		'retain_date',
 		'retain_min_total_value',
 		'retain_min_total_count',
+		'retain_min_total_balance',
 		'benefit_point_multiplier',
 		'benefit_cashback_multiplier',
 		'benefit_promo_id',
@@ -80,5 +85,10 @@ class UsersMembership extends Model
 	public function membership()
 	{
 		return $this->belongsTo(\App\Http\Models\Membership::class, 'id_membership');
+	}
+
+	public function users_membership_promo_id()
+	{
+	    return $this->hasMany(UsersMembershipPromoId::class, 'id_users_membership', 'id_log_membership');
 	}
 }
