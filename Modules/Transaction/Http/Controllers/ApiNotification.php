@@ -82,23 +82,22 @@ class ApiNotification extends Controller {
             //         'messages' => ['Transaction failed']
             //     ]);
             // }
+            
 
             $newTrx = Transaction::with('user.memberships', 'outlet', 'productTransaction')->where('transaction_receipt_number', $midtrans['order_id'])->first();
 
-            $checkType = TransactionMultiplePayment::where('id_transaction', $midtrans['order_id'])->get()->toArray();
+            $checkType = TransactionMultiplePayment::where('id_transaction', $newTrx['id_transaction'])->get()->toArray();
             $column = array_column($checkType, 'type');
-
-            if (!in_array('Balance', $column)) {
-                $savePoint = $this->savePoint($newTrx);
-                if (!$savePoint) {
-                    DB::rollback();
-                    return response()->json([
-                        'status'   => 'fail',
-                        'messages' => ['Transaction failed']
-                    ]);
-                }
-            }
                     
+            // $user = User::where('id', $newTrx['id_user'])->first();
+            // if (empty($user)) {
+            //     DB::rollback();
+            //     return response()->json([
+            //         'status'   => 'fail',
+            //         'messages' => ['Data Transaction Not Valid']
+            //     ]);
+            // }
+
             //booking GO-SEND
             if ($newTrx['trasaction_type'] == 'Pickup Order') {
                 $newTrx['detail'] = TransactionPickup::with('transaction_pickup_go_send')->where('id_transaction', $newTrx['id_transaction'])->first();
@@ -119,6 +118,17 @@ class ApiNotification extends Controller {
             }
 
             if ($midtrans['status_code'] == 200) {
+                if (!in_array('Balance', $column)) {
+                    $savePoint = $this->savePoint($newTrx);
+                    if (!$savePoint) {
+                        DB::rollback();
+                        return response()->json([
+                            'status'   => 'fail',
+                            'messages' => ['Transaction failed']
+                        ]);
+                    }
+                }
+
                 $notif = $this->notification($midtrans, $newTrx);
                 if (!$notif) {
                     return response()->json([
@@ -137,25 +147,41 @@ class ApiNotification extends Controller {
                     ]);
                 }
             } elseif ($midtrans['status_code'] == 202) {
-                $notifExpired = $this->notificationExpired($midtrans, $newTrx);
-                if (!$notifExpired) {
-                    return response()->json([
-                        'status'   => 'fail',
-                        'messages' => ['Transaction failed']
-                    ]);
+                if ($midtrans['transaction_status'] == 'deny') {
+                    $notifDeny = $this->notificationDenied($midtrans, $newTrx);
+                    if (!$notifDeny) {
+                        return response()->json([
+                            'status'   => 'fail',
+                            'messages' => ['Transaction failed']
+                        ]);
+                    }
+                } else {
+                    $notifExpired = $this->notificationExpired($midtrans, $newTrx);
+                    if (!$notifExpired) {
+                        return response()->json([
+                            'status'   => 'fail',
+                            'messages' => ['Transaction failed']
+                        ]);
+                    }
+                }
+                if (count($checkType) > 0) {
+                    foreach ($checkType as $key => $value) {
+                        if ($value['type'] == 'Balance') {
+                            $checkBalance = TransactionPaymentBalance::where('id_transaction_payment_balance', $value['id_payment'])->first();
+                            if (!empty($checkBalance)) {
+                                $insertDataLogCash = app($this->balance)->addLogBalance($newTrx['id_user'], $checkBalance['balance_nominal'], $newTrx['id_transaction'], 'Rejected Order', $newTrx['transaction_grandtotal']);
+                                if (!$insertDataLogCash) {
+                                    DB::rollback();
+                                    return response()->json([
+                                        'status'    => 'fail',
+                                        'messages'  => ['Insert Cashback Failed']
+                                    ]);
+                                }
+                            }
+                        }
+                    }
                 }
             }
-
-            // $user = User::where('id', $newTrx['id_user'])->first();
-            // if (empty($user)) {
-            //     DB::rollback();
-            //     return response()->json([
-            //         'status'   => 'fail',
-            //         'messages' => ['Data Transaction Not Valid']
-            //     ]);
-            // }
-
-            
 
             DB::commit();
             return response()->json(['status' => 'success']);
@@ -304,6 +330,36 @@ class ApiNotification extends Controller {
         }
 
         $send = app($this->autocrm)->SendAutoCRM('Transaction Expired', $trx->user->phone, ['notif_type' => 'trx', 'header_label' => $title, 'date' => $trx['transaction_date'], 'status' => $trx['transaction_payment_status'], 'name'  => $trx->user->name, 'id' => $mid['order_id'], 'outlet_name' => $outlet, 'detail' => $detail, 'id_reference' => $mid['order_id']]);
+
+        return $send;
+    }
+
+    public function notificationDenied($mid, $trx)
+    {
+        $name    = $trx['user']['name'];
+        $phone   = $trx['user']['phone'];
+        $date    = $trx['transaction_date'];
+        $outlet  = $trx['outlet']['outlet_name'];
+        $receipt = $trx['transaction_receipt_number'];
+        $detail = $this->getHtml($trx, $trx['productTransaction'], $name, $phone, $date, $outlet, $receipt);
+
+        if ($trx['transaction_payment_status'] == 'Pending') {
+            $title = 'Pending';
+        }
+
+        if ($trx['transaction_payment_status'] == 'Paid') {
+            $title = 'Terbayar';
+        }
+
+        if ($trx['transaction_payment_status'] == 'Completed') {
+            $title = 'Sukses';
+        }
+
+        if ($trx['transaction_payment_status'] == 'Cancelled') {
+            $title = 'Gagal';
+        }
+
+        $send = app($this->autocrm)->SendAutoCRM('Transaction Failed', $trx->user->phone, ['notif_type' => 'trx', 'header_label' => $title, 'date' => $trx['transaction_date'], 'status' => $trx['transaction_payment_status'], 'name'  => $trx->user->name, 'id' => $mid['order_id'], 'outlet_name' => $outlet, 'detail' => $detail, 'id_reference' => $mid['order_id']]);
 
         return $send;
     }

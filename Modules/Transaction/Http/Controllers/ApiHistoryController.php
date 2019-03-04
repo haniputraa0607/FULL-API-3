@@ -436,7 +436,7 @@ class ApiHistoryController extends Controller
     }
 
     public function transaction($post, $id) {
-        $transaction = Transaction::with('outlet', 'logTopup')->orderBy('transaction_date', 'DESC');
+        $transaction = Transaction::where('transaction_payment_status', '!=', 'Cancelled')->with('outlet', 'logTopup')->orderBy('transaction_date', 'DESC');
 
         if (!is_null($post['date_start']) && !is_null($post['date_end'])) {
             $date_start = date('Y-m-d', strtotime($post['date_start']))." 00.00.00";
