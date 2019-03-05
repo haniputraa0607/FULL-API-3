@@ -670,12 +670,18 @@ class ApiOutletController extends Controller
         $distance = $request->json('distance');
         $id_city = $request->json('id_city');
         $sort = $request->json('sort');
+        $gofood = $request->json('gofood');
         
         // outlet
         $outlet = Outlet::with(['today', 'city', 'outlet_photos'])->where('outlet_status', 'Active')->whereNotNull('id_city')->orderBy('outlet_name','asc');
         if($request->json('search') && $request->json('search') != ""){
             $outlet = $outlet->where('outlet_name', 'LIKE', '%'.$request->json('search').'%');
         }
+
+        if (isset($gofood)) {
+            $outlet = $outlet->whereNotNull('deep_link');
+        }
+
         $outlet = $outlet->get()->toArray();
 		
 		

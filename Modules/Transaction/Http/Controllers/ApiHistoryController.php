@@ -761,19 +761,47 @@ class ApiHistoryController extends Controller
                     continue;
                 }
 
-                $dataList['type']    = 'balance';
-                $dataList['id']      = $value['id_log_balance'];
-                $dataList['date']    = date('Y-m-d H:i:s', strtotime($value['created_at']));
-                $dataList['outlet']  = $trx['outlet']['outlet_name'];
-                if ($value['balance'] < 0) {
-                    $dataList['amount'] = '- '.ltrim(number_format($value['balance'], 0, ',', '.'), '-');
+                if ($trx['transaction_payment_status'] != 'Cancelled') {
+                    $dataList['type']    = 'balance';
+                    $dataList['id']      = $value['id_log_balance'];
+                    $dataList['date']    = date('Y-m-d H:i:s', strtotime($value['created_at']));
+                    $dataList['outlet']  = $trx['outlet']['outlet_name'];
+                    if ($value['balance'] < 0) {
+                        $dataList['amount'] = '- '.ltrim(number_format($value['balance'], 0, ',', '.'), '-');
+                    } else {
+                        $dataList['amount'] = '+ '.number_format($value['balance'], 0, ',', '.');
+                    }
+
+                    $listBalance[$key] = $dataList;
                 } else {
-                    $dataList['amount'] = '+ '.number_format($value['balance'], 0, ',', '.');
+                    if ($value['balance'] < 0) {
+                        $dataList['type']    = 'balance';
+                        $dataList['id']      = $value['id_log_balance'];
+                        $dataList['date']    = date('Y-m-d H:i:s', strtotime($value['created_at']));
+                        $dataList['outlet']  = $trx['outlet']['outlet_name'];
+                        if ($value['balance'] < 0) {
+                            $dataList['amount'] = '- '.ltrim(number_format($value['balance'], 0, ',', '.'), '-');
+                        } else {
+                            $dataList['amount'] = '+ '.number_format($value['balance'], 0, ',', '.');
+                        }
+
+                        $listBalance[$key] = $dataList;
+                    } else {
+                        $dataList['type']    = 'profile';
+                        $dataList['id']      = $value['id_log_balance'];
+                        $dataList['date']    = date('Y-m-d H:i:s', strtotime($value['created_at']));
+                        $dataList['outlet']  = 'Reversal';
+                        if ($value['balance'] < 0) {
+                            $dataList['amount'] = '- '.ltrim(number_format($value['balance'], 0, ',', '.'), '-');
+                        } else {
+                            $dataList['amount'] = '+ '.number_format($value['balance'], 0, ',', '.');
+                        }
+
+                        $listBalance[$key] = $dataList;
+                    }
+                    
                 }
-
-                $listBalance[$key] = $dataList;
-
-
+                
             } elseif ($value['source'] == 'Voucher') {
                 $vou = DealsUser::with('dealVoucher.deal')->where('id_deals_user', $value['id_reference'])->first();
                 // $log[$key]['detail'] = $vou;
