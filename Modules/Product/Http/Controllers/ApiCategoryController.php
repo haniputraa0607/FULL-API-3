@@ -259,6 +259,7 @@ class ApiCategoryController extends Controller
         $post = $request->json()->all();
 
         $category = $this->getData($post);
+        
         if (!empty($category)) {
             $category = $this->createTree($category, $post);
         }
@@ -290,16 +291,30 @@ class ApiCategoryController extends Controller
 		}
 		
 		$result = array();
-
+        $dataCategory = [];
         if (!empty($category)) {
             foreach ($category as $key => $value) {
                 if (count($value['product']) < 1) {
-                        unset($category[$key]);
+                        // unset($category[$key]);
+                }else{
+                    foreach($value['product'] as $index => $prod){
+                        if(count($prod['photos']) < 1){
+                            $value['product'][$index]['photos'][] = [
+                                "id_product_photo" => 0,
+                                "id_product" => $prod['id_product'],
+                                "product_photo" => 'img/product/item/default.png',
+                                "created_at" => $prod['created_at'],
+                                "updated_at" => $prod['updated_at'],
+                                "url_product_photo" => env('APP_API_URL').'img/product/item/default.png'
+                            ];
+                        }
+                    }
+                    $dataCategory[] = $value;
                 }
             }
         }
 
-        $result['categorized'] = $category;
+        $result['categorized'] = $dataCategory;
         
         if(!isset($post['id_product_category'])){
             $result['uncategorized_name'] = "Product";
@@ -370,7 +385,8 @@ class ApiCategoryController extends Controller
 									->where('products.id_product_category', $id)
 									->with(['photos'])
                                     ->orderBy('products.position')
-									->get();
+                                    ->get();
+            
         } else {
 			$defaultoutlet = Setting::where('key','=','default_outlet')->first();
 			$product = Product::select('products.*', 'product_prices.product_price', 'product_prices.product_visibility', 'product_prices.product_status', 'product_prices.product_stock_status')->join('product_prices','product_prices.id_product','=','products.id_product')

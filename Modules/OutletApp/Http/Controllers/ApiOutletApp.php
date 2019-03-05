@@ -13,6 +13,7 @@ use App\Http\Models\TransactionPickup;
 use App\Http\Models\TransactionPickupGoSend;
 use App\Http\Models\TransactionMultiplePayment;
 use App\Http\Models\TransactionPaymentMidtran;
+use App\Http\Models\TransactionPaymentBalance;
 use App\Http\Models\Setting;
 use App\Http\Models\User;
 use App\Http\Models\Product;

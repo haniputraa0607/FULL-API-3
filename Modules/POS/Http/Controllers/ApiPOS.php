@@ -13,6 +13,9 @@ use App\Http\Models\TransactionProduct;
 use App\Http\Models\TransactionPickup;
 use App\Http\Models\TransactionProductModifier;
 use App\Http\Models\TransactionPaymentOffline;
+use App\Http\Models\TransactionMultiplePayment;
+use App\Http\Models\TransactionPaymentMidtran;
+use App\Http\Models\TransactionPaymentBalance;
 use App\Http\Models\TransactionVoucher;
 use App\Http\Models\TransactionSetting;
 use App\Http\Models\User;
@@ -107,9 +110,54 @@ class ApiPOS extends Controller
 			$transactions['tax'] = $check['transaction_tax'];
 			$transactions['discount'] = $check['transaction_discount'];
 			$transactions['grand_total'] = $check['transaction_grandtotal'];
-			$transactions['payment_type'] = null;
-			$transactions['payment_code'] = null;
-			$transactions['payment_nominal'] = null;
+
+			$transactions['payments'] = [];
+			if($check['trasaction_payment_type'] == 'Midtrans'){
+				//cek di multi payment
+				$multi = TransactionMultiplePayment::where('id_transaction', $check['id_transaction'])->get();
+				if(!$multi){
+					//cek di balance
+					$balance = TransactionPaymentBalance::where('id_transaction', $check['id_transaction'])->get();
+					if($balance){
+						foreach($balance as $payBalance){
+							$pay['payment_type'] = 'Kopi Points';
+							$pay['payment_nominal'] = (int)$payBalance['balance_nominal'];
+							$transactions['payments'][] = $pay;
+						}
+					}else{
+						$midtrans = TransactionPaymentMidtran::where('id_transaction', $check['id_transaction'])->get();
+						if($midtrans){
+							foreach($midtrans as $payMidtrans){
+								$pay['payment_type'] = 'Online Payment';
+								$pay['payment_nominal'] = (int)$payMidtrans['gross_amount'];
+								$transactions['payments'][] = $pay;
+							}
+						}
+					}
+				}else{
+					foreach($multi as $payMulti){
+						if($payMulti['type'] == 'Balance'){
+							$balance = TransactionPaymentBalance::find($payMulti['id_payment']);
+							if($balance){
+								$pay['payment_type'] = 'Kopi Points';
+								$pay['payment_nominal'] = (int)$balance['balance_nominal'];
+								$transactions['payments'][] = $pay;
+							}
+						}elseif($payMulti['type'] == 'Midtrans'){
+							$midtrans = TransactionPaymentmidtran::find($payMulti['id_payment']);
+							if($midtrans){
+								$pay['payment_type'] = 'Online Payment';
+								$pay['payment_nominal'] = (int)$midtrans['gross_amount'];
+								$transactions['payments'][] = $pay;
+							}
+						}
+					}
+				}
+			}
+
+			// $transactions['payment_type'] = null;
+			// $transactions['payment_code'] = null;
+			// $transactions['payment_nominal'] = null;
 			$transactions['menu'] = [];
 			foreach($check['products'] as $key => $menu){
 				$val = [];
