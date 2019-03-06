@@ -157,8 +157,8 @@ class ApiSingleReport extends Controller
                     $chart_date = date('d M', strtotime($item['trx_date']));
                     break;
                 case 'month':
-                    $item_date = date('F', mktime(0, 0, 0, $item['trx_month'], 10));
-                    $chart_date = $item_date;
+                    $item_date = date('M', mktime(0, 0, 0, $item['trx_month'], 10)) ." ". $item['trx_year'];
+                    $chart_date = date('F', mktime(0, 0, 0, $item['trx_month'], 10));
                     break;
                 case 'year':
                     $item_date = $item['trx_month'] ."-". $item['trx_year'];
@@ -167,6 +167,7 @@ class ApiSingleReport extends Controller
                 default:
                     break;
             }
+            $transactions[$key]['number'] = $key + 1;
             $transactions[$key]['date'] = $item_date;
 
             // trx chart data
@@ -270,8 +271,8 @@ class ApiSingleReport extends Controller
                     $chart_date = date('d M', strtotime($item['trx_date']));
                     break;
                 case 'month':
-                    $item_date = date('F', mktime(0, 0, 0, $item['trx_month'], 10));
-                    $chart_date = $item_date;
+                    $item_date = date('M', mktime(0, 0, 0, $item['trx_month'], 10)) ." ". $item['trx_year'];
+                    $chart_date = date('F', mktime(0, 0, 0, $item['trx_month'], 10));
                     break;
                 case 'year':
                     $item_date = $item['trx_month'] ."-". $item['trx_year'];
@@ -281,6 +282,7 @@ class ApiSingleReport extends Controller
                     break;
             }
 
+            $products[$key]['number'] = $key + 1;
             $products[$key]['date'] = $item_date;
             
             // product chart data
@@ -369,8 +371,8 @@ class ApiSingleReport extends Controller
                     $chart_date = date('d M', strtotime($item['reg_date']));
                     break;
                 case 'month':
-                    $item_date = date('F', mktime(0, 0, 0, $item['reg_month'], 10));
-                    $chart_date = $item_date;
+                    $item_date = date('M', mktime(0, 0, 0, $item['reg_month'], 10)) ." ". $item['reg_year'];
+                    $chart_date = date('F', mktime(0, 0, 0, $item['reg_month'], 10));
                     break;
                 case 'year':
                     $item_date = $item['reg_month'] ."-". $item['reg_year'];
@@ -380,6 +382,7 @@ class ApiSingleReport extends Controller
                     break;
             }
 
+            $registrations[$key]['number'] = $key + 1;
             $registrations[$key]['date'] = $item_date;
 
             $reg_gender_chart[] = $this->genderChart($chart_date, $item);
@@ -460,8 +463,8 @@ class ApiSingleReport extends Controller
                     $chart_date = date('d M', strtotime($item['mem_date']));
                     break;
                 case 'month':
-                    $item_date = date('F', mktime(0, 0, 0, $item['mem_month'], 10));
-                    $chart_date = $item_date;
+                    $item_date = date('M', mktime(0, 0, 0, $item['mem_month'], 10)) ." ". $item['mem_year'];
+                    $chart_date = date('F', mktime(0, 0, 0, $item['mem_month'], 10));
                     break;
                 case 'year':
                     $item_date = $item['mem_month'] ."-". $item['mem_year'];
@@ -471,6 +474,7 @@ class ApiSingleReport extends Controller
                     break;
             }
 
+            $memberships[$key]['number'] = $key + 1;
             $memberships[$key]['date'] = $item_date;
             
             // membership chart data
@@ -565,8 +569,8 @@ class ApiSingleReport extends Controller
                     $chart_date = date('d M', strtotime($item['used_at']));
                     break;
                 case 'month':
-                    $item_date = date('F', strtotime($item['used_at']));
-                    $chart_date = $item_date;
+                    $item_date = date('M Y', strtotime($item['used_at']));
+                    $chart_date = date('F', strtotime($item['used_at']));
                     break;
                 case 'year':
                     $item_date = date('m-Y', strtotime($item['used_at']));
@@ -575,6 +579,8 @@ class ApiSingleReport extends Controller
                 default:
                     break;
             }
+            
+            $vouchers[$key]['number'] = $key + 1;
             $vouchers[$key]['date'] = $item_date;
 
             // voucher chart data
