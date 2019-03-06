@@ -6,11 +6,16 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
 use App\Http\Models\Membership;
+use App\Http\Models\MembershipPromoId;
 use App\Http\Models\UsersMembership;
+use App\Http\Models\UsersMembershipPromoId;
 use App\Http\Models\Transaction;
 use App\Http\Models\User;
 use App\Lib\MyHelper;
 use App\Http\Models\Configs;
+use App\Http\Models\LogBalance;
+
+use DB;
 
 class ApiMembership extends Controller
 {
@@ -23,7 +28,7 @@ class ApiMembership extends Controller
 		if(isset($post['id_membership'])){
 			$query = Membership::where('id_membership','=',$post['id_membership'])->get()->toArray();
         } else {
-			$query = Membership::get()->toArray();
+			$query = Membership::with('membership_promo_id')->get()->toArray();
 		}
         return response()->json(MyHelper::checkGet($query));
     }
@@ -36,17 +41,19 @@ class ApiMembership extends Controller
     }
 
     function update(Request $request) {
+		DB::beginTransaction();
     	$post = $request->json()->all();
 		$current = Membership::get()->toArray();
 		$exist = false;
 		foreach($current as $cur){
 			$exist = false;
-			foreach($post['membership'] as $membership){
+			foreach($post['membership'] as $i => $membership){
 				$membership = $this->checkInputBenefitMembership($membership);
 				if($cur['id_membership'] == $membership['id_membership']){
 					$exist = true;
 					$data = [];
 					$data['membership_name'] = $membership['membership_name'];
+					$data['membership_type'] = $post['membership_type'];
 
 					if(isset($data['membership_name_color'])){
 						$data['membership_name_color'] = str_replace('#','',$membership['membership_name_color']);
@@ -61,6 +68,7 @@ class ApiMembership extends Controller
 						if ($upload['status'] == "success") {
 							$data['membership_image'] = $upload['path'];
 						} else{
+							DB::rollback();
 							$result = [
 									'status'	=> 'fail',
 									'messages'	=> ['Upload Membership Image failed.']
@@ -69,22 +77,40 @@ class ApiMembership extends Controller
 						}
 					}
 		
+					if(!isset($membership['min_retain_value'])){
+						$membership['min_retain_value'] = null;
+					}
+
 					if($membership['min_value'] == null) $membership['min_value'] = '0';
 					if($membership['min_retain_value'] == null) $membership['min_retain_value'] = '0';
-					if($post['type'] == 'value'){
+					if($post['membership_type'] == 'value'){
 						$data['min_total_value'] = $membership['min_value'];
 						$data['min_total_count'] = null;
+						$data['min_total_balance'] = null;
 						
 						$data['retain_min_total_value'] = $membership['min_retain_value'];
 						$data['retain_min_total_count'] = null;
+						$data['retain_min_total_balance'] = null;
 					}
 					
-					if($post['type'] == 'count'){
+					if($post['membership_type'] == 'count'){
 						$data['min_total_value'] = null;
 						$data['min_total_count'] = $membership['min_value'];
+						$data['min_total_balance'] = null;
 						
 						$data['retain_min_total_value'] = null;
 						$data['retain_min_total_count'] = $membership['min_retain_value'];
+						$data['retain_min_total_balance'] = null;
+					}
+
+					if($post['membership_type'] == 'balance'){
+						$data['min_total_value'] = null;
+						$data['min_total_count'] = null;
+						$data['min_total_balance'] = $membership['min_value'];
+						
+						$data['retain_min_total_value'] = null;
+						$data['retain_min_total_count'] = null;
+						$data['retain_min_total_balance'] = $membership['min_retain_value'];
 					}
 
 					if(isset($post['retain_days'])){
@@ -94,13 +120,28 @@ class ApiMembership extends Controller
 					$data['benefit_point_multiplier'] = $membership['benefit_point_multiplier'];
 					$data['benefit_cashback_multiplier'] = $membership['benefit_cashback_multiplier'];
 					$data['benefit_discount'] = $membership['benefit_discount'];
-					$data['benefit_promo_id'] = $membership['benefit_promo_id'];
+					// $data['benefit_promo_id'] = $membership['benefit_promo_id'];
 
 					if(isset($membership['cashback_maximum'])){
 						$data['cashback_maximum'] = $membership['cashback_maximum'];
 					}
 					
 					$query = Membership::where('id_membership', $membership['id_membership'])->update($data);
+					//benefit promo id
+					$deletePromoId = MembershipPromoId::where('id_membership', $membership['id_membership'])->delete();
+					if(isset($membership['benefit_promo_id'])){
+						foreach($membership['benefit_promo_id']  as $promoid){
+							$savePromoid = MembershipPromoId::Create(['id_membership' => $membership['id_membership'], 'promo_name' => $promoid['promo_name'], 'promo_id' => $promoid['promo_id']]);
+							if(!$savePromoid){
+								DB::rollback();
+								$result = [
+									'status'	=> 'fail',
+									'messages'	=> ['Update membership failed.']
+								];
+								return response()->json($result);
+							}
+						}
+					}
 					break;
 				}
 			}
@@ -108,11 +149,12 @@ class ApiMembership extends Controller
 				$query = Membership::where('id_membership', $cur['id_membership'])->delete();
 			}
 		}
-    	foreach($post['membership'] as $membership){
+    	foreach($post['membership'] as $index => $membership){
 			$membership = $this->checkInputBenefitMembership($membership);
 			if($membership['id_membership'] == null){
 				$data = [];
 				$data['membership_name'] = $membership['membership_name'];
+				$data['membership_type'] = $post['membership_type'];
 
 				if(isset($data['membership_name_color'])){
 					$data['membership_name_color'] = str_replace('#','',$membership['membership_name_color']);
@@ -127,6 +169,7 @@ class ApiMembership extends Controller
 					if ($upload['status'] == "success") {
 						$post['membership_image'] = $upload['path'];
 					} else{
+						DB::rollback();
 						$result = [
 								'status'	=> 'fail',
 								'messages'	=> ['Upload Membership Image failed.']
@@ -134,36 +177,93 @@ class ApiMembership extends Controller
 						return response()->json($result);
 					}
 				}
-					
-				if($post['type'] == 'value'){
+				
+				if(!isset($membership['min_retain_value'])) {
+					$membership['min_retain_value'] = 0;
+				}
+
+				if($post['membership_type'] == 'value'){
 					$data['min_total_value'] = $membership['min_value'];
 					$data['min_total_count'] = null;
+					$data['min_total_balance'] = null;
 					
 					$data['retain_min_total_value'] = $membership['min_retain_value'];
 					$data['retain_min_total_count'] = null;
+					$data['retain_min_total_balance'] = null;
 				}
 				
-				if($post['type'] == 'count'){
+				if($post['membership_type'] == 'count'){
 					$data['min_total_value'] = null;
 					$data['min_total_count'] = $membership['min_value'];
+					$data['min_total_balance'] = null;
 					
 					$data['retain_min_total_value'] = null;
 					$data['retain_min_total_count'] = $membership['min_retain_value'];
+					$data['retain_min_total_balance'] = null;
 				}
+
+				if($post['membership_type'] == 'balance'){
+					$data['min_total_value'] = null;
+					$data['min_total_count'] = null;
+					$data['min_total_balance'] = $membership['min_value'];
+					
+					$data['retain_min_total_value'] = null;
+					$data['retain_min_total_count'] = null;
+					$data['retain_min_total_balance'] = $membership['min_retain_value'];
+				}
+
 				$data['benefit_point_multiplier'] = $membership['benefit_point_multiplier'];
 				$data['benefit_cashback_multiplier'] = $membership['benefit_cashback_multiplier'];
 				$data['retain_days'] = $post['retain_days'];
 				$data['benefit_discount'] = $membership['benefit_discount'];
-				$data['benefit_promo_id'] = $membership['benefit_promo_id'];
+				// $data['benefit_promo_id'] = $membership['benefit_promo_id'];
 
 				if(isset($membership['cashback_maximum'])){
 					$data['cashback_maximum'] = $membership['cashback_maximum'];
 				}
 				$query = Membership::create($data);
+
+				if(!$query){
+					DB::rollback();
+					$result = [
+							'status'	=> 'fail',
+							'messages'	=> ['Update Membership failed.']
+						];
+					return response()->json($result);
+				}
+
+				if(isset($membership['benefit_promo_id'])){
+					foreach($membership['benefit_promo_id'] as $promoid){
+						$savePromoid = MembershipPromoId::Create(['id_membership' => $membership['id_membership'], 'promo_name' => $promoid['promo_name'], 'promo_id' => $promoid['promo_id']]);
+						if(!$savePromoid){
+							DB::rollback();
+							$result = [
+								'status'	=> 'fail',
+								'messages'	=> ['Update membership failed.']
+							];
+							return response()->json($result);
+						}
+					}
+				}
 			}
 		}
 
-    	return response()->json(['status' => 'success']);
+		//kalkulasi ulang membership user
+		$calculate = $this->calculateMembershipAllUser();
+		if(isset($calculate['status']) && $calculate['status'] == 'success'){
+			DB::commit();
+			return response()->json(['status' => 'success']);
+		}elseif(isset($calculate['status']) && $calculate['status'] == 'fail'){
+			DB::rollback();
+			return response()->json($calculate);
+		}else{
+			DB::rollback();
+			return response()->json([
+				'status' => 'fail',
+				'messages' => ['Update Membership failed.']
+			]);
+		}
+
     }
 
     function delete(Request $request) {
@@ -199,7 +299,7 @@ class ApiMembership extends Controller
 						->toArray();
 		
 		if($check){		
-			$membership_all = Membership::orderBy('min_total_value','asc')->get()->toArray();
+			$membership_all = Membership::with('membership_promo_id')->orderBy('min_total_value','asc')->orderBy('min_total_count','asc')->orderBy('min_total_balance','asc')->get()->toArray();
 			if(empty($membership_all)){
 				return [
 					'status'   => 'fail',
@@ -236,7 +336,15 @@ class ApiMembership extends Controller
 											->whereDate('transaction_date','<=', date('Y-m-d', strtotime($check['retain_date'])))
 											->where('transaction_payment_status', 'Completed')
 											->sum('transaction_subtotal');
+
+					$total_balance = LogBalance::where('id_user',$check['id'])
+											->whereDate('created_at','>=',$date_start)
+											->whereDate('created_at','<=', date('Y-m-d', strtotime($check['retain_date'])))
+											->sum('balance');
 					
+					//update user count & subtotal transaction
+					$user = User::where('users.phone', $phone)->update(['subtotal_transaction'=> $trx_value, 'count_transaction' => $trx_count]);
+
 					$membership_baru = null;
 
 					if(strtotime($check['retain_date']) > strtotime(date('Y-m-d'))){
@@ -246,15 +354,28 @@ class ApiMembership extends Controller
 
 							//cek cuma kalo lebih dari membership yang sekarang
 							//cek total transaction value
-							if($all['min_total_value'] > $membership['min_total_value']){
-								if($trx_value >= $all['min_total_value']){
-									$membership_baru = $all;
+							if($all['membership_type'] == 'value'){
+								if($all['min_total_value'] > $membership['min_total_value']){
+									if($trx_value >= $all['min_total_value']){
+										$membership_baru = $all;
+									}
 								}
 							}
 							//cek total transaction count
-							if($all['min_total_count'] > $membership['min_total_count']){
-								if($trx_count >= $all['min_total_count']){
-									$membership_baru = $all;
+							if($all['membership_type'] == 'count'){
+								if($all['min_total_count'] > $membership['min_total_count']){
+									if($trx_count >= $all['min_total_count']){
+										$membership_baru = $all;
+									}
+								}
+							}
+
+							//cek total transaction balance
+							if($all['membership_type'] == 'balance'){
+								if($all['min_total_balance'] > $membership['min_total_balance']){
+									if($total_balance >= $all['min_total_balance']){
+										$membership_baru = $all;
+									}
 								}
 							}
 						}
@@ -264,40 +385,66 @@ class ApiMembership extends Controller
 						foreach($membership_all as $all){
 							//cek cuma kalo lebih dari membership yang sekarang
 							//cek total transaction value
-							if($all['min_total_value'] > $membership['min_total_value']){
-								if($trx_value >= $all['min_total_value']){
-									//level up
-									$membership_baru = $all;
+							if($all['membership_type'] == 'value'){
+								if($all['min_total_value'] > $membership['min_total_value']){
+									if($trx_value >= $all['min_total_value']){
+										//level up
+										$membership_baru = $all;
+									}
 								}
 							}
 							//cek total transaction count
-							if($all['min_total_count'] > $membership['min_total_count']){
-								if($trx_count >= $all['min_total_count']){
-									//level up
-									$membership_baru = $all;
+							if($all['membership_type'] == 'count'){
+								if($all['min_total_count'] > $membership['min_total_count']){
+									if($trx_count >= $all['min_total_count']){
+										//level up
+										$membership_baru = $all;
+									}
+								}
+							}
+							//cek total balance
+							if($all['membership_type'] == 'balance'){
+								if($all['min_total_balance'] > $membership['min_total_balance']){
+									if($total_balance >= $all['min_total_balance']){
+										//level up
+										$membership_baru = $all;
+									}
 								}
 							}
 						}
 						if($membership_baru == null){
 							//cek retain level
-							if($trx_value >= $membership['retain_min_total_value'] || $trx_count >= $membership['retain_min_total_count']){
+							if($trx_value >= $membership['retain_min_total_value'] || $trx_count >= $membership['retain_min_total_count'] || $total_balance >= $membership['retain_min_total_balance']){
 								//level retained
 								$membership_baru = null;
 							} else {
 								foreach($membership_all as $all){
 									//cek cuma kalo kurang dari membership yang sekarang
 									//cek total transaction value
-									if($all['min_total_value'] < $membership['min_total_value']){
-										if($trx_value >= $all['min_total_value']){
-											//level up
-											$membership_baru = $all;
+									if($all['membership_type'] == 'value'){
+										if($all['min_total_value'] < $membership['min_total_value']){
+											if($trx_value >= $all['min_total_value']){
+												//level up
+												$membership_baru = $all;
+											}
 										}
 									}
 									//cek total transaction count
-									if($all['min_total_count'] < $membership['min_total_count']){
-										if($trx_count >= $all['min_total_count']){
-											//level up
-											$membership_baru = $all;
+									if($all['membership_type'] == 'count'){
+										if($all['min_total_count'] < $membership['min_total_count']){
+											if($trx_count >= $all['min_total_count']){
+												//level up
+												$membership_baru = $all;
+											}
+										}
+									}
+									//cek total balance
+									if($all['membership_type'] == 'balance'){
+										if($all['min_total_balance'] < $membership['min_total_balance']){
+											if($trx_count >= $all['min_total_balance']){
+												//level up
+												$membership_baru = $all;
+											}
 										}
 									}
 								}
@@ -315,22 +462,41 @@ class ApiMembership extends Controller
 											->where('transaction_payment_status', 'Completed')
 											->sum('transaction_subtotal');
 
+					$total_balance = LogBalance::where('id_user',$check['id'])
+											->sum('balance');
+
+					//update user count & subtotal transaction
+					$user = User::where('users.phone', $phone)->update(['subtotal_transaction'=> $trx_value, 'count_transaction' => $trx_count]);
+
 					$membership_baru = null;
 					//cek naik level
 					foreach($membership_all as $all){
 						//cek cuma kalo lebih dari membership yang sekarang
 						//cek total transaction value
-						if($all['min_total_value'] > $membership['min_total_value']){
-							if($trx_value >= $all['min_total_value']){
-								//level up
-								$membership_baru = $all;
+						if($all['membership_type'] == 'value'){
+							if($all['min_total_value'] > $membership['min_total_value']){
+								if($trx_value >= $all['min_total_value']){
+									//level up
+									$membership_baru = $all;
+								}
 							}
 						}
 						//cek total transaction count
-						if($all['min_total_count'] > $membership['min_total_count']){
-							if($trx_count >= $all['min_total_count']){
-								//level up
-								$membership_baru = $all;
+						if($all['membership_type'] == 'count'){
+							if($all['min_total_count'] > $membership['min_total_count']){
+								if($trx_count >= $all['min_total_count']){
+									//level up
+									$membership_baru = $all;
+								}
+							}
+						}
+						//cek total balance
+						if($all['membership_type'] == 'balance'){
+							if($all['min_total_balance'] > $membership['min_total_balance']){
+								if($total_balance >= $all['min_total_balance']){
+									//level up
+									$membership_baru = $all;
+								}
 							}
 						}
 					}
@@ -341,17 +507,22 @@ class ApiMembership extends Controller
 				
 				$trx_count = Transaction::where('id_user',$check['id'])
 											->where('transaction_payment_status', 'Completed')
-											->count('transaction_grandtotal');
+											->count('transaction_subtotal');
 					
 				$trx_value = Transaction::where('id_user',$check['id'])
 										->where('transaction_payment_status', 'Completed')
-										->sum('transaction_grandtotal');
+										->sum('transaction_subtotal');
+
+				$total_balance = LogBalance::where('id_user',$check['id'])->sum('balance');
+
+				//update user count & subtotal transaction
+				$user = User::where('users.phone', $phone)->update(['subtotal_transaction'=> $trx_value, 'count_transaction' => $trx_count]);
 				
 				$membership_baru = null;
 				//cek naik level
 				foreach($membership_all as $all){
 					//cek total transaction value
-					if($all['min_total_count'] == null){
+					if($all['membership_type'] == 'value'){
 						if($trx_value >= $all['min_total_value']){
 							//level up
 							$membership_baru = $all;
@@ -359,8 +530,15 @@ class ApiMembership extends Controller
 					}
 
 					//cek total transaction count
-					if($all['min_total_value'] == null){
+					if($all['membership_type'] == 'count'){
 						if($trx_count >= $all['min_total_count']){
+							//level up
+							$membership_baru = $all;
+						}
+					}
+					//cek total balance
+					if($all['membership_type'] == 'balance'){
+						if($total_balance >= $all['min_total_balance']){
 							//level up
 							$membership_baru = $all;
 						}
@@ -377,11 +555,14 @@ class ApiMembership extends Controller
 				$data['membership_name'] 				= $membership_baru['membership_name'];
 				$data['membership_name_color'] 			= $membership_baru['membership_name_color'];
 				$data['membership_image'] 				= $membership_baru['membership_image'];
+				$data['membership_type'] 				= $membership_baru['membership_type'];
 				$data['min_total_value'] 				= $membership_baru['min_total_value'];
 				$data['min_total_count'] 				= $membership_baru['min_total_count'];
+				$data['min_total_balance'] 				= $membership_baru['min_total_balance'];
 				$data['retain_date'] 					= $date_end;
 				$data['retain_min_total_value'] 		= $membership_baru['retain_min_total_value'];
 				$data['retain_min_total_count'] 		= $membership_baru['retain_min_total_count'];
+				$data['retain_min_total_balance'] 		= $membership_baru['retain_min_total_balance'];
 				$data['benefit_point_multiplier'] 		= $membership_baru['benefit_point_multiplier'];
 				$data['benefit_cashback_multiplier'] 	= $membership_baru['benefit_cashback_multiplier'];
 				$data['benefit_promo_id'] 				= $membership_baru['benefit_promo_id'];
@@ -393,6 +574,16 @@ class ApiMembership extends Controller
 				if($query){
 					//update membership user
 					$user = User::where('phone', $phone)->update(['id_membership' => $query['id_membership']]);
+
+					foreach($membership_baru['membership_promo_id'] as $promoid){
+						$savePromoid = UsersMembershipPromoId::Create(['id_users_membership' => $query->id_log_membership, 'promo_name' => $promoid['promo_name'], 'promo_id' => $promoid['promo_id']]);
+						if(!$savePromoid){
+							return [
+								'status' => 'fail',
+								'messages' => ['Update user membership failed.']
+							];
+						}
+					}
 				}
 				
 				return [
@@ -412,6 +603,100 @@ class ApiMembership extends Controller
     		];
 		}
 	}
+
+	public function calculateMembershipAllUser() {
+    	$users = User::all();
+		
+		$membership_all = Membership::with('membership_promo_id')->orderBy('min_total_value','asc')->orderBy('min_total_count','asc')->orderBy('min_total_balance','asc')->get()->toArray();
+		if(empty($membership_all)){
+			return [
+				'status'   => 'fail',
+				'messages' => ['Membership Level not found.']
+			];
+		}
+
+		foreach($users as $datauser){		
+			
+			$membership_baru = null;
+			//cek level
+			foreach($membership_all as $all){
+				//cek total transaction value
+				if($all['membership_type'] == 'value'){
+					if($datauser->subtotal_transaction >= $all['min_total_value']){
+						//level up
+						$membership_baru = $all;
+					}
+				}
+
+				//cek total transaction count
+				if($all['membership_type'] == 'count'){
+					if($datauser->count_transaction >= $all['min_total_count']){
+						//level up
+						$membership_baru = $all;
+					}
+				}
+
+				//cek total transaction count
+				if($all['membership_type'] == 'balance'){
+					if($datauser->balance >= $all['min_total_balance']){
+						//level up
+						$membership_baru = $all;
+					}
+				}
+			}
+
+			if($membership_baru != null){
+				$date_end = date("Y-m-d", strtotime(date('Y-m-d').' +'.$membership_baru['retain_days'].' days'));
+				
+				$data 									= [];
+				$data['id_user'] 						= $datauser->id;
+				$data['id_membership'] 					= $membership_baru['id_membership'];
+				$data['membership_name'] 				= $membership_baru['membership_name'];
+				$data['membership_name_color'] 			= $membership_baru['membership_name_color'];
+				$data['membership_image'] 				= $membership_baru['membership_image'];
+				$data['membership_type'] 				= $membership_baru['membership_type'];
+				$data['min_total_value'] 				= $membership_baru['min_total_value'];
+				$data['min_total_count'] 				= $membership_baru['min_total_count'];
+				$data['min_total_balance'] 				= $membership_baru['min_total_balance'];
+				$data['retain_date'] 					= $date_end;
+				$data['retain_min_total_value'] 		= $membership_baru['retain_min_total_value'];
+				$data['retain_min_total_count'] 		= $membership_baru['retain_min_total_count'];
+				$data['retain_min_total_balance'] 		= $membership_baru['retain_min_total_balance'];
+				$data['benefit_point_multiplier'] 		= $membership_baru['benefit_point_multiplier'];
+				$data['benefit_cashback_multiplier'] 	= $membership_baru['benefit_cashback_multiplier'];
+				$data['benefit_promo_id'] 				= $membership_baru['benefit_promo_id'];
+				$data['benefit_discount'] 				= $membership_baru['benefit_discount'];
+				$data['cashback_maximum'] 				= $membership_baru['cashback_maximum'];
+				
+				$query = UsersMembership::create($data);
+				if($query){
+					//update membership user
+					$user = User::where('phone', $datauser->phone)->update(['id_membership' => $query['id_membership']]);
+
+					foreach($membership_baru['membership_promo_id'] as $promoid){
+						$savePromoid = UsersMembershipPromoId::Create(['id_users_membership' => $query->id_log_membership, 'promo_name' => $promoid['promo_name'], 'promo_id' => $promoid['promo_id']]);
+						if(!$savePromoid){
+							return [
+								'status' => 'fail',
+								'messages' => ['Update user membership failed.']
+							];
+						}
+					}
+				}else{
+					return [
+						'status' => 'fail',
+						'messages' => ['Update user membership failed.']
+					];
+				}
+				
+			} 
+		} 
+
+		return [
+			'status' => 'success'
+		];
+	}
+	
 	
 	function checkInputBenefitMembership($data=[]) {
         if (!isset($data['benefit_point_multiplier'])) {
@@ -428,5 +713,25 @@ class ApiMembership extends Controller
         }
 
         return $data;
+	}
+
+	public function updateSubtotalTrxUser(){
+		$users = User::all();
+		foreach($users as $datauser){
+
+			$trx_count = Transaction::where('id_user',$datauser->id)
+										->where('transaction_payment_status', 'Completed')
+										->count('transaction_subtotal');
+				
+			$trx_value = Transaction::where('id_user',$datauser->id)
+									->where('transaction_payment_status', 'Completed')
+									->sum('transaction_subtotal');
+
+			$total_balance = LogBalance::where('id_user', $datauser->id)
+										->sum('balance');
+
+			$update = User::where('phone', $datauser->phone)->update(['subtotal_transaction' => $trx_value, 'count_transaction' => $trx_count, 'balance' => $total_balance]);
+		}
+		return 'success';
 	}
 }

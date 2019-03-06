@@ -978,8 +978,12 @@ class ApiSetting extends Controller
 
         // get user profile success page content
         $value_text = Setting::where('key', 'complete_profile_success_page')->get()->pluck('value_text');
+        if(isset($value_text[0]))
         $complete_profiles['complete_profile_success_page'] = $value_text[0];
 
+        if (!isset($complete_profiles['complete_profile_popup'])) {
+            $complete_profiles['complete_profile_popup'] = '';
+        }
         if (!isset($complete_profiles['complete_profile_point'])) {
             $complete_profiles['complete_profile_point'] = '';
         }
@@ -1005,12 +1009,13 @@ class ApiSetting extends Controller
     {
         $post = $request->json()->all();
         
+        $update[] = Setting::updateOrCreate(['key' => 'complete_profile_popup'], ['key' => 'complete_profile_popup', 'value' => $post['complete_profile_popup']]);
         $update[] = Setting::updateOrCreate(['key' => 'complete_profile_point'], ['key' => 'complete_profile_point', 'value' => $post['complete_profile_point']]);
         $update[] = Setting::updateOrCreate(['key' => 'complete_profile_cashback'], ['key' => 'complete_profile_cashback', 'value' => $post['complete_profile_cashback']]);
         $update[] = Setting::updateOrCreate(['key' => 'complete_profile_count'], ['key' => 'complete_profile_count', 'value' => $post['complete_profile_count']]);
         $update[] = Setting::updateOrCreate(['key' => 'complete_profile_interval'], ['key' => 'complete_profile_interval', 'value' => $post['complete_profile_interval']]);
 
-        if (count($update) == 4) {
+        if (count($update) == 5) {
             return [
                 'status' => 'success',
                 'result' => $update

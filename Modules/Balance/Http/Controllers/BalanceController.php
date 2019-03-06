@@ -208,7 +208,7 @@ class BalanceController extends Controller
         if ($data['balance_before'] < 1) {
             return [
                 'status'   => 'fail',
-                'messages' => ['You need more balance']
+                'messages' => ['You need more kopi point']
             ];
         }
 

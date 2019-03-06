@@ -471,7 +471,7 @@ class ApiOutletController extends Controller
 
     /* City Outlet */
     function cityOutlet(Request $request) {
-        $outlet = Outlet::join('cities', 'cities.id_city', '=', 'outlets.id_city')->select('outlets.id_city', 'city_name')->distinct()->get()->toArray();
+        $outlet = Outlet::join('cities', 'cities.id_city', '=', 'outlets.id_city')->where('outlet_status', 'Active')->select('outlets.id_city', 'city_name')->distinct()->get()->toArray();
 
         // if (!empty($outlet)) {
         //     $outlet = array_pluck($outlet, 'city_name');
@@ -670,12 +670,18 @@ class ApiOutletController extends Controller
         $distance = $request->json('distance');
         $id_city = $request->json('id_city');
         $sort = $request->json('sort');
+        $gofood = $request->json('gofood');
         
         // outlet
         $outlet = Outlet::with(['today', 'city', 'outlet_photos'])->where('outlet_status', 'Active')->whereNotNull('id_city')->orderBy('outlet_name','asc');
         if($request->json('search') && $request->json('search') != ""){
             $outlet = $outlet->where('outlet_name', 'LIKE', '%'.$request->json('search').'%');
         }
+
+        if (isset($gofood)) {
+            $outlet = $outlet->whereNotNull('deep_link');
+        }
+
         $outlet = $outlet->get()->toArray();
 		
 		

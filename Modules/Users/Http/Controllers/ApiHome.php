@@ -298,6 +298,7 @@ class ApiHome extends Controller
 
             // webview: user profile form
             $webview_url = "";
+            $popup_text = "";
             $webview_link = env('APP_URL') . 'webview/complete-profile';
 
             // check user profile completeness (if there is null data)
@@ -326,10 +327,24 @@ class ApiHome extends Controller
 
                     if ($user->count_complete_profile < $complete_profile_count && $complete_profile_interval < $minutes_diff ) {
                         $webview_url = $webview_link;
+
+                        $setting_profile_popup = Setting::where('key', 'complete_profile_popup')->first();
+                        if (isset($setting_profile_popup->value)) {
+                            $popup_text = $setting_profile_popup->value;
+                        }else{
+                            $popup_text = "Lengkapi data dan dapatkan Kopi Points";
+                        }
                     }
                 }
                 else {  // never pop up before
                     $webview_url = $webview_link;
+
+                    $setting_profile_popup = Setting::where('key', 'complete_profile_popup')->first();
+                    if (isset($setting_profile_popup->value)) {
+                        $popup_text = $setting_profile_popup->value;
+                    }else{
+                        $popup_text = "Lengkapi data dan dapatkan Kopi Points";
+                    }
                 }
             }
 
@@ -367,7 +382,8 @@ class ApiHome extends Controller
                     ],
                     'qr_code'       => $qrCode,
                     'uid'           => $qr,
-                    'webview_complete_profile_url'   => $webview_url
+                    'webview_complete_profile_url'   => $webview_url,
+                    'popup_complete_profile'   => $popup_text,
                 ]
             ]; 
             

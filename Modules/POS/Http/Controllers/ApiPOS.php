@@ -13,6 +13,9 @@ use App\Http\Models\TransactionProduct;
 use App\Http\Models\TransactionPickup;
 use App\Http\Models\TransactionProductModifier;
 use App\Http\Models\TransactionPaymentOffline;
+use App\Http\Models\TransactionMultiplePayment;
+use App\Http\Models\TransactionPaymentMidtran;
+use App\Http\Models\TransactionPaymentBalance;
 use App\Http\Models\TransactionVoucher;
 use App\Http\Models\TransactionSetting;
 use App\Http\Models\User;
@@ -107,9 +110,54 @@ class ApiPOS extends Controller
 			$transactions['tax'] = $check['transaction_tax'];
 			$transactions['discount'] = $check['transaction_discount'];
 			$transactions['grand_total'] = $check['transaction_grandtotal'];
-			$transactions['payment_type'] = null;
-			$transactions['payment_code'] = null;
-			$transactions['payment_nominal'] = null;
+
+			$transactions['payments'] = [];
+			if($check['trasaction_payment_type'] == 'Midtrans'){
+				//cek di multi payment
+				$multi = TransactionMultiplePayment::where('id_transaction', $check['id_transaction'])->get();
+				if(!$multi){
+					//cek di balance
+					$balance = TransactionPaymentBalance::where('id_transaction', $check['id_transaction'])->get();
+					if($balance){
+						foreach($balance as $payBalance){
+							$pay['payment_type'] = 'Kopi Points';
+							$pay['payment_nominal'] = (int)$payBalance['balance_nominal'];
+							$transactions['payments'][] = $pay;
+						}
+					}else{
+						$midtrans = TransactionPaymentMidtran::where('id_transaction', $check['id_transaction'])->get();
+						if($midtrans){
+							foreach($midtrans as $payMidtrans){
+								$pay['payment_type'] = 'Online Payment';
+								$pay['payment_nominal'] = (int)$payMidtrans['gross_amount'];
+								$transactions['payments'][] = $pay;
+							}
+						}
+					}
+				}else{
+					foreach($multi as $payMulti){
+						if($payMulti['type'] == 'Balance'){
+							$balance = TransactionPaymentBalance::find($payMulti['id_payment']);
+							if($balance){
+								$pay['payment_type'] = 'Kopi Points';
+								$pay['payment_nominal'] = (int)$balance['balance_nominal'];
+								$transactions['payments'][] = $pay;
+							}
+						}elseif($payMulti['type'] == 'Midtrans'){
+							$midtrans = TransactionPaymentmidtran::find($payMulti['id_payment']);
+							if($midtrans){
+								$pay['payment_type'] = 'Online Payment';
+								$pay['payment_nominal'] = (int)$midtrans['gross_amount'];
+								$transactions['payments'][] = $pay;
+							}
+						}
+					}
+				}
+			}
+
+			// $transactions['payment_type'] = null;
+			// $transactions['payment_code'] = null;
+			// $transactions['payment_nominal'] = null;
 			$transactions['menu'] = [];
 			foreach($check['products'] as $key => $menu){
 				$val = [];
@@ -193,13 +241,22 @@ class ApiPOS extends Controller
             $result['vouchers'] = $voucher_name; 
         } 
          
-        $membership = UsersMembership::where('id_user', $user->id)->orderBy('id_log_membership', 'DESC')->first();
+        $membership = UsersMembership::with('users_membership_promo_id')->where('id_user', $user->id)->orderBy('id_log_membership', 'DESC')->first();
         if(empty($membership)){ 
             $result['customer_level'] = ""; 
-            $result['promo_id'] = ""; 
+            $result['promo_id'] = []; 
         }else{ 
             $result['customer_level'] = $membership->membership_name; 
-            $result['promo_id'] = explode(',',$membership->benefit_promo_id); 
+            if($membership->users_membership_promo_id){
+				$result['promo_id'] = [];
+				foreach($membership->users_membership_promo_id as $promoid){
+					if($promoid['promo_id']){
+						$result['promo_id'][] = $promoid['promo_id'];
+					}
+				}
+            }else{
+                $result['promo_id'] = [];
+            }
         } 
 
         $result['saldo'] = $user->balance; 
@@ -363,9 +420,9 @@ class ApiPOS extends Controller
                                     $oldUpdatedAt = null;
                                 }
     
-                                $dataProductPrice['product_price'] = (int)$menu['price'];
-                                $dataProductPrice['product_price_base'] = (int)$menu['price_base'];
-                                $dataProductPrice['product_price_tax'] = (int)$menu['price_tax'];
+                                $dataProductPrice['product_price'] = (int)round($menu['price']);
+                                $dataProductPrice['product_price_base'] = (int)round($menu['price_base']);
+                                $dataProductPrice['product_price_tax'] = (int)round($menu['price_tax']);
                                 $dataProductPrice['product_status'] = $menu['status'];
                                 
                                 $updateProductPrice = ProductPrice::updateOrCreate([
@@ -439,7 +496,7 @@ class ApiPOS extends Controller
                                     $updateProd['plu_id'] = $product['product_code']; 
                                     $updateProd['product_name'] = $product['product_name']; 
                                     $updateProd['old_price'] = $oldPrice;
-                                    $updateProd['new_price'] = (int)$menu['price'];
+                                    $updateProd['new_price'] = (int)round($menu['price']);
                                     $updateProd['old_updated_at'] = $oldUpdatedAt;
                                     $updateProd['new_updated_at'] = $newUpdatedAt;
                                     if(count($imageUpload) > 0){
@@ -480,9 +537,9 @@ class ApiPOS extends Controller
 					$create = Product::create([ 'product_code' => $menu['plu_id'], 'product_name_pos' => $menu['name'], 'product_name' => $menu['name']]);
 					if($create){
                         // update price
-						$dataProductPrice['product_price'] = (int)$menu['price'];
-						$dataProductPrice['product_price_base'] = (int)$menu['price_base'];
-						$dataProductPrice['product_price_tax'] = (int)$menu['price_tax'];
+						$dataProductPrice['product_price'] = (int)round($menu['price']);
+						$dataProductPrice['product_price_base'] = (int)round($menu['price_base']);
+						$dataProductPrice['product_price_tax'] = (int)round($menu['price_tax']);
                         $dataProductPrice['product_status'] = $menu['status'];
                        
 						$updateProductPrice = ProductPrice::updateOrCreate([
@@ -546,7 +603,7 @@ class ApiPOS extends Controller
                             $insertProd['id_product'] = $create['id_product']; 
                             $insertProd['plu_id'] = $create['product_code']; 
                             $insertProd['product_name'] = $create['product_name']; 
-                            $insertProd['price'] = (int)$menu['price'];
+                            $insertProd['price'] = (int)round($menu['price']);
                             if(count($imageUpload) > 0){
                                 $updateProd['new_photo'] = $imageUpload;
                             }
@@ -1734,9 +1791,9 @@ class ApiPOS extends Controller
 										$oldUpdatedAt = null;
 									}
 		
-									$dataProductPrice['product_price'] = (int)$menu['price'];
-									$dataProductPrice['product_price_base'] = (int)$menu['price_base'];
-									$dataProductPrice['product_price_tax'] = (int)$menu['price_tax'];
+									$dataProductPrice['product_price'] = (int)round($menu['price']);
+									$dataProductPrice['product_price_base'] = (int)round($menu['price_base']);
+									$dataProductPrice['product_price_tax'] = (int)round($menu['price_tax']);
 									$dataProductPrice['product_status'] = $menu['status'];
 									
 									$updateProductPrice = ProductPrice::updateOrCreate([
@@ -1854,9 +1911,9 @@ class ApiPOS extends Controller
 						$create = Product::create([ 'product_code' => $menu['plu_id'], 'product_name_pos' => $menu['name'], 'product_name' => $menu['name']]);
 						if($create){
 							// update price
-							$dataProductPrice['product_price'] = (int)$menu['price'];
-							$dataProductPrice['product_price_base'] = (int)$menu['price_base'];
-							$dataProductPrice['product_price_tax'] = (int)$menu['price_tax'];
+							$dataProductPrice['product_price'] = (int)round($menu['price']);
+							$dataProductPrice['product_price_base'] = (int)round($menu['price_base']);
+							$dataProductPrice['product_price_tax'] = (int)round($menu['price_tax']);
 							$dataProductPrice['product_status'] = $menu['status'];
 						   
 							$updateProductPrice = ProductPrice::updateOrCreate([
@@ -2027,7 +2084,7 @@ class ApiPOS extends Controller
     }
 
     public function syncOutletMenuReturn(reqBulkMenu $request){
-        // call function syncMenu
+		// call function syncMenu
         $url = env('API_URL').'api/v1/pos/outlet/menu/sync';
         $syncMenu = MyHelper::post($url, MyHelper::getBearerToken(), $request->json()->all());
 

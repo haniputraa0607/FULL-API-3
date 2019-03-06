@@ -297,8 +297,16 @@ class ApiProductController extends Controller
 				$data['product_price'] = 0;
 				$data['product_visibility'] = 'Visible';
 				
-				ProductPrice::create($data);
-			}
+                ProductPrice::create($data);
+                
+                //photo default
+                $dataPhoto['id_product']          = $save->id_product;
+                $dataPhoto['product_photo_order'] = $this->cekUrutanPhoto($post['id_product']);
+                $dataPhoto['product_photo']       = 'img/product/default';
+                $save                             = ProductPhoto::create($dataPhoto);
+            }
+            
+
 		}
 		
         return response()->json(MyHelper::checkCreate($save));
@@ -329,7 +337,6 @@ class ApiProductController extends Controller
                 //delete all photo
                 $delete = $this->deletePhoto($post['id_product']);
                 
-                if($delete){
 
                     //create photo
                     $upload = MyHelper::uploadPhotoStrict($post['photo'], $this->saveImage, 300, 300);
@@ -349,7 +356,6 @@ class ApiProductController extends Controller
                     $dataPhoto['id_product']          = $post['id_product'];
                     $dataPhoto['product_photo_order'] = $this->cekUrutanPhoto($post['id_product']);
                     $save                        = ProductPhoto::create($dataPhoto);
-                }
                 
 
             }

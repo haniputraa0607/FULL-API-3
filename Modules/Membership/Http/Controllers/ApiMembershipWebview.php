@@ -10,6 +10,7 @@ use App\Http\Models\UsersMembership;
 use App\Http\Models\Transaction;
 use App\Http\Models\User;
 use App\Http\Models\Setting;
+use App\Http\Models\LogBalance;
 use App\Lib\MyHelper;
 
 class ApiMembershipWebview extends Controller
@@ -51,7 +52,7 @@ class ApiMembershipWebview extends Controller
 			]);
 		}
 
-		$allMembership = Membership::orderBy('min_total_value','asc')->orderBy('min_total_count', 'asc')->get()->toArray();
+		$allMembership = Membership::orderBy('min_total_value','asc')->orderBy('min_total_count', 'asc')->orderBy('min_total_balance', 'asc')->get()->toArray();
 
 		$nextMembershipName = "";
 		$nextTrx = 0;
@@ -59,7 +60,7 @@ class ApiMembershipWebview extends Controller
 		if(count($allMembership) > 0){
 			if($result['user_membership']){
 				foreach($allMembership as $index => $dataMembership){
-					if(is_integer($dataMembership['min_total_count'])){
+					if($dataMembership['membership_type'] == 'count'){
 						if($dataMembership['min_total_count'] > $result['user_membership']['min_total_count']){
 							if($nextMembershipName == ""){
 								$nextTrx = $dataMembership['min_total_count'];
@@ -68,11 +69,20 @@ class ApiMembershipWebview extends Controller
 							}
 						}
 					}
-					if(is_integer($dataMembership['min_total_value'])){
+					if($dataMembership['membership_type'] == 'value'){
 						if($dataMembership['min_total_value'] > $result['user_membership']['min_total_value']){
 							if($nextMembershipName == ""){
 								$nextTrx = $dataMembership['min_total_value'];
 								$nextTrxType = 'value';
+								$nextMembershipName = $dataMembership['membership_name']; 
+							}
+						}
+					}
+					if($dataMembership['membership_type'] == 'balance'){
+						if($dataMembership['min_total_balance'] > $result['user_membership']['min_total_balance']){
+							if($nextMembershipName == ""){
+								$nextTrx = $dataMembership['min_total_balance'];
+								$nextTrxType = 'balance';
 								$nextMembershipName = $dataMembership['membership_name']; 
 							}
 						}
@@ -83,11 +93,11 @@ class ApiMembershipWebview extends Controller
 			}else{
 				$result['user_membership']['user'] = User::find($post['id_user']);
 				$nextMembershipName = $allMembership[0]['membership_name'];
-				if(is_integer($allMembership[0]['min_total_count'])){
+				if($allMembership[0]['membership_type'] == 'count'){
 					$nextTrx = $allMembership[0]['min_total_count'];
 					$nextTrxType = 'count';
 				}
-				if(is_integer($allMembership[0]['min_total_value'])){
+				if($allMembership[0]['membership_type'] == 'value'){
 					$nextTrx = $allMembership[0]['min_total_value'];
 					$nextTrxType = 'value';
 				}
@@ -100,17 +110,20 @@ class ApiMembershipWebview extends Controller
 		}
 
 		$result['next_membership_name'] = $nextMembershipName;
-		$count_transaction = Transaction::where('id_user', $post['id_user'])->where('transaction_payment_status', 'Completed')->count('transaction_subtotal');
-		$subtotal_transaction = Transaction::where('id_user', $post['id_user'])->where('transaction_payment_status', 'Completed')->sum('transaction_subtotal');
-		$result['user_membership']['user']['count_transaction'] = $count_transaction;
-		$result['user_membership']['user']['subtotal_transaction'] = $subtotal_transaction;
 		if(isset($result['user_membership'])){
 			if($nextTrxType == 'count'){
-				$result['progress_active'] = $count_transaction / $nextTrx * 100;
-				$result['next_trx']	= $nextTrx - $count_transaction;
+				$count_transaction = Transaction::where('id_user', $post['id_user'])->where('transaction_payment_status', 'Completed')->count('transaction_subtotal');
+				$result['user_membership']['user']['progress_now'] = $count_transaction;
 			}elseif($nextTrxType == 'value'){
+				$subtotal_transaction = Transaction::where('id_user', $post['id_user'])->where('transaction_payment_status', 'Completed')->sum('transaction_subtotal');
+				$result['user_membership']['user']['progress_now'] = $subtotal_transaction;
 				$result['progress_active'] = $subtotal_transaction / $nextTrx * 100;
 				$result['next_trx']	= $nextTrx - $subtotal_transaction;
+			}elseif($nextTrxType == 'balance'){
+				$total_balance = LogBalance::where('id_user', $post['id_user'])->sum('balance');
+				$result['user_membership']['user']['progress_now'] = $total_balance;
+				$result['progress_active'] = $total_balance / $nextTrx * 100;
+				$result['next_trx']	= $nextTrx - $total_balance;
 			}
 		}
 
@@ -120,6 +133,16 @@ class ApiMembershipWebview extends Controller
 		if($nextMembershipName == ""){
 			$result['progress_active'] = 100;
 			$result['next_trx'] = 0;
+			if($allMembership[0]['membership_type'] == 'count'){
+				$count_transaction = Transaction::where('id_user', $post['id_user'])->where('transaction_payment_status', 'Completed')->count('transaction_subtotal');
+				$result['user_membership']['user']['progress_now'] = $count_transaction;
+			}elseif($allMembership[0]['membership_type'] == 'value'){
+				$subtotal_transaction = Transaction::where('id_user', $post['id_user'])->where('transaction_payment_status', 'Completed')->sum('transaction_subtotal');
+				$result['user_membership']['user']['progress_now'] = $subtotal_transaction;
+			}elseif($allMembership[0]['membership_type'] == 'balance'){
+				$total_balance = LogBalance::where('id_user', $post['id_user'])->sum('balance');
+				$result['user_membership']['user']['progress_now'] = $total_balance;
+			}
 		}
 
 		return response()->json(MyHelper::checkGet($result));
