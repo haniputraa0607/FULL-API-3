@@ -650,4 +650,28 @@ class ApiProductController extends Controller
 
         return ['status' => 'success'];
     }
+
+    public function photoDefault(Request $request){
+        $post = $request->json()->all();
+
+         //create photo
+         if (!file_exists('img/product/item/')) {
+            mkdir('img/product/item/', 0777, true);
+        }
+         $upload = MyHelper::uploadPhotoStrict($post['photo'], 'img/product/item/', 300, 300, 'default', '.png');
+                   
+         if (isset($upload['status']) && $upload['status'] == "success") {
+            $result = [
+                'status'   => 'success',
+            ];
+         }
+         else {
+             $result = [
+                 'status'   => 'fail',
+                 'messages' => ['fail upload image']
+             ];
+
+        }
+        return response()->json($result);
+    }
 }

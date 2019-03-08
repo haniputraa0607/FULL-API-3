@@ -148,7 +148,8 @@ class ApiSettingTransactionV2 extends Controller
                         'product' => $product['product_name']
                     ]);
                 }
-                $price = $productPrice['product_price_base'] * $valueData['qty'];
+                // $price = $productPrice['product_price_base'] * $valueData['qty'];
+                $price = $productPrice['product_price'] * $valueData['qty'];
                 array_push($dataSubtotal, $price);
             }
 
@@ -194,48 +195,48 @@ class ApiSettingTransactionV2 extends Controller
         }
 
         if ($value == 'tax') {
-            // $subtotal = $data['subtotal'];
-            // $taxFormula = $this->convertFormula('tax');
-            // $value = $this->taxValue();
-            // // return $taxFormula;
+            $subtotal = $data['subtotal'];
+            $taxFormula = $this->convertFormula('tax');
+            $value = $this->taxValue();
+            // return $taxFormula;
 
-            // $count = (eval('return ' . preg_replace('/([a-zA-Z0-9]+)/', '\$$1', $taxFormula) . ';'));
-            // return $count;
+            $count = (eval('return ' . preg_replace('/([a-zA-Z0-9]+)/', '\$$1', $taxFormula) . ';'));
+            return $count;
 
             //tax dari product price tax
-            $productTax = 0;
-            foreach ($data['item'] as $keyProduct => $valueProduct) {
-                $checkProduct = Product::where('id_product', $valueProduct['id_product'])->first();
-                if (empty($checkProduct)) {
-                    DB::rollback();
-                    return response()->json([
-                        'status'    => 'fail',
-                        'messages'  => ['Product Not Found'],
-                        'product' => $checkProduct['product_name']
-                    ]);
-                }
+            // $productTax = 0;
+            // foreach ($data['item'] as $keyProduct => $valueProduct) {
+            //     $checkProduct = Product::where('id_product', $valueProduct['id_product'])->first();
+            //     if (empty($checkProduct)) {
+            //         DB::rollback();
+            //         return response()->json([
+            //             'status'    => 'fail',
+            //             'messages'  => ['Product Not Found'],
+            //             'product' => $checkProduct['product_name']
+            //         ]);
+            //     }
     
-                $checkPriceProduct = ProductPrice::where(['id_product' => $checkProduct['id_product'], 'id_outlet' => $data['id_outlet']])->first();
-                if (empty($checkPriceProduct)) {
-                    return response()->json([
-                        'status'    => 'fail',
-                        'messages'  => ['Price Product Not Valid'],
-                        'product' => $checkProduct['product_name']
-                    ]);
-                }
+            //     $checkPriceProduct = ProductPrice::where(['id_product' => $checkProduct['id_product'], 'id_outlet' => $data['id_outlet']])->first();
+            //     if (empty($checkPriceProduct)) {
+            //         return response()->json([
+            //             'status'    => 'fail',
+            //             'messages'  => ['Price Product Not Valid'],
+            //             'product' => $checkProduct['product_name']
+            //         ]);
+            //     }
 
-                if($checkPriceProduct['product_price'] == null || $checkPriceProduct['product_price_base'] == null || $checkPriceProduct['product_price_tax'] == null){
-                    return response()->json([
-                        'status'    => 'fail',
-                        'messages'  => ['Price Product Not Valid'],
-                        'product' => $checkProduct['product_name']
-                    ]);
-                }
+            //     if($checkPriceProduct['product_price'] == null || $checkPriceProduct['product_price_base'] == null || $checkPriceProduct['product_price_tax'] == null){
+            //         return response()->json([
+            //             'status'    => 'fail',
+            //             'messages'  => ['Price Product Not Valid'],
+            //             'product' => $checkProduct['product_name']
+            //         ]);
+            //     }
 
-                $productTax += $checkPriceProduct['product_price_tax'] * $valueProduct['qty'];
-            }
+            //     $productTax += $checkPriceProduct['product_price_tax'] * $valueProduct['qty'];
+            // }
 
-            return $productTax;
+            // return $productTax;
 
         }
 

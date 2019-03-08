@@ -473,7 +473,7 @@ class ApiOnlineTransaction extends Controller
 
         $useragent = $_SERVER['HTTP_USER_AGENT'];
         if(stristr($useragent,'iOS')) $useragent = 'IOS';
-        if(stristr($useragent,'okhttp')) $useragent = 'Android';
+        elseif(stristr($useragent,'okhttp')) $useragent = 'Android';
         else $useragent = null;
 
         if($useragent){
@@ -527,8 +527,10 @@ class ApiOnlineTransaction extends Controller
                 'id_outlet'                    => $insertTransaction['id_outlet'],
                 'id_user'                      => $insertTransaction['id_user'],
                 'transaction_product_qty'      => $valueProduct['qty'],
-                'transaction_product_price'    => $checkPriceProduct['product_price_base'],
-                'transaction_product_subtotal' => $valueProduct['qty'] * $checkPriceProduct['product_price_base'],
+                'transaction_product_price'    => $checkPriceProduct['product_price'],
+                'transaction_product_price_base'    => $checkPriceProduct['product_price_base'],
+                'transaction_product_price_tax'    => $checkPriceProduct['product_price_tax'],
+                'transaction_product_subtotal' => $valueProduct['qty'] * $checkPriceProduct['product_price'],
                 'transaction_product_note'     => $valueProduct['note'],
                 'created_at'                   => date('Y-m-d', strtotime($insertTransaction['transaction_date'])).' '.date('H:i:s'),
                 'updated_at'                   => date('Y-m-d H:i:s')
@@ -1047,7 +1049,7 @@ class ApiOnlineTransaction extends Controller
                     ]);
                 }
             }
-
+            
             if ($post['payment_type'] == 'Midtrans') {
                 if ($post['transaction_payment_status'] == 'Completed') {
                     //bank
@@ -1086,7 +1088,7 @@ class ApiOnlineTransaction extends Controller
 
                 }
 
-            } 
+            }
         }
         
         DB::commit();
@@ -1257,44 +1259,44 @@ class ApiOnlineTransaction extends Controller
             }
         }
     }
+    
+     public function getrandomstring($length = 120) {
 
-    public function getrandomstring($length = 120) {
+       global $template;
+       settype($template, "string");
 
-        global $template;
-        settype($template, "string");
- 
-        $template = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
- 
-        settype($length, "integer");
-        settype($rndstring, "string");
-        settype($a, "integer");
-        settype($b, "integer");
- 
-        for ($a = 0; $a <= $length; $a++) {
-                $b = rand(0, strlen($template) - 1);
-                $rndstring .= $template[$b];
-        }
- 
-        return $rndstring; 
+       $template = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+       settype($length, "integer");
+       settype($rndstring, "string");
+       settype($a, "integer");
+       settype($b, "integer");
+
+       for ($a = 0; $a <= $length; $a++) {
+               $b = rand(0, strlen($template) - 1);
+               $rndstring .= $template[$b];
+       }
+
+       return $rndstring; 
     }
+    
+     public function getrandomnumber($length) {
 
-    public function getrandomnumber($length) {
+       global $template;
+       settype($template, "string");
 
-        global $template;
-        settype($template, "string");
- 
-        $template = "0987654321";
- 
-        settype($length, "integer");
-        settype($rndstring, "string");
-        settype($a, "integer");
-        settype($b, "integer");
- 
-        for ($a = 0; $a <= $length; $a++) {
-                $b = rand(0, strlen($template) - 1);
-                $rndstring .= $template[$b];
-        }
- 
-        return $rndstring; 
-     }
+       $template = "0987654321";
+
+       settype($length, "integer");
+       settype($rndstring, "string");
+       settype($a, "integer");
+       settype($b, "integer");
+
+       for ($a = 0; $a <= $length; $a++) {
+               $b = rand(0, strlen($template) - 1);
+               $rndstring .= $template[$b];
+       }
+
+       return $rndstring; 
+    }
 }

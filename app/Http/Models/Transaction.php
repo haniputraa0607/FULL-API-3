@@ -155,4 +155,9 @@ class Transaction extends Model
 	{
 		return $this->belongsToMany(\App\Http\Models\DealsVoucher::class, 'transaction_vouchers', 'id_transaction', 'id_deals_voucher');
 	}
+
+	public function transaction_vouchers()
+	{
+		return $this->hasMany(\App\Http\Models\TransactionVoucher::class, 'id_transaction', 'id_transaction');
+	}
 }

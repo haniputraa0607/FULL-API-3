@@ -54,7 +54,8 @@ class ApiPOS extends Controller
         date_default_timezone_set('Asia/Jakarta');
         $this->balance    = "Modules\Balance\Http\Controllers\BalanceController";
         $this->membership = "Modules\Membership\Http\Controllers\ApiMembership";
-        $this->balance    = "Modules\Balance\Http\Controllers\BalanceController";
+		$this->balance    = "Modules\Balance\Http\Controllers\BalanceController";
+		$this->autocrm  = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
     }
 	
     public function transactionDetail(reqPreOrderDetail $request){
@@ -110,7 +111,7 @@ class ApiPOS extends Controller
 			$transactions['tax'] = $check['transaction_tax'];
 			$transactions['discount'] = $check['transaction_discount'];
 			$transactions['grand_total'] = $check['transaction_grandtotal'];
-
+			
 			$transactions['payments'] = [];
 			if($check['trasaction_payment_type'] == 'Midtrans'){
 				//cek di multi payment
@@ -128,7 +129,7 @@ class ApiPOS extends Controller
 						$midtrans = TransactionPaymentMidtran::where('id_transaction', $check['id_transaction'])->get();
 						if($midtrans){
 							foreach($midtrans as $payMidtrans){
-								$pay['payment_type'] = 'Online Payment';
+								$pay['payment_type'] = 'Midtrans';
 								$pay['payment_nominal'] = (int)$payMidtrans['gross_amount'];
 								$transactions['payments'][] = $pay;
 							}
@@ -146,7 +147,7 @@ class ApiPOS extends Controller
 						}elseif($payMulti['type'] == 'Midtrans'){
 							$midtrans = TransactionPaymentmidtran::find($payMulti['id_payment']);
 							if($midtrans){
-								$pay['payment_type'] = 'Online Payment';
+								$pay['payment_type'] = 'Midtrans';
 								$pay['payment_nominal'] = (int)$midtrans['gross_amount'];
 								$transactions['payments'][] = $pay;
 							}
@@ -154,16 +155,18 @@ class ApiPOS extends Controller
 					}
 				}
 			}
-
-			// $transactions['payment_type'] = null;
-			// $transactions['payment_code'] = null;
-			// $transactions['payment_nominal'] = null;
+			
+// 			$transactions['payment_type'] = null;
+// 			$transactions['payment_code'] = null;
+// 			$transactions['payment_nominal'] = null;
 			$transactions['menu'] = [];
+			$transactions['tax'] = 0;
+			$transactions['total'] = 0;
 			foreach($check['products'] as $key => $menu){
 				$val = [];
 				$val['plu_id'] = $menu['product_code'];
 				$val['name'] = $menu['product_name'];
-				$val['price'] = $menu['pivot']['transaction_product_price'];
+				$val['price'] = (int)$menu['pivot']['transaction_product_price'];
 				$val['qty'] = $menu['pivot']['transaction_product_qty'];
 				$val['category'] = $menu['product_category_name'];
 				if($menu['pivot']['transaction_product_note'] != null){
@@ -172,7 +175,18 @@ class ApiPOS extends Controller
 				$val['modifiers'] = $check['product_transaction'][$key]['modifiers'];
 				
 				array_push($transactions['menu'], $val);
+				
+				$transactions['tax'] = $transactions['tax']+($menu['pivot']['transaction_product_qty'] * $menu['pivot']['transaction_product_price_tax']);
+				$transactions['total'] = $transactions['total']+($menu['pivot']['transaction_product_qty'] * $menu['pivot']['transaction_product_price_base']);
 			}
+				$transactions['tax'] = round($transactions['tax']);
+				$transactions['total'] = round($transactions['total']);
+
+				//update accepted_at
+				$pick = TransactionPickup::where('id_transaction', $check['id_transaction'])->update(['receive_at' => date('Y-m-d H:i:s')]);
+
+				$send = app($this->autocrm)->SendAutoCRM('Order Accepted', $user['phone'], ["outlet_name" => $outlet['outlet_name'], "id_reference" => $check['transaction_receipt_number'].','.$outlet['id_outlet'], "transaction_date" => $check['transaction_date']]);
+	
 			return response()->json(['status' => 'success', 'result' => $transactions]); 
 		} else {
 			return response()->json(['status' => 'fail', 'messages' => ['Invalid Order ID']]); 
@@ -421,8 +435,8 @@ class ApiPOS extends Controller
                                 }
     
                                 $dataProductPrice['product_price'] = (int)round($menu['price']);
-                                $dataProductPrice['product_price_base'] = (int)round($menu['price_base']);
-                                $dataProductPrice['product_price_tax'] = (int)round($menu['price_tax']);
+                                $dataProductPrice['product_price_base'] = round($menu['price_base'],2);
+                                $dataProductPrice['product_price_tax'] = round($menu['price_tax'],2);
                                 $dataProductPrice['product_status'] = $menu['status'];
                                 
                                 $updateProductPrice = ProductPrice::updateOrCreate([
@@ -538,8 +552,8 @@ class ApiPOS extends Controller
 					if($create){
                         // update price
 						$dataProductPrice['product_price'] = (int)round($menu['price']);
-						$dataProductPrice['product_price_base'] = (int)round($menu['price_base']);
-						$dataProductPrice['product_price_tax'] = (int)round($menu['price_tax']);
+						$dataProductPrice['product_price_base'] = round($menu['price_base'],2);
+						$dataProductPrice['product_price_tax'] =round($menu['price_tax'],2);
                         $dataProductPrice['product_status'] = $menu['status'];
                        
 						$updateProductPrice = ProductPrice::updateOrCreate([
@@ -855,6 +869,10 @@ class ApiPOS extends Controller
 					$post['membership_promo_id'] = null;
 				}
 				
+				$trx['total'] = round($trx['total']);
+				$trx['discount'] = round($trx['discount']);
+				$trx['tax'] = round($trx['tax']);
+				
 				$dataTrx = [
 					'id_outlet'                   => $checkOutlet['id_outlet'],
 					'id_user'                     => $user['id'],
@@ -879,7 +897,7 @@ class ApiPOS extends Controller
 					$dataTrx['transaction_device_type'] = $qr['device'];
 				}
 
-				$createTrx = Transaction::updateOrCreate(['transaction_receipt_number' => $trx['trx_id']], $dataTrx);
+				$createTrx = Transaction::updateOrCreate(['transaction_receipt_number' => $trx['trx_id'], 'id_outlet' => $checkOutlet['id_outlet']], $dataTrx);
 
 				if (!$createTrx) {
 					DB::rollback();
@@ -917,6 +935,11 @@ class ApiPOS extends Controller
 						return response()->json(['status' => 'fail', 'messages' => ['Transaction sync failed']]);
 					}
 				}
+				
+				$checkProd = TransactionProduct::where('id_transaction', $createTrx['id_transaction'])->get();
+                if(count($checkProd) > 0){
+                    $checkProd = TransactionProduct::where('id_transaction', $createTrx['id_transaction'])->delete();
+                }
 
 				foreach ($trx['menu'] as $row => $menu) {
 					$checkProduct = Product::where('product_code', $menu['plu_id'])->first();
@@ -950,14 +973,15 @@ class ApiPOS extends Controller
 						'id_outlet'                    => $checkOutlet['id_outlet'],
 						'id_user'                      => $createTrx['id_user'],
 						'transaction_product_qty'      => $menu['qty'],
-						'transaction_product_price'    => $menu['price'],
-						'transaction_product_subtotal' => $menu['qty'] * $menu['price']
+						'transaction_product_price'    => round($menu['price'],2),
+						'transaction_product_subtotal' => $menu['qty'] * round($menu['price'],2)
 					];
 					if(isset($menu['open_modifier'])){
 						$dataProduct['transaction_product_note'] = $menu['open_modifier'];
 					}
 
-					$createProduct = TransactionProduct::updateOrCreate(['id_transaction' => $createTrx['id_transaction'], 'id_product' => $checkProduct['id_product']], $dataProduct);
+                   $createProduct = TransactionProduct::create($dataProduct);
+				// 	$createProduct = TransactionProduct::updateOrCreate(['id_transaction' => $createTrx['id_transaction'], 'id_product' => $checkProduct['id_product']], $dataProduct);
 					
 					// update modifiers 
 					if(isset($menu['modifiers'])){
@@ -1792,8 +1816,8 @@ class ApiPOS extends Controller
 									}
 		
 									$dataProductPrice['product_price'] = (int)round($menu['price']);
-									$dataProductPrice['product_price_base'] = (int)round($menu['price_base']);
-									$dataProductPrice['product_price_tax'] = (int)round($menu['price_tax']);
+									$dataProductPrice['product_price_base'] = round($menu['price_base'],2);
+									$dataProductPrice['product_price_tax'] = round($menu['price_tax'],2);
 									$dataProductPrice['product_status'] = $menu['status'];
 									
 									$updateProductPrice = ProductPrice::updateOrCreate([
@@ -1912,8 +1936,8 @@ class ApiPOS extends Controller
 						if($create){
 							// update price
 							$dataProductPrice['product_price'] = (int)round($menu['price']);
-							$dataProductPrice['product_price_base'] = (int)round($menu['price_base']);
-							$dataProductPrice['product_price_tax'] = (int)round($menu['price_tax']);
+							$dataProductPrice['product_price_base'] = round($menu['price_base'],2);
+							$dataProductPrice['product_price_tax'] = round($menu['price_tax'],2);
 							$dataProductPrice['product_status'] = $menu['status'];
 						   
 							$updateProductPrice = ProductPrice::updateOrCreate([

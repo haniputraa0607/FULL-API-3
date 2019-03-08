@@ -39,19 +39,23 @@ class LogRequestMiddleware
 		if($requestnya == '[]') $requestnya = null;
 		$urlexp = explode('/',$url);
 		
-		$subject = "Unknown";
 		$module = $urlexp[6];
+		if(stristr($url, 'v1/pos')) $module = 'POS';
+		
+		$subject = "Unknown";
 		if(stristr($url, 'users/pin/create')) $subject = 'User Register';
 		if(stristr($url, 'users/pin/check')) $subject = 'User Login Attempt';
 		if(stristr($url, 'users/phone/check')) $subject = 'Phone Check';
 		if(stristr($url, 'users/pin/resend')) $subject = 'Resend PIN';
 		if(stristr($url, 'users/pin/forgot')) $subject = 'Forgot PIN';
-		if(stristr($url, 'pos/check/member')) { $subject = 'POS Check Member'; $module = $urlexp[7]; }
-		if(stristr($url, 'pos/check/voucher')) { $subject = 'POS Check Voucher'; $module = $urlexp[7]; }
+		if(stristr($url, 'pos/check/member')) { $subject = 'POS Check Member'; }
+		if(stristr($url, 'pos/check/voucher')) { $subject = 'POS Check Voucher'; }
 		if(stristr($url, 'pos/menu')) $subject = 'POS Menu Sync';
+		if(stristr($url, 'pos/outlet/menu')) $subject = 'POS Menu Sync';
 		if(stristr($url, 'pos/transaction')) $subject = 'POS Transaction Sync';
+		if(stristr($url, 'pos/transaction/detail')) $subject = 'Fetch Pre Order';
 		if(stristr($url, 'pos/transaction/refund')) $subject = 'POS Transaction Refund';
-		if(stristr($url, 'product/delete')) $subject = 'Delete Product'; $module = $urlexp[4];
+		if(stristr($url, 'product/delete')) { $subject = 'Delete Product'; $module = $urlexp[4]; }
 		
 		if(!empty($request->header('ip-address-view'))){
 			$ip = $request->header('ip-address-view');

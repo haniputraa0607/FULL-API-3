@@ -39,6 +39,7 @@ Route::group(['prefix' => 'api/product', 'namespace' => 'Modules\Product\Http\Co
             Route::post('create', 'ApiProductController@uploadPhotoProduct');
             Route::post('update', 'ApiProductController@updatePhotoProduct');
             Route::post('delete', 'ApiProductController@deletePhotoProduct');
+            Route::post('default', 'ApiProductController@photoDefault');
         });
 
         /* PRICES */

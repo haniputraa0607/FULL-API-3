@@ -71,13 +71,14 @@ class ApiOutletApp extends Controller
         $post = $request->json()->all();
         $outlet = $request->user();
 
-        $list = Transaction::join('transaction_pickups', 'transactions.id_transaction', 'transaction_pickups.id_transaction')
-                            ->select('transactions.id_transaction', 'transaction_receipt_number', 'order_id', 'transaction_date', 'pickup_by', 'pickup_type', 'pickup_at', 'receive_at', 'ready_at', 'taken_at', 'reject_at')
-                            ->where('id_outlet', $outlet->id_outlet)
+        $list = Transaction::join('transaction_pickups', 'transactions.id_transaction', 'transaction_pickups.id_transaction')->leftJoin('transaction_products', 'transactions.id_transaction', 'transaction_products.id_transaction')->leftJoin('users', 'users.id', 'transactions.id_user')
+                            ->select('transactions.id_transaction', 'transaction_receipt_number', 'order_id', 'transaction_date', 'pickup_by', 'pickup_type', 'pickup_at', 'receive_at', 'ready_at', 'taken_at', 'reject_at', DB::raw('sum(transaction_product_qty) as total_item'), 'users.name')
+                            ->where('transactions.id_outlet', $outlet->id_outlet)
                             ->whereDate('transaction_date', date('Y-m-d'))
                             ->where('transaction_payment_status', 'Completed')
                             ->where('trasaction_type', 'Pickup Order')
                             ->whereNull('void_date')
+                            ->groupBy('transaction_products.id_transaction')
                             ->orderBy('transaction_date', 'ASC')
                             ->orderBy('transactions.id_transaction', 'ASC');
 
