@@ -82,6 +82,9 @@ Route::group(['prefix' => 'api'], function(){
 		Route::post('complete-profile', 'ApiWebviewUser@completeProfile');
 	});
 
+	// get complete user profile success message
+	Route::get('users/complete-profile/success-message', 'Modules\Users\Http\Controllers\ApiWebviewUser@getSuccessMessage');
+
 });
 
 Route::group(['namespace' => 'Modules\Users\Http\Controllers'], function()

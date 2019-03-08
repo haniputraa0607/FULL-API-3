@@ -124,4 +124,13 @@ class ApiWebviewUser extends Controller
 
         return MyHelper::checkUpdate($update);
     }
+
+    public function getSuccessMessage()
+    {
+        $success_page = Setting::where('key', 'complete_profile_success_page')->get()->pluck('value_text');
+        return [
+                'status' => 'success',
+                'result' => $success_page[0]
+        ];
+    }
 }
