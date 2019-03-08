@@ -444,11 +444,16 @@ class ApiOutletApp extends Controller
 
         $list['kind'] = $list['trasaction_type'];
 
+        $warning = 0;
+        $takenLabel = '';
+
         if($detail['reject_at'] != null){
             $statusPickup  = 'Reject';
         }
         elseif($detail['taken_at'] != null){
             $statusPickup  = 'Taken';
+            $warning = 1;
+            $takenLabel = $this->convertMonth($detail['taken_at']);
         }
         elseif($detail['ready_at'] != null){
             $statusPickup  = 'Ready';
@@ -474,8 +479,46 @@ class ApiOutletApp extends Controller
         $list['valueService'] = 100 * $settingService['value'];
         $list['valueTax'] = 100 * $settingTax['value'];
         $list['status'] = $statusPickup;
+        $list['warning'] = $warning;
+        $list['taken_label'] = $takenLabel;
 
         return response()->json(MyHelper::checkGet($list));
+    }
+
+    public function convertMonth($date)
+    {
+        if (date('m', strtotime($date)) == '01') {
+            $month = 'Januari';
+        } elseif (date('m', strtotime($date)) == '02') {
+            $month = 'Februari';
+        } elseif (date('m', strtotime($date)) == '03') {
+            $month = 'Maret';
+        } elseif (date('m', strtotime($date)) == '04') {
+            $month = 'April';
+        } elseif (date('m', strtotime($date)) == '05') {
+            $month = 'Mei';
+        } elseif (date('m', strtotime($date)) == '06') {
+            $month = 'Juni';
+        } elseif (date('m', strtotime($date)) == '07') {
+            $month = 'Juli';
+        } elseif (date('m', strtotime($date)) == '08') {
+            $month = 'Agustus';
+        } elseif (date('m', strtotime($date)) == '09') {
+            $month = 'September';
+        } elseif (date('m', strtotime($date)) == '10') {
+            $month = 'Oktober';
+        } elseif (date('m', strtotime($date)) == '11') {
+            $month = 'November';
+        } elseif (date('m', strtotime($date)) == '12') {
+            $month = 'Desember';
+        }
+
+        $day = date('d', strtotime($date));
+        $year = date('Y', strtotime($date));
+
+        $time = date('H:i', strtotime($date));
+
+        return $day.' '.$month.' '.$year.' '.$time;
     }
 
     public function detailWebview(DetailOrder $request){
