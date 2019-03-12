@@ -1250,7 +1250,7 @@ class ApiUser extends Controller
 			if(stristr($useragent,'okhttp')) $useragent = 'Android';
 			if(stristr($useragent,'GuzzleHttp')) $useragent = 'Browser';
 				
-			$autocrm = app($this->autocrm)->SendAutoCRM('Pin Sent', $request->json('phone'), 
+			$autocrm = app($this->autocrm)->SendAutoCRM('Pin Forgot', $request->json('phone'), 
 																	['pin' => $pin,
 																	'useragent' => $useragent, 
 																	 'now' => date('Y-m-d H:i:s')], $useragent);

@@ -214,7 +214,9 @@ class ApiMembership extends Controller
 
 				$data['benefit_point_multiplier'] = $membership['benefit_point_multiplier'];
 				$data['benefit_cashback_multiplier'] = $membership['benefit_cashback_multiplier'];
-				$data['retain_days'] = $post['retain_days'];
+				if(isset($post['retain_days'])){
+					$data['retain_days'] = $post['retain_days'];
+				}
 				$data['benefit_discount'] = $membership['benefit_discount'];
 				// $data['benefit_promo_id'] = $membership['benefit_promo_id'];
 

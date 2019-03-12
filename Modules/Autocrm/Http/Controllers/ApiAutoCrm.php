@@ -97,6 +97,9 @@ class ApiAutoCrm extends Controller
 						if(!empty($setting['email_bcc']) && !empty($setting['email_bcc_name'])){
 							$message->bcc($setting['email_bcc'], $setting['email_bcc_name']);
 						}
+
+						//attachment
+						// if()
 					});
 					
 					$logData = [];
@@ -178,7 +181,7 @@ class ApiAutoCrm extends Controller
 					);
 
 					//add <#> and Hash Key in pin sms content
-					if($crm['autocrm_title'] == 'Pin Sent'){
+					if($crm['autocrm_title'] == 'Pin Sent' || $crm['autocrm_title'] == 'Pin Forgot'){
 						if($useragent && $useragent == "Android"){
 							$crm['autocrm_sms_content'] = '<#> '.$crm['autocrm_sms_content'].' '.ENV('HASH_KEY_'.ENV('HASH_KEY_TYPE'));
 						}

@@ -471,7 +471,7 @@ class ApiOutletController extends Controller
 
     /* City Outlet */
     function cityOutlet(Request $request) {
-        $outlet = Outlet::join('cities', 'cities.id_city', '=', 'outlets.id_city')->where('outlet_status', 'Active')->select('outlets.id_city', 'city_name')->distinct()->get()->toArray();
+        $outlet = Outlet::join('cities', 'cities.id_city', '=', 'outlets.id_city')->where('outlet_status', 'Active')->select('outlets.id_city', 'city_name')->orderBy('city_name', 'ASC')->distinct()->get()->toArray();
 
         // if (!empty($outlet)) {
         //     $outlet = array_pluck($outlet, 'city_name');
