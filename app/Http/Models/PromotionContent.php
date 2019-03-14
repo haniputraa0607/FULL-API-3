@@ -21,6 +21,7 @@ class PromotionContent extends Model
 	protected $fillable = [
 		'id_promotion',
 		'id_deals',
+		'id_deals_promotion_template',
 		'promotion_series_days',
 		'promotion_series_no',
 		'voucher_value',
