@@ -51,6 +51,7 @@ class LogRequestMiddleware
 		if(stristr($url, 'pos/check/member')) { $subject = 'POS Check Member'; }
 		if(stristr($url, 'pos/check/voucher')) { $subject = 'POS Check Voucher'; }
 		if(stristr($url, 'pos/menu')) $subject = 'POS Menu Sync';
+		if(stristr($url, 'pos/outlet')) $subject = 'POS Outlet Sync';
 		if(stristr($url, 'pos/outlet/menu')) $subject = 'POS Menu Sync';
 		if(stristr($url, 'pos/transaction')) $subject = 'POS Transaction Sync';
 		if(stristr($url, 'pos/transaction/detail')) $subject = 'Fetch Pre Order';

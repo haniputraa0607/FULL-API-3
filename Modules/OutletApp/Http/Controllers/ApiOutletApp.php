@@ -403,6 +403,13 @@ class ApiOutletApp extends Controller
             $payment = TransactionPaymentOffline::where('id_transaction', $list['id_transaction'])->get();
             $list['payment_offline'] = $payment;
         }
+        
+        if ($list['trasaction_payment_type'] == 'Balance') {
+            $paymentBalance = TransactionPaymentBalance::where('id_transaction', $list['id_transaction'])->first();
+            if($paymentBalance){
+                $list['balance'] = -$paymentBalance['balance_nominal'];
+            }
+        }
 
         array_splice($exp, 0, 0, 'transaction_subtotal');
         array_splice($label, 0, 0, 'Cart Total');
@@ -621,7 +628,7 @@ class ApiOutletApp extends Controller
         if($pickup){
             //send notif to customer
             $user = User::find($order->id_user);
-            $send = app($this->autocrm)->SendAutoCRM('Order Accepted', $user['phone'], ["outlet_name" => $outlet['outlet_name'], "id_reference" => $order->transaction_receipt_number, "transaction_date" => $order->transaction_date]);
+            $send = app($this->autocrm)->SendAutoCRM('Order Accepted', $user['phone'], ["outlet_name" => $outlet['outlet_name'], "id_reference" => $order->transaction_receipt_number.','.$order->id_outlet, "transaction_date" => $order->transaction_date]);
             if($send != true){
                 DB::rollback();
                 return response()->json([
@@ -685,7 +692,7 @@ class ApiOutletApp extends Controller
         if($pickup){
             //send notif to customer
             $user = User::find($order->id_user);
-            $send = app($this->autocrm)->SendAutoCRM('Order Ready', $user['phone'], ["outlet_name" => $outlet['outlet_name'], "id_reference" => $order->transaction_receipt_number,  "transaction_date" => $order->transaction_date]);
+            $send = app($this->autocrm)->SendAutoCRM('Order Ready', $user['phone'], ["outlet_name" => $outlet['outlet_name'], "id_reference" => $order->transaction_receipt_number.','.$order->id_outlet,  "transaction_date" => $order->transaction_date]);
             if($send != true){
                 DB::rollback();
                 return response()->json([
@@ -757,7 +764,7 @@ class ApiOutletApp extends Controller
         if($pickup){
             //send notif to customer
             $user = User::find($order->id_user);
-            $send = app($this->autocrm)->SendAutoCRM('Order Taken', $user['phone'], ["outlet_name" => $outlet['outlet_name'], "id_reference" => $order->transaction_receipt_number, "transaction_date" => $order->transaction_date]);
+            $send = app($this->autocrm)->SendAutoCRM('Order Taken', $user['phone'], ["outlet_name" => $outlet['outlet_name'], "id_reference" => $order->transaction_receipt_number.','.$order->id_outlet, "transaction_date" => $order->transaction_date]);
             if($send != true){
                 DB::rollback();
                 return response()->json([
@@ -797,6 +804,8 @@ class ApiOutletApp extends Controller
         $listCategory = ProductCategory::join('products', 'product_categories.id_product_category', 'products.id_product_category')
                                         ->join('product_prices', 'product_prices.id_product', 'products.id_product')
                                         ->where('id_outlet', $outlet['id_outlet'])
+                                        ->where('product_prices.product_visibility','=','Visible')
+                                        ->where('product_prices.product_status','=','Active')
                                         ->with('product_category')
                                         // ->select('id_product_category', 'product_category_name')
                                         ->get();
@@ -804,6 +813,7 @@ class ApiOutletApp extends Controller
         $result = [];
         $idParent = [];
         $idParent2 = [];
+        $categorized = [];
         foreach($listCategory as $i => $category){
             $dataCategory = [];
             $dataProduct = [];
@@ -966,7 +976,7 @@ class ApiOutletApp extends Controller
 
             //send notif to customer
             $user = User::where('id', $order['id_user'])->first()->toArray();
-            $send = app($this->autocrm)->SendAutoCRM('Order Reject', $user['phone'], ["outlet_name" => $outlet['outlet_name'], "id_reference" => $order->transaction_receipt_number, "transaction_date" => $order->transaction_date]);
+            $send = app($this->autocrm)->SendAutoCRM('Order Reject', $user['phone'], ["outlet_name" => $outlet['outlet_name'], "id_reference" => $order->transaction_receipt_number.','.$order->id_outlet, "transaction_date" => $order->transaction_date]);
             if($send != true){
                 DB::rollback();
                 return response()->json([
