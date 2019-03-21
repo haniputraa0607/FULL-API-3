@@ -118,7 +118,9 @@ class ApiOutletApp extends Controller
 
         foreach($list as $i => $dataList){
             $qr     = $dataList['order_id'];
-            $qrCode = 'https://chart.googleapis.com/chart?chl='.$qr.'&chs=250x250&cht=qr&chld=H%7C0';
+
+            $qrCode = 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data='.$qr;
+            // $qrCode = 'https://chart.googleapis.com/chart?chl='.$qr.'&chs=250x250&cht=qr&chld=H%7C0';
             $qrCode = html_entity_decode($qrCode);
 
             $dataList = array_slice($dataList, 0, 3, true) +
@@ -209,7 +211,9 @@ class ApiOutletApp extends Controller
                             ->with('user.city.province', 'productTransaction.product.product_category', 'productTransaction.product.product_discounts', 'outlet')->first();
 
         $qr     = $list['order_id'];
-        $qrCode = 'https://chart.googleapis.com/chart?chl='.$qr.'&chs=250x250&cht=qr&chld=H%7C0';
+
+        $qrCode = 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data='.$qr;
+        // $qrCode = 'https://chart.googleapis.com/chart?chl='.$qr.'&chs=250x250&cht=qr&chld=H%7C0';
         $list['qr'] = html_entity_decode($qrCode);
 
         if(!$list){
@@ -477,7 +481,9 @@ class ApiOutletApp extends Controller
             $list['success'] = 1;
         
         }
-        $qrCode = 'https://chart.googleapis.com/chart?chl='.$qrTest.'&chs=250x250&cht=qr&chld=H%7C0';
+
+        $qrCode = 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data='.$qrTest;
+        // $qrCode = 'https://chart.googleapis.com/chart?chl='.$qrTest.'&chs=250x250&cht=qr&chld=H%7C0';
         $qrCode = html_entity_decode($qrCode);
         $list['qr'] = $qrCode;
 

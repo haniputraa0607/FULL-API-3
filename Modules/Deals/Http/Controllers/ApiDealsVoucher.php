@@ -307,6 +307,23 @@ class ApiDealsVoucher extends Controller
                 }
             }
             
+            // get new voucher code
+            // beetwen "https://chart.googleapis.com/chart?chl="
+            // and "&chs=250x250&cht=qr&chld=H%7C0"
+            preg_match("/api.qrserver.com\/v1\/create-qr-code\/?size=250x250&data=(.*)&chs=250x250/", $datavoucher['voucher_hash'], $matches);
+            // replace voucher_code with code from voucher_hash
+            if (isset($matches[1])) {
+                $voucher[$index]['deal_voucher']['voucher_code'] = $matches[1];
+            }
+            else {
+                $voucher[$index]['deal_voucher']['voucher_code'] = "";
+            }
+
+            $useragent = $_SERVER['HTTP_USER_AGENT'];
+            if(stristr($useragent,'okhttp')){
+                $voucher[$index]['voucher_expired_at'] = date('d/m/Y H:i',strtotime($voucher[$index]['voucher_expired_at']));
+            }
+            
         }
         
         $voucher = $this->kotacuks($voucher);
@@ -316,6 +333,7 @@ class ApiDealsVoucher extends Controller
             
                 foreach($voucher as $index => $dataVou){
                     $voucher[$index]['webview_url'] = env('APP_URL') ."webview/voucher/". $dataVou['id_deals_user'];
+                    $voucher[$index]['webview_url_v2'] = env('APP_URL') ."webview/voucher/v2/". $dataVou['id_deals_user'];
                     $voucher[$index]['button_text'] = 'INVALIDATE';
                 }
             
