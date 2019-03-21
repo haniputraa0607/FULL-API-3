@@ -32,6 +32,7 @@ class ApiHiddenDeals extends Controller
         $this->deals        = "Modules\Deals\Http\Controllers\ApiDeals";
         $this->dealsVoucher = "Modules\Deals\Http\Controllers\ApiDealsVoucher";
         $this->dealsClaim = "Modules\Deals\Http\Controllers\ApiDealsClaim";
+        $this->user     = "Modules\Users\Http\Controllers\ApiUser";
     }
 
     public $saveImage = "img/deals/";
@@ -123,120 +124,142 @@ class ApiHiddenDeals extends Controller
     function autoAssign(Request $request) {
         DB::beginTransaction();
 
+        $post = $request->json()->all();
+
+        $users = [];
+        if(isset($post['conditions'])){
+            $users = app($this->user)->UserFilter($post['conditions']);
+            if(isset($users['status']) && $users['status'] == 'success'){
+                $users = $users['result'];
+            }
+        }
+
         $deals = Deal::where('id_deals', $request->json('id_deals'))->first();
 
         if (empty($deals)) {
             return response()->json(MyHelper::checkGet($deals));
         }
         else {
-            $user = $this->cekUser($request->json('phone'), $request->json('id_deals'));
+            $countUser = 0;
+            $countVoucher = 0;
+            foreach($users as $datauser){
+                $amount = 1;
+                if(isset($post['amount'])){
+                   $amount = $post['amount'];    
+                }
 
-            if (!empty($user)) {
-                // AUTO GENERATE
-                if ($deals->deals_voucher_type == "Auto generated") {
-                    // LIMIT USER
-                    $user = $this->limitAvailableUser($deals, $user);
-
-                    if ($user) {
-                        // UPDATE DEALS
-                        $updateDeals = Deal::where('id_deals', $deals->id_deals)->update([
-                            'deals_total_claimed' => $deals->deals_total_claimed + count($user),
-                            // 'deals_total_voucher' => count($user) + $deals->deals_total_voucher
-                        ]);
-
-                        if ($updateDeals) {
+                $user = $this->cekUser($datauser['phone'], $request->json('id_deals'));
+                if (!empty($user)) {
+                    for($i = 1; $i<= $amount; $i++){
+                        // AUTO GENERATE
+                        if ($deals->deals_voucher_type == "Auto generated") {
+                            // LIMIT USER
+                            $user = $this->limitAvailableUser($deals, $user);
+                            if ($user) {
+                                    
+                                $claim = $this->autoClaimedAssign($deals, $user);
+                                if (!$claim) {
+                                    DB::rollback();
+                                    return response()->json(MyHelper::checkUpdate($claim));
+                                }
+                                $countVoucher++;
+                            }
+                            else {
+                                DB::rollback();
+                                return response()->json([
+                                    'status'   => 'fail',
+                                    'messages' => ['Voucher runs out']
+                                ]);
+                            }
+                        }
+                        // UNLIMITED
+                        elseif ($deals->deals_voucher_type == "Unlimited") {
+                            // UPDATE DEALS
                             $claim = $this->autoClaimedAssign($deals, $user);
-
+    
                             if (!$claim) {
                                 DB::rollback();
                                 return response()->json(MyHelper::checkUpdate($claim));
                             }
+                            $countVoucher++;
                         }
+                        // WITH VOUCHER
                         else {
                             DB::rollback();
-                            return response()->json(MyHelper::checkUpdate($updateDeals));
+                            return response()->json([
+                                'status'   => 'fail',
+                                'messages' => ['Voucher is not free.']
+                            ]);
+                            // $voucher = $this->checkVoucherRegistered($deals->id_deals);
+        
+                            // if ($voucher) {
+                            //     // BATAS
+                            //     $batas = $this->limit($voucher, $user);
+        
+                            //     // UPDATE DEALS
+                            //     $updateDeals = Deal::where('id_deals', $deals->id_deals)->update([
+                            //         'deals_total_claimed' => $deals->deals_total_claimed + $batas,
+                            //         // 'deals_total_voucher' => $batas + $deals->deals_total_voucher
+                            //     ]);
+        
+                            //     if ($updateDeals) {
+                            //         $claim = $this->claimedWithVoucher($deals, $user, $voucher);
+        
+                            //         if (!$claim) {
+                            //             DB::rollback();
+                            //             return response()->json(MyHelper::checkUpdate($claim));
+                            //         }
+                            //     }
+                            //     else {
+                            //         DB::rollback();
+                            //         return response()->json(MyHelper::checkUpdate($updateDeals));
+                            //     }
+                            // }
+                            // else {
+                            //     DB::rollback();
+                            //     return response()->json([
+                            //         'status'   => 'fail',
+                            //         'messages' => ['Voucher is empty']
+                            //     ]);
+                            // }                  
                         }
                     }
-                    else {
-                        DB::rollback();
-                        return response()->json([
-                            'status'   => 'fail',
-                            'messages' => ['User is empty']
-                        ]);
-                    }
-                }
-                // UNLIMITED
-                elseif ($deals->deals_voucher_type == "Unlimited") {
-                    // UPDATE DEALS
-                    $updateDeals = Deal::where('id_deals', $deals->id_deals)->update([
-                        'deals_total_claimed' => $deals->deals_total_claimed + 1,
-                        'deals_total_voucher' => $deals->deals_total_voucher + 1
-                    ]);
-
-                    if ($updateDeals) {
-                        $claim = $this->autoClaimedAssign($deals, $user);
-
-                        if (!$claim) {
-                            DB::rollback();
-                            return response()->json(MyHelper::checkUpdate($claim));
-                        }
-                    }
-                    else {
-                        DB::rollback();
-                        return response()->json(MyHelper::checkUpdate($updateDeals));
-                    }
-                }
-                // WITH VOUCHER
-                else {
-                    DB::rollback();
-                    return response()->json([
-                        'status'   => 'fail',
-                        'messages' => ['Voucher is not free.']
-                    ]);
-                    // $voucher = $this->checkVoucherRegistered($deals->id_deals);
-
-                    // if ($voucher) {
-                    //     // BATAS
-                    //     $batas = $this->limit($voucher, $user);
-
-                    //     // UPDATE DEALS
-                    //     $updateDeals = Deal::where('id_deals', $deals->id_deals)->update([
-                    //         'deals_total_claimed' => $deals->deals_total_claimed + $batas,
-                    //         // 'deals_total_voucher' => $batas + $deals->deals_total_voucher
-                    //     ]);
-
-                    //     if ($updateDeals) {
-                    //         $claim = $this->claimedWithVoucher($deals, $user, $voucher);
-
-                    //         if (!$claim) {
-                    //             DB::rollback();
-                    //             return response()->json(MyHelper::checkUpdate($claim));
-                    //         }
-                    //     }
-                    //     else {
-                    //         DB::rollback();
-                    //         return response()->json(MyHelper::checkUpdate($updateDeals));
-                    //     }
-                    // }
                     // else {
                     //     DB::rollback();
                     //     return response()->json([
                     //         'status'   => 'fail',
-                    //         'messages' => ['Voucher is empty']
+                    //         'messages' => ['All user already claimed.']
                     //     ]);
-                    // }                  
+                    // }
+                    $countUser++;
                 }
             }
-            else {
-                DB::rollback();
-                return response()->json([
-                    'status'   => 'fail',
-                    'messages' => ['All user already claimed.']
+
+            // UPDATE DEALS
+            if($deals->deals_voucher_type == "Unlimited"){
+                $updateDeals = Deal::where('id_deals', $deals->id_deals)->update([
+                    'deals_total_claimed' => $deals->deals_total_claimed + $countVoucher,
+                    'deals_total_voucher' => $deals->deals_total_voucher + $countVoucher
                 ]);
+            }else{
+                $updateDeals = Deal::where('id_deals', $deals->id_deals)->update([
+                    'deals_total_claimed' => $deals->deals_total_claimed + $countVoucher
+                ]);
+            }
+
+            if (!$updateDeals) {
+                DB::rollback();
+                return response()->json(MyHelper::checkUpdate($updateDeals));
             }
             
             DB::commit();
-            return response()->json(MyHelper::checkCreate($deals));
+            return response()->json([
+                "status" => "success",
+                "result" => [
+                    "user" => $countUser,
+                    "voucher" => $countVoucher
+                ]
+            ]);
         }
     }
 
@@ -258,7 +281,7 @@ class ApiHiddenDeals extends Controller
 
     /* LIMIT AVAILABLE USER */
     function limitAvailableUser($deals, $user) {
-        if ($deals->deals_type == "Deals") {
+        // if ($deals->deals_type == "Deals") {
             // CEK TOTAL VOUCHER SENT 
             $voucher = DealsVoucher::where('id_deals', $deals->id_deals)->count();
 
@@ -287,7 +310,7 @@ class ApiHiddenDeals extends Controller
                 // ASSIGN USERFIXED
                 $user = $fixedUser;
             }
-        }
+        // }
 
         return array_values($user);
     }

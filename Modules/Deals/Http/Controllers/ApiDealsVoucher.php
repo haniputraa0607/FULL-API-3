@@ -234,7 +234,7 @@ class ApiDealsVoucher extends Controller
         $post = $request->json()->all();
 
         $voucher = DealsUser::where('id_user', $request->user()->id)->with(['dealVoucher', 'dealVoucher.deal', 'dealVoucher.deal.outlets', 'dealVoucher.deal.outlets.city']);
-
+        
         if (isset($post['used']) && $post['used'] == 1)  {
             $voucher->whereNotNull('used_at');
         }
@@ -271,36 +271,40 @@ class ApiDealsVoucher extends Controller
             }
             $voucher = $voucher_temp;
         }
-
         //add outlet name
         foreach($voucher as $index => $datavoucher){
             $outlet = null;
-            if($datavoucher['id_outlet']){
-                $getOutlet = Outlet::find($datavoucher['id_outlet']);
-                if($getOutlet){
-                    $outlet = $getOutlet['outlet_name'];
+            if($datavoucher['deal_voucher'] == null){
+                unset($voucher[$index]);
+            }else{
+                
+                if($datavoucher['id_outlet']){
+                    $getOutlet = Outlet::find($datavoucher['id_outlet']);
+                    if($getOutlet){
+                        $outlet = $getOutlet['outlet_name'];
+                    }
                 }
-            }
-
-            $voucher[$index] = array_slice($voucher[$index], 0, 4, true) +
-            array("outlet_name" => $outlet) +
-            array_slice($voucher[$index], 4, count($voucher[$index]) - 1, true) ;
-            
-            // get new voucher code
-            // beetwen "https://chart.googleapis.com/chart?chl="
-            // and "&chs=250x250&cht=qr&chld=H%7C0"
-            preg_match("/chart.googleapis.com\/chart\?chl=(.*)&chs=250x250/", $datavoucher['voucher_hash'], $matches);
-            // replace voucher_code with code from voucher_hash
-            if (isset($matches[1])) {
-                $voucher[$index]['deal_voucher']['voucher_code'] = $matches[1];
-            }
-            else {
-                $voucher[$index]['deal_voucher']['voucher_code'] = "";
-            }
-
-            $useragent = $_SERVER['HTTP_USER_AGENT'];
-            if(stristr($useragent,'okhttp')){
-                $voucher[$index]['voucher_expired_at'] = date('d/m/Y H:i',strtotime($voucher[$index]['voucher_expired_at']));
+    
+                $voucher[$index] = array_slice($voucher[$index], 0, 4, true) +
+                array("outlet_name" => $outlet) +
+                array_slice($voucher[$index], 4, count($voucher[$index]) - 1, true) ;
+                
+                // get new voucher code
+                // beetwen "https://chart.googleapis.com/chart?chl="
+                // and "&chs=250x250&cht=qr&chld=H%7C0"
+                preg_match("/chart.googleapis.com\/chart\?chl=(.*)&chs=250x250/", $datavoucher['voucher_hash'], $matches);
+                // replace voucher_code with code from voucher_hash
+                if (isset($matches[1])) {
+                    $voucher[$index]['deal_voucher']['voucher_code'] = $matches[1];
+                }
+                else {
+                    $voucher[$index]['deal_voucher']['voucher_code'] = "";
+                }
+                
+                $useragent = $_SERVER['HTTP_USER_AGENT'];
+                if(stristr($useragent,'okhttp')){
+                    $voucher[$index]['voucher_expired_at'] = date('d/m/Y H:i',strtotime($voucher[$index]['voucher_expired_at']));
+                }
             }
             
         }
@@ -308,19 +312,6 @@ class ApiDealsVoucher extends Controller
         $voucher = $this->kotacuks($voucher);
 
         // add webview url & btn text
-        /*if (isset($post['used'])) {
-            if ($post['used'] == 0) {
-                foreach($voucher as $index => $dataVou){
-                    $voucher[$index]['webview_url'] = env('APP_URL') ."webview/voucher/". $dataVou['id_deals_user'];
-                    $voucher[$index]['button_text'] = 'INVALIDATE';
-                }
-            }
-            elseif ($post['used'] == 1) {
-                foreach($voucher as $index => $dataVou){
-                    $voucher[$index]['webview_url'] = env('APP_URL') ."webview/voucher/used/". $dataVou['id_deals_user'];
-                }
-            }
-        }*/
         if (isset($post['used']) && $post['used'] == 0) {
             
                 foreach($voucher as $index => $dataVou){
