@@ -35,6 +35,7 @@ class ApiOutletApp extends Controller
         date_default_timezone_set('Asia/Jakarta');
         $this->autocrm  = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
         $this->balance  = "Modules\Balance\Http\Controllers\BalanceController";
+        $this->getNotif = "Modules\Transaction\Http\Controllers\ApiNotification";
     }
 
     public function deleteToken(DeleteToken $request)
@@ -705,6 +706,22 @@ class ApiOutletApp extends Controller
                         'status' => 'fail',
                         'messages' => ['Failed Send notification to customer']
                     ]);
+            }
+
+            $newTrx = Transaction::with('user.memberships', 'outlet', 'productTransaction')->where('id_transaction', $order->id_transaction)->first();
+
+            $checkType = TransactionMultiplePayment::where('id_transaction', $order->id_transaction)->get()->toArray();
+            $column = array_column($checkType, 'type');
+
+            if (!in_array('Balance', $column)) {
+                $savePoint = app($this->getNotif)->savePoint($newTrx);
+                if (!$savePoint) {
+                    DB::rollback();
+                    return response()->json([
+                        'status'   => 'fail',
+                        'messages' => ['Transaction failed']
+                    ]);
+                }
             }
 
             DB::commit();

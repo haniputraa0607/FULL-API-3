@@ -118,16 +118,16 @@ class ApiNotification extends Controller {
             }
 
             if ($midtrans['status_code'] == 200) {
-                if (!in_array('Balance', $column)) {
-                    $savePoint = $this->savePoint($newTrx);
-                    if (!$savePoint) {
-                        DB::rollback();
-                        return response()->json([
-                            'status'   => 'fail',
-                            'messages' => ['Transaction failed']
-                        ]);
-                    }
-                }
+                // if (!in_array('Balance', $column)) {
+                //     $savePoint = $this->savePoint($newTrx);
+                //     if (!$savePoint) {
+                //         DB::rollback();
+                //         return response()->json([
+                //             'status'   => 'fail',
+                //             'messages' => ['Transaction failed']
+                //         ]);
+                //     }
+                // }
 
                 $notif = $this->notification($midtrans, $newTrx);
                 if (!$notif) {
