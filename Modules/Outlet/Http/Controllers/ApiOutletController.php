@@ -701,22 +701,29 @@ class ApiOutletController extends Controller
                 $outlet[$key]['dist']     = (float) $jaraknya;
 				
 				if($distance == "0-2km"){
-					if((float) $jaraknya < 0.01 || (float) $jaraknya > 2.00)
-						unset($outlet[$key]);
+					if((float) $jaraknya < 0.01 || (float) $jaraknya > 2.00) {
+                        unset($outlet[$key]);
+                        continue;
+                    }
 				}
 				
 				if($distance == "2-5km"){
-					if((float) $jaraknya < 2.00 || (float) $jaraknya > 5.00)
+					if((float) $jaraknya < 2.00 || (float) $jaraknya > 5.00) {
 						unset($outlet[$key]);
+                        continue;
+                    }
 				}
 				
 				if($distance == ">5km"){
-					if((float) $jaraknya < 5.00)
+					if((float) $jaraknya < 5.00) {
 						unset($outlet[$key]);
+                        continue;
+                    }
 				}
 				
 				if($id_city != "" && $id_city != $value['id_city']){
 					unset($outlet[$key]);
+                    continue;
 				}
             }
 			if($sort != 'Alphabetical'){
@@ -737,6 +744,10 @@ class ApiOutletController extends Controller
         } else {
             return response()->json(MyHelper::checkGet($outlet));
         }
+
+        // if (!isset($request['page'])) {
+        //     $request['page'] = 1;
+        // }
 
         if(isset($request['page']) && $request['page'] > 0){
             $page = $request['page'];
