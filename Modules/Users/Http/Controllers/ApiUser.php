@@ -1141,16 +1141,16 @@ class ApiUser extends Controller
 				$result['device'] 	= $device;
 				$result['ip'] 		= $ip;
 			}
+
+			if($datauser[0]['pin_changed'] == '0'){
+				$result['pin_changed'] = false; 
+			}else{
+				$result['pin_changed'] = true; 
+			}
 		}
 		else {
 			$result['status'] 	= 'fail';
 			$result['messages'] = ['The user credentials were incorrect'];
-		}
-		
-		if($datauser[0]['pin_changed'] == '0'){
-			$result['pin_changed'] = false; 
-		}else{
-			$result['pin_changed'] = true; 
 		}
 		
         return response()->json($result);

@@ -30,13 +30,13 @@ class CheckVoucher
 
         // kalo input manwal
         if (isset($post['code'])) {
-            $validQr = Self::newValidateQr('code', $post['code']);
+            $validQr = Self::newValidateQr('code', $post['code'], $post['store_code']);
         }
 
         if (isset($post['qrcode'])) {
-            $validQr = Self::newValidateQr('qr', $post['qrcode']);
+            $validQr = Self::newValidateQr('qr', $post['qrcode'], $post['store_code']);
         }
-
+// dd($validQr);
         // validate qr code
         if ($validQr) {
 
@@ -46,7 +46,7 @@ class CheckVoucher
                 // validate store
                 if ($validStore = Self::validateStore($post['store_code'], $validQr[0]['deal_voucher']['id_deals'])) {
                     
-                    $get = Self::returnVoucher($validQr);
+                    $get = Self::returnVoucher($validQr, $post['store_code']);
     
                     return response()->json(MyHelper::checkGet($get));
                 }else{
@@ -55,7 +55,7 @@ class CheckVoucher
             }else{
                 // validate store voucher
                 if ($validStore = Self::cekStore($validQr[0], $post['store_code'])) {
-                    $get = Self::returnVoucher($validQr);
+                    $get = Self::returnVoucher($validQr, $post['store_code']);
     
                     return response()->json(MyHelper::checkGet($get));            
                 }else{
@@ -98,7 +98,7 @@ class CheckVoucher
     }*/
 
     /* VALIDATE QR */
-    static function newValidateQr($type, $qrcode) 
+    static function newValidateQr($type, $qrcode, $storecode) 
     {
     	
     	// $var = 'https://chart.googleapis.com/chart?chl='.MyHelper::encryptQRCode($deals->id_deals_user.MyHelper::createRandomPIN(6)).'&chs=250x250&cht=qr&chld=H%7C0';
@@ -111,6 +111,10 @@ class CheckVoucher
 		$dealsUser = DealsUser::where('voucher_hash_code', $qrcode)
 								->whereNull('used_at')
 								->with(['dealVoucher', 'dealVoucher.deal'])->get()->toArray();
+								
+								
+								
+		
 
 		if ($dealsUser) {
 			return $dealsUser;
@@ -151,7 +155,7 @@ class CheckVoucher
     }
 
     /* RETURN */
-    static function returnVoucher($deals) {
+    static function returnVoucher($deals, $storecode) {
 
     	if ($deals[0]['deal_voucher']['deal']['deals_promo_id_type'] == "nominal") {
 			$type  = "voucher";
@@ -168,6 +172,16 @@ class CheckVoucher
 				'type'  => $type
     		]
     	];
+    	
+    	$outlet = Outlet::where('outlet_code', $storecode)->first();
+								
+								if($outlet){
+								    // foreach($dealsUser as $del){
+                            		    $dealsUser = DealsUser::where('id_deals_user', $deals[0]['id_deals_user'])
+                            								->update(['used_at' => date('Y-m-d H:i:s'), 'id_outlet' => $outlet['id_outlet']]);
+                            // 		}
+								}
+    	
 
     	return $voucher;
     }

@@ -4,6 +4,7 @@ namespace App\Lib;
 use Image;
 use File;
 use DB;
+use Storage;
 use App\Http\Models\Notification;
 use App\Http\Models\Store;
 use App\Http\Models\User;
@@ -444,8 +445,13 @@ class MyHelper{
 			$img->resize($resize, null, function ($constraint) {
 				$constraint->aspectRatio();
 			});
+
 			
-			if ($img->save($upload)) {
+			$resource = $img->stream()->detach();
+
+			$save = Storage::disk('s3')->put($upload, $resource, 'public');
+
+			if ($save) {
 					$result = [
 						'status' => 'success',
 						'path'  => $upload
@@ -558,7 +564,6 @@ class MyHelper{
 			$upload = $path.$pictName;
 
 			$img = Image::make($decoded);
-
 			$imgwidth = $img->width();
 			$imgheight = $img->height();
 
@@ -624,7 +629,11 @@ class MyHelper{
 		
 			$img->crop($width, $height);
 
-			if ($img->save($upload)) {
+			$resource = $img->stream()->detach();
+
+			$save = Storage::disk('s3')->put($upload, $resource, 'public');
+
+			if ($save) {
 					$result = [
 						'status' => 'success',
 						'path'  => $upload
@@ -670,8 +679,8 @@ class MyHelper{
 	}
 
 	public static function deletePhoto($path) {
-		if (file_exists($path)) {
-			if (unlink($path)) {
+		if(Storage::disk('s3')->exists($path)) {
+			if(Storage::disk('s3')->delete($path)){
 				return true;
 			}
 			else {

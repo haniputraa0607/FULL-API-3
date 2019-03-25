@@ -54,7 +54,7 @@ class ApiPOS extends Controller
         date_default_timezone_set('Asia/Jakarta');
         $this->balance    = "Modules\Balance\Http\Controllers\BalanceController";
         $this->membership = "Modules\Membership\Http\Controllers\ApiMembership";
-		$this->balance    = "Modules\Balance\Http\Controllers\BalanceController";
+        $this->balance    = "Modules\Balance\Http\Controllers\BalanceController";
 		$this->autocrm  = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
     }
 	
@@ -181,12 +181,12 @@ class ApiPOS extends Controller
 			}
 				$transactions['tax'] = round($transactions['tax']);
 				$transactions['total'] = round($transactions['total']);
-
+				
 				//update accepted_at
 				$pick = TransactionPickup::where('id_transaction', $check['id_transaction'])->update(['receive_at' => date('Y-m-d H:i:s')]);
 
 				$send = app($this->autocrm)->SendAutoCRM('Order Accepted', $user['phone'], ["outlet_name" => $outlet['outlet_name'], "id_reference" => $check['transaction_receipt_number'].','.$outlet['id_outlet'], "transaction_date" => $check['transaction_date']]);
-	
+				
 			return response()->json(['status' => 'success', 'result' => $transactions]); 
 		} else {
 			return response()->json(['status' => 'fail', 'messages' => ['Invalid Order ID']]); 
@@ -228,7 +228,7 @@ class ApiPOS extends Controller
                                 $query->where('id_outlet', $outlet->id_outlet) 
                                     ->orWhereNull('id_outlet'); 
                             }) 
-                            ->whereNull('used_at')->whereDate('voucher_expired_at', '>=', date("Y-m-d"))
+                            ->whereDate('voucher_expired_at', '>=', date("Y-m-d"))
                             ->where(function ($q) { 
                                 $q->where('paid_status', 'Completed') 
                                     ->orWhere('paid_status', 'Free');
@@ -304,13 +304,14 @@ class ApiPOS extends Controller
             return response()->json(['status' => 'fail', 'messages' => ['Voucher tidak ditemukan']]); 
         }
 
-        if($voucher['deals_user'][0]['used_at']){
-            return response()->json(['status' => 'fail', 'messages' => ['Gagal void voucher '.$post['voucher_code'].'. Voucher sudah digunakan.']]); 
-        }
+        // if($voucher['deals_user'][0]){
+        //     return response()->json(['status' => 'fail', 'messages' => ['Gagal void voucher '.$post['voucher_code'].'. Voucher sudah digunakan.']]); 
+        // }
 
         //update voucher redeem
         foreach($voucher['deals_user'] as $dealsUser){
             $dealsUser->redeemed_at = null;
+            $dealsUser->used_at = null;
             $dealsUser->voucher_hash = null;
             $dealsUser->voucher_hash_code = null;
             $dealsUser->id_outlet = null;
@@ -1109,17 +1110,17 @@ class ApiPOS extends Controller
 
 							$idDealVouUsed[] = $insertTrxVoucher->id_deals_voucher;
 
-							foreach ($checkUsed['deals_user'] as $keyU => $valueU) {
-								$valueU->used_at = $createTrx->transaction_date;
-								$valueU->update();
-								if (!$valueU) {
-									DB::rollback();
-									return response()->json([
-										'status'    => 'fail',
-										'messages'  => ['Voucher '.$valueV['voucher_code'].' not valid']
-									]);
-								}
-							}
+				// 			foreach ($checkUsed['deals_user'] as $keyU => $valueU) {
+				// 				$valueU->used_at = $createTrx->transaction_date;
+				// 				$valueU->update();
+				// 				if (!$valueU) {
+				// 					DB::rollback();
+				// 					return response()->json([
+				// 						'status'    => 'fail',
+				// 						'messages'  => ['Voucher '.$valueV['voucher_code'].' not valid']
+				// 					]);
+				// 				}
+				// 			}
 
 							$checkUsed['deal']->deals_total_used =  $checkUsed['deal']->deals_total_used + 1;
 							$checkUsed['deal']->update();

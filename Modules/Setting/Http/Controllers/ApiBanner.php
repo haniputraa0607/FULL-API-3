@@ -28,7 +28,7 @@ class ApiBanner extends Controller
 
         // add full url to collection
         $banners = $banners->map(function ($banner, $key) {
-            $banner->image_url = url($banner->image);
+            $banner->image_url = env('AWS_URL').$banner->image;
             return $banner;
         });
         $banners->all();
@@ -51,7 +51,7 @@ class ApiBanner extends Controller
             mkdir($path, 0777, true);
         }
 
-        // img 4:3
+        // img 4:3;
         $upload = MyHelper::uploadPhotoStrict($post['image'], $path, 800, 600);
 
         if (isset($upload['status']) && $upload['status'] == "success") {

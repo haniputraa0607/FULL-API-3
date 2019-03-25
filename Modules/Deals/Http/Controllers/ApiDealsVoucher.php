@@ -233,7 +233,7 @@ class ApiDealsVoucher extends Controller
     function myVoucher(Request $request) {
         $post = $request->json()->all();
 
-        $voucher = DealsUser::where('id_user', $request->user()->id)->with(['dealVoucher', 'dealVoucher.deal', 'dealVoucher.deal.outlets', 'dealVoucher.deal.outlets.city']);
+        $voucher = DealsUser::where('id_user', $request->user()->id)->with(['dealVoucher', 'dealVoucher.deal', 'dealVoucher.deal.outlets_active', 'dealVoucher.deal.outlets.city']);
         
         if (isset($post['used']) && $post['used'] == 1)  {
             $voucher->whereNotNull('used_at');
@@ -277,51 +277,57 @@ class ApiDealsVoucher extends Controller
             if($datavoucher['deal_voucher'] == null){
                 unset($voucher[$index]);
             }else{
-                
-                if($datavoucher['id_outlet']){
-                    $getOutlet = Outlet::find($datavoucher['id_outlet']);
-                    if($getOutlet){
-                        $outlet = $getOutlet['outlet_name'];
+                if(count($datavoucher['deal_voucher']['deal']['outlets_active']) <= 1){
+                    unset($voucher[$index]);
+                }else{
+                    $voucher[$index]['deal_voucher']['deal']['outlets'] = $datavoucher['deal_voucher']['deal']['outlets_active'];
+
+                    if($datavoucher['id_outlet']){
+                        $getOutlet = Outlet::find($datavoucher['id_outlet']);
+                        if($getOutlet){
+                            $outlet = $getOutlet['outlet_name'];
+                        }
+                    }
+        
+                    $voucher[$index] = array_slice($voucher[$index], 0, 4, true) +
+                    array("outlet_name" => $outlet) +
+                    array_slice($voucher[$index], 4, count($voucher[$index]) - 1, true) ;
+                    
+                    // get new voucher code
+                    // beetwen "https://chart.googleapis.com/chart?chl="
+                    // and "&chs=250x250&cht=qr&chld=H%7C0"
+                    preg_match("/chart.googleapis.com\/chart\?chl=(.*)&chs=250x250/", $datavoucher['voucher_hash'], $matches);
+                    // replace voucher_code with code from voucher_hash
+                    if (isset($matches[1])) {
+                        $voucher[$index]['deal_voucher']['voucher_code'] = $matches[1];
+                    }
+                    else {
+                        $voucher[$index]['deal_voucher']['voucher_code'] = "";
+                    }
+                    
+                    $useragent = $_SERVER['HTTP_USER_AGENT'];
+                    if(stristr($useragent,'okhttp')){
+                        $voucher[$index]['voucher_expired_at'] = date('d/m/Y H:i',strtotime($voucher[$index]['voucher_expired_at']));
+                    }
+
+                    // get new voucher code
+                    // beetwen "https://chart.googleapis.com/chart?chl="
+                    // and "&chs=250x250&cht=qr&chld=H%7C0"
+                    preg_match("/api.qrserver.com\/v1\/create-qr-code\/?size=250x250&data=(.*)&chs=250x250/", $datavoucher['voucher_hash'], $matches);
+                    // replace voucher_code with code from voucher_hash
+                    if (isset($matches[1])) {
+                        $voucher[$index]['deal_voucher']['voucher_code'] = $matches[1];
+                    }
+                    else {
+                        $voucher[$index]['deal_voucher']['voucher_code'] = "";
+                    }
+
+                    $useragent = $_SERVER['HTTP_USER_AGENT'];
+                    if(stristr($useragent,'okhttp')){
+                        $voucher[$index]['voucher_expired_at'] = date('d/m/Y H:i',strtotime($voucher[$index]['voucher_expired_at']));
                     }
                 }
-    
-                $voucher[$index] = array_slice($voucher[$index], 0, 4, true) +
-                array("outlet_name" => $outlet) +
-                array_slice($voucher[$index], 4, count($voucher[$index]) - 1, true) ;
                 
-                // get new voucher code
-                // beetwen "https://chart.googleapis.com/chart?chl="
-                // and "&chs=250x250&cht=qr&chld=H%7C0"
-                preg_match("/chart.googleapis.com\/chart\?chl=(.*)&chs=250x250/", $datavoucher['voucher_hash'], $matches);
-                // replace voucher_code with code from voucher_hash
-                if (isset($matches[1])) {
-                    $voucher[$index]['deal_voucher']['voucher_code'] = $matches[1];
-                }
-                else {
-                    $voucher[$index]['deal_voucher']['voucher_code'] = "";
-                }
-                
-                $useragent = $_SERVER['HTTP_USER_AGENT'];
-                if(stristr($useragent,'okhttp')){
-                    $voucher[$index]['voucher_expired_at'] = date('d/m/Y H:i',strtotime($voucher[$index]['voucher_expired_at']));
-                }
-            }
-            
-            // get new voucher code
-            // beetwen "https://chart.googleapis.com/chart?chl="
-            // and "&chs=250x250&cht=qr&chld=H%7C0"
-            preg_match("/api.qrserver.com\/v1\/create-qr-code\/?size=250x250&data=(.*)&chs=250x250/", $datavoucher['voucher_hash'], $matches);
-            // replace voucher_code with code from voucher_hash
-            if (isset($matches[1])) {
-                $voucher[$index]['deal_voucher']['voucher_code'] = $matches[1];
-            }
-            else {
-                $voucher[$index]['deal_voucher']['voucher_code'] = "";
-            }
-
-            $useragent = $_SERVER['HTTP_USER_AGENT'];
-            if(stristr($useragent,'okhttp')){
-                $voucher[$index]['voucher_expired_at'] = date('d/m/Y H:i',strtotime($voucher[$index]['voucher_expired_at']));
             }
             
         }

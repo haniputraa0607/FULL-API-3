@@ -18,7 +18,7 @@ Route::group(['prefix' => 'api/v1/pos/', 'namespace' => 'Modules\POS\Http\Contro
         Route::any('transaction/refund', 'ApiPOS@transactionRefund');
         Route::any('transaction/detail', 'ApiPOS@transactionDetail');
     });
-    Route::group(['middleware' => 'auth_client'], function() {
+    Route::group(['middleware' => 'auth_client', 'log_request'], function() {
         Route::any('menu', 'ApiPOS@syncMenuReturn');
         Route::post('outlet/menu', 'ApiPOS@syncOutletMenuReturn');
         Route::post('transaction/last', 'ApiPOS@getLastTransaction');

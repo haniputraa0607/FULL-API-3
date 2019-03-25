@@ -78,19 +78,19 @@ class News extends Model
 	
 	public function getUrlNewsImageLuarAttribute() {
 		if (empty($this->news_image_luar)) {
-            return env('APP_API_URL').'img/default.jpg';
+            return env('AWS_URL').'img/default.jpg';
         }
         else {
-            return env('APP_API_URL').$this->news_image_luar;
+            return env('AWS_URL').$this->news_image_luar;
         }
 	}
 
 	public function getUrlNewsImageDalamAttribute() {
 		if (empty($this->news_image_dalam)) {
-            return env('APP_API_URL').'img/default.jpg';
+            return env('AWS_URL').'img/default.jpg';
         }
         else {
-            return env('APP_API_URL').$this->news_image_dalam;
+            return env('AWS_URL').$this->news_image_dalam;
         }
 	}
 

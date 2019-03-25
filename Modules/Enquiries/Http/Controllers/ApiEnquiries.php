@@ -345,7 +345,7 @@ class ApiEnquiries extends Controller
 					
 					if (isset($post['reply_push_image']) && $post['reply_push_image'] != null) {
 						$dataOptional['image'] = env('APP_API_URL').$post['reply_push_image'];
-						$image = env('APP_API_URL').$post['reply_push_image'];
+						$image = env('AWS_URL').$post['reply_push_image'];
 					}
 					
 					if (isset($post['reply_push_clickto']) && $post['reply_push_clickto'] != null) {

@@ -46,10 +46,10 @@ class ManualPayment extends Model
 
 	public function getManualPaymentLogoUrlAttribute() {
 		if (empty($this->manual_payment_logo)) {
-            return env('APP_API_URL').'img/logo.jpg';
+            return env('AWS_URL').'img/logo.jpg';
         }
         else {
-            return env('APP_API_URL').$this->manual_payment_logo;
+            return env('AWS_URL').$this->manual_payment_logo;
         }
 	}
 }

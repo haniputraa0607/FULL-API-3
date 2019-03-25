@@ -25,7 +25,7 @@ Route::group(['middleware' => 'auth:api', 'prefix' => 'api/deals', 'namespace' =
     });
 
     /* INVALIDATE */
-    Route::group(['prefix' => 'invalidate'], function()
+    Route::group(['prefix' => 'invalidate', 'middleware' => 'log_request'], function()
     {
         Route::post('/', 'ApiDealsInvalidate@invalidate');  
     });

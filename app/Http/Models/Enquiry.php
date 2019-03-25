@@ -64,7 +64,7 @@ class Enquiry extends Model
 
 	public function getUrlEnquiryPhotoAttribute() {
 	    if (!empty($this->enquiry_photo)) {
-	        return env('APP_API_URL').$this->enquiry_photo;
+	        return env('AWS_URL').$this->enquiry_photo;
 	    }
 	}
 

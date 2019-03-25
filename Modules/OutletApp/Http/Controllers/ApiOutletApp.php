@@ -988,13 +988,64 @@ class ApiOutletApp extends Controller
         
         if($pickup){
             //refund ke balance
-            $refund = app($this->balance)->addLogBalance( $order['id_user'], $order['transaction_grandtotal'], $order['id_transaction'], 'Rejected Order', $order['transaction_grandtotal']);
-            if ($refund == false) {
-                DB::rollback();
-                return response()->json([
-                    'status'    => 'fail',
-                    'messages'  => ['Insert Cashback Failed']
-                ]);
+            if($order['trasaction_payment_type'] == "Midtrans"){
+                $multiple = TransactionMultiplePayment::where('id_transaction', $order->id_transaction)->get()->toArray();
+                if($multiple){
+                    foreach($multiple as $pay){
+                        if($pay['type'] == 'Balance'){
+                            $payBalance = TransactionPaymentBalance::find($pay['id_payment']);
+                            if($payBalance){
+                                $refund = app($this->balance)->addLogBalance( $order['id_user'], $payBalance['balance_nominal'], $order['id_transaction'], 'Rejected Order', $order['transaction_grandtotal']);
+                                if ($refund == false) {
+                                    DB::rollback();
+                                    return response()->json([
+                                        'status'    => 'fail',
+                                        'messages'  => ['Insert Cashback Failed']
+                                    ]);
+                                }
+                            }
+                        }
+                        else{
+                            $payMidtrans = TransactionPaymentMidtran::find($pay['id_payment']);
+                            if($payMidtrans){
+                                $refund = app($this->balance)->addLogBalance( $order['id_user'], $payMidtrans['gross_amount'], $order['id_transaction'], 'Rejected Order', $order['transaction_grandtotal']);
+                                if ($refund == false) {
+                                    DB::rollback();
+                                    return response()->json([
+                                        'status'    => 'fail',
+                                        'messages'  => ['Insert Cashback Failed']
+                                    ]);
+                                }
+                            }
+                        }
+                    }
+                }else{
+                    $payMidtrans = TransactionPaymentMidtran::where('id_transaction', $order['id_transaction'])->first();
+                    if($payMidtrans){
+                        $refund = app($this->balance)->addLogBalance( $order['id_user'], $payMidtrans['gross_amount'], $order['id_transaction'], 'Rejected Order', $order['transaction_grandtotal']);
+                        if ($refund == false) {
+                            DB::rollback();
+                            return response()->json([
+                                'status'    => 'fail',
+                                'messages'  => ['Insert Cashback Failed']
+                            ]);
+                        }
+                    }
+                }
+            }
+
+            if($order['trasaction_payment_type'] == 'Balance'){
+                $payBalance = TransactionPaymentBalance::where('id_transaction', $order['id_transaction'])->first();
+                if($payBalance){
+                    $refund = app($this->balance)->addLogBalance( $order['id_user'], $payBalance['balance_nominal'], $order['id_transaction'], 'Rejected Order', $order['transaction_grandtotal']);
+                    if ($refund == false) {
+                        DB::rollback();
+                        return response()->json([
+                            'status'    => 'fail',
+                            'messages'  => ['Insert Cashback Failed']
+                        ]);
+                    }
+                }
             }
 
             //send notif to customer

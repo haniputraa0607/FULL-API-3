@@ -318,7 +318,7 @@ class ApiAutoCrmCron extends Controller
 					//upload file
 					$upload = MyHelper::uploadPhoto($content['content'], $path = 'whatsapp/img/autocrm/');
 					if ($upload['status'] == "success") {
-						$content['content'] = env('APP_API_URL').$upload['path'];
+						$content['content'] = env('AWS_URL').$upload['path'];
 					} else{
 						return 'fail';
 					}
@@ -337,7 +337,7 @@ class ApiAutoCrmCron extends Controller
 
 					$upload = MyHelper::uploadFile($content['content'], $path = 'whatsapp/file/autocrm/', $content['content_file_ext'], $content['content_file_name']);
 					if ($upload['status'] == "success") {
-						$content['content'] = env('APP_API_URL').$upload['path'];
+						$content['content'] = env('AWS_URL').$upload['path'];
 					} else{
 						return 'fail';
 					}
