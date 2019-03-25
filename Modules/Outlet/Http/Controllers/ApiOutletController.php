@@ -742,6 +742,10 @@ class ApiOutletController extends Controller
             return response()->json(MyHelper::checkGet($outlet));
         }
 
+        // if (!isset($request['page'])) {
+        //     $request['page'] = 1;
+        // }
+
         if(isset($request['page']) && $request['page'] > 0){
             $page = $request['page'];
             $next_page = $page + 1;
