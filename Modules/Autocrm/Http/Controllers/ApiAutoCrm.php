@@ -75,7 +75,7 @@ class ApiAutoCrm extends Controller
 						'setting' => $setting
 					);
 					
-					Mailgun::send('emails.test', $data, function($message) use ($to,$subject,$name,$setting)
+					Mailgun::send('emails.test', $data, function($message) use ($to,$subject,$name,$setting,$variables)
 					{
 						$message->to($to, $name)->subject($subject)
 										->trackClicks(true)
@@ -98,8 +98,16 @@ class ApiAutoCrm extends Controller
 							$message->bcc($setting['email_bcc'], $setting['email_bcc_name']);
 						}
 
-						//attachment
-						// if()
+						// attachment
+						if(isset($variables['attachment'])){
+							if(is_array($variables['attachment'])){
+								foreach($variables['attachment'] as $attach){
+									$message->attach($attach);
+								}
+							}else{
+								$message->attach($variables['attachment']);
+							}
+						}
 					});
 					
 					$logData = [];

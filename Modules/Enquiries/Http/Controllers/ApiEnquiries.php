@@ -5,6 +5,7 @@ namespace Modules\Enquiries\Http\Controllers;
 use App\Http\Models\Enquiry;
 use App\Http\Models\EnquiriesPhoto;
 use App\Http\Models\Setting;
+use App\Http\Models\Outlet;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
@@ -136,9 +137,18 @@ class ApiEnquiries extends Controller
         if (isset($data['error'])) {
             unset($data['error']);        
             return response()->json($data);
-        }
+		}
 
-        $save = Enquiry::create($data);
+		//cek outlet
+		$outlet = Outlet::find($data['id_outlet']);
+		if(!$outlet){
+			return response()->json([
+				'status' => 'fail',
+				'messages' => ['Outlet not found']
+			]);
+		}        
+		
+		$save = Enquiry::create($data);
 
         // jika berhasil maka ngirim" ke crm
         if ($save) {
@@ -147,7 +157,12 @@ class ApiEnquiries extends Controller
         		$photos = $this->savePhotos($save->id_enquiry, $data['many_upload']);
         	}
 
-            // send CRM
+			// send CRM
+			$enquiryPhoto = EnquiriesPhoto::where('id_enquiry', $save->id_enquiry)->get();
+			$data['attachment'] = [];
+			foreach($enquiryPhoto as $dataPhoto){
+				$data['attachment'] = $dataPhoto->url_enquiry_photo;
+			}
             $goCrm = $this->sendCrm($data);
         }
         return response()->json(MyHelper::checkCreate($save));
@@ -445,7 +460,8 @@ class ApiEnquiries extends Controller
                                                                 'enquiry_message' => $data['enquiry_content'],
                                                                 'enquiry_phone'   => $data['enquiry_phone'],
                                                                 'enquiry_name'    => $data['enquiry_name'],
-                                                                'enquiry_email'   => $data['enquiry_email']
+																'enquiry_email'   => $data['enquiry_email'],
+																'attachment' 	  => $data['attachment']
                                                             ]);
 		// print_r($send);exit;
         return $send; 
