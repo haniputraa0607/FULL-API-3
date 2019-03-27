@@ -1123,19 +1123,20 @@ class ApiTransaction extends Controller
         // return response()->json($query->get());
         if (isset($post['conditions'])) {
             foreach ($post['conditions'] as $key => $con) {
-                
-                $var = $con['subject'];
-                if ($post['rule'] == 'and') {
-                    if ($con['operator'] == 'like') {
-                        $query = $query->where($var, $con['operator'], '%'.$con['parameter'].'%');
+                if(isset($con['subject'])){
+                    $var = $con['subject'];
+                    if ($post['rule'] == 'and') {
+                        if ($con['operator'] == 'like') {
+                            $query = $query->where($var, $con['operator'], '%'.$con['parameter'].'%');
+                        } else {
+                            $query = $query->where($var, $con['operator'], $con['parameter']);
+                        }
                     } else {
-                        $query = $query->where($var, $con['operator'], $con['parameter']);
-                    }
-                } else {
-                    if ($con['operator'] == 'like') {
-                        $query = $query->orWhere($var, $con['operator'], '%'.$con['parameter'].'%');
-                    } else {
-                        $query = $query->orWhere($var, $con['operator'], $con['parameter']);
+                        if ($con['operator'] == 'like') {
+                            $query = $query->orWhere($var, $con['operator'], '%'.$con['parameter'].'%');
+                        } else {
+                            $query = $query->orWhere($var, $con['operator'], $con['parameter']);
+                        }
                     }
                 }
 
@@ -1192,24 +1193,25 @@ class ApiTransaction extends Controller
         // return response()->json($query->get());
         if (isset($post['conditions'])) {
             foreach ($post['conditions'] as $key => $con) {
-                
-                if ($con['subject'] == 'balance') {
-                    $var = 'log_balances.balance';
-                } else {
-                    $var = $con['subject'];
-                }
-                
-                if ($post['rule'] == 'and') {
-                    if ($con['operator'] == 'like') {
-                        $query = $query->where($var, $con['operator'], '%'.$con['parameter'].'%');
+                if(isset($con['subject'])){
+                    if ($con['subject'] == 'balance') {
+                        $var = 'log_balances.balance';
                     } else {
-                        $query = $query->where($var, $con['operator'], $con['parameter']);
+                        $var = $con['subject'];
                     }
-                } else {
-                    if ($con['operator'] == 'like') {
-                        $query = $query->orWhere($var, $con['operator'], '%'.$con['parameter'].'%');
+                    
+                    if ($post['rule'] == 'and') {
+                        if ($con['operator'] == 'like') {
+                            $query = $query->where($var, $con['operator'], '%'.$con['parameter'].'%');
+                        } else {
+                            $query = $query->where($var, $con['operator'], $con['parameter']);
+                        }
                     } else {
-                        $query = $query->orWhere($var, $con['operator'], $con['parameter']);
+                        if ($con['operator'] == 'like') {
+                            $query = $query->orWhere($var, $con['operator'], '%'.$con['parameter'].'%');
+                        } else {
+                            $query = $query->orWhere($var, $con['operator'], $con['parameter']);
+                        }
                     }
                 }
 
@@ -1292,66 +1294,68 @@ class ApiTransaction extends Controller
         // return response()->json($query->get());
         if (isset($post['conditions'])) {
             foreach ($post['conditions'] as $key => $con) {
-                if ($con['subject'] == 'receipt') {
-                    $var = 'transactions.transaction_receipt_number';
-                } elseif ($con['subject'] == 'name' || $con['subject'] == 'phone' || $con['subject'] == 'email') {
-                    $var = 'users.'.$con['subject'];
-                } elseif ($con['subject'] == 'product_name' || $con['subject'] == 'product_code') {
-                    $var = 'products.'.$con['subject'];
-                } elseif ($con['subject'] == 'product_category') {
-                    $var = 'product_categories.product_category_name';
-                }
+                if (isset($con['subject'])) {
+                    if ($con['subject'] == 'receipt') {
+                        $var = 'transactions.transaction_receipt_number';
+                    } elseif ($con['subject'] == 'name' || $con['subject'] == 'phone' || $con['subject'] == 'email') {
+                        $var = 'users.'.$con['subject'];
+                    } elseif ($con['subject'] == 'product_name' || $con['subject'] == 'product_code') {
+                        $var = 'products.'.$con['subject'];
+                    } elseif ($con['subject'] == 'product_category') {
+                        $var = 'product_categories.product_category_name';
+                    }
 
-                if ($con['subject'] == 'receipt' || $con['subject'] == 'name' || $con['subject'] == 'phone' || $con['subject'] == 'email' || $con['subject'] == 'product_name' || $con['subject'] == 'product_code' || $con['subject'] == 'product_category') {
-                    if ($post['rule'] == 'and') {
-                        if ($con['operator'] == 'like') {
-                            $query = $query->where($var, 'like', '%'.$con['parameter'].'%');
+                    if ($con['subject'] == 'receipt' || $con['subject'] == 'name' || $con['subject'] == 'phone' || $con['subject'] == 'email' || $con['subject'] == 'product_name' || $con['subject'] == 'product_code' || $con['subject'] == 'product_category') {
+                        if ($post['rule'] == 'and') {
+                            if ($con['operator'] == 'like') {
+                                $query = $query->where($var, 'like', '%'.$con['parameter'].'%');
+                            } else {
+                                $query = $query->where($var, '=', $con['parameter']);
+                            }
                         } else {
-                            $query = $query->where($var, '=', $con['parameter']);
+                            if ($con['operator'] == 'like') {
+                                $query = $query->orWhere($var, 'like', '%'.$con['parameter'].'%');
+                            } else {
+                                $query = $query->orWhere($var, '=', $con['parameter']);
+                            }
                         }
-                    } else {
-                        if ($con['operator'] == 'like') {
-                            $query = $query->orWhere($var, 'like', '%'.$con['parameter'].'%');
+                    }
+
+                    if ($con['subject'] == 'product_name' || $con['subject'] == 'product_code' || $con['subject'] == 'product_weight' || $con['subject'] == 'product_price') {
+                        $var = 'products.'.$con['subject'];
+                        if ($post['rule'] == 'and') {
+                            $query = $query->where($var, $con['operator'], $con['parameter']);
                         } else {
-                            $query = $query->orWhere($var, '=', $con['parameter']);
+                            $query = $query->orWhere($var, $con['operator'], $con['parameter']);
                         }
                     }
-                }
 
-                if ($con['subject'] == 'product_name' || $con['subject'] == 'product_code' || $con['subject'] == 'product_weight' || $con['subject'] == 'product_price') {
-                    $var = 'products.'.$con['subject'];
-                    if ($post['rule'] == 'and') {
-                        $query = $query->where($var, $con['operator'], $con['parameter']);
-                    } else {
-                        $query = $query->orWhere($var, $con['operator'], $con['parameter']);
-                    }
-                }
+                    if ($con['subject'] == 'grand_total' || $con['subject'] == 'product_tax') {
+                        if ($con['subject'] == 'grand_total') {
+                            $var = 'transactions.transaction_grandtotal';
+                        } else {
+                            $var = 'transactions.transaction_tax';
+                        }
 
-                if ($con['subject'] == 'grand_total' || $con['subject'] == 'product_tax') {
-                    if ($con['subject'] == 'grand_total') {
-                        $var = 'transactions.transaction_grandtotal';
-                    } else {
-                        $var = 'transactions.transaction_tax';
+                        if ($post['rule'] == 'and') {
+                            $query = $query->where($var, $con['operator'], $con['parameter']);
+                        } else {
+                            $query = $query->orWhere($var, $con['operator'], $con['parameter']);
+                        }
                     }
 
-                    if ($post['rule'] == 'and') {
-                        $query = $query->where($var, $con['operator'], $con['parameter']);
-                    } else {
-                        $query = $query->orWhere($var, $con['operator'], $con['parameter']);
-                    }
-                }
+                    if ($con['subject'] == 'status' || $con['subject'] == 'courier') {
+                        if ($con['subject'] == 'status') {
+                            $var = 'transactions.transaction_payment_status';
+                        } else {
+                            $var = 'transactions.transaction_courier';
+                        }
 
-                if ($con['subject'] == 'status' || $con['subject'] == 'courier') {
-                    if ($con['subject'] == 'status') {
-                        $var = 'transactions.transaction_payment_status';
-                    } else {
-                        $var = 'transactions.transaction_courier';
-                    }
-
-                    if ($post['rule'] == 'and') {
-                        $query = $query->where($var, '=', $con['operator']);
-                    } else {
-                        $query = $query->orWhere($var, '=', $con['operator']);
+                        if ($post['rule'] == 'and') {
+                            $query = $query->where($var, '=', $con['operator']);
+                        } else {
+                            $query = $query->orWhere($var, '=', $con['operator']);
+                        }
                     }
                 }
 

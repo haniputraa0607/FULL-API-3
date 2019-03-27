@@ -638,7 +638,9 @@ class ApiAutoCrm extends Controller
 
 			if(!empty($variables)){
 				foreach($variables as $key => $var){
-					$text = str_replace('%'.$key.'%',$var, $text);
+					if(is_string($var)){
+						$text = str_replace('%'.$key.'%',$var, $text);
+					}
 				}
 			}
 		} 

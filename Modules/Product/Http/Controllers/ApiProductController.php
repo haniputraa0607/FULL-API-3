@@ -133,7 +133,8 @@ class ApiProductController extends Controller
 												'product_price_base' => $post['product_price_base'][$key],
 												'product_price_tax' => $post['product_price_tax'][$key],
 												'product_stock_status' => $post['product_stock_status'][$key],
-												'product_visibility' => "'".$post['product_visibility'][$key]."'"]);
+                                                'product_visibility' => $post['product_visibility'][$key]
+                                                ]);
 			}
 			else{
 				$update = ProductPrice::where('id_product_price','=',$id_product_price)->update(['product_price' => $post['product_price'][$key], 'product_price_base' => $post['product_price_base'][$key], 'product_price_tax' => $post['product_price_tax'][$key],'product_stock_status' => $post['product_stock_status'][$key],'product_visibility' => $post['product_visibility'][$key]]);
@@ -627,7 +628,7 @@ class ApiProductController extends Controller
                 }
             }
         }
-
+        
         return response()->json(MyHelper::checkUpdate($save));
     }
 

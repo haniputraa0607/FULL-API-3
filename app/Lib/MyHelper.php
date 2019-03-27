@@ -330,18 +330,18 @@ class MyHelper{
 	}
 
 	public static function createrandom($digit, $custom = null) {
-		$chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+		$chars = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ123456789";
 		if($custom != null){
 			if($custom == 'Angka')
 				$chars = "0123456789";
 			if($custom == 'Besar Angka')
-				$chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+				$chars = "ABCDEFGHJKLMNPQRSTUVWXYZ123456789";
 			if($custom == 'Kecil Angka')
-				$chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+				$chars = "abcdefghjkmnpqrstuvwxyz123456789";
 			if($custom == 'Kecil')
-				$chars = "abcdefghijklmnopqrstuvwxyz";
+				$chars = "abcdefghjkmnpqrstuvwxyz";
 			if($custom == 'Besar')
-				$chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+				$chars = "ABCDEFGHJKLMNPQRSTUVWXYZ";
 		}
 		$i = 0;
 		$generatedstring = '';
@@ -447,11 +447,11 @@ class MyHelper{
 			});
 
 			
-			$resource = $img->stream()->detach();
+			// $resource = $img->stream()->detach();
 
-			$save = Storage::disk('s3')->put($upload, $resource, 'public');
+			// $save = Storage::disk('s3')->put($upload, $resource, 'public');
 
-			if ($save) {
+			if ($img->save($upload)) {
 					$result = [
 						'status' => 'success',
 						'path'  => $upload
@@ -629,11 +629,11 @@ class MyHelper{
 		
 			$img->crop($width, $height);
 
-			$resource = $img->stream()->detach();
+			// $resource = $img->stream()->detach();
 
-			$save = Storage::disk('s3')->put($upload, $resource, 'public');
+			// $save = Storage::disk('s3')->put($upload, $resource, 'public');
 
-			if ($save) {
+			if ($img->save($upload)) {
 					$result = [
 						'status' => 'success',
 						'path'  => $upload
@@ -679,8 +679,20 @@ class MyHelper{
 	}
 
 	public static function deletePhoto($path) {
-		if(Storage::disk('s3')->exists($path)) {
-			if(Storage::disk('s3')->delete($path)){
+		// if(Storage::disk('s3')->exists($path)) {
+		// 	if(Storage::disk('s3')->delete($path)){
+		// 		return true;
+		// 	}
+		// 	else {
+		// 		return false;
+		// 	}
+		// }
+		// else {
+		// 	return true;
+		// }
+
+		if (file_exists($path)) {
+			if (unlink($path)) {
 				return true;
 			}
 			else {
