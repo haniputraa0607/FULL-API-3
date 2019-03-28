@@ -1,6 +1,6 @@
 <?php
 
-Route::group(['middleware' => 'auth:api', 'prefix' => 'api/promotion', 'namespace' => 'Modules\Promotion\Http\Controllers'], function()
+Route::group(['middleware' => ['auth:api', 'log_request'], 'prefix' => 'api/promotion', 'namespace' => 'Modules\Promotion\Http\Controllers'], function()
 {
     Route::post('create', 'ApiPromotion@CreatePromotion');
     Route::post('step1', 'ApiPromotion@ShowPromotionStep1');

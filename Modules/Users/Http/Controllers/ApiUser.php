@@ -19,6 +19,7 @@ use App\Http\Models\LogPoint;
 use App\Http\Models\UserNotification;
 use App\Http\Models\Transaction;
 use App\Http\Models\FraudSetting;
+use App\Http\Models\Feature;
 use App\Http\Models\Setting;
 
 use Modules\Users\Http\Requests\users_list;
@@ -1793,9 +1794,19 @@ class ApiUser extends Controller
 	public function log(Request $request)
     {
 		$post = $request->json()->all();
-		
+		if(isset($post['take'])){
+			$take = $post['take'];
+		}else{
+			$take = 10;
+		}
+		if(isset($post['skip'])){
+			$skip = $post['skip'];
+		}else{
+			$skip = 10;
+		}
 		$query = LogRequest::where('phone','=',$post['phone'])
 							->orderBy('id_log_activity','desc')
+							->skip($skip)->take($take)
 							->get()
 							->toArray();
 		if($query){

@@ -1,13 +1,13 @@
 <?php
 
-Route::group(['middleware' => 'auth:api', 'prefix' => 'api/balance', 'namespace' => 'Modules\Balance\Http\Controllers'], function()
+Route::group(['middleware' => ['auth:api', 'log_request'], 'prefix' => 'api/balance', 'namespace' => 'Modules\Balance\Http\Controllers'], function()
 {
     Route::post('topup', 'BalanceController@requestTopUpBalance');
     Route::post('balance', 'BalanceController@requestCashBackBalance');
     Route::post('point', 'BalanceController@requestPoint');
 });
 
-Route::group(['middleware' => 'auth_client', 'prefix' => 'api/balance', 'namespace' => 'Modules\Balance\Http\Controllers'], function()
+Route::group(['middleware' => ['auth_client', 'log_request'], 'prefix' => 'api/balance', 'namespace' => 'Modules\Balance\Http\Controllers'], function()
 {
 	Route::group(['prefix' => 'topup'], function()
 	{
@@ -18,7 +18,7 @@ Route::group(['middleware' => 'auth_client', 'prefix' => 'api/balance', 'namespa
 	});
 });
 
-Route::group(['prefix' => 'api/v1/pos/saldo', 'namespace' => 'Modules\Balance\Http\Controllers'], function()
+Route::group(['prefix' => 'api/v1/pos/saldo', 'middleware' => 'log_request', 'namespace' => 'Modules\Balance\Http\Controllers'], function()
 {
     Route::post('list', 'NewTopupController@topupNominalList');
     Route::post('topup', 'NewTopupController@topupNominalDo');
@@ -30,7 +30,7 @@ Route::group(['prefix' => 'api/v1/pos/saldo', 'namespace' => 'Modules\Balance\Ht
     Route::post('use/void', 'UseSaldoController@useVoid');
 });
 
-Route::group(['middleware' => 'auth:api', 'prefix' => 'api/v1/pos/saldo', 'namespace' => 'Modules\Balance\Http\Controllers'], function()
+Route::group(['middleware' => ['auth:api', 'log_request'], 'prefix' => 'api/v1/pos/saldo', 'namespace' => 'Modules\Balance\Http\Controllers'], function()
 {
     Route::post('topup/generate', 'NewTopupController@generateCode');
 });

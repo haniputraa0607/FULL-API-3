@@ -1,6 +1,6 @@
 <?php
 
-Route::group(['prefix' => 'api/spinthewheel', 'namespace' => 'Modules\SpinTheWheel\Http\Controllers'], function()
+Route::group(['prefix' => 'api/spinthewheel', 'middleware' => 'log_request', 'namespace' => 'Modules\SpinTheWheel\Http\Controllers'], function()
 {
     Route::group(['middleware' => 'auth_client'], function() {
 	    Route::post('/items', 'ApiSpinTheWheelController@getItems');

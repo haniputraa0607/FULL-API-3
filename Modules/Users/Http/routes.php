@@ -1,6 +1,6 @@
 <?php
 
-Route::group(['prefix' => 'api'], function(){
+Route::group(['prefix' => 'api', 'middleware' => 'log_request'], function(){
 	Route::get('users/list/{var}', 'Modules\Users\Http\Controllers\ApiUser@listVar');
 	Route::group(['middleware' => ['auth_client','log_request'], 'prefix' => 'users', 'namespace' => 'Modules\Users\Http\Controllers'], function()
 	{

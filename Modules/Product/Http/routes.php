@@ -1,6 +1,6 @@
 <?php
 
-Route::group(['prefix' => 'api/product', 'namespace' => 'Modules\Product\Http\Controllers'], function()
+Route::group(['prefix' => 'api/product','middleware' => 'log_request', 'namespace' => 'Modules\Product\Http\Controllers'], function()
 {
     /**
      * product
