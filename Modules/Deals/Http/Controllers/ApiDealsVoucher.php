@@ -233,8 +233,10 @@ class ApiDealsVoucher extends Controller
     function myVoucher(Request $request) {
         $post = $request->json()->all();
 
-        $voucher = DealsUser::where('id_user', $request->user()->id)->with(['dealVoucher', 'dealVoucher.deal', 'dealVoucher.deal.outlets_active', 'dealVoucher.deal.outlets_active.city']);
+        $outlet_total = Outlet::get()->count();
 
+        $voucher = DealsUser::where('id_user', $request->user()->id)->with(['dealVoucher', 'dealVoucher.deal', 'dealVoucher.deal.outlets_active.city', 'dealVoucher.deal.outlets.city']);
+        
         if (isset($post['used']) && $post['used'] == 1)  {
             $voucher->whereNotNull('used_at');
         }
@@ -275,9 +277,21 @@ class ApiDealsVoucher extends Controller
         }
 
         //add outlet name
-        if (!isset($post['used']) || $post['used'] == 0) {
-            foreach($voucher as $index => $datavoucher){
-                if(isset($datavoucher['deal_voucher']['deal']['outlets_active']) && count($datavoucher['deal_voucher']['deal']['outlets_active']) > 0){
+        foreach($voucher as $index => $datavoucher){
+            $check = count($datavoucher['deal_voucher']['deal']['outlets_active']);
+            if ($check == $outlet_total) {
+                $voucher[$index]['deal_voucher']['deal']['label_outlet'] = 'All';
+            } else {
+                $voucher[$index]['deal_voucher']['deal']['label_outlet'] = 'Some';
+            }
+
+            $outlet = null;
+            if($datavoucher['deal_voucher'] == null){
+                unset($voucher[$index]);
+            }else{
+                if(count($datavoucher['deal_voucher']['deal']['outlets_active']) <= 1){
+                    unset($voucher[$index]);
+                }else{
                     $voucher[$index]['deal_voucher']['deal']['outlets'] = $datavoucher['deal_voucher']['deal']['outlets_active'];
                     unset($voucher[$index]['deal_voucher']['deal']['outlets_active']);
                     $outlet = null;
@@ -394,12 +408,15 @@ class ApiDealsVoucher extends Controller
                     $kota[$k]['outlet'] = [];
 
                     foreach ($value['deal_voucher']['deal']['outlets'] as $outlet) {
-                        if ($v['id_city'] == $outlet['id_city']) {
-                            unset($outlet['pivot']);
-                            unset($outlet['city']);
+                        if ($outlet['id_city'] != null) {
+                            if ($v['id_city'] == $outlet['id_city']) {
+                                unset($outlet['pivot']);
+                                unset($outlet['city']);
 
-                            array_push($kota[$k]['outlet'], $outlet);
+                                array_push($kota[$k]['outlet'], $outlet);
+                            }
                         }
+                        
                     }
                 }
 
