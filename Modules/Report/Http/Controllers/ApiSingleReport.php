@@ -623,7 +623,7 @@ class ApiSingleReport extends Controller
 
 
     // gender chart data
-    private function genderChart($chart_date, $item)
+    public function genderChart($chart_date, $item)
     {
         return [
             'date'      => $chart_date,
@@ -632,7 +632,7 @@ class ApiSingleReport extends Controller
         ];
     }
     // age chart data
-    private function ageChart($chart_date, $item)
+    public function ageChart($chart_date, $item)
     {
         return [
             'date'      => $chart_date,
@@ -643,7 +643,7 @@ class ApiSingleReport extends Controller
         ];
     }
     // device chart data
-    private function deviceChart($chart_date, $item)
+    public function deviceChart($chart_date, $item)
     {
         return [
             'date'      => $chart_date,
@@ -652,7 +652,7 @@ class ApiSingleReport extends Controller
         ];
     }
     // provider chart data
-    private function providerChart($chart_date, $item)
+    public function providerChart($chart_date, $item)
     {
         return [
             'date'      => $chart_date,
@@ -671,7 +671,8 @@ class ApiSingleReport extends Controller
     {
         // with outlet
         if (isset($params['id_outlet'])) {
-            $trans = DailyReportTrx::where('id_outlet', $params['id_outlet'])
+            $trans = DailyReportTrx::with('outlet')
+                ->where('id_outlet', $params['id_outlet'])
                 ->whereBetween('trx_date', [date('Y-m-d', strtotime($params['start_date'])), date('Y-m-d', strtotime($params['end_date']))]);
         }
         else {
@@ -687,7 +688,8 @@ class ApiSingleReport extends Controller
     {
         // with outlet
         if (isset($params['id_outlet'])) {
-            $trans = MonthlyReportTrx::where('id_outlet', $params['id_outlet'])
+            $trans = MonthlyReportTrx::with('outlet')
+                ->where('id_outlet', $params['id_outlet'])
                 ->where('trx_year', $params['year'])
                 ->whereBetween('trx_month', [$params['start_month'], $params['end_month']]);
         }
@@ -705,7 +707,8 @@ class ApiSingleReport extends Controller
     {
         // with outlet
         if (isset($params['id_outlet'])) {
-            $trans = MonthlyReportTrx::where('id_outlet', $params['id_outlet'])
+            $trans = MonthlyReportTrx::with('outlet')
+                ->where('id_outlet', $params['id_outlet'])
                 ->whereBetween('trx_year', [$params['start_year'], $params['end_year']]);
         }
         else {
@@ -936,7 +939,7 @@ class ApiSingleReport extends Controller
     }
 
     // calculate age, gender, device, and provider
-    private function calculateVoucherReport($data) 
+    public function calculateVoucherReport($data) 
     {
         $user_vouchers = [];
 

@@ -45,6 +45,14 @@ Route::group(['middleware' => 'api', 'prefix' => 'api/report', 'namespace' => 'M
     Route::post('/single/membership', 'ApiSingleReport@getMembershipReport');
     Route::post('/single/voucher', 'ApiSingleReport@getVoucherReport');
 
+    /* COMPARE REPORT */
+    Route::post('/compare', 'ApiCompareReport@getReport');
+    Route::post('/compare/trx', 'ApiCompareReport@getTrxReport');
+    Route::post('/compare/product', 'ApiCompareReport@getProductReport');
+    Route::post('/compare/membership', 'ApiCompareReport@getMembershipReport');
+    Route::post('/compare/voucher', 'ApiCompareReport@getVoucherReport');
+    // Route::post('/compare/reg', 'ApiCompareReport@getRegReport');
+
 });
 
 Route::group(['prefix' => 'api/cron', 'namespace' => 'Modules\Report\Http\Controllers'], function()
