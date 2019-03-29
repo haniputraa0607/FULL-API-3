@@ -662,7 +662,7 @@ class ApiOutletController extends Controller
 
         // write into file
         // Storage::disk('s3')->put('stations.geojson', json_encode($allfeatures));
-        Storage::disk('public_custom')->put('stations.geojson', json_encode($allfeatures));
+        // Storage::disk('public_custom')->put('stations.geojson', json_encode($allfeatures));
         
         return $allfeatures;
     }
@@ -863,23 +863,14 @@ class ApiOutletController extends Controller
             // format result into geojson
             $urutan = $this->geoJson($urutan);
         }
-<<<<<<< HEAD
-        $geojson_file_url = env('API_URL') . 'files/stations.geojson' . '?';
-
-        // checkGet
-        if($urutan && !empty($urutan)) return ['status' => 'success', 'result' => $urutan, 'url'=>$geojson_file_url];
-        else if(empty($urutan)) return ['status' => 'fail', 'messages' => ['empty']];
-        else return ['status' => 'fail', 'messages' => ['failed to retrieve data']];
-=======
-        
-        $geojson_file_url = env('API_URL') . 'files/stations.geojson' . '?';
+         
+        /*$geojson_file_url = env('API_URL') . 'files/stations.geojson' . '?';
 
         if($urutan && !empty($urutan)) return ['status' => 'success', 'result' => $urutan, 'url'=>$geojson_file_url];
         else if(empty($urutan)) return ['status' => 'fail', 'messages' => ['empty']];
-        else return ['status' => 'fail', 'messages' => ['failed to retrieve data']];
+        else return ['status' => 'fail', 'messages' => ['failed to retrieve data']];*/
         
-        // return response()->json(MyHelper::checkGet($urutan));
->>>>>>> master
+        return response()->json(MyHelper::checkGet($urutan));
     }
 
     // unset outlet yang tutup dan libur
