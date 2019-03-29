@@ -235,7 +235,7 @@ class ApiDealsVoucher extends Controller
 
         $outlet_total = Outlet::get()->count();
 
-        $voucher = DealsUser::where('id_user', $request->user()->id)->with(['dealVoucher', 'dealVoucher.deal', 'dealVoucher.deal.outlets_active.city', 'dealVoucher.deal.outlets.city']);
+        $voucher = DealsUser::where('id_user', $request->user()->id)->with(['dealVoucher', 'dealVoucher.deal', 'dealVoucher.deal.outlets.city', 'dealVoucher.deal.outlets.city']);
         
         if (isset($post['used']) && $post['used'] == 1)  {
             $voucher->whereNotNull('used_at');
@@ -278,7 +278,7 @@ class ApiDealsVoucher extends Controller
 
         //add outlet name
         foreach($voucher as $index => $datavoucher){
-            $check = count($datavoucher['deal_voucher']['deal']['outlets_active']);
+            $check = count($datavoucher['deal_voucher']['deal']['outlets']);
             if ($check == $outlet_total) {
                 $voucher[$index]['deal_voucher']['deal']['label_outlet'] = 'All';
             } else {
@@ -289,11 +289,11 @@ class ApiDealsVoucher extends Controller
             if($datavoucher['deal_voucher'] == null){
                 unset($voucher[$index]);
             }else{
-                if(count($datavoucher['deal_voucher']['deal']['outlets_active']) <= 1){
-                    unset($voucher[$index]);
-                }else{
-                    $voucher[$index]['deal_voucher']['deal']['outlets'] = $datavoucher['deal_voucher']['deal']['outlets_active'];
-                    unset($voucher[$index]['deal_voucher']['deal']['outlets_active']);
+                // if(count($datavoucher['deal_voucher']['deal']['outlets_active']) <= 1){
+                //     unset($voucher[$index]);
+                // }else{
+                    // $voucher[$index]['deal_voucher']['deal']['outlets'] = $datavoucher['deal_voucher']['deal']['outlets_active'];
+                    // unset($voucher[$index]['deal_voucher']['deal']['outlets_active']);
                     $outlet = null;
                     if($datavoucher['id_outlet']){
                         $getOutlet = Outlet::find($datavoucher['id_outlet']);
@@ -322,10 +322,11 @@ class ApiDealsVoucher extends Controller
                     if(stristr($useragent,'okhttp')){
                         $voucher[$index]['voucher_expired_at'] = date('d/m/Y H:i',strtotime($voucher[$index]['voucher_expired_at']));
                     }
-                }else{
-                    unset($voucher[$index]);
-                    continue;
-                }
+                // }
+                // else{
+                //     unset($voucher[$index]);
+                //     continue;
+                // }
                 
             }
             $voucher = $this->kotacuks($voucher);

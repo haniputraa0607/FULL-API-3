@@ -351,7 +351,7 @@ class ApiPOS extends Controller
 			}
             // $data['outlet_status'] = $value['store_status'];
 
-            $save = Outlet::updateOrCreate(['outlet_code' => $value['store_code']], $data);
+            $save = Outlet::updateOrCreate(['outlet_code' => strtoupper($value['store_code'])], $data);
 
             if (!$save) {
                 return response()->json([

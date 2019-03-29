@@ -42,7 +42,12 @@ class LogRequestMiddleware
 		if($requestnya == '[]') $requestnya = null;
 		$urlexp = explode('/',$url);
 		
-		$module = $urlexp[6];
+		$module='Unknown';
+		if(isset($urlexp[6])){
+			$module = $urlexp[6];
+		}elseif(isset($urlexp[4])){
+			$module = $urlexp[4];
+		}
 		if(stristr($url, 'v1/pos')) $module = 'POS';
 		
 		$subject = "Unknown";

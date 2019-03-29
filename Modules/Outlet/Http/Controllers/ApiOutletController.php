@@ -372,7 +372,8 @@ class ApiOutletController extends Controller
         if (isset($post['webview'])) {
             $outlet = Outlet::with(['today']);
         } else {
-            $outlet = Outlet::with(['city', 'outlet_photos', 'product_prices', 'product_prices.product', 'outlet_schedules', 'today']);
+            $outlet = Outlet::with(['city', 'outlet_photos', 'outlet_schedules', 'today']);
+            // $outlet = Outlet::with(['city', 'outlet_photos', 'product_prices', 'product_prices.product', 'outlet_schedules', 'today']);
         }
         
         if (isset($post['outlet_code'])) {
@@ -665,6 +666,7 @@ class ApiOutletController extends Controller
         $allfeatures = array('type' => 'FeatureCollection', 'features' => $features);
         
         // write into file
+        // Storage::disk('s3')->put('stations.geojson', json_encode($allfeatures));
         Storage::disk('public_custom')->put('stations.geojson', json_encode($allfeatures));
         
         return $allfeatures;
