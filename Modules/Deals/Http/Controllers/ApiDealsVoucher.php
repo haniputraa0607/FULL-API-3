@@ -233,8 +233,10 @@ class ApiDealsVoucher extends Controller
     function myVoucher(Request $request) {
         $post = $request->json()->all();
 
-        $voucher = DealsUser::where('id_user', $request->user()->id)->with(['dealVoucher', 'dealVoucher.deal', 'dealVoucher.deal.outlets', 'dealVoucher.deal.outlets.city']);
+        $outlet_total = Outlet::get()->count();
 
+        $voucher = DealsUser::where('id_user', $request->user()->id)->with(['dealVoucher', 'dealVoucher.deal', 'dealVoucher.deal.outlets.city', 'dealVoucher.deal.outlets.city']);
+        
         if (isset($post['used']) && $post['used'] == 1)  {
             $voucher->whereNotNull('used_at');
         }
@@ -246,8 +248,10 @@ class ApiDealsVoucher extends Controller
         if (isset($post['id_deals_user'])) {
             $voucher->where('id_deals_user', $post['id_deals_user']);
         }
-		
-		$voucher->where('voucher_expired_at', '>=',date('Y-m-d H:i:s'));
+        
+        if (!isset($post['used']) || $post['used'] == 0) {
+		    $voucher->where('voucher_expired_at', '>=',date('Y-m-d H:i:s'));
+        }
 		$voucher->orderBy('voucher_expired_at', 'asc');
         
         // if voucher detail, no need pagination
@@ -274,38 +278,60 @@ class ApiDealsVoucher extends Controller
 
         //add outlet name
         foreach($voucher as $index => $datavoucher){
+            $check = count($datavoucher['deal_voucher']['deal']['outlets']);
+            if ($check == $outlet_total) {
+                $voucher[$index]['deal_voucher']['deal']['label_outlet'] = 'All';
+            } else {
+                $voucher[$index]['deal_voucher']['deal']['label_outlet'] = 'Some';
+            }
+
             $outlet = null;
-            if($datavoucher['id_outlet']){
-                $getOutlet = Outlet::find($datavoucher['id_outlet']);
-                if($getOutlet){
-                    $outlet = $getOutlet['outlet_name'];
-                }
+            if($datavoucher['deal_voucher'] == null){
+                unset($voucher[$index]);
+            }else{
+                // if(count($datavoucher['deal_voucher']['deal']['outlets_active']) <= 1){
+                //     unset($voucher[$index]);
+                // }else{
+                    // $voucher[$index]['deal_voucher']['deal']['outlets'] = $datavoucher['deal_voucher']['deal']['outlets_active'];
+                    // unset($voucher[$index]['deal_voucher']['deal']['outlets_active']);
+                    $outlet = null;
+                    if($datavoucher['id_outlet']){
+                        $getOutlet = Outlet::find($datavoucher['id_outlet']);
+                        if($getOutlet){
+                            $outlet = $getOutlet['outlet_name'];
+                        }
+                    }
+        
+                    $voucher[$index] = array_slice($voucher[$index], 0, 4, true) +
+                    array("outlet_name" => $outlet) +
+                    array_slice($voucher[$index], 4, count($voucher[$index]) - 1, true) ;
+                
+                    // get new voucher code
+                    // beetwen "https://chart.googleapis.com/chart?chl="
+                    // and "&chs=250x250&cht=qr&chld=H%7C0"
+                    preg_match("/api.qrserver.com\/v1\/create-qr-code\/?size=250x250&data=(.*)&chs=250x250/", $datavoucher['voucher_hash'], $matches);
+                    // replace voucher_code with code from voucher_hash
+                    if (isset($matches[1])) {
+                        $voucher[$index]['deal_voucher']['voucher_code'] = $matches[1];
+                    }
+                    else {
+                        $voucher[$index]['deal_voucher']['voucher_code'] = "";
+                    }
+        
+                    $useragent = $_SERVER['HTTP_USER_AGENT'];
+                    if(stristr($useragent,'okhttp')){
+                        $voucher[$index]['voucher_expired_at'] = date('d/m/Y H:i',strtotime($voucher[$index]['voucher_expired_at']));
+                    }
+                // }
+                // else{
+                //     unset($voucher[$index]);
+                //     continue;
+                // }
+                
             }
-
-            $voucher[$index] = array_slice($voucher[$index], 0, 4, true) +
-            array("outlet_name" => $outlet) +
-            array_slice($voucher[$index], 4, count($voucher[$index]) - 1, true) ;
-            
-            // get new voucher code
-            // beetwen "https://chart.googleapis.com/chart?chl="
-            // and "&chs=250x250&cht=qr&chld=H%7C0"
-            preg_match("/chart.googleapis.com\/chart\?chl=(.*)&chs=250x250/", $datavoucher['voucher_hash'], $matches);
-            // replace voucher_code with code from voucher_hash
-            if (isset($matches[1])) {
-                $voucher[$index]['deal_voucher']['voucher_code'] = $matches[1];
-            }
-            else {
-                $voucher[$index]['deal_voucher']['voucher_code'] = "";
-            }
-
-            $useragent = $_SERVER['HTTP_USER_AGENT'];
-            if(stristr($useragent,'okhttp')){
-                $voucher[$index]['voucher_expired_at'] = date('d/m/Y H:i',strtotime($voucher[$index]['voucher_expired_at']));
-            }
-            
+            $voucher = $this->kotacuks($voucher);
         }
         
-        $voucher = $this->kotacuks($voucher);
 
         // add webview url & btn text
         /*if (isset($post['used'])) {
@@ -325,6 +351,7 @@ class ApiDealsVoucher extends Controller
             
                 foreach($voucher as $index => $dataVou){
                     $voucher[$index]['webview_url'] = env('APP_URL') ."webview/voucher/". $dataVou['id_deals_user'];
+                    $voucher[$index]['webview_url_v2'] = env('APP_URL') ."webview/voucher/v2/". $dataVou['id_deals_user'];
                     $voucher[$index]['button_text'] = 'INVALIDATE';
                 }
             
@@ -382,12 +409,15 @@ class ApiDealsVoucher extends Controller
                     $kota[$k]['outlet'] = [];
 
                     foreach ($value['deal_voucher']['deal']['outlets'] as $outlet) {
-                        if ($v['id_city'] == $outlet['id_city']) {
-                            unset($outlet['pivot']);
-                            unset($outlet['city']);
+                        if ($outlet['id_city'] != null) {
+                            if ($v['id_city'] == $outlet['id_city']) {
+                                unset($outlet['pivot']);
+                                unset($outlet['city']);
 
-                            array_push($kota[$k]['outlet'], $outlet);
+                                array_push($kota[$k]['outlet'], $outlet);
+                            }
                         }
+                        
                     }
                 }
 

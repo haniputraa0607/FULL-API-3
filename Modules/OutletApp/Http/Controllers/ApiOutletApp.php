@@ -35,6 +35,7 @@ class ApiOutletApp extends Controller
         date_default_timezone_set('Asia/Jakarta');
         $this->autocrm  = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
         $this->balance  = "Modules\Balance\Http\Controllers\BalanceController";
+        $this->getNotif = "Modules\Transaction\Http\Controllers\ApiNotification";
     }
 
     public function deleteToken(DeleteToken $request)
@@ -71,13 +72,14 @@ class ApiOutletApp extends Controller
         $post = $request->json()->all();
         $outlet = $request->user();
 
-        $list = Transaction::join('transaction_pickups', 'transactions.id_transaction', 'transaction_pickups.id_transaction')
-                            ->select('transactions.id_transaction', 'transaction_receipt_number', 'order_id', 'transaction_date', 'pickup_by', 'pickup_type', 'pickup_at', 'receive_at', 'ready_at', 'taken_at', 'reject_at')
-                            ->where('id_outlet', $outlet->id_outlet)
+        $list = Transaction::join('transaction_pickups', 'transactions.id_transaction', 'transaction_pickups.id_transaction')->leftJoin('transaction_products', 'transactions.id_transaction', 'transaction_products.id_transaction')->leftJoin('users', 'users.id', 'transactions.id_user')
+                            ->select('transactions.id_transaction', 'transaction_receipt_number', 'order_id', 'transaction_date', 'pickup_by', 'pickup_type', 'pickup_at', 'receive_at', 'ready_at', 'taken_at', 'reject_at', DB::raw('sum(transaction_product_qty) as total_item'), 'users.name')
+                            ->where('transactions.id_outlet', $outlet->id_outlet)
                             ->whereDate('transaction_date', date('Y-m-d'))
                             ->where('transaction_payment_status', 'Completed')
                             ->where('trasaction_type', 'Pickup Order')
                             ->whereNull('void_date')
+                            ->groupBy('transaction_products.id_transaction')
                             ->orderBy('transaction_date', 'ASC')
                             ->orderBy('transactions.id_transaction', 'ASC');
 
@@ -117,7 +119,9 @@ class ApiOutletApp extends Controller
 
         foreach($list as $i => $dataList){
             $qr     = $dataList['order_id'];
-            $qrCode = 'https://chart.googleapis.com/chart?chl='.$qr.'&chs=250x250&cht=qr&chld=H%7C0';
+
+            $qrCode = 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data='.$qr;
+            // $qrCode = 'https://chart.googleapis.com/chart?chl='.$qr.'&chs=250x250&cht=qr&chld=H%7C0';
             $qrCode = html_entity_decode($qrCode);
 
             $dataList = array_slice($dataList, 0, 3, true) +
@@ -208,7 +212,9 @@ class ApiOutletApp extends Controller
                             ->with('user.city.province', 'productTransaction.product.product_category', 'productTransaction.product.product_discounts', 'outlet')->first();
 
         $qr     = $list['order_id'];
-        $qrCode = 'https://chart.googleapis.com/chart?chl='.$qr.'&chs=250x250&cht=qr&chld=H%7C0';
+
+        $qrCode = 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data='.$qr;
+        // $qrCode = 'https://chart.googleapis.com/chart?chl='.$qr.'&chs=250x250&cht=qr&chld=H%7C0';
         $list['qr'] = html_entity_decode($qrCode);
 
         if(!$list){
@@ -402,6 +408,13 @@ class ApiOutletApp extends Controller
             $payment = TransactionPaymentOffline::where('id_transaction', $list['id_transaction'])->get();
             $list['payment_offline'] = $payment;
         }
+        
+        if ($list['trasaction_payment_type'] == 'Balance') {
+            $paymentBalance = TransactionPaymentBalance::where('id_transaction', $list['id_transaction'])->first();
+            if($paymentBalance){
+                $list['balance'] = -$paymentBalance['balance_nominal'];
+            }
+        }
 
         array_splice($exp, 0, 0, 'transaction_subtotal');
         array_splice($label, 0, 0, 'Cart Total');
@@ -469,7 +482,9 @@ class ApiOutletApp extends Controller
             $list['success'] = 1;
         
         }
-        $qrCode = 'https://chart.googleapis.com/chart?chl='.$qrTest.'&chs=250x250&cht=qr&chld=H%7C0';
+
+        $qrCode = 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data='.$qrTest;
+        // $qrCode = 'https://chart.googleapis.com/chart?chl='.$qrTest.'&chs=250x250&cht=qr&chld=H%7C0';
         $qrCode = html_entity_decode($qrCode);
         $list['qr'] = $qrCode;
 
@@ -620,7 +635,7 @@ class ApiOutletApp extends Controller
         if($pickup){
             //send notif to customer
             $user = User::find($order->id_user);
-            $send = app($this->autocrm)->SendAutoCRM('Order Accepted', $user['phone'], ["outlet_name" => $outlet['outlet_name'], "id_reference" => $order->transaction_receipt_number, "transaction_date" => $order->transaction_date]);
+            $send = app($this->autocrm)->SendAutoCRM('Order Accepted', $user['phone'], ["outlet_name" => $outlet['outlet_name'], "id_reference" => $order->transaction_receipt_number.','.$order->id_outlet, "transaction_date" => $order->transaction_date]);
             if($send != true){
                 DB::rollback();
                 return response()->json([
@@ -684,13 +699,29 @@ class ApiOutletApp extends Controller
         if($pickup){
             //send notif to customer
             $user = User::find($order->id_user);
-            $send = app($this->autocrm)->SendAutoCRM('Order Ready', $user['phone'], ["outlet_name" => $outlet['outlet_name'], "id_reference" => $order->transaction_receipt_number,  "transaction_date" => $order->transaction_date]);
+            $send = app($this->autocrm)->SendAutoCRM('Order Ready', $user['phone'], ["outlet_name" => $outlet['outlet_name'], "id_reference" => $order->transaction_receipt_number.','.$order->id_outlet,  "transaction_date" => $order->transaction_date]);
             if($send != true){
                 DB::rollback();
                 return response()->json([
                         'status' => 'fail',
                         'messages' => ['Failed Send notification to customer']
                     ]);
+            }
+
+            $newTrx = Transaction::with('user.memberships', 'outlet', 'productTransaction')->where('id_transaction', $order->id_transaction)->first();
+
+            $checkType = TransactionMultiplePayment::where('id_transaction', $order->id_transaction)->get()->toArray();
+            $column = array_column($checkType, 'type');
+
+            if (!in_array('Balance', $column)) {
+                $savePoint = app($this->getNotif)->savePoint($newTrx);
+                if (!$savePoint) {
+                    DB::rollback();
+                    return response()->json([
+                        'status'   => 'fail',
+                        'messages' => ['Transaction failed']
+                    ]);
+                }
             }
 
             DB::commit();
@@ -756,7 +787,7 @@ class ApiOutletApp extends Controller
         if($pickup){
             //send notif to customer
             $user = User::find($order->id_user);
-            $send = app($this->autocrm)->SendAutoCRM('Order Taken', $user['phone'], ["outlet_name" => $outlet['outlet_name'], "id_reference" => $order->transaction_receipt_number, "transaction_date" => $order->transaction_date]);
+            $send = app($this->autocrm)->SendAutoCRM('Order Taken', $user['phone'], ["outlet_name" => $outlet['outlet_name'], "id_reference" => $order->transaction_receipt_number.','.$order->id_outlet, "transaction_date" => $order->transaction_date]);
             if($send != true){
                 DB::rollback();
                 return response()->json([
@@ -796,6 +827,8 @@ class ApiOutletApp extends Controller
         $listCategory = ProductCategory::join('products', 'product_categories.id_product_category', 'products.id_product_category')
                                         ->join('product_prices', 'product_prices.id_product', 'products.id_product')
                                         ->where('id_outlet', $outlet['id_outlet'])
+                                        ->where('product_prices.product_visibility','=','Visible')
+                                        ->where('product_prices.product_status','=','Active')
                                         ->with('product_category')
                                         // ->select('id_product_category', 'product_category_name')
                                         ->get();
@@ -803,6 +836,7 @@ class ApiOutletApp extends Controller
         $result = [];
         $idParent = [];
         $idParent2 = [];
+        $categorized = [];
         foreach($listCategory as $i => $category){
             $dataCategory = [];
             $dataProduct = [];
@@ -954,18 +988,69 @@ class ApiOutletApp extends Controller
         
         if($pickup){
             //refund ke balance
-            $refund = app($this->balance)->addLogBalance( $order['id_user'], $order['transaction_grandtotal'], $order['id_transaction'], 'Rejected Order', $order['transaction_grandtotal']);
-            if ($refund == false) {
-                DB::rollback();
-                return response()->json([
-                    'status'    => 'fail',
-                    'messages'  => ['Insert Cashback Failed']
-                ]);
+            if($order['trasaction_payment_type'] == "Midtrans"){
+                $multiple = TransactionMultiplePayment::where('id_transaction', $order->id_transaction)->get()->toArray();
+                if($multiple){
+                    foreach($multiple as $pay){
+                        if($pay['type'] == 'Balance'){
+                            $payBalance = TransactionPaymentBalance::find($pay['id_payment']);
+                            if($payBalance){
+                                $refund = app($this->balance)->addLogBalance( $order['id_user'], $payBalance['balance_nominal'], $order['id_transaction'], 'Rejected Order', $order['transaction_grandtotal']);
+                                if ($refund == false) {
+                                    DB::rollback();
+                                    return response()->json([
+                                        'status'    => 'fail',
+                                        'messages'  => ['Insert Cashback Failed']
+                                    ]);
+                                }
+                            }
+                        }
+                        else{
+                            $payMidtrans = TransactionPaymentMidtran::find($pay['id_payment']);
+                            if($payMidtrans){
+                                $refund = app($this->balance)->addLogBalance( $order['id_user'], $payMidtrans['gross_amount'], $order['id_transaction'], 'Rejected Order', $order['transaction_grandtotal']);
+                                if ($refund == false) {
+                                    DB::rollback();
+                                    return response()->json([
+                                        'status'    => 'fail',
+                                        'messages'  => ['Insert Cashback Failed']
+                                    ]);
+                                }
+                            }
+                        }
+                    }
+                }else{
+                    $payMidtrans = TransactionPaymentMidtran::where('id_transaction', $order['id_transaction'])->first();
+                    if($payMidtrans){
+                        $refund = app($this->balance)->addLogBalance( $order['id_user'], $payMidtrans['gross_amount'], $order['id_transaction'], 'Rejected Order', $order['transaction_grandtotal']);
+                        if ($refund == false) {
+                            DB::rollback();
+                            return response()->json([
+                                'status'    => 'fail',
+                                'messages'  => ['Insert Cashback Failed']
+                            ]);
+                        }
+                    }
+                }
+            }
+
+            if($order['trasaction_payment_type'] == 'Balance'){
+                $payBalance = TransactionPaymentBalance::where('id_transaction', $order['id_transaction'])->first();
+                if($payBalance){
+                    $refund = app($this->balance)->addLogBalance( $order['id_user'], $payBalance['balance_nominal'], $order['id_transaction'], 'Rejected Order', $order['transaction_grandtotal']);
+                    if ($refund == false) {
+                        DB::rollback();
+                        return response()->json([
+                            'status'    => 'fail',
+                            'messages'  => ['Insert Cashback Failed']
+                        ]);
+                    }
+                }
             }
 
             //send notif to customer
             $user = User::where('id', $order['id_user'])->first()->toArray();
-            $send = app($this->autocrm)->SendAutoCRM('Order Reject', $user['phone'], ["outlet_name" => $outlet['outlet_name'], "id_reference" => $order->transaction_receipt_number, "transaction_date" => $order->transaction_date]);
+            $send = app($this->autocrm)->SendAutoCRM('Order Reject', $user['phone'], ["outlet_name" => $outlet['outlet_name'], "id_reference" => $order->transaction_receipt_number.','.$order->id_outlet, "transaction_date" => $order->transaction_date]);
             if($send != true){
                 DB::rollback();
                 return response()->json([

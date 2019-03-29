@@ -1,6 +1,6 @@
 <?php
 
-Route::group(['prefix' => 'api/enquiries', 'namespace' => 'Modules\Enquiries\Http\Controllers'], function()
+Route::group(['prefix' => 'api/enquiries', 'middleware' => 'log_request', 'namespace' => 'Modules\Enquiries\Http\Controllers'], function()
 {
     Route::group(['middleware' => 'auth_client'], function() {
     	Route::post('create', 'ApiEnquiries@create');

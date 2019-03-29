@@ -130,7 +130,8 @@ class ApiHome extends Controller
         
             $qr = MyHelper::createQR($timestamp, $user->phone, $useragent);
 
-            $qrCode = 'https://chart.googleapis.com/chart?chl='.$qr.'&chs=250x250&cht=qr&chld=H%7C0';
+            $qrCode = 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data='.$qr;
+            // $qrCode = 'https://chart.googleapis.com/chart?chl='.$qr.'&chs=250x250&cht=qr&chld=H%7C0';
             $qrCode = html_entity_decode($qrCode);
 				
 			$result = [
@@ -234,7 +235,7 @@ class ApiHome extends Controller
                     $greetingss2     = app($this->autocrm)->TextReplace($greetings[$greetingKey]['greeting2'], $user['phone']);
                     if (!empty($background)) {
 						$backgroundKey = array_rand($background, 1);
-						$background    = env('API_URL').'/'.$background[$backgroundKey]['picture'];
+						$background    = env('AWS_URL').'/'.$background[$backgroundKey]['picture'];
 					}
                 }
             }
@@ -255,7 +256,8 @@ class ApiHome extends Controller
 
             $qr = MyHelper::createQR($timestamp, $user->phone, $useragent);
             
-            $qrCode = 'https://chart.googleapis.com/chart?chl='.$qr.'&chs=250x250&cht=qr&chld=H%7C0';
+            $qrCode = 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data='.$qr;
+            // $qrCode = 'https://chart.googleapis.com/chart?chl='.$qr.'&chs=250x250&cht=qr&chld=H%7C0';
             $qrCode = html_entity_decode($qrCode);
 			
 			$point      = app($this->point)->getPoint($user->id);
@@ -277,7 +279,7 @@ class ApiHome extends Controller
     
                 $membership['webview_detail_membership'] = env('VIEW_URL').'/membership/web/view?data='.$base;
 				if(isset($membership['membership_image']))
-					$membership['membership_image'] = env('APP_API_URL').$membership['membership_image'];
+					$membership['membership_image'] = env('AWS_URL').$membership['membership_image'];
 			} else {
 				$membership = null;
 			}
@@ -451,7 +453,7 @@ class ApiHome extends Controller
                 }
                 else {
                     $backgroundKey = array_rand($background, 1);
-                    $background    = env('APP_API_URL').$background[$backgroundKey]['picture'];
+                    $background    = env('AWS_URL').$background[$backgroundKey]['picture'];
                 }
             }
 

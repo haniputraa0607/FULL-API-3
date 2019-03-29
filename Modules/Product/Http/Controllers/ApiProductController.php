@@ -133,7 +133,8 @@ class ApiProductController extends Controller
 												'product_price_base' => $post['product_price_base'][$key],
 												'product_price_tax' => $post['product_price_tax'][$key],
 												'product_stock_status' => $post['product_stock_status'][$key],
-												'product_visibility' => "'".$post['product_visibility'][$key]."'"]);
+                                                'product_visibility' => $post['product_visibility'][$key]
+                                                ]);
 			}
 			else{
 				$update = ProductPrice::where('id_product_price','=',$id_product_price)->update(['product_price' => $post['product_price'][$key], 'product_price_base' => $post['product_price_base'][$key], 'product_price_tax' => $post['product_price_tax'][$key],'product_stock_status' => $post['product_stock_status'][$key],'product_visibility' => $post['product_visibility'][$key]]);
@@ -627,7 +628,7 @@ class ApiProductController extends Controller
                 }
             }
         }
-
+        
         return response()->json(MyHelper::checkUpdate($save));
     }
 
@@ -649,5 +650,29 @@ class ApiProductController extends Controller
         }
 
         return ['status' => 'success'];
+    }
+
+    public function photoDefault(Request $request){
+        $post = $request->json()->all();
+
+         //create photo
+         if (!file_exists('img/product/item/')) {
+            mkdir('img/product/item/', 0777, true);
+        }
+         $upload = MyHelper::uploadPhotoStrict($post['photo'], 'img/product/item/', 300, 300, 'default', '.png');
+                   
+         if (isset($upload['status']) && $upload['status'] == "success") {
+            $result = [
+                'status'   => 'success',
+            ];
+         }
+         else {
+             $result = [
+                 'status'   => 'fail',
+                 'messages' => ['fail upload image']
+             ];
+
+        }
+        return response()->json($result);
     }
 }

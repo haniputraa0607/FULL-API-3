@@ -19,6 +19,7 @@ use App\Http\Models\LogPoint;
 use App\Http\Models\UserNotification;
 use App\Http\Models\Transaction;
 use App\Http\Models\FraudSetting;
+use App\Http\Models\Feature;
 use App\Http\Models\Setting;
 
 use Modules\Users\Http\Requests\users_list;
@@ -1141,16 +1142,16 @@ class ApiUser extends Controller
 				$result['device'] 	= $device;
 				$result['ip'] 		= $ip;
 			}
+
+			if($datauser[0]['pin_changed'] == '0'){
+				$result['pin_changed'] = false; 
+			}else{
+				$result['pin_changed'] = true; 
+			}
 		}
 		else {
 			$result['status'] 	= 'fail';
 			$result['messages'] = ['The user credentials were incorrect'];
-		}
-		
-		if($datauser[0]['pin_changed'] == '0'){
-			$result['pin_changed'] = false; 
-		}else{
-			$result['pin_changed'] = true; 
 		}
 		
         return response()->json($result);
@@ -1250,7 +1251,7 @@ class ApiUser extends Controller
 			if(stristr($useragent,'okhttp')) $useragent = 'Android';
 			if(stristr($useragent,'GuzzleHttp')) $useragent = 'Browser';
 				
-			$autocrm = app($this->autocrm)->SendAutoCRM('Pin Sent', $request->json('phone'), 
+			$autocrm = app($this->autocrm)->SendAutoCRM('Pin Forgot', $request->json('phone'), 
 																	['pin' => $pin,
 																	'useragent' => $useragent, 
 																	 'now' => date('Y-m-d H:i:s')], $useragent);
@@ -1793,9 +1794,19 @@ class ApiUser extends Controller
 	public function log(Request $request)
     {
 		$post = $request->json()->all();
-		
+		if(isset($post['take'])){
+			$take = $post['take'];
+		}else{
+			$take = 10;
+		}
+		if(isset($post['skip'])){
+			$skip = $post['skip'];
+		}else{
+			$skip = 10;
+		}
 		$query = LogRequest::where('phone','=',$post['phone'])
 							->orderBy('id_log_activity','desc')
+							->skip($skip)->take($take)
 							->get()
 							->toArray();
 		if($query){

@@ -524,7 +524,7 @@ class ApiHistoryController extends Controller
 
                 if($found == true){
                     $dataList['type'] = 'trx';
-                    $dataList['id'] = $value['transaction_receipt_number'];
+                    $dataList['id'] = $value['transaction_receipt_number'].','.$value['id_outlet'];
                     $dataList['date']    = date('Y-m-d H:i:s', strtotime($value['transaction_date']));
                     $dataList['outlet'] = $value['outlet']['outlet_name'];
                     $dataList['amount'] = number_format($value['transaction_grandtotal'], 0, ',', '.');
@@ -553,7 +553,7 @@ class ApiHistoryController extends Controller
 
         foreach ($transaction as $key => $value) {
             $dataList['type'] = 'trx';
-            $dataList['id'] = $value['transaction_receipt_number'];
+            $dataList['id'] = $value['transaction_receipt_number'].','.$value['id_outlet'];
             $dataList['date']    = date('Y-m-d H:i:s', strtotime($value['transaction_date']));
             $dataList['outlet'] = $value['outlet']['outlet_name'];
             $dataList['amount'] = number_format($value['transaction_grandtotal'], 0, ',', '.');
@@ -743,7 +743,7 @@ class ApiHistoryController extends Controller
         $listBalance = [];
         
         foreach ($log as $key => $value) {
-            if ($value['source'] == 'Transaction' || $value['source'] == 'Rejected Order') {
+            if ($value['source'] == 'Transaction' || $value['source'] == 'Rejected Order' || $value['source'] == 'Rejected Order') {
                 $trx = Transaction::with('outlet')->where('id_transaction', $value['id_reference'])->first();
                 
                 // return $trx;

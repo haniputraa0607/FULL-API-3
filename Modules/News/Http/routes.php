@@ -1,6 +1,6 @@
 <?php
 
-Route::group(['prefix' => 'api/news', 'namespace' => 'Modules\News\Http\Controllers'], function()
+Route::group(['prefix' => 'api/news', 'middleware' => 'log_request', 'namespace' => 'Modules\News\Http\Controllers'], function()
 {
 	Route::group(['middleware' => 'auth_client'], function() {
     	Route::any('list', 'ApiNews@listNews');
@@ -29,7 +29,7 @@ Route::group(['prefix' => 'api/news', 'namespace' => 'Modules\News\Http\Controll
     
 });
 
-Route::group(['prefix' => 'api/news', 'namespace' => 'Modules\News\Http\Controllers'], function()
+Route::group(['prefix' => 'api/news', 'middleware' => 'log_request', 'namespace' => 'Modules\News\Http\Controllers'], function()
 {
         Route::any('list/test', 'ApiNews@listNews');
         // Route::any('list/web', 'ApiNews@listNews');

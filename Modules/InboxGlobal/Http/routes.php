@@ -1,5 +1,5 @@
 <?php
-Route::group(['middleware' => 'auth:api', 'prefix' => 'api/inboxglobal', 'namespace' => 'Modules\InboxGlobal\Http\Controllers'], function()
+Route::group(['middleware' => ['auth:api','log_request'], 'prefix' => 'api/inboxglobal', 'namespace' => 'Modules\InboxGlobal\Http\Controllers'], function()
 {
     Route::post('list', 'ApiInboxGlobal@listInboxGlobal');
     Route::post('detail', 'ApiInboxGlobal@detailInboxGlobal');

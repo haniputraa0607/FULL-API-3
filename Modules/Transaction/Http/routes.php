@@ -1,6 +1,6 @@
 <?php
 
-Route::group(['middleware' => 'auth:api', 'prefix' => 'api/transaction', 'namespace' => 'Modules\Transaction\Http\Controllers'], function()
+Route::group(['middleware' => ['auth:api', 'log_request'], 'prefix' => 'api/transaction', 'namespace' => 'Modules\Transaction\Http\Controllers'], function()
 {
     Route::post('/outlet', 'ApiNotification@adminOutlet');
     Route::post('/admin/confirm', 'ApiNotification@adminOutletComfirm');
@@ -66,6 +66,7 @@ Route::group(['middleware' => 'auth:api', 'prefix' => 'api/transaction', 'namesp
 
     Route::post('/new', 'ApiOnlineTransaction@newTransaction');
     Route::post('/confirm', 'ApiConfirm@confirmTransaction');
+    Route::post('/prod/confirm', 'ApiTransactionProductionController@confirmTransaction2');
     Route::get('/{key}', 'ApiTransaction@transactionList');
 });
 

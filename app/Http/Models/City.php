@@ -39,7 +39,9 @@ class City extends Model
 		'id_province',
 		'city_name',
 		'city_type',
-		'city_postal_code'
+		'city_postal_code',
+		'city_latitude',
+		'city_longitude'
 	];
 
 	public function province()

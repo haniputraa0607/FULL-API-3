@@ -1,6 +1,6 @@
 <?php
 
-Route::group(['prefix' => 'api/product', 'namespace' => 'Modules\Product\Http\Controllers'], function()
+Route::group(['prefix' => 'api/product','middleware' => 'log_request', 'namespace' => 'Modules\Product\Http\Controllers'], function()
 {
     /**
      * product
@@ -39,6 +39,7 @@ Route::group(['prefix' => 'api/product', 'namespace' => 'Modules\Product\Http\Co
             Route::post('create', 'ApiProductController@uploadPhotoProduct');
             Route::post('update', 'ApiProductController@updatePhotoProduct');
             Route::post('delete', 'ApiProductController@deletePhotoProduct');
+            Route::post('default', 'ApiProductController@photoDefault');
         });
 
         /* PRICES */

@@ -35,7 +35,7 @@ class TransactionProduct extends Model
 		'id_transaction' => 'int',
 		'id_product' => 'int',
 		'transaction_product_qty' => 'int',
-		'transaction_product_price' => 'int',
+// 		'transaction_product_price' => 'int',
 		'transaction_product_subtotal' => 'int'
 	];
 
@@ -46,6 +46,8 @@ class TransactionProduct extends Model
 		'id_user',
 		'transaction_product_qty',
 		'transaction_product_price',
+		'transaction_product_price_base',
+		'transaction_product_price_tax',
 		'transaction_product_subtotal',
 		'transaction_product_note'
 	];

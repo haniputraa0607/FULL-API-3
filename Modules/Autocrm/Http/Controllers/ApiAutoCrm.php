@@ -75,7 +75,7 @@ class ApiAutoCrm extends Controller
 						'setting' => $setting
 					);
 					
-					Mailgun::send('emails.test', $data, function($message) use ($to,$subject,$name,$setting)
+					Mailgun::send('emails.test', $data, function($message) use ($to,$subject,$name,$setting,$variables)
 					{
 						$message->to($to, $name)->subject($subject)
 										->trackClicks(true)
@@ -96,6 +96,17 @@ class ApiAutoCrm extends Controller
 
 						if(!empty($setting['email_bcc']) && !empty($setting['email_bcc_name'])){
 							$message->bcc($setting['email_bcc'], $setting['email_bcc_name']);
+						}
+
+						// attachment
+						if(isset($variables['attachment'])){
+							if(is_array($variables['attachment'])){
+								foreach($variables['attachment'] as $attach){
+									$message->attach($attach);
+								}
+							}else{
+								$message->attach($variables['attachment']);
+							}
 						}
 					});
 					
@@ -178,7 +189,7 @@ class ApiAutoCrm extends Controller
 					);
 
 					//add <#> and Hash Key in pin sms content
-					if($crm['autocrm_title'] == 'Pin Sent'){
+					if($crm['autocrm_title'] == 'Pin Sent' || $crm['autocrm_title'] == 'Pin Forgot'){
 						if($useragent && $useragent == "Android"){
 							$crm['autocrm_sms_content'] = '<#> '.$crm['autocrm_sms_content'].' '.ENV('HASH_KEY_'.ENV('HASH_KEY_TYPE'));
 						}
@@ -262,8 +273,8 @@ class ApiAutoCrm extends Controller
 						$dataOptional          = [];
 						$image = null;
 						if (isset($crm['autocrm_push_image']) && $crm['autocrm_push_image'] != null) {
-							$dataOptional['image'] = env('APP_API_URL').$crm['autocrm_push_image'];
-							$image = env('APP_API_URL').$crm['autocrm_push_image'];
+							$dataOptional['image'] = env('AWS_URL').$crm['autocrm_push_image'];
+							$image = env('AWS_URL').$crm['autocrm_push_image'];
 						}
 						
 						if (isset($crm['autocrm_push_clickto']) && $crm['autocrm_push_clickto'] != null) {
@@ -627,7 +638,9 @@ class ApiAutoCrm extends Controller
 
 			if(!empty($variables)){
 				foreach($variables as $key => $var){
-					$text = str_replace('%'.$key.'%',$var, $text);
+					if(is_string($var)){
+						$text = str_replace('%'.$key.'%',$var, $text);
+					}
 				}
 			}
 		} 
@@ -720,7 +733,7 @@ class ApiAutoCrm extends Controller
 						//upload file
 						$upload = MyHelper::uploadPhoto($content['content'], $path = 'whatsapp/img/autocrm/');
 						if ($upload['status'] == "success") {
-							$content['content'] = env('APP_API_URL').$upload['path'];
+							$content['content'] = env('AWS_URL').$upload['path'];
 						} else{
 							DB::rollBack();
 							$result = [
@@ -744,7 +757,7 @@ class ApiAutoCrm extends Controller
 
 						$upload = MyHelper::uploadFile($content['content'], $path = 'whatsapp/file/campaign/', $content['content_file_ext'], $content['content_file_name']);
 						if ($upload['status'] == "success") {
-							$content['content'] = env('APP_API_URL').$upload['path'];
+							$content['content'] = env('AWS_URL').$upload['path'];
 						} else{
 							DB::rollBack();
 							$result = [

@@ -119,25 +119,36 @@ class ApiOnlineTransaction extends Controller
                     }
                 }
             }
+
+            if($outlet['today']['is_closed'] == '1'){
+                DB::rollback();
+                return response()->json([
+                    'status'    => 'fail',
+                    'messages'  => ['Outlet tutup']
+                ]);  
+            }
     
-            $settingTime = Setting::where('key', 'processing_time')->first();
-            if($settingTime && $settingTime->value){
-                if($outlet['today']['close'] && date('H:i') > date('H:i', strtotime('-'.$settingTime->value.' minutes' ,strtotime($outlet['today']['close'])))){
+            if($outlet['today']['close'] && $outlet['today']['close'] != "00:00" && $outlet['today']['open'] && $outlet['today']['open'] != '00:00'){
+
+                $settingTime = Setting::where('key', 'processing_time')->first();
+                if($settingTime && $settingTime->value){
+                    if($outlet['today']['close'] && date('H:i') > date('H:i', strtotime('-'.$settingTime->value.' minutes' ,strtotime($outlet['today']['close'])))){
+                        DB::rollback();
+                        return response()->json([
+                            'status'    => 'fail',
+                            'messages'  => ['Outlet tutup']
+                        ]);    
+                    }
+                }
+        
+                //cek outlet open - close hour
+                if(($outlet['today']['open'] && date('H:i') < date('H:i', strtotime($outlet['today']['open']))) || ($outlet['today']['close'] && date('H:i') > date('H:i', strtotime($outlet['today']['close'])))){
                     DB::rollback();
                     return response()->json([
                         'status'    => 'fail',
                         'messages'  => ['Outlet tutup']
                     ]);    
                 }
-            }
-    
-            //cek outlet open - close hour
-            if(($outlet['today']['open'] && date('H:i') < date('H:i', strtotime($outlet['today']['open']))) || ($outlet['today']['close'] && date('H:i') > date('H:i', strtotime($outlet['today']['close'])))){
-                DB::rollback();
-                return response()->json([
-                    'status'    => 'fail',
-                    'messages'  => ['Outlet tutup']
-                ]);    
             }
         }
 
@@ -294,35 +305,33 @@ class ApiOnlineTransaction extends Controller
                 $post['cashback'] = $countSettingCashback[$countUserTrx]['cashback_maximum'];
             }
         } else {
+            $maxCash = Setting::where('key', 'cashback_maximum')->first();
+
             if (count($user['memberships']) > 0) {
+                $post['point'] = $post['point'] * ($user['memberships'][0]['benefit_point_multiplier']) / 100;
                 $post['cashback'] = $post['cashback'] * ($user['memberships'][0]['benefit_cashback_multiplier']) / 100;
+
+                if($user['memberships'][0]['cashback_maximum']){
+                    $maxCash['value'] = $user['memberships'][0]['cashback_maximum'];
+                }
+            }
+
+            $statusCashMax = 'no';
+
+            if (!empty($maxCash) && !empty($maxCash['value'])) {
+                $statusCashMax = 'yes';
+                $totalCashMax = $maxCash['value'];
+            }
+            
+            if ($statusCashMax == 'yes') {
+                if ($totalCashMax < $post['cashback']) {
+                    $post['cashback'] = $totalCashMax;
+                }
+            } else {
+                $post['cashback'] = $post['cashback'];
             }
         }
 
-        $maxCash = Setting::where('key', 'cashback_maximum')->first();
-
-        if (count($user['memberships']) > 0) {
-            $post['point'] = $post['point'] * ($user['memberships'][0]['benefit_point_multiplier']) / 100;
-
-            if($user['memberships'][0]['cashback_maximum']){
-                $maxCash['value'] = $user['memberships'][0]['cashback_maximum'];
-            }
-        }
-
-        $statusCashMax = 'no';
-
-        if (!empty($maxCash) && !empty($maxCash['value'])) {
-            $statusCashMax = 'yes';
-            $totalCashMax = $maxCash['value'];
-        }
-        
-        if ($statusCashMax == 'yes') {
-            if ($totalCashMax < $post['cashback']) {
-                $post['cashback'] = $totalCashMax;
-            }
-        } else {
-            $post['cashback'] = $post['cashback'];
-        }
         
         if (!isset($post['payment_type'])) {
             $post['payment_type'] = null;
@@ -473,7 +482,7 @@ class ApiOnlineTransaction extends Controller
 
         $useragent = $_SERVER['HTTP_USER_AGENT'];
         if(stristr($useragent,'iOS')) $useragent = 'IOS';
-        if(stristr($useragent,'okhttp')) $useragent = 'Android';
+        elseif(stristr($useragent,'okhttp')) $useragent = 'Android';
         else $useragent = null;
 
         if($useragent){
@@ -527,8 +536,10 @@ class ApiOnlineTransaction extends Controller
                 'id_outlet'                    => $insertTransaction['id_outlet'],
                 'id_user'                      => $insertTransaction['id_user'],
                 'transaction_product_qty'      => $valueProduct['qty'],
-                'transaction_product_price'    => $checkPriceProduct['product_price_base'],
-                'transaction_product_subtotal' => $valueProduct['qty'] * $checkPriceProduct['product_price_base'],
+                'transaction_product_price'    => $checkPriceProduct['product_price'],
+                'transaction_product_price_base'    => $checkPriceProduct['product_price_base'],
+                'transaction_product_price_tax'    => $checkPriceProduct['product_price_tax'],
+                'transaction_product_subtotal' => $valueProduct['qty'] * $checkPriceProduct['product_price'],
                 'transaction_product_note'     => $valueProduct['note'],
                 'created_at'                   => date('Y-m-d', strtotime($insertTransaction['transaction_date'])).' '.date('H:i:s'),
                 'updated_at'                   => date('Y-m-d H:i:s')
@@ -1047,7 +1058,7 @@ class ApiOnlineTransaction extends Controller
                     ]);
                 }
             }
-
+            
             if ($post['payment_type'] == 'Midtrans') {
                 if ($post['transaction_payment_status'] == 'Completed') {
                     //bank
@@ -1086,7 +1097,7 @@ class ApiOnlineTransaction extends Controller
 
                 }
 
-            } 
+            }
         }
         
         DB::commit();
@@ -1257,44 +1268,44 @@ class ApiOnlineTransaction extends Controller
             }
         }
     }
+    
+     public function getrandomstring($length = 120) {
 
-    public function getrandomstring($length = 120) {
+       global $template;
+       settype($template, "string");
 
-        global $template;
-        settype($template, "string");
- 
-        $template = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
- 
-        settype($length, "integer");
-        settype($rndstring, "string");
-        settype($a, "integer");
-        settype($b, "integer");
- 
-        for ($a = 0; $a <= $length; $a++) {
-                $b = rand(0, strlen($template) - 1);
-                $rndstring .= $template[$b];
-        }
- 
-        return $rndstring; 
+       $template = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+       settype($length, "integer");
+       settype($rndstring, "string");
+       settype($a, "integer");
+       settype($b, "integer");
+
+       for ($a = 0; $a <= $length; $a++) {
+               $b = rand(0, strlen($template) - 1);
+               $rndstring .= $template[$b];
+       }
+
+       return $rndstring; 
     }
+    
+     public function getrandomnumber($length) {
 
-    public function getrandomnumber($length) {
+       global $template;
+       settype($template, "string");
 
-        global $template;
-        settype($template, "string");
- 
-        $template = "0987654321";
- 
-        settype($length, "integer");
-        settype($rndstring, "string");
-        settype($a, "integer");
-        settype($b, "integer");
- 
-        for ($a = 0; $a <= $length; $a++) {
-                $b = rand(0, strlen($template) - 1);
-                $rndstring .= $template[$b];
-        }
- 
-        return $rndstring; 
-     }
+       $template = "0987654321";
+
+       settype($length, "integer");
+       settype($rndstring, "string");
+       settype($a, "integer");
+       settype($b, "integer");
+
+       for ($a = 0; $a <= $length; $a++) {
+               $b = rand(0, strlen($template) - 1);
+               $rndstring .= $template[$b];
+       }
+
+       return $rndstring; 
+    }
 }

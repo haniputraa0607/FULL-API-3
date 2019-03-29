@@ -149,9 +149,11 @@ class ApiOutletController extends Controller
             $days = $request->json('day');
             $opens = $request->json('open');
             $closes = $request->json('close');
+            $is_closed = $request->json('is_closed');
             foreach($days as $key => $value){
                 $data['open'] = $opens[$key];
                 $data['close'] = $closes[$key];
+                $data['is_close'] = $is_closes[$key];
                 $saveSchedule = OutletSchedule::updateOrCreate(['id_outlet' => $save['id_outlet'], 'day' => $value], $data);
                 if (!$saveSchedule) {
                     DB::rollBack();
@@ -370,7 +372,8 @@ class ApiOutletController extends Controller
         if (isset($post['webview'])) {
             $outlet = Outlet::with(['today']);
         } else {
-            $outlet = Outlet::with(['city', 'outlet_photos', 'product_prices', 'product_prices.product', 'outlet_schedules', 'today']);
+            $outlet = Outlet::with(['city', 'outlet_photos', 'outlet_schedules', 'today']);
+            // $outlet = Outlet::with(['city', 'outlet_photos', 'product_prices', 'product_prices.product', 'outlet_schedules', 'today']);
         }
         
         if (isset($post['outlet_code'])) {
@@ -472,7 +475,7 @@ class ApiOutletController extends Controller
 
     /* City Outlet */
     function cityOutlet(Request $request) {
-        $outlet = Outlet::join('cities', 'cities.id_city', '=', 'outlets.id_city')->where('outlet_status', 'Active')->select('outlets.id_city', 'city_name')->distinct()->get()->toArray();
+        $outlet = Outlet::join('cities', 'cities.id_city', '=', 'outlets.id_city')->where('outlet_status', 'Active')->select('outlets.id_city', 'city_name')->orderBy('city_name', 'ASC')->distinct()->get()->toArray();
 
         // if (!empty($outlet)) {
         //     $outlet = array_pluck($outlet, 'city_name');
@@ -656,9 +659,11 @@ class ApiOutletController extends Controller
             };   
 
         $allfeatures = array('type' => 'FeatureCollection', 'features' => $features);
-        // write into file
-        Storage::disk('public_custom')->put('stations.geojson', json_encode($allfeatures));
 
+        // write into file
+        // Storage::disk('s3')->put('stations.geojson', json_encode($allfeatures));
+        Storage::disk('public_custom')->put('stations.geojson', json_encode($allfeatures));
+        
         return $allfeatures;
     }
 
@@ -694,21 +699,25 @@ class ApiOutletController extends Controller
 				
 				if($distance == "0-2km"){
 					if((float) $jaraknya < 0.01 || (float) $jaraknya > 2.00)
-						unset($outlet[$key]);
+                        unset($outlet[$key]);
+                        continue;
 				}
 				
 				if($distance == "2-5km"){
 					if((float) $jaraknya < 2.00 || (float) $jaraknya > 5.00)
-						unset($outlet[$key]);
+                        unset($outlet[$key]);
+                        continue;
 				}
 				
 				if($distance == ">5km"){
 					if((float) $jaraknya < 5.00)
-						unset($outlet[$key]);
+                        unset($outlet[$key]);
+                        continue;
 				}
 				
 				if($id_city != "" && $id_city != $value['id_city']){
-					unset($outlet[$key]);
+                    unset($outlet[$key]);
+                    continue;
 				}
             }
 			if($sort != 'Alphabetical'){
@@ -729,6 +738,10 @@ class ApiOutletController extends Controller
         } else {
             return response()->json(MyHelper::checkGet($outlet));
         }
+
+        // if (!isset($request['page'])) {
+        //     $request['page'] = 1;
+        // }
 
         if(isset($request['page']) && $request['page'] > 0){
             $page = $request['page'];
@@ -850,12 +863,23 @@ class ApiOutletController extends Controller
             // format result into geojson
             $urutan = $this->geoJson($urutan);
         }
+<<<<<<< HEAD
         $geojson_file_url = env('API_URL') . 'files/stations.geojson' . '?';
 
         // checkGet
         if($urutan && !empty($urutan)) return ['status' => 'success', 'result' => $urutan, 'url'=>$geojson_file_url];
         else if(empty($urutan)) return ['status' => 'fail', 'messages' => ['empty']];
         else return ['status' => 'fail', 'messages' => ['failed to retrieve data']];
+=======
+        
+        $geojson_file_url = env('API_URL') . 'files/stations.geojson' . '?';
+
+        if($urutan && !empty($urutan)) return ['status' => 'success', 'result' => $urutan, 'url'=>$geojson_file_url];
+        else if(empty($urutan)) return ['status' => 'fail', 'messages' => ['empty']];
+        else return ['status' => 'fail', 'messages' => ['failed to retrieve data']];
+        
+        // return response()->json(MyHelper::checkGet($urutan));
+>>>>>>> master
     }
 
     // unset outlet yang tutup dan libur
@@ -871,26 +895,32 @@ class ApiOutletController extends Controller
             if($dataOutlet['today']['open'] == null || $dataOutlet['today']['close'] == null){
                 unset($outlet[$index]);
             }else{
-                if($dataOutlet['today']['open'] && date('H:i:01') < date('H:i', strtotime($dataOutlet['today']['open']))){
-                    unset($outlet[$index]);
-                }elseif($dataOutlet['today']['close'] && date('H:i') > date('H:i', strtotime('-'.$processing.' minutes', strtotime($dataOutlet['today']['close'])))){
+                if($dataOutlet['today']['is_closed'] == '1'){
                     unset($outlet[$index]);
                 }else{
-                    $holiday = Holiday::join('outlet_holidays', 'holidays.id_holiday', 'outlet_holidays.id_holiday')->join('date_holidays', 'holidays.id_holiday', 'date_holidays.id_holiday')
-                    ->where('id_outlet', $dataOutlet['id_outlet'])->whereDay('date_holidays.date', date('d'))->whereMonth('date_holidays.date', date('m'))->get();
-                    if(count($holiday) > 0){
-                        foreach($holiday as $i => $holi){
-                            if($holi['yearly'] == '0'){
-                                if($holi['date'] == date('Y-m-d')){
-                                    unset($outlet[$index]);
-                                    break;
+                    if($dataOutlet['today']['open'] != "00:00" && $dataOutlet['today']['close'] != "00:00"){
+                        if($dataOutlet['today']['open'] && date('H:i:01') < date('H:i', strtotime($dataOutlet['today']['open']))){
+                            unset($outlet[$index]);
+                        }elseif($dataOutlet['today']['close'] && date('H:i') > date('H:i', strtotime('-'.$processing.' minutes', strtotime($dataOutlet['today']['close'])))){
+                            unset($outlet[$index]);
+                        }else{
+                            $holiday = Holiday::join('outlet_holidays', 'holidays.id_holiday', 'outlet_holidays.id_holiday')->join('date_holidays', 'holidays.id_holiday', 'date_holidays.id_holiday')
+                            ->where('id_outlet', $dataOutlet['id_outlet'])->whereDay('date_holidays.date', date('d'))->whereMonth('date_holidays.date', date('m'))->get();
+                            if(count($holiday) > 0){
+                                foreach($holiday as $i => $holi){
+                                    if($holi['yearly'] == '0'){
+                                        if($holi['date'] == date('Y-m-d')){
+                                            unset($outlet[$index]);
+                                            break;
+                                        }
+                                    }else{
+                                        unset($outlet[$index]);
+                                        break;
+                                    }
                                 }
-                            }else{
-                                unset($outlet[$index]);
-                                break;
+            
                             }
                         }
-    
                     }
                 }
             }
@@ -1352,6 +1382,7 @@ class ApiOutletController extends Controller
                 'day'       => $value,
                 'open'      => $post['open'][$key],
                 'close'     => $post['close'][$key],
+                'is_closed' => $post['is_closed'][$key],
                 'id_outlet' => $post['id_outlet']
             ];
 

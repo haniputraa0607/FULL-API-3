@@ -1,6 +1,6 @@
 <?php
 
-Route::group(['middleware' => 'auth:api', 'prefix' => 'api/promotion', 'namespace' => 'Modules\Promotion\Http\Controllers'], function()
+Route::group(['middleware' => ['auth:api', 'log_request'], 'prefix' => 'api/promotion', 'namespace' => 'Modules\Promotion\Http\Controllers'], function()
 {
     Route::post('create', 'ApiPromotion@CreatePromotion');
     Route::post('step1', 'ApiPromotion@ShowPromotionStep1');
@@ -15,6 +15,13 @@ Route::group(['middleware' => 'auth:api', 'prefix' => 'api/promotion', 'namespac
     Route::post('voucher/list', 'ApiPromotion@promotionVoucherList');
     Route::post('voucher/trx', 'ApiPromotion@promotionVoucherTrx');
     Route::post('linkclicked/list', 'ApiPromotion@promotionLinkClickedList');
+
+    Route::group(['prefix' => 'deals'], function()
+    {
+        Route::any('', 'ApiPromotionDeals@list');
+        Route::post('save', 'ApiPromotionDeals@save');
+    
+    });
 });
 
 Route::group(['prefix' => 'api/promotion', 'namespace' => 'Modules\Promotion\Http\Controllers'], function()

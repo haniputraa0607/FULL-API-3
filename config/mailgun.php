@@ -16,19 +16,19 @@ return [
      * Domain name registered with Mailgun
      *
      */
-    'domain' => 'mg.rulia.one',
+    'domain' => 'staging.co.id',
 
     /*
      * Mailgun (private) API key
      *
      */
-    'api_key' => 'key-f5329bcb05ac236f0ad654f5ade988d0',
+    'api_key' => 'key-cfacffad0d3bf5dde6cbd3df60daf168',
 
     /*
      * Mailgun public API key
      *
      */
-    'public_api_key' => 'pubkey-0a658fc50f416087505f5482b81db547',
+    'public_api_key' => 'pubkey-d64f01596ff913dc14c4398015b9545e',
 
     /*
      * You may wish for all e-mails sent with Mailgun to be sent from

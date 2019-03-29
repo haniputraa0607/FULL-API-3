@@ -118,7 +118,7 @@ class Transaction extends Model
 		return $this->belongsToMany(\App\Http\Models\Product::class, 'transaction_products', 'id_transaction', 'id_product')
 					->select('product_categories.*','products.*')
 					->leftJoin('product_categories', 'product_categories.id_product_category', '=', 'products.id_product_category')
-					->withPivot('id_transaction_product', 'transaction_product_qty', 'transaction_product_price', 'transaction_product_subtotal', 'transaction_product_note')
+					->withPivot('id_transaction_product', 'transaction_product_qty', 'transaction_product_price', 'transaction_product_price_base', 'transaction_product_price_tax', 'transaction_product_subtotal', 'transaction_product_note')
 					->withTimestamps();
 	}
 
@@ -154,5 +154,10 @@ class Transaction extends Model
 	public function vouchers()
 	{
 		return $this->belongsToMany(\App\Http\Models\DealsVoucher::class, 'transaction_vouchers', 'id_transaction', 'id_deals_voucher');
+	}
+
+	public function transaction_vouchers()
+	{
+		return $this->hasMany(\App\Http\Models\TransactionVoucher::class, 'id_transaction', 'id_transaction');
 	}
 }

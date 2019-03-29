@@ -34,10 +34,17 @@ class Midtrans {
     }
 
     static function bearer() {
+        // return 'Basic ' . base64_encode(env('MIDTRANS_PRO_BEARER'));
         return 'Basic ' . base64_encode(env('MIDTRANS_SANDBOX_BEARER'));
+    }
+
+    static function bearerPro() {
+        return 'Basic ' . base64_encode(env('MIDTRANS_PRO_BEARER'));
+        // return 'Basic ' . base64_encode(env('MIDTRANS_SANDBOX_BEARER'));
     }
     
     static function token($receipt, $grandTotal, $user=null, $shipping=null, $product=null) {
+        // $url    = env('MIDTRANS_PRO');
         $url    = env('MIDTRANS_SANDBOX');
 
         $transaction_details = array(
@@ -66,20 +73,60 @@ class Midtrans {
         return $token;
     }
 
+    static function tokenPro($receipt, $grandTotal, $user=null, $shipping=null, $product=null) {
+        $url    = env('MIDTRANS_PRO');
+        // $url    = env('MIDTRANS_SANDBOX');
+
+        $transaction_details = array(
+            'order_id'      => $receipt,
+            'gross_amount'  => $grandTotal
+        );
+
+        $dataMidtrans = array(
+            'transaction_details' => $transaction_details,
+        );
+
+        if (!is_null($user)) {
+            $dataMidtrans['customer_details'] = $user;
+        }
+
+        if (!is_null($shipping)) {
+            $dataMidtrans['shipping_address'] = $shipping;
+        }
+
+        if (!is_null($product)) {
+            $dataMidtrans['item_details'] = $product;
+        }
+
+        $token = MyHelper::post($url, Self::bearerPro(), $dataMidtrans);
+
+        return $token;
+    }
+
     static function expire($order_id)
     {
+        // $url    = env('BASE_MIDTRANS_PRO').'/v2/'.$order_id.'/expire';
         $url    = env('BASE_MIDTRANS_SANDBOX').'/v2/'.$order_id.'/expire';
         $status = MyHelper::post($url, Self::bearer(), ['data' => 'expired']);
 
         return $status;
     }
 
-    static function checkStatus($orderId) {
-        $url = 'https://api.sandbox.midtrans.com/v2/'.$orderId.'/status';
-        
-        $status = MyHelper::get($url, Self::bearer());
+    static function expire2($order_id)
+    {
+        $url    = env('BASE_MIDTRANS_PRO').'/v2/'.$order_id.'/expire';
+        // $url    = env('BASE_MIDTRANS_SANDBOX').'/v2/'.$order_id.'/expire';
+        $status = MyHelper::post($url, Self::bearerPro(), ['data' => 'expired']);
 
         return $status;
     }
+
+    // static function checkStatus($orderId) {
+    //     $url = 'https://api.sandbox.midtrans.com/v2/'.$orderId.'/status';
+        
+    //     $status = MyHelper::get($url, Self::bearer());
+
+    //     return $status;
+    // }
 }
 ?>

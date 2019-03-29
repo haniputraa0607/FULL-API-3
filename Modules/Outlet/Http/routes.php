@@ -1,8 +1,9 @@
 <?php
-Route::group(['prefix' => 'api/outlet', 'namespace' => 'Modules\Outlet\Http\Controllers'], function()
+Route::group(['prefix' => 'api/outlet', 'middleware' => 'log_request', 'namespace' => 'Modules\Outlet\Http\Controllers'], function()
 {
     Route::any('list', 'ApiOutletController@listOutlet');
     Route::any('list/gofood', 'ApiOutletGofoodController@listOutletGofood');
+    Route::any('filter', 'ApiOutletController@filter');
 });
 
 Route::group(['prefix' => 'api/outlet', 'namespace' => 'Modules\Outlet\Http\Controllers'], function()
@@ -13,7 +14,7 @@ Route::group(['prefix' => 'api/outlet', 'namespace' => 'Modules\Outlet\Http\Cont
     Route::group(['middleware' => 'auth_client'], function() {
         Route::get('city', 'ApiOutletController@cityOutlet');
         Route::any('nearme', 'ApiOutletController@nearMe');
-        Route::any('filter', 'ApiOutletController@filter');
+        // Route::any('filter', 'ApiOutletController@filter');
         Route::any('nearme/geolocation', 'ApiOutletController@nearMeGeolocation');
         Route::any('filter/geolocation', 'ApiOutletController@filterGeolocation');
         Route::any('schedule/save', 'ApiOutletController@scheduleSave');

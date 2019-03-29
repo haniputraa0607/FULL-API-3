@@ -63,6 +63,11 @@ class ApiMembership extends Controller
 						if (!file_exists('img/membership/')) {
 							mkdir('img/membership/', 0777, true);
 						}
+
+						//delete photo
+						if($cur['membership_image']){
+							$deletephoto = MyHelper::deletePhoto($cur['membership_image']);
+						}
 						$upload = MyHelper::uploadPhoto($membership['membership_image'], $path = 'img/membership/', 600);
 
 						if ($upload['status'] == "success") {
@@ -131,14 +136,16 @@ class ApiMembership extends Controller
 					$deletePromoId = MembershipPromoId::where('id_membership', $membership['id_membership'])->delete();
 					if(isset($membership['benefit_promo_id'])){
 						foreach($membership['benefit_promo_id']  as $promoid){
-							$savePromoid = MembershipPromoId::Create(['id_membership' => $membership['id_membership'], 'promo_name' => $promoid['promo_name'], 'promo_id' => $promoid['promo_id']]);
-							if(!$savePromoid){
-								DB::rollback();
-								$result = [
-									'status'	=> 'fail',
-									'messages'	=> ['Update membership failed.']
-								];
-								return response()->json($result);
+							if($promoid['promo_id']){
+								$savePromoid = MembershipPromoId::Create(['id_membership' => $membership['id_membership'], 'promo_name' => $promoid['promo_name'], 'promo_id' => $promoid['promo_id']]);
+								if(!$savePromoid){
+									DB::rollback();
+									$result = [
+										'status'	=> 'fail',
+										'messages'	=> ['Update membership failed.']
+									];
+									return response()->json($result);
+								}
 							}
 						}
 					}
@@ -146,6 +153,9 @@ class ApiMembership extends Controller
 				}
 			}
 			if($exist == false){
+				if($cur['membership_image']){
+					$deletephoto = MyHelper::deletePhoto($cur['membership_image']);
+				}
 				$query = Membership::where('id_membership', $cur['id_membership'])->delete();
 			}
 		}
@@ -214,7 +224,9 @@ class ApiMembership extends Controller
 
 				$data['benefit_point_multiplier'] = $membership['benefit_point_multiplier'];
 				$data['benefit_cashback_multiplier'] = $membership['benefit_cashback_multiplier'];
-				$data['retain_days'] = $post['retain_days'];
+				if(isset($post['retain_days'])){
+					$data['retain_days'] = $post['retain_days'];
+				}
 				$data['benefit_discount'] = $membership['benefit_discount'];
 				// $data['benefit_promo_id'] = $membership['benefit_promo_id'];
 
@@ -234,14 +246,16 @@ class ApiMembership extends Controller
 
 				if(isset($membership['benefit_promo_id'])){
 					foreach($membership['benefit_promo_id'] as $promoid){
-						$savePromoid = MembershipPromoId::Create(['id_membership' => $membership['id_membership'], 'promo_name' => $promoid['promo_name'], 'promo_id' => $promoid['promo_id']]);
-						if(!$savePromoid){
-							DB::rollback();
-							$result = [
-								'status'	=> 'fail',
-								'messages'	=> ['Update membership failed.']
-							];
-							return response()->json($result);
+						if($promoid['promo_id']){
+							$savePromoid = MembershipPromoId::Create(['id_membership' => $membership['id_membership'], 'promo_name' => $promoid['promo_name'], 'promo_id' => $promoid['promo_id']]);
+							if(!$savePromoid){
+								DB::rollback();
+								$result = [
+									'status'	=> 'fail',
+									'messages'	=> ['Update membership failed.']
+								];
+								return response()->json($result);
+							}
 						}
 					}
 				}

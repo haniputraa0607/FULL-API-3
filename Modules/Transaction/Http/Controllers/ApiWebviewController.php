@@ -38,7 +38,13 @@ class ApiWebviewController extends Controller
 
         if (empty($check)) {
             if ($type == 'trx') {
-                $list = Transaction::where('transaction_receipt_number', $id)->first();
+                $arrId = explode(',',$id);
+                if(count($arrId) != 2){
+                    $list = Transaction::where('transaction_receipt_number', $id)->first();
+                }else{
+                     $list = Transaction::where('transaction_receipt_number', $arrId[0])->where('id_outlet', $arrId[1])->first();
+                }
+               
                 if (empty($list)) {
                     return response()->json(['status' => 'fail', 'messages' => ['Transaction not found']]);
                 }
@@ -119,7 +125,12 @@ class ApiWebviewController extends Controller
         }
 
         if ($type == 'trx') {
-            $list = Transaction::where('transaction_receipt_number', $id)->with('user.city.province', 'productTransaction.product.product_category', 'productTransaction.product.product_photos', 'productTransaction.product.product_discounts', 'transaction_payment_offlines', 'outlet.city')->first();
+            $arrId = explode(',',$id);
+           if(count($arrId) != 2){
+                $list = Transaction::where('transaction_receipt_number', $id)->with('user.city.province', 'productTransaction.product.product_category', 'productTransaction.product.product_photos', 'productTransaction.product.product_discounts', 'transaction_payment_offlines', 'outlet.city', 'transaction_vouchers.deals_voucher')->first();
+            }else{
+                $list = Transaction::where('transaction_receipt_number', $arrId[0])->where('id_outlet', $arrId[1])->with('user.city.province', 'productTransaction.product.product_category', 'productTransaction.product.product_photos', 'productTransaction.product.product_discounts', 'transaction_payment_offlines', 'outlet.city', 'transaction_vouchers.deals_voucher')->first();
+            }
             $label = [];
             $label2 = [];
 
@@ -212,7 +223,16 @@ class ApiWebviewController extends Controller
                         }
                     }
                 }
-            }
+            }else{
+                if($list['trasaction_payment_type'] == 'Midtrans') {
+                    $getPayment = TransactionPaymentMidtran::where('id_transaction', $list['id_transaction'])->first();
+                    if (!empty($getPayment)) {
+                        $getPayment['type'] = 'Midtrans';
+                        array_push($dataPayment, $getPayment);
+                    }
+                }
+
+            } 
 
             // if ($list['trasaction_payment_type'] == 'Balance') {
             //     $log = LogBalance::where('id_reference', $list['id_transaction'])->where('source', 'Transaction')->where('balance', '<', 0)->first();
@@ -228,24 +248,6 @@ class ApiWebviewController extends Controller
             // if ($list['trasaction_payment_type'] == 'Manual') {
             //     $payment = TransactionPaymentManual::with('manual_payment_method.manual_payment')->where('id_transaction', $list['id_transaction'])->first();
             //     $list['payment'] = $payment;
-            // }
-
-            // if ($list['trasaction_payment_type'] == 'Midtrans') {
-            //     //cek multi payment
-            //     $multiPayment = TransactionMultiplePayment::where('id_transaction', $list['id_transaction'])->get();
-            //     foreach($multiPayment as $dataPay){
-            //         if($dataPay['type'] == 'Balance'){
-            //             $paymentBalance = TransactionPaymentBalance::find($dataPay['id_payment']);
-            //             if($paymentBalance){
-            //                 $list['balance'] = -$paymentBalance['balance_nominal'];
-            //             }
-            //         }else{
-            //             $payment = TransactionPaymentMidtran::find($dataPay['id_payment']);
-            //         }
-            //     }
-            //     if(isset($payment)){
-            //         $list['payment'] = $payment;
-            //     }
             // }
 
             // if ($list['trasaction_payment_type'] == 'Offline') {
@@ -303,7 +305,8 @@ class ApiWebviewController extends Controller
             
             }
 
-            $qrCode = 'https://chart.googleapis.com/chart?chl='.$qrTest.'&chs=250x250&cht=qr&chld=H%7C0';
+            $qrCode = 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data='.$qrTest;
+            // $qrCode = 'https://chart.googleapis.com/chart?chl='.$qrTest.'&chs=250x250&cht=qr&chld=H%7C0';
             $qrCode = html_entity_decode($qrCode);
             $list['qr'] = $qrCode;
 
