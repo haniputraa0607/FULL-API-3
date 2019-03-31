@@ -5,7 +5,7 @@ namespace Modules\Deals\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
-
+use Illuminate\Pagination\LengthAwarePaginator;
 use App\Lib\MyHelper;
 
 use App\Http\Models\Deal;
@@ -252,14 +252,35 @@ class ApiDealsVoucher extends Controller
         if (!isset($post['used']) || $post['used'] == 0) {
 		    $voucher->where('voucher_expired_at', '>=',date('Y-m-d H:i:s'));
         }
-		$voucher->orderBy('voucher_expired_at', 'asc');
+        // $voucher->orderBy('voucher_expired_at', 'asc');
+		$voucher->orderBy('id_deals_user', 'desc');
         
         // if voucher detail, no need pagination
         if (isset($post['id_deals_user']) && $post['id_deals_user'] != "") {
             $voucher = $voucher->get()->toArray();
         }
         else {
-            $voucher = $voucher->paginate(10);
+            if (isset($post['used']) && $post['used'] == 1)  {
+                // if voucher used, return max 100 vouchers with pagination
+                $collection = $voucher->take(100)->get();
+                $perPage = 10;
+                $currentPage = LengthAwarePaginator::resolveCurrentPage();
+                if ($currentPage == 1) {
+                    $start = 0;
+                }
+                else {
+                    $start = ($currentPage - 1) * $perPage;
+                }
+                $currentPageCollection = $collection->slice($start, $perPage)->all();
+
+                $paginatedLast100 = new LengthAwarePaginator($currentPageCollection, count($collection), $perPage);
+
+                $paginatedLast100->setPath(LengthAwarePaginator::resolveCurrentPath());
+                $voucher = $paginatedLast100;
+            }
+            else{
+                $voucher = $voucher->paginate(10);
+            }
 
             // get pagination attributes
             $current_page = $voucher->currentPage();
