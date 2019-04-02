@@ -109,7 +109,7 @@ class BalanceController extends Controller
                 'membership_cashback_percentage' => $log_balance->membership_cashback_percentage
             ];
             $encodeCheck = json_encode($dataHashBalance);
-            $enc = Hash::make($encodeCheck);
+            $enc = MyHelper::encryptkhususnew($encodeCheck);
             // update enc column
             $log_balance->update(['enc' => $enc]);
             

@@ -590,9 +590,12 @@ class NewTopupController extends Controller
 
         $encodeCheck = json_encode($dataHash);
 
-        if (Hash::check($encodeCheck, $check['enc'])) {
+        if (MyHelper::decryptkhususnew($check['enc']) == $encodeCheck) {
             return true;
         }
+        // if (Hash::check($encodeCheck, $check['enc'])) {
+        //     return true;
+        // }
 
         return false;
     }

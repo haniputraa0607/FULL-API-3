@@ -124,4 +124,5 @@ Route::group(['prefix' => 'api/cron/transaction', 'namespace' => 'Modules\Transa
 {
     Route::get('/pickup/completed', 'ApiTransaction@completeTransactionPickup');
     Route::get('/expire', 'ApiCronTrxController@cron');
+    Route::get('/schedule', 'ApiCronTrxController@checkSchedule');
 });

@@ -410,6 +410,10 @@ class ApiWebviewController extends Controller
     public function webviewBalance(Request $request)
     {
         $id     = $request->json('id');
+        if (!isset($id)) {
+            return response()->json(['status' => 'fail', 'messages' => ['Data request is not valid']]);
+        }
+        
         $select = [];
         $check = $request->json('check');
         $receipt = null;
