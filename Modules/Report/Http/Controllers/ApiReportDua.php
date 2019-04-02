@@ -46,8 +46,8 @@ class ApiReportDua extends Controller
                             FROM daily_report_trx_menu
                             LEFT JOIN products ON daily_report_trx_menu.id_product = products.id_product
                             WHERE id_outlet = "'.$request->json('id_outlet').'"
-                            AND daily_report_trx_menu.trx_date >= "'. date('Y-m-d', strtotime($request->json('date_start'))) .'" 
-                            AND daily_report_trx_menu.trx_date <= "'. date('Y-m-d', strtotime($request->json('date_end'))) .'"
+                            AND daily_report_trx_menu.trx_date BETWEEN "'. date('Y-m-d', strtotime($request->json('date_start'))) .'" 
+                            AND "'. date('Y-m-d', strtotime($request->json('date_end'))) .'"
                             GROUP BY id_product'
             ));
         }
@@ -60,8 +60,8 @@ class ApiReportDua extends Controller
                             (SELECT SUM(daily_report_trx_menu.total_nominal)) as total_nominal
                             FROM daily_report_trx_menu
                             LEFT JOIN products ON daily_report_trx_menu.id_product = products.id_product
-                            WHERE daily_report_trx_menu.trx_date >= "'. date('Y-m-d', strtotime($request->json('date_start'))) .'" 
-                            AND daily_report_trx_menu.trx_date <= "'. date('Y-m-d', strtotime($request->json('date_end'))) .'"
+                            WHERE daily_report_trx_menu.trx_date BETWEEN "'. date('Y-m-d', strtotime($request->json('date_start'))) .'" 
+                            AND "'. date('Y-m-d', strtotime($request->json('date_end'))) .'"
                             GROUP BY id_product'
             ));
         }
@@ -80,7 +80,7 @@ class ApiReportDua extends Controller
             $trans->with(['outlet'])->where('id_outlet', $request->json('id_outlet'));
         }
         
-        $trans = $trans->select('trx_date', DB::raw('sum(trx_grand) as trx_grand'), DB::raw('sum(trx_count) as trx_count'))->groupBy('trx_date')->orderBy('trx_date', 'ASC')->get()->toArray();
+        $trans = $trans->orderBy('trx_date', 'ASC')->get()->toArray();
 
         return response()->json(MyHelper::checkGet($trans));
     }
@@ -127,8 +127,8 @@ class ApiReportDua extends Controller
                         (SELECT SUM(daily_report_trx.trx_count)) as total_count
                         FROM daily_report_trx
                         JOIN outlets ON daily_report_trx.id_outlet = outlets.id_outlet
-                        WHERE daily_report_trx.trx_date >= "'. date('Y-m-d', strtotime($request->json('date_start'))) .'" 
-                        AND daily_report_trx.trx_date <= "'. date('Y-m-d', strtotime($request->json('date_end'))) .'"
+                        AND daily_report_trx.trx_date BETWEEN "'. date('Y-m-d', strtotime($request->json('date_start'))) .'" 
+                        AND "'. date('Y-m-d', strtotime($request->json('date_end'))) .'"
                         GROUP BY outlets.id_outlet
                         ORDER BY total_value DESC'
         ));
@@ -139,8 +139,8 @@ class ApiReportDua extends Controller
                         (SELECT SUM(daily_report_trx.trx_count)) as total_count
                         FROM daily_report_trx
                         JOIN outlets ON daily_report_trx.id_outlet = outlets.id_outlet
-                        WHERE daily_report_trx.trx_date >= "'. date('Y-m-d', strtotime($request->json('date_start'))) .'" 
-                        AND daily_report_trx.trx_date <= "'. date('Y-m-d', strtotime($request->json('date_end'))) .'"
+                        AND daily_report_trx.trx_date BETWEEN "'. date('Y-m-d', strtotime($request->json('date_start'))) .'" 
+                        AND "'. date('Y-m-d', strtotime($request->json('date_end'))) .'"
                         GROUP BY outlets.id_outlet
                         ORDER BY total_count DESC
                         LIMIT 10'
@@ -162,19 +162,6 @@ class ApiReportDua extends Controller
                     ->orderBy('trx_date', 'ASC')->get()->toArray();
         
         return response()->json(MyHelper::checkGet($outlet));
-    }
-
-    function outletTransactionDetail(Request $request){
-        $post = $request->json()->all();
-
-        $transaction = Transaction::with('user')
-                                    ->where('id_outlet', $post['id_outlet'])
-                                    ->whereDate('transaction_date', '>=', $post['date_start'])
-                                    ->whereDate('transaction_date', '<=', $post['date_end'])
-                                    ->orderBy('transaction_date', 'desc')
-                                    ->paginate($post['take']);
-
-        return response()->json(MyHelper::checkGet($transaction));
     }
  
 }

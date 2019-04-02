@@ -15,7 +15,9 @@ class FraudDetectionLog extends Model
 		'count_transaction_day',
 		'count_transaction_week',
 		'id_transaction',
-		'id_device_user'
+		'id_device_user',
+		'id_log_balance',
+		'data_log_balance'
 	];
 
 	function user() {

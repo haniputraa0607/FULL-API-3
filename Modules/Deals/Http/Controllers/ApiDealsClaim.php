@@ -16,6 +16,7 @@ use App\Http\Models\DealsUser;
 use App\Http\Models\DealsVoucher;
 use App\Http\Models\LogPoint;
 use App\Http\Models\User;
+use App\Http\Models\Setting;
 
 use Modules\Deals\Http\Controllers\ApiDealsVoucher;
 

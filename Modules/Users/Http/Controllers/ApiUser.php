@@ -19,8 +19,8 @@ use App\Http\Models\LogPoint;
 use App\Http\Models\UserNotification;
 use App\Http\Models\Transaction;
 use App\Http\Models\FraudSetting;
-use App\Http\Models\Feature;
 use App\Http\Models\Setting;
+use App\Http\Models\Feature;
 
 use Modules\Users\Http\Requests\users_list;
 use Modules\Users\Http\Requests\users_forgot;
@@ -1112,6 +1112,16 @@ class ApiUser extends Controller
 				$result['device'] 	= $device;
 				$result['ip'] 		= $ip;
 
+				if($request->json('latitude') && $request->json('longitude')){
+					$userLocation = UserLocation::create([
+						'id_user' => $create['id'],
+						'lat' => $request->json('latitude'),
+						'lng' => $request->json('longitude'),
+						'action' => 'Login'
+					]);
+	
+				}
+
 				if($cekFraud == 0){
 					$updateUserLogin = User::where('phone', $datauser[0]['phone'])->update(['new_login' => '1']);
 				}
@@ -1142,17 +1152,19 @@ class ApiUser extends Controller
 				$result['device'] 	= $device;
 				$result['ip'] 		= $ip;
 			}
-
-			if($datauser[0]['pin_changed'] == '0'){
-				$result['pin_changed'] = false; 
-			}else{
-				$result['pin_changed'] = true; 
-			}
+			
+				if($datauser[0]['pin_changed'] == '0'){
+        			$result['pin_changed'] = false; 
+        		}else{
+        			$result['pin_changed'] = true; 
+        		}
 		}
 		else {
 			$result['status'] 	= 'fail';
 			$result['messages'] = ['The user credentials were incorrect'];
 		}
+		
+	
 		
         return response()->json($result);
     }
@@ -1791,7 +1803,7 @@ class ApiUser extends Controller
 		return response()->json($result);
     }
 	
-	public function log(Request $request)
+public function log(Request $request)
     {
 		$post = $request->json()->all();
 		if(isset($post['take'])){

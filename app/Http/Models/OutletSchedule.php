@@ -17,8 +17,8 @@ class OutletSchedule extends Model
 		'created_at',
 		'updated_at',
 	];
-
-	public function getOpenAttribute($value) {
+	
+    public function getOpenAttribute($value) {
 		return date('H:i', strtotime($value));
 	}
 

@@ -13,9 +13,16 @@ use App\Lib\Midtrans;
 use App\Http\Models\Transaction;
 use App\Http\Models\TransactionProduct;
 use App\Http\Models\User;
+use App\Http\Models\LogBalance;
+use App\Http\Models\LogPoint;
 
 class ApiCronTrxController extends Controller
 {
+    function __construct() {
+        date_default_timezone_set('Asia/Jakarta');
+        $this->balance  = "Modules\Balance\Http\Controllers\BalanceController";
+    }
+
     public function cron(Request $request)
     {
         $crossLine = date('Y-m-d H:i:s', strtotime('- 3days'));
@@ -63,8 +70,36 @@ class ApiCronTrxController extends Controller
             if (!$singleTrx) {
                 continue;
             }
+
+            //reversal balance
+            $logBalance = LogBalance::where('id_reference', $singleTrx->id_transaction)->where('source', 'Transaction')->where('balance', '<', 0)->get();
+            foreach($logBalance as $logB){
+                $reversal = app($this->balance)->addLogBalance( $singleTrx->id_user, abs($logB['balance']), $singleTrx->id_transaction, 'Reversal', $singleTrx->transaction_grandtotal);
+            }
         }
 
         return response()->json(['success']);
+    }
+
+    public function completeTransactionPickup(){
+        $idTrx = Transaction::whereDate('transaction_date', '<', date('Y-m-d'))->pluck('id_transaction')->toArray();
+        //update ready_at
+        $dataTrx = TransactionPickup::whereIn('id_transaction', $idTrx)
+                                    ->whereNull('ready_at')
+                                    ->whereNull('reject_at')
+                                    ->update(['ready_at' => date('Y-m-d 00:00:00')]);
+        //update receive_at
+        $dataTrx = TransactionPickup::whereIn('id_transaction', $idTrx)
+                                    ->whereNull('receive_at')
+                                    ->whereNull('reject_at')
+                                    ->update(['receive_at' => date('Y-m-d 00:00:00')]);
+        //update taken_at                           
+        $dataTrx = TransactionPickup::whereIn('id_transaction', $idTrx)
+                                    ->whereNull('taken_at')
+                                    ->whereNull('reject_at')
+                                    ->update(['taken_at' => date('Y-m-d 00:00:00')]);
+
+        return response()->json(['status' => 'success']);
+    
     }
 }

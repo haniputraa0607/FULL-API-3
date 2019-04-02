@@ -121,3 +121,10 @@ Route::group(['prefix' => 'api/setting', 'middleware' => 'log_request', 'namespa
     
     Route::get('/cron/point-reset', 'ApiSetting@cronPointReset');
 });
+
+
+
+Route::group(['namespace' => 'Modules\Setting\Http\Controllers'], function()
+{
+    Route::any('term-of-service', 'ApiSetting@viewTOS');
+});

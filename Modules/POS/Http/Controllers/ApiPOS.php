@@ -66,7 +66,7 @@ class ApiPOS extends Controller
             return response()->json($api); 
         } 
  
-        $outlet = Outlet::where('outlet_code', $post['store_code'])->first(); 
+        $outlet = Outlet::where('outlet_code', strtoupper($post['store_code']))->first(); 
         if(empty($outlet)){ 
             return response()->json(['status' => 'fail', 'messages' => ['Store not found']]); 
         } 
@@ -202,7 +202,7 @@ class ApiPOS extends Controller
             return response()->json($api); 
         } 
  
-        $outlet = Outlet::where('outlet_code', $post['store_code'])->first(); 
+        $outlet = Outlet::where('outlet_code', strtoupper($post['store_code']))->first(); 
         if(empty($outlet)){ 
             return response()->json(['status' => 'fail', 'messages' => ['Store not found']]); 
         } 
@@ -350,8 +350,16 @@ class ApiPOS extends Controller
 				$data['outlet_phone'] = $value['store_phone'];
 			}
             // $data['outlet_status'] = $value['store_status'];
-
-            $save = Outlet::updateOrCreate(['outlet_code' => strtoupper($value['store_code'])], $data);
+            
+            // $save = Outlet::updateOrCreate(['outlet_code' => strtoupper($value['store_code'])], $data);
+            $data['outlet_code'] = strtoupper($value['store_code']);
+			$cekOutlet = Outlet::where('outlet_code', strtoupper($value['store_code']))->first();
+			
+            if($cekOutlet){
+                $save = Outlet::where('outlet_code', strtoupper($value['store_code']))->update($data);
+            }else{
+                $save = Outlet::create($data);
+            }
 
             if (!$save) {
                 return response()->json([

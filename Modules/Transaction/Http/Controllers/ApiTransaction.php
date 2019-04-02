@@ -2152,26 +2152,4 @@ class ApiTransaction extends Controller
 
     }
 
-    function completeTransactionPickup(){
-        $idTrx = Transaction::whereDate('transaction_date', '<', date('Y-m-d'))->pluck('id_transaction')->toArray();
-        //update ready_at
-        $dataTrx = TransactionPickup::whereIn('id_transaction', $idTrx)
-                                    ->whereNull('ready_at')
-                                    ->whereNull('reject_at')
-                                    ->update(['ready_at' => '2019-02-15 00:00:00']);
-        //update receive_at
-        $dataTrx = TransactionPickup::whereIn('id_transaction', $idTrx)
-                                    ->whereNull('receive_at')
-                                    ->whereNull('reject_at')
-                                    ->update(['receive_at' => date('Y-m-d 00:00:00')]);
-        //update taken_at                           
-        $dataTrx = TransactionPickup::whereIn('id_transaction', $idTrx)
-                                    ->whereNull('taken_at')
-                                    ->whereNull('reject_at')
-                                    ->update(['taken_at' => date('Y-m-d 00:00:00')]);
-
-        return response()->json(['status' => 'success']);
-    
-    }
-
 }

@@ -45,7 +45,7 @@ class ApiSettingFraud extends Controller
         return response()->json(MyHelper::checkUpdate($update));
     }
 
-    function SendFraudDetection($id_fraud_setting, $user, $idTransaction = null, $deviceUser = null){
+    function SendFraudDetection($id_fraud_setting, $user, $idTransaction = null, $deviceUser = null, $idLogBalance = null, $dataLogBalance = null){
         $fraudSetting = FraudSetting::find($id_fraud_setting);
         if(!$fraudSetting){
             return false;
@@ -107,7 +107,7 @@ class ApiSettingFraud extends Controller
             foreach($recipient_sms as $key => $recipient){
                 if($recipient != ' ' && $recipient != ""){
                     $senddata = array(
-                        'apikey' => 'd49091c827903ef28a07cca2c4e99064',  
+                        'apikey' => env('SMS_KEY'),  
                         'callbackurl' => env('APP_URL'), 
                         'datapacket'=>array()
                     );
@@ -162,6 +162,13 @@ class ApiSettingFraud extends Controller
 
         if($deviceUser){
             $log['id_device_user'] = $deviceUser['id_device_user'];
+        }
+        
+        if($idLogBalance){
+            $log['id_log_balance'] = $id_log_balance;
+        }
+        if($dataLogBalance){
+            $log['data_log_balance'] = $dataLogBalance;
         }
 
         $insertLog = FraudDetectionLog::create($log);

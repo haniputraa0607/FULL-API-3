@@ -16,7 +16,7 @@ class Create extends FormRequest
     public function rules()
     {
         return [
-            'outlet_code'        => 'unique:outlets,outlet_code',
+            'outlet_code'        => 'unique:outlets,outlet_code|max:10',
             'outlet_name'        => 'required',
             'outlet_address'     => '',
             'id_city'            => 'required|integer',
@@ -24,7 +24,7 @@ class Create extends FormRequest
             'outlet_email'       => 'email',
             'outlet_latitude'    => '',
             'outlet_longitude'   => '',
-            // 'outlet_open_hours'  => 'date_format:"H:i:s"',
+            'outlet_open_hours'  => 'date_format:"H:i:s"',
             // 'outlet_close_hours' => 'date_format:"H:i:s"|after:outlet_open_hours',
         ];
     }

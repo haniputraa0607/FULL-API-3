@@ -32,9 +32,9 @@ class AccessTokenController extends PassportAccessTokenController
                 return response()->json(['status' => 'fail', 'messages' => 'Pin tidak sesuai.']);
             }
  
-            return $this->withErrorHandling(function () use($exception) {
-                throw $exception;
-            });
+             return $this->withErrorHandling(function () use($exception) {
+                 throw $exception;
+             });
         }
     }
 }

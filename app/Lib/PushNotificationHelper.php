@@ -34,7 +34,7 @@ class PushNotificationHelper{
     function __construct() {
         date_default_timezone_set('Asia/Jakarta');        
         $this->autocrm  = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
-        $this->endPoint  = env('APP_API_URL');
+        $this->endPoint  = env('AWS_URL');
     }
 
     public static function saveQueue($id_user, $subject, $message, $inbox=null, $data) {
@@ -143,6 +143,52 @@ class PushNotificationHelper{
         $notification = $notificationBuilder->build();
         $data         = $dataBuilder->build(); 
 
+        $downstreamResponse = FCM::sendTo($tokens, $option, $notification, $data);
+
+        $success = $downstreamResponse->numberSuccess();
+        $fail    = $downstreamResponse->numberFailure();
+
+        if ($fail != 0) {
+            $error = $downstreamResponse->tokensWithError();
+        }
+
+        $downstreamResponse->tokensToDelete(); 
+        $downstreamResponse->tokensToModify(); 
+        $downstreamResponse->tokensToRetry();
+
+        $result = [
+            'success' => $success,
+            'fail'    => $fail
+        ];        
+
+        return $result;
+    }
+
+    public static function sendPushOutlet ($tokens, $subject, $messages, $image=null, $dataOptional=[]) {
+
+        $optionBuiler = new OptionsBuilder();
+        $optionBuiler->setTimeToLive(60*200);
+        $optionBuiler->setContentAvailable(true);
+        $optionBuiler->setPriority("high");
+
+        // $notificationBuilder = new PayloadNotificationBuilder("");
+        $notificationBuilder = new PayloadNotificationBuilder($subject);
+        $notificationBuilder->setBody($messages)
+                            ->setSound('default')
+                            ->setClickAction($dataOptional['type']);
+        
+        $dataBuilder = new PayloadDataBuilder();
+
+        $dataOptional['title']             = $subject;
+        $dataOptional['body']              = $messages;
+
+        $dataBuilder->addData($dataOptional);
+
+        // build semua
+        $option       = $optionBuiler->build();
+        $notification = $notificationBuilder->build();
+        $data         = $dataBuilder->build(); 
+        return $data;
         $downstreamResponse = FCM::sendTo($tokens, $option, $notification, $data);
 
         $success = $downstreamResponse->numberSuccess();

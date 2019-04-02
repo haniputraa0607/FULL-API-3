@@ -151,58 +151,56 @@ class ApiTransactionPaymentManual extends Controller
 
         if (isset($post['conditions'])) {
             foreach ($post['conditions'] as $key => $con) {
-                if(isset($con['subject'])){
-                    if ($con['subject'] == 'receipt') {
-                        $var = 'transactions.transaction_receipt_number';
-                    } elseif ($con['subject'] == 'name' || $con['subject'] == 'phone' || $con['subject'] == 'email') {
-                        $var = 'users.'.$con['subject'];
-                    } elseif ($con['subject'] == 'payment_method' || $con['subject'] == 'payment_nominal' || $con['subject'] == 'payment_bank' || $con['subject'] == 'payment_account_number' || $con['subject'] == 'payment_account_name') {
-                        $var = 'transaction_payment_manuals.'.$con['subject'];
-                    } elseif ($con['subject'] == 'confirm_by') {
-                        $var = 'admin.name';
-                    } elseif ($con['subject'] == 'grand_total') {
-                        $var = 'transactions.transaction_grandtotal';
-                    }
-    
-                    if ($con['subject'] == 'receipt' || $con['subject'] == 'name' || $con['subject'] == 'phone' || $con['subject'] == 'email' || $con['subject'] == 'payment_bank' || $con['subject'] == 'payment_account_number' || $con['subject'] == 'payment_account_name' || $con['subject'] == 'confirm_by') {
-                        if ($post['rule'] == 'and' || $key == 0) {
-                            if ($con['operator'] == 'like') {
-                                $query = $query->where($var, 'like', '%'.$con['parameter'].'%');
-                            } else {
-                                $query = $query->where($var, '=', $con['parameter']);
-                            }
+                if ($con['subject'] == 'receipt') {
+                    $var = 'transactions.transaction_receipt_number';
+                } elseif ($con['subject'] == 'name' || $con['subject'] == 'phone' || $con['subject'] == 'email') {
+                    $var = 'users.'.$con['subject'];
+                } elseif ($con['subject'] == 'payment_method' || $con['subject'] == 'payment_nominal' || $con['subject'] == 'payment_bank' || $con['subject'] == 'payment_account_number' || $con['subject'] == 'payment_account_name') {
+                    $var = 'transaction_payment_manuals.'.$con['subject'];
+                } elseif ($con['subject'] == 'confirm_by') {
+                    $var = 'admin.name';
+                } elseif ($con['subject'] == 'grand_total') {
+                    $var = 'transactions.transaction_grandtotal';
+                }
+
+                if ($con['subject'] == 'receipt' || $con['subject'] == 'name' || $con['subject'] == 'phone' || $con['subject'] == 'email' || $con['subject'] == 'payment_bank' || $con['subject'] == 'payment_account_number' || $con['subject'] == 'payment_account_name' || $con['subject'] == 'confirm_by') {
+                    if ($post['rule'] == 'and' || $key == 0) {
+                        if ($con['operator'] == 'like') {
+                            $query = $query->where($var, 'like', '%'.$con['parameter'].'%');
                         } else {
-                            if ($con['operator'] == 'like') {
-                                $query = $query->orWhere($var, 'like', '%'.$con['parameter'].'%');
-                            } else {
-                                $query = $query->orWhere($var, '=', $con['parameter']);
-                            }
-                        }
-                    }
-    
-                    if ($con['subject'] == 'payment_nominal' || $con['subject'] == 'grand_total') {
-                        if ($post['rule'] == 'and' || $key == 0) {
-                            $query = $query->where($var, $con['operator'], $con['parameter']);
-                        } else {
-                            $query = $query->orWhere($var, $con['operator'], $con['parameter']);
-                        }
-                    }
-    
-                    if ($con['subject'] == 'confirmed_at' || $con['subject'] == 'cancelled_at') {
-                        $var = 'transaction_payment_manuals.'.$con['subject'];
-                        if ($post['rule'] == 'and' || $key == 0) {
-                            $query = $query->whereDate($var, $con['operator'], date('Y-m-d', strtotime($con['parameter'])));
-                        } else {
-                            $query = $query->orWhereDate($var, $con['operator'], date('Y-m-d', strtotime($con['parameter'])));
-                        }
-                    }
-    
-                    if ($con['subject'] == 'gender' ) {
-                        if ($post['rule'] == 'and' || $key == 0) {
                             $query = $query->where($var, '=', $con['parameter']);
+                        }
+                    } else {
+                        if ($con['operator'] == 'like') {
+                            $query = $query->orWhere($var, 'like', '%'.$con['parameter'].'%');
                         } else {
                             $query = $query->orWhere($var, '=', $con['parameter']);
                         }
+                    }
+                }
+
+                if ($con['subject'] == 'payment_nominal' || $con['subject'] == 'grand_total') {
+                    if ($post['rule'] == 'and' || $key == 0) {
+                        $query = $query->where($var, $con['operator'], $con['parameter']);
+                    } else {
+                        $query = $query->orWhere($var, $con['operator'], $con['parameter']);
+                    }
+                }
+
+                if ($con['subject'] == 'confirmed_at' || $con['subject'] == 'cancelled_at') {
+                    $var = 'transaction_payment_manuals.'.$con['subject'];
+                    if ($post['rule'] == 'and' || $key == 0) {
+                        $query = $query->whereDate($var, $con['operator'], date('Y-m-d', strtotime($con['parameter'])));
+                    } else {
+                        $query = $query->orWhereDate($var, $con['operator'], date('Y-m-d', strtotime($con['parameter'])));
+                    }
+                }
+
+                if ($con['subject'] == 'gender' ) {
+                    if ($post['rule'] == 'and' || $key == 0) {
+                        $query = $query->where($var, '=', $con['parameter']);
+                    } else {
+                        $query = $query->orWhere($var, '=', $con['parameter']);
                     }
                 }
 

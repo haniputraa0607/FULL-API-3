@@ -120,7 +120,7 @@ class Deal extends Model
 	{
 		return $this->belongsToMany(\App\Http\Models\Outlet::class, 'deals_outlets', 'id_deals', 'id_outlet');
 	}
-
+	
 	public function outlets_active()
 	{
 		return $this->belongsToMany(\App\Http\Models\Outlet::class, 'deals_outlets', 'id_deals', 'id_outlet')->where('outlet_status', 'Active');

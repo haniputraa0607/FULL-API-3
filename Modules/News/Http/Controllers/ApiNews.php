@@ -31,6 +31,7 @@ class ApiNews extends Controller
 {
     function __construct() {
         date_default_timezone_set('Asia/Jakarta');
+        $this->autocrm = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
     }
 
     public $saveImage = "img/news/";
@@ -228,6 +229,12 @@ class ApiNews extends Controller
         }
 
         return $data;
+    }
+
+    public function testing()
+    {
+        $send = app($this->autocrm)->SendAutoCRMOutlet('Transaction Payment', '08489657456', ['notif_type' => 'trx', 'header_label' => 'label', 'date' => '2012-34-23', 'status' => 'completed', 'name'  => 'jali', 'id' => 'id', 'outlet_name' => 'outlet', 'detail' => 'detail', 'payment' => 'payment', 'id_reference' => 'id_reference']);
+        return $send;
     }
 
     /* Create News */

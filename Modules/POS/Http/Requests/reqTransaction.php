@@ -20,7 +20,7 @@ class reqTransaction extends FormRequest
             'api_secret'                          => 'required',
             'store_code'                          => 'required',
             'transactions'                        => 'required|array',
-            'transactions.*.member_uid'           => 'nullable|min:35',
+            'transactions.*.member_uid'           => 'nullable',
             'transactions.*.trx_id'               => 'required',
             'transactions.*.sales_type'           => 'nullable',
             'transactions.*.order_id'             => 'nullable',

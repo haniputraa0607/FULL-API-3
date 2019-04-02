@@ -12,15 +12,16 @@ Route::group(['prefix' => 'api/v1/pos/', 'namespace' => 'Modules\POS\Http\Contro
         Route::any('check/voucher', 'ApiPOS@checkVoucher');
         Route::any('voucher/void', 'ApiPOS@voidVoucher');
         Route::post('outlet/sync', 'ApiPOS@syncOutlet');
+        Route::any('menu', 'ApiPOS@syncMenuReturn');
+        Route::any('outlet/menu', 'ApiPOS@syncOutletMenuReturn');
+        
         Route::post('menu/sync', 'ApiPOS@syncMenu');
-        Route::post('outlet/menu/sync', 'ApiPOS@syncOutletMenu');
+        Route::any('outlet/menu/sync', 'ApiPOS@syncOutletMenu');
         Route::any('transaction', 'ApiPOS@transaction');
         Route::any('transaction/refund', 'ApiPOS@transactionRefund');
         Route::any('transaction/detail', 'ApiPOS@transactionDetail');
     });
-    Route::group(['middleware' => 'auth_client', 'log_request'], function() {
-        Route::any('menu', 'ApiPOS@syncMenuReturn');
-        Route::post('outlet/menu', 'ApiPOS@syncOutletMenuReturn');
+    Route::group(['middleware' => 'auth_client'], function() {
         Route::post('transaction/last', 'ApiPOS@getLastTransaction');
     });
 });

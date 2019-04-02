@@ -133,8 +133,8 @@ class ApiProductController extends Controller
 												'product_price_base' => $post['product_price_base'][$key],
 												'product_price_tax' => $post['product_price_tax'][$key],
 												'product_stock_status' => $post['product_stock_status'][$key],
-                                                'product_visibility' => $post['product_visibility'][$key]
-                                                ]);
+												'product_visibility' => $post['product_visibility'][$key]
+												]);
 			}
 			else{
 				$update = ProductPrice::where('id_product_price','=',$id_product_price)->update(['product_price' => $post['product_price'][$key], 'product_price_base' => $post['product_price_base'][$key], 'product_price_tax' => $post['product_price_tax'][$key],'product_stock_status' => $post['product_stock_status'][$key],'product_visibility' => $post['product_visibility'][$key]]);
@@ -269,7 +269,7 @@ class ApiProductController extends Controller
             foreach ($product as $key => $value) {
                 unset($product[$key]['product_price_base']);
                 unset($product[$key]['product_price_tax']);
-                $product[$key]['photos'] = ProductPhoto::select('*', DB::raw('if(product_photo is not null, (select concat("'.env('APP_API_URL').'", product_photo)), "'.env('APP_API_URL').'img/default.jpg") as url_product_photo'))->where('id_product', $value['id_product'])->orderBy('product_photo_order', 'ASC')->get()->toArray();
+                $product[$key]['photos'] = ProductPhoto::select('*', DB::raw('if(product_photo is not null, (select concat("'.env('AWS_URL').'", product_photo)), "'.env('AWS_URL').'img/default.jpg") as url_product_photo'))->where('id_product', $value['id_product'])->orderBy('product_photo_order', 'ASC')->get()->toArray();
             }
         }
 
@@ -302,7 +302,7 @@ class ApiProductController extends Controller
                 
                 //photo default
                 $dataPhoto['id_product']          = $save->id_product;
-                $dataPhoto['product_photo_order'] = $this->cekUrutanPhoto($post['id_product']);
+                $dataPhoto['product_photo_order'] = $this->cekUrutanPhoto($save['id_product']);
                 $dataPhoto['product_photo']       = 'img/product/default';
                 $save                             = ProductPhoto::create($dataPhoto);
             }
@@ -628,7 +628,7 @@ class ApiProductController extends Controller
                 }
             }
         }
-        
+
         return response()->json(MyHelper::checkUpdate($save));
     }
 

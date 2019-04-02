@@ -1,6 +1,6 @@
 <?php
 
-Route::group(['middleware' => ['auth:api', 'log_request'], 'prefix' => 'api/transaction', 'namespace' => 'Modules\Transaction\Http\Controllers'], function()
+Route::group(['middleware' => 'auth:api', 'prefix' => 'api/transaction', 'namespace' => 'Modules\Transaction\Http\Controllers'], function()
 {
     Route::post('/outlet', 'ApiNotification@adminOutlet');
     Route::post('/admin/confirm', 'ApiNotification@adminOutletComfirm');
@@ -122,6 +122,6 @@ Route::group(['middleware' => 'auth:api', 'prefix' => 'api/transaction', 'namesp
 
 Route::group(['prefix' => 'api/cron/transaction', 'namespace' => 'Modules\Transaction\Http\Controllers'], function()
 {
-    Route::get('/pickup/completed', 'ApiTransaction@completeTransactionPickup');
+    Route::get('/pickup/completed', 'ApiCronTrxController@completeTransactionPickup');
     Route::get('/expire', 'ApiCronTrxController@cron');
 });
