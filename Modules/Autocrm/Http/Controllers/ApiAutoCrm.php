@@ -97,7 +97,7 @@ class ApiAutoCrm extends Controller
 						if(!empty($setting['email_bcc']) && !empty($setting['email_bcc_name'])){
 							$message->bcc($setting['email_bcc'], $setting['email_bcc_name']);
 						}
-
+						
 						// attachment
 						if(isset($variables['attachment'])){
 							if(is_array($variables['attachment'])){
@@ -183,7 +183,7 @@ class ApiAutoCrm extends Controller
 			if($crm['autocrm_sms_toogle'] == 1){
 				if(!empty($user['phone'])){
 					$senddata = array(
-						'apikey' => 'd49091c827903ef28a07cca2c4e99064',  
+						'apikey' => env('SMS_KEY'),  
 						'callbackurl' => env('APP_URL'), 
 						'datapacket'=>array()
 					);
@@ -637,10 +637,11 @@ class ApiAutoCrm extends Controller
 			}
 
 			if(!empty($variables)){
+			 //   dd($variables);
 				foreach($variables as $key => $var){
-					if(is_string($var)){
-						$text = str_replace('%'.$key.'%',$var, $text);
-					}
+				    if(is_string($var)){
+    					$text = str_replace('%'.$key.'%',$var, $text);
+				    }
 				}
 			}
 		} 
@@ -698,7 +699,7 @@ class ApiAutoCrm extends Controller
 			if(count($contentOld) > 0){
 				foreach($contentOld as $old){
 					if($old['content_type'] == 'image' || $old['content_type'] == 'file'){
-						$del = MyHelper::deletePhoto(str_replace(env('APP_API_URL'), '', $old['content']));
+						$del = MyHelper::deletePhoto(str_replace(env('AWS_URL'), '', $old['content']));
 					}
 				}
 

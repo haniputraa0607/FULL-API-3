@@ -15,7 +15,7 @@ class AddIdDealsPromotionTemplatePromotionContentsTable extends Migration
     {
      Schema::table('promotion_contents', function (Blueprint $table) {
             $table->unsignedInteger('id_deals_promotion_template')->nullable()->after('promotion_series_days');
-            $table->foreign('id_deals_promotion_template', 'fk_promotion_contents_with_deals_promotion_templates')->references('id_deals_promotion_template')->on('deals_promotion_templates')->onUpdate('CASCADE')->onDelete('CASCADE');
+            $table->foreign('id_deals_promotion_template', 'fk_promotion_contents_deals_promotion_templates')->references('id_deals_promotion_template')->on('deals_promotion_templates')->onUpdate('CASCADE')->onDelete('CASCADE');
         });
     }
 
@@ -27,7 +27,7 @@ class AddIdDealsPromotionTemplatePromotionContentsTable extends Migration
     public function down()
     {
         Schema::table('promotion_contents', function (Blueprint $table) {
-            $table->dropForeign('fk_promotion_contents_with_deals_promotion_templates');
+            $table->dropForeign('fk_promotion_contents_deals_promotion_templates');
             $table->dropColumn('id_deals_promotion_template');
         });
     }

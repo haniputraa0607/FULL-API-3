@@ -23,7 +23,5 @@ class DatabaseSeeder extends Seeder
         $this->call(UserAddressesTableSeeder::class);
         $this->call(ManualPaymentsTableSeeder::class);
         $this->call(ManualPaymentMethodsTableSeeder::class);
-        $this->call(FraudSettingsTableSeeder::class);
-        $this->call(OauthClientsTableSeeder::class);
     }
 }

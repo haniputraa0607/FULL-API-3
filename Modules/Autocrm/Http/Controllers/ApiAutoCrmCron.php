@@ -289,7 +289,7 @@ class ApiAutoCrmCron extends Controller
 			// delete file
 			foreach($contentOld as $old){
 				if($old['content_type'] == 'image' || $old['content_type'] == 'file'){
-					$del = MyHelper::deletePhoto(str_replace(env('APP_API_URL'), '', $old['content']));
+					$del = MyHelper::deletePhoto(str_replace(env('AWS_URL'), '', $old['content']));
 				}
 			}
 

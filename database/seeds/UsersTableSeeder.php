@@ -36,7 +36,7 @@ class UsersTableSeeder extends Seeder
             ),
             1 => 
             array (
-                'id' => 2,
+                'id' => 3,
                 'name' => 'Haniyah Imtiyaz',
                 'phone' => '085866937804',
                 'id_membership' => NULL,
@@ -59,7 +59,7 @@ class UsersTableSeeder extends Seeder
             ),
             2 => 
             array (
-                'id' => 3,
+                'id' => 4,
                 'name' => 'Guntur Satrya Saputro',
                 'phone' => '0811255501',
                 'id_membership' => NULL,
@@ -82,7 +82,30 @@ class UsersTableSeeder extends Seeder
             ),
             3 => 
             array (
-                'id' => 4,
+                'id' => 5,
+                'name' => 'Dwi Heru Budi Waspodo',
+                'phone' => '083847090002',
+                'id_membership' => NULL,
+                'email' => 'dwiheru@technopartner.id',
+                'password' => '$2y$10$vdo59DrFthn04wBY78pfQejWaWhqQ.uawd9XbbIpfCmaXj/tyJavy',
+                'id_city' => 501,
+                'gender' => NULL,
+                'provider' => 'Axis',
+                'birthday' => NULL,
+                'phone_verified' => '1',
+                'email_verified' => '0',
+                'level' => 'Super Admin',
+                'points' => 0,
+                'android_device' => NULL,
+                'ios_device' => NULL,
+                'is_suspended' => '0',
+                'remember_token' => NULL,
+                'created_at' => '2018-05-09 16:22:34',
+                'updated_at' => '2018-05-09 16:22:34',
+            ),
+            4 => 
+            array (
+                'id' => 6,
                 'name' => 'Tri Wardana',
                 'phone' => '089674657270',
                 'id_membership' => NULL,
@@ -103,13 +126,13 @@ class UsersTableSeeder extends Seeder
                 'created_at' => '2018-05-09 16:22:58',
                 'updated_at' => '2018-05-09 16:22:58',
             ),
-            4 => 
+            5 => 
             array (
-                'id' => 5,
+                'id' => 7,
                 'name' => 'Adi Baswendra',
                 'phone' => '082251401717',
                 'id_membership' => NULL,
-                'email' => 'adi.baswendra@technopartner.id',
+                'email' => 'adibaswendra@technopartner.id',
                 'password' => '$2y$10$Cr99veqlMeixF46GV3T5VeV8WNqw3FIPlK.ao094jE/uAghq7PB.C',
                 'id_city' => 501,
                 'gender' => NULL,
@@ -126,13 +149,13 @@ class UsersTableSeeder extends Seeder
                 'created_at' => '2018-05-09 16:23:23',
                 'updated_at' => '2018-05-09 16:23:23',
             ),
-            5 => 
+            6 => 
             array (
-                'id' => 6,
+                'id' => 8,
                 'name' => 'Niki Hidayati',
                 'phone' => '081329649882',
                 'id_membership' => NULL,
-                'email' => 'niki.hidayati@technopartner.id',
+                'email' => 'nikihidayati@technopartner.id',
                 'password' => '$2y$10$Pu2p0ZWdjDt2ob.kF5YJ8.l5uDq9ZoNRaiL8SeuFmKdJFZ77uCZHm',
                 'id_city' => 501,
                 'gender' => NULL,
@@ -149,13 +172,13 @@ class UsersTableSeeder extends Seeder
                 'created_at' => '2018-05-09 16:23:44',
                 'updated_at' => '2018-05-09 16:23:44',
             ),
-            6 => 
+            7 => 
             array (
-                'id' => 7,
+                'id' => 9,
                 'name' => 'Wahyu Hadi',
                 'phone' => '082225501351',
                 'id_membership' => NULL,
-                'email' => 'ce.wahyuhadi@technopartner.id',
+                'email' => 'wahyuhadi@technopartner.id',
                 'password' => '$2y$10$0WDJh.yLM2q0OXcKq/2CqOxNfuH6UYq8rXnMyxiSJzavGmUJbLc3e',
                 'id_city' => 501,
                 'gender' => NULL,
@@ -172,13 +195,13 @@ class UsersTableSeeder extends Seeder
                 'created_at' => '2018-05-09 16:25:44',
                 'updated_at' => '2018-05-09 16:25:44',
             ),
-            7 => 
+            8 => 
             array (
-                'id' => 8,
+                'id' => 10,
                 'name' => 'Denis Tirta',
                 'phone' => '081379100375',
                 'id_membership' => NULL,
-                'email' => 'denis.tirta@technopartner.id',
+                'email' => 'denistirta@technopartner.id',
                 'password' => '$2y$10$8FO7/C7b/NgpV8OyhuVb2edwmfj24zMjsl.2vpGxGDKRqrRwL7gzC',
                 'id_city' => 501,
                 'gender' => NULL,

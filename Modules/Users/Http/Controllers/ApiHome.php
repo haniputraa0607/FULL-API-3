@@ -37,7 +37,7 @@ class ApiHome extends Controller
 		$this->point  = "Modules\Deals\Http\Controllers\ApiDealsClaim";
 		$this->autocrm  = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
         $this->setting_fraud = "Modules\SettingFraud\Http\Controllers\ApiSettingFraud";
-		$this->endPoint  = env('APP_API_URL');
+		$this->endPoint  = env('AWS_URL');
     }
 	
 	public function homeNotLoggedIn(Request $request) {
@@ -235,7 +235,7 @@ class ApiHome extends Controller
                     $greetingss2     = app($this->autocrm)->TextReplace($greetings[$greetingKey]['greeting2'], $user['phone']);
                     if (!empty($background)) {
 						$backgroundKey = array_rand($background, 1);
-						$background    = env('AWS_URL').'/'.$background[$backgroundKey]['picture'];
+						$background    = env('AWS_URL').$background[$backgroundKey]['picture'];
 					}
                 }
             }

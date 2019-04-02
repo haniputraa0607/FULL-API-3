@@ -33,7 +33,7 @@ class ApiEnquiries extends Controller
 		date_default_timezone_set('Asia/Jakarta');
 		$this->autocrm = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
 		$this->rajasms = new classMaskingJson();
-		$this->endPoint = env('APP_API_URL');
+		$this->endPoint = env('AWS_URL');
 	}
     /* Cek inputan */
     function cekInputan($post = []) {
@@ -323,7 +323,7 @@ class ApiEnquiries extends Controller
 		if(isset($post['reply_sms_content'])){
 			if($check['reply_sms_content'] == null && $check['enquiry_phone'] != null){
 				$senddata = array(
-						'apikey' => 'd49091c827903ef28a07cca2c4e99064',  
+						'apikey' => env('SMS_KEY'),  
 						'callbackurl' => env('APP_URL'), 
 						'datapacket'=>array()
 					);
@@ -359,7 +359,7 @@ class ApiEnquiries extends Controller
 					}
 					
 					if (isset($post['reply_push_image']) && $post['reply_push_image'] != null) {
-						$dataOptional['image'] = env('APP_API_URL').$post['reply_push_image'];
+						$dataOptional['image'] = env('AWS_URL').$post['reply_push_image'];
 						$image = env('AWS_URL').$post['reply_push_image'];
 					}
 					

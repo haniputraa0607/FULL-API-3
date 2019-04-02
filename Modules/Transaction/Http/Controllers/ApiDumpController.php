@@ -406,6 +406,7 @@ class ApiDumpController extends Controller
                 }
 
                 $insertTransaction = $this->insert($data);
+                // return $insertTransaction;
                 if (isset($insertTransaction['status']) && $insertTransaction['status'] == 'success') {
                     continue;
                 } elseif (isset($insertTransaction['status']) && $insertTransaction['status'] == 'fail') {

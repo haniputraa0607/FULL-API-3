@@ -119,16 +119,8 @@ class ApiOnlineTransaction extends Controller
                     }
                 }
             }
-
-            if($outlet['today']['is_closed'] == '1'){
-                DB::rollback();
-                return response()->json([
-                    'status'    => 'fail',
-                    'messages'  => ['Outlet tutup']
-                ]);  
-            }
     
-            if($outlet['today']['close'] && $outlet['today']['close'] != "00:00" && $outlet['today']['open'] && $outlet['today']['open'] != '00:00'){
+             if($outlet['today']['close'] && $outlet['today']['close'] != "00:00" && $outlet['today']['open'] && $outlet['today']['open'] != '00:00'){
 
                 $settingTime = Setting::where('key', 'processing_time')->first();
                 if($settingTime && $settingTime->value){
@@ -305,19 +297,20 @@ class ApiOnlineTransaction extends Controller
                 $post['cashback'] = $countSettingCashback[$countUserTrx]['cashback_maximum'];
             }
         } else {
+            
             $maxCash = Setting::where('key', 'cashback_maximum')->first();
 
             if (count($user['memberships']) > 0) {
                 $post['point'] = $post['point'] * ($user['memberships'][0]['benefit_point_multiplier']) / 100;
                 $post['cashback'] = $post['cashback'] * ($user['memberships'][0]['benefit_cashback_multiplier']) / 100;
-
+    
                 if($user['memberships'][0]['cashback_maximum']){
                     $maxCash['value'] = $user['memberships'][0]['cashback_maximum'];
                 }
             }
-
+    
             $statusCashMax = 'no';
-
+    
             if (!empty($maxCash) && !empty($maxCash['value'])) {
                 $statusCashMax = 'yes';
                 $totalCashMax = $maxCash['value'];
@@ -331,7 +324,7 @@ class ApiOnlineTransaction extends Controller
                 $post['cashback'] = $post['cashback'];
             }
         }
-
+        
         
         if (!isset($post['payment_type'])) {
             $post['payment_type'] = null;

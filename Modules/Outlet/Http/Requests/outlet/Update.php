@@ -18,7 +18,7 @@ class Update extends FormRequest
     {
         return [
             'id_outlet'          => 'integer|required',
-            'outlet_code'        => 'required|unique:outlets,outlet_code,'.$request->json('id_outlet').',id_outlet|',
+            'outlet_code'        => 'required|unique:outlets,outlet_code,'.$request->json('id_outlet').',id_outlet|max:10',
             'outlet_name'        => 'required',
             'outlet_address'     => '',
             'id_city'            => 'required|integer',
@@ -27,8 +27,8 @@ class Update extends FormRequest
             'outlet_email'       => 'email',
             'outlet_latitude'    => '',
             'outlet_longitude'   => '',
-            // 'outlet_open_hours'  => 'date_format:"H:i:s"',
-            // 'outlet_close_hours' => 'date_format:"H:i:s"|after:outlet_open_hours',
+            'outlet_open_hours'  => 'date_format:"H:i:s"',
+            'outlet_close_hours' => 'date_format:"H:i:s"|after:outlet_open_hours',
         ];
     }
 

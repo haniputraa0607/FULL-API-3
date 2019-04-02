@@ -36,6 +36,7 @@ class ApiOutletApp extends Controller
         $this->autocrm  = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
         $this->balance  = "Modules\Balance\Http\Controllers\BalanceController";
         $this->getNotif = "Modules\Transaction\Http\Controllers\ApiNotification";
+        $this->membership    = "Modules\Membership\Http\Controllers\ApiMembership";
     }
 
     public function deleteToken(DeleteToken $request)
@@ -120,8 +121,8 @@ class ApiOutletApp extends Controller
         foreach($list as $i => $dataList){
             $qr     = $dataList['order_id'];
 
-            $qrCode = 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data='.$qr;
-            // $qrCode = 'https://chart.googleapis.com/chart?chl='.$qr.'&chs=250x250&cht=qr&chld=H%7C0';
+            // $qrCode = 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data='.$qr;
+            $qrCode = 'https://chart.googleapis.com/chart?chl='.$qr.'&chs=250x250&cht=qr&chld=H%7C0';
             $qrCode = html_entity_decode($qrCode);
 
             $dataList = array_slice($dataList, 0, 3, true) +
@@ -694,14 +695,15 @@ class ApiOutletApp extends Controller
             ]);
         }
         
-        DB::beginTransaction();
+        // DB::beginTransaction();
         $pickup = TransactionPickup::where('id_transaction', $order->id_transaction)->update(['ready_at' => date('Y-m-d H:i:s')]);
+        // dd($pickup);
         if($pickup){
             //send notif to customer
             $user = User::find($order->id_user);
             $send = app($this->autocrm)->SendAutoCRM('Order Ready', $user['phone'], ["outlet_name" => $outlet['outlet_name'], "id_reference" => $order->transaction_receipt_number.','.$order->id_outlet,  "transaction_date" => $order->transaction_date]);
             if($send != true){
-                DB::rollback();
+                // DB::rollback();
                 return response()->json([
                         'status' => 'fail',
                         'messages' => ['Failed Send notification to customer']
@@ -715,18 +717,21 @@ class ApiOutletApp extends Controller
 
             if (!in_array('Balance', $column)) {
                 $savePoint = app($this->getNotif)->savePoint($newTrx);
+                // return $savePoint;
                 if (!$savePoint) {
-                    DB::rollback();
+                    // DB::rollback();
                     return response()->json([
                         'status'   => 'fail',
                         'messages' => ['Transaction failed']
                     ]);
                 }
             }
-
-            DB::commit();
+        
+            $checkMembership = app($this->membership)->calculateMembership($user['phone']);
+            
         }
-
+        DB::commit();
+        // return  $pickup = TransactionPickup::where('id_transaction', $order->id_transaction)->first();
         return response()->json(MyHelper::checkUpdate($pickup));
     }
     
@@ -987,7 +992,7 @@ class ApiOutletApp extends Controller
         ]);
         
         if($pickup){
-            //refund ke balance
+              //refund ke balance
             if($order['trasaction_payment_type'] == "Midtrans"){
                 $multiple = TransactionMultiplePayment::where('id_transaction', $order->id_transaction)->get()->toArray();
                 if($multiple){
@@ -995,7 +1000,7 @@ class ApiOutletApp extends Controller
                         if($pay['type'] == 'Balance'){
                             $payBalance = TransactionPaymentBalance::find($pay['id_payment']);
                             if($payBalance){
-                                $refund = app($this->balance)->addLogBalance( $order['id_user'], $payBalance['balance_nominal'], $order['id_transaction'], 'Rejected Order', $order['transaction_grandtotal']);
+                                $refund = app($this->balance)->addLogBalance( $order['id_user'], $payBalance['balance_nominal'], $order['id_transaction'], 'Reverse Point from Rejected Order', $order['transaction_grandtotal']);
                                 if ($refund == false) {
                                     DB::rollback();
                                     return response()->json([
@@ -1022,7 +1027,7 @@ class ApiOutletApp extends Controller
                 }else{
                     $payMidtrans = TransactionPaymentMidtran::where('id_transaction', $order['id_transaction'])->first();
                     if($payMidtrans){
-                        $refund = app($this->balance)->addLogBalance( $order['id_user'], $payMidtrans['gross_amount'], $order['id_transaction'], 'Rejected Order', $order['transaction_grandtotal']);
+                        $refund = app($this->balance)->addLogBalance( $order['id_user'], $payMidtrans['gross_amount'], $order['id_transaction'], 'Reverse Point from Rejected Order', $order['transaction_grandtotal']);
                         if ($refund == false) {
                             DB::rollback();
                             return response()->json([
@@ -1058,9 +1063,12 @@ class ApiOutletApp extends Controller
                         'messages' => ['Failed Send notification to customer']
                     ]);
             }
+            
+            
+            $checkMembership = app($this->membership)->calculateMembership($user['phone']);
 
-            DB::commit();
         }
+        DB::commit();
 
 
         return response()->json(MyHelper::checkUpdate($pickup));

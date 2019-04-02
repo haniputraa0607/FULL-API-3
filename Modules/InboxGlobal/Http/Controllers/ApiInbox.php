@@ -45,7 +45,7 @@ class ApiInbox extends Controller
 								->get()
 								->toArray();
 		
-		foreach($globals as $global){
+		foreach($globals as $ind => $global){
 			$cons = array();
 			$cons['subject'] = 'phone';
 			$cons['operator'] = '=';
@@ -53,6 +53,7 @@ class ApiInbox extends Controller
 			
 			array_push($global['inbox_global_rule_parents'], ['rule' => 'and', 'rule_next' => 'and', 'rules' => [$cons]]);
 			$users = app($this->user)->UserFilter($global['inbox_global_rule_parents']);
+
 			
 			if(isset($users['status']) && $users['status'] == 'success'){
 				$content = [];
@@ -61,11 +62,12 @@ class ApiInbox extends Controller
 				$content['subject'] 	 = app($this->autocrm)->TextReplace($global['inbox_global_subject'], $user['phone']);
 				$content['clickto'] 	 = $global['inbox_global_clickto'];
 				
-				if($content['clickto'] == 'Product' || $content['clickto'] == 'Outlet'){
-					$content['id_reference'] = $global['inbox_global_id_reference'];
-				}else{
-					$content['id_reference'] = null;
-				}
+				
+				if($global['inbox_global_id_reference']){
+    				$content['id_reference'] = $global['inbox_global_id_reference'];
+    			}else{
+    				$content['id_reference'] = null;
+    			}
 
 				if($content['clickto'] == 'News'){
 					$news = News::find($global['inbox_global_id_reference']);

@@ -336,7 +336,8 @@ class ApiDealsVoucher extends Controller
                         $voucher[$index]['deal_voucher']['voucher_code'] = $matches[1];
                     }
                     else {
-                        $voucher[$index]['deal_voucher']['voucher_code'] = "";
+                        $voucherHash = $datavoucher['voucher_hash'];
+                        $voucher[$index]['deal_voucher']['voucher_code'] = str_replace("https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=",'',  $voucherHash);
                     }
         
                     $useragent = $_SERVER['HTTP_USER_AGENT'];

@@ -4,7 +4,6 @@ namespace App\Lib;
 use Image;
 use File;
 use DB;
-use Storage;
 use App\Http\Models\Notification;
 use App\Http\Models\Store;
 use App\Http\Models\User;
@@ -46,8 +45,8 @@ class MyHelper{
 		$config = array(
 						'digitdepan' => 7,
 						'digitbelakang' => 5,
-						'keyutama' => 'JSncajiopw32jk',
-						'secret_iv' => 'kkopIEnan5698gAN',
+						'keyutama' => 'kf8jaJKH8a3',
+						'secret_iv' => 'PKs84j9kkk63',
 						'ciphermode' => 'AES-256-CBC'
 					);
 	}
@@ -212,13 +211,13 @@ class MyHelper{
 	}
 
 	public static function encryptkhusus($value) {
-		$config = array(
-			'digitdepan' => 7,
-			'digitbelakang' => 5,
-			'keyutama' => 'JSncajiopw32jk',
-			'secret_iv' => 'kkopIEnan5698gAN',
-			'ciphermode' => 'AES-256-CBC'
-		);
+			$config = array(
+						'digitdepan' => 7,
+						'digitbelakang' => 5,
+						'keyutama' => 'kf8jaJKH8a3',
+						'secret_iv' => 'PKs84j9kkk63',
+						'ciphermode' => 'AES-256-CBC'
+					);
 		if(!$value){return false;}
 		$skey = self::getkey();
 		$depan = substr($skey, 0, $config['digitdepan']);
@@ -231,13 +230,13 @@ class MyHelper{
 	}
 
 	public static function decryptkhusus($value) {
-		$config = array(
-			'digitdepan' => 7,
-			'digitbelakang' => 5,
-			'keyutama' => 'JSncajiopw32jk',
-			'secret_iv' => 'kkopIEnan5698gAN',
-			'ciphermode' => 'AES-256-CBC'
-		);
+			$config = array(
+						'digitdepan' => 7,
+						'digitbelakang' => 5,
+						'keyutama' => 'kf8jaJKH8a3',
+						'secret_iv' => 'PKs84j9kkk63',
+						'ciphermode' => 'AES-256-CBC'
+					);
 		if(!$value){return false;}
 		$skey = self::parsekey($value);
 		$jumlah = strlen($value);
@@ -272,13 +271,13 @@ class MyHelper{
 	}
 	
 	public static function encryptkhususnew($value) {
-		$config = array(
-			'digitdepan' => 7,
-			'digitbelakang' => 5,
-			'keyutama' => 'JSncajiopw32jk',
-			'secret_iv' => 'kkopIEnan5698gAN',
-			'ciphermode' => 'AES-256-CBC'
-		);
+			$config = array(
+						'digitdepan' => 7,
+						'digitbelakang' => 5,
+						'keyutama' => 'kf8jaJKH8a3',
+						'secret_iv' => 'PKs84j9kkk63',
+						'ciphermode' => 'AES-256-CBC'
+					);
 		if(!$value){return false;}
 		$skey = self::getkey();
 		$depan = substr($skey, 0, $config['digitdepan']);
@@ -290,13 +289,13 @@ class MyHelper{
 	}
 
 	public static function decryptkhususnew($value) {
-		$config = array(
-			'digitdepan' => 7,
-			'digitbelakang' => 5,
-			'keyutama' => 'JSncajiopw32jk',
-			'secret_iv' => 'kkopIEnan5698gAN',
-			'ciphermode' => 'AES-256-CBC'
-		);
+			$config = array(
+						'digitdepan' => 7,
+						'digitbelakang' => 5,
+						'keyutama' => 'kf8jaJKH8a3',
+						'secret_iv' => 'PKs84j9kkk63',
+						'ciphermode' => 'AES-256-CBC'
+					);
 		if(!$value){return false;}
 		$skey = self::parsekey($value);
 		$jumlah = strlen($value);
@@ -307,16 +306,16 @@ class MyHelper{
 		$decrypttext = openssl_decrypt($crypttext, $config['ciphermode'], $skey, 0, $iv);
 		return trim($decrypttext);
 	}
-
-	// terbaru, cuma nambah serialize + unserialize sih biar support array
+	
+// terbaru, cuma nambah serialize + unserialize sih biar support array
 	public static function encrypt2019($value) {
 		$config = array(
-			'digitdepan' => 7,
-			'digitbelakang' => 5,
-			'keyutama' => 'JSncajiopw32jk',
-			'secret_iv' => 'kkopIEnan5698gAN',
-			'ciphermode' => 'AES-256-CBC'
-		);
+						'digitdepan' => 7,
+						'digitbelakang' => 5,
+						'keyutama' => 'JSncajiopw32jk',
+						'secret_iv' => 'kkopIEnan5698gAN',
+						'ciphermode' => 'AES-256-CBC'
+					);
 		if(!$value){return false;}
 		// biar support array
 		$text = serialize($value);
@@ -330,13 +329,13 @@ class MyHelper{
 	}
 
 	public static function decrypt2019($value) {
-		$config = array(
-			'digitdepan' => 7,
-			'digitbelakang' => 5,
-			'keyutama' => 'JSncajiopw32jk',
-			'secret_iv' => 'kkopIEnan5698gAN',
-			'ciphermode' => 'AES-256-CBC'
-		);
+	$config = array(
+						'digitdepan' => 7,
+						'digitbelakang' => 5,
+						'keyutama' => 'JSncajiopw32jk',
+						'secret_iv' => 'kkopIEnan5698gAN',
+						'ciphermode' => 'AES-256-CBC'
+					);
 		if(!$value){return false;}
 		$skey = self::parsekey($value);
 		$jumlah = strlen($value);
@@ -478,7 +477,7 @@ class MyHelper{
 		 }
 	}
 
-	public static function uploadPhoto($foto, $path, $resize=800, $name=null) {
+	public static function uploadPhoto($foto, $path, $resize=1000, $name=null) {
 			// kalo ada foto
 			$decoded = base64_decode($foto);
 
@@ -499,29 +498,18 @@ class MyHelper{
 			$width  = $img->width();
 			$height = $img->height();
 
-			// resize hanya height nya krn foto sekarang berdiri
-			if($height > 800){
-					$img->resize(null, 800, function ($constraint) {
+
+			if($width > 1000){
+					$img->resize(1000, null, function ($constraint) {
 							$constraint->aspectRatio();
 							$constraint->upsize();
 					});
 			} 
-			// if($width > 1000){
-			// 		$img->resize(1000, null, function ($constraint) {
-			// 				$constraint->aspectRatio();
-			// 				$constraint->upsize();
-			// 		});
-			// } 
 			
 			$img->resize($resize, null, function ($constraint) {
 				$constraint->aspectRatio();
 			});
-
 			
-			// $resource = $img->stream()->detach();
-
-			// $save = Storage::disk('s3')->put($upload, $resource, 'public');
-
 			if ($img->save($upload)) {
 					$result = [
 						'status' => 'success',
@@ -618,7 +606,7 @@ class MyHelper{
 			return $result;
 	}
 
-	public static function uploadPhotoStrict($foto, $path, $width=800, $height=800, $name=null, $forceextension=null) {
+	public static function uploadPhotoStrict($foto, $path, $width=1000, $height=1000, $name=null, $forceextension=null) {
 			// kalo ada foto1
 			$decoded = base64_decode($foto);
 			if($forceextension != null)
@@ -635,6 +623,7 @@ class MyHelper{
 			$upload = $path.$pictName;
 
 			$img = Image::make($decoded);
+
 			$imgwidth = $img->width();
 			$imgheight = $img->height();
 
@@ -700,10 +689,6 @@ class MyHelper{
 		
 			$img->crop($width, $height);
 
-			// $resource = $img->stream()->detach();
-
-			// $save = Storage::disk('s3')->put($upload, $resource, 'public');
-
 			if ($img->save($upload)) {
 					$result = [
 						'status' => 'success',
@@ -750,18 +735,6 @@ class MyHelper{
 	}
 
 	public static function deletePhoto($path) {
-		// if(Storage::disk('s3')->exists($path)) {
-		// 	if(Storage::disk('s3')->delete($path)){
-		// 		return true;
-		// 	}
-		// 	else {
-		// 		return false;
-		// 	}
-		// }
-		// else {
-		// 	return true;
-		// }
-
 		if (file_exists($path)) {
 			if (unlink($path)) {
 				return true;
@@ -1570,7 +1543,7 @@ class MyHelper{
 
 	public static function dateFormatInd($date){
 		$bulan = ['','Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
-		
+
 		return date('d', strtotime($date)).' '.$bulan[date('n', strtotime($date))].' '.date('Y', strtotime($date)).' '.date('H:i', strtotime($date));
 	}
 }

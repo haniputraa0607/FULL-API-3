@@ -22,6 +22,7 @@ class ApiWebviewUser extends Controller
 {
     function __construct() {
         date_default_timezone_set('Asia/Jakarta');
+        $this->membership    = "Modules\Membership\Http\Controllers\ApiMembership";
     }
     
     // update profile, point, balance
@@ -101,6 +102,8 @@ class ApiWebviewUser extends Controller
                     'messages' => 'Failed to save data'
                 ];
             }
+            
+            $checkMembership = app($this->membership)->calculateMembership($user->phone);
         DB::commit();
         // get user profile success page content
         $success_page = Setting::where('key', 'complete_profile_success_page')->get()->pluck('value_text');

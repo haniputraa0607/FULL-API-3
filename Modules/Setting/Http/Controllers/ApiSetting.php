@@ -58,7 +58,7 @@ class ApiSetting extends Controller
     
     function __construct() {
         date_default_timezone_set('Asia/Jakarta');
-        $this->endPoint = env('APP_API_URL');
+        $this->endPoint = env('AWS_URL');
     }
     public function emailUpdate(Request $request) {
 		$data = $request->json()->all();
@@ -1134,7 +1134,7 @@ class ApiSetting extends Controller
                     $setting['version_text_alert'] = str_replace('%version_app%', $setting['version_android'], $setting['version_text_alert']);
 					if($setting['version_rule_android'] != 'allow'){
 						return response()->json(['status' => 'fail', 
-												'image' => env('AWS_URL').$setting['version_image'],
+                    							'image' => env('AWS_URL').$setting['version_image'],
 												'text' => $setting['version_text_alert'],
 												'button_text' => $setting['version_text_button'],
 												'button_url' => $setting['version_playstore']]);
@@ -1150,8 +1150,8 @@ class ApiSetting extends Controller
 				if($post['version'] != $compare_version){
 					if($setting['version_rule_ios'] != 'allow'){
                         $setting['version_text_alert'] = str_replace('%version_app%', $setting['version_ios'], $setting['version_text_alert']);
-                        return response()->json(['status' => 'fail', 
-                                                'image' => env('AWS_URL').$setting['version_image'],
+						return response()->json(['status' => 'fail', 
+                        						'image' => env('AWS_URL').$setting['version_image'],
 												'text' => $setting['version_text_alert'],
 												'button_text' => $setting['version_text_button'],
 												'button_url' => $setting['version_appstore']]);
@@ -1167,8 +1167,8 @@ class ApiSetting extends Controller
 				if($post['version'] != $compare_version){
 					if($setting['version_rule_outletapp'] != 'allow'){
                         $setting['version_text_alert'] = str_replace('%version_app%', $setting['version_outletapp'], $setting['version_text_alert']);
-                        return response()->json(['status' => 'fail',
-                                                'image' => env('AWS_URL').$setting['version_image'], 
+						return response()->json(['status' => 'fail', 
+                    							'image' => env('AWS_URL').$setting['version_image'],
 												'text' => $setting['version_text_alert'],
 												'button_text' => $setting['version_text_button'],
 												'button_url' => $setting['version_outletstore']]);
@@ -1199,6 +1199,7 @@ class ApiSetting extends Controller
 
         DB::beginTransaction();
         foreach($post as $key => $data){
+            
             if($key == 'version_image'){
                 if (!file_exists('img/setting/version/')) {
                     mkdir('img/setting/version/', 0777, true);
@@ -1210,6 +1211,7 @@ class ApiSetting extends Controller
                     return false;
                 }
             }
+            
             $setting = Setting::updateOrCreate(['key' => $key], ['value' => $data]);
             if(!$setting){
                 DB::rollBack();
@@ -1219,5 +1221,17 @@ class ApiSetting extends Controller
 
         DB::commit();
         return response()->json(['status' => 'success']);
+    }
+    
+    public function viewTOS(){
+        $setting = Setting::where('key', 'tos')->first();
+        if($setting && $setting['value_text']){
+            $data['value'] =preg_replace('/font face="[^;"]*(")?/', 'div class="seravek-light-font"' , $setting['value_text']);
+        }else{
+             $data['value'] = "";
+        }
+            
+        return view('setting::tos', $data);
+
     }
 }

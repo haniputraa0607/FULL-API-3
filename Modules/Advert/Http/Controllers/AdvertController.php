@@ -62,7 +62,7 @@ class AdvertController extends Controller
         }
         
         $advert = $newAdv;
-
+        // dd(MyHelper::encrypt2019($advert));
         return response()->json(MyHelper::checkGet($advert));
     }
 

@@ -16,19 +16,19 @@ return [
      * Domain name registered with Mailgun
      *
      */
-    'domain' => 'staging.co.id',
+    'domain' => env('MAILGUN_DOMAIN'),
 
     /*
      * Mailgun (private) API key
      *
      */
-    'api_key' => 'key-cfacffad0d3bf5dde6cbd3df60daf168',
+    'api_key' => env('MAILGUN_SECRET'),
 
     /*
      * Mailgun public API key
      *
      */
-    'public_api_key' => 'pubkey-d64f01596ff913dc14c4398015b9545e',
+    'public_api_key' => env('MAILGUN_PUBLIC_KEY'),
 
     /*
      * You may wish for all e-mails sent with Mailgun to be sent from

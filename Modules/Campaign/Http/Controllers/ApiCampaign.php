@@ -422,7 +422,7 @@ class ApiCampaign extends Controller
 					$receipient_sms = explode(',', str_replace(' ', ',', str_replace(';', ',', $campaign['campaign_sms_receipient'])));
 				
 					$senddata = array(
-						'apikey' => 'd49091c827903ef28a07cca2c4e99064',  
+						'apikey' => env('SMS_KEY'),  
 						'callbackurl' => env('APP_URL'), 
 						'datapacket'=>array()
 					);
@@ -482,8 +482,8 @@ class ApiCampaign extends Controller
 							$dataOptional          = [];
 							$image = null;
 							if (isset($campaign['campaign_push_image']) && $campaign['campaign_push_image'] != null) {
-								$dataOptional['image'] = env('APP_API_URL').$campaign['campaign_push_image'];
-								$image = env('APP_API_URL').$campaign['campaign_push_image'];
+								$dataOptional['image'] = env('AWS_URL').$campaign['campaign_push_image'];
+								$image = env('AWS_URL').$campaign['campaign_push_image'];
 							}
 							
 							if (isset($campaign['campaign_push_clickto']) && $campaign['campaign_push_clickto'] != null) {
@@ -1014,7 +1014,7 @@ class ApiCampaign extends Controller
 		$smsQueues = CampaignSmsQueue::where('sms_queue_send_at', '<=', $now)->orderBy('sms_queue_send_at', 'ASC')->limit(10)->get();
 		foreach ($smsQueues as $key => $smsQueue) {
 			$senddata = array(
-				'apikey' => 'd49091c827903ef28a07cca2c4e99064',  
+				'apikey' => env('SMS_KEY'),  
 				'callbackurl' => env('APP_URL'), 
 				'datapacket'=>array()
 			);
@@ -1059,8 +1059,8 @@ class ApiCampaign extends Controller
 			$image 			= null;
 
 			if (isset($pushQueue['campaign']['campaign_push_image']) && $pushQueue['campaign']['campaign_push_image'] != null) {
-				$dataOptional['image'] = env('APP_API_URL').$pushQueue['campaign']['campaign_push_image'];
-				$image = env('APP_API_URL').$pushQueue['campaign']['campaign_push_image'];
+				$dataOptional['image'] = env('AWS_URL').$pushQueue['campaign']['campaign_push_image'];
+				$image = env('AWS_URL').$pushQueue['campaign']['campaign_push_image'];
 			}
 			
 			if (isset($pushQueue['campaign']['campaign_push_clickto']) && $pushQueue['campaign']['campaign_push_clickto'] != null) {
@@ -1256,7 +1256,7 @@ class ApiCampaign extends Controller
 				if(count($contentOld) > 0){
 					foreach($contentOld as $old){
 						if($old['content_type'] == 'image' || $old['content_type'] == 'file'){
-							$del = MyHelper::deletePhoto(str_replace(env('APP_API_URL'), '', $old['content']));
+							$del = MyHelper::deletePhoto(str_replace(env('AWS_URL'), '', $old['content']));
 						}
 					}
 
@@ -1291,7 +1291,7 @@ class ApiCampaign extends Controller
 							//upload file
 							$upload = MyHelper::uploadPhoto($content['content'], $path = 'whatsapp/img/campaign/');
 							if ($upload['status'] == "success") {
-								$content['content'] = env('APP_API_URL').$upload['path'];
+								$content['content'] = env('AWS_URL').$upload['path'];
 							} else{
 								DB::rollBack();
 								$result = [
@@ -1315,7 +1315,7 @@ class ApiCampaign extends Controller
 	
 							$upload = MyHelper::uploadFile($content['content'], $path = 'whatsapp/file/campaign/', $content['content_file_ext'], $content['content_file_name']);
 							if ($upload['status'] == "success") {
-								$content['content'] = env('APP_API_URL').$upload['path'];
+								$content['content'] = env('AWS_URL').$upload['path'];
 							} else{
 								DB::rollBack();
 								$result = [
