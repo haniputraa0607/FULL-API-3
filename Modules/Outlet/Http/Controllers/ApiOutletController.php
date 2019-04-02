@@ -652,11 +652,6 @@ class ApiOutletController extends Controller
                         'id_outlet' => $value['id_outlet'],
                         'url' => $value['url'],
                         'today' => $value['today'],
-                        // 'outlet_name' => $value['outlet_name'],
-                        // 'outlet_address' => $value['outlet_address'],
-                        // 'outlet_phone' => $value['outlet_phone'],
-                        // 'url' => $value['url'],
-                        // 'city_name' => $value['city']['city_name'],
                         'distance' => $value['distance'],
                         'dist' => $value['dist']
                     ),
@@ -664,7 +659,7 @@ class ApiOutletController extends Controller
             };   
 
         $allfeatures = array('type' => 'FeatureCollection', 'features' => $features);
-        
+
         // write into file
         // Storage::disk('s3')->put('stations.geojson', json_encode($allfeatures));
         Storage::disk('public_custom')->put('stations.geojson', json_encode($allfeatures));
@@ -783,15 +778,14 @@ class ApiOutletController extends Controller
         $distance = $request->json('distance');
         $id_city = $request->json('id_city');
         $sort = $request->json('sort');
-        
+
         // outlet
         $outlet = Outlet::with(['today', 'city', 'outlet_photos'])->where('outlet_status', 'Active')->whereNotNull('id_city')->orderBy('outlet_name','asc');
         if($request->json('search') && $request->json('search') != ""){
             $outlet = $outlet->where('outlet_name', 'LIKE', '%'.$request->json('search').'%');
         }
         $outlet = $outlet->get()->toArray();
-        
-        
+
         if (!empty($outlet)) {
             foreach ($outlet as $key => $value) {
                 $jaraknya =   number_format((float)$this->distance($latitude, $longitude, $value['outlet_latitude'], $value['outlet_longitude'], "K"), 2, '.', '');
@@ -869,7 +863,7 @@ class ApiOutletController extends Controller
             // format result into geojson
             $urutan = $this->geoJson($urutan);
         }
-        
+         
         $geojson_file_url = env('API_URL') . 'files/stations.geojson' . '?';
 
         if($urutan && !empty($urutan)) return ['status' => 'success', 'result' => $urutan, 'url'=>$geojson_file_url];
