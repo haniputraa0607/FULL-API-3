@@ -352,7 +352,7 @@ class ApiMembership extends Controller
 											->sum('transaction_subtotal');
 
 					$total_balance = LogBalance::where('id_user',$check['id'])
-											->whereNotIn('source', ['Rejected Order', 'Reversal'])
+											->whereNotIn('source', ['Rejected Order', 'Rejected Order Midtrans', 'Rejected Order Point', 'Reversal'])
 											->where('balance', '>', 0)
 											->whereDate('created_at','>=',$date_start)
 											->whereDate('created_at','<=', date('Y-m-d', strtotime($check['retain_date'])))
@@ -480,7 +480,7 @@ class ApiMembership extends Controller
 
 					$total_balance = LogBalance::where('id_user',$check['id'])
 											->where('balance', '>', 0)
-											->whereNotIn('source', ['Rejected Order', 'Reversal'])
+											->whereNotIn('source', ['Rejected Order', 'Rejected Order Midtrans', 'Rejected Order Point', 'Reversal'])
 											->sum('balance');
 
 					//update user count & subtotal transaction
@@ -531,7 +531,7 @@ class ApiMembership extends Controller
 										->where('transaction_payment_status', 'Completed')
 										->sum('transaction_subtotal');
 
-				$total_balance = LogBalance::whereNotIn('source', ['Rejected Order', 'Reversal'])
+				$total_balance = LogBalance::whereNotIn('source', ['Rejected Order', 'Rejected Order Midtrans', 'Rejected Order Point', 'Reversal'])
 											->where('balance', '>', 0)
 											->where('id_user',$check['id'])->sum('balance');
 
@@ -748,7 +748,7 @@ class ApiMembership extends Controller
 									->sum('transaction_subtotal');
 
 			$total_balance = LogBalance::where('id_user', $datauser->id)
-										->whereNotIn('source', ['Rejected Order', 'Reversal'])
+										->whereNotIn('source', ['Rejected Order', 'Rejected Order Midtrans', 'Rejected Order Point', 'Reversal'])
 										->where('balance', '>', 0)
 										->sum('balance');
 

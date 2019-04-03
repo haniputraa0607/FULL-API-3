@@ -113,7 +113,7 @@ Route::group(['middleware' => ['auth_client', 'log_request'], 'prefix' => 'api/s
     Route::post('/version/update', 'ApiSetting@updateVersion');
 });
 
-Route::group(['prefix' => 'api/setting', 'middleware' => 'log_request', 'namespace' => 'Modules\Setting\Http\Controllers'], function()
+Route::group(['prefix' => 'api/setting', 'middleware' => ['auth:api', 'log_request'], 'namespace' => 'Modules\Setting\Http\Controllers'], function()
 {
     Route::get('/faq', 'ApiSetting@faqList');
     Route::post('webview', 'ApiSetting@settingWebview');
@@ -126,5 +126,5 @@ Route::group(['prefix' => 'api/setting', 'middleware' => 'log_request', 'namespa
 
 Route::group(['namespace' => 'Modules\Setting\Http\Controllers'], function()
 {
-    Route::any('term-of-service', 'ApiSetting@viewTOS');
+    Route::any('terms-of-service', 'ApiSetting@viewTOS');
 });

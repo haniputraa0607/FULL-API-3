@@ -34,7 +34,3 @@ Route::group(['middleware' => ['auth:api', 'log_request'], 'prefix' => 'api/v1/p
 {
     Route::post('topup/generate', 'NewTopupController@generateCode');
 });
-Route::group(['prefix' => 'api/balance/cron', 'namespace' => 'Modules\Balance\Http\Controllers'], function()
-{
-    Route::any('', 'ApiCronBalanceController@cekLogBalance');
-});
