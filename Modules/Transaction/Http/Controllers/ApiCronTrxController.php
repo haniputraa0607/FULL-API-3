@@ -138,7 +138,7 @@ class ApiCronTrxController extends Controller
                         
                         $to      = $email;
                         
-                        $content = $crm['autocrm_forward_email_content'];
+                        $content = str_replace('%table_trx%', '', $crm['autocrm_forward_email_content']);
 
                         $content .= $this->html($result);
                         // return response()->json($this->html($result));
