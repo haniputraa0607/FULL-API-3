@@ -428,10 +428,7 @@ class ApiNotification extends Controller {
             $insertDataLog = LogPoint::updateOrCreate(['id_reference' => $data['id_transaction'], 'source' => 'Transaction'], $dataLog);
             if (!$insertDataLog) {
                 DB::rollback();
-                return response()->json([
-                    'status'    => 'fail',
-                    'messages'  => ['Insert Point Failed']
-                ]);
+                return false;
             }
 
             //update point user
@@ -445,10 +442,7 @@ class ApiNotification extends Controller {
                 $insertDataLogCash = app($this->balance)->addLogBalance( $data['id_user'], $data['transaction_cashback_earned'], $data['id_transaction'], 'Transaction', $data['transaction_grandtotal']);
                 if (!$insertDataLogCash) {
                     DB::rollback();
-                    return response()->json([
-                        'status'    => 'fail',
-                        'messages'  => ['Insert Cashback Failed']
-                    ]);
+                    return false;
                 }
             }
         }

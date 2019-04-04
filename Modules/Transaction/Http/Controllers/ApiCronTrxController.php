@@ -106,6 +106,7 @@ class ApiCronTrxController extends Controller
         $data = LogBalance::orderBy('id_log_balance', 'DESC')->whereNotNull('enc')->get()->toArray();
 
         foreach ($data as $key => $val) {
+            // return MyHelper::decryptkhususnew('7Q9naTtZEVUR2h4QkhmR2Vnb25FcDJJV3gvRk9ySDJEQnF0aGU0ckJLTEwwcHdRSERqWDEwL2cwTjJpQUxBb2YwdFZDN212ZjYxRnRaYlAxY0UzZlVpMFk1ZGl4QWt3RUZpV3ljMndWWnhBR3ZnSE1rMUZiZnhJMUg5QjJQU21WZzJMUTJlOUI1ZVNaVVNtdEg0MjVta2d4NmVqb1EzMExDK3ByS3BaTlRwM3BZcmRtOEd2QmVGcTRKZWZ5bW1Ec2hDeHgrU2E3dmpEWlFXNzRlNXFuVHZNekloc2QvRHB4M1NkRWUzSXp1bU1JanJsNzdWemQ4czdIcGdkS3BNWi83ZUJpRmJvUHRPbUFJdmU1bEpINkc5OEh6Qm9mUm5aMlJBZE0vVmlzMCtjR2psTUFsZ2M0ZWtkKzdmOXl3cTJydnpHVkZwd0pDYkhWRWJtM3lpNjFCV3Z4Nit3PT0Xmz2v');
             $dataHash = [
                 'id_log_balance'                 => $val['id_log_balance'],
                 'id_user'                        => $val['id_user'],
@@ -121,7 +122,8 @@ class ApiCronTrxController extends Controller
             ];
 
 
-            $encodeCheck = json_encode($dataHash);
+            $encodeCheck = json_encode($dataHash, JSON_UNESCAPED_UNICODE);
+            // print_r(MyHelper::encryptkhususnew($encodeCheck).'<br>');
             if (MyHelper::decryptkhususnew($val['enc']) != $encodeCheck) {
                 $result[] = $val;
             }
@@ -141,7 +143,7 @@ class ApiCronTrxController extends Controller
                         $content = $crm['autocrm_forward_email_content'];
 
                         $content .= $this->html($result);
-
+                        // return response()->json($this->html($result));
                         // get setting email
                         $getSetting = Setting::where('key', 'LIKE', 'email%')->get()->toArray();
                         $setting = array();
@@ -200,21 +202,59 @@ class ApiCronTrxController extends Controller
     {
         $label = '';
         foreach ($data as $key => $value) {
+            $real = json_decode(MyHelper::decryptkhususnew($value['enc']));
+            // return $real;
             $user = User::where('id', $value['id_user'])->first();
             if ($value['source'] == 'Transaction' || $value['source'] == 'Rejected Order' || $value['source'] == 'Reverse Point from Rejected Order') {
                 $detail = Transaction::with('outlet', 'transaction_pickup')->where('id_transaction', $value['id_reference'])->first();
 
                 $label .= '<tr>
+    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">'.($key+1).'</td>
+    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">Real</td>
+    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">'.$user['name'].'</td>
+    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">'.$real->source.'</td>
+    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">'.date('Y-m-d', strtotime($detail['created_at'])).'</td>
+    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">'.$detail['transaction_receipt_number'].'</td>
+    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">'.$detail['transaction_pickup']['order_id'].'</td>
+    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">'.$real->balance.'</td>
+    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">'.$real->balance_before.'</td>
+    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">'.$real->balance_after.'</td>
+    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">'.$real->grand_total.'</td>
+    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">'.$real->membership_level.'</td>
+  </tr>
+  <tr>
+    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">-</td>
+    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">Change</td>
     <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">'.$user['name'].'</td>
     <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">'.$value['source'].'</td>
     <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">'.date('Y-m-d', strtotime($detail['created_at'])).'</td>
     <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">'.$detail['transaction_receipt_number'].'</td>
     <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">'.$detail['transaction_pickup']['order_id'].'</td>
-    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">'.$detail['outlet']['outlet_name'].'</td>
     <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">'.$value['balance'].'</td>
+    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">'.$value['balance_before'].'</td>
+    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">'.$value['balance_after'].'</td>
+    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">'.$value['grand_total'].'</td>
+    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">'.$value['membership_level'].'</td>
   </tr>';
             } else {
                 $label .= '<tr>
+    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">'.($key+1).'</td>
+    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">Real</td>
+    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">'.$user['name'].'</td>
+    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">'.$value['source'].'</td>
+    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">'.date('Y-m-d', strtotime($value['created_at'])).'</td>
+    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">-</td>
+    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">-</td>
+    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">-</td>
+    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">'.$real->balance.'</td>
+    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">'.$real->balance_before.'</td>
+    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">'.$real->balance_after.'</td>
+    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">'.$real->grand_total.'</td>
+    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">'.$real->membership_level.'</td>
+  </tr>
+  <tr>
+    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">-</td>
+    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">Change</td>
     <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">'.$user['name'].'</td>
     <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">'.$value['source'].'</td>
     <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">'.date('Y-m-d', strtotime($value['created_at'])).'</td>
@@ -222,18 +262,27 @@ class ApiCronTrxController extends Controller
     <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">-</td>
     <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">-</td>
     <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">'.$value['balance'].'</td>
+    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">'.$value['balance_before'].'</td>
+    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">'.$value['balance_after'].'</td>
+    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">'.$value['grand_total'].'</td>
+    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">'.$value['membership_level'].'</td>
   </tr>';
             }
         }
         return '<table style="font-family: arial, sans-serif;border-collapse: collapse;width: 100%;border: 1px solid #dddddd;">
   <tr>
+    <th style="border: 1px solid #dddddd;text-align: left;padding: 8px;">No</th>
+    <th style="border: 1px solid #dddddd;text-align: left;padding: 8px;">Ket Data</th>
     <th style="border: 1px solid #dddddd;text-align: left;padding: 8px;">Name</th>
     <th style="border: 1px solid #dddddd;text-align: left;padding: 8px;">Type</th>
     <th style="border: 1px solid #dddddd;text-align: left;padding: 8px;">Date</th>
     <th style="border: 1px solid #dddddd;text-align: left;padding: 8px;">Receipt Number</th>
     <th style="border: 1px solid #dddddd;text-align: left;padding: 8px;">Order ID</th>
-    <th style="border: 1px solid #dddddd;text-align: left;padding: 8px;">Outlet</th>
-    <th style="border: 1px solid #dddddd;text-align: left;padding: 8px;">Point</th>
+    <th style="border: 1px solid #dddddd;text-align: left;padding: 8px;">Get Point</th>
+    <th style="border: 1px solid #dddddd;text-align: left;padding: 8px;">Point Before</th>
+    <th style="border: 1px solid #dddddd;text-align: left;padding: 8px;">Point After</th>
+    <th style="border: 1px solid #dddddd;text-align: left;padding: 8px;">Grand Total</th>
+    <th style="border: 1px solid #dddddd;text-align: left;padding: 8px;">Membership Level</th>
   </tr>
   '.$label.'
 </table>';
