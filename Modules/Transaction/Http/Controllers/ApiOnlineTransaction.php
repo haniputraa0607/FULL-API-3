@@ -28,6 +28,8 @@ use App\Http\Models\Configs;
 use App\Http\Models\Holiday;
 use App\Http\Models\OutletToken;
 
+use Modules\Balance\Http\Controllers\NewTopupController;
+
 use GuzzleHttp\Exception\GuzzleException;
 use GuzzleHttp\Client;
 use Guzzle\Http\EntityBody;
@@ -480,6 +482,17 @@ class ApiOnlineTransaction extends Controller
             'longitude'                   => $post['longitude'],
             'void_date'                   => null,
         ];
+
+        $newTopupController = new NewTopupController();
+        $checkHashBefore = $newTopupController->checkHash('log_balances', $id);
+
+        if (!$checkHashBefore) {
+            DB::rollback();
+            return response()->json([
+                'status'    => 'fail',
+                'messages'  => ['Your previous transaction data is invalid']
+            ]);
+        }
 
         $useragent = $_SERVER['HTTP_USER_AGENT'];
         if(stristr($useragent,'iOS')) $useragent = 'IOS';

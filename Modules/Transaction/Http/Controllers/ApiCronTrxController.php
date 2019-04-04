@@ -106,7 +106,6 @@ class ApiCronTrxController extends Controller
         $data = LogBalance::orderBy('id_log_balance', 'DESC')->whereNotNull('enc')->get()->toArray();
 
         foreach ($data as $key => $val) {
-            // return MyHelper::decryptkhususnew('7Q9naTtZEVUR2h4QkhmR2Vnb25FcDJJV3gvRk9ySDJEQnF0aGU0ckJLTEwwcHdRSERqWDEwL2cwTjJpQUxBb2YwdFZDN212ZjYxRnRaYlAxY0UzZlVpMFk1ZGl4QWt3RUZpV3ljMndWWnhBR3ZnSE1rMUZiZnhJMUg5QjJQU21WZzJMUTJlOUI1ZVNaVVNtdEg0MjVta2d4NmVqb1EzMExDK3ByS3BaTlRwM3BZcmRtOEd2QmVGcTRKZWZ5bW1Ec2hDeHgrU2E3dmpEWlFXNzRlNXFuVHZNekloc2QvRHB4M1NkRWUzSXp1bU1JanJsNzdWemQ4czdIcGdkS3BNWi83ZUJpRmJvUHRPbUFJdmU1bEpINkc5OEh6Qm9mUm5aMlJBZE0vVmlzMCtjR2psTUFsZ2M0ZWtkKzdmOXl3cTJydnpHVkZwd0pDYkhWRWJtM3lpNjFCV3Z4Nit3PT0Xmz2v');
             $dataHash = [
                 'id_log_balance'                 => $val['id_log_balance'],
                 'id_user'                        => $val['id_user'],
@@ -123,7 +122,6 @@ class ApiCronTrxController extends Controller
 
 
             $encodeCheck = json_encode($dataHash, JSON_UNESCAPED_UNICODE);
-            // print_r(MyHelper::encryptkhususnew($encodeCheck).'<br>');
             if (MyHelper::decryptkhususnew($val['enc']) != $encodeCheck) {
                 $result[] = $val;
             }
