@@ -121,7 +121,7 @@ class ApiCronTrxController extends Controller
             ];
 
 
-            $encodeCheck = json_encode($dataHash, JSON_UNESCAPED_UNICODE);
+            $encodeCheck = json_encode($dataHash);
             if (MyHelper::decryptkhususnew($val['enc']) != $encodeCheck) {
                 $result[] = $val;
             }
@@ -193,7 +193,11 @@ class ApiCronTrxController extends Controller
             }
         }
 
-        return $result;
+        if (!empty($result)) {
+            return ['status' => 'success', 'data_error' => count($result), 'message' => 'Check your email'];
+        } else {
+            return ['status' => 'success', 'data_error' => count($result)];
+        }
     }
 
     public function html($data)
@@ -201,7 +205,6 @@ class ApiCronTrxController extends Controller
         $label = '';
         foreach ($data as $key => $value) {
             $real = json_decode(MyHelper::decryptkhususnew($value['enc']));
-            // return $real;
             $user = User::where('id', $value['id_user'])->first();
             if ($value['source'] == 'Transaction' || $value['source'] == 'Rejected Order' || $value['source'] == 'Reverse Point from Rejected Order') {
                 $detail = Transaction::with('outlet', 'transaction_pickup')->where('id_transaction', $value['id_reference'])->first();
@@ -239,7 +242,7 @@ class ApiCronTrxController extends Controller
     <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">'.($key+1).'</td>
     <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">Real</td>
     <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">'.$user['name'].'</td>
-    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">'.$value['source'].'</td>
+    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">'.$value->source.'</td>
     <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">'.date('Y-m-d', strtotime($value['created_at'])).'</td>
     <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">-</td>
     <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">-</td>
