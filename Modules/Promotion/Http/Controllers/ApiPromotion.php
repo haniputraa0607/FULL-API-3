@@ -27,6 +27,7 @@ use App\Http\Models\Treatment;
 use App\Http\Models\Setting;
 use App\Http\Models\Transaction;
 use App\Http\Models\WhatsappContent;
+use App\Http\Models\News;
 
 use App\Lib\MyHelper;
 use App\Lib\PushNotificationHelper;
@@ -668,8 +669,8 @@ class ApiPromotion extends Controller
 					}else{
 						$dataDeals['deals_promo_id']	= $dealsTemplate['deals_nominal'];
 					}
-					$dataDeals['deals_title'] = $promotion['promotion_name']." - ".$dealsTemplate['deals_title'];
-					$dataDeals['deals_second_title'] = "Campaign No ".$key;
+					$dataDeals['deals_title'] = $dealsTemplate['deals_title'];
+					$dataDeals['deals_second_title'] = $dealsTemplate['deals_second_title'];
 					$dataDeals['deals_description'] = $dealsTemplate['deals_description'];
 					$dataDeals['deals_short_description'] = $dealsTemplate['deals_short_description'];
 					$dataDeals['deals_image'] = $dealsTemplate['deals_image'];
@@ -1210,7 +1211,8 @@ class ApiPromotion extends Controller
 					$dataDeals['deals_promo_id']	= $dealsTemplate['deals_nominal'];
 				}
 				
-				$dataDeals['deals_title'] = $promotion['promotion_name']." - ".$dealsTemplate['deals_title'];
+				$dataDeals['deals_title'] = $dealsTemplate['deals_title'];
+				$dataDeals['deals_second_title'] = $dealsTemplate['deals_second_title'];
 				$dataDeals['deals_description'] = $dealsTemplate['deals_description'];
 				$dataDeals['deals_short_description'] = $dealsTemplate['deals_short_description'];
 				$dataDeals['deals_image'] = $dealsTemplate['deals_image'];
@@ -1412,7 +1414,7 @@ class ApiPromotion extends Controller
 			$promotions = Promotion::join('promotion_schedules', 'promotions.id_promotion', 'promotion_schedules.id_promotion')
 									->where('promotion_type', '!=', 'Instant Campaign')
 									->where('schedule_time', '<=', $timeNow)
-									->where('schedule_time', '>=', $timeNow2)
+									->where('schedule_time', '>', $timeNow2)
 									->where(function ($query) {
 										$query->where('schedule_exact_date', '=', date('Y-m-d'))
 										->orWhere('schedule_date_every_month', '=', date('d'))
@@ -1663,7 +1665,7 @@ class ApiPromotion extends Controller
 			}
 
 			$hash = base64_encode($user['id'].'|'.$promotionContent['id_promotion_content'].'|'.$time);
-			$setting['email_logo'] = Url('api/promotion/display_logo/'.$hash);
+			$setting['email_logo'] = env('API_APP_URL').'api/promotion/display_logo/'.$hash;
 			
 			$data = array(
 				'customer' => $name,
@@ -1760,10 +1762,6 @@ class ApiPromotion extends Controller
 			try {
 				$dataOptional          = [];
 				$image = null;
-				if (isset($promotionContent['promotion_push_image']) && $promotionContentcrm['promotion_push_image'] != null) {
-					$dataOptional['image'] = Url($promotionContent['promotion_push_image']);
-					$image = Url($promotionContent['promotion_push_image']);
-				}
 				
 				if (isset($promotionContent['promotion_push_clickto']) && $promotionContent['promotion_push_clickto'] != null) {
 					$dataOptional['type'] = $promotionContent['promotion_push_clickto'];
@@ -1784,6 +1782,14 @@ class ApiPromotion extends Controller
 					$dataOptional['id_reference'] = (int)$promotionContent['promotion_push_id_reference'];
 				} else{
 					$dataOptional['id_reference'] = 0;
+				}
+
+				if($promotionContent['promotion_push_clickto'] == 'News' && $promotionContent['promotion_push_id_reference'] != null){
+					$news = News::find($promotionContent['promotion_push_id_reference']);
+					if($news){
+						$dataOptional['news_title'] = $news->news_title;
+					}
+					$dataOptional['url'] = env('APP_URL').'news/webview/'.$promotionContent['promotion_push_id_reference'];
 				}
 				
 				$deviceToken = PushNotificationHelper::searchDeviceToken("phone", $user['phone']);
@@ -2002,11 +2008,11 @@ class ApiPromotion extends Controller
 								
 		$emailLogo = Setting::where('key', 'email_logo')->first();
 		if($emailLogo){
-			$imagenya = Url($emailLogo->value);
+			$imagenya = env('AWS_URL').$emailLogo->value;
 		}
 		$img = Image::make($imagenya);
 		$response = $img->response('png');
-        ob_end_clean(); // if I remove this, it does not work
+        // ob_end_clean(); // if I remove this, it does not work
 		return $response;
 
     }

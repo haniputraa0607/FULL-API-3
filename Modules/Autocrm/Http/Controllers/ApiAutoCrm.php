@@ -641,7 +641,13 @@ class ApiAutoCrm extends Controller
 					}
 				}
 				
-				$text = str_replace($replace['keyword'],$replaced, $text);
+				if($replace['keyword'] == "%kenangan_points%"){
+				    $text = str_replace("%point%",number_format($replaced, 0, ',', '.'), $text);
+				    $text = str_replace("%points%",number_format($replaced, 0, ',', '.'), $text);
+				    $text = str_replace($replace['keyword'],number_format($replaced, 0, ',', '.'), $text);
+				}else{
+    				$text = str_replace($replace['keyword'],$replaced, $text);
+				}
 			}
 
 			if(!empty($variables)){

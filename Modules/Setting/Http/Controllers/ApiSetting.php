@@ -1227,6 +1227,7 @@ class ApiSetting extends Controller
         $setting = Setting::where('key', 'tos')->first();
         if($setting && $setting['value_text']){
             $data['value'] =preg_replace('/font face="[^;"]*(")?/', 'div class="seravek-light-font"' , $setting['value_text']);
+            $data['value'] =preg_replace('/face="[^;"]*(")?/', '' , $data['value']);
         }else{
              $data['value'] = "";
         }

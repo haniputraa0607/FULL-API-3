@@ -1114,7 +1114,7 @@ class ApiUser extends Controller
 
 				if($request->json('latitude') && $request->json('longitude')){
 					$userLocation = UserLocation::create([
-						'id_user' => $create['id'],
+						'id_user' => $datauser[0]['id'],
 						'lat' => $request->json('latitude'),
 						'lng' => $request->json('longitude'),
 						'action' => 'Login'

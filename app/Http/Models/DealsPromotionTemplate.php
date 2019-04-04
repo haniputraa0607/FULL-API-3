@@ -22,6 +22,7 @@ class DealsPromotionTemplate extends Model
 		'deals_voucher_value',
 		'deals_voucher_given',
 		'deals_title',
+		'deals_second_title',
 		'deals_description',
 		'deals_short_description',
 		'deals_image',
