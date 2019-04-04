@@ -119,6 +119,14 @@ class ApiOnlineTransaction extends Controller
                     }
                 }
             }
+
+            if($outlet['today']['is_closed'] == '1'){
+                DB::rollback();
+                return response()->json([
+                    'status'    => 'fail',
+                    'messages'  => ['Outlet tutup']
+                ]);  
+            }
     
              if($outlet['today']['close'] && $outlet['today']['close'] != "00:00" && $outlet['today']['open'] && $outlet['today']['open'] != '00:00'){
 

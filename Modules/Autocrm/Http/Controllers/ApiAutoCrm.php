@@ -18,6 +18,7 @@ use App\Http\Models\WhatsappContent;
 use App\Http\Models\UserInbox;
 use App\Http\Models\Setting;
 use App\Http\Models\News;
+use App\Http\Models\UsersMembership;
 
 use App\Lib\MyHelper;
 use App\Lib\PushNotificationHelper;
@@ -630,6 +631,13 @@ class ApiAutoCrm extends Controller
 								$replaced = number_format($replace['default_value'], 2, '.', ',');
 							}
 						}
+					}
+				}
+
+				if($replace['keyword'] == '%level%'){
+					$usermembership = UsersMembership::where('id_user', $user->id)->orderBy('id_log_membership', 'DESC')->first();
+					if($usermembership){
+						$replaced = $usermembership->membership_name;
 					}
 				}
 				

@@ -28,7 +28,7 @@ class ApiBanner extends Controller
 
         // add full url to collection
         $banners = $banners->map(function ($banner, $key) {
-            $banner->image_url = url($banner->image);
+            $banner->image_url = env('AWS_URL').$banner->image;
             return $banner;
         });
         $banners->all();

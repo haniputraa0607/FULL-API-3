@@ -1000,7 +1000,7 @@ class ApiOutletApp extends Controller
                         if($pay['type'] == 'Balance'){
                             $payBalance = TransactionPaymentBalance::find($pay['id_payment']);
                             if($payBalance){
-                                $refund = app($this->balance)->addLogBalance( $order['id_user'], $payBalance['balance_nominal'], $order['id_transaction'], 'Reverse Point from Rejected Order', $order['transaction_grandtotal']);
+                                $refund = app($this->balance)->addLogBalance( $order['id_user'], $payBalance['balance_nominal'], $order['id_transaction'], 'Rejected Order Point', $order['transaction_grandtotal']);
                                 if ($refund == false) {
                                     DB::rollback();
                                     return response()->json([
@@ -1013,7 +1013,7 @@ class ApiOutletApp extends Controller
                         else{
                             $payMidtrans = TransactionPaymentMidtran::find($pay['id_payment']);
                             if($payMidtrans){
-                                $refund = app($this->balance)->addLogBalance( $order['id_user'], $payMidtrans['gross_amount'], $order['id_transaction'], 'Rejected Order', $order['transaction_grandtotal']);
+                                $refund = app($this->balance)->addLogBalance( $order['id_user'], $payMidtrans['gross_amount'], $order['id_transaction'], 'Rejected Order Midtrans', $order['transaction_grandtotal']);
                                 if ($refund == false) {
                                     DB::rollback();
                                     return response()->json([

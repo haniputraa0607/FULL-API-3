@@ -743,7 +743,7 @@ class ApiHistoryController extends Controller
         $listBalance = [];
         
         foreach ($log as $key => $value) {
-            if ($value['source'] == 'Transaction' || $value['source'] == 'Rejected Order' || $value['source'] == "Reverse Point from Rejected Order") {
+            if ($value['source'] == 'Transaction' || $value['source'] == 'Rejected Order'  || $value['source'] == 'Rejected Order Point' || $value['source'] == 'Rejected Order Midtrans' || $value['source'] == 'Reversal') {
                 $trx = Transaction::with('outlet')->where('id_transaction', $value['id_reference'])->first();
                 
                 // return $trx;

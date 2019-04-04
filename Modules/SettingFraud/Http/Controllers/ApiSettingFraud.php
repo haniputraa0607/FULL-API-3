@@ -45,7 +45,7 @@ class ApiSettingFraud extends Controller
         return response()->json(MyHelper::checkUpdate($update));
     }
 
-    function SendFraudDetection($id_fraud_setting, $user, $idTransaction = null, $deviceUser = null, $idLogBalance = null, $dataLogBalance = null){
+    function SendFraudDetection($id_fraud_setting, $user, $idTransaction = null, $deviceUser = null){
         $fraudSetting = FraudSetting::find($id_fraud_setting);
         if(!$fraudSetting){
             return false;
@@ -164,13 +164,6 @@ class ApiSettingFraud extends Controller
             $log['id_device_user'] = $deviceUser['id_device_user'];
         }
         
-        if($idLogBalance){
-            $log['id_log_balance'] = $id_log_balance;
-        }
-        if($dataLogBalance){
-            $log['data_log_balance'] = $dataLogBalance;
-        }
-
         $insertLog = FraudDetectionLog::create($log);
         if(!$insertLog){
              return false;   

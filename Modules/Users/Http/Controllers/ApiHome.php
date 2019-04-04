@@ -84,7 +84,7 @@ class ApiHome extends Controller
                 continue;
             }
 
-            $item['image_url']  = url($value->image);
+            $item['image_url']  = env('AWS_URL').$value->image;
             $item['id_news']    = $value->id_news;
             $item['news_title'] = "";
             $item['url']        = $value->url;

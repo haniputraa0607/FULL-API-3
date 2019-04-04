@@ -26,6 +26,8 @@ class reqMenu extends FormRequest
             'menu.*.name'		=> 'required',
             'menu.*.category'	=> 'required',
             'menu.*.price'	    => 'required',
+            'menu.*.price_base'	=> 'nullable',
+            'menu.*.price_tax'	=> 'nullable',
             'menu.*.status'	    => 'required',
             'menu.*.photo'      => 'nullable|array',
             'menu.*.photo.*.url' => ['nullable', 'url', new UrlImage],
