@@ -40,17 +40,13 @@ use LaravelFCM\Message\PayloadNotificationBuilder;
 use FCM;
 
 class MyHelper{
-	public function __construct() {
-		global $config;
-		
-		$config = array(
+	private static $config = array(
 						'digitdepan' => 7,
 						'digitbelakang' => 5,
 						'keyutama' => 'JSncajiopw32jk',
 						'secret_iv' => 'kkopIEnan5698gAN',
 						'ciphermode' => 'AES-256-CBC'
 					);
-	}
 	
 	public static function  checkGet($data){
 			if($data && !empty($data)) return ['status' => 'success', 'result' => $data];
@@ -212,13 +208,7 @@ class MyHelper{
 	}
 
 	public static function encryptkhusus($value) {
-		$config = array(
-			'digitdepan' => 7,
-			'digitbelakang' => 5,
-			'keyutama' => 'JSncajiopw32jk',
-			'secret_iv' => 'kkopIEnan5698gAN',
-			'ciphermode' => 'AES-256-CBC'
-		);
+		$config = static::$config;
 		if(!$value){return false;}
 		$skey = self::getkey();
 		$depan = substr($skey, 0, $config['digitdepan']);
@@ -231,13 +221,7 @@ class MyHelper{
 	}
 
 	public static function decryptkhusus($value) {
-		$config = array(
-			'digitdepan' => 7,
-			'digitbelakang' => 5,
-			'keyutama' => 'JSncajiopw32jk',
-			'secret_iv' => 'kkopIEnan5698gAN',
-			'ciphermode' => 'AES-256-CBC'
-		);
+		$config = static::$config;
 		if(!$value){return false;}
 		$skey = self::parsekey($value);
 		$jumlah = strlen($value);
@@ -272,13 +256,7 @@ class MyHelper{
 	}
 	
 	public static function encryptkhususnew($value) {
-		$config = array(
-			'digitdepan' => 7,
-			'digitbelakang' => 5,
-			'keyutama' => 'JSncajiopw32jk',
-			'secret_iv' => 'kkopIEnan5698gAN',
-			'ciphermode' => 'AES-256-CBC'
-		);
+		$config = static::$config;
 		if(!$value){return false;}
 		$skey = self::getkey();
 		$depan = substr($skey, 0, $config['digitdepan']);
@@ -290,13 +268,7 @@ class MyHelper{
 	}
 
 	public static function decryptkhususnew($value) {
-		$config = array(
-			'digitdepan' => 7,
-			'digitbelakang' => 5,
-			'keyutama' => 'JSncajiopw32jk',
-			'secret_iv' => 'kkopIEnan5698gAN',
-			'ciphermode' => 'AES-256-CBC'
-		);
+		$config = static::$config;
 		if(!$value){return false;}
 		$skey = self::parsekey($value);
 		$jumlah = strlen($value);
@@ -307,16 +279,10 @@ class MyHelper{
 		$decrypttext = openssl_decrypt($crypttext, $config['ciphermode'], $skey, 0, $iv);
 		return trim($decrypttext);
 	}
-
+	
 	// terbaru, cuma nambah serialize + unserialize sih biar support array
 	public static function encrypt2019($value) {
-		$config = array(
-			'digitdepan' => 7,
-			'digitbelakang' => 5,
-			'keyutama' => 'JSncajiopw32jk',
-			'secret_iv' => 'kkopIEnan5698gAN',
-			'ciphermode' => 'AES-256-CBC'
-		);
+		$config = static::$config;
 		if(!$value){return false;}
 		// biar support array
 		$text = serialize($value);
@@ -330,13 +296,7 @@ class MyHelper{
 	}
 
 	public static function decrypt2019($value) {
-		$config = array(
-			'digitdepan' => 7,
-			'digitbelakang' => 5,
-			'keyutama' => 'JSncajiopw32jk',
-			'secret_iv' => 'kkopIEnan5698gAN',
-			'ciphermode' => 'AES-256-CBC'
-		);
+		$config = static::$config;
 		if(!$value){return false;}
 		$skey = self::parsekey($value);
 		$jumlah = strlen($value);
@@ -424,7 +384,7 @@ class MyHelper{
 	}
 
 	public static function getkey() {
-		global $config;
+		$config = static::$config;
 		$depan = self::createrandom($config['digitdepan']);
 		$belakang = self::createrandom($config['digitbelakang']);
 		$skey = $depan . $config['keyutama'] . $belakang;
@@ -432,7 +392,7 @@ class MyHelper{
 	}
 
 	public static function parsekey($value) {
-		global $config;
+		$config = static::$config;
 		$depan = substr($value, 0, $config['digitdepan']);
 		$belakang = substr($value, -$config['digitbelakang'], $config['digitbelakang']);
 		$skey = $depan . $config['keyutama'] . $belakang;

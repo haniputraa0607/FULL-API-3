@@ -553,7 +553,7 @@ class NewTopupController extends Controller
         }
 
         $check = $className::where('id_user', $id_user)->orderBy('created_at', 'DESC')->first();
-        
+
         if (empty($check) || empty($check['enc'])) {
             return true;
         }
@@ -587,9 +587,8 @@ class NewTopupController extends Controller
                 'membership_cashback_percentage' => $check['membership_cashback_percentage']
             ];
         }
-
+        
         $encodeCheck = json_encode($dataHash);
-
         if (MyHelper::decryptkhususnew($check['enc']) == $encodeCheck) {
             return true;
         }
