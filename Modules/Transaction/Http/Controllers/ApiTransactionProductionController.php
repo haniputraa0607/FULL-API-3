@@ -202,7 +202,13 @@ class ApiTransactionProductionController extends Controller
                     'messages'  => [
                         'Midtrans token is empty. Please try again.'
                     ],
-                    'error' => [$connectMidtrans]
+                    'error' => [$connectMidtrans],
+                    'data' => [
+                        'trx'         => $transaction_details,
+                        'grand_total' => $countGrandTotal,
+                        'product'     => $dataDetailProduct,
+                        'user'        => $dataUser
+                    ]
                 ]);
             }
 
