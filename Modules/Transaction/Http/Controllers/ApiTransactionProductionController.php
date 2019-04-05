@@ -193,7 +193,8 @@ class ApiTransactionProductionController extends Controller
                     'status'    => 'fail',
                     'messages'  => [
                         'Midtrans token is empty. Please try again.'
-                    ]
+                    ],
+                    'error' => [$connectMidtrans]
                 ]);
             }
 
