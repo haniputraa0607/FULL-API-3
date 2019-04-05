@@ -21,6 +21,7 @@ use App\Http\Models\Transaction;
 use App\Http\Models\FraudSetting;
 use App\Http\Models\Setting;
 use App\Http\Models\Feature;
+use App\Http\Models\OauthAccessToken;
 
 use Modules\Users\Http\Requests\users_list;
 use Modules\Users\Http\Requests\users_forgot;
@@ -55,11 +56,11 @@ class ApiUser extends Controller
     }
 	
 	function LogActivityFilter($rule='and', $conditions = null, $order_field='id', $order_method='asc', $skip=0, $take=999999999999){
-		$query = DB::table(env('DB2_DATABASE').'.log_activities as t_log_activities')->select('t_log_activities.*',
+		$query = DB::table('mysql2.'.env('DB2_DATABASE').'.log_activities as t_log_activities')->select('t_log_activities.*',
 													't_users.name',
 													't_users.email'
 													)
-					->leftJoin(env('DB_DATABASE').'.users as t_users','t_users.phone','=','t_log_activities.phone')
+					->leftJoin('mysql.'.env('DB_DATABASE').'.users as t_users','t_users.phone','=','t_log_activities.phone')
 					
 					->orderBy($order_field, $order_method);
 		
@@ -1112,7 +1113,7 @@ class ApiUser extends Controller
 				$result['device'] 	= $device;
 				$result['ip'] 		= $ip;
 
-				if($request->json('latitude') && $request->json('longitude')){
+                if($request->json('latitude') && $request->json('longitude')){
 					$userLocation = UserLocation::create([
 						'id_user' => $datauser[0]['id'],
 						'lat' => $request->json('latitude'),
@@ -1121,7 +1122,7 @@ class ApiUser extends Controller
 					]);
 	
 				}
-
+				
 				if($cekFraud == 0){
 					$updateUserLogin = User::where('phone', $datauser[0]['phone'])->update(['new_login' => '1']);
 				}
@@ -1262,7 +1263,7 @@ class ApiUser extends Controller
 			if(stristr($useragent,'iOS')) $useragent = 'iOS';
 			if(stristr($useragent,'okhttp')) $useragent = 'Android';
 			if(stristr($useragent,'GuzzleHttp')) $useragent = 'Browser';
-				
+
 			$autocrm = app($this->autocrm)->SendAutoCRM('Pin Forgot', $request->json('phone'), 
 																	['pin' => $pin,
 																	'useragent' => $useragent, 
@@ -1339,7 +1340,17 @@ class ApiUser extends Controller
 				$pin 	= bcrypt($request->json('pin_new'));
 				$update = User::where('id','=',$data[0]['id'])->update(['password' => $pin, 'phone_verified' => '1', 'pin_changed' => '1']);
 				if(\Module::collections()->has('Autocrm')) {
-					$autocrm = app($this->autocrm)->SendAutoCRM('Pin Changed', $request->json('phone'));
+				    if($data[0]['first_pin_change'] < 1){
+    					$autocrm = app($this->autocrm)->SendAutoCRM('Pin Changed', $request->json('phone'));
+    					$changepincount = $data[0]['first_pin_change']+1;
+    					$update = User::where('id','=',$data[0]['id'])->update(['first_pin_change' => $changepincount]);
+				    }else{
+						$autocrm = app($this->autocrm)->SendAutoCRM('Pin Changed Forgot Password', $request->json('phone'));
+						
+						$del = OauthAccessToken::join('oauth_access_token_providers', 'oauth_access_tokens.id', 'oauth_access_token_providers.oauth_access_token_id')
+							->where('oauth_access_tokens.user_id', $data[0]['id'])->where('oauth_access_token_providers.provider', 'users')->delete();
+
+				    }
 				}
 				$result = [
 						'status'	=> 'success',
@@ -1910,6 +1921,14 @@ public function log(Request $request)
 		if (isset($post['password_new'])) {
 			$password = bcrypt($post['password_new']);
 			$update = User::where('phone',$post['phone'])->update(['password' => $password]);
+
+			$user = User::where('phone',$post['phone'])->first();
+
+			if($user){
+
+				$del = OauthAccessToken::join('oauth_access_token_providers', 'oauth_access_tokens.id', 'oauth_access_token_providers.oauth_access_token_id')
+				->where('oauth_access_tokens.user_id', $user->id)->where('oauth_access_token_providers.provider', 'users')->delete();
+			}
 
 			return MyHelper::checkUpdate($update);
 		} else {

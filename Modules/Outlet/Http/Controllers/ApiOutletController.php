@@ -19,6 +19,7 @@ use App\Http\Models\UserOutlet;
 use App\Http\Models\Configs;
 use App\Http\Models\OutletSchedule;
 use App\Http\Models\Setting;
+use App\Http\Models\OauthAccessToken;
 
 use App\Lib\MyHelper;
 use Validator;
@@ -359,6 +360,11 @@ class ApiOutletController extends Controller
         $pin = bcrypt($post['outlet_pin']);
         $outlet->outlet_pin = $pin;
         $outlet->save();
+
+        //delete token
+        $del = OauthAccessToken::join('oauth_access_token_providers', 'oauth_access_tokens.id', 'oauth_access_token_providers.oauth_access_token_id')
+                                    ->where('oauth_access_tokens.user_id', $post['id_outlet'])->where('oauth_access_token_providers.provider', 'outlet-app')->delete();
+
         
         return response()->json(MyHelper::checkUpdate($outlet));
     }
