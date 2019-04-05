@@ -225,7 +225,8 @@ class ApiConfirm extends Controller
                     'status'    => 'fail',
                     'messages'  => [
                         'Payment Midtrans Failed.'
-                    ]
+                    ],
+                    'data' => [$connectMidtrans]
                 ]);
             }
 
@@ -255,8 +256,9 @@ class ApiConfirm extends Controller
                 return response()->json([
                     'status'    => 'fail',
                     'messages'  => [
-                        'Payment Midtrans Failed.'
-                    ]
+                        'Payment Midtrans Invalid.'
+                    ],
+                    'data' => [$connectMidtrans]
                 ]);
             }
 
