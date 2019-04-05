@@ -451,7 +451,7 @@ class ApiWebviewController extends Controller
         }
 
         $data   = LogBalance::where('id_log_balance', $id)->first();
-        if ($value['source'] == 'Transaction' || $value['source'] == 'Rejected Order'  || $value['source'] == 'Rejected Order Point' || $value['source'] == 'Rejected Order Midtrans' || $value['source'] == 'Reversal') {
+        if ($data['source'] == 'Transaction' || $data['source'] == 'Rejected Order'  || $data['source'] == 'Rejected Order Point' || $data['source'] == 'Rejected Order Midtrans' || $data['source'] == 'Reversal') {
             $select = Transaction::with(['outlet', 'productTransaction'])->where('id_transaction', $data['id_reference'])->first();
 
             $data['date'] = $select['transaction_date'];

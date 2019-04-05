@@ -126,12 +126,3 @@ Route::group(['prefix' => 'api/cron/transaction', 'namespace' => 'Modules\Transa
     Route::get('/expire', 'ApiCronTrxController@cron');
     Route::get('/schedule', 'ApiCronTrxController@checkSchedule');
 });
-
-Route::group(['prefix' => 'api/transaction', 'namespace' => 'Modules\Transaction\Http\Controllers'], function()
-{
-    Route::get('/data/decript', function() {
-        return response()->json(App\Lib\MyHelper::decryptkhususnew('5Np2FwhTEhHRTJRT3h2SkQ5Z3NBQXBEUlFSUUYybEhoL1hacnpsM0d5UzRUb3BGVUpOQmp3bkwzTlBjUVJYdk5wVlZMZlBqOVZlM3Fzc0R3V05SZkdzakhVN3JVNDNYQ0IvQUZyZHNLVkJRZklvaENxUmhxUFVyTVRQNzJJTTFlSm1menJ6aURLeEx5emM5LzVaNVpoUE5peElLRWxSWUQ0SnFITUFhVXljcDh4Vi9xQlRNSEt6aWlOdnk0Q2RRd1pKbXVPZmR4cDY4VWh4RnV5dUpsN0hsYzdnWUxNeSswdHVLNkFNVXJZSkdTdUNmNFZSeC90Z3Qvd3RCbC9PVG50eUFnK3V1a3Z4WHVjOWdQQzBSUTVMcFZDcThUZndBUGwxVHNBeGpFTy82NGhYbmNhaitGMGNSbW9XTTIyWHJxOWp4QzRpOTlUejdPN3FzUW1sc0EwdEVzYllnPT0zk1P4'));
-        
-        return response()->json(App\Lib\MyHelper::encrypt2019('testing'));
-    });
-});
