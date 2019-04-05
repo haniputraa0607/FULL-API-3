@@ -73,7 +73,8 @@ class User extends Authenticatable
 		'count_transaction',
 		'count_login_failed',
 		'new_login',
-		'pin_changed'
+		'pin_changed',
+		'first_pin_change'
 	];
 
 	public function city()
