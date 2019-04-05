@@ -225,7 +225,8 @@ class ApiTransactionProductionController extends Controller
                     'status'    => 'fail',
                     'messages'  => [
                         'Payment Midtrans Failed.'
-                    ]
+                    ],
+                    'data' => [$connectMidtrans]
                 ]);
             }
 
@@ -248,17 +249,17 @@ class ApiTransactionProductionController extends Controller
             $dataMidtrans['payment'] = $detailPayment;
             $dataMidtrans['midtrans_product'] = $dataDetailProduct;
 
-            $update = Transaction::where('transaction_receipt_number', $post['id'])->update(['trasaction_payment_type' => $post['payment_type']]);
+            // $update = Transaction::where('transaction_receipt_number', $post['id'])->update(['trasaction_payment_type' => $post['payment_type']]);
 
-            if (!$update) {
-                DB::rollback();
-                return response()->json([
-                    'status'    => 'fail',
-                    'messages'  => [
-                        'Payment Midtrans Failed.'
-                    ]
-                ]);
-            }
+            // if (!$update) {
+            //     DB::rollback();
+            //     return response()->json([
+            //         'status'    => 'fail',
+            //         'messages'  => [
+            //             'Payment Midtrans Failed.'
+            //         ]
+            //     ]);
+            // }
 
             DB::commit();
             return response()->json([
