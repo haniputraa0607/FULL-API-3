@@ -485,7 +485,6 @@ class ApiOnlineTransaction extends Controller
 
         $newTopupController = new NewTopupController();
         $checkHashBefore = $newTopupController->checkHash('log_balances', $id);
-
         if (!$checkHashBefore) {
             DB::rollback();
             return response()->json([
