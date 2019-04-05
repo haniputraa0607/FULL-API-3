@@ -49,6 +49,9 @@ class ApiNews extends Controller
         if (isset($post['news_title'])) {
             $data['news_title'] = $post['news_title'];
         }
+        if (isset($post['news_second_title'])) {
+            $data['news_second_title'] = $post['news_second_title'];
+        }
 
         if (isset($post['news_content_short'])) {
             $data['news_content_short'] = $post['news_content_short'];

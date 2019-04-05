@@ -325,7 +325,7 @@ class MyHelper{
 					$chars = "346789abcdefghjkmnpqrstuvwxy";
 				}
 			} else {
-				$chars = "346789ABCDEFGHJKMNPQRSTUVWXY";
+				$chars = "36789BCDEFGHJKMNPQRSTUVWXY";
 			}
 			
 			srand((double)microtime()*1000000);
@@ -360,7 +360,7 @@ class MyHelper{
 			if($custom == 'Angka')
 				$chars = "0123456789";
 			if($custom == 'Besar Angka')
-				$chars = "ABCDEFGHJKLMNPQRSTUVWXYZ123456789";
+				$chars = "BCDEFGHJKLMNPQRSTUVWXYZ12356789";
 			if($custom == 'Kecil Angka')
 				$chars = "abcdefghjkmnpqrstuvwxyz123456789";
 			if($custom == 'Kecil')
