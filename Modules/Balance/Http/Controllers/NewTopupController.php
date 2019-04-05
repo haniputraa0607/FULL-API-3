@@ -592,8 +592,15 @@ class NewTopupController extends Controller
             ];
         }
         
-        $encodeCheck = utf8_encode(json_encode($dataHash));
-        if (MyHelper::decryptkhususnew($check['enc']) == $encodeCheck) {
+        // $encodeCheck = utf8_encode(json_encode($dataHash));
+        
+        // if (MyHelper::decryptkhususnew($check['enc']) == $encodeCheck) {
+        //     return true;
+        // }
+
+        $encodeCheck = base64_encode((json_encode($dataHash)));
+
+        if ($check['enc'] == $encodeCheck) {
             return true;
         }
         // if (Hash::check($encodeCheck, $check['enc'])) {
@@ -678,8 +685,10 @@ class NewTopupController extends Controller
             'membership_cashback_percentage' => $checkUpdateEnc['membership_cashback_percentage']
         ];
 
-        $encodeCheck = utf8_encode(json_encode(($dataHashBalance)));
-        $enc = MyHelper::encryptkhususnew($encodeCheck);
+        // $encodeCheck = utf8_encode(json_encode(($dataHashBalance)));
+        // $enc = MyHelper::encryptkhususnew($encodeCheck);
+        
+        $enc = base64_encode((json_encode($dataHashBalance)));
 
         $checkUpdateEnc->enc = $enc;
         $checkUpdateEnc->update();
