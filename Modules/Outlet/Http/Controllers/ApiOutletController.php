@@ -377,9 +377,12 @@ class ApiOutletController extends Controller
 
         if (isset($post['webview'])) {
             $outlet = Outlet::with(['today']);
+        }elseif(isset($post['admin'])){
+            $outlet = Outlet::with(['user_outlets', 'product_prices'])->select('outlets.id_outlet', 'outlets.outlet_code', 'outlets.outlet_name'); 
+        
         }
         else {
-            $outlet = Outlet::with(['city', 'outlet_photos', 'outlet_schedules', 'today']);
+            $outlet = Outlet::with(['city', 'outlet_photos', 'outlet_schedules', 'today', 'user_outlets']);
         }
         
         if (isset($post['outlet_code'])) {
@@ -392,10 +395,6 @@ class ApiOutletController extends Controller
 
         if (isset($post['id_city'])) {
             $outlet->where('id_city',$post['id_city']); 
-        }
-
-        if (isset($post['admin'])){
-            $outlet->with(['user_outlets', 'product_prices.product']); 
         }
 
         $useragent = $_SERVER['HTTP_USER_AGENT'];

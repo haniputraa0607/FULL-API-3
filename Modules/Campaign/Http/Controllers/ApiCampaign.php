@@ -514,6 +514,13 @@ class ApiCampaign extends Controller
 								}
 								$dataOptional['url'] = env('APP_URL').'news/webview/'.$campaign['campaign_push_id_reference'];
 							}
+
+							if($campaign['campaign_push_clickto'] == 'Order' && $campaign['campaign_push_id_reference'] != null){
+								$outlet = Outlet::find($campaign['campaign_push_id_reference']);
+								if($outlet){
+									$dataOptional['news_title'] = $outlet->outlet_name;
+								}
+							}
 							
 							$deviceToken = PushNotificationHelper::searchDeviceToken("phone", $receipient);
 							
@@ -584,6 +591,7 @@ class ApiCampaign extends Controller
 						if(!empty($campaign['campaign_inbox_id_reference'])){
 							$inbox['inboxes_id_reference'] = $campaign['campaign_inbox_id_reference'];
 						}
+						
 						$inbox['inboxes_send_at'] = date("Y-m-d H:i:s");
 						$inbox['created_at'] = date("Y-m-d H:i:s");
 						$inbox['updated_at'] = date("Y-m-d H:i:s");
@@ -691,9 +699,9 @@ class ApiCampaign extends Controller
 
 	public function insertQueue(){
 		$now = date('Y-m-d H:i:00');
-		// $now2 = date('Y-m-d H:i:00', strtotime('-5 minutes'));
+		$now2 = date('Y-m-d H:i:00', strtotime('-5 minutes'));
 
-		$campaigns = Campaign::where('campaign_send_at', '<=', $now)->where('campaign_is_sent', 'No')->get();
+		$campaigns = Campaign::where('campaign_send_at', '>=', $now2)->where('campaign_send_at', '<=', $now)->where('campaign_is_sent', 'No')->get();
 		foreach ($campaigns as $i => $campaign) {
 			if($campaign['campaign_generate_receipient'] == 'Send At Time'){
 				$cond = Campaign::with(['campaign_rule_parents', 'campaign_rule_parents.rules'])->where('id_campaign','=',$campaign['id_campaign'])->first();
@@ -1090,6 +1098,13 @@ class ApiCampaign extends Controller
 					$dataOptional['news_title'] = $news->news_title;
 				}
 				$dataOptional['url'] = env('APP_URL').'news/webview/'.$campaign['campaign_push_id_reference'];
+			}
+
+			if($pushQueue['campaign_push_clickto'] == 'Order' && $pushQueue['campaign_push_id_reference'] != null){
+				$outlet = Outlet::find($pushQueue['campaign_push_id_reference']);
+				if($outlet){
+					$dataOptional['news_title'] = $outlet->outlet_name;
+				}
 			}
 			
 			$deviceToken = PushNotificationHelper::searchDeviceToken("phone", $receipient);

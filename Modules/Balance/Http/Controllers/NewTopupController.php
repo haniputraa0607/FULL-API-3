@@ -554,6 +554,10 @@ class NewTopupController extends Controller
 
         $check = $className::where('id_user', $id_user)->orderBy('created_at', 'DESC')->first();
 
+        if (!$check) {
+            return true;
+        }
+
         if (count($check->toArray()) < 1) {
             return true;
         }

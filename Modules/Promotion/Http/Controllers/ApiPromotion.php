@@ -1791,6 +1791,13 @@ class ApiPromotion extends Controller
 					}
 					$dataOptional['url'] = env('APP_URL').'news/webview/'.$promotionContent['promotion_push_id_reference'];
 				}
+
+				if($promotionContent['promotion_push_clickto']  == 'Order' && $promotionContent['promotion_push_id_reference'] != null){
+					$outlet = Outlet::find($promotionContent['promotion_push_id_reference']);
+					if($outlet){
+						$dataOptional['news_title'] = $outlet->outlet_name;
+					}
+				}
 				
 				$deviceToken = PushNotificationHelper::searchDeviceToken("phone", $user['phone']);
 				
