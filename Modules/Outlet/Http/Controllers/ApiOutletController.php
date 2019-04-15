@@ -515,6 +515,8 @@ class ApiOutletController extends Controller
             if($request->json('type') && $request->json('type') == 'transaction'){
                 $outlet = $this->setAvailableOutlet($outlet);
             }
+        }else{
+            return response()->json(['status' => 'fail', 'messages' => ['There is no open store \n at this moment']]);
         }
 
         if(isset($request['page']) && $request['page'] > 0){
@@ -537,7 +539,7 @@ class ApiOutletController extends Controller
                 }
             } else {
                 $outlet['status'] = 'fail';
-                $outlet['messages'] = ['empty'];
+                $urutan['messages'] = ['There is no open store \n at this moment'];
                 
             }
         }
@@ -666,8 +668,8 @@ class ApiOutletController extends Controller
         $allfeatures = array('type' => 'FeatureCollection', 'features' => $features);
 
         // write into file
-        // Storage::disk('s3')->put('stations.geojson', json_encode($allfeatures));
-        Storage::disk('public_custom')->put('stations.geojson', json_encode($allfeatures));
+        Storage::disk('s3')->put('stations.geojson', json_encode($allfeatures));
+        // Storage::disk('public_custom')->put('stations.geojson', json_encode($allfeatures));
         
         return $allfeatures;
     }
@@ -741,7 +743,7 @@ class ApiOutletController extends Controller
                 $urutan = $this->setAvailableOutlet($urutan);
             }
         } else {
-            return response()->json(MyHelper::checkGet($outlet));
+            return response()->json(['status' => 'fail', 'messages' => ['There is no open store \n at this moment']]);
         }
 
         // if (!isset($request['page'])) {
@@ -768,7 +770,7 @@ class ApiOutletController extends Controller
                 }
             } else {
                 $urutan['status'] = 'fail';
-                $urutan['messages'] = ['empty'];
+                $urutan['messages'] = ['There is no open store \n at this moment'];
                 
             }
         }

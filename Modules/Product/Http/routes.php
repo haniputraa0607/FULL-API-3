@@ -5,7 +5,7 @@ Route::group(['prefix' => 'api/product','middleware' => 'log_request', 'namespac
     /**
      * product
      */
-    Route::group(['middleware' => 'auth_client'], function() {
+    Route::group(['middleware' => 'auth:api'], function() {
         Route::any('list', 'ApiProductController@listProduct');
 
         /* Sync */
@@ -68,7 +68,7 @@ Route::group(['prefix' => 'api/product','middleware' => 'log_request', 'namespac
     /**
      * category
      */
-    Route::group(['prefix' => 'category'], function() {
+    Route::group(['prefix' => 'category', 'middleware' => 'auth:api'], function() {
     	
     	Route::any('list', 'ApiCategoryController@listCategory');
     	Route::any('list/tree', 'ApiCategoryController@listCategoryTree');

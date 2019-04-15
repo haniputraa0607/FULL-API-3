@@ -27,6 +27,7 @@ use App\Http\Models\FraudSetting;
 use App\Http\Models\Configs;
 use App\Http\Models\Holiday;
 use App\Http\Models\OutletToken;
+use App\Http\Models\LogActivityLocation;
 
 use Modules\Balance\Http\Controllers\NewTopupController;
 
@@ -294,7 +295,7 @@ class ApiOnlineTransaction extends Controller
         $post['cashback'] = app($this->setting_trx)->countTransaction('cashback', $post);
 
         //count some trx user
-        $countUserTrx = Transaction::where('id_user', $id)->count();
+        $countUserTrx = Transaction::where('id_user', $id)->where('transaction_payment_status', 'Completed')->count();
 
         $countSettingCashback = TransactionSetting::get();
 
@@ -456,7 +457,7 @@ class ApiOnlineTransaction extends Controller
             }
         }
 
-        DB::beginTransaction();
+        // DB::beginTransaction();
         $transaction = [
             'id_outlet'                   => $post['id_outlet'],
             'id_user'                     => $id,
@@ -1062,6 +1063,10 @@ class ApiOnlineTransaction extends Controller
                     // return $sendNotifOutlet;
                     $dataRedirect = $this->dataRedirect($insertTransaction['transaction_receipt_number'], 'trx', '1');
 
+                    if($post['latitude'] && $post['longitude']){
+                        $savelocation = $this->saveLocation($post['latitude'], $post['longitude'], $insertTransaction['id_user'], $insertTransaction['id_transaction']);
+                     }
+
                     DB::commit();
                     return response()->json([
                         'status'     => 'success',
@@ -1112,14 +1117,877 @@ class ApiOnlineTransaction extends Controller
 
             }
         }
+
+        if($post['latitude'] && $post['longitude']){
+           $savelocation = $this->saveLocation($post['latitude'], $post['longitude'], $insertTransaction['id_user'], $insertTransaction['id_transaction']);
+        }
         
-        DB::commit();
+        // DB::commit();
         return response()->json([
             'status'   => 'success',
             'redirect' => true,
             'result'   => $insertTransaction
         ]);
         
+    }
+
+    public function saveLocation($latitude, $longitude, $id_user, $id_transaction){
+        // $googlemap = MyHelper::get('https://maps.googleapis.com/maps/api/geocode/json?latlng='.$latitude.','.$longitude.'&key=AIzaSyBJD1V5JlXchKFkBvD8IDEP1euKYmb2T6Q');
+        
+        $googlemap = json_decode('
+        {
+            "plus_code" : {
+               "compound_code" : "QR7F+W6 Jakarta, Indonesia",
+               "global_code" : "6P58QR7F+W6"
+            },
+            "results" : [
+               {
+                  "address_components" : [
+                     {
+                        "long_name" : "42",
+                        "short_name" : "42",
+                        "types" : [ "street_number" ]
+                     },
+                     {
+                        "long_name" : "Jalan Gatot Subroto",
+                        "short_name" : "Jl. Gatot Subroto",
+                        "types" : [ "route" ]
+                     },
+                     {
+                        "long_name" : "3",
+                        "short_name" : "3",
+                        "types" : [ "political" ]
+                     },
+                     {
+                        "long_name" : "2",
+                        "short_name" : "2",
+                        "types" : [ "political" ]
+                     },
+                     {
+                        "long_name" : "Kuningan Barat",
+                        "short_name" : "Kuningan Bar.",
+                        "types" : [ "administrative_area_level_4", "political" ]
+                     },
+                     {
+                        "long_name" : "Mampang Prapatan",
+                        "short_name" : "Mampang Prpt.",
+                        "types" : [ "administrative_area_level_3", "political" ]
+                     },
+                     {
+                        "long_name" : "Kota Jakarta Selatan",
+                        "short_name" : "Kota Jakarta Selatan",
+                        "types" : [ "administrative_area_level_2", "political" ]
+                     },
+                     {
+                        "long_name" : "Daerah Khusus Ibukota Jakarta",
+                        "short_name" : "Daerah Khusus Ibukota Jakarta",
+                        "types" : [ "administrative_area_level_1", "political" ]
+                     },
+                     {
+                        "long_name" : "Indonesia",
+                        "short_name" : "ID",
+                        "types" : [ "country", "political" ]
+                     },
+                     {
+                        "long_name" : "12710",
+                        "short_name" : "12710",
+                        "types" : [ "postal_code" ]
+                     }
+                  ],
+                  "formatted_address" : "Jl. Gatot Subroto No.42, RT.3/RW.2, Kuningan Bar., Mampang Prpt., Kota Jakarta Selatan, Daerah Khusus Ibukota Jakarta 12710, Indonesia",
+                  "geometry" : {
+                     "bounds" : {
+                        "northeast" : {
+                           "lat" : -6.234781099999999,
+                           "lng" : 106.8237033
+                        },
+                        "southwest" : {
+                           "lat" : -6.235346499999999,
+                           "lng" : 106.8230854
+                        }
+                     },
+                     "location" : {
+                        "lat" : -6.235114599999999,
+                        "lng" : 106.8234608
+                     },
+                     "location_type" : "ROOFTOP",
+                     "viewport" : {
+                        "northeast" : {
+                           "lat" : -6.233714819708498,
+                           "lng" : 106.8247433302915
+                        },
+                        "southwest" : {
+                           "lat" : -6.236412780291502,
+                           "lng" : 106.8220453697085
+                        }
+                     }
+                  },
+                  "place_id" : "ChIJ_R_nIOHzaS4RLxX7ekR6tqQ",
+                  "types" : [ "premise" ]
+               },
+               {
+                  "address_components" : [
+                     {
+                        "long_name" : "42",
+                        "short_name" : "42",
+                        "types" : [ "street_number" ]
+                     },
+                     {
+                        "long_name" : "Jalan Gatot Subroto",
+                        "short_name" : "Jl. Gatot Subroto",
+                        "types" : [ "route" ]
+                     },
+                     {
+                        "long_name" : "3",
+                        "short_name" : "3",
+                        "types" : [ "political" ]
+                     },
+                     {
+                        "long_name" : "2",
+                        "short_name" : "2",
+                        "types" : [ "political" ]
+                     },
+                     {
+                        "long_name" : "Kuningan Barat",
+                        "short_name" : "Kuningan Bar.",
+                        "types" : [ "administrative_area_level_4", "political" ]
+                     },
+                     {
+                        "long_name" : "Mampang Prapatan",
+                        "short_name" : "Mampang Prpt.",
+                        "types" : [ "administrative_area_level_3", "political" ]
+                     },
+                     {
+                        "long_name" : "Kota Jakarta Selatan",
+                        "short_name" : "Kota Jakarta Selatan",
+                        "types" : [ "administrative_area_level_2", "political" ]
+                     },
+                     {
+                        "long_name" : "Daerah Khusus Ibukota Jakarta",
+                        "short_name" : "Daerah Khusus Ibukota Jakarta",
+                        "types" : [ "administrative_area_level_1", "political" ]
+                     },
+                     {
+                        "long_name" : "Indonesia",
+                        "short_name" : "ID",
+                        "types" : [ "country", "political" ]
+                     },
+                     {
+                        "long_name" : "12710",
+                        "short_name" : "12710",
+                        "types" : [ "postal_code" ]
+                     }
+                  ],
+                  "formatted_address" : "Jl. Gatot Subroto No.42, RT.3/RW.2, Kuningan Bar., Mampang Prpt., Kota Jakarta Selatan, Daerah Khusus Ibukota Jakarta 12710, Indonesia",
+                  "geometry" : {
+                     "location" : {
+                        "lat" : -6.2350384,
+                        "lng" : 106.8233918
+                     },
+                     "location_type" : "ROOFTOP",
+                     "viewport" : {
+                        "northeast" : {
+                           "lat" : -6.233689419708497,
+                           "lng" : 106.8247407802915
+                        },
+                        "southwest" : {
+                           "lat" : -6.236387380291502,
+                           "lng" : 106.8220428197085
+                        }
+                     }
+                  },
+                  "place_id" : "ChIJb-2NKOHzaS4Ri0ZihLZTg6w",
+                  "plus_code" : {
+                     "compound_code" : "QR7F+X9 Jakarta, Indonesia",
+                     "global_code" : "6P58QR7F+X9"
+                  },
+                  "types" : [ "street_address" ]
+               },
+               {
+                  "address_components" : [
+                     {
+                        "long_name" : "Unnamed Road",
+                        "short_name" : "Unnamed Road",
+                        "types" : [ "route" ]
+                     },
+                     {
+                        "long_name" : "Kuningan Barat",
+                        "short_name" : "Kuningan Bar.",
+                        "types" : [ "administrative_area_level_4", "political" ]
+                     },
+                     {
+                        "long_name" : "Mampang Prapatan",
+                        "short_name" : "Mampang Prapatan",
+                        "types" : [ "administrative_area_level_3", "political" ]
+                     },
+                     {
+                        "long_name" : "Kota Jakarta Selatan",
+                        "short_name" : "Kota Jakarta Selatan",
+                        "types" : [ "administrative_area_level_2", "political" ]
+                     },
+                     {
+                        "long_name" : "Daerah Khusus Ibukota Jakarta",
+                        "short_name" : "Daerah Khusus Ibukota Jakarta",
+                        "types" : [ "administrative_area_level_1", "political" ]
+                     },
+                     {
+                        "long_name" : "Indonesia",
+                        "short_name" : "ID",
+                        "types" : [ "country", "political" ]
+                     },
+                     {
+                        "long_name" : "12710",
+                        "short_name" : "12710",
+                        "types" : [ "postal_code" ]
+                     }
+                  ],
+                  "formatted_address" : "Unnamed Road, Kuningan Bar., Mampang Prapatan, Kota Jakarta Selatan, Daerah Khusus Ibukota Jakarta 12710, Indonesia",
+                  "geometry" : {
+                     "bounds" : {
+                        "northeast" : {
+                           "lat" : -6.235530199999999,
+                           "lng" : 106.8238843
+                        },
+                        "southwest" : {
+                           "lat" : -6.236333999999999,
+                           "lng" : 106.8229531
+                        }
+                     },
+                     "location" : {
+                        "lat" : -6.2358493,
+                        "lng" : 106.8237606
+                     },
+                     "location_type" : "GEOMETRIC_CENTER",
+                     "viewport" : {
+                        "northeast" : {
+                           "lat" : -6.234583119708497,
+                           "lng" : 106.8247676802915
+                        },
+                        "southwest" : {
+                           "lat" : -6.237281080291502,
+                           "lng" : 106.8220697197085
+                        }
+                     }
+                  },
+                  "place_id" : "ChIJI0TDzeDzaS4RouWlNffKH4I",
+                  "types" : [ "route" ]
+               },
+               {
+                  "address_components" : [
+                     {
+                        "long_name" : "2",
+                        "short_name" : "2",
+                        "types" : [ "political" ]
+                     },
+                     {
+                        "long_name" : "Kuningan Barat",
+                        "short_name" : "Kuningan Bar.",
+                        "types" : [ "administrative_area_level_4", "political" ]
+                     },
+                     {
+                        "long_name" : "Mampang Prapatan",
+                        "short_name" : "Mampang Prpt.",
+                        "types" : [ "administrative_area_level_3", "political" ]
+                     },
+                     {
+                        "long_name" : "Kota Jakarta Selatan",
+                        "short_name" : "Kota Jakarta Selatan",
+                        "types" : [ "administrative_area_level_2", "political" ]
+                     },
+                     {
+                        "long_name" : "Daerah Khusus Ibukota Jakarta",
+                        "short_name" : "Daerah Khusus Ibukota Jakarta",
+                        "types" : [ "administrative_area_level_1", "political" ]
+                     },
+                     {
+                        "long_name" : "Indonesia",
+                        "short_name" : "ID",
+                        "types" : [ "country", "political" ]
+                     }
+                  ],
+                  "formatted_address" : "RW.2, Kuningan Bar., Mampang Prpt., Kota Jakarta Selatan, Daerah Khusus Ibukota Jakarta, Indonesia",
+                  "geometry" : {
+                     "bounds" : {
+                        "northeast" : {
+                           "lat" : -6.2338631,
+                           "lng" : 106.832279
+                        },
+                        "southwest" : {
+                           "lat" : -6.2402251,
+                           "lng" : 106.8224339
+                        }
+                     },
+                     "location" : {
+                        "lat" : -6.2383071,
+                        "lng" : 106.8259498
+                     },
+                     "location_type" : "APPROXIMATE",
+                     "viewport" : {
+                        "northeast" : {
+                           "lat" : -6.2338631,
+                           "lng" : 106.832279
+                        },
+                        "southwest" : {
+                           "lat" : -6.2402251,
+                           "lng" : 106.8224339
+                        }
+                     }
+                  },
+                  "place_id" : "ChIJA_9DhefzaS4RW7dbkChU8gU",
+                  "types" : [ "political" ]
+               },
+               {
+                  "address_components" : [
+                     {
+                        "long_name" : "12710",
+                        "short_name" : "12710",
+                        "types" : [ "postal_code" ]
+                     },
+                     {
+                        "long_name" : "Mampang Prapatan",
+                        "short_name" : "Mampang Prapatan",
+                        "types" : [ "administrative_area_level_3", "political" ]
+                     },
+                     {
+                        "long_name" : "South Jakarta City",
+                        "short_name" : "South Jakarta City",
+                        "types" : [ "administrative_area_level_2", "political" ]
+                     },
+                     {
+                        "long_name" : "Jakarta",
+                        "short_name" : "Jakarta",
+                        "types" : [ "administrative_area_level_1", "political" ]
+                     },
+                     {
+                        "long_name" : "Indonesia",
+                        "short_name" : "ID",
+                        "types" : [ "country", "political" ]
+                     }
+                  ],
+                  "formatted_address" : "Mampang Prapatan, South Jakarta City, Jakarta 12710, Indonesia",
+                  "geometry" : {
+                     "bounds" : {
+                        "northeast" : {
+                           "lat" : -6.226239100000001,
+                           "lng" : 106.8326033
+                        },
+                        "southwest" : {
+                           "lat" : -6.240579599999999,
+                           "lng" : 106.8167723
+                        }
+                     },
+                     "location" : {
+                        "lat" : -6.2365111,
+                        "lng" : 106.8222625
+                     },
+                     "location_type" : "APPROXIMATE",
+                     "viewport" : {
+                        "northeast" : {
+                           "lat" : -6.226239100000001,
+                           "lng" : 106.8326033
+                        },
+                        "southwest" : {
+                           "lat" : -6.240579599999999,
+                           "lng" : 106.8167723
+                        }
+                     }
+                  },
+                  "place_id" : "ChIJ8dmqpcLzaS4R4CcDTevFABw",
+                  "types" : [ "postal_code" ]
+               },
+               {
+                  "address_components" : [
+                     {
+                        "long_name" : "West Kuningan",
+                        "short_name" : "West Kuningan",
+                        "types" : [ "administrative_area_level_4", "political" ]
+                     },
+                     {
+                        "long_name" : "Mampang Prapatan",
+                        "short_name" : "Mampang Prapatan",
+                        "types" : [ "administrative_area_level_3", "political" ]
+                     },
+                     {
+                        "long_name" : "South Jakarta City",
+                        "short_name" : "South Jakarta City",
+                        "types" : [ "administrative_area_level_2", "political" ]
+                     },
+                     {
+                        "long_name" : "Jakarta",
+                        "short_name" : "Jakarta",
+                        "types" : [ "administrative_area_level_1", "political" ]
+                     },
+                     {
+                        "long_name" : "Indonesia",
+                        "short_name" : "ID",
+                        "types" : [ "country", "political" ]
+                     }
+                  ],
+                  "formatted_address" : "West Kuningan, Mampang Prapatan, South Jakarta City, Jakarta, Indonesia",
+                  "geometry" : {
+                     "bounds" : {
+                        "northeast" : {
+                           "lat" : -6.2262999,
+                           "lng" : 106.8323359
+                        },
+                        "southwest" : {
+                           "lat" : -6.24064,
+                           "lng" : 106.8165401
+                        }
+                     },
+                     "location" : {
+                        "lat" : -6.2365111,
+                        "lng" : 106.8222625
+                     },
+                     "location_type" : "APPROXIMATE",
+                     "viewport" : {
+                        "northeast" : {
+                           "lat" : -6.2262999,
+                           "lng" : 106.8323359
+                        },
+                        "southwest" : {
+                           "lat" : -6.24064,
+                           "lng" : 106.8165401
+                        }
+                     }
+                  },
+                  "place_id" : "ChIJpZmZsObzaS4RnF0xT00UcCA",
+                  "types" : [ "administrative_area_level_4", "political" ]
+               },
+               {
+                  "address_components" : [
+                     {
+                        "long_name" : "3",
+                        "short_name" : "3",
+                        "types" : [ "political" ]
+                     },
+                     {
+                        "long_name" : "2",
+                        "short_name" : "2",
+                        "types" : [ "political" ]
+                     },
+                     {
+                        "long_name" : "Kuningan Barat",
+                        "short_name" : "Kuningan Bar.",
+                        "types" : [ "administrative_area_level_4", "political" ]
+                     },
+                     {
+                        "long_name" : "Mampang Prapatan",
+                        "short_name" : "Mampang Prpt.",
+                        "types" : [ "administrative_area_level_3", "political" ]
+                     },
+                     {
+                        "long_name" : "Kota Jakarta Selatan",
+                        "short_name" : "Kota Jakarta Selatan",
+                        "types" : [ "administrative_area_level_2", "political" ]
+                     },
+                     {
+                        "long_name" : "Daerah Khusus Ibukota Jakarta",
+                        "short_name" : "Daerah Khusus Ibukota Jakarta",
+                        "types" : [ "administrative_area_level_1", "political" ]
+                     },
+                     {
+                        "long_name" : "Indonesia",
+                        "short_name" : "ID",
+                        "types" : [ "country", "political" ]
+                     }
+                  ],
+                  "formatted_address" : "RT.3/RW.2, Kuningan Bar., Mampang Prpt., Kota Jakarta Selatan, Daerah Khusus Ibukota Jakarta, Indonesia",
+                  "geometry" : {
+                     "bounds" : {
+                        "northeast" : {
+                           "lat" : -6.2338631,
+                           "lng" : 106.8272608
+                        },
+                        "southwest" : {
+                           "lat" : -6.24012,
+                           "lng" : 106.8224339
+                        }
+                     },
+                     "location" : {
+                        "lat" : -6.2367462,
+                        "lng" : 106.8248436
+                     },
+                     "location_type" : "APPROXIMATE",
+                     "viewport" : {
+                        "northeast" : {
+                           "lat" : -6.2338631,
+                           "lng" : 106.8272608
+                        },
+                        "southwest" : {
+                           "lat" : -6.24012,
+                           "lng" : 106.8224339
+                        }
+                     }
+                  },
+                  "place_id" : "ChIJuZNfQ-fzaS4R0BdBZFkO0qk",
+                  "types" : [ "political" ]
+               },
+               {
+                  "address_components" : [
+                     {
+                        "long_name" : "Mampang Prapatan",
+                        "short_name" : "Mampang Prapatan",
+                        "types" : [ "administrative_area_level_3", "political" ]
+                     },
+                     {
+                        "long_name" : "South Jakarta City",
+                        "short_name" : "South Jakarta City",
+                        "types" : [ "administrative_area_level_2", "political" ]
+                     },
+                     {
+                        "long_name" : "Jakarta",
+                        "short_name" : "Jakarta",
+                        "types" : [ "administrative_area_level_1", "political" ]
+                     },
+                     {
+                        "long_name" : "Indonesia",
+                        "short_name" : "ID",
+                        "types" : [ "country", "political" ]
+                     }
+                  ],
+                  "formatted_address" : "Mampang Prapatan, South Jakarta City, Jakarta, Indonesia",
+                  "geometry" : {
+                     "bounds" : {
+                        "northeast" : {
+                           "lat" : -6.2262999,
+                           "lng" : 106.835737
+                        },
+                        "southwest" : {
+                           "lat" : -6.274269800000001,
+                           "lng" : 106.808294
+                        }
+                     },
+                     "location" : {
+                        "lat" : -6.250614400000001,
+                        "lng" : 106.8207875
+                     },
+                     "location_type" : "APPROXIMATE",
+                     "viewport" : {
+                        "northeast" : {
+                           "lat" : -6.2262999,
+                           "lng" : 106.835737
+                        },
+                        "southwest" : {
+                           "lat" : -6.274269800000001,
+                           "lng" : 106.808294
+                        }
+                     }
+                  },
+                  "place_id" : "ChIJNR7PHtfzaS4R6f3q-wGKCVA",
+                  "types" : [ "administrative_area_level_3", "political" ]
+               },
+               {
+                  "address_components" : [
+                     {
+                        "long_name" : "South Jakarta",
+                        "short_name" : "South Jakarta",
+                        "types" : [ "locality", "political" ]
+                     },
+                     {
+                        "long_name" : "South Jakarta City",
+                        "short_name" : "South Jakarta City",
+                        "types" : [ "administrative_area_level_2", "political" ]
+                     },
+                     {
+                        "long_name" : "Jakarta",
+                        "short_name" : "Jakarta",
+                        "types" : [ "administrative_area_level_1", "political" ]
+                     },
+                     {
+                        "long_name" : "Indonesia",
+                        "short_name" : "ID",
+                        "types" : [ "country", "political" ]
+                     }
+                  ],
+                  "formatted_address" : "South Jakarta, South Jakarta City, Jakarta, Indonesia",
+                  "geometry" : {
+                     "bounds" : {
+                        "northeast" : {
+                           "lat" : -6.202699,
+                           "lng" : 106.866844
+                        },
+                        "southwest" : {
+                           "lat" : -6.3655141,
+                           "lng" : 106.7373149
+                        }
+                     },
+                     "location" : {
+                        "lat" : -6.2614927,
+                        "lng" : 106.8105998
+                     },
+                     "location_type" : "APPROXIMATE",
+                     "viewport" : {
+                        "northeast" : {
+                           "lat" : -6.202699,
+                           "lng" : 106.866844
+                        },
+                        "southwest" : {
+                           "lat" : -6.3655141,
+                           "lng" : 106.7373149
+                        }
+                     }
+                  },
+                  "place_id" : "ChIJs7AiJOzxaS4RAk1AR_7QoDk",
+                  "types" : [ "locality", "political" ]
+               },
+               {
+                  "address_components" : [
+                     {
+                        "long_name" : "South Jakarta City",
+                        "short_name" : "South Jakarta City",
+                        "types" : [ "administrative_area_level_2", "political" ]
+                     },
+                     {
+                        "long_name" : "Jakarta",
+                        "short_name" : "Jakarta",
+                        "types" : [ "administrative_area_level_1", "political" ]
+                     },
+                     {
+                        "long_name" : "Indonesia",
+                        "short_name" : "ID",
+                        "types" : [ "country", "political" ]
+                     }
+                  ],
+                  "formatted_address" : "South Jakarta City, Jakarta, Indonesia",
+                  "geometry" : {
+                     "bounds" : {
+                        "northeast" : {
+                           "lat" : -6.202699,
+                           "lng" : 106.866844
+                        },
+                        "southwest" : {
+                           "lat" : -6.3655141,
+                           "lng" : 106.7373149
+                        }
+                     },
+                     "location" : {
+                        "lat" : -6.2689913,
+                        "lng" : 106.8060388
+                     },
+                     "location_type" : "APPROXIMATE",
+                     "viewport" : {
+                        "northeast" : {
+                           "lat" : -6.202699,
+                           "lng" : 106.866844
+                        },
+                        "southwest" : {
+                           "lat" : -6.3655141,
+                           "lng" : 106.7373149
+                        }
+                     }
+                  },
+                  "place_id" : "ChIJs7AiJOzxaS4R_1UOI9HJhic",
+                  "types" : [ "administrative_area_level_2", "political" ]
+               },
+               {
+                  "address_components" : [
+                     {
+                        "long_name" : "Jakarta",
+                        "short_name" : "Jakarta",
+                        "types" : [ "colloquial_area", "locality", "political" ]
+                     },
+                     {
+                        "long_name" : "Jakarta",
+                        "short_name" : "Jakarta",
+                        "types" : [ "administrative_area_level_1", "political" ]
+                     },
+                     {
+                        "long_name" : "Indonesia",
+                        "short_name" : "ID",
+                        "types" : [ "country", "political" ]
+                     }
+                  ],
+                  "formatted_address" : "Jakarta, Indonesia",
+                  "geometry" : {
+                     "bounds" : {
+                        "northeast" : {
+                           "lat" : -6.0886599,
+                           "lng" : 106.972825
+                        },
+                        "southwest" : {
+                           "lat" : -6.3708331,
+                           "lng" : 106.686211
+                        }
+                     },
+                     "location" : {
+                        "lat" : -6.2087634,
+                        "lng" : 106.845599
+                     },
+                     "location_type" : "APPROXIMATE",
+                     "viewport" : {
+                        "northeast" : {
+                           "lat" : -6.0886599,
+                           "lng" : 106.972825
+                        },
+                        "southwest" : {
+                           "lat" : -6.3708331,
+                           "lng" : 106.686211
+                        }
+                     }
+                  },
+                  "place_id" : "ChIJnUvjRenzaS4RoobX2g-_cVM",
+                  "types" : [ "colloquial_area", "locality", "political" ]
+               },
+               {
+                  "address_components" : [
+                     {
+                        "long_name" : "Jakarta",
+                        "short_name" : "Jakarta",
+                        "types" : [ "administrative_area_level_1", "political" ]
+                     },
+                     {
+                        "long_name" : "Indonesia",
+                        "short_name" : "ID",
+                        "types" : [ "country", "political" ]
+                     }
+                  ],
+                  "formatted_address" : "Jakarta, Indonesia",
+                  "geometry" : {
+                     "bounds" : {
+                        "northeast" : {
+                           "lat" : -5.1843219,
+                           "lng" : 106.972825
+                        },
+                        "southwest" : {
+                           "lat" : -6.3708331,
+                           "lng" : 106.3831259
+                        }
+                     },
+                     "location" : {
+                        "lat" : -6.180495,
+                        "lng" : 106.8283415
+                     },
+                     "location_type" : "APPROXIMATE",
+                     "viewport" : {
+                        "northeast" : {
+                           "lat" : -5.1843219,
+                           "lng" : 106.972825
+                        },
+                        "southwest" : {
+                           "lat" : -6.3708331,
+                           "lng" : 106.3831259
+                        }
+                     }
+                  },
+                  "place_id" : "ChIJnUvjRenzaS4RILjULejFAAE",
+                  "types" : [ "administrative_area_level_1", "political" ]
+               },
+               {
+                  "address_components" : [
+                     {
+                        "long_name" : "Indonesia",
+                        "short_name" : "ID",
+                        "types" : [ "country", "political" ]
+                     }
+                  ],
+                  "formatted_address" : "Indonesia",
+                  "geometry" : {
+                     "bounds" : {
+                        "northeast" : {
+                           "lat" : 6.216999899999999,
+                           "lng" : 141.0425
+                        },
+                        "southwest" : {
+                           "lat" : -11.1082999,
+                           "lng" : 94.7351
+                        }
+                     },
+                     "location" : {
+                        "lat" : -0.7892749999999999,
+                        "lng" : 113.921327
+                     },
+                     "location_type" : "APPROXIMATE",
+                     "viewport" : {
+                        "northeast" : {
+                           "lat" : 6.216999899999999,
+                           "lng" : 141.0425
+                        },
+                        "southwest" : {
+                           "lat" : -11.1082999,
+                           "lng" : 94.7351
+                        }
+                     }
+                  },
+                  "place_id" : "ChIJtwRkSdcHTCwRhfStG-dNe-M",
+                  "types" : [ "country", "political" ]
+               }
+            ],
+            "status" : "OK"
+         }           
+        ');
+        //  dd($googlemap);
+        // return response()->json($googlemap->results[0]->address_components);
+        if(isset($googlemap->results[0]->address_components)){
+
+            $street = null;
+            $route = null;
+            $level1 = null;
+            $level2 = null;
+            $level3 = null;
+            $level4 = null;
+            $level5 = null;
+            $country = null;
+            $postal = null;
+            $address = null;
+
+            foreach($googlemap->results[0]->address_components as $data){
+                if($data->types[0] == 'postal_code'){
+                    $postal = $data->long_name;
+                }
+                elseif($data->types[0] == 'route'){
+                    $route = $data->long_name;
+                }
+                elseif($data->types[0] == 'administrative_area_level_5'){
+                    $level5 = $data->long_name;
+                }
+                elseif($data->types[0] == 'administrative_area_level_4'){
+                    $level4 = $data->long_name;
+                }
+                elseif($data->types[0] == 'administrative_area_level_3'){
+                    $level3 = $data->long_name;
+                }
+                elseif($data->types[0] == 'administrative_area_level_2'){
+                    $level2 = $data->long_name;
+                }
+                elseif($data->types[0] == 'administrative_area_level_1'){
+                    $level1 = $data->long_name;
+                }
+                elseif($data->types[0] == 'country'){
+                    $country = $data->long_name;
+                }
+            }
+
+            if($googlemap->results[0]->formatted_address){
+                $address = $googlemap->results[0]->formatted_address;
+            }
+
+            $logactivity = LogActivityLocation::create([
+                'id_user' => $id_user,
+                'id_reference' => $id_transaction,
+                'activity' => 'Transaction',
+                'action' => 'Create',
+                'latitude' => $latitude,
+                'longitude' => $longitude,
+                'response_json' => json_encode($googlemap),
+                'route' => $route,
+                'street_address' => $street,
+                'administrative_area_level_5' => $level5,
+                'administrative_area_level_4' => $level4,
+                'administrative_area_level_3' => $level3,
+                'administrative_area_level_2' => $level2,
+                'administrative_area_level_1' => $level1,
+                'country' => $country,
+                'postal_code' => $postal,
+                'formatted_address' => $address
+            ]);
+
+            if($logactivity) {
+                return true;
+            }
+        }
+        
+        return false;
     }
 
     public function dataRedirect($id, $type, $success)

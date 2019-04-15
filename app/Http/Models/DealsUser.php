@@ -88,4 +88,8 @@ class DealsUser extends Model
 	function deals() {
 		return $this->belongsTo(Deal::class, 'id_deals', 'id_deals');
 	}
+	
+	function deals_voucher() {
+		return $this->belongsTo(DealsVoucher::class, 'id_deals_voucher', 'id_deals_voucher')->select('id_deals_voucher', 'id_deals', 'voucher_code');
+	}
 }

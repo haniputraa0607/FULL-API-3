@@ -382,12 +382,12 @@ class ApiDashboardSetting extends Controller
 								->whereDate('daily_report_trx.trx_date', '<=', $end)
 								->groupBy('outlets.id_outlet');
 	
-						if(strpos($card['card_name'], 'Outlet') !== false){
-							$value = $value->select(DB::raw('outlets.outlet_name, outlets.id_outlet, outlets.outlet_code, SUM(daily_report_trx.trx_count) as transaction_count'))
+						if(strpos($card['card_name'], 'Count') !== false){
+							$value = $value->select(DB::raw('outlets.outlet_name, outlets.id_outlet as id, outlets.outlet_code, SUM(daily_report_trx.trx_count) as transaction_count'))
 										   ->orderBy('transaction_count', 'DESC');
 						}
-						elseif(strpos($card['card_name'], 'Outlet') !== false){
-							$value = $value->select(DB::raw('outlets.outlet_name, SUM(daily_report_trx.trx_grand) as transaction_value'))
+						elseif(strpos($card['card_name'], 'Value') !== false){
+							$value = $value->select(DB::raw('outlets.outlet_name, outlets.id_outlet as id, SUM(daily_report_trx.trx_grand) as transaction_value'))
 										   ->orderBy('transaction_value', 'DESC');
 						}
 						$value = $value->limit(10)->get();
@@ -413,6 +413,7 @@ class ApiDashboardSetting extends Controller
 
 					elseif(strpos($card['card_name'], 'User') !== false || strpos($card['card_name'], 'Customer') !== false){
 						$value = Transaction::leftJoin('users', 'transactions.id_user', 'users.id')
+								->where('transaction_payment_status', 'Completed')
 								->whereDate('transaction_date', '>=', $start)
 								->whereDate('transaction_date', '<=', $end)
 								->select(DB::raw('users.name, users.phone, SUM(transaction_grandtotal) as nominal'))
@@ -507,16 +508,17 @@ class ApiDashboardSetting extends Controller
 				}
 				
 				elseif(strpos($card['card_name'], 'Transaction') !== false){
-					$value = Transaction::whereDate('transaction_date', '<=', $end)->whereDate('transaction_date', '>=', $start);
+					$value = DailyReportTrx::whereDate('trx_date', '<=', $end)->whereDate('trx_date', '>=', $start);
+
 					if($card['card_name'] == 'Total Transaction Count'){
-						$value = $value->count();
+						$value = $value->sum('trx_count');
 					}
 					if($card['card_name'] == 'Total Transaction Value'){
-						$value = $value->sum('transaction_grandtotal');
+						$value = $value->sum('trx_grand');
 					}
 					if($card['card_name'] == 'Transaction Average'){
-						$sum = $value->sum('transaction_grandtotal');
-						$count = $value->count();
+						$sum = $value->sum('trx_grand');
+						$count = $value->sum('trx_count');
 						if($sum > 0 && $count > 0){
 							$value = (int) $sum/$count;
 						}else{
@@ -524,10 +526,8 @@ class ApiDashboardSetting extends Controller
 						}
 					}
 					if($card['card_name'] == 'Transaction Average per Day'){
-						$sum = $value->sum('transaction_grandtotal');
-						$count = $value->get()->groupBy(function($date) {
-							return \Carbon\Carbon::parse($date->transaction_date)->format('Y-m-d');
-						})->count();
+						$sum = $value->sum('trx_grand');
+						$count = $value->get()->groupBy('trx_date')->count();
 						if($sum > 0 && $count > 0){
 							$value = (int) $sum/$count;
 						}else{

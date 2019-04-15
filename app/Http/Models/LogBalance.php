@@ -57,4 +57,9 @@ class LogBalance extends Model
 	{
 		return $this->belongsTo(\App\Http\Models\User::class, 'id_user');
 	}
+	
+	public function detail_trx()
+	{
+		return $this->belongsTo(\App\Http\Models\Transaction::class, 'id_reference')->select('id_transaction', 'transaction_receipt_number', 'trasaction_type');
+	}
 }

@@ -28,6 +28,6 @@ Route::group(['middleware' => ['auth:api','log_request'], 'prefix' => 'api/campa
 
 Route::group(['prefix' => 'api/campaign/cron', 'namespace' => 'Modules\Campaign\Http\Controllers'], function()
 {
-    Route::get('queue', 'ApiCampaign@insertQueue');
-    Route::get('send', 'ApiCampaign@sendCampaignCron');
+    Route::any('queue', 'ApiCampaign@insertQueue');
+    Route::any('send', 'ApiCampaign@sendCampaignCron');
 });

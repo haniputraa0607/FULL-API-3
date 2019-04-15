@@ -5,7 +5,7 @@ Route::group(['middleware' => ['api', 'log_request'], 'prefix' => 'api/setting',
     Route::get('/courier', 'ApiSetting@settingCourier');
 });
 
-Route::group(['middleware' => ['api', 'log_request'], 'prefix' => 'api/setting', 'namespace' => 'Modules\Setting\Http\Controllers'], function()
+Route::group(['middleware' => ['auth:api', 'log_request'], 'prefix' => 'api/setting', 'namespace' => 'Modules\Setting\Http\Controllers'], function()
 {
     Route::any('email/update', 'ApiSetting@emailUpdate');
     Route::any('/', 'ApiSetting@settingList');
@@ -113,11 +113,15 @@ Route::group(['middleware' => ['auth_client', 'log_request'], 'prefix' => 'api/s
     Route::post('/version/update', 'ApiSetting@updateVersion');
 });
 
-Route::group(['prefix' => 'api/setting', 'middleware' => ['auth:api', 'log_request'], 'namespace' => 'Modules\Setting\Http\Controllers'], function()
+Route::group(['prefix' => 'api/setting', 'namespace' => 'Modules\Setting\Http\Controllers'], function()
+{    
+    Route::post('/version', 'ApiSetting@Version');
+});
+
+Route::group(['prefix' => 'api/setting', 'middleware' => ['log_request', 'auth:api'], 'namespace' => 'Modules\Setting\Http\Controllers'], function()
 {
     Route::get('/faq', 'ApiSetting@faqList');
     Route::post('webview', 'ApiSetting@settingWebview');
-    Route::post('/version', 'ApiSetting@Version');
     
     Route::get('/cron/point-reset', 'ApiSetting@cronPointReset');
 });

@@ -76,40 +76,79 @@ class ApiAutoCrm extends Controller
 						'setting' => $setting
 					);
 					
-					Mailgun::send('emails.test', $data, function($message) use ($to,$subject,$name,$setting,$variables)
-					{
-						$message->to($to, $name)->subject($subject)
-										->trackClicks(true)
-										->trackOpens(true);
-						if(!empty($setting['email_from']) && !empty($setting['email_sender'])){
-							$message->from($setting['email_from'], $setting['email_sender']);
-						}else if(!empty($setting['email_from'])){
-							$message->from($setting['email_from']);
-						}
+					if($autocrm_title == 'Transaction Success'){
 
-						if(!empty($setting['email_reply_to'])){
-							$message->replyTo($setting['email_reply_to'], $setting['email_reply_to_name']);
-						}
-
-						if(!empty($setting['email_cc']) && !empty($setting['email_cc_name'])){
-							$message->cc($setting['email_cc'], $setting['email_cc_name']);
-						}
-
-						if(!empty($setting['email_bcc']) && !empty($setting['email_bcc_name'])){
-							$message->bcc($setting['email_bcc'], $setting['email_bcc_name']);
-						}
-						
-						// attachment
-						if(isset($variables['attachment'])){
-							if(is_array($variables['attachment'])){
-								foreach($variables['attachment'] as $attach){
-									$message->attach($attach);
-								}
-							}else{
-								$message->attach($variables['attachment']);
+						Mailgun::send('emails.test2', $data, function($message) use ($to,$subject,$name,$setting,$variables)
+						{
+							$message->to($to, $name)->subject($subject)
+											->trackClicks(true)
+											->trackOpens(true);
+							if(!empty($setting['email_from']) && !empty($setting['email_sender'])){
+								$message->from($setting['email_from'], $setting['email_sender']);
+							}else if(!empty($setting['email_from'])){
+								$message->from($setting['email_from']);
 							}
-						}
-					});
+	
+							if(!empty($setting['email_reply_to'])){
+								$message->replyTo($setting['email_reply_to'], $setting['email_reply_to_name']);
+							}
+	
+							if(!empty($setting['email_cc']) && !empty($setting['email_cc_name'])){
+								$message->cc($setting['email_cc'], $setting['email_cc_name']);
+							}
+	
+							if(!empty($setting['email_bcc']) && !empty($setting['email_bcc_name'])){
+								$message->bcc($setting['email_bcc'], $setting['email_bcc_name']);
+							}
+							
+							// attachment
+							if(isset($variables['attachment'])){
+								if(is_array($variables['attachment'])){
+									foreach($variables['attachment'] as $attach){
+										$message->attach($attach);
+									}
+								}else{
+									$message->attach($variables['attachment']);
+								}
+							}
+						});
+					}else{
+						Mailgun::send('emails.test', $data, function($message) use ($to,$subject,$name,$setting,$variables)
+						{
+							$message->to($to, $name)->subject($subject)
+											->trackClicks(true)
+											->trackOpens(true);
+							if(!empty($setting['email_from']) && !empty($setting['email_sender'])){
+								$message->from($setting['email_from'], $setting['email_sender']);
+							}else if(!empty($setting['email_from'])){
+								$message->from($setting['email_from']);
+							}
+	
+							if(!empty($setting['email_reply_to'])){
+								$message->replyTo($setting['email_reply_to'], $setting['email_reply_to_name']);
+							}
+	
+							if(!empty($setting['email_cc']) && !empty($setting['email_cc_name'])){
+								$message->cc($setting['email_cc'], $setting['email_cc_name']);
+							}
+	
+							if(!empty($setting['email_bcc']) && !empty($setting['email_bcc_name'])){
+								$message->bcc($setting['email_bcc'], $setting['email_bcc_name']);
+							}
+							
+							// attachment
+							if(isset($variables['attachment'])){
+								if(is_array($variables['attachment'])){
+									foreach($variables['attachment'] as $attach){
+										$message->attach($attach);
+									}
+								}else{
+									$message->attach($variables['attachment']);
+								}
+							}
+						});
+
+					}
 					
 					$logData = [];
 					$logData['id_user'] = $user['id'];
@@ -341,7 +380,7 @@ class ApiAutoCrm extends Controller
 						if (!empty($deviceToken)) {
 							if (isset($deviceToken['token']) && !empty($deviceToken['token'])) {
 								$push = PushNotificationHelper::sendPush($deviceToken['token'], $subject, $content, $image, $dataOptional);
-
+								
 								if (isset($push['success']) && $push['success'] > 0) {
 									$logData = [];
 									$logData['id_user'] = $user['id'];
@@ -675,6 +714,15 @@ class ApiAutoCrm extends Controller
 		unset($post['id_autocrm']);
 		
 		if (isset($post['autocrm_push_image'])) {
+
+			$query = Autocrm::where('id_autocrm','=',$id_autocrm)->first();
+			if($query){
+				//delete photo
+				if($query['autocrm_push_image']){
+					$del = MyHelper::deletePhoto($query['autocrm_push_image']);
+				}
+			}
+
 			$upload = MyHelper::uploadPhoto($post['autocrm_push_image'], $path = 'img/push/', 600);
 
 			if ($upload['status'] == "success") {

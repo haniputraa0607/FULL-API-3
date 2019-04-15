@@ -14,14 +14,14 @@
             font-family: 'Seravek';
             font-style: normal;
             font-weight: 400;
-            src: url('{{env('AWS_ASSET_URL')}}{{"assets/fonts/Seravek.ttf"}}') format('truetype'); 
+            src: url('{{env("AWS_ASSET_URL")}}{{"assets/fonts/Seravek.ttf"}}') format('truetype'); 
         }
 
         @font-face {
             font-family: 'Seravek Light';
             font-style: normal;
             font-weight: 400;
-            src: url('{{env('AWS_ASSET_URL')}}{{"assets/fonts/Seravek-Light.ttf"}}') format('truetype'); 
+            src: url('{{env("AWS_ASSET_URL")}}{{"assets/fonts/Seravek-Light.ttf"}}') format('truetype'); 
         }
         .kotak {
             margin : 10px;
@@ -38,6 +38,7 @@
         .kotak-full {
             background: #fff;
             font-family: 'Seravek Light';
+            padding: 30px 0;
         }
 
         .kotak-biasa {
