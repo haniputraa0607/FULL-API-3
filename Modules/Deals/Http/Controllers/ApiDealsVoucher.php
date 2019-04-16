@@ -331,6 +331,7 @@ class ApiDealsVoucher extends Controller
                     // beetwen "https://chart.googleapis.com/chart?chl="
                     // and "&chs=250x250&cht=qr&chld=H%7C0"
                     preg_match("/api.qrserver.com\/v1\/create-qr-code\/?size=250x250&data=(.*)&chs=250x250/", $datavoucher['voucher_hash'], $matches);
+                    
                     // replace voucher_code with code from voucher_hash
                     if (isset($matches[1])) {
                         $voucher[$index]['deal_voucher']['voucher_code'] = $matches[1];
@@ -470,5 +471,15 @@ class ApiDealsVoucher extends Controller
         $deals = array_values($deals);
 
         return $deals;
+    }
+    
+    function voucherUser(Request $request){
+        $post = $request->json()->all();
+        
+        $voucher = DealsUser::join('users', 'deals_users.id_user', 'users.id')->where('phone', $post['phone'])
+                                ->with(['deals_voucher.deals', 'outlet'])
+                                ->get();
+                                
+        return response()->json(MyHelper::checkGet($voucher));
     }
 }

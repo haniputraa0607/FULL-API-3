@@ -376,7 +376,8 @@ class ApiNotification extends Controller {
         $date    = $trx['transaction_date'];
         $outlet  = $trx['outlet']['outlet_name'];
         $receipt = $trx['transaction_receipt_number'];
-        $detail = $this->getHtml($trx, $trx['productTransaction'], $name, $phone, $date, $outlet, $receipt);
+        // $detail = $this->getHtml($trx, $trx['productTransaction'], $name, $phone, $date, $outlet, $receipt);
+        $detail = $this->htmlDetail($trx['id_transaction']);
 
         if ($trx['transaction_payment_status'] == 'Pending') {
             $title = 'Pending';
@@ -397,6 +398,39 @@ class ApiNotification extends Controller {
         $send = app($this->autocrm)->SendAutoCRM('Transaction Success', $trx->user->phone, ['notif_type' => 'trx', 'header_label' => $title, 'date' => $trx['transaction_date'], 'status' => $trx['transaction_payment_status'], 'name'  => $trx->user->name, 'id' => $mid['order_id'], 'outlet_name' => $outlet, 'detail' => $detail, 'id_reference' => $mid['order_id'].','.$trx['id_outlet']]);
 
         return $send;
+    }
+
+    function notification2() 
+    {
+        $trx = Transaction::where('id_transaction', '6')->with(['user', 'outlet'])->first();
+        $name    = $trx['user']['name'];
+        $phone   = $trx['user']['phone'];
+        $date    = $trx['transaction_date'];
+        $outlet  = $trx['outlet']['outlet_name'];
+        $receipt = $trx['transaction_receipt_number'];
+        // $detail = $this->getHtml($trx, $trx['productTransaction'], $name, $phone, $date, $outlet, $receipt);
+        $detail = $this->htmlDetail($trx['id_transaction']);
+
+        $mid = TransactionPickup::where('id_transaction', '6')->first();
+        if ($trx['transaction_payment_status'] == 'Pending') {
+            $title = 'Pending';
+        }
+
+        if ($trx['transaction_payment_status'] == 'Paid') {
+            $title = 'Terbayar';
+        }
+
+        if ($trx['transaction_payment_status'] == 'Completed') {
+            $title = 'Sukses';
+        }
+
+        if ($trx['transaction_payment_status'] == 'Cancelled') {
+            $title = 'Gagal';
+        }
+
+        $send = app($this->autocrm)->SendAutoCRM('Transaction Success', $trx->user->phone, ['notif_type' => 'trx', 'header_label' => $title, 'date' => $trx['transaction_date'], 'status' => $trx['transaction_payment_status'], 'name'  => $trx->user->name, 'id' => $mid['order_id'], 'outlet_name' => $outlet, 'detail' => $detail, 'id_reference' => $mid['order_id'].','.$trx['id_outlet']]);
+
+        return 'success';
     }
 
     function savePoint($data) 
@@ -1336,5 +1370,257 @@ Detail: ".$link['short'],
                   </tr>
                </tbody>
             </table>';
+    }
+
+    public function htmlDetail($id){
+        $list = Transaction::where('id_transaction', $id)->with('user.city.province', 'productTransaction.product.product_category', 'productTransaction.product.product_photos', 'productTransaction.product.product_discounts', 'outlet.city')->first();
+            
+
+            $dataPayment = [];
+
+            $multiPayment = TransactionMultiplePayment::where('id_transaction', $list['id_transaction'])->get();
+            // return $multiPayment;
+            if (isset($multiPayment)) {
+                foreach ($multiPayment as $key => $value) {
+                    if ($value->type == 'Midtrans') {
+                        $getPayment = TransactionPaymentMidtran::where('id_transaction_payment', $value->id_payment)->first();
+                        if (!empty($getPayment)) {
+                            $getPayment['type'] = 'Midtrans';
+                            array_push($dataPayment, $getPayment);
+                        }
+                    } elseif ($value->type == 'Balance') {
+                        $getPayment = TransactionPaymentBalance::where('id_transaction_payment_balance', $value->id_payment)->first();
+                        if (!empty($getPayment)) {
+                            $getPayment['type'] = 'Balance';
+                            array_push($dataPayment, $getPayment);
+                            $list['balance'] = $getPayment['balance_nominal'];
+                        }
+                    } 
+                }
+            }else{
+                if($list['trasaction_payment_type'] == 'Midtrans') {
+                    $getPayment = TransactionPaymentMidtran::where('id_transaction', $list['id_transaction'])->first();
+                    if (!empty($getPayment)) {
+                        $getPayment['type'] = 'Midtrans';
+                        array_push($dataPayment, $getPayment);
+                    }
+                }
+
+            } 
+
+            $detail = [];
+
+            $qrTest= '';
+
+            if ($list['trasaction_type'] == 'Pickup Order') {
+                $detail = TransactionPickup::where('id_transaction', $list['id_transaction'])->first();
+                $qrTest = $detail['order_id'];
+            } elseif ($list['trasaction_type'] == 'Delivery') {
+                $detail = TransactionShipment::with('city.province')->where('id_transaction', $list['id_transaction'])->first();
+            }
+
+            $list['data_payment'] = $dataPayment;
+
+            $list['detail'] = $detail;
+
+            $list['date'] = $list['transaction_date'];
+
+            $qrCode = 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data='.$qrTest;
+            // $qrCode = 'https://chart.googleapis.com/chart?chl='.$qrTest.'&chs=250x250&cht=qr&chld=H%7C0';
+            $qrCode = html_entity_decode($qrCode);
+            $list['qr'] = $qrCode;
+
+            $data = $list;
+
+        if ($data['detail']['pickup_type'] == 'set time'){
+            $data['text_siap'] = 'Pesanan Anda akan siap pada';
+        }
+        else{
+            $data['text_siap'] = 'Pesanan Anda akan diproses pada';
+        }
+
+        if ($data['detail']['pickup_type'] == 'set time'){
+            $textPick = date('H:i', strtotime($data['detail']['pickup_at']));
+        }elseif($data['detail']['pickup_type'] == 'at arrival'){
+            $textPick = 'Saat Kedatangan';
+        }else{
+            $textPick = 'Saat Ini';
+        }
+
+        $html = '<div class="kotak-biasa">
+                    <div class="">
+                        <div class="text-center">
+                            <div class="col-12 seravek-font text-15px space-text text-grey">Kode Pickup Anda</div>
+                            
+                            <div class="kotak-qr" data-toggle="modal" data-target="#exampleModal">
+                                <div class="col-12 text-14-3px space-top"><img class="img-responsive" style="display: block; max-width: 100%; padding-top: 10px" src="'.$data['qr'].'"></div>
+                            </div>
+
+                            <div class="col-12 text-greyish-brown text-21-7px space-bottom space-top-all seravek-medium-font">'.$data['detail']['order_id'].'</div>
+                            <div class="col-12 text-16-7px text-black space-text seravek-light-font">'.$data['outlet']['outlet_name'].'</div>
+                            <div class="row">
+                            <div class="kotak-inside col-12">
+                                <div class="col-12 text-13-3px text-grey-white space-nice text-center seravek-font">'.$data['outlet']['outlet_address'].'</div>
+                            </div>
+                            </div>
+                                <div class="col-12 text-16-7px space-nice text-black seravek-light-font">'.$data['text_siap'].'</div>
+                                <div class="col-12 text-16-7px space-text text-greyish-brown seravek-medium-font">'.date('d F Y', strtotime($data['transaction_date'])).'</div>
+                                <div class="col-12 text-21-7px space-nice text-greyish-brown seravek-medium-font">'.$textPick.'</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="container">
+                    <div class=" line-bottom">
+                        <div class="row space-bottom">
+                            <div class="col-6 text-grey-black text-14-3px seravek-font">'.$data['outlet']['outlet_name'].'</div>
+                            <div class="col-6 text-right text-medium-grey text-13-3px seravek-light-font">'.date('d F Y H:i', strtotime($data['transaction_date'])).'</div>
+                        </div>
+                        <div class="row space-text">
+                            <div class="col-4"></div>
+                            <div class="col-8 text-right text-medium-grey-black text-13-3px seravek-font">#'.$data['transaction_receipt_number'].'</div>
+                        </div>
+                    </div>
+                    <div class="">
+                        <div class="">
+                            <div class="col-12 text-13-3px text-grey-light seravek-light-font">
+                                Transaksi Anda 
+                                <hr style="margin:10px 0 20px 0">
+                            </div>';
+            
+            $countQty = 0;
+            foreach ($data['productTransaction'] as $key => $val){
+                if (isset($val['transaction_product_note'])){
+                }else{
+                    $val['transaction_product_note'] = '-';
+                }
+                $html = $html.'
+                    <div class="row">
+                    <div class="col-7 text-13-3px text-black seravek-light-font">'.$val['product']['product_name'].'</div>
+                    <div class="col-5 text-right text-13-3px text-black seravek-light-font">'.str_replace(',', '.', number_format($val['transaction_product_subtotal'])).'</div>
+                    </div>
+                    <div class="col-12 text-grey text-12-7px text-black-grey-light seravek-light-font">'.$val['transaction_product_qty'].' x '.str_replace(',', '.', number_format($val['transaction_product_price'])).'</div>
+                    <div class="space-bottom col-8">
+                        <div class="space-bottom text-12-7px text-grey-medium-light seravek-italic-font" style="word-break: break-word">
+                                '.$val['transaction_product_note'].'
+                        </div>
+                    </div>
+                ';
+
+                $countQty += $val['transaction_product_qty'];
+            }
+
+            $html = $html.'
+                        <div class="col-12 text-12-7px text-right"><hr style="margin:0"></div>
+                        <div class="row">
+                            <div class="col-6 text-13-3px space-bottom space-top-all text-black seravek-font">SubTotal ('.$countQty.' item)</div>
+                            <div class="col-6 text-13-3px space-bottom space-top-all text-black text-right seravek-font">'.str_replace(',', '.', number_format($data['transaction_subtotal'])).'</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="">
+                <div class="container">
+                    <div class="">
+                        <div class="col-12 text-14-3px space-top seravek-font text-greyish-brown">Detail Pembayaran <hr> </div>
+                        <div class="row">
+                            <div class="col-6 text-13-3px space-text seravek-light-font text-black">SubTotal ('.$countQty.' item)</div>
+                            <div class="col-6 text-13-3px text-right space-text seravek-light-font text-grey-black">'.str_replace(',', '.', number_format($data['transaction_subtotal'])).'</div>
+                        </div>
+            ';
+            
+            if($data['transaction_tax'] > 0){
+                $html = $html.'
+                            <div class="row">
+                                <div class="col-6 text-13-3px space-text seravek-light-font text-black">Tax</div>
+                                <div class="col-6 text-13-3px text-right seravek-light-font text-grey-black">'.str_replace(',', '.', number_format($data['transaction_tax'])).'</div>
+                            </div>
+                        ';    
+            }
+                        
+            if($data['transaction_discount'] > 0){
+                $html = $html.'
+                    <div class="row">
+                    <div class="col-6 text-13-3px space-text seravek-light-font">Diskon</div>
+                    <div class="col-6 text-13-3px text-right seravek-light-font text-greyish-brown">- '.str_replace(',', '.', number_format($data['transaction_discount'])).'</div>
+                    </div>
+                    ';
+            }
+
+            if(isset($data['balance'])){
+                $html = $html.'
+                <div class="row">
+                    <div class="col-6 text-13-3px space-text seravek-light-font">Kenangan Points</div>
+                    <div class="col-6 text-13-3px text-right seravek-light-font text-greyish-brown">- '.str_replace(',', '.', number_format(abs($data['balance']))).'</div>
+                </div>
+                ';
+            }
+
+            $html = $html.'
+                        <div class="col-12 text-12-7px text-right"><hr></div>
+                        <div class="row">
+                        <div class="col-6 text-13-3px seravek-font text-black ">Total Pembayaran</div>
+            ';
+
+            if(isset($data['balance'])){
+                $html = $html.'<div class="col-6 text-13-3px text-right seravek-font text-black">'.str_replace(',', '.', number_format($data['transaction_grandtotal'] - $data['balance'])).'</div>';
+            }
+            else{
+                $html = $html.'<div class="col-6 text-13-3px text-right seravek-font text-black">'.str_replace(',', '.', number_format($data['transaction_grandtotal'])).'</div>';
+            }
+
+            $html = $html.'
+                        </div>
+                        </div>
+                    </div>
+                </div>
+            ';
+
+            if ($data['transaction_payment_status'] == 'Completed'|| $data['transaction_payment_status'] == 'Paid'){
+                $html = $html.'
+                    <div class="">
+                        <div class="container">
+                        <div class="col-12 text-14-3px space-top text-greyish-brown seravek-font">Metode Pembayaran <hr> </div>
+                            <div class="row">
+                                <div class="col-6 text-13-3px seravek-font text-black">
+                ';
+                if ($data['trasaction_payment_type'] == 'Balance') {
+                    $html = $html.'Kenangan Points';
+                }
+                elseif ($data['trasaction_payment_type'] == 'Midtrans') {
+                    if(isset($data['data_payment'][0]['payment_type'])){
+                        $html = $html.ucwords(str_replace('_', ' ', $data['data_payment'][0]['payment_type']));
+                    }
+                    else{
+                        $html = $html.'Online Payment';
+                    }
+                }
+                elseif ($data['trasaction_payment_type'] == 'Manual'){
+                    $html = $html.'Transfer Bank';
+                }
+                elseif ($data['trasaction_payment_type'] == 'Offline'){
+                    $html = $html.'TUNAI';
+                }
+
+                $html = $html.'</div>
+                    <div class="col-6 text-12-7px text-right">
+                        LUNAS
+                    </div>
+                    </div>
+                    <div class="row">';
+            
+                if (isset($data['payment']['bank'])){
+                    $html = $html.'<div class="col-6 text-grey text-12-7px">'.$data['payment']['bank'].'</div>';
+                }
+                
+                if (isset($data['payment']['payment_method'])){
+                    $html = $html.'<div class="col-6 text-grey text-12-7px">'.$data['payment']['payment_method'].'</div>';
+                }
+        
+                $html = $html.'</div></div></div></div>';
+            }
+        
+            return $html;
     }
 }

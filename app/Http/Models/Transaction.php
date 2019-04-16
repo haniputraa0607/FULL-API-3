@@ -97,6 +97,11 @@ class Transaction extends Model
 	{
 		return $this->belongsTo(\App\Http\Models\Outlet::class, 'id_outlet');
 	}
+	
+	public function outlet_name()
+	{
+		return $this->belongsTo(\App\Http\Models\Outlet::class, 'id_outlet')->select('id_outlet', 'outlet_name');
+	}
 
 	public function transaction_payment_manuals()
 	{

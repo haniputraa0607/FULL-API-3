@@ -57,6 +57,6 @@ Route::group(['middleware' => ['api','log_request'], 'prefix' => 'api/report', '
 
 Route::group(['prefix' => 'api/cron', 'namespace' => 'Modules\Report\Http\Controllers'], function()
 {
-    Route::get('daily-transaction', 'ApiCronReport@transactionCron');
+    Route::any('daily-transaction', 'ApiCronReport@transactionCron');
 });
 

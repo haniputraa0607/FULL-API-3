@@ -24,9 +24,9 @@ Route::group(['middleware' => ['auth:api', 'log_request'], 'prefix' => 'api/prom
     });
 });
 
-Route::group(['prefix' => 'api/promotion', 'namespace' => 'Modules\Promotion\Http\Controllers'], function()
+Route::group(['prefix' => 'api/promotion', 'middleware' => 'log_request', 'namespace' => 'Modules\Promotion\Http\Controllers'], function()
 {
     Route::get('display_logo/{hash}', 'ApiPromotion@displayLogo');
-    Route::get('queue', 'ApiPromotion@addPromotionQueue');
-    Route::get('send', 'ApiPromotion@sendPromotion');
+    Route::any('queue', 'ApiPromotion@addPromotionQueue');
+    Route::any('send', 'ApiPromotion@sendPromotion');
 });

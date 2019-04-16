@@ -554,7 +554,15 @@ class NewTopupController extends Controller
 
         $check = $className::where('id_user', $id_user)->orderBy('created_at', 'DESC')->first();
 
-        if (empty($check) || empty($check['enc'])) {
+        if (!$check) {
+            return true;
+        }
+
+        if (count($check->toArray()) < 1) {
+            return true;
+        }
+
+        if (!isset($check['enc'])) {
             return true;
         }
 
@@ -588,8 +596,15 @@ class NewTopupController extends Controller
             ];
         }
         
-        $encodeCheck = json_encode($dataHash);
-        if (MyHelper::decryptkhususnew($check['enc']) == $encodeCheck) {
+        // $encodeCheck = utf8_encode(json_encode($dataHash));
+        
+        // if (MyHelper::decryptkhususnew($check['enc']) == $encodeCheck) {
+        //     return true;
+        // }
+
+        $encodeCheck = base64_encode((json_encode($dataHash)));
+
+        if ($check['enc'] == $encodeCheck) {
             return true;
         }
         // if (Hash::check($encodeCheck, $check['enc'])) {
@@ -674,8 +689,10 @@ class NewTopupController extends Controller
             'membership_cashback_percentage' => $checkUpdateEnc['membership_cashback_percentage']
         ];
 
-        $encodeCheck = json_encode($dataHashBalance);
-        $enc = Hash::make($encodeCheck);
+        // $encodeCheck = utf8_encode(json_encode(($dataHashBalance)));
+        // $enc = MyHelper::encryptkhususnew($encodeCheck);
+        
+        $enc = base64_encode((json_encode($dataHashBalance)));
 
         $checkUpdateEnc->enc = $enc;
         $checkUpdateEnc->update();

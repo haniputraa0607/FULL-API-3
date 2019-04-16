@@ -59,7 +59,7 @@ class ApiCronTrxController extends Controller
                 continue;
             }
 
-            $expired_at = date('Y-m-d H:i:s', strtotime('+ 1days', strtotime($singleTrx->transaction_date)));
+            $expired_at = date('Y-m-d H:i:s', strtotime('+30 minutes', strtotime($singleTrx->transaction_date)));
 
             if ($expired_at >= $now) {
                 continue;
@@ -84,6 +84,7 @@ class ApiCronTrxController extends Controller
             // }
 
             $singleTrx->transaction_payment_status = 'Cancelled';
+            $singleTrx->void_date = $now;
             $singleTrx->save();
             if (!$singleTrx) {
                 continue;

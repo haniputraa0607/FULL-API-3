@@ -19,6 +19,7 @@ use App\Http\Models\UserOutlet;
 use App\Http\Models\Configs;
 use App\Http\Models\OutletSchedule;
 use App\Http\Models\Setting;
+use App\Http\Models\OauthAccessToken;
 
 use App\Lib\MyHelper;
 use Validator;
@@ -359,6 +360,11 @@ class ApiOutletController extends Controller
         $pin = bcrypt($post['outlet_pin']);
         $outlet->outlet_pin = $pin;
         $outlet->save();
+
+        //delete token
+        $del = OauthAccessToken::join('oauth_access_token_providers', 'oauth_access_tokens.id', 'oauth_access_token_providers.oauth_access_token_id')
+                                    ->where('oauth_access_tokens.user_id', $post['id_outlet'])->where('oauth_access_token_providers.provider', 'outlet-app')->delete();
+
         
         return response()->json(MyHelper::checkUpdate($outlet));
     }
@@ -371,9 +377,12 @@ class ApiOutletController extends Controller
 
         if (isset($post['webview'])) {
             $outlet = Outlet::with(['today']);
+        }elseif(isset($post['admin'])){
+            $outlet = Outlet::with(['user_outlets', 'product_prices'])->select('outlets.id_outlet', 'outlets.outlet_code', 'outlets.outlet_name'); 
+        
         }
         else {
-            $outlet = Outlet::with(['city', 'outlet_photos', 'outlet_schedules', 'today']);
+            $outlet = Outlet::with(['city', 'outlet_photos', 'outlet_schedules', 'today', 'user_outlets']);
         }
         
         if (isset($post['outlet_code'])) {
@@ -386,10 +395,6 @@ class ApiOutletController extends Controller
 
         if (isset($post['id_city'])) {
             $outlet->where('id_city',$post['id_city']); 
-        }
-
-        if (isset($post['admin'])){
-            $outlet->with(['user_outlets', 'product_prices.product']); 
         }
 
         $useragent = $_SERVER['HTTP_USER_AGENT'];
@@ -510,6 +515,8 @@ class ApiOutletController extends Controller
             if($request->json('type') && $request->json('type') == 'transaction'){
                 $outlet = $this->setAvailableOutlet($outlet);
             }
+        }else{
+            return response()->json(['status' => 'fail', 'messages' => ['There is no open store \n at this moment']]);
         }
 
         if(isset($request['page']) && $request['page'] > 0){
@@ -532,7 +539,7 @@ class ApiOutletController extends Controller
                 }
             } else {
                 $outlet['status'] = 'fail';
-                $outlet['messages'] = ['empty'];
+                $urutan['messages'] = ['There is no open store \n at this moment'];
                 
             }
         }
@@ -661,8 +668,8 @@ class ApiOutletController extends Controller
         $allfeatures = array('type' => 'FeatureCollection', 'features' => $features);
 
         // write into file
-        // Storage::disk('s3')->put('stations.geojson', json_encode($allfeatures));
-        Storage::disk('public_custom')->put('stations.geojson', json_encode($allfeatures));
+        Storage::disk('s3')->put('stations.geojson', json_encode($allfeatures));
+        // Storage::disk('public_custom')->put('stations.geojson', json_encode($allfeatures));
         
         return $allfeatures;
     }
@@ -736,7 +743,7 @@ class ApiOutletController extends Controller
                 $urutan = $this->setAvailableOutlet($urutan);
             }
         } else {
-            return response()->json(MyHelper::checkGet($outlet));
+            return response()->json(['status' => 'fail', 'messages' => ['There is no open store \n at this moment']]);
         }
 
         // if (!isset($request['page'])) {
@@ -763,7 +770,7 @@ class ApiOutletController extends Controller
                 }
             } else {
                 $urutan['status'] = 'fail';
-                $urutan['messages'] = ['empty'];
+                $urutan['messages'] = ['There is no open store \n at this moment'];
                 
             }
         }

@@ -295,18 +295,33 @@ class ApiProductController extends Controller
 				$data = [];
 				$data['id_product'] = $save->id_product;
 				$data['id_outlet'] = $outlet['id_outlet'];
-				$data['product_price'] = 0;
+				$data['product_price'] = null;
 				$data['product_visibility'] = 'Visible';
 				
                 ProductPrice::create($data);
+            }
+
+            //create photo
+            if(isset($post['photo'])){
+
+                $upload = MyHelper::uploadPhotoStrict($post['photo'], $this->saveImage, 300, 300);
                 
-                //photo default
+                if (isset($upload['status']) && $upload['status'] == "success") {
+                    $dataPhoto['product_photo'] = $upload['path'];
+                }
+                else {
+                    $result = [
+                        'status'   => 'fail',
+                        'messages' => ['fail upload image']
+                    ];
+    
+                    return response()->json($result);
+                }
+    
                 $dataPhoto['id_product']          = $save->id_product;
                 $dataPhoto['product_photo_order'] = $this->cekUrutanPhoto($save['id_product']);
-                $dataPhoto['product_photo']       = 'img/product/default';
-                $save                             = ProductPhoto::create($dataPhoto);
+                $save                             = ProductPhoto::create($dataPhoto);            
             }
-            
 
 		}
 		
@@ -414,7 +429,7 @@ class ApiProductController extends Controller
      */
     function deletePhoto($id) {
         // info photo
-        $dataPhoto = ProductPhoto::where('id_product')->get()->toArray();
+        $dataPhoto = ProductPhoto::where('id_product', $id)->get()->toArray();
 
         if (!empty($dataPhoto)) {
             foreach ($dataPhoto as $key => $value) {
@@ -550,7 +565,7 @@ class ApiProductController extends Controller
      */
     function deletePhotoProduct(DeletePhoto $request) {
         // info photo
-        $dataPhoto = ProductPhoto::where('id_product_photo')->get()->toArray();
+        $dataPhoto = ProductPhoto::where('id_product_photo', $request->json('id_product_photo'))->get()->toArray();
         
         $delete    = ProductPhoto::where('id_product_photo', $request->json('id_product_photo'))->delete();
 

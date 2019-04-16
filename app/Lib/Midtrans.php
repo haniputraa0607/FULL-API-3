@@ -68,6 +68,10 @@ class Midtrans {
             $dataMidtrans['item_details'] = $product;
         }
 
+        $dataMidtrans['credit_card'] = [
+            'secure' => true,
+        ];
+
         $token = MyHelper::post($url, Self::bearer(), $dataMidtrans);
 
         return $token;
@@ -97,6 +101,10 @@ class Midtrans {
         if (!is_null($product)) {
             $dataMidtrans['item_details'] = $product;
         }
+
+        $dataMidtrans['credit_card'] = [
+            'secure' => true,
+        ];
 
         $token = MyHelper::post($url, Self::bearerPro(), $dataMidtrans);
 

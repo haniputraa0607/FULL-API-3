@@ -59,7 +59,7 @@ class ApiConfirm extends Controller
             foreach ($check['productTransaction'] as $key => $value) {
                 $dataProductMidtrans = [
                     'id'       => $value['id_product'],
-                    'price'    => $value['transaction_product_price'],
+                    'price'    => abs($value['transaction_product_price']),
                     'name'     => $value['product']['product_name'],
                     'quantity' => $value['transaction_product_qty'],
                 ];
@@ -69,37 +69,45 @@ class ApiConfirm extends Controller
             }
         }
 
-        $dataShip = [
-            'id'       => null,
-            'price'    => $check['transaction_shipment'],
-            'name'     => 'Shipping',
-            'quantity' => 1,
-        ];
-        array_push($dataDetailProduct, $dataShip);
+        if ($check['transaction_shipment'] > 0) {
+            $dataShip = [
+                'id'       => null,
+                'price'    => abs($check['transaction_shipment']),
+                'name'     => 'Shipping',
+                'quantity' => 1,
+            ];
+            array_push($dataDetailProduct, $dataShip);
+        }
+        
+        if ($check['transaction_service'] > 0) {
+            $dataService = [
+                'id'       => null,
+                'price'    => abs($check['transaction_service']),
+                'name'     => 'Service',
+                'quantity' => 1,
+            ];
+            array_push($dataDetailProduct, $dataService);
+        }
 
-        $dataService = [
-            'id'       => null,
-            'price'    => $check['transaction_service'],
-            'name'     => 'Service',
-            'quantity' => 1,
-        ];
-        array_push($dataDetailProduct, $dataService);
+        if ($check['transaction_tax'] > 0) {
+            $dataTax = [
+                'id'       => null,
+                'price'    => abs($check['transaction_tax']),
+                'name'     => 'Tax',
+                'quantity' => 1,
+            ];
+            array_push($dataDetailProduct, $dataTax);
+        }
 
-        $dataTax = [
-            'id'       => null,
-            'price'    => $check['transaction_tax'],
-            'name'     => 'Tax',
-            'quantity' => 1,
-        ];
-        array_push($dataDetailProduct, $dataTax);
-
-        $dataDis = [
-            'id'       => null,
-            'price'    => -$check['transaction_discount'],
-            'name'     => 'Discount',
-            'quantity' => 1,
-        ];
-        array_push($dataDetailProduct, $dataDis);
+        if ($check['transaction_discount'] > 0) {
+            $dataDis = [
+                'id'       => null,
+                'price'    => -abs($check['transaction_discount']),
+                'name'     => 'Discount',
+                'quantity' => 1,
+            ];
+            array_push($dataDetailProduct, $dataDis);
+        }
 
         $detailPayment = [
             'subtotal' => $check['transaction_subtotal'],
@@ -123,7 +131,7 @@ class ApiConfirm extends Controller
                 $countGrandTotal = $countGrandTotal - $checkPaymentBalance['balance_nominal'];
                 $dataBalance = [
                     'id'       => null,
-                    'price'    => -$checkPaymentBalance['balance_nominal'],
+                    'price'    => -abs($checkPaymentBalance['balance_nominal']),
                     'name'     => 'Balance',
                     'quantity' => 1,
                 ];
@@ -193,6 +201,13 @@ class ApiConfirm extends Controller
                     'status'    => 'fail',
                     'messages'  => [
                         'Midtrans token is empty. Please try again.'
+                    ],
+                    'error' => [$connectMidtrans],
+                    'data' => [
+                        'trx'         => $transaction_details,
+                        'grand_total' => $countGrandTotal,
+                        'product'     => $dataDetailProduct,
+                        'user'        => $dataUser
                     ]
                 ]);
             }
@@ -210,7 +225,8 @@ class ApiConfirm extends Controller
                     'status'    => 'fail',
                     'messages'  => [
                         'Payment Midtrans Failed.'
-                    ]
+                    ],
+                    'data' => [$connectMidtrans]
                 ]);
             }
 
@@ -231,18 +247,20 @@ class ApiConfirm extends Controller
 
             $dataMidtrans['items']   = $productMidtrans;
             $dataMidtrans['payment'] = $detailPayment;
+            $dataMidtrans['midtrans_product'] = $dataDetailProduct;
 
-            $update = Transaction::where('transaction_receipt_number', $post['id'])->update(['trasaction_payment_type' => $post['payment_type']]);
+            // $update = Transaction::where('transaction_receipt_number', $post['id'])->update(['trasaction_payment_type' => $post['payment_type']]);
 
-            if (!$update) {
-                DB::rollback();
-                return response()->json([
-                    'status'    => 'fail',
-                    'messages'  => [
-                        'Payment Midtrans Failed.'
-                    ]
-                ]);
-            }
+            // if (!$update) {
+            //     DB::rollback();
+            //     return response()->json([
+            //         'status'    => 'fail',
+            //         'messages'  => [
+            //             'Payment Midtrans Invalid.'
+            //         ],
+            //         'data' => [$connectMidtrans]
+            //     ]);
+            // }
 
             DB::commit();
             return response()->json([

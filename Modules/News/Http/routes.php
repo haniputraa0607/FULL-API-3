@@ -2,7 +2,7 @@
 
 Route::group(['prefix' => 'api/news', 'middleware' => 'log_request', 'namespace' => 'Modules\News\Http\Controllers'], function()
 {
-	Route::group(['middleware' => 'auth_client'], function() {
+	Route::group(['middleware' => 'auth:api'], function() {
     	Route::any('list', 'ApiNews@listNews');
 	
         // get news for custom form webview
@@ -29,7 +29,7 @@ Route::group(['prefix' => 'api/news', 'middleware' => 'log_request', 'namespace'
     
 });
 
-Route::group(['prefix' => 'api/news', 'middleware' => 'log_request', 'namespace' => 'Modules\News\Http\Controllers'], function()
+Route::group(['prefix' => 'api/news', 'middleware' => ['log_request', 'auth:api'], 'namespace' => 'Modules\News\Http\Controllers'], function()
 {
         Route::any('list/test', 'ApiNews@listNews');
         // Route::any('list/web', 'ApiNews@listNews');

@@ -91,7 +91,7 @@ Route::group(['prefix' => 'api/transaction', 'namespace' => 'Modules\Transaction
     Route::any('/notif', 'ApiNotification@receiveNotification');
 });
     
-Route::group(['prefix' => 'api/transaction', 'middleware' => ['log_request'], 'namespace' => 'Modules\Transaction\Http\Controllers'], function()
+Route::group(['prefix' => 'api/transaction', 'middleware' => ['log_request', 'auth:api'], 'namespace' => 'Modules\Transaction\Http\Controllers'], function()
 {
     Route::post('/detail/webview', 'ApiWebviewController@webview');
     Route::post('/detail/webview/point', 'ApiWebviewController@webviewPoint');
@@ -122,7 +122,20 @@ Route::group(['middleware' => ['auth:api', 'log_request'], 'prefix' => 'api/tran
 
 Route::group(['prefix' => 'api/cron/transaction', 'namespace' => 'Modules\Transaction\Http\Controllers'], function()
 {
-    Route::get('/pickup/completed', 'ApiCronTrxController@completeTransactionPickup');
-    Route::get('/expire', 'ApiCronTrxController@cron');
-    Route::get('/schedule', 'ApiCronTrxController@checkSchedule');
+    Route::any('/pickup/completed', 'ApiCronTrxController@completeTransactionPickup');
+    Route::any('/expire', 'ApiCronTrxController@cron');
+    Route::any('/schedule', 'ApiCronTrxController@checkSchedule');
+});
+
+Route::group(['prefix' => 'api/transaction', 'namespace' => 'Modules\Transaction\Http\Controllers'], function()
+{
+    Route::get('/data/decript/{data}', function($data) {
+        return response()->json(App\Lib\MyHelper::decrypt2019($data));
+    });
+    Route::get('/data/encrypt/{data}', function($data) {
+        // return response()->json(App\Lib\MyHelper::decrypt2019($data));
+        
+        return response()->json(App\Lib\MyHelper::encrypt2019($data));
+    });
+    Route::any('/notif2', 'ApiNotification@notification2');
 });

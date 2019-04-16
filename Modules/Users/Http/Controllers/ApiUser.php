@@ -21,6 +21,7 @@ use App\Http\Models\Transaction;
 use App\Http\Models\FraudSetting;
 use App\Http\Models\Setting;
 use App\Http\Models\Feature;
+use App\Http\Models\OauthAccessToken;
 
 use Modules\Users\Http\Requests\users_list;
 use Modules\Users\Http\Requests\users_forgot;
@@ -55,11 +56,11 @@ class ApiUser extends Controller
     }
 	
 	function LogActivityFilter($rule='and', $conditions = null, $order_field='id', $order_method='asc', $skip=0, $take=999999999999){
-		$query = DB::table(env('DB2_DATABASE').'.log_activities as t_log_activities')->select('t_log_activities.*',
+		$query = DB::table('mysql2.'.env('DB2_DATABASE').'.log_activities as t_log_activities')->select('t_log_activities.*',
 													't_users.name',
 													't_users.email'
 													)
-					->leftJoin(env('DB_DATABASE').'.users as t_users','t_users.phone','=','t_log_activities.phone')
+					->leftJoin('mysql.'.env('DB_DATABASE').'.users as t_users','t_users.phone','=','t_log_activities.phone')
 					
 					->orderBy($order_field, $order_method);
 		
@@ -836,6 +837,9 @@ class ApiUser extends Controller
 	
 	function check(users_phone $request){
 		$phone = $request->json('phone');
+
+		$phone = preg_replace("/[^0-9]/", "", $phone);
+
 		if(substr($phone, 0, 2) == '62'){
 			$phone = substr($phone,2);
 		}elseif(substr($phone, 0, 3) == '+62'){
@@ -865,6 +869,9 @@ class ApiUser extends Controller
 	 */
 	function createPin(users_phone $request){
 		$phone = $request->json('phone');
+
+		$phone = preg_replace("/[^0-9]/", "", $phone);
+
 		if(substr($phone, 0, 2) == '62'){
 			$phone = substr($phone,2);
 		}elseif(substr($phone, 0, 3) == '+62'){
@@ -1024,12 +1031,26 @@ class ApiUser extends Controller
 			$device_token = $request->json('device_token');
 		}
 			
-		$datauser = User::where('phone', '=', $request->json('phone'))
+		$phone = $request->json('phone');
+
+		$phone = preg_replace("/[^0-9]/", "", $phone);
+
+		if(substr($phone, 0, 2) == '62'){
+			$phone = substr($phone,2);
+		}elseif(substr($phone, 0, 3) == '+62'){
+			$phone = substr($phone,3);
+		}
+
+		if(substr($phone, 0, 1) != '0'){
+			$phone = '0'.$phone;
+		}
+
+		$datauser = User::where('phone', '=', $phone)
 						->get()
 						->toArray();
 		$cekFraud = 0;
 		if($datauser){
-			if(Auth::attempt(['phone' => $request->json('phone'), 'password' => $request->json('pin')])){
+			if(Auth::attempt(['phone' => $phone, 'password' => $request->json('pin')])){
 				//kalo login success
 				if($is_android != 0 || $is_ios != 0){
 					
@@ -1094,7 +1115,7 @@ class ApiUser extends Controller
 				if(stristr($useragent,'okhttp')) $useragent = 'Android';
 				if(stristr($useragent,'GuzzleHttp')) $useragent = 'Browser';
 				if(\Module::collections()->has('Autocrm')) {
-					$autocrm = app($this->autocrm)->SendAutoCRM('Login Success', $request->json('phone'), 
+					$autocrm = app($this->autocrm)->SendAutoCRM('Login Success', $phone, 
 																		['ip' => $ip, 
 																		 'useragent' => $useragent, 
 																		 'now' => date('Y-m-d H:i:s')
@@ -1103,7 +1124,7 @@ class ApiUser extends Controller
 
 				//update count login failed
 				if($datauser[0]['count_login_failed'] > 0){
-					$updateCountFailed = User::where('phone', $request->json('phone'))->update(['count_login_failed' => 0]);
+					$updateCountFailed = User::where('phone', $phone)->update(['count_login_failed' => 0]);
 				}
 				
 				$result 			= [];
@@ -1112,7 +1133,7 @@ class ApiUser extends Controller
 				$result['device'] 	= $device;
 				$result['ip'] 		= $ip;
 
-				if($request->json('latitude') && $request->json('longitude')){
+                if($request->json('latitude') && $request->json('longitude')){
 					$userLocation = UserLocation::create([
 						'id_user' => $datauser[0]['id'],
 						'lat' => $request->json('latitude'),
@@ -1121,7 +1142,7 @@ class ApiUser extends Controller
 					]);
 	
 				}
-
+				
 				if($cekFraud == 0){
 					$updateUserLogin = User::where('phone', $datauser[0]['phone'])->update(['new_login' => '1']);
 				}
@@ -1129,14 +1150,14 @@ class ApiUser extends Controller
 				//kalo login gagal
 				if($datauser){
 					//update count login failed
-					$updateCountFailed = User::where('phone', $request->json('phone'))->update(['count_login_failed' => $datauser[0]['count_login_failed'] + 1]);
+					$updateCountFailed = User::where('phone', $phone)->update(['count_login_failed' => $datauser[0]['count_login_failed'] + 1]);
 
 					$failedLogin = $datauser[0]['count_login_failed']+1;
 					//get setting login failed
 					$getSet = Setting::where('key', 'count_login_failed')->first();
 					if($getSet && $getSet->value){
 						if($failedLogin >= $getSet->value){
-							$autocrm = app($this->autocrm)->SendAutoCRM('Login Failed', $request->json('phone'), 
+							$autocrm = app($this->autocrm)->SendAutoCRM('Login Failed', $phone, 
 																			['ip' => $ip, 
 																			 'useragent' => $useragent, 
 																			 'now' => date('Y-m-d H:i:s')
@@ -1171,6 +1192,9 @@ class ApiUser extends Controller
 	
 	function resendPin(users_phone $request){
 		$phone = $request->json('phone');
+
+		$phone = preg_replace("/[^0-9]/", "", $phone);
+
 		if(substr($phone, 0, 2) == '62'){
 			$phone = substr($phone,2);
 		}elseif(substr($phone, 0, 3) == '+62'){
@@ -1226,7 +1250,22 @@ class ApiUser extends Controller
     }
 	
 	function forgotPin(users_forgot $request){
-		$user = User::where('phone', '=', $request->json('phone'))->first();
+		$phone = $request->json('phone');
+
+		$phone = preg_replace("/[^0-9]/", "", $phone);
+
+		if(substr($phone, 0, 2) == '62'){
+			$phone = substr($phone,2);
+		}elseif(substr($phone, 0, 3) == '+62'){
+			$phone = substr($phone,3);
+		}
+
+		if(substr($phone, 0, 1) != '0'){
+			$phone = '0'.$phone;
+		}
+
+		$user = User::where('phone', '=', $phone)->first();
+
 		if(!$user){
 			$result = [
 				'status'	=> 'fail',
@@ -1243,7 +1282,7 @@ class ApiUser extends Controller
 			return response()->json($result);
 		}
 		
-        $data = User::where('phone', '=', $request->json('phone'))
+        $data = User::where('phone', '=', $phone)
 					->where('email', '=', $request->json('email'))
 					->get()
 					->toArray();
@@ -1262,15 +1301,15 @@ class ApiUser extends Controller
 			if(stristr($useragent,'iOS')) $useragent = 'iOS';
 			if(stristr($useragent,'okhttp')) $useragent = 'Android';
 			if(stristr($useragent,'GuzzleHttp')) $useragent = 'Browser';
-				
-			$autocrm = app($this->autocrm)->SendAutoCRM('Pin Forgot', $request->json('phone'), 
+
+			$autocrm = app($this->autocrm)->SendAutoCRM('Pin Forgot', $phone, 
 																	['pin' => $pin,
 																	'useragent' => $useragent, 
 																	 'now' => date('Y-m-d H:i:s')], $useragent);
 			
 			$result = [
                         'status'	=> 'success',
-                        'result'	=> ['phone'	=>	$request->json('phone'),
+                        'result'	=> ['phone'	=>	$phone,
 										'pin'	=>	$pin
 									   ]
                     ];
@@ -1286,20 +1325,35 @@ class ApiUser extends Controller
     }
 	
 	function verifyPin(users_phone_pin $request){
-        $data = User::where('phone', '=', $request->json('phone'))
+
+		$phone = $request->json('phone');
+
+		$phone = preg_replace("/[^0-9]/", "", $phone);
+
+		if(substr($phone, 0, 2) == '62'){
+			$phone = substr($phone,2);
+		}elseif(substr($phone, 0, 3) == '+62'){
+			$phone = substr($phone,3);
+		}
+
+		if(substr($phone, 0, 1) != '0'){
+			$phone = '0'.$phone;
+		}
+
+        $data = User::where('phone', '=', $phone)
 						->get()
 						->toArray();
 		if($data){
 			if($data[0]['phone_verified'] == 0){
-				if(Auth::attempt(['phone' => $request->json('phone'), 'password' => $request->json('pin')])){
+				if(Auth::attempt(['phone' => $phone, 'password' => $request->json('pin')])){
 					$update = User::where('id','=',$data[0]['id'])->update(['phone_verified' => '1']);
 					if($update){
 						$profile = User::select('phone','email','name','id_city','gender','phone_verified', 'email_verified')
-									->where('phone', '=', $request->json('phone'))
+									->where('phone', '=', $phone)
 									->get()
 									->toArray();
 						if(\Module::collections()->has('Autocrm')) {
-							$autocrm = app($this->autocrm)->SendAutoCRM('Pin Verify', $request->json('phone'));
+							$autocrm = app($this->autocrm)->SendAutoCRM('Pin Verify', $phone);
 						}
 						$result = [
 								'status'	=> 'success',
@@ -1331,15 +1385,40 @@ class ApiUser extends Controller
     }
 	
 	function changePin(users_phone_pin_new $request){
-        $data = User::where('phone', '=', $request->json('phone'))
+
+		$phone = $request->json('phone');
+
+		$phone = preg_replace("/[^0-9]/", "", $phone);
+
+		if(substr($phone, 0, 2) == '62'){
+			$phone = substr($phone,2);
+		}elseif(substr($phone, 0, 3) == '+62'){
+			$phone = substr($phone,3);
+		}
+
+		if(substr($phone, 0, 1) != '0'){
+			$phone = '0'.$phone;
+		}
+
+        $data = User::where('phone', '=', $phone)
 						->get()
 						->toArray();
 		if($data){
-			if(Auth::attempt(['phone' => $request->json('phone'), 'password' => $request->json('pin_old')])){
+			if(Auth::attempt(['phone' => $phone, 'password' => $request->json('pin_old')])){
 				$pin 	= bcrypt($request->json('pin_new'));
 				$update = User::where('id','=',$data[0]['id'])->update(['password' => $pin, 'phone_verified' => '1', 'pin_changed' => '1']);
 				if(\Module::collections()->has('Autocrm')) {
-					$autocrm = app($this->autocrm)->SendAutoCRM('Pin Changed', $request->json('phone'));
+				    if($data[0]['first_pin_change'] < 1){
+    					$autocrm = app($this->autocrm)->SendAutoCRM('Pin Changed', $phone);
+    					$changepincount = $data[0]['first_pin_change']+1;
+    					$update = User::where('id','=',$data[0]['id'])->update(['first_pin_change' => $changepincount]);
+				    }else{
+						$autocrm = app($this->autocrm)->SendAutoCRM('Pin Changed Forgot Password', $phone);
+						
+						$del = OauthAccessToken::join('oauth_access_token_providers', 'oauth_access_tokens.id', 'oauth_access_token_providers.oauth_access_token_id')
+							->where('oauth_access_tokens.user_id', $data[0]['id'])->where('oauth_access_token_providers.provider', 'users')->delete();
+
+				    }
 				}
 				$result = [
 						'status'	=> 'success',
@@ -1774,25 +1853,39 @@ class ApiUser extends Controller
 		
 		$query = User::leftJoin('cities','cities.id_city','=','users.id_city')
 					->leftJoin('provinces','provinces.id_province','=','cities.id_province')
-					->with('transactions', 'pointTransaction', 'pointVoucher', 'pointVoucher.voucher', 'pointVoucher.voucher.voucher','point')
+				// 	->with('transactions', 'pointTransaction', 'pointVoucher', 'pointVoucher.voucher', 'pointVoucher.voucher.voucher','point')
+					->with('history_transactions.outlet_name', 'history_balance.detail_trx')
 					->where('phone','=',$post['phone'])
 					->get()
 					->first();
 					
-		foreach ($query->point as $key => $value) {
-            $value->detail_product = $value->detailProduct;
-        }
+// 		foreach ($query->point as $key => $value) {
+//             $value->detail_product = $value->detailProduct;
+//         }
 		
-		$countVoucher = LogPoint::where(['id_user' => $query['id'], 'source' => 'voucher'])->get()->count();
-        $countTrx = LogPoint::where(['id_user' => $query['id'], 'source' => 'transaction'])->get()->count();
+// 		$countVoucher = LogPoint::where(['id_user' => $query['id'], 'source' => 'voucher'])->get()->count();
+//         $countTrx = LogPoint::where(['id_user' => $query['id'], 'source' => 'transaction'])->get()->count();
 		
 		if($query){
-			if(!empty($query['photo']))
-			$query['photo'] = env('API_URL')."/".$query['photo'];
+// 			if(!empty($query['photo']))
+// 			$query['photo'] = env('API_URL')."/".$query['photo'];
+
+            //on going
+            $query['on_going'] = $transaction = Transaction::join('transaction_pickups', 'transactions.id_transaction', 'transaction_pickups.id_transaction')
+                                    ->with('outlet_name')
+                                    ->where('transaction_payment_status', 'Completed')
+                                    ->whereDate('transaction_date', date('Y-m-d'))
+                                    ->whereNull('taken_at')
+                                    ->whereNull('reject_at')
+                                    ->where('id_user', $query['id'])
+                                    ->select('transactions.id_transaction', 'transaction_receipt_number','trasaction_type','transaction_grandtotal', 'transaction_payment_status', 'transaction_date', 'receive_at', 'ready_at', 'taken_at', 'reject_at')
+                                    ->orderBy('transaction_date', 'DESC')
+                                    ->get();
+            
 			$result = ['status'	=> 'success',
 					   'result'	=> $query,
-					   'trx'     => $countTrx,
-						'voucher' => $countVoucher
+				// 	   'trx'     => $countTrx,
+				// 		'voucher' => $countVoucher
 					  ]; 
 		} else {
 			$result = [
@@ -1803,7 +1896,7 @@ class ApiUser extends Controller
 		return response()->json($result);
     }
 	
-public function log(Request $request)
+	public function log(Request $request)
     {
 		$post = $request->json()->all();
 		if(isset($post['take'])){
@@ -1814,13 +1907,21 @@ public function log(Request $request)
 		if(isset($post['skip'])){
 			$skip = $post['skip'];
 		}else{
-			$skip = 10;
+			$skip = 0;
 		}
 		$query = LogRequest::where('phone','=',$post['phone'])
 							->orderBy('id_log_activity','desc')
 							->skip($skip)->take($take)
-							->get()
-							->toArray();
+							->select('id_log_activity', 'response_status', 'ip', 'created_at', 'subject', 'useragent');
+		if(isset($post['type']) && $post['type'] == "backend"){
+		    $query = $query->where('subject', 'LIKE', 'BE %');
+		}
+		if(isset($post['type']) && $post['type'] == "mobile"){
+		    $query = $query->where('subject', 'NOT LIKE', 'BE %');
+		}
+		
+		$query = $query->get()
+						->toArray();
 		if($query){
 			$result = ['status'	=> 'success',
 					   'result'	=> $query
@@ -1832,7 +1933,31 @@ public function log(Request $request)
 						];
 		}
 		return response()->json($result);
-    }
+	}
+	
+	public function detailLog($id, Request $request){
+		$log = LogRequest::where('id_log_activity', $id)->first();
+		if($log){
+		    if($log['response']){
+    			$res = MyHelper::decrypt2019($log['response']);
+    			if(!$log['response']){
+    				$log['response'] = $res;
+    			} 
+    			// $log['response'] = str_replace('}','\r\n}',str_replace(',',',\r\n&emsp;',str_replace('{','{\r\n&emsp;',strip_tags($log['response']))));
+		    }
+		    
+    	    if($log['request']){
+    			$req = MyHelper::decrypt2019($log['request']);
+    			if(!$log['request']){
+    				$log['request'] = $request;
+    			} 
+    			// $log['request'] = str_replace('}','\r\n}',str_replace(',',',\r\n&emsp;',str_replace('{','{\r\n&emsp;',strip_tags($log['request']))));
+    	    }
+		}
+
+		return response()->json(MyHelper::checkGet($log));
+	}
+	
 	
 	public function updateProfileByAdmin(Request $request)
     {
@@ -1910,6 +2035,14 @@ public function log(Request $request)
 		if (isset($post['password_new'])) {
 			$password = bcrypt($post['password_new']);
 			$update = User::where('phone',$post['phone'])->update(['password' => $password]);
+
+			$user = User::where('phone',$post['phone'])->first();
+
+			if($user){
+
+				$del = OauthAccessToken::join('oauth_access_token_providers', 'oauth_access_tokens.id', 'oauth_access_token_providers.oauth_access_token_id')
+				->where('oauth_access_tokens.user_id', $user->id)->where('oauth_access_token_providers.provider', 'users')->delete();
+			}
 
 			return MyHelper::checkUpdate($update);
 		} else {

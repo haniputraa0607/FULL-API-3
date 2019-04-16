@@ -14,6 +14,7 @@ Route::group(['middleware' => ['auth:api', 'log_request'], 'prefix' => 'api/deal
     {
         Route::post('create', 'ApiDealsVoucher@createReq');
         Route::post('delete', 'ApiDealsVoucher@deleteReq'); 
+        Route::post('user', 'ApiDealsVoucher@voucherUser');
     });
 
     /* CLAIM */

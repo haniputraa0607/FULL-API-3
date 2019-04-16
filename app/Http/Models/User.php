@@ -73,7 +73,8 @@ class User extends Authenticatable
 		'count_transaction',
 		'count_login_failed',
 		'new_login',
-		'pin_changed'
+		'pin_changed',
+		'first_pin_change'
 	];
 
 	public function city()
@@ -120,6 +121,11 @@ class User extends Authenticatable
 	{
 		return $this->hasMany(Transaction::class, 'id_user', 'id')->orderBy('created_at', 'DESC');
 	}
+	
+	public function history_transactions()
+	{
+		return $this->hasMany(Transaction::class, 'id_user', 'id')->select('id_user', 'id_transaction', 'id_outlet', 'transaction_receipt_number', 'trasaction_type', 'transaction_grandtotal', 'transaction_payment_status', 'transaction_date')->orderBy('created_at', 'DESC')->limit(50);
+	}
 
 	public function addresses()
 	{
@@ -150,6 +156,14 @@ class User extends Authenticatable
 	
 	public function point() {
     	return $this->hasMany(LogPoint::class, 'id_user', 'id')->orderBy('created_at', 'DESC');
+    }
+    
+    public function log_balance() {
+    	return $this->hasMany(LogBalance::class, 'id_user', 'id')->orderBy('created_at', 'DESC');
+    }
+    
+    public function history_balance() {
+    	return $this->hasMany(LogBalance::class, 'id_user', 'id')->orderBy('created_at', 'DESC')->limit(50);
     }
 
     public function pointTransaction() {
