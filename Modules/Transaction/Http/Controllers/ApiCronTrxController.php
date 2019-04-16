@@ -59,7 +59,7 @@ class ApiCronTrxController extends Controller
                 continue;
             }
 
-            $expired_at = date('Y-m-d H:i:s', strtotime('+ 1days', strtotime($singleTrx->transaction_date)));
+            $expired_at = date('Y-m-d H:i:s', strtotime('+30 minutes', strtotime($singleTrx->transaction_date)));
 
             if ($expired_at >= $now) {
                 continue;
@@ -84,6 +84,7 @@ class ApiCronTrxController extends Controller
             // }
 
             $singleTrx->transaction_payment_status = 'Cancelled';
+            $singleTrx->void_date = $now;
             $singleTrx->save();
             if (!$singleTrx) {
                 continue;
@@ -129,67 +130,65 @@ class ApiCronTrxController extends Controller
 
         if (!empty($result)) {
             $crm = Autocrm::where('autocrm_title','=','Cron Transaction')->with('whatsapp_content')->first();
-            if($crm['autocrm_forward_toogle'] == 1){
-                if (!empty($crm)) {
-                    if(!empty($crm['autocrm_forward_email'])){
-                        $exparr = explode(';',str_replace(',',';',$crm['autocrm_forward_email']));
-                        foreach($exparr as $email){
-                            $n   = explode('@',$email);
-                            $name = $n[0];
-                            
-                            $to      = $email;
-                            
-                            $content = str_replace('%table_trx%', '', $crm['autocrm_forward_email_content']);
+            if (!empty($crm)) {
+                if(!empty($crm['autocrm_forward_email'])){
+                    $exparr = explode(';',str_replace(',',';',$crm['autocrm_forward_email']));
+                    foreach($exparr as $email){
+                        $n   = explode('@',$email);
+                        $name = $n[0];
+                        
+                        $to      = $email;
+                        
+                        $content = str_replace('%table_trx%', '', $crm['autocrm_forward_email_content']);
 
-                            $content .= $this->html($result);
-                            // return response()->json($this->html($result));
-                            // get setting email
-                            $getSetting = Setting::where('key', 'LIKE', 'email%')->get()->toArray();
-                            $setting = array();
-                            foreach ($getSetting as $key => $value) {
-                                $setting[$value['key']] = $value['value']; 
+                        $content .= $this->html($result);
+                        // return response()->json($this->html($result));
+                        // get setting email
+                        $getSetting = Setting::where('key', 'LIKE', 'email%')->get()->toArray();
+                        $setting = array();
+                        foreach ($getSetting as $key => $value) {
+                            $setting[$value['key']] = $value['value']; 
+                        }
+
+                        $subject = $crm['autocrm_forward_email_subject'];
+
+                        $data = array(
+                            'customer'     => $name,
+                            'html_message' => $content,
+                            'setting'      => $setting
+                        );
+                        
+                        Mailgun::send('emails.test', $data, function($message) use ($to,$subject,$name,$setting)
+                        {
+                            $message->to($to, $name)->subject($subject)
+                                            ->trackClicks(true)
+                                            ->trackOpens(true);
+                            if(!empty($setting['email_from']) && !empty($setting['email_sender'])){
+                                $message->from($setting['email_from'], $setting['email_sender']);
+                            }else if(!empty($setting['email_from'])){
+                                $message->from($setting['email_from']);
                             }
 
-                            $subject = $crm['autocrm_forward_email_subject'];
+                            if(!empty($setting['email_reply_to'])){
+                                $message->replyTo($setting['email_reply_to'], $setting['email_reply_to_name']);
+                            }
 
-                            $data = array(
-                                'customer'     => $name,
-                                'html_message' => $content,
-                                'setting'      => $setting
-                            );
-                            
-                            Mailgun::send('emails.test', $data, function($message) use ($to,$subject,$name,$setting)
-                            {
-                                $message->to($to, $name)->subject($subject)
-                                                ->trackClicks(true)
-                                                ->trackOpens(true);
-                                if(!empty($setting['email_from']) && !empty($setting['email_sender'])){
-                                    $message->from($setting['email_from'], $setting['email_sender']);
-                                }else if(!empty($setting['email_from'])){
-                                    $message->from($setting['email_from']);
-                                }
+                            if(!empty($setting['email_cc']) && !empty($setting['email_cc_name'])){
+                                $message->cc($setting['email_cc'], $setting['email_cc_name']);
+                            }
 
-                                if(!empty($setting['email_reply_to'])){
-                                    $message->replyTo($setting['email_reply_to'], $setting['email_reply_to_name']);
-                                }
-
-                                if(!empty($setting['email_cc']) && !empty($setting['email_cc_name'])){
-                                    $message->cc($setting['email_cc'], $setting['email_cc_name']);
-                                }
-
-                                if(!empty($setting['email_bcc']) && !empty($setting['email_bcc_name'])){
-                                    $message->bcc($setting['email_bcc'], $setting['email_bcc_name']);
-                                }
-                            });
-                            
-                            // $logData = [];
-                            // $logData['id_user'] = 999999999;
-                            // $logData['email_log_to'] = $email;
-                            // $logData['email_log_subject'] = $subject;
-                            // $logData['email_log_message'] = $content;
-                            
-                            // $logs = AutocrmEmailLog::create($logData);
-                        }
+                            if(!empty($setting['email_bcc']) && !empty($setting['email_bcc_name'])){
+                                $message->bcc($setting['email_bcc'], $setting['email_bcc_name']);
+                            }
+                        });
+                        
+                        // $logData = [];
+                        // $logData['id_user'] = 999999999;
+                        // $logData['email_log_to'] = $email;
+                        // $logData['email_log_subject'] = $subject;
+                        // $logData['email_log_message'] = $content;
+                        
+                        // $logs = AutocrmEmailLog::create($logData);
                     }
                 }
             }

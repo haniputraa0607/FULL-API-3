@@ -1,9 +1,20 @@
 <?php
-Route::group(['prefix' => 'api/outlet', 'middleware' => 'log_request', 'namespace' => 'Modules\Outlet\Http\Controllers'], function()
+Route::group(['prefix' => 'api/outlet', 'middleware' => ['log_request', 'auth:api'], 'namespace' => 'Modules\Outlet\Http\Controllers'], function()
 {
     Route::any('list', 'ApiOutletController@listOutlet');
     Route::any('list/gofood', 'ApiOutletGofoodController@listOutletGofood');
     Route::any('filter', 'ApiOutletController@filter');
+    Route::any('filter/gofood', 'ApiOutletController@filter');
+});
+
+Route::group(['prefix' => 'api/outlet','namespace' => 'Modules\Outlet\Http\Controllers'], function()
+{
+    Route::any('list/android', 'ApiOutletController@listOutlet');
+});
+
+Route::group(['prefix' => 'api/outlet', 'middleware' => ['log_request', 'auth_client'], 'namespace' => 'Modules\Outlet\Http\Controllers'], function()
+{
+    Route::any('filter/android', 'ApiOutletController@filter');
 });
 
 Route::group(['prefix' => 'api/outlet', 'namespace' => 'Modules\Outlet\Http\Controllers'], function()
@@ -11,7 +22,7 @@ Route::group(['prefix' => 'api/outlet', 'namespace' => 'Modules\Outlet\Http\Cont
     /**
      * outlet
      */
-    Route::group(['middleware' => 'auth_client'], function() {
+    Route::group(['middleware' => 'auth:api'], function() {
         Route::get('city', 'ApiOutletController@cityOutlet');
         Route::any('nearme', 'ApiOutletController@nearMe');
         // Route::any('filter', 'ApiOutletController@filter');

@@ -110,8 +110,9 @@ class ApiHome extends Controller
     public function refreshPointBalance(Request $request) {
 		$user = $request->user();
 		if($user){
-			$point      = app($this->point)->getPoint($user->id);
-			$balance      = app($this->balance)->balanceNow($user->id);
+			// $point      = app($this->point)->getPoint($user->id);
+			// $balance      = app($this->balance)->balanceNow($user->id);
+			$balance      = $user->balance;
 			
 			 /* QR CODE */
             $expired = Setting::where('key', 'qrcode_expired')->first();
@@ -260,8 +261,8 @@ class ApiHome extends Controller
             $qrCode = 'https://chart.googleapis.com/chart?chl='.$qr.'&chs=250x250&cht=qr&chld=H%7C0';
             $qrCode = html_entity_decode($qrCode);
 			
-			$point      = app($this->point)->getPoint($user->id);
-			$balance      = app($this->balance)->balanceNow($user->id);
+			// $point      = app($this->point)->getPoint($user->id);
+			// $balance      = app($this->balance)->balanceNow($user->id);
 			
 			$membership = UsersMembership::select('memberships.*')
 										->Join('memberships','memberships.id_membership','=','users_memberships.id_membership')
@@ -366,7 +367,7 @@ class ApiHome extends Controller
                     'banners'       => $banners,
                     'splash_screen_url' => $splash."?update=".time(),
                     // 'total_point'   => (int) $point,
-                    'total_kopi_point' => (int) $balance,
+                    'total_kopi_point' => (int) $user->balance,
                     // 'notification'  =>[
                     //     'total' => $countUnread + $transactionPending,
                     //     'count_unread_inbox' => $countUnread,

@@ -42,7 +42,8 @@ Route::group(['prefix' => 'api', 'middleware' => 'log_request'], function(){
 	    Route::post('adminoutlet/delete', 'ApiUser@deleteAdminOutlet');
 	    Route::post('activity', 'ApiUser@activity');
 	    Route::post('detail', 'ApiUser@show');
-	    Route::post('log', 'ApiUser@log');
+		Route::post('log', 'ApiUser@log');
+	    Route::get('log/detail/{id}', 'ApiUser@detailLog');
 	    Route::post('delete', 'ApiUser@delete');
 		Route::post('update', 'ApiUser@updateProfileByAdmin');
 		Route::post('update/photo', 'ApiUser@updateProfilePhotoByAdmin');
@@ -96,5 +97,5 @@ Route::group(['namespace' => 'Modules\Users\Http\Controllers'], function()
 
 Route::group(['prefix' => 'api/cron', 'namespace' => 'Modules\Users\Http\Controllers'], function()
 {
-	Route::get('/reset-trx-day', 'ApiUser@resetCountTransaction');
+	Route::any('/reset-trx-day', 'ApiUser@resetCountTransaction');
 });

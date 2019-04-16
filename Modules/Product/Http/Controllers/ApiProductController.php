@@ -299,12 +299,11 @@ class ApiProductController extends Controller
 				$data['product_visibility'] = 'Visible';
 				
                 ProductPrice::create($data);
-                
             }
-            
+
+            //create photo
             if(isset($post['photo'])){
 
-                //create photo
                 $upload = MyHelper::uploadPhotoStrict($post['photo'], $this->saveImage, 300, 300);
                 
                 if (isset($upload['status']) && $upload['status'] == "success") {
@@ -321,8 +320,7 @@ class ApiProductController extends Controller
     
                 $dataPhoto['id_product']          = $save->id_product;
                 $dataPhoto['product_photo_order'] = $this->cekUrutanPhoto($save['id_product']);
-                $save                             = ProductPhoto::create($dataPhoto);
-                
+                $save                             = ProductPhoto::create($dataPhoto);            
             }
 
 		}

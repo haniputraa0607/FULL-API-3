@@ -202,6 +202,7 @@ class ApiSingleReport extends Controller
         $data['transactions']['trx_device_chart'] = $trx_device_chart;
         $data['transactions']['trx_provider_chart'] = $trx_provider_chart;
         $data['transactions']['total_idr'] = number_format($total_idr , 0, '', ',');
+        $data['transactions']['total_qty'] = number_format($total_qty , 0, '', ',');
         $data['transactions']['average_idr'] = number_format($average_idr , 0, '', ',');
         $data['transactions']['total_male'] = number_format($total_male , 0, '', ',');
         $data['transactions']['total_female'] = number_format($total_female , 0, '', ',');

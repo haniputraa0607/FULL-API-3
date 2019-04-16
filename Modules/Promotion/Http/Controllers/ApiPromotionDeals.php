@@ -93,7 +93,7 @@ class ApiPromotionDeals extends Controller
 			if (!file_exists('img/promotion/deals')) {
 				mkdir('img/promotion/deals', 0777, true);
 			}
-			$upload = MyHelper::uploadPhoto($post['deals_image'], $path = 'img/promotion/deals', 500);
+			$upload = MyHelper::uploadPhoto($post['deals_image'], $path = 'img/promotion/deals/', 500);
 			if ($upload['status'] == "success") {
 				$post['deals_image'] = $upload['path'];
 			} else{
@@ -106,6 +106,10 @@ class ApiPromotionDeals extends Controller
 		}
 
 		if(isset($post['id_deals_promotion_template'])){
+			$deals = DealsPromotionTemplate::where('id_deals_promotion_template', $post['id_deals_promotion_template'])->first();
+			if($deals && $deals['']){
+
+			}
 			$deals = DealsPromotionTemplate::where('id_deals_promotion_template', $post['id_deals_promotion_template'])->update($post);
 		}else{
 			$deals = DealsPromotionTemplate::create($post);

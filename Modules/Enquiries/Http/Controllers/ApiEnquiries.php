@@ -83,7 +83,7 @@ class ApiEnquiries extends Controller
 
 			if (is_array($post['enquiry_photo'])) {
 				foreach ($post['enquiry_photo'] as $value) {
-					$upload = MyHelper::uploadPhoto($value, $this->saveImage);
+					$upload = MyHelper::uploadPhotoQuality($value, $this->saveImage, 800,50);
 
 					if (isset($upload['status']) && $upload['status'] == "success") {
 					    $data['enquiry_photo'] = $upload['path'];
@@ -102,7 +102,7 @@ class ApiEnquiries extends Controller
 				}
 			}
 			else {
-				$upload = MyHelper::uploadPhoto($post['enquiry_photo'], $this->saveImage);
+				$upload = MyHelper::uploadPhotoQuality($post['enquiry_photo'], $this->saveImage, 800, 50);
 
 				if (isset($upload['status']) && $upload['status'] == "success") {
 				    $data['enquiry_photo'] = $upload['path'];
