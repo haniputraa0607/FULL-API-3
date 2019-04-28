@@ -49,6 +49,10 @@ return [
             'driver' => 'passport',
             'provider' => 'outlet-app'
         ],
+        'quinos' => [
+            'driver' => 'passport',
+            'provider' => 'quinos'
+        ],
     ],
 
     /*
@@ -82,6 +86,10 @@ return [
         'outlet-app' => [
             'driver' => 'eloquent',
             'model' => App\Http\Models\Outlet::class
+        ],
+        'quinos' => [
+            'driver' => 'eloquent',
+            'model' => App\Http\Models\QuinosUser::class
         ],
     ],
 

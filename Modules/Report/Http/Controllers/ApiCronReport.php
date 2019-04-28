@@ -63,8 +63,8 @@ class ApiCronReport extends Controller
         // }
         // else {
             // DATE START
-            // $dateStart = $this->firstTrx();
-            $dateStart = "2019-01-01";
+            $dateStart = $this->firstTrx();
+            // $dateStart = "2019-01-01";
 
             if ($dateStart) {
                 // UP TO YESTERDAY

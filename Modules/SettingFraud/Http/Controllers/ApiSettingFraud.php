@@ -56,8 +56,8 @@ class ApiSettingFraud extends Controller
             foreach($recipient_email as $key => $recipient){
                 if($recipient != ' ' && $recipient != ""){
                     $to		 = $recipient;
-                    $subject = app($this->autocrm)->TextReplace($fraudSetting['email_subject'], $user['phone'], ['transaction_count_day' => $user['count_transaction_day'], 'transaction_count_week' => $user['count_transaction_week'], 'last_device_id' => $deviceUser['device_id'], 'last_device_token' => $deviceUser['device_token'], 'last_device_type' => $deviceUser['device_type']]);
-                    $content = app($this->autocrm)->TextReplace($fraudSetting['email_content'], $user['phone'], ['transaction_count_day' => $user['count_transaction_day'], 'transaction_count_week' => $user['count_transaction_week'], 'last_device_id' => $deviceUser['device_id'], 'last_device_token' => $deviceUser['device_token'], 'last_device_type' => $deviceUser['device_type']]);
+                    $subject = app($this->autocrm)->TextReplace($fraudSetting['email_subject'], $user['phone'], ['transaction_count_day' => (string)$user['count_transaction_day'], 'transaction_count_week' => (string)$user['count_transaction_week'], 'last_device_id' => $deviceUser['device_id'], 'last_device_token' => $deviceUser['device_token'], 'last_device_type' => $deviceUser['device_type']]);
+                    $content = app($this->autocrm)->TextReplace($fraudSetting['email_content'], $user['phone'], ['transaction_count_day' => (string)$user['count_transaction_day'], 'transaction_count_week' => (string)$user['count_transaction_week'], 'last_device_id' => $deviceUser['device_id'], 'last_device_token' => $deviceUser['device_token'], 'last_device_type' => $deviceUser['device_type']]);
                     
                     //get setting email
                     $getSetting = Setting::where('key', 'LIKE', 'email%')->get()->toArray();

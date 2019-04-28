@@ -32,6 +32,7 @@ use App\Http\Models\LogBalance;
 use App\Http\Models\SpecialMembership;
 use App\Http\Models\DealsVoucher;
 use App\Http\Models\Configs;
+use App\Http\Models\FraudSetting;
 use App\Lib\MyHelper;
 use Mailgun;
 
@@ -56,6 +57,7 @@ class ApiPOS extends Controller
         $this->membership = "Modules\Membership\Http\Controllers\ApiMembership";
         $this->balance    = "Modules\Balance\Http\Controllers\BalanceController";
 		$this->autocrm  = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
+        $this->setting_fraud = "Modules\SettingFraud\Http\Controllers\ApiSettingFraud";
     }
 	
     public function transactionDetail(reqPreOrderDetail $request){
@@ -113,7 +115,6 @@ class ApiPOS extends Controller
 			$transactions['grand_total'] = $check['transaction_grandtotal'];
 			
 			$transactions['payments'] = [];
-			if($check['trasaction_payment_type'] == 'Midtrans'){
 				//cek di multi payment
 				$multi = TransactionMultiplePayment::where('id_transaction', $check['id_transaction'])->get();
 				if(!$multi){
@@ -121,7 +122,7 @@ class ApiPOS extends Controller
 					$balance = TransactionPaymentBalance::where('id_transaction', $check['id_transaction'])->get();
 					if($balance){
 						foreach($balance as $payBalance){
-							$pay['payment_type'] = 'Kopi Points';
+							$pay['payment_type'] = 'Kenangan Points';
 							$pay['payment_nominal'] = (int)$payBalance['balance_nominal'];
 							$transactions['payments'][] = $pay;
 						}
@@ -140,7 +141,7 @@ class ApiPOS extends Controller
 						if($payMulti['type'] == 'Balance'){
 							$balance = TransactionPaymentBalance::find($payMulti['id_payment']);
 							if($balance){
-								$pay['payment_type'] = 'Kopi Points';
+								$pay['payment_type'] = 'Kenangan Points';
 								$pay['payment_nominal'] = (int)$balance['balance_nominal'];
 								$transactions['payments'][] = $pay;
 							}
@@ -154,7 +155,6 @@ class ApiPOS extends Controller
 						}
 					}
 				}
-			}
 			
 // 			$transactions['payment_type'] = null;
 // 			$transactions['payment_code'] = null;
@@ -183,7 +183,10 @@ class ApiPOS extends Controller
 				$transactions['total'] = round($transactions['total']);
 				
 				//update accepted_at
-				$pick = TransactionPickup::where('id_transaction', $check['id_transaction'])->update(['receive_at' => date('Y-m-d H:i:s')]);
+				$trxPickup = TransactionPickup::where('id_transaction', $check['id_transaction'])->first();
+				if($trxPickup && $trxPickup->reject_at == null){
+					$pick = TransactionPickup::where('id_transaction', $check['id_transaction'])->update(['receive_at' => date('Y-m-d H:i:s')]);
+				}
 
 				$send = app($this->autocrm)->SendAutoCRM('Order Accepted', $user['phone'], ["outlet_name" => $outlet['outlet_name'], "id_reference" => $check['transaction_receipt_number'].','.$outlet['id_outlet'], "transaction_date" => $check['transaction_date']]);
 				
@@ -218,7 +221,16 @@ class ApiPOS extends Controller
         $user = User::where('phone', $phoneqr)->first(); 
         if(empty($user)){ 
             return response()->json(['status' => 'fail', 'messages' => ['User not found']]); 
-        } 
+		} 
+		
+		//suspend
+		if(isset($user['is_suspended']) && $user['is_suspended'] == '1'){
+            DB::rollback();
+            return response()->json([
+                'status'    => 'fail',
+                'messages'  => ['Maaf, akun Anda sedang di-suspend']
+            ]);
+        }
  
         $result['uid'] = $post['uid']; 
         $result['name'] = $user->name; 
@@ -848,6 +860,12 @@ class ApiPOS extends Controller
 					}
 				}
 			} else {
+				if(count($trx['menu']) <= 0){
+					continue;
+				}
+				if(!$trx['trx_id']){
+					continue;
+				}
 				if (isset($trx['member_uid'])) {
 					$qr = MyHelper::readQR($trx['member_uid']);
 					$timestamp = $qr['timestamp'];
@@ -858,13 +876,22 @@ class ApiPOS extends Controller
 						return response()->json(['status' => 'fail', 'messages' => ['User not found']]);
 					}
 
-					if (count($user['memberships']) > 0) {
-						$post['membership_level']    = $user['memberships'][0]['membership_name'];
-						$post['membership_promo_id'] = $user['memberships'][0]['benefit_promo_id'];
-					} else {
+					//suspend
+					if(isset($user['is_suspended']) && $user['is_suspended'] == '1'){
+						$user['id'] = null;
 						$post['membership_level']    = null;
 						$post['membership_promo_id'] = null;
+					}else{
+
+						if (count($user['memberships']) > 0) {
+							$post['membership_level']    = $user['memberships'][0]['membership_name'];
+							$post['membership_promo_id'] = $user['memberships'][0]['benefit_promo_id'];
+						} else {
+							$post['membership_level']    = null;
+							$post['membership_promo_id'] = null;
+						}
 					}
+
 				} else {
 
 					//transaction with voucher but non member
@@ -904,6 +931,18 @@ class ApiPOS extends Controller
 
 				if(isset($qr['device'])){
 					$dataTrx['transaction_device_type'] = $qr['device'];
+				}
+
+				if(isset($trx['cashier'])){
+					$dataTrx['transaction_cashier'] = $trx['cashier'];
+				}
+
+				//cek jika transaksi sudah pernah di sync, data tidak akan diproses
+				$cektransaction = Transaction::where(['transaction_receipt_number' => $trx['trx_id'], 'id_outlet' => $checkOutlet['id_outlet']])->first();
+				if($cektransaction){
+					$r = ['id_transaction'    => $cektransaction->id_transaction];
+					array_push($result, $r);
+					continue;
 				}
 
 				$createTrx = Transaction::updateOrCreate(['transaction_receipt_number' => $trx['trx_id'], 'id_outlet' => $checkOutlet['id_outlet']], $dataTrx);
@@ -1239,8 +1278,11 @@ class ApiPOS extends Controller
 								 }
 								
 								 $point = floor($this->count('point', $trx) * $percentageP);
-								 $cashback = floor($this->count('cashback', $trx) * $percentageB);
-		 
+
+								 $datatrx = $trx;
+								 $datatrx['total'] = $trx['grand_total'];
+								 $cashback = floor($this->count('cashback', $datatrx) * $percentageB);
+								 
 								 if(isset($cashMax) && $cashback > $cashMax){
 									 $cashback = $cashMax;
 								 }
@@ -1346,8 +1388,11 @@ class ApiPOS extends Controller
 								}
 
 								$point = floor($this->count('point', $trx) * $percentageP);
-								$cashback = floor($this->count('cashback', $trx) * $percentageB);
-
+								
+								$datatrx = $trx;
+								$datatrx['total'] = $trx['grand_total'];
+								$cashback = floor($this->count('cashback', $datatrx) * $percentageB);
+								
 								//count some trx user
 								$countUserTrx = Transaction::where('id_user', $user['id'])->count();
 
@@ -1442,7 +1487,61 @@ class ApiPOS extends Controller
 
 								}
 		 
-								 $checkMembership = app($this->membership)->calculateMembership($user['phone']);
+								if(isset($user['phone'])){
+									$checkMembership = app($this->membership)->calculateMembership($user['phone']);
+
+									//update count transaction
+									if(date('Y-m-d', strtotime($createTrx['transaction_date'])) == date('Y-m-d')){
+										$updateCountTrx = User::where('id', $user['id'])->update([
+											'count_transaction_day' => $user['count_transaction_day'] + 1, 
+										]);
+										
+										if (!$updateCountTrx) {
+											DB::rollback();
+											return response()->json([
+												'status'    => 'fail',
+												'messages'  => ['Update User Count Transaction Failed']
+											]);
+										}
+
+										$userData = User::find($user['id']);
+									
+										//cek fraud detection transaction per day
+										$fraudTrxDay = FraudSetting::where('parameter', 'LIKE', '%transactions in 1 day%')->first();
+										if($fraudTrxDay && $fraudTrxDay['parameter_detail'] != null){
+											if($userData['count_transaction_day'] >= $fraudTrxDay['parameter_detail']){
+												//send fraud detection to admin
+												$sendFraud = app($this->setting_fraud)->SendFraudDetection($fraudTrxDay['id_fraud_setting'], $userData, $createTrx['id_transaction'], null);
+											}
+										}
+									}
+			
+									if(date('Y-m-d', strtotime($createTrx['transaction_date'])) >= date('Y-m-d', strtotime(' - 6 days')) && date('Y-m-d', strtotime($createTrx['transaction_date'])) <= date('Y-m-d')){
+										$updateCountTrx = User::where('id', $user['id'])->update([
+											'count_transaction_week' => $user['count_transaction_week'] + 1, 
+										]);
+
+										if (!$updateCountTrx) {
+											DB::rollback();
+											return response()->json([
+												'status'    => 'fail',
+												'messages'  => ['Update User Count Transaction Failed']
+											]);
+										}
+
+										//cek fraud detection transaction per week (last 7 days)
+										$userData = User::find($user['id']);
+										
+										$fraudTrx = FraudSetting::where('parameter', 'LIKE', '%transactions in 1 week%')->first();
+										if($fraudTrx && $fraudTrx['parameter_detail'] != null){
+											if($userData['count_transaction_week'] >= $fraudTrx['parameter_detail']){
+												//send fraud detection to admin
+												$sendFraud = app($this->setting_fraud)->SendFraudDetection($fraudTrx['id_fraud_setting'], $userData, $createTrx['id_transaction'], $lastDeviceId = null);
+											}
+										}
+									}
+
+								}
 							 }
 						 }
 					}

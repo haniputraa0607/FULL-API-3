@@ -7,6 +7,8 @@ use Laravel\Passport\Http\Controllers\AccessTokenController as PassportAccessTok
 use League\OAuth2\Server\Exception\OAuthServerException;
 use Psr\Http\Message\ServerRequestInterface;
 use Zend\Diactoros\Response as Psr7Response;
+use Auth;
+use App\Http\Models\User;
 
 class AccessTokenController extends PassportAccessTokenController
 {
@@ -21,6 +23,14 @@ class AccessTokenController extends PassportAccessTokenController
     public function issueToken(ServerRequestInterface $request)
     {
         try {
+            if(Auth::attempt(['phone' => $request->getParsedBody()['username'], 'password' => $request->getParsedBody()['password']])){
+                $user = User::where('phone', $request->getParsedBody()['username'])->first();
+                if($user){
+                    if($user->is_suspended == '1'){
+                        return response()->json(['status' => 'fail', 'messages' => 'Maaf, akun Anda sedang di-suspend']);
+                    }
+                }
+            }
             return $this->convertResponse(
                 $this->server->respondToAccessTokenRequest($request, new Psr7Response)
             );

@@ -14,27 +14,20 @@ use Illuminate\Database\Eloquent\Model;
  * @property string $updated_at
  * @property User $user
  */
-class LogActivityLocation extends Model
+class UserLocationDetail extends Model
 {
-	/**
-	 * The database name used by the model.
-	 *
-	 * @var string
-	 */
-	protected $connection = 'mysql2';
-	
     /**
      * The table associated with the model.
      * 
      * @var string
      */
-    protected $table = 'log_activity_locations';
-
+    protected $table = 'user_location_details';
+    
+	protected $primaryKey = 'id_user_location_detail';
     /**
      * @var array
      */
     protected $fillable = [
-        'id_log_activity_location', 
         'id_user', 
         'id_reference', 
         'activity', 

@@ -22,6 +22,7 @@ use App\Http\Models\FraudSetting;
 use App\Http\Models\Setting;
 use App\Http\Models\Feature;
 use App\Http\Models\OauthAccessToken;
+use App\Http\Models\LogBalance;
 
 use Modules\Users\Http\Requests\users_list;
 use Modules\Users\Http\Requests\users_forgot;
@@ -858,7 +859,16 @@ class ApiUser extends Controller
 			]);
 		}
 
-        $data = User::with('city')->where('phone', '=', $phone)->get()->toArray();
+		$data = User::with('city')->where('phone', '=', $phone)->get()->toArray();
+
+		if(isset($data[0]['is_suspended']) && $data[0]['is_suspended'] == '1'){
+			return response()->json([
+				'status' => 'success',
+				'result' => $data,
+				'messages' => ['Maaf, Akun anda sedang di-suspend']
+			]);
+		}
+
         return MyHelper::checkGet($data);
     }
     /**
@@ -1853,22 +1863,19 @@ class ApiUser extends Controller
 		
 		$query = User::leftJoin('cities','cities.id_city','=','users.id_city')
 					->leftJoin('provinces','provinces.id_province','=','cities.id_province')
-				// 	->with('transactions', 'pointTransaction', 'pointVoucher', 'pointVoucher.voucher', 'pointVoucher.voucher.voucher','point')
-					->with('history_transactions.outlet_name', 'history_balance.detail_trx')
+					->with('history_transactions.outlet_name', 'history_balance.detail_trx', 'user_membership')
 					->where('phone','=',$post['phone'])
 					->get()
 					->first();
+		
 					
-// 		foreach ($query->point as $key => $value) {
-//             $value->detail_product = $value->detailProduct;
-//         }
-		
-// 		$countVoucher = LogPoint::where(['id_user' => $query['id'], 'source' => 'voucher'])->get()->count();
-//         $countTrx = LogPoint::where(['id_user' => $query['id'], 'source' => 'transaction'])->get()->count();
-		
 		if($query){
-// 			if(!empty($query['photo']))
-// 			$query['photo'] = env('API_URL')."/".$query['photo'];
+			
+			// total perolehan balance
+			$query['balance_acquisition'] = LogBalance::where('id_user', $query['id'])
+										->where('balance', '>', 0)
+										->whereNotIn('source', ['Rejected Order', 'Rejected Order Midtrans', 'Rejected Order Point', 'Reversal'])
+										->sum('balance');
 
             //on going
             $query['on_going'] = $transaction = Transaction::join('transaction_pickups', 'transactions.id_transaction', 'transaction_pickups.id_transaction')
@@ -1909,19 +1916,62 @@ class ApiUser extends Controller
 		}else{
 			$skip = 0;
 		}
+
+		if(isset($post['rule'])){
+			$rule = $post['rule'];
+		}else{
+			$rule = 'and';
+		}
+
+
 		$query = LogRequest::where('phone','=',$post['phone'])
 							->orderBy('id_log_activity','desc')
-							->skip($skip)->take($take)
-							->select('id_log_activity', 'response_status', 'ip', 'created_at', 'subject', 'useragent');
+							->select('id_log_activity', 'response_status', 'ip', 'created_at', 'subject', 'useragent', 'module');
 		if(isset($post['type']) && $post['type'] == "backend"){
 		    $query = $query->where('subject', 'LIKE', 'BE %');
 		}
 		if(isset($post['type']) && $post['type'] == "mobile"){
 		    $query = $query->where('subject', 'NOT LIKE', 'BE %');
 		}
+
+		if(isset($post['date_start'])){
+			$query = $query->where('created_at', '>=', date('Y-m-d H:i:00', strtotime($post['date_start'])));
+		}
+		if(isset($post['date_end'])){
+			$query = $query->where('created_at', '<=', date('Y-m-d H:i:00', strtotime($post['date_end'])));
+		}
+		if(isset($post['conditions'])){
+			foreach($post['conditions'] as $condition){
+				if(isset($condition['subject'])){
+					if($condition['operator'] != '=' && $condition['operator'] != 'like'){
+						$condition['parameter'] = $condition['operator'];
+					}
+	
+					if($condition['operator'] == 'like'){
+						if($rule == 'and'){
+							$query = $query->where($condition['subject'],'LIKE','%'.$condition['parameter'].'%');
+						} else {
+							$query = $query->orWhere($condition['subject'],'LIKE', '%'.$condition['parameter']).'%';
+						}
+					}else{
+						if($rule == 'and'){
+							$query = $query->where($condition['subject'],'=',$condition['parameter']);
+						} else {
+							$query = $query->orWhere($condition['subject'],'=',$condition['parameter']);
+						}
+					}
+				}
+			}
+		}
+
+		if(isset($post['pagination'])){
+			$query = $query->paginate($post['take']);
+		}else{
+			$query = $query->skip($skip)->take($take)
+							->get()
+							->toArray();
+		}
 		
-		$query = $query->get()
-						->toArray();
 		if($query){
 			$result = ['status'	=> 'success',
 					   'result'	=> $query
@@ -2335,28 +2385,33 @@ class ApiUser extends Controller
 
 		//reset transaction week
 		foreach($user as $dataUser){
-			$countTrx = Transaction::whereDate('transaction_date', '>=' ,date('Y-m-d', strtotime(' - 8 days')))->whereDate('transaction_date', '<=' ,date('Y-m-d', strtotime(' - 1 days')))->where('id_user', $dataUser->id)->count();
-			if($countTrx > 0){
-				$newCountTrx = $countTrx;
-				$update = User::where('id', $dataUser->id)->update(['count_transaction_week' => $newCountTrx]);
-				if(!$update){
-					DB::rollBack();
-					return response()->json([
-						'status'   => 'fail',
-						'messages' => 'failed update count transaction week.'
-					]);
-				}
-			}
-		}
+			$countTrx = Transaction::whereDate('transaction_date', '>=' ,date('Y-m-d', strtotime(' - 6 days')))->whereDate('transaction_date', '<=' ,date('Y-m-d'))
+						->where('id_user', $dataUser->id)
+						->where('transaction_payment_status', 'Completed')
+						->count();
 
-		//reset transaction day
-		$updateDay = DB::table('users')->update(['count_transaction_day' => 0]);
-		if(!is_integer($updateDay)){
-			DB::rollBack();
-			return response()->json([
-				'status'   => 'fail',
-				'messages' => 'failed update count transaction day.'
-			]);
+			$update = User::where('id', $dataUser->id)->update(['count_transaction_week' => $countTrx]);
+			// if(!$update){
+			// 	DB::rollBack();
+			// 	return response()->json([
+			// 		'status'   => 'fail',
+			// 		'messages' => 'failed update count transaction week.'
+			// 	]);
+			// }
+
+			$countTrx = Transaction::whereDate('transaction_date', '=' ,date('Y-m-d'))
+						->where('id_user', $dataUser->id)
+						->where('transaction_payment_status', 'Completed')
+						->count();
+
+			$update = User::where('id', $dataUser->id)->update(['count_transaction_day' => $countTrx]);
+			// if(!$update){
+			// 	DB::rollBack();
+			// 	return response()->json([
+			// 		'status'   => 'fail',
+			// 		'messages' => 'failed update count transaction day.'
+			// 	]);
+			// }
 		}
 
 		DB::commit();
@@ -2399,6 +2454,24 @@ class ApiUser extends Controller
 
 	function getAllName(){
 		$user = User::select('id', 'name', 'phone')->get();
+
+		return response()->json(MyHelper::checkGet($user));
+	}
+
+	function getDetailUser(Request $request){
+		$post = $request->json()->all();
+		if(isset($post['phone'])){
+			$user = User::with('city.province', 'user_membership')->where('phone', $post['phone'])->first();
+		}else{
+			$user = User::with('city.province', 'user_membership')->where('id', $post['id_user'])->first();
+		}
+
+		if($user){
+			$user['balance_acquisition'] = LogBalance::where('id_user', $user['id'])
+										->where('balance', '>', 0)
+										->whereNotIn('source', ['Rejected Order', 'Rejected Order Midtrans', 'Rejected Order Point', 'Reversal'])
+										->sum('balance');
+		}
 
 		return response()->json(MyHelper::checkGet($user));
 	}

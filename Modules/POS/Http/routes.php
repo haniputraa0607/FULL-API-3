@@ -25,3 +25,16 @@ Route::group(['prefix' => 'api/v1/pos/', 'namespace' => 'Modules\POS\Http\Contro
         Route::post('transaction/last', 'ApiPOS@getLastTransaction');
     });
 });
+
+Route::group(['prefix' => 'api/quinos', 'namespace' => 'Modules\POS\Http\Controllers'], function()
+{
+    Route::group(['middleware' => ['auth:quinos']], function() {
+        Route::any('log', 'ApiQuinos@log');
+        Route::get('log/detail/{id}', 'ApiQuinos@detailLog');
+    });
+
+    Route::group(['middleware' => ['auth_client']], function() {
+        Route::post('user/new', 'ApiQuinos@createQuinosUser');
+        Route::post('user/update', 'ApiQuinos@updateQuinosUser');
+    });
+});

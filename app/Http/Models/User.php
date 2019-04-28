@@ -124,7 +124,7 @@ class User extends Authenticatable
 	
 	public function history_transactions()
 	{
-		return $this->hasMany(Transaction::class, 'id_user', 'id')->select('id_user', 'id_transaction', 'id_outlet', 'transaction_receipt_number', 'trasaction_type', 'transaction_grandtotal', 'transaction_payment_status', 'transaction_date')->orderBy('created_at', 'DESC')->limit(50);
+		return $this->hasMany(Transaction::class, 'id_user', 'id')->select('id_user', 'id_transaction', 'id_outlet', 'transaction_receipt_number', 'trasaction_type', 'transaction_grandtotal', 'transaction_payment_status', 'transaction_date')->orderBy('transaction_date', 'DESC');
 	}
 
 	public function addresses()
@@ -147,6 +147,11 @@ class User extends Authenticatable
 		return $this->hasMany(\App\Http\Models\UserInbox::class, 'id', 'id_user');
 	}
 
+	public function user_membership()
+	{
+		return $this->belongsTo(\App\Http\Models\Membership::class, 'id_membership')->select('id_membership', 'membership_name');
+	}
+
 	public function memberships()
 	{
 		return $this->belongsToMany(\App\Http\Models\Membership::class, 'users_memberships', 'id_user', 'id_membership')
@@ -163,7 +168,7 @@ class User extends Authenticatable
     }
     
     public function history_balance() {
-    	return $this->hasMany(LogBalance::class, 'id_user', 'id')->orderBy('created_at', 'DESC')->limit(50);
+    	return $this->hasMany(LogBalance::class, 'id_user', 'id')->orderBy('created_at', 'DESC');
     }
 
     public function pointTransaction() {

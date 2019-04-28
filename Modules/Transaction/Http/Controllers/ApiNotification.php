@@ -128,16 +128,18 @@ class ApiNotification extends Controller {
                 //         ]);
                 //     }
                 // }
+                if($midtrans['transaction_status'] != 'settlement' && $midtrans['payment_type'] != 'credit_card'){
 
-                $notif = $this->notification($midtrans, $newTrx);
-                if (!$notif) {
-                    return response()->json([
-                        'status'   => 'fail',
-                        'messages' => ['Transaction failed']
-                    ]);
+                    $notif = $this->notification($midtrans, $newTrx);
+                    if (!$notif) {
+                        return response()->json([
+                            'status'   => 'fail',
+                            'messages' => ['Transaction failed']
+                        ]);
+                    }
+                    $sendNotifOutlet = app($this->trx)->outletNotif($newTrx['id_transaction']);
                 }
 
-                $sendNotifOutlet = app($this->trx)->outletNotif($newTrx['id_transaction']);
             } elseif ($midtrans['status_code'] == 201) {
                 $notifPending = $this->notificationPending($midtrans, $newTrx);
                 if (!$notifPending) {
@@ -398,39 +400,6 @@ class ApiNotification extends Controller {
         $send = app($this->autocrm)->SendAutoCRM('Transaction Success', $trx->user->phone, ['notif_type' => 'trx', 'header_label' => $title, 'date' => $trx['transaction_date'], 'status' => $trx['transaction_payment_status'], 'name'  => $trx->user->name, 'id' => $mid['order_id'], 'outlet_name' => $outlet, 'detail' => $detail, 'id_reference' => $mid['order_id'].','.$trx['id_outlet']]);
 
         return $send;
-    }
-
-    function notification2() 
-    {
-        $trx = Transaction::where('id_transaction', '6')->with(['user', 'outlet'])->first();
-        $name    = $trx['user']['name'];
-        $phone   = $trx['user']['phone'];
-        $date    = $trx['transaction_date'];
-        $outlet  = $trx['outlet']['outlet_name'];
-        $receipt = $trx['transaction_receipt_number'];
-        // $detail = $this->getHtml($trx, $trx['productTransaction'], $name, $phone, $date, $outlet, $receipt);
-        $detail = $this->htmlDetail($trx['id_transaction']);
-
-        $mid = TransactionPickup::where('id_transaction', '6')->first();
-        if ($trx['transaction_payment_status'] == 'Pending') {
-            $title = 'Pending';
-        }
-
-        if ($trx['transaction_payment_status'] == 'Paid') {
-            $title = 'Terbayar';
-        }
-
-        if ($trx['transaction_payment_status'] == 'Completed') {
-            $title = 'Sukses';
-        }
-
-        if ($trx['transaction_payment_status'] == 'Cancelled') {
-            $title = 'Gagal';
-        }
-
-        $send = app($this->autocrm)->SendAutoCRM('Transaction Success', $trx->user->phone, ['notif_type' => 'trx', 'header_label' => $title, 'date' => $trx['transaction_date'], 'status' => $trx['transaction_payment_status'], 'name'  => $trx->user->name, 'id' => $mid['order_id'], 'outlet_name' => $outlet, 'detail' => $detail, 'id_reference' => $mid['order_id'].','.$trx['id_outlet']]);
-
-        return 'success';
     }
 
     function savePoint($data) 

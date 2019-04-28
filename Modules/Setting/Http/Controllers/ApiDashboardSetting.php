@@ -383,11 +383,11 @@ class ApiDashboardSetting extends Controller
 								->groupBy('outlets.id_outlet');
 	
 						if(strpos($card['card_name'], 'Count') !== false){
-							$value = $value->select(DB::raw('outlets.outlet_name, outlets.id_outlet as id, outlets.outlet_code, SUM(daily_report_trx.trx_count) as transaction_count'))
+							$value = $value->select(DB::raw('outlets.outlet_code, outlets.outlet_name, outlets.id_outlet as id, SUM(daily_report_trx.trx_count) as transaction_count'))
 										   ->orderBy('transaction_count', 'DESC');
 						}
 						elseif(strpos($card['card_name'], 'Value') !== false){
-							$value = $value->select(DB::raw('outlets.outlet_name, outlets.id_outlet as id, SUM(daily_report_trx.trx_grand) as transaction_value'))
+							$value = $value->select(DB::raw('outlets.outlet_code, outlets.outlet_name, outlets.id_outlet as id, SUM(daily_report_trx.trx_grand) as transaction_value'))
 										   ->orderBy('transaction_value', 'DESC');
 						}
 						$value = $value->limit(10)->get();

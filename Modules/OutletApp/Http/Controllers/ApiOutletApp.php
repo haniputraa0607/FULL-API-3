@@ -14,6 +14,7 @@ use App\Http\Models\TransactionPickupGoSend;
 use App\Http\Models\TransactionMultiplePayment;
 use App\Http\Models\TransactionPaymentMidtran;
 use App\Http\Models\TransactionPaymentBalance;
+use App\Http\Models\TransactionPaymentOffline;
 use App\Http\Models\Setting;
 use App\Http\Models\User;
 use App\Http\Models\Product;
@@ -311,7 +312,11 @@ class ApiOutletApp extends Controller
     {
         $id = $request->json('receipt');
 
-        $list = Transaction::where('transaction_receipt_number', $id)->with('user.city.province', 'productTransaction.product.product_category', 'productTransaction.product.product_photos', 'productTransaction.product.product_discounts', 'transaction_payment_offlines', 'outlet.city')->first();
+        if($request->json('id_transaction')){
+            $list = Transaction::where('id_transaction', $request->json('id_transaction'))->with('user.city.province', 'productTransaction.product.product_category', 'productTransaction.product.product_photos', 'productTransaction.product.product_discounts', 'transaction_payment_offlines', 'outlet.city')->first();
+        }else{
+            $list = Transaction::where('transaction_receipt_number', $id)->with('user.city.province', 'productTransaction.product.product_category', 'productTransaction.product.product_photos', 'productTransaction.product.product_discounts', 'transaction_payment_offlines', 'outlet.city')->first();
+        }
         $label = [];
         $label2 = [];
 
@@ -387,36 +392,45 @@ class ApiOutletApp extends Controller
             $list['payment'] = $payment;
         }
 
-        if ($list['trasaction_payment_type'] == 'Midtrans') {
+        if ($list['trasaction_payment_type'] == 'Midtrans' || $list['trasaction_payment_type'] == 'Balance') {
             //cek multi payment
             $multiPayment = TransactionMultiplePayment::where('id_transaction', $list['id_transaction'])->get();
-            foreach($multiPayment as $dataPay){
-                if($dataPay['type'] == 'Balance'){
-                    $paymentBalance = TransactionPaymentBalance::find($dataPay['id_payment']);
+            if($multiPayment){
+                foreach($multiPayment as $dataPay){
+                    if($dataPay['type'] == 'Balance'){
+                        $paymentBalance = TransactionPaymentBalance::find($dataPay['id_payment']);
+                        if($paymentBalance){
+                            $list['balance'] = -$paymentBalance['balance_nominal'];
+                        }
+                    }else{
+                        $payment = TransactionPaymentMidtran::find($dataPay['id_payment']);
+                    }
+                }
+                if(isset($payment)){
+                    $list['payment'] = $payment;
+                }
+            }else{
+                if ($list['trasaction_payment_type'] == 'Balance') {
+                    $paymentBalance = TransactionPaymentBalance::where('id_transaction', $list['id_transaction'])->first();
                     if($paymentBalance){
                         $list['balance'] = -$paymentBalance['balance_nominal'];
                     }
-                }else{
-                    $payment = TransactionPaymentMidtran::find($dataPay['id_payment']);
                 }
-            }
-            if(isset($payment)){
-                $list['payment'] = $payment;
+
+                if ($list['trasaction_payment_type'] == 'Midtrans') {
+                    $paymentMidtrans = TransactionPaymentMidtran::where('id_transaction', $list['id_transaction'])->first();
+                    if($paymentMidtrans){
+                        $list['payment'] = $paymentMidtrans;
+                    }
+                }
             }
         }
 
         if ($list['trasaction_payment_type'] == 'Offline') {
             $payment = TransactionPaymentOffline::where('id_transaction', $list['id_transaction'])->get();
-            $list['payment_offline'] = $payment;
+            $list['payment'] = $payment;
         }
         
-        if ($list['trasaction_payment_type'] == 'Balance') {
-            $paymentBalance = TransactionPaymentBalance::where('id_transaction', $list['id_transaction'])->first();
-            if($paymentBalance){
-                $list['balance'] = -$paymentBalance['balance_nominal'];
-            }
-        }
-
         array_splice($exp, 0, 0, 'transaction_subtotal');
         array_splice($label, 0, 0, 'Cart Total');
 
@@ -812,6 +826,7 @@ class ApiOutletApp extends Controller
         $outlet = $request->user();
         $profile['outlet_name'] = $outlet['outlet_name'];
         $profile['outlet_code'] = $outlet['outlet_code'];
+        $profile['status'] = 'success';
 
         return response()->json($profile);
     }
@@ -993,7 +1008,7 @@ class ApiOutletApp extends Controller
         
         if($pickup){
               //refund ke balance
-            if($order['trasaction_payment_type'] == "Midtrans"){
+            // if($order['trasaction_payment_type'] == "Midtrans"){
                 $multiple = TransactionMultiplePayment::where('id_transaction', $order->id_transaction)->get()->toArray();
                 if($multiple){
                     foreach($multiple as $pay){
@@ -1027,7 +1042,7 @@ class ApiOutletApp extends Controller
                 }else{
                     $payMidtrans = TransactionPaymentMidtran::where('id_transaction', $order['id_transaction'])->first();
                     if($payMidtrans){
-                        $refund = app($this->balance)->addLogBalance( $order['id_user'], $payMidtrans['gross_amount'], $order['id_transaction'], 'Reverse Point from Rejected Order', $order['transaction_grandtotal']);
+                        $refund = app($this->balance)->addLogBalance( $order['id_user'], $payMidtrans['gross_amount'], $order['id_transaction'], 'Rejected Order Midtrans', $order['transaction_grandtotal']);
                         if ($refund == false) {
                             DB::rollback();
                             return response()->json([
@@ -1035,23 +1050,21 @@ class ApiOutletApp extends Controller
                                 'messages'  => ['Insert Cashback Failed']
                             ]);
                         }
+                    }else{
+                        $payBalance = TransactionPaymentBalance::where('id_transaction', $order['id_transaction'])->first();
+                        if($payBalance){
+                            $refund = app($this->balance)->addLogBalance( $order['id_user'], $payBalance['balance_nominal'], $order['id_transaction'], 'Rejected Order Point', $order['transaction_grandtotal']);
+                            if ($refund == false) {
+                                DB::rollback();
+                                return response()->json([
+                                    'status'    => 'fail',
+                                    'messages'  => ['Insert Cashback Failed']
+                                ]);
+                            }
+                        }
                     }
                 }
-            }
-
-            if($order['trasaction_payment_type'] == 'Balance'){
-                $payBalance = TransactionPaymentBalance::where('id_transaction', $order['id_transaction'])->first();
-                if($payBalance){
-                    $refund = app($this->balance)->addLogBalance( $order['id_user'], $payBalance['balance_nominal'], $order['id_transaction'], 'Rejected Order', $order['transaction_grandtotal']);
-                    if ($refund == false) {
-                        DB::rollback();
-                        return response()->json([
-                            'status'    => 'fail',
-                            'messages'  => ['Insert Cashback Failed']
-                        ]);
-                    }
-                }
-            }
+            // }
 
             //send notif to customer
             $user = User::where('id', $order['id_user'])->first()->toArray();
@@ -1072,6 +1085,45 @@ class ApiOutletApp extends Controller
 
 
         return response()->json(MyHelper::checkUpdate($pickup));
+    }
+
+    //refund pembayaran ke point dari transaksi yg multiple payment
+    public function returnRejectMidtrans(){
+        $trxReject = Transaction::join('transaction_pickups', 'transactions.id_tranasction', 'trasnaction_pickups.id_trasnaction')
+                    ->whereNotNull('reject_at')->get();
+        foreach($trxReject as $dataReject){
+            $multiple = TransactionMultiplePayment::where('id_transaction', $order->id_transaction)->get()->toArray();
+            if($multiple){
+                foreach($multiple as $pay){
+                    if($pay['type'] == 'Balance'){
+                        $payBalance = TransactionPaymentBalance::find($pay['id_payment']);
+                        if($payBalance){
+                            $refund = app($this->balance)->addLogBalance( $order['id_user'], $payBalance['balance_nominal'], $order['id_transaction'], 'Rejected Order Point', $order['transaction_grandtotal']);
+                            if ($refund == false) {
+                                DB::rollback();
+                                return response()->json([
+                                    'status'    => 'fail',
+                                    'messages'  => ['Insert Cashback Failed']
+                                ]);
+                            }
+                        }
+                    }
+                    else{
+                        $payMidtrans = TransactionPaymentMidtran::find($pay['id_payment']);
+                        if($payMidtrans){
+                            $refund = app($this->balance)->addLogBalance( $order['id_user'], $payMidtrans['gross_amount'], $order['id_transaction'], 'Rejected Order Midtrans', $order['transaction_grandtotal']);
+                            if ($refund == false) {
+                                DB::rollback();
+                                return response()->json([
+                                    'status'    => 'fail',
+                                    'messages'  => ['Insert Cashback Failed']
+                                ]);
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 
 }

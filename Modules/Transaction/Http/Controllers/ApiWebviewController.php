@@ -125,11 +125,16 @@ class ApiWebviewController extends Controller
         }
 
         if ($type == 'trx') {
-            $arrId = explode(',',$id);
-           if(count($arrId) != 2){
-                $list = Transaction::where('transaction_receipt_number', $id)->with('user.city.province', 'productTransaction.product.product_category', 'productTransaction.product.product_photos', 'productTransaction.product.product_discounts', 'transaction_payment_offlines', 'outlet.city', 'transaction_vouchers.deals_voucher')->first();
+            if($request->json('id_transaction')){
+                $list = Transaction::where('id_transaction', $request->json('id_transaction'))->with('user.city.province', 'productTransaction.product.product_category', 'productTransaction.product.product_photos', 'productTransaction.product.product_discounts', 'transaction_payment_offlines', 'outlet.city', 'transaction_vouchers.deals_voucher')->first();
             }else{
-                $list = Transaction::where('transaction_receipt_number', $arrId[0])->where('id_outlet', $arrId[1])->with('user.city.province', 'productTransaction.product.product_category', 'productTransaction.product.product_photos', 'productTransaction.product.product_discounts', 'transaction_payment_offlines', 'outlet.city', 'transaction_vouchers.deals_voucher')->first();
+                $arrId = explode(',',$id);
+                
+                if(count($arrId) != 2){
+                    $list = Transaction::where('transaction_receipt_number', $id)->with('user.city.province', 'productTransaction.product.product_category', 'productTransaction.product.product_photos', 'productTransaction.product.product_discounts', 'transaction_payment_offlines', 'outlet.city', 'transaction_vouchers.deals_voucher')->first();
+                }else{
+                    $list = Transaction::where('transaction_receipt_number', $arrId[0])->where('id_outlet', $arrId[1])->with('user.city.province', 'productTransaction.product.product_category', 'productTransaction.product.product_photos', 'productTransaction.product.product_discounts', 'transaction_payment_offlines', 'outlet.city', 'transaction_vouchers.deals_voucher')->first();
+                }
             }
             $label = [];
             $label2 = [];
@@ -192,48 +197,59 @@ class ApiWebviewController extends Controller
 
             $dataPayment = [];
 
-            $multiPayment = TransactionMultiplePayment::where('id_transaction', $list['id_transaction'])->get();
-            // return $multiPayment;
-            if (isset($multiPayment)) {
-                foreach ($multiPayment as $key => $value) {
-                    if ($value->type == 'Midtrans') {
-                        $getPayment = TransactionPaymentMidtran::where('id_transaction_payment', $value->id_payment)->first();
+            if ($list['trasaction_payment_type'] == 'Offline') {
+                $getPayment = TransactionPaymentOffline::where('id_transaction', $list['id_transaction'])->get();
+                foreach($getPayment as $pay){
+                    $pay['type'] = 'Offline';
+                    array_push($dataPayment, $pay);
+                }
+            }else{
+                $multiPayment = TransactionMultiplePayment::where('id_transaction', $list['id_transaction'])->get();
+                // return $multiPayment;
+                if (isset($multiPayment)) {
+                    foreach ($multiPayment as $key => $value) {
+                        if ($value->type == 'Midtrans') {
+                            $getPayment = TransactionPaymentMidtran::where('id_transaction_payment', $value->id_payment)->first();
+                            if (!empty($getPayment)) {
+                                $getPayment['type'] = 'Midtrans';
+                                array_push($dataPayment, $getPayment);
+                            }
+                        } elseif ($value->type == 'Balance') {
+                            $getPayment = TransactionPaymentBalance::where('id_transaction_payment_balance', $value->id_payment)->first();
+                            if (!empty($getPayment)) {
+                                $getPayment['type'] = 'Balance';
+                                array_push($dataPayment, $getPayment);
+                                $list['balance'] = $getPayment['balance_nominal'];
+                            }
+                        } elseif ($value->type == 'Manual') {
+                            $getPayment = TransactionPaymentManual::where('id_transaction_payment_manual', $value->id_payment)->first();
+                            if (!empty($getPayment)) {
+                                $getPayment['type'] = 'Manual';
+                                array_push($dataPayment, $getPayment);
+                            }
+                        }
+                    }
+                }else{
+                    if($list['trasaction_payment_type'] == 'Midtrans') {
+                        $getPayment = TransactionPaymentMidtran::where('id_transaction', $list['id_transaction'])->first();
                         if (!empty($getPayment)) {
                             $getPayment['type'] = 'Midtrans';
                             array_push($dataPayment, $getPayment);
                         }
-                    } elseif ($value->type == 'Balance') {
-                        $getPayment = TransactionPaymentBalance::where('id_transaction_payment_balance', $value->id_payment)->first();
-                        if (!empty($getPayment)) {
+                    }
+    
+                    if ($list['trasaction_payment_type'] == 'Balance') {
+                        $getPayment = TransactionPaymentBalance::where('id_transaction', $list['id_transaction'])->first();
+                        if($getPayment){
                             $getPayment['type'] = 'Balance';
                             array_push($dataPayment, $getPayment);
                             $list['balance'] = $getPayment['balance_nominal'];
                         }
-                    } elseif ($value->type == 'Manual') {
-                        $getPayment = TransactionPaymentManual::where('id_transaction_payment_manual', $value->id_payment)->first();
-                        if (!empty($getPayment)) {
-                            $getPayment['type'] = 'Manual';
-                            array_push($dataPayment, $getPayment);
-                        }
-                    } elseif ($value->type == 'Offline') {
-                        $getPayment = TransactionPaymentManual::where('id_transaction_payment_offline', $value->id_payment)->first();
-                        if (!empty($getPayment)) {
-                            $getPayment['type'] = 'Offline';
-                            array_push($dataPayment, $getPayment);
-                        }
-                    }
-                }
-            }else{
-                if($list['trasaction_payment_type'] == 'Midtrans') {
-                    $getPayment = TransactionPaymentMidtran::where('id_transaction', $list['id_transaction'])->first();
-                    if (!empty($getPayment)) {
-                        $getPayment['type'] = 'Midtrans';
-                        array_push($dataPayment, $getPayment);
                     }
                 }
 
-            } 
-
+            }
+            
             // if ($list['trasaction_payment_type'] == 'Balance') {
             //     $log = LogBalance::where('id_reference', $list['id_transaction'])->where('source', 'Transaction')->where('balance', '<', 0)->first();
             //     if ($log['balance'] < 0) {
@@ -300,6 +316,25 @@ class ApiWebviewController extends Controller
 
             $list['kind'] = $list['trasaction_type'];
 
+            $statusPickup = "";
+            if(isset($detail['reject_at']) && $detail['reject_at'] != null){
+                $statusPickup  = 'Reject';
+            }
+            elseif(isset($detail['taken_at']) && $detail['taken_at'] != null){
+                $statusPickup  = 'Taken';
+            }
+            elseif(isset($detail['ready_at']) && $detail['ready_at'] != null){
+                $statusPickup  = 'Ready';
+            }
+            elseif(isset($detail['receive_at']) && $detail['receive_at'] != null){
+                $statusPickup  = 'On Going';
+            }
+            else{
+                $statusPickup  = 'Pending';
+            }
+
+            $list['status'] = $statusPickup;
+    
             if (isset($success)) {
                 $list['success'] = 1;
             

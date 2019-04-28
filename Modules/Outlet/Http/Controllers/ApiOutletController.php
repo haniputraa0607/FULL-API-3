@@ -457,7 +457,7 @@ class ApiOutletController extends Controller
             $outlet = [];
 
             $pagingOutlet = $this->pagingOutlet($dataOutlet, $page);
-            if (count($pagingOutlet) > 0) {
+            if (isset($pagingOutlet['data']) && count($pagingOutlet['data']) > 0) {
                 $outlet['status'] = 'success';
                 $outlet['current_page']  = $page;
                 $outlet['data']          = $pagingOutlet['data'];
@@ -516,7 +516,7 @@ class ApiOutletController extends Controller
                 $outlet = $this->setAvailableOutlet($outlet);
             }
         }else{
-            return response()->json(['status' => 'fail', 'messages' => ['There is no open store \n at this moment']]);
+            return response()->json(['status' => 'success', 'messages' => ['There is no open store','at this moment']]);
         }
 
         if(isset($request['page']) && $request['page'] > 0){
@@ -527,7 +527,7 @@ class ApiOutletController extends Controller
             $outlet = [];
 
             $pagingOutlet = $this->pagingOutlet($dataOutlet, $page);
-            if (count($pagingOutlet) > 0) {
+            if (isset($pagingOutlet['data']) && count($pagingOutlet['data']) > 0) {
                 $outlet['status'] = 'success';
                 $outlet['current_page']  = $page;
                 $outlet['data']          = $pagingOutlet['data'];
@@ -538,10 +538,12 @@ class ApiOutletController extends Controller
                     $outlet['next_page_url'] = ENV('APP_API_URL').'api/outlet/nearme?page='.$next_page;
                 }
             } else {
-                $outlet['status'] = 'fail';
-                $urutan['messages'] = ['There is no open store \n at this moment'];
-                
+                return response()->json(['status' => 'success', 'messages' => ['There is no open store','at this moment']]);
             }
+        }
+
+        if(!$outlet){
+            return response()->json(['status' => 'success', 'messages' => ['There is no open store','at this moment']]);
         }
 
         return response()->json(MyHelper::checkGet($outlet));
@@ -743,7 +745,7 @@ class ApiOutletController extends Controller
                 $urutan = $this->setAvailableOutlet($urutan);
             }
         } else {
-            return response()->json(['status' => 'fail', 'messages' => ['There is no open store \n at this moment']]);
+            return response()->json(['status' => 'success', 'messages' => ['There is no open store','at this moment']]);
         }
 
         // if (!isset($request['page'])) {
@@ -758,7 +760,7 @@ class ApiOutletController extends Controller
             $urutan = [];
 
             $pagingOutlet = $this->pagingOutlet($dataOutlet, $page);
-            if (count($pagingOutlet) > 0) {
+            if (isset($pagingOutlet['data']) && count($pagingOutlet['data']) > 0) {
                 $urutan['status'] = 'success';
                 $urutan['current_page']  = $page;
                 $urutan['data']          = $pagingOutlet['data'];
@@ -769,12 +771,12 @@ class ApiOutletController extends Controller
                     $urutan['next_page_url'] = ENV('APP_API_URL').'api/outlet/filter?page='.$next_page;
                 }
             } else {
-                $urutan['status'] = 'fail';
-                $urutan['messages'] = ['There is no open store \n at this moment'];
-                
+                return response()->json(['status' => 'success', 'messages' => ['There is no open store','at this moment']]);
             }
         }
-
+        if(!$urutan){
+            return response()->json(['status' => 'success', 'messages' => ['There is no open store','at this moment']]);
+        }
         return response()->json(MyHelper::checkGet($urutan));
     }
 

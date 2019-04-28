@@ -19,6 +19,7 @@ use App\Http\Models\UsersMembership;
 use App\Http\Models\Transaction;
 use App\Http\Models\Banner;
 use App\Http\Models\FraudSetting;
+use App\Http\Models\OauthAccessToken;
 
 use DB;
 use App\Lib\MyHelper;
@@ -168,6 +169,14 @@ class ApiHome extends Controller
                     'status' => 'fail',
                     'messages' => ['User email or user name is empty.', 'Please complete name and email first']
                 ]);
+            }
+
+            if($request->user()->is_suspended == '1'){
+                //delete token
+                $del = OauthAccessToken::join('oauth_access_token_providers', 'oauth_access_tokens.id', 'oauth_access_token_providers.oauth_access_token_id')
+                ->where('oauth_access_tokens.user_id', $request->user()->id)->where('oauth_access_token_providers.provider', 'users')->delete();
+                
+                return response()->json(['message' => 'Unauthenticated'], 401);
             }
 
             if ($request->json('time')) {

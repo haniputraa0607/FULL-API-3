@@ -83,7 +83,7 @@ Route::group(['middleware' => 'auth_client', 'prefix' => 'api/transaction', 'nam
     Route::post('/shipping/gosend', 'ApiTransaction@shippingCostGoSend');
 });
 
-Route::group(['prefix' => 'api/transaction', 'namespace' => 'Modules\Transaction\Http\Controllers'], function()
+Route::group(['prefix' => 'api/transaction', 'middleware' => 'log_request', 'namespace' => 'Modules\Transaction\Http\Controllers'], function()
 {
     Route::any('/finish', 'ApiTransaction@transactionFinish');
     Route::any('/cancel', 'ApiTransaction@transactionCancel');
@@ -137,5 +137,4 @@ Route::group(['prefix' => 'api/transaction', 'namespace' => 'Modules\Transaction
         
         return response()->json(App\Lib\MyHelper::encrypt2019($data));
     });
-    Route::any('/notif2', 'ApiNotification@notification2');
 });

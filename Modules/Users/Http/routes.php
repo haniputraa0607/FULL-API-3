@@ -60,7 +60,7 @@ Route::group(['prefix' => 'api', 'middleware' => 'log_request'], function(){
 		Route::post('outlet', 'ApiUser@outletUser');
 		Route::any('notification', 'ApiUser@getUserNotification');
 		Route::get('get-all', 'ApiUser@getAllName');
-	    
+		Route::any('get-detail', 'ApiUser@getDetailUser');
 	});
 	Route::group(['middleware' => 'auth:api', 'prefix' => 'home', 'namespace' => 'Modules\Users\Http\Controllers'], function()
 	{
