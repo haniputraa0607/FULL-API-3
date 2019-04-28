@@ -152,8 +152,8 @@ class ApiDealsInvalidate extends Controller
         $update = $this->updateStatusDealsUser($deals->id_deals_user, [
             'redeemed_at'       => date('Y-m-d H:i:s'),
             // 'used_at'           => date('Y-m-d H:i:s'),
-            // 'voucher_hash'      => 'https://chart.googleapis.com/chart?chl='.MyHelper::encryptQRCode($code).'&chs=250x250&cht=qr&chld=H%7C0',
-            'voucher_hash'      => 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data='.MyHelper::encryptQRCode($code),
+            'voucher_hash'      => 'https://chart.googleapis.com/chart?chl='.MyHelper::encryptQRCode($code).'&chs=250x250&cht=qr&chld=H%7C0',
+            // 'voucher_hash'      => 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data='.MyHelper::encryptQRCode($code),
             'voucher_hash_code' => $code,
             'id_outlet'         => $deals->id_outlet
         ]);
