@@ -169,8 +169,8 @@ class ApiOutletApp extends Controller
         $result['on_going']['data']['right_now']['data'] = $listOnGoingNow;
         $result['on_going']['data']['pickup_time']['count'] = count($listOnGoingSet);
         $result['on_going']['data']['pickup_time']['data'] = $listOnGoingSet;
-        $result['on_going']['data']['at_arrival']['count'] = count($listOnGoingArrival);
-        $result['on_going']['data']['at_arrival']['data'] = $listOnGoingArrival;
+        // $result['on_going']['data']['at_arrival']['count'] = count($listOnGoingArrival);
+        // $result['on_going']['data']['at_arrival']['data'] = $listOnGoingArrival;
 
         $result['ready']['count'] = count($listReady);
         $result['ready']['data'] = $listReady;

@@ -23,11 +23,14 @@ class AccessTokenController extends PassportAccessTokenController
     public function issueToken(ServerRequestInterface $request)
     {
         try {
-            if(Auth::attempt(['phone' => $request->getParsedBody()['username'], 'password' => $request->getParsedBody()['password']])){
-                $user = User::where('phone', $request->getParsedBody()['username'])->first();
-                if($user){
-                    if($user->is_suspended == '1'){
-                        return response()->json(['status' => 'fail', 'messages' => 'Maaf, akun Anda sedang di-suspend']);
+            if(isset($request->getParsedBody()['username']) && isset($request->getParsedBody()['password'])){
+                
+                if(Auth::attempt(['phone' => $request->getParsedBody()['username'], 'password' => $request->getParsedBody()['password']])){
+                    $user = User::where('phone', $request->getParsedBody()['username'])->first();
+                    if($user){
+                        if($user->is_suspended == '1'){
+                            return response()->json(['status' => 'fail', 'messages' => 'Maaf, akun Anda sedang di-suspend']);
+                        }
                     }
                 }
             }

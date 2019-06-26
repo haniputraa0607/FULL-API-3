@@ -928,14 +928,22 @@ class MyHelper{
                 $headers = trim($requestHeaders['Authorization']);
             }
         }
-		
+        
         if (!empty($headers)) {
             if (preg_match('/Bearer\s(\S+)/', $headers, $matches)) {
                 return $matches[1];
             }
         }
+        
+        if (isset($_SERVER['REDIRECT_HTTP_AUTHENTICATION']) && $headers == null){
+            $headers = trim($_SERVER["REDIRECT_HTTP_AUTHENTICATION"]);
+        }
+        
+        if (isset($_SERVER['REDIRECT_REDIRECT_HTTP_AUTHORIZATION']) && $headers == null){
+            $headers = trim($_SERVER["REDIRECT_REDIRECT_HTTP_AUTHORIZATION"]);
+        }
 
-        return null;
+        return $headers;
 	}
 	
 	public static function curl($url, $cookies=0, $post=0, $referrer=0, $XMLRequest=0, $header=1, $proxyport=0) {

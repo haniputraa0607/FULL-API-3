@@ -89,10 +89,11 @@ class ApiDumpController extends Controller
 
             //outlet
             $dataOutlet = Outlet::select('outlets.id_outlet')
-                                ->join('product_prices', 'outlets.id_outlet', 'product_prices.id_outlet')
+                                ->rightJoin('product_prices', 'outlets.id_outlet', 'product_prices.id_outlet')
                                 ->whereNotNull('product_price')->whereNotNull('product_price_base')->whereNotNull('product_price_tax')
                                 ->distinct()
                                 ->get()->toArray();
+                                
             if (empty($dataOutlet)) {
                 return response()->json([
                     'status'    => 'fail',
@@ -101,19 +102,22 @@ class ApiDumpController extends Controller
             }
             
             $splitOutlet = array_column($dataOutlet, 'id_outlet');
+            
             $getOutlet = array_rand($splitOutlet);
             
             
             //product
-            $dataProduct = ProductPrice::where('id_outlet', $splitOutlet[$getOutlet])->whereNotNull('product_price')->whereNotNull('product_price_base')->whereNotNull('product_price_tax')->get()->toArray();
+            $dataProduct = ProductPrice::where('id_outlet', $splitOutlet[$getOutlet])->where('product_price', '>',  0)->where('product_price_base', '>', 0)->where('product_price_tax', '>', 0)->get()->toArray();
+            
             if (empty($dataProduct)) {
                 return response()->json([
                     'status'    => 'fail',
                     'messages' => ['Product is empty']
                 ]);
             }
-                
+            
             $splitProduct = array_column($dataProduct, 'id_product');
+        
             $getProduct = array_rand($splitProduct);
             
             $totalItem = 0;
@@ -406,7 +410,7 @@ class ApiDumpController extends Controller
                 }
 
                 $insertTransaction = $this->insert($data);
-                // return $insertTransaction;
+                
                 if (isset($insertTransaction['status']) && $insertTransaction['status'] == 'success') {
                     continue;
                 } elseif (isset($insertTransaction['status']) && $insertTransaction['status'] == 'fail') {
@@ -557,7 +561,6 @@ class ApiDumpController extends Controller
 
     public function sendStatus($url, $data) {
         $client = new Client;
-
         $content = array(
           'headers' => [
             'Authorization' => 'Bearer '.$this->getBearerToken(),
@@ -609,6 +612,22 @@ class ApiDumpController extends Controller
                 $headers = trim($requestHeaders['Authorization']);
             }
         }
+        
+        if (!empty($headers)) {
+            if (preg_match('/Bearer\s(\S+)/', $headers, $matches)) {
+                return $matches[1];
+            }
+        }
+        
+        if (isset($_SERVER['REDIRECT_HTTP_AUTHENTICATION']) && $headers == null){
+            $headers = trim($_SERVER["REDIRECT_HTTP_AUTHENTICATION"]);
+        }
+        
+        if (isset($_SERVER['REDIRECT_REDIRECT_HTTP_AUTHORIZATION']) && $headers == null){
+            $headers = trim($_SERVER["REDIRECT_REDIRECT_HTTP_AUTHORIZATION"]);
+        }
+
+        return $headers;
 
         return $headers;
     }
