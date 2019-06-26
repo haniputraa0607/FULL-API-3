@@ -489,7 +489,7 @@ Message :
                 'autocrm_type' => 'Response',
                 'autocrm_trigger' => 'Daily',
                 'autocrm_cron_reference' => NULL,
-                'autocrm_title' => 'Order Ready',
+                'autocrm_title' => 'Order Accepted',
                 'autocrm_email_toogle' => '0',
                 'autocrm_sms_toogle' => '0',
                 'autocrm_push_toogle' => '1',
