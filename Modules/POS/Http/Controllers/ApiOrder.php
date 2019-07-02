@@ -24,7 +24,7 @@ use App\Http\Models\LogBalance;
 
 use Modules\POS\Http\Requests\Order\listOrder;
 use Modules\POS\Http\Requests\Order\detailOrder;
-use Modules\OutletApp\Http\Requests\ProductSoldOut;
+use Modules\POS\Http\Requests\Order\ProductSoldOut;
 
 use App\Lib\MyHelper;
 use DB;
@@ -577,21 +577,28 @@ class ApiOrder extends Controller
         return response()->json(MyHelper::checkUpdate($pickup));
     }
 
-    public function profile(Request $request){
-        $outlet = $request->user();
-        $profile['outlet_name'] = $outlet['outlet_name'];
-        $profile['outlet_code'] = $outlet['outlet_code'];
-        $profile['status'] = 'success';
-
-        return response()->json($profile);
-    }
-
     public function productSoldOut(ProductSoldOut $request){
         $post = $request->json()->all();
-        $outlet = $request->user();
+
+        $api = app($this->pos)->checkApi($post['api_key'], $post['api_secret']); 
+        if ($api['status'] != 'success') { 
+            return response()->json($api); 
+        } 
+ 
+        $outlet = Outlet::where('outlet_code', strtoupper($post['store_code']))->first(); 
+
+        if(empty($outlet)){ 
+            return response()->json(['status' => 'fail', 'messages' => ['Store not found']]); 
+        } 
+
+        //get id product
+        $cekProduct = Product::where('product_code', $post['plu_id'])->first();
+        if(empty($cekProduct)){ 
+            return response()->json(['status' => 'fail', 'messages' => ['Product not found']]); 
+        }
         
         $product = ProductPrice::where('id_outlet', $outlet['id_outlet'])
-                                ->where('id_product', $post['id_product'])
+                                ->where('id_product', $cekProduct->id_product)
                                 ->update(['product_stock_status' => $post['product_stock_status']]);
 
         return response()->json(MyHelper::checkUpdate($product));
