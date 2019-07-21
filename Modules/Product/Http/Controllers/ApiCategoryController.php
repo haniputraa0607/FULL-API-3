@@ -74,7 +74,7 @@ class ApiCategoryController extends Controller
                 }
                 else {
                     $data['product_category_order'] = $this->searchLastSorting(null);
-                }    
+                }
             }
         }
 
@@ -97,7 +97,7 @@ class ApiCategoryController extends Controller
 
         if (isset($data['error'])) {
             unset($data['error']);
-            
+
             return response()->json($data);
         }
 
@@ -154,10 +154,10 @@ class ApiCategoryController extends Controller
 
         if (isset($data['error'])) {
             unset($data['error']);
-            
+
             return response()->json($data);
         }
-		 
+
         // update
         $update = ProductCategory::where('id_product_category', $post['id_product_category'])->update($data);
 
@@ -188,7 +188,7 @@ class ApiCategoryController extends Controller
 
             // delete file
             MyHelper::deletePhoto($dataCategory[0]['product_category_photo']);
-            
+
             return response()->json(MyHelper::checkDelete($delete));
         }
         else {
@@ -259,15 +259,21 @@ class ApiCategoryController extends Controller
         $post = $request->json()->all();
 
         $category = $this->getData($post);
-        
+
         if (!empty($category)) {
             $category = $this->createTree($category, $post);
         }
-		
+
 		if(isset($post['id_outlet'])){
 			$uncategorized = Product::join('product_prices','product_prices.id_product','=','products.id_product')
-									->where('product_prices.id_outlet','=',$post['id_outlet'])
-									->where('product_prices.product_visibility','=','Visible')
+                                    ->where('product_prices.id_outlet','=',$post['id_outlet'])
+                                    ->where(function($query){
+                                        $query->where('product_prices.product_visibility','=','Visible')
+                                                ->orWhere(function($q){
+                                                    $q->whereNull('product_prices.product_visibility')
+                                                    ->where('products.product_visibility', 'Visible');
+                                                });
+                                    })
                                     ->where('product_prices.product_status','=','Active')
                                     ->whereNotNull('product_prices.product_price')
 									->whereNull('products.id_product_category')
@@ -275,12 +281,18 @@ class ApiCategoryController extends Controller
                                     ->orderBy('products.position')
 									->get()
 									->toArray();
-			
+
 		} else {
 			$defaultoutlet = Setting::where('key','=','default_outlet')->first();
 			$uncategorized = Product::join('product_prices','product_prices.id_product','=','products.id_product')
 									->where('product_prices.id_outlet','=',$defaultoutlet['value'])
-									->where('product_prices.product_visibility','=','Visible')
+                                    ->where(function($query){
+                                        $query->where('product_prices.product_visibility','=','Visible')
+                                                ->orWhere(function($q){
+                                                    $q->whereNull('product_prices.product_visibility')
+                                                    ->where('products.product_visibility', 'Visible');
+                                                });
+                                    })
                                     ->where('product_prices.product_status','=','Active')
 									->whereNotNull('product_prices.product_price')
 									->whereNull('products.id_product_category')
@@ -289,7 +301,7 @@ class ApiCategoryController extends Controller
 									->get()
 									->toArray();
 		}
-		
+
 		$result = array();
         $dataCategory = [];
         if (!empty($category)) {
@@ -315,7 +327,7 @@ class ApiCategoryController extends Controller
         }
 
         $result['categorized'] = $dataCategory;
-        
+
         if(!isset($post['id_product_category'])){
             $result['uncategorized_name'] = "Product";
             $result['uncategorized'] = $uncategorized;
@@ -350,7 +362,7 @@ class ApiCategoryController extends Controller
     }
 
     /**
-     * list 
+     * list
      */
 
     public function createTree($root, $post=[]){
@@ -365,7 +377,7 @@ class ApiCategoryController extends Controller
             else {
                 $r['child'] = [];
             }
-            
+
             $product = $this->getDataProduk($r['id_product_category'], $post);
             $r['product_count'] = count($product);
             $r['product'] = $product;
@@ -376,22 +388,34 @@ class ApiCategoryController extends Controller
     }
 
     public function getDataProduk($id, $post=[]) {
-        if (isset($post['id_outlet'])) { 
+        if (isset($post['id_outlet'])) {
 			$product = Product::select('products.*', 'product_prices.product_price', 'product_prices.product_visibility', 'product_prices.product_status', 'product_prices.product_stock_status', 'product_prices.id_outlet')->join('product_prices','product_prices.id_product','=','products.id_product')
 									->where('product_prices.id_outlet','=',$post['id_outlet'])
-									->where('product_prices.product_visibility','=','Visible')
+                                    ->where(function($query){
+                                        $query->where('product_prices.product_visibility','=','Visible')
+                                                ->orWhere(function($q){
+                                                    $q->whereNull('product_prices.product_visibility')
+                                                    ->where('products.product_visibility', 'Visible');
+                                                });
+                                    })
 									->where('product_prices.product_status','=','Active')
 									->whereNotNull('product_prices.product_price')
 									->where('products.id_product_category', $id)
 									->with(['photos'])
                                     ->orderBy('products.position')
                                     ->get();
-            
+
         } else {
 			$defaultoutlet = Setting::where('key','=','default_outlet')->first();
 			$product = Product::select('products.*', 'product_prices.product_price', 'product_prices.product_visibility', 'product_prices.product_status', 'product_prices.product_stock_status')->join('product_prices','product_prices.id_product','=','products.id_product')
 									->where('product_prices.id_outlet','=',$defaultoutlet['value'])
-									->where('product_prices.product_visibility','=','Visible')
+                                    ->where(function($query){
+                                        $query->where('product_prices.product_visibility','=','Visible')
+                                                ->orWhere(function($q){
+                                                    $q->whereNull('product_prices.product_visibility')
+                                                    ->where('products.product_visibility', 'Visible');
+                                                });
+                                    })
                                     ->where('product_prices.product_status','=','Active')
                                     ->whereNotNull('product_prices.product_price')
 									->where('products.id_product_category', $id)
@@ -419,6 +443,11 @@ class ApiCategoryController extends Controller
         }
 
         return ['status' => 'success'];
+    }
+
+    public function getAllCategory(){
+        $data = ProductCategory::orderBy('product_category_name')->get();
+        return response()->json(MyHelper::checkGet($data));
     }
 
 }

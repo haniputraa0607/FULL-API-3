@@ -68,6 +68,6 @@ Route::group(['prefix' => 'api/outlet', 'namespace' => 'Modules\Outlet\Http\Cont
             Route::post('update', 'ApiOutletController@updateAdminOutlet');
             Route::post('delete', 'ApiOutletController@deleteAdminOutlet');
         });
-        
+
     });
 });

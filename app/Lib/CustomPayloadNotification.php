@@ -1,0 +1,67 @@
+<?php
+
+namespace app\Lib;
+
+use Illuminate\Contracts\Support\Arrayable;
+use LaravelFCM\Message\PayloadNotification;
+
+/**
+ * Class PayloadNotification.
+ */
+class CustomPayloadNotification extends PayloadNotification
+{
+    protected $image;
+
+    /**
+     * PayloadNotification constructor.
+     *
+     * @param PayloadNotificationBuilder $builder
+     */
+    public function __construct(CustomPayloadNotificationBuilder $builder)
+    {
+        $this->title = $builder->getTitle();
+        $this->body = $builder->getBody();
+        $this->channelId = $builder->getChannelId();
+        $this->icon = $builder->getIcon();
+        $this->sound = $builder->getSound();
+        $this->badge = $builder->getBadge();
+        $this->tag = $builder->getTag();
+        $this->image = $builder->getImage();
+        $this->color = $builder->getColor();
+        $this->clickAction = $builder->getClickAction();
+        $this->bodyLocationKey = $builder->getBodyLocationKey();
+        $this->bodyLocationArgs = $builder->getBodyLocationArgs();
+        $this->titleLocationKey = $builder->getTitleLocationKey();
+        $this->titleLocationArgs = $builder->getTitleLocationArgs();
+    }
+
+    /**
+     * convert PayloadNotification to array.
+     *
+     * @return array
+     */
+    public function toArray()
+    {
+        $notification = [
+            'title' => $this->title,
+            'body' => $this->body,
+            'android_channel_id' => $this->channelId,
+            'icon' => $this->icon,
+            'image' => $this->image,
+            'sound' => $this->sound,
+            'badge' => $this->badge,
+            'tag' => $this->tag,
+            'color' => $this->color,
+            'click_action' => $this->clickAction,
+            'body_loc_key' => $this->bodyLocationKey,
+            'body_loc_args' => $this->bodyLocationArgs,
+            'title_loc_key' => $this->titleLocationKey,
+            'title_loc_args' => $this->titleLocationArgs,
+        ];
+
+        // remove null values
+        $notification = array_filter($notification);
+
+        return $notification;
+    }
+}

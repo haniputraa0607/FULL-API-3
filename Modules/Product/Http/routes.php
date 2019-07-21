@@ -7,11 +7,12 @@ Route::group(['prefix' => 'api/product','middleware' => 'log_request', 'namespac
      */
     Route::group(['middleware' => 'auth:api'], function() {
         Route::any('list', 'ApiProductController@listProduct');
+        Route::get('list/price/{id_outlet}', 'ApiProductController@listProductPriceByOutlet');
 
         /* Sync */
         Route::any('sync', 'ApiSyncProductController@sync');
     });
-    
+
     /**
      * auth
      */
@@ -21,6 +22,7 @@ Route::group(['prefix' => 'api/product','middleware' => 'log_request', 'namespac
         Route::post('create', 'ApiProductController@create');
         Route::post('update', 'ApiProductController@update');
         Route::post('update/allow_sync', 'ApiProductController@updateAllowSync');
+        Route::post('update/visibility/global', 'ApiProductController@updateVisibility');
         Route::post('update/visibility', 'ApiProductController@visibility');
 
         /* product position */
@@ -64,16 +66,17 @@ Route::group(['prefix' => 'api/product','middleware' => 'log_request', 'namespac
         });
 
     });
-    
+
     /**
      * category
      */
     Route::group(['prefix' => 'category', 'middleware' => 'auth:api'], function() {
-    	
+
     	Route::any('list', 'ApiCategoryController@listCategory');
     	Route::any('list/tree', 'ApiCategoryController@listCategoryTree');
         Route::post('position/assign', 'ApiCategoryController@positionCategoryAssign');
-        
+        Route::get('all', 'ApiCategoryController@getAllCategory');
+
     	/**
     	 * auth
     	 */

@@ -99,6 +99,15 @@ class ApiOnlineTransaction extends Controller
             $post['transaction_date'] = date('Y-m-d H:i:s');
         }
 
+        //cek outlet active
+        if(isset($outlet['outlet_status']) && $outlet['outlet_status'] == 'Inactive'){
+            DB::rollback();
+            return response()->json([
+                'status'    => 'fail',
+                'messages'  => ['Outlet tutup']
+            ]);
+        }
+
         //cek outlet holiday
         if($issetDate == false){
             $holiday = Holiday::join('outlet_holidays', 'holidays.id_holiday', 'outlet_holidays.id_holiday')->join('date_holidays', 'holidays.id_holiday', 'date_holidays.id_holiday')
@@ -128,9 +137,9 @@ class ApiOnlineTransaction extends Controller
                 return response()->json([
                     'status'    => 'fail',
                     'messages'  => ['Outlet tutup']
-                ]);  
+                ]);
             }
-    
+
              if($outlet['today']['close'] && $outlet['today']['close'] != "00:00" && $outlet['today']['open'] && $outlet['today']['open'] != '00:00'){
 
                 $settingTime = Setting::where('key', 'processing_time')->first();
@@ -140,17 +149,17 @@ class ApiOnlineTransaction extends Controller
                         return response()->json([
                             'status'    => 'fail',
                             'messages'  => ['Outlet tutup']
-                        ]);    
+                        ]);
                     }
                 }
-        
+
                 //cek outlet open - close hour
                 if(($outlet['today']['open'] && date('H:i') < date('H:i', strtotime($outlet['today']['open']))) || ($outlet['today']['close'] && date('H:i') > date('H:i', strtotime($outlet['today']['close'])))){
                     DB::rollback();
                     return response()->json([
                         'status'    => 'fail',
                         'messages'  => ['Outlet tutup']
-                    ]);    
+                    ]);
                 }
             }
         }
@@ -160,7 +169,7 @@ class ApiOnlineTransaction extends Controller
         } else {
             $post['transaction_payment_status'] = 'Pending';
         }
-  
+
         if (!isset($post['id_user'])) {
             $id = $request->user()->id;
         } else {
@@ -181,7 +190,7 @@ class ApiOnlineTransaction extends Controller
             DB::rollback();
             return response()->json([
                 'status'    => 'fail',
-                'messages'  => ['Maaf, akun Anda sedang di-suspend']
+                'messages'  => ['Akun Anda telah diblokir karena menunjukkan aktivitas mencurigakan. Untuk informasi lebih lanjut harap hubungi customer service kami di hello@kopikenangan.com']
             ]);
         }
 
@@ -195,7 +204,7 @@ class ApiOnlineTransaction extends Controller
 
         if ($post['type'] == 'Delivery') {
             $userAddress = UserAddress::where(['id_user' => $id, 'id_user_address' => $post['id_user_address']])->first();
-        
+
             if (empty($userAddress)) {
                 DB::rollback();
                 return response()->json([
@@ -204,7 +213,7 @@ class ApiOnlineTransaction extends Controller
                 ]);
             }
         }
-        
+
         $totalDisProduct = 0;
 
         // $productDis = $this->countDis($post);
@@ -224,7 +233,7 @@ class ApiOnlineTransaction extends Controller
 
                     if (isset($post['sub']->original['messages'])) {
                         $mes = $post['sub']->original['messages'];
-                        
+
                         if ($post['sub']->original['messages'] == ['Price Product Not Found']) {
                             if (isset($post['sub']->original['product'])) {
                                 $mes = ['Price Product Not Found with product '.$post['sub']->original['product'].' at outlet '.$outlet['outlet_name']];
@@ -294,7 +303,7 @@ class ApiOnlineTransaction extends Controller
                             'messages'  => $mes
                         ]);
                     }
-            } 
+            }
             else {
                 $post[$valueTotal] = app($this->setting_trx)->countTransaction($valueTotal, $post);
             }
@@ -317,25 +326,25 @@ class ApiOnlineTransaction extends Controller
                 $post['cashback'] = $countSettingCashback[$countUserTrx]['cashback_maximum'];
             }
         } else {
-            
+
             $maxCash = Setting::where('key', 'cashback_maximum')->first();
 
             if (count($user['memberships']) > 0) {
                 $post['point'] = $post['point'] * ($user['memberships'][0]['benefit_point_multiplier']) / 100;
                 $post['cashback'] = $post['cashback'] * ($user['memberships'][0]['benefit_cashback_multiplier']) / 100;
-    
+
                 if($user['memberships'][0]['cashback_maximum']){
                     $maxCash['value'] = $user['memberships'][0]['cashback_maximum'];
                 }
             }
-    
+
             $statusCashMax = 'no';
-    
+
             if (!empty($maxCash) && !empty($maxCash['value'])) {
                 $statusCashMax = 'yes';
                 $totalCashMax = $maxCash['value'];
             }
-            
+
             if ($statusCashMax == 'yes') {
                 if ($totalCashMax < $post['cashback']) {
                     $post['cashback'] = $totalCashMax;
@@ -344,8 +353,8 @@ class ApiOnlineTransaction extends Controller
                 $post['cashback'] = $post['cashback'];
             }
         }
-        
-        
+
+
         if (!isset($post['payment_type'])) {
             $post['payment_type'] = null;
         }
@@ -466,12 +475,12 @@ class ApiOnlineTransaction extends Controller
             }
         }
 
-        // DB::beginTransaction();
+        DB::beginTransaction();
         $transaction = [
             'id_outlet'                   => $post['id_outlet'],
             'id_user'                     => $id,
             'transaction_date'            => $post['transaction_date'],
-            'transaction_receipt_number'  => 'TRX-'.app($this->setting_trx)->getrandomnumber(8).'-'.date('YmdHis'),
+            // 'transaction_receipt_number'  => 'TRX-'.app($this->setting_trx)->getrandomnumber(8).'-'.date('YmdHis'),
             'trasaction_type'             => $type,
             'transaction_notes'           => $post['notes'],
             'transaction_subtotal'        => $post['subtotal'],
@@ -521,6 +530,22 @@ class ApiOnlineTransaction extends Controller
                 'messages'  => ['Insert Transaction Failed']
             ]);
         }
+
+        //update receipt
+        $receipt = 'TRX-'.$insertTransaction['id_outlet'].$insertTransaction['id_transaction'].'-'.date('ymdHis');
+        $updateReceiptNumber = Transaction::where('id_transaction', $insertTransaction['id_transaction'])->update([
+            'transaction_receipt_number' => $receipt
+        ]);
+
+        if (!$updateReceiptNumber) {
+            DB::rollback();
+            return response()->json([
+                'status'    => 'fail',
+                'messages'  => ['Insert Transaction Failed']
+            ]);
+        }
+
+        $insertTransaction['transaction_receipt_number'] = $receipt;
 
         foreach ($post['item'] as $keyProduct => $valueProduct) {
             $checkProduct = Product::where('id_product', $valueProduct['id_product'])->with('category')->first();
@@ -645,7 +670,7 @@ class ApiOnlineTransaction extends Controller
             $post['receive_at'] = date('Y-m-d H:i:s', strtotime($post['receive_at']));
         } else {
             $post['receive_at'] = null;
-        } 
+        }
 
         if (isset($post['id_admin_outlet_receive'])) {
             $post['id_admin_outlet_receive'] = $post['id_admin_outlet_receive'];
@@ -660,7 +685,7 @@ class ApiOnlineTransaction extends Controller
             if ($post['type'] == 'Delivery') {
                 $configAdminOutlet = Configs::where('config_name', 'admin outlet delivery order')->first();
             }else{
-                $configAdminOutlet = Configs::where('config_name', 'admin outlet pickup order')->first(); 
+                $configAdminOutlet = Configs::where('config_name', 'admin outlet pickup order')->first();
             }
 
             if($configAdminOutlet && $configAdminOutlet['is_active'] == '1'){
@@ -685,7 +710,7 @@ class ApiOnlineTransaction extends Controller
             }
 
             $order_id = MyHelper::createrandom(4, 'Besar Angka');
-            
+
             //cek unique order id today
             $cekOrderId = TransactionShipment::join('transactions', 'transactions.id_transaction', 'transaction_shipments.id_transaction')
                                             ->where('order_id', $order_id)
@@ -809,11 +834,11 @@ class ApiOnlineTransaction extends Controller
 
             if($pickupType == 'set time'){
 
-                if (date('Y-m-d H:i:s', strtotime($post['pickup_at'])) <= date('Y-m-d H:i:s')) {
+                if (date('Y-m-d H:i:s', strtotime($post['pickup_at'])) <= date('Y-m-d H:i:s', strtotime('- '.$settingTime['value'].'minutes'))) {
                     $settingTime = Setting::where('key', 'processing_time')->first();
 
                     $pickup = date('Y-m-d H:i:s', strtotime('+ '.$settingTime['value'].'minutes'));
-                } 
+                }
                 else {
                     if(isset($outlet['today']['close'])){
                         if(date('Y-m-d H:i', strtotime($post['pickup_at'])) > date('Y-m-d').' '.date('H:i', strtotime($outlet['today']['close']))){
@@ -849,7 +874,7 @@ class ApiOnlineTransaction extends Controller
             }
 
             $insertPickup = TransactionPickup::create($dataPickup);
-           
+
             if (!$insertPickup) {
                 DB::rollback();
                 return response()->json([
@@ -1002,11 +1027,25 @@ class ApiOnlineTransaction extends Controller
 
                 // Fraud Detection
                 if ($post['transaction_payment_status'] == 'Completed' || $save['type'] == 'no_topup') {
+                    $trxDay = Transaction::where('id_user', $user['id'])
+                    ->whereDate('transaction_date', date('Y-m-d'))
+                    ->where('transaction_payment_status', 'Completed')->count();
+
+                    $trxWeek = Transaction::where('id_user', $user['id'])
+                    ->whereDate('transaction_date','<=', date('Y-m-d'))
+                    ->whereDate('transaction_date', '>=' ,date('Y-m-d', strtotime(' - 6 days')))
+                    ->where('transaction_payment_status', 'Completed')->count();
+
                     //update count transaction
                     $updateCountTrx = User::where('id', $user['id'])->update([
-                        'count_transaction_day' => $user['count_transaction_day'] + 1, 
-                        'count_transaction_week' => $user['count_transaction_week'] + 1,
+                        'count_transaction_day' => $trxDay,
+                        'count_transaction_week' =>  $trxWeek,
                     ]);
+
+                    // $updateCountTrx = User::where('id', $user['id'])->update([
+                    //     'count_transaction_day' => $user['count_transaction_day'] + 1,
+                    //     'count_transaction_week' => $user['count_transaction_week'] + 1,
+                    // ]);
                     if (!$updateCountTrx) {
                         DB::rollback();
                         return response()->json([
@@ -1014,9 +1053,9 @@ class ApiOnlineTransaction extends Controller
                             'messages'  => ['Update User Count Transaction Failed']
                         ]);
                     }
-            
+
                     $userData = User::find($user['id']);
-                    
+
                     //cek fraud detection transaction per day
                     $fraudTrxDay = FraudSetting::where('parameter', 'LIKE', '%transactions in 1 day%')->first();
                     if($fraudTrxDay && $fraudTrxDay['parameter_detail'] != null){
@@ -1025,7 +1064,7 @@ class ApiOnlineTransaction extends Controller
                             $sendFraud = app($this->setting_fraud)->SendFraudDetection($fraudTrxDay['id_fraud_setting'], $userData, $insertTransaction['id_transaction'], null);
                         }
                     }
-            
+
                     //cek fraud detection transaction per week (last 7 days)
                     $fraudTrxDay = FraudSetting::where('parameter', 'LIKE', '%transactions in 1 week%')->first();
                     if($fraudTrxDay && $fraudTrxDay['parameter_detail'] != null){
@@ -1038,6 +1077,7 @@ class ApiOnlineTransaction extends Controller
 
                 if ($save['type'] == 'no_topup') {
                     $mid['order_id'] = $insertTransaction['transaction_receipt_number'];
+                    $mid['gross_amount'] = 0;
 
                     $insertTransaction = Transaction::with('user.memberships', 'outlet', 'productTransaction')->where('transaction_receipt_number', $insertTransaction['transaction_receipt_number'])->first();
 
@@ -1073,7 +1113,7 @@ class ApiOnlineTransaction extends Controller
                     $dataRedirect = $this->dataRedirect($insertTransaction['transaction_receipt_number'], 'trx', '1');
 
                     if($post['latitude'] && $post['longitude']){
-                        $savelocation = $this->saveLocation($post['latitude'], $post['longitude'], $insertTransaction['id_user'], $insertTransaction['id_transaction']);
+                        $savelocation = $this->saveLocation($post['latitude'], $post['longitude'], $insertTransaction['id_user'], $insertTransaction['id_transaction'], $insertTransaction['id_outlet']);
                      }
 
                     DB::commit();
@@ -1085,7 +1125,7 @@ class ApiOnlineTransaction extends Controller
                     ]);
                 }
             }
-            
+
             if ($post['payment_type'] == 'Midtrans') {
                 if ($post['transaction_payment_status'] == 'Completed') {
                     //bank
@@ -1122,27 +1162,37 @@ class ApiOnlineTransaction extends Controller
                         ]);
                     }
 
+                    // if($post['latitude'] && $post['longitude']){
+                    //     $savelocation = $this->saveLocation($post['latitude'], $post['longitude'], $insertTransaction['id_user'], $insertTransaction['id_transaction']);
+                    // }
+
                 }
 
             }
         }
 
-        if($post['latitude'] && $post['longitude']){
-           $savelocation = $this->saveLocation($post['latitude'], $post['longitude'], $insertTransaction['id_user'], $insertTransaction['id_transaction']);
-        }
-        
-        // DB::commit();
+        // if($post['latitude'] && $post['longitude']){
+        //    $savelocation = $this->saveLocation($post['latitude'], $post['longitude'], $insertTransaction['id_user'], $insertTransaction['id_transaction']);
+        // }
+
+        DB::commit();
         return response()->json([
             'status'   => 'success',
             'redirect' => true,
             'result'   => $insertTransaction
         ]);
-        
+
     }
 
-    public function saveLocation($latitude, $longitude, $id_user, $id_transaction){
+    public function saveLocation($latitude, $longitude, $id_user, $id_transaction, $id_outlet){
+
+        $cek = UserLocationDetail::where('id_reference', $id_transaction)->where('activity', 'Transaction')->first();
+        if($cek){
+            return true;
+        }
+
         $googlemap = MyHelper::get(env('GEOCODE_URL').$latitude.','.$longitude.'&key='.env('GEOCODE_KEY'));
-        
+
         if(isset($googlemap['results'][0]['address_components'])){
 
             $street = null;
@@ -1187,11 +1237,23 @@ class ApiOnlineTransaction extends Controller
                 $address = $googlemap['results'][0]['formatted_address'];
             }
 
+            $outletCode = null;
+            $outletName = null;
+
+            $outlet = Outlet::find($id_outlet);
+            if($outlet){
+                $outletCode = $outlet['outlet_code'];
+                $outletCode = $outlet['outlet_name'];
+            }
+
             $logactivity = UserLocationDetail::create([
                 'id_user' => $id_user,
                 'id_reference' => $id_transaction,
+                'id_outlet' => $id_outlet,
+                'outlet_code' => $outletCode,
+                'outlet_name' => $outletName,
                 'activity' => 'Transaction',
-                'action' => 'Create',
+                'action' => 'Completed',
                 'latitude' => $latitude,
                 'longitude' => $longitude,
                 'response_json' => json_encode($googlemap),
@@ -1211,7 +1273,7 @@ class ApiOnlineTransaction extends Controller
                 return true;
             }
         }
-        
+
         return false;
     }
 
@@ -1306,12 +1368,12 @@ class ApiOnlineTransaction extends Controller
         } else {
             $type = 'Delivery';
         }
-        
+
         $user = User::where('id', $trx['id_user'])->first();
 
         if (!empty($outletToken)) {
             $dataArraySend = [];
-            
+
             foreach ($outletToken as $key => $value) {
                 $dataOutletSend = [
                     'to'    => $value['token'],
@@ -1349,17 +1411,17 @@ class ApiOnlineTransaction extends Controller
             ],
             'json' => (array) $data
         );
-  
+
         try {
             $response =  $client->request($method, $url, $content);
             return json_decode($response->getBody(), true);
         }
         catch (\GuzzleHttp\Exception\RequestException $e) {
             try{
-            
+
                 if($e->getResponse()){
                     $response = $e->getResponse()->getBody()->getContents();
-          
+
                     $error = json_decode($response, true);
 
                     if(!$error) {
@@ -1374,7 +1436,7 @@ class ApiOnlineTransaction extends Controller
             }
         }
     }
-    
+
      public function getrandomstring($length = 120) {
 
        global $template;
@@ -1392,9 +1454,9 @@ class ApiOnlineTransaction extends Controller
                $rndstring .= $template[$b];
        }
 
-       return $rndstring; 
+       return $rndstring;
     }
-    
+
      public function getrandomnumber($length) {
 
        global $template;
@@ -1412,6 +1474,6 @@ class ApiOnlineTransaction extends Controller
                $rndstring .= $template[$b];
        }
 
-       return $rndstring; 
+       return $rndstring;
     }
 }

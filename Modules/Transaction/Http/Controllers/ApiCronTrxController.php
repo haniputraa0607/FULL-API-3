@@ -24,6 +24,7 @@ use App\Jobs\CronBalance;
 
 use App\Http\Models\Transaction;
 use App\Http\Models\TransactionProduct;
+use App\Http\Models\TransactionPickup;
 use App\Http\Models\User;
 use App\Http\Models\LogBalance;
 use App\Http\Models\AutocrmEmailLog;
@@ -36,7 +37,8 @@ class ApiCronTrxController extends Controller
     public function __construct()
     {
         date_default_timezone_set('Asia/Jakarta');
-        ini_set('max_execution_time', 600);
+        // ini_set('max_execution_time', 600);
+        ini_set('max_execution_time', 0);
         $this->autocrm = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
         $this->balance  = "Modules\Balance\Http\Controllers\BalanceController";
     }
@@ -47,7 +49,7 @@ class ApiCronTrxController extends Controller
         $dateLine  = date('Y-m-d H:i:s', strtotime('- 1days'));
         $now       = date('Y-m-d H:i:s');
 
-        $getTrx = Transaction::where('transaction_payment_status', 'Pending')->where('created_at', '>=', $crossLine)->where('created_at', '<=', $now)->get();
+        $getTrx = Transaction::where('transaction_payment_status', 'Pending')->where('created_at', '<=', $now)->get();
 
         if (empty($getTrx)) {
             return response()->json(['empty']);
@@ -99,7 +101,7 @@ class ApiCronTrxController extends Controller
 
         return response()->json(['success']);
     }
-    
+
     public function checkSchedule()
     {
         $result = [];
@@ -123,7 +125,8 @@ class ApiCronTrxController extends Controller
 
 
             $encodeCheck = json_encode($dataHash);
-            if (MyHelper::decryptkhususnew($val['enc']) != $encodeCheck) {
+            // if (MyHelper::decryptkhususnew($val['enc']) != $encodeCheck) {
+            if (base64_decode($val['enc']) != $encodeCheck) {
                 $result[] = $val;
             }
         }
@@ -136,9 +139,9 @@ class ApiCronTrxController extends Controller
                     foreach($exparr as $email){
                         $n   = explode('@',$email);
                         $name = $n[0];
-                        
+
                         $to      = $email;
-                        
+
                         $content = str_replace('%table_trx%', '', $crm['autocrm_forward_email_content']);
 
                         $content .= $this->html($result);
@@ -147,7 +150,7 @@ class ApiCronTrxController extends Controller
                         $getSetting = Setting::where('key', 'LIKE', 'email%')->get()->toArray();
                         $setting = array();
                         foreach ($getSetting as $key => $value) {
-                            $setting[$value['key']] = $value['value']; 
+                            $setting[$value['key']] = $value['value'];
                         }
 
                         $subject = $crm['autocrm_forward_email_subject'];
@@ -157,7 +160,7 @@ class ApiCronTrxController extends Controller
                             'html_message' => $content,
                             'setting'      => $setting
                         );
-                        
+
                         Mailgun::send('emails.test', $data, function($message) use ($to,$subject,$name,$setting)
                         {
                             $message->to($to, $name)->subject($subject)
@@ -181,13 +184,13 @@ class ApiCronTrxController extends Controller
                                 $message->bcc($setting['email_bcc'], $setting['email_bcc_name']);
                             }
                         });
-                        
+
                         // $logData = [];
                         // $logData['id_user'] = 999999999;
                         // $logData['email_log_to'] = $email;
                         // $logData['email_log_subject'] = $subject;
                         // $logData['email_log_message'] = $content;
-                        
+
                         // $logs = AutocrmEmailLog::create($logData);
                     }
                 }
@@ -205,7 +208,9 @@ class ApiCronTrxController extends Controller
     {
         $label = '';
         foreach ($data as $key => $value) {
-            $real = json_decode(MyHelper::decryptkhususnew($value['enc']));
+            // $real = json_decode(MyHelper::decryptkhususnew($value['enc']));
+            $real = json_decode(base64_decode($value['enc']));
+            // dd($real->source);
             $user = User::where('id', $value['id_user'])->first();
             if ($value['source'] == 'Transaction' || $value['source'] == 'Rejected Order' || $value['source'] == 'Reverse Point from Rejected Order') {
                 $detail = Transaction::with('outlet', 'transaction_pickup')->where('id_transaction', $value['id_reference'])->first();
@@ -243,7 +248,7 @@ class ApiCronTrxController extends Controller
     <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">'.($key+1).'</td>
     <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">Real</td>
     <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">'.$user['name'].'</td>
-    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">'.$value->source.'</td>
+    <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">'.$value['source'].'</td>
     <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">'.date('Y-m-d', strtotime($value['created_at'])).'</td>
     <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">-</td>
     <td style="border: 1px solid #dddddd;text-align: left;padding: 8px;">-</td>
@@ -291,22 +296,13 @@ class ApiCronTrxController extends Controller
     }
 
     public function completeTransactionPickup(){
-        $idTrx = Transaction::whereDate('transaction_date', '<', date('Y-m-d'))->pluck('id_transaction')->toArray();
-        //update ready_at
+        $idTrx = Transaction::whereDate('transaction_date', '<', date('Y-m-d'))->where('trasaction_type', 'Pickup Order')->pluck('id_transaction')->toArray();
+        //update taken_by_sistem_at
         $dataTrx = TransactionPickup::whereIn('id_transaction', $idTrx)
                                     ->whereNull('ready_at')
                                     ->whereNull('reject_at')
-                                    ->update(['ready_at' => date('Y-m-d 00:00:00')]);
-        //update receive_at
-        $dataTrx = TransactionPickup::whereIn('id_transaction', $idTrx)
-                                    ->whereNull('receive_at')
-                                    ->whereNull('reject_at')
-                                    ->update(['receive_at' => date('Y-m-d 00:00:00')]);
-        //update taken_at                           
-        $dataTrx = TransactionPickup::whereIn('id_transaction', $idTrx)
-                                    ->whereNull('taken_at')
-                                    ->whereNull('reject_at')
-                                    ->update(['taken_at' => date('Y-m-d 00:00:00')]);
+                                    ->whereNull('taken_by_system_at')
+                                    ->update(['taken_by_system_at' => date('Y-m-d 00:00:00')]);
 
         return response()->json(['status' => 'success']);
 
