@@ -58,7 +58,6 @@ class ApiDealsClaimPay extends Controller
         $post      = $request->json()->all();
         $dataDeals = app($this->claim)->chekDealsData($request->json('id_deals'));
         $id_user   = $request->user()->id;
-
         if (empty($dataDeals)) {
             return response()->json([
                 'status'   => 'fail',
@@ -70,10 +69,30 @@ class ApiDealsClaimPay extends Controller
             // CEK VALID DATE
             if (app($this->claim)->checkValidDate($dataDeals)) {
 
-                if (!empty($dataDeals->deals_voucher_price_cash) || $dataDeals->deals_promo_id_type == "nominal") {
-                    if (app($this->claim)->checkDealsPoint($dataDeals, $request->user()->id)) {
-                        // CEK USER ALREADY CLAIMED
-                        if (app($this->claim)->checkUserClaimed($request->user(), $dataDeals->id_deals)) {
+                if (!empty($dataDeals->deals_voucher_price_point) || !empty($dataDeals->deals_voucher_price_cash)) {
+                    if (!empty($dataDeals->deals_voucher_price_point)) {
+                        if (!app($this->claim)->checkDealsPoint($dataDeals, $request->user()->id)) {
+                            DB::rollback();
+                            return response()->json([
+                                'status'   => 'fail',
+                                'messages' => ['Your point not enough.']
+                            ]);
+                        }
+                    }
+
+                    //CEK IF BALANCE O
+                    if(isset($post['balance']) && $post['balance'] == true){
+                        if(app($this->claim)->getPoint($request->user()->id) <= 0){
+                            DB::rollback();
+                            return response()->json([
+                                'status'   => 'fail',
+                                'messages' => ['Your need more point.']
+                            ]);
+                        }
+                    }
+
+                    // CEK USER ALREADY CLAIMED
+                    if (app($this->claim)->checkUserClaimed($request->user(), $dataDeals->id_deals)) {
 
                         // if deals subscription
                         if ($dataDeals->deals_type == "Subscription") {
@@ -188,7 +207,15 @@ class ApiDealsClaimPay extends Controller
                         }
 
                         if ($voucher) {
+                            
+                            if (!empty($dataDeals->deals_voucher_price_point)){
+                                $req['payment_deals'] = 'balance';
+                            }
+                            $req['id_deals_user'] =  $voucher['id_deals_user'];
+                            $payNow = new PayNow($req);
+                            
                             DB::commit();
+                            return $this->bayarSekarang($payNow);
                         }
                         else {
                             DB::rollback();
@@ -197,23 +224,16 @@ class ApiDealsClaimPay extends Controller
                                 'messages' => ['Transaction is failed.']
                             ]);
                         }
-
+                        DB::commit();
                         return response()->json(MyHelper::checkCreate($voucher));
-                        }
-                        else {
-                            return response()->json([
-                                'status'   => 'fail',
-                                'messages' => ['You have participated.']
-                            ]);
-                        }
                     }
                     else {
-                        DB::rollback();
                         return response()->json([
                             'status'   => 'fail',
-                            'messages' => ['Your point not enough.']
+                            'messages' => ['You have participated.']
                         ]);
                     }
+                    
                 }
                 else {
                     DB::rollback();
@@ -239,11 +259,10 @@ class ApiDealsClaimPay extends Controller
     {
         DB::beginTransaction();
         $post      = $request->json()->all();        
-        $dataDeals = $this->deals($request->json('id_deals_user'));
-
+        $dataDeals = $this->deals($request->get('id_deals_user'));
+        
         if ($dataDeals) {
-            $voucher = DealsUser::with(['userMid', 'dealVoucher'])->where('id_deals_user', $request->json('id_deals_user'))->first();
-
+            $voucher = DealsUser::with(['userMid', 'dealVoucher'])->where('id_deals_user', $request->get('id_deals_user'))->first();
             // if deals subscription re-get the user voucher
             if ($voucher->dealVoucher->id_deals_subscription != null) {
                 $id_user = $voucher->id_user;
@@ -283,7 +302,18 @@ class ApiDealsClaimPay extends Controller
             }
             elseif ($pay) {
                 DB::commit();
-                return response()->json(MyHelper::checkCreate($pay));
+                $return = MyHelper::checkCreate($pay);
+                if(isset($return['status']) && $return['status'] == 'success'){
+                    if(isset($return['result']['midtrans'])){
+                        $return['redirect'] = true;
+                    }else{
+                        $return['redirect'] = false;
+                    }
+                    $result = $return['result'];
+                    unset($return['result']);
+                    $return['result'] = $result;
+                }
+                return response()->json($return);
             }
         }
 
@@ -304,23 +334,31 @@ class ApiDealsClaimPay extends Controller
     /* PAYMENT */
     function paymentMethod($dataDeals, $voucher, $request)
     {
-       /* MIDTRANS */
-        if ($request->json('payment_deals') && $request->json('payment_deals') == "midtrans") {
-            $pay = $this->midtrans($dataDeals, $voucher);
+        //IF USING BALANCE
+        if ($request->get('balance') && $request->get('balance') == true){
+            /* BALANCE */
+            $pay = $this->balance($dataDeals, $voucher,$request->get('payment_deals') );
+        }else{
+
+            /* BALANCE */
+            if ($request->get('payment_deals') && $request->get('payment_deals') == "balance") {
+                $pay = $this->balance($dataDeals, $voucher);
+            }
+    
+           /* MIDTRANS */
+            if ($request->get('payment_deals') && $request->get('payment_deals') == "midtrans") {
+                $pay = $this->midtrans($dataDeals, $voucher);
+            }
+    
+            /* MANUAL */
+            if ($request->get('payment_deals') && $request->get('payment_deals') == "manual") {
+                $post             = $request->json()->all();
+                $post['id_deals'] = $dataDeals->id_deals;
+    
+                $pay = $this->manual($voucher, $post);
+            }
         }
 
-        /* BALANCE */
-        if ($request->json('payment_deals') && $request->json('payment_deals') == "balance") {
-            $pay = $this->balance($dataDeals, $voucher);
-        }
-
-        /* MANUAL */
-        if ($request->json('payment_deals') && $request->json('payment_deals') == "manual") {
-            $post             = $request->json()->all();
-            $post['id_deals'] = $dataDeals->id_deals;
-
-            $pay = $this->manual($voucher, $post);
-        }
 
         return $pay;
     }
@@ -411,24 +449,40 @@ class ApiDealsClaimPay extends Controller
     }
 
     /* BALANCE */
-    function balance($deals, $voucher) 
+    function balance($deals, $voucher, $paymentMethod = null) 
     {
         $myBalance   = app($this->balance)->balanceNow($voucher->id_user);
         $kurangBayar = $myBalance - $voucher->voucher_price_cash;
 
+        if($paymentMethod == null){
+            $paymentMethod = 'balance';
+        }
+
         // jika kurang bayar
         if ($kurangBayar < 0) {
             $dataDealsUserUpdate = [
-                'payment_method'  => 'Balance',
-                'balance_nominal' => abs($kurangBayar),
+                'payment_method'  => $paymentMethod,
+                'balance_nominal' => $myBalance,
             ];
 
-            if ($this->updateInfoDealUsers($voucher->id_deals_user, $dataDealsUserUpdate)) {
-                return $this->midtrans($deals, $voucher, $dataDealsUserUpdate['balance_nominal']);
+            if ($this->updateLogPoint(- $myBalance, $voucher)) {
+                if ($this->updateInfoDealUsers($voucher->id_deals_user, $dataDealsUserUpdate)) {
+                    if($paymentMethod == 'midtrans'){
+                        return $this->midtrans($deals, $voucher, $dataDealsUserUpdate['balance_nominal']);
+                    }
+                }
             }
+
         } else {
             // update log balance
-            if ($this->updateLogPoint($myBalance, $voucher)) {
+            $price = 0;
+            if(!empty($voucher->voucher_price_cash)){
+                $price = $voucher->voucher_price_cash;
+            }
+            if(!empty($voucher->voucher_price_point)){
+                $price = $voucher->voucher_price_point;
+            }
+            if ($this->updateLogPoint(- $price, $voucher)) {
                 $dataDealsUserUpdate = [
                     'payment_method'  => 'Balance',
                     'balance_nominal' => $voucher->voucher_price_cash,
@@ -450,18 +504,23 @@ class ApiDealsClaimPay extends Controller
     }
 
     /* UPDATE BALANCE */
-    function updateLogPoint($myBalance, $voucher)
+    function updateLogPoint($balance_nominal, $voucher)
     {
         $user = User::with('memberships')->where('id', $voucher->id_user)->first();
 
-        $balance_nominal = -$voucher->voucher_price_cash;
-        $grand_total = $voucher->voucher_price_cash;
+        // $balance_nominal = -$voucher->voucher_price_cash;
+        $grand_total = 0;
+        if(!empty($voucher->voucher_price_cash)){
+            $grand_total = $voucher->voucher_price_cash;
+        }
+        if(!empty($voucher->voucher_price_point)){
+            $grand_total = $voucher->voucher_price_point;
+        }
         $id_reference = $voucher->id_deals_user;
 
         // add log balance (with balance hash check) & update user balance
         $balanceController = new BalanceController();
         $addLogBalance = $balanceController->addLogBalance($user->id, $balance_nominal, $id_reference, "Deals Balance", $grand_total);
-
         return $addLogBalance;
     }
 

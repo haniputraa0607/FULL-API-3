@@ -66,7 +66,7 @@ class ApiDealsClaim extends Controller
 
                         if ($dataDeals->deals_type == "Subscription") {
                             $id_deals = $dataDeals->id_deals;
-                            
+
                             // count claimed deals by id_deals_subscription (how many times deals are claimed)
                             $dealsVoucherSubs = DealsVoucher::where('id_deals', $id_deals)->count();
                             $voucherClaimed = 0;
@@ -84,7 +84,7 @@ class ApiDealsClaim extends Controller
                                 // create deals voucher and deals user x times
                                 $user_voucher_array = [];
                                 $apiDealsVoucher = new ApiDealsVoucher();
-                                
+
                                 foreach ($deals_subs as $key => $deals_sub) {
                                     // deals subscription may have > 1 voucher
                                     for ($i=1; $i <= $deals_sub->total_voucher; $i++) {
@@ -93,7 +93,7 @@ class ApiDealsClaim extends Controller
                                             $code = $apiDealsVoucher->generateCode($dataDeals->id_deals);
                                             $voucherCode = DealsVoucher::where('id_deals', $id_deals)->where('voucher_code', $code)->first();
                                         } while (!empty($voucherCode));
-                                        
+
                                         $deals_voucher = DealsVoucher::create([
                                             'id_deals'             => $id_deals,
                                             'id_deals_subscription'=> $deals_sub->id_deals_subscription,
@@ -144,7 +144,7 @@ class ApiDealsClaim extends Controller
                             }
                         }
                         else{
-                            // CHECK TYPE VOUCHER 
+                            // CHECK TYPE VOUCHER
                             // IF LIST VOUCHER, GET 1 FROM DEALS VOUCHER
                             if ($dataDeals->deals_voucher_type == "List Vouchers") {
                                 $voucher = $this->getVoucherFromTable($request->user(), $dataDeals);
@@ -188,6 +188,10 @@ class ApiDealsClaim extends Controller
                             $voucher = $user_voucher_array;
                         }
 
+                        if(isset($voucher['deals_voucher']['id_deals'])){
+                            $voucher['deals'] = Deal::find($voucher['deals_voucher']['id_deals']);
+                        }
+
                         return response()->json(MyHelper::checkCreate($voucher));
                         }
                         else {
@@ -212,9 +216,9 @@ class ApiDealsClaim extends Controller
                 return response()->json([
                     'status' => 'fail',
                     'messages' => ['Date valid '.date('d F Y', strtotime($dataDeals->deals_start)).' until '.date('d F Y', strtotime($dataDeals->deals_end))]
-                ]); 
+                ]);
             }
-            
+
         }
     }
 
@@ -245,7 +249,7 @@ class ApiDealsClaim extends Controller
                 return false;
             }
         }
-        
+
         return true;
     }
 
@@ -256,7 +260,7 @@ class ApiDealsClaim extends Controller
         }
 
         if (strtotime($deals->deals_start) <= strtotime(date('Y-m-d H:i:s')) && strtotime($deals->deals_end) >= strtotime(date('Y-m-d H:i:s'))) {
-            
+
             return true;
         }
 
@@ -317,7 +321,7 @@ class ApiDealsClaim extends Controller
     function createVoucherUser($id, $voucher, $dataDeals, $deals_subscription=null, $price=null) {
         $deals_voucher_price_point = $dataDeals->deals_voucher_price_point;
         $deals_voucher_price_cash = $dataDeals->deals_voucher_price_cash;
-        
+
         // for deals subscription, only 1 voucher that have price
         if ($price===0 && $deals_subscription!=null) {
             $deals_voucher_price_point = null;
@@ -367,9 +371,9 @@ class ApiDealsClaim extends Controller
         if (!empty($dataDeals->deals_voucher_price_cash) && empty(!$dataDeals->deals_voucher_price_point)) {
             $data['paid_status'] = "Pending";
         }
-        
 
-        // CHECK PAYMENT WITH POINT    
+
+        // CHECK PAYMENT WITH POINT
         // SUM POINT
         // if ($dataDeals->deals_voucher_price_point <= $this->getPoint($id)) {
         //     $data['paid_status'] = "success";
@@ -384,8 +388,8 @@ class ApiDealsClaim extends Controller
     }
 
     /*=============================================================================*/
-    // 
-    // 
+    //
+    //
     /*=============================================================================*/
 
     /* GET VOUCHER GENERATE */
@@ -417,15 +421,23 @@ class ApiDealsClaim extends Controller
                 return $updateVoucher;
             }
         }
-        
+
         return false;
     }
 
     /* GET POINT */
     function getPoint($user) {
-        if (Schema::hasTable('log_points')) {
+        // if (Schema::hasTable('log_points')) {
 
-            $point = DB::table('log_points')->where('id_user', $user)->sum('point');
+        //     $point = DB::table('log_points')->where('id_user', $user)->sum('point');
+
+        //     return $point;
+        // }
+
+        //point is balance
+        if (Schema::hasTable('log_balances')) {
+
+            $point = DB::table('log_balances')->where('id_user', $user)->sum('balance');
 
             return $point;
         }
@@ -447,7 +459,7 @@ class ApiDealsClaim extends Controller
         return $generate;
     }
 
-    function updatePoint($voucher) 
+    function updatePoint($voucher)
     {
         $user = User::with('memberships')->where('id', $voucher->id_user)->first();
 
@@ -472,7 +484,7 @@ class ApiDealsClaim extends Controller
             'voucher_price'    => $voucher->voucher_price_point,
             'point_conversion' => $setting,
             'membership_level'            => $level,
-            'membership_point_percentage' => $point_percentage            
+            'membership_point_percentage' => $point_percentage
         ];
         $save = LogPoint::create($dataCreate);
 

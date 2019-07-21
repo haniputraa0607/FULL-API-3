@@ -35,17 +35,17 @@ class ApiNews extends Controller
     }
 
     public $saveImage = "img/news/";
-    public $endPoint  = "http://localhost/crmsys-api/public/"; 
+    public $endPoint  = "http://localhost/crmsys-api/public/";
 
     /* Cek inputan */
     function cekInputan($post = []) {
-        
+
         $data = [];
 
         if (isset($post['news_slug'])) {
             $data['news_slug'] = $post['news_slug'];
         }
-        
+
         if (isset($post['news_title'])) {
             $data['news_title'] = $post['news_title'];
         }
@@ -79,7 +79,7 @@ class ApiNews extends Controller
         }
 
         if (isset($post['news_image_dalam'])) {
-            $upload = MyHelper::uploadPhotoStrict($post['news_image_dalam'], $this->saveImage, 500, 250);
+            $upload = MyHelper::uploadPhotoStrict($post['news_image_dalam'], $this->saveImage, 750, 375);
 
             if (isset($upload['status']) && $upload['status'] == "success") {
                 $data['news_image_dalam'] = $upload['path'];
@@ -112,7 +112,7 @@ class ApiNews extends Controller
             $data['news_video_text'] = $post['news_video_text'];
         }
         else {
-            $data['news_video_text'] = null;   
+            $data['news_video_text'] = null;
         }
 
         if (isset($post['news_video'])) {
@@ -126,109 +126,109 @@ class ApiNews extends Controller
             $data['news_event_date_start'] = $post['news_event_date_start'];
         }
         else {
-            $data['news_event_date_start'] = null;   
+            $data['news_event_date_start'] = null;
         }
-		
+
 		if (isset($post['news_button_form_text'])) {
             $data['news_button_form_text'] = $post['news_button_form_text'];
         }
         else {
-            $data['news_button_form_text'] = null;   
+            $data['news_button_form_text'] = null;
         }
-		
+
 		 if (isset($post['news_button_form_expired'])) {
             $data['news_button_form_expired'] = $post['news_button_form_expired'];
         }
         else {
-            $data['news_button_form_expired'] = null;   
+            $data['news_button_form_expired'] = null;
         }
-		
+
         if (isset($post['news_event_date_end'])) {
             $data['news_event_date_end'] = $post['news_event_date_end'];
         }
         else {
-            $data['news_event_date_end'] = null;   
+            $data['news_event_date_end'] = null;
         }
 
         if (isset($post['news_event_time_start'])) {
             $data['news_event_time_start'] = $post['news_event_time_start'];
         }
         else {
-            $data['news_event_time_start'] = null;   
+            $data['news_event_time_start'] = null;
         }
 
         if (isset($post['news_event_time_end'])) {
             $data['news_event_time_end'] = $post['news_event_time_end'];
         }
         else {
-            $data['news_event_time_end'] = null;   
+            $data['news_event_time_end'] = null;
         }
 
         if (isset($post['news_event_location_name'])) {
             $data['news_event_location_name'] = $post['news_event_location_name'];
         }
         else {
-            $data['news_event_location_name'] = null;   
+            $data['news_event_location_name'] = null;
         }
 
         if (isset($post['news_event_location_phone'])) {
             $data['news_event_location_phone'] = $post['news_event_location_phone'];
         }
         else {
-            $data['news_event_location_phone'] = null;   
+            $data['news_event_location_phone'] = null;
         }
 
         if (isset($post['news_event_location_address'])) {
             $data['news_event_location_address'] = $post['news_event_location_address'];
         }
         else {
-            $data['news_event_location_address'] = null;   
+            $data['news_event_location_address'] = null;
         }
 
         if (isset($post['news_event_location_map'])) {
             $data['news_event_location_map'] = $post['news_event_location_map'];
         }
         else {
-            $data['news_event_location_map'] = null;   
+            $data['news_event_location_map'] = null;
         }
 
         if (isset($post['news_event_latitude'])) {
             $data['news_event_latitude'] = $post['news_event_latitude'];
         }
         else {
-            $data['news_event_latitude'] = null;   
+            $data['news_event_latitude'] = null;
         }
 
         if (isset($post['news_event_longitude'])) {
             $data['news_event_longitude'] = $post['news_event_longitude'];
         }
         else {
-            $data['news_event_longitude'] = null;   
+            $data['news_event_longitude'] = null;
         }
 
         if (isset($post['news_outlet_text'])) {
             $data['news_outlet_text'] = $post['news_outlet_text'];
         }
         else {
-            $data['news_outlet_text'] = null;   
+            $data['news_outlet_text'] = null;
         }
 
         if (isset($post['news_product_text'])) {
             $data['news_product_text'] = $post['news_product_text'];
         }
         else {
-            $data['news_product_text'] = null;   
+            $data['news_product_text'] = null;
         }
 
         if (isset($post['news_form_success_message'])) {
             $data['news_form_success_message'] = $post['news_form_success_message'];
         }
-		
+
 		if (isset($post['customform'])) {
-            $data['customform'] = $post['customform'];   
+            $data['customform'] = $post['customform'];
         }
         else {
-            $data['customform'] = null;   
+            $data['customform'] = null;
         }
 
         return $data;
@@ -259,7 +259,7 @@ class ApiNews extends Controller
             $data = $this->cekInputan($post);
 
             if (isset($data['error'])) {
-                unset($data['error']);        
+                unset($data['error']);
                 return response()->json($data);
             }
             // dd($data);
@@ -268,11 +268,11 @@ class ApiNews extends Controller
             if ( $this->cekSlug("", $data['news_slug']) ) {
                 $customform = $data['customform'];
                 unset($data['customform']);
-                
+
                 DB::beginTransaction();
 
                 $save = News::create($data);
-                // jika ada custom form 
+                // jika ada custom form
                 if(!empty($customform)){
                     foreach($customform as $key => $form){
                         $dataForm = [];
@@ -282,7 +282,7 @@ class ApiNews extends Controller
                             $dataForm['form_input_options'] = $form['form_input_options'];
                         else
                             $dataForm['form_input_options'] = null;
-                        
+
                         $dataForm['form_input_label'] = $form['form_input_label'];
                         $dataForm['form_input_autofill'] = $form['form_input_autofill'];
                         $dataForm['is_required'] = $form['is_required'];
@@ -343,7 +343,7 @@ class ApiNews extends Controller
             if ($this->cekSlug($request->json('id_news'), $request->json('news_slug'))) {
                 $customform = $data['customform'];
 				unset($data['customform']);
-				
+
                 $save = News::where('id_news', $request->json('id_news'))->update($data);
 
                 // jika ada upload file
@@ -353,7 +353,7 @@ class ApiNews extends Controller
                 if (isset($data['news_image_dalam'])) {
                     MyHelper::deletePhoto($dataNews[0]['news_image_dalam']);
                 }
-                // jika ada upload 
+                // jika ada upload
 				if(!empty($customform)){
 					$clear = NewsFormStructure::where('id_news', $request->json('id_news'))->delete();
 					foreach($customform as $key => $form){
@@ -498,12 +498,12 @@ class ApiNews extends Controller
     function listNews(Request $request) {
             $post = $request->json()->all();
 
-            $news = News::select('*')->with('news_form_structures'); 
+            $news = News::select('*')->with('news_form_structures');
 
             if (isset($post['id_news'])) {
                 $news->where('id_news', $post['id_news'])->with(['newsOutlet', 'newsProduct', 'newsOutlet.outlet.city', 'newsOutlet.outlet.photos', 'newsProduct.product.photos']);
             }
-            
+
             if (isset($post['news_slug'])) {
                 $news->slug($post['news_slug'])->with(['newsOutlet', 'newsProduct', 'newsOutlet.outlet.city', 'newsOutlet.outlet.photos', 'newsProduct.product.photos']);
             }
@@ -533,7 +533,7 @@ class ApiNews extends Controller
     {
         $post = $request->json()->all();
 
-        $news = News::select('news_post_date', 'news_publish_date', 'news_title')->where('id_news', $post['id_news'])->get(); 
+        $news = News::select('news_post_date', 'news_publish_date', 'news_title')->where('id_news', $post['id_news'])->get();
 
         if (count($news) == 0) {
             return response()->json(['status' => 'fail', 'messages' => ['News not found']]);
@@ -657,7 +657,7 @@ class ApiNews extends Controller
                         return false;
                     }
                     break;
-                
+
                 default:
                     $value = $input_value;
                     break;
