@@ -15,7 +15,7 @@ class User extends Authenticatable
 {
 	protected $connection = 'mysql';
     use HasApiTokens, Notifiable;
-	
+
 	public function findForPassport($username) {
 		if(substr($username, 0, 2) == '62'){
 			$username = substr($username,2);
@@ -63,8 +63,13 @@ class User extends Authenticatable
 		'level',
 		'points',
 		'balance',
+		'count_complete_profile',
+		'last_complete_profile',
+		'complete_profile',
 		'android_device',
 		'ios_device',
+		'ios_apps_version',
+		'android_apps_version',
 		'is_suspended',
 		'remember_token',
 		'count_transaction_day',
@@ -86,7 +91,7 @@ class User extends Authenticatable
 	{
 		return $this->hasMany(\App\Http\Models\AutocrmEmailLog::class, 'id', 'id_user');
 	}
-	
+
 	public function user_outlets()
 	{
 		return $this->hasOne(\App\Http\Models\UserOutlet::class, 'id_user', 'id');
@@ -121,7 +126,7 @@ class User extends Authenticatable
 	{
 		return $this->hasMany(Transaction::class, 'id_user', 'id')->orderBy('created_at', 'DESC');
 	}
-	
+
 	public function history_transactions()
 	{
 		return $this->hasMany(Transaction::class, 'id_user', 'id')->select('id_user', 'id_transaction', 'id_outlet', 'transaction_receipt_number', 'trasaction_type', 'transaction_grandtotal', 'transaction_payment_status', 'transaction_date')->orderBy('transaction_date', 'DESC');
@@ -158,15 +163,21 @@ class User extends Authenticatable
 					->withPivot('id_log_membership', 'min_total_value', 'min_total_count', 'retain_date', 'retain_min_total_value', 'retain_min_total_count', 'benefit_point_multiplier', 'benefit_cashback_multiplier', 'benefit_promo_id', 'benefit_discount')
 					->withTimestamps()->orderBy('id_log_membership', 'DESC');
 	}
-	
+
+	public function lastMembership()
+	{
+		return $this->hasMany(\App\Http\Models\UsersMembership::class, 'id_user')
+					->limit(1)->orderBy('id_log_membership', 'DESC');
+	}
+
 	public function point() {
     	return $this->hasMany(LogPoint::class, 'id_user', 'id')->orderBy('created_at', 'DESC');
     }
-    
+
     public function log_balance() {
     	return $this->hasMany(LogBalance::class, 'id_user', 'id')->orderBy('created_at', 'DESC');
     }
-    
+
     public function history_balance() {
     	return $this->hasMany(LogBalance::class, 'id_user', 'id')->orderBy('created_at', 'DESC');
     }
@@ -178,7 +189,7 @@ class User extends Authenticatable
     public function pointVoucher() {
     	return $this->hasMany(LogPoint::class, 'id_user', 'id')->orderBy('created_at', 'DESC')->where('source', '=', 'voucher');
 	}
-	
+
     public function promotionSents() {
     	return $this->hasMany(PromotionSent::class, 'id_user', 'id')->orderBy('series_no', 'ASC');
     }

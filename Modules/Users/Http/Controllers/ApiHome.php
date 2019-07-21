@@ -140,7 +140,8 @@ class ApiHome extends Controller
 					'status' => 'success',
 					'result' => [
 						// 'total_point'   => (int) $point,
-						'total_kopi_point' => (int) $balance,
+						// 'total_kopi_point' => (int) $balance,
+						'total_point' => (int) $balance,
 						'qr_code'        => $qrCode
 					]
 				]; 
@@ -376,7 +377,8 @@ class ApiHome extends Controller
                     'banners'       => $banners,
                     'splash_screen_url' => $splash."?update=".time(),
                     // 'total_point'   => (int) $point,
-                    'total_kopi_point' => (int) $user->balance,
+                    // 'total_kopi_point' => (int) $user->balance,
+                    'total_point' => (int) $user->balance,
                     // 'notification'  =>[
                     //     'total' => $countUnread + $transactionPending,
                     //     'count_unread_inbox' => $countUnread,

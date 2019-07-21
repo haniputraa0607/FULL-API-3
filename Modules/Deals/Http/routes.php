@@ -2,7 +2,8 @@
 Route::group(['middleware' => ['auth:api', 'log_request'], 'prefix' => 'api/deals', 'namespace' => 'Modules\Deals\Http\Controllers'], function()
 {
     /* MASTER DEALS */
-    // Route::any('list', 'ApiDeals@listDeal');
+    Route::any('list', 'ApiDeals@listDeal');
+    Route::any('detail', 'ApiDealsWebview@dealsDetail');
     Route::post('create', 'ApiDeals@createReq');
     Route::post('update', 'ApiDeals@updateReq');
     Route::post('delete', 'ApiDeals@deleteReq');
@@ -51,7 +52,7 @@ Route::group(['middleware' => ['auth:api', 'log_request'], 'prefix' => 'api/deal
 Route::group(['prefix' => 'api/deals', 'middleware' => 'log_request', 'namespace' => 'Modules\Deals\Http\Controllers'], function()
 {
     /* MASTER DEALS */
-    Route::any('list', 'ApiDeals@listDeal')->middleware('auth_client');
+    // Route::any('list', 'ApiDeals@listDeal')->middleware('auth_client');
 });
 
 Route::group(['middleware' => ['auth:api', 'log_request'], 'prefix' => 'api/voucher', 'namespace' => 'Modules\Deals\Http\Controllers'], function()

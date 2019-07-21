@@ -908,6 +908,10 @@ class ApiPOS extends Controller
 				$trx['total'] = round($trx['total']);
 				$trx['discount'] = round($trx['discount']);
 				$trx['tax'] = round($trx['tax']);
+
+				if(!isset($trx['sales_type'])){
+					$trx['sales_type'] = null;
+				}
 				
 				$dataTrx = [
 					'id_outlet'                   => $checkOutlet['id_outlet'],

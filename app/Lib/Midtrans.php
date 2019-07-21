@@ -46,7 +46,7 @@ class Midtrans {
     static function token($receipt, $grandTotal, $user=null, $shipping=null, $product=null) {
         // $url    = env('MIDTRANS_PRO');
         $url    = env('MIDTRANS_SANDBOX');
-
+        
         $transaction_details = array(
             'order_id'      => $receipt,
             'gross_amount'  => $grandTotal
