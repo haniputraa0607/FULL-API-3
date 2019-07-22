@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Model;
 
 /**
  * Class Deal
- * 
+ *
  * @property int $id_deals
  * @property string $deals_type
  * @property string $deals_voucher_type
@@ -37,7 +37,7 @@ use Illuminate\Database\Eloquent\Model;
  * @property int $deals_total_used
  * @property \Carbon\Carbon $created_at
  * @property \Carbon\Carbon $updated_at
- * 
+ *
  * @property \App\Http\Models\Product $product
  * @property \Illuminate\Database\Eloquent\Collection $outlets
  * @property \Illuminate\Database\Eloquent\Collection $deals_payment_manuals
@@ -111,7 +111,7 @@ class Deal extends Model
         }
         return $type;
 	}
-	
+
 	public function getDealsStatusAttribute() {
 	    $status = "";
 		if (date('Y-m-d H:i:s', strtotime($this->deals_start)) <= date('Y-m-d H:i:s') && date('Y-m-d H:i:s', strtotime($this->deals_end)) > date('Y-m-d H:i:s')) {
@@ -125,8 +125,8 @@ class Deal extends Model
         }
         return $status;
 	}
-	
-	
+
+
 	// ATTRIBUTE IMAGE URL
 	public function getUrlDealsImageAttribute() {
 		if (empty($this->deals_image)) {
@@ -146,7 +146,7 @@ class Deal extends Model
 	{
 		return $this->belongsToMany(\App\Http\Models\Outlet::class, 'deals_outlets', 'id_deals', 'id_outlet');
 	}
-	
+
 	public function outlets_active()
 	{
 		return $this->belongsToMany(\App\Http\Models\Outlet::class, 'deals_outlets', 'id_deals', 'id_outlet')->where('outlet_status', 'Active');

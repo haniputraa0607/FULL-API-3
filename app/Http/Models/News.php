@@ -21,7 +21,7 @@ class News extends Model
      */
     protected $primaryKey = 'id_news';
 
-    protected $appends  = ['url_news_image_luar', 'url_news_image_dalam', 'url_form','news_form_status', 'url_webview'];
+    protected $appends  = ['url_news_image_luar', 'url_news_image_dalam', 'url_form','news_form_status'];
 
     /**
      * @var array
@@ -57,10 +57,6 @@ class News extends Model
 		'created_at', 
 		'updated_at'
 	];
-	
-	public function getUrlWebviewAttribute() {
-		return env('APP_URL') .'news/webview/'. $this->id_news;
-	}
 	
 	public function getUrlFormAttribute() {
 		if (empty($this->news_button_form_text)) {

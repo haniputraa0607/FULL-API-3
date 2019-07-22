@@ -14,40 +14,41 @@ use Illuminate\Database\Eloquent\Model;
  * @property string $updated_at
  * @property User $user
  */
-class UserLocationDetail extends Model
+class LogActivityLocation extends Model
 {
+	/**
+	 * The database name used by the model.
+	 *
+	 * @var string
+	 */
+	protected $connection = 'mysql2';
+	
     /**
      * The table associated with the model.
      * 
      * @var string
      */
-    protected $table = 'user_location_details';
-    
-	protected $primaryKey = 'id_user_location_detail';
+    protected $table = 'log_activity_locations';
+
     /**
      * @var array
      */
     protected $fillable = [
+        'id_log_activity_location', 
         'id_user', 
-        'id_reference', 
-        'id_outlet', 
-        'outlet_code', 
-        'outlet_name', 
         'activity', 
         'action', 
         'latitude',
         'longitude', 
-        'response_json', 
-        'street_address', 
+        'request_json', 
+        'response_josn', 
         'route', 
         'administrative_area_level_5', 
         'administrative_area_level_4', 
         'administrative_area_level_3', 
         'administrative_area_level_2', 
         'administrative_area_level_1',
-        'country',
-        'postal_code',
-        'formatted_address'
+        'country'
     ];
 
 }
