@@ -394,7 +394,7 @@ class ApiOutletController extends Controller
             $outlet->with(['holidays', 'holidays.date_holidays'])->where('outlet_code', $post['outlet_code']);
         }
 
-        if (isset($post['id_outlet'])) {
+        if (isset($post['id_outlet']) && !isset($post['webview'])) {
             $outlet->with(['holidays', 'holidays.date_holidays', 'product_prices.product'])->where('id_outlet', $post['id_outlet']);
         }
 

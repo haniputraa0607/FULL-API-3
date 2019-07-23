@@ -22,6 +22,13 @@ use App\Http\Models\FraudSetting;
 use App\Http\Models\TransactionMultiplePayment;
 use App\Http\Models\TransactionPaymentBalance;
 
+use GuzzleHttp\Exception\GuzzleException;
+use GuzzleHttp\Client;
+use Guzzle\Http\EntityBody;
+use Guzzle\Http\Message\Request as RequestGuzzle;
+use Guzzle\Http\Message\Response as ResponseGuzzle;
+use Guzzle\Http\Exception\ServerErrorResponseException;
+
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
@@ -44,6 +51,9 @@ class ApiNotification extends Controller {
         $this->membership    = "Modules\Membership\Http\Controllers\ApiMembership";
         $this->setting_fraud = "Modules\SettingFraud\Http\Controllers\ApiSettingFraud";
         $this->trx = "Modules\Transaction\Http\Controllers\ApiOnlineTransaction";
+        $this->url_oauth  = env('URL_OUTLET_OAUTH');
+        $this->oauth_id  = env('OUTLET_OAUTH_ID');
+        $this->oauth_secret  = env('OUTLET_OAUTH_SECRET');
     }
 
     /* RECEIVE NOTIFICATION */
@@ -56,7 +66,7 @@ class ApiNotification extends Controller {
         if (stristr($midtrans['order_id'], "TRX")) {
             // TRANSACTION
             $transac = Transaction::with('user.memberships', 'logTopup')->where('transaction_receipt_number', $midtrans['order_id'])->first();
-            
+
             if (empty($transac)) {
                 DB::rollback();
                 return response()->json([
@@ -82,13 +92,13 @@ class ApiNotification extends Controller {
             //         'messages' => ['Transaction failed']
             //     ]);
             // }
-            
+
 
             $newTrx = Transaction::with('user.memberships', 'outlet', 'productTransaction')->where('transaction_receipt_number', $midtrans['order_id'])->first();
 
             $checkType = TransactionMultiplePayment::where('id_transaction', $newTrx['id_transaction'])->get()->toArray();
             $column = array_column($checkType, 'type');
-                    
+
             // $user = User::where('id', $newTrx['id_user'])->first();
             // if (empty($user)) {
             //     DB::rollback();
@@ -138,6 +148,27 @@ class ApiNotification extends Controller {
                         ]);
                     }
                     $sendNotifOutlet = app($this->trx)->outletNotif($newTrx['id_transaction']);
+
+                    $kirim = $this->kirimOutlet($newTrx['transaction_receipt_number']);
+                    if (isset($kirim['status']) && $kirim['status'] == 1) {
+                        DB::commit();
+                        // langsung
+                        return response()->json(['status' => 'success']);
+                    } elseif (isset($kirim['status']) && $kirim['status'] == 'fail') {
+                        if (isset($kirim['messages'])) {
+                            DB::rollback();
+                            return response()->json([
+                                'status'   => 'fail',
+                                'messages' => $kirim['messages']
+                            ]);
+                        }
+                    } else {
+                        DB::rollback();
+                        return response()->json([
+                            'status'   => 'fail',
+                            'messages' => ['failed']
+                        ]);
+                    }
                 }
 
             } elseif ($midtrans['status_code'] == 201) {
@@ -264,7 +295,7 @@ class ApiNotification extends Controller {
                     }
                 }
             }
-            
+
         }
 
         DB::rollback();
@@ -371,7 +402,7 @@ class ApiNotification extends Controller {
         $send = app($this->autocrm)->SendAutoCRM('Topup Success', $user->phone, ['notif_type' => 'topup', 'date' => $data['created_at'], 'status' => $data['transaction_payment_status'], 'name'  => $user->name, 'id' => $mid['order_id'], 'id_reference' => $mid['order_id']]);
     }
 
-    function notification($mid, $trx) 
+    function notification($mid, $trx)
     {
         $name    = $trx['user']['name'];
         $phone   = $trx['user']['phone'];
@@ -402,7 +433,7 @@ class ApiNotification extends Controller {
         return $send;
     }
 
-    function savePoint($data) 
+    function savePoint($data)
     {
         if (!empty($data['user']['memberships'][0]['membership_name'])) {
             $level = $data['user']['memberships'][0]['membership_name'];
@@ -441,7 +472,7 @@ class ApiNotification extends Controller {
 
         if ($data['trasaction_payment_type'] != 'Balance') {
             if ($data['transaction_cashback_earned'] != 0) {
-                
+
                 $insertDataLogCash = app($this->balance)->addLogBalance( $data['id_user'], $data['transaction_cashback_earned'], $data['id_transaction'], 'Transaction', $data['transaction_grandtotal']);
                 if (!$insertDataLogCash) {
                     DB::rollback();
@@ -456,7 +487,7 @@ class ApiNotification extends Controller {
         return true;
     }
 
-    function sendNotif($data) 
+    function sendNotif($data)
     {
         if ($data['trasaction_type'] == 'Delivery') {
             $table = 'transaction_shipments';
@@ -465,10 +496,10 @@ class ApiNotification extends Controller {
             $table = 'transaction_pickups';
             $field = 'pickup_order';
         }
-        
+
         $detail = DB::table($table)->where('id_transaction', $data['id_transaction'])->first();
         $link = MyHelper::get(env('SHORT_LINK_URL').'/?key='.env('SHORT_LINK_KEY').'&url='.$detail->short_link);
-        
+
         if (isset($link['error']) && $link['error'] == 0) {
             $admin = UserOutlet::with('outlet')->where('id_outlet', $data['id_outlet'])->where($field, 1)->get()->toArray();
 
@@ -594,7 +625,7 @@ Detail: ".$link['short'],
             $bank = isset($midtrans['va_numbers'][0]['bank']) ? $midtrans['va_numbers'][0]['bank'] : null;
             $eci  = isset($midtrans['va_numbers'][0]['va_number']) ? $midtrans['va_numbers'][0]['va_number'] : null;
         }
-        
+
         $data = [
             'masked_card'        => $masked_card,
             'approval_code'      => $approval_code,
@@ -693,11 +724,11 @@ Detail: ".$link['short'],
         }
 
         foreach ($admin as $key => $value) {
-            
+
         }
     }
 
-    public function adminOutlet(Request $request) 
+    public function adminOutlet(Request $request)
     {
         $post = $request->json()->all();
         $transaction = Transaction::with('outlet', 'user', 'products')->where('transaction_receipt_number', $post['receipt'])->first();
@@ -755,7 +786,7 @@ Detail: ".$link['short'],
             $detail->receive_at = date('Y-m-d H:i:s');
             $detail->id_admin_outlet_receive = $post['id'];
         } else {
-            if ($post['type'] == 'delivery') {  
+            if ($post['type'] == 'delivery') {
                 $detail->send_at = date('Y-m-d H:i:s');
                 $detail->id_admin_outlet_send = $post['id'];
             } else {
@@ -797,7 +828,7 @@ Detail: ".$link['short'],
             $percentageP = 0;
             $percentageB = 0;
         }
-        
+
         $trxBalance = TransactionMultiplePayment::where('id_transaction', $data['id_transaction'])->first();
 
         $balanceNow = app($this->balance)->balanceNow($data['id_user']);
@@ -822,7 +853,7 @@ Detail: ".$link['short'],
 
         //update count transaction
         $updateCountTrx = User::where('id', $userData['id'])->update([
-            'count_transaction_day' => $userData['count_transaction_day'] + 1, 
+            'count_transaction_day' => $userData['count_transaction_day'] + 1,
             'count_transaction_week' => $userData['count_transaction_week'] + 1,
         ]);
 
@@ -855,7 +886,7 @@ Detail: ".$link['short'],
     }
 
     function bookGoSend($trx){
-        //create booking GO-SEND    
+        //create booking GO-SEND
         $origin['name']             = $trx['detail']['transaction_pickup_go_send']['origin_name'];
         $origin['phone']            = $trx['detail']['transaction_pickup_go_send']['origin_phone'];
         $origin['latitude']         = $trx['detail']['transaction_pickup_go_send']['origin_latitude'];
@@ -988,7 +1019,7 @@ Detail: ".$link['short'],
         $exp   = explode(',', $order);
         $manna = [];
 
-        for ($i=0; $i < count($exp); $i++) { 
+        for ($i=0; $i < count($exp); $i++) {
             if (substr($exp[$i], 0, 5) == 'empty') {
                 unset($exp[$i]);
                 continue;
@@ -1095,7 +1126,7 @@ Detail: ".$link['short'],
                             <span style="color:#555;font-family:\'Source Sans Pro\',sans-serif;font-size:14px;line-height:1.5;margin:0;padding:0">:  '.$phone.' </span>
                         </td>
                      </tr>
-                                         
+
                     <tr>
                         <th colspan="4" style="background:#6C5648;border-bottom-style:none;color:#ffffff;padding-left:10px;padding-right:10px" bgcolor="background: rgb(40, 141, 73)">
                            <h2 style="color:#ffffff;font-family:\'Source Sans Pro\',sans-serif;font-size:14px;line-height:1.5;margin:0;padding:5px 0"> #<a style="color:#ffffff!important;font-family:\'Source Sans Pro\',sans-serif;font-size:14px;line-height:1.5;margin:0;padding:0;text-decoration:none" target="_blank" data-saferedirecturl="https://www.google.com/url?q=http://vourest.com/history/transaction/hakaikykdm/1011&amp;source=gmail&amp;ust=1539830594941000&amp;usg=AFQjCNG9sneH2MymFvLJsuVjeOY2XvH7QA">'.$receipt.'</a></h2>
@@ -1128,7 +1159,7 @@ Detail: ".$link['short'],
 
                     '.$dataItem.'
 
-                                                             
+
                     '.$dataOrder.'
                     <tr style="text-align:right">
                         <td colspan="3" style="background:#ffffff;border-collapse:collapse;border-spacing:0;color:#555;font-family:\'Source Sans Pro\',sans-serif;line-height:1.5;margin:0;padding:15px 10px" valign="top" bgcolor="#FFFFFF" align="right">
@@ -1144,7 +1175,7 @@ Detail: ".$link['short'],
                     </tr>
                   </tbody>
                </table>
-               
+
                <!-- <p style="color:#555;font-family:\'Source Sans Pro\',sans-serif;font-size:14px;line-height:1.5;margin:0;padding:0">Jika ada permasalahan terkait pesanan ini, silakan <span style="color:#a30046!important;font-family:\'Source Sans Pro\',sans-serif;font-size:14px;line-height:1.5;margin:0;padding:0;text-decoration:none">Hubungi <span class="m_6657055476784441913il"><b>Hakatta Ikkousha Demangan</b>, (0274) 557651</span></span></p> -->
                <!-- <br> -->
                <!-- <div style="background:#f4f4f4;padding-bottom:20px;padding-top:20px">
@@ -1343,7 +1374,7 @@ Detail: ".$link['short'],
 
     public function htmlDetail($id){
         $list = Transaction::where('id_transaction', $id)->with('user.city.province', 'productTransaction.product.product_category', 'productTransaction.product.product_photos', 'productTransaction.product.product_discounts', 'outlet.city')->first();
-            
+
 
             $dataPayment = [];
 
@@ -1364,7 +1395,7 @@ Detail: ".$link['short'],
                             array_push($dataPayment, $getPayment);
                             $list['balance'] = $getPayment['balance_nominal'];
                         }
-                    } 
+                    }
                 }
             }else{
                 if($list['trasaction_payment_type'] == 'Midtrans') {
@@ -1375,7 +1406,7 @@ Detail: ".$link['short'],
                     }
                 }
 
-            } 
+            }
 
             $detail = [];
 
@@ -1420,7 +1451,7 @@ Detail: ".$link['short'],
                     <div class="">
                         <div class="text-center">
                             <div class="col-12 seravek-font text-15px space-text text-grey">Kode Pickup Anda</div>
-                            
+
                             <div class="kotak-qr" data-toggle="modal" data-target="#exampleModal">
                                 <div class="col-12 text-14-3px space-top"><img class="img-responsive" style="display: block; max-width: 100%; padding-top: 10px" src="'.$data['qr'].'"></div>
                             </div>
@@ -1453,10 +1484,10 @@ Detail: ".$link['short'],
                     <div class="">
                         <div class="">
                             <div class="col-12 text-13-3px text-grey-light seravek-light-font">
-                                Transaksi Anda 
+                                Transaksi Anda
                                 <hr style="margin:10px 0 20px 0">
                             </div>';
-            
+
             $countQty = 0;
             foreach ($data['productTransaction'] as $key => $val){
                 if (isset($val['transaction_product_note'])){
@@ -1498,16 +1529,16 @@ Detail: ".$link['short'],
                             <div class="col-6 text-13-3px text-right space-text seravek-light-font text-grey-black">'.str_replace(',', '.', number_format($data['transaction_subtotal'])).'</div>
                         </div>
             ';
-            
+
             if($data['transaction_tax'] > 0){
                 $html = $html.'
                             <div class="row">
                                 <div class="col-6 text-13-3px space-text seravek-light-font text-black">Tax</div>
                                 <div class="col-6 text-13-3px text-right seravek-light-font text-grey-black">'.str_replace(',', '.', number_format($data['transaction_tax'])).'</div>
                             </div>
-                        ';    
+                        ';
             }
-                        
+
             if($data['transaction_discount'] > 0){
                 $html = $html.'
                     <div class="row">
@@ -1578,18 +1609,267 @@ Detail: ".$link['short'],
                     </div>
                     </div>
                     <div class="row">';
-            
+
                 if (isset($data['payment']['bank'])){
                     $html = $html.'<div class="col-6 text-grey text-12-7px">'.$data['payment']['bank'].'</div>';
                 }
-                
+
                 if (isset($data['payment']['payment_method'])){
                     $html = $html.'<div class="col-6 text-grey text-12-7px">'.$data['payment']['payment_method'].'</div>';
                 }
-        
+
                 $html = $html.'</div></div></div></div>';
             }
-        
+
             return $html;
+    }
+
+    public function kirimOutlet($receipt)
+    {
+        $check = Transaction::select('id_transaction', 'id_user', 'id_outlet', 'transaction_receipt_number', 'transaction_subtotal', 'transaction_shipment', 'transaction_service', 'transaction_discount', 'transaction_tax', 'transaction_grandtotal', 'trasaction_payment_type', 'transaction_payment_status', 'created_at')->where('transaction_receipt_number', $receipt)->first();
+        if (empty($check)) {
+            return ['status' => 'fail', 'messages' => ['Transaction not found']];
+        } else {
+			$check = $check->toArray();
+		}
+
+        $detail = TransactionPickup::select('order_id', 'pickup_at')->where('id_transaction', $check['id_transaction'])->first();
+
+		if (empty($detail)) {
+            return ['status' => 'fail', 'messages' => ['Transaction pickup detail not found']];
+        } else {
+			$detail = $detail->toArray();
+		}
+
+        $check['transaction_payment_type'] = $check['trasaction_payment_type'];
+        unset($check['trasaction_payment_type']);
+
+        $user = User::select('name', 'phone')->where('id', $check['id_user'])->first();
+
+		if (empty($user)) {
+            return ['status' => 'fail', 'messages' => ['User not found']];
+        } else {
+			$user = $user->toArray();
+		}
+
+        $outlet = Outlet::select('outlet_code', 'outlet_name', 'id_city')->with('city')->where('id_outlet', $check['id_outlet'])->first();
+
+		if (empty($outlet)) {
+            return ['status' => 'fail', 'messages' => ['Outlet not found']];
+        } else {
+			$outlet = $outlet->toArray();
+		}
+
+        $outlet['city_name'] = $outlet['city']['city_name'];
+        unset($outlet['city']);
+
+        $dataOutlet = [
+            "outlet_code" => $outlet['outlet_code'],
+            "outlet_name" => $outlet['outlet_name'],
+            "city" => $outlet['city_name'],
+        ];
+
+        $payment = [];
+        if ($check['transaction_payment_type'] == 'Midtrans') {
+            $payment = TransactionPaymentMidtran::select('payment_type', 'gross_amount', 'transaction_status','bank')->where('id_transaction', $check['id_transaction'])->first();
+
+			if (empty($payment)) {
+				return ['status' => 'fail', 'messages' => ['Payment not found']];
+			} else {
+				$payment = $payment->toArray();
+			}
+        }
+
+        $product = TransactionProduct::select('id_product', 'transaction_product_qty', 'transaction_product_price', 'transaction_product_subtotal')->with('product')->where('id_transaction', $check['id_transaction'])->get()->toArray();
+
+
+        $dataProduct = [];
+
+        foreach ($product as $key => $value) {
+            $pro = [
+                'product_code' => $value['product']['product_code'],
+                'product_name' => $value['product']['product_name'],
+                'price'        => $value['transaction_product_price'],
+                'qty'          => $value['transaction_product_qty'],
+                'subtotal'     => $value['transaction_product_subtotal']
+            ];
+
+            array_push($dataProduct, $pro);
+        }
+
+        $check['pickup'] = $detail;
+        $check['product'] = $dataProduct;
+        $check['user'] = $user;
+        $check['outlet'] = $dataOutlet;
+        $check['payment'] = $payment;
+
+		$requestformat = array();
+		$requestformat['store_code'] = $check['outlet']['outlet_code'];
+		$requestformat['trx_id'] = $check['transaction_receipt_number'];
+		$requestformat['pickup_time'] = $check['pickup']['pickup_at'];
+		$requestformat['date_time'] = $check['created_at'];
+		$requestformat['payments'] = array();
+
+		$isinya = array();
+		$isinya['type'] = str_replace('_',' ', $check['payment']['payment_type']);
+		$isinya['name'] = $check['payment']['bank'];
+		$isinya['nominal'] = $check['payment']['gross_amount'];
+
+		array_push($requestformat['payments'], $isinya);
+
+		$requestformat['total'] = $check['transaction_subtotal'];
+		$requestformat['service'] = $check['transaction_service'];
+		$requestformat['tax'] = $check['transaction_tax'];
+		$requestformat['discount'] = $check['transaction_discount'];
+		$requestformat['grand_total'] = $check['transaction_grandtotal'];
+		$requestformat['menu'] = array();
+
+		foreach($check['product'] as $prod){
+			$isinya = array();
+			$isinya['plu_id'] = $prod['product_code'];
+			$isinya['name'] = $prod['product_name'];
+			$isinya['price'] = $prod['price'];
+			$isinya['qty'] = $prod['qty'];
+			$isinya['category'] = "";
+
+			array_push($requestformat['menu'], $isinya);
+		}
+
+		$requestformat['member']['name'] = $user['name'];
+		$requestformat['member']['phone'] = $user['phone'];
+
+		// return $requestformat;
+
+		$client = new Client;
+		$params = array();
+		$params['client_id'] = $this->oauth_id;
+		$params['client_secret'] = $this->oauth_secret;
+
+        $content = array(
+            'headers' => [
+                'Content-Type'  => 'application/x-www-form-urlencoded'
+            ],
+            'form_params' => $params
+        );
+
+        try {
+            $response =  $client->request('POST', $this->url_oauth, $content);
+
+            $res = json_decode($response->getBody(), true);
+        }
+        catch (\GuzzleHttp\Exception\RequestException $e) {
+            try{
+
+                if($e->getResponse()){
+                    $response = $e->getResponse()->getBody()->getContents();
+
+                    $error = json_decode($response, true);
+
+                    if(!$error) {
+                        return $e->getResponse()->getBody();
+                    } else {
+                        return $error;
+                    }
+                } else return ['status' => 'fail', 'messages' => [0 => 'Check your internet connection.']];
+
+            } catch(Exception $e) {
+                return ['status' => 'fail', 'messages' => [0 => 'Check your internet connection.']];
+            }
+        }
+
+		if($res){
+			$client = new Client;
+
+			$content = array(
+				'headers' => [
+					'Content-Type'  => 'application/json',
+					'Authorization'  => $res['type'].' '.$res['token'],
+				],
+				'json' => $requestformat
+			);
+
+			try {
+				$response =  $client->request('POST', $this->url_kirim, $content);
+
+				return json_decode($response->getBody(), true);
+			}
+			catch (\GuzzleHttp\Exception\RequestException $e) {
+				try{
+
+					if($e->getResponse()){
+						$response = $e->getResponse()->getBody()->getContents();
+
+						$error = json_decode($response, true);
+
+						if(!$error) {
+							return $e->getResponse()->getBody();
+						} else {
+							return $error;
+						}
+					} else return ['status' => 'fail', 'messages' => [0 => 'Check your internet connection.']];
+
+				} catch(Exception $e) {
+					return ['status' => 'fail', 'messages' => [0 => 'Check your internet connection.']];
+				}
+			}
+		}
+
+        return ['status' => 'success'];
+    }
+
+    public function kirimUrl($data)
+    {
+        if (isset($data['id_user'])) {
+            unset($data['id_user']);
+        }
+
+        if (isset($data['id_outlet'])) {
+            unset($data['id_outlet']);
+        }
+
+        if (isset($data['id_transaction'])) {
+            unset($data['id_transaction']);
+        }
+
+        if (isset($data['transaction_payment_type'])) {
+            unset($data['transaction_payment_type']);
+        }
+
+        if (isset($data['transaction_shipment'])) {
+            unset($data['transaction_shipment']);
+        }
+
+        $client = new Client;
+        $content = array(
+            'headers' => [
+                'Accept'        => 'application/json',
+                'Content-Type'  => 'application/json'
+            ],
+            'json' => (array) $data
+        );
+
+        try {
+            $response =  $client->request('POST', $this->url_kirim, $content);
+            return json_decode($response->getBody(), true);
+        }
+        catch (\GuzzleHttp\Exception\RequestException $e) {
+            try{
+
+                if($e->getResponse()){
+                    $response = $e->getResponse()->getBody()->getContents();
+
+                    $error = json_decode($response, true);
+
+                    if(!$error) {
+                        return $e->getResponse()->getBody();
+                    } else {
+                        return $error;
+                    }
+                } else return ['status' => 'fail', 'messages' => [0 => 'Check your internet connection.']];
+
+            } catch(Exception $e) {
+                return ['status' => 'fail', 'messages' => [0 => 'Check your internet connection.']];
+            }
+        }
     }
 }
