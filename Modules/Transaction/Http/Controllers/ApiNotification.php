@@ -110,6 +110,7 @@ class ApiNotification extends Controller {
 
             //booking GO-SEND
             if ($newTrx['trasaction_type'] == 'Pickup Order') {
+
                 $newTrx['detail'] = TransactionPickup::with('transaction_pickup_go_send')->where('id_transaction', $newTrx['id_transaction'])->first();
                 if ($newTrx['detail']) {
                     if ($newTrx['detail']['pickup_by'] == 'GO-SEND') {
@@ -291,6 +292,7 @@ class ApiNotification extends Controller {
                     $checkDealsPayment = $this->checkDealsPayment($deals, $midtrans);
 
                     if ($checkDealsPayment) {
+                        DB::commit();
                         return response()->json(['status' => 'success']);
                     }
                 }
@@ -583,9 +585,38 @@ Detail: ".$link['short'],
         $update = DealsPaymentMidtran::where('order_id', $midtrans['order_id'])->update($midtrans);
 
         if ($update) {
-            // UPDATE STATUS PEMBAYARAN
-            $updatePembayaran = DealsUser::where('id_deals_user', $deals->id_deals_user)->update(['paid_status' => 'Completed']);
+            $statusPay = "Pending";
+            if (isset($midtrans['status_code']) && $midtrans['status_code'] == 200) {
+                // if($midtrans['transaction_status'] != 'settlement' && $midtrans['payment_type'] != 'credit_card'){
+                    $deals = DealsUser::with(['userMid', 'deals'])->where('id_deals_user', $deals->id_deals_user)->first();
 
+                    $title = "";
+                    if(isset($deals['deals']['deals_title']) && $deals['deals']['deals_title'] != null){
+                        $title = $deals['deals']['deals_title'];
+                    }
+
+                    if(isset($deals['deals']['deals_second_title']) && $deals['deals']['deals_second_title']){
+                        $title = $title.' '.$deals['deals']['deals_second_title'];
+                    }
+                    // dd($deals);
+                    $send = app($this->autocrm)->SendAutoCRM(
+                        'Payment Deals Success',
+                        $deals['userMid']['phone'],
+                        [
+                            'deals_title'       => $title,
+                            'id_deals_user'     => $deals['id_deals_user']
+                        ]
+                    );
+                // }
+                $statusPay = 'Completed';
+            }elseif (isset($midtrans['status_code']) && $midtrans['status_code'] == 201){
+                $statusPay = 'Pending';
+            }elseif (isset($midtrans['status_code']) && $midtrans['status_code'] == 202) {
+                 $statusPay = 'Cancelled';
+            }
+            // UPDATE STATUS PEMBAYARAN
+            $updatePembayaran = DealsUser::where('id_deals_user', $deals->id_deals_user)->update(['paid_status' => $statusPay]);
+            // dd($updatePembayaran);
             if ($updatePembayaran) {
                 DB::commit();
                 return true;

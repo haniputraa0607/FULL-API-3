@@ -237,71 +237,88 @@ class ApiDealsVoucher extends Controller
 
         $voucher = DealsUser::where('id_user', $request->user()->id)
                             ->whereIn('paid_status', ['Free', 'Completed'])
+                            ->where('voucher_expired_at', '>', date('Y-m-d H:i:s'))
                             ->with(['dealVoucher', 'dealVoucher.deal', 'dealVoucher.deal.outlets.city', 'dealVoucher.deal.outlets.city']);
 
         if (isset($post['id_deals_user'])) {
-            $voucher->where('id_deals_user', $post['id_deals_user'])->get()->toArray();
-        }else{
-            if (!isset($post['expired']) || $post['expired'] != 1) {
-                $voucher->where('voucher_expired_at', '>', date('Y-m-d H:i:s'));
-            }else{
-                $voucher->where('voucher_expired_at', '<=', date('Y-m-d H:i:s'));
-            }
+            $voucher = $voucher->where('id_deals_user', $post['id_deals_user']);
+        }
+
+        $voucher->where(function ($query) use ($post) {
+
             if (isset($post['used']) && $post['used'] == 1)  {
-                $voucher->whereNotNull('used_at');
+                $query->orWhere(function ($amp) use ($post) {
+                        $amp->whereNotNull('used_at');
+                    });
             }
-
             if (isset($post['available']) && $post['available'] == 1) {
-                $voucher = $voucher->whereNull('used_at');
+                 $query->orWhere(function ($amp) use ($post) {
+                        $amp->whereNull('used_at')->where('voucher_expired_at', '>', date('Y-m-d H:i:s'));
+                    });
             }
-
-            if (isset($post['expired_start'])) {
-                $voucher = $voucher->whereDate('voucher_expired_at', '>=',date('Y-m-d', strtotime($post['expired_start'])));
+             if (isset($post['expired']) && $post['expired'] == 1) {
+                 $query->orWhere(function ($amp) use ($post) {
+                        $amp->where('voucher_expired_at', '<=', date('Y-m-d H:i:s'));
+                    });
             }
+        });
 
-            if (isset($post['expired_end'])) {
-                $voucher = $voucher->whereDate('voucher_expired_at', '<=',date('Y-m-d', strtotime($post['expired_end'])));
-            }
+        if (isset($post['expired_start'])) {
+            $voucher = $voucher->whereDate('voucher_expired_at', '>=',date('Y-m-d', strtotime($post['expired_start'])));
+        }
 
-            //search by outlet
-            if(isset($post['id_outlet']) && is_integer($post['id_outlet'])){
+        if (isset($post['expired_end'])) {
+            $voucher = $voucher->whereDate('voucher_expired_at', '<=',date('Y-m-d', strtotime($post['expired_end'])));
+        }
+
+
+         //search by outlet
+        if(isset($post['id_outlet']) && is_integer($post['id_outlet'])){
+            $voucher = $voucher->join('deals_vouchers', 'deals_users.id_deals_voucher', 'deals_vouchers.id_deals_voucher')
+                                ->join('deals', 'deals.id_deals', 'deals_vouchers.id_deals')
+                                ->join('deals_outlets', 'deals.id_deals', 'deals_outlets.id_deals')
+                                ->where(function ($query) use ($post) {
+                                    $query->where('deals_users.id_outlet', $post['id_outlet'])
+                                            ->orWhere('deals_outlets.id_outlet', $post['id_outlet']);
+                                })
+                                ->select('deals_users.*')->distinct();
+
+          if(isset($post['key_free']) && $post['key_free'] != null){
+               $voucher = $voucher->where(function ($query) use ($post) {
+                                        $query->where('deals.deals_title', 'LIKE', '%'.$post['key_free'].'%')
+                                                ->orWhere('deals.deals_second_title', 'LIKE', '%'.$post['key_free'].'%');
+                                    });
+          }
+        }else{
+            if(isset($post['key_free']) && $post['key_free'] != null){
                 $voucher = $voucher->join('deals_vouchers', 'deals_users.id_deals_voucher', 'deals_vouchers.id_deals_voucher')
                                     ->join('deals', 'deals.id_deals', 'deals_vouchers.id_deals')
                                     ->join('deals_outlets', 'deals.id_deals', 'deals_outlets.id_deals')
                                     ->where(function ($query) use ($post) {
-                                        $query->where('deals_users.id_outlet', $post['id_outlet'])
-                                                ->orWhere('deals_outlets.id_outlet', $post['id_outlet']);
+                                        $query->where('deals.deals_title', 'LIKE', '%'.$post['key_free'].'%')
+                                                ->orWhere('deals.deals_second_title', 'LIKE', '%'.$post['key_free'].'%');
                                     })
                                     ->select('deals_users.*')->distinct();
+            }
+        }
 
-              if(isset($post['key_free']) && $post['key_free'] != null){
-                   $voucher = $voucher->where(function ($query) use ($post) {
-                                            $query->where('deals.deals_title', 'LIKE', '%'.$post['key_free'].'%')
-                                                    ->orWhere('deals.deals_second_title', 'LIKE', '%'.$post['key_free'].'%');
-                                        });
-              }
-            }else{
-                if(isset($post['key_free']) && $post['key_free'] != null){
-                    $voucher = $voucher->join('deals_vouchers', 'deals_users.id_deals_voucher', 'deals_vouchers.id_deals_voucher')
-                                        ->join('deals', 'deals.id_deals', 'deals_vouchers.id_deals')
-                                        ->where(function ($query) use ($post) {
-                                            $query->where('deals.deals_title', 'LIKE', '%'.$post['key_free'].'%')
-                                                    ->orWhere('deals.deals_second_title', 'LIKE', '%'.$post['key_free'].'%');
-                                        })
-                                        ->select('deals_users.*')->distinct();
-                }
-            }
 
-            if (isset($post['oldest']) && $post['oldest'] == 1) {
-                $voucher = $voucher->orderBy('deals_users.created_at', 'asc');
-            }
-            elseif (isset($post['newest_expired']) && $post['newest_expired'] == 1) {
-                $voucher = $voucher->orderBy('voucher_expired_at', 'asc');
-            }
-            else{
-                $voucher = $voucher->orderBy('deals_users.created_at', 'desc');
-            }
+        // $voucher->orderBy('voucher_expired_at', 'asc');
+        if (isset($post['oldest']) && $post['oldest'] == 1) {
+                $voucher = $voucher->orderBy('deals_users.claimed_at', 'asc');
+        }
+        elseif (isset($post['newest_expired']) && $post['newest_expired'] == 1) {
+            $voucher = $voucher->orderBy('voucher_expired_at', 'asc');
+        }
+        else{
+            $voucher = $voucher->orderBy('deals_users.claimed_at', 'desc');
+        }
 
+        // if voucher detail, no need pagination
+        if (isset($post['id_deals_user']) && $post['id_deals_user'] != "") {
+            $voucher = $voucher->get()->toArray();
+        }
+        else {
             if (isset($post['used']) && $post['used'] == 1)  {
                 // if voucher used, return max 100 vouchers with pagination
                 $collection = $voucher->take(100)->get();
@@ -337,7 +354,6 @@ class ApiDealsVoucher extends Controller
                 $voucher_temp[] = $value->toArray();
             }
             $voucher = $voucher_temp;
-
         }
 
         //add outlet name
@@ -350,42 +366,45 @@ class ApiDealsVoucher extends Controller
             }
 
             $outlet = null;
-            // if(count($datavoucher['deal_voucher']['deal']['outlets_active']) <= 1){
-            //     unset($voucher[$index]);
-            // }else{
-                // $voucher[$index]['deal_voucher']['deal']['outlets'] = $datavoucher['deal_voucher']['deal']['outlets_active'];
-                // unset($voucher[$index]['deal_voucher']['deal']['outlets_active']);
-                $outlet = null;
-                if($datavoucher['id_outlet']){
-                    $getOutlet = Outlet::find($datavoucher['id_outlet']);
-                    if($getOutlet){
-                        $outlet = $getOutlet['outlet_name'];
+            if($datavoucher['deal_voucher'] == null){
+                unset($voucher[$index]);
+            }else{
+                // if(count($datavoucher['deal_voucher']['deal']['outlets_active']) <= 1){
+                //     unset($voucher[$index]);
+                // }else{
+                    // $voucher[$index]['deal_voucher']['deal']['outlets'] = $datavoucher['deal_voucher']['deal']['outlets_active'];
+                    // unset($voucher[$index]['deal_voucher']['deal']['outlets_active']);
+                    $outlet = null;
+                    if($datavoucher['id_outlet']){
+                        $getOutlet = Outlet::find($datavoucher['id_outlet']);
+                        if($getOutlet){
+                            $outlet = $getOutlet['outlet_name'];
+                        }
                     }
-                }
 
-                $voucher[$index] = array_slice($voucher[$index], 0, 4, true) +
-                array("outlet_name" => $outlet) +
-                array_slice($voucher[$index], 4, count($voucher[$index]) - 1, true) ;
+                    $voucher[$index] = array_slice($voucher[$index], 0, 4, true) +
+                    array("outlet_name" => $outlet) +
+                    array_slice($voucher[$index], 4, count($voucher[$index]) - 1, true) ;
 
-                // get new voucher code
-                // beetwen "https://chart.googleapis.com/chart?chl="
-                // and "&chs=250x250&cht=qr&chld=H%7C0"
-                // preg_match("/api.qrserver.com\/v1\/create-qr-code\/?size=250x250&data=(.*)&chs=250x250/", $datavoucher['voucher_hash'], $matches);
-                preg_match("/chart.googleapis.com\/chart\?chl=(.*)&chs=250x250/", $datavoucher['voucher_hash'], $matches);
+                    // get new voucher code
+                    // beetwen "https://chart.googleapis.com/chart?chl="
+                    // and "&chs=250x250&cht=qr&chld=H%7C0"
+                    // preg_match("/api.qrserver.com\/v1\/create-qr-code\/?size=250x250&data=(.*)&chs=250x250/", $datavoucher['voucher_hash'], $matches);
+                    preg_match("/chart.googleapis.com\/chart\?chl=(.*)&chs=250x250/", $datavoucher['voucher_hash'], $matches);
 
-                // replace voucher_code with code from voucher_hash
-                if (isset($matches[1])) {
-                    $voucher[$index]['deal_voucher']['voucher_code'] = $matches[1];
-                }
-                else {
-                    $voucherHash = $datavoucher['voucher_hash'];
-                    $voucher[$index]['deal_voucher']['voucher_code'] = str_replace("https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=",'',  $voucherHash);
-                }
+                    // replace voucher_code with code from voucher_hash
+                    if (isset($matches[1])) {
+                        $voucher[$index]['deal_voucher']['voucher_code'] = $matches[1];
+                    }
+                    else {
+                        $voucherHash = $datavoucher['voucher_hash'];
+                        $voucher[$index]['deal_voucher']['voucher_code'] = str_replace("https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=",'',  $voucherHash);
+                    }
 
-                $useragent = $_SERVER['HTTP_USER_AGENT'];
-                if(stristr($useragent,'okhttp')){
-                    $voucher[$index]['voucher_expired_at'] = date('d/m/Y H:i',strtotime($voucher[$index]['voucher_expired_at']));
-                }
+                    $useragent = $_SERVER['HTTP_USER_AGENT'];
+                    if(stristr($useragent,'okhttp')){
+                        $voucher[$index]['voucher_expired_at'] = date('d/m/Y H:i',strtotime($voucher[$index]['voucher_expired_at']));
+                    }
                 // }
                 // else{
                 //     unset($voucher[$index]);
@@ -393,31 +412,6 @@ class ApiDealsVoucher extends Controller
                 // }
 
             }
-
-            if (isset($post['used']) && $post['used'] == 0) {
-
-                foreach($voucher as $index => $dataVou){
-                    $voucher[$index]['webview_url'] = env('APP_URL') ."webview/voucher/". $dataVou['id_deals_user'];
-                    $voucher[$index]['webview_url_v2'] = env('APP_URL') ."webview/voucher/v2/". $dataVou['id_deals_user'];
-                    $voucher[$index]['button_text'] = 'INVALIDATE';
-                }
-
-            }
-
-        // if voucher detail, no need pagination
-        if (isset($post['id_deals_user']) && $post['id_deals_user'] != "") {
-            $result = $voucher;
-        }
-        else {
-            // add pagination attributes
-            $result['data'] = $voucher;
-            $result['current_page'] = $current_page;
-            $result['next_page_url'] = $next_page_url;
-            $result['prev_page_url'] = $prev_page_url;
-            $result['per_page'] = $per_page;
-            $result['total'] = $total;
-        }
-
 
             $voucher = $this->kotacuks($voucher);
         }
@@ -437,6 +431,29 @@ class ApiDealsVoucher extends Controller
                 }
             }
         }*/
+        if (isset($post['used']) && $post['used'] == 0) {
+
+                foreach($voucher as $index => $dataVou){
+                    $voucher[$index]['webview_url'] = env('APP_URL') ."webview/voucher/". $dataVou['id_deals_user'];
+                    $voucher[$index]['webview_url_v2'] = env('APP_URL') ."webview/voucher/v2/". $dataVou['id_deals_user'];
+                    $voucher[$index]['button_text'] = 'INVALIDATE';
+                }
+
+        }
+
+        // if voucher detail, no need pagination
+        if (isset($post['id_deals_user']) && $post['id_deals_user'] != "") {
+            $result = $voucher;
+        }
+        else {
+            // add pagination attributes
+            $result['data'] = $voucher;
+            $result['current_page'] = $current_page;
+            $result['next_page_url'] = $next_page_url;
+            $result['prev_page_url'] = $prev_page_url;
+            $result['per_page'] = $per_page;
+            $result['total'] = $total;
+        }
 
         return response()->json(MyHelper::checkGet($result));
     }
