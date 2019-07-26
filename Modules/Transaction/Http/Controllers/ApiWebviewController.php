@@ -469,6 +469,41 @@ class ApiWebviewController extends Controller
         }
 
         if (empty($check)) {
+
+            if($type == 'voucher'){
+                $list = DealsUser::with('outlet', 'dealVoucher.deal')->where('id_deals_user', $data['id_reference'])->first();
+
+                if ($list && $list['voucher_price_cash'] != null) {
+
+                    $dataEncode = [
+                        'transaction_receipt_number'   => $data['id_reference'],
+                        'type' => $type
+                    ];
+
+                    $encode = json_encode($dataEncode);
+                    $base = base64_encode($encode);
+
+                    if($list['balance_nominal'] != null){
+                        $list['voucher_price_cash'] = $list['voucher_price_cash'] - $list['balance_nominal'];
+                    }
+
+                    $send = [
+                        'status'         => 'success',
+                        'result'         => [
+                            'payment_status'             => $list['paid_status'],
+                            'transaction_receipt_number' => $list['id_deals_user'],
+                            'transaction_grandtotal'     => $list['voucher_price_cash'],
+                            'type'                       => $type,
+                            'url'                        => env('VIEW_URL').'/transaction/web/view/detail?data='.$base
+                        ],
+
+                    ];
+
+                    return response()->json($send);
+                }
+                return response()->json(['status' => 'fail', 'messages' => ['Data not valid']]);
+            }
+
             $dataEncode = [
                 'id'   => $id
             ];
