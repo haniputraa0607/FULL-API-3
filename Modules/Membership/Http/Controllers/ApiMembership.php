@@ -55,7 +55,7 @@ class ApiMembership extends Controller
 					$data['membership_name'] = $membership['membership_name'];
 					$data['membership_type'] = $post['membership_type'];
 
-					if(isset($data['membership_name_color'])){
+					if(isset($membership['membership_name_color'])){
 						$data['membership_name_color'] = str_replace('#','',$membership['membership_name_color']);
 					}
 
@@ -166,7 +166,7 @@ class ApiMembership extends Controller
 				$data['membership_name'] = $membership['membership_name'];
 				$data['membership_type'] = $post['membership_type'];
 
-				if(isset($data['membership_name_color'])){
+				if(isset($membership['membership_name_color'])){
 					$data['membership_name_color'] = str_replace('#','',$membership['membership_name_color']);
 				}
 
