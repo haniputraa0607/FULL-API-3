@@ -833,10 +833,8 @@ class ApiOnlineTransaction extends Controller
             }
 
             if($pickupType == 'set time'){
-
+                $settingTime = Setting::where('key', 'processing_time')->first();
                 if (date('Y-m-d H:i:s', strtotime($post['pickup_at'])) <= date('Y-m-d H:i:s', strtotime('- '.$settingTime['value'].'minutes'))) {
-                    $settingTime = Setting::where('key', 'processing_time')->first();
-
                     $pickup = date('Y-m-d H:i:s', strtotime('+ '.$settingTime['value'].'minutes'));
                 }
                 else {

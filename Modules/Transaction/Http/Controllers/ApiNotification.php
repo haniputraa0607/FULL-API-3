@@ -963,6 +963,8 @@ Detail: ".$link['short'],
     public function getPayment($mid)
     {
         $label_place = 'Bank';
+        $number = "";
+        $bank = "";
         if (isset($mid['permata_va_number'])) {
             $number = $mid['permata_va_number'];
             $bank = 'Permata';
@@ -974,8 +976,8 @@ Detail: ".$link['short'],
             $bank = $mid['store'];
             $label_place = 'Store';
         } else {
-            $number = $mid['va_numbers'][0]['va_number'];
-            $bank = strtoupper($mid['va_numbers'][0]['bank']);
+            $number = isset($mid['va_numbers'][0]['va_number']) ? $mid['va_numbers'][0]['va_number'] : null;
+            $bank = isset($mid['va_numbers'][0]['bank']) ? strtoupper($mid['va_numbers'][0]['bank']) : null;
         }
 
         $kode = '';
