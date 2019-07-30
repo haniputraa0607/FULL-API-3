@@ -747,7 +747,47 @@ class ApiHistoryController extends Controller
     }
 
     public function balance($post, $id) {
-        $log = LogBalance::where('id_user', $id)->get();
+        $log = LogBalance::where('id_user', $id);
+
+        $log->where(function ($query) use ($post) {
+            if (!is_null($post['use_point'])) {
+                $query->orWhere(function ($queryLog) {
+                    $queryLog->where('balance', '<', 0);
+                });
+            }
+            if (!is_null($post['earn_point'])) {
+                $query->orWhere(function ($queryLog) {
+                    $queryLog->where('balance', '>', 0);
+                });
+            }
+        });
+
+        if (!is_null($post['online_order']) || !is_null($post['offline_order'])){
+            $log->leftJoin('transactions', 'transacations.id_transaction', 'log_balances.id_reference')
+                ->where(function ($query) use ($post) {
+                if (!is_null($post['online_order'])) {
+                    $query->orWhere(function ($queryLog) {
+                        $queryLog->whereIn('source', ['Transaction', 'Transaction Failed', 'Rejected Order', 'Rejected Order Midtrans', 'Rejected Order Point', 'Rejected Order Ovo', 'Reversal'])
+                                ->where('trasaction_type', '!=', 'Offline');
+                    });
+                }
+                if (!is_null($post['offline_order'])) {
+                    $query->orWhere(function ($queryLog) {
+                        $queryLog->where('source', 'Transaction')
+                                ->where('trasaction_type', '=', 'Offline');
+                    });
+                }
+            });
+        }
+
+        if (!is_null($post['voucher'])) {
+            $query->orWhere(function ($queryLog) {
+                $queryLog->where('source', 'Deals Balance');
+            });
+        }
+
+        $log = $log->get();
+
         $listBalance = [];
 
         foreach ($log as $key => $value) {
@@ -842,30 +882,6 @@ class ApiHistoryController extends Controller
                     continue;
                 }
             }
-
-            if (!is_null($post['use_point']) && !is_null($post['earn_point']) && !is_null($post['online_order']) && !is_null($post['offline_order']) && !is_null($post['voucher'])) {
-            }
-
-            if (!is_null($post['use_point']) && !is_null($post['earn_point'])) {
-
-            } elseif (is_null($post['use_point']) && is_null($post['earn_point'])) {
-
-            } else {
-                if (!is_null($post['use_point'])) {
-                    if ($value['source'] == 'Transaction') {
-                        unset($listBalance[$key]);
-                        continue;
-                    }
-                }
-
-                if (!is_null($post['earn_point'])) {
-                    if ($value['source'] != 'Transaction') {
-                        unset($listBalance[$key]);
-                        continue;
-                    }
-                }
-            }
-
 
             // if (!is_null($post['online_order']) && !is_null($post['offline_order']) && !is_null($post['voucher'])) {
 
