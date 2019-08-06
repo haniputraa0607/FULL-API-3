@@ -99,7 +99,11 @@ class Deal extends Model
 		'user_limit'
 	];
 
-	protected $appends  = ['url_deals_image', 'deals_status', 'deals_voucher_price_type'];
+	protected $appends  = ['url_deals_image', 'deals_status', 'deals_voucher_price_type', 'url_webview'];
+
+	public function getUrlWebviewAttribute() {
+		return env('APP_URL') ."webview/deals/". $this->id_deals ."/". $this->deals_type;
+	}
 
 	public function getDealsVoucherPriceTypeAttribute() {
 	    $type = "free";

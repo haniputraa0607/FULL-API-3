@@ -345,8 +345,17 @@ class ApiHistoryController extends Controller
         if(!isset($post['offline_order'])){
             $post['offline_order'] = null;
         }
+        if(!isset($post['online_order'])){
+            $post['online_order'] = null;
+        }
         if(!isset($post['voucher'])){
             $post['voucher'] = null;
+        }
+        if(!isset($post['oldest'])){
+            $post['oldest'] = null;
+        }
+        if(!isset($post['newest'])){
+            $post['newest'] = null;
         }
 
         if (!is_null($post['oldest'])) {
@@ -873,7 +882,7 @@ class ApiHistoryController extends Controller
                 $listBalance[$key] = $dataList;
             }
 
-            if (!is_null($post['date_start']) && !is_null($post['date_end'])) {
+            if (isset($post['date_start']) && !is_null($post['date_start']) && isset($post['date_end']) && !is_null($post['date_end'])) {
                 $date_start = date('Y-m-d', strtotime($post['date_start']))." 00.00.00";
                 $date_end = date('Y-m-d', strtotime($post['date_end']))." 23.59.59";
 

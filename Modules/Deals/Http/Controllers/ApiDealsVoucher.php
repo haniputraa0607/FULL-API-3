@@ -246,17 +246,17 @@ class ApiDealsVoucher extends Controller
 
         $voucher->where(function ($query) use ($post) {
 
-            if (isset($post['used']) && $post['used'] == 1)  {
+            if (isset($post['used']) && ($post['used'] == 1 || $post['used'] == '1'))  {
                 $query->orWhere(function ($amp) use ($post) {
                         $amp->whereNotNull('used_at');
                     });
             }
-            if (isset($post['available']) && $post['available'] == 1) {
+            if (isset($post['available']) && ($post['available'] == 1 || $post['available'] == '1')) {
                  $query->orWhere(function ($amp) use ($post) {
                         $amp->whereNull('used_at')->where('voucher_expired_at', '>', date('Y-m-d H:i:s'));
                     });
             }
-             if (isset($post['expired']) && $post['expired'] == 1) {
+             if (isset($post['expired']) && ($post['expired'] == 1 || $post['expired'] == '1')) {
                  $query->orWhere(function ($amp) use ($post) {
                         $amp->where('voucher_expired_at', '<=', date('Y-m-d H:i:s'));
                     });
@@ -304,10 +304,10 @@ class ApiDealsVoucher extends Controller
 
 
         // $voucher->orderBy('voucher_expired_at', 'asc');
-        if (isset($post['oldest']) && $post['oldest'] == 1) {
+        if (isset($post['oldest']) && ($post['oldest'] == 1 || $post['oldest'] == '1')) {
                 $voucher = $voucher->orderBy('deals_users.claimed_at', 'asc');
         }
-        elseif (isset($post['newest_expired']) && $post['newest_expired'] == 1) {
+        elseif (isset($post['newest_expired']) && ($post['newest_expired'] == 1 || $post['newest_expired'] == '1')) {
             $voucher = $voucher->orderBy('voucher_expired_at', 'asc');
         }
         else{
@@ -319,7 +319,7 @@ class ApiDealsVoucher extends Controller
             $voucher = $voucher->get()->toArray();
         }
         else {
-            if (isset($post['used']) && $post['used'] == 1)  {
+            if (isset($post['used']) && ($post['used'] == 1 || $post['used'] == '1'))  {
                 // if voucher used, return max 100 vouchers with pagination
                 $collection = $voucher->take(100)->get();
                 $perPage = 10;
@@ -431,7 +431,7 @@ class ApiDealsVoucher extends Controller
                 }
             }
         }*/
-        if (isset($post['used']) && $post['used'] == 0) {
+        if (isset($post['used']) && ($post['used'] == 0 || $post['used'] == '0')) {
 
                 foreach($voucher as $index => $dataVou){
                     $voucher[$index]['webview_url'] = env('APP_URL') ."webview/voucher/". $dataVou['id_deals_user'];
