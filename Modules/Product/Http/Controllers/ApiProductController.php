@@ -226,16 +226,13 @@ class ApiProductController extends Controller
             if (isset($post['visibility'])) {
 
                 if($post['visibility'] == 'Hidden'){
-                    $idVisible = ProductPrice::where(function($query){
-                        $query->where('product_visibility', 'Visible')
-                                ->orWhere(function($q){
-                                    $q->where('product_visibility', 'Hidden')
-                                    ->where('product_status', 'Inactive');
-                                });
-                    })
-                    ->where('id_outlet', $post['id_outlet'])
-                    ->select('id_product')->get();
-                    $product = Product::whereNotIn('products.id_product', $idVisible)->whereNull('id_product_category')->with(['category', 'discount']);
+                    $idVisible = ProductPrice::join('products', 'products.id_product','=', 'product_prices.id_product')
+                                            ->where('product_prices.product_visibility', 'Visible')
+                                            ->where('product_prices.product_status', 'Active')
+                                            ->whereNotNull('id_product_category')
+                                            ->where('id_outlet', $post['id_outlet'])
+                                            ->select('product_prices.id_product')->get();
+                    $product = Product::whereNotIn('products.id_product', $idVisible)->with(['category', 'discount']);
                 }else{
                     $product = $product->whereNotNull('id_product_category');
                 }
@@ -726,6 +723,10 @@ class ApiProductController extends Controller
         $product = Product::with(['all_prices'=> function($q) use ($id_outlet){
             $q->where('id_outlet', $id_outlet);
         }])->get();
+        return response()->json(MyHelper::checkGet($product));
+    }
+    function getNextID($id){
+        $product = Product::where('id_product', '>', $id)->orderBy('id_product')->first();
         return response()->json(MyHelper::checkGet($product));
     }
 }
