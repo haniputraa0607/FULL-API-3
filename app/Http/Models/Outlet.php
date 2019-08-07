@@ -14,7 +14,7 @@ use Hash;
 
 /**
  * Class Outlet
- * 
+ *
  * @property int $id_outlet
  * @property string $outlet_code
  * @property string $outlet_name
@@ -30,7 +30,7 @@ use Hash;
  * @property \Carbon\Carbon $outlet_close_hours
  * @property \Carbon\Carbon $created_at
  * @property \Carbon\Carbon $updated_at
- * 
+ *
  * @property \App\Http\Models\City $city
  * @property \Illuminate\Database\Eloquent\Collection $deals
  * @property \Illuminate\Database\Eloquent\Collection $enquiries
@@ -47,7 +47,7 @@ class Outlet extends Authenticatable
 	public function findForPassport($username) {
         return $this->where('outlet_code', $username)->first();
 	}
-	
+
 	public function getAuthPassword() {
 		return $this->outlet_pin;
 	 }
@@ -118,7 +118,7 @@ class Outlet extends Authenticatable
 	public function photos() {
         return $this->hasMany(OutletPhoto::class, 'id_outlet', 'id_outlet')->orderBy('outlet_photo_order', 'ASC');
     }
-	
+
 	public function outlet_photos()
 	{
 		return $this->hasMany(\App\Http\Models\OutletPhoto::class, 'id_outlet')->orderBy('outlet_photo_order');
@@ -142,32 +142,32 @@ class Outlet extends Authenticatable
 	public function today()
 	{
 		$hari = date ("D");
- 
+
 		switch($hari){
 			case 'Sun':
 				$hari_ini = "Minggu";
 			break;
-	 
-			case 'Mon':			
+
+			case 'Mon':
 				$hari_ini = "Senin";
 			break;
-	 
+
 			case 'Tue':
 				$hari_ini = "Selasa";
 			break;
-	 
+
 			case 'Wed':
 				$hari_ini = "Rabu";
 			break;
-	 
+
 			case 'Thu':
 				$hari_ini = "Kamis";
 			break;
-	 
+
 			case 'Fri':
 				$hari_ini = "Jumat";
 			break;
-	 
+
 			default:
 				$hari_ini = "Sabtu";
 			break;

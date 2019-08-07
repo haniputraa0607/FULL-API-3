@@ -41,13 +41,13 @@ use FCM;
 
 class MyHelper{
 	private static $config = array(
-						'digitdepan' => 7,
-						'digitbelakang' => 5,
-						'keyutama' => 'JSncajiopw32jk',
-						'secret_iv' => 'kkopIEnan5698gAN',
-						'ciphermode' => 'AES-256-CBC'
-					);
-	
+		'digitdepan' => 7,
+		'digitbelakang' => 5,
+		'keyutama' => 'JSncajiopw32jk',
+		'secret_iv' => 'kkopIEnan5698gAN',
+		'ciphermode' => 'AES-256-CBC'
+	);
+
 	public static function  checkGet($data){
 			if($data && !empty($data)) return ['status' => 'success', 'result' => $data];
 			else if(empty($data)) return ['status' => 'fail', 'messages' => ['empty']];
@@ -85,7 +85,7 @@ class MyHelper{
 		}
 		return base64_decode($data);
 	}
-	
+
 	public static function encryptQRCode($string) {
 		$string = base64_encode($string);
 		$string = str_replace(array('+','/','='),array('-','_',''),$string);
@@ -154,7 +154,7 @@ class MyHelper{
 										->orderBy('TransaksiProduct.harga_total','desc')
 										->get()
 										->toArray();
-					if($top_products){	
+					if($top_products){
 						return ['status' => 'success', 'result' => $top_products];
 					} else {
 						return ['status' => 'empty', 'messages' => []];
@@ -254,7 +254,7 @@ class MyHelper{
 		$decrypttext = mcrypt_decrypt(MCRYPT_RIJNDAEL_256, $keybaru, $crypttext, MCRYPT_MODE_ECB, $iv);
 		return unserialize(trim($decrypttext));
 	}
-	
+
 	public static function encryptkhususnew($value) {
 		$config = static::$config;
 		if(!$value){return false;}
@@ -279,7 +279,7 @@ class MyHelper{
 		$decrypttext = openssl_decrypt($crypttext, $config['ciphermode'], $skey, 0, $iv);
 		return trim($decrypttext);
 	}
-	
+
 	// terbaru, cuma nambah serialize + unserialize sih biar support array
 	public static function encrypt2019($value) {
 		$config = static::$config;
@@ -315,7 +315,7 @@ class MyHelper{
 				if($mode == "angka")
 				{
 					$chars = "1234567890";
-				} 
+				}
 				elseif($mode == "huruf")
 				{
 					$chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -327,7 +327,7 @@ class MyHelper{
 			} else {
 				$chars = "36789BCDEFGHJKMNPQRSTUVWXY";
 			}
-			
+
 			srand((double)microtime()*1000000);
 			$i = 0;
 			$pin = '';
@@ -346,7 +346,7 @@ class MyHelper{
 			if (array_key_exists('HTTP_X_FORWARDED_FOR', $_SERVER)) {
 				$ipAddress = array_pop(explode(',', $_SERVER['HTTP_X_FORWARDED_FOR']));
 			}
-			
+
 			return $ipAddress;
 	}
 
@@ -355,7 +355,7 @@ class MyHelper{
 	}
 
 	public static function createrandom($digit, $custom = null) {
-		$chars = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ123456789";
+		$chars = "abcdefghjkmnpqrstuvwxyzBCDEFGHJKLMNPQRSTUVWXYZ12356789";
 		if($custom != null){
 			if($custom == 'Angka')
 				$chars = "0123456789";
@@ -384,7 +384,7 @@ class MyHelper{
 	}
 
 	public static function getkey() {
-		$config = static::$config;
+		global $config;
 		$depan = self::createrandom($config['digitdepan']);
 		$belakang = self::createrandom($config['digitbelakang']);
 		$skey = $depan . $config['keyutama'] . $belakang;
@@ -392,7 +392,7 @@ class MyHelper{
 	}
 
 	public static function parsekey($value) {
-		$config = static::$config;
+		global $config;
 		$depan = substr($value, 0, $config['digitdepan']);
 		$belakang = substr($value, -$config['digitbelakang'], $config['digitbelakang']);
 		$skey = $depan . $config['keyutama'] . $belakang;
@@ -450,12 +450,12 @@ class MyHelper{
 				$pictName = $name.$ext;
 			else
 				$pictName = mt_rand(0, 1000).''.time().''.$ext;
-		
+
 			// path
 			$upload = $path.$pictName;
-			
+
 			$img    = Image::make($decoded);
-			
+
 			$width  = $img->width();
 			$height = $img->height();
 
@@ -465,34 +465,119 @@ class MyHelper{
 							$constraint->aspectRatio();
 							$constraint->upsize();
 					});
-			} 
+			}
 			// if($width > 1000){
 			// 		$img->resize(1000, null, function ($constraint) {
 			// 				$constraint->aspectRatio();
 			// 				$constraint->upsize();
 			// 		});
-			// } 
-			
+			// }
+
 			$img->resize($resize, null, function ($constraint) {
 				$constraint->aspectRatio();
 			});
 
-			
-			// $resource = $img->stream()->detach();
+			if(env('STORAGE') &&  env('STORAGE') == 's3'){
+				$resource = $img->stream()->detach();
 
-			// $save = Storage::disk('s3')->put($upload, $resource, 'public');
-
-			if ($img->save($upload)) {
+				$save = Storage::disk('s3')->put($upload, $resource, 'public');
+				if ($save) {
+						$result = [
+							'status' => 'success',
+							'path'  => $upload
+						];
+				}
+				else {
 					$result = [
-						'status' => 'success',
-						'path'  => $upload
+						'status' => 'fail'
 					];
+				}
+			}else{
+				if ($img->save($upload)) {
+						$result = [
+							'status' => 'success',
+							'path'  => $upload
+						];
+				}
+				else {
+					$result = [
+						'status' => 'fail'
+					];
+				}
 			}
-			else {
-				$result = [
-					'status' => 'fail'
-				];
-			}  
+
+
+			return $result;
+	}
+
+	public static function uploadPhotoQuality($foto, $path, $resize=800, $quality, $name=null) {
+			// kalo ada foto
+			$decoded = base64_decode($foto);
+
+			// cek extension
+			$ext = MyHelper::checkExtensionImageBase64($decoded);
+
+			// set picture name
+			if($name != null)
+				$pictName = $name.$ext;
+			else
+				$pictName = mt_rand(0, 1000).''.time().''.$ext;
+
+			// path
+			$upload = $path.$pictName;
+
+			$img    = Image::make($decoded)->encode('jpg', $quality);
+
+			$width  = $img->width();
+			$height = $img->height();
+
+			// resize hanya height nya krn foto sekarang berdiri
+			if($height > 800){
+					$img->resize(null, 800, function ($constraint) {
+							$constraint->aspectRatio();
+							$constraint->upsize();
+					});
+			}
+			// if($width > 1000){
+			// 		$img->resize(1000, null, function ($constraint) {
+			// 				$constraint->aspectRatio();
+			// 				$constraint->upsize();
+			// 		});
+			// }
+
+			$img->resize($resize, null, function ($constraint) {
+				$constraint->aspectRatio();
+			});
+
+			if(env('STORAGE') &&  env('STORAGE') == 's3'){
+				$resource = $img->stream()->detach();
+
+				$save = Storage::disk('s3')->put($upload, $resource, 'public');
+				if ($save) {
+						$result = [
+							'status' => 'success',
+							'path'  => $upload
+						];
+				}
+				else {
+					$result = [
+						'status' => 'fail'
+					];
+				}
+			}else{
+				if ($img->save($upload)) {
+						$result = [
+							'status' => 'success',
+							'path'  => $upload
+						];
+				}
+				else {
+					$result = [
+						'status' => 'fail'
+					];
+				}
+			}
+
 
 			return $result;
 	}
@@ -500,7 +585,7 @@ class MyHelper{
 	public static function cekImageNews($type, $foto) {
 			// kalo ada foto
 			$decoded = base64_decode($foto);
-			
+
 			$img     = Image::make($decoded);
 
 			// cek resolusi
@@ -550,24 +635,24 @@ class MyHelper{
 							}
 						}
 					}
-					
+
 					break;
-				
+
 				case 'rectangle':
 					if ($width < 600) {
 						$result = [
 							'status'   => 'fail',
 							'messages' => ['photo width minimum 600']
-						];  
+						];
 					}
 					else {
 						$result = [
 							'status' => 'success',
 							'width'  => $width
-						];  
+						];
 					}
 					break;
-				
+
 				default:
 					$result = [
 						'status' => 'fail'
@@ -590,7 +675,7 @@ class MyHelper{
 				$pictName = $name.$ext;
 			else
 				$pictName = mt_rand(0, 1000).''.time().''.$ext;
-			
+
 			// path
 			$upload = $path.$pictName;
 
@@ -604,7 +689,7 @@ class MyHelper{
 							$constraint->upsize();
 					});
 			} */
-		
+
 			if($imgwidth < $imgheight){
 				//potrait
 				if($imgwidth < $width){
@@ -613,7 +698,7 @@ class MyHelper{
 						$constraint->upsize();
 					});
 				}
-				
+
 				if($imgwidth > $width){
 					$img->resize($width, null, function ($constraint) {
 						$constraint->aspectRatio();
@@ -632,7 +717,7 @@ class MyHelper{
 						$constraint->aspectRatio();
 					});
 				}
-			
+
 			}
 			/* if($imgwidth < $width){
 				$img->resize($width, null, function ($constraint) {
@@ -657,24 +742,39 @@ class MyHelper{
 					$constraint->upsize();
 				});
 			} */
-		
+
 			$img->crop($width, $height);
 
-			// $resource = $img->stream()->detach();
+			if(env('STORAGE') &&  env('STORAGE') == 's3'){
+				$resource = $img->stream()->detach();
 
-			// $save = Storage::disk('s3')->put($upload, $resource, 'public');
-
-			if ($img->save($upload)) {
+				$save = Storage::disk('s3')->put($upload, $resource, 'public');
+				if ($save) {
+						$result = [
+							'status' => 'success',
+							'path'  => $upload
+						];
+				}
+				else {
 					$result = [
-						'status' => 'success',
-						'path'  => $upload
+						'status' => 'fail'
 					];
+				}
+			}else{
+				if ($img->save($upload)) {
+						$result = [
+							'status' => 'success',
+							'path'  => $upload
+						];
+				}
+				else {
+					$result = [
+						'status' => 'fail'
+					];
+				}
 			}
-			else {
-				$result = [
-					'status' => 'fail'
-				];
-			}  
+
+
 
 			return $result;
 	}
@@ -688,7 +788,7 @@ class MyHelper{
 			$pictName = $name.'.'.$ext;
 		else
 			$pictName = mt_rand(0, 1000).''.time().'.'.$ext;
-	
+
 		// path
 		$upload = $path.$pictName;
 
@@ -704,35 +804,38 @@ class MyHelper{
 			$result = [
 				'status' => 'fail'
 			];
-		}  
+		}
 
 		return $result;
 	}
 
 	public static function deletePhoto($path) {
-		// if(Storage::disk('s3')->exists($path)) {
-		// 	if(Storage::disk('s3')->delete($path)){
-		// 		return true;
-		// 	}
-		// 	else {
-		// 		return false;
-		// 	}
-		// }
-		// else {
-		// 	return true;
-		// }
-
-		if (file_exists($path)) {
-			if (unlink($path)) {
-				return true;
+		if(env('STORAGE') &&  env('STORAGE') == 's3'){
+			if(Storage::disk('s3')->exists($path)) {
+				if(Storage::disk('s3')->delete($path)){
+					return true;
+				}
+				else {
+					return false;
+				}
 			}
 			else {
-				return false;
+				return true;
+			}
+		}else{
+			if (file_exists($path)) {
+				if (unlink($path)) {
+					return true;
+				}
+				else {
+					return false;
+				}
+			}
+			else {
+				return true;
 			}
 		}
-		else {
-			return true;
-		}
+
 	}
 
 	public static function sendNotification($id, $type){
@@ -741,7 +844,7 @@ class MyHelper{
 
 	public static function cariOperator($phone){
 		$prefix = $result = substr($phone, 0, 4);
-		
+
 		$telkomsel = ['0811','0812','0813','0821','0822','0823','0852','0853','0851','0813'];
 		$indosat   = ['0814','0815','0816','0855','0856','0857','0858'];
 		$XL        = ['0817','0818','0819','0859','0877','0878'];
@@ -749,7 +852,7 @@ class MyHelper{
 		$smart     = ['0881','0882','0883','0884','0885','0886','0887','0888','0889'];
 		$ceria     = ['0828'];
 		$axis      = ['0838','0831','0832','0833'];
-		
+
 		if(in_array($prefix, $telkomsel))
 			return 'Telkomsel';
 		elseif(in_array($prefix, $indosat))
@@ -776,9 +879,9 @@ class MyHelper{
 
 					$bar = 'https://chart.googleapis.com/chart?chl='.$QR.'&chs=250x250&cht=qr&chld=H%7C0';
 					$url = html_entity_decode($bar);
-					
+
 					break;
-				
+
 				case 'maps':
 					$maps = 'http://maps.googleapis.com/maps/api/staticmap?center='.$character.'&zoom=15&scale=false&size=200x350&maptype=roadmap&format=png&visual_refresh=true&markers=size:large%7Ccolor:0xff0000%7Clabel:toko%'.$character.'&key=AIzaSyCOHBNv3Td9_zb_7uW-AJDU6DHFYk-8e9Y';
 					$url = html_entity_decode($maps);
@@ -798,14 +901,14 @@ class MyHelper{
 
 			curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
 			curl_setopt($ch, CURLOPT_BINARYTRANSFER, 1);
-					
-			curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, FALSE); 
+
+			curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, FALSE);
 			curl_setopt ($ch, CURLOPT_SSL_VERIFYPEER, FALSE);
-			curl_setopt($ch, CURLOPT_TIMEOUT, 30); 
+			curl_setopt($ch, CURLOPT_TIMEOUT, 30);
 			curl_setopt ($ch, CURLOPT_CONNECTTIMEOUT, 30);
 
 			$page = curl_exec( $ch);
-			curl_close($ch); 
+			curl_close($ch);
 
 			if(file_exists($filename)) {
 				return true;
@@ -869,14 +972,14 @@ class MyHelper{
 
 	public static function post($url, $bearer=null, $post, $form_type=0, $header=null){
 		$client = new Client;
-		
+
 		$content = array(
 			'headers' => [
 				'Accept'        => 'application/json',
 				'Content-Type'  => 'application/json',
 			]
 		);
-        
+
 		// if form_type = 0
 		if ($form_type == 0) {
 			$content['json'] = (array)$post;
@@ -915,6 +1018,63 @@ class MyHelper{
 		}
 	}
 
+	public static function post2($url, $bearer=null, $post, $form_type=0, $header=null){
+		$client = new Client;
+
+		$content = array(
+			'headers' => [
+				'Accept'        => 'application/json',
+				'Content-Type'  => 'application/json',
+			]
+		);
+
+		// if form_type = 0
+		if ($form_type == 0) {
+			$content['json'] = (array)$post;
+		}
+		else {
+			$content['form_params'] = $post;
+		}
+
+		// if null bearer
+		if (!is_null($bearer)) {
+			$content['headers']['Authorization'] = $bearer;
+		}
+
+		if(!is_null($header)){
+			if(is_array($header)){
+				foreach($header as $key => $dataHeader){
+					$content['headers'][$key] = $dataHeader;
+				}
+			}
+		}
+		$content['timeout']=65;
+		try {
+			$response = $client->post($url, $content);
+			$return = json_decode($response->getBody(), true);
+			return [
+				'status_code' => $response->getStatusCode(),
+				'response' => $return
+			];
+		}catch (\GuzzleHttp\Exception\RequestException $e) {
+			try{
+				if($e->getResponse()){
+					$response = $e->getResponse()->getBody()->getContents();
+					$return = json_decode($response, true);
+					return [
+						'status_code' => $e->getResponse()->getStatusCode(),
+						'response' => $return
+					];
+				}
+				else  return ['status' => 'fail', 'messages' => [0 => 'Check your internet connection.']];
+			}
+			catch(Exception $e){
+				return ['status' => 'fail', 'messages' => [0 => 'Check your internet connection.']];
+			}
+		}
+	}
+
+
     public static function getBearerToken() {
 		$headers = null;
 		if (isset($_SERVER['Authorization'])) {
@@ -928,24 +1088,16 @@ class MyHelper{
                 $headers = trim($requestHeaders['Authorization']);
             }
         }
-        
+
         if (!empty($headers)) {
             if (preg_match('/Bearer\s(\S+)/', $headers, $matches)) {
                 return $matches[1];
             }
         }
-        
-        if (isset($_SERVER['REDIRECT_HTTP_AUTHENTICATION']) && $headers == null){
-            $headers = trim($_SERVER["REDIRECT_HTTP_AUTHENTICATION"]);
-        }
-        
-        if (isset($_SERVER['REDIRECT_REDIRECT_HTTP_AUTHORIZATION']) && $headers == null){
-            $headers = trim($_SERVER["REDIRECT_REDIRECT_HTTP_AUTHORIZATION"]);
-        }
 
-        return $headers;
+        return null;
 	}
-	
+
 	public static function curl($url, $cookies=0, $post=0, $referrer=0, $XMLRequest=0, $header=1, $proxyport=0) {
 		global $_GET;
 
@@ -1005,7 +1157,7 @@ class MyHelper{
 
 		return $page;
 	}
-	
+
 	public static function urlTransaction($url, $method, $data, $content) {
 		$curl = curl_init();
 		curl_setopt_array($curl, array(
@@ -1023,13 +1175,13 @@ class MyHelper{
 			"key: 39555583a3816088cb1e32ab2dcda012"
 			),
 		));
- 
+
 		$response = curl_exec($curl);
 		$err = curl_error($curl);
 
 		return json_decode($response);
 	}
-	
+
 	public static function sendPush ($tokens, $subject, $messages, $image=null, $dataOptional=[]) {
 
         $optionBuiler = new OptionsBuilder();
@@ -1046,8 +1198,8 @@ class MyHelper{
         // if (!is_null($image) || $image != null) {
         //     $notificationBuilder->setIcon($image);
         // }
-        
-        /* INI YANG PERMINTAANNYA DARI ANDOID BIAR BISA DICUTOM KATANYA */ 
+
+        /* INI YANG PERMINTAANNYA DARI ANDOID BIAR BISA DICUTOM KATANYA */
    		/* YANG ATASNYA NNTI DI COMMENT AJA, YANG INI DIAKTIFKAN */
         // $notificationBuilder = new PayloadNotificationBuilder("");
 
@@ -1065,7 +1217,7 @@ class MyHelper{
         // build semua
         $option       = $optionBuiler->build();
         $notification = $notificationBuilder->build();
-        $data         = $dataBuilder->build(); 
+        $data         = $dataBuilder->build();
 
         // print_r($option);
         // print_r($notification);
@@ -1081,7 +1233,7 @@ class MyHelper{
         $fail    = $downstreamResponse->numberFailure();
 
         if ($fail != 0) {
-            // return Array (key:token, value:errror) - in production you should remove from your database the tokens present in this array 
+            // return Array (key:token, value:errror) - in production you should remove from your database the tokens present in this array
             $error = $downstreamResponse->tokensWithError();
             // print_r($error);
         }
@@ -1089,10 +1241,10 @@ class MyHelper{
         // $downstreamResponse->numberModification();;
 
         //return Array - you must remove all this tokens in your database
-        $downstreamResponse->tokensToDelete(); 
+        $downstreamResponse->tokensToDelete();
 
         //return Array (key : oldToken, value : new token - you must change the token in your database )
-        $downstreamResponse->tokensToModify(); 
+        $downstreamResponse->tokensToModify();
 
         //return Array - you should try to resend the message to the tokens in the array
         $downstreamResponse->tokensToRetry();
@@ -1100,11 +1252,11 @@ class MyHelper{
         $result = [
             'success' => $success,
             'fail'    => $fail
-        ];        
+        ];
 
         return $result;
     }
-	
+
 	// based on field Users Table
     public static function searchDeviceToken($type, $value) {
         $result = [];
@@ -1152,7 +1304,7 @@ class MyHelper{
 
 		$context  = stream_context_create($options);
 		$result = file_get_contents($url, false, $context);
-	 
+
 		return $result;
     }
 
@@ -1161,7 +1313,7 @@ class MyHelper{
 
     	if (empty($user)) {
     		return [
-    			'status'	=> 'fail', 
+    			'status'	=> 'fail',
     			'messages'	=> 'User Not Found'
     		];
     	}
@@ -1183,7 +1335,7 @@ class MyHelper{
 
     	if (!$user) {
     		return [
-    			'status'	=> 'fail', 
+    			'status'	=> 'fail',
     			'messages'	=> 'Something Went Wrong'
     		];
     	}
@@ -1196,17 +1348,17 @@ class MyHelper{
     	return $result;
 
 	}
-	
+
 	public static function parseYoutube($url) {
         if (($cek = strpos($url, "youtu.be")) !== FALSE) {
             $parse = strpos($url, '/', $cek+1);
-            $key = substr($url, $parse+1); 
+            $key = substr($url, $parse+1);
         } else{
-            if (($parse = strpos($url, "v=")) !== FALSE) { 
+            if (($parse = strpos($url, "v=")) !== FALSE) {
                 if(($index = strpos($url, '&', $parse)) !== FALSE){
-					$key = substr($url, $parse+2, $index - 2 - $parse ); 
+					$key = substr($url, $parse+2, $index - 2 - $parse );
                 }else{
-                    $key = substr($url, $parse+2); 
+                    $key = substr($url, $parse+2);
                 }
             }
 		}
@@ -1279,7 +1431,7 @@ class MyHelper{
 		}
 	}
 
-	public static function insertCondition($type, $id, $conditions){ 
+	public static function insertCondition($type, $id, $conditions){
 		if($type == 'autocrm'){
 			$deleteRuleParent = AutocrmRuleParent::where('id_'.$type, $id)->get();
 			if(count($deleteRuleParent)>0){
@@ -1317,7 +1469,7 @@ class MyHelper{
 			}
 		}
 
-		$operatorexception = ['gender', 
+		$operatorexception = ['gender',
 							'birthday_month',
 							'city_name',
 							'city_postal_code',
@@ -1343,17 +1495,17 @@ class MyHelper{
 							'birthday_today',
 							'register_today'
 							];
-		
-		$data_rule = array(); 
-		
-		foreach ($conditions as $key => $ruleParent) { 
+
+		$data_rule = array();
+
+		foreach ($conditions as $key => $ruleParent) {
 			$dataRuleParent['id_'.$type] = $id;
 			$dataRuleParent[$type.'_rule'] = $ruleParent['rule'];
 			$dataRuleParent[$type.'_rule_next'] = $ruleParent['rule_next'];
-			
+
 			unset($ruleParent['rule']);
 			unset($ruleParent['rule_next']);
-			
+
 			if($type == 'autocrm'){
 				$createRuleParent = AutocrmRuleParent::create($dataRuleParent);
 			}
@@ -1366,15 +1518,15 @@ class MyHelper{
 			elseif($type == 'inbox_global'){
 				$createRuleParent = InboxGlobalRuleParent::create($dataRuleParent);
 			}
-			
+
 			if(!$createRuleParent){
 				DB::rollBack();
 				return ['status' => 'fail'];
 			}
 			foreach ($ruleParent as $i => $row) {
-				$condition['id_'.$type.'_rule_parent'] = $createRuleParent['id_'.$type.'_rule_parent']; 
-				$condition[$type.'_rule_subject'] = $row['subject']; 
-			
+				$condition['id_'.$type.'_rule_parent'] = $createRuleParent['id_'.$type.'_rule_parent'];
+				$condition[$type.'_rule_subject'] = $row['subject'];
+
 				if($row['subject'] == 'all_user'){
 					$condition[$type.'_rule_operator'] = "";
 				}elseif(in_array($row['subject'], $operatorexception)){
@@ -1390,14 +1542,14 @@ class MyHelper{
 				} else {
 					$condition[$type.'_rule_param'] = $row['parameter'];
 				}
-				
-				$condition['created_at'] =  date('Y-m-d H:i:s');  
-				$condition['updated_at'] =  date('Y-m-d H:i:s'); 
-				 
-				array_push($data_rule, $condition); 
-			} 
-		} 
-	   
+
+				$condition['created_at'] =  date('Y-m-d H:i:s');
+				$condition['updated_at'] =  date('Y-m-d H:i:s');
+
+				array_push($data_rule, $condition);
+			}
+		}
+
 		if($type == 'autocrm'){
 			$insert = AutocrmRule::insert($data_rule);
 		}
@@ -1410,14 +1562,14 @@ class MyHelper{
 		elseif($type == 'inbox_global'){
 			$insert = InboxGlobalRule::insert($data_rule);
 		}
-		
+
 		if($insert){
-			return ['status' => 'success', 'data' =>  $data_rule]; 
+			return ['status' => 'success', 'data' =>  $data_rule];
 		}else{
 			DB::rollBack();
 			return ['status' => 'fail'];
 		}
-	} 
+	}
 
 	public static function cut_str($str, $left, $right) {
 		$str = substr ( stristr ( $str, $left ), strlen ( $left ) );
@@ -1431,44 +1583,44 @@ class MyHelper{
 		$arrtime = str_split($timestamp);
 
 		$arrphone = str_split($phone);
-		
-		$qr[] = rand(0,9); 
-		$qr[] = rand(0,9); 
-		$qr[] = (int)$arrtime[0]; 
-		$qr[] = (int)$arrtime[1]; 
-		$qr[] = (int)$arrtime[2]; 
-		$qr[] = rand(0,9); 
-		$qr[] = rand(0,9); 
-		$qr[] = rand(0,9); 
-		$qr[] = (int)$arrtime[3]; 
-		$qr[] = (int)$arrtime[4]; 
-		$qr[] = (int)$arrtime[5]; 
-		$qr[] = (int)$arrtime[6]; 
-		$qr[] = rand(0,9); 
-		$qr[] = (int)$arrtime[7]; 
-		$qr[] = (int)$arrtime[8]; 
-		$qr[] = (int)$arrtime[9]; 
-		$qr[] = rand(0,9); 
-		$qr[] = (int)$arrphone[0]; 
-		$qr[] = (int)$arrphone[1]; 
-		$qr[] = rand(0,9); 
-		$qr[] = rand(0,9); 
-		$qr[] = (int)$arrphone[2]; 
-		$qr[] = (int)$arrphone[3]; 
-		$qr[] = (int)$arrphone[4]; 
-		$qr[] = rand(0,9); 
-		$qr[] = rand(0,9); 
-		$qr[] = (int)$arrphone[5]; 
-		$qr[] = (int)$arrphone[6]; 
-		$qr[] = (int)$arrphone[7]; 
+
 		$qr[] = rand(0,9);
-		
+		$qr[] = rand(0,9);
+		$qr[] = (int)$arrtime[0];
+		$qr[] = (int)$arrtime[1];
+		$qr[] = (int)$arrtime[2];
+		$qr[] = rand(0,9);
+		$qr[] = rand(0,9);
+		$qr[] = rand(0,9);
+		$qr[] = (int)$arrtime[3];
+		$qr[] = (int)$arrtime[4];
+		$qr[] = (int)$arrtime[5];
+		$qr[] = (int)$arrtime[6];
+		$qr[] = rand(0,9);
+		$qr[] = (int)$arrtime[7];
+		$qr[] = (int)$arrtime[8];
+		$qr[] = (int)$arrtime[9];
+		$qr[] = rand(0,9);
+		$qr[] = (int)$arrphone[0];
+		$qr[] = (int)$arrphone[1];
+		$qr[] = rand(0,9);
+		$qr[] = rand(0,9);
+		$qr[] = (int)$arrphone[2];
+		$qr[] = (int)$arrphone[3];
+		$qr[] = (int)$arrphone[4];
+		$qr[] = rand(0,9);
+		$qr[] = rand(0,9);
+		$qr[] = (int)$arrphone[5];
+		$qr[] = (int)$arrphone[6];
+		$qr[] = (int)$arrphone[7];
+		$qr[] = rand(0,9);
+
 		for($i = 8; $i < count($arrphone); $i++){
-			$qr[] = $arrphone[$i]; 
+			$qr[] = $arrphone[$i];
 		}
 
 		for($i = 0; $i < 5; $i++){
-			$qr[] = rand(0,9); 
+			$qr[] = rand(0,9);
 		}
 
 		if($useragent == "Android"){
@@ -1480,7 +1632,7 @@ class MyHelper{
 		}
 
 		$qr = implode('', $qr);
-		
+
 		return $qr;
 	}
 
@@ -1505,40 +1657,40 @@ class MyHelper{
 
 		$qrcode = str_split($qrcode);
 
-		$arrtimestamp[] = $qrcode[0]; 
-		$arrtimestamp[] = $qrcode[1]; 
-		$arrtimestamp[] = $qrcode[2]; 
-		$arrtimestamp[] = $qrcode[6]; 
-		$arrtimestamp[] = $qrcode[7]; 
-		$arrtimestamp[] = $qrcode[8]; 
-		$arrtimestamp[] = $qrcode[9]; 
-		$arrtimestamp[] = $qrcode[11]; 
-		$arrtimestamp[] = $qrcode[12]; 
-		$arrtimestamp[] = $qrcode[13]; 
-		
-		$arrphone[] = $qrcode[15]; 
-		$arrphone[] = $qrcode[16]; 
-		$arrphone[] = $qrcode[19]; 
-		$arrphone[] = $qrcode[20]; 
-		$arrphone[] = $qrcode[21]; 
-		$arrphone[] = $qrcode[24]; 
-		$arrphone[] = $qrcode[25]; 
-		$arrphone[] = $qrcode[26]; 
+		$arrtimestamp[] = $qrcode[0];
+		$arrtimestamp[] = $qrcode[1];
+		$arrtimestamp[] = $qrcode[2];
+		$arrtimestamp[] = $qrcode[6];
+		$arrtimestamp[] = $qrcode[7];
+		$arrtimestamp[] = $qrcode[8];
+		$arrtimestamp[] = $qrcode[9];
+		$arrtimestamp[] = $qrcode[11];
+		$arrtimestamp[] = $qrcode[12];
+		$arrtimestamp[] = $qrcode[13];
+
+		$arrphone[] = $qrcode[15];
+		$arrphone[] = $qrcode[16];
+		$arrphone[] = $qrcode[19];
+		$arrphone[] = $qrcode[20];
+		$arrphone[] = $qrcode[21];
+		$arrphone[] = $qrcode[24];
+		$arrphone[] = $qrcode[25];
+		$arrphone[] = $qrcode[26];
 
 		for($i = 28; $i < count($qrcode); $i++){
-			$arrphone[] = $qrcode[$i]; 
+			$arrphone[] = $qrcode[$i];
 		}
 
 		$result['timestamp'] = implode('', $arrtimestamp);
 		$result['phone'] = implode('', $arrphone);
 		$result['device'] = $device;
-		
+
 		return $result;
 	}
 
 	public static function dateFormatInd($date){
 		$bulan = ['','Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
-		
+
 		return date('d', strtotime($date)).' '.$bulan[date('n', strtotime($date))].' '.date('Y', strtotime($date)).' '.date('H:i', strtotime($date));
 	}
 }

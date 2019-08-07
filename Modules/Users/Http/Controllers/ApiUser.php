@@ -36,6 +36,8 @@ use Modules\Users\Http\Requests\users_profile;
 use Modules\Users\Http\Requests\users_profile_admin;
 use Modules\Users\Http\Requests\users_notification;
 
+use Modules\Balance\Http\Controllers\BalanceController;
+
 use App\Lib\MyHelper;
 use Validator;
 use Hash;
@@ -46,6 +48,7 @@ use Auth;
 class ApiUser extends Controller
 {
 	function __construct() {
+		ini_set('max_execution_time', 0);
         date_default_timezone_set('Asia/Jakarta');
 		$this->home     = "Modules\Users\Http\Controllers\ApiHome";
 		if(\Module::collections()->has('Autocrm')) {
@@ -55,22 +58,22 @@ class ApiUser extends Controller
 		$this->inbox  = "Modules\InboxGlobal\Http\Controllers\ApiInbox";
         $this->setting_fraud = "Modules\SettingFraud\Http\Controllers\ApiSettingFraud";
     }
-	
+
 	function LogActivityFilter($rule='and', $conditions = null, $order_field='id', $order_method='asc', $skip=0, $take=999999999999){
 		$query = DB::table('mysql2.'.env('DB2_DATABASE').'.log_activities as t_log_activities')->select('t_log_activities.*',
 													't_users.name',
 													't_users.email'
 													)
 					->leftJoin('mysql.'.env('DB_DATABASE').'.users as t_users','t_users.phone','=','t_log_activities.phone')
-					
+
 					->orderBy($order_field, $order_method);
-		
+
 		if($conditions != null){
 			foreach($conditions as $condition){
 				if(isset($condition['subject'])){
 					if($condition['subject'] == 'name' || $condition['subject'] == 'email'){
 						$var = "t_users.".$condition['subject'];
-						
+
 						if($rule == 'and'){
 							if($condition['operator'] == 'like')
 								$query = $query->where($var,'like','%'.$condition['parameter'].'%');
@@ -83,10 +86,10 @@ class ApiUser extends Controller
 								$query = $query->orWhere($var,'=',$condition['parameter']);
 						}
 					}
-					
+
 					if($condition['subject'] == 'phone' || $condition['subject'] == 'url' || $condition['subject'] == 'subject' || $condition['subject'] == 'request' || $condition['subject'] == 'response' || $condition['subject'] == 'ip' || $condition['subject'] == 'useragent'){
 						$var = "t_log_activities.".$condition['subject'];
-						
+
 						if($rule == 'and'){
 							if($condition['operator'] == 'like')
 								$query = $query->where($var,'like','%'.$condition['parameter'].'%');
@@ -99,23 +102,23 @@ class ApiUser extends Controller
 								$query = $query->orWhere($var,'=',$condition['parameter']);
 						}
 					}
-					
+
 					if($condition['subject'] == 'response_status'){
 						$var = "t_log_activities.".$condition['subject'];
-						
+
 						if($rule == 'and'){
 							$query = $query->where($var,'=',$condition['operator']);
 						} else {
 							$query = $query->orWhere($var,'=',$condition['operator']);
 						}
 					}
-				} 
+				}
 			}
 		}
-		
+
 		$hasil = $query->skip($skip)->take($take)->get()->toArray();
 		$hasilcount = $query->count();
-		
+
 		if($hasil){
 			$result = ['status'	=> 'success',
                        'result'	=> $hasil,
@@ -127,10 +130,10 @@ class ApiUser extends Controller
                         'messages'	=> ['Log Activity Not Found']
 						];
 		}
-		
+
 		return $result;
 	}
-	
+
 	function UserFilter($conditions = null, $order_field='id', $order_method='asc', $skip=0, $take=99999999999){
 		$hasilSebelum = [];
 		$hasilAkhir = [];
@@ -141,7 +144,7 @@ class ApiUser extends Controller
 				$query = User::leftJoin('cities','cities.id_city','=','users.id_city')
 				->leftJoin('provinces','provinces.id_province','=','cities.id_province')
 				->orderBy($order_field, $order_method);
-				
+
 				$notProduct = false;
 				$notOutlet = false;
 
@@ -153,12 +156,12 @@ class ApiUser extends Controller
 					$userTrxProduct = false;
 					$exceptUserTrxProduct = false;
 					$scanOtherProduct = false;
-					
+
 					$rule = $cond['rule'];
 					unset($cond['rule']);
 					$conRuleNext = $cond['rule_next'];
 					unset($cond['rule_next']);
-					
+
 					if(isset($cond['rules'])){
 						$cond = $cond['rules'];
 					}
@@ -197,14 +200,14 @@ class ApiUser extends Controller
 								$exceptUserTrxProduct = true;
 							}
 						}
-						
+
 						if($condition['subject'] == 'last_trx_date'){
 							$exceptUserTrxProduct = true;
 						}
-						
-						
+
+
 					}
-					
+
 					if($exceptUserTrxProduct == true || $countTrxDate > 1){
 						$userTrxProduct = false;
 					}
@@ -331,7 +334,7 @@ class ApiUser extends Controller
 								DB::raw('YEAR(CURDATE()) - YEAR(users.birthday) AS age')
 								)
 							->whereNotIn('users.id', $exceptUser);
-							
+
 				}
 
 				if($notOutlet){
@@ -347,7 +350,7 @@ class ApiUser extends Controller
 							->whereNotIn('users.id', $exceptUser);
 				}
 				$hasil = array_pluck($query->get()->toArray(),'id');
-				
+
 				if($key > 0){
 					if($ruleNext == 'and'){
 						$hasilSebelum = array_intersect($hasil,$hasilSebelum);
@@ -359,7 +362,7 @@ class ApiUser extends Controller
 					$hasilSebelum = $hasil;
 					$ruleNext = $conRuleNext;
 				}
-			
+
 				$key++;
 			}
 			$hasilAkhir = User::leftJoin('cities','cities.id_city','=','users.id_city')
@@ -396,12 +399,12 @@ class ApiUser extends Controller
                         'messages'	=> ['User Not Found']
 						];
 		}
-		
+
 		return $result;
 	}
 
 	function queryFilter($conditions, $rule, $query, $userTrxProduct){
-		
+
 		foreach($conditions as $index => $condition){
 			if(isset($condition['subject'])){
 				if($condition['subject'] == 'all_user'){
@@ -413,7 +416,7 @@ class ApiUser extends Controller
 				}
 				if($condition['subject'] == 'name' || $condition['subject'] == 'phone' || $condition['subject'] == 'email' || $condition['subject'] == 'address'){
 					$var = "users.".$condition['subject'];
-					
+
 					if($rule == 'and'){
 						if($condition['operator'] == 'like')
 							$query = $query->where($var,'like','%'.$condition['parameter'].'%');
@@ -426,12 +429,12 @@ class ApiUser extends Controller
 							$query = $query->orWhere($var,'=',$condition['parameter']);
 					}
 				}
-				
+
 				if($condition['subject'] == 'gender' || $condition['subject'] == 'is_suspended' || $condition['subject'] == 'email_verified' || $condition['subject'] == 'phone_verified' || $condition['subject'] == 'email_unsubscribed' || $condition['subject'] == 'provider' || $condition['subject'] == 'city_name' || $condition['subject'] == 'city_postal_code' || $condition['subject'] == 'province_name' || $condition['subject'] == 'level'){
 					if($condition['subject'] == 'city_name' || $condition['subject'] == 'city_postal_code') $var = "cities.".$condition['subject'];
 					else if($condition['subject'] == 'province_name') $var = "provinces.".$condition['subject'];
 					else $var = "users.".$condition['subject'];
-					
+
 					if($condition['operator'] != '='){
 						$condition['parameter'] = $condition['operator'];
 					}
@@ -447,7 +450,7 @@ class ApiUser extends Controller
 					if($condition['operator'] != '='){
 						$condition['parameter'] = $condition['operator'];
 					}
-					
+
 					if($condition['parameter'] == 'None'){
 						if($rule == 'and'){
 							$query = $query->whereNull('users.android_device');
@@ -457,7 +460,7 @@ class ApiUser extends Controller
 							$query = $query->orWhereNull('users.ios_device');
 						}
 					}
-					
+
 					if($condition['parameter'] == 'Android'){
 						if($rule == 'and'){
 							$query = $query->whereNotNull('users.android_device');
@@ -467,7 +470,7 @@ class ApiUser extends Controller
 							$query = $query->orWhereNull('users.ios_device');
 						}
 					}
-					
+
 					if($condition['parameter'] == 'IOS'){
 						if($rule == 'and'){
 							$query = $query->notNull('users.android_device');
@@ -477,7 +480,7 @@ class ApiUser extends Controller
 							$query = $query->orwhereNotNull('users.ios_device');
 						}
 					}
-					
+
 					if($condition['parameter'] == 'Both'){
 						if($rule == 'and'){
 							$query = $query->whereNotNull('users.android_device');
@@ -488,7 +491,7 @@ class ApiUser extends Controller
 						}
 					}
 				}
-				
+
 				if($condition['subject'] == 'age'){
 					if($rule == 'and'){
 						$query = $query->whereRaw(DB::raw('timestampdiff(year,users.birthday,curdate()) '.$condition['operator'].' '.$condition['parameter']));
@@ -496,7 +499,7 @@ class ApiUser extends Controller
 						$query = $query->orWhereRaw(DB::raw('timestampdiff(year,users.birthday,curdate()) '.$condition['operator'].' '.$condition['parameter']));
 					}
 				}
-				
+
 				if($condition['subject'] == 'birthday_date'){
 					$var = 'users.birthday';
 					if($rule == 'and'){
@@ -560,7 +563,7 @@ class ApiUser extends Controller
 						$query = $query->orWhere('users.points',$condition['operator'],$condition['parameter']);
 					}
 				}
-				
+
 				if($condition['subject'] == 'balance'){
 					if($rule == 'and'){
 						$query = $query->where('users.balance',$condition['operator'],$condition['parameter']);
@@ -568,7 +571,7 @@ class ApiUser extends Controller
 						$query = $query->orWhere('users.balance',$condition['operator'],$condition['parameter']);
 					}
 				}
-				
+
 				if($condition['subject'] == 'register_date'){
 					if($rule == 'and'){
 						$query = $query->where('users.created_at',$condition['operator'],$condition['parameter']);
@@ -585,18 +588,18 @@ class ApiUser extends Controller
 						$query = $query->orWhere('users.created_at', '=', $today);
 					}
 				}
-				
-				
+
+
 				if($condition['subject'] == 'trx_type' || $condition['subject'] == 'trx_shipment_courier' || $condition['subject'] == 'trx_payment_type' || $condition['subject'] == 'trx_payment_status'){
-					if($condition['subject'] == 'trx_type') 
+					if($condition['subject'] == 'trx_type')
 						$var = "transactions.trasaction_type";
-					if($condition['subject'] == 'trx_payment_type') 
+					if($condition['subject'] == 'trx_payment_type')
 						$var = "transactions.trasaction_payment_type";
-					if($condition['subject'] == 'trx_payment_status') 
+					if($condition['subject'] == 'trx_payment_status')
 						$var = "transactions.transaction_payment_status";
-					if($condition['subject'] == 'trx_shipment_courier') 
+					if($condition['subject'] == 'trx_shipment_courier')
 						$var = "transaction_shipments.shipment_courier";
-					
+
 					if($condition['operator'] != '='){
 						$condition['parameter'] = $condition['operator'];
 					}
@@ -607,7 +610,7 @@ class ApiUser extends Controller
 						$query = $query->orWhere($var,'=',$condition['parameter']);
 					}
 				}
-				
+
 				if($condition['subject'] == 'trx_date'){
 					if($rule == 'and'){
 						if($userTrxProduct == false){
@@ -619,7 +622,7 @@ class ApiUser extends Controller
 						}
 					}
 				}
-				
+
 				if($condition['subject'] == 'last_trx'){
 					$condition['parameter'] = (int)$condition['parameter'] - 1;
 					$lastDate = date('Y-m-d', strtotime('-'.$condition['parameter'].' days'));
@@ -630,7 +633,7 @@ class ApiUser extends Controller
 						$query = $query->orWhereDate('transactions.transaction_date',$condition['operator'],$lastDate);
 					}
 				}
-				
+
 				if($condition['subject'] == 'trx_outlet'){
 					if($condition['operator'] != '='){
 						$condition['parameter'] = $condition['operator'];
@@ -652,7 +655,7 @@ class ApiUser extends Controller
 						$query = $query->orWhere('transactions.id_outlet','=',$condition['parameter']);
 					}
 				}
-				
+
 				if($condition['subject'] == 'trx_count'){
 					if($condition['parameter'] != 0){
 						if($rule == 'and'){
@@ -666,11 +669,11 @@ class ApiUser extends Controller
 								$query = $query->whereNotNull('transactions.id_transaction');
 							} else {
 								$query = $query->orWhereNotNull('transactions.id_transaction');
-							}	
+							}
 						}
 					}
 				}
-				
+
 				if($condition['subject'] == 'trx_subtotal'){
 					if($rule == 'and'){
 						$query = $query->where('transactions.transaction_subtotal',$condition['operator'],$condition['parameter']);
@@ -678,7 +681,7 @@ class ApiUser extends Controller
 						$query = $query->orWhere('transactions.transaction_subtotal',$condition['operator'],$condition['parameter']);
 					}
 				}
-				
+
 				if($condition['subject'] == 'trx_tax'){
 					if($rule == 'and'){
 						$query = $query->where('transactions.transaction_tax',$condition['operator'],$condition['parameter']);
@@ -686,7 +689,7 @@ class ApiUser extends Controller
 						$query = $query->orWhere('transactions.transaction_tax',$condition['operator'],$condition['parameter']);
 					}
 				}
-				
+
 				if($condition['subject'] == 'trx_service'){
 					if($rule == 'and'){
 						$query = $query->where('transactions.transaction_service',$condition['operator'],$condition['parameter']);
@@ -694,7 +697,7 @@ class ApiUser extends Controller
 						$query = $query->orWhere('transactions.transaction_service',$condition['operator'],$condition['parameter']);
 					}
 				}
-				
+
 				if($condition['subject'] == 'trx_discount'){
 					if($rule == 'and'){
 						$query = $query->where('transactions.transaction_discount',$condition['operator'],$condition['parameter']);
@@ -702,7 +705,7 @@ class ApiUser extends Controller
 						$query = $query->orWhere('transactions.transaction_discount',$condition['operator'],$condition['parameter']);
 					}
 				}
-				
+
 				if($condition['subject'] == 'trx_payment_type'){
 					if($condition['operator'] != '='){
 						$condition['parameter'] = $condition['operator'];
@@ -713,7 +716,7 @@ class ApiUser extends Controller
 						$query = $query->orWhere('transactions.trasaction_payment_type','=',$condition['parameter']);
 					}
 				}
-				
+
 				if($condition['subject'] == 'trx_payment_status'){
 					if($condition['operator'] != '='){
 						$condition['parameter'] = $condition['operator'];
@@ -724,7 +727,7 @@ class ApiUser extends Controller
 						$query = $query->orWhere('transactions.transaction_payment_status','=',$condition['parameter']);
 					}
 				}
-				
+
 				if($condition['subject'] == 'trx_void_count'){
 					if($rule == 'and'){
 						$query = $query->whereNotNull('transactions.void_date')->havingRaw('COUNT(*) '.$condition['operator'].' '.$condition['parameter']);
@@ -732,7 +735,7 @@ class ApiUser extends Controller
 						$query = $query->orWhereNotNull('transactions.void_date')->havingRaw('COUNT(*) '.$condition['operator'].' '.$condition['parameter']);
 					}
 				}
-				
+
 				if($condition['subject'] == 'trx_shipment_value'){
 					if($rule == 'and'){
 						$query = $query->where('transactions.transaction_shipment',$condition['operator'],$condition['parameter']);
@@ -740,7 +743,7 @@ class ApiUser extends Controller
 						$query = $query->orWhere('transactions.transaction_shipment',$condition['operator'],$condition['parameter']);
 					}
 				}
-				
+
 				if($condition['subject'] == 'trx_product'){
 					if($condition['operator'] != '='){
 						$condition['parameter'] = $condition['operator'];
@@ -815,7 +818,7 @@ class ApiUser extends Controller
 		$userQuery = User::where('phone','=',$post['phone'])->get()->toArray();
 		if($userQuery){
 			$user = $userQuery[0];
-			
+
 			if($user['level'] == 'Super Admin'){
 				$checkFeature = Feature::select('id_feature')->get()->toArray();
 			}else{
@@ -835,7 +838,7 @@ class ApiUser extends Controller
 		}
       return response()->json($result);
     }
-	
+
 	function check(users_phone $request){
 		$phone = $request->json('phone');
 
@@ -846,7 +849,7 @@ class ApiUser extends Controller
 		}elseif(substr($phone, 0, 3) == '+62'){
 			$phone = substr($phone,3);
 		}
-		
+
 		if(substr($phone, 0, 1) != '0'){
 			$phone = '0'.$phone;
 		}
@@ -865,15 +868,29 @@ class ApiUser extends Controller
 			return response()->json([
 				'status' => 'success',
 				'result' => $data,
-				'messages' => ['Maaf, Akun anda sedang di-suspend']
+				'messages' => ['Akun Anda telah diblokir karena menunjukkan aktivitas mencurigakan. Untuk informasi lebih lanjut harap hubungi customer service kami di hello@kopikenangan.com']
 			]);
 		}
 
-        return MyHelper::checkGet($data);
+		if(isset($data[0])){
+			if($data[0]['email'] == null || $data[0]['name'] == null){
+				$data[0]['phone_verified'] = '0';
+			}
+		}
+
+		if(count($data) > 1){
+			return response()->json([
+				'status' => 'success',
+				'result' => $data,
+				'messages' => null
+			]);
+		}else{
+			return response()->json(MyHelper::checkGet($data));
+		}
     }
     /**
 	 * [Users] Create User & PIN
-	 * 
+	 *
 	 * to register user based on phone and generate PIN
 	 *
 	 */
@@ -894,35 +911,35 @@ class ApiUser extends Controller
         $data = User::where('phone', '=', $phone)
 						->get()
 						->toArray();
-		
+
 		if(!$data){
 			$pin = MyHelper::createRandomPIN(6, 'angka');
 			// $pin = '777777';
-			
+
 			$provider = MyHelper::cariOperator($phone);
 			$is_android 	= null;
 			$is_ios 		= null;
 			$device_id = $request->json('device_id');
 			$device_token = $request->json('device_token');
 			$device_type = $request->json('device_type');
-			
+
 			if($request->json('device_type') == "Android") {
 				$is_android = $device_id;
 			} else{
 				$is_ios = $device_id;
 			}
-			
+
 			if($request->json('device_token') != "") {
 				$device_token = $request->json('device_token');
 			}
-			
+
 			$create = User::create(['phone' => $phone,
 					'provider' 		=> $provider,
 					'password'		=> bcrypt($pin),
 					'android_device' => $is_android,
 					'ios_device' 	=> $is_ios
 					]);
-			
+
 			if($create){
 				if ($request->json('device_id') && $request->json('device_token') && $request->json('device_type')){
 					app($this->home)->updateDeviceUser($create, $request->json('device_id'), $request->json('device_token'), $request->json('device_type'));
@@ -932,18 +949,18 @@ class ApiUser extends Controller
 			if(stristr($_SERVER['HTTP_USER_AGENT'],'iOS')) $useragent = 'iOS';
 			if(stristr($_SERVER['HTTP_USER_AGENT'],'okhttp')) $useragent = 'Android';
 			if(stristr($_SERVER['HTTP_USER_AGENT'],'GuzzleHttp')) $useragent = 'Browser';
-						
-			
+
+
 			if(\Module::collections()->has('Autocrm')) {
-			$autocrm = app($this->autocrm)->SendAutoCRM('Pin Sent', $phone, 
-																	['pin' => $pin, 
-																	 'useragent' => $useragent, 
+			$autocrm = app($this->autocrm)->SendAutoCRM('Pin Sent', $phone,
+																	['pin' => $pin,
+																	 'useragent' => $useragent,
 																	 'now' => date('Y-m-d H:i:s')
 																	],
 																	$useragent
-																); 
+																);
 			}
-			
+
 			app($this->membership)->calculateMembership($phone);
 
 			//create user location when register
@@ -956,7 +973,7 @@ class ApiUser extends Controller
 				]);
 
 			}
-			
+
 			$result = ['status'	=> 'success',
                         'result'	=> ['phone'	=>	$create->phone,
 										'autocrm'	=>	$autocrm,
@@ -964,7 +981,7 @@ class ApiUser extends Controller
 									   ]
 					];
 			return response()->json($result);
-			
+
 		} else {
 			$result = [
                         'status'	=> 'fail',
@@ -973,10 +990,10 @@ class ApiUser extends Controller
 			return response()->json($result);
 		}
     }
-	
+
 	/**
 	 * [Users] Check User PIN
-	 * 
+	 *
 	 * to check users phone number and PIN
 	 *
 	 */
@@ -985,8 +1002,8 @@ class ApiUser extends Controller
 		$is_ios 		= 0;
 		$device_id 		= null;
 		$device_token 	= null;
-		
-		
+
+
 		$ip = null;
 		if(!empty($request->json('ip'))){
 			$ip = $request->json('ip');
@@ -997,7 +1014,7 @@ class ApiUser extends Controller
 				$ip = $_SERVER["REMOTE_ADDR"];
 			}
 		}
-		
+
 		$useragent = $_SERVER['HTTP_USER_AGENT'];
 		if(!empty($request->json('useragent'))){
 			$useragent = $request->json('useragent');
@@ -1008,9 +1025,9 @@ class ApiUser extends Controller
 				$useragent = $_SERVER['HTTP_USER_AGENT'];
 			}
 		}
-		
+
 		$device = null;
-		
+
 		if($useragent == "Opera/9.80 (Windows NT 6.1) Presto/2.12.388 Version/12.16")
 			$device = 'Web Browser';
 		if(stristr($useragent, 'iOS'))
@@ -1023,8 +1040,8 @@ class ApiUser extends Controller
 		}
 		if(empty($device))
 			$device = $useragent;
-		
-		
+
+
 		if($request->json('device_type') == "Android") {
 			$is_android = 1;
 			$device_type = "Android";
@@ -1032,15 +1049,15 @@ class ApiUser extends Controller
 			$is_ios = 1;
 			$device_type = "IOS";
 		}
-		
+
 		if($request->json('device_id') != "") {
 			$device_id = $request->json('device_id');
 		}
-		
+
 		if($request->json('device_token') != "") {
 			$device_token = $request->json('device_token');
 		}
-			
+
 		$phone = $request->json('phone');
 
 		$phone = preg_replace("/[^0-9]/", "", $phone);
@@ -1063,7 +1080,7 @@ class ApiUser extends Controller
 			if(Auth::attempt(['phone' => $phone, 'password' => $request->json('pin')])){
 				//kalo login success
 				if($is_android != 0 || $is_ios != 0){
-					
+
 					//check fraud
 					if($device_type && $device_id && $device_token){
 						$cekFraud = 1;
@@ -1072,9 +1089,9 @@ class ApiUser extends Controller
 												// ->where('device_token','=',$device_token)
 												->orderBy('id_device_user', 'ASC')
 												->first();
-						
+
 						$lastDevice = UserDevice::where('id_user','=',$datauser[0]['id'])->orderBy('id_device_user', 'desc')->first();
-						
+
 						if($deviceCus && $deviceCus['id_user'] != $datauser[0]['id']){
 							// send notif fraud detection
 							$fraud = FraudSetting::where('parameter', 'LIKE', '%device ID%')->first();
@@ -1102,21 +1119,21 @@ class ApiUser extends Controller
 							$update = User::where('id','=',$datauser[0]['id'])->update(['android_device' => $device_id, 'ios_device' => null]);
 						if($device_type == "IOS")
 							$update = User::where('id','=',$datauser[0]['id'])->update(['android_device' => null, 'ios_device' => $device_id]);
-						
+
 						if(stristr($useragent,'iOS')) $useragent = 'iOS';
 						if(stristr($useragent,'okhttp')) $useragent = 'Android';
 						if(stristr($useragent,'GuzzleHttp')) $useragent = 'Browser';
-						
+
 						// if(\Module::collections()->has('Autocrm')) {
-						// 	$autocrm = app($this->autocrm)->SendAutoCRM('Login Success', $request->json('phone'), 
-						// 												['ip' => $ip, 
-						// 												 'useragent' => $useragent, 
+						// 	$autocrm = app($this->autocrm)->SendAutoCRM('Login Success', $request->json('phone'),
+						// 												['ip' => $ip,
+						// 												 'useragent' => $useragent,
 						// 												 'now' => date('Y-m-d H:i:s')
 						// 												]);
 						// }
 					}
 				}
-					
+
 				if($device_id == null && $device_token == null){
 					//handle login dari web, tidak ada device id dan token sama sekali wajib notif
 					// app($this->Sms)->sendSMSAuto('login success', $datauser[0]['id'], date('F d, Y H:i'), $device, $ip);
@@ -1125,9 +1142,9 @@ class ApiUser extends Controller
 				if(stristr($useragent,'okhttp')) $useragent = 'Android';
 				if(stristr($useragent,'GuzzleHttp')) $useragent = 'Browser';
 				if(\Module::collections()->has('Autocrm')) {
-					$autocrm = app($this->autocrm)->SendAutoCRM('Login Success', $phone, 
-																		['ip' => $ip, 
-																		 'useragent' => $useragent, 
+					$autocrm = app($this->autocrm)->SendAutoCRM('Login Success', $phone,
+																		['ip' => $ip,
+																		 'useragent' => $useragent,
 																		 'now' => date('Y-m-d H:i:s')
 																		]);
 				}
@@ -1136,7 +1153,7 @@ class ApiUser extends Controller
 				if($datauser[0]['count_login_failed'] > 0){
 					$updateCountFailed = User::where('phone', $phone)->update(['count_login_failed' => 0]);
 				}
-				
+
 				$result 			= [];
 				$result['status'] 	= 'success';
 				$result['date'] 	= date('Y-m-d H:i:s');
@@ -1150,9 +1167,9 @@ class ApiUser extends Controller
 						'lng' => $request->json('longitude'),
 						'action' => 'Login'
 					]);
-	
+
 				}
-				
+
 				if($cekFraud == 0){
 					$updateUserLogin = User::where('phone', $datauser[0]['phone'])->update(['new_login' => '1']);
 				}
@@ -1167,39 +1184,39 @@ class ApiUser extends Controller
 					$getSet = Setting::where('key', 'count_login_failed')->first();
 					if($getSet && $getSet->value){
 						if($failedLogin >= $getSet->value){
-							$autocrm = app($this->autocrm)->SendAutoCRM('Login Failed', $phone, 
-																			['ip' => $ip, 
-																			 'useragent' => $useragent, 
+							$autocrm = app($this->autocrm)->SendAutoCRM('Login Failed', $phone,
+																			['ip' => $ip,
+																			 'useragent' => $useragent,
 																			 'now' => date('Y-m-d H:i:s')
 																			]);
 						}
 					}
 				}
-				
+
 				$result 			= [];
 				$result['status'] 	= 'fail';
-				$result['messages'] = ['The user credentials were incorrect'];
+				$result['messages'] = ['Maaf, Pin Anda Salah'];
 				$result['date'] 	= date('Y-m-d H:i:s');
 				$result['device'] 	= $device;
 				$result['ip'] 		= $ip;
 			}
-			
+
 				if($datauser[0]['pin_changed'] == '0'){
-        			$result['pin_changed'] = false; 
+        			$result['pin_changed'] = false;
         		}else{
-        			$result['pin_changed'] = true; 
+        			$result['pin_changed'] = true;
         		}
 		}
 		else {
 			$result['status'] 	= 'fail';
-			$result['messages'] = ['The user credentials were incorrect'];
+			$result['messages'] = ['Maaf, Pin Anda Salah'];
 		}
-		
-	
-		
+
+
+
         return response()->json($result);
     }
-	
+
 	function resendPin(users_phone $request){
 		$phone = $request->json('phone');
 
@@ -1224,20 +1241,20 @@ class ApiUser extends Controller
 			$pin = bcrypt($pinnya);
 			/*if($data[0]['phone_verified'] == 0){*/
 				$update = User::where('phone','=',$phone)->update(['password' => $pin]);
-				
+
 				$useragent = $_SERVER['HTTP_USER_AGENT'];
 				if(stristr($_SERVER['HTTP_USER_AGENT'],'iOS')) $useragent = 'iOS';
 				if(stristr($_SERVER['HTTP_USER_AGENT'],'okhttp')) $useragent = 'Android';
 				if(stristr($_SERVER['HTTP_USER_AGENT'],'GuzzleHttp')) $useragent = 'Browser';
-			
-				
+
+
 				if(\Module::collections()->has('Autocrm')) {
-					$autocrm = app($this->autocrm)->SendAutoCRM('Pin Sent', $phone, 
+					$autocrm = app($this->autocrm)->SendAutoCRM('Pin Sent', $phone,
 																	['pin' => $pinnya,
-																	'useragent' => $useragent, 
-																	 'now' => date('Y-m-d H:i:s')], $useragent); 
+																	'useragent' => $useragent,
+																	 'now' => date('Y-m-d H:i:s')], $useragent);
 				}
-				
+
 				$result = [
 							'status'	=> 'success',
 							'result'	=> ['phone'	=>	$data[0]['phone'],
@@ -1258,7 +1275,7 @@ class ApiUser extends Controller
 		}
 		return response()->json($result);
     }
-	
+
 	function forgotPin(users_forgot $request){
 		$phone = $request->json('phone');
 
@@ -1291,7 +1308,7 @@ class ApiUser extends Controller
 			];
 			return response()->json($result);
 		}
-		
+
         $data = User::where('phone', '=', $phone)
 					->where('email', '=', $request->json('email'))
 					->get()
@@ -1301,7 +1318,7 @@ class ApiUser extends Controller
 			$pin = MyHelper::createRandomPIN(6, 'angka');
 			$password = bcrypt($pin);
 			$update = User::where('id','=',$data[0]['id'])->update(['password' => $password, 'phone_verified' => '0']);
-			
+
 			if(!empty($request->header('user-agent-view'))){
 				$useragent = $request->header('user-agent-view');
 			}else{
@@ -1312,11 +1329,11 @@ class ApiUser extends Controller
 			if(stristr($useragent,'okhttp')) $useragent = 'Android';
 			if(stristr($useragent,'GuzzleHttp')) $useragent = 'Browser';
 
-			$autocrm = app($this->autocrm)->SendAutoCRM('Pin Forgot', $phone, 
+			$autocrm = app($this->autocrm)->SendAutoCRM('Pin Forgot', $phone,
 																	['pin' => $pin,
-																	'useragent' => $useragent, 
+																	'useragent' => $useragent,
 																	 'now' => date('Y-m-d H:i:s')], $useragent);
-			
+
 			$result = [
                         'status'	=> 'success',
                         'result'	=> ['phone'	=>	$phone,
@@ -1324,7 +1341,7 @@ class ApiUser extends Controller
 									   ]
                     ];
 			return response()->json($result);
-			
+
 		} else {
 			$result = [
                         'status'	=> 'fail',
@@ -1333,7 +1350,7 @@ class ApiUser extends Controller
 			return response()->json($result);
 		}
     }
-	
+
 	function verifyPin(users_phone_pin $request){
 
 		$phone = $request->json('phone');
@@ -1354,6 +1371,12 @@ class ApiUser extends Controller
 						->get()
 						->toArray();
 		if($data){
+			if($data[0]['email'] == null || $data[0]['name']){
+				$update = User::where('id','=',$data[0]['id'])->update(['phone_verified' => '0']);
+				$data = User::where('phone', '=', $phone)
+						->get()
+						->toArray();
+			}
 			if($data[0]['phone_verified'] == 0){
 				if(Auth::attempt(['phone' => $phone, 'password' => $request->json('pin')])){
 					$update = User::where('id','=',$data[0]['id'])->update(['phone_verified' => '1']);
@@ -1393,7 +1416,7 @@ class ApiUser extends Controller
 		}
 		return response()->json($result);
     }
-	
+
 	function changePin(users_phone_pin_new $request){
 
 		$phone = $request->json('phone');
@@ -1424,7 +1447,7 @@ class ApiUser extends Controller
     					$update = User::where('id','=',$data[0]['id'])->update(['first_pin_change' => $changepincount]);
 				    }else{
 						$autocrm = app($this->autocrm)->SendAutoCRM('Pin Changed Forgot Password', $phone);
-						
+
 						$del = OauthAccessToken::join('oauth_access_token_providers', 'oauth_access_tokens.id', 'oauth_access_token_providers.oauth_access_token_id')
 							->where('oauth_access_tokens.user_id', $data[0]['id'])->where('oauth_access_token_providers.provider', 'users')->delete();
 
@@ -1450,22 +1473,22 @@ class ApiUser extends Controller
 		}
 		return response()->json($result);
     }
-	
+
 	function createUserFromAdmin(users_create $request){
 		$post = $request->json()->all();
 		$d = explode('/',$post['birthday']);
 		$post['birthday'] = $d[2]."-".$d[0]."-".$d[1];
-		
+
 		if($post['pin'] == null) {
 			$pin = MyHelper::createRandomPIN(6, 'angka');
 			$pin = '777777';
 		} else {
 			$pin = $post['pin'];
 		}
-		
+
 		$post['password'] = bcrypt($pin);
 		$post['provider'] = MyHelper::cariOperator($post['phone']);
-		
+
 		$sent_pin = $post['sent_pin'];
 		if(isset($post['pickup_order'])){
 			$pickup_order = $post['pickup_order'];
@@ -1475,17 +1498,17 @@ class ApiUser extends Controller
 			$enquiry = $post['enquiry'];
 			unset($post['enquiry']);
 		}
-		
+
 		if(isset($post['delivery'])){
 			$delivery = $post['delivery'];
 			unset($post['delivery']);
 		}
 		unset($post['pin']);
 		unset($post['sent_pin']);
-		
-		
+
+
 		$result = MyHelper::checkGet(User::create($post));
-		
+
 		if($result['status'] == "success"){
 			if($post['level'] == 'Admin Outlet'){
 				foreach($post['id_outlet'] as $id_outlet){
@@ -1498,7 +1521,7 @@ class ApiUser extends Controller
 					UserOutlet::create($dataUserOutlet);
 				}
 			}
-		
+
 			if($sent_pin == 'Yes'){
 				if(!empty($request->header('user-agent-view'))){
 					$useragent = $request->header('user-agent-view');
@@ -1511,22 +1534,22 @@ class ApiUser extends Controller
 				if(stristr($useragent,'GuzzleHttp')) $useragent = 'Browser';
 
 				if(\Module::collections()->has('Autocrm')) {
-				$autocrm = app($this->autocrm)->SendAutoCRM('Pin Sent', $post['phone'], 
-																		['pin' => $pin, 
-																		 'useragent' => $useragent, 
+				$autocrm = app($this->autocrm)->SendAutoCRM('Pin Sent', $post['phone'],
+																		['pin' => $pin,
+																		 'useragent' => $useragent,
 																		 'now' => date('Y-m-d H:i:s')
-																		], $useragent); 
+																		], $useragent);
 				}
 			}
 		}
 		return response()->json($result);
     }
-	
+
 	function profileUpdate(users_profile $request){
         $data = User::where('phone', '=', $request->json('phone'))
 						->get()
 						->toArray();
-						
+
 		if($data){
 			// $pin_x = MyHelper::decryptkhususpassword($data[0]['pin_k'], md5($data[0]['id_user'], true));
 			if($request->json('email') != ""){
@@ -1564,9 +1587,69 @@ class ApiUser extends Controller
 					if($request->json('relationship')){
 						$dataupdate['relationship'] = $request->json('relationship');
 					}
+
+					DB::beginTransaction();
+
 					$update = User::where('id','=',$data[0]['id'])->update($dataupdate);
 
 					$datauser = User::where('id','=',$data[0]['id'])->get()->toArray();
+
+					//cek complete profile ?
+					if($datauser[0]['complete_profile'] != "1"){
+						if($datauser[0]['name'] != "" && $datauser[0]['email'] != "" && $datauser[0]['gender'] != "" && $datauser[0]['birthday'] != "" && $datauser[0]['id_city'] != ""){
+							//get point
+
+							$complete_profile_cashback = 0;
+							// $setting_profile_point = Setting::where('key', 'complete_profile_point')->first();
+							$setting_profile_cashback = Setting::where('key', 'complete_profile_cashback')->first();
+							/*if (isset($setting_profile_point->value)) {
+								$complete_profile_point = $setting_profile_point->value;
+							}*/
+							if (isset($setting_profile_cashback->value)) {
+								$complete_profile_cashback = $setting_profile_cashback->value;
+							}
+
+							/*** uncomment this if point feature is active
+							// add point
+							$setting_point = Setting::where('key', 'point_conversion_value')->first();
+							$log_point = [
+								'id_user'                     => $user->id,
+								'point'                       => $complete_profile_point,
+								'id_reference'                => null,
+								'source'                      => 'Completing User Profile',
+								'grand_total'                 => 0,
+								'point_conversion'            => $setting_point->value,
+								'membership_level'            => $level,
+								'membership_point_percentage' => $point_percentage
+							];
+							$insert_log_point = LogPoint::create($log_point);
+
+							// update user point
+							$new_user_point = LogPoint::where('id_user', $user->id)->sum('point');
+							$user_update = $user->update(['points' => $new_user_point]);
+							*/
+
+							/* add cashback */
+							$balance_nominal = $complete_profile_cashback;
+							// add log balance & update user balance
+							$balanceController = new BalanceController();
+							$addLogBalance = $balanceController->addLogBalance($datauser[0]['id'], $balance_nominal, null, "Completing User Profile", 0);
+
+							if ( !$addLogBalance ) {
+								DB::rollback();
+								return [
+									'status' => 'fail',
+									'messages' => 'Failed to save data'
+								];
+							}
+
+							$update = User::where('id','=',$data[0]['id'])->update(['complete_profile' => '1']);
+
+							$checkMembership = app($this->membership)->calculateMembership($datauser[0]['phone']);
+						}
+					}
+
+					DB::commit();
 					$result = [
 							'status'	=> 'success',
 							'result'	=> ['phone'	=>	$data[0]['phone'],
@@ -1599,7 +1682,7 @@ class ApiUser extends Controller
 		}
 		return response()->json($result);
     }
-	
+
 	function createAdminOutlet(Request $request){
 		$post = $request->json()->all();
 		$query = null;
@@ -1613,11 +1696,11 @@ class ApiUser extends Controller
 			$data['pickup_order'] = 0;
 			$data['delivery'] = 0;
 			$data['payment'] = 0;
-			
+
 			foreach($post['type'] as $type){
 				$data[$type] = 1;
 			}
-			
+
 			$check = UserOutlet::where('phone',$data['phone'])
 								->where('id_outlet',$data['id_outlet'])
 								->first();
@@ -1631,7 +1714,7 @@ class ApiUser extends Controller
 		}
 		return response()->json(MyHelper::checkCreate($query));
 	}
-	
+
 	function deleteAdminOutlet(Request $request){
 		$post = $request->json()->all();
 		$query = UserOutlet::where('phone',$post['phone'])
@@ -1639,14 +1722,14 @@ class ApiUser extends Controller
 							->delete();
 		return response()->json(MyHelper::checkDelete($query));
 	}
-	
+
 	function listAdminOutlet(Request $request){
 		$check = UserOutlet::join('outlets','outlets.id_outlet','=','user_outlets.id_outlet')
 								->get()
 								->toArray();
 		return response()->json(MyHelper::checkGet($check));
 	}
-	
+
 	function detailAdminOutlet(Request $request){
 		$post = $request->json()->all();
 		$check = UserOutlet::join('outlets','outlets.id_outlet','=','user_outlets.id_outlet')
@@ -1655,12 +1738,12 @@ class ApiUser extends Controller
 								->first();
 		return response()->json(MyHelper::checkGet($check));
 	}
-	
+
 	function listVar($var){
 		if($var == 'phone') $query = User::select('phone')->get()->toArray();
 		if($var == 'email') $query = User::select('email')->get()->toArray();
 		if($var == 'name') $query = User::select('name')->get()->toArray();
-	
+
 		return response()->json($query);
 	}
 	function list(Request $request){
@@ -1677,32 +1760,32 @@ class ApiUser extends Controller
 
 		return response()->json($query);
 	}
-	
+
 	function activity(Request $request){
 		$post = $request->json()->all();
-		
+
 		if(isset($post['order_field'])) $order_field = $post['order_field']; else $order_field = 'id';
 		if(isset($post['order_method'])) $order_method = $post['order_method']; else $order_method = 'desc';
 		if(isset($post['skip'])) $skip = $post['skip']; else $skip = '0';
 		if(isset($post['take'])) $take = $post['take']; else $take = '10';
 		if(isset($post['rule'])) $rule = $post['rule']; else $rule = 'and';
 		if(isset($post['conditions'])) $conditions = $post['conditions']; else $conditions = null;
-		
+
 		$query = $this->LogActivityFilter($rule, $conditions, $order_field, $order_method, $skip, $take);
-	
+
 		return response()->json($query);
 	}
-	
+
 	public function delete(Request $request)
     {
 		$post = $request->json()->all();
-		
+
 		if(is_array($post['phone'])){
 			$messages = "Users ";
 			foreach($post['phone'] as $row){
 				$checkUser = User::where('phone','=',$row)->get()->toArray();
 				if(!$checkUser) continue;
-				
+
 				if($checkUser[0]['level'] != 'Super Admin' && $checkUser[0]['level'] != 'Admin')
 					$action = User::where('phone','=',$row)->delete();
 				else
@@ -1713,7 +1796,7 @@ class ApiUser extends Controller
 			}
 			$messages = substr($messages, 0, -2);
 			$messages .= " Has been Deleted";
-			
+
 			$result = ['status'	=> 'success',
 					   'result'	=> [$messages]
 						  ];
@@ -1722,7 +1805,7 @@ class ApiUser extends Controller
 			if($checkUser){
 				if($checkUser[0]['level'] != 'Super Admin' && $checkUser[0]['level'] != 'Admin'){
 					$deleteUser = User::where('phone','=',$post['phone'])->delete();
-				
+
 					if($deleteUser){
 						$result = ['status'	=> 'success',
 								   'result'	=> ['User '.$post['phone'].' has been deleted']
@@ -1738,7 +1821,7 @@ class ApiUser extends Controller
 								'status'	=> 'fail',
 								'messages'	=> ['User Admin & Super Admin Cannot be deleted']
 								];
-				} 
+				}
 			} else {
 				$result = [
 							'status'	=> 'fail',
@@ -1748,11 +1831,11 @@ class ApiUser extends Controller
 		}
 		return response()->json($result);
     }
-	
+
 	public function phoneVerified(Request $request)
     {
 		$post = $request->json()->all();
-		
+
 		if(is_array($post['phone'])){
 			$messages = "Users ";
 			foreach($post['phone'] as $row){
@@ -1763,7 +1846,7 @@ class ApiUser extends Controller
 			}
 			$messages = substr($messages, 0, -2);
 			$messages .= " Has been Phone Verified";
-			
+
 			$result = ['status'	=> 'success',
 					   'result'	=> [$messages]
 						  ];
@@ -1775,11 +1858,11 @@ class ApiUser extends Controller
 		}
 		return response()->json($result);
     }
-	
+
 	public function phoneUnverified(Request $request)
     {
 		$post = $request->json()->all();
-		
+
 		if(is_array($post['phone'])){
 			$messages = "Users ";
 			foreach($post['phone'] as $row){
@@ -1790,7 +1873,7 @@ class ApiUser extends Controller
 			}
 			$messages = substr($messages, 0, -2);
 			$messages .= " Has been Phone Unverified";
-			
+
 			$result = ['status'	=> 'success',
 					   'result'	=> [$messages]
 						  ];
@@ -1802,11 +1885,11 @@ class ApiUser extends Controller
 		}
 		return response()->json($result);
     }
-	
+
 	public function emailVerified(Request $request)
     {
 		$post = $request->json()->all();
-		
+
 		if(is_array($post['phone'])){
 			$messages = "Users ";
 			foreach($post['phone'] as $row){
@@ -1817,7 +1900,7 @@ class ApiUser extends Controller
 			}
 			$messages = substr($messages, 0, -2);
 			$messages .= " Has been Email Verified";
-			
+
 			$result = ['status'	=> 'success',
 					   'result'	=> [$messages]
 						  ];
@@ -1829,11 +1912,11 @@ class ApiUser extends Controller
 		}
 		return response()->json($result);
     }
-	
+
 	public function emailUnverified(Request $request)
     {
 		$post = $request->json()->all();
-		
+
 		if(is_array($post['phone'])){
 			$messages = "Users ";
 			foreach($post['phone'] as $row){
@@ -1844,7 +1927,7 @@ class ApiUser extends Controller
 			}
 			$messages = substr($messages, 0, -2);
 			$messages .= " Has been Email Unverified";
-			
+
 			$result = ['status'	=> 'success',
 					   'result'	=> [$messages]
 						  ];
@@ -1856,21 +1939,21 @@ class ApiUser extends Controller
 		}
 		return response()->json($result);
     }
-	
+
 	public function show(Request $request)
     {
 		$post = $request->json()->all();
-		
+
 		$query = User::leftJoin('cities','cities.id_city','=','users.id_city')
 					->leftJoin('provinces','provinces.id_province','=','cities.id_province')
 					->with('history_transactions.outlet_name', 'history_balance.detail_trx', 'user_membership')
 					->where('phone','=',$post['phone'])
 					->get()
 					->first();
-		
-					
+
+
 		if($query){
-			
+
 			// total perolehan balance
 			$query['balance_acquisition'] = LogBalance::where('id_user', $query['id'])
 										->where('balance', '>', 0)
@@ -1888,12 +1971,12 @@ class ApiUser extends Controller
                                     ->select('transactions.id_transaction', 'transaction_receipt_number','trasaction_type','transaction_grandtotal', 'transaction_payment_status', 'transaction_date', 'receive_at', 'ready_at', 'taken_at', 'reject_at')
                                     ->orderBy('transaction_date', 'DESC')
                                     ->get();
-            
+
 			$result = ['status'	=> 'success',
 					   'result'	=> $query,
 				// 	   'trx'     => $countTrx,
 				// 		'voucher' => $countVoucher
-					  ]; 
+					  ];
 		} else {
 			$result = [
 						'status'	=> 'fail',
@@ -1902,7 +1985,7 @@ class ApiUser extends Controller
 		}
 		return response()->json($result);
     }
-	
+
 	public function log(Request $request)
     {
 		$post = $request->json()->all();
@@ -1946,7 +2029,7 @@ class ApiUser extends Controller
 					if($condition['operator'] != '=' && $condition['operator'] != 'like'){
 						$condition['parameter'] = $condition['operator'];
 					}
-	
+
 					if($condition['operator'] == 'like'){
 						if($rule == 'and'){
 							$query = $query->where($condition['subject'],'LIKE','%'.$condition['parameter'].'%');
@@ -1971,11 +2054,11 @@ class ApiUser extends Controller
 							->get()
 							->toArray();
 		}
-		
+
 		if($query){
 			$result = ['status'	=> 'success',
 					   'result'	=> $query
-					  ]; 
+					  ];
 		} else {
 			$result = [
 						'status'	=> 'fail',
@@ -1984,7 +2067,7 @@ class ApiUser extends Controller
 		}
 		return response()->json($result);
 	}
-	
+
 	public function detailLog($id, Request $request){
 		$log = LogRequest::where('id_log_activity', $id)->first();
 		if($log){
@@ -1992,29 +2075,29 @@ class ApiUser extends Controller
     			$res = MyHelper::decrypt2019($log['response']);
     			if(!$log['response']){
     				$log['response'] = $res;
-    			} 
+    			}
     			// $log['response'] = str_replace('}','\r\n}',str_replace(',',',\r\n&emsp;',str_replace('{','{\r\n&emsp;',strip_tags($log['response']))));
 		    }
-		    
+
     	    if($log['request']){
     			$req = MyHelper::decrypt2019($log['request']);
     			if(!$log['request']){
     				$log['request'] = $request;
-    			} 
+    			}
     			// $log['request'] = str_replace('}','\r\n}',str_replace(',',',\r\n&emsp;',str_replace('{','{\r\n&emsp;',strip_tags($log['request']))));
     	    }
 		}
 
 		return response()->json(MyHelper::checkGet($log));
 	}
-	
-	
+
+
 	public function updateProfileByAdmin(Request $request)
     {
 		$post = $request->json()->all();
-		
+
 		$user = User::where('phone',$post['phone'])->get()->toArray();
-		
+
 		if(isset($post['update']['phone'])){
 			if($post['update']['phone'] != $user[0]['phone']){
 				$check = User::where('phone',$post['update']['phone'])->get()->toArray();
@@ -2027,7 +2110,7 @@ class ApiUser extends Controller
 				}
 			}
 		}
-		
+
 		if(isset($post['update']['email'])){
 			if($post['update']['email'] != $user[0]['email']){
 				$check = User::where('email',$post['update']['email'])->get()->toArray();
@@ -2040,19 +2123,19 @@ class ApiUser extends Controller
 				}
 			}
 		}
-		
+
 		if(isset($post['update']['birthday'])){
 			if(stristr($post['update']['birthday'], '/')){
 				$explode = explode('/', $post['update']['birthday']);
 				$post['update']['birthday'] = $explode[2].'-'.$explode[1].'-'.$explode[0];
 			}
 		}
-		
+
 		$update = User::where('phone',$post['phone'])->update($post['update']);
-		
+
 		return MyHelper::checkUpdate($update);
     }
-	
+
 	public function updateProfilePhotoByAdmin(Request $request)
     {
 		$post = $request->json()->all();
@@ -2078,7 +2161,7 @@ class ApiUser extends Controller
 			return response()->json($result);
 		}
 	}
-	
+
 	public function updateProfilePasswordByAdmin(users_phone_pin_new_admin $request)
     {
 		$post = $request->json()->all();
@@ -2103,7 +2186,7 @@ class ApiUser extends Controller
 			return response()->json($result);
 		}
 	}
-	
+
 	public function updateDoctorOutletByAdmin(Request $request)
 	{
 		$post = $request->json()->all();
@@ -2119,7 +2202,7 @@ class ApiUser extends Controller
 					$dataOutletDoctor = [];
 					$dataOutletDoctor['id_outlet'] = $outlet;
 					$dataOutletDoctor['id_doctor'] = $checkDoctor['id_doctor'];
-					
+
 					$addOutlet = OutletDoctor::insert($dataOutletDoctor);
 				}
 				return MyHelper::checkUpdate($addOutlet);
@@ -2135,8 +2218,9 @@ class ApiUser extends Controller
 	public function updateProfileLevelByAdmin(Request $request)
     {
 		$post = $request->json()->all();
-		$user = $request->user();
-		if(!Auth::check(['phone' => $user['phone'], 'password' => $post['password_level']])){
+		$user = User::where('id', $request->user()->id)->first()->makeVisible('password');
+
+		if(!Hash::check($post['password_level'], $user['password'])){
 			$result = [
 					'status'	=> 'fail',
 					'messages'	=> ['Update level failed. Wrong PIN']
@@ -2172,7 +2256,7 @@ class ApiUser extends Controller
 						$dataAdminOutlet['enquiry'] = $post['enquiry'];
 						$dataAdminOutlet['pickup_order'] = $post['pickup_order'];
 						$dataAdminOutlet['delivery'] = $post['delivery'];
-						
+
 						if($checkAdminOutlet){
 							$updateAdminOutlet = UserOutlet::where('id_user','=',$checkUser['id'])
 														   ->where('id_outlet','=',$id_outlet)
@@ -2200,20 +2284,20 @@ class ApiUser extends Controller
 			return response()->json($result);
 		}
 	}
-	
+
 	public function updateProfilePermissionByAdmin(Request $request)
     {
 		$post = $request->json()->all();
-		$user = $request->user();
-		
-		if(!Auth::check(['phone' => $user['phone'], 'password' => $post['password_permission']])){
+		$user = User::where('id', $request->user()->id)->first()->makeVisible('password');
+
+		if(!Hash::check($post['password_permission'], $user['password'])){
 			$result = [
 					'status'	=> 'fail',
 					'messages'	=> ['Update permission failed. Wrong PIN']
 				];
 			return response()->json($result);
 		}
-		
+
 		if($user['level'] != 'Super Admin' && $user['level'] != "Admin"){
 			$result = [
 					'status'	=> 'fail',
@@ -2221,26 +2305,58 @@ class ApiUser extends Controller
 				];
 			return response()->json($result);
 		}
-		
+
 		$user = User::where('phone',$post['phone'])->get()->toArray();
-		$delete = UserFeature::where('id_user',$user[0]['id'])->delete();
-		
+
 		$create = null;
 		if(isset($post['module'])){
 			foreach($post['module'] as $id_feature){
 				$create = DB::insert('insert into user_features (id_user, id_feature) values (?, ?)', [$user[0]['id'], $id_feature]);
-				
+
 			}
 		}
 		$result = ['status'	=> 'success'];
 		return response()->json($result);
 	}
-	
+
+	public function updateSuspendByAdmin(Request $request)
+    {
+		$post = $request->json()->all();
+		$user = User::where('id', $request->user()->id)->first()->makeVisible('password');
+
+		if(!Hash::check($post['password_suspend'], $user['password'])){
+			$result = [
+					'status'	=> 'fail',
+					'messages'	=> ['Update suspend status failed. Wrong PIN']
+				];
+			return response()->json($result);
+		}
+
+		if($user['level'] != 'Super Admin' && $user['level'] != "Admin"){
+			$result = [
+					'status'	=> 'fail',
+					'messages'	=> ['Update suspend status failed. Only Super Admin and Admin are allowed to modify permission']
+				];
+			return response()->json($result);
+		}
+
+		$update = User::where('phone',$post['phone'])->update(['is_suspended' => $post['is_suspended']]);
+
+		$data = User::where('phone',$post['phone'])->get();
+
+		if(isset($data[0]['is_suspended']) && $data[0]['is_suspended'] == '1'){
+			$del = OauthAccessToken::join('oauth_access_token_providers', 'oauth_access_tokens.id', 'oauth_access_token_providers.oauth_access_token_id')
+							->where('oauth_access_tokens.user_id', $data[0]['id'])->where('oauth_access_token_providers.provider', 'users')->delete();
+
+		}
+		return response()->json(MyHelper::checkUpdate($update));
+	}
+
 	public function updateUserOutletByAdmin(Request $request)
     {
 		$post = $request->json()->all();
 		$user = $request->user();
-		
+
 		if(!Auth::check(['phone' => $user['phone'], 'password' => $post['password_outlet_setting']])){
 			$result = [
 					'status'	=> 'fail',
@@ -2248,7 +2364,7 @@ class ApiUser extends Controller
 				];
 			return response()->json($result);
 		}
-		
+
 		if($user['level'] != 'Super Admin' && $user['level'] != "Admin Outlet"){
 			$result = [
 					'status'	=> 'fail',
@@ -2256,28 +2372,28 @@ class ApiUser extends Controller
 				];
 			return response()->json($result);
 		}
-		
+
 		$user = User::where('phone',$post['phone'])->get()->toArray();
-		
+
 		$update = [];
 		$update['delivery'] = '0';
 		$update['enquiry'] = '0';
 		$update['pickup_order'] = '0';
 		$false = UserOutlet::where('id_user',$user[0]['id'])->update($update);
 
-		
+
 		foreach($post['outlets'] as $outlet){
 			$check = UserOutlet::where('id_user',$user[0]['id'])->where('id_outlet',$outlet['id_outlet'])->first();
-			
+
 			if(isset($check)){
 				if(isset($outlet['enquiry'])){
 					UserOutlet::where('id_user',$user[0]['id'])->where('id_outlet',$outlet['id_outlet'])->update(['enquiry' => $outlet['enquiry']]);
 				}
-				
+
 				if(isset($outlet['delivery'])){
 					UserOutlet::where('id_user',$user[0]['id'])->where('id_outlet',$outlet['id_outlet'])->update(['delivery' => $outlet['delivery']]);
 				}
-				
+
 				if(isset($outlet['pickup_order'])){
 					UserOutlet::where('id_user',$user[0]['id'])->where('id_outlet',$outlet['id_outlet'])->update(['pickup_order' => $outlet['pickup_order']]);
 				}
@@ -2287,10 +2403,10 @@ class ApiUser extends Controller
 		$result = ['status'	=> 'success'];
 		return response()->json($result);
 	}
-	
+
 	public function outletUser(Request $request){
 		$post = $request->json()->all();
-		
+
 		$query = UserOutlet::leftJoin('users','users.id','=','user_outlets.id_user')
 						->leftJoin('outlets','outlets.id_outlet','=','user_outlets.id_outlet')
 						->where('users.phone','=',$post['phone'])
@@ -2301,7 +2417,7 @@ class ApiUser extends Controller
 		if($query){
 			$result = ['status'	=> 'success',
 					   'result'	=> $query
-					  ]; 
+					  ];
 		} else {
 			$result = [
 						'status'	=> 'fail',
@@ -2313,7 +2429,7 @@ class ApiUser extends Controller
 	public function inboxUser(Request $request)
     {
 		$user = $request->user();
-		
+
 		$query = UserInbox::where('id_user','=',$user->id)
 						->orderBy('id_user_inboxes','desc')
 						->get()
@@ -2321,7 +2437,7 @@ class ApiUser extends Controller
 		if($query){
 			$result = ['status'	=> 'success',
 					   'result'	=> $query
-					  ]; 
+					  ];
 		} else {
 			$result = [
 						'status'	=> 'fail',
@@ -2340,13 +2456,13 @@ class ApiUser extends Controller
 		if(empty($userNotification)){
 			$notif['inbox'] = app($this->inbox)->listInboxUnread($user->id);
 			$notif['voucher'] = 0;
-			$notif['history'] = $tranPending; 
+			$notif['history'] = $tranPending;
 
 			$createUserNotif = UserNotification::create(['id_user' => $user->id]);
 			$result = [
 				'status'	=> 'success',
 				'result'	=> $notif
-			]; 
+			];
 		}else{
 			// update voucher jika sudah diliat
 			if(isset($post['type']) && $post['type'] == 'voucher'){
@@ -2360,7 +2476,7 @@ class ApiUser extends Controller
 			$result = [
 				'status'	=> 'success',
 				'result'	=> $notif
-			]; 
+			];
 		}
 		return response()->json($result);
 	}
@@ -2426,7 +2542,7 @@ class ApiUser extends Controller
 		$data['phone'] = $phone;
 		return view('users::delete', $data);
 	}
-	
+
 	public function deleteUserAction(Request $request)
     {
 		$post = $request->except('_token');

@@ -31,7 +31,7 @@ class ApiHome extends Controller
 {
     public $getMyVoucher;
     public $endPoint;
-    
+
     public function __construct() {
         date_default_timezone_set('Asia/Jakarta');
 		$this->balance  = "Modules\Balance\Http\Controllers\BalanceController";
@@ -40,9 +40,9 @@ class ApiHome extends Controller
         $this->setting_fraud = "Modules\SettingFraud\Http\Controllers\ApiSettingFraud";
 		$this->endPoint  = env('AWS_URL');
     }
-	
+
 	public function homeNotLoggedIn(Request $request) {
-		
+
 		if ($request->json('device_id') && $request->json('device_token') && $request->json('device_type')) {
            $this->updateDeviceUserGuest($request->json('device_id'), $request->json('device_token'), $request->json('device_type'));
 		}
@@ -51,17 +51,17 @@ class ApiHome extends Controller
 		$defaultHome = array_combine($key, $value);
 
 		if(isset($defaultHome['default_home_image'])){
-			$defaultHome['default_home_image_url'] = $this->endPoint.$defaultHome['default_home_image']; 
+			$defaultHome['default_home_image_url'] = $this->endPoint.$defaultHome['default_home_image'];
 		}
-		
+
 		if(isset($defaultHome['default_home_splash_screen'])){
-			$defaultHome['splash_screen_url'] = $this->endPoint.$defaultHome['default_home_splash_screen']."?"; 
+			$defaultHome['splash_screen_url'] = $this->endPoint.$defaultHome['default_home_splash_screen']."?";
 		}
 
         // banner
         $banners = $this->getBanner();
         $defaultHome['banners'] = $banners;
-	   
+
        return response()->json(MyHelper::checkGet($defaultHome));
 	}
 
@@ -107,14 +107,14 @@ class ApiHome extends Controller
 
         return $array;
     }
-	
+
     public function refreshPointBalance(Request $request) {
 		$user = $request->user();
 		if($user){
 			// $point      = app($this->point)->getPoint($user->id);
 			// $balance      = app($this->balance)->balanceNow($user->id);
 			$balance      = $user->balance;
-			
+
 			 /* QR CODE */
             $expired = Setting::where('key', 'qrcode_expired')->first();
             if(!$expired || ($expired && $expired->value == null)){
@@ -129,21 +129,22 @@ class ApiHome extends Controller
             if(stristr($useragent,'iOS')) $useragent = 'iOS';
             if(stristr($useragent,'okhttp')) $useragent = 'Android';
             else $useragent = null;
-        
+
             $qr = MyHelper::createQR($timestamp, $user->phone, $useragent);
 
             // $qrCode = 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data='.$qr;
             $qrCode = 'https://chart.googleapis.com/chart?chl='.$qr.'&chs=250x250&cht=qr&chld=H%7C0';
             $qrCode = html_entity_decode($qrCode);
-				
+
 			$result = [
 					'status' => 'success',
 					'result' => [
 						// 'total_point'   => (int) $point,
-						'total_kopi_point' => (int) $balance,
+						// 'total_kopi_point' => (int) $balance,
+						'total_point' => (int) $balance,
 						'qr_code'        => $qrCode
 					]
-				]; 
+				];
 		}else {
 			$result = [
                 'status' => 'fail'
@@ -151,13 +152,13 @@ class ApiHome extends Controller
 		}
 		return response()->json($result);
 	}
-	
+
     public function home(Home $request) {
         try {
             $user = $request->user();
 
             /**
-             * update device token 
+             * update device token
              */
 
             if ($request->json('device_id') && $request->json('device_token') && $request->json('device_type')) {
@@ -175,7 +176,7 @@ class ApiHome extends Controller
                 //delete token
                 $del = OauthAccessToken::join('oauth_access_token_providers', 'oauth_access_tokens.id', 'oauth_access_token_providers.oauth_access_token_id')
                 ->where('oauth_access_tokens.user_id', $request->user()->id)->where('oauth_access_token_providers.provider', 'users')->delete();
-                
+
                 return response()->json(['message' => 'Unauthenticated'], 401);
             }
 
@@ -204,7 +205,7 @@ class ApiHome extends Controller
                 foreach ($timeDB as $key => $value) {
                     $dbTime[str_replace("greetings_", "", $value['key'])] = $value['value'];
                 }
-                
+
                 /**
                  * search greetings from DB
                  */
@@ -229,7 +230,7 @@ class ApiHome extends Controller
                     $greetings  = Greeting::where('when', '=', 'morning')->get()->toArray();
                     $background  = HomeBackground::where('when', '=', 'morning')->get()->toArray();
                 }
-				
+
                 /**
                  * kesimpulannya
                  */
@@ -249,7 +250,7 @@ class ApiHome extends Controller
 					}
                 }
             }
-            
+
             $expired = Setting::where('key', 'qrcode_expired')->first();
             if(!$expired || ($expired && $expired->value == null)){
                 $expired = '10';
@@ -265,43 +266,43 @@ class ApiHome extends Controller
             else $useragent = null;
 
             $qr = MyHelper::createQR($timestamp, $user->phone, $useragent);
-            
+
             // $qrCode = 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data='.$qr;
             $qrCode = 'https://chart.googleapis.com/chart?chl='.$qr.'&chs=250x250&cht=qr&chld=H%7C0';
             $qrCode = html_entity_decode($qrCode);
-			
+
 			// $point      = app($this->point)->getPoint($user->id);
 			// $balance      = app($this->balance)->balanceNow($user->id);
-			
+
 			$membership = UsersMembership::select('memberships.*')
 										->Join('memberships','memberships.id_membership','=','users_memberships.id_membership')
 										->where('id_user','=',$user->id)
 										->orderBy('id_log_membership','desc')
 										->first();
-			                             
+
 			if(isset($membership) && $membership != ""){
                 $dataEncode = [
                     'id_user' => $user->id,
                 ];
-    
+
                 $encode = json_encode($dataEncode);
                 $base = base64_encode($encode);
-    
+
                 $membership['webview_detail_membership'] = env('VIEW_URL').'/membership/web/view?data='.$base;
 				if(isset($membership['membership_image']))
 					$membership['membership_image'] = env('AWS_URL').$membership['membership_image'];
 			} else {
 				$membership = null;
 			}
-			
+
 			$splash = Setting::where('key', '=', 'default_home_splash_screen')->first();
 
 			if(!empty($splash)){
-				$splash = $this->endPoint.$splash['value']; 
+				$splash = $this->endPoint.$splash['value'];
 			} else {
 				$splash = null;
             }
-            
+
             $countUnread = UserInbox::where('id_user','=',$user['id'])->where('read', '0')->count();
             $transactionPending = Transaction::where('id_user','=',$user['id'])->where('transaction_payment_status', 'Pending')->count();
 
@@ -314,7 +315,7 @@ class ApiHome extends Controller
             $webview_link = env('APP_URL') . 'webview/complete-profile';
 
             // check user profile completeness (if there is null data)
-            if ($user->id_city=="" || $user->gender=="" || $user->birthday=="" || $user->relationship=="") {
+            if ($user->id_city=="" || $user->gender=="" || $user->birthday=="") {
                 // get setting user profile value
                 $complete_profile_interval = 0;
                 $complete_profile_count = 0;
@@ -366,7 +367,7 @@ class ApiHome extends Controller
             if ($user->birthday != "") {
                 $birthday = date("d F Y", strtotime($user->birthday));
             }
-            
+
             $result = [
                 'status' => 'success',
                 'result' => [
@@ -376,7 +377,8 @@ class ApiHome extends Controller
                     'banners'       => $banners,
                     'splash_screen_url' => $splash."?update=".time(),
                     // 'total_point'   => (int) $point,
-                    'total_kopi_point' => (int) $user->balance,
+                    // 'total_kopi_point' => (int) $user->balance,
+                    'total_point' => (int) $user->balance,
                     // 'notification'  =>[
                     //     'total' => $countUnread + $transactionPending,
                     //     'count_unread_inbox' => $countUnread,
@@ -397,12 +399,12 @@ class ApiHome extends Controller
                     'webview_complete_profile_url'   => $webview_url,
                     'popup_complete_profile'   => $popup_text,
                 ]
-            ]; 
-            
+            ];
+
             return response()->json($result);
         } catch (\Exception $e) {
             return response()->json(MyHelper::throwError($e));
-        }        
+        }
     }
 
     public function background(Request $request) {
@@ -472,12 +474,12 @@ class ApiHome extends Controller
                 'result' => [
                     'background'     => $background,
                 ]
-            ]; 
-            
+            ];
+
             return response()->json($result);
         } catch (\Exception $e) {
             return response()->json(MyHelper::throwError($e));
-        } 
+        }
     }
 
 	public function updateDeviceUserGuest($device_id, $device_token, $device_type) {
@@ -505,7 +507,7 @@ class ApiHome extends Controller
 
         return $result;
     }
-	
+
     public function updateDeviceUser($user, $device_id, $device_token, $device_type) {
         $dataUpdate = [
             'device_id'    => $device_id,
@@ -529,10 +531,10 @@ class ApiHome extends Controller
         if ($update) {
 			if($device_type == 'Android')
             $query                 = User::where('id','=',$user->id)->update(['android_device' => $device_id]);
-		
+
 			if($device_type == 'IOS')
             $query                 = User::where('id','=',$user->id)->update(['ios_device' => $device_id]);
-		
+
             $result = [
                 'status' => 'updated'
             ];
@@ -550,7 +552,7 @@ class ApiHome extends Controller
             // ->where('device_token','=',$device_token)
             ->orderBy('id_device_user', 'ASC')
             ->first();
-    
+
             $lastDevice = UserDevice::where('id_user','=',$user->id)->orderBy('id_device_user', 'desc')->first();
             if($deviceCus && $deviceCus['id_user'] != $user->id){
                 // send notif fraud detection

@@ -23,7 +23,8 @@ use Guzzle\Http\Exception\ServerErrorResponseException;
 
 use LaravelFCM\Message\OptionsBuilder;
 use LaravelFCM\Message\PayloadDataBuilder;
-use LaravelFCM\Message\PayloadNotificationBuilder;
+// use LaravelFCM\Message\PayloadNotificationBuilder;
+use App\Lib\CustomPayloadNotificationBuilder;
 use FCM;
 
 class PushNotificationHelper{
@@ -126,10 +127,13 @@ class PushNotificationHelper{
         $optionBuiler->setPriority("high");
 
         // $notificationBuilder = new PayloadNotificationBuilder("");
-        $notificationBuilder = new PayloadNotificationBuilder($subject);
+        $notificationBuilder = new CustomPayloadNotificationBuilder($subject);
         $notificationBuilder->setBody($messages)
                             ->setSound('default')
-                            ->setClickAction($dataOptional['type']);
+                            ->setClickAction('Home');
+        if($image){
+            $notificationBuilder->setImage($image);
+        }
         
         $dataBuilder = new PayloadDataBuilder();
 
@@ -144,7 +148,6 @@ class PushNotificationHelper{
         $data         = $dataBuilder->build(); 
 
         $downstreamResponse = FCM::sendTo($tokens, $option, $notification, $data);
-
         $success = $downstreamResponse->numberSuccess();
         $fail    = $downstreamResponse->numberFailure();
 

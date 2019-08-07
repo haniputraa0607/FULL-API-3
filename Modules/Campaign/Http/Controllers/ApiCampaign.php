@@ -26,6 +26,8 @@ use App\Http\Models\CampaignWhatsappQueue;
 use App\Http\Models\CampaignWhatsappSent;
 use App\Http\Models\CampaignWhatsappSentContent;
 use App\Http\Models\News;
+use App\Http\Models\OauthAccessToken;
+
 //use Modules\Campaign\Http\Requests\campaign_list;
 //use Modules\Campaign\Http\Requests\campaign_create;
 //use Modules\Campaign\Http\Requests\campaign_update;
@@ -49,21 +51,21 @@ class ApiCampaign extends Controller
 		$this->rajasms = new classMaskingJson();
 		$this->apiwha = new apiwha();
     }
-	
+
     public function campaignList(Request $request){
-		$post = $request->json()->all(); 
-		
+		$post = $request->json()->all();
+
 		$query = Campaign::orderBy('id_campaign', 'Desc');
 		$count = Campaign::get();
-		
+
 		if(isset($post['campaign_title']) && $post['campaign_title'] != ""){
 			$query = $query->where('campaign_title','like','%'.$post['campaign_title'].'%');
 			$count = $count->where('campaign_title','like','%'.$post['campaign_title'].'%');
 		}
-		
+
 		$query = $query->skip($post['skip'])->take($post['take'])->get()->toArray();
 		$count = $count->count();
-		
+
 		if(isset($query) && !empty($query)) {
 			$result = [
 					'status'  => 'success',
@@ -81,7 +83,7 @@ class ApiCampaign extends Controller
 	public function CreateCampaign(Request $request){
 		$post = $request->json()->all();
 		$user = $request->user();
-		
+
 		$data 						= [];
 		$data['campaign_title'] 	= $post['campaign_title'];
 		$data['id_user'] 			= $user['id'];
@@ -92,53 +94,53 @@ class ApiCampaign extends Controller
 			$date 						= date("Y-m-d", strtotime($datearr[2].", ".$datearr[1]." ".$datearr[0]));
 			$data['campaign_send_at'] 	= $date." ".$datetimearr[1].":00";
 		} else $data['campaign_send_at'] = null;
-			
+
 		// $data['campaign_rule'] 		= $post['rule'];
-		
-		if(in_array('Email', $post['campaign_media'])) 
+
+		if(in_array('Email', $post['campaign_media']))
 			$data['campaign_media_email'] = "Yes";
-		else 
+		else
 			$data['campaign_media_email'] = "No";
-	   
-		if(in_array('SMS', $post['campaign_media'])) 
+
+		if(in_array('SMS', $post['campaign_media']))
 			$data['campaign_media_sms'] = "Yes";
-		else 
+		else
 			$data['campaign_media_sms'] = "No";
-		
-		if(in_array('Push Notification', $post['campaign_media'])) 
+
+		if(in_array('Push Notification', $post['campaign_media']))
 			$data['campaign_media_push'] = "Yes";
-		else 
+		else
 			$data['campaign_media_push'] = "No";
-		
-		if(in_array('Inbox', $post['campaign_media'])) 
+
+		if(in_array('Inbox', $post['campaign_media']))
 			$data['campaign_media_inbox'] = "Yes";
-		else 
+		else
 			$data['campaign_media_inbox'] = "No";
 
-		if(in_array('Whatsapp', $post['campaign_media'])) 
+		if(in_array('Whatsapp', $post['campaign_media']))
 			$data['campaign_media_whatsapp'] = "Yes";
-		else 
+		else
 			$data['campaign_media_whatsapp'] = "No";
-			
+
 		$data['campaign_generate_receipient'] =  $post['campaign_generate_receipient'];
 
 		DB::beginTransaction();
-		if(isset($post['id_campaign'])) 
+		if(isset($post['id_campaign']))
 			$queryCampaign = Campaign::where('id_campaign','=',$post['id_campaign'])->update($data);
 		else
 			$queryCampaign = Campaign::create($data);
-		
+
 		if($queryCampaign){
 			$data = [];
-			
+
 			if(isset($post['id_campaign'])){
 				$deleteRuleParent = CampaignRuleParent::where('id_campaign','=',$post['id_campaign'])->get();
 				foreach ($deleteRuleParent as $key => $value) {
 					$value->rules()->delete();
-				}	
+				}
 				$deleteRuleParent = CampaignRuleParent::where('id_campaign','=',$post['id_campaign'])->delete();
-			} 
-			
+			}
+
 			if(isset($post['id_campaign'])) $data['id_campaign'] = $post['id_campaign'];
 				else $data['id_campaign'] = $queryCampaign->id_campaign;
 
@@ -170,11 +172,11 @@ class ApiCampaign extends Controller
 		DB::commit();
 		return response()->json($result);
     }
-	
+
     public function ShowCampaignStep1(Request $request){
 		$post = $request->json()->all();
 		$user = $request->user();
-		
+
 		$campaign = Campaign::with(['user', 'campaign_rule_parents', 'campaign_rule_parents.rules'])->where('id_campaign','=',$post['id_campaign'])->get()->toArray();
 		if($campaign){
 			$result = [
@@ -189,15 +191,15 @@ class ApiCampaign extends Controller
 		}
 		return response()->json($result);
     }
-	
+
 	public function ShowCampaignStep2(Request $request){
 		$post = $request->json()->all();
 		$user = $request->user();
-		
+
 		$campaign = Campaign::with(['user', 'campaign_rule_parents', 'campaign_rule_parents.rules', 'whatsapp_content'])->where('id_campaign','=',$post['id_campaign'])->get()->first();
 		if($campaign){
 			$campaign['campaign_push_name_reference'] = "";
-			
+
 			if($campaign['campaign_media_push'] == "Yes"){
 				if($campaign['campaign_push_clickto'] == "Product"){
 					if($campaign['campaign_push_id_reference'] != 0){
@@ -205,7 +207,7 @@ class ApiCampaign extends Controller
 						$campaign['campaign_push_name_reference'] = $q['product_name'];
 					}
 				}
-				
+
 				if($campaign['campaign_push_clickto'] == "Outlet"){
 					if($campaign['campaign_push_id_reference'] != 0){
 						$q = Outlet::where('id_outlet','=',$campaign['campaign_push_id_reference'])->get()->first();
@@ -221,7 +223,7 @@ class ApiCampaign extends Controller
 						$campaign['campaign_inbox_name_reference'] = $q['product_name'];
 					}
 				}
-				
+
 				if($campaign['campaign_inbox_clickto'] == "Outlet"){
 					if($campaign['campaign_inbox_id_reference'] != 0){
 						$q = Outlet::where('id_outlet','=',$campaign['campaign_inbox_id_reference'])->get()->first();
@@ -229,12 +231,12 @@ class ApiCampaign extends Controller
 					}
 				}
 			}
-			
+
 			$cond = Campaign::with(['campaign_rule_parents', 'campaign_rule_parents.rules'])->where('id_campaign','=',$post['id_campaign'])->first();
-		
+
 			$users = app($this->user)->UserFilter($cond['campaign_rule_parents']);
 			if($users['status'] == 'success') $campaign['users'] = $users['result'];
-			
+
 			$result = [
 				'status'  => 'success',
 				'result'  => $campaign
@@ -245,14 +247,14 @@ class ApiCampaign extends Controller
 					'messages'  => ['Campaign Not Found']
 				];
 		}
-		
+
 		return response()->json($result);
     }
-	
+
 	public function SendCampaign(Request $request){
 		$post = $request->json()->all();
 		$user = $request->user();
-		
+
 		$campaign = Campaign::where('id_campaign','=',$post['id_campaign'])->first();
 
 		if($campaign){
@@ -263,7 +265,7 @@ class ApiCampaign extends Controller
 				];
 				return response()->json($result);
 			}
-				
+
 			if($campaign['campaign_send_at'] == null){
 				//Kirimnya NOW
 				if($campaign['campaign_media_email'] == "Yes"){
@@ -273,10 +275,10 @@ class ApiCampaign extends Controller
 							$to = $receipient;
 							$em_arr = explode('@',$receipient);
 							$name = ucwords(str_replace("_"," ", str_replace("-"," ", str_replace("."," ", $em_arr[0]))));
-							
+
 							$subject = app($this->autocrm)->TextReplace($campaign['campaign_email_subject'], $receipient, null, 'email');
 							$content = app($this->autocrm)->TextReplace($campaign['campaign_email_content'], $receipient, null, 'email');
-							
+
 							// get setting email
 							$setting = array();
 							$set = Setting::where('key', 'email_from')->first();
@@ -357,9 +359,14 @@ class ApiCampaign extends Controller
 								'html_message' => $content,
 								'setting' => $setting
 							);
-							
+
 							Mailgun::send('emails.test', $data, function($message) use ($to,$subject,$name,$setting)
 							{
+
+								if(stristr($to, 'gmail.con')){
+									$to = str_replace('gmail.con', 'gmail.com', $to);
+								}
+
 								$message->to($to, $name)->subject($subject)
 												->trackClicks(true)
 												->trackOpens(true);
@@ -381,14 +388,14 @@ class ApiCampaign extends Controller
 									$message->bcc($setting['email_bcc'], $setting['email_bcc_name']);
 								}
 							});
-							
+
 							$outbox = [];
 							$outbox['id_campaign'] = $campaign['id_campaign'];
 							$outbox['email_sent_to'] = $receipient;
 							$outbox['email_sent_subject'] = $subject;
 							$outbox['email_sent_message'] = $content;
 							$outbox['email_sent_send_at'] = date("Y-m-d H:i:s");
-							
+
 							$logs = CampaignEmailSent::create($outbox);
 							DB::table('campaigns')
 							   ->where('id_campaign', $campaign['id_campaign'])
@@ -399,16 +406,16 @@ class ApiCampaign extends Controller
 							//masuk queue
 							$subject = app($this->autocrm)->TextReplace($campaign['campaign_email_subject'], $receipient, null, 1);
 							$content = app($this->autocrm)->TextReplace($campaign['campaign_email_content'], $receipient, null, 1);
-							
+
 							$queue = [];
 							$queue['id_campaign'] = $campaign['id_campaign'];
 							$queue['email_queue_to'] = $receipient;
 							$queue['email_queue_subject'] = $subject;
 							$queue['email_queue_content'] = $content;
 							$queue['email_queue_send_at'] = date('Y-m-d H:i:s', strtotime("+ 5 minutes"));
-							
+
 							$logs = CampaignEmailQueue::create($queue);
-							
+
 							DB::table('campaigns')
 							   ->where('id_campaign', $campaign['id_campaign'])
 							   ->update([
@@ -417,26 +424,26 @@ class ApiCampaign extends Controller
 						}
 					}
 				}
-				
+
 				if($campaign['campaign_media_sms'] == "Yes"){
 					$receipient_sms = explode(',', str_replace(' ', ',', str_replace(';', ',', $campaign['campaign_sms_receipient'])));
-				
+
 					$senddata = array(
-						'apikey' => env('SMS_KEY'),  
-						'callbackurl' => env('APP_URL'), 
+						'apikey' => env('SMS_KEY'),
+						'callbackurl' => env('APP_URL'),
 						'datapacket'=>array()
 					);
-		
-				
+
+
 					foreach($receipient_sms as $key => $receipient){
 						if($key < 10){
 							$content 	= app($this->autocrm)->TextReplace($campaign['campaign_sms_content'], $receipient);
-								
+
 							array_push($senddata['datapacket'],array(
 									'number' => trim($receipient),
 									'message' => urlencode(stripslashes(utf8_encode($content))),
 									'sendingdatetime' => ""));
-									
+
 							$this->rajasms->setData($senddata);
 							$send = $this->rajasms->send();
 
@@ -445,15 +452,15 @@ class ApiCampaign extends Controller
 							$outbox['sms_sent_to'] = $receipient;
 							$outbox['sms_sent_content'] = $content;
 							$outbox['sms_sent_send_at'] = date("Y-m-d H:i:s");
-							
+
 							$logs = CampaignSmsSent::create($outbox);
-							
+
 							DB::table('campaigns')
 							   ->where('id_campaign', $campaign['id_campaign'])
 							   ->update([
 								   'campaign_sms_count_sent' => DB::raw('campaign_sms_count_sent + 1')
 							   ]);
-					
+
 						} else {
 							$content = app($this->autocrm)->TextReplace($campaign['campaign_sms_content'], $receipient);
 
@@ -462,9 +469,9 @@ class ApiCampaign extends Controller
 							$queue['sms_queue_to'] = $receipient;
 							$queue['sms_queue_content'] = $content;
 							$queue['sms_queue_send_at'] = date('Y-m-d H:i:s', strtotime("+ 5 minutes"));
-							
+
 							$logs = CampaignSmsQueue::create($queue);
-							
+
 							DB::table('campaigns')
 							   ->where('id_campaign', $campaign['id_campaign'])
 							   ->update([
@@ -473,10 +480,10 @@ class ApiCampaign extends Controller
 						}
 					}
 				}
-				
+
 				if($campaign['campaign_media_push'] == "Yes"){
 					$receipient_push = explode(',', str_replace(' ', ',', str_replace(';', ',', $campaign['campaign_push_receipient'])));
-					
+
 					foreach($receipient_push as $key => $receipient){
 						if($key < 100){
 							$dataOptional          = [];
@@ -485,22 +492,22 @@ class ApiCampaign extends Controller
 								$dataOptional['image'] = env('AWS_URL').$campaign['campaign_push_image'];
 								$image = env('AWS_URL').$campaign['campaign_push_image'];
 							}
-							
+
 							if (isset($campaign['campaign_push_clickto']) && $campaign['campaign_push_clickto'] != null) {
 								$dataOptional['type'] = $campaign['campaign_push_clickto'];
 							} else {
 								$dataOptional['type'] = 'Home';
 							}
-							
+
 							if (isset($campaign['campaign_push_link']) && $campaign['campaign_push_link'] != null) {
 								if($dataOptional['type'] == 'Link')
 									$dataOptional['link'] = $campaign['campaign_push_link'];
-								else 
+								else
 									$dataOptional['link'] = null;
 							} else {
 								$dataOptional['link'] = null;
 							}
-							
+
 							if (isset($campaign['campaign_push_id_reference']) && $campaign['campaign_push_id_reference'] != null) {
 								$dataOptional['id_reference'] = (int)$campaign['campaign_push_id_reference'];
 							} else{
@@ -521,9 +528,21 @@ class ApiCampaign extends Controller
 									$dataOptional['news_title'] = $outlet->outlet_name;
 								}
 							}
-							
+
+							//push notif logout
+							if($campaign['campaign_push_clickto'] == 'Logout'){
+								$user = User::where('phone', $receipient)->first();
+								if($user){
+									//delete token
+									$del = OauthAccessToken::join('oauth_access_token_providers', 'oauth_access_tokens.id', 'oauth_access_token_providers.oauth_access_token_id')
+											->where('oauth_access_tokens.user_id', $user['id'])->where('oauth_access_token_providers.provider', 'users')->delete();
+
+								}
+
+							}
+
 							$deviceToken = PushNotificationHelper::searchDeviceToken("phone", $receipient);
-							
+
 							$subject = app($this->autocrm)->TextReplace($campaign['campaign_push_subject'], $receipient);
 							$content = app($this->autocrm)->TextReplace($campaign['campaign_push_content'], $receipient);
 							$deviceToken = PushNotificationHelper::searchDeviceToken("phone", $receipient);
@@ -539,12 +558,12 @@ class ApiCampaign extends Controller
 										$push['push_sent_subject'] = $subject;
 										$push['push_sent_content'] = $content;
 										$push['push_sent_send_at'] = date('Y-m-d H:i:s', strtotime("+ 5 minutes"));
-									
+
 									$logs = CampaignPushSent::create($push);
 									}
 								}
 							}
-							
+
 						} else {
 							$push_subject = app($this->autocrm)->TextReplace($campaign['campaign_push_subject'], $receipient, null, 'id');
 							$push_content = app($this->autocrm)->TextReplace($campaign['campaign_push_content'], $receipient, null, 'id');
@@ -555,9 +574,9 @@ class ApiCampaign extends Controller
 							$push['push_queue_subject'] = $push_subject;
 							$push['push_queue_content'] = $push_content;
 							$push['push_queue_send_at'] = date('Y-m-d H:i:s', strtotime("+ 5 minutes"));
-							
+
 							$logs = CampaignPushQueue::create($push);
-							
+
 							DB::table('campaigns')
 							   ->where('id_campaign', $campaign['id_campaign'])
 							   ->update([
@@ -566,14 +585,14 @@ class ApiCampaign extends Controller
 						}
 					}
 				}
-				
+
 				if($campaign['campaign_media_inbox'] == "Yes"){
 					$receipient_inbox = explode(',', str_replace(' ', ',', str_replace(';', ',', $campaign['campaign_inbox_receipient'])));
-					
+
 					$user = User::whereIn('phone',$receipient_inbox)->get()->toArray();
 
 					foreach($user as $key => $receipient){
-						
+
 						$inbox = [];
 						$inbox['id_campaign'] = $campaign['id_campaign'];
 						$inbox['id_user'] 	  = $receipient['id'];
@@ -591,11 +610,11 @@ class ApiCampaign extends Controller
 						if(!empty($campaign['campaign_inbox_id_reference'])){
 							$inbox['inboxes_id_reference'] = $campaign['campaign_inbox_id_reference'];
 						}
-						
+
 						$inbox['inboxes_send_at'] = date("Y-m-d H:i:s");
 						$inbox['created_at'] = date("Y-m-d H:i:s");
 						$inbox['updated_at'] = date("Y-m-d H:i:s");
-						
+
 						$inboxQuery = UserInbox::insert($inbox);
 					}
 				}
@@ -604,7 +623,7 @@ class ApiCampaign extends Controller
 					$sendAt = date('Y-m-d H:i:s', strtotime("+ 5 minutes"));
 
 					$receipient_whatsapp = explode(',', str_replace(' ', ',', str_replace(';', ',', $campaign['campaign_whatsapp_receipient'])));
-					
+
 					$api_key = Setting::where('key', 'api_key_whatsapp')->first();
 					if($api_key){
 						if($api_key->value){
@@ -620,12 +639,12 @@ class ApiCampaign extends Controller
 											$content = $contentWhatsapp['content'];
 										}
 										// add country code in number
-										$ptn = "/^0/";  
-										$rpltxt = "62"; 
+										$ptn = "/^0/";
+										$rpltxt = "62";
 										$phone = preg_replace($ptn, $rpltxt, $receipient);
-		
+
 										$send = $this->apiwha->send($api_key->value, $phone, $content);
-		
+
 										//api key whatsapp not valid
 										if(isset($send['result_code']) && $send['result_code'] == -1){
 											break 2;
@@ -634,14 +653,14 @@ class ApiCampaign extends Controller
 										$dataContent['content'] = $content;
 										$dataContent['content_type'] = $contentWhatsapp['content_type'];
 										array_push($contentWaSent, $dataContent);
-		
+
 									}
 
 									$outbox = [];
 									$outbox['id_campaign'] = $campaign['id_campaign'];
 									$outbox['whatsapp_sent_to'] = $receipient;
 									$outbox['whatsapp_sent_send_at'] = date("Y-m-d H:i:s");
-									
+
 									$logs = CampaignWhatsappSent::create($outbox);
 									if($logs){
 										foreach($dataContent as $data){
@@ -661,9 +680,9 @@ class ApiCampaign extends Controller
 									$queue['id_campaign'] 			 = $campaign['id_campaign'];
 									$queue['whatsapp_queue_to'] 	 = $receipient;
 									$queue['whatsapp_queue_send_at'] = $sendAt;
-									
+
 									$logs = CampaignWhatsappQueue::create($queue);
-									
+
 									DB::table('campaigns')
 									->where('id_campaign', $campaign['id_campaign'])
 									->update([
@@ -676,7 +695,7 @@ class ApiCampaign extends Controller
 					}
 				}
 				$update = Campaign::where('id_campaign','=',$campaign['id_campaign'])->update(['campaign_is_sent' => 'Yes']);
-				
+
 				$result = [
 					'status'  => 'success',
 					'result'  => $campaign
@@ -687,7 +706,7 @@ class ApiCampaign extends Controller
 					'messages'  => ['Campaign Will be automatically sent at '.date("d F Y - H:i", strtotime($campaign['campaign_send_at']))]
 				];
 			}
-			
+
 		} else {
 			$result = [
 					'status'  => 'fail',
@@ -709,15 +728,15 @@ class ApiCampaign extends Controller
 				$receipient = [];
 				if($userFilter){
 					$receipient = $userFilter['result'];
-					
-					//update email receipient 
+
+					//update email receipient
 					if($campaign['campaign_media_email'] == "Yes"){
 						$emailReceipient = $campaign['campaign_email_receipient'];
 						if(count($receipient) > 0){
 							if($emailReceipient != null){
-								$emailReceipient = $emailReceipient.','.implode(',', array_pluck($receipient,'email')); 
+								$emailReceipient = $emailReceipient.','.implode(',', array_pluck($receipient,'email'));
 							}else{
-								$emailReceipient = implode(',', array_pluck($receipient,'email')); 
+								$emailReceipient = implode(',', array_pluck($receipient,'email'));
 							}
 
 							DB::table('campaigns')
@@ -728,14 +747,14 @@ class ApiCampaign extends Controller
 							]);
 						}
 					}
-					//update sms receipient 
+					//update sms receipient
 					if($campaign['campaign_media_sms'] == "Yes"){
 						$smsReceipient = $campaign['campaign_sms_receipient'];
 						if(count($receipient) > 0){
 							if($smsReceipient != null){
-								$smsReceipient = $smsReceipient.','.implode(',', array_pluck($receipient,'phone')); 
+								$smsReceipient = $smsReceipient.','.implode(',', array_pluck($receipient,'phone'));
 							}else{
-								$smsReceipient = implode(',', array_pluck($receipient,'phone')); 
+								$smsReceipient = implode(',', array_pluck($receipient,'phone'));
 							}
 
 							DB::table('campaigns')
@@ -746,14 +765,14 @@ class ApiCampaign extends Controller
 							]);
 						}
 					}
-					//update push receipient 
+					//update push receipient
 					if($campaign['campaign_media_push'] == "Yes"){
 						$pushReceipient = $campaign['campaign_push_receipient'];
 						if(count($receipient) > 0){
 							if($pushReceipient != null){
-								$pushReceipient = $pushReceipient.','.implode(',', array_pluck($receipient,'phone')); 
+								$pushReceipient = $pushReceipient.','.implode(',', array_pluck($receipient,'phone'));
 							}else{
-								$pushReceipient = implode(',', array_pluck($receipient,'phone')); 
+								$pushReceipient = implode(',', array_pluck($receipient,'phone'));
 							}
 
 							DB::table('campaigns')
@@ -764,14 +783,14 @@ class ApiCampaign extends Controller
 							]);
 						}
 					}
-					//update inbox receipient 
+					//update inbox receipient
 					if($campaign['campaign_media_inbox'] == "Yes"){
 						$inboxReceipient = $campaign['campaign_inbox_receipient'];
 						if(count($receipient) > 0){
 							if($inboxReceipient != null){
-								$inboxReceipient = $inboxReceipient.','.implode(',', array_pluck($receipient,'phone')); 
+								$inboxReceipient = $inboxReceipient.','.implode(',', array_pluck($receipient,'phone'));
 							}else{
-								$inboxReceipient = implode(',', array_pluck($receipient,'phone')); 
+								$inboxReceipient = implode(',', array_pluck($receipient,'phone'));
 							}
 
 							DB::table('campaigns')
@@ -782,14 +801,14 @@ class ApiCampaign extends Controller
 							]);
 						}
 					}
-					//update whatsapp receipient 
+					//update whatsapp receipient
 					if($campaign['campaign_media_whatsapp'] == "Yes"){
 						$whatsappReceipient = $campaign['campaign_whatsapp_receipient'];
 						if(count($receipient) > 0){
 							if($whatsappReceipient != null){
-								$whatsappReceipient = $whatsappReceipient.','.implode(',', array_pluck($receipient,'phone')); 
+								$whatsappReceipient = $whatsappReceipient.','.implode(',', array_pluck($receipient,'phone'));
 							}else{
-								$whatsappReceipient = implode(',', array_pluck($receipient,'phone')); 
+								$whatsappReceipient = implode(',', array_pluck($receipient,'phone'));
 							}
 
 							DB::table('campaigns')
@@ -800,7 +819,7 @@ class ApiCampaign extends Controller
 							]);
 						}
 					}
-					
+
 				}
 			}
 			$campaign = Campaign::find($campaign['id_campaign']);
@@ -811,28 +830,28 @@ class ApiCampaign extends Controller
 					//masuk queue
 					$subject = app($this->autocrm)->TextReplace($campaign['campaign_email_subject'], $receipient, null, 'email');
 					$content = app($this->autocrm)->TextReplace($campaign['campaign_email_content'], $receipient, null, 'email');
-					
+
 					$queue = [];
 					$queue['id_campaign'] = $campaign['id_campaign'];
 					$queue['email_queue_to'] = $receipient;
 					$queue['email_queue_subject'] = $subject;
 					$queue['email_queue_content'] = $content;
 					$queue['email_queue_send_at'] = date('Y-m-d H:i:s');
-					
+
 					$logs = CampaignEmailQueue::create($queue);
-					
+
 					DB::table('campaigns')
 						->where('id_campaign', $campaign['id_campaign'])
 						->update([
 							'campaign_email_count_queue' => DB::raw('campaign_email_count_queue + 1')
 						]);
 				}
-				
+
 			}
 			// add sms queue
 			if($campaign['campaign_media_sms'] == "Yes"){
 				$receipient_sms = explode(',', str_replace(' ', ',', str_replace(';', ',', $campaign['campaign_sms_receipient'])));
-			
+
 				foreach($receipient_sms as $key => $receipient){
 					$content = app($this->autocrm)->TextReplace($campaign['campaign_sms_content'], $receipient);
 
@@ -841,9 +860,9 @@ class ApiCampaign extends Controller
 					$queue['sms_queue_to'] = $receipient;
 					$queue['sms_queue_content'] = $content;
 					$queue['sms_queue_send_at'] = date('Y-m-d H:i:s');
-					
+
 					$logs = CampaignSmsQueue::create($queue);
-					
+
 					DB::table('campaigns')
 						->where('id_campaign', $campaign['id_campaign'])
 						->update([
@@ -851,11 +870,11 @@ class ApiCampaign extends Controller
 						]);
 				}
 			}
-			
+
 			// add push queue
 			if($campaign['campaign_media_push'] == "Yes"){
 				$receipient_push = explode(',', str_replace(' ', ',', str_replace(';', ',', $campaign['campaign_push_receipient'])));
-				
+
 				foreach($receipient_push as $key => $receipient){
 					$push_subject = app($this->autocrm)->TextReplace($campaign['campaign_push_subject'], $receipient, null, 'phone');
 					$push_content = app($this->autocrm)->TextReplace($campaign['campaign_push_content'], $receipient, null, 'phone');
@@ -866,9 +885,9 @@ class ApiCampaign extends Controller
 					$push['push_queue_subject'] = $push_subject;
 					$push['push_queue_content'] = $push_content;
 					$push['push_queue_send_at'] = date('Y-m-d H:i:s');
-					
+
 					$logs = CampaignPushQueue::create($push);
-					
+
 					DB::table('campaigns')
 						->where('id_campaign', $campaign['id_campaign'])
 						->update([
@@ -876,36 +895,36 @@ class ApiCampaign extends Controller
 						]);
 				}
 			}
-			
+
 			// add inbox queue
 			if($campaign['campaign_media_inbox'] == "Yes"){
 				$receipient_inbox = explode(',', str_replace(' ', ',', str_replace(';', ',', $campaign['campaign_inbox_receipient'])));
-				
+
 				$user = User::whereIn('phone',$receipient_inbox)->get()->toArray();
-	
+
 				foreach($user as $key => $receipient){
-					
+
 					$inbox = [];
 					$inbox['id_campaign'] = $campaign['id_campaign'];
 					$inbox['id_user'] 	  = $receipient['id'];
 					$inbox['inboxes_subject'] = app($this->autocrm)->TextReplace($campaign['campaign_inbox_subject'], $receipient['id'], null, 'id');
 					$inbox['inboxes_clickto'] = $campaign['campaign_inbox_clickto'];
-	
+
 					if($campaign['campaign_inbox_clickto'] == 'Content'){
 						$inbox['inboxes_content'] = app($this->autocrm)->TextReplace($campaign['campaign_inbox_content'], $receipient['id'], null, 'id');
 					}
-	
+
 					if($campaign['campaign_inbox_clickto'] == 'Link'){
 						$inbox['inboxes_link'] = $campaign['campaign_inbox_link'];
 					}
-	
+
 					if(!empty($campaign['campaign_inbox_id_reference'])){
 						$inbox['inboxes_id_reference'] = $campaign['campaign_inbox_id_reference'];
 					}
 					$inbox['inboxes_send_at'] = date("Y-m-d H:i:s");
 					$inbox['created_at'] = date("Y-m-d H:i:s");
 					$inbox['updated_at'] = date("Y-m-d H:i:s");
-					
+
 					$inboxQuery = UserInbox::insert($inbox);
 				}
 			}
@@ -913,16 +932,16 @@ class ApiCampaign extends Controller
 			// add whatsapp queue
 			if($campaign['campaign_media_whatsapp'] == "Yes"){
 				$receipient_Whatsapp = explode(',', str_replace(' ', ',', str_replace(';', ',', $campaign['campaign_push_receipient'])));
-				
+
 				foreach($receipient_Whatsapp as $key => $receipient){
 
 					$whatsapp = [];
 					$whatsapp['id_campaign'] = $campaign['id_campaign'];
 					$whatsapp['whatsapp_queue_to'] = $receipient;
 					$whatsapp['whatsapp_queue_send_at'] = date('Y-m-d H:i:s');
-					
+
 					$logs = CampaignWhatsappQueue::create($whatsapp);
-					
+
 					DB::table('campaigns')
 						->where('id_campaign', $campaign['id_campaign'])
 						->update([
@@ -940,14 +959,14 @@ class ApiCampaign extends Controller
 
 	}
 
-	
+
 	public function sendCampaignCron(){
 		$now = date('Y-m-d H:i:00');
 
 		// send 10 email queue
 		$emailQueues = CampaignEmailQueue::where('email_queue_send_at', '<=', $now)->orderBy('email_queue_send_at', 'ASC')->limit(10)->get();
 		foreach ($emailQueues as $key => $emailQueue) {
-			
+
 			$to = $emailQueue['email_queue_to'];
 			$user = User::where('email', $to)->first();
 			if($user && $user['name'] != null){
@@ -955,25 +974,30 @@ class ApiCampaign extends Controller
 			}else{
 				$name = ucwords(str_replace("_"," ", str_replace("-"," ", str_replace("."," ", $to))));
 			}
-			
+
 			$subject = $emailQueue['email_queue_subject'];
 			$content = $emailQueue['email_queue_content'];
-			
+
 			// get setting email
 			$getSetting = Setting::where('key', 'LIKE', 'email%')->get()->toArray();
 			$setting = array();
 			foreach ($getSetting as $key => $value) {
-				$setting[$value['key']] = $value['value']; 
+				$setting[$value['key']] = $value['value'];
 			}
-	
+
 			$data = array(
 				'customer' => $name,
 				'html_message' => $content,
 				'setting' => $setting
 			);
-			
+
 			Mailgun::send('emails.test', $data, function($message) use ($to,$subject,$name,$setting)
 			{
+
+				if(stristr($to, 'gmail.con')){
+					$to = str_replace('gmail.con', 'gmail.com', $to);
+				}
+
 				$message->to($to, $name)->subject($subject)
 								->trackClicks(true)
 								->trackOpens(true);
@@ -982,20 +1006,20 @@ class ApiCampaign extends Controller
 				}else if(!empty($setting['email_from'])){
 					$message->from($setting['email_from']);
 				}
-	
+
 				if(!empty($setting['email_reply_to'])){
 					$message->replyTo($setting['email_reply_to'], $setting['email_reply_to_name']);
 				}
-	
+
 				if(!empty($setting['email_cc']) && !empty($setting['email_cc_name'])){
 					$message->cc($setting['email_cc'], $setting['email_cc_name']);
 				}
-	
+
 				if(!empty($setting['email_bcc']) && !empty($setting['email_bcc_name'])){
 					$message->bcc($setting['email_bcc'], $setting['email_bcc_name']);
 				}
 			});
-			
+
 			// insert to email sent
 			$outbox = [];
 			$outbox['id_campaign'] = $emailQueue['id_campaign'];
@@ -1017,24 +1041,24 @@ class ApiCampaign extends Controller
 			$deleteQueue = CampaignEmailQueue::where('id_campaign_email_queue', $emailQueue['id_campaign_email_queue'])->delete();
 
 		}
-		
+
 		// send 10 sms queue
 		$smsQueues = CampaignSmsQueue::where('sms_queue_send_at', '<=', $now)->orderBy('sms_queue_send_at', 'ASC')->limit(10)->get();
 		foreach ($smsQueues as $key => $smsQueue) {
 			$senddata = array(
-				'apikey' => env('SMS_KEY'),  
-				'callbackurl' => env('APP_URL'), 
+				'apikey' => env('SMS_KEY'),
+				'callbackurl' => env('APP_URL'),
 				'datapacket'=>array()
 			);
-		
+
 			$receipient = $smsQueue['sms_queue_to'];
 			$content 	= $smsQueue['sms_queue_content'];
-				
+
 			array_push($senddata['datapacket'],array(
 					'number' => trim($receipient),
 					'message' => urlencode(stripslashes(utf8_encode($content))),
 					'sendingdatetime' => ""));
-					
+
 			$this->rajasms->setData($senddata);
 			$send = $this->rajasms->send();
 
@@ -1056,9 +1080,9 @@ class ApiCampaign extends Controller
 
 			// delete from sms queue
 			$deleteQueue = CampaignSmsQueue::where('id_campaign_sms_queue', $smsQueue['id_campaign_sms_queue'])->delete();
-			
+
 		}
-		
+
 		// send 100 push queue
 		$pushQueues = CampaignPushQueue::with('campaign')->where('push_queue_send_at', '<=', $now)->orderBy('push_queue_send_at', 'ASC')->limit(100)->get();
 		foreach ($pushQueues as $key => $pushQueue) {
@@ -1070,22 +1094,22 @@ class ApiCampaign extends Controller
 				$dataOptional['image'] = env('AWS_URL').$pushQueue['campaign']['campaign_push_image'];
 				$image = env('AWS_URL').$pushQueue['campaign']['campaign_push_image'];
 			}
-			
+
 			if (isset($pushQueue['campaign']['campaign_push_clickto']) && $pushQueue['campaign']['campaign_push_clickto'] != null) {
 				$dataOptional['type'] = $pushQueue['campaign']['campaign_push_clickto'];
 			} else {
 				$dataOptional['type'] = 'Home';
 			}
-			
+
 			if (isset($pushQueue['campaign']['campaign_push_link']) && $pushQueue['campaign']['campaign_push_link'] != null) {
 				if($dataOptional['type'] == 'Link')
 					$dataOptional['link'] = $pushQueue['campaign']['campaign_push_link'];
-				else 
+				else
 					$dataOptional['link'] = null;
 			} else {
 				$dataOptional['link'] = null;
 			}
-			
+
 			if (isset($pushQueue['campaign']['campaign_push_id_reference']) && $pushQueue['campaign']['campaign_push_id_reference'] != null) {
 				$dataOptional['id_reference'] = (int)$pushQueue['campaign']['campaign_push_id_reference'];
 			} else{
@@ -1093,11 +1117,11 @@ class ApiCampaign extends Controller
 			}
 
 			if($pushQueue['campaign']['campaign_push_clickto'] == 'News' && $pushQueue['campaign']['campaign_push_id_reference'] != null){
-				$news = News::find($campaign['campaign_push_id_reference']);
+				$news = News::find($pushQueue['campaign_push_id_reference']);
 				if($news){
 					$dataOptional['news_title'] = $news->news_title;
 				}
-				$dataOptional['url'] = env('APP_URL').'news/webview/'.$campaign['campaign_push_id_reference'];
+				$dataOptional['url'] = env('APP_URL').'news/webview/'.$pushQueue['campaign_push_id_reference'];
 			}
 
 			if($pushQueue['campaign_push_clickto'] == 'Order' && $pushQueue['campaign_push_id_reference'] != null){
@@ -1106,9 +1130,22 @@ class ApiCampaign extends Controller
 					$dataOptional['news_title'] = $outlet->outlet_name;
 				}
 			}
-			
+
+			//push notif logout
+			if($pushQueue['campaign_push_clickto'] == 'Logout'){
+				$user = User::where('phone', $receipient)->first();
+				if($user){
+					//delete token
+                			$del = OauthAccessToken::join('oauth_access_token_providers', 'oauth_access_tokens.id', 'oauth_access_token_providers.oauth_access_token_id')
+               		 			->where('oauth_access_tokens.user_id', $user['id'])->where('oauth_access_token_providers.provider', 'users')->delete();
+
+				}
+
+			}
+
+
 			$deviceToken = PushNotificationHelper::searchDeviceToken("phone", $receipient);
-			
+
 			$subject = $pushQueue['push_queue_subject'];
 			$content = $pushQueue['push_queue_content'];
 			$deviceToken = PushNotificationHelper::searchDeviceToken("phone", $receipient);
@@ -1125,12 +1162,12 @@ class ApiCampaign extends Controller
 						$push['push_sent_subject'] = $subject;
 						$push['push_sent_content'] = $content;
 						$push['push_sent_send_at'] = date('Y-m-d H:i:s');
-					
+
 					$logs = CampaignPushSent::create($push);
 					}
 				}
 			}
-			
+
 			//update count campaign
 			DB::table('campaigns')
 			->where('id_campaign', $pushQueue['id_campaign'])
@@ -1138,7 +1175,7 @@ class ApiCampaign extends Controller
 				'campaign_push_count_sent' => DB::raw('campaign_push_count_sent + 1'),
 				'campaign_push_count_queue' => DB::raw('campaign_push_count_queue - 1')
 				]);
-				
+
 			// delete from push queue
 			$deleteQueue = CampaignPushQueue::where('id_campaign_push_queue', $pushQueue['id_campaign_push_queue'])->delete();
 		}
@@ -1165,8 +1202,8 @@ class ApiCampaign extends Controller
 							$content = $contentWhatsapp['content'];
 						}
 						// add country code in number
-						$ptn = "/^0/";  
-						$rpltxt = "62"; 
+						$ptn = "/^0/";
+						$rpltxt = "62";
 						$phone = preg_replace($ptn, $rpltxt, $receipient);
 
 						$send = $this->apiwha->send($api_key->value, $phone, $content);
@@ -1187,10 +1224,10 @@ class ApiCampaign extends Controller
 					$outbox['id_campaign'] = $whatsappQueue['id_campaign'];
 					$outbox['whatsapp_sent_to'] = $receipient;
 					$outbox['whatsapp_sent_send_at'] = date("Y-m-d H:i:s");
-					
+
 					$logs = CampaignWhatsappSent::create($outbox);
 					if($logs){
-						// insert to campaign whatsapp content 
+						// insert to campaign whatsapp content
 						foreach($contentWaSent as $data){
 							$dataContentWhatsapp['content'] = $data['content'];
 							$dataContentWhatsapp['content_type'] = $data['content_type'];
@@ -1209,7 +1246,7 @@ class ApiCampaign extends Controller
 
 					// delete from sms queue
 					$deleteQueue = CampaignWhatsappQueue::where('id_campaign_whatsapp_queue', $whatsappQueue['id_campaign_whatsapp_queue'])->delete();
-						
+
 				}
 			}
 
@@ -1223,7 +1260,7 @@ class ApiCampaign extends Controller
 
     public function update(Request $request){
 		$post = $request->json()->all();
-		
+
 		$id_campaign = $post['id_campaign'];
 		unset($post['id_campaign']);
 		if(isset($post['campaign_email_receipient']) && $post['campaign_email_receipient'] != "")
@@ -1236,7 +1273,7 @@ class ApiCampaign extends Controller
 			$post['campaign_inbox_count'] = count(explode(',',$post['campaign_inbox_receipient']));
 		if(isset($post['campaign_whatsapp_receipient']) && $post['campaign_whatsapp_receipient'] != "")
 			$post['campaign_whatsapp_count_all'] = count(explode(',',$post['campaign_whatsapp_receipient']));
-		
+
 		if (isset($post['campaign_push_image'])) {
 			$upload = MyHelper::uploadPhoto($post['campaign_push_image'], $path = 'img/push/', 600);
 
@@ -1297,12 +1334,12 @@ class ApiCampaign extends Controller
 								MyHelper::deletePhoto($whatsappContent->content);
 							}
 						}
-	
+
 						if($content['content_type'] == 'image'){
 							if (!file_exists('whatsapp/img/campaign/')) {
 								mkdir('whatsapp/img/campaign/', 0777, true);
 							}
-	
+
 							//upload file
 							$upload = MyHelper::uploadPhoto($content['content'], $path = 'whatsapp/img/campaign/');
 							if ($upload['status'] == "success") {
@@ -1320,14 +1357,14 @@ class ApiCampaign extends Controller
 							if (!file_exists('whatsapp/file/campaign/')) {
 								mkdir('whatsapp/file/campaign/', 0777, true);
 							}
-	
+
 							$i = 1;
 							$filename = $content['content_file_name'];
 							while (file_exists('whatsapp/file/campaign/'.$content['content_file_name'].'.'.$content['content_file_ext'])) {
 								$content['content_file_name'] = $filename.'_'.$i;
 								$i++;
 							}
-	
+
 							$upload = MyHelper::uploadFile($content['content'], $path = 'whatsapp/file/campaign/', $content['content_file_ext'], $content['content_file_name']);
 							if ($upload['status'] == "success") {
 								$content['content'] = env('AWS_URL').$upload['path'];
@@ -1340,12 +1377,12 @@ class ApiCampaign extends Controller
 								return response()->json($result);
 							}
 						}
-	
+
 						$dataContent['source'] 		 = 'campaign';
 						$dataContent['id_reference'] = $id_campaign;
 						$dataContent['content_type'] = $content['content_type'];
 						$dataContent['content'] 	 = $content['content'];
-	
+
 						//for update
 						if($content['id_whatsapp_content']){
 							$whatsappContent = WhatsappContent::where('id_whatsapp_content',$content['id_whatsapp_content'])->update($dataContent);
@@ -1354,7 +1391,7 @@ class ApiCampaign extends Controller
 						else{
 							$whatsappContent = WhatsappContent::create($dataContent);
 						}
-	
+
 						if(!$whatsappContent){
 							DB::rollBack();
 							$result = [
@@ -1364,7 +1401,7 @@ class ApiCampaign extends Controller
 							return response()->json($result);
 						}
 					}
-					
+
 				}
 			}
 
@@ -1384,20 +1421,20 @@ class ApiCampaign extends Controller
     }
 
     public function campaignEmailOutboxList(Request $request){
-		$post = $request->json()->all(); 
-		
+		$post = $request->json()->all();
+
 		$query = CampaignEmailSent::join('campaigns','campaigns.id_campaign','=','campaign_email_sents.id_campaign')
 									->orderBy('id_campaign_email_sent', 'Desc');
 		$count = CampaignEmailSent::join('campaigns','campaigns.id_campaign','=','campaign_email_sents.id_campaign')->get();
-		
+
 		if(isset($post['email_sent_subject']) && $post['email_sent_subject'] != ""){
 			$query = $query->where('email_sent_subject','like','%'.$post['email_sent_subject'].'%');
 			$count = $count->where('email_sent_subject','like','%'.$post['email_sent_subject'].'%');
 		}
-		
+
 		$query = $query->skip($post['skip'])->take($post['take'])->get()->toArray();
 		$count = $count->count();
-		
+
 		if(isset($query) && !empty($query)) {
 			$result = [
 					'status'  => 'success',
@@ -1412,14 +1449,14 @@ class ApiCampaign extends Controller
 		}
 		return response()->json($result);
 	}
-	
+
 	public function campaignEmailOutboxDetail(Request $request){
-		$post = $request->json()->all(); 
-		
+		$post = $request->json()->all();
+
 		$query = CampaignEmailSent::join('campaigns','campaigns.id_campaign','=','campaign_email_sents.id_campaign')
 								->where('id_campaign_email_sent',$post['id_campaign_email_sent'])
 								->first();
-		
+
 		if(isset($query) && !empty($query)) {
 			$result = [
 					'status'  => 'success',
@@ -1433,22 +1470,22 @@ class ApiCampaign extends Controller
 		}
 		return response()->json($result);
 	}
-	
+
 	public function campaignEmailQueueList(Request $request){
-		$post = $request->json()->all(); 
-		
+		$post = $request->json()->all();
+
 		$query = CampaignEmailQueue::join('campaigns','campaigns.id_campaign','=','campaign_email_queues.id_campaign')
 									->orderBy('id_campaign_email_queue', 'Desc');
 		$count = CampaignEmailQueue::join('campaigns','campaigns.id_campaign','=','campaign_email_queues.id_campaign')->get();
-		
+
 		if(isset($post['email_queue_subject']) && $post['email_queue_subject'] != ""){
 			$query = $query->where('email_queue_subject','like','%'.$post['email_queue_subject'].'%');
 			$count = $count->where('email_queue_subject','like','%'.$post['email_queue_subject'].'%');
 		}
-		
+
 		$query = $query->skip($post['skip'])->take($post['take'])->get()->toArray();
 		$count = $count->count();
-		
+
 		if(isset($query) && !empty($query)) {
 			$result = [
 					'status'  => 'success',
@@ -1463,14 +1500,14 @@ class ApiCampaign extends Controller
 		}
 		return response()->json($result);
 	}
-	
+
 	public function campaignEmailQueueDetail(Request $request){
-		$post = $request->json()->all(); 
-		
+		$post = $request->json()->all();
+
 		$query = CampaignEmailQueue::join('campaigns','campaigns.id_campaign','=','campaign_email_queues.id_campaign')
 								->where('id_campaign_email_queue',$post['id_campaign_email_queue'])
 								->first();
-		
+
 		if(isset($query) && !empty($query)) {
 			$result = [
 					'status'  => 'success',
@@ -1484,22 +1521,22 @@ class ApiCampaign extends Controller
 		}
 		return response()->json($result);
 	}
-	
+
 	public function campaignSmsOutboxList(Request $request){
-		$post = $request->json()->all(); 
-		
+		$post = $request->json()->all();
+
 		$query = CampaignSmsSent::join('campaigns','campaigns.id_campaign','=','campaign_sms_sents.id_campaign')
 									->orderBy('id_campaign_sms_sent', 'Desc');
 		$count = CampaignSmsSent::join('campaigns','campaigns.id_campaign','=','campaign_sms_sents.id_campaign')->get();
-		
+
 		if(isset($post['sms_sent_content']) && $post['sms_sent_content'] != ""){
 			$query = $query->where('sms_sent_content','like','%'.$post['sms_sent_content'].'%');
 			$count = $count->where('sms_sent_content','like','%'.$post['sms_sent_content'].'%');
 		}
-		
+
 		$query = $query->skip($post['skip'])->take($post['take'])->get()->toArray();
 		$count = $count->count();
-		
+
 		if(isset($query) && !empty($query)) {
 			$result = [
 					'status'  => 'success',
@@ -1514,14 +1551,14 @@ class ApiCampaign extends Controller
 		}
 		return response()->json($result);
 	}
-	
+
 	public function campaignSmsOutboxDetail(Request $request){
-		$post = $request->json()->all(); 
-		
+		$post = $request->json()->all();
+
 		$query = CampaignSmsSent::join('campaigns','campaigns.id_campaign','=','campaign_sms_sents.id_campaign')
 								->where('id_campaign_sms_sent',$post['id_campaign_sms_sent'])
 								->first();
-		
+
 		if(isset($query) && !empty($query)) {
 			$result = [
 					'status'  => 'success',
@@ -1535,22 +1572,22 @@ class ApiCampaign extends Controller
 		}
 		return response()->json($result);
 	}
-	
+
 	public function campaignSmsQueueList(Request $request){
-		$post = $request->json()->all(); 
-		
+		$post = $request->json()->all();
+
 		$query = CampaignSmsQueue::join('campaigns','campaigns.id_campaign','=','campaign_sms_queues.id_campaign')
 									->orderBy('id_campaign_sms_queue', 'Desc');
 		$count = CampaignSmsQueue::join('campaigns','campaigns.id_campaign','=','campaign_sms_queues.id_campaign')->get();
-		
+
 		if(isset($post['sms_queue_content']) && $post['sms_queue_content'] != ""){
 			$query = $query->where('sms_queue_content','like','%'.$post['sms_queue_content'].'%');
 			$count = $count->where('sms_queue_content','like','%'.$post['sms_queue_content'].'%');
 		}
-		
+
 		$query = $query->skip($post['skip'])->take($post['take'])->get()->toArray();
 		$count = $count->count();
-		
+
 		if(isset($query) && !empty($query)) {
 			$result = [
 					'status'  => 'success',
@@ -1565,14 +1602,14 @@ class ApiCampaign extends Controller
 		}
 		return response()->json($result);
 	}
-	
+
 	public function campaignSmsQueueDetail(Request $request){
-		$post = $request->json()->all(); 
-		
+		$post = $request->json()->all();
+
 		$query = CampaignSmsQueue::join('campaigns','campaigns.id_campaign','=','campaign_sms_queues.id_campaign')
 								->where('id_campaign_sms_queue',$post['id_campaign_sms_queue'])
 								->first();
-		
+
 		if(isset($query) && !empty($query)) {
 			$result = [
 					'status'  => 'success',
@@ -1586,22 +1623,22 @@ class ApiCampaign extends Controller
 		}
 		return response()->json($result);
 	}
-	
+
 	public function campaignPushOutboxList(Request $request){
-		$post = $request->json()->all(); 
-		
+		$post = $request->json()->all();
+
 		$query = CampaignPushSent::join('campaigns','campaigns.id_campaign','=','campaign_push_sents.id_campaign')
 									->orderBy('id_campaign_push_sent', 'Desc');
 		$count = CampaignPushSent::join('campaigns','campaigns.id_campaign','=','campaign_push_sents.id_campaign')->get();
-		
+
 		if(isset($post['push_sent_subject']) && $post['push_sent_subject'] != ""){
 			$query = $query->where('push_sent_subject','like','%'.$post['push_sent_subject'].'%');
 			$count = $count->where('push_sent_subject','like','%'.$post['push_sent_subject'].'%');
 		}
-		
+
 		$query = $query->skip($post['skip'])->take($post['take'])->get()->toArray();
 		$count = $count->count();
-		
+
 		if(isset($query) && !empty($query)) {
 			$result = [
 					'status'  => 'success',
@@ -1616,14 +1653,14 @@ class ApiCampaign extends Controller
 		}
 		return response()->json($result);
 	}
-	
+
 	public function campaignPushOutboxDetail(Request $request){
-		$post = $request->json()->all(); 
-		
+		$post = $request->json()->all();
+
 		$query = CampaignPushSent::join('campaigns','campaigns.id_campaign','=','campaign_push_sents.id_campaign')
 								->where('id_campaign_push_sent',$post['id_campaign_push_sent'])
 								->first();
-		
+
 		if(isset($query) && !empty($query)) {
 			$result = [
 					'status'  => 'success',
@@ -1638,20 +1675,20 @@ class ApiCampaign extends Controller
 		return response()->json($result);
 	}
 	public function campaignPushQueueList(Request $request){
-		$post = $request->json()->all(); 
-		
+		$post = $request->json()->all();
+
 		$query = CampaignPushQueue::join('campaigns','campaigns.id_campaign','=','campaign_push_queues.id_campaign')
 									->orderBy('id_campaign_push_queue', 'Desc');
 		$count = CampaignPushQueue::join('campaigns','campaigns.id_campaign','=','campaign_push_queues.id_campaign')->get();
-		
+
 		if(isset($post['push_queue_subject']) && $post['push_queue_subject'] != ""){
 			$query = $query->where('push_queue_subject','like','%'.$post['push_queue_subject'].'%');
 			$count = $count->where('push_queue_subject','like','%'.$post['push_queue_subject'].'%');
 		}
-		
+
 		$query = $query->skip($post['skip'])->take($post['take'])->get()->toArray();
 		$count = $count->count();
-		
+
 		if(isset($query) && !empty($query)) {
 			$result = [
 					'status'  => 'success',
@@ -1666,14 +1703,14 @@ class ApiCampaign extends Controller
 		}
 		return response()->json($result);
 	}
-	
+
 	public function campaignPushQueueDetail(Request $request){
-		$post = $request->json()->all(); 
-		
+		$post = $request->json()->all();
+
 		$query = CampaignPushQueue::join('campaigns','campaigns.id_campaign','=','campaign_push_queues.id_campaign')
 								->where('id_campaign_push_queue',$post['id_campaign_push_queue'])
 								->first();
-		
+
 		if(isset($query) && !empty($query)) {
 			$result = [
 					'status'  => 'success',
@@ -1689,22 +1726,22 @@ class ApiCampaign extends Controller
 	}
 
 	public function campaignWhatsappOutboxList(Request $request){
-		$post = $request->json()->all(); 
-		
+		$post = $request->json()->all();
+
 		$query = CampaignWhatsappSent::join('campaigns','campaigns.id_campaign','=','campaign_whatsapp_sents.id_campaign')
 									->orderBy('campaign_whatsapp_sents.id_campaign_whatsapp_sent', 'Desc');
 		$count = CampaignWhatsappSent::join('campaigns','campaigns.id_campaign','=','campaign_whatsapp_sents.id_campaign')->get();
-		
+
 		if(isset($post['id_campaign_whatsapp_sent'])){
 			$query = $query->where('campaign_whatsapp_sents.id_campaign_whatsapp_sent', $post['id_campaign_whatsapp_sent'])
 						   ->with('campaign_whatsapp_sent_content');
 		}else{
 			$query = $query->skip($post['skip'])->take($post['take']);
 		}
-		
+
 		$query = $query->get()->toArray();
 		$count = $count->count();
-		
+
 		if(isset($query) && !empty($query)) {
 			$result = [
 					'status'  => 'success',
@@ -1719,14 +1756,14 @@ class ApiCampaign extends Controller
 		}
 		return response()->json($result);
 	}
-	
+
 	public function campaignWhatsappQueueList(Request $request){
-		$post = $request->json()->all(); 
-		
+		$post = $request->json()->all();
+
 		$query = CampaignWhatsappQueue::join('campaigns','campaigns.id_campaign','=','campaign_whatsapp_queues.id_campaign')
 									->orderBy('id_campaign_whatsapp_queue', 'Desc');
 		$count = CampaignWhatsappQueue::join('campaigns','campaigns.id_campaign','=','campaign_whatsapp_queues.id_campaign')->get();
-		
+
 		if(isset($post['id_campaign_whatsapp_queue'])){
 			$query = $query->where('id_campaign_whatsapp_queue', $post['id_campaign_whatsapp_queue']);
 		}else{
@@ -1741,7 +1778,7 @@ class ApiCampaign extends Controller
 				$query[0]['campaign_whatsapp_queue_content'] = WhatsappContent::where('source', 'campaign')->where('id_reference', $query[0]['id_campaign'])->get()->toArray();
 			}
 		}
-		
+
 		if(isset($query) && !empty($query)) {
 			$result = [
 					'status'  => 'success',

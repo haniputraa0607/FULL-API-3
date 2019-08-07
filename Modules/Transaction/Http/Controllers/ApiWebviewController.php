@@ -44,7 +44,7 @@ class ApiWebviewController extends Controller
                 }else{
                      $list = Transaction::where('transaction_receipt_number', $arrId[0])->where('id_outlet', $arrId[1])->first();
                 }
-               
+
                 if (empty($list)) {
                     return response()->json(['status' => 'fail', 'messages' => ['Transaction not found']]);
                 }
@@ -117,7 +117,7 @@ class ApiWebviewController extends Controller
                         'type'                       => $type,
                         'url'                        => env('VIEW_URL').'/transaction/web/view/detail?data='.$base
                     ],
-                    
+
                 ];
 
                 return response()->json($send);
@@ -129,7 +129,7 @@ class ApiWebviewController extends Controller
                 $list = Transaction::where('id_transaction', $request->json('id_transaction'))->with('user.city.province', 'productTransaction.product.product_category', 'productTransaction.product.product_photos', 'productTransaction.product.product_discounts', 'transaction_payment_offlines', 'outlet.city', 'transaction_vouchers.deals_voucher')->first();
             }else{
                 $arrId = explode(',',$id);
-                
+
                 if(count($arrId) != 2){
                     $list = Transaction::where('transaction_receipt_number', $id)->with('user.city.province', 'productTransaction.product.product_category', 'productTransaction.product.product_photos', 'productTransaction.product.product_discounts', 'transaction_payment_offlines', 'outlet.city', 'transaction_vouchers.deals_voucher')->first();
                 }else{
@@ -146,27 +146,27 @@ class ApiWebviewController extends Controller
             $order = Setting::where('key', 'transaction_grand_total_order')->value('value');
             $exp   = explode(',', $order);
             $exp2   = explode(',', $order);
-            
+
             foreach ($exp as $i => $value) {
                 if ($exp[$i] == 'subtotal') {
                     unset($exp[$i]);
                     unset($exp2[$i]);
                     continue;
-                } 
+                }
 
                 if ($exp[$i] == 'tax') {
                     $exp[$i] = 'transaction_tax';
                     $exp2[$i] = 'transaction_tax';
                     array_push($label, 'Tax');
                     array_push($label2, 'Tax');
-                } 
+                }
 
                 if ($exp[$i] == 'service') {
                     $exp[$i] = 'transaction_service';
                     $exp2[$i] = 'transaction_service';
                     array_push($label, 'Service Fee');
                     array_push($label2, 'Service Fee');
-                } 
+                }
 
                 if ($exp[$i] == 'shipping') {
                     if ($list['trasaction_type'] == 'Pickup Order') {
@@ -179,7 +179,7 @@ class ApiWebviewController extends Controller
                         array_push($label, 'Delivery Cost');
                         array_push($label2, 'Delivery Cost');
                     }
-                } 
+                }
 
                 if ($exp[$i] == 'discount') {
                     $exp2[$i] = 'transaction_discount';
@@ -192,7 +192,7 @@ class ApiWebviewController extends Controller
                     unset($exp[$i]);
                     unset($exp2[$i]);
                     continue;
-                } 
+                }
             }
 
             $dataPayment = [];
@@ -237,7 +237,7 @@ class ApiWebviewController extends Controller
                             array_push($dataPayment, $getPayment);
                         }
                     }
-    
+
                     if ($list['trasaction_payment_type'] == 'Balance') {
                         $getPayment = TransactionPaymentBalance::where('id_transaction', $list['id_transaction'])->first();
                         if($getPayment){
@@ -249,7 +249,7 @@ class ApiWebviewController extends Controller
                 }
 
             }
-            
+
             // if ($list['trasaction_payment_type'] == 'Balance') {
             //     $log = LogBalance::where('id_reference', $list['id_transaction'])->where('source', 'Transaction')->where('balance', '<', 0)->first();
             //     if ($log['balance'] < 0) {
@@ -270,8 +270,8 @@ class ApiWebviewController extends Controller
             //     $payment = TransactionPaymentOffline::where('id_transaction', $list['id_transaction'])->get();
             //     $list['payment_offline'] = $payment;
             // }
-            
-            
+
+
 
             array_splice($exp, 0, 0, 'transaction_subtotal');
             array_splice($label, 0, 0, 'Cart Total');
@@ -334,10 +334,10 @@ class ApiWebviewController extends Controller
             }
 
             $list['status'] = $statusPickup;
-    
+
             if (isset($success)) {
                 $list['success'] = 1;
-            
+
             }
 
             // $qrCode = 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data='.$qrTest;
@@ -365,6 +365,11 @@ class ApiWebviewController extends Controller
                 $payment = DealsPaymentManual::where('id_deals_user', $id)->first();
             }
 
+            $balance = LogBalance::where('id_reference', $id)->where('source', 'Deals Balance')->first();
+            if($balance){
+                $list['balance'] = $balance['balance'];
+            }
+
             $list['payment'] = $payment;
 
             $list['date'] = $list['claimed_at'];
@@ -373,7 +378,7 @@ class ApiWebviewController extends Controller
 
             return response()->json(MyHelper::checkGet($list));
         }
-        
+
     }
 
     public function webviewPoint(Request $request)
@@ -390,7 +395,7 @@ class ApiWebviewController extends Controller
 
         if ($data['source'] == 'Transaction') {
             $select = Transaction::with('outlet')->where('id_transaction', $data['id_reference'])->first();
-            $receipt = $select['transaction_receipt_number']; 
+            $receipt = $select['transaction_receipt_number'];
             $type = 'trx';
         } else {
             $type = 'voucher';
@@ -429,7 +434,7 @@ class ApiWebviewController extends Controller
             } else {
                 $data['online'] = 1;
             }
-            
+
         } else {
             $select = DealsUser::with('dealVoucher.deal')->where('id_deals_user', $data['id_reference'])->first();
             $data['type']   = 'voucher';
@@ -445,11 +450,11 @@ class ApiWebviewController extends Controller
     public function webviewBalance(Request $request)
     {
         $id     = $request->json('id');
-        
+
         if (!isset($id)) {
             return response()->json(['status' => 'fail', 'messages' => ['Data request is not valid']]);
         }
-        
+
         $select = [];
         $check = $request->json('check');
         $receipt = null;
@@ -457,13 +462,48 @@ class ApiWebviewController extends Controller
         $data   = LogBalance::where('id_log_balance', $id)->first();
         if ($data['source'] == 'Transaction' || $data['source'] == 'Rejected Order' || $data['source'] == 'Rejected Order Point' || $data['source'] == 'Rejected Order Midtrans' || $data['source'] == 'Reversal') {
             $select = Transaction::with('outlet')->where('id_transaction', $data['id_reference'])->first();
-            $receipt = $select['transaction_receipt_number']; 
+            $receipt = $select['transaction_receipt_number'];
             $type = 'trx';
         } else {
             $type = 'voucher';
         }
 
         if (empty($check)) {
+
+            if($type == 'voucher'){
+                $list = DealsUser::with('outlet', 'dealVoucher.deal')->where('id_deals_user', $data['id_reference'])->first();
+
+                if ($list) {
+
+                    $dataEncode = [
+                        'transaction_receipt_number'   => $data['id_reference'],
+                        'type' => $type
+                    ];
+
+                    $encode = json_encode($dataEncode);
+                    $base = base64_encode($encode);
+
+                    if($list['balance_nominal'] != null){
+                        $list['voucher_price_cash'] = $list['voucher_price_cash'] - $list['balance_nominal'];
+                    }
+
+                    $send = [
+                        'status'         => 'success',
+                        'result'         => [
+                            'payment_status'             => $list['paid_status'],
+                            'transaction_receipt_number' => $list['id_deals_user'],
+                            'transaction_grandtotal'     => $list['voucher_price_cash'],
+                            'type'                       => $type,
+                            'url'                        => env('VIEW_URL').'/transaction/web/view/detail?data='.$base
+                        ],
+
+                    ];
+
+                    return response()->json($send);
+                }
+                return response()->json(['status' => 'fail', 'messages' => ['Data not valid']]);
+            }
+
             $dataEncode = [
                 'id'   => $id
             ];
@@ -497,7 +537,7 @@ class ApiWebviewController extends Controller
             } else {
                 $data['online'] = 1;
             }
-            
+
         } else {
             $select = DealsUser::with('dealVoucher.deal')->where('id_deals_user', $data['id_reference'])->first();
             $data['type']   = 'voucher';
@@ -516,7 +556,7 @@ class ApiWebviewController extends Controller
         $check = Transaction::where('transaction_receipt_number', $post['id'])->first();
         if (empty($check)) {
             return response()->json([
-                'status' => 'fail', 
+                'status' => 'fail',
                 'messages' => ['Transaction not found']
             ]);
         }
