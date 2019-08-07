@@ -4,7 +4,6 @@ Route::group(['middleware' => ['auth:api','log_request'], 'prefix' => 'api/campa
 {
     Route::post('create', 'ApiCampaign@CreateCampaign');
     Route::post('step1', 'ApiCampaign@ShowCampaignStep1');
-    Route::post('step2', 'ApiCampaign@ShowCampaignStep2');
     Route::post('step3', 'ApiCampaign@ShowCampaignStep2');
     Route::post('send', 'ApiCampaign@SendCampaign');
     Route::post('update', 'ApiCampaign@update');
@@ -24,6 +23,11 @@ Route::group(['middleware' => ['auth:api','log_request'], 'prefix' => 'api/campa
     Route::post('whatsapp/outbox/list', 'ApiCampaign@campaignWhatsappOutboxList');
     Route::post('whatsapp/queue/list', 'ApiCampaign@campaignWhatsappQueueList');
 
+});
+
+Route::group(['middleware' => ['auth:api'], 'prefix' => 'api/campaign', 'namespace' => 'Modules\Campaign\Http\Controllers'], function()
+{
+    Route::post('step2', 'ApiCampaign@ShowCampaignStep2');
 });
 
 Route::group(['prefix' => 'api/campaign/cron', 'namespace' => 'Modules\Campaign\Http\Controllers'], function()

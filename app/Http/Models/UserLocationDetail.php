@@ -30,6 +30,9 @@ class UserLocationDetail extends Model
     protected $fillable = [
         'id_user', 
         'id_reference', 
+        'id_outlet', 
+        'outlet_code', 
+        'outlet_name', 
         'activity', 
         'action', 
         'latitude',

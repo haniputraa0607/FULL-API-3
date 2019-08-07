@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Model;
 
 /**
  * Class Product
- * 
+ *
  * @property int $id_product
  * @property int $id_product_category
  * @property string $product_code
@@ -22,7 +22,7 @@ use Illuminate\Database\Eloquent\Model;
  * @property int $product_weight
  * @property \Carbon\Carbon $created_at
  * @property \Carbon\Carbon $updated_at
- * 
+ *
  * @property \App\Http\Models\ProductCategory $product_category
  * @property \Illuminate\Database\Eloquent\Collection $deals
  * @property \Illuminate\Database\Eloquent\Collection $news
@@ -51,6 +51,7 @@ class Product extends Model
 		'product_video',
 		'product_weight',
 		'product_allow_sync',
+		'product_visibility',
 		'position'
 	];
 
@@ -58,7 +59,7 @@ class Product extends Model
 	{
 		return $this->belongsTo(\App\Http\Models\ProductCategory::class, 'id_product_category');
 	}
-	
+
 	 public function category()
     {
         return $this->belongsTo(ProductCategory::class, 'id_product_category', 'id_product_category');
@@ -71,7 +72,7 @@ class Product extends Model
     public function discount() {
         return $this->hasMany(ProductDiscount::class, 'id_product', 'id_product');
     }
-	
+
 	public function deals()
 	{
 		return $this->hasMany(\App\Http\Models\Deal::class, 'id_product');
@@ -112,5 +113,14 @@ class Product extends Model
 	public function product_tags()
 	{
 		return $this->hasMany(\App\Http\Models\ProductTag::class, 'id_product');
+	}
+
+	public function product_price_hiddens()
+	{
+		return $this->hasMany(\App\Http\Models\ProductPrice::class, 'id_product')->where('product_visibility', 'Hidden');
+	}
+	public function all_prices()
+	{
+		return $this->hasMany(\App\Http\Models\ProductPrice::class, 'id_product');
 	}
 }

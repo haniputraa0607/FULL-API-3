@@ -345,8 +345,17 @@ class ApiHistoryController extends Controller
         if(!isset($post['offline_order'])){
             $post['offline_order'] = null;
         }
+        if(!isset($post['online_order'])){
+            $post['online_order'] = null;
+        }
         if(!isset($post['voucher'])){
             $post['voucher'] = null;
+        }
+        if(!isset($post['oldest'])){
+            $post['oldest'] = null;
+        }
+        if(!isset($post['newest'])){
+            $post['newest'] = null;
         }
 
         if (!is_null($post['oldest'])) {
@@ -624,7 +633,7 @@ class ApiHistoryController extends Controller
             $dataVoucher[$key]['id'] = $value['id_deals_user'];
             $dataVoucher[$key]['date'] = $value['claimed_at'];
             $dataVoucher[$key]['outlet'] = 'Beli Kupon';
-            $dataVoucher[$key]['amount'] = $value['voucher_price_cash'];
+            $dataVoucher[$key]['amount'] = $value['voucher_price_cash']-$value['balance_nominal'];
         }
 
         return $dataVoucher;
@@ -747,7 +756,47 @@ class ApiHistoryController extends Controller
     }
 
     public function balance($post, $id) {
-        $log = LogBalance::where('id_user', $id)->get();
+        $log = LogBalance::where('id_user', $id);
+
+        $log->where(function ($query) use ($post) {
+            if (!is_null($post['use_point'])) {
+                $query->orWhere(function ($queryLog) {
+                    $queryLog->where('balance', '<', 0);
+                });
+            }
+            if (!is_null($post['earn_point'])) {
+                $query->orWhere(function ($queryLog) {
+                    $queryLog->where('balance', '>', 0);
+                });
+            }
+        });
+
+        if (!is_null($post['online_order']) || !is_null($post['offline_order'])){
+            $log->leftJoin('transactions', 'transacations.id_transaction', 'log_balances.id_reference')
+                ->where(function ($query) use ($post) {
+                if (!is_null($post['online_order'])) {
+                    $query->orWhere(function ($queryLog) {
+                        $queryLog->whereIn('source', ['Transaction', 'Transaction Failed', 'Rejected Order', 'Rejected Order Midtrans', 'Rejected Order Point', 'Rejected Order Ovo', 'Reversal'])
+                                ->where('trasaction_type', '!=', 'Offline');
+                    });
+                }
+                if (!is_null($post['offline_order'])) {
+                    $query->orWhere(function ($queryLog) {
+                        $queryLog->where('source', 'Transaction')
+                                ->where('trasaction_type', '=', 'Offline');
+                    });
+                }
+            });
+        }
+
+        if (!is_null($post['voucher'])) {
+            $query->orWhere(function ($queryLog) {
+                $queryLog->where('source', 'Deals Balance');
+            });
+        }
+
+        $log = $log->get();
+
         $listBalance = [];
 
         foreach ($log as $key => $value) {
@@ -833,7 +882,7 @@ class ApiHistoryController extends Controller
                 $listBalance[$key] = $dataList;
             }
 
-            if (!is_null($post['date_start']) && !is_null($post['date_end'])) {
+            if (isset($post['date_start']) && !is_null($post['date_start']) && isset($post['date_end']) && !is_null($post['date_end'])) {
                 $date_start = date('Y-m-d', strtotime($post['date_start']))." 00.00.00";
                 $date_end = date('Y-m-d', strtotime($post['date_end']))." 23.59.59";
 
@@ -842,30 +891,6 @@ class ApiHistoryController extends Controller
                     continue;
                 }
             }
-
-            if (!is_null($post['use_point']) && !is_null($post['earn_point']) && !is_null($post['online_order']) && !is_null($post['offline_order']) && !is_null($post['voucher'])) {
-            }
-
-            if (!is_null($post['use_point']) && !is_null($post['earn_point'])) {
-
-            } elseif (is_null($post['use_point']) && is_null($post['earn_point'])) {
-
-            } else {
-                if (!is_null($post['use_point'])) {
-                    if ($value['source'] == 'Transaction') {
-                        unset($listBalance[$key]);
-                        continue;
-                    }
-                }
-
-                if (!is_null($post['earn_point'])) {
-                    if ($value['source'] != 'Transaction') {
-                        unset($listBalance[$key]);
-                        continue;
-                    }
-                }
-            }
-
 
             // if (!is_null($post['online_order']) && !is_null($post['offline_order']) && !is_null($post['voucher'])) {
 

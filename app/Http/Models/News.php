@@ -9,14 +9,14 @@ class News extends Model
 	protected $connection = 'mysql';
     /**
      * The table associated with the model.
-     * 
+     *
      * @var string
      */
     protected $table = 'news';
 
     /**
      * The primary key for the model.
-     * 
+     *
      * @var string
      */
     protected $primaryKey = 'id_news';
@@ -27,41 +27,41 @@ class News extends Model
      * @var array
      */
     protected $fillable = [
-    	'news_slug', 
-		'news_title', 
-		'news_second_title', 
-		'news_content_short', 
-		'news_content_long', 
-		'news_video', 
-		'news_image_luar', 
-		'news_image_dalam', 
-		'news_post_date', 
-		'news_publish_date', 
+    	'news_slug',
+		'news_title',
+		'news_second_title',
+		'news_content_short',
+		'news_content_long',
+		'news_video',
+		'news_image_luar',
+		'news_image_dalam',
+		'news_post_date',
+		'news_publish_date',
 		'news_expired_date',
 		'news_date_start',
 		'news_date_end',
 		'news_time_start',
-		'news_time_end', 
-		'news_location_name', 
-		'news_location_phone', 
-		'news_location_address', 
-		'news_location_map', 
-		'news_latitude', 
-		'news_longitude', 
-		'news_outlet_text', 
-		'news_product_text', 
-		'news_treatment_text', 
-		'news_button_form_text', 
+		'news_time_end',
+		'news_location_name',
+		'news_location_phone',
+		'news_location_address',
+		'news_location_map',
+		'news_latitude',
+		'news_longitude',
+		'news_outlet_text',
+		'news_product_text',
+		'news_treatment_text',
+		'news_button_form_text',
 		'news_button_form_expired',
 		'news_form_success_message',
-		'created_at', 
+		'created_at',
 		'updated_at'
 	];
-	
+
 	public function getUrlWebviewAttribute() {
-		return env('APP_URL') .'news/webview/'. $this->id_news;
+		return env('APP_URL') ."news/webview/". $this->id_news;
 	}
-	
+
 	public function getUrlFormAttribute() {
 		if (empty($this->news_button_form_text)) {
             return null;
@@ -70,7 +70,7 @@ class News extends Model
             return env('APP_URL').'/news_form/'.$this->id_news.'/form';
         }
 	}
-	
+
 	public function getNewsFormStatusAttribute() {
 		$today = date("Y-m-d H:i:s");
 		if (strtotime($this->news_button_form_expired) <= strtotime($today)) {
@@ -80,7 +80,7 @@ class News extends Model
             return true;
         }
 	}
-	
+
 	public function getUrlNewsImageLuarAttribute() {
 		if (empty($this->news_image_luar)) {
             return env('AWS_URL').'img/default.jpg';

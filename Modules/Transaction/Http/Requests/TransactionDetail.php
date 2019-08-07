@@ -11,8 +11,8 @@ class TransactionDetail extends FormRequest
     public function rules()
     {
         return [
-            'transaction_receipt_number'    => 'required_without:id_transaction|string',
-            'id_transaction'                => 'required_without:transaction_receipt_number|string'
+            'transaction_receipt_number'    => 'required_without:id_transaction',
+            'id_transaction'                => 'required_without:transaction_receipt_number'
         ];
     }
 

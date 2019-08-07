@@ -16,6 +16,7 @@ class CreateDealsPromotionTemplatesTable extends Migration
         Schema::create('deals_promotion_templates', function (Blueprint $table) {
             $table->increments('id_deals_promotion_template');
             $table->string('deals_title');
+            $table->string('deals_second_title')->nullable();
             $table->text('deals_description')->nullable();
             $table->string('deals_short_description')->nullable();
             $table->string('deals_image')->nullable();

@@ -25,7 +25,7 @@ class reqTransaction extends FormRequest
             'transactions.*.sales_type'           => 'nullable',
             'transactions.*.order_id'             => 'nullable',
             'transactions.*.date_time'            => 'required|date_format:Y-m-d H:i:s',
-            'transactions.*.cashier'              => 'required',
+            'transactions.*.cashier'              => '',
             'transactions.*.total'                => 'required',
             'transactions.*.service'              => 'required',
             'transactions.*.tax'                  => 'required',

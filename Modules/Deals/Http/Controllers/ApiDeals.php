@@ -154,6 +154,8 @@ class ApiDeals extends Controller
         }
         if (isset($post['user_limit'])) {
             $data['user_limit'] = $post['user_limit'];
+        }else{
+            $data['user_limit'] = 0;
         }
 
         return $data;
@@ -204,7 +206,7 @@ class ApiDeals extends Controller
         $deals = Deal::with(['outlets', 'outlets.city', 'product']);
 
         if($request->json('id_outlet') && is_integer($request->json('id_outlet'))){
-            $deals->join('deals_outlets', 'deals.id_deals', 'deals_outlets.id_deals')
+            $deals = $deals->join('deals_outlets', 'deals.id_deals', 'deals_outlets.id_deals')
                             ->where('id_outlet', $request->json('id_outlet'))
                             ->select('deals.*')->distinct();
         }
@@ -239,15 +241,9 @@ class ApiDeals extends Controller
             $deals->where('deals_promo_id', $request->json('deals_promo_id'));
         }
 
-        if ($request->json('price_range_start') && $request->json('price_range_end')) {
-            $deals->whereBetween('deals_voucher_price_cash', [$request->json('price_range_start'), $request->json('price_range_end')]);
-        }
-
         if ($request->json('key_free')) {
-            $deals->where(function ($query) use ($request) {
-                        $query->where('deals_title', 'LIKE', '%'.$request->json('key_free').'%')
-                                ->orWhere('deals_second_title', 'LIKE', '%'.$request->json('key_free').'%');
-                    });
+             $deals->where('deals_title', 'LIKE', '%'.$request->json('key_free').'%')
+                    ->orWhere('deals_second_title', 'LIKE', '%'.$request->json('key_free').'%');
         }
 
         /* ========================= TYPE ========================= */
@@ -278,13 +274,19 @@ class ApiDeals extends Controller
             }
         });
 
-        /* ========================= POINT ========================= */
+        /* ========================= POINT & PRICE ========================= */
         $deals->where(function ($query) use ($request) {
 
+            if ($request->json('price_range_start') && $request->json('price_range_end')) {
+                 $query->orWhere(function ($amp) use ($request) {
+                    $amp->where('deals_voucher_price_cash','>=',$request->json('price_range_start'))->where('deals_voucher_price_cash', '<=', $request->json('price_range_end'));
+                 });
+
+             }
+
             if ($request->json('050')) {
-                $point      = explode("-", $request->json('050'));
-                $pointStart = $point[0];
-                $pointEnd   = $point[1];
+                $pointStart = 0;
+                $pointEnd   = 50;
 
                 $query->orWhere(function ($amp) use ($pointStart, $pointEnd) {
                     $amp->whereBetween('deals_voucher_price_point', [$pointStart, $pointEnd]);
@@ -296,9 +298,8 @@ class ApiDeals extends Controller
             }
 
             if ($request->json('50100')) {
-                $point      = explode("-", $request->json('50100'));
-                $pointStart = $point[0];
-                $pointEnd   = $point[1];
+                $pointStart = 50;
+                $pointEnd   = 100;
 
                 $query->orWhere(function ($amp) use ($pointStart, $pointEnd) {
                     $amp->whereBetween('deals_voucher_price_point', [$pointStart, $pointEnd]);
@@ -309,9 +310,8 @@ class ApiDeals extends Controller
             }
 
             if ($request->json('100300')) {
-                $point      = explode("-", $request->json('100300'));
-                $pointStart = $point[0];
-                $pointEnd   = $point[1];
+                $pointStart = 100;
+                $pointEnd   = 300;
 
                 $query->orWhere(function ($amp) use ($pointStart, $pointEnd) {
                     $amp->whereBetween('deals_voucher_price_point', [$pointStart, $pointEnd]);
@@ -321,10 +321,9 @@ class ApiDeals extends Controller
                 // die();
             }
 
-            if ($request->json('300500')) {
-                $point      = explode("-", $request->json('300500'));
-                $pointStart = $point[0];
-                $pointEnd   = $point[1];
+            if ($request->json('100500')) {
+                $pointStart = 100;
+                $pointEnd   = 500;
 
                 $query->orWhere(function ($amp) use ($pointStart, $pointEnd) {
                     $amp->whereBetween('deals_voucher_price_point', [$pointStart, $pointEnd]);
@@ -336,7 +335,31 @@ class ApiDeals extends Controller
             }
 
             if ($request->json('500up')) {
-                $point = str_replace("+", "", $request->json('500up'));
+                $point = 500;
+
+                $query->orWhere(function ($amp) use ($point) {
+                    $amp->where('deals_voucher_price_point', '>=', $point);
+                });
+                // print_r("500up");
+                // print_r($query->get()->toArray());
+                // die();
+            }
+
+            if ($request->json('5001000')) {
+                $pointStart = 500;
+                $pointEnd   = 1000;
+
+                $query->orWhere(function ($amp) use ($pointStart, $pointEnd) {
+                    $amp->whereBetween('deals_voucher_price_point', [$pointStart, $pointEnd]);
+                });
+                // print_r("300500");
+                // print_r($query->get()->toArray());
+                // die();
+
+            }
+
+            if ($request->json('1000up')) {
+                $point = 1000;
 
                 $query->orWhere(function ($amp) use ($point) {
                     $amp->where('deals_voucher_price_point', '>=', $point);
@@ -354,12 +377,14 @@ class ApiDeals extends Controller
             $deals->orderBy('deals_title', 'ASC');
         }
 
-        if ($request->json('newest')) {
-            $deals->orderBy('id_deals', 'DESC');
+        else if ($request->json('newest')) {
+            $deals->orderBy('deals_start', 'DESC');
         }
 
-        if ($request->json('oldest')) {
-            $deals->orderBy('id_deals', 'ASC');
+        else if ($request->json('oldest')) {
+            $deals->orderBy('deals_start', 'ASC');
+        }else{
+            $deals->orderBy('deals_end', 'ASC');
         }
 
         $deals = $deals->get()->toArray();
@@ -550,9 +575,8 @@ class ApiDeals extends Controller
                 }
 
                 foreach ($kota as $k => $v) {
-                    $kota[$k]['outlet'] = [];
-
                     if($v){
+
                         $kota[$k]['outlet'] = [];
 
                         foreach ($value['outlets'] as $outlet) {
@@ -569,6 +593,7 @@ class ApiDeals extends Controller
                 }
 
                 $deals[$key]['outlet_by_city'] = $kota;
+
             }
 
             // unset($deals[$key]['outlets']);

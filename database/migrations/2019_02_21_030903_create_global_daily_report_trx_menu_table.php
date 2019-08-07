@@ -14,7 +14,7 @@ class CreateGlobalDailyReportTrxMenuTable extends Migration
     public function up()
     {
         Schema::create('global_daily_report_trx_menu', function (Blueprint $table) {
-            $table->increments('id_global_monthly_report_trx_menu');
+            $table->increments('id_global_daily_report_trx_menu');
             $table->date('trx_date')->nullable();
             $table->integer('id_product')->nullable();
             $table->integer('total_rec')->nullable();
