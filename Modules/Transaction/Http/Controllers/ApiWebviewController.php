@@ -473,7 +473,7 @@ class ApiWebviewController extends Controller
             if($type == 'voucher'){
                 $list = DealsUser::with('outlet', 'dealVoucher.deal')->where('id_deals_user', $data['id_reference'])->first();
 
-                if ($list && $list['voucher_price_cash'] != null) {
+                if ($list) {
 
                     $dataEncode = [
                         'transaction_receipt_number'   => $data['id_reference'],
