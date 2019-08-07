@@ -17,6 +17,7 @@ Route::group(['prefix' => 'api/product','middleware' => 'log_request', 'namespac
      * auth
      */
     Route::group(['middleware' => 'auth:api'], function() {
+        Route::get('next/{id}', 'ApiProductController@getNextID');
         Route::post('category/assign', 'ApiProductController@categoryAssign');
         Route::post('price/update', 'ApiProductController@priceUpdate');
         Route::post('create', 'ApiProductController@create');
