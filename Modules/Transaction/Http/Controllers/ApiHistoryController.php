@@ -100,7 +100,7 @@ class ApiHistoryController extends Controller
         }
 
         $next_page = $page + 1;
-        
+
         $merge = array_merge($transaction, $balance);
         $merge = array_merge($merge, $point);
         // return $merge;
@@ -120,7 +120,7 @@ class ApiHistoryController extends Controller
         } else {
             $ampas['status'] = 'fail';
             $ampas['messages'] = ['empty'];
-            
+
         }
 
         return response()->json($ampas);
@@ -170,17 +170,15 @@ class ApiHistoryController extends Controller
             $post['buy_voucher'] = null;
         }
 
-
-        $transaction = $this->transaction($post, $id);
+        $transaction = [];
         $voucher = [];
-
-        if (is_null($post['pickup_order']) && is_null($post['delivery_order']) && is_null($post['offline_order'])) {
-            if (!is_null($post['buy_voucher'])) {
-                $transaction = [];
-                $voucher = $this->voucher($post, $id);
+        if (is_null($post['pickup_order']) && is_null($post['delivery_order']) && is_null($post['offline_order']) && is_null($post['online_order']) && is_null($post['buy_voucher'])) {
+            $transaction = $this->transaction($post, $id);
+            $voucher = $this->voucher($post, $id);
+        }else{
+            if (!is_null($post['pickup_order']) || !is_null($post['delivery_order']) || !is_null($post['offline_order']) || !is_null($post['online_order'])) {
+                $transaction = $this->transaction($post, $id);
             }
-            
-        } elseif (!is_null($post['pickup_order']) || !is_null($post['delivery_order']) || !is_null($post['offline_order'])) {
             if (!is_null($post['buy_voucher'])) {
                 $voucher = $this->voucher($post, $id);
             }
@@ -199,7 +197,7 @@ class ApiHistoryController extends Controller
         }
 
         $next_page = $page + 1;
-        
+
         $merge = array_merge($transaction, $voucher);
         $sortTrx = $this->sorting($merge, $order, $page);
 
@@ -217,7 +215,7 @@ class ApiHistoryController extends Controller
         } else {
             $ampas['status'] = 'fail';
             $ampas['messages'] = ['empty'];
-            
+
         }
 
         return response()->json($ampas);
@@ -246,7 +244,7 @@ class ApiHistoryController extends Controller
         }
 
         $next_page = $page + 1;
-        
+
         $sortTrx = $this->sorting($transaction, $order, $page);
 
         $check = MyHelper::checkGet($sortTrx);
@@ -263,7 +261,7 @@ class ApiHistoryController extends Controller
         } else {
             $ampas['status'] = 'fail';
             $ampas['messages'] = ['empty'];
-            
+
         }
 
         return response()->json($ampas);
@@ -309,7 +307,7 @@ class ApiHistoryController extends Controller
         $point = $this->point($post, $id);
 
         $sortPoint = $this->sorting($point, $order, $page);
-        
+
         $check = MyHelper::checkGet($sortPoint);
         if (count($point) > 0) {
             $ampas['status'] = 'success';
@@ -324,12 +322,12 @@ class ApiHistoryController extends Controller
         } else {
             $ampas['status'] = 'fail';
             $ampas['messages'] = ['empty'];
-            
+
         }
 
         return response()->json($ampas);
-     
-               
+
+
     }
 
     public function historyBalance(Request $request) {
@@ -347,8 +345,17 @@ class ApiHistoryController extends Controller
         if(!isset($post['offline_order'])){
             $post['offline_order'] = null;
         }
+        if(!isset($post['online_order'])){
+            $post['online_order'] = null;
+        }
         if(!isset($post['voucher'])){
             $post['voucher'] = null;
+        }
+        if(!isset($post['oldest'])){
+            $post['oldest'] = null;
+        }
+        if(!isset($post['newest'])){
+            $post['newest'] = null;
         }
 
         if (!is_null($post['oldest'])) {
@@ -367,7 +374,7 @@ class ApiHistoryController extends Controller
 
         $balance = $this->balance($post, $id);
         $sortBalance = $this->sorting($balance, $order, $page);
-        
+
         $check = MyHelper::checkGet($sortBalance);
         if (count($balance) > 0) {
             $ampas['status'] = 'success';
@@ -382,12 +389,12 @@ class ApiHistoryController extends Controller
         } else {
             $ampas['status'] = 'fail';
             $ampas['messages'] = ['empty'];
-            
+
         }
 
         return response()->json($ampas);
-     
-               
+
+
     }
 
     public function sorting($data, $order, $page) {
@@ -430,7 +437,7 @@ class ApiHistoryController extends Controller
 
             return ['data' => $resultData, 'status' => $next];
         }
-        
+
 
         return ['data' => $data, 'status' => $next];
     }
@@ -461,6 +468,12 @@ class ApiHistoryController extends Controller
             if (!is_null($post['offline_order'])) {
                 $query->orWhere(function ($amp) use ($post) {
                     $amp->where('trasaction_type', 'Offline');
+                });
+            }
+
+            if (!is_null($post['online_order'])) {
+                $query->orWhere(function ($amp) use ($post) {
+                    $amp->whereNotIn('trasaction_type', ['Offline']);
                 });
             }
         });
@@ -501,11 +514,14 @@ class ApiHistoryController extends Controller
             // $transaction[$key]['date'] = $value['transaction_date'];
             // $transaction[$key]['type'] = 'trx';
             // $transaction[$key]['outlet'] = $value['outlet']['outlet_name'];
-            
+
             //cek payment
-            if($value['trasaction_payment_type']){
+             if($value['trasaction_payment_type']){
                 $found = false;
-                if($value['trasaction_payment_type'] == 'Midtrans'){
+
+                if($value['transaction_payment_status'] == 'Completed'){
+                    $found = true;
+                }else{
                     $pay = TransactionMultiplePayment::where('id_transaction', $value['id_transaction'])->first();
                     if($pay){
                         $payMidtrans = TransactionPaymentMidtran::where('id_transaction', $value['id_transaction'])->first();
@@ -518,8 +534,6 @@ class ApiHistoryController extends Controller
                             $found = true;
                         }
                     }
-                }else{
-                    $found = true;
                 }
 
                 if($found == true){
@@ -528,9 +542,10 @@ class ApiHistoryController extends Controller
                     $dataList['date']    = date('Y-m-d H:i:s', strtotime($value['transaction_date']));
                     $dataList['outlet'] = $value['outlet']['outlet_name'];
                     $dataList['amount'] = number_format($value['transaction_grandtotal'], 0, ',', '.');
-        
+
                     $listTransaction[] = $dataList;
                 }
+
             }
 
         }
@@ -580,10 +595,10 @@ class ApiHistoryController extends Controller
             $date_start = date('Y-m-d', strtotime($post['date_start']))." 00.00.00";
             $date_end = date('Y-m-d', strtotime($post['date_end']))." 23.59.59";
 
-            $voucher->whereBetween('claimed_at', [$date_start, $date_end]);
+            $voucher = $voucher->whereBetween('claimed_at', [$date_start, $date_end]);
         }
 
-        $voucher->where(function ($query) use ($post) {
+        $voucher = $voucher->where(function ($query) use ($post) {
             if (!is_null($post['pending'])) {
                 $query->orWhere(function ($amp) use ($post) {
                     $amp->where('paid_status', 'Pending');
@@ -609,24 +624,26 @@ class ApiHistoryController extends Controller
             }
         });
 
-        $voucher->where('id_user', $id);
+        $voucher = $voucher->whereNotNull('voucher_price_cash')->where('id_user', $id);
 
         $voucher = $voucher->get()->toArray();
-
+        $dataVoucher = [];
         foreach ($voucher as $key => $value) {
-            $voucher[$key]['date'] = $value['claimed_at'];
-            $voucher[$key]['type'] = 'voucher';
-            $voucher[$key]['outlet'] = $value['outlet']['outlet_name'];
+            $dataVoucher[$key]['type'] = 'voucher';
+            $dataVoucher[$key]['id'] = $value['id_deals_user'];
+            $dataVoucher[$key]['date'] = $value['claimed_at'];
+            $dataVoucher[$key]['outlet'] = 'Beli Kupon';
+            $dataVoucher[$key]['amount'] = $value['voucher_price_cash']-$value['balance_nominal'];
         }
 
-        return $voucher;
+        return $dataVoucher;
     }
 
     public function point($post, $id) {
         $log = LogPoint::where('id_user', $id)->get();
-       
+
         $listPoint = [];
-        
+
         foreach ($log as $key => $value) {
             if ($value['source'] == 'Transaction') {
                 $trx = Transaction::with('outlet')->where('id_transaction', $value['id_reference'])->first();
@@ -673,9 +690,9 @@ class ApiHistoryController extends Controller
             }
 
             if (!is_null($post['use_point']) && !is_null($post['earn_point'])) {
-               
+
             } elseif (is_null($post['use_point']) && is_null($post['earn_point'])) {
-               
+
             } else {
                 if (!is_null($post['use_point'])) {
                     if ($value['source'] == 'Transaction') {
@@ -694,9 +711,9 @@ class ApiHistoryController extends Controller
 
 
             if (!is_null($post['online_order']) && !is_null($post['offline_order']) && !is_null($post['voucher'])) {
-                
+
             } elseif (is_null($post['online_order']) && is_null($post['offline_order']) && is_null($post['voucher'])) {
-                
+
             } else {
                 if (!is_null($post['online_order'])) {
                     if (is_null($post['voucher'])) {
@@ -739,13 +756,53 @@ class ApiHistoryController extends Controller
     }
 
     public function balance($post, $id) {
-        $log = LogBalance::where('id_user', $id)->get();
+        $log = LogBalance::where('id_user', $id);
+
+        $log->where(function ($query) use ($post) {
+            if (!is_null($post['use_point'])) {
+                $query->orWhere(function ($queryLog) {
+                    $queryLog->where('balance', '<', 0);
+                });
+            }
+            if (!is_null($post['earn_point'])) {
+                $query->orWhere(function ($queryLog) {
+                    $queryLog->where('balance', '>', 0);
+                });
+            }
+        });
+
+        if (!is_null($post['online_order']) || !is_null($post['offline_order'])){
+            $log->leftJoin('transactions', 'transacations.id_transaction', 'log_balances.id_reference')
+                ->where(function ($query) use ($post) {
+                if (!is_null($post['online_order'])) {
+                    $query->orWhere(function ($queryLog) {
+                        $queryLog->whereIn('source', ['Transaction', 'Transaction Failed', 'Rejected Order', 'Rejected Order Midtrans', 'Rejected Order Point', 'Rejected Order Ovo', 'Reversal'])
+                                ->where('trasaction_type', '!=', 'Offline');
+                    });
+                }
+                if (!is_null($post['offline_order'])) {
+                    $query->orWhere(function ($queryLog) {
+                        $queryLog->where('source', 'Transaction')
+                                ->where('trasaction_type', '=', 'Offline');
+                    });
+                }
+            });
+        }
+
+        if (!is_null($post['voucher'])) {
+            $query->orWhere(function ($queryLog) {
+                $queryLog->where('source', 'Deals Balance');
+            });
+        }
+
+        $log = $log->get();
+
         $listBalance = [];
-        
+
         foreach ($log as $key => $value) {
             if ($value['source'] == 'Transaction' || $value['source'] == 'Rejected Order'  || $value['source'] == 'Rejected Order Point' || $value['source'] == 'Rejected Order Midtrans' || $value['source'] == 'Reversal') {
                 $trx = Transaction::with('outlet')->where('id_transaction', $value['id_reference'])->first();
-                
+
                 // return $trx;
                 // $log[$key]['detail'] = $trx;
                 // $log[$key]['type']   = 'trx';
@@ -799,16 +856,16 @@ class ApiHistoryController extends Controller
 
                         $listBalance[$key] = $dataList;
                     }
-                    
+
                 }
-                
-            } elseif ($value['source'] == 'Voucher') {
+
+            } elseif ($value['source'] == 'Voucher' || $value['source'] == 'Deals Balance') {
                 $vou = DealsUser::with('dealVoucher.deal')->where('id_deals_user', $value['id_reference'])->first();
                 // $log[$key]['detail'] = $vou;
                 $dataList['type']   = 'voucher';
                 $dataList['id']      = $value['id_log_balance'];
                 $dataList['date']   = date('Y-m-d H:i:s', strtotime($vou['claimed_at']));
-                $dataList['outlet'] = $vou['outlet']['outlet_name'];
+                $dataList['outlet'] = 'Beli Kupon';
                 $dataList['amount'] = '- '.ltrim(number_format($value['balance'], 0, ',', '.'), '-');
                 // $dataList['amount'] = number_format($value['balance'], 0, ',', '.');
                 // $dataList['online'] = 1;
@@ -825,7 +882,7 @@ class ApiHistoryController extends Controller
                 $listBalance[$key] = $dataList;
             }
 
-            if (!is_null($post['date_start']) && !is_null($post['date_end'])) {
+            if (isset($post['date_start']) && !is_null($post['date_start']) && isset($post['date_end']) && !is_null($post['date_end'])) {
                 $date_start = date('Y-m-d', strtotime($post['date_start']))." 00.00.00";
                 $date_end = date('Y-m-d', strtotime($post['date_end']))." 23.59.59";
 
@@ -834,35 +891,11 @@ class ApiHistoryController extends Controller
                     continue;
                 }
             }
-            
-            if (!is_null($post['use_point']) && !is_null($post['earn_point']) && !is_null($post['online_order']) && !is_null($post['offline_order']) && !is_null($post['voucher'])) {
-            }
-
-            if (!is_null($post['use_point']) && !is_null($post['earn_point'])) {
-               
-            } elseif (is_null($post['use_point']) && is_null($post['earn_point'])) {
-               
-            } else {
-                if (!is_null($post['use_point'])) {
-                    if ($value['source'] == 'Transaction') {
-                        unset($listBalance[$key]);
-                        continue;
-                    }
-                }
-
-                if (!is_null($post['earn_point'])) {
-                    if ($value['source'] != 'Transaction') {
-                        unset($listBalance[$key]);
-                        continue;
-                    }
-                }
-            }
-
 
             // if (!is_null($post['online_order']) && !is_null($post['offline_order']) && !is_null($post['voucher'])) {
-                
+
             // } elseif (is_null($post['online_order']) && is_null($post['offline_order']) && is_null($post['voucher'])) {
-                
+
             // } else {
             //     if (!is_null($post['online_order'])) {
             //         if (is_null($post['voucher'])) {

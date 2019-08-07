@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Model;
 
 /**
  * Class Deal
- * 
+ *
  * @property int $id_deals
  * @property string $deals_type
  * @property string $deals_voucher_type
@@ -37,7 +37,7 @@ use Illuminate\Database\Eloquent\Model;
  * @property int $deals_total_used
  * @property \Carbon\Carbon $created_at
  * @property \Carbon\Carbon $updated_at
- * 
+ *
  * @property \App\Http\Models\Product $product
  * @property \Illuminate\Database\Eloquent\Collection $outlets
  * @property \Illuminate\Database\Eloquent\Collection $deals_payment_manuals
@@ -99,7 +99,37 @@ class Deal extends Model
 		'user_limit'
 	];
 
-	protected $appends  = ['url_deals_image'];
+	protected $appends  = ['url_deals_image', 'deals_status', 'deals_voucher_price_type', 'url_webview'];
+
+	public function getUrlWebviewAttribute() {
+		return env('APP_URL') ."webview/deals/". $this->id_deals ."/". $this->deals_type;
+	}
+
+	public function getDealsVoucherPriceTypeAttribute() {
+	    $type = "free";
+		if ($this->deals_voucher_price_point) {
+            $type = "point";
+        }
+        else if ($this->deals_voucher_price_cash) {
+            $type = "nominal";
+        }
+        return $type;
+	}
+
+	public function getDealsStatusAttribute() {
+	    $status = "";
+		if (date('Y-m-d H:i:s', strtotime($this->deals_start)) <= date('Y-m-d H:i:s') && date('Y-m-d H:i:s', strtotime($this->deals_end)) > date('Y-m-d H:i:s')) {
+            $status = "available";
+        }
+        else if (date('Y-m-d H:i:s', strtotime($this->deals_start)) > date('Y-m-d H:i:s')) {
+            $status = "soon";
+        }
+        else if (date('Y-m-d H:i:s', strtotime($this->deals_end)) < date('Y-m-d H:i:s')) {
+            $status = "expired";
+        }
+        return $status;
+	}
+
 
 	// ATTRIBUTE IMAGE URL
 	public function getUrlDealsImageAttribute() {
@@ -120,7 +150,7 @@ class Deal extends Model
 	{
 		return $this->belongsToMany(\App\Http\Models\Outlet::class, 'deals_outlets', 'id_deals', 'id_outlet');
 	}
-	
+
 	public function outlets_active()
 	{
 		return $this->belongsToMany(\App\Http\Models\Outlet::class, 'deals_outlets', 'id_deals', 'id_outlet')->where('outlet_status', 'Active');

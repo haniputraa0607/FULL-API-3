@@ -22,6 +22,7 @@ class AccessTokenController extends PassportAccessTokenController
      */
     public function issueToken(ServerRequestInterface $request)
     {
+        // return response()->json($request->getParsedBody());
         try {
             if(isset($request->getParsedBody()['username']) && isset($request->getParsedBody()['password'])){
                 
@@ -41,6 +42,7 @@ class AccessTokenController extends PassportAccessTokenController
         }
         catch (OAuthServerException $exception) {
             //return error message
+            
             if($exception->getCode() == 6){
                 return response()->json(['status' => 'fail', 'messages' => 'Pin tidak sesuai.']);
             }

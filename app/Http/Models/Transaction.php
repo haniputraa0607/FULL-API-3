@@ -44,11 +44,11 @@ class Transaction extends Model
 
 	protected $casts = [
 		'id_user' => 'int',
-		'transaction_subtotal' => 'int',
+		// 'transaction_subtotal' => 'int',
 		'transaction_shipment' => 'int',
-		'transaction_service' => 'int',
+		// 'transaction_service' => 'int',
 		'transaction_discount' => 'int',
-		'transaction_tax' => 'int',
+		// 'transaction_tax' => 'int',
 		'transaction_grandtotal' => 'int',
 		'transaction_point_earned' => 'int',
 		'transaction_cashback_earned' => 'int'
@@ -118,6 +118,10 @@ class Transaction extends Model
 	{
 		return $this->hasMany(\App\Http\Models\TransactionPaymentOffline::class, 'id_transaction');
 	}
+	public function transaction_payment_ovo()
+	{
+		return $this->hasMany(\App\Http\Models\TransactionPaymentOvo::class, 'id_transaction');
+	}
 
 	public function products()
 	{
@@ -136,7 +140,7 @@ class Transaction extends Model
     public function productTransaction() 
     {
     	return $this->hasMany(TransactionProduct::class, 'id_transaction', 'id_transaction');
-    }
+	}
 
     public function product_detail()
     {

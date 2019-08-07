@@ -87,7 +87,7 @@ class ApiProductController extends Controller
             }
             else {
                 $data['position'] = $this->searchLastSorting(null);
-            }    
+            }
         }
 
     	return $data;
@@ -98,7 +98,7 @@ class ApiProductController extends Controller
      */
     function searchLastSorting($id_product_category=null) {
         $sorting = Product::select('position')->orderBy('position', 'DESC');
-        
+
         if (is_null($id_product_category)) {
             $sorting->whereNull('id_product_category');
         }
@@ -142,7 +142,7 @@ class ApiProductController extends Controller
 		}
 		return response()->json(MyHelper::checkUpdate($update));
 	}
-	
+
     public function categoryAssign(Request $request) {
 		$post = $request->json()->all();
 		foreach ($post['id_product'] as $key => $idprod) {
@@ -153,7 +153,7 @@ class ApiProductController extends Controller
 		}
 		return response()->json(MyHelper::checkUpdate($update));
 	}
-	
+
     public function import(Import $request) {
         $post = $request->json()->all();
         // return $post;
@@ -173,7 +173,7 @@ class ApiProductController extends Controller
 
                     $insert = Product::updateOrCreate(['product_code' => $product['product_code']], $data);
                 }
-                
+
             } else {
                 foreach ($value as $row => $price) {
                     $id_product = Product::where('product_code', $price['product_code'])->first();
@@ -215,14 +215,14 @@ class ApiProductController extends Controller
      */
     function listProduct(Request $request) {
         $post = $request->json()->all();
-		
+
 		if (isset($post['id_outlet'])) {
             $product = Product::join('product_prices','product_prices.id_product','=','products.id_product')
 									->where('product_prices.id_outlet','=',$post['id_outlet'])
 									->where('product_prices.product_visibility','=','Visible')
                                     ->where('product_prices.product_status','=','Active')
                                     ->with(['category', 'discount']);
-                                    
+
             if (isset($post['visibility'])) {
 
                 if($post['visibility'] == 'Hidden'){
@@ -235,7 +235,9 @@ class ApiProductController extends Controller
                     })
                     ->where('id_outlet', $post['id_outlet'])
                     ->select('id_product')->get();
-                    $product = Product::whereNotIn('products.id_product', $idVisible)->with(['category', 'discount']);
+                    $product = Product::whereNotIn('products.id_product', $idVisible)->whereNull('id_product_category')->with(['category', 'discount']);
+                }else{
+                    $product = $product->whereNotNull('id_product_category');
                 }
 
                 unset($post['id_outlet']);
@@ -243,7 +245,7 @@ class ApiProductController extends Controller
 		} else {
 			$product = Product::with(['category', 'discount']);
 		}
-		
+
         if (isset($post['id_product'])) {
             $product->where('products.id_product', $post['id_product']);
         }
@@ -256,7 +258,16 @@ class ApiProductController extends Controller
             $product->where('products.product_name', 'LIKE', '%'.$post['product_name'].'%');
         }
 
-        $product = $product->orderBy('position');
+        if(isset($post['orderBy'])){
+            $product = $product->orderBy($post['orderBy']);
+        }
+        else{
+            $product = $product->orderBy('position');
+        }
+
+        if(isset($post['admin_list'])){
+            $product = $product->withCount('product_prices')->withCount('product_price_hiddens');
+        }
 
         if(isset($post['pagination'])){
             $product = $product->paginate(10);
@@ -286,9 +297,9 @@ class ApiProductController extends Controller
 
         // check data
         $data = $this->checkInputProduct($post, $type="create");
-        
+        // return $data;
         $save = Product::create($data);
-		
+
 		if($save){
 			$listOutlet = Outlet::get()->toArray();
 			foreach($listOutlet as $outlet){
@@ -296,8 +307,8 @@ class ApiProductController extends Controller
 				$data['id_product'] = $save->id_product;
 				$data['id_outlet'] = $outlet['id_outlet'];
 				$data['product_price'] = null;
-				$data['product_visibility'] = 'Visible';
-				
+				// $data['product_visibility'] = 'Visible';
+
                 ProductPrice::create($data);
             }
 
@@ -305,7 +316,7 @@ class ApiProductController extends Controller
             if(isset($post['photo'])){
 
                 $upload = MyHelper::uploadPhotoStrict($post['photo'], $this->saveImage, 300, 300);
-                
+
                 if (isset($upload['status']) && $upload['status'] == "success") {
                     $dataPhoto['product_photo'] = $upload['path'];
                 }
@@ -314,17 +325,17 @@ class ApiProductController extends Controller
                         'status'   => 'fail',
                         'messages' => ['fail upload image']
                     ];
-    
+
                     return response()->json($result);
                 }
-    
+
                 $dataPhoto['id_product']          = $save->id_product;
                 $dataPhoto['product_photo_order'] = $this->cekUrutanPhoto($save['id_product']);
-                $save                             = ProductPhoto::create($dataPhoto);            
+                $save                             = ProductPhoto::create($dataPhoto);
             }
 
 		}
-		
+
         return response()->json(MyHelper::checkCreate($save));
     }
 
@@ -347,16 +358,16 @@ class ApiProductController extends Controller
         }
 
     	$save = Product::where('id_product', $post['id_product'])->update($data);
-    	
+
     	if($save){
             if(isset($post['photo'])){
                 //delete all photo
                 $delete = $this->deletePhoto($post['id_product']);
-                
+
 
                     //create photo
                     $upload = MyHelper::uploadPhotoStrict($post['photo'], $this->saveImage, 300, 300);
-                   
+
                     if (isset($upload['status']) && $upload['status'] == "success") {
                         $dataPhoto['product_photo'] = $upload['path'];
                     }
@@ -365,14 +376,14 @@ class ApiProductController extends Controller
                             'status'   => 'fail',
                             'messages' => ['fail upload image']
                         ];
-    
+
                         return response()->json($result);
                     }
-    
+
                     $dataPhoto['id_product']          = $post['id_product'];
                     $dataPhoto['product_photo_order'] = $this->cekUrutanPhoto($post['id_product']);
                     $save                        = ProductPhoto::create($dataPhoto);
-                
+
 
             }
         }
@@ -392,7 +403,7 @@ class ApiProductController extends Controller
     	if ($check) {
     		// delete photo
     		$deletePhoto = $this->deletePhoto($request->json('id_product'));
-    		
+
     		// delete product
     		$delete = Product::where('id_product', $request->json('id_product'))->delete();
 
@@ -407,7 +418,7 @@ class ApiProductController extends Controller
                         'product_prices' => $product['prices'],
                     ],
                 ];
-            } 
+            }
 			else{
                 $result = ['status' => 'fail', 'messages' => ['failed to delete data']];
             }
@@ -421,7 +432,7 @@ class ApiProductController extends Controller
 				'messages' => ['product has been used.']
     		]);
     	}
-    	
+
     }
 
     /**
@@ -443,7 +454,7 @@ class ApiProductController extends Controller
     }
 
     /**
-     * checking delete 
+     * checking delete
      */
     function checkDeleteProduct($id) {
 
@@ -502,7 +513,7 @@ class ApiProductController extends Controller
     	$data = [];
 
     	if (isset($post['photo'])) {
-    	    
+
     	    $upload = MyHelper::uploadPhotoStrict($post['photo'], $this->saveImage, 300, 300);
 
     	    if (isset($upload['status']) && $upload['status'] == "success") {
@@ -540,7 +551,7 @@ class ApiProductController extends Controller
         $cek = ProductPhoto::where('id_product', $id)->orderBy('product_photo_order', 'DESC')->first();
 
         if (empty($cek)) {
-            $cek = 1;   
+            $cek = 1;
         }
         else {
             $cek = $cek->product_photo_order + 1;
@@ -566,7 +577,7 @@ class ApiProductController extends Controller
     function deletePhotoProduct(DeletePhoto $request) {
         // info photo
         $dataPhoto = ProductPhoto::where('id_product_photo', $request->json('id_product_photo'))->get()->toArray();
-        
+
         $delete    = ProductPhoto::where('id_product_photo', $request->json('id_product_photo'))->delete();
 
         if (!empty($dataPhoto)) {
@@ -577,7 +588,7 @@ class ApiProductController extends Controller
     }
 
     /* harga */
-    function productPrices(Request $request) 
+    function productPrices(Request $request)
     {
         $data = [];
         $post = $request->json()->all();
@@ -598,7 +609,7 @@ class ApiProductController extends Controller
             $data['product_price_tax'] = $post['product_price_tax'];
         }
 
-        if (isset($post['product_visibility'])) {
+        if (isset($post['product_visibility']) || $post['product_visibility'] == null) {
             $data['product_visibility'] = $post['product_visibility'];
         }
 
@@ -609,18 +620,16 @@ class ApiProductController extends Controller
         if (isset($post['product_stock_status'])) {
             $data['product_stock_status'] = $post['product_stock_status'];
         }
-
         $save = ProductPrice::updateOrCreate([
-            'id_product' => $data['id_product'], 
+            'id_product' => $data['id_product'],
             'id_outlet'  => $data['id_outlet']
         ], $data);
-
         return response()->json(MyHelper::checkUpdate($save));
     }
 
     function updateAllowSync(UpdateAllowSync $request) {
         $post = $request->json()->all();
-        
+
         if($post['product_allow_sync'] == "true"){
             $allow = '1';
         }else{
@@ -631,7 +640,7 @@ class ApiProductController extends Controller
     	return response()->json(MyHelper::checkUpdate($update));
     }
 
-    function visibility(Request $request) 
+    function visibility(Request $request)
     {
         $post = $request->json()->all();
         foreach ($post['id_visibility'] as $key => $value) {
@@ -675,7 +684,7 @@ class ApiProductController extends Controller
             mkdir('img/product/item/', 0777, true);
         }
          $upload = MyHelper::uploadPhotoStrict($post['photo'], 'img/product/item/', 300, 300, 'default', '.png');
-                   
+
          if (isset($upload['status']) && $upload['status'] == "success") {
             $result = [
                 'status'   => 'success',
@@ -689,5 +698,34 @@ class ApiProductController extends Controller
 
         }
         return response()->json($result);
+    }
+
+    public function updateVisibility(Request $request)
+    {
+        $post = $request->json()->all();
+
+        if (!isset($post['id_product'])) {
+            return [
+                'status' => 'fail',
+                'messages' => ['Id product is required']
+            ];
+        }
+        if (!isset($post['product_visibility'])) {
+            return [
+                'status' => 'fail',
+                'messages' => ['Product visibility is required']
+            ];
+        }
+        // update visibility
+        $update = Product::find($post['id_product'])->update(['product_visibility'=>$post['product_visibility']]);
+
+        return response()->json(MyHelper::checkUpdate($update));
+    }
+
+    function listProductPriceByOutlet(Request $request, $id_outlet) {
+        $product = Product::with(['all_prices'=> function($q) use ($id_outlet){
+            $q->where('id_outlet', $id_outlet);
+        }])->get();
+        return response()->json(MyHelper::checkGet($product));
     }
 }
