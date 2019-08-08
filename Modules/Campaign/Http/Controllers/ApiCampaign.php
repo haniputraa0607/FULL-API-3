@@ -101,8 +101,15 @@ class ApiCampaign extends Controller
 					return $x;
 				}
 			},$arr));
+			if(empty($param)){
+				$erDa=$content=='id'?'User Id':'Phone Number';
+				return [
+					'status'  => 'fail',
+					'messages'  => ['No '.$erDa.' was found in this file']
+				];
+			}
 			$content=isset($post['csv_content'])?$post['csv_content']:'id';
-			$post['conditions'][0]=array(
+			$post['conditions']=array(0=>array(
 				0=>array(
 					'subject'=>$content,
 					'operator'=>'WHERE IN',
@@ -110,7 +117,7 @@ class ApiCampaign extends Controller
 				),
 				'rule'=>'and',
 				'rule_next'=>'and'
-			);
+			));
 		}else{
 			$post = $request->json()->all();
 		}
