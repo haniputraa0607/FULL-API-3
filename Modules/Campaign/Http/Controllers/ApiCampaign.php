@@ -81,9 +81,44 @@ class ApiCampaign extends Controller
 		return response()->json($result);
 	}
 	public function CreateCampaign(Request $request){
-		$post = $request->json()->all();
+		if($request->hasFile('import_file')){
+			if(!($request->file('import_file')->isValid()&&in_array($request->file('import_file')->getMimeType(), array('text/plain','text/csv','application/csv')))){
+				return [
+					'status'  => 'fail',
+					'messages'  => 'Invalid file',
+				];
+			}
+			$isi=file_get_contents($request->file('import_file')->getRealPath());
+			$post=$request->post();
+			$post=array_map(function($x){
+				return json_decode($x,true);
+			},$post);
+			$post['conditions']=array_map(function($y) use($post){
+				$x=$y[0];
+				$content=isset($post['csv_content'])?$post['csv_content']:'id';
+				if(is_numeric($x)){
+					return array(
+						0=>array(
+							'subject'=>$content,
+							'operator'=>'=',
+							'parameter'=>$x
+						),
+						'rule'=>'and',
+						'rule_next'=>'and'
+					);
+				}
+			}, MyHelper::csvToArray($isi));
+			$post['conditions']=array_filter($post['conditions']);
+		}else{
+			$post = $request->json()->all();
+		}
+		if(empty($post['conditions'])){
+			return [
+				'status'  => 'fail',
+				'messages'  => ['Rule must be filled in at least one']
+			];
+		}
 		$user = $request->user();
-
 		$data 						= [];
 		$data['campaign_title'] 	= $post['campaign_title'];
 		$data['id_user'] 			= $user['id'];
