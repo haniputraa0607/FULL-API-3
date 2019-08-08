@@ -93,22 +93,24 @@ class ApiCampaign extends Controller
 			$post=array_map(function($x){
 				return json_decode($x,true);
 			},$post);
-			$post['conditions']=array_map(function($y) use($post){
+			$arr=MyHelper::csvToArray($isi);
+			$content=isset($post['csv_content'])?$post['csv_content']:'id';
+			$param=array_filter(array_map(function($y){
 				$x=$y[0];
-				$content=isset($post['csv_content'])?$post['csv_content']:'id';
 				if(is_numeric($x)){
-					return array(
-						0=>array(
-							'subject'=>$content,
-							'operator'=>'=',
-							'parameter'=>$x
-						),
-						'rule'=>'and',
-						'rule_next'=>'and'
-					);
+					return $x;
 				}
-			}, MyHelper::csvToArray($isi));
-			$post['conditions']=array_filter($post['conditions']);
+			},$arr));
+			$content=isset($post['csv_content'])?$post['csv_content']:'id';
+			$post['conditions'][0]=array(
+				0=>array(
+					'subject'=>$content,
+					'operator'=>'WHERE IN',
+					'parameter'=>implode(',',$param)
+				),
+				'rule'=>'and',
+				'rule_next'=>'and'
+			);
 		}else{
 			$post = $request->json()->all();
 		}
