@@ -45,6 +45,7 @@ class CreateCampaignsTable extends Migration {
 			$table->text('campaign_inbox_subject', 65535)->nullable();
 			$table->text('campaign_inbox_content', 65535)->nullable();
 			$table->enum('campaign_is_sent', array('Yes','No'))->default('No');
+			$table->text('campaign_description', 65535)->nullable();
 			$table->timestamps();
 		});
 	}
