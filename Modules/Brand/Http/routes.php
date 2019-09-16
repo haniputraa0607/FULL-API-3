@@ -1,7 +1,7 @@
 <?php
 
-Route::group(['middleware' => ['web', 'auth:api'], 'prefix' => 'brand', 'namespace' => 'Modules\Brand\Http\Controllers'], function () {
+Route::group(['middleware' => ['auth:api'], 'prefix' => 'api/brand', 'namespace' => 'Modules\Brand\Http\Controllers'], function () {
     Route::get('/', 'ApiBrandController@index');
 
-    Route::any('sync', 'ApiSyncBrandController@sync');
+    Route::post('sync', 'ApiSyncBrandController@syncBrand');
 });
