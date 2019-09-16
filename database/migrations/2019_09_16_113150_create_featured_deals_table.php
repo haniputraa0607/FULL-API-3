@@ -16,8 +16,8 @@ class CreateFeaturedDealsTable extends Migration
         Schema::create('featured_deals', function (Blueprint $table) {
             $table->increments('id_featured_deals');
             $table->unsignedInteger('id_deals');
-            $table->timestamp('start_date');
-            $table->timestamp('end_date');
+            $table->dateTime('start_date');
+            $table->dateTime('end_date');
             $table->unsignedInteger('order');
             $table->timestamps();
 
