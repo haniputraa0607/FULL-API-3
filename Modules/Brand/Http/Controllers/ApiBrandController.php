@@ -86,7 +86,7 @@ class ApiBrandController extends Controller
             }
         }
         $dataMerge = array_merge($brand, $nullOrZero);
-        dd($dataMerge);
+
         $result = [];
         if ($dataMerge) {
             foreach ($dataMerge as $key => $value) {
