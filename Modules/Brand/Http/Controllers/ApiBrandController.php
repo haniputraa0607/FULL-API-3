@@ -78,27 +78,21 @@ class ApiBrandController extends Controller
 
     public function listBrand()
     {
-        $customPage = Brand::orderBy('order_brand')->get()->toArray();
-        foreach ($customPage as $key => $value) {
+        $brand = Brand::orderBy('order_brand', 'id_brand')->get()->toArray();
+        foreach ($brand as $key => $value) {
             if ($value['order_brand'] == null || $value['order_brand'] == 0) {
-                $nullOrZero[] = $customPage[$key];
-                unset($customPage[$key]);
-            } else {
-                $nullOrZero[] = null;
+                $nullOrZero[] = $brand[$key];
+                unset($brand[$key]);
             }
         }
-        foreach ($nullOrZero as $key => $value) {
-            if ($value == null) {
-                unset($nullOrZero[$key]);
-            }
-        }
-        $dataMerge = array_merge($customPage, $nullOrZero);
+        $dataMerge = array_merge($brand, $nullOrZero);
+        dd($dataMerge);
         $result = [];
         if ($dataMerge) {
             foreach ($dataMerge as $key => $value) {
                 $result[$key]['code_brand']     = $value['code_brand'];
-                $result[$key]['logo_brand']     = env("APP_API_URL").$value['logo_brand'];
-                $result[$key]['image_brand']    = env("APP_API_URL").$value['image_brand'];
+                $result[$key]['logo_brand']     = env("APP_API_URL") . $value['logo_brand'];
+                $result[$key]['image_brand']    = env("APP_API_URL") . $value['image_brand'];
             }
         }
         return response()->json(['status'  => 'success', 'result' => $result]);
