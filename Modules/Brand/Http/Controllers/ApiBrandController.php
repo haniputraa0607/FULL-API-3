@@ -6,8 +6,17 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
 
+use Modules\Brand\Entities\Brand;
+use App\Lib\MyHelper;
+use DB;
+
 class ApiBrandController extends Controller
 {
+    function __construct()
+    {
+        date_default_timezone_set('Asia/Jakarta');
+    }
+
     /**
      * Display a listing of the resource.
      * @return Response
@@ -66,4 +75,32 @@ class ApiBrandController extends Controller
      */
     public function destroy()
     { }
+
+    public function listBrand()
+    {
+        $customPage = Brand::orderBy('order_brand')->get()->toArray();
+        foreach ($customPage as $key => $value) {
+            if ($value['order_brand'] == null || $value['order_brand'] == 0) {
+                $nullOrZero[] = $customPage[$key];
+                unset($customPage[$key]);
+            } else {
+                $nullOrZero[] = null;
+            }
+        }
+        foreach ($nullOrZero as $key => $value) {
+            if ($value == null) {
+                unset($nullOrZero[$key]);
+            }
+        }
+        $dataMerge = array_merge($customPage, $nullOrZero);
+        $result = [];
+        if ($dataMerge) {
+            foreach ($dataMerge as $key => $value) {
+                $result[$key]['code_brand']     = $value['code_brand'];
+                $result[$key]['logo_brand']     = env("APP_API_URL").$value['logo_brand'];
+                $result[$key]['image_brand']    = env("APP_API_URL").$value['image_brand'];
+            }
+        }
+        return response()->json(['status'  => 'success', 'result' => $result]);
+    }
 }
