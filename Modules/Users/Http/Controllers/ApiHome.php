@@ -586,7 +586,6 @@ class ApiHome extends Controller
 
         if (empty($timeDB)) {
             $greetings = "Hello";
-            $background = "";
         }
         else {
             $dbTime = [];
@@ -604,23 +603,18 @@ class ApiHome extends Controller
             if($time >= strtotime($dbTime['afternoon']) && $time < strtotime($dbTime['evening'])){
                 // salamnya dari DB
                 $greetings  = Greeting::where('when', '=', 'afternoon')->get()->toArray();
-                $background  = HomeBackground::where('when', '=', 'afternoon')->get()->toArray();
             }
             elseif($time >= strtotime($dbTime['evening']) && $time <= strtotime($dbTime['latenight'])){
                 $greetings  = Greeting::where('when', '=', 'evening')->get()->toArray();
-                $background  = HomeBackground::where('when', '=', 'evening')->get()->toArray();
             }
             elseif($time >= strtotime($dbTime['latenight'])){
                 $greetings  = Greeting::where('when', '=', 'latenight')->get()->toArray();
-                $background  = HomeBackground::where('when', '=', 'latenight')->get()->toArray();
             }
             elseif($time <= strtotime("04:00:00")){
                 $greetings  = Greeting::where('when', '=', 'latenight')->get()->toArray();
-                $background  = HomeBackground::where('when', '=', 'latenight')->get()->toArray();
             }
             else{
                 $greetings  = Greeting::where('when', '=', 'morning')->get()->toArray();
-                $background  = HomeBackground::where('when', '=', 'morning')->get()->toArray();
             }
 
             /**
@@ -628,16 +622,11 @@ class ApiHome extends Controller
              */
             if (empty($greetings)) {
                 $greetingss = "Hello";
-                $background = "";
             }
             else {
                 $greetingKey   = array_rand($greetings, 1);
                 // return $greetings[$greetingKey]['greeting2'];
                 $greetingss     = app($this->autocrm)->TextReplace($greetings[$greetingKey]['greeting'], $user['phone']);
-                if (!empty($background)) {
-                    $backgroundKey = array_rand($background, 1);
-                    $background    = env('AWS_URL').$background[$backgroundKey]['picture'];
-                }
             }
         }
 
