@@ -84,6 +84,7 @@ class ApiBrandController extends Controller
             return response()->json(['status'  => 'fail', 'messages' => ['empty!']]);
         }
 
+        $nullOrZero = [];
         foreach ($brand as $key => $value) {
             if ($value['order_brand'] == null || $value['order_brand'] == 0) {
                 $nullOrZero[] = $brand[$key];
