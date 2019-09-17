@@ -203,7 +203,7 @@ class ApiDeals extends Controller
     function listDeal(ListDeal $request) {
 
         // return $request->json()->all();
-        $deals = new Deal;
+        $deals = (new Deal)->newQuery();
 
         if($request->json('id_outlet') && is_integer($request->json('id_outlet'))){
             $deals = $deals->join('deals_outlets', 'deals.id_deals', 'deals_outlets.id_deals')
@@ -226,7 +226,8 @@ class ApiDeals extends Controller
                 // 'deals_vouchers.deals_user.user'
             ])->where('id_deals', $request->json('id_deals'))->with(['outlets', 'outlets.city', 'product','brand']);
         }else{
-            $deals->select('id_deals','deals_title','deals_publish_start','deals_publish_end','deals_total_voucher','deals_total_claimed','deals_voucher_type','deals_image','deals_start','deals_end');
+            $deals->select('id_deals','deals_title','deals_second_title','deals_voucher_price_point','deals_voucher_price_cash','deals_total_voucher','deals_total_claimed','deals_voucher_type','deals_image','deals_start','deals_end');
+            // return($deals->toSql());
         }
 
         if ($request->json('publish')) {
@@ -283,11 +284,11 @@ class ApiDeals extends Controller
         // print_r($deals->get()->toArray());
         // $deals = $deals->orderBy('deals_start', 'ASC');
 
-        if ($request->json('lowest_price')) {
+        if ($request->json('lowest_point')) {
             $deals->orderBy('deals_voucher_price_point', 'ASC');
         }
 
-        if ($request->json('highest_price')) {
+        if ($request->json('highest_point')) {
             $deals->orderBy('deals_voucher_price_point', 'DESC');
         }
 
