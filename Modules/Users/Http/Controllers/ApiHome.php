@@ -732,6 +732,11 @@ class ApiHome extends Controller
                 'status'=>'success',
                 'result'=>$deals
             ];
+        }else{
+            return [
+                'status' => 'fail',
+                'messages' => ['Something went wrong']
+            ];
         }
     }
 }
