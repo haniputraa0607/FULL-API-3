@@ -203,7 +203,7 @@ class ApiDeals extends Controller
     function listDeal(ListDeal $request) {
 
         // return $request->json()->all();
-        $deals = Deal::with(['outlets', 'outlets.city', 'product','brand']);
+        $deals = new Deal;
 
         if($request->json('id_outlet') && is_integer($request->json('id_outlet'))){
             $deals = $deals->join('deals_outlets', 'deals.id_deals', 'deals_outlets.id_deals')
@@ -224,7 +224,9 @@ class ApiDeals extends Controller
             $deals->with(['deals_vouchers',
                 // 'deals_vouchers.deals_voucher_user',
                 // 'deals_vouchers.deals_user.user'
-            ])->where('id_deals', $request->json('id_deals'));
+            ])->where('id_deals', $request->json('id_deals'))->with(['outlets', 'outlets.city', 'product','brand']);
+        }else{
+            $deals->select('id_deals','deals_title','deals_publish_start','deals_publish_end','deals_total_voucher','deals_total_claimed','deals_voucher_type','deals_image','deals_start','deals_end');
         }
 
         if ($request->json('publish')) {
