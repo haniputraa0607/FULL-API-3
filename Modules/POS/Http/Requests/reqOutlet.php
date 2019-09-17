@@ -16,12 +16,13 @@ class reqOutlet extends FormRequest
     public function rules()
     {
         return [
-            'api_key'		=> 'required',
-            'api_secret'	=> 'required',
-            'store'			=> 'required|array',
-            'store.*.store_code'	=> 'required',
-            'store.*.store_name'	=> 'required',
-            'store.*.store_status'	=> 'required|in:Active,Inactive'
+            'api_key'               => 'required',
+            'api_secret'            => 'required',
+            'store'                 => 'required|array',
+            'store.*.brand_code'    => 'required',
+            'store.*.store_code'    => 'required',
+            'store.*.store_name'    => 'required',
+            'store.*.store_status'  => 'required|in:Active,Inactive'
         ];
     }
 

@@ -13,4 +13,5 @@ Route::group(['middleware' => ['auth:api','log_request'], 'prefix' => 'api/inbox
 {
     Route::get('user', 'ApiInbox@listInboxUser');
     Route::post('marked', 'ApiInbox@markedInbox');
+    Route::post('unread', 'ApiInbox@unread');
 });

@@ -354,42 +354,77 @@ class ApiPOS extends Controller
     }
 	
 	public function syncOutlet(reqOutlet $request){
-		$outlet = $request->json('store');
+		$post = $request->json()->all();
 
-        foreach ($outlet as $key => $value) {
-          
-			$data['outlet_name'] = $value['store_name'];
-			if(isset($value['store_address'])){
-				$data['outlet_address'] = $value['store_address'];
-			}
-			if(isset($value['store_phone'])){
-				$data['outlet_phone'] = $value['store_phone'];
-			}
-            // $data['outlet_status'] = $value['store_status'];
-            
-            // $save = Outlet::updateOrCreate(['outlet_code' => strtoupper($value['store_code'])], $data);
-            $data['outlet_code'] = strtoupper($value['store_code']);
-			$cekOutlet = Outlet::where('outlet_code', strtoupper($value['store_code']))->first();
-			
-            if($cekOutlet){
-                $save = Outlet::where('outlet_code', strtoupper($value['store_code']))->update($data);
-            }else{
-                $save = Outlet::create($data);
-            }
-
-            if (!$save) {
-                return response()->json([
-                    'status'   => 'fail',
-                    'messages' => ['fail to sync']
-                ]);
-            }    
+		$api = $this->checkApi($post['api_key'], $post['api_secret']);
+        if ($api['status'] != 'success') {
+            return response()->json($api);
         }
-        // return success
+
+		DB::beginTransaction();
+        foreach ($post['store'] as $key => $value) {
+			$dataOutlet[$key]['outlet_name'] = $value['store_name'];
+			$dataOutlet[$key]['outlet_code'] = strtoupper($value['store_code']);
+			$dataOutlet[$key]['outlet_status'] = strtoupper($value['store_status']);
+			$dataBrand[$key]['code_brand'] = strtoupper($value['brand_code']);
+			$dataBrandOutlet[$key]['outlet_code'] = strtoupper($value['store_code']);
+			$dataBrandOutlet[$key]['code_brand'] = strtoupper($value['brand_code']);
+		}
+
+		foreach (array_unique($dataOutlet, SORT_REGULAR) as $key => $value) {
+			$cekOutlet = Outlet::where('outlet_code', strtoupper($value['outlet_code']))->first();
+			if($cekOutlet){
+				$update = Outlet::where('outlet_code', strtoupper($value['outlet_code']))->update($value);
+				if (!$update) {
+					DB::rollBack();
+					return response()->json([
+						'status'   => 'fail',
+						'messages' => ['fail to sync']
+					]);
+				}
+			}else{
+				$save = Outlet::create($value);
+				if (!$save) {
+					DB::rollBack();
+					return response()->json([
+						'status'   => 'fail',
+						'messages' => ['fail to sync']
+					]);
+				}
+			}
+		}
+
+		foreach (array_unique($dataBrand, SORT_REGULAR) as $key => $value) {
+			$cekBrand = Brand::where('code_brand', strtoupper($value['code_brand']))->first();
+			if(!$cekBrand){
+				DB::rollBack();
+				return response()->json([
+					'status'   => 'fail',
+					'messages' => ['fail to sync, brand '.$value['code_brand']]
+				]);
+			}
+		}
+
+		foreach ($dataBrandOutlet as $key => $value) {
+			$getId['id_outlet'] = Outlet::where('outlet_code', $value['outlet_code'])->first()->id_outlet;
+			$getId['id_brand'] = Brand::where('code_brand', $value['code_brand'])->first()->id_brand;
+
+			$save = BrandOutlet::updateOrCreate($getId);
+			if (!$save) {
+				DB::rollBack();
+				return response()->json([
+					'status'   => 'fail',
+					'messages' => ['fail to sync']
+				]);
+			}
+		}
+		// return success
+		DB::commit();
         return response()->json([
             'status' => 'success'
         ]);
 	}
-	
+
 	public function syncMenu(reqMenu $request){
 		$post = $request->json()->all();
 		
@@ -1673,7 +1708,7 @@ class ApiPOS extends Controller
         return response()->json(['status' => 'success']);
     }
 
-    function checkApi($key, $secret)
+    public static function checkApi($key, $secret)
     {
         $api_key = Setting::where('key', 'api_key')->first();
         if (empty($api_key)) {
