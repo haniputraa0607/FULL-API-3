@@ -390,7 +390,7 @@ class ApiPOS extends Controller
         ]);
 	}
 	
-	public function syncMenu(reqMenu $request){
+	public function syncMenu(Request $request){
 		$post = $request->json()->all();
 		
         $syncDatetime = date('d F Y h:i');
@@ -411,158 +411,249 @@ class ApiPOS extends Controller
 			
 			foreach($post['menu'] as $key => $menu){
 				DB::beginTransaction();
-				$product = Product::where('product_code', $menu['plu_id'])->first();
-				
-                // return response()->json($menu);
-                // update product
-				if($product){
-                    // cek allow sync, jika 0 product tidak di update
-                    if($product->product_allow_sync == '1'){
 
-                        // cek name pos, jika beda product tidak di update
-                        if(empty($product->product_name_pos) || $product->product_name_pos == $menu['name']){
-                            $update = $product->update(['product_name_pos' => $menu['name']]);
-                            if($update){
-								// update modifiers 
-								if(isset($menu['modifiers'])){
-									if(!empty($menu['modifiers'])){
-										foreach($menu['modifiers'] as $mod){
-											$dataProductMod['type'] = $mod['type'];
-											if(isset($mod['text']))
-												$dataProductMod['text'] = $mod['text'];
-											else
-												$dataProductMod['text'] = null;
-											
-											$updateProductMod = ProductModifier::updateOrCreate([
-														'id_product' => $product->id_product, 
-														'code'  => $mod['code']
-														], $dataProductMod);
+				if (!isset($menu['plu_id'])) {
+					$failedProduct[] = ['product_code' => $menu['plu_id'], 'product_name' => $menu['name']];
+				} else {
+					$product = Product::where('product_code', $menu['plu_id'])->first();
+				
+					// return response()->json($menu);
+					// update product
+					if($product){
+						// cek allow sync, jika 0 product tidak di update
+						if($product->product_allow_sync == '1'){
+	
+							// cek name pos, jika beda product tidak di update
+							if(empty($product->product_name_pos) || $product->product_name_pos == $menu['name']){
+								$update = $product->update(['product_name_pos' => $menu['name']]);
+								if($update){
+									// update modifiers 
+									if(isset($menu['modifiers'])){
+										if(!empty($menu['modifiers'])){
+											foreach($menu['modifiers'] as $mod){
+												$dataProductMod['type'] = $mod['type'];
+												if(isset($mod['text']))
+													$dataProductMod['text'] = $mod['text'];
+												else
+													$dataProductMod['text'] = null;
+												
+												$updateProductMod = ProductModifier::updateOrCreate([
+															'id_product' => $product->id_product, 
+															'code'  => $mod['code']
+															], $dataProductMod);
+											}
 										}
 									}
+									
+									// update price 
+									$productPrice = ProductPrice::where('id_product', $product->id_product)->where('id_outlet', $outlet->id_outlet)->first();
+									if($productPrice){
+										$oldPrice =  $productPrice->product_price;
+										$oldUpdatedAt =  $productPrice->updated_at;
+									}else{
+										$oldPrice = null;
+										$oldUpdatedAt = null;
+									}
+		
+									$dataProductPrice['product_price'] = (int)round($menu['price']);
+									$dataProductPrice['product_price_base'] = round($menu['price_base'],2);
+									$dataProductPrice['product_price_tax'] = round($menu['price_tax'],2);
+									$dataProductPrice['product_status'] = $menu['status'];
+									
+									try {
+										$updateProductPrice = ProductPrice::updateOrCreate([
+											'id_product' => $product->id_product, 
+											'id_outlet'  => $outlet->id_outlet
+											], $dataProductPrice); 	
+									} catch (\Exception $e) {
+										DB::rollBack();
+										LogBackendError::logExceptionMessage("ApiPOS/syncMenu=>".$e->getMessage(),$e);
+									}
+			
+									if(!$updateProductPrice){
+										$failedProduct[] = ['product_code' => $menu['plu_id'], 'product_name' => $menu['name']];
+									}else{
+	
+										//upload photo
+										$imageUpload = [];
+										if(isset($menu['photo'])){
+											foreach($menu['photo'] as $photo){
+												$image = file_get_contents($photo['url']);
+												$img = base64_encode($image);
+												if (!file_exists('img/product/item/')) {
+													mkdir('img/product/item/', 0777, true);
+												}
+	
+												$upload = MyHelper::uploadPhotoStrict($img, 'img/product/item/', 300, 300);
+		
+												if (isset($upload['status']) && $upload['status'] == "success") {
+													$orderPhoto = ProductPhoto::where('id_product', $product->id_product)->orderBy('product_photo_order', 'desc')->first();
+													if($orderPhoto){
+														$orderPhoto = $orderPhoto->product_photo_order + 1;
+													}else{
+														$orderPhoto = 1;
+													}
+													$dataPhoto['id_product'] = $product->id_product;
+													$dataPhoto['product_photo'] = $upload['path'];
+													$dataPhoto['product_photo_order'] = $orderPhoto;
+	
+													try {
+														$photo = ProductPhoto::create($dataPhoto);
+													} catch (\Exception $e) {
+														DB::rollBack();
+														LogBackendError::logExceptionMessage("ApiPOS/syncMenu=>".$e->getMessage(),$e);
+													}
+	
+													if(!$photo){
+														DB::rollBack();
+														$failedProduct[] = ['product_code' => $menu['plu_id'], 'product_name' => $menu['name']];
+													}
+	
+													//add in array photo
+													$imageUpload[] = $photo['product_photo'];  
+												}else{
+													DB::rollBack();
+													$failedProduct[] = ['product_code' => $menu['plu_id'], 'product_name' => $menu['name']];
+												}
+											}
+										}
+	
+										$countUpdate++;
+										
+										// list updated product utk data log
+										$newProductPrice = ProductPrice::where('id_product', $product->id_product)->where('id_outlet', $outlet->id_outlet)->first();
+										$newUpdatedAt =  $newProductPrice->updated_at;
+		
+										$updateProd['id_product'] = $product['id_product']; 
+										$updateProd['plu_id'] = $product['product_code']; 
+										$updateProd['product_name'] = $product['product_name']; 
+										$updateProd['old_price'] = $oldPrice;
+										$updateProd['new_price'] = (int)round($menu['price']);
+										$updateProd['old_updated_at'] = $oldUpdatedAt;
+										$updateProd['new_updated_at'] = $newUpdatedAt;
+										if(count($imageUpload) > 0){
+											$updateProd['new_photo'] = $imageUpload;
+										}
+	
+										$updatedProduct[] = $updateProd;
+									}
+								}else{
+									DB::rollBack();
+									$failedProduct[] = ['product_code' => $menu['plu_id'], 'product_name' => $menu['name']];
 								}
+							}else{
+								// Add product to rejected product
+								$productPrice = ProductPrice::where('id_outlet', $outlet->id_outlet)->where('id_product', $product->id_product)->first();
 								
-                                // update price 
-                                $productPrice = ProductPrice::where('id_product', $product->id_product)->where('id_outlet', $outlet->id_outlet)->first();
-                                if($productPrice){
-                                    $oldPrice =  $productPrice->product_price;
-                                    $oldUpdatedAt =  $productPrice->updated_at;
-                                }else{
-                                    $oldPrice = null;
-                                    $oldUpdatedAt = null;
-                                }
-    
-                                $dataProductPrice['product_price'] = (int)round($menu['price']);
-                                $dataProductPrice['product_price_base'] = round($menu['price_base'],2);
-                                $dataProductPrice['product_price_tax'] = round($menu['price_tax'],2);
-                                $dataProductPrice['product_status'] = $menu['status'];
-								
+								$dataBackend['plu_id'] = $product->product_code;
+								$dataBackend['name'] = $product->product_name_pos;
+								if(empty($productPrice)){
+									$dataBackend['price'] = '';
+								}else{
+									$dataBackend['price'] = number_format($productPrice->product_price,0,',','.');
+								}
+		
+								$dataRaptor['plu_id'] = $menu['plu_id'];
+								$dataRaptor['name'] = $menu['name'];
+								$dataRaptor['price'] = number_format($menu['price'],0,',','.');
+								array_push($rejectedProduct, ['backend' => $dataBackend, 'raptor' => $dataRaptor]);
+							}
+							foreach($menu['brand_code'] as $valueBrand){
+								$brand = Brand::where('code_brand', $valueBrand)->first();
+	
 								try {
-									$updateProductPrice = ProductPrice::updateOrCreate([
+									BrandProduct::updateOrCreate([
 										'id_product' => $product->id_product, 
-										'id_outlet'  => $outlet->id_outlet
-										], $dataProductPrice); 	
+										'id_brand'  => $brand->id_brand]
+									);	
 								} catch (\Exception $e) {
 									DB::rollBack();
 									LogBackendError::logExceptionMessage("ApiPOS/syncMenu=>".$e->getMessage(),$e);
 								}
-        
-                                if(!$updateProductPrice){
-                                    $failedProduct[] = ['product_code' => $menu['plu_id'], 'product_name' => $menu['name']];
-                                }else{
-
-                                    //upload photo
-                                    $imageUpload = [];
-                                    if(isset($menu['photo'])){
-                                        foreach($menu['photo'] as $photo){
-                                            $image = file_get_contents($photo['url']);
-                                            $img = base64_encode($image);
-                                            if (!file_exists('img/product/item/')) {
-                                                mkdir('img/product/item/', 0777, true);
-                                            }
-
-                                            $upload = MyHelper::uploadPhotoStrict($img, 'img/product/item/', 300, 300);
-    
-                                            if (isset($upload['status']) && $upload['status'] == "success") {
-                                                $orderPhoto = ProductPhoto::where('id_product', $product->id_product)->orderBy('product_photo_order', 'desc')->first();
-                                                if($orderPhoto){
-                                                    $orderPhoto = $orderPhoto->product_photo_order + 1;
-                                                }else{
-                                                    $orderPhoto = 1;
-                                                }
-                                                $dataPhoto['id_product'] = $product->id_product;
-                                                $dataPhoto['product_photo'] = $upload['path'];
-                                                $dataPhoto['product_photo_order'] = $orderPhoto;
-
-												try {
-													$photo = ProductPhoto::create($dataPhoto);
-												} catch (\Exception $e) {
-													DB::rollBack();
-													LogBackendError::logExceptionMessage("ApiPOS/syncMenu=>".$e->getMessage(),$e);
-												}
-
-                                                if(!$photo){
-                                                    DB::rollBack();
-													$failedProduct[] = ['product_code' => $menu['plu_id'], 'product_name' => $menu['name']];
-                                                }
-
-                                                //add in array photo
-                                                $imageUpload[] = $photo['product_photo'];  
-                                            }else{
-                                                DB::rollBack();
+							}
+						}
+					}
+					
+					// insert product
+					else{
+						$create = Product::create([ 'product_code' => $menu['plu_id'], 'product_name_pos' => $menu['name'], 'product_name' => $menu['name']]);
+						if($create){
+							// update price
+							$dataProductPrice['product_price'] = (int)round($menu['price']);
+							$dataProductPrice['product_price_base'] = round($menu['price_base'],2);
+							$dataProductPrice['product_price_tax'] =round($menu['price_tax'],2);
+							$dataProductPrice['product_status'] = $menu['status'];
+						   
+							try {
+								$updateProductPrice = ProductPrice::updateOrCreate([
+														'id_product' => $create->id_product, 
+														'id_outlet'  => $outlet->id_outlet
+													  ], $dataProductPrice);
+							} catch (\Exception $e) {
+								DB::rollBack();
+								LogBackendError::logExceptionMessage("ApiPOS/syncMenu=>".$e->getMessage(),$e);
+							}
+							
+							if(!$updateProductPrice){
+								$failedProduct[] = ['product_code' => $menu['plu_id'], 'product_name' => $menu['name']];
+							}else{
+								 $imageUpload = [];
+								 if(isset($menu['photo'])){
+									 foreach($menu['photo'] as $photo){
+										 $image = file_get_contents($photo['url']);
+										 $img = base64_encode($image);
+										 if (!file_exists('img/product/item/')) {
+											 mkdir('img/product/item/', 0777, true);
+										 }
+	
+										 $upload = MyHelper::uploadPhotoStrict($img, 'img/product/item/', 300, 300);
+	
+										 if (isset($upload['status']) && $upload['status'] == "success") {
+											$dataPhoto['id_product'] = $product->id_product;
+											$dataPhoto['product_photo'] = $upload['path'];
+											$dataPhoto['product_photo_order'] = 1;
+	
+											try {
+												$photo = ProductPhoto::create($dataPhoto);
+											} catch (\Exception $e) {
+												DB::rollBack();
+												LogBackendError::logExceptionMessage("ApiPOS/syncMenu=>".$e->getMessage(),$e);
+											}
+	
+											if(!$photo){
+												DB::rollBack();
 												$failedProduct[] = ['product_code' => $menu['plu_id'], 'product_name' => $menu['name']];
-                                            }
-                                        }
-                                    }
-
-                                    $countUpdate++;
-                                    
-                                    // list updated product utk data log
-                                    $newProductPrice = ProductPrice::where('id_product', $product->id_product)->where('id_outlet', $outlet->id_outlet)->first();
-                                    $newUpdatedAt =  $newProductPrice->updated_at;
-    
-                                    $updateProd['id_product'] = $product['id_product']; 
-                                    $updateProd['plu_id'] = $product['product_code']; 
-                                    $updateProd['product_name'] = $product['product_name']; 
-                                    $updateProd['old_price'] = $oldPrice;
-                                    $updateProd['new_price'] = (int)round($menu['price']);
-                                    $updateProd['old_updated_at'] = $oldUpdatedAt;
-                                    $updateProd['new_updated_at'] = $newUpdatedAt;
-                                    if(count($imageUpload) > 0){
-                                        $updateProd['new_photo'] = $imageUpload;
-                                    }
-
-                                    $updatedProduct[] = $updateProd;
-                                }
-                            }else{
-                                DB::rollBack();
-                                return response()->json([
-                                    'status'    => 'fail',
-                                    'messages'  =>  ['Something went wrong.']
-                                ]);
-                            }
-                        }else{
-                            // Add product to rejected product
-                            $productPrice = ProductPrice::where('id_outlet', $outlet->id_outlet)->where('id_product', $product->id_product)->first();
-                            
-                            $dataBackend['plu_id'] = $product->product_code;
-                            $dataBackend['name'] = $product->product_name_pos;
-                            if(empty($productPrice)){
-                                $dataBackend['price'] = '';
-                            }else{
-                                $dataBackend['price'] = number_format($productPrice->product_price,0,',','.');
-                            }
-    
-                            $dataRaptor['plu_id'] = $menu['plu_id'];
-                            $dataRaptor['name'] = $menu['name'];
-                            $dataRaptor['price'] = number_format($menu['price'],0,',','.');
-                            array_push($rejectedProduct, ['backend' => $dataBackend, 'raptor' => $dataRaptor]);
+											}
+	
+											//add in array photo
+											$imageUpload[] = $photo['product_photo']; 
+										}else{
+											DB::rollBack();
+											$failedProduct[] = ['product_code' => $menu['plu_id'], 'product_name' => $menu['name']];
+										}
+									}
+								}
+	
+								$countInsert++;
+	
+								// list new product utk data log
+								$insertProd['id_product'] = $create['id_product']; 
+								$insertProd['plu_id'] = $create['product_code']; 
+								$insertProd['product_name'] = $create['product_name']; 
+								$insertProd['price'] = (int)round($menu['price']);
+								if(count($imageUpload) > 0){
+									$updateProd['new_photo'] = $imageUpload;
+								}
+	
+								$insertedProduct[] = $insertProd;
+							}
 						}
 						foreach($menu['brand_code'] as $valueBrand){
 							$brand = Brand::where('code_brand', $valueBrand)->first();
-
+	
 							try {
 								BrandProduct::updateOrCreate([
-									'id_product' => $product->id_product, 
+									'id_product' => $create->id_product, 
 									'id_brand'  => $brand->id_brand]
 								);	
 							} catch (\Exception $e) {
@@ -570,97 +661,9 @@ class ApiPOS extends Controller
 								LogBackendError::logExceptionMessage("ApiPOS/syncMenu=>".$e->getMessage(),$e);
 							}
 						}
-                    }
-                }
-                
-                // insert product
-                else{
-					$create = Product::create([ 'product_code' => $menu['plu_id'], 'product_name_pos' => $menu['name'], 'product_name' => $menu['name']]);
-					if($create){
-                        // update price
-						$dataProductPrice['product_price'] = (int)round($menu['price']);
-						$dataProductPrice['product_price_base'] = round($menu['price_base'],2);
-						$dataProductPrice['product_price_tax'] =round($menu['price_tax'],2);
-                        $dataProductPrice['product_status'] = $menu['status'];
-					   
-						try {
-							$updateProductPrice = ProductPrice::updateOrCreate([
-													'id_product' => $create->id_product, 
-													'id_outlet'  => $outlet->id_outlet
-												  ], $dataProductPrice);
-						} catch (\Exception $e) {
-							DB::rollBack();
-							LogBackendError::logExceptionMessage("ApiPOS/syncMenu=>".$e->getMessage(),$e);
-						}
-						
-						if(!$updateProductPrice){
-							$failedProduct[] = ['product_code' => $menu['plu_id'], 'product_name' => $menu['name']];
-						}else{
-                             $imageUpload = [];
-                             if(isset($menu['photo'])){
-                                 foreach($menu['photo'] as $photo){
-                                     $image = file_get_contents($photo['url']);
-                                     $img = base64_encode($image);
-                                     if (!file_exists('img/product/item/')) {
-                                         mkdir('img/product/item/', 0777, true);
-                                     }
-
-                                     $upload = MyHelper::uploadPhotoStrict($img, 'img/product/item/', 300, 300);
-
-                                     if (isset($upload['status']) && $upload['status'] == "success") {
-										$dataPhoto['id_product'] = $product->id_product;
-										$dataPhoto['product_photo'] = $upload['path'];
-										$dataPhoto['product_photo_order'] = 1;
-
-										try {
-											$photo = ProductPhoto::create($dataPhoto);
-										} catch (\Exception $e) {
-											DB::rollBack();
-											LogBackendError::logExceptionMessage("ApiPOS/syncMenu=>".$e->getMessage(),$e);
-										}
-
-										if(!$photo){
-											DB::rollBack();
-											$failedProduct[] = ['product_code' => $menu['plu_id'], 'product_name' => $menu['name']];
-										}
-
-										//add in array photo
-										$imageUpload[] = $photo['product_photo']; 
-									}else{
-										DB::rollBack();
-                                        $failedProduct[] = ['product_code' => $menu['plu_id'], 'product_name' => $menu['name']];
-									}
-								}
-							}
-
-                            $countInsert++;
-
-                            // list new product utk data log
-                            $insertProd['id_product'] = $create['id_product']; 
-                            $insertProd['plu_id'] = $create['product_code']; 
-                            $insertProd['product_name'] = $create['product_name']; 
-                            $insertProd['price'] = (int)round($menu['price']);
-                            if(count($imageUpload) > 0){
-                                $updateProd['new_photo'] = $imageUpload;
-                            }
-
-                            $insertedProduct[] = $insertProd;
-						}
-					}
-					foreach($menu['brand_code'] as $valueBrand){
-						$brand = Brand::where('code_brand', $valueBrand)->first();
-
-						try {
-							BrandProduct::updateOrCreate([
-								'id_product' => $create->id_product, 
-								'id_brand'  => $brand->id_brand]
-							);	
-						} catch (\Exception $e) {
-							DB::rollBack();
-							LogBackendError::logExceptionMessage("ApiPOS/syncMenu=>".$e->getMessage(),$e);
-						}
 					}
 				}
+				
 				DB::commit();
 			}
 
@@ -679,6 +682,7 @@ class ApiPOS extends Controller
                         $content['outlet_name'] = $outlet->outlet_name;
                         $content['total_rejected'] = count($rejectedProduct);
                         $content['rejected_menu'] = $rejectedProduct;
+						$content['failed_product'] = $failedProduct;
     
                         // get setting email
                         $setting = array();
