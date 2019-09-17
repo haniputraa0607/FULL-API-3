@@ -78,7 +78,7 @@ class ApiBrandController extends Controller
 
     public function listBrand()
     {
-        $brand = Brand::orderBy('order_brand', 'id_brand')->get()->toArray();
+        $brand = Brand::orderBy('order_brand', 'asc')->orderBy('id_brand', 'asc')->get()->toArray();
 
         if (!$brand) {
             return response()->json(['status'  => 'fail', 'messages' => ['empty!']]);
