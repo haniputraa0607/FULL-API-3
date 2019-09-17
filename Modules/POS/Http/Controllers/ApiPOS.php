@@ -33,6 +33,7 @@ use App\Http\Models\SpecialMembership;
 use App\Http\Models\DealsVoucher;
 use App\Http\Models\Configs;
 use App\Http\Models\FraudSetting;
+use App\Http\Models\LogBackendError;
 use App\Lib\MyHelper;
 use Mailgun;
 
@@ -47,6 +48,7 @@ use Modules\POS\Http\Requests\reqPreOrderDetail;
 use Modules\POS\Http\Requests\reqBulkMenu;
 use Modules\Brand\Entities\Brand;
 use Modules\Brand\Entities\BrandOutlet;
+use Modules\Brand\Entities\BrandProduct;
 
 use Modules\POS\Http\Controllers\CheckVoucher;
 
@@ -425,35 +427,27 @@ class ApiPOS extends Controller
 
 	public function syncMenu(reqMenu $request){
 		$post = $request->json()->all();
-
+		
         $syncDatetime = date('d F Y h:i');
 
-		$apikey = Setting::where('key', 'api_key')->first()->value;
-		$apisecret = Setting::where('key', 'api_secret')->first()->value;
-		if($post['api_key'] != $apikey){
-			return response()->json([
-				'status'    => 'fail',
-				'messages'  => ['Api key doesn\'t match.']
-			]);
-		}
-		if($post['api_secret'] != $apisecret){
-			return response()->json([
-				'status'    => 'fail',
-				'messages'  => ['Api secret doesn\'t match.']
-			]);
+		$api = $this->checkApi($post['api_key'], $post['api_secret']);
+        if ($api['status'] != 'success') {
+            return response()->json($api);
 		}
 
 		$outlet = Outlet::where('outlet_code', strtoupper($post['store_code']))->first();
 		if($outlet){
-			DB::beginTransaction();
 			$countInsert = 0;
             $countUpdate = 0;
             $rejectedProduct = [];
             $updatedProduct = [];
-            $insertedProduct = [];
+			$insertedProduct = [];
+			$failedProduct = [];
 			
 			foreach($post['menu'] as $key => $menu){
-                $product = Product::where('product_code', $menu['plu_id'])->first();
+				DB::beginTransaction();
+				$product = Product::where('product_code', $menu['plu_id'])->first();
+				
                 // return response()->json($menu);
                 // update product
 				if($product){
@@ -496,18 +490,19 @@ class ApiPOS extends Controller
                                 $dataProductPrice['product_price_base'] = round($menu['price_base'],2);
                                 $dataProductPrice['product_price_tax'] = round($menu['price_tax'],2);
                                 $dataProductPrice['product_status'] = $menu['status'];
-                                
-                                $updateProductPrice = ProductPrice::updateOrCreate([
-                                                    'id_product' => $product->id_product, 
-                                                    'id_outlet'  => $outlet->id_outlet
-                                                    ], $dataProductPrice); 
+								
+								try {
+									$updateProductPrice = ProductPrice::updateOrCreate([
+										'id_product' => $product->id_product, 
+										'id_outlet'  => $outlet->id_outlet
+										], $dataProductPrice); 	
+								} catch (\Exception $e) {
+									DB::rollBack();
+									LogBackendError::logExceptionMessage("ApiPOS/syncMenu=>".$e->getMessage(),$e);
+								}
         
                                 if(!$updateProductPrice){
-                                    DB::rollBack();
-                                    return response()->json([
-                                        'status'    => 'fail',
-                                        'messages'  => ['Something went wrong.']
-                                    ]);
+                                    $failedProduct[] = ['product_code' => $menu['plu_id'], 'product_name' => $menu['name']];
                                 }else{
 
                                     //upload photo
@@ -533,27 +528,23 @@ class ApiPOS extends Controller
                                                 $dataPhoto['product_photo'] = $upload['path'];
                                                 $dataPhoto['product_photo_order'] = $orderPhoto;
 
-                                                $photo = ProductPhoto::create($dataPhoto);
+												try {
+													$photo = ProductPhoto::create($dataPhoto);
+												} catch (\Exception $e) {
+													DB::rollBack();
+													LogBackendError::logExceptionMessage("ApiPOS/syncMenu=>".$e->getMessage(),$e);
+												}
+
                                                 if(!$photo){
                                                     DB::rollBack();
-                                                    $result = [
-                                                        'status'   => 'fail',
-                                                        'messages' => ['fail upload image']
-                                                    ];
-        
-                                                    return response()->json($result);
+													$failedProduct[] = ['product_code' => $menu['plu_id'], 'product_name' => $menu['name']];
                                                 }
 
                                                 //add in array photo
                                                 $imageUpload[] = $photo['product_photo'];  
                                             }else{
                                                 DB::rollBack();
-                                                $result = [
-                                                    'status'   => 'fail',
-                                                    'messages' => ['fail upload image']
-                                                ];
-    
-                                                return response()->json($result);
+												$failedProduct[] = ['product_code' => $menu['plu_id'], 'product_name' => $menu['name']];
                                             }
                                         }
                                     }
@@ -600,7 +591,20 @@ class ApiPOS extends Controller
                             $dataRaptor['name'] = $menu['name'];
                             $dataRaptor['price'] = number_format($menu['price'],0,',','.');
                             array_push($rejectedProduct, ['backend' => $dataBackend, 'raptor' => $dataRaptor]);
-                        }
+						}
+						foreach($menu['brand_code'] as $valueBrand){
+							$brand = Brand::where('code_brand', $valueBrand)->first();
+
+							try {
+								BrandProduct::updateOrCreate([
+									'id_product' => $product->id_product, 
+									'id_brand'  => $brand->id_brand]
+								);	
+							} catch (\Exception $e) {
+								DB::rollBack();
+								LogBackendError::logExceptionMessage("ApiPOS/syncMenu=>".$e->getMessage(),$e);
+							}
+						}
                     }
                 }
                 
@@ -613,21 +617,20 @@ class ApiPOS extends Controller
 						$dataProductPrice['product_price_base'] = round($menu['price_base'],2);
 						$dataProductPrice['product_price_tax'] =round($menu['price_tax'],2);
                         $dataProductPrice['product_status'] = $menu['status'];
-                       
-						$updateProductPrice = ProductPrice::updateOrCreate([
-												'id_product' => $create->id_product, 
-												'id_outlet'  => $outlet->id_outlet
-											  ], $dataProductPrice); 
+					   
+						try {
+							$updateProductPrice = ProductPrice::updateOrCreate([
+													'id_product' => $create->id_product, 
+													'id_outlet'  => $outlet->id_outlet
+												  ], $dataProductPrice);
+						} catch (\Exception $e) {
+							DB::rollBack();
+							LogBackendError::logExceptionMessage("ApiPOS/syncMenu=>".$e->getMessage(),$e);
+						}
 						
 						if(!$updateProductPrice){
-							DB::rollBack();
-							return response()->json([
-								'status'    => 'fail',
-								'messages'  => ['Something went wrong.']
-							]);
+							$failedProduct[] = ['product_code' => $menu['plu_id'], 'product_name' => $menu['name']];
 						}else{
-
-                             //upload photo
                              $imageUpload = [];
                              if(isset($menu['photo'])){
                                  foreach($menu['photo'] as $photo){
@@ -640,34 +643,30 @@ class ApiPOS extends Controller
                                      $upload = MyHelper::uploadPhotoStrict($img, 'img/product/item/', 300, 300);
 
                                      if (isset($upload['status']) && $upload['status'] == "success") {
-                                         $dataPhoto['id_product'] = $product->id_product;
-                                         $dataPhoto['product_photo'] = $upload['path'];
-                                         $dataPhoto['product_photo_order'] = 1;
+										$dataPhoto['id_product'] = $product->id_product;
+										$dataPhoto['product_photo'] = $upload['path'];
+										$dataPhoto['product_photo_order'] = 1;
 
-                                         $photo = ProductPhoto::create($dataPhoto);
-                                         if(!$photo){
-                                             DB::rollBack();
-                                             $result = [
-                                                 'status'   => 'fail',
-                                                 'messages' => ['fail upload image']
-                                             ];
- 
-                                             return response()->json($result);
-                                         }
+										try {
+											$photo = ProductPhoto::create($dataPhoto);
+										} catch (\Exception $e) {
+											DB::rollBack();
+											LogBackendError::logExceptionMessage("ApiPOS/syncMenu=>".$e->getMessage(),$e);
+										}
 
-                                         //add in array photo
-                                         $imageUpload[] = $photo['product_photo']; 
-                                     }else{
-                                         DB::rollBack();
-                                         $result = [
-                                             'status'   => 'fail',
-                                             'messages' => ['fail upload image']
-                                         ];
+										if(!$photo){
+											DB::rollBack();
+											$failedProduct[] = ['product_code' => $menu['plu_id'], 'product_name' => $menu['name']];
+										}
 
-                                         return response()->json($result);
-                                     }
-                                 }
-                             }
+										//add in array photo
+										$imageUpload[] = $photo['product_photo']; 
+									}else{
+										DB::rollBack();
+                                        $failedProduct[] = ['product_code' => $menu['plu_id'], 'product_name' => $menu['name']];
+									}
+								}
+							}
 
                             $countInsert++;
 
@@ -683,9 +682,22 @@ class ApiPOS extends Controller
                             $insertedProduct[] = $insertProd;
 						}
 					}
+					foreach($menu['brand_code'] as $valueBrand){
+						$brand = Brand::where('code_brand', $valueBrand)->first();
+
+						try {
+							BrandProduct::updateOrCreate([
+								'id_product' => $create->id_product, 
+								'id_brand'  => $brand->id_brand]
+							);	
+						} catch (\Exception $e) {
+							DB::rollBack();
+							LogBackendError::logExceptionMessage("ApiPOS/syncMenu=>".$e->getMessage(),$e);
+						}
+					}
 				}
+				DB::commit();
 			}
-            DB::commit();
 
             // send email rejected product
             if(count($rejectedProduct) > 0){
@@ -832,7 +844,8 @@ class ApiPOS extends Controller
 			$hasil['new_product']['list_product'] = $insertedProduct;
             $hasil['updated_product']['total'] = (String)$countUpdate;
             $hasil['updated_product']['list_product'] = $updatedProduct;
-            
+            $hasil['failed_product']['list_product'] = $failedProduct;
+			
             return response()->json([
 				'status'    => 'success',
                 'result'  => $hasil,
