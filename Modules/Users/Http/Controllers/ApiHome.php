@@ -667,17 +667,13 @@ class ApiHome extends Controller
         } else {
             $membership = null;
         }
-
+        $retUser=$user->toArray();
+        unset($retUser['password_k']);
         $result = [
             'status' => 'success',
             'result' => [
                 'total_point' => (int) $user->balance??0,
-                'user_info'     => [
-                    'name'  => $user->name??'',
-                    'phone' => $user->phone??'',
-                    'gender' => $user->gender??'',
-                    'membership'  => $membership??'',
-                ],
+                'user_info'     => $retUser,
                 'qr_code'       => $qrCode??'',
                 'greeting'      => $greetingss??'',
                 'expired_qr'    => $expired??''
@@ -726,6 +722,7 @@ class ApiHome extends Controller
             $deals=array_map(function($value){
                 $calc = $value['deals']['deals_total_voucher'] - $value['deals']['deals_total_claimed'];
                 $value['deals']['available_voucher'] = $calc;
+                $value['deals']['percent_voucher'] = $calc*100/$value['deals']['deals_total_voucher'];
                 return $value;
             },$deals->toArray());
             return [
