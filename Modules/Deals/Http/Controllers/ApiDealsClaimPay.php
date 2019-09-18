@@ -304,12 +304,17 @@ class ApiDealsClaimPay extends Controller
                 DB::commit();
                 $return = MyHelper::checkCreate($pay);
                 if(isset($return['status']) && $return['status'] == 'success'){
+                    $result = [
+                        'id_deals_user'=>$return['result']['voucher']['id_deals_user'],
+                        'id_deals_voucher'=>$return['result']['voucher']['id_deals_voucher'],
+                        'paid_status'=>$return['result']['voucher']['paid_status'],
+                    ];
                     if(isset($return['result']['midtrans'])){
-                        $return['redirect'] = true;
+                        $result['redirect'] = true;
+                        $result['midtrans'] = $return['result']['midtrans'];
                     }else{
-                        $return['redirect'] = false;
+                        $result['redirect'] = false;
                     }
-                    $result = $return['result'];
                     unset($return['result']);
                     $return['result'] = $result;
                 }
