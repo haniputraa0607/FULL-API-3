@@ -191,9 +191,9 @@ class ApiDealsClaim extends Controller
                             $voucher = $user_voucher_array;
                         }
 
-                        if(isset($voucher['deals_voucher']['id_deals'])){
-                            $voucher['deals'] = Deal::find($voucher['deals_voucher']['id_deals']);
-                        }
+                        // if(isset($voucher['deals_voucher']['id_deals'])){
+                        //     $voucher['deals'] = Deal::find($voucher['deals_voucher']['id_deals']);
+                        // }
                         if(\Module::collections()->has('Autocrm')) {
                             $phone=$request->user()->phone;
                             $autocrm = app($this->autocrm)->SendAutoCRM('Claim Deals Success', $phone,
@@ -206,7 +206,12 @@ class ApiDealsClaim extends Controller
                                 ]
                             );
                         }
-                        return response()->json(MyHelper::checkCreate($voucher));
+                        $return=[
+                            'id_deals_user'=>$voucher['id_deals_user'],
+                            'id_deals_voucher'=>$voucher['id_deals_voucher'],
+                            'paid_status'=>$voucher['paid_status']
+                        ];
+                        return response()->json(MyHelper::checkCreate($return));
                         }
                         else {
                             DB::rollback();
