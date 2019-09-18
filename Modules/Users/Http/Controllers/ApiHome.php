@@ -671,16 +671,16 @@ class ApiHome extends Controller
         $result = [
             'status' => 'success',
             'result' => [
-                'total_point' => (int) $user->balance,
+                'total_point' => (int) $user->balance??0,
                 'user_info'     => [
-                    'name'  => $user->name,
-                    'phone' => $user->phone,
-                    'gender' => $user->gender,
-                    'membership'  => $membership,
+                    'name'  => $user->name??'',
+                    'phone' => $user->phone??'',
+                    'gender' => $user->gender??'',
+                    'membership'  => $membership??'',
                 ],
-                'qr_code'       => $qrCode,
-                'greeting'      => $greetingss,
-                'expired_qr'    => $expired
+                'qr_code'       => $qrCode??'',
+                'greeting'      => $greetingss??'',
+                'expired_qr'    => $expired??''
             ]
         ];
 
