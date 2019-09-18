@@ -34,6 +34,9 @@ class ApiDealsClaim extends Controller
         $this->deals   = "Modules\Deals\Http\Controllers\ApiDeals";
         $this->voucher = "Modules\Deals\Http\Controllers\ApiDealsVoucher";
         $this->setting = "Modules\Transaction\Http\Controllers\ApiOnlineTransaction";
+        if(\Module::collections()->has('Autocrm')) {
+            $this->autocrm  = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
+        }
     }
 
     /* CLAIM DEALS */
@@ -191,7 +194,18 @@ class ApiDealsClaim extends Controller
                         if(isset($voucher['deals_voucher']['id_deals'])){
                             $voucher['deals'] = Deal::find($voucher['deals_voucher']['id_deals']);
                         }
-
+                        if(\Module::collections()->has('Autocrm')) {
+                            $phone=$request->user()->phone;
+                            $autocrm = app($this->autocrm)->SendAutoCRM('Claim Deals Success', $phone,
+                                [
+                                    'claimed_at'       => $voucher['claimed_at'], 
+                                    'voucher_hash'      => $voucher['voucher_hash'],
+                                    'voucher_hash_code' => $voucher['voucher_hash_code'],
+                                    'id_deals_user'     => $voucher['id_deals_user'],
+                                    'voucher_code'      => $voucher['deal_voucher']['voucher_code']
+                                ]
+                            );
+                        }
                         return response()->json(MyHelper::checkCreate($voucher));
                         }
                         else {
