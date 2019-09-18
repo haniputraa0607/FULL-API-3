@@ -669,6 +669,7 @@ class ApiHome extends Controller
         }
         $retUser=$user->toArray();
         unset($retUser['password_k']);
+        $retUser['membership']=$membership;
         $result = [
             'status' => 'success',
             'result' => [
