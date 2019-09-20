@@ -163,6 +163,14 @@ class ApiHistoryController extends Controller
             $post['pending'] = null;
         }
 
+        if (!isset($post['brand'])) {
+            $post['brand'] = null;
+        }
+
+        if (!isset($post['outlet'])) {
+            $post['outlet'] = null;
+        }
+
         if (!isset($post['paid'])) {
             $post['paid'] = null;
         }
