@@ -425,7 +425,7 @@ class ApiPOS extends Controller
         ]);
 	}
   
-	public function syncMenu(reqMenu $request){
+	public function syncMenu(Request $request){
 		$post = $request->json()->all();
 		
         $syncDatetime = date('d F Y h:i');
