@@ -567,6 +567,7 @@ class ApiHome extends Controller
 
     public function membership(Request $request){   
         $user = $request->user();
+        $user->load(['city','city.province']);
         $birthday = "";
         if ($user->birthday != "") {
             $birthday = date("d F Y", strtotime($user->birthday));
@@ -668,7 +669,17 @@ class ApiHome extends Controller
             $membership = null;
         }
         $retUser=$user->toArray();
+        if($retUser['birthday']??false){
+            $retUser['birthday']=date("d F Y", strtotime($retUser['birthday']));
+        }
+        array_walk_recursive($retUser, function(&$it){
+            if($it==null){
+                $it="";
+            }
+        });
         unset($retUser['password_k']);
+        unset($retUser['created_at']);
+        unset($retUser['updated_at']);
         $retUser['membership']=$membership;
         $result = [
             'status' => 'success',
