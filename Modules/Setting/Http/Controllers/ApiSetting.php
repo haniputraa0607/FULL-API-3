@@ -1247,10 +1247,10 @@ class ApiSetting extends Controller
                 $data=[];
             }
         }
-        if($post){
-            $postedJobs=$post['jobs_list'];
+        if($post['jobs_list']??false){
+            $postedJobs=json_encode($post['jobs_list']);
             if($setting){
-                $save=Setting::where('key','jobs_list')->update(['value_text',$postedJobs]);
+                $save=Setting::where('key','jobs_list')->update(['value_text'=>$postedJobs]);
             }else{
                 $save=Setting::create(['key'=>'jobs_list','value_text'=>$postedJobs]);
             }
@@ -1275,15 +1275,15 @@ class ApiSetting extends Controller
                 $data=[];
             }
         }
-        if($post){
-            $postedJobs=$post['jobs_list'];
+        if($post['celebrate_list']??false){
+            $postedCelebrate=json_encode($post['celebrate_list']);
             if($setting){
-                $save=Setting::where('key','celebrate_list')->update(['value_text',$postedJobs]);
+                $save=Setting::where('key','celebrate_list')->update(['value_text'=>$postedCelebrate]);
             }else{
-                $save=Setting::create(['key'=>'celebrate_list','value_text'=>$postedJobs]);
+                $save=Setting::create(['key'=>'celebrate_list','value_text'=>$postedCelebrate]);
             }
             if($save){
-                return ['status'=>'success','result'=>json_decode($postedJobs)];
+                return ['status'=>'success','result'=>json_decode($postedCelebrate)];
             }else{
                 return ['status'=>'fail','messages'=>'Something went wrong'];
             }
