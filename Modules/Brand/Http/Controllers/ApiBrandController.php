@@ -78,14 +78,22 @@ class ApiBrandController extends Controller
 
     public function listBrand()
     {
-        $brand = Brand::select('id_brand', 'name_brand', 'logo_brand', 'image_brand')->orderByRaw('CASE WHEN order_brand = 0 THEN 1 ELSE 0 END')->orderBy('order_brand')->paginate(10)->toArray();
-
-        if (!$brand) {
-            return response()->json(['status'  => 'fail', 'messages' => ['empty!']]);
+        $brand = Brand::select('id_brand', 'name_brand', 'logo_brand', 'image_brand')->orderByRaw('CASE WHEN order_brand = 0 THEN 1 ELSE 0 END')->orderBy('order_brand');
+        if (isset($_GET['page'])) {
+            $brand = $brand->paginate(1)->toArray();
+            if (!$brand) {
+                return response()->json(['status'  => 'fail', 'messages' => ['empty!']]);
+            }
+            $data['data']           = $brand['data'];
+            $data['next_page_url']  = $brand['next_page_url'];
+        } else {
+            $brand = $brand->get()->toArray();
+            if (!$brand) {
+                return response()->json(['status'  => 'fail', 'messages' => ['empty!']]);
+            }
+            $data = $brand;
         }
 
-        $data['data']           = $brand['data'];
-        $data['next_page_url']  = $brand['next_page_url'];
         return response()->json(['status'  => 'success', 'result' => $data]);
     }
 }

@@ -17,4 +17,14 @@ class Brand extends Model
         'image_brand',
         'order_brand'
     ];
+
+    public function getLogoBrandAttribute($value)
+    {
+        return env('API_URL') . $value;
+    }
+
+    public function getImageBrandAttribute($value)
+    {
+        return env('API_URL') . $value;
+    }
 }
