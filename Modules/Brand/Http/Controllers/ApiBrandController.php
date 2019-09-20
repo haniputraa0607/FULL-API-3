@@ -78,30 +78,14 @@ class ApiBrandController extends Controller
 
     public function listBrand()
     {
-        $brand = Brand::orderBy('order_brand', 'id_brand')->get()->toArray();
+        $brand = Brand::select('id_brand', 'name_brand', 'logo_brand', 'image_brand')->orderByRaw('CASE WHEN order_brand = 0 THEN 1 ELSE 0 END')->orderBy('order_brand')->paginate(10)->toArray();
 
         if (!$brand) {
             return response()->json(['status'  => 'fail', 'messages' => ['empty!']]);
         }
 
-        $nullOrZero = [];
-        foreach ($brand as $key => $value) {
-            if ($value['order_brand'] == null || $value['order_brand'] == 0) {
-                $nullOrZero[] = $brand[$key];
-                unset($brand[$key]);
-            }
-        }
-
-        $dataMerge = array_merge($brand, $nullOrZero);
-
-        $result = [];
-        if ($dataMerge) {
-            foreach ($dataMerge as $key => $value) {
-                $result[$key]['code_brand']     = $value['code_brand'];
-                $result[$key]['logo_brand']     = env("APP_API_URL") . $value['logo_brand'];
-                $result[$key]['image_brand']    = env("APP_API_URL") . $value['image_brand'];
-            }
-        }
-        return response()->json(['status'  => 'success', 'result' => $result]);
+        $data['data']           = $brand['data'];
+        $data['next_page_url']  = $brand['next_page_url'];
+        return response()->json(['status'  => 'success', 'result' => $data]);
     }
 }
