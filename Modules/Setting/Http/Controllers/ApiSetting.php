@@ -1235,4 +1235,60 @@ class ApiSetting extends Controller
         return view('setting::tos', $data);
 
     }
+
+    public function jobsList(Request $request){
+        $post=$request->json()->all();
+        $setting=Setting::where('key','jobs_list')->first();
+        $data=[];
+        if($setting&&$setting->value_text){
+            try{
+                $data=json_decode($setting->value_text);
+            }catch(\Exception $e){
+                $data=[];
+            }
+        }
+        if($post){
+            $postedJobs=$post['jobs_list'];
+            if($setting){
+                $save=Setting::where('key','jobs_list')->update(['value_text',$postedJobs]);
+            }else{
+                $save=Setting::create(['key'=>'jobs_list','value_text'=>$postedJobs]);
+            }
+            if($save){
+                return ['status'=>'success','result'=>json_decode($postedJobs)];
+            }else{
+                return ['status'=>'fail','messages'=>'Something went wrong'];
+            }
+        }else{
+            return MyHelper::checkGet($data);
+        }
+    }
+
+    public function celebrateList(Request $request){
+        $post=$request->json()->all();
+        $setting=Setting::where('key','celebrate_list')->first();
+        $data=[];
+        if($setting&&$setting->value_text){
+            try{
+                $data=json_decode($setting->value_text);
+            }catch(\Exception $e){
+                $data=[];
+            }
+        }
+        if($post){
+            $postedJobs=$post['jobs_list'];
+            if($setting){
+                $save=Setting::where('key','celebrate_list')->update(['value_text',$postedJobs]);
+            }else{
+                $save=Setting::create(['key'=>'celebrate_list','value_text'=>$postedJobs]);
+            }
+            if($save){
+                return ['status'=>'success','result'=>json_decode($postedJobs)];
+            }else{
+                return ['status'=>'fail','messages'=>'Something went wrong'];
+            }
+        }else{
+            return MyHelper::checkGet($data);
+        }
+    }
 }
