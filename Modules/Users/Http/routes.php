@@ -64,12 +64,15 @@ Route::group(['prefix' => 'api', 'middleware' => 'log_request'], function(){
 	});
 	Route::group(['middleware' => 'auth:api', 'prefix' => 'home', 'namespace' => 'Modules\Users\Http\Controllers'], function()
 	{
-	    Route::post('/', 'ApiHome@home');
+		Route::post('/membership','ApiHome@membership');
+		Route::any('/banner','ApiHome@banner');
+		Route::any('/featured-deals','ApiHome@featuredDeals');
 	    Route::post('refresh-point-balance', 'ApiHome@refreshPointBalance');
 	});
 	
 	Route::group(['prefix' => 'home', 'namespace' => 'Modules\Users\Http\Controllers'], function()
 	{
+		Route::any('splash','ApiHome@splash');
 	    Route::any('notloggedin', 'ApiHome@homeNotLoggedIn');
 	});
 

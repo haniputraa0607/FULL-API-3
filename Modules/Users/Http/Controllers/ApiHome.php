@@ -20,6 +20,7 @@ use App\Http\Models\Transaction;
 use App\Http\Models\Banner;
 use App\Http\Models\FraudSetting;
 use App\Http\Models\OauthAccessToken;
+use App\Http\Models\FeaturedDeal;
 
 use DB;
 use App\Lib\MyHelper;
@@ -81,9 +82,6 @@ class ApiHome extends Controller
         $array = [];
 
         foreach ($banners as $key => $value) {
-            if ($gofood == 0) {
-                continue;
-            }
 
             $item['image_url']  = env('AWS_URL').$value->image;
             $item['id_news']    = $value->id_news;
@@ -142,7 +140,8 @@ class ApiHome extends Controller
 						// 'total_point'   => (int) $point,
 						// 'total_kopi_point' => (int) $balance,
 						'total_point' => (int) $balance,
-						'qr_code'        => $qrCode
+						'qr_code'        => $qrCode,
+                        'expired_qr'    => $expired
 					]
 				];
 		}else {
@@ -564,5 +563,178 @@ class ApiHome extends Controller
         }
 
         return $result;
+    }
+
+    public function membership(Request $request){   
+        $user = $request->user();
+        $birthday = "";
+        if ($user->birthday != "") {
+            $birthday = date("d F Y", strtotime($user->birthday));
+        }
+
+        if ($request->json('time')) {
+            $time = $request->json('time');
+        }
+        else {
+            $time = date('H:i:s');
+        }
+
+        $time = strtotime($time);
+
+        // ambil dari DB
+        $timeDB = Setting::select('key', 'value')->whereIn('key', ['greetings_morning', 'greetings_afternoon', 'greetings_evening', 'greetings_latenight'])->get()->toArray();
+
+        if (empty($timeDB)) {
+            $greetings = "Hello";
+        }
+        else {
+            $dbTime = [];
+
+            /**
+             * replace key supaya gamapang dibaca
+             */
+            foreach ($timeDB as $key => $value) {
+                $dbTime[str_replace("greetings_", "", $value['key'])] = $value['value'];
+            }
+
+            /**
+             * search greetings from DB
+             */
+            if($time >= strtotime($dbTime['afternoon']) && $time < strtotime($dbTime['evening'])){
+                // salamnya dari DB
+                $greetings  = Greeting::where('when', '=', 'afternoon')->get()->toArray();
+            }
+            elseif($time >= strtotime($dbTime['evening']) && $time <= strtotime($dbTime['latenight'])){
+                $greetings  = Greeting::where('when', '=', 'evening')->get()->toArray();
+            }
+            elseif($time >= strtotime($dbTime['latenight'])){
+                $greetings  = Greeting::where('when', '=', 'latenight')->get()->toArray();
+            }
+            elseif($time <= strtotime("04:00:00")){
+                $greetings  = Greeting::where('when', '=', 'latenight')->get()->toArray();
+            }
+            else{
+                $greetings  = Greeting::where('when', '=', 'morning')->get()->toArray();
+            }
+
+            /**
+             * kesimpulannya
+             */
+            if (empty($greetings)) {
+                $greetingss = "Hello";
+            }
+            else {
+                $greetingKey   = array_rand($greetings, 1);
+                // return $greetings[$greetingKey]['greeting2'];
+                $greetingss     = app($this->autocrm)->TextReplace($greetings[$greetingKey]['greeting'], $user['phone']);
+            }
+        }
+
+        $expired = Setting::where('key', 'qrcode_expired')->first();
+        if(!$expired || ($expired && $expired->value == null)){
+            $expired = '10';
+        }else{
+            $expired = $expired->value;
+        }
+
+        $timestamp = strtotime('+'.$expired.' minutes');
+
+        $useragent = $_SERVER['HTTP_USER_AGENT'];
+        if(stristr($useragent,'iOS')) $useragent = 'iOS';
+        if(stristr($useragent,'okhttp')) $useragent = 'Android';
+        else $useragent = null;
+
+        $qr = MyHelper::createQR($timestamp, $user->phone, $useragent);
+
+        $qrCode = 'https://chart.googleapis.com/chart?chl='.$qr.'&chs=250x250&cht=qr&chld=H%7C0';
+        $qrCode = html_entity_decode($qrCode);
+
+        $membership = UsersMembership::select('memberships.membership_name')
+                                    ->Join('memberships','memberships.id_membership','=','users_memberships.id_membership')
+                                    ->where('id_user','=',$user->id)
+                                    ->orderBy('id_log_membership','desc')
+                                    ->first();
+
+        if(isset($membership) && $membership != ""){
+            $dataEncode = [
+                'id_user' => $user->id,
+            ];
+
+            $encode = json_encode($dataEncode);
+            $base = base64_encode($encode);
+
+            $membership['webview_detail_membership'] = env('VIEW_URL').'/membership/web/view?data='.$base;
+        } else {
+            $membership = null;
+        }
+        $retUser=$user->toArray();
+        unset($retUser['password_k']);
+        $retUser['membership']=$membership;
+        $result = [
+            'status' => 'success',
+            'result' => [
+                'total_point' => (int) $user->balance??0,
+                'user_info'     => $retUser,
+                'qr_code'       => $qrCode??'',
+                'greeting'      => $greetingss??'',
+                'expired_qr'    => $expired??''
+            ]
+        ];
+
+        return response()->json($result);
+    }
+
+    public function splash(Request $request){
+        $splash = Setting::where('key', '=', 'default_home_splash_screen')->first();
+
+        if(!empty($splash)){
+            $splash = $this->endPoint.$splash['value'];
+        } else {
+            $splash = null;
+        }
+
+        $result = [
+            'status' => 'success',
+            'result' => [
+                'splash_screen_url' => $splash."?update=".time(),
+            ]
+        ];
+        return $result;
+    }
+
+    public function banner(Request $request){
+        $banners = $this->getBanner();
+        $result = [
+            'status' => 'success',
+            'result' => $banners,
+        ];
+        return $result;
+    }
+
+    public function featuredDeals(Request $request){
+        $now=date('Y-m-d H-i-s');
+        $deals=FeaturedDeal::select('id_featured_deals','id_deals')->with(['deals'=>function($query){
+            $query->select('deals_title','deals_image','deals_total_voucher','deals_total_claimed','deals_publish_end','deals_start','deals_end','id_deals','deals_voucher_price_point','deals_voucher_price_cash');
+        }])->orderBy('order')
+            ->where('start_date','<=',$now)
+            ->where('end_date','>=',$now)
+            ->get();
+        if($deals){
+            $deals=array_map(function($value){
+                $calc = $value['deals']['deals_total_voucher'] - $value['deals']['deals_total_claimed'];
+                $value['deals']['available_voucher'] = $calc;
+                $value['deals']['percent_voucher'] = $calc*100/$value['deals']['deals_total_voucher'];
+                return $value;
+            },$deals->toArray());
+            return [
+                'status'=>'success',
+                'result'=>$deals
+            ];
+        }else{
+            return [
+                'status' => 'fail',
+                'messages' => ['Something went wrong']
+            ];
+        }
     }
 }

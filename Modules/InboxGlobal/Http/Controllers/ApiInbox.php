@@ -114,7 +114,7 @@ class ApiInbox extends Controller
 				$countInbox++;
 			}
 		}
-		
+
 		$privates = UserInbox::where('id_user','=',$user['id'])->get()->toArray();
 		
 		foreach($privates as $private){
@@ -298,6 +298,15 @@ class ApiInbox extends Controller
 		$countUnread = $countUnread + count($privates);
 
 		return $countUnread;
+	}
+
+	public function unread(Request $request){
+		$user=$request->user();
+		$countUnread=$this->listInboxUnread($user->id);
+		return [
+			'status'=>'success',
+			'result'=>['unread'=>$countUnread]
+		];
 	}
 
 }
