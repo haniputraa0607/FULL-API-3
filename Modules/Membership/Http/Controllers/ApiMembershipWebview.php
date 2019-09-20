@@ -17,7 +17,6 @@ class ApiMembershipWebview extends Controller
 {
     public function webview(Request $request)
     {
-		return view('errors.503');
         $check = $request->json('check');
 		
         if (empty($check)) {
