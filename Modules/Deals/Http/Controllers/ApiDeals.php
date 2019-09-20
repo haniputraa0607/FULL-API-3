@@ -530,7 +530,11 @@ class ApiDeals extends Controller
                 $calc = '*';
             }
 
-            $deals[$key]['percent_voucher'] = $calc*100/$value['deals_total_voucher'];
+            if($calc&&is_numeric($calc)){
+                $deals[$key]['percent_voucher'] = $calc*100/$value['deals_total_voucher'];
+            }else{
+                $deals[$key]['percent_voucher'] = 100;
+            }
             $deals[$key]['available_voucher'] = $calc;
 
             // print_r($deals[$key]['available_voucher']);
