@@ -677,9 +677,10 @@ class ApiHome extends Controller
                 $it="";
             }
         });
-        unset($retUser['password_k']);
-        unset($retUser['created_at']);
-        unset($retUser['updated_at']);
+        $hidden=['password_k','created_at','updated_at','provider','phone_verified','email_verified','email_unsubscribed','level','points','rank','android_device','ios_device','is_suspended','balance','complete_profile','subtotal_transaction','count_transaction','id_membership','relationship'];
+        foreach ($hidden as $hide) {
+            unset($retUser[$hide]);
+        }
         $retUser['membership']=$membership;
         $result = [
             'status' => 'success',
