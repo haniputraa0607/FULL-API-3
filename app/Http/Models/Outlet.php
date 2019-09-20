@@ -94,6 +94,10 @@ class Outlet extends Authenticatable
 		return env('VIEW_URL').'/outlet/webview/'.$this->id_outlet;
 	}
 
+	public function brands(){
+		return $this->belongsToMany(\Modules\Brand\Entities\Brand::class, 'brand_outlet', 'id_outlet', 'id_brand');
+	}
+
 	public function city()
 	{
 		return $this->belongsTo(\App\Http\Models\City::class, 'id_city');
