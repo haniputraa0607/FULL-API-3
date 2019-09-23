@@ -40,6 +40,9 @@ Route::group(['middleware' => ['auth:api', 'log_request'], 'prefix' => 'api/sett
 
     Route::any('whatsapp', 'ApiSetting@settingWhatsApp');
 
+    Route::any('jobs_list', 'ApiSetting@jobsList');
+    Route::any('celebrate_list', 'ApiSetting@celebrateList');
+
     Route::group(['middleware' => 'auth:api', 'prefix' => 'dashboard'], function()
     {
         Route::any('', 'ApiDashboardSetting@getDashboard');
