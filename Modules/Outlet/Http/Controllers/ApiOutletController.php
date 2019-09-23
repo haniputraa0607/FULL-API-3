@@ -387,7 +387,21 @@ class ApiOutletController extends Controller
             }
         }
         else {
-            $outlet = Outlet::with(['city', 'outlet_photos', 'outlet_schedules', 'today', 'user_outlets']);
+            $outlet = Outlet::with(['city', 'outlet_photos', 'outlet_schedules', 'today', 'user_outlets','brands']);
+        }
+
+        if(is_array($post['id_brand']??false)&&$post['id_brand']){
+            $outlet->leftJoin('brand_outlet','outlets.id_outlet','brand_outlet.id_outlet');
+            $id_brands=$post['id_brand'];
+            $outlet->where(function($query) use ($id_brands){
+                foreach ($id_brands as $id_brand) {
+                    $query->orWhere('brand_outlet.id_brand',$id_brand);
+                }
+            });
+        }
+
+        if($post['key_free']??false){
+            $outlet->where('outlets.outlet_name','LIKE','%'.$post['key_free'].'%');
         }
 
         if (isset($post['outlet_code'])) {
@@ -443,7 +457,13 @@ class ApiOutletController extends Controller
         if(isset($post['type']) && $post['type'] == 'transaction'){
             $outlet = $this->setAvailableOutlet($outlet);
         }
-
+        $outlet = array_map(function($var) use ($post){
+            $var['url']=env('VIEW_URL').'/outlet/webview/'.$var['id_outlet'];
+            if(($post['latitude']??false)&&($post['longitude']??false)){
+                $var['distance']=number_format((float)$this->distance($post['latitude'], $post['longitude'], $var['outlet_latitude'], $var['outlet_longitude'], "K"), 2, '.', '').' km';
+            }
+            return $var;
+        }, $outlet);
         if (isset($post['webview'])) {
             if(isset($outlet[0])){
                 $latitude  = $post['latitude'];
@@ -456,17 +476,30 @@ class ApiOutletController extends Controller
                 if(isset($outlet[0]['holidays'])) unset($outlet[0]['holidays']);
             }
         }
-
+        if(!isset($post['id_outlet'])&&!isset($post['outlet_code'])){
+            $outlet=array_map(function($var){
+                $ret=[
+                    'id_outlet'=>$var['id_outlet'],
+                    'outlet_name'=>$var['outlet_name'],
+                    'outlet_code'=>$var['outlet_code'],
+                    'outlet_status'=>$var['outlet_status'],
+                    'outlet_address'=>$var['outlet_address'],
+                    'url'=>$var['url'],
+                    'city'=>$var['city'],
+                    'distance'=>$var['distance']??'',
+                    'today'=>$var['today']
+                ];
+                return $ret;
+            },$outlet);
+        }
         if(isset($request['page']) && $request['page'] > 0){
             $page = $request['page'];
             $next_page = $page + 1;
 
             $dataOutlet = $outlet;
             $outlet = [];
-
-            $pagingOutlet = $this->pagingOutlet($dataOutlet, $page);
+            $pagingOutlet=$this->pagingOutlet($dataOutlet, $page);
             if (isset($pagingOutlet['data']) && count($pagingOutlet['data']) > 0) {
-                $outlet['status'] = 'success';
                 $outlet['current_page']  = $page;
                 $outlet['data']          = $pagingOutlet['data'];
                 $outlet['total']         = count($dataOutlet);
