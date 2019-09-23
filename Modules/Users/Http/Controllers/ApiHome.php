@@ -668,7 +668,9 @@ class ApiHome extends Controller
         } else {
             $membership = null;
         }
-        $retUser=$user->toArray();
+
+        $retUser=$user->load(['city'])->toArray();
+
         if($retUser['birthday']??false){
             $retUser['birthday']=date("d F Y", strtotime($retUser['birthday']));
         }
@@ -681,6 +683,7 @@ class ApiHome extends Controller
         foreach ($hidden as $hide) {
             unset($retUser[$hide]);
         }
+
         $retUser['membership']=$membership;
         $result = [
             'status' => 'success',
