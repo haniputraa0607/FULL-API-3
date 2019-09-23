@@ -667,7 +667,7 @@ class ApiHome extends Controller
         } else {
             $membership = null;
         }
-        $retUser=$user->toArray();
+        $retUser=$user->load(['city'])->toArray();
         unset($retUser['password_k']);
         $retUser['membership']=$membership;
         $result = [
