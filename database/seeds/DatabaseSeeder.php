@@ -25,5 +25,6 @@ class DatabaseSeeder extends Seeder
         $this->call(ManualPaymentMethodsTableSeeder::class);
 
         $this->call(AutocrmsTableAddClaimDeals::class);
+        $this->call(SettingJobsCelebrateSeeder::class);
     }
 }

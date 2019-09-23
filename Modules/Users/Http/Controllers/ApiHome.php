@@ -567,6 +567,7 @@ class ApiHome extends Controller
 
     public function membership(Request $request){   
         $user = $request->user();
+        $user->load(['city','city.province']);
         $birthday = "";
         if ($user->birthday != "") {
             $birthday = date("d F Y", strtotime($user->birthday));
@@ -667,8 +668,22 @@ class ApiHome extends Controller
         } else {
             $membership = null;
         }
+
         $retUser=$user->load(['city'])->toArray();
-        unset($retUser['password_k']);
+
+        if($retUser['birthday']??false){
+            $retUser['birthday']=date("d F Y", strtotime($retUser['birthday']));
+        }
+        array_walk_recursive($retUser, function(&$it){
+            if($it==null){
+                $it="";
+            }
+        });
+        $hidden=['password_k','created_at','updated_at','provider','phone_verified','email_verified','email_unsubscribed','level','points','rank','android_device','ios_device','is_suspended','balance','complete_profile','subtotal_transaction','count_transaction','id_membership','relationship'];
+        foreach ($hidden as $hide) {
+            unset($retUser[$hide]);
+        }
+
         $retUser['membership']=$membership;
         $result = [
             'status' => 'success',
@@ -723,7 +738,11 @@ class ApiHome extends Controller
             $deals=array_map(function($value){
                 $calc = $value['deals']['deals_total_voucher'] - $value['deals']['deals_total_claimed'];
                 $value['deals']['available_voucher'] = $calc;
-                $value['deals']['percent_voucher'] = $calc*100/$value['deals']['deals_total_voucher'];
+                if($calc&&is_numeric($calc)){
+                    $value['deals']['percent_voucher'] = $calc*100/$value['deals']['deals_total_voucher'];
+                }else{
+                    $value['deals']['percent_voucher'] = 100;
+                }
                 return $value;
             },$deals->toArray());
             return [
