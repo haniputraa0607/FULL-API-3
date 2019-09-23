@@ -27,6 +27,7 @@ class News extends Model
      * @var array
      */
     protected $fillable = [
+    	'id_news_category',
     	'news_slug',
 		'news_title',
 		'news_second_title',
@@ -123,5 +124,8 @@ class News extends Model
 	public function newsTreatment()
 	{
 	    return $this->hasMany(NewsTreatment::class, 'id_news', 'id_news');
+	}
+	public function newsCategory(){
+		return $this->belongsTo(NewsCategory::class,'id_news_category');
 	}
 }
