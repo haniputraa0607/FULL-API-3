@@ -509,9 +509,7 @@ class ApiOutletController extends Controller
                     $outlet['next_page_url'] = ENV('APP_API_URL').'api/outlet/list?page='.$next_page;
                 }
             } else {
-                $outlet['status'] = 'fail';
-                $outlet['messages'] = ['empty'];
-
+                $outlet = [];
             }
         }
 
