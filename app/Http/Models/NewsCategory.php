@@ -16,6 +16,6 @@ class NewsCategory extends Model
 	];
 
 	public function news(){
-		return $this->hasMany(\App\Http\Models\News::class,'id_news_category');
+		return $this->hasMany(\App\Http\Models\News::class,'id_news_category','id_news_category');
 	}
 }

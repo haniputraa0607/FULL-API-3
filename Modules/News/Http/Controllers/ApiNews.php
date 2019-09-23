@@ -498,7 +498,7 @@ class ApiNews extends Controller
     function listNews(Request $request) {
             $post = $request->json()->all();
 
-            $news = News::select('*')->with('news_form_structures');
+            $news = News::select('*')->with(['news_form_structures','newsCategory']);
 
             if (isset($post['id_news'])) {
                 $news->where('id_news', $post['id_news'])->with(['newsOutlet', 'newsProduct', 'newsOutlet.outlet.city', 'newsOutlet.outlet.photos', 'newsProduct.product.photos']);
@@ -506,6 +506,12 @@ class ApiNews extends Controller
 
             if (isset($post['news_slug'])) {
                 $news->slug($post['news_slug'])->with(['newsOutlet', 'newsProduct', 'newsOutlet.outlet.city', 'newsOutlet.outlet.photos', 'newsProduct.product.photos']);
+            }
+
+            if ($post['id_news_category']??false) {
+                $news->where('id_news_category',$post['id_news_category']);
+            }elseif(($post['id_news_category']??false)===0||($post['id_news_category']??false)==='0'){
+                $news->where('id_news_category',null);
             }
 
             if (isset($post['published'])) {
@@ -519,13 +525,30 @@ class ApiNews extends Controller
             else {
 
                 if (!isset($post['id_news'])) {
-                    $news = $news->orderBy('news_post_date', 'DESC')->paginate(10);
+                    $news = $news->orderBy('news_post_date', 'DESC')->paginate(10)->toArray();
                 }
                 else {
                     $news = $news->orderBy('news_post_date', 'DESC')->get()->toArray();
                 }
             }
-
+            if(isset($news['data'])){
+                $updateNews=&$news['data'];
+            }else{
+                $updateNews=&$news;
+            }
+            array_walk($updateNews, function(&$newsItem) use ($post){
+                if(!isset($post['id_news'])){
+                    $allowed=['id_news','news_title','news_publish_date','news_expired_date','news_slug','news_content_short','url_webview','url_news_image_luar','news_category'];
+                    $newArr=[];
+                    foreach ($allowed as $val) {
+                        $newArr[$val]=$newsItem[$val];
+                    }
+                    $newArr['news_category']=$newsItem['news_category']?:['id_news_category'=>0,'category_name'=>'Uncategories'];
+                    $newsItem=$newArr;
+                }else{
+                    $newsItem['news_category']=$newsItem['news_category']?:['id_news_category'=>0,'category_name'=>'Uncategories'];
+                }
+            });
             return response()->json(MyHelper::checkGet($news));
     }
 

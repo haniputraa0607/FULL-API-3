@@ -126,6 +126,6 @@ class News extends Model
 	    return $this->hasMany(NewsTreatment::class, 'id_news', 'id_news');
 	}
 	public function newsCategory(){
-		return $this->belongsTo(NewsCategory::class,'id_news_category');
+		return $this->belongsTo(NewsCategory::class,'id_news_category','id_news_category');
 	}
 }
