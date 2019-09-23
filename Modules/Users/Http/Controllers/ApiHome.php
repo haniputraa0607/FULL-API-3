@@ -723,7 +723,11 @@ class ApiHome extends Controller
             $deals=array_map(function($value){
                 $calc = $value['deals']['deals_total_voucher'] - $value['deals']['deals_total_claimed'];
                 $value['deals']['available_voucher'] = $calc;
-                $value['deals']['percent_voucher'] = $calc*100/$value['deals']['deals_total_voucher'];
+                if($calc&&is_numeric($calc)){
+                    $value['deals']['percent_voucher'] = $calc*100/$value['deals']['deals_total_voucher'];
+                }else{
+                    $value['deals']['percent_voucher'] = 100;
+                }
                 return $value;
             },$deals->toArray());
             return [
