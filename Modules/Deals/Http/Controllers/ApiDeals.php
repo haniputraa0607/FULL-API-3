@@ -227,6 +227,9 @@ class ApiDeals extends Controller
             ])->where('id_deals', $request->json('id_deals'))->with(['outlets', 'outlets.city', 'product','brand']);
         }else{
             $deals->select('id_deals','deals_title','deals_second_title','deals_voucher_price_point','deals_voucher_price_cash','deals_total_voucher','deals_total_claimed','deals_voucher_type','deals_image','deals_start','deals_end');
+            if(strpos($request->user()->level,'Admin')>=0){
+                $deals->addSelect('deals_promo_id','deals_publish_start','deals_publish_end');
+            }
             // return($deals->toSql());
         }
 
@@ -535,7 +538,7 @@ class ApiDeals extends Controller
             }else{
                 $deals[$key]['percent_voucher'] = 100;
             }
-            $deals[$key]['available_voucher'] = $calc;
+            $deals[$key]['available_voucher'] = (string) $calc;
 
             // print_r($deals[$key]['available_voucher']);
         }
