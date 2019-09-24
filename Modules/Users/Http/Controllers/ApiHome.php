@@ -743,6 +743,7 @@ class ApiHome extends Controller
                 }else{
                     $value['deals']['percent_voucher'] = 100;
                 }
+                $value['deals']['time_to_end']=strtotime($value['deals']['deals_end'])-time();
                 return $value;
             },$deals->toArray());
             return [
