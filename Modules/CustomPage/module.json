@@ -1,0 +1,16 @@
+{
+    "name": "CustomPage",
+    "alias": "custompage",
+    "description": "",
+    "keywords": [],
+    "active": 1,
+    "order": 0,
+    "providers": [
+        "Modules\\CustomPage\\Providers\\CustomPageServiceProvider"
+    ],
+    "aliases": {},
+    "files": [
+        "start.php"
+    ],
+    "requires": []
+}
