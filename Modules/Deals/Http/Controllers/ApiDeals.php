@@ -405,6 +405,7 @@ class ApiDeals extends Controller
             }
 
             for ($i=$start; $i < $end; $i++) {
+                $deals[$i]['time_to_end']=strtotime($deals[$i]['deals_end'])-time();
                 array_push($resultData, $deals[$i]);
             }
 
