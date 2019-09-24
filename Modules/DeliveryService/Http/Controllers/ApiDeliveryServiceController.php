@@ -6,6 +6,11 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
 
+use App\Http\Models\Setting;
+use Modules\DeliveryService\Entities\DeliveryServiceArea;
+use App\Lib\MyHelper;
+use DB;
+
 class ApiDeliveryServiceController extends Controller
 {
     /**
@@ -66,4 +71,15 @@ class ApiDeliveryServiceController extends Controller
      */
     public function destroy()
     { }
+
+    public function detailWebview()
+    {
+        $head = Setting::select('value AS head', 'value_text AS description')->where('key', 'delivery_services')->get()->first();
+        $content = Setting::select('value AS head_content', 'value_text AS description_content')->where('key', 'delivery_service_content')->get()->first();
+        $area = DeliveryServiceArea::get()->toArray();
+
+        $result = ['head' => $head, 'content' => $content, 'area' => $area];
+
+        return response()->json(['status'  => 'success', 'result' => $result]);
+    }
 }
