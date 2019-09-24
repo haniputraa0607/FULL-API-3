@@ -4,7 +4,7 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Migrations\Migration;
 
-class CreateDeliveryServicesTable extends Migration
+class CreateDeliveryServiceAreaTable extends Migration
 {
     /**
      * Run the migrations.
@@ -13,9 +13,9 @@ class CreateDeliveryServicesTable extends Migration
      */
     public function up()
     {
-        Schema::create('delivery_services', function (Blueprint $table) {
-            $table->increments('id_delivery_service');
-            $table->string('description', 255)->nullable();
+        Schema::create('delivery_service_area', function (Blueprint $table) {
+            $table->string('nama_area', 255)->nullable();
+            $table->integer('phone_number')->nullable();
             $table->timestamps();
         });
     }
@@ -27,6 +27,6 @@ class CreateDeliveryServicesTable extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('delivery_services');
+        Schema::dropIfExists('delivery_service_area');
     }
 }
