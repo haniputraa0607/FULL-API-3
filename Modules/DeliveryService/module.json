@@ -1,0 +1,16 @@
+{
+    "name": "DeliveryService",
+    "alias": "deliveryservice",
+    "description": "",
+    "keywords": [],
+    "active": 1,
+    "order": 0,
+    "providers": [
+        "Modules\\DeliveryService\\Providers\\DeliveryServiceServiceProvider"
+    ],
+    "aliases": {},
+    "files": [
+        "start.php"
+    ],
+    "requires": []
+}
