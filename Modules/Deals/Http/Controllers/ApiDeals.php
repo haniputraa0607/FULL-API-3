@@ -535,7 +535,7 @@ class ApiDeals extends Controller
             }else{
                 $deals[$key]['percent_voucher'] = 100;
             }
-            $deals[$key]['available_voucher'] = $calc;
+            $deals[$key]['available_voucher'] = (string) $calc;
 
             // print_r($deals[$key]['available_voucher']);
         }
