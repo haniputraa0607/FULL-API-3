@@ -669,7 +669,7 @@ class ApiHome extends Controller
             $membership = null;
         }
 
-        $retUser=$user->load(['city'])->toArray();
+        $retUser=$user->toArray();
 
         if($retUser['birthday']??false){
             $retUser['birthday']=date("d F Y", strtotime($retUser['birthday']));
