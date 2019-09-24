@@ -498,8 +498,15 @@ class ApiNews extends Controller
     function listNews(Request $request) {
             $post = $request->json()->all();
 
-            $news = News::select('*')->with(['news_form_structures','newsCategory']);
+            $news = News::with(['newsCategory'=>function($query){
+                $query->select('id_news_category','category_name');
+            }]);
 
+            if(!isset($post['id_news'])){
+                $news->select('id_news','id_news_category','news_title','news_publish_date','news_expired_date','news_slug','news_content_short','news_image_luar','news_image_dalam');
+            }else{
+                $news->with('news_form_structures');
+            }
             if (isset($post['id_news'])) {
                 $news->where('id_news', $post['id_news'])->with(['newsOutlet', 'newsProduct', 'newsOutlet.outlet.city', 'newsOutlet.outlet.photos', 'newsProduct.product.photos']);
             }
@@ -537,17 +544,7 @@ class ApiNews extends Controller
                 $updateNews=&$news;
             }
             array_walk($updateNews, function(&$newsItem) use ($post){
-                if(!isset($post['id_news'])){
-                    $allowed=['id_news','news_title','news_publish_date','news_expired_date','news_slug','news_content_short','url_webview','url_news_image_luar','news_category'];
-                    $newArr=[];
-                    foreach ($allowed as $val) {
-                        $newArr[$val]=$newsItem[$val];
-                    }
-                    $newArr['news_category']=$newsItem['news_category']?:['id_news_category'=>0,'category_name'=>'Uncategories'];
-                    $newsItem=$newArr;
-                }else{
-                    $newsItem['news_category']=$newsItem['news_category']?:['id_news_category'=>0,'category_name'=>'Uncategories'];
-                }
+                $newsItem['news_category']=$newsItem['news_category']?:['id_news_category'=>0,'category_name'=>'Uncategories'];
             });
             return response()->json(MyHelper::checkGet($news));
     }
