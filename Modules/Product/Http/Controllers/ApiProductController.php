@@ -22,6 +22,7 @@ use DB;
 use Mail;
 
 use Modules\Brand\Entities\BrandProduct;
+use Modules\Brand\Entities\Brand;
 
 use Modules\Product\Http\Requests\product\Create;
 use Modules\Product\Http\Requests\product\Update;
@@ -359,6 +360,10 @@ class ApiProductController extends Controller
     	// check data
         DB::beginTransaction();
         if(is_array($brands=$post['product_brands']??false)){
+            if(in_array('*', $post['product_brands'])){
+                $brands=Brand::select('id_brand')->get()->toArray();
+                $brands=array_column($brands, 'id_brand');
+            }
             BrandProduct::where('id_product',$request->json('id_product'))->delete();
             foreach ($brands as $id_brand) {
                 BrandProduct::create([

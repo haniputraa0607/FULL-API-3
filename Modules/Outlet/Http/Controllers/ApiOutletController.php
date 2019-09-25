@@ -30,6 +30,7 @@ use Excel;
 use Storage;
 
 use Modules\Brand\Entities\BrandOutlet;
+use Modules\Brand\Entities\Brand;
 
 use Modules\Outlet\Http\Requests\outlet\Upload;
 use Modules\Outlet\Http\Requests\outlet\Update;
@@ -159,6 +160,10 @@ class ApiOutletController extends Controller
         }
 
         if(is_array($brands=$post['outlet_brands']??false)){
+            if(in_array('*', $post['outlet_brands'])){
+                $brands=Brand::select('id_brand')->get()->toArray();
+                $brands=array_column($brands, 'id_brand');
+            }
             foreach ($brands as $id_brand) {
                 BrandOutlet::create([
                     'id_outlet'=>$save['id_outlet'],
@@ -196,6 +201,10 @@ class ApiOutletController extends Controller
 
         DB::beginTransaction();
         if(is_array($brands=$post['outlet_brands']??false)){
+            if(in_array('*', $post['outlet_brands'])){
+                $brands=Brand::select('id_brand')->get()->toArray();
+                $brands=array_column($brands, 'id_brand');
+            }
             BrandOutlet::where('id_outlet',$request->json('id_outlet'))->delete();
             foreach ($brands as $id_brand) {
                 BrandOutlet::create([
