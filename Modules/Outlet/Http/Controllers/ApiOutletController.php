@@ -415,7 +415,7 @@ class ApiOutletController extends Controller
         if (isset($post['webview'])) {
             $outlet = Outlet::with(['today']);
         }elseif(isset($post['admin'])){
-            $outlet = Outlet::with(['user_outlets'])->select('outlets.id_outlet', 'outlets.outlet_code', 'outlets.outlet_name');
+            $outlet = Outlet::with(['user_outlets','city','today'])->select('*');
             if(isset($post['id_product'])){
                 $outlet = $outlet->with(['product_prices'=> function($q) use ($post){
                     $q->where('id_product', $post['id_product']);
@@ -514,7 +514,7 @@ class ApiOutletController extends Controller
                 if(isset($outlet[0]['holidays'])) unset($outlet[0]['holidays']);
             }
         }
-        if(!isset($post['id_outlet'])&&!isset($post['outlet_code'])){
+        if(!isset($post['id_outlet'])&&!isset($post['outlet_code'])&&!isset($post['admin'])){
             $outlet=array_map(function($var){
                 $ret=[
                     'id_outlet'=>$var['id_outlet'],

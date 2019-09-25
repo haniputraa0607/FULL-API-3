@@ -21,6 +21,8 @@ use Hash;
 use DB;
 use Mail;
 
+use Modules\Brand\Entities\BrandProduct;
+
 use Modules\Product\Http\Requests\product\Create;
 use Modules\Product\Http\Requests\product\Update;
 use Modules\Product\Http\Requests\product\Delete;
@@ -79,6 +81,9 @@ class ApiProductController extends Controller
     	if (isset($post['product_order'])) {
     		$data['product_order'] = $post['product_order'];
     	}
+        if (isset($post['product_brands'])) {
+            $data['product_brands'] = $post['product_brands'];
+        }
 
         // search position
         if ($type == "create") {
@@ -244,11 +249,11 @@ class ApiProductController extends Controller
 		}
 
         if (isset($post['id_product'])) {
-            $product->where('products.id_product', $post['id_product']);
+            $product->where('products.id_product', $post['id_product'])->with(['brands']);
         }
 
         if (isset($post['product_code'])) {
-            $product->with('product_tags')->where('products.product_code', $post['product_code']);
+            $product->with(['product_tags','brands'])->where('products.product_code', $post['product_code']);
         }
 
         if (isset($post['product_name'])) {
@@ -309,6 +314,15 @@ class ApiProductController extends Controller
                 ProductPrice::create($data);
             }
 
+            if(is_array($brands=$data['product_brands']??false)){
+                foreach ($brands as $id_brand) {
+                    BrandProduct::create([
+                        'id_product'=>$save['id_product'],
+                        'id_brand'=>$id_brand
+                    ]);
+                }
+            }
+
             //create photo
             if(isset($post['photo'])){
 
@@ -343,6 +357,17 @@ class ApiProductController extends Controller
     	$post = $request->json()->all();
 
     	// check data
+        DB::beginTransaction();
+        if(is_array($brands=$post['product_brands']??false)){
+            BrandProduct::where('id_product',$request->json('id_product'))->delete();
+            foreach ($brands as $id_brand) {
+                BrandProduct::create([
+                    'id_product'=>$request->json('id_product'),
+                    'id_brand'=>$id_brand
+                ]);
+            }
+        }
+        unset($post['product_brands']);
     	$data = $this->checkInputProduct($post);
 
         if (isset($post['product_code'])) {
@@ -383,6 +408,11 @@ class ApiProductController extends Controller
 
 
             }
+        }
+        if($save){
+            DB::commit();
+        }else{
+            DB::rollBack();
         }
 
 
