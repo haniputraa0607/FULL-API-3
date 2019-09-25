@@ -29,6 +29,8 @@ use Mail;
 use Excel;
 use Storage;
 
+use Modules\Brand\Entities\BrandOutlet;
+
 use Modules\Outlet\Http\Requests\outlet\Upload;
 use Modules\Outlet\Http\Requests\outlet\Update;
 use Modules\Outlet\Http\Requests\outlet\UpdateStatus;
@@ -102,8 +104,19 @@ class ApiOutletController extends Controller
         if (isset($post['outlet_status'])) {
             $data['outlet_status'] = $post['outlet_status'];
         }
-        if (isset($post['deep_link'])) {
-            $data['deep_link'] = $post['deep_link'];
+        if (isset($post['outlet_brands'])) {
+            $data['outlet_brands'] = $post['outlet_brands'];
+        }
+        if (isset($post['deep_link_gojek'])) {
+            $data['deep_link_gojek'] = $post['deep_link_gojek'];
+        }
+        if (isset($post['deep_link_grab'])) {
+            $data['deep_link_grab'] = $post['deep_link_grab'];
+        }
+        if (isset($post['big_order'])) {
+            $data['big_order'] = $post['big_order'];
+        }else{
+            $data['big_order'] = 0;
         }
 
         return $data;
@@ -145,6 +158,14 @@ class ApiOutletController extends Controller
             DB::rollBack();
         }
 
+        if(is_array($brands=$post['outlet_brands']??false)){
+            foreach ($brands as $id_brand) {
+                BrandOutlet::create([
+                    'id_outlet'=>$save['id_outlet'],
+                    'id_brand'=>$id_brand
+                ]);
+            }
+        }
         //schedule
         if($request->json('day') && $request->json('open') && $request->json('close')){
             $days = $request->json('day');
@@ -154,7 +175,7 @@ class ApiOutletController extends Controller
             foreach($days as $key => $value){
                 $data['open'] = $opens[$key];
                 $data['close'] = $closes[$key];
-                $data['is_close'] = $is_closes[$key];
+                $data['is_close'] = $is_closed[$key];
                 $saveSchedule = OutletSchedule::updateOrCreate(['id_outlet' => $save['id_outlet'], 'day' => $value], $data);
                 if (!$saveSchedule) {
                     DB::rollBack();
@@ -172,9 +193,26 @@ class ApiOutletController extends Controller
      */
     function update(Update $request) {
         $post = $this->checkInputOutlet($request->json()->all());
+
+        DB::beginTransaction();
+        if(is_array($brands=$post['outlet_brands']??false)){
+            BrandOutlet::where('id_outlet',$request->json('id_outlet'))->delete();
+            foreach ($brands as $id_brand) {
+                BrandOutlet::create([
+                    'id_outlet'=>$request->json('id_outlet'),
+                    'id_brand'=>$id_brand
+                ]);
+            }
+        }
+
+        unset($post['outlet_brands']);
         $save = Outlet::where('id_outlet', $request->json('id_outlet'))->update($post);
         // return Outlet::where('id_outlet', $request->json('id_outlet'))->first();
-
+        if($save){
+            DB::commit();
+        }else{
+            DB::rollBack();
+        }
         return response()->json(MyHelper::checkUpdate($save));
     }
 
@@ -405,7 +443,7 @@ class ApiOutletController extends Controller
         }
 
         if (isset($post['outlet_code'])) {
-            $outlet->with(['holidays', 'holidays.date_holidays'])->where('outlet_code', $post['outlet_code']);
+            $outlet->with(['holidays', 'holidays.date_holidays','brands'])->where('outlet_code', $post['outlet_code']);
         }
 
         if (isset($post['id_outlet'])) {

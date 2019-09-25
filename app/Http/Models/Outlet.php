@@ -77,7 +77,9 @@ class Outlet extends Authenticatable
 		'outlet_latitude',
 		'outlet_longitude',
 		'outlet_status',
-		'deep_link',
+		'deep_link_gojek',
+		'deep_link_grab',
+		'big_order'
 		// 'outlet_open_hours',
 		// 'outlet_close_hours'
 	];
