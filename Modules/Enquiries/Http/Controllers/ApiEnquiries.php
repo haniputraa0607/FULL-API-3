@@ -555,4 +555,10 @@ class ApiEnquiries extends Controller
         return $send; 
     }
 
+	function listEnquirySubject(){
+		$list = Setting::where('key', 'enquiries_subject_list')->get()->first();
+
+		$result = ['text' => $list['value'], 'value' => explode(', ' ,$list['value_text'])];
+		return response()->json(MyHelper::checkGet($result));
+	}
 }

@@ -14,4 +14,8 @@ Route::group(['prefix' => 'api/enquiries', 'middleware' => 'log_request', 'names
     	Route::post('update', 'ApiEnquiries@update');
     	Route::post('delete', 'ApiEnquiries@delete');
 	});
+
+	Route::group(['middleware' => 'auth:api'], function() {
+    	Route::any('listEnquiries', 'ApiEnquiries@listEnquirySubject');
+	});
 });
