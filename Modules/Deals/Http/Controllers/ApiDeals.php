@@ -420,6 +420,9 @@ class ApiDeals extends Controller
 
 
             // print_r($deals); exit();
+            if(!$result['total']){
+                $result=[];
+            }
             return response()->json(MyHelper::checkGet($result));
         }else{
              return response()->json(MyHelper::checkGet($deals));
