@@ -466,6 +466,9 @@ class ApiDealsVoucher extends Controller
             $result['prev_page_url'] = $prev_page_url;
             $result['per_page'] = $per_page;
             $result['total'] = $total;
+            if(!$result['total']){
+                $result=[];
+            }
         }
 
         return response()->json(MyHelper::checkGet($result));
