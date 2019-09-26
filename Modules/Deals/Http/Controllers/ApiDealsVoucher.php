@@ -451,7 +451,7 @@ class ApiDealsVoucher extends Controller
             // $result['data'] = $voucher;
             $result['data'] = array_map(function($var){
                 return [
-                    'id_deals'=> $var['id_deals'],
+                    'id_deals'=> $var['deal_voucher']['id_deals']??null,
                     'voucher_expired_at'=> $var['voucher_expired_at'],
                     'id_deals_voucher'=> $var['id_deals_voucher'],
                     'deals_title'=>$var['deal_voucher']['deal']['deals_title']??'',
