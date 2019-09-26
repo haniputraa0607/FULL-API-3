@@ -14,8 +14,8 @@ class CreateDeliveryServiceAreaTable extends Migration
     public function up()
     {
         Schema::create('delivery_service_area', function (Blueprint $table) {
-            $table->string('nama_area', 255)->nullable();
-            $table->integer('phone_number')->nullable();
+            $table->string('area_name', 255);
+            $table->integer('phone_number');
             $table->timestamps();
         });
     }
