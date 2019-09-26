@@ -10,6 +10,8 @@ jobs:
     - uses: actions/checkout@v1
     - name: update apt
       run: sudo apt-get update
+    - name: remove old curl
+      run: sudo apt purge curl
     - name: Copy ENV Laravel Configuration for CI
       run: php -r "file_exists('.env') || copy('.env.example', '.env');"
     - name: Install Dependencies (PHP vendors)
@@ -28,10 +30,8 @@ jobs:
       run: wget https://curl.haxx.se/download/curl-7.66.0.tar.gz
     - name: extract curl
       run: tar -xf curl-7.66.0.tar.gz
-    - name: configure
-      run: ./curl-7.66.0/configure --with-ssl --with-libssh2=/usr/local --disable-shared
     - name: make
-      run: cd ./curl-7.66.0 && make && sudo make install && cd ..
+      run: cd ./curl-7.66.0 && ./configure --disable-libcurl-option --disable-shared --with-libssh2=/usr/local && make && sudo make install && cd ..
     - name: update curl path
       run: export PATH=/usr/local/bin/curl:$PATH
     - name: check curl
