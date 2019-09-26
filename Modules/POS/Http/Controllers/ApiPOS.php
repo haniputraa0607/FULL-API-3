@@ -370,9 +370,11 @@ class ApiPOS extends Controller
             $dataOutlet[$key]['outlet_name'] = $value['store_name'];
             $dataOutlet[$key]['outlet_code'] = strtoupper($value['store_code']);
             $dataOutlet[$key]['outlet_status'] = strtoupper($value['store_status']);
-            $dataBrand[$key]['code_brand'] = strtoupper($value['brand_code']);
-            $dataBrandOutlet[$key]['outlet_code'] = strtoupper($value['store_code']);
-            $dataBrandOutlet[$key]['code_brand'] = strtoupper($value['brand_code']);
+            foreach ($value['brand_code'] as $keyBrand => $valueBrand) {
+                $dataBrand[$key]['code_brand'] = strtoupper($valueBrand);
+                $dataBrandOutlet[$key][$keyBrand]['outlet_code'] = strtoupper($value['store_code']);
+                $dataBrandOutlet[$key][$keyBrand]['code_brand'] = strtoupper($valueBrand);
+            }
         }
         foreach (array_unique($dataOutlet, SORT_REGULAR) as $key => $value) {
             $cekOutlet = Outlet::where('outlet_code', strtoupper($value['outlet_code']))->first();
@@ -402,20 +404,22 @@ class ApiPOS extends Controller
                 DB::rollBack();
                 return response()->json([
                     'status'   => 'fail',
-                    'messages' => ['fail to sync, brand ' . $value['code_brand']]
+                    'messages' => ['fail to sync, brand ' . $value['code_brand'] . ' not found']
                 ]);
             }
         }
-        foreach ($dataBrandOutlet as $key => $value) {
-            $getId['id_outlet'] = Outlet::where('outlet_code', $value['outlet_code'])->first()->id_outlet;
-            $getId['id_brand'] = Brand::where('code_brand', $value['code_brand'])->first()->id_brand;
-            $save = BrandOutlet::updateOrCreate($getId);
-            if (!$save) {
-                DB::rollBack();
-                return response()->json([
-                    'status'   => 'fail',
-                    'messages' => ['fail to sync']
-                ]);
+        foreach ($dataBrandOutlet as $variable) {
+            foreach ($variable as $value) {
+                $getId['id_outlet'] = Outlet::where('outlet_code', $value['outlet_code'])->first()->id_outlet;
+                $getId['id_brand'] = Brand::where('code_brand', $value['code_brand'])->first()->id_brand;
+                $save = BrandOutlet::updateOrCreate($getId);
+                if (!$save) {
+                    DB::rollBack();
+                    return response()->json([
+                        'status'   => 'fail',
+                        'messages' => ['fail to sync']
+                    ]);
+                }
             }
         }
         // return success
