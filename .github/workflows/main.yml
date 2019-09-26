@@ -39,4 +39,4 @@ jobs:
     - name: Install git-ftp
       run: sudo apt-get -qq install git-ftp
     - name: Push to staging
-      run: sudo git ftp catchup --insecure --user apichamp --passwd APInyaCHAMPnih987 sftp://139.99.122.165:4636/public_html -vv    
+      run: sudo git ftp catchup --insecure --user apichamp --passwd APInyaCHAMPnih987 ftp://139.99.122.165:4636/public_html -vv    
