@@ -24,4 +24,4 @@ Pcj8liPnLlJG91VE5ntR6EYYTbqb49CbSklJ4BTBLaybMKIh3D8Vq/hcaChBqM1l
 mMf9hVNzX4hlOL1A+bOQZKvFgAW+HhzV+F17D0DFXQ6fyxBab5Dc3pOGiCXQPLDq
 uZuZcdYiB9jFfhNsUJZRqbqar1KqM7vwB15KmxcyjIgqp+I/fh/vwtkgoh+FNYQm
 BE28528+T7rU/Ka8QRHqv5pqiHCCQmitVWbnDvlp0AGf6US1ow=="]
-      args: ["-avzr --delete", "--exclude .htaccess --exclude /uploads/ -p 4636", "apichamp@139.99.122.165:/public_html/"]
+        args: ["-avzr --delete", "--exclude .htaccess --exclude /uploads/ -p 4636", "apichamp@139.99.122.165:/public_html/"]
