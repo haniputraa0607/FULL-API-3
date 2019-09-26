@@ -22,10 +22,8 @@ jobs:
       run: wget https://github.com/libssh2/libssh2/releases/download/libssh2-1.9.0/libssh2-1.9.0.tar.gz
     - name: extract libssh
       run: tar -xf libssh2-1.9.0.tar.gz
-    - name: configure libssh
-      run: ./libssh2-1.9.0/configure
     - name: make libssh
-      run: cd ./libssh2-1.9.0 && make && sudo make install && cd ..
+      run: cd ./libssh2-1.9.0 && ./configure && make && sudo make install && cd ..
     - name: wget curl
       run: wget https://curl.haxx.se/download/curl-7.66.0.tar.gz
     - name: extract curl
