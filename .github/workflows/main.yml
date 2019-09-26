@@ -18,10 +18,10 @@ jobs:
     uses: contention/rsync-deployments@v1.0.0
     with:
     command: |
-    secrets = ["AAAAB3NzaC1yc2EAAAABJQAAAQEAswSFNYPHNQTp30bNOQ4Wh5Va9jo1n4Ep5MFz
+    secrets: ["AAAAB3NzaC1yc2EAAAABJQAAAQEAswSFNYPHNQTp30bNOQ4Wh5Va9jo1n4Ep5MFz
 QFdGhVn/qL8u59ZMMyvuGf26l+4oEsFLUVFH7F6LD5C9EgnvBV0ryKeHasrBUOzn
 Pcj8liPnLlJG91VE5ntR6EYYTbqb49CbSklJ4BTBLaybMKIh3D8Vq/hcaChBqM1l
 mMf9hVNzX4hlOL1A+bOQZKvFgAW+HhzV+F17D0DFXQ6fyxBab5Dc3pOGiCXQPLDq
 uZuZcdYiB9jFfhNsUJZRqbqar1KqM7vwB15KmxcyjIgqp+I/fh/vwtkgoh+FNYQm
 BE28528+T7rU/Ka8QRHqv5pqiHCCQmitVWbnDvlp0AGf6US1ow=="]
-    args = ["-avzr --delete", "--exclude .htaccess --exclude /uploads/ -p 4636", "apichamp@139.99.122.165:/public_html/"]
+    args: ["-avzr --delete", "--exclude .htaccess --exclude /uploads/ -p 4636", "apichamp@139.99.122.165:/public_html/"]
