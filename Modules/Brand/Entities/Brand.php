@@ -27,4 +27,12 @@ class Brand extends Model
     {
         return env('API_URL') . $value;
     }
+
+    public function products(){
+        return $this->belongsToMany(\App\Http\Models\Product::class, 'brand_product','id_brand','id_product');
+    }
+
+    public function outlets(){
+        return $this->belongsToMany(\App\Http\Models\Outlet::class, 'brand_outlet','id_brand','id_outlet');
+    }
 }

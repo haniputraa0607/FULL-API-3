@@ -567,6 +567,7 @@ class ApiHome extends Controller
 
     public function membership(Request $request){   
         $user = $request->user();
+        $user->load(['city','city.province']);
         $birthday = "";
         if ($user->birthday != "") {
             $birthday = date("d F Y", strtotime($user->birthday));
@@ -667,8 +668,22 @@ class ApiHome extends Controller
         } else {
             $membership = null;
         }
+
         $retUser=$user->toArray();
-        unset($retUser['password_k']);
+
+        if($retUser['birthday']??false){
+            $retUser['birthday']=date("d F Y", strtotime($retUser['birthday']));
+        }
+        array_walk_recursive($retUser, function(&$it,$ix){
+            if($it==null&&!in_array($ix, ['city','membership'])){
+                $it="";
+            }
+        });
+        $hidden=['password_k','created_at','updated_at','provider','phone_verified','email_verified','email_unsubscribed','level','points','rank','android_device','ios_device','is_suspended','balance','complete_profile','subtotal_transaction','count_transaction','id_membership','relationship'];
+        foreach ($hidden as $hide) {
+            unset($retUser[$hide]);
+        }
+
         $retUser['membership']=$membership;
         $result = [
             'status' => 'success',
@@ -715,7 +730,12 @@ class ApiHome extends Controller
         $now=date('Y-m-d H-i-s');
         $deals=FeaturedDeal::select('id_featured_deals','id_deals')->with(['deals'=>function($query){
             $query->select('deals_title','deals_image','deals_total_voucher','deals_total_claimed','deals_publish_end','deals_start','deals_end','id_deals','deals_voucher_price_point','deals_voucher_price_cash');
-        }])->orderBy('order')
+        }])
+            ->whereHas('deals',function($query){
+                $query->where('deals_publish_end','>=',DB::raw('CURRENT_TIMESTAMP()'));
+                $query->where('deals_publish_start','<=',DB::raw('CURRENT_TIMESTAMP()'));
+            })
+            ->orderBy('order')
             ->where('start_date','<=',$now)
             ->where('end_date','>=',$now)
             ->get();
@@ -723,7 +743,12 @@ class ApiHome extends Controller
             $deals=array_map(function($value){
                 $calc = $value['deals']['deals_total_voucher'] - $value['deals']['deals_total_claimed'];
                 $value['deals']['available_voucher'] = $calc;
-                $value['deals']['percent_voucher'] = $calc*100/$value['deals']['deals_total_voucher'];
+                if($calc&&is_numeric($calc)){
+                    $value['deals']['percent_voucher'] = $calc*100/$value['deals']['deals_total_voucher'];
+                }else{
+                    $value['deals']['percent_voucher'] = 100;
+                }
+                $value['deals']['time_to_end']=strtotime($value['deals']['deals_end'])-time();
                 return $value;
             },$deals->toArray());
             return [

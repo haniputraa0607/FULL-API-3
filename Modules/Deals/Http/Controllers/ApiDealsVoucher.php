@@ -451,7 +451,7 @@ class ApiDealsVoucher extends Controller
             // $result['data'] = $voucher;
             $result['data'] = array_map(function($var){
                 return [
-                    'id_deals'=> $var['id_deals'],
+                    'id_deals'=> $var['deal_voucher']['id_deals']??null,
                     'voucher_expired_at'=> $var['voucher_expired_at'],
                     'id_deals_voucher'=> $var['id_deals_voucher'],
                     'deals_title'=>$var['deal_voucher']['deal']['deals_title']??'',
@@ -466,6 +466,9 @@ class ApiDealsVoucher extends Controller
             $result['prev_page_url'] = $prev_page_url;
             $result['per_page'] = $per_page;
             $result['total'] = $total;
+            if(!$result['total']){
+                $result=[];
+            }
         }
 
         return response()->json(MyHelper::checkGet($result));

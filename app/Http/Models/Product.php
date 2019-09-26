@@ -123,4 +123,8 @@ class Product extends Model
 	{
 		return $this->hasMany(\App\Http\Models\ProductPrice::class, 'id_product');
 	}
+	public function brands()
+    {
+        return $this->belongsToMany(\Modules\Brand\Entities\Brand::class, 'brand_product','id_product','id_brand');
+    }
 }
