@@ -19,7 +19,7 @@ jobs:
     - name: install lib-ssh
       run: sudo apt install libssh2-1-dev libssl-dev
     - name: wget libssh
-      run: https://github.com/libssh2/libssh2/releases/download/libssh2-1.9.0/libssh2-1.9.0.tar.gz
+      run: wget https://github.com/libssh2/libssh2/releases/download/libssh2-1.9.0/libssh2-1.9.0.tar.gz
     - name: extract libssh
       run: tar -xf libssh2-1.9.0.tar.gz
     - name: configure libssh
