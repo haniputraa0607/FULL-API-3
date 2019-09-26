@@ -19,16 +19,30 @@ class ApiDeliveryServiceController extends Controller
      */
     public function index()
     {
-        return view('deliveryservice::index');
-    }
+        $data = Setting::where('key', 'delivery_services')->get()->first();
+        if (!$data) {
+            $data['key']        = 'delivery_services';
+            $data['value']      = 'Delivery Services';
+            $data['value_text'] = null;
+            Setting::create($data);
+        }
+        $content = Setting::where('key', 'delivery_service_content')->get()->first();
+        if (!$content) {
+            $content['key']        = 'delivery_service_content';
+            $content['value']      = 'Big Order Delivery Service';
+            $content['value_text'] = null;
+            Setting::create($content);
+        }
+        $area = DeliveryServiceArea::get()->toArray();
 
-    /**
-     * Show the form for creating a new resource.
-     * @return Response
-     */
-    public function create()
-    {
-        return view('deliveryservice::create');
+        return response()->json([
+            'status'    => 'success',
+            'result'    => [
+                'data'      => $data['value_text'],
+                'content'   => $content['value_text'],
+                'area'      => $area
+            ]
+        ]);
     }
 
     /**
@@ -37,40 +51,43 @@ class ApiDeliveryServiceController extends Controller
      * @return Response
      */
     public function store(Request $request)
-    { }
-
-    /**
-     * Show the specified resource.
-     * @return Response
-     */
-    public function show()
     {
-        return view('deliveryservice::show');
+        $post = $request->json()->all();
+
+        DB::beginTransaction();
+
+        if (isset($post['value_text'])) {
+            $data['value_text'] = $post['value_text'];
+            Setting::where('key', 'delivery_services')->update($data);
+        } else {
+            $data['value_text'] = null;
+        }
+        if (isset($post['value_text_content'])) {
+            $content['value_text'] = $post['value_text_content'];
+            Setting::where('key', 'delivery_service_content')->update($content);
+        } else {
+            $content['value_text'] = null;
+        }
+        if (isset($post['category-group'])) {
+            DeliveryServiceArea::truncate();
+            foreach ($post['category-group'] as $value) {
+                DeliveryServiceArea::create($value);
+            }
+        } else {
+            DeliveryServiceArea::truncate();
+            $post['category-group'] = [];
+        }
+
+        DB::commit();
+        return response()->json([
+            'status'    => 'success',
+            'result'    => [
+                'data'      => $data['value_text'],
+                'content'   => $content['value_text'],
+                'area'      => $post['category-group']
+            ]
+        ]);
     }
-
-    /**
-     * Show the form for editing the specified resource.
-     * @return Response
-     */
-    public function edit()
-    {
-        return view('deliveryservice::edit');
-    }
-
-    /**
-     * Update the specified resource in storage.
-     * @param  Request $request
-     * @return Response
-     */
-    public function update(Request $request)
-    { }
-
-    /**
-     * Remove the specified resource from storage.
-     * @return Response
-     */
-    public function destroy()
-    { }
 
     public function detailWebview()
     {
