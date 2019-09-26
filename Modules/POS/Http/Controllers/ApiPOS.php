@@ -376,7 +376,7 @@ class ApiPOS extends Controller
             // search different brand
             $diffBrand = array_diff($value['brand_code'], $getBrand);
             if (!empty($diffBrand)) {
-                $failedBrand[] = 'fail to sync, brand ' . implode(', ', $diffBrand) . ' in ' . $value['store_name'] . ' not found';
+                $failedBrand[] = 'fail to sync outlet ' . $value['store_name'] . ', because code brand ' . implode(', ', $diffBrand) . ' not found';
                 continue;
             }
             $cekOutlet = Outlet::where('outlet_code', strtoupper($value['store_code']))->first();
