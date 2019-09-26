@@ -1242,30 +1242,6 @@ class FeaturesTableSeeder extends Seeder
                 'feature_module' => 'Delivery Service',
                 'created_at' => date('Y-m-d H:00:00'),
                 'updated_at' => date('Y-m-d H:00:00'),
-            ),
-            154 =>
-            array(
-                'id_feature' => 155,
-                'feature_type' => 'Update',
-                'feature_module' => 'Delivery Service',
-                'created_at' => date('Y-m-d H:00:00'),
-                'updated_at' => date('Y-m-d H:00:00'),
-            ),
-            155 =>
-            array(
-                'id_feature' => 156,
-                'feature_type' => 'Delete',
-                'feature_module' => 'Delivery Service',
-                'created_at' => date('Y-m-d H:00:00'),
-                'updated_at' => date('Y-m-d H:00:00'),
-            ),
-            156 =>
-            array(
-                'id_feature' => 157,
-                'feature_type' => 'Detail',
-                'feature_module' => 'Delivery Service',
-                'created_at' => date('Y-m-d H:00:00'),
-                'updated_at' => date('Y-m-d H:00:00'),
             )
         ));
     }
