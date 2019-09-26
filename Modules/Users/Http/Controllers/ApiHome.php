@@ -730,7 +730,12 @@ class ApiHome extends Controller
         $now=date('Y-m-d H-i-s');
         $deals=FeaturedDeal::select('id_featured_deals','id_deals')->with(['deals'=>function($query){
             $query->select('deals_title','deals_image','deals_total_voucher','deals_total_claimed','deals_publish_end','deals_start','deals_end','id_deals','deals_voucher_price_point','deals_voucher_price_cash');
-        }])->orderBy('order')
+        }])
+            ->whereHas('deals',function($query){
+                $query->where('deals_publish_end','>=',DB::raw('CURRENT_TIMESTAMP()'));
+                $query->where('deals_publish_start','<=',DB::raw('CURRENT_TIMESTAMP()'));
+            })
+            ->orderBy('order')
             ->where('start_date','<=',$now)
             ->where('end_date','>=',$now)
             ->get();
