@@ -51,6 +51,7 @@ use Modules\Brand\Entities\BrandOutlet;
 use Modules\Brand\Entities\BrandProduct;
 
 use Modules\POS\Http\Controllers\CheckVoucher;
+use Exception;
 
 use DB;
 
@@ -365,67 +366,106 @@ class ApiPOS extends Controller
         if ($api['status'] != 'success') {
             return response()->json($api);
         }
-        DB::beginTransaction();
+        $getBrand = Brand::pluck('code_brand')->toArray();
+        $getBrandList = Brand::select('id_brand', 'code_brand')->get()->toArray();
+        $successOutlet = [];
+        $failedOutlet = [];
+        $failedBrand = [];
         foreach ($post['store'] as $key => $value) {
-            $dataOutlet[$key]['outlet_name'] = $value['store_name'];
-            $dataOutlet[$key]['outlet_code'] = strtoupper($value['store_code']);
-            $dataOutlet[$key]['outlet_status'] = strtoupper($value['store_status']);
-            foreach ($value['brand_code'] as $keyBrand => $valueBrand) {
-                $dataBrand[$key]['code_brand'] = strtoupper($valueBrand);
-                $dataBrandOutlet[$key][$keyBrand]['outlet_code'] = strtoupper($value['store_code']);
-                $dataBrandOutlet[$key][$keyBrand]['code_brand'] = strtoupper($valueBrand);
+            DB::beginTransaction();
+            // search different brand
+            $diffBrand = array_diff($value['brand_code'], $getBrand);
+            if (!empty($diffBrand)) {
+                $failedBrand[] = 'fail to sync, brand ' . implode(', ', $diffBrand) . ' in ' . $value['store_name'] . ' not found';
+                continue;
             }
-        }
-        foreach (array_unique($dataOutlet, SORT_REGULAR) as $key => $value) {
-            $cekOutlet = Outlet::where('outlet_code', strtoupper($value['outlet_code']))->first();
+            $cekOutlet = Outlet::where('outlet_code', strtoupper($value['store_code']))->first();
             if ($cekOutlet) {
-                $update = Outlet::where('outlet_code', strtoupper($value['outlet_code']))->update($value);
-                if (!$update) {
-                    DB::rollBack();
-                    return response()->json([
-                        'status'   => 'fail',
-                        'messages' => ['fail to sync']
-                    ]);
+                try {
+                    $cekOutlet->outlet_name = $value['store_name'];
+                    $cekOutlet->outlet_status = $value['store_status'];
+                    $cekOutlet->save();
+                } catch (\Exception $e) {
+                    LogBackendError::logExceptionMessage("ApiPOS/syncOutlet=>" . $e->getMessage(), $e);
+                    $failedOutlet[] = 'fail to sync, outlet ' . $value['store_name'];
+                    continue;
+                }
+                $cekBrandOutlet = BrandOutlet::join('brands', 'brands.id_brand', 'brand_outlet.id_brand')->where('id_outlet', $cekOutlet->id_outlet)->pluck('code_brand')->toArray();
+                // delete diff brand
+                $deleteDiffBrand = array_diff($cekBrandOutlet, $value['brand_code']);
+                if (!empty($deleteDiffBrand)) {
+                    try {
+                        BrandOutlet::join('brands', 'brands.id_brand', 'brand_outlet.id_brand')->where('id_outlet', $cekOutlet->id_outlet)->whereIn('brand_outlet.id_brand', $deleteDiffBrand)->delete();
+                    } catch (\Exception $e) {
+                        DB::rollback();
+                        LogBackendError::logExceptionMessage("ApiPOS/syncOutlet=>" . $e->getMessage(), $e);
+                        $failedOutlet[] = 'fail to sync, outlet ' . $value['store_name'];
+                        continue;
+                    }
+                }
+                $createDiffBrand = array_diff($value['brand_code'], $cekBrandOutlet);
+                if (!empty($createDiffBrand)) {
+                    try {
+                        $brandOutlet = [];
+                        foreach ($createDiffBrand as $valueBrand) {
+                            $getIdBrand = $getBrandList[array_search($valueBrand, $getBrand)]['id_brand'];
+                            $brandOutlet[] = [
+                                'id_outlet' => $cekOutlet->id_outlet,
+                                'id_brand' => $getIdBrand,
+                                'created_at' => date('Y-m-d H:i:s'),
+                                'updated_at' => date('Y-m-d H:i:s'),
+                            ];
+                        }
+                        BrandOutlet::insert($brandOutlet);
+                    } catch (Exception $e) {
+                        DB::rollback();
+                        LogBackendError::logExceptionMessage("ApiPOS/syncOutlet=>" . $e->getMessage(), $e);
+                        $failedOutlet[] = 'fail to sync, outlet ' . $value['store_name'];
+                        continue;
+                    }
                 }
             } else {
-                $save = Outlet::create($value);
-                if (!$save) {
-                    DB::rollBack();
-                    return response()->json([
-                        'status'   => 'fail',
-                        'messages' => ['fail to sync']
+                try {
+                    $save = Outlet::create([
+                        'outlet_name'   => $value['store_name'],
+                        'outlet_status' => $value['store_status'],
+                        'outlet_code'   => $value['store_code']
                     ]);
+                } catch (\Exception $e) {
+                    LogBackendError::logExceptionMessage("ApiPOS/syncOutlet=>" . $e->getMessage(), $e);
+                    $failedOutlet[] = 'fail to sync, outlet ' . $value['store_name'];
+                    continue;
+                }
+                try {
+                    $brandOutlet = [];
+                    foreach ($value['brand_code'] as $valueBrand) {
+                        $getIdBrand = $getBrandList[array_search($valueBrand, $getBrand)]['id_brand'];
+                        $brandOutlet[] = [
+                            'id_outlet' => $save->id_outlet,
+                            'id_brand' => $getIdBrand,
+                            'created_at' => date('Y-m-d H:i:s'),
+                            'updated_at' => date('Y-m-d H:i:s'),
+                        ];
+                    }
+                    BrandOutlet::insert($brandOutlet);
+                } catch (Exception $e) {
+                    DB::rollback();
+                    LogBackendError::logExceptionMessage("ApiPOS/syncOutlet=>" . $e->getMessage(), $e);
+                    $failedOutlet[] = 'fail to sync, outlet ' . $value['store_name'];
+                    continue;
                 }
             }
-        }
-        foreach (array_unique($dataBrand, SORT_REGULAR) as $key => $value) {
-            $cekBrand = Brand::where('code_brand', strtoupper($value['code_brand']))->first();
-            if (!$cekBrand) {
-                DB::rollBack();
-                return response()->json([
-                    'status'   => 'fail',
-                    'messages' => ['fail to sync, brand ' . $value['code_brand'] . ' not found']
-                ]);
-            }
-        }
-        foreach ($dataBrandOutlet as $variable) {
-            foreach ($variable as $value) {
-                $getId['id_outlet'] = Outlet::where('outlet_code', $value['outlet_code'])->first()->id_outlet;
-                $getId['id_brand'] = Brand::where('code_brand', $value['code_brand'])->first()->id_brand;
-                $save = BrandOutlet::updateOrCreate($getId);
-                if (!$save) {
-                    DB::rollBack();
-                    return response()->json([
-                        'status'   => 'fail',
-                        'messages' => ['fail to sync']
-                    ]);
-                }
-            }
+            $successOutlet[] = $value['store_name'];
+            DB::commit();
         }
         // return success
-        DB::commit();
         return response()->json([
-            'status' => 'success'
+            'status' => 'success',
+            'result' => [
+                'success_outlet' => $successOutlet,
+                'failed_outlet' => $failedOutlet,
+                'failed_brand' => $failedBrand
+            ]
         ]);
     }
 
