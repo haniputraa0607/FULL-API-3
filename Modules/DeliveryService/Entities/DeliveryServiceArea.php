@@ -9,7 +9,7 @@ class DeliveryServiceArea extends Model
     protected $table = 'delivery_service_area';
 
     protected $fillable = [
-        'nama_area',
+        'area_name',
         'phone_number'
     ];
 }
