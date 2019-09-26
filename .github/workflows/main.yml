@@ -8,35 +8,20 @@ jobs:
     runs-on: ubuntu-16.04
     steps:
     - uses: actions/checkout@v1
-    - name: update apt
-      run: sudo apt-get update
-    - name: remove old curl
-      run: sudo apt purge curl
     - name: Copy ENV Laravel Configuration for CI
-      run: php -r "file_exists('.env') || copy('.env.example', '.env');"
+      run: php -r "file_exists('.env') || copy('.env.staging', '.env');"
     - name: Install Dependencies (PHP vendors)
       run: composer install -q --no-ansi --no-interaction --no-scripts --no-suggest --no-progress --prefer-dist
-    - name: Generate key
-      run: php artisan key:generate
-    - name: install lib-ssh
-      run: sudo apt install libssh2-1-dev libssl-dev
-    - name: wget libssh
-      run: wget https://github.com/libssh2/libssh2/releases/download/libssh2-1.9.0/libssh2-1.9.0.tar.gz
-    - name: extract libssh
-      run: tar -xf libssh2-1.9.0.tar.gz
-    - name: make libssh
-      run: cd ./libssh2-1.9.0 && ./configure && make && sudo make install && cd ..
-    - name: wget curl
-      run: wget https://curl.haxx.se/download/curl-7.66.0.tar.gz
-    - name: extract curl
-      run: tar -xf curl-7.66.0.tar.gz
-    - name: make
-      run: cd ./curl-7.66.0 && ./configure --disable-libcurl-option --disable-shared --with-libssh2=/usr/local && make && sudo make install && cd ..
-    - name: update curl path
-      run: export PATH=/usr/local/bin/curl:$PATH
-    - name: check curl
-      run: curl -V
-    - name: Install git-ftp
-      run: sudo apt-get -qq install git-ftp
-    - name: Push to staging
-      run: sudo git ftp catchup --insecure --user apichamp --passwd APInyaCHAMPnih987 ftp://139.99.122.165:4636/public_html -vv    
+    - name: Composer load
+      run: composer dump-autoload
+    - name: rsync deployments
+    uses: contention/rsync-deployments@v1.0.0
+    with:
+    command: |
+    secrets = ["AAAAB3NzaC1yc2EAAAABJQAAAQEAswSFNYPHNQTp30bNOQ4Wh5Va9jo1n4Ep5MFz
+QFdGhVn/qL8u59ZMMyvuGf26l+4oEsFLUVFH7F6LD5C9EgnvBV0ryKeHasrBUOzn
+Pcj8liPnLlJG91VE5ntR6EYYTbqb49CbSklJ4BTBLaybMKIh3D8Vq/hcaChBqM1l
+mMf9hVNzX4hlOL1A+bOQZKvFgAW+HhzV+F17D0DFXQ6fyxBab5Dc3pOGiCXQPLDq
+uZuZcdYiB9jFfhNsUJZRqbqar1KqM7vwB15KmxcyjIgqp+I/fh/vwtkgoh+FNYQm
+BE28528+T7rU/Ka8QRHqv5pqiHCCQmitVWbnDvlp0AGf6US1ow=="]
+    args = ["-avzr --delete", "--exclude .htaccess --exclude /uploads/ -p 4636", "apichamp@139.99.122.165:/public_html/"]
