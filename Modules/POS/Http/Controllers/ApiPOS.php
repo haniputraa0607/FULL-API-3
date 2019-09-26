@@ -1676,7 +1676,7 @@ class ApiPOS extends Controller
         return response()->json(['status' => 'success']);
     }
 
-    function checkApi($key, $secret)
+    public static function checkApi($key, $secret)
     {
         $api_key = Setting::where('key', 'api_key')->first();
         if (empty($api_key)) {
