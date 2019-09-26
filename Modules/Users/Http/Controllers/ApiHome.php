@@ -674,8 +674,8 @@ class ApiHome extends Controller
         if($retUser['birthday']??false){
             $retUser['birthday']=date("d F Y", strtotime($retUser['birthday']));
         }
-        array_walk_recursive($retUser, function(&$it){
-            if($it==null){
+        array_walk_recursive($retUser, function(&$it,$ix){
+            if($it==null&&!in_array($ix, ['city','membership'])){
                 $it="";
             }
         });
