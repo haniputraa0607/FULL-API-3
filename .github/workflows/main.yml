@@ -5,19 +5,38 @@ on:
     - staging
 jobs:
   laravel-tests:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-16.04
     steps:
     - uses: actions/checkout@v1
+    - name: update apt
+      run: sudo apt-get update
+    - name: remove curl
+      run: sudo apt-get remove curl
     - name: Copy ENV Laravel Configuration for CI
       run: php -r "file_exists('.env') || copy('.env.example', '.env');"
     - name: Install Dependencies (PHP vendors)
       run: composer install -q --no-ansi --no-interaction --no-scripts --no-suggest --no-progress --prefer-dist
     - name: Generate key
       run: php artisan key:generate
-    - name: Create DB and schemas
-      run: |
-        mkdir -p database
-        touch database/database.sqlite
-        php artisan migrate
     - name: Execute tests (Unit and Feature tests) via PHPUnit
       run: vendor/bin/phpunit
+    - name: install lib-ssh
+      run: sudo apt install libssh2-1-dev libssl-dev
+    - name: wget curl
+      run: wget https://curl.haxx.se/download/curl-7.66.0.tar.gz
+    - name: extract curl
+      run: tar -xf curl-7.66.0.tar.gz
+    - name: configure
+      run: ./curl-7.66.0/configure --with-ssl --with-libssh2
+    - name: make
+      run: cd ./curl-7.66.0 && make && sudo make install && cd ..
+    - name: find curl
+      run: ldd /usr/local/bin/curl | grep libcurl
+    - name: update curl path
+      run: export PATH=/usr/local/bin/curl:$PATH
+    - name: check curl
+      run: curl -V
+    - name: Install git-ftp
+      run: sudo apt-get -qq install git-ftp
+    - name: Push to staging
+      run: sudo git ftp catchup --insecure --user apichamp --passwd APInyaCHAMPnih987 sftp://139.99.122.165:4636/public_html -vv    
