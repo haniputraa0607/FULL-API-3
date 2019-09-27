@@ -19,4 +19,4 @@ jobs:
     - name: check key
       run: cat ~/.ssh/id_rsa
     - name: rsync deployments
-      run: rsync -avz -e "ssh -p 4636" champapi@139.99.122.165:/public_html/
+      run: rsync -avz -e "ssh -p 4636" apichamp@139.99.122.165:/public_html/
