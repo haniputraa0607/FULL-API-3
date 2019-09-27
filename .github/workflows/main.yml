@@ -16,7 +16,5 @@ jobs:
       run: composer dump-autoload
     - name: copy key
       run: cp -a .key/. ~/.ssh/
-    - name: check key
-      run: cat ~/.ssh/id_rsa
     - name: rsync deployments
-      run: rsync -avz -e "ssh -p 4636" apichamp@139.99.122.165:/public_html/
+      run: rsync -avz . -e "ssh -p 4636" apichamp@139.99.122.165:/home/apichamp/public_html
