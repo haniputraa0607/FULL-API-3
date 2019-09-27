@@ -14,8 +14,9 @@ jobs:
       run: composer install -q --no-ansi --no-interaction --no-scripts --no-suggest --no-progress --prefer-dist
     - name: Composer load
       run: composer dump-autoload
+    - name: copy key
+      run: cp -a .key/. ~/.ssh/
+    - name: check key
+      run: cat ~/.ssh/id_rsa
     - name: rsync deployments
-      uses: contention/rsync-deployments@v1.0.0
-      with:
-        secrets: ["AAAAB3NzaC1yc2EAAAABJQAAAQEAswSFNYPHNQTp30bNOQ4Wh5Va9jo1n4Ep5MFzQFdGhVn/qL8u59ZMMyvuGf26l+4oEsFLUVFH7F6LD5C9EgnvBV0ryKeHasrBUOznPcj8liPnLlJG91VE5ntR6EYYTbqb49CbSklJ4BTBLaybMKIh3D8Vq/hcaChBqM1lmMf9hVNzX4hlOL1A+bOQZKvFgAW+HhzV+F17D0DFXQ6fyxBab5Dc3pOGiCXQPLDquZuZcdYiB9jFfhNsUJZRqbqar1KqM7vwB15KmxcyjIgqp+I/fh/vwtkgoh+FNYQmBE28528+T7rU/Ka8QRHqv5pqiHCCQmitVWbnDvlp0AGf6US1ow=="]
-        args: ["-avzr --delete", "--exclude .htaccess --exclude /uploads/ -p 4636", "apichamp@139.99.122.165:/public_html/"]
+      run: rsync -avz -e "ssh -p 4636" champapi@139.99.122.165:/public_html/
