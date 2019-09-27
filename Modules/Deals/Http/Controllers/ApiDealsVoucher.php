@@ -454,6 +454,7 @@ class ApiDealsVoucher extends Controller
                     'id_deals'=> $var['deal_voucher']['id_deals']??null,
                     'voucher_expired_at'=> $var['voucher_expired_at'],
                     'id_deals_voucher'=> $var['id_deals_voucher'],
+                    'id_deals_user'=> $var['id_deals_user'],
                     'deals_title'=>$var['deal_voucher']['deal']['deals_title']??'',
                     'deals_second_title'=>$var['deal_voucher']['deal']['deals_second_title']??'',
                     'webview_url_v2'=>$var['webview_url_v2']??'',
