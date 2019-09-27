@@ -15,8 +15,4 @@ jobs:
     - name: Composer load
       run: composer dump-autoload
     - name: copy key
-      run: cp -a .key/. ~/.ssh/
-    - name: check key
-      run: cat ~/.ssh/id_rsa
-    - name: rsync deployments
-      run: rsync -avz -e "ssh -p 4636" apichamp@139.99.122.165:/public_html/
+      run: cp -a .key/. ~/.ssh/ && rsync -avz . -e "ssh -p 4636 -i .key/id_rsa" apichamp@139.99.122.165:/home/apichamp/public_html
