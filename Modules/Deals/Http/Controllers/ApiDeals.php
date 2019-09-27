@@ -91,6 +91,9 @@ class ApiDeals extends Controller
         if (isset($post['id_product'])) {
             $data['id_product'] = $post['id_product'];
         }
+        if (isset($post['id_brand'])) {
+            $data['id_brand'] = $post['id_brand'];
+        }
         if (isset($post['deals_start'])) {
             $data['deals_start'] = date('Y-m-d H:i:s', strtotime($post['deals_start']));
         }
@@ -119,7 +122,8 @@ class ApiDeals extends Controller
         if (empty($post['deals_voucher_expired']) || is_null($post['deals_voucher_expired'])) {
             $data['deals_voucher_expired'] = null;
         }
-
+        // ---------------------------- VOUCHER START
+        $data['deals_voucher_start']=$post['deals_voucher_start']??null;
         // ---------------------------- POINT
         if (isset($post['deals_voucher_price_point'])) {
             $data['deals_voucher_price_point'] = $post['deals_voucher_price_point'];

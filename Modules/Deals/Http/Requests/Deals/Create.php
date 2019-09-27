@@ -23,7 +23,7 @@ class Create extends FormRequest
             'deals_second_title'        => '',
             'deals_description'         => '',
             'deals_short_description'   => '',
-            'deals_image'               => '',
+            'deals_image'               => 'dimensions:min_width=600,min_height=450',
             'deals_video'               => '',
             'id_product'                => 'nullable|integer',
             'deals_start'               => 'sometimes|nullable|date|date_format:"Y-m-d H:i:s"|after_or_equal:'.date('Y-m-d').'',
@@ -31,7 +31,8 @@ class Create extends FormRequest
             'deals_publish_start'       => 'sometimes|nullable|date|date_format:"Y-m-d H:i:s"',
             'deals_publish_end'         => 'sometimes|nullable|date|date_format:"Y-m-d H:i:s"|after_or_equal:deals_publish_start',
             'deals_voucher_duration'    => '',
-            'deals_voucher_expired'     => 'nullable|date|date_format:"Y-m-d H:i:s"|after:'.date('Y-m-d H:i:s').'',
+            'deals_voucher_start'     => 'nullable|date|date_format:"Y-m-d H:i:s"|after:deals_start',
+            'deals_voucher_expired'     => 'nullable|date|date_format:"Y-m-d H:i:s"|after:deals_voucher_start',
             'deals_voucher_price_point' => '',
             'deals_voucher_price_cash'  => '',
             'deals_total_voucher'       => '',
@@ -39,6 +40,7 @@ class Create extends FormRequest
             'deals_total_redeemed'      => '',
             'deals_total_used'          => '',
             'id_outlet'                 => 'sometimes|array',
+            'id_brand'                 => 'required|exists:brands,id_brand',
         ];
     }
 
