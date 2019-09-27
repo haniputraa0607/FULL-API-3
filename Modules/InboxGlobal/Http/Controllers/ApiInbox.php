@@ -15,6 +15,7 @@ use App\Http\Models\InboxGlobalRead;
 use App\Http\Models\News;
 
 use Modules\InboxGlobal\Http\Requests\MarkedInbox;
+use Modules\InboxGlobal\Http\Requests\DeleteUserInbox;
 
 use App\Lib\MyHelper;
 use Validator;
@@ -30,8 +31,17 @@ class ApiInbox extends Controller
 		$this->autocrm  = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
     }
 	
+    public function deleteInboxUser(DeleteUserInbox $request){
+    	$delete=UserInbox::where('id_user_inboxes',$request->json('id_inbox'))->delete();
+    	return MyHelper::checkDelete($delete);
+    }
+
     public function listInboxUser(Request $request){
-		$user = $request->user();
+    	if(is_numeric($phone=$request->json('phone'))){
+    		$user=User::where('phone',$phone)->first();
+    	}else{
+			$user = $request->user();
+    	}
 		
 		$today = date("Y-m-d H:i:s");
 		$arrInbox = [];

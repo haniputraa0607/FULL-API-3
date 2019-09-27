@@ -29,6 +29,9 @@ use Mail;
 use Excel;
 use Storage;
 
+use Modules\Brand\Entities\BrandOutlet;
+use Modules\Brand\Entities\Brand;
+
 use Modules\Outlet\Http\Requests\outlet\Upload;
 use Modules\Outlet\Http\Requests\outlet\Update;
 use Modules\Outlet\Http\Requests\outlet\UpdateStatus;
@@ -102,8 +105,19 @@ class ApiOutletController extends Controller
         if (isset($post['outlet_status'])) {
             $data['outlet_status'] = $post['outlet_status'];
         }
-        if (isset($post['deep_link'])) {
-            $data['deep_link'] = $post['deep_link'];
+        if (isset($post['outlet_brands'])) {
+            $data['outlet_brands'] = $post['outlet_brands'];
+        }
+        if (isset($post['deep_link_gojek'])) {
+            $data['deep_link_gojek'] = $post['deep_link_gojek'];
+        }
+        if (isset($post['deep_link_grab'])) {
+            $data['deep_link_grab'] = $post['deep_link_grab'];
+        }
+        if (isset($post['big_order'])) {
+            $data['big_order'] = $post['big_order'];
+        }else{
+            $data['big_order'] = 0;
         }
 
         return $data;
@@ -145,6 +159,18 @@ class ApiOutletController extends Controller
             DB::rollBack();
         }
 
+        if(is_array($brands=$post['outlet_brands']??false)){
+            if(in_array('*', $post['outlet_brands'])){
+                $brands=Brand::select('id_brand')->get()->toArray();
+                $brands=array_column($brands, 'id_brand');
+            }
+            foreach ($brands as $id_brand) {
+                BrandOutlet::create([
+                    'id_outlet'=>$save['id_outlet'],
+                    'id_brand'=>$id_brand
+                ]);
+            }
+        }
         //schedule
         if($request->json('day') && $request->json('open') && $request->json('close')){
             $days = $request->json('day');
@@ -154,7 +180,7 @@ class ApiOutletController extends Controller
             foreach($days as $key => $value){
                 $data['open'] = $opens[$key];
                 $data['close'] = $closes[$key];
-                $data['is_close'] = $is_closes[$key];
+                $data['is_close'] = $is_closed[$key];
                 $saveSchedule = OutletSchedule::updateOrCreate(['id_outlet' => $save['id_outlet'], 'day' => $value], $data);
                 if (!$saveSchedule) {
                     DB::rollBack();
@@ -172,9 +198,30 @@ class ApiOutletController extends Controller
      */
     function update(Update $request) {
         $post = $this->checkInputOutlet($request->json()->all());
+
+        DB::beginTransaction();
+        if(is_array($brands=$post['outlet_brands']??false)){
+            if(in_array('*', $post['outlet_brands'])){
+                $brands=Brand::select('id_brand')->get()->toArray();
+                $brands=array_column($brands, 'id_brand');
+            }
+            BrandOutlet::where('id_outlet',$request->json('id_outlet'))->delete();
+            foreach ($brands as $id_brand) {
+                BrandOutlet::create([
+                    'id_outlet'=>$request->json('id_outlet'),
+                    'id_brand'=>$id_brand
+                ]);
+            }
+        }
+
+        unset($post['outlet_brands']);
         $save = Outlet::where('id_outlet', $request->json('id_outlet'))->update($post);
         // return Outlet::where('id_outlet', $request->json('id_outlet'))->first();
-
+        if($save){
+            DB::commit();
+        }else{
+            DB::rollBack();
+        }
         return response()->json(MyHelper::checkUpdate($save));
     }
 
@@ -377,7 +424,7 @@ class ApiOutletController extends Controller
         if (isset($post['webview'])) {
             $outlet = Outlet::with(['today']);
         }elseif(isset($post['admin'])){
-            $outlet = Outlet::with(['user_outlets'])->select('outlets.id_outlet', 'outlets.outlet_code', 'outlets.outlet_name');
+            $outlet = Outlet::with(['user_outlets','city','today'])->select('*');
             if(isset($post['id_product'])){
                 $outlet = $outlet->with(['product_prices'=> function($q) use ($post){
                     $q->where('id_product', $post['id_product']);
@@ -387,11 +434,25 @@ class ApiOutletController extends Controller
             }
         }
         else {
-            $outlet = Outlet::with(['city', 'outlet_photos', 'outlet_schedules', 'today', 'user_outlets']);
+            $outlet = Outlet::with(['city', 'outlet_photos', 'outlet_schedules', 'today', 'user_outlets','brands']);
+        }
+
+        if(is_array($post['id_brand']??false)&&$post['id_brand']){
+            $outlet->leftJoin('brand_outlet','outlets.id_outlet','brand_outlet.id_outlet');
+            $id_brands=$post['id_brand'];
+            $outlet->where(function($query) use ($id_brands){
+                foreach ($id_brands as $id_brand) {
+                    $query->orWhere('brand_outlet.id_brand',$id_brand);
+                }
+            });
+        }
+
+        if($post['key_free']??false){
+            $outlet->where('outlets.outlet_name','LIKE','%'.$post['key_free'].'%');
         }
 
         if (isset($post['outlet_code'])) {
-            $outlet->with(['holidays', 'holidays.date_holidays'])->where('outlet_code', $post['outlet_code']);
+            $outlet->with(['holidays', 'holidays.date_holidays','brands'])->where('outlet_code', $post['outlet_code']);
         }
 
         if (isset($post['id_outlet'])) {
@@ -443,7 +504,13 @@ class ApiOutletController extends Controller
         if(isset($post['type']) && $post['type'] == 'transaction'){
             $outlet = $this->setAvailableOutlet($outlet);
         }
-
+        $outlet = array_map(function($var) use ($post){
+            $var['url']=env('VIEW_URL').'/outlet/webview/'.$var['id_outlet'];
+            if(($post['latitude']??false)&&($post['longitude']??false)){
+                $var['distance']=number_format((float)$this->distance($post['latitude'], $post['longitude'], $var['outlet_latitude'], $var['outlet_longitude'], "K"), 2, '.', '').' km';
+            }
+            return $var;
+        }, $outlet);
         if (isset($post['webview'])) {
             if(isset($outlet[0])){
                 $latitude  = $post['latitude'];
@@ -456,17 +523,30 @@ class ApiOutletController extends Controller
                 if(isset($outlet[0]['holidays'])) unset($outlet[0]['holidays']);
             }
         }
-
+        if(!isset($post['id_outlet'])&&!isset($post['outlet_code'])&&!isset($post['admin'])){
+            $outlet=array_map(function($var){
+                $ret=[
+                    'id_outlet'=>$var['id_outlet'],
+                    'outlet_name'=>$var['outlet_name'],
+                    'outlet_code'=>$var['outlet_code'],
+                    'outlet_status'=>$var['outlet_status'],
+                    'outlet_address'=>$var['outlet_address'],
+                    'url'=>$var['url'],
+                    'city'=>$var['city'],
+                    'distance'=>$var['distance']??'',
+                    'today'=>$var['today']
+                ];
+                return $ret;
+            },$outlet);
+        }
         if(isset($request['page']) && $request['page'] > 0){
             $page = $request['page'];
             $next_page = $page + 1;
 
             $dataOutlet = $outlet;
             $outlet = [];
-
-            $pagingOutlet = $this->pagingOutlet($dataOutlet, $page);
+            $pagingOutlet=$this->pagingOutlet($dataOutlet, $page);
             if (isset($pagingOutlet['data']) && count($pagingOutlet['data']) > 0) {
-                $outlet['status'] = 'success';
                 $outlet['current_page']  = $page;
                 $outlet['data']          = $pagingOutlet['data'];
                 $outlet['total']         = count($dataOutlet);
@@ -476,9 +556,7 @@ class ApiOutletController extends Controller
                     $outlet['next_page_url'] = ENV('APP_API_URL').'api/outlet/list?page='.$next_page;
                 }
             } else {
-                $outlet['status'] = 'fail';
-                $outlet['messages'] = ['empty'];
-
+                $outlet = [];
             }
         }
 

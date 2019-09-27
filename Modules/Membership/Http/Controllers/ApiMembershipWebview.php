@@ -55,6 +55,7 @@ class ApiMembershipWebview extends Controller
 		$allMembership = Membership::orderBy('min_total_value','asc')->orderBy('min_total_count', 'asc')->orderBy('min_total_balance', 'asc')->get()->toArray();
 
 		$nextMembershipName = "";
+		$nextMembershipImage = "";
 		$nextTrx = 0;
 		$nextTrxType = '';
 		if(count($allMembership) > 0){
@@ -65,7 +66,8 @@ class ApiMembershipWebview extends Controller
 							if($nextMembershipName == ""){
 								$nextTrx = $dataMembership['min_total_count'];
 								$nextTrxType = 'count';
-								$nextMembershipName = $dataMembership['membership_name']; 
+								$nextMembershipName = $dataMembership['membership_name'];
+								$nextMembershipImage = $dataMembership['membership_image']; 
 							}
 						}
 					}
@@ -75,6 +77,7 @@ class ApiMembershipWebview extends Controller
 								$nextTrx = $dataMembership['min_total_value'];
 								$nextTrxType = 'value';
 								$nextMembershipName = $dataMembership['membership_name']; 
+								$nextMembershipImage = $dataMembership['membership_image']; 
 							}
 						}
 					}
@@ -84,6 +87,7 @@ class ApiMembershipWebview extends Controller
 								$nextTrx = $dataMembership['min_total_balance'];
 								$nextTrxType = 'balance';
 								$nextMembershipName = $dataMembership['membership_name']; 
+								$nextMembershipImage = $dataMembership['membership_image']; 
 							}
 						}
 					}
@@ -93,6 +97,7 @@ class ApiMembershipWebview extends Controller
 			}else{
 				$result['user_membership']['user'] = User::find($post['id_user']);
 				$nextMembershipName = $allMembership[0]['membership_name'];
+				$nextMembershipImage = $allMembership[0]['membership_image']; 
 				if($allMembership[0]['membership_type'] == 'count'){
 					$nextTrx = $allMembership[0]['min_total_count'];
 					$nextTrxType = 'count';
@@ -110,6 +115,7 @@ class ApiMembershipWebview extends Controller
 		}
 
 		$result['next_membership_name'] = $nextMembershipName;
+		$result['next_membership_image'] = $nextMembershipImage;
 		if(isset($result['user_membership'])){
 			if($nextTrxType == 'count'){
 				$count_transaction = Transaction::where('id_user', $post['id_user'])->where('transaction_payment_status', 'Completed')->count('transaction_subtotal');
