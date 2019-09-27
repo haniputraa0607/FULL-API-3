@@ -72,6 +72,7 @@ Route::group(['prefix' => 'api', 'middleware' => 'log_request'], function(){
 	
 	Route::group(['prefix' => 'home', 'namespace' => 'Modules\Users\Http\Controllers'], function()
 	{
+		Route::any('splash','ApiHome@splash');
 	    Route::any('notloggedin', 'ApiHome@homeNotLoggedIn');
 	});
 
