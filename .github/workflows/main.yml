@@ -5,9 +5,11 @@ on:
     - staging
 jobs:
   laravel-tests:
-    runs-on: ubuntu-16.04
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v1
+    - name: update repo
+      run: sudo apt-get update
     - name: Copy ENV Laravel Configuration for CI
       run: php -r "file_exists('.env') || copy('.env.staging', '.env');"
     - name: Install Dependencies (PHP vendors)
