@@ -21,9 +21,15 @@ class ApiBrandController extends Controller
      * Display a listing of the resource.
      * @return Response
      */
-    public function index()
+    public function index(Request $request)
     {
-        return view('brand::index');
+        $post = $request->json()->all();
+
+        $brand = Brand::orderByRaw('CASE WHEN order_brand = 0 THEN 1 ELSE 0 END')->orderBy('order_brand');
+
+        $brand = $brand->get()->toArray();
+
+        return response()->json(MyHelper::checkGet($brand));
     }
 
     /**
@@ -120,8 +126,18 @@ class ApiBrandController extends Controller
      * Remove the specified resource from storage.
      * @return Response
      */
-    public function destroy()
-    { }
+    public function destroy(Request $request)
+    {
+        try {
+            $delete = Brand::where('id_brand', $request->json('id_brand'))->delete();
+            return response()->json(MyHelper::checkDelete($delete));
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'fail',
+                'messages' => ['outlet has been used.']
+            ]);
+        }
+    }
 
     public function listBrand()
     {
