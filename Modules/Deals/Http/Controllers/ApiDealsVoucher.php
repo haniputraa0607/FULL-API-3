@@ -240,6 +240,7 @@ class ApiDealsVoucher extends Controller
                             ->with(['dealVoucher', 'dealVoucher.deal', 'dealVoucher.deal.outlets.city', 'dealVoucher.deal.outlets.city']);
         $voucher->select('deals_users.id_deals','voucher_expired_at','deals_users.id_deals_voucher','id_deals_user','id_outlet','voucher_hash');
         if (isset($post['id_deals_user'])) {
+            $voucher->addselect('deals_users.redeemed_at', 'deals_users.used_at');
             $voucher->where('id_deals_user', $post['id_deals_user']);
         }
 
