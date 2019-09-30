@@ -23,7 +23,7 @@ class Create extends FormRequest
             'deals_second_title'        => '',
             'deals_description'         => '',
             'deals_short_description'   => '',
-            'deals_image'               => 'dimensions:min_width=600,min_height=450',
+            'deals_image'               => '',
             'deals_video'               => '',
             'id_product'                => 'nullable|integer',
             'deals_start'               => 'sometimes|nullable|date|date_format:"Y-m-d H:i:s"|after_or_equal:'.date('Y-m-d').'',
