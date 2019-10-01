@@ -39,7 +39,7 @@ class ApiHome extends Controller
 		$this->point  = "Modules\Deals\Http\Controllers\ApiDealsClaim";
 		$this->autocrm  = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
         $this->setting_fraud = "Modules\SettingFraud\Http\Controllers\ApiSettingFraud";
-		$this->endPoint  = env('AWS_URL');
+		$this->endPoint  = env('S3_URL_API');
     }
 
 	public function homeNotLoggedIn(Request $request) {
@@ -83,7 +83,7 @@ class ApiHome extends Controller
 
         foreach ($banners as $key => $value) {
 
-            $item['image_url']  = env('AWS_URL').$value->image;
+            $item['image_url']  = env('S3_URL_API').$value->image;
             $item['id_news']    = $value->id_news;
             $item['news_title'] = "";
             $item['url']        = $value->url;
@@ -245,7 +245,7 @@ class ApiHome extends Controller
                     $greetingss2     = app($this->autocrm)->TextReplace($greetings[$greetingKey]['greeting2'], $user['phone']);
                     if (!empty($background)) {
 						$backgroundKey = array_rand($background, 1);
-						$background    = env('AWS_URL').$background[$backgroundKey]['picture'];
+						$background    = env('S3_URL_API').$background[$backgroundKey]['picture'];
 					}
                 }
             }
@@ -289,7 +289,7 @@ class ApiHome extends Controller
 
                 $membership['webview_detail_membership'] = env('VIEW_URL').'/membership/web/view?data='.$base;
 				if(isset($membership['membership_image']))
-					$membership['membership_image'] = env('AWS_URL').$membership['membership_image'];
+					$membership['membership_image'] = env('S3_URL_API').$membership['membership_image'];
 			} else {
 				$membership = null;
 			}
@@ -464,7 +464,7 @@ class ApiHome extends Controller
                 }
                 else {
                     $backgroundKey = array_rand($background, 1);
-                    $background    = env('AWS_URL').$background[$backgroundKey]['picture'];
+                    $background    = env('S3_URL_API').$background[$backgroundKey]['picture'];
                 }
             }
 
