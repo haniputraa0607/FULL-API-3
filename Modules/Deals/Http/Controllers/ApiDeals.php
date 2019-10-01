@@ -533,21 +533,21 @@ class ApiDeals extends Controller
                     unset($deals[$key]);
                 }else{
                     // kalkulasi point
-                    $calc = $value['deals_total_voucher'] - $value['deals_total_claimed'];
-
-                    if ($value['deals_voucher_type'] == "Unlimited") {
-                        $calc = '*';
-                    }
-
-                    if($calc&&is_numeric($calc)){
-                        $deals[$key]['percent_voucher'] = $calc*100/$value['deals_total_voucher'];
-                    }else{
-                        $deals[$key]['percent_voucher'] = 100;
-                    }
-                    $deals[$key]['available_voucher'] = (string) $calc;
                 }
             }
 
+            $calc = $value['deals_total_voucher'] - $value['deals_total_claimed'];
+
+            if ($value['deals_voucher_type'] == "Unlimited") {
+                $calc = '*';
+            }
+
+            if($calc&&is_numeric($calc)){
+                $deals[$key]['percent_voucher'] = $calc*100/$value['deals_total_voucher'];
+            }else{
+                $deals[$key]['percent_voucher'] = 100;
+            }
+            $deals[$key]['available_voucher'] = (string) $calc;
             // print_r($deals[$key]['available_voucher']);
         }
 
