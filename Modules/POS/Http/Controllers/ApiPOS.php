@@ -480,6 +480,8 @@ class ApiPOS extends Controller
             return response()->json($api);
         }
 
+        $getBrand = Brand::pluck('code_brand')->toArray();
+        $getBrandList = Brand::select('id_brand', 'code_brand')->get()->toArray();
         $outlet = Outlet::where('outlet_code', strtoupper($post['store_code']))->first();
         if ($outlet) {
             $countInsert = 0;
@@ -490,33 +492,84 @@ class ApiPOS extends Controller
             $failedProduct = [];
 
             foreach ($post['menu'] as $key => $menu) {
-                dd($menu['brand_code']);
+                if (!isset($menu['brand_code'])) {
+                    $failedProduct[] = 'fail to sync product ' . $menu['name'] . ', because brand_code not set';
+                    continue;
+                }
+                if (!isset($menu['plu_id'])) {
+                    $failedProduct[] = 'fail to sync product ' . $menu['name'] . ', because plu_id not set';
+                    continue;
+                }
+                if (!isset($menu['name'])) {
+                    $failedProduct[] = 'fail to sync product ' . $menu['name'] . ', because name not set';
+                    continue;
+                }
+                if (!isset($menu['category'])) {
+                    $failedProduct[] = 'fail to sync product ' . $menu['name'] . ', because category not set';
+                    continue;
+                }
+                if (!isset($menu['price'])) {
+                    $failedProduct[] = 'fail to sync product ' . $menu['name'] . ', because price not set';
+                    continue;
+                }
+                if (!isset($menu['price_base'])) {
+                    $failedProduct[] = 'fail to sync product ' . $menu['name'] . ', because price_base not set';
+                    continue;
+                }
+                if (!isset($menu['price_tax'])) {
+                    $failedProduct[] = 'fail to sync product ' . $menu['name'] . ', because price_tax not set';
+                    continue;
+                }
+                if (!isset($menu['status'])) {
+                    $failedProduct[] = 'fail to sync product ' . $menu['name'] . ', because status not set';
+                    continue;
+                }
+
+                $diffBrand = array_diff($menu['brand_code'], $getBrand);
+                if (!empty($diffBrand)) {
+                    $failedProduct[] = 'fail to sync product ' . $menu['name'] . ', because code brand ' . implode(', ', $diffBrand) . ' not found';
+                    continue;
+                }
                 if (isset($menu['plu_id']) && isset($menu['name'])) {
                     DB::beginTransaction();
                     $product = Product::where('product_code', $menu['plu_id'])->first();
 
-                    // return response()->json($menu);
                     // update product
                     if ($product) {
                         // cek allow sync, jika 0 product tidak di update
                         if ($product->product_allow_sync == '1') {
-
-                            foreach ($menu['brand_code'] as $valueBrand) {
-                                $brand = Brand::where('code_brand', $valueBrand)->first();
-                                if (!$brand) {
-                                    DB::rollBack();
-                                    $failedProduct[] = ['product_code' => $menu['plu_id'], 'product_name' => $menu['name']];
-                                }
+                            $cekBrandProduct = BrandProduct::join('brands', 'brands.id_brand', 'brand_product.id_brand')->where('id_product', $product->id_product)->pluck('code_brand')->toArray();
+                            // delete diff brand
+                            $deleteDiffBrand = array_diff($cekBrandProduct, $menu['brand_code']);
+                            if (!empty($deleteDiffBrand)) {
                                 try {
-                                    BrandProduct::create(
-                                        [
-                                            'id_product' => $product->id_product,
-                                            'id_brand'  => $brand->id_brand
-                                        ]
-                                    );
+                                    BrandProduct::join('brands', 'brands.id_brand', 'brand_product.id_brand')->where('id_product', $product->id_product)->whereIn('brand_product.id_brand', $deleteDiffBrand)->delete();
                                 } catch (\Exception $e) {
-                                    DB::rollBack();
-                                    LogBackendError::logExceptionMessage("ApiPOS/syncMenu=>" . $e->getMessage(), $e);
+                                    DB::rollback();
+                                    LogBackendError::logExceptionMessage("ApiPOS/syncProduct=>" . $e->getMessage(), $e);
+                                    $failedProduct[] = 'fail to sync, product ' . $menu['name'];
+                                    continue;
+                                }
+                            }
+                            $createDiffBrand = array_diff($menu['brand_code'], $cekBrandProduct);
+                            if (!empty($createDiffBrand)) {
+                                try {
+                                    $brandProduct = [];
+                                    foreach ($createDiffBrand as $menuBrand) {
+                                        $getIdBrand = $getBrandList[array_search($menuBrand, $getBrand)]['id_brand'];
+                                        $brandProduct[] = [
+                                            'id_product' => $product->id_product,
+                                            'id_brand' => $getIdBrand,
+                                            'created_at' => date('Y-m-d H:i:s'),
+                                            'updated_at' => date('Y-m-d H:i:s'),
+                                        ];
+                                    }
+                                    BrandProduct::insert($brandProduct);
+                                } catch (Exception $e) {
+                                    DB::rollback();
+                                    LogBackendError::logExceptionMessage("ApiPOS/syncProduct=>" . $e->getMessage(), $e);
+                                    $failedProduct[] = 'fail to sync, product ' . $menu['name'];
+                                    continue;
                                 }
                             }
                             // cek name pos, jika beda product tidak di update
@@ -564,44 +617,44 @@ class ApiPOS extends Controller
                                 }
 
                                 //upload photo
-                                $imageUpload = [];
-                                if (isset($menu['photo'])) {
-                                    foreach ($menu['photo'] as $photo) {
-                                        $image = file_get_contents($photo['url']);
-                                        $img = base64_encode($image);
-                                        if (!file_exists('img/product/item/')) {
-                                            mkdir('img/product/item/', 0777, true);
-                                        }
+                                // $imageUpload = [];
+                                // if (isset($menu['photo'])) {
+                                //     foreach ($menu['photo'] as $photo) {
+                                //         $image = file_get_contents($photo['url']);
+                                //         $img = base64_encode($image);
+                                //         if (!file_exists('img/product/item/')) {
+                                //             mkdir('img/product/item/', 0777, true);
+                                //         }
 
-                                        $upload = MyHelper::uploadPhotoStrict($img, 'img/product/item/', 300, 300);
+                                //         $upload = MyHelper::uploadPhotoStrict($img, 'img/product/item/', 300, 300);
 
-                                        if (isset($upload['status']) && $upload['status'] == "success") {
-                                            $orderPhoto = ProductPhoto::where('id_product', $product->id_product)->orderBy('product_photo_order', 'desc')->first();
-                                            if ($orderPhoto) {
-                                                $orderPhoto = $orderPhoto->product_photo_order + 1;
-                                            } else {
-                                                $orderPhoto = 1;
-                                            }
-                                            $dataPhoto['id_product'] = $product->id_product;
-                                            $dataPhoto['product_photo'] = $upload['path'];
-                                            $dataPhoto['product_photo_order'] = $orderPhoto;
+                                //         if (isset($upload['status']) && $upload['status'] == "success") {
+                                //             $orderPhoto = ProductPhoto::where('id_product', $product->id_product)->orderBy('product_photo_order', 'desc')->first();
+                                //             if ($orderPhoto) {
+                                //                 $orderPhoto = $orderPhoto->product_photo_order + 1;
+                                //             } else {
+                                //                 $orderPhoto = 1;
+                                //             }
+                                //             $dataPhoto['id_product'] = $product->id_product;
+                                //             $dataPhoto['product_photo'] = $upload['path'];
+                                //             $dataPhoto['product_photo_order'] = $orderPhoto;
 
-                                            try {
-                                                $photo = ProductPhoto::create($dataPhoto);
-                                            } catch (\Exception $e) {
-                                                DB::rollBack();
-                                                LogBackendError::logExceptionMessage("ApiPOS/syncMenu=>" . $e->getMessage(), $e);
-                                                $failedProduct[] = ['product_code' => $menu['plu_id'], 'product_name' => $menu['name']];
-                                            }
+                                //             try {
+                                //                 $photo = ProductPhoto::create($dataPhoto);
+                                //             } catch (\Exception $e) {
+                                //                 DB::rollBack();
+                                //                 LogBackendError::logExceptionMessage("ApiPOS/syncMenu=>" . $e->getMessage(), $e);
+                                //                 $failedProduct[] = ['product_code' => $menu['plu_id'], 'product_name' => $menu['name']];
+                                //             }
 
-                                            //add in array photo
-                                            $imageUpload[] = $photo['product_photo'];
-                                        } else {
-                                            DB::rollBack();
-                                            $failedProduct[] = ['product_code' => $menu['plu_id'], 'product_name' => $menu['name']];
-                                        }
-                                    }
-                                }
+                                //             //add in array photo
+                                //             $imageUpload[] = $photo['product_photo'];
+                                //         } else {
+                                //             DB::rollBack();
+                                //             $failedProduct[] = ['product_code' => $menu['plu_id'], 'product_name' => $menu['name']];
+                                //         }
+                                //     }
+                                // }
 
                                 $countUpdate++;
 
@@ -616,15 +669,14 @@ class ApiPOS extends Controller
                                 $updateProd['new_price'] = (int) round($menu['price']);
                                 $updateProd['old_updated_at'] = $oldUpdatedAt;
                                 $updateProd['new_updated_at'] = $newUpdatedAt;
-                                if (count($imageUpload) > 0) {
-                                    $updateProd['new_photo'] = $imageUpload;
-                                }
+                                // if (count($imageUpload) > 0) {
+                                //     $updateProd['new_photo'] = $imageUpload;
+                                // }
 
                                 $updatedProduct[] = $updateProd;
                             } else {
                                 // Add product to rejected product
                                 $productPrice = ProductPrice::where('id_outlet', $outlet->id_outlet)->where('id_product', $product->id_product)->first();
-
                                 $dataBackend['plu_id'] = $product->product_code;
                                 $dataBackend['name'] = $product->product_name_pos;
                                 if (empty($productPrice)) {
@@ -644,24 +696,6 @@ class ApiPOS extends Controller
                     // insert product
                     else {
                         $create = Product::create(['product_code' => $menu['plu_id'], 'product_name_pos' => $menu['name'], 'product_name' => $menu['name']]);
-                        foreach ($menu['brand_code'] as $valueBrand) {
-                            $brand = Brand::where('code_brand', $valueBrand)->first();
-                            if (!$brand) {
-                                DB::rollBack();
-                                $failedProduct[] = ['product_code' => $menu['plu_id'], 'product_name' => $menu['name']];
-                            }
-                            try {
-                                BrandProduct::create(
-                                    [
-                                        'id_product' => $create->id_product,
-                                        'id_brand'  => $brand->id_brand
-                                    ]
-                                );
-                            } catch (\Exception $e) {
-                                DB::rollBack();
-                                LogBackendError::logExceptionMessage("ApiPOS/syncMenu=>" . $e->getMessage(), $e);
-                            }
-                        }
                         if ($create) {
                             // update price
                             $dataProductPrice['product_price'] = (int) round($menu['price']);
@@ -671,7 +705,7 @@ class ApiPOS extends Controller
 
                             try {
                                 $updateProductPrice = ProductPrice::updateOrCreate([
-                                    'id_product' => $create->id_product,
+                                    'id_product' => $create['id_product'],
                                     'id_outlet'  => $outlet->id_outlet
                                 ], $dataProductPrice);
                             } catch (\Exception $e) {
@@ -679,39 +713,56 @@ class ApiPOS extends Controller
                                 LogBackendError::logExceptionMessage("ApiPOS/syncMenu=>" . $e->getMessage(), $e);
                                 $failedProduct[] = ['product_code' => $menu['plu_id'], 'product_name' => $menu['name']];
                             }
-
-                            $imageUpload = [];
-                            if (isset($menu['photo'])) {
-                                foreach ($menu['photo'] as $photo) {
-                                    $image = file_get_contents($photo['url']);
-                                    $img = base64_encode($image);
-                                    if (!file_exists('img/product/item/')) {
-                                        mkdir('img/product/item/', 0777, true);
-                                    }
-
-                                    $upload = MyHelper::uploadPhotoStrict($img, 'img/product/item/', 300, 300);
-
-                                    if (isset($upload['status']) && $upload['status'] == "success") {
-                                        $dataPhoto['id_product'] = $product->id_product;
-                                        $dataPhoto['product_photo'] = $upload['path'];
-                                        $dataPhoto['product_photo_order'] = 1;
-
-                                        try {
-                                            $photo = ProductPhoto::create($dataPhoto);
-                                        } catch (\Exception $e) {
-                                            DB::rollBack();
-                                            LogBackendError::logExceptionMessage("ApiPOS/syncMenu=>" . $e->getMessage(), $e);
-                                            $failedProduct[] = ['product_code' => $menu['plu_id'], 'product_name' => $menu['name']];
-                                        }
-
-                                        //add in array photo
-                                        $imageUpload[] = $photo['product_photo'];
-                                    } else {
-                                        DB::rollBack();
-                                        $failedProduct[] = ['product_code' => $menu['plu_id'], 'product_name' => $menu['name']];
-                                    }
+                            try {
+                                $brandProduct = [];
+                                foreach ($menu['brand_code'] as $valueBrand) {
+                                    $getIdBrand = $getBrandList[array_search($valueBrand, $getBrand)]['id_brand'];
+                                    $brandProduct[] = [
+                                        'id_product' => $create['id_product'],
+                                        'id_brand' => $getIdBrand,
+                                        'created_at' => date('Y-m-d H:i:s'),
+                                        'updated_at' => date('Y-m-d H:i:s'),
+                                    ];
                                 }
+                                BrandProduct::insert($brandProduct);
+                            } catch (Exception $e) {
+                                DB::rollback();
+                                LogBackendError::logExceptionMessage("ApiPOS/syncProduct=>" . $e->getMessage(), $e);
+                                $failedProduct[] = 'fail to sync, brand ' . $menu['name'];
+                                continue;
                             }
+                            // $imageUpload = [];
+                            // if (isset($menu['photo'])) {
+                            //     foreach ($menu['photo'] as $photo) {
+                            //         $image = file_get_contents($photo['url']);
+                            //         $img = base64_encode($image);
+                            //         if (!file_exists('img/product/item/')) {
+                            //             mkdir('img/product/item/', 0777, true);
+                            //         }
+
+                            //         $upload = MyHelper::uploadPhotoStrict($img, 'img/product/item/', 300, 300);
+
+                            //         if (isset($upload['status']) && $upload['status'] == "success") {
+                            //             $dataPhoto['id_product'] = $product->id_product;
+                            //             $dataPhoto['product_photo'] = $upload['path'];
+                            //             $dataPhoto['product_photo_order'] = 1;
+
+                            //             try {
+                            //                 $photo = ProductPhoto::create($dataPhoto);
+                            //             } catch (\Exception $e) {
+                            //                 DB::rollBack();
+                            //                 LogBackendError::logExceptionMessage("ApiPOS/syncMenu=>" . $e->getMessage(), $e);
+                            //                 $failedProduct[] = ['product_code' => $menu['plu_id'], 'product_name' => $menu['name']];
+                            //             }
+
+                            //             //add in array photo
+                            //             $imageUpload[] = $photo['product_photo'];
+                            //         } else {
+                            //             DB::rollBack();
+                            //             $failedProduct[] = ['product_code' => $menu['plu_id'], 'product_name' => $menu['name']];
+                            //         }
+                            //     }
+                            // }
 
                             $countInsert++;
 
@@ -720,9 +771,9 @@ class ApiPOS extends Controller
                             $insertProd['plu_id'] = $create['product_code'];
                             $insertProd['product_name'] = $create['product_name'];
                             $insertProd['price'] = (int) round($menu['price']);
-                            if (count($imageUpload) > 0) {
-                                $updateProd['new_photo'] = $imageUpload;
-                            }
+                            // if (count($imageUpload) > 0) {
+                            //     $updateProd['new_photo'] = $imageUpload;
+                            // }
 
                             $insertedProduct[] = $insertProd;
                         }
@@ -743,6 +794,7 @@ class ApiPOS extends Controller
             $hasil['new_product']['list_product'] = $insertedProduct;
             $hasil['updated_product']['total'] = (string) $countUpdate;
             $hasil['updated_product']['list_product'] = $updatedProduct;
+            $hasil['rejected_product']['list_product'] = $rejectedProduct;
             $hasil['failed_product']['list_product'] = $failedProduct;
 
             return response()->json([
