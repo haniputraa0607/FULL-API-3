@@ -283,7 +283,7 @@ class ApiProductController extends Controller
             foreach ($product as $key => $value) {
                 unset($product[$key]['product_price_base']);
                 unset($product[$key]['product_price_tax']);
-                $product[$key]['photos'] = ProductPhoto::select('*', DB::raw('if(product_photo is not null, (select concat("'.env('AWS_URL').'", product_photo)), "'.env('AWS_URL').'img/default.jpg") as url_product_photo'))->where('id_product', $value['id_product'])->orderBy('product_photo_order', 'ASC')->get()->toArray();
+                $product[$key]['photos'] = ProductPhoto::select('*', DB::raw('if(product_photo is not null, (select concat("'.env('S3_URL_API').'", product_photo)), "'.env('S3_URL_API').'img/default.jpg") as url_product_photo'))->where('id_product', $value['id_product'])->orderBy('product_photo_order', 'ASC')->get()->toArray();
             }
         }
 

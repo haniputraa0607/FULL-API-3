@@ -26,7 +26,7 @@ class EnquiriesFile extends Model
 
 	public function getUrlEnquiryPhotoAttribute() {
 	    if (!empty($this->enquiry_file)) {
-	        return env('AWS_URL').$this->enquiry_file;
+	        return env('S3_URL_API').$this->enquiry_file;
 	    }
 	}
 }

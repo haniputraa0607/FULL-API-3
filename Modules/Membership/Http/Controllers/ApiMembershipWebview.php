@@ -91,7 +91,7 @@ class ApiMembershipWebview extends Controller
 							}
 						}
 					}
-					$allMembership[$index]['membership_image'] = env('AWS_URL').$allMembership[$index]['membership_image']; 
+					$allMembership[$index]['membership_image'] = env('S3_URL_API').$allMembership[$index]['membership_image']; 
 					$allMembership[$index]['benefit_cashback_multiplier'] = $allMembership[$index]['benefit_cashback_multiplier'] * $settingCashback->value;
 				}
 			}else{
@@ -108,7 +108,7 @@ class ApiMembershipWebview extends Controller
 				}
 
 				foreach($allMembership as $j => $dataMember){
-					$allMembership[$j]['membership_image'] = env('AWS_URL').$allMembership[$j]['membership_image']; 
+					$allMembership[$j]['membership_image'] = env('S3_URL_API').$allMembership[$j]['membership_image']; 
 					$allMembership[$j]['benefit_cashback_multiplier'] = $allMembership[$j]['benefit_cashback_multiplier'] * $settingCashback->value;
 				}
 			}

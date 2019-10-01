@@ -58,7 +58,7 @@ class ApiSetting extends Controller
     
     function __construct() {
         date_default_timezone_set('Asia/Jakarta');
-        $this->endPoint = env('AWS_URL');
+        $this->endPoint = env('S3_URL_API');
     }
     public function emailUpdate(Request $request) {
 		$data = $request->json()->all();
@@ -1134,7 +1134,7 @@ class ApiSetting extends Controller
                     $setting['version_text_alert'] = str_replace('%version_app%', $setting['version_android'], $setting['version_text_alert']);
 					if($setting['version_rule_android'] != 'allow'){
 						return response()->json(['status' => 'fail', 
-                    							'image' => env('AWS_URL').$setting['version_image'],
+                    							'image' => env('S3_URL_API').$setting['version_image'],
 												'text' => $setting['version_text_alert'],
 												'button_text' => $setting['version_text_button'],
 												'button_url' => $setting['version_playstore']]);
@@ -1151,7 +1151,7 @@ class ApiSetting extends Controller
 					if($setting['version_rule_ios'] != 'allow'){
                         $setting['version_text_alert'] = str_replace('%version_app%', $setting['version_ios'], $setting['version_text_alert']);
 						return response()->json(['status' => 'fail', 
-                        						'image' => env('AWS_URL').$setting['version_image'],
+                        						'image' => env('S3_URL_API').$setting['version_image'],
 												'text' => $setting['version_text_alert'],
 												'button_text' => $setting['version_text_button'],
 												'button_url' => $setting['version_appstore']]);
@@ -1168,7 +1168,7 @@ class ApiSetting extends Controller
 					if($setting['version_rule_outletapp'] != 'allow'){
                         $setting['version_text_alert'] = str_replace('%version_app%', $setting['version_outletapp'], $setting['version_text_alert']);
 						return response()->json(['status' => 'fail', 
-                    							'image' => env('AWS_URL').$setting['version_image'],
+                    							'image' => env('S3_URL_API').$setting['version_image'],
 												'text' => $setting['version_text_alert'],
 												'button_text' => $setting['version_text_button'],
 												'button_url' => $setting['version_outletstore']]);
