@@ -729,7 +729,7 @@ class ApiHome extends Controller
     public function featuredDeals(Request $request){
         $now=date('Y-m-d H-i-s');
         $deals=FeaturedDeal::select('id_featured_deals','id_deals')->with(['deals'=>function($query){
-            $query->select('deals_title','deals_image','deals_total_voucher','deals_total_claimed','deals_publish_end','deals_start','deals_end','id_deals','deals_voucher_price_point','deals_voucher_price_cash');
+            $query->select('deals_title','deals_image','deals_total_voucher','deals_total_claimed','deals_publish_end','deals_start','deals_end','id_deals','deals_voucher_price_point','deals_voucher_price_cash','deals_voucher_type');
         }])
             ->whereHas('deals',function($query){
                 $query->where('deals_publish_end','>=',DB::raw('CURRENT_TIMESTAMP()'));
@@ -741,8 +741,12 @@ class ApiHome extends Controller
             ->get();
         if($deals){
             $deals=array_map(function($value){
-                $calc = $value['deals']['deals_total_voucher'] - $value['deals']['deals_total_claimed'];
-                $value['deals']['available_voucher'] = $calc;
+                if ($value['deals']['deals_voucher_type'] == "Unlimited") {
+                    $calc = '*';
+                }else{
+                    $calc = $value['deals']['deals_total_voucher'] - $value['deals']['deals_total_claimed'];
+                }
+                $value['deals']['available_voucher'] = (string) $calc;
                 if($calc&&is_numeric($calc)){
                     $value['deals']['percent_voucher'] = $calc*100/$value['deals']['deals_total_voucher'];
                 }else{
