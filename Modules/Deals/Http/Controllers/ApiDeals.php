@@ -205,7 +205,9 @@ class ApiDeals extends Controller
 
     /* LIST */
     function listDeal(ListDeal $request) {
-
+        if($request->json('forSelect2')){
+            return MyHelper::checkGet(Deal::select('id_deals','deals_title')->where('deals_type','Deals')->whereDoesntHave('featured_deals')->get());
+        }
         // return $request->json()->all();
         $deals = (new Deal)->newQuery();
 
