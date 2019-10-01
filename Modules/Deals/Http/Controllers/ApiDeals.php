@@ -236,7 +236,9 @@ class ApiDeals extends Controller
             }
             // return($deals->toSql());
         }
-
+        if ($request->json('rule')){
+             $this->filterList($deals,$request->json('rule'),$request->json('operator')??'and');
+        }
         if ($request->json('publish')) {
             $deals->where('deals_publish_end', '>=', date('Y-m-d H:i:s'));
         }
@@ -429,12 +431,56 @@ class ApiDeals extends Controller
             }
             return response()->json(MyHelper::checkGet($result));
         }else{
-             return response()->json(MyHelper::checkGet($deals));
+            return response()->json(MyHelper::checkGet($deals));
         }
 
 
     }
-
+    public function filterList($query,$rules,$operator='and'){
+        $newRule=[];
+        foreach ($rules as $var) {
+            $rule=[$var['operator']??'=',$var['parameter']];
+            if($rule[0]=='like'){
+                $rule[1]='%'.$rule[1].'%';
+            }
+            $newRule[$var['subject']][]=$rule;
+        }
+        $where=$operator=='and'?'where':'orWhere';
+        $subjects=['deals_title','deals_title','deals_second_title','deals_promo_id_type','deals_promo_id','id_brand','deals_total_voucher','deals_start', 'deals_end', 'deals_publish_start', 'deals_publish_end', 'deals_voucher_start', 'deals_voucher_expired', 'deals_voucher_duration', 'user_limit', 'total_voucher_subscription', 'deals_total_claimed', 'deals_total_redeemed', 'deals_total_used', 'created_at', 'updated_at'];
+        foreach ($subjects as $subject) {
+            if($rules2=$newRule[$subject]??false){
+                foreach ($rules2 as $rule) {
+                    $query->$where($subject,$rule[0],$rule[1]);
+                }
+            }
+        }
+        if($rules2=$newRule['voucher_code']??false){
+            foreach ($rules2 as $rule) {
+                $query->{$where.'Has'}('deals_vouchers',function($query) use ($rule){
+                    $query->where('deals_vouchers.voucher_code',$rule[0],$rule[1]);
+                });
+            }
+        }
+        if($rules2=$newRule['used_by']??false){
+            foreach ($rules2 as $rule) {
+                $query->{$where.'Has'}('deals_vouchers.deals_voucher_user',function($query) use ($rule){
+                    $query->where('phone',$rule[0],$rule[1]);
+                });
+            }
+        }
+        if($rules2=$newRule['deals_total_available']??false){
+            foreach ($rules2 as $rule) {
+                $query->$where(DB::raw('(deals.deals_total_voucher - deals.deals_total_claimed)'),$rule[0],$rule[1]);
+            }
+        }
+        if($rules2=$newRule['id_outlet']??false){
+            foreach ($rules2 as $rule) {
+                $query->{$where.'Has'}('outlets',function($query) use ($rule){
+                    $query->where('outlets.id_outlet',$rule[0],$rule[1]);
+                });
+            }
+        }
+    }
     /* UNLIMITED */
     function unlimited ($deals)
     {
