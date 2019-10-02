@@ -54,7 +54,7 @@ class ApiInbox extends Controller
 								->where('inbox_global_end', '>=', $today)
 								->get()
 								->toArray();
-		
+
 		foreach($globals as $ind => $global){
 			$cons = array();
 			$cons['subject'] = 'phone';
@@ -294,7 +294,7 @@ class ApiInbox extends Controller
 			array_push($global['inbox_global_rule_parents'], ['rule' => 'and', 'rule_next' => 'and', 'rules' => [$cons]]);
 			$users = app($this->user)->UserFilter($global['inbox_global_rule_parents']);
 			
-			if($users){
+			if(($users['status']??false)=='success'){
 				$read = InboxGlobalRead::where('id_inbox_global', $global['id_inbox_global'])->where('id_user', $id_user)->first();
 				if(empty($read)){
 					$countUnread += 1;
