@@ -241,7 +241,7 @@ class ApiCustomPageController extends Controller
             } catch (\Exception $e) {
                 $result = [
                     'status'  => 'fail',
-                    'message' => 'Update Custom Page Failed'
+                    'messages' => 'Update Custom Page Failed'
                 ];
                 DB::rollBack();
                 return response()->json($result);
@@ -277,7 +277,7 @@ class ApiCustomPageController extends Controller
             } catch (\Exception $e) {
                 $result = [
                     'status'  => 'fail',
-                    'message' => 'Create Custom Page Failed'
+                    'messages' => 'Create Custom Page Failed'
                 ];
                 DB::rollBack();
                 return response()->json($result);
