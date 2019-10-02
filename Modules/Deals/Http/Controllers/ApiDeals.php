@@ -205,7 +205,9 @@ class ApiDeals extends Controller
 
     /* LIST */
     function listDeal(ListDeal $request) {
-
+        if($request->json('forSelect2')){
+            return MyHelper::checkGet(Deal::select('id_deals','deals_title')->where('deals_type','Deals')->whereDoesntHave('featured_deals')->get());
+        }
         // return $request->json()->all();
         $deals = (new Deal)->newQuery();
 
@@ -230,7 +232,7 @@ class ApiDeals extends Controller
                 // 'deals_vouchers.deals_user.user'
             ])->where('id_deals', $request->json('id_deals'))->with(['outlets', 'outlets.city', 'product','brand']);
         }else{
-            $deals->select('id_deals','deals_title','deals_second_title','deals_voucher_price_point','deals_voucher_price_cash','deals_total_voucher','deals_total_claimed','deals_voucher_type','deals_image','deals_start','deals_end');
+            $deals->select('id_deals','deals_title','deals_second_title','deals_voucher_price_point','deals_voucher_price_cash','deals_total_voucher','deals_total_claimed','deals_voucher_type','deals_image','deals_start','deals_end','deals_type');
             if(strpos($request->user()->level,'Admin')>=0){
                 $deals->addSelect('deals_promo_id','deals_publish_start','deals_publish_end');
             }
