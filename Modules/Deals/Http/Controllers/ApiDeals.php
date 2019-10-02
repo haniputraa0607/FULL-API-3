@@ -480,6 +480,36 @@ class ApiDeals extends Controller
                 });
             }
         }
+        if($rules2=$newRule['voucher_claim_time']??false){
+            foreach ($rules2 as $rule) {
+                $rule[1]=strtotime($rule[1]);
+                $query->{$where.'Has'}('deals_vouchers',function($query) use ($rule){
+                    $query->whereHas('deals_user',function($query) use ($rule){
+                        $query->where(DB::raw('UNIX_TIMESTAMP(deals_users.claimed_at)'),$rule[0],$rule[1]);
+                    });
+                });
+            }
+        }
+        if($rules2=$newRule['voucher_redeem_time']??false){
+            foreach ($rules2 as $rule) {
+                $rule[1]=strtotime($rule[1]);
+                $query->{$where.'Has'}('deals_vouchers',function($query) use ($rule){
+                    $query->whereHas('deals_user',function($query) use ($rule){
+                        $query->where('deals_users.redeemed_at',$rule[0],$rule[1]);
+                    });
+                });
+            }
+        }
+        if($rules2=$newRule['voucher_used_time']??false){
+            foreach ($rules2 as $rule) {
+                $rule[1]=strtotime($rule[1]);
+                $query->{$where.'Has'}('deals_vouchers',function($query) use ($rule){
+                    $query->whereHas('deals_user',function($query) use ($rule){
+                        $query->where('deals_users.used_at',$rule[0],$rule[1]);
+                    });
+                });
+            }
+        }
     }
     /* UNLIMITED */
     function unlimited ($deals)
