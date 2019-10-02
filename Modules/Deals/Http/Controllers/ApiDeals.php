@@ -29,14 +29,17 @@ use Illuminate\Support\Facades\Schema;
 class ApiDeals extends Controller
 {
 
-    function __construct() {
+    function __construct()
+    {
         date_default_timezone_set('Asia/Jakarta');
+        $this->user     = "Modules\Users\Http\Controllers\ApiUser";
     }
 
     public $saveImage = "img/deals/";
 
     /* CHECK INPUTAN */
-    function checkInputan($post) {
+    function checkInputan($post)
+    {
 
         $data = [];
 
@@ -74,8 +77,7 @@ class ApiDeals extends Controller
 
             if (isset($upload['status']) && $upload['status'] == "success") {
                 $data['deals_image'] = $upload['path'];
-            }
-            else {
+            } else {
                 $result = [
                     'error'    => 1,
                     'status'   => 'fail',
@@ -158,7 +160,7 @@ class ApiDeals extends Controller
         }
         if (isset($post['user_limit'])) {
             $data['user_limit'] = $post['user_limit'];
-        }else{
+        } else {
             $data['user_limit'] = 0;
         }
 
@@ -166,7 +168,8 @@ class ApiDeals extends Controller
     }
 
     /* CREATE */
-    function create($data) {
+    function create($data)
+    {
         $data = $this->checkInputan($data);
 
         // error
@@ -189,14 +192,14 @@ class ApiDeals extends Controller
     }
 
     /* CREATE REQUEST */
-    function createReq(Create $request) {
+    function createReq(Create $request)
+    {
         DB::beginTransaction();
         $save = $this->create($request->json()->all());
 
         if ($save) {
             DB::commit();
-        }
-        else {
+        } else {
             DB::rollback();
         }
 
@@ -208,13 +211,14 @@ class ApiDeals extends Controller
         if($request->json('forSelect2')){
             return MyHelper::checkGet(Deal::select('id_deals','deals_title')->where('deals_type','Deals')->whereDoesntHave('featured_deals')->get());
         }
+
         // return $request->json()->all();
         $deals = (new Deal)->newQuery();
 
-        if($request->json('id_outlet') && is_integer($request->json('id_outlet'))){
+        if ($request->json('id_outlet') && is_integer($request->json('id_outlet'))) {
             $deals = $deals->join('deals_outlets', 'deals.id_deals', 'deals_outlets.id_deals')
-                            ->where('id_outlet', $request->json('id_outlet'))
-                            ->select('deals.*')->distinct();
+                ->where('id_outlet', $request->json('id_outlet'))
+                ->select('deals.*')->distinct();
         }
 
         // brand
@@ -227,7 +231,8 @@ class ApiDeals extends Controller
         }
 
         if ($request->json('id_deals')) {
-            $deals->with(['deals_vouchers',
+            $deals->with([
+                'deals_vouchers',
                 // 'deals_vouchers.deals_voucher_user',
                 // 'deals_vouchers.deals_user.user'
             ])->where('id_deals', $request->json('id_deals'))->with(['outlets', 'outlets.city', 'product','brand']);
@@ -249,8 +254,7 @@ class ApiDeals extends Controller
             // get > 1 deals types
             if (is_array($request->json('deals_type'))) {
                 $deals->whereIn('deals_type', $request->json('deals_type'));
-            }
-            else {
+            } else {
                 $deals->where('deals_type', $request->json('deals_type'));
             }
         }
@@ -260,8 +264,8 @@ class ApiDeals extends Controller
         }
 
         if ($request->json('key_free')) {
-             $deals->where('deals_title', 'LIKE', '%'.$request->json('key_free').'%')
-                    ->orWhere('deals_second_title', 'LIKE', '%'.$request->json('key_free').'%');
+            $deals->where('deals_title', 'LIKE', '%' . $request->json('key_free') . '%')
+                ->orWhere('deals_second_title', 'LIKE', '%' . $request->json('key_free') . '%');
         }
 
         /* ========================= TYPE ========================= */
@@ -305,15 +309,11 @@ class ApiDeals extends Controller
 
         if ($request->json('alphabetical')) {
             $deals->orderBy('deals_title', 'ASC');
-        }
-
-        else if ($request->json('newest')) {
+        } else if ($request->json('newest')) {
             $deals->orderBy('deals_start', 'DESC');
-        }
-
-        else if ($request->json('oldest')) {
+        } else if ($request->json('oldest')) {
             $deals->orderBy('deals_start', 'ASC');
-        }else{
+        } else {
             $deals->orderBy('deals_end', 'ASC');
         }
 
@@ -329,7 +329,6 @@ class ApiDeals extends Controller
             }
 
             $deals = $this->kotacuks($deals, $city);
-
         }
 
         if ($request->json('highest_available_voucher')) {
@@ -387,17 +386,17 @@ class ApiDeals extends Controller
 
         // if deals detail, add webview url & btn text
         if ($request->json('id_deals') && !empty($deals)) {
-            $deals[0]['webview_url'] = env('APP_URL') ."webview/deals/". $deals[0]['id_deals'] ."/". $deals[0]['deals_type'];
+            $deals[0]['webview_url'] = env('APP_URL') . "webview/deals/" . $deals[0]['id_deals'] . "/" . $deals[0]['deals_type'];
             $deals[0]['button_text'] = 'BELI';
         }
 
         //jika mobile di pagination
-        if(!$request->json('web')){
+        if (!$request->json('web')) {
             //pagination
-            if ($request->get('page')){
+            if ($request->get('page')) {
                 $page = $request->get('page');
-            }else{
-               $page = 1;
+            } else {
+                $page = 1;
             }
 
             $resultData = [];
@@ -412,6 +411,7 @@ class ApiDeals extends Controller
                 $next = false;
             }
 
+
             for ($i=$start; $i < $end; $i++) {
                 $deals[$i]['time_to_end']=strtotime($deals[$i]['deals_end'])-time();
                 array_push($resultData, $deals[$i]);
@@ -421,9 +421,9 @@ class ApiDeals extends Controller
             $result['data']          = $resultData;
             $result['total']         = count($resultData);
             $result['next_page_url'] = null;
-            if($next == true){
-                 $next_page = (int)$page + 1;
-                 $result['next_page_url'] = ENV('APP_API_URL').'api/deals/list?page='.$next_page;
+            if ($next == true) {
+                $next_page = (int) $page + 1;
+                $result['next_page_url'] = ENV('APP_API_URL') . 'api/deals/list?page=' . $next_page;
             }
 
 
@@ -432,11 +432,21 @@ class ApiDeals extends Controller
                 $result=[];
             }
             return response()->json(MyHelper::checkGet($result));
+
         }else{
             return response()->json(MyHelper::checkGet($deals));
         }
+    }
 
+    /* LIST */
+    function myDeal(Request $request)
+    {
+        $post = $request->json()->all();
+        $user = $request->user();
 
+        $deals = DealsUser::with(['deals'])->where('id_user', $user['id'])->where('id_deals_user', $post['id_deals_user'])->whereNotNull('claimed_at')->where('paid_status', 'Completed')->first();
+
+        return response()->json(MyHelper::checkGet($deals));
     }
     public function filterList($query,$rules,$operator='and'){
         $newRule=[];
@@ -484,9 +494,9 @@ class ApiDeals extends Controller
         }
     }
     /* UNLIMITED */
-    function unlimited ($deals)
+    function unlimited($deals)
     {
-        $unlimited = array_filter(array_column($deals, "available_voucher"), function($deals) {
+        $unlimited = array_filter(array_column($deals, "available_voucher"), function ($deals) {
             if ($deals == "*") {
                 return $deals;
             }
@@ -495,9 +505,9 @@ class ApiDeals extends Controller
         return $unlimited;
     }
 
-    function limited ($deals)
+    function limited($deals)
     {
-        $limited = array_filter(array_column($deals, "available_voucher"), function($deals) {
+        $limited = array_filter(array_column($deals, "available_voucher"), function ($deals) {
             if ($deals != "*") {
                 return $deals;
             }
@@ -507,9 +517,9 @@ class ApiDeals extends Controller
     }
 
     /* SORT DEALS */
-    function highestAvailableVoucher ($deals)
+    function highestAvailableVoucher($deals)
     {
-        usort($deals, function($a, $b) {
+        usort($deals, function ($a, $b) {
             return $a['available_voucher'] < $b['available_voucher'];
         });
 
@@ -518,7 +528,7 @@ class ApiDeals extends Controller
 
     function lowestAvailableVoucher($deals)
     {
-        usort($deals, function($a, $b) {
+        usort($deals, function ($a, $b) {
             return $a['available_voucher'] > $b['available_voucher'];
         });
 
@@ -526,7 +536,7 @@ class ApiDeals extends Controller
     }
 
     /* INI LIST KOTA */
-    function kotacuks($deals, $city="")
+    function kotacuks($deals, $city = "")
     {
         $timeNow = date('Y-m-d H:i:s');
 
@@ -553,7 +563,7 @@ class ApiDeals extends Controller
                 }
 
                 foreach ($kota as $k => $v) {
-                    if($v){
+                    if ($v) {
 
                         $kota[$k]['outlet'] = [];
 
@@ -565,13 +575,12 @@ class ApiDeals extends Controller
                                 array_push($kota[$k]['outlet'], $outlet);
                             }
                         }
-                    }else{
+                    } else {
                         unset($kota[$k]);
                     }
                 }
 
                 $deals[$key]['outlet_by_city'] = $kota;
-
             }
 
             // unset($deals[$key]['outlets']);
@@ -606,7 +615,8 @@ class ApiDeals extends Controller
     }
 
     /* LIST USER */
-    function listUserVoucher(Request $request) {
+    function listUserVoucher(Request $request)
+    {
         $deals = DealsUser::join('deals_vouchers', 'deals_vouchers.id_deals_voucher', '=', 'deals_users.id_deals_voucher');
 
         if ($request->json('id_deals')) {
@@ -619,7 +629,8 @@ class ApiDeals extends Controller
     }
 
     /* LIST VOUCHER */
-    function listVoucher(Request $request) {
+    function listVoucher(Request $request)
+    {
         $deals = DealsVoucher::select('*');
 
         if ($request->json('id_deals')) {
@@ -632,7 +643,8 @@ class ApiDeals extends Controller
     }
 
     /* UPDATE */
-    function update($id, $data) {
+    function update($id, $data)
+    {
         $data = $this->checkInputan($data);
 
         // error
@@ -662,7 +674,8 @@ class ApiDeals extends Controller
     }
 
     /* DELETE IMAGE */
-    function deleteImage($id) {
+    function deleteImage($id)
+    {
         $cekImage = Deal::where('id_deals', $id)->get()->first();
 
         if (!empty($cekImage)) {
@@ -674,14 +687,14 @@ class ApiDeals extends Controller
     }
 
     /* UPDATE REQUEST */
-    function updateReq(Update $request) {
+    function updateReq(Update $request)
+    {
         DB::beginTransaction();
         $save = $this->update($request->json('id_deals'), $request->json()->all());
 
         if ($save) {
             DB::commit();
-        }
-        else {
+        } else {
             DB::rollback();
         }
 
@@ -689,7 +702,8 @@ class ApiDeals extends Controller
     }
 
     /* DELETE */
-    function delete($id) {
+    function delete($id)
+    {
         // delete outlet
         DealsOutlet::where('id_deals', $id)->delete();
 
@@ -698,11 +712,12 @@ class ApiDeals extends Controller
     }
 
     /* DELETE REQUEST */
-    function deleteReq(Delete $request) {
+    function deleteReq(Delete $request)
+    {
         DB::beginTransaction();
 
         // check spin the wheel
-        if ($request->json('deals_type')!==null && $request->json('deals_type')=="Spin") {
+        if ($request->json('deals_type') !== null && $request->json('deals_type') == "Spin") {
             $spin = SpinTheWheel::where('id_deals', $request->json('id_deals'))->first();
             if ($spin != null) {
                 return response()->json([
@@ -721,14 +736,12 @@ class ApiDeals extends Controller
 
             if ($delete) {
                 DB::commit();
-            }
-            else {
+            } else {
                 DB::rollback();
             }
 
             return response()->json(MyHelper::checkDelete($delete));
-        }
-        else {
+        } else {
             return response()->json([
                 'status'   => 'fail',
                 'messages' => ['Deal already used.']
@@ -737,7 +750,8 @@ class ApiDeals extends Controller
     }
 
     /* CHECK DELETE */
-    function checkDelete($id) {
+    function checkDelete($id)
+    {
         $database = [
             'deals_vouchers',
             'deals_payment_manuals',
@@ -765,7 +779,8 @@ class ApiDeals extends Controller
     }
 
     /* OUTLET */
-    function saveOutlet($id_deals, $id_outlet=[]) {
+    function saveOutlet($id_deals, $id_outlet = [])
+    {
         $dataOutlet = [];
 
         if (in_array("all", $id_outlet)) {
@@ -774,8 +789,7 @@ class ApiDeals extends Controller
 
             if (empty($id_outlet)) {
                 return false;
-            }
-            else {
+            } else {
                 $id_outlet = array_pluck($id_outlet, 'id_outlet');
             }
         }
@@ -791,8 +805,7 @@ class ApiDeals extends Controller
             $save = DealsOutlet::insert($dataOutlet);
 
             return $save;
-        }
-        else {
+        } else {
             return false;
         }
 
@@ -800,7 +813,8 @@ class ApiDeals extends Controller
     }
 
     /* DELETE OUTLET */
-    function deleteOutlet($id_deals) {
+    function deleteOutlet($id_deals)
+    {
         $delete = DealsOutlet::where('id_deals', $id_deals)->delete();
 
         return $delete;
