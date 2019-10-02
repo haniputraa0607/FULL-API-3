@@ -12,6 +12,7 @@ class CustomPage extends Model
 
     protected $fillable = [
         'custom_page_title',
+        'custom_page_menu',
         'custom_page_description',
         'custom_page_order',
         'custom_page_icon_image',
