@@ -1587,6 +1587,15 @@ class ApiUser extends Controller
 					if($request->json('relationship')){
 						$dataupdate['relationship'] = $request->json('relationship');
 					}
+					if($request->json('celebrate')){
+						$dataupdate['celebrate'] = $request->json('celebrate');
+					}
+					if($request->json('job')){
+						$dataupdate['job'] = $request->json('job');
+					}
+					if($request->json('address')){
+						$dataupdate['address'] = $request->json('address');
+					}
 
 					DB::beginTransaction();
 
@@ -1659,7 +1668,10 @@ class ApiUser extends Controller
 											'gender' => $datauser[0]['gender'],
 											'birthday' => $datauser[0]['birthday'],
 											'id_city' => $datauser[0]['id_city'],
-											'relationship' => $datauser[0]['relationship']
+											'relationship' => $datauser[0]['relationship'],
+											'celebrate' => $datauser[0]['celebrate'],
+											'job' => $datauser[0]['job'],
+											'address' => $datauser[0]['address']
 										   ]
 						];
 				// } else {

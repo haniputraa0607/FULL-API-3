@@ -58,7 +58,7 @@ class ApiSetting extends Controller
     
     function __construct() {
         date_default_timezone_set('Asia/Jakarta');
-        $this->endPoint = env('AWS_URL');
+        $this->endPoint = env('S3_URL_API');
     }
     public function emailUpdate(Request $request) {
 		$data = $request->json()->all();
@@ -1134,7 +1134,7 @@ class ApiSetting extends Controller
                     $setting['version_text_alert'] = str_replace('%version_app%', $setting['version_android'], $setting['version_text_alert']);
 					if($setting['version_rule_android'] != 'allow'){
 						return response()->json(['status' => 'fail', 
-                    							'image' => env('AWS_URL').$setting['version_image'],
+                    							'image' => env('S3_URL_API').$setting['version_image'],
 												'text' => $setting['version_text_alert'],
 												'button_text' => $setting['version_text_button'],
 												'button_url' => $setting['version_playstore']]);
@@ -1151,7 +1151,7 @@ class ApiSetting extends Controller
 					if($setting['version_rule_ios'] != 'allow'){
                         $setting['version_text_alert'] = str_replace('%version_app%', $setting['version_ios'], $setting['version_text_alert']);
 						return response()->json(['status' => 'fail', 
-                        						'image' => env('AWS_URL').$setting['version_image'],
+                        						'image' => env('S3_URL_API').$setting['version_image'],
 												'text' => $setting['version_text_alert'],
 												'button_text' => $setting['version_text_button'],
 												'button_url' => $setting['version_appstore']]);
@@ -1168,7 +1168,7 @@ class ApiSetting extends Controller
 					if($setting['version_rule_outletapp'] != 'allow'){
                         $setting['version_text_alert'] = str_replace('%version_app%', $setting['version_outletapp'], $setting['version_text_alert']);
 						return response()->json(['status' => 'fail', 
-                    							'image' => env('AWS_URL').$setting['version_image'],
+                    							'image' => env('S3_URL_API').$setting['version_image'],
 												'text' => $setting['version_text_alert'],
 												'button_text' => $setting['version_text_button'],
 												'button_url' => $setting['version_outletstore']]);
@@ -1234,5 +1234,61 @@ class ApiSetting extends Controller
             
         return view('setting::tos', $data);
 
+    }
+
+    public function jobsList(Request $request){
+        $post=$request->json()->all();
+        $setting=Setting::where('key','jobs_list')->first();
+        $data=[];
+        if($setting&&$setting->value_text){
+            try{
+                $data=json_decode($setting->value_text);
+            }catch(\Exception $e){
+                $data=[];
+            }
+        }
+        if($post['jobs_list']??false){
+            $postedJobs=json_encode($post['jobs_list']);
+            if($setting){
+                $save=Setting::where('key','jobs_list')->update(['value_text'=>$postedJobs]);
+            }else{
+                $save=Setting::create(['key'=>'jobs_list','value_text'=>$postedJobs]);
+            }
+            if($save){
+                return ['status'=>'success','result'=>json_decode($postedJobs)];
+            }else{
+                return ['status'=>'fail','messages'=>'Something went wrong'];
+            }
+        }else{
+            return MyHelper::checkGet($data);
+        }
+    }
+
+    public function celebrateList(Request $request){
+        $post=$request->json()->all();
+        $setting=Setting::where('key','celebrate_list')->first();
+        $data=[];
+        if($setting&&$setting->value_text){
+            try{
+                $data=json_decode($setting->value_text);
+            }catch(\Exception $e){
+                $data=[];
+            }
+        }
+        if($post['celebrate_list']??false){
+            $postedCelebrate=json_encode($post['celebrate_list']);
+            if($setting){
+                $save=Setting::where('key','celebrate_list')->update(['value_text'=>$postedCelebrate]);
+            }else{
+                $save=Setting::create(['key'=>'celebrate_list','value_text'=>$postedCelebrate]);
+            }
+            if($save){
+                return ['status'=>'success','result'=>json_decode($postedCelebrate)];
+            }else{
+                return ['status'=>'fail','messages'=>'Something went wrong'];
+            }
+        }else{
+            return MyHelper::checkGet($data);
+        }
     }
 }

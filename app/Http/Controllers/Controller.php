@@ -77,9 +77,14 @@ class Controller extends BaseController
 		return MyHelper::checkGet($query); 
 	}
 
-	function listProvince(){
-		$query = Province::get()->toArray();
-		return MyHelper::checkGet($query); 
+	function listProvince(Request $request){
+		$query = (new Province)->newQuery();
+		if($id_city=$request->json('id_city')){
+			$query->whereHas('cities',function($query) use ($id_city){
+				$query->where('id_city',$id_city);
+			});
+		}
+		return MyHelper::checkGet($query->get()->toArray()); 
 	}
 	
 	function listCourier(){

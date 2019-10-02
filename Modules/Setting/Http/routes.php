@@ -40,6 +40,9 @@ Route::group(['middleware' => ['auth:api', 'log_request'], 'prefix' => 'api/sett
 
     Route::any('whatsapp', 'ApiSetting@settingWhatsApp');
 
+    Route::any('jobs_list', 'ApiSetting@jobsList');
+    Route::any('celebrate_list', 'ApiSetting@celebrateList');
+
     Route::group(['middleware' => 'auth:api', 'prefix' => 'dashboard'], function()
     {
         Route::any('', 'ApiDashboardSetting@getDashboard');
@@ -59,6 +62,16 @@ Route::group(['middleware' => ['auth:api', 'log_request'], 'prefix' => 'api/sett
         Route::post('update', 'ApiBanner@update');
         Route::post('reorder', 'ApiBanner@reorder');
         Route::post('delete', 'ApiBanner@destroy');
+    });
+
+    // featured_deal
+    Route::group(['middleware' => 'auth:api', 'prefix' => 'featured_deal'], function()
+    {
+        Route::get('list', 'ApiFeaturedDeal@index');
+        Route::post('create', 'ApiFeaturedDeal@create');
+        Route::post('update', 'ApiFeaturedDeal@update');
+        Route::post('reorder', 'ApiFeaturedDeal@reorder');
+        Route::post('delete', 'ApiFeaturedDeal@destroy');
     });
 
     // complete profile

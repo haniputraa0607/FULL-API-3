@@ -15,6 +15,7 @@ use App\Http\Models\InboxGlobalRead;
 use App\Http\Models\News;
 
 use Modules\InboxGlobal\Http\Requests\MarkedInbox;
+use Modules\InboxGlobal\Http\Requests\DeleteUserInbox;
 
 use App\Lib\MyHelper;
 use Validator;
@@ -30,8 +31,17 @@ class ApiInbox extends Controller
 		$this->autocrm  = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
     }
 	
+    public function deleteInboxUser(DeleteUserInbox $request){
+    	$delete=UserInbox::where('id_user_inboxes',$request->json('id_inbox'))->delete();
+    	return MyHelper::checkDelete($delete);
+    }
+
     public function listInboxUser(Request $request){
-		$user = $request->user();
+    	if(is_numeric($phone=$request->json('phone'))){
+    		$user=User::where('phone',$phone)->first();
+    	}else{
+			$user = $request->user();
+    	}
 		
 		$today = date("Y-m-d H:i:s");
 		$arrInbox = [];
@@ -44,7 +54,7 @@ class ApiInbox extends Controller
 								->where('inbox_global_end', '>=', $today)
 								->get()
 								->toArray();
-		
+
 		foreach($globals as $ind => $global){
 			$cons = array();
 			$cons['subject'] = 'phone';
@@ -114,7 +124,7 @@ class ApiInbox extends Controller
 				$countInbox++;
 			}
 		}
-		
+
 		$privates = UserInbox::where('id_user','=',$user['id'])->get()->toArray();
 		
 		foreach($privates as $private){
@@ -284,7 +294,7 @@ class ApiInbox extends Controller
 			array_push($global['inbox_global_rule_parents'], ['rule' => 'and', 'rule_next' => 'and', 'rules' => [$cons]]);
 			$users = app($this->user)->UserFilter($global['inbox_global_rule_parents']);
 			
-			if($users){
+			if(($users['status']??false)=='success'){
 				$read = InboxGlobalRead::where('id_inbox_global', $global['id_inbox_global'])->where('id_user', $id_user)->first();
 				if(empty($read)){
 					$countUnread += 1;
@@ -298,6 +308,15 @@ class ApiInbox extends Controller
 		$countUnread = $countUnread + count($privates);
 
 		return $countUnread;
+	}
+
+	public function unread(Request $request){
+		$user=$request->user();
+		$countUnread=$this->listInboxUnread($user->id);
+		return [
+			'status'=>'success',
+			'result'=>['unread'=>$countUnread]
+		];
 	}
 
 }

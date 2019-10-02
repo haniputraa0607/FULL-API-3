@@ -317,7 +317,7 @@ class ApiCategoryController extends Controller
                                 "product_photo" => 'img/product/item/default.png',
                                 "created_at" => $prod['created_at'],
                                 "updated_at" => $prod['updated_at'],
-                                "url_product_photo" => env('AWS_URL').'img/product/item/default.png'
+                                "url_product_photo" => env('S3_URL_API').'img/product/item/default.png'
                             ];
                         }
                     }
@@ -337,7 +337,7 @@ class ApiCategoryController extends Controller
     }
 
     function getData($post=[]) {
-        // $category = ProductCategory::select('*', DB::raw('if(product_category_photo is not null, (select concat("'.env('AWS_URL').'", product_category_photo)), "'.env('AWS_URL').'assets/pages/img/noimg-500-375.png") as url_product_category_photo'));
+        // $category = ProductCategory::select('*', DB::raw('if(product_category_photo is not null, (select concat("'.env('S3_URL_API').'", product_category_photo)), "'.env('S3_URL_API').'assets/pages/img/noimg-500-375.png") as url_product_category_photo'));
         $category = ProductCategory::with(['parentCategory'])->select('*');
 
         if (isset($post['id_parent_category'])) {

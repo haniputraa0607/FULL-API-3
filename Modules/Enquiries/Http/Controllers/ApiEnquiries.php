@@ -18,15 +18,18 @@ use App\Lib\PushNotificationHelper;
 use DB;
 use Mail;
 use Mailgun;
+use File;
 
 use Modules\Enquiries\Http\Requests\Create;
 use Modules\Enquiries\Http\Requests\Update;
 use Modules\Enquiries\Http\Requests\Delete;
+use Modules\Enquiries\Entities\EnquiriesFile;
 
 class ApiEnquiries extends Controller
 {
 	
-	public $saveImage = "img/enquiry/";
+	public $saveImage 	= "img/enquiry/";
+	public $saveFile 	= "files/enquiry/";
     public $endPoint;
 	
 	function __construct() {
@@ -121,6 +124,57 @@ class ApiEnquiries extends Controller
 			}
 
 			$data['many_upload'] = $dataUploadImage;
+		} 
+		
+		if (isset($post['enquiry_file'])) {
+        	$dataUploadFile = [];
+
+			if (is_array($post['enquiry_file'])) {
+				foreach ($post['enquiry_file'] as $value) {
+					$decoded = base64_decode($value);
+					$ext = MyHelper::checkExtensionImageBase64($decoded);
+
+					$upload = MyHelper::uploadFile($value, $this->saveFile, str_replace('.','',$ext));
+
+					if (isset($upload['status']) && $upload['status'] == "success") {
+					    $data['enquiry_file'] = $upload['path'];
+
+					    array_push($dataUploadFile, $upload['path']);
+					}
+					else {
+					    $result = [
+					        'error'    => 1,
+					        'status'   => 'fail',
+					        'messages' => ['fail upload file']
+					    ];
+
+					    return $result;
+					}
+				}
+			}
+			else {
+				$decoded = base64_decode($post['enquiry_file']);
+				$ext = MyHelper::checkExtensionImageBase64($decoded);
+				
+				$upload = MyHelper::uploadFile($post['enquiry_file'], $this->saveFile, str_replace('.','',$ext));
+
+				if (isset($upload['status']) && $upload['status'] == "success") {
+				    $data['enquiry_file'] = $upload['path'];
+
+				    array_push($dataUploadFile, $upload['path']);
+				}
+				else {
+				    $result = [
+				        'error'    => 1,
+				        'status'   => 'fail',
+				        'messages' => ['fail upload file']
+				    ];
+
+				    return $result;
+				}	
+			}
+
+			$data['many_upload_file'] = $dataUploadFile;
         } 
 
         if (isset($post['enquiry_status'])) {
@@ -153,16 +207,25 @@ class ApiEnquiries extends Controller
         // jika berhasil maka ngirim" ke crm
         if ($save) {
         	// save many photo
+			$data['attachment'] = [];
         	if (isset($data['many_upload'])) {
         		$photos = $this->savePhotos($save->id_enquiry, $data['many_upload']);
+				$enquiryPhoto = EnquiriesPhoto::where('id_enquiry', $save->id_enquiry)->get();
+				foreach($enquiryPhoto as $dataPhoto){
+					$data['attachment'] = $dataPhoto->url_enquiry_photo;
+				}
+			}
+			
+			// save many file
+        	if (isset($data['many_upload_file'])) {
+        		$files = $this->saveFiles($save->id_enquiry, $data['many_upload_file']);
+				$enquiryFile = EnquiriesFile::where('id_enquiry', $save->id_enquiry)->get();
+				foreach($enquiryFile as $dataFile){
+					$data['attachment'] = $dataFile->url_enquiry_file;
+				}
         	}
 
 			// send CRM
-			$enquiryPhoto = EnquiriesPhoto::where('id_enquiry', $save->id_enquiry)->get();
-			$data['attachment'] = [];
-			foreach($enquiryPhoto as $dataPhoto){
-				$data['attachment'] = $dataPhoto->url_enquiry_photo;
-			}
             $goCrm = $this->sendCrm($data);
         }
         return response()->json(MyHelper::checkCreate($save));
@@ -192,6 +255,31 @@ class ApiEnquiries extends Controller
 
     	return true;
     }
+	
+	/* SAVE FILE BANYAK */
+    function saveFiles($id, $file)
+    {
+    	$data = [];
+
+    	foreach ($file as $key => $value) {
+    		$temp = [
+				'enquiry_file' 	=> $value,
+				'id_enquiry'    => $id,
+				'created_at'    => date('Y-m-d H:i:s'),
+				'updated_at'    => date('Y-m-d H:i:s')
+    		];
+
+    		array_push($data, $temp);
+    	}
+
+    	if (!empty($data)) {
+    		if (!EnquiriesFile::insert($data)) {
+    			return false;
+    		}
+    	}
+
+    	return true;
+	}
 	
 	/* REPLY */
     function reply(Request $request) {
@@ -467,4 +555,10 @@ class ApiEnquiries extends Controller
         return $send; 
     }
 
+	function listEnquirySubject(){
+		$list = Setting::where('key', 'enquiries_subject_list')->get()->first();
+
+		$result = ['text' => $list['value'], 'value' => explode(', ' ,$list['value_text'])];
+		return response()->json(MyHelper::checkGet($result));
+	}
 }

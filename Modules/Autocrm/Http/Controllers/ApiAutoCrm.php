@@ -320,8 +320,8 @@ class ApiAutoCrm extends Controller
 						$dataOptional          = [];
 						$image = null;
 						if (isset($crm['autocrm_push_image']) && $crm['autocrm_push_image'] != null) {
-							$dataOptional['image'] = env('AWS_URL').$crm['autocrm_push_image'];
-							$image = env('AWS_URL').$crm['autocrm_push_image'];
+							$dataOptional['image'] = env('S3_URL_API').$crm['autocrm_push_image'];
+							$image = env('S3_URL_API').$crm['autocrm_push_image'];
 						}
 
 						if (isset($crm['autocrm_push_clickto']) && $crm['autocrm_push_clickto'] != null) {
@@ -788,7 +788,7 @@ class ApiAutoCrm extends Controller
 			if(count($contentOld) > 0){
 				foreach($contentOld as $old){
 					if($old['content_type'] == 'image' || $old['content_type'] == 'file'){
-						$del = MyHelper::deletePhoto(str_replace(env('AWS_URL'), '', $old['content']));
+						$del = MyHelper::deletePhoto(str_replace(env('S3_URL_API'), '', $old['content']));
 					}
 				}
 
@@ -823,7 +823,7 @@ class ApiAutoCrm extends Controller
 						//upload file
 						$upload = MyHelper::uploadPhoto($content['content'], $path = 'whatsapp/img/autocrm/');
 						if ($upload['status'] == "success") {
-							$content['content'] = env('AWS_URL').$upload['path'];
+							$content['content'] = env('S3_URL_API').$upload['path'];
 						} else{
 							DB::rollBack();
 							$result = [
@@ -847,7 +847,7 @@ class ApiAutoCrm extends Controller
 
 						$upload = MyHelper::uploadFile($content['content'], $path = 'whatsapp/file/campaign/', $content['content_file_ext'], $content['content_file_name']);
 						if ($upload['status'] == "success") {
-							$content['content'] = env('AWS_URL').$upload['path'];
+							$content['content'] = env('S3_URL_API').$upload['path'];
 						} else{
 							DB::rollBack();
 							$result = [

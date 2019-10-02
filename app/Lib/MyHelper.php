@@ -1692,6 +1692,20 @@ class MyHelper{
 		$bulan = ['','Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
 
 		return date('d', strtotime($date)).' '.$bulan[date('n', strtotime($date))].' '.date('Y', strtotime($date)).' '.date('H:i', strtotime($date));
-	}
+	}    
+	public static function isJoined($query, $table){
+        $joins = $query->getQuery()->joins;
+        if($joins == null) {
+            return false;
+        }
+
+        foreach ($joins as $join) {
+            if ($join->table == $table) {
+                return true;
+            }
+        }
+
+        return false;
+    }
 }
 ?>

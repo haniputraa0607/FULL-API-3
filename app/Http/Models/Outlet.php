@@ -77,7 +77,9 @@ class Outlet extends Authenticatable
 		'outlet_latitude',
 		'outlet_longitude',
 		'outlet_status',
-		'deep_link',
+		'deep_link_gojek',
+		'deep_link_grab',
+		'big_order'
 		// 'outlet_open_hours',
 		// 'outlet_close_hours'
 	];
@@ -92,6 +94,10 @@ class Outlet extends Authenticatable
 	public function getUrlAttribute()
 	{
 		return env('VIEW_URL').'/outlet/webview/'.$this->id_outlet;
+	}
+
+	public function brands(){
+		return $this->belongsToMany(\Modules\Brand\Entities\Brand::class, 'brand_outlet', 'id_outlet', 'id_brand');
 	}
 
 	public function city()
