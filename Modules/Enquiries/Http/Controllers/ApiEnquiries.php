@@ -558,6 +558,16 @@ class ApiEnquiries extends Controller
 	function listEnquirySubject(){
 		$list = Setting::where('key', 'enquiries_subject_list')->get()->first();
 
+		$result = ['text' => $list['value'], 'value' => explode('| ' ,$list['value_text'])];
+		foreach ($result['value'] as $key => $value) {
+			$result['value'][$key] = explode('* ' ,$value);
+		}
+		return response()->json(MyHelper::checkGet($result));
+	}
+
+	function listEnquiryPosition(){
+		$list = Setting::where('key', 'enquiries_position_list')->get()->first();
+
 		$result = ['text' => $list['value'], 'value' => explode(', ' ,$list['value_text'])];
 		return response()->json(MyHelper::checkGet($result));
 	}
