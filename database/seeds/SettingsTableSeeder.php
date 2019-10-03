@@ -326,6 +326,24 @@ class SettingsTableSeeder extends Seeder
                 'created_at' => '2018-05-15 13:55:55',
                 'updated_at' => '2018-05-15 13:55:55',
             ),
+            35 =>
+            array(
+                'id_setting' => 36,
+                'key' => 'enquiries_subject_list',
+                'value' => 'Subject',
+                'value_text' => 'Customer Feedback* outlet,visiting_time,messages| Marketing Partnership* messages| Business Development* messages| Career* position',
+                'created_at' => '2019-10-03 12:00:00',
+                'updated_at' => '2019-10-03 12:00:00',
+            ),
+            36 =>
+            array(
+                'id_setting' => 37,
+                'key' => 'enquiries_position_list',
+                'value' => 'Position',
+                'value_text' => 'Part Time, Supervisor',
+                'created_at' => '2019-10-03 12:00:00',
+                'updated_at' => '2019-10-03 12:00:00',
+            ),
         ));
     }
 }
