@@ -605,7 +605,7 @@ class ApiOutletController extends Controller
                 $outlet = $this->setAvailableOutlet($outlet);
             }
         }else{
-            return response()->json(['status' => 'success', 'messages' => ['There is no open store','at this moment']]);
+            return response()->json(['status' => 'fail', 'messages' => ['There is no open store','at this moment']]);
         }
 
         if(isset($request['page']) && $request['page'] > 0){
@@ -626,12 +626,12 @@ class ApiOutletController extends Controller
                     $outlet['next_page_url'] = ENV('APP_API_URL').'api/outlet/nearme?page='.$next_page;
                 }
             } else {
-                return response()->json(['status' => 'success', 'messages' => ['There is no open store','at this moment']]);
+                return response()->json(['status' => 'fail', 'messages' => ['There is no open store','at this moment']]);
             }
         }
 
         if(!$outlet){
-            return response()->json(['status' => 'success', 'messages' => ['There is no open store','at this moment']]);
+            return response()->json(['status' => 'fail', 'messages' => ['There is no open store','at this moment']]);
         }
 
         return response()->json(MyHelper::checkGet($outlet));
@@ -862,7 +862,7 @@ class ApiOutletController extends Controller
                 $urutan = $this->setAvailableOutlet($urutan);
             }
         } else {
-            return response()->json(['status' => 'success', 'messages' => ['There is no open store','at this moment']]);
+            return response()->json(['status' => 'fail', 'messages' => ['There is no open store','at this moment']]);
         }
 
         // if (!isset($request['page'])) {
@@ -888,11 +888,11 @@ class ApiOutletController extends Controller
                     $urutan['next_page_url'] = ENV('APP_API_URL').'api/outlet/filter?page='.$next_page;
                 }
             } else {
-                return response()->json(['status' => 'success', 'messages' => ['There is no open store','at this moment']]);
+                return response()->json(['status' => 'fail', 'messages' => ['There is no open store','at this moment']]);
             }
         }
         if(!$urutan){
-            return response()->json(['status' => 'success', 'messages' => ['There is no open store','at this moment']]);
+            return response()->json(['status' => 'fail', 'messages' => ['There is no open store','at this moment']]);
         }
         return response()->json(MyHelper::checkGet($urutan));
     }
