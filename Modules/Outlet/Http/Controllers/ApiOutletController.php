@@ -437,7 +437,7 @@ class ApiOutletController extends Controller
             $outlet = Outlet::select('outlets.id_outlet','outlets.outlet_name');
         }else{
             $outlet = Outlet::with(['city', 'outlet_photos', 'outlet_schedules', 'today', 'user_outlets','brands']);
-            $outlet->select('outlets.id_outlet','outlets.outlet_name','outlets.outlet_code','outlets.outlet_status','outlets.outlet_address','outlets.id_city','outlet_latitude','outlet_longitude');
+            $outlet->select('outlets.id_outlet','outlets.outlet_name','outlets.outlet_phone','outlets.outlet_code','outlets.outlet_status','outlets.outlet_address','outlets.id_city','outlet_latitude','outlet_longitude');
         }
         if($post['simple_result']??false){
             $outlet->select('outlets.id_outlet','outlets.outlet_name');
@@ -581,7 +581,7 @@ class ApiOutletController extends Controller
         }
 
         // outlet
-        $outlet = Outlet::with(['today', 'city', 'outlet_photos'])->where('outlet_status', 'Active')->whereNotNull('id_city')->orderBy('outlet_name','asc');
+        $outlet = Outlet::select('outlets.id_outlet','outlets.outlet_name','outlets.outlet_phone','outlets.outlet_code','outlets.outlet_status','outlets.outlet_address','outlets.id_city','outlet_latitude','outlet_longitude')->where('outlet_status', 'Active')->whereNotNull('id_city')->orderBy('outlet_name','asc');
         if($request->json('search') && $request->json('search') != ""){
             $outlet = $outlet->where('outlet_name', 'LIKE', '%'.$request->json('search').'%');
         }
@@ -783,15 +783,31 @@ class ApiOutletController extends Controller
         $id_city = $request->json('id_city');
         $sort = $request->json('sort');
         $gofood = $request->json('gofood');
+        $grabfood = $request->json('grabfood');
 
         // outlet
-        $outlet = Outlet::with(['today', 'city', 'outlet_photos'])->where('outlet_status', 'Active')->whereNotNull('id_city')->orderBy('outlet_name','asc');
+        $outlet = Outlet::select('outlets.id_outlet','outlets.outlet_name','outlets.outlet_phone','outlets.outlet_code','outlets.outlet_status','outlets.outlet_address','outlets.id_city','outlet_latitude','outlet_longitude')->where('outlet_status', 'Active')->whereNotNull('id_city')->orderBy('outlet_name','asc');
+
+        if(is_array($post['id_brand']??false)&&$post['id_brand']){
+            $outlet->leftJoin('brand_outlet','outlets.id_outlet','brand_outlet.id_outlet');
+            $id_brands=$post['id_brand'];
+            $outlet->where(function($query) use ($id_brands){
+                foreach ($id_brands as $id_brand) {
+                    $query->orWhere('brand_outlet.id_brand',$id_brand);
+                }
+            });
+        }
+
         if($request->json('search') && $request->json('search') != ""){
             $outlet = $outlet->where('outlet_name', 'LIKE', '%'.$request->json('search').'%');
         }
 
         if (isset($gofood)) {
-            $outlet = $outlet->whereNotNull('deep_link');
+            $outlet = $outlet->whereNotNull('deep_link_gojek');
+        }
+
+        if (isset($grabfood)) {
+            $outlet = $outlet->whereNotNull('deep_link_grab');
         }
 
         $outlet = $outlet->get()->toArray();
@@ -803,7 +819,6 @@ class ApiOutletController extends Controller
                 settype($jaraknya, "float");
 
                 $outlet[$key]['distance'] = number_format($jaraknya, 2, '.', ',')." km";
-                $outlet[$key]['dist']     = (float) $jaraknya;
 
 				if($distance == "0-2km"){
 					if((float) $jaraknya < 0.01 || (float) $jaraknya > 2.00)
