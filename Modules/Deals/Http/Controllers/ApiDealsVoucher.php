@@ -36,7 +36,7 @@ class ApiDealsVoucher extends Controller
             foreach ($post['voucher_code'] as $value) {
                 array_push($data, [
                     'id_deals'             => $post['id_deals'],
-                    'voucher_code'         => $value,
+                    'voucher_code'         => strtoupper($value),
                     'deals_voucher_status' => 'Available',
                     'created_at'           => date('Y-m-d H:i:s'),
                     'updated_at'           => date('Y-m-d H:i:s')
@@ -70,7 +70,7 @@ class ApiDealsVoucher extends Controller
         else {
             $save = DealsVoucher::create([
                 'id_deals'             => $post['id_deals'],
-                'voucher_code'         => $post['voucher_code'],
+                'voucher_code'         => strtoupper($post['voucher_code']),
                 'deals_voucher_status' => 'Available'
             ]);
 
@@ -147,7 +147,7 @@ class ApiDealsVoucher extends Controller
                 // push for save db
                 array_push($data, [
                     'id_deals'             => $id_deals,
-                    'voucher_code'         => $code,
+                    'voucher_code'         => strtoupper($code),
                     'deals_voucher_status' => 'Available',
                     'created_at'           => date('Y-m-d H:i:s'),
                     'updated_at'           => date('Y-m-d H:i:s')
@@ -167,7 +167,7 @@ class ApiDealsVoucher extends Controller
 
             $data = [
                 'id_deals'             => $id_deals,
-                'voucher_code'         => $code,
+                'voucher_code'         => strtoupper($code),
             ];
 
             if ($status != 0) {
