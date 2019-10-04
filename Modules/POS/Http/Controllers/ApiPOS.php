@@ -34,6 +34,7 @@ use App\Http\Models\DealsVoucher;
 use App\Http\Models\Configs;
 use App\Http\Models\FraudSetting;
 use App\Http\Models\LogBackendError;
+use App\Http\Models\LogTransactionFailed;
 use App\Lib\MyHelper;
 use Mailgun;
 
@@ -65,6 +66,8 @@ class ApiPOS extends Controller
         $this->balance    = "Modules\Balance\Http\Controllers\BalanceController";
         $this->autocrm  = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
         $this->setting_fraud = "Modules\SettingFraud\Http\Controllers\ApiSettingFraud";
+        
+        $this->pos = "Modules\POS\Http\Controllers\ApiPos";
     }
 
     public function transactionDetail(reqPreOrderDetail $request)
@@ -920,741 +923,671 @@ class ApiPOS extends Controller
         return $syncMenu;
     }
 
-    public function transaction(reqTransaction $request)
+    public function transaction(Request $request)
     {
         $post = $request->json()->all();
+        
+        if(isset($post['api_key']) && !empty($post['api_key']) &&
+            isset($post['api_secret']) && !empty($post['api_secret']) &&
+            isset($post['store_code']) && !empty($post['store_code']) &&
+            isset($post['transactions']) && is_array ($post['transactions']) && 
+            !empty($post['transactions'])){
+            
+            $api = $this->checkApi($post['api_key'], $post['api_secret']);
+            if ($api['status'] != 'success') {
+                return response()->json($api);
+            }
 
-        DB::beginTransaction();
-        $api = $this->checkApi($post['api_key'], $post['api_secret']);
-        if ($api['status'] != 'success') {
-            DB::rollback();
-            return response()->json($api);
-        }
+            $checkOutlet = Outlet::where('outlet_code', strtoupper($post['store_code']))->first();
+            if (empty($checkOutlet)) {
+                return response()->json(['status' => 'fail', 'messages' => ['Store not found']]);
+            }
 
-        $checkOutlet = Outlet::where('outlet_code', strtoupper($post['store_code']))->first();
-        if (empty($checkOutlet)) {
-            DB::rollback();
-            return response()->json(['status' => 'fail', 'messages' => ['Store not found']]);
-        }
+            $config['point']    = Configs::where('config_name', 'point')->first()->is_active;
+            $config['balance']  = Configs::where('config_name', 'balance')->first()->is_active;
+            $settingPoint       = Setting::where('key', 'point_conversion_value')->first()->value;
+            $countTransactionFail = 0;
+            $countTransactionSuccess = 0;
+            $countTransactionDuplicate = 0;
+            $detailTransactionFail = [];
 
-        $result = array();
-        foreach ($post['transactions'] as $key => $trx) {
-            if (isset($trx['order_id'])) {
-                if (!empty($trx['order_id'])) {
-                    $trx = Transaction::join('transaction_pickups', 'transactions.id_transaction', '=', 'transaction_pickups.id_transaction')
-                        ->where('transaction_pickups.order_id', '=', $trx['order_id'])
-                        ->whereDate('transactions.transaction_date', '=', date("Y-m-d"))
-                        ->first();
-                    if ($trx) {
-                        $r = [
-                            'id_transaction'    => $trx['id_transaction']
+            $result = array();
+
+            $receipt = array_column($post['transactions'], 'trx_id');
+            //exclude receipt number when already exist in outlet
+            $checkReceipt = Transaction::select('transaction_receipt_number', 'id_transaction')->where('id_outlet', $checkOutlet['id_outlet'])
+                                ->whereIn('transaction_receipt_number', $receipt)
+                                ->where('trasaction_type', 'Offline')
+                                ->get();
+            $convertTranscToArray = $checkReceipt->toArray();
+            $receiptExist = $checkReceipt->pluck('transaction_receipt_number')->toArray();
+            
+            $validReceipt = array_diff($receipt,$receiptExist);
+            
+            $invalidReceipt = array_intersect($receipt,$receiptExist);
+            foreach($invalidReceipt as $key => $invalid){
+                $countTransactionDuplicate++;
+                unset($post['transactions'][$key]);
+            }
+            
+            //check possibility duplicate
+            $receiptDuplicate = Transaction::where('id_outlet', '!=', $checkOutlet['id_outlet'])
+                                                                            ->whereIn('transaction_receipt_number', $validReceipt)
+                                                                            ->where('trasaction_type', 'Offline')
+                                                                            ->select('transaction_receipt_number')
+                                                                            ->get()->pluck('transaction_receipt_number')->toArray();
+
+            $receiptDuplicate = array_intersect($receipt, $receiptDuplicate);
+            $contentDuplicate = [];
+            foreach($receiptDuplicate as $key => $receipt){
+                $duplicate = $this->processDuplicate($post['transactions'][$key], $checkOutlet);
+                if(isset($duplicate['status']) && $duplicate['status'] == 'duplicate'){
+                    $data = [
+                        'trx' => $duplicate['trx'],
+                        'duplicate' =>$duplicate['duplicate']
+                    ];
+                    $contentDuplicate[] = $data;
+                    unset($post['transactions'][$key]);
+                }
+            }
+           
+            foreach ($post['transactions'] as $key => $trx) {
+                if(isset($trx['date_time']) && !empty($trx['date_time']) &&
+                    isset($trx['total']) && !empty($trx['total']) &&
+                    isset($trx['service']) &&
+                    isset($trx['tax']) && !empty($trx['tax']) &&
+                    isset($trx['discount']) && isset($trx['grand_total']) &&  
+                    isset($trx['payments']) && !empty($trx['payments']) && is_array ($trx['payments']) &&  
+                    isset($trx['menu'])){
+
+                    $insertTrx = $this->insertTransaction($checkOutlet, $trx, $config, $settingPoint);
+                    if(isset($insertTrx['id_transaction'])){
+                            $countTransactionSuccess++;
+                            $result[] = $insertTrx;
+                    }else{
+                        $countTransactionFail++;
+                        array_push($detailTransactionFail, $trx['trx_id']);
+                        $data = [
+                            'outlet_code' => $post['store_code'],
+                            'request' => json_encode($trx),
+                            'message_failed' => $insertTrx['messages'][0],
+                            'created_at' => date('Y-m-d H:i:s'),
+                            'updated_at' => date('Y-m-d H:i:s')
                         ];
-                        array_push($result, $r);
-                    } else {
-                        if (count($post['transactions']) == 1)
-                            return response()->json(['status' => 'fail', 'messages' => ['Order ID not found']]);
+                        LogTransactionFailed::create($data);
+                    }
+                }else{
+                    $countTransactionFail++;
+                    if(isset($trx['trx_id'])){
+                        $id = $trx['trx_id'];
+                    }else{
+                        $id = 'trx_id does not exist';
+                    }
+                    
+                    array_push($detailTransactionFail, $id);
+                    $data = [
+                        'outlet_code' => $post['store_code'],
+                        'request' => json_encode($trx['transaction']),
+                        'message_failed' => 'There is an incomplete input in the transaction list',
+                        'created_at' => date('Y-m-d H:i:s'),
+                        'updated_at' => date('Y-m-d H:i:s')
+                    ];
+                    LogTransactionFailed::create($data);
+                }
+            }
+
+            return response()->json([
+                'status'    => 'success',
+                'result'    => [
+                    'transaction_success' => $countTransactionSuccess,
+                    'transaction_failed' => $countTransactionFail,
+                    'transaction_duplicate' => $countTransactionDuplicate,
+                    'detail_transaction_failed' => $detailTransactionFail
+                ]
+            ]);
+        }else{
+            return response()->json(['status' => 'fail', 'messages' => ['Input is incomplete']]);
+        }
+    }
+    
+    function insertTransaction($outlet, $trx, $config, $settingPoint){
+          DB::beginTransaction();
+        try{
+            if(!isset($trx['order_id'])){
+                if(count($trx['menu']) >= 0 && isset($trx['trx_id'])){
+
+                    $dataTrx = [
+                            'id_outlet'                   => $outlet['id_outlet'],
+                            'transaction_date'            => date('Y-m-d H:i:s', strtotime($trx['date_time'])),
+                            'transaction_receipt_number'  => $trx['trx_id'],
+                            'trasaction_type'             => 'Offline',
+                            'sales_type'                  => $trx['sales_type'],
+                            'transaction_subtotal'        => $trx['total'],
+                            'transaction_service'         => $trx['service'],
+                            'transaction_discount'        => $trx['discount'],
+                            'transaction_tax'             => $trx['tax'],
+                            'transaction_grandtotal'      => $trx['grand_total'],
+                            'transaction_point_earned'    => null,
+                            'transaction_cashback_earned' => null,
+                            'trasaction_payment_type'     => 'Offline',
+                            'transaction_payment_status'  => 'Completed'
+                    ];
+
+                    $trxVoucher = [];
+                    $pointBefore = 0;
+                    $pointValue = 0;
+
+                    if (isset($trx['member_uid'])) {
+                        $qr         = MyHelper::readQR($trx['member_uid']);
+                        $timestamp  = $qr['timestamp'];
+                        $phoneqr    = $qr['phone'];
+                        $user       = User::where('phone', $phoneqr)->with('memberships')->first();
+
+                        if (empty($user)) {
+                            $user['id'] = null;
+                            $user['id'] = null;
+                            $dataTrx['membership_level']    = null;
+                            $dataTrx['membership_promo_id'] = null;
+                        }elseif(isset($user['is_suspended']) && $user['is_suspended'] == '1'){
+                            $user['id'] = null;
+                            $user['id'] = null;
+                            $dataTrx['membership_level']    = null;
+                            $dataTrx['membership_promo_id'] = null;
+                        }else{
+                            if (count($user['memberships']) > 0) {
+                                $dataTrx['membership_level']    = $user['memberships'][0]['membership_name'];
+                                $dataTrx['membership_promo_id'] = $user['memberships'][0]['benefit_promo_id'];
+                            }
+
+                            //using voucher
+                            if (!empty($trx['voucher'])) {
+                                foreach ($trx['voucher'] as $keyV => $valueV) {
+                                    $checkVoucher = DealsVoucher::join('deals_users', 'deals_voucher.id_deals_voucher', 'deals_users.id_deals_voucher')
+                                                                                    ->where('voucher_code', $valueV['voucher_code'])
+                                                                                    ->where('deals_users.id_outlet', $outlet['id_outlet'])
+                                                                                    ->where('deals_users.id_user', $user['id'])
+                                                                                    ->whereNotNull('deals_users.used_at')
+                                                                                    ->whereNull('id_transaction')
+                                                                                    ->first();
+                                    if (empty($checkVoucher)) {
+                                            // for invalid voucher
+                                            $dataVoucher['deals_voucher_invalid'] = $valueV;
+                                    }else{
+                                            $dataVoucher['id_deals_voucher'] =  $checkUsed['id_deals_voucher'];
+                                    }
+                                    $trxVoucher[] = $dataVoucher;
+                                }
+                            }
+
+                            if($config['point'] == '1'){
+                                if (isset($user['memberships'][0]['membership_name'])) {
+                                        $level = $user['memberships'][0]['membership_name'];
+                                        $percentageP = $user['memberships'][0]['benefit_point_multiplier'] / 100;
+                                } else {
+                                        $level = null;
+                                        $percentageP = 0;
+                                }
+
+                                $point = floor(app($this->pos)->count('point', $trx) * $percentageP);
+                                $dataTrx['transaction_point_earned'] = $point;
+                            }
+
+                            if($config['balance'] == '1'){
+                                if (isset($user['memberships'][0]['membership_name'])) {
+                                        $level = $user['memberships'][0]['membership_name'];
+                                        $percentageB = $user['memberships'][0]['benefit_cashback_multiplier'] / 100;
+                                        $cashMax = $user['memberships'][0]['cashback_maximum'];
+                                } else {
+                                        $level = null;
+                                        $percentageB = 0;
+                                }
+
+                                $data = $trx;
+                                $data['total'] = $trx['grand_total'];
+                                $cashback = floor(app($this->pos)->count('cashback', $data) * $percentageB);
+
+                                //count some trx user
+                                $countUserTrx = Transaction::where('id_user', $user['id'])->count();
+                                $countSettingCashback = TransactionSetting::get();
+                                if ($countUserTrx < count($countSettingCashback)) {
+                                    $cashback = $cashback * $countSettingCashback[$countUserTrx]['cashback_percent'] / 100;
+                                    if ($cashback > $countSettingCashback[$countUserTrx]['cashback_maximum']) {
+                                            $cashback = $countSettingCashback[$countUserTrx]['cashback_maximum'];
+                                    }
+                                } else{
+                                    if(isset($cashMax) && $cashback > $cashMax){
+                                            $cashback = $cashMax;
+                                    }
+                                }
+                                $dataTrx['transaction_cashback_earned'] = $cashback;
+                            }
+                        }
+                    }
+
+                    $dataTrx['id_user'] = $user['id'];
+                    if(isset($qr['device'])){
+                        $dataTrx['transaction_device_type'] = $qr['device'];
+                    }
+                    if(isset($trx['cashier'])){
+                        $dataTrx['transaction_cashier'] = $trx['cashier'];
+                    }
+
+                    $createTrx = Transaction::create($dataTrx);
+                    if (!$createTrx) {
+                        DB::rollback();
+                        return ['status' => 'fail', 'messages' => ['Transaction sync failed']];
+                    }
+
+                    foreach ($trx['payments'] as $col => $pay) {
+                        if(isset($pay['type']) && isset($pay['name'])
+                            && isset($pay['nominal'])){
+                            $dataPay = [
+                                    'id_transaction' => $createTrx['id_transaction'],
+                                    'payment_type'   => $pay['type'],
+                                    'payment_bank'   => $pay['name'],
+                                    'payment_amount' => $pay['nominal']
+                            ];
+
+                            $createPay = TransactionPaymentOffline::create($dataPay);
+                            if (!$createPay) {
+                                    DB::rollback();
+                                    return ['status' => 'fail', 'messages' => ['Transaction sync failed']];
+                            }
+                        }else{
+                            DB::rollback();
+                            return ['status' => 'fail', 'messages' => ['There is an incomplete input in the payment list']];
+                        }
+                    }
+
+                    $userTrxProduct = [];
+                    $allMenuId = array_column($trx['menu'], 'plu_id');
+                    $checkProduct = Product::select('id_product', 'product_code')->whereIn('product_code', $allMenuId)->get()->toArray();
+
+                    foreach ($trx['menu'] as $row => $menu) {
+                        if(isset($menu['plu_id']) && !empty($menu['plu_id'])
+                            && isset($menu['name']) && !empty($menu['name']) 
+                            && isset($menu['price']) && isset($menu['qty']) 
+                            && isset($menu['category']) && !empty($menu['category'])){
+
+                            $getIndexProduct = array_search($menu['plu_id'], array_column($checkProduct, 'product_code'));
+
+                            if($getIndexProduct === false){
+                                //create new product
+                                $dataProduct['product_code']      = $menu['plu_id'];
+                                $dataProduct['product_name']      = $menu['name'];
+                                $dataProduct['product_name_pos'] = $menu['name'];
+
+                                $newProduct = Product::create($dataProduct);
+                                if (!$newProduct) {
+                                    DB::rollback();
+                                    return ['status' => 'fail', 'messages' => ['Transaction sync failed']];
+                                }
+
+                                $productPriceData['id_product']         = $newProduct['id_product'];
+                                $productPriceData['id_outlet']             = $outlet['id_outlet'];
+                                $productPriceData['product_price_base'] = $menu['price'];
+                                $newProductPrice = ProductPrice::create($productPriceData);
+                                if (!$newProductPrice) {
+                                    DB::rollback();
+                                    return ['status' => 'fail', 'messages' => ['Transaction sync failed']];
+                                }
+
+                                $product = $newProduct;
+                            }else{
+                                $product = $checkProduct[$getIndexProduct];
+                            }
+                            $dataProduct = [
+                                'id_transaction'               => $createTrx['id_transaction'],
+                                'id_product'                   => $product['id_product'],
+                                'id_outlet'                    => $outlet['id_outlet'],
+                                'id_user'                      => $createTrx['id_user'],
+                                'transaction_product_qty'      => $menu['qty'],
+                                'transaction_product_price'    => round($menu['price'], 2),
+                                'transaction_product_subtotal' => $menu['qty'] * round($menu['price'], 2)
+                            ];
+                            if (isset($menu['open_modifier'])) {
+                                $dataProduct['transaction_product_note'] = $menu['open_modifier'];
+                            }
+
+                            $createProduct = TransactionProduct::create($dataProduct);
+
+                            // update modifiers 
+                            if (isset($menu['modifiers']) && !empty($menu['modifiers'])) {
+
+                                $allModCode = array_column($menu['modifiers'], 'code');
+                                $detailMod = ProductModifier::select('id_product_modifier','type','text','code')
+                                        ->whereIn('code', $allModCode)
+                                        ->where('id_product', '=', $product['id_product'])->get()->toArray();
+
+                                foreach ($menu['modifiers'] as $mod) {
+                                    $getIndexMod = array_search($mod['code'], array_column($detailMod, 'code'));
+
+                                    if ($getIndexMod !== false) {
+                                        $id_product_modifier = $detailMod[$getIndexMod]['id_product_modifier'];
+                                        $type = $detailMod[$getIndexMod]['type'];
+                                        $text = $detailMod[$getIndexMod]['text'];
+                                    } else {
+                                        if (isset($mod['text'])) {
+                                            $text = $mod['text'];
+                                        } else {
+                                            $text = null;
+                                        }
+                                        if (isset($mod['type'])) {
+                                            $type = $mod['type'];
+                                        } else {
+                                            $type = "";
+                                        }
+                                        $newModifier = ProductModifier::create([
+                                            'id_product' => $product['id_product'],
+                                            'type' => $type,
+                                            'code' => $mod['code'],
+                                            'text' => $text
+                                        ]);
+                                        $id_product_modifier = $newModifier['id_product_modifier'];
+                                    }
+                                    $dataProductMod['id_transaction_product'] = $createProduct['id_transaction_product'];
+                                    $dataProductMod['id_transaction'] = $createTrx['id_transaction'];
+                                    $dataProductMod['id_product'] = $product['id_product'];
+                                    $dataProductMod['id_product_modifier'] = $id_product_modifier;
+                                    $dataProductMod['id_outlet'] = $outlet['id_outlet'];
+                                    $dataProductMod['id_user'] = $createTrx['id_user'];
+                                    $dataProductMod['type'] = $type;
+                                    $dataProductMod['code'] = $mod['code'];
+                                    $dataProductMod['text'] = $text;
+                                    $dataProductMod['qty'] = $menu['qty'];
+                                    $dataProductMod['datetime'] = $createTrx['created_at'];
+                                    $dataProductMod['trx_type'] = $createTrx['trasaction_type'];
+                                    $dataProductMod['sales_type'] = $createTrx['sales_type'];
+
+                                    $updateProductMod = TransactionProductModifier::updateOrCreate([
+                                        'id_transaction' => $createTrx['id_transaction'],
+                                        'code'  => $mod['code']
+                                    ], $dataProductMod);
+                                }
+                            }
+                            if (!$createProduct) {
+                                DB::rollback();
+                                return ['status' => 'fail', 'messages' => ['Transaction product sync failed']];
+                            }
+                        }else{
+                            DB::rollback();
+                            return['status' => 'fail', 'messages' => ['There is an incomplete input in the menu list']];
+                        }
+
+                    }
+
+                    if ($createTrx['transaction_point_earned']) {
+                        $dataLog = [
+                            'id_user'                     => $createTrx['id_user'],
+                            'point'                       => $createTrx['transaction_point_earned'],
+                            'id_reference'                => $createTrx['id_transaction'],
+                            'source'                      => 'Transaction',
+                            'grand_total'                 => $createTrx['transaction_grandtotal'],
+                            'point_conversion'            => $settingPoint,
+                            'membership_level'            => $level,
+                            'membership_point_percentage' => $percentageP * 100
+                        ];
+
+                        $insertDataLog = LogPoint::updateOrCreate(['id_user' => $createTrx['id_user'], 'id_reference' => $createTrx['id_transaction']], $dataLog);
+                        if (!$insertDataLog) {
+                            DB::rollback();
+                            return [
+                                    'status'    => 'fail',
+                                    'messages'  => ['Insert Point Failed']
+                            ];
+                        }
+
+                        $pointValue = $insertDataLog->point;
+
+                        //update user point
+                        $user->points = $pointBefore + $pointValue;
+                        $user->update();
+                        if (!$user) {
+                            DB::rollback();
+                            return [
+                                    'status'    => 'fail',
+                                    'messages'  => ['Insert Point Failed']
+                            ];
+                        }
+                    }
+                    
+                    if ($createTrx['transaction_cashback_earned']) {
+
+                        $insertDataLogCash = app($this->balance)->addLogBalance($createTrx['id_user'], $createTrx['transaction_cashback_earned'], $createTrx['id_transaction'], 'Transaction', $createTrx['transaction_grandtotal']);
+                        if (!$insertDataLogCash) {
+                            DB::rollback();
+                            return [
+                                'status'    => 'fail',
+                                'messages'  => ['Insert Cashback Failed']
+                            ];
+                        }
+
+                        $pointValue = $insertDataLogCash->balance;
+                    }
+                    
+                    if (isset($user['phone'])) {
+                        $checkMembership = app($this->membership)->calculateMembership($user['phone']);
+
+                        //update count transaction
+                        if (date('Y-m-d', strtotime($createTrx['transaction_date'])) == date('Y-m-d')) {
+                            $updateCountTrx = User::where('id', $user['id'])->update([
+                                'count_transaction_day' => $user['count_transaction_day'] + 1,
+                            ]);
+
+                            if (!$updateCountTrx) {
+                                DB::rollback();
+                                return [
+                                    'status'    => 'fail',
+                                    'messages'  => ['Update User Count Transaction Failed']
+                                ];
+                            }
+
+                            $userData = User::find($user['id']);
+
+                            //cek fraud detection transaction per day
+                            $fraudTrxDay = FraudSetting::where('parameter', 'LIKE', '%transactions in 1 day%')->first();
+                            if ($fraudTrxDay && $fraudTrxDay['parameter_detail'] != null) {
+                                if ($userData['count_transaction_day'] >= $fraudTrxDay['parameter_detail']) {
+                                    //send fraud detection to admin
+                                    $sendFraud = app($this->setting_fraud)->SendFraudDetection($fraudTrxDay['id_fraud_setting'], $userData, $createTrx['id_transaction'], null);
+                                }
+                            }
+                        }
+
+                        if (date('Y-m-d', strtotime($createTrx['transaction_date'])) >= date('Y-m-d', strtotime(' - 6 days')) && date('Y-m-d', strtotime($createTrx['transaction_date'])) <= date('Y-m-d')) {
+                            $updateCountTrx = User::where('id', $user['id'])->update([
+                                'count_transaction_week' => $user['count_transaction_week'] + 1,
+                            ]);
+
+                            if (!$updateCountTrx) {
+                                DB::rollback();
+                                return [
+                                    'status'    => 'fail',
+                                    'messages'  => ['Update User Count Transaction Failed']
+                                ];
+                            }
+
+                            //cek fraud detection transaction per week (last 7 days)
+                            $userData = User::find($user['id']);
+
+                            $fraudTrx = FraudSetting::where('parameter', 'LIKE', '%transactions in 1 week%')->first();
+                            if ($fraudTrx && $fraudTrx['parameter_detail'] != null) {
+                                if ($userData['count_transaction_week'] >= $fraudTrx['parameter_detail']) {
+                                    //send fraud detection to admin
+                                    $sendFraud = app($this->setting_fraud)->SendFraudDetection($fraudTrx['id_fraud_setting'], $userData, $createTrx['id_transaction'], $lastDeviceId = null);
+                                }
+                            }
+                        }
+                    }
+
+                    //insert voucher
+                    foreach($trxVoucher as $dataTrxVoucher){
+                        $dataTrxVoucher['id_transaction'] = $createTrx['id_transaction'];
+                        $create = TransactionVoucher::create($dataTrxVoucher);
+                    }
+                    
+                    DB::commit();
+                    return [
+                        'id_transaction'    => $createTrx->id_transaction,
+                        'point_before'      => (int)$pointBefore,
+                        'point_after'       => $pointBefore + $pointValue,
+                        'point_value'       => $pointValue
+                    ];
+                }else{
+                    return ['status' => 'fail', 'messages' => ['trx_id does not exist']];
+                }
+            }
+        }catch (Exception $e) {
+            return ['status' => 'fail', 'messages' => ['There is an error']];
+        }
+    }
+
+    function processDuplicate($trx, $outlet){
+        $trxDuplicate = Transaction::where('transaction_receipt_number',  $trx['trx_id'])
+                            ->with('user', 'outlet', 'productTransaction.product')
+                            ->whereNotIn('transactions.id_outlet', [$outlet['id_outlet']])
+                            ->where('transaction_date', date('Y-m-d H:i:s', strtotime($trx['date_time'])))
+                            ->where('transaction_grandtotal', $trx['grand_total'])
+                            ->where('transaction_subtotal', $trx['total'])
+                            ->where('trasaction_type', 'Offline');
+
+        if(isset($trx['cashier'])){
+            $trxDuplicate = $trxDuplicate->where('transaction_cashier', $trx['cashier']);
+        }
+
+        $trxDuplicate = $trxDuplicate->first();
+        if($trxDuplicate){
+            //cek detail productnya
+            $statusDuplicate = true;
+
+            $trx['product'] = [];
+            $detailproduct = [];
+
+            foreach ($trx['menu'] as $row => $menu) {
+                $productDuplicate = false;
+                foreach($trxDuplicate['productTransaction'] as $i => $dataProduct){
+                    if($menu['plu_id'] == $dataProduct['product']['product_code']){
+                        //cek jumlah quantity
+                        if($menu['qty'] == $dataProduct['transaction_product_qty']){
+                            //set status product duplicate true
+                            $productDuplicate = true;
+                            $menu['id_product'] = $dataProduct['id_product'];
+                            $menu['product_name'] = $dataProduct['product']['product_name'];
+                            $trx['product'][] = $menu;
+                            $detailproduct[] = $dataProduct;
+                            unset($trxDuplicate['productTransaction'][$i]);
+                        }
                     }
                 }
-            } else {
-                if (count($trx['menu']) <= 0) {
-                    continue;
+
+                //jika status product duplicate false maka detail product ada yg berbeda
+                if($productDuplicate == false){
+                        $statusDuplicate = false;
+                        break;
                 }
-                if (!$trx['trx_id']) {
-                    continue;
-                }
+            }
+
+            $trxDuplicate['product'] = $detailproduct;
+
+            if($statusDuplicate == true){
+                //insert into table transaction_duplicates
                 if (isset($trx['member_uid'])) {
                     $qr = MyHelper::readQR($trx['member_uid']);
                     $timestamp = $qr['timestamp'];
                     $phoneqr = $qr['phone'];
                     $user      = User::where('phone', $phoneqr)->with('memberships')->first();
-                    if (empty($user)) {
-                        DB::rollback();
-                        return response()->json(['status' => 'fail', 'messages' => ['User not found']]);
+                    if ($user) {
+                        $dataDuplicate['id_user'] = $user['id'];
                     }
-
-                    //suspend
-                    if (isset($user['is_suspended']) && $user['is_suspended'] == '1') {
-                        $user['id'] = null;
-                        $post['membership_level']    = null;
-                        $post['membership_promo_id'] = null;
-                    } else {
-
-                        if (count($user['memberships']) > 0) {
-                            $post['membership_level']    = $user['memberships'][0]['membership_name'];
-                            $post['membership_promo_id'] = $user['memberships'][0]['benefit_promo_id'];
-                        } else {
-                            $post['membership_level']    = null;
-                            $post['membership_promo_id'] = null;
-                        }
-                    }
-                } else {
-
-                    //transaction with voucher but non member
-                    if (isset($trx['voucher']) && !empty($trx['voucher'])) {
-                        DB::rollback();
-                        return response()->json(['status' => 'fail', 'messages' => ['Transactions with vouchers must be with member UID', 'trx id : ' . $trx['trx_id'] . ' does not have a member UID']]);
-                    }
-
-                    $user['id'] = null;
-                    $post['membership_level']    = null;
-                    $post['membership_promo_id'] = null;
                 }
 
-                $trx['total'] = round($trx['total']);
-                $trx['discount'] = round($trx['discount']);
-                $trx['tax'] = round($trx['tax']);
+                $dataDuplicate['id_transaction'] = $trxDuplicate['id_transaction'];
+                $dataDuplicate['id_outlet_duplicate'] = $trxDuplicate['outlet']['id_outlet'];
+                $dataDuplicate['id_outlet'] = $outlet['id_outlet'];
+                $dataDuplicate['transaction_receipt_number'] = $trx['trx_id'];
+                $dataDuplicate['outlet_code_duplicate'] = $trxDuplicate['outlet']['outlet_code'];
+                $dataDuplicate['outlet_code'] = $outlet['outlet_code'];
+                $dataDuplicate['outlet_name_duplicate'] = $trxDuplicate['outlet']['outlet_name'];
+                $dataDuplicate['outlet_name'] = $outlet['outlet_name'];
 
-                if (!isset($trx['sales_type'])) {
-                    $trx['sales_type'] = null;
+                if(isset($user['name'])){
+                    $dataDuplicate['user_name'] = $user['name'];
                 }
 
-                $dataTrx = [
-                    'id_outlet'                   => $checkOutlet['id_outlet'],
-                    'id_user'                     => $user['id'],
-                    'transaction_date'            => date('Y-m-d H:i:s', strtotime($trx['date_time'])),
-                    'transaction_receipt_number'  => $trx['trx_id'],
-                    'trasaction_type'             => 'Offline',
-                    'sales_type'                  => $trx['sales_type'],
-                    'transaction_subtotal'        => $trx['total'],
-                    'transaction_service'         => $trx['service'],
-                    'transaction_discount'        => $trx['discount'],
-                    'transaction_tax'             => $trx['tax'],
-                    'transaction_grandtotal'      => $trx['grand_total'],
-                    'transaction_point_earned'    => null,
-                    'transaction_cashback_earned' => null,
-                    'membership_level'            => $post['membership_level'],
-                    'membership_promo_id'         => $post['membership_promo_id'],
-                    'trasaction_payment_type'     => 'Offline',
-                    'transaction_payment_status'  => 'Completed'
-                ];
-
-                if (isset($qr['device'])) {
-                    $dataTrx['transaction_device_type'] = $qr['device'];
+                if(isset($user['phone'])){
+                    $dataDuplicate['user_phone'] = $user['phone'];
                 }
 
-                if (isset($trx['cashier'])) {
-                    $dataTrx['transaction_cashier'] = $trx['cashier'];
-                }
-
-                //cek jika transaksi sudah pernah di sync, data tidak akan diproses
-                $cektransaction = Transaction::where(['transaction_receipt_number' => $trx['trx_id'], 'id_outlet' => $checkOutlet['id_outlet']])->first();
-                if ($cektransaction) {
-                    $r = ['id_transaction'    => $cektransaction->id_transaction];
-                    array_push($result, $r);
-                    continue;
-                }
-
-                $createTrx = Transaction::updateOrCreate(['transaction_receipt_number' => $trx['trx_id'], 'id_outlet' => $checkOutlet['id_outlet']], $dataTrx);
-
-                if (!$createTrx) {
+                $dataDuplicate['transaction_cashier'] = $trx['cashier'];
+                $dataDuplicate['transaction_date'] = date('Y-m-d H:i:s',strtotime($trx['date_time']));
+                $dataDuplicate['transaction_subtotal'] = $trx['total'];
+                $dataDuplicate['transaction_tax'] = $trx['tax'];
+                $dataDuplicate['transaction_service'] = $trx['service'];
+                $dataDuplicate['transaction_grandtotal'] = $trx['grand_total'];
+                $dataDuplicate['sync_datetime_duplicate'] = $trxDuplicate['created_at'];
+                $dataDuplicate['sync_datetime'] = date('Y-m-d H:i:s');
+                $insertDuplicate = TransactionDuplicate::create($dataDuplicate);
+                if(!$insertDuplicate){
                     DB::rollback();
                     return response()->json(['status' => 'fail', 'messages' => ['Transaction sync failed']]);
                 }
 
-                $checkPay = TransactionPaymentOffline::where('id_transaction', $createTrx['id_transaction'])->get();
-                if (count($checkPay) > 0) {
-                    $deletePay = TransactionPaymentOffline::where('id_transaction', $createTrx['id_transaction'])->delete();
-                    if (!$deletePay) {
-                        DB::rollback();
-                        return response()->json(['status' => 'fail', 'messages' => ['Transaction sync failed']]);
+                //insert transaction duplicate product
+                $prodDuplicate = [];
+                foreach ($trx['product'] as $row => $menu) {
+                    $dataTrxDuplicateProd['id_transaction_duplicate'] = $insertDuplicate['id_transaction_duplicate'];
+
+                    $dataTrxDuplicateProd['id_product'] = $menu['id_product'];
+                    $dataTrxDuplicateProd['transaction_product_code'] = $menu['plu_id'];
+                    $dataTrxDuplicateProd['transaction_product_name'] = $menu['product_name'];
+                    $dataTrxDuplicateProd['transaction_product_qty'] = $menu['qty'];
+                    $dataTrxDuplicateProd['transaction_product_price'] = $menu['price'];
+                    $dataTrxDuplicateProd['transaction_product_subtotal'] = $menu['qty'] * $menu['price'];
+                    if(isset($menu['open_modifier'])){
+                        $dataTrxDuplicateProd['transaction_product_note'] = $menu['open_modifier'];
                     }
+                    $dataTrxDuplicateProd['created_at'] = date('Y-m-d H:i:s');
+                    $dataTrxDuplicateProd['updated_at'] = date('Y-m-d H:i:s');
+
+                    $prodDuplicate[] = $dataTrxDuplicateProd;
                 }
 
-                $statusGet = 0;
-
-                foreach ($trx['payments'] as $col => $pay) {
-                    $paymentSpecial = SpecialMembership::where('payment_method', $pay['name'])->first();
-                    if (!empty($paymentSpecial)) {
-                        $paymentUse = $paymentSpecial;
-                        $statusGet = 1;
-                    }
-
-                    $dataPay = [
-                        'id_transaction' => $createTrx['id_transaction'],
-                        'payment_type'   => $pay['type'],
-                        'payment_bank'   => $pay['name'],
-                        'payment_amount' => $pay['nominal']
-                    ];
-
-                    $createPay = TransactionPaymentOffline::create($dataPay);
-                    if (!$createPay) {
-                        DB::rollback();
-                        return response()->json(['status' => 'fail', 'messages' => ['Transaction sync failed']]);
-                    }
+                $insertTrxDuplicateProd = TransactionDuplicateProduct::insert($prodDuplicate);
+                if(!$insertTrxDuplicateProd){
+                    DB::rollback();
+                    return response()->json(['status' => 'fail', 'messages' => ['Transaction sync failed']]);
                 }
 
-                $checkProd = TransactionProduct::where('id_transaction', $createTrx['id_transaction'])->get();
-                if (count($checkProd) > 0) {
-                    $checkProd = TransactionProduct::where('id_transaction', $createTrx['id_transaction'])->delete();
+                //insert payment
+                $payDuplicate = [];
+                foreach($trx['payments'] as $pay){
+                    $dataTrxDuplicatePay['id_transaction_duplicate'] = $insertDuplicate['id_transaction_duplicate'];
+                    $dataTrxDuplicatePay['payment_name'] = $pay['name'];
+                    $dataTrxDuplicatePay['payment_type'] = $pay['type'];
+                    $dataTrxDuplicatePay['payment_amount'] = $pay['nominal'];
+                    $dataTrxDuplicatePay['created_at'] = date('Y-m-d H:i:s');
+                    $dataTrxDuplicatePay['updated_at'] = date('Y-m-d H:i:s');
+                    $payDuplicate[] = $dataTrxDuplicatePay;
                 }
 
-                foreach ($trx['menu'] as $row => $menu) {
-                    $checkProduct = Product::where('product_code', $menu['plu_id'])->first();
-                    if (empty($checkProduct)) {
-                        //create new product
-                        $dataProduct['product_code']      = $menu['plu_id'];
-                        $dataProduct['product_name']      = $menu['name'];
-                        $dataProduct['product_name_pos'] = $menu['name'];
-
-                        $newProduct = Product::create($dataProduct);
-                        if (!$newProduct) {
-                            DB::rollback();
-                            return response()->json(['status' => 'fail', 'messages' => ['Transaction sync failed']]);
-                        }
-
-                        $productPriceData['id_product']         = $newProduct['id_product'];
-                        $productPriceData['id_outlet']             = $checkOutlet['id_outlet'];
-                        $productPriceData['product_price_base'] = $menu['price'];
-                        $newProductPrice = ProductPrice::create($productPriceData);
-                        if (!$newProductPrice) {
-                            DB::rollback();
-                            return response()->json(['status' => 'fail', 'messages' => ['Transaction sync failed']]);
-                        }
-
-                        $checkProduct = $newProduct;
-                    }
-
-                    $dataProduct = [
-                        'id_transaction'               => $createTrx['id_transaction'],
-                        'id_product'                   => $checkProduct['id_product'],
-                        'id_outlet'                    => $checkOutlet['id_outlet'],
-                        'id_user'                      => $createTrx['id_user'],
-                        'transaction_product_qty'      => $menu['qty'],
-                        'transaction_product_price'    => round($menu['price'], 2),
-                        'transaction_product_subtotal' => $menu['qty'] * round($menu['price'], 2)
-                    ];
-                    if (isset($menu['open_modifier'])) {
-                        $dataProduct['transaction_product_note'] = $menu['open_modifier'];
-                    }
-
-                    $createProduct = TransactionProduct::create($dataProduct);
-                    // 	$createProduct = TransactionProduct::updateOrCreate(['id_transaction' => $createTrx['id_transaction'], 'id_product' => $checkProduct['id_product']], $dataProduct);
-
-                    // update modifiers 
-                    if (isset($menu['modifiers'])) {
-                        if (!empty($menu['modifiers'])) {
-                            foreach ($menu['modifiers'] as $mod) {
-                                $detailMod = ProductModifier::where('id_product', '=', $checkProduct['id_product'])
-                                    ->where('code', '=', $mod['code'])
-                                    ->first();
-                                if ($detailMod) {
-                                    $id_product_modifier = $detailMod['id_product_modifier'];
-                                    $type = $detailMod['type'];
-                                    $text = $detailMod['text'];
-                                } else {
-                                    if (isset($mod['text'])) {
-                                        $text = $mod['text'];
-                                    } else {
-                                        $text = null;
-                                    }
-                                    if (isset($mod['type'])) {
-                                        $type = $mod['type'];
-                                    } else {
-                                        $type = "";
-                                    }
-                                    $newModifier = ProductModifier::create([
-                                        'id_product' => $checkProduct['id_product'],
-                                        'type' => $mod['type'],
-                                        'code' => $mod['code'],
-                                        'text' => $text
-                                    ]);
-                                    $id_product_modifier = $newModifier['id_product_modifier'];
-                                }
-                                $dataProductMod['id_transaction_product'] = $createProduct['id_transaction_product'];
-                                $dataProductMod['id_transaction'] = $createTrx['id_transaction'];
-                                $dataProductMod['id_product'] = $checkProduct['id_product'];
-                                $dataProductMod['id_product_modifier'] = $id_product_modifier;
-                                $dataProductMod['id_outlet'] = $checkOutlet['id_outlet'];
-                                $dataProductMod['id_user'] = $createTrx['id_user'];
-                                $dataProductMod['type'] = $type;
-                                $dataProductMod['code'] = $mod['code'];
-                                $dataProductMod['text'] = $text;
-                                $dataProductMod['qty'] = $menu['qty'];
-                                $dataProductMod['datetime'] = $createTrx['created_at'];
-                                $dataProductMod['trx_type'] = $createTrx['trasaction_type'];
-                                $dataProductMod['sales_type'] = $createTrx['sales_type'];
-
-                                $updateProductMod = TransactionProductModifier::updateOrCreate([
-                                    'id_transaction' => $createTrx['id_transaction'],
-                                    'code'  => $mod['code']
-                                ], $dataProductMod);
-                            }
-                        }
-                    }
-                    if (!$createProduct) {
-                        DB::rollback();
-                        return response()->json(['status' => 'fail', 'messages' => ['Transaction product sync failed']]);
-                    }
+                $insertTrxDuplicatePay = TransactionDuplicatePayment::create($dataTrxDuplicatePay);
+                if(!$insertTrxDuplicatePay){
+                    DB::rollback();
+                    return response()->json(['status' => 'fail', 'messages' => ['Transaction sync failed']]);
                 }
 
-                $pointBefore = 0;
-                $pointValue = 0;
-
-                if (isset($trx['member_uid'])) {
-                    //insert voucher
-                    $idDealVouUsed = [];
-                    if (!empty($trx['voucher'])) {
-                        foreach ($trx['voucher'] as $keyV => $valueV) {
-                            $checkUsed = DealsVoucher::where('voucher_code', $valueV['voucher_code'])->with(['deals_user', 'deal'])->first();
-                            if (empty($checkUsed)) {
-                                DB::rollback();
-                                return response()->json([
-                                    'status'    => 'fail',
-                                    'messages'  => ['Voucher ' . $valueV['voucher_code'] . ' not found']
-                                ]);
-                            }
-
-                            foreach ($checkUsed['deals_user'] as $valueDealUser) {
-                                //cek voucher user
-                                if ($valueDealUser->id_user != $user['id']) {
-                                    DB::rollback();
-                                    return response()->json([
-                                        'status'    => 'fail',
-                                        'messages'  => ['Voucher ' . $valueV['voucher_code'] . ' not valid']
-                                    ]);
-                                }
-
-                                //cek voucher sudah di invalidate
-                                if ($valueDealUser->redeemed_at == null) {
-                                    DB::rollback();
-                                    return response()->json([
-                                        'status'    => 'fail',
-                                        'messages'  => ['Voucher ' . $valueV['voucher_code'] . ' not valid']
-                                    ]);
-                                }
-
-                                //cek voucher outlet
-                                if ($valueDealUser->id_outlet !=  $checkOutlet['id_outlet']) {
-                                    DB::rollback();
-                                    return response()->json([
-                                        'status'    => 'fail',
-                                        'messages'  => ['Voucher ' . $valueV['voucher_code'] . ' cannot be used at this store.']
-                                    ]);
-                                }
-                            }
-
-                            $checkVoucherUsed = TransactionVoucher::whereNotIn('id_transaction', [$createTrx->id_transaction])->where('id_deals_voucher', $checkUsed['id_deals_voucher'])->first();
-                            if ($checkVoucherUsed) {
-                                DB::rollback();
-                                return response()->json([
-                                    'status'    => 'fail',
-                                    'messages'  => ['Voucher ' . $valueV['voucher_code'] . ' has been used']
-                                ]);
-                            }
-
-                            //create transaction voucher
-                            $trxVoucher['id_transaction'] = $createTrx->id_transaction;
-                            $trxVoucher['id_deals_voucher'] =  $checkUsed['id_deals_voucher'];
-
-                            $insertTrxVoucher = TransactionVoucher::updateOrCreate(['id_transaction' => $createTrx->id_transaction, 'id_deals_voucher' => $checkUsed['id_deals_voucher']], $trxVoucher);
-                            if (!$insertTrxVoucher) {
-                                DB::rollback();
-                                return response()->json([
-                                    'status'    => 'fail',
-                                    'messages'  => ['Create voucher transaction failed']
-                                ]);
-                            }
-
-                            $idDealVouUsed[] = $insertTrxVoucher->id_deals_voucher;
-
-                            // 			foreach ($checkUsed['deals_user'] as $keyU => $valueU) {
-                            // 				$valueU->used_at = $createTrx->transaction_date;
-                            // 				$valueU->update();
-                            // 				if (!$valueU) {
-                            // 					DB::rollback();
-                            // 					return response()->json([
-                            // 						'status'    => 'fail',
-                            // 						'messages'  => ['Voucher '.$valueV['voucher_code'].' not valid']
-                            // 					]);
-                            // 				}
-                            // 			}
-
-                            $checkUsed['deal']->deals_total_used =  $checkUsed['deal']->deals_total_used + 1;
-                            $checkUsed['deal']->update();
-                            if (!$checkUsed['deal']) {
-                                DB::rollback();
-                                return response()->json([
-                                    'status'    => 'fail',
-                                    'messages'  => ['Voucher ' . $valueV['voucher_code'] . ' not valid']
-                                ]);
-                            }
-                        }
-                    }
-
-                    //delete voucher not used if transction update
-                    $trxVouNotUsed = TransactionVoucher::where('id_transaction', $createTrx->id_transaction)->whereNotIn('id_deals_voucher', $idDealVouUsed)->get();
-                    if (count($trxVouNotUsed) > 0) {
-                        foreach ($trxVouNotUsed as $notUsed) {
-
-                            $notUsed['deals_voucher']['deals_user'][0]->used_at = null;
-                            $notUsed['deals_voucher']['deals_user'][0]->save();
-                            if (!$notUsed['deals_voucher']['deals_user'][0]) {
-                                DB::rollback();
-                                return response()->json([
-                                    'status'    => 'fail',
-                                    'messages'  => ['Update voucher transaction failed']
-                                ]);
-                            }
-
-                            $notUsed['deals_voucher']['deal']->deals_total_used = $notUsed['deals_voucher']['deal']->deals_total_used - 1;
-                            $notUsed['deals_voucher']['deal']->save();
-                            if (!$notUsed['deals_voucher']['deal']) {
-                                DB::rollback();
-                                return response()->json([
-                                    'status'    => 'fail',
-                                    'messages'  => ['Update voucher transaction failed']
-                                ]);
-                            }
-                        }
-
-                        $delTrxVou = TransactionVoucher::where('id_transaction', $createTrx->id_transaction)->whereNotIn('id_deals_voucher', $idDealVouUsed)->delete();
-                        if (!$delTrxVou) {
-                            DB::rollback();
-                            return response()->json([
-                                'status'    => 'fail',
-                                'messages'  => ['Update voucher transaction failed']
-                            ]);
-                        }
-                    }
-
-                    if ($createTrx['transaction_payment_status'] == 'Completed') {
-                        //get last point 
-                        $pointBefore = LogBalance::where('id_user', $user['id'])->whereNotIn('id_log_balance', function ($q) use ($createTrx) {
-                            $q->from('log_balances')
-                                ->where('source', 'Transaction')
-                                ->where('id_reference', $createTrx->id_transaction)
-                                ->select('id_log_balance');
-                        })->sum('balance');
-
-                        //cek jika menggunakan voucher tidak dapat point / cashback
-                        if (count($idDealVouUsed) > 0) {
-                            $point = null;
-                            $cashback = null;
-
-                            //delete log point
-                            $delLog = LogPoint::where('id_reference', $createTrx->id_transaction)->where('source', 'Transaction')->get();
-                            if (count($delLog) > 0) {
-                                $delLog = LogPoint::where('id_reference', $createTrx->id_transaction)->where('source', 'Transaction')->delete();
-                                if (!$delLog) {
-                                    DB::rollback();
-                                    return response()->json([
-                                        'status'    => 'fail',
-                                        'messages'  => ['Update point failed']
-                                    ]);
-                                }
-                            }
-
-                            //delete log balance
-                            $delLog = LogBalance::where('id_reference', $createTrx->id_transaction)->where('source', 'Transaction')->get();
-                            if (count($delLog) > 0) {
-                                $delLog = LogBalance::where('id_reference', $createTrx->id_transaction)->where('source', 'Transaction')->delete();
-                                if (!$delLog) {
-                                    DB::rollback();
-                                    return response()->json([
-                                        'status'    => 'fail',
-                                        'messages'  => ['Update cashback failed']
-                                    ]);
-                                }
-                            }
-                        } else {
-                            if ($statusGet == 1) {
-                                if (!empty($user['memberships'][0]['membership_name'])) {
-                                    $level = $paymentUse->special_membership_name;
-                                    $percentageP = $paymentUse->benefit_point_multiplier / 100;
-                                    $percentageB = $paymentUse->benefit_cashback_multiplier / 100;
-                                    $cashMax = $paymentUse->cashback_maximum;
-                                } else {
-                                    $level = null;
-                                    $percentageP = 1;
-                                    $percentageB = 1;
-
-                                    $getSet = Setting::where('key', 'cashback_maximum')->first();
-                                    if ($getSet) {
-                                        $cashMax = (int) $getSet->value;
-                                    }
-                                }
-
-                                $point = floor($this->count('point', $trx) * $percentageP);
-
-                                $datatrx = $trx;
-                                $datatrx['total'] = $trx['grand_total'];
-                                $cashback = floor($this->count('cashback', $datatrx) * $percentageB);
-
-                                if (isset($cashMax) && $cashback > $cashMax) {
-                                    $cashback = $cashMax;
-                                }
-
-                                //update point & cashback earned
-                                $configPoint = Configs::where('config_name', 'point')->first();
-                                if ($configPoint && isset($configPoint['is_active']) && $configPoint['is_active'] == '1') {
-                                    $createTrx->transaction_point_earned = $point;
-                                } else {
-                                    $createTrx->transaction_point_earned = null;
-                                }
-                                $configBalance = Configs::where('config_name', 'balance')->first();
-                                if ($configBalance && isset($configBalance['is_active']) && $configBalance['is_active'] == '1') {
-                                    $createTrx->transaction_cashback_earned = $cashback;
-                                } else {
-                                    $createTrx->transaction_cashback_earned = null;
-                                }
-
-                                $createTrx->update();
-                                if (!$createTrx) {
-                                    DB::rollback();
-                                    return response()->json([
-                                        'status'    => 'fail',
-                                        'messages'  => ['Insert Point Failed']
-                                    ]);
-                                }
-
-                                if ($createTrx['transaction_point_earned']) {
-                                    $settingPoint = Setting::where('key', 'point_conversion_value')->first();
-
-                                    $dataLog = [
-                                        'id_user'                     => $createTrx['id_user'],
-                                        'point'                       => $createTrx['transaction_point_earned'],
-                                        'id_reference'                => $createTrx['id_transaction'],
-                                        'source'                      => 'Transaction',
-                                        'grand_total'                 => $createTrx['transaction_grandtotal'],
-                                        'point_conversion'            => $settingPoint['value'],
-                                        'membership_level'            => $level,
-                                        'membership_point_percentage' => $percentageP * 100
-                                    ];
-
-                                    $insertDataLog = LogPoint::updateOrCreate(['id_user' => $createTrx['id_user'], 'id_reference' => $createTrx['id_transaction']], $dataLog);
-                                    if (!$insertDataLog) {
-                                        DB::rollback();
-                                        return response()->json([
-                                            'status'    => 'fail',
-                                            'messages'  => ['Insert Point Failed']
-                                        ]);
-                                    }
-
-                                    $pointValue = $insertDataLog->point;
-
-                                    //update user point
-                                    $user->points = $pointBefore + $pointValue;
-                                    $user->update();
-                                    if (!$user) {
-                                        DB::rollback();
-                                        return response()->json([
-                                            'status'    => 'fail',
-                                            'messages'  => ['Insert Point Failed']
-                                        ]);
-                                    }
-                                }
-
-                                if ($createTrx['transaction_cashback_earned']) {
-
-                                    $insertDataLogCash = app($this->balance)->addLogBalance($createTrx['id_user'], $createTrx['transaction_cashback_earned'], $createTrx['id_transaction'], 'Transaction', $createTrx['transaction_grandtotal']);
-                                    if (!$insertDataLogCash) {
-                                        DB::rollback();
-                                        return response()->json([
-                                            'status'    => 'fail',
-                                            'messages'  => ['Insert Cashback Failed']
-                                        ]);
-                                    }
-
-                                    $pointValue = $insertDataLogCash->balance;
-                                }
-
-                                $createTrx->special_memberships = 1;
-                                $createTrx->save();
-                                if (!$createTrx) {
-                                    DB::rollback();
-                                    return response()->json([
-                                        'status'    => 'fail',
-                                        'messages'  => ['Transaction sync failed']
-                                    ]);
-                                }
-                            } else {
-                                if (!empty($user['memberships'][0]['membership_name'])) {
-                                    $level = $user['memberships'][0]['membership_name'];
-                                    $percentageP = $user['memberships'][0]['benefit_point_multiplier'] / 100;
-                                    $percentageB = $user['memberships'][0]['benefit_cashback_multiplier'] / 100;
-                                    $cashMax = $user['memberships'][0]['cashback_maximum'];
-                                } else {
-                                    $level = null;
-                                    $percentageP = 0;
-                                    $percentageB = 0;
-
-                                    $getSet = Setting::where('key', 'cashback_maximum')->first();
-                                    if ($getSet) {
-                                        $cashMax = (int) $getSet->value;
-                                    }
-                                }
-
-                                $point = floor($this->count('point', $trx) * $percentageP);
-
-                                $datatrx = $trx;
-                                $datatrx['total'] = $trx['grand_total'];
-                                $cashback = floor($this->count('cashback', $datatrx) * $percentageB);
-
-                                //count some trx user
-                                $countUserTrx = Transaction::where('id_user', $user['id'])->count();
-
-                                $countSettingCashback = TransactionSetting::get();
-
-                                // return $countSettingCashback;
-                                if ($countUserTrx < count($countSettingCashback)) {
-                                    // return $countUserTrx;
-                                    $cashback = $cashback * $countSettingCashback[$countUserTrx]['cashback_percent'] / 100;
-
-                                    if ($cashback > $countSettingCashback[$countUserTrx]['cashback_maximum']) {
-                                        $cashback = $countSettingCashback[$countUserTrx]['cashback_maximum'];
-                                    }
-                                } else {
-                                    if (isset($cashMax) && $cashback > $cashMax) {
-                                        $cashback = $cashMax;
-                                    }
-                                }
-
-                                //update point & cashback earned
-                                $configPoint = Configs::where('config_name', 'point')->first();
-                                if ($configPoint && isset($configPoint['is_active']) && $configPoint['is_active'] == '1') {
-                                    $createTrx->transaction_point_earned = $point;
-                                } else {
-                                    $createTrx->transaction_point_earned = null;
-                                }
-                                $configBalance = Configs::where('config_name', 'balance')->first();
-                                if ($configBalance && isset($configBalance['is_active']) && $configBalance['is_active'] == '1') {
-                                    $createTrx->transaction_cashback_earned = $cashback;
-                                } else {
-                                    $createTrx->transaction_cashback_earned = null;
-                                }
-                                $createTrx->update();
-                                if (!$createTrx) {
-                                    DB::rollback();
-                                    return response()->json([
-                                        'status'    => 'fail',
-                                        'messages'  => ['Insert Point Failed']
-                                    ]);
-                                }
-
-                                if ($createTrx['transaction_point_earned']) {
-                                    $settingPoint = Setting::where('key', 'point_conversion_value')->first();
-
-                                    $dataLog = [
-                                        'id_user'                     => $createTrx['id_user'],
-                                        'point'                       => $createTrx['transaction_point_earned'],
-                                        'id_reference'                => $createTrx['id_transaction'],
-                                        'source'                      => 'Transaction',
-                                        'grand_total'                 => $createTrx['transaction_grandtotal'],
-                                        'point_conversion'            => $settingPoint['value'],
-                                        'membership_level'            => $level,
-                                        'membership_point_percentage' => $percentageP * 100
-                                    ];
-
-                                    $insertDataLog = LogPoint::updateOrCreate(['id_user' => $createTrx['id_user'], 'id_reference' => $createTrx['id_transaction']], $dataLog);
-                                    if (!$insertDataLog) {
-                                        DB::rollback();
-                                        return response()->json([
-                                            'status'    => 'fail',
-                                            'messages'  => ['Insert Point Failed']
-                                        ]);
-                                    }
-
-                                    $pointValue = $insertDataLog->point;
-
-                                    //update user point
-                                    $user->points = $pointBefore + $pointValue;
-                                    $user->update();
-                                    if (!$user) {
-                                        DB::rollback();
-                                        return response()->json([
-                                            'status'    => 'fail',
-                                            'messages'  => ['Insert Point Failed']
-                                        ]);
-                                    }
-                                }
-
-                                if ($createTrx['transaction_cashback_earned']) {
-
-                                    $insertDataLogCash = app($this->balance)->addLogBalance($createTrx['id_user'], $createTrx['transaction_cashback_earned'], $createTrx['id_transaction'], 'Transaction', $createTrx['transaction_grandtotal']);
-                                    if (!$insertDataLogCash) {
-                                        DB::rollback();
-                                        return response()->json([
-                                            'status'    => 'fail',
-                                            'messages'  => ['Insert Cashback Failed']
-                                        ]);
-                                    }
-
-                                    $pointValue = $insertDataLogCash->balance;
-                                }
-
-                                if (isset($user['phone'])) {
-                                    $checkMembership = app($this->membership)->calculateMembership($user['phone']);
-
-                                    //update count transaction
-                                    if (date('Y-m-d', strtotime($createTrx['transaction_date'])) == date('Y-m-d')) {
-                                        $updateCountTrx = User::where('id', $user['id'])->update([
-                                            'count_transaction_day' => $user['count_transaction_day'] + 1,
-                                        ]);
-
-                                        if (!$updateCountTrx) {
-                                            DB::rollback();
-                                            return response()->json([
-                                                'status'    => 'fail',
-                                                'messages'  => ['Update User Count Transaction Failed']
-                                            ]);
-                                        }
-
-                                        $userData = User::find($user['id']);
-
-                                        //cek fraud detection transaction per day
-                                        $fraudTrxDay = FraudSetting::where('parameter', 'LIKE', '%transactions in 1 day%')->first();
-                                        if ($fraudTrxDay && $fraudTrxDay['parameter_detail'] != null) {
-                                            if ($userData['count_transaction_day'] >= $fraudTrxDay['parameter_detail']) {
-                                                //send fraud detection to admin
-                                                $sendFraud = app($this->setting_fraud)->SendFraudDetection($fraudTrxDay['id_fraud_setting'], $userData, $createTrx['id_transaction'], null);
-                                            }
-                                        }
-                                    }
-
-                                    if (date('Y-m-d', strtotime($createTrx['transaction_date'])) >= date('Y-m-d', strtotime(' - 6 days')) && date('Y-m-d', strtotime($createTrx['transaction_date'])) <= date('Y-m-d')) {
-                                        $updateCountTrx = User::where('id', $user['id'])->update([
-                                            'count_transaction_week' => $user['count_transaction_week'] + 1,
-                                        ]);
-
-                                        if (!$updateCountTrx) {
-                                            DB::rollback();
-                                            return response()->json([
-                                                'status'    => 'fail',
-                                                'messages'  => ['Update User Count Transaction Failed']
-                                            ]);
-                                        }
-
-                                        //cek fraud detection transaction per week (last 7 days)
-                                        $userData = User::find($user['id']);
-
-                                        $fraudTrx = FraudSetting::where('parameter', 'LIKE', '%transactions in 1 week%')->first();
-                                        if ($fraudTrx && $fraudTrx['parameter_detail'] != null) {
-                                            if ($userData['count_transaction_week'] >= $fraudTrx['parameter_detail']) {
-                                                //send fraud detection to admin
-                                                $sendFraud = app($this->setting_fraud)->SendFraudDetection($fraudTrx['id_fraud_setting'], $userData, $createTrx['id_transaction'], $lastDeviceId = null);
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                $r = [
-                    'id_transaction'    => $createTrx->id_transaction,
-                    'point_before'      => (int) $pointBefore,
-                    'point_after'       => $pointBefore + $pointValue,
-                    'point_value'       => $pointValue
+                $trx['outlet_name'] = $outlet['outlet_name'];
+                $trx['outlet_code'] = $outlet['outlet_code'];
+                $trx['sync_datetime'] = $dataDuplicate['sync_datetime'];
+                return [
+                    'status' => 'duplicate',
+                    'duplicate' => $trxDuplicate,
+                    'trx' => $trx,
                 ];
-                array_push($result, $r);
             }
         }
-        DB::commit();
-        return response()->json([
-            'status'    => 'success',
-            'result'    => $result
-        ]);
+
+        return ['status' => 'not duplicate'];
     }
 
     public function transactionRefund(reqTransactionRefund $request)
