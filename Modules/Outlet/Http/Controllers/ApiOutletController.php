@@ -433,10 +433,15 @@ class ApiOutletController extends Controller
                 $outlet = $outlet->with(['product_prices']);
             }
         }
-        else {
+        elseif($post['simple_result']??false) {
+            $outlet = Outlet::select('outlets.id_outlet','outlets.outlet_name');
+        }else{
             $outlet = Outlet::with(['city', 'outlet_photos', 'outlet_schedules', 'today', 'user_outlets','brands']);
+            $outlet->select('outlets.id_outlet','outlets.outlet_name','outlets.outlet_code','outlets.outlet_status','outlets.outlet_address','outlets.id_city','outlet_latitude','outlet_longitude');
         }
-
+        if($post['simple_result']??false){
+            $outlet->select('outlets.id_outlet','outlets.outlet_name');
+        }
         if(is_array($post['id_brand']??false)&&$post['id_brand']){
             $outlet->leftJoin('brand_outlet','outlets.id_outlet','brand_outlet.id_outlet');
             $id_brands=$post['id_brand'];
@@ -523,20 +528,12 @@ class ApiOutletController extends Controller
                 if(isset($outlet[0]['holidays'])) unset($outlet[0]['holidays']);
             }
         }
-        if(!isset($post['id_outlet'])&&!isset($post['outlet_code'])&&!isset($post['admin'])){
+        if($post['simple_result']??false){
             $outlet=array_map(function($var){
-                $ret=[
+                return [
                     'id_outlet'=>$var['id_outlet'],
-                    'outlet_name'=>$var['outlet_name'],
-                    'outlet_code'=>$var['outlet_code'],
-                    'outlet_status'=>$var['outlet_status'],
-                    'outlet_address'=>$var['outlet_address'],
-                    'url'=>$var['url'],
-                    'city'=>$var['city'],
-                    'distance'=>$var['distance']??'',
-                    'today'=>$var['today']
+                    'outlet_name'=>$var['outlet_name']
                 ];
-                return $ret;
             },$outlet);
         }
         if(isset($request['page']) && $request['page'] > 0){
