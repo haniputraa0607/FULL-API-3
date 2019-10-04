@@ -100,7 +100,7 @@ class ApiDealsClaim extends Controller
                                         $deals_voucher = DealsVoucher::create([
                                             'id_deals'             => $id_deals,
                                             'id_deals_subscription'=> $deals_sub->id_deals_subscription,
-                                            'voucher_code'         => $code,
+                                            'voucher_code'         => strtoupper($code),
                                             'deals_voucher_status' => 'Sent',
                                         ]);
                                         if (!$deals_voucher) {
