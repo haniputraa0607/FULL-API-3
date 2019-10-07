@@ -41,16 +41,25 @@ class ApiDealsInvalidate extends Controller
             $now = date('Y-m-d H:i:s');
             // if deals subscription, check voucher start time
             if ($deals->deals->deals_type == "Subscription") {
-                $condition = (strtotime($deals->voucher_active_at) <= strtotime($now) &&
-                    strtotime($deals->voucher_expired_at) >= strtotime($now));
-                $voucher_active  = date('d F Y H:i:s', strtotime($deals->voucher_active_at));
+                $condition = (strtotime($deals->deals->deals_voucher_start??$deals->voucher_active_at) <= strtotime($now) &&
+                    strtotime($deals->deals->deals_voucher_start??$deals->voucher_expired_at) >= strtotime($now));
+                $voucher_active  = date('d F Y H:i:s', strtotime($deals->deals->deals_voucher_start??$deals->voucher_active_at));
                 $voucher_expired = date('d F Y H:i:s', strtotime($deals->voucher_expired_at));
                 $messages = ['Voucher is expired or not yet active.',
                         'Voucher validity period: '.$voucher_active.' - '.$voucher_expired."."];
             }
             else{
-                $condition = strtotime($deals->voucher_expired_at) >= strtotime($now);
-                $messages = ['Voucher is expired.'];
+                if($deals->deals->deals_voucher_start){
+                    $condition = (strtotime($deals->deals->deals_voucher_start) <= strtotime($now) &&
+                        strtotime($deals->voucher_expired_at) >= strtotime($now));
+                    $voucher_active  = date('d F Y H:i:s', strtotime($deals->deals->deals_voucher_start));
+                    $voucher_expired = date('d F Y H:i:s', strtotime($deals->voucher_expired_at));
+                    $messages = ['Voucher is expired or not yet active.',
+                            'Voucher validity period: '.$voucher_active.' - '.$voucher_expired."."];
+                }else{
+                    $condition = strtotime($deals->voucher_expired_at) >= strtotime($now);
+                    $messages = ['Voucher is expired.'];
+                }
             }
 
             if ($condition) {

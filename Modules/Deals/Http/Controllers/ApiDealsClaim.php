@@ -372,7 +372,11 @@ class ApiDealsClaim extends Controller
         }
         else{
             if (!empty($dataDeals->deals_voucher_duration)) {
-                $data['voucher_expired_at'] = date('Y-m-d H:i:s', strtotime("+".$dataDeals->deals_voucher_duration." days"));
+                if($dataDeals->deals_voucher_start??false){
+                    $data['voucher_expired_at'] = date('Y-m-d H:i:s', strtotime($dataDeals->deals_voucher_start." +".$dataDeals->deals_voucher_duration." days"));
+                }else{
+                    $data['voucher_expired_at'] = date('Y-m-d H:i:s', strtotime("+".$dataDeals->deals_voucher_duration." days"));
+                }
             }
             else {
                 $data['voucher_expired_at'] = $dataDeals->deals_voucher_expired;
