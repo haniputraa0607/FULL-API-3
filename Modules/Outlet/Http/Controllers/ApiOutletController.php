@@ -579,7 +579,7 @@ class ApiOutletController extends Controller
         $longitude = $request->json('longitude');
 
         if(!$latitude || !$longitude){
-            return response()->json(['status' => 'success', 'messages' => ['We need to access your location']]);
+            return response()->json(['status' => 'fail', 'messages' => ['We need to access your location']]);
         }
 
         // outlet
@@ -776,7 +776,7 @@ class ApiOutletController extends Controller
 
         if(!isset($latitude) || !isset($longitude)){
             return response()->json([
-                'status' => 'success',
+                'status' => 'fail',
                 'messages' => ['We need to access your location']
             ]);
         }
@@ -878,7 +878,6 @@ class ApiOutletController extends Controller
 
             $pagingOutlet = $this->pagingOutlet($dataOutlet, $page);
             if (isset($pagingOutlet['data']) && count($pagingOutlet['data']) > 0) {
-                $urutan['status'] = 'success';
                 $urutan['current_page']  = $page;
                 $urutan['data']          = $pagingOutlet['data'];
                 $urutan['total']         = count($dataOutlet);
