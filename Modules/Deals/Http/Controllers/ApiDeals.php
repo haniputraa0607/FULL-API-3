@@ -444,7 +444,12 @@ class ApiDeals extends Controller
         $post = $request->json()->all();
         $user = $request->user();
 
-        $deals = DealsUser::with(['deals'])->where('id_user', $user['id'])->where('id_deals_user', $post['id_deals_user'])->whereNotNull('claimed_at')->where('paid_status', 'Completed')->first();
+        $deals = DealsUser::with(['deals_voucher.deal'])
+        ->where('id_user', $user['id'])
+        ->where('id_deals_user', $post['id_deals_user'])
+        ->whereNull('redeemed_at')
+        ->whereIn('paid_status', ['Completed','Free'])
+        ->first();
 
         return response()->json(MyHelper::checkGet($deals));
     }
