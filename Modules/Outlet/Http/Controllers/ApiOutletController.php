@@ -800,6 +800,8 @@ class ApiOutletController extends Controller
             });
         }
 
+        $countAll=$outlet->count();
+
         if($request->json('search') && $request->json('search') != ""){
             $outlet = $outlet->where('outlet_name', 'LIKE', '%'.$request->json('search').'%');
         }
@@ -862,7 +864,11 @@ class ApiOutletController extends Controller
                 $urutan = $this->setAvailableOutlet($urutan);
             }
         } else {
-            return response()->json(['status' => 'fail', 'messages' => ['There is no open store','at this moment']]);
+            if($countAll){
+                return response()->json(['status' => 'fail', 'messages' => ['empty']]);
+            }else{
+                return response()->json(['status' => 'fail', 'messages' => ['There is no open store','at this moment']]);
+            }
         }
 
         // if (!isset($request['page'])) {
@@ -887,11 +893,19 @@ class ApiOutletController extends Controller
                     $urutan['next_page_url'] = ENV('APP_API_URL').'api/outlet/filter?page='.$next_page;
                 }
             } else {
-                return response()->json(['status' => 'fail', 'messages' => ['There is no open store','at this moment']]);
+                if($countAll){
+                    return response()->json(['status' => 'fail', 'messages' => ['empty']]);
+                }else{
+                    return response()->json(['status' => 'fail', 'messages' => ['There is no open store','at this moment']]);
+                }
             }
         }
         if(!$urutan){
-            return response()->json(['status' => 'fail', 'messages' => ['There is no open store','at this moment']]);
+            if($countAll){
+                return response()->json(['status' => 'fail', 'messages' => ['empty']]);
+            }else{
+                return response()->json(['status' => 'fail', 'messages' => ['There is no open store','at this moment']]);
+            }
         }
         return response()->json(MyHelper::checkGet($urutan));
     }
