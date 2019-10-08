@@ -1374,4 +1374,122 @@ class ApiSetting extends Controller
             return MyHelper::checkGet($data);
         }
     }
+    
+    public function textMenuList(){
+        
+        try{
+            $textMenuHome = Setting::where('key', 'text_menu_home')->first()->value_text;
+            $textMenuAccount = Setting::where('key', 'text_menu_account')->first()->value_text;
+            
+            $result = [
+                'status' => 'success',
+                'result' => [
+                    'text_menu_home' => json_decode($textMenuHome),
+                    'text_menu_account' => json_decode($textMenuAccount)
+                ]
+            ];
+            
+            return response()->json($result);
+            
+        }catch(Exception $e){
+            
+            return response()->json(['status' => 'fail', 'messages' => []]);
+        }
+    }
+    
+    public function updateTextMenu(Request $request){
+        $post = $request->json()->all();
+        
+        if(isset($post['category']) && !empty($post['category']) && 
+            isset($post['data_menu']) && !empty($post['data_menu'])){
+            
+            try{
+                $category = $post['category'];
+                $menu = $post['data_menu'];
+                
+                if($category == 'menu-home'){
+                    
+                    $dataMenuForUpdate = [
+                        "home" => [
+                            "text_menu" => $menu['home_text_menu'],
+                            "text_header" => $menu['home_text_header']
+                        ],
+                        "deals" => [
+                            "text_menu" => $menu['deals_text_menu'],
+                            "text_header" => $menu['deals_text_header']
+                        ],
+                        "voucher" => [
+                            "text_menu" => $menu['voucher_text_menu'],
+                            "text_header" => $menu['voucher_text_header']
+                        ],
+                        "history" => [
+                            "text_menu" => $menu['history_text_menu'],
+                            "text_header" => $menu['history_text_header']
+                        ],
+                        "account" => [
+                            "text_menu" => $menu['account_text_menu'],
+                            "text_header" => $menu['account_text_header']
+                        ]
+                    ];
+                        
+                    $update = Setting::where('key','text_menu_home')->update(['value_text' => json_encode($dataMenuForUpdate), 'updated_at' => date('Y-m-d H:i:s')]);
+                    
+                    if(!$update){
+                        return response()->json(['status' => 'fail', 'messages' => ['There is an error']]);
+                    }
+                }elseif($category == 'menu-account'){
+                    $dataMenuForUpdate = [
+                        "my_profile" => [
+                                "text_menu" => $menu['my_profile_text_menu'],
+                                "text_header" => $menu['my_profile_text_header']
+                        ],
+                        "outlet" => [
+                                "text_menu" => $menu['outlet_text_menu'],
+                                "text_header" => $menu['outlet_text_header']
+                        ],
+                        "news" => [
+                                "text_menu" => $menu['news_text_menu'],
+                                "text_header" => $menu['news_text_header']
+                        ],
+                        "delivery_service" => [
+                                "text_menu" => $menu['delivery_service_text_menu'],
+                                "text_header" => $menu['delivery_service_text_header']
+                        ],
+                        "faq" => [
+                                "text_menu" => $menu['delivery_service_text_menu'],
+                                "text_header" => $menu['delivery_service_text_header']
+                        ],
+                        "terms_service" => [
+                                "text_menu" =>$menu['terms_service_text_menu'],
+                                "text_header" => $menu['terms_service_text_header']
+                        ],
+                        "contact" => [
+                                "text_menu" => $menu['contact_text_menu'],
+                                "text_header" => $menu['contact_text_header']
+                        ]
+                    ];
+                        
+                    $update = Setting::where('key','text_menu_account')->update(['value_text' => json_encode($dataMenuForUpdate), 'updated_at' => date('Y-m-d H:i:s')]);
+                    
+                    if(!$update){
+                        return response()->json(['status' => 'fail', 'messages' => ['There is an error']]);
+                    }
+                }else{
+                    return response()->json(['status' => 'fail', 'messages' => ['No data for update']]);
+                }
+                
+                $result = [
+                    'status' => 'success',
+                    'result' => []
+                ];
+
+                return response()->json($result);
+
+            }catch(Exception $e){
+                return response()->json(['status' => 'fail', 'messages' => ['There is an error']]);
+            }
+        }else{
+            return response()->json(['status' => 'fail', 'messages' => ['Incomplated Input']]);
+        }
+    }
 }
