@@ -1660,7 +1660,20 @@ class ApiUser extends Controller
 									'messages' => 'Failed to save data'
 								];
 							}
-
+							if($balance_nominal??false){
+				                $send   = app($this->autocrm)->SendAutoCRM('Complete User Profile Point Bonus', $datauser[0]['phone'], 
+				                    [
+				                        'point' => $balance_nominal
+				                    ]
+				                );
+				                if($send != true){
+				                    DB::rollback();
+				                    return response()->json([
+				                        'status' => 'fail',
+				                        'messages' => ['Failed Send notification to customer']
+				                    ]);
+				                }
+							}
 							$update = User::where('id','=',$data[0]['id'])->update(['complete_profile' => '1']);
 
 							$checkMembership = app($this->membership)->calculateMembership($datauser[0]['phone']);

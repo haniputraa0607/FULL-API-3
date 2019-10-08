@@ -1517,6 +1517,22 @@ class ApiPOS extends Controller
                                             'messages'  => ['Insert Cashback Failed']
                                         ]);
                                     }
+                                    $usere= User::where('id',$createTrx['id_user'])->first();
+                                    $send = app($this->autocrm)->SendAutoCRM('Transaction Point Achievement', $usere->phone, 
+                                        [
+                                            "outlet_name"       => $outlet['outlet_name'], 
+                                            "transaction_date"  => $createTrx['transaction_date'],
+                                            'receipt_number'    => $createTrx['transaction_receipt_number'],
+                                            'point'             => $createTrx['transaction_cashback_earned']
+                                        ]
+                                    );
+                                    if($send != true){
+                                        DB::rollback();
+                                        return response()->json([
+                                                'status' => 'fail',
+                                                'messages' => ['Failed Send notification to customer']
+                                            ]);
+                                    }
 
                                     $pointValue = $insertDataLogCash->balance;
                                 }
@@ -1642,6 +1658,23 @@ class ApiPOS extends Controller
                                         ]);
                                     }
 
+                                    $usere= User::where('id',$createTrx['id_user'])->first();
+                                    $send = app($this->autocrm)->SendAutoCRM('Transaction Point Achievement', $usere->phone, 
+                                        [
+                                            "outlet_name"       => $outlet['outlet_name'], 
+                                            "transaction_date"  => $createTrx['transaction_date'],
+                                            'receipt_number'    => $createTrx['transaction_receipt_number'],
+                                            'point'             => $createTrx['transaction_cashback_earned']
+                                        ]
+                                    );
+                                    if($send != true){
+                                        DB::rollback();
+                                        return response()->json([
+                                                'status' => 'fail',
+                                                'messages' => ['Failed Send notification to customer']
+                                            ]);
+                                    }
+                                    
                                     $pointValue = $insertDataLogCash->balance;
                                 }
 
