@@ -6,6 +6,10 @@ use Illuminate\Database\Migrations\Migration;
 
 class UpdateEnquiriesTable extends Migration
 {
+    public function __construct()
+    {
+        DB::getDoctrineSchemaManager()->getDatabasePlatform()->registerDoctrineTypeMapping('enum', 'string');
+    }
     /**
      * Run the migrations.
      *
@@ -13,7 +17,12 @@ class UpdateEnquiriesTable extends Migration
      */
     public function up()
     {
-        DB::statement('ALTER TABLE enquiries CHANGE enquiry_subject enquiry_subject VARCHAR(200)');
+        Schema::table('enquiries', function (Blueprint $table) {
+            $table->unsignedInteger('id_outlet')->nullable()->change();
+            $table->string('enquiry_subject')->change();
+            $table->timestamp('visiting_time')->nullable();
+            $table->string('position', 255)->nullable();
+        });
     }
 
     /**

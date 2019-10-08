@@ -71,17 +71,17 @@ class ApiEnquiries extends Controller
 
         if (isset($post['enquiry_subject'])) {
             $data['enquiry_subject'] = $post['enquiry_subject'];
-			if ($post['enquiry_subject'] == "Customer Feedback") {
-				if (isset($post['visiting_time'])) {
-					$data['visiting_time'] = $post['visiting_time'];
-				}
-			}
+          if ($post['enquiry_subject'] == "Customer Feedback") {
+            if (isset($post['visiting_time'])) {
+              $data['visiting_time'] = $post['visiting_time'];
+            }
+          }
 
-			if ($post['enquiry_subject'] == "Career") {
-				if (isset($post['position'])) {
-					$data['position'] = $post['position'];
-				}
-			}
+          if ($post['enquiry_subject'] == "Career") {
+            if (isset($post['position'])) {
+              $data['position'] = $post['position'];
+            }
+          }
         }
 
         if (isset($post['enquiry_content'])) {
@@ -95,7 +95,7 @@ class ApiEnquiries extends Controller
         }else{
 			$data['enquiry_device_token'] = null;
 		}
-
+      
 		if (isset($post['enquiry_file'])) {
         	$dataUploadFile = [];
 
@@ -175,8 +175,9 @@ class ApiEnquiries extends Controller
 
         // jika berhasil maka ngirim" ke crm
         if ($save) {
-        	// save many photo
+          
 			$data['attachment'] = [];
+			// save many file
         	if (isset($data['many_upload_file'])) {
         		$files = $this->saveFiles($save->id_enquiry, $data['many_upload_file']);
 				$enquiryFile = EnquiriesFile::where('id_enquiry', $save->id_enquiry)->get();

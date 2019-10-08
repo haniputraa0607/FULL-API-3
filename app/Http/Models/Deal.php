@@ -181,4 +181,9 @@ class Deal extends Model
 	{
 		return $this->hasMany(DealsSubscription::class, 'id_deals');
 	}
+
+	public function featured_deals()
+	{
+		return $this->hasOne(FeaturedDeal::class, 'id_deals','id_deals');
+	}
 }
