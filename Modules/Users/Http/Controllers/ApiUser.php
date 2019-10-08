@@ -1681,7 +1681,8 @@ class ApiUser extends Controller
 											'celebrate' => $datauser[0]['celebrate'],
 											'job' => $datauser[0]['job'],
 											'address' => $datauser[0]['address']
-										   ]
+										   ],
+						    'messages'	=> 'Your profile was successfully updated'
 						];
 				// } else {
 				// 	$result = [
