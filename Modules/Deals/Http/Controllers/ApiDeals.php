@@ -310,9 +310,9 @@ class ApiDeals extends Controller
         if ($request->json('alphabetical')) {
             $deals->orderBy('deals_title', 'ASC');
         } else if ($request->json('newest')) {
-            $deals->orderBy('deals_start', 'DESC');
+            $deals->orderBy('deals_publish_start', 'DESC');
         } else if ($request->json('oldest')) {
-            $deals->orderBy('deals_start', 'ASC');
+            $deals->orderBy('deals_publish_start', 'ASC');
         } else {
             $deals->orderBy('deals_end', 'ASC');
         }
