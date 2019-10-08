@@ -213,6 +213,22 @@ class ApiNotification extends Controller {
                                 }
                             }
                         }
+                        $usere = User::where('id', $order['id_user'])->first();
+                        $send = app($this->autocrm)->SendAutoCRM('Rejected Order Point Refund', $usere->phone, 
+                            [
+                                "outlet_name"       => $newTrx['outlet']['outlet_name'], 
+                                "transaction_date"  => $newTrx['transaction_date'],
+                                'receipt_number'    => $newTrx['transaction_receipt_number'],
+                                'point'             => $checkBalance['balance_nominal']
+                            ]
+                        );
+                        if($send != true){
+                            DB::rollback();
+                            return response()->json([
+                                    'status' => 'fail',
+                                    'messages' => ['Failed Send notification to customer']
+                                ]);
+                        }
                     }
                 }
             }
@@ -477,6 +493,19 @@ class ApiNotification extends Controller {
 
                 $insertDataLogCash = app($this->balance)->addLogBalance( $data['id_user'], $data['transaction_cashback_earned'], $data['id_transaction'], 'Transaction', $data['transaction_grandtotal']);
                 if (!$insertDataLogCash) {
+                    DB::rollback();
+                    return false;
+                }
+                $usere= User::where('id',$data['id_user'])->first();
+                $send = app($this->autocrm)->SendAutoCRM('Transaction Point Achievement', $usere->phone, 
+                    [
+                        "outlet_name"       => $data['outlet']['outlet_name'], 
+                        "transaction_date"  => $data['transaction_date'],
+                        'receipt_number'    => $data['transaction_receipt_number'],
+                        'point'             => $data['transaction_cashback_earned']
+                    ]
+                );
+                if($send != true){
                     DB::rollback();
                     return false;
                 }
