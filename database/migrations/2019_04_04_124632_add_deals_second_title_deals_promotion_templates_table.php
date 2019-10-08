@@ -6,6 +6,10 @@ use Illuminate\Database\Migrations\Migration;
 
 class AddDealsSecondTitleDealsPromotionTemplatesTable extends Migration
 {
+    public function __construct()
+    {
+        DB::getDoctrineSchemaManager()->getDatabasePlatform()->registerDoctrineTypeMapping('enum', 'string');
+    }
     /**
      * Run the migrations.
      *
@@ -14,7 +18,7 @@ class AddDealsSecondTitleDealsPromotionTemplatesTable extends Migration
     public function up()
     {
         Schema::table('deals_promotion_templates', function (Blueprint $table) {
-            $table->string('deals_second_title')->nullable()->after('deals_title');
+            $table->string('deals_second_title')->nullable()->after('deals_title')->change();
         });
     }
 
@@ -25,8 +29,6 @@ class AddDealsSecondTitleDealsPromotionTemplatesTable extends Migration
      */
     public function down()
     {
-        Schema::table('deals_promotion_templates', function (Blueprint $table) {
-            $table->dropColumn('deals_second_title');
-        });
+        //
     }
 }

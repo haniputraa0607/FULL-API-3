@@ -268,6 +268,19 @@ class ApiDeals extends Controller
                 ->orWhere('deals_second_title', 'LIKE', '%' . $request->json('key_free') . '%');
         }
 
+        if ($request->json('price_range_start') && $request->json('price_range_end')) {
+            $query->orWhere(function ($amp) use ($request) {
+                $amp->where('deals_voucher_price_cash','>=',$request->json('price_range_start'))->where('deals_voucher_price_cash', '<=', $request->json('price_range_end'));
+            });
+
+        }
+
+        if ($request->json('point_range_start') && $request->json('point_range_end')) {
+            $query->orWhere(function ($amp) use ($request) {
+                $amp->where('deals_voucher_price_point','>=',$request->json('point_range_start'))->where('deals_voucher_price_point', '<=', $request->json('point_range_end'));
+            });
+
+        }
         /* ========================= TYPE ========================= */
         $deals->where(function ($query) use ($request) {
             // cash
@@ -310,9 +323,9 @@ class ApiDeals extends Controller
         if ($request->json('alphabetical')) {
             $deals->orderBy('deals_title', 'ASC');
         } else if ($request->json('newest')) {
-            $deals->orderBy('deals_start', 'DESC');
+            $deals->orderBy('deals_publish_start', 'DESC');
         } else if ($request->json('oldest')) {
-            $deals->orderBy('deals_start', 'ASC');
+            $deals->orderBy('deals_publish_start', 'ASC');
         } else {
             $deals->orderBy('deals_end', 'ASC');
         }
@@ -444,7 +457,12 @@ class ApiDeals extends Controller
         $post = $request->json()->all();
         $user = $request->user();
 
-        $deals = DealsUser::with(['deals'])->where('id_user', $user['id'])->where('id_deals_user', $post['id_deals_user'])->whereNotNull('claimed_at')->where('paid_status', 'Completed')->first();
+        $deals = DealsUser::with(['deals_voucher.deal'])
+        ->where('id_user', $user['id'])
+        ->where('id_deals_user', $post['id_deals_user'])
+        ->whereNull('redeemed_at')
+        ->whereIn('paid_status', ['Completed','Free'])
+        ->first();
 
         return response()->json(MyHelper::checkGet($deals));
     }

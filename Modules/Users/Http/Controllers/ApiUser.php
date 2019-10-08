@@ -407,6 +407,15 @@ class ApiUser extends Controller
 
 		foreach($conditions as $index => $condition){
 			if(isset($condition['subject'])){
+				if($condition['operator']=='WHERE IN'){
+					$param=explode(',', $condition['parameter']);
+					if($rule == 'and'){
+						$query = $query->whereIn($condition['subject'],$param);
+					} else {
+						$query = $query->orWhereIn($condition['subject'],$param);
+					}
+					continue;
+				}
 				if($condition['subject'] == 'all_user'){
 					if($rule == 'and'){
 						$query = $query->whereRaw('1');
@@ -1685,7 +1694,8 @@ class ApiUser extends Controller
 											'celebrate' => $datauser[0]['celebrate'],
 											'job' => $datauser[0]['job'],
 											'address' => $datauser[0]['address']
-										   ]
+										   ],
+						    'message'	=> 'Your profile was successfully updated'
 						];
 				// } else {
 				// 	$result = [

@@ -437,7 +437,9 @@ class ApiOutletController extends Controller
             $outlet = Outlet::select('outlets.id_outlet','outlets.outlet_name');
         }else{
             $outlet = Outlet::with(['city', 'outlet_photos', 'outlet_schedules', 'today', 'user_outlets','brands']);
-            $outlet->select('outlets.id_outlet','outlets.outlet_name','outlets.outlet_code','outlets.outlet_status','outlets.outlet_address','outlets.id_city','outlet_latitude','outlet_longitude');
+            if(!($post['id_outlet']??false)||!($post['id_outlet']??false)){                
+                $outlet->select('outlets.id_outlet','outlets.outlet_name','outlets.outlet_code','outlets.outlet_status','outlets.outlet_address','outlets.id_city','outlet_latitude','outlet_longitude');
+            }
         }
         if($post['simple_result']??false){
             $outlet->select('outlets.id_outlet','outlets.outlet_name');
@@ -577,11 +579,11 @@ class ApiOutletController extends Controller
         $longitude = $request->json('longitude');
 
         if(!$latitude || !$longitude){
-            return response()->json(['status' => 'success', 'messages' => ['We need to access your location']]);
+            return response()->json(['status' => 'fail', 'messages' => ['We need to access your location']]);
         }
 
         // outlet
-        $outlet = Outlet::with(['today', 'city', 'outlet_photos'])->where('outlet_status', 'Active')->whereNotNull('id_city')->orderBy('outlet_name','asc');
+        $outlet = Outlet::select('outlets.id_outlet','outlets.outlet_name','outlets.outlet_phone','outlets.outlet_code','outlets.outlet_status','outlets.outlet_address','outlets.id_city','outlet_latitude','outlet_longitude')->where('outlet_status', 'Active')->whereNotNull('id_city')->orderBy('outlet_name','asc');
         if($request->json('search') && $request->json('search') != ""){
             $outlet = $outlet->where('outlet_name', 'LIKE', '%'.$request->json('search').'%');
         }
@@ -603,7 +605,7 @@ class ApiOutletController extends Controller
                 $outlet = $this->setAvailableOutlet($outlet);
             }
         }else{
-            return response()->json(['status' => 'success', 'messages' => ['There is no open store','at this moment']]);
+            return response()->json(['status' => 'fail', 'messages' => ['There is no open store','at this moment']]);
         }
 
         if(isset($request['page']) && $request['page'] > 0){
@@ -615,7 +617,6 @@ class ApiOutletController extends Controller
 
             $pagingOutlet = $this->pagingOutlet($dataOutlet, $page);
             if (isset($pagingOutlet['data']) && count($pagingOutlet['data']) > 0) {
-                $outlet['status'] = 'success';
                 $outlet['current_page']  = $page;
                 $outlet['data']          = $pagingOutlet['data'];
                 $outlet['total']         = count($dataOutlet);
@@ -625,12 +626,12 @@ class ApiOutletController extends Controller
                     $outlet['next_page_url'] = ENV('APP_API_URL').'api/outlet/nearme?page='.$next_page;
                 }
             } else {
-                return response()->json(['status' => 'success', 'messages' => ['There is no open store','at this moment']]);
+                return response()->json(['status' => 'fail', 'messages' => ['There is no open store','at this moment']]);
             }
         }
 
         if(!$outlet){
-            return response()->json(['status' => 'success', 'messages' => ['There is no open store','at this moment']]);
+            return response()->json(['status' => 'fail', 'messages' => ['There is no open store','at this moment']]);
         }
 
         return response()->json(MyHelper::checkGet($outlet));
@@ -769,12 +770,13 @@ class ApiOutletController extends Controller
 
 	/* Filter*/
     function filter(Filter $request) {
+        $post=$request->except('_token');
         $latitude  = $request->json('latitude');
         $longitude = $request->json('longitude');
 
         if(!isset($latitude) || !isset($longitude)){
             return response()->json([
-                'status' => 'success',
+                'status' => 'fail',
                 'messages' => ['We need to access your location']
             ]);
         }
@@ -783,15 +785,33 @@ class ApiOutletController extends Controller
         $id_city = $request->json('id_city');
         $sort = $request->json('sort');
         $gofood = $request->json('gofood');
+        $grabfood = $request->json('grabfood');
 
         // outlet
-        $outlet = Outlet::with(['today', 'city', 'outlet_photos'])->where('outlet_status', 'Active')->whereNotNull('id_city')->orderBy('outlet_name','asc');
+        $outlet = Outlet::with(['today'])->select('outlets.id_outlet','outlets.outlet_name','outlets.outlet_phone','outlets.outlet_code','outlets.outlet_status','outlets.outlet_address','outlets.id_city','outlet_latitude','outlet_longitude')->where('outlet_status', 'Active')->whereNotNull('id_city')->orderBy('outlet_name','asc');
+
+        if(is_array($post['id_brand']??false)&&$post['id_brand']){
+            $outlet->leftJoin('brand_outlet','outlets.id_outlet','brand_outlet.id_outlet');
+            $id_brands=$post['id_brand'];
+            $outlet->where(function($query) use ($id_brands){
+                foreach ($id_brands as $id_brand) {
+                    $query->orWhere('brand_outlet.id_brand',$id_brand);
+                }
+            });
+        }
+
+        $countAll=$outlet->count();
+
         if($request->json('search') && $request->json('search') != ""){
             $outlet = $outlet->where('outlet_name', 'LIKE', '%'.$request->json('search').'%');
         }
 
-        if (isset($gofood)) {
-            $outlet = $outlet->whereNotNull('deep_link');
+        if ($gofood) {
+            $outlet = $outlet->whereNotNull('deep_link_gojek');
+        }
+
+        if ($grabfood) {
+            $outlet = $outlet->whereNotNull('deep_link_grab');
         }
 
         $outlet = $outlet->get()->toArray();
@@ -844,7 +864,11 @@ class ApiOutletController extends Controller
                 $urutan = $this->setAvailableOutlet($urutan);
             }
         } else {
-            return response()->json(['status' => 'success', 'messages' => ['There is no open store','at this moment']]);
+            if($countAll){
+                return response()->json(['status' => 'fail', 'messages' => ['empty']]);
+            }else{
+                return response()->json(['status' => 'fail', 'messages' => ['There is no open store','at this moment']]);
+            }
         }
 
         // if (!isset($request['page'])) {
@@ -860,7 +884,6 @@ class ApiOutletController extends Controller
 
             $pagingOutlet = $this->pagingOutlet($dataOutlet, $page);
             if (isset($pagingOutlet['data']) && count($pagingOutlet['data']) > 0) {
-                $urutan['status'] = 'success';
                 $urutan['current_page']  = $page;
                 $urutan['data']          = $pagingOutlet['data'];
                 $urutan['total']         = count($dataOutlet);
@@ -870,11 +893,19 @@ class ApiOutletController extends Controller
                     $urutan['next_page_url'] = ENV('APP_API_URL').'api/outlet/filter?page='.$next_page;
                 }
             } else {
-                return response()->json(['status' => 'success', 'messages' => ['There is no open store','at this moment']]);
+                if($countAll){
+                    return response()->json(['status' => 'fail', 'messages' => ['empty']]);
+                }else{
+                    return response()->json(['status' => 'fail', 'messages' => ['There is no open store','at this moment']]);
+                }
             }
         }
         if(!$urutan){
-            return response()->json(['status' => 'success', 'messages' => ['There is no open store','at this moment']]);
+            if($countAll){
+                return response()->json(['status' => 'fail', 'messages' => ['empty']]);
+            }else{
+                return response()->json(['status' => 'fail', 'messages' => ['There is no open store','at this moment']]);
+            }
         }
         return response()->json(MyHelper::checkGet($urutan));
     }

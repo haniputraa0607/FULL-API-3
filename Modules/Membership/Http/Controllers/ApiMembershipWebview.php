@@ -43,7 +43,7 @@ class ApiMembershipWebview extends Controller
 		$result = [];
 
 		$result['user_membership'] = UsersMembership::with('user')->where('id_user', $post['id_user'])->orderBy('id_log_membership', 'desc')->first();
-
+		
 		$settingCashback = Setting::where('key', 'cashback_conversion_value')->first();
 		if(!$settingCashback || !$settingCashback->value){
 			return response()->json([
@@ -52,7 +52,7 @@ class ApiMembershipWebview extends Controller
 			]);
 		}
 
-		$allMembership = Membership::orderBy('min_total_value','asc')->orderBy('min_total_count', 'asc')->orderBy('min_total_balance', 'asc')->get()->toArray();
+		$allMembership = Membership::with('membership_promo_id')->orderBy('min_total_value','asc')->orderBy('min_total_count', 'asc')->orderBy('min_total_balance', 'asc')->get()->toArray();
 
 		$nextMembershipName = "";
 		$nextMembershipImage = "";
