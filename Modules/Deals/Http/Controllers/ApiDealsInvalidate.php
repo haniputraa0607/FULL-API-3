@@ -81,12 +81,10 @@ class ApiDealsInvalidate extends Controller
                             $deals['webview_url'] = env('APP_URL') ."webview/voucher/". $deals['id_deals_user'];
 
                             // SEND NOTIFICATION
-                            $send = app($this->autocrm)->SendAutoCRM('Deals', 
+                            $send = app($this->autocrm)->SendAutoCRM('Redeem Voucher Success', 
                                 $deals['user']['phone'], 
                                 [
                                     'redeemed_at'       => $deals['redeemed_at'], 
-                                    'voucher_hash'      => $deals['voucher_hash'],
-                                    'voucher_hash_code' => $deals['voucher_hash_code'],
                                     'id_deals_user'     => $deals['id_deals_user'],
                                     'voucher_code'      => $deals['deal_voucher']['voucher_code'],
                                     'outlet_name'       => $deals['outlet_name'],

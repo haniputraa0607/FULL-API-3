@@ -199,10 +199,8 @@ class ApiDealsClaim extends Controller
                             $autocrm = app($this->autocrm)->SendAutoCRM('Claim Deals Success', $phone,
                                 [
                                     'claimed_at'       => $voucher['claimed_at'], 
-                                    'voucher_hash'      => $voucher['voucher_hash'],
-                                    'voucher_hash_code' => $voucher['voucher_hash_code'],
-                                    'id_deals_user'     => $voucher['id_deals_user'],
-                                    'voucher_code'      => $voucher['deal_voucher']['voucher_code']
+                                    'deals_title'      => $dataDeals->deals_title,
+                                    'deals_voucher_price_point' => $dataDeals->deals_voucher_price_point
                                 ]
                             );
                         }
