@@ -268,6 +268,19 @@ class ApiDeals extends Controller
                 ->orWhere('deals_second_title', 'LIKE', '%' . $request->json('key_free') . '%');
         }
 
+        if(is_numeric($val=$request->json('price_range_start'))){
+            $deals->where('deals_voucher_price_cash','>=',$val);
+        }
+        if(is_numeric($val=$request->json('price_range_end'))){
+            $deals->where('deals_voucher_price_cash','<=',$val);
+        }
+
+        if(is_numeric($val=$request->json('point_range_start'))){
+            $deals->where('deals_voucher_price_point','>=',$val);
+        }
+        if(is_numeric($val=$request->json('point_range_end'))){
+            $deals->where('deals_voucher_price_point','<=',$val);
+        }
         /* ========================= TYPE ========================= */
         $deals->where(function ($query) use ($request) {
             // cash
