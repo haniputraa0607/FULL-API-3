@@ -268,18 +268,18 @@ class ApiDeals extends Controller
                 ->orWhere('deals_second_title', 'LIKE', '%' . $request->json('key_free') . '%');
         }
 
-        if ($request->json('price_range_start') && $request->json('price_range_end')) {
-            $query->orWhere(function ($amp) use ($request) {
-                $amp->where('deals_voucher_price_cash','>=',$request->json('price_range_start'))->where('deals_voucher_price_cash', '<=', $request->json('price_range_end'));
-            });
-
+        if(is_numeric($val=$request->json('price_range_start'))){
+            $deals->where('deals_voucher_price_cash','>=',$val);
+        }
+        if(is_numeric($val=$request->json('price_range_end'))){
+            $deals->where('deals_voucher_price_cash','<=',$val);
         }
 
-        if ($request->json('point_range_start') && $request->json('point_range_end')) {
-            $query->orWhere(function ($amp) use ($request) {
-                $amp->where('deals_voucher_price_point','>=',$request->json('point_range_start'))->where('deals_voucher_price_point', '<=', $request->json('point_range_end'));
-            });
-
+        if(is_numeric($val=$request->json('point_range_start'))){
+            $deals->where('deals_voucher_price_point','>=',$val);
+        }
+        if(is_numeric($val=$request->json('point_range_end'))){
+            $deals->where('deals_voucher_price_point','<=',$val);
         }
         /* ========================= TYPE ========================= */
         $deals->where(function ($query) use ($request) {
