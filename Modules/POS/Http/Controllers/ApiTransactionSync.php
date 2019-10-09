@@ -123,13 +123,10 @@ class ApiTransactionSync extends Controller
             }
             
             foreach ($dataTrans as $key => $trx) {
-                if(isset($trx->date_time) && !empty($trx->date_time) &&
-                    isset($trx->total) && !empty($trx->total) &&
-                    isset($trx->service) &&
-                    isset($trx->tax) && !empty($trx->tax) &&
-                    isset($trx->discount) && isset($trx->grand_total) &&  
-                    isset($trx->payments) && !empty($trx->payments) && is_array ($trx->payments) &&  
-                    isset($trx->menu)){
+                if(!empty($trx->date_time) &&
+                    isset($trx->total) && isset($trx->service) &&
+                    isset($trx->tax) && isset($trx->discount) && isset($trx->grand_total) &&  
+                    !empty($trx->payments) && isset($trx->menu)){
 
                     $insertTrx = $this->insertTransaction($checkOutlet, $trx, $config, $settingPoint);
                     if(isset($insertTrx['id_transaction'])){
@@ -326,10 +323,9 @@ class ApiTransactionSync extends Controller
 
                     foreach ($trx['menu'] as $row => $menu) {
                         $menu = (array)$menu;
-                        if(isset($menu['plu_id']) && !empty($menu['plu_id'])
-                            && isset($menu['name']) && !empty($menu['name']) 
+                        if(!empty($menu['plu_id']) && !empty($menu['name']) 
                             && isset($menu['price']) && isset($menu['qty']) 
-                            && isset($menu['category']) && !empty($menu['category'])){
+                            && !empty($menu['category'])){
 
                             $getIndexProduct = array_search($menu['plu_id'], array_column($checkProduct, 'product_code'));
 
@@ -374,7 +370,7 @@ class ApiTransactionSync extends Controller
                             $createProduct = TransactionProduct::create($dataProduct);
 
                             // update modifiers 
-                            if (isset($menu['modifiers']) && !empty($menu['modifiers'])) {
+                            if (!empty($menu['modifiers'])) {
 
                                 $allModCode = array_column($menu['modifiers'], 'code');
                                 $detailMod = ProductModifier::select('id_product_modifier','type','text','code')

@@ -928,11 +928,8 @@ class ApiPOS extends Controller
     {
         $post = $request->json()->all();
         
-        if(isset($post['api_key']) && !empty($post['api_key']) &&
-            isset($post['api_secret']) && !empty($post['api_secret']) &&
-            isset($post['store_code']) && !empty($post['store_code']) &&
-            isset($post['transactions']) && is_array ($post['transactions']) && 
-            !empty($post['transactions'])){
+        if(!empty($post['api_key']) && !empty($post['api_secret']) &&
+            !empty($post['store_code']) && !empty($post['transactions'])){
             
             $api = $this->checkApi($post['api_key'], $post['api_secret']);
             if ($api['status'] != 'success') {
@@ -999,13 +996,11 @@ class ApiPOS extends Controller
                 }
                 
                 foreach ($post['transactions'] as $key => $trx) {
-                    if(isset($trx['date_time']) && !empty($trx['date_time']) &&
-                        isset($trx['total']) && !empty($trx['total']) &&
-                        isset($trx['service']) &&
-                        isset($trx['tax']) && !empty($trx['tax']) &&
+                    if(!empty($trx['date_time']) &&
+                        isset($trx['total']) &&
+                        isset($trx['service']) && !empty($trx['tax']) &&
                         isset($trx['discount']) && isset($trx['grand_total']) &&  
-                        isset($trx['payments']) && !empty($trx['payments']) && is_array ($trx['payments']) &&  
-                        isset($trx['menu'])){
+                        !empty($trx['payments']) && isset($trx['menu'])){
 
                         $insertTrx = $this->insertTransaction($checkOutlet, $trx, $config, $settingPoint);
                         if(isset($insertTrx['id_transaction'])){
@@ -1039,7 +1034,7 @@ class ApiPOS extends Controller
                         array_push($detailTransactionFail, $id);
                         $data = [
                             'outlet_code' => $post['store_code'],
-                            'request' => json_encode($trx['transaction']),
+                            'request' => json_encode($trx),
                             'message_failed' => 'There is an incomplete input in the transaction list',
                             'created_at' => date('Y-m-d H:i:s'),
                             'updated_at' => date('Y-m-d H:i:s')
@@ -1262,10 +1257,9 @@ class ApiPOS extends Controller
                     $checkProduct = Product::select('id_product', 'product_code')->whereIn('product_code', $allMenuId)->get()->toArray();
 
                     foreach ($trx['menu'] as $row => $menu) {
-                        if(isset($menu['plu_id']) && !empty($menu['plu_id'])
-                            && isset($menu['name']) && !empty($menu['name']) 
+                        if(!empty($menu['plu_id']) && !empty($menu['name']) 
                             && isset($menu['price']) && isset($menu['qty']) 
-                            && isset($menu['category']) && !empty($menu['category'])){
+                            && !empty($menu['category'])){
 
                             $getIndexProduct = array_search($menu['plu_id'], array_column($checkProduct, 'product_code'));
 
@@ -1310,7 +1304,7 @@ class ApiPOS extends Controller
                             $createProduct = TransactionProduct::create($dataProduct);
 
                             // update modifiers 
-                            if (isset($menu['modifiers']) && !empty($menu['modifiers'])) {
+                            if (!empty($menu['modifiers'])) {
 
                                 $allModCode = array_column($menu['modifiers'], 'code');
                                 $detailMod = ProductModifier::select('id_product_modifier','type','text','code')
