@@ -771,7 +771,7 @@ class ApiHistoryController extends Controller
 
     public function balance($post, $id)
     {
-        $log = LogBalance::where('id_user', $id);
+        $log = LogBalance::where('log_balances.id_user', $id);
 
         $log->where(function ($query) use ($post) {
             if (!is_null($post['use_point'])) {
@@ -787,7 +787,7 @@ class ApiHistoryController extends Controller
         });
 
         if (!is_null($post['online_order']) || !is_null($post['offline_order'])) {
-            $log->leftJoin('transactions', 'transacations.id_transaction', 'log_balances.id_reference')
+            $log->leftJoin('transactions', 'transactions.id_transaction', 'log_balances.id_reference')
                 ->where(function ($query) use ($post) {
                     if (!is_null($post['online_order'])) {
                         $query->orWhere(function ($queryLog) {

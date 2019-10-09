@@ -24,7 +24,7 @@ class EnquiriesFile extends Model
 
 	protected $appends = ['url_enquiry_file'];
 
-	public function getUrlEnquiryPhotoAttribute() {
+	public function getUrlEnquiryFileAttribute() {
 	    if (!empty($this->enquiry_file)) {
 	        return env('S3_URL_API').$this->enquiry_file;
 	    }

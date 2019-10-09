@@ -42,6 +42,7 @@ Route::group(['middleware' => ['auth:api', 'log_request'], 'prefix' => 'api/sett
 
     Route::any('jobs_list', 'ApiSetting@jobsList');
     Route::any('celebrate_list', 'ApiSetting@celebrateList');
+    Route::any('/text_menu/update', 'ApiSetting@updateTextMenu');
 
     Route::group(['middleware' => 'auth:api', 'prefix' => 'dashboard'], function()
     {
@@ -129,6 +130,7 @@ Route::group(['middleware' => ['auth_client', 'log_request'], 'prefix' => 'api/s
 Route::group(['prefix' => 'api/setting', 'namespace' => 'Modules\Setting\Http\Controllers'], function()
 {    
     Route::post('/version', 'ApiSetting@Version');
+    Route::any('/text_menu_list', 'ApiSetting@textMenuList');
 });
 
 Route::group(['prefix' => 'api/setting', 'middleware' => ['log_request', 'auth:api'], 'namespace' => 'Modules\Setting\Http\Controllers'], function()
