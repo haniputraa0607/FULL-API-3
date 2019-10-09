@@ -1010,24 +1010,8 @@ class ApiSetting extends Controller
     {
         $post = $request->json()->all();
         
-        $update[] = Setting::updateOrCreate(['key' => 'complete_profile_popup'], ['key' => 'complete_profile_popup', 'value' => $post['complete_profile_popup']]);
-        $update[] = Setting::updateOrCreate(['key' => 'complete_profile_point'], ['key' => 'complete_profile_point', 'value' => $post['complete_profile_point']]);
-        $update[] = Setting::updateOrCreate(['key' => 'complete_profile_cashback'], ['key' => 'complete_profile_cashback', 'value' => $post['complete_profile_cashback']]);
-        $update[] = Setting::updateOrCreate(['key' => 'complete_profile_count'], ['key' => 'complete_profile_count', 'value' => $post['complete_profile_count']]);
-        $update[] = Setting::updateOrCreate(['key' => 'complete_profile_interval'], ['key' => 'complete_profile_interval', 'value' => $post['complete_profile_interval']]);
-
-        if (count($update) == 5) {
-            return [
-                'status' => 'success',
-                'result' => $update
-            ];
-        }
-        else {
-            return [
-                'status' => 'fail',
-                'messages' => ['Some data may not saved.']
-            ];
-        }
+        $update = Setting::updateOrCreate(['key' => 'complete_profile_cashback'], ['key' => 'complete_profile_cashback', 'value' => $post['complete_profile_cashback']]);
+        return MyHelper::checkUpdate($update);
     }
 
     public function completeProfileSuccessPage(Request $request)
