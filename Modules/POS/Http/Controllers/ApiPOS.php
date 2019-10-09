@@ -34,8 +34,8 @@ use App\Http\Models\DealsVoucher;
 use App\Http\Models\Configs;
 use App\Http\Models\FraudSetting;
 use App\Http\Models\LogBackendError;
-use App\Http\Models\LogTransactionFailed;
-use App\Http\Models\TransactionQueue;
+use App\Http\Models\SyncTransactionFaileds;
+use App\Http\Models\SyncTransactionQueues;
 use App\Lib\MyHelper;
 use Mailgun;
 
@@ -1026,7 +1026,7 @@ class ApiPOS extends Controller
                                 'created_at' => date('Y-m-d H:i:s'),
                                 'updated_at' => date('Y-m-d H:i:s')
                             ];
-                            LogTransactionFailed::create($data);
+                            SyncTransactionFaileds::create($data);
                         }
                     }else{
                         $countTransactionFail++;
@@ -1044,7 +1044,7 @@ class ApiPOS extends Controller
                             'created_at' => date('Y-m-d H:i:s'),
                             'updated_at' => date('Y-m-d H:i:s')
                         ];
-                        LogTransactionFailed::create($data);
+                        SyncTransactionFaileds::create($data);
                     }
                 }
 
@@ -1075,7 +1075,7 @@ class ApiPOS extends Controller
                         'updated_at' => date('Y-m-d H:i:s')
                     ];
                     try{
-                        $insertTransactionQueue = TransactionQueue::create($data);
+                        $insertTransactionQueue = SyncTransactionQueues::create($data);
 
                         if(!$insertTransactionQueue){
                             $countTransactionFail = $countTransactionFail + count($dataTransToSave);

@@ -34,8 +34,8 @@ use App\Http\Models\DealsVoucher;
 use App\Http\Models\Configs;
 use App\Http\Models\FraudSetting;
 use App\Http\Models\LogBackendError;
-use App\Http\Models\LogTransactionFailed;
-use App\Http\Models\TransactionQueue;
+use App\Http\Models\SyncTransactionFaileds;
+use App\Http\Models\SyncTransactionQueues;
 use App\Lib\MyHelper;
 use Mailgun;
 
@@ -72,7 +72,7 @@ class ApiTransactionSync extends Controller
     
     public function transaction(){
         $x = 10;
-        $getDataQueue = TransactionQueue::Orderby('created_at', 'asc')->limit($x)->get()->toArray();
+        $getDataQueue = SyncTransactionQueues::Orderby('created_at', 'asc')->limit($x)->get()->toArray();
         
         foreach($getDataQueue as $key => $trans){
             $checkOutlet = Outlet::where('outlet_code', $trans['outlet_code'])->first();
@@ -144,7 +144,7 @@ class ApiTransactionSync extends Controller
                             'created_at' => date('Y-m-d H:i:s'),
                             'updated_at' => date('Y-m-d H:i:s')
                         ];
-                        LogTransactionFailed::create($data);
+                        SyncTransactionFaileds::create($data);
                     }
                 }else{
                     if(isset($trx->trx_id)){
@@ -159,12 +159,12 @@ class ApiTransactionSync extends Controller
                         'created_at' => date('Y-m-d H:i:s'),
                         'updated_at' => date('Y-m-d H:i:s')
                     ];
-                    LogTransactionFailed::create($data);
+                    SyncTransactionFaileds::create($data);
                 }
             }
             
             if($countDataTrans == $checkSuccess || $countDataTrans == $checkDuplicate){
-                TransactionQueue::where('id_transaction_queue', $trans['id_transaction_queue'])->delete();
+                SyncTransactionQueues::where('id_sync_transaction_queues', $trans['id_sync_transaction_queues'])->delete();
             }
         }
     }
