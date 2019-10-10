@@ -35,6 +35,7 @@ class ApiConfirm extends Controller
         date_default_timezone_set('Asia/Jakarta');
         $this->notif = "Modules\Transaction\Http\Controllers\ApiNotification";
         $this->trx = "Modules\Transaction\Http\Controllers\ApiOnlineTransaction";
+        $this->autocrm  = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
     }
 
     public function confirmTransaction(ConfirmPayment $request) {

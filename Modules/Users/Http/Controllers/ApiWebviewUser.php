@@ -23,6 +23,7 @@ class ApiWebviewUser extends Controller
     function __construct() {
         date_default_timezone_set('Asia/Jakarta');
         $this->membership    = "Modules\Membership\Http\Controllers\ApiMembership";
+        $this->autocrm  = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
     }
     
     // update profile, point, balance
