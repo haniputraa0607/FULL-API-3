@@ -1,6 +1,6 @@
 <?php
 
-Route::group(['middleware' => ['auth:api', 'log_request'], 'prefix' => 'api/custom-page', 'namespace' => 'Modules\CustomPage\Http\Controllers'], function () {
+Route::group(['middleware' => ['auth:api', 'log_activities_apps'], 'prefix' => 'api/custom-page', 'namespace' => 'Modules\CustomPage\Http\Controllers'], function () {
     Route::get('list', 'ApiCustomPageController@index');
     Route::post('create', 'ApiCustomPageController@store');
     Route::post('detail', 'ApiCustomPageController@show');

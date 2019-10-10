@@ -1,6 +1,6 @@
 <?php
 
-Route::group(['middleware' => ['auth:api', 'log_request'], 'prefix' => 'api/promotion', 'namespace' => 'Modules\Promotion\Http\Controllers'], function()
+Route::group(['middleware' => ['auth:api', 'log_activities_apps'], 'prefix' => 'api/promotion', 'namespace' => 'Modules\Promotion\Http\Controllers'], function()
 {
     Route::post('create', 'ApiPromotion@CreatePromotion');
     Route::post('step1', 'ApiPromotion@ShowPromotionStep1');
@@ -24,7 +24,7 @@ Route::group(['middleware' => ['auth:api', 'log_request'], 'prefix' => 'api/prom
     });
 });
 
-Route::group(['prefix' => 'api/promotion', 'middleware' => 'log_request', 'namespace' => 'Modules\Promotion\Http\Controllers'], function()
+Route::group(['prefix' => 'api/promotion', 'middleware' => 'log_activities_apps', 'namespace' => 'Modules\Promotion\Http\Controllers'], function()
 {
     Route::get('display_logo/{hash}', 'ApiPromotion@displayLogo');
     Route::any('queue', 'ApiPromotion@addPromotionQueue');

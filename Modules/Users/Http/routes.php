@@ -1,8 +1,8 @@
 <?php
 
-Route::group(['prefix' => 'api', 'middleware' => 'log_request'], function(){
+Route::group(['prefix' => 'api', 'middleware' => 'log_activities_apps'], function(){
 	Route::get('users/list/{var}', 'Modules\Users\Http\Controllers\ApiUser@listVar');
-	Route::group(['middleware' => ['auth_client','log_request'], 'prefix' => 'users', 'namespace' => 'Modules\Users\Http\Controllers'], function()
+	Route::group(['middleware' => ['auth_client','log_activities_apps'], 'prefix' => 'users', 'namespace' => 'Modules\Users\Http\Controllers'], function()
 	{
 	    Route::post('new', 'ApiUser@newUser');
 		Route::post('phone/check', 'ApiUser@check');

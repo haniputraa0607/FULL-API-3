@@ -17,7 +17,7 @@ Route::middleware('auth:api')->get('/user', function (Request $request) {
     return json_decode($request->user(), true);
 });
 
-Route::group(['middleware' => ['auth:api', 'log_request'] ], function(){
+Route::group(['middleware' => ['auth:api', 'log_activities_apps'] ], function(){
 	Route::get('granted-feature', 'Controller@getFeatureControl');
 	Route::get('feature', 'Controller@getFeature');
 	Route::get('feature-module', 'Controller@getFeatureModule');

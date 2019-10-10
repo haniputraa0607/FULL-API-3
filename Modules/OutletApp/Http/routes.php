@@ -1,6 +1,6 @@
 <?php
 
-Route::group(['middleware' => ['auth:outlet-app', 'log_request'], 'prefix' => 'api/outletapp', 'namespace' => 'Modules\OutletApp\Http\Controllers'], function()
+Route::group(['middleware' => ['auth:outlet-app', 'log_activities_outlet_apps'], 'prefix' => 'api/outletapp', 'namespace' => 'Modules\OutletApp\Http\Controllers'], function()
 {
     Route::any('/update-token', 'ApiOutletApp@updateToken');
     Route::any('/delete-token', 'ApiOutletApp@deleteToken');
@@ -15,7 +15,7 @@ Route::group(['middleware' => ['auth:outlet-app', 'log_request'], 'prefix' => 'a
     Route::post('product/sold-out', 'ApiOutletApp@productSoldOut');
 });
 
-Route::group(['prefix' => 'api/outletapp', 'middleware' => 'log_request', 'namespace' => 'Modules\OutletApp\Http\Controllers'], function()
+Route::group(['prefix' => 'api/outletapp', 'middleware' => 'log_activities_outlet_apps', 'namespace' => 'Modules\OutletApp\Http\Controllers'], function()
 {
     Route::post('order/detail/view', 'ApiOutletApp@detailWebviewPage');
 });

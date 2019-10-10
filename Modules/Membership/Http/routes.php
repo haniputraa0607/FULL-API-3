@@ -1,5 +1,5 @@
 <?php
-Route::group(['middleware' => ['auth:api', 'log_request'], 'prefix' => 'api/membership', 'namespace' => 'Modules\Membership\Http\Controllers'], function()
+Route::group(['middleware' => ['auth:api', 'log_activities_apps'], 'prefix' => 'api/membership', 'namespace' => 'Modules\Membership\Http\Controllers'], function()
 {
     Route::post('list', 'ApiMembership@listMembership');
 	Route::post('create', 'ApiMembership@create');
