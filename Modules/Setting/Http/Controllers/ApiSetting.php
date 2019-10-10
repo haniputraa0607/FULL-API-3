@@ -1447,6 +1447,10 @@ class ApiSetting extends Controller
                                 "text_menu" => $menu['outlet_text_menu'],
                                 "text_header" => $menu['outlet_text_header']
                         ],
+                        "benefit" => [
+                                "text_menu" => $menu['benefit_text_menu'],
+                                "text_header" => $menu['benefit_text_menu']
+                        ],
                         "news" => [
                                 "text_menu" => $menu['news_text_menu'],
                                 "text_header" => $menu['news_text_header']
