@@ -1,5 +1,5 @@
 <?php
-Route::group(['middleware' => ['auth:api','log_activities_apps'], 'prefix' => 'api/inboxglobal', 'namespace' => 'Modules\InboxGlobal\Http\Controllers'], function()
+Route::group(['middleware' => ['auth:api','log_activities'], 'prefix' => 'api/inboxglobal', 'namespace' => 'Modules\InboxGlobal\Http\Controllers'], function()
 {
     Route::post('list', 'ApiInboxGlobal@listInboxGlobal');
     Route::post('detail', 'ApiInboxGlobal@detailInboxGlobal');
@@ -9,7 +9,7 @@ Route::group(['middleware' => ['auth:api','log_activities_apps'], 'prefix' => 'a
 });
 
 
-Route::group(['middleware' => ['auth:api','log_activities_apps'], 'prefix' => 'api/inbox', 'namespace' => 'Modules\InboxGlobal\Http\Controllers'], function()
+Route::group(['middleware' => ['auth:api','log_activities'], 'prefix' => 'api/inbox', 'namespace' => 'Modules\InboxGlobal\Http\Controllers'], function()
 {
     Route::any('user', 'ApiInbox@listInboxUser');
     Route::any('delete', 'ApiInbox@deleteInboxUser');

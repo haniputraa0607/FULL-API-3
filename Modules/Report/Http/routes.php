@@ -1,6 +1,6 @@
 <?php
 
-Route::group(['middleware' => ['api','log_activities_apps'], 'prefix' => 'api/report', 'namespace' => 'Modules\Report\Http\Controllers'], function()
+Route::group(['middleware' => ['api','log_activities'], 'prefix' => 'api/report', 'namespace' => 'Modules\Report\Http\Controllers'], function()
 {
     Route::post('/global', 'ApiReport@global');
     Route::post('/product', 'ApiReport@product');

@@ -1,5 +1,5 @@
 <?php
-Route::group(['prefix' => 'api/outlet', 'middleware' => ['log_activities_apps', 'auth:api'], 'namespace' => 'Modules\Outlet\Http\Controllers'], function()
+Route::group(['prefix' => 'api/outlet', 'middleware' => ['log_activities', 'auth:api'], 'namespace' => 'Modules\Outlet\Http\Controllers'], function()
 {
     Route::any('list', 'ApiOutletController@listOutlet');
     Route::any('list/gofood', 'ApiOutletGofoodController@listOutletGofood');
@@ -12,7 +12,7 @@ Route::group(['prefix' => 'api/outlet','namespace' => 'Modules\Outlet\Http\Contr
     Route::any('list/android', 'ApiOutletController@listOutlet');
 });
 
-Route::group(['prefix' => 'api/outlet', 'middleware' => ['log_activities_apps', 'auth_client'], 'namespace' => 'Modules\Outlet\Http\Controllers'], function()
+Route::group(['prefix' => 'api/outlet', 'middleware' => ['log_activities', 'auth_client'], 'namespace' => 'Modules\Outlet\Http\Controllers'], function()
 {
     Route::any('filter/android', 'ApiOutletController@filter');
 });

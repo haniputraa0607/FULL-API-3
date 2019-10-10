@@ -38,19 +38,6 @@ class LogActivitiesOutletAppsMiddleware
                 $requestnya = json_encode($reqnya);
                 $requeste = json_decode($requestnya, true);
                 
-                $phone = null;
-                if(isset($requeste['phone']))
-                    $phone = $requeste['phone'];
-
-                if(isset($user['phone']))
-                    $phone = $user['phone'];
-
-                if(Auth::user()){
-                    $datauser = Auth::user();
-                    if(isset($datauser['phone']))
-                        $phone = $datauser['phone'];
-                }
-                
                 $outletCode = null;
                 if(isset($user['outlet_code'])){
                     $outletCode = $user['outlet_code'];
@@ -88,17 +75,7 @@ class LogActivitiesOutletAppsMiddleware
                     $ip = $request->ip();
                 }
 
-                if(!empty($request->header('user-agent-view'))){
-                    $userAgent = $request->header('user-agent-view');
-                    if(stristr($userAgent,'iOS') || stristr($userAgent,'okhttp')){
-                    }else{
-                        if(!stristr($url, 'complete-profile')){
-                            $subject = "BE ".$subject;
-                        }
-                    }
-                }else{
-                    $userAgent = $request->header('user-agent');
-                }
+                $userAgent = $request->header('user-agent');
                 
                 $dtUser = null;
                 

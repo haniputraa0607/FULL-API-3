@@ -1,6 +1,6 @@
 <?php
 
-Route::group(['middleware' => ['auth:api', 'log_activities_apps'], 'prefix' => 'api/transaction', 'namespace' => 'Modules\Transaction\Http\Controllers'], function () {
+Route::group(['middleware' => ['auth:api', 'log_activities'], 'prefix' => 'api/transaction', 'namespace' => 'Modules\Transaction\Http\Controllers'], function () {
     Route::post('/outlet', 'ApiNotification@adminOutlet');
     Route::post('/admin/confirm', 'ApiNotification@adminOutletComfirm');
     Route::get('/rule', 'ApiTransaction@transactionRule');
@@ -39,7 +39,7 @@ Route::group(['middleware' => ['auth:api', 'log_activities_apps'], 'prefix' => '
     });
 });
 
-Route::group(['middleware' => ['auth:api', 'log_activities_apps'], 'prefix' => 'api/transaction', 'namespace' => 'Modules\Transaction\Http\Controllers'], function () {
+Route::group(['middleware' => ['auth:api', 'log_activities'], 'prefix' => 'api/transaction', 'namespace' => 'Modules\Transaction\Http\Controllers'], function () {
     Route::get('/', 'ApiTransaction@transactionList');
     Route::any('/filter', 'ApiTransaction@transactionFilter');
     Route::post('/detail', 'ApiTransaction@transactionDetail');
@@ -77,14 +77,14 @@ Route::group(['middleware' => 'auth_client', 'prefix' => 'api/transaction', 'nam
     Route::post('/shipping/gosend', 'ApiTransaction@shippingCostGoSend');
 });
 
-Route::group(['prefix' => 'api/transaction', 'middleware' => 'log_activities_apps', 'namespace' => 'Modules\Transaction\Http\Controllers'], function () {
+Route::group(['prefix' => 'api/transaction', 'middleware' => 'log_activities', 'namespace' => 'Modules\Transaction\Http\Controllers'], function () {
     Route::any('/finish', 'ApiTransaction@transactionFinish');
     Route::any('/cancel', 'ApiTransaction@transactionCancel');
     Route::any('/error', 'ApiTransaction@transactionError');
     Route::any('/notif', 'ApiNotification@receiveNotification');
 });
 
-Route::group(['prefix' => 'api/transaction', 'middleware' => ['log_activities_apps', 'auth:api'], 'namespace' => 'Modules\Transaction\Http\Controllers'], function () {
+Route::group(['prefix' => 'api/transaction', 'middleware' => ['log_activities', 'auth:api'], 'namespace' => 'Modules\Transaction\Http\Controllers'], function () {
     Route::post('/detail/webview', 'ApiWebviewController@webview');
     Route::post('/detail/webview/point', 'ApiWebviewController@webviewPoint');
     Route::post('/detail/webview/balance', 'ApiWebviewController@webviewBalance');
@@ -103,7 +103,7 @@ Route::group(['middleware' => 'auth_client', 'prefix' => 'api/manual-payment', '
     Route::post('/method', 'ApiTransactionPaymentManual@paymentMethod');
 });
 
-Route::group(['middleware' => ['auth:api', 'log_activities_apps'], 'prefix' => 'api/transaction', 'namespace' => 'Modules\Transaction\Http\Controllers'], function () {
+Route::group(['middleware' => ['auth:api', 'log_activities'], 'prefix' => 'api/transaction', 'namespace' => 'Modules\Transaction\Http\Controllers'], function () {
     Route::get('setting/cashback', 'ApiSettingCashbackController@list');
     Route::post('setting/cashback/update', 'ApiSettingCashbackController@update');
 });

@@ -60,7 +60,7 @@ class Kernel extends HttpKernel
         'can' => \Illuminate\Auth\Middleware\Authorize::class,
         'guest' => \App\Http\Middleware\RedirectIfAuthenticated::class,
         'throttle' => \Illuminate\Routing\Middleware\ThrottleRequests::class,
-        'log_activities_apps'    => \App\Http\Middleware\LogActivitiesAppsMiddleware::class,
+        'log_activities'    => \App\Http\Middleware\LogActivitiesMiddleware::class,
         'log_activities_pos'    => \App\Http\Middleware\LogActivitiesPOSMiddleware::class,
         'log_activities_pos_transaction'    => \App\Http\Middleware\LogActivitiesPOSTransactionMiddleware::class,
         'log_activities_outlet_apps'    => \App\Http\Middleware\LogActivitiesOutletAppsMiddleware::class,
