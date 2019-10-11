@@ -790,6 +790,8 @@ class ApiOutletController extends Controller
         // outlet
         $outlet = Outlet::with(['today'])->select('outlets.id_outlet','outlets.outlet_name','outlets.outlet_phone','outlets.outlet_code','outlets.outlet_status','outlets.outlet_address','outlets.id_city','outlet_latitude','outlet_longitude')->where('outlet_status', 'Active')->whereNotNull('id_city')->orderBy('outlet_name','asc');
 
+        $countAll=$outlet->count();
+        
         if(is_array($post['id_brand']??false)&&$post['id_brand']){
             $outlet->leftJoin('brand_outlet','outlets.id_outlet','brand_outlet.id_outlet');
             $id_brands=$post['id_brand'];
@@ -799,8 +801,6 @@ class ApiOutletController extends Controller
                 }
             });
         }
-
-        $countAll=$outlet->count();
 
         if($request->json('search') && $request->json('search') != ""){
             $outlet = $outlet->where('outlet_name', 'LIKE', '%'.$request->json('search').'%');
