@@ -294,25 +294,19 @@ class ApiDeals extends Controller
                 ->orWhere('deals_second_title', 'LIKE', '%' . $request->json('key_free') . '%');
         }
 
-        if(is_numeric($val=$request->json('price_range_start'))){
-            $deals->where('deals_voucher_price_cash','>=',$val);
-        }
-        if(is_numeric($val=$request->json('price_range_end'))){
-            $deals->where('deals_voucher_price_cash','<=',$val);
-        }
 
-        if(is_numeric($val=$request->json('point_range_start'))){
-            $deals->where('deals_voucher_price_point','>=',$val);
-        }
-        if(is_numeric($val=$request->json('point_range_end'))){
-            $deals->where('deals_voucher_price_point','<=',$val);
-        }
         /* ========================= TYPE ========================= */
         $deals->where(function ($query) use ($request) {
             // cash
             if ($request->json('voucher_type_paid')) {
                 $query->orWhere(function ($amp) use ($request) {
                     $amp->whereNotNull('deals_voucher_price_cash');
+                    if(is_numeric($val=$request->json('price_range_start'))){
+                        $amp->where('deals_voucher_price_cash','>=',$val);
+                    }
+                    if(is_numeric($val=$request->json('price_range_end'))){
+                        $amp->where('deals_voucher_price_cash','<=',$val);
+                    }
                 });
                 // print_r('voucher_type_paid');
                 // print_r($query->get()->toArray());die();
@@ -321,6 +315,12 @@ class ApiDeals extends Controller
             if ($request->json('voucher_type_point')) {
                 $query->orWhere(function ($amp) use ($request) {
                     $amp->whereNotNull('deals_voucher_price_point');
+                    if(is_numeric($val=$request->json('point_range_start'))){
+                        $amp->where('deals_voucher_price_point','>=',$val);
+                    }
+                    if(is_numeric($val=$request->json('point_range_end'))){
+                        $amp->where('deals_voucher_price_point','<=',$val);
+                    }
                 });
                 // print_r('voucher_type_point');
                 // print_r($query->get()->toArray());die();
@@ -425,8 +425,21 @@ class ApiDeals extends Controller
 
         // if deals detail, add webview url & btn text
         if ($request->json('id_deals') && !empty($deals)) {
+            //url webview
             $deals[0]['webview_url'] = env('APP_URL') . "webview/deals/" . $deals[0]['id_deals'] . "/" . $deals[0]['deals_type'];
+            // text tombol beli
             $deals[0]['button_text'] = $deals[0]['deals_voucher_price_type']=='free'?'Ambil':'Tukar';
+            //text konfirmasi pembelian
+            if($deals[0]['deals_voucher_price_type']=='free'){
+                //voucher free
+                $payment_message = Setting::where('key', 'payment_message')->pluck('value')->first()??'Kamu yakin ingin mengambil voucher ini?';
+            }elseif($deals[0]['deals_voucher_price_type']=='point'){
+                $payment_message = Setting::where('key', 'payment_message_point')->pluck('value')->first()??'Anda akan menukarkan %point% points anda dengan Voucher %voucher_name%?';
+                $payment_message = MyHelper::simpleReplace($payment_message,['point'=>$deals[0]['deals_voucher_price_point'],'voucher_name'=>$deals[0]['deals_title']]);
+            }
+            $payment_success_message = Setting::where('key', 'payment_success_message')->pluck('value')->first()??'Apakah kamu ingin menggunakan Voucher sekarang?';
+            $deals[0]['payment_message'] = $payment_message;
+            $deals[0]['payment_success_message'] = $payment_success_message;
             if($deals[0]['deals_voucher_price_type']=='free'){
                 $deals[0]['button_status']=1;
             }else {

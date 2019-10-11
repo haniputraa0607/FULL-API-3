@@ -42,6 +42,9 @@ class ApiDealsClaimPay extends Controller
         $this->voucher = "Modules\Deals\Http\Controllers\ApiDealsVoucher";
         $this->claim   = "Modules\Deals\Http\Controllers\ApiDealsClaim";
         $this->balance = "Modules\Balance\Http\Controllers\BalanceController";
+        if(\Module::collections()->has('Autocrm')) {
+            $this->autocrm  = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
+        }
     }
 
     public $saveImage = "img/receipt_deals/";
@@ -303,6 +306,17 @@ class ApiDealsClaimPay extends Controller
             elseif ($pay) {
                 DB::commit();
                 $return = MyHelper::checkCreate($pay);
+                if(\Module::collections()->has('Autocrm')) {
+                    $phone=User::where('id', $voucher->id_user)->pluck('phone')->first();
+                    $voucher->load('dealVoucher.deals');
+                    $autocrm = app($this->autocrm)->SendAutoCRM('Claim Deals Success', $phone,
+                        [
+                            'claimed_at'       => $voucher->claimed_at, 
+                            'deals_title'      => $voucher->dealVoucher->deals->deals_title,
+                            'deals_voucher_price_point' => $voucher->dealVoucher->deals->deals_voucher_price_point
+                        ]
+                    );
+                }
                 if(isset($return['status']) && $return['status'] == 'success'){
                     $result = [
                         'id_deals_user'=>$return['result']['voucher']['id_deals_user'],

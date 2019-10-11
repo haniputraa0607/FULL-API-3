@@ -1908,5 +1908,12 @@ class MyHelper{
 
         return false;
     }
+    //replace text dengan array
+    public static function simpleReplace($string,$replacers,$symbol='%'){
+    	foreach ($replacers as $key => $to) {
+    		$string=str_replace($symbol.$key.$symbol, $to,$string);
+    	}
+    	return $string;
+    }
 }
 ?>
