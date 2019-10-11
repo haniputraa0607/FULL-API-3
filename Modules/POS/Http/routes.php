@@ -1,3 +1,4 @@
+
 <?php
 
 Route::group(['middleware' => 'web', 'prefix' => 'pos', 'namespace' => 'Modules\POS\Http\Controllers'], function()
@@ -24,6 +25,11 @@ Route::group(['prefix' => 'api/v1/pos/', 'namespace' => 'Modules\POS\Http\Contro
         
         Route::post('order/detail/view', 'ApiOrder@detailWebviewPage');
     });
+});
+
+Route::group(['middleware' => ['auth_client','log_activities_pos'], 'prefix' => 'api/v1/pos/', 'namespace' => 'Modules\Brand\Http\Controllers'], function()
+{
+    Route::post('brand', 'ApiSyncBrandController@syncBrand');
 });
 
 Route::group(['prefix' => 'api/v1/pos/', 'namespace' => 'Modules\POS\Http\Controllers'], function()
@@ -65,3 +71,4 @@ Route::group(['prefix' => 'api/v1/pos/', 'namespace' => 'Modules\POS\Http\Contro
 {
     Route::post('outlet/menu/cron', 'ApiPOS@syncOutletMenuCron');
 });
+
