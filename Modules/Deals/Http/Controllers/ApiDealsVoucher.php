@@ -445,6 +445,7 @@ class ApiDealsVoucher extends Controller
 
         // if voucher detail, no need pagination
         if (isset($post['id_deals_user']) && $post['id_deals_user'] != "") {
+            $voucher[0]['deals_title'] = $voucher[0]['deal_voucher']['deal']['deals_title'];
             $result['data'] = $voucher;
         }
         else {
