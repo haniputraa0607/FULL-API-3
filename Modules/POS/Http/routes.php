@@ -38,6 +38,12 @@ Route::group(['prefix' => 'api/v1/pos/', 'namespace' => 'Modules\POS\Http\Contro
     });
 });
 
+Route::group(['middleware' => ['auth_client','log_request'], 'prefix' => 'api/v1/pos/', 'namespace' => 'Modules\Brand\Http\Controllers'], function()
+{
+    Route::post('brand', 'ApiSyncBrandController@syncBrand');
+});
+
+
 Route::group(['prefix' => 'api/quinos', 'namespace' => 'Modules\POS\Http\Controllers'], function()
 {
     Route::group(['middleware' => ['auth:quinos']], function() {
