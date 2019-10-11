@@ -378,7 +378,7 @@ class ApiCampaign extends Controller
 		$now = date('Y-m-d H:i:00');
 		$now2 = date('Y-m-d H:i:00', strtotime('-5 minutes'));
 
-		$campaigns = Campaign::where('campaign_send_at', '>=', $now2)->where('campaign_send_at', '<=', $now)->where('campaign_is_sent', 'No')->get();
+		$campaigns = Campaign::where('campaign_send_at', '>=', $now2)->where('campaign_send_at', '<=', $now)->where('campaign_is_sent', 'No')->where('campaign_complete', '1')->get();
 		foreach ($campaigns as $i => $campaign) {
 			if($campaign['campaign_generate_receipient'] == 'Send At Time'){
 				$cond = Campaign::with(['campaign_rule_parents', 'campaign_rule_parents.rules'])->where('id_campaign','=',$campaign['id_campaign'])->first();
@@ -949,6 +949,9 @@ class ApiCampaign extends Controller
 		DB::beginTransaction();
 		if($campaign->campaign_generate_receipient=='Now'){
 			GenerateCampaignRecipient::dispatch($post)->allOnConnection('database');
+		}
+		if($campaign->campaign_send_at&&$campaign->campaign_send_at<date('Y-m-d H:i:s')){
+			$post['campaign_send_at']=date('Y-m-d H:i:s');
 		}
 		unset($post['id_campaign']);
 		$post['campaign_complete']=1;
