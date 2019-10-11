@@ -1302,7 +1302,7 @@ class FeaturesTableSeeder extends Seeder
             161 =>
             array(
                 'id_feature' => 162,
-                'feature_type' => 'Update',
+                'feature_type' => 'List',
                 'feature_module' => 'Confirmation Messages',
                 'created_at' => date('Y-m-d H:00:00'),
                 'updated_at' => date('Y-m-d H:00:00'),
