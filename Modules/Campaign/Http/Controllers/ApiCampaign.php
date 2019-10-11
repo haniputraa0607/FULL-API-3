@@ -269,10 +269,10 @@ class ApiCampaign extends Controller
 		}
 		// UserFilter($conditions = null, $order_field='id', $order_method='asc', $skip=0, $take=99999999999,$keyword=null)
 		$users = app($this->user)->UserFilter($cond['campaign_rule_parents'],...$limiter);
-		if($users['status'] == 'success') $campaign['users'] = $users['result'];
+		if($users['status'] == 'success') $cond['users'] = $users['result'];
 		$result = [
 				'status'  => 'success',
-				'result'  => $campaign,
+				'result'  => $cond,
 				'recordsFiltered' => $users['recordsFiltered']??0,
 				'recordsTotal' => $users['recordsTotal']??0
 			];
@@ -301,7 +301,7 @@ class ApiCampaign extends Controller
 					$data['campaign'] = $campaign;
 					$data['type'] = 'email';
 					foreach (array_chunk($receipient_email,10) as $recipients) {
-						$data['recipient']=$recipients;
+						$data['recipient']=array_filter($recipients,function($var){return !empty($var);});
 						SendCampaignJob::dispatch($data)->allOnConnection('database');
 					}
 				}
@@ -312,7 +312,7 @@ class ApiCampaign extends Controller
 					$data['campaign'] = $campaign;
 					$data['type'] = 'sms';
 					foreach (array_chunk($receipient_sms,10) as $recipients) {
-						$data['recipient']=$recipients;
+						$data['recipient']=array_filter($recipients,function($var){return !empty($var);});
 						SendCampaignJob::dispatch($data)->allOnConnection('database');
 					}
 				}
@@ -323,7 +323,7 @@ class ApiCampaign extends Controller
 					$data['campaign'] = $campaign;
 					$data['type'] = 'push';
 					foreach (array_chunk($receipient_push,10) as $recipients) {
-						$data['recipient']=$recipients;
+						$data['recipient']=array_filter($recipients,function($var){return !empty($var);});
 						SendCampaignJob::dispatch($data)->allOnConnection('database');
 					}
 				}
@@ -334,7 +334,7 @@ class ApiCampaign extends Controller
 					$data['campaign'] = $campaign;
 					$data['type'] = 'inbox';
 					foreach (array_chunk($receipient_inbox,10) as $recipients) {
-						$data['recipient']=$recipients;
+						$data['recipient']=array_filter($recipients,function($var){return !empty($var);});
 						SendCampaignJob::dispatch($data)->allOnConnection('database');
 					}
 				}
@@ -347,7 +347,7 @@ class ApiCampaign extends Controller
 					$data['campaign'] = $campaign;
 					$data['type'] = 'whatsapp';
 					foreach (array_chunk($receipient_whatsapp,10) as $recipients) {
-						$data['recipient']=$recipients;
+						$data['recipient']=array_filter($recipients,function($var){return !empty($var);});
 						SendCampaignJob::dispatch($data)->allOnConnection('database');
 					}
 

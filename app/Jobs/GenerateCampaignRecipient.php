@@ -68,23 +68,28 @@ class GenerateCampaignRecipient implements ShouldQueue
         }
         if($campaign->campaign_media_email=='Yes'){
             $data['campaign_email_receipient']=trim(trim($campaign->campaign_email_more_recipient,',').','.$recipient['email'],',');
-            $data['campaign_email_count_all']=count(explode(',',$data['campaign_email_receipient']));
+            $recipientx=array_filter(explode(',',$data['campaign_email_receipient']),function($var){return !empty($var);});
+            $data['campaign_email_count_all']=count($recipientx);
         }
         if($campaign->campaign_media_sms=='Yes'){
             $data['campaign_sms_receipient']=trim(trim($campaign->campaign_sms_more_recipient,',').','.$recipient['phone'],',');
-            $data['campaign_sms_count_all']=count(explode(',',$data['campaign_sms_receipient']));
+            $recipientx=array_filter(explode(',',$data['campaign_sms_receipient']),function($var){return !empty($var);});
+            $data['campaign_sms_count_all']=count($recipientx);
         }
         if($campaign->campaign_media_push=='Yes'){
             $data['campaign_push_receipient']=trim(trim($campaign->campaign_push_more_recipient,',').','.$recipient['phone'],',');
-            $data['campaign_push_count_all']=count(explode(',',$data['campaign_push_receipient']));
+            $recipientx=array_filter(explode(',',$data['campaign_push_receipient']),function($var){return !empty($var);});
+            $data['campaign_push_count_all']=count($recipientx);
         }
         if($campaign->campaign_media_inbox=='Yes'){
             $data['campaign_inbox_receipient']=trim(trim($campaign->campaign_inbox_more_recipient,',').','.$recipient['phone'],',');
-            $data['campaign_inbox_count']=count(explode(',',$data['campaign_inbox_receipient']));
+            $recipientx=array_filter(explode(',',$data['campaign_inbox_receipient']),function($var){return !empty($var);});
+            $data['campaign_inbox_count']=count($recipientx);
         }
         if($campaign->campaign_media_whatsapp=='Yes'){
             $data['campaign_whatsapp_receipient']=trim(trim($campaign->campaign_whatsapp_more_recipient,',').','.$recipient['phone'],',');
-            $data['campaign_whatsapp_count_all']=count(explode(',',$data['campaign_whatsapp_receipient']));
+            $recipientx=array_filter(explode(',',$data['campaign_whatsapp_receipient']),function($var){return !empty($var);});
+            $data['campaign_whatsapp_count_all']=count($recipientx);
         }
         $id_campaign=$this->data['id_campaign'];
         return Campaign::where('id_campaign','=',$id_campaign)->update($data);
