@@ -1496,4 +1496,28 @@ class ApiSetting extends Controller
             return response()->json(['status' => 'fail', 'messages' => ['Incomplated Input']]);
         }
     }
+
+    public function update(Request $request){
+        if(($updates = $request->json('update'))&&is_array($updates)){
+            DB::beginTransaction();
+            foreach ($updates as $key => $value) {
+                $up=Setting::updateOrCreate(['key'=>$key],[$value[0]=>$value[1]]);
+                if(!$up){
+                    DB::rollback();
+                    return [
+                        'status'=>'fail',
+                        'messages'=>['Something went wrong']
+                    ];        
+                }
+            }
+            DB::commit();
+            return [
+                'status'=>'success'
+            ];    
+        }
+        return [
+            'status'=>'fail',
+            'messages'=>['No setting updated']
+        ];        
+    }
 }

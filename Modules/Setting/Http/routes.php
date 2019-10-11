@@ -123,6 +123,8 @@ Route::group(['middleware' => ['auth_client', 'log_request'], 'prefix' => 'api/s
 	Route::get('/navigation-sidebar', 'ApiSetting@NavigationSidebar');
     Route::get('/navigation-navbar', 'ApiSetting@NavigationNavbar');
 
+    Route::get('/update','ApiSetting@update');
+
     Route::get('/version/list', 'ApiSetting@getVersion');
     Route::post('/version/update', 'ApiSetting@updateVersion');
 });
