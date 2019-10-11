@@ -425,8 +425,21 @@ class ApiDeals extends Controller
 
         // if deals detail, add webview url & btn text
         if ($request->json('id_deals') && !empty($deals)) {
+            //url webview
             $deals[0]['webview_url'] = env('APP_URL') . "webview/deals/" . $deals[0]['id_deals'] . "/" . $deals[0]['deals_type'];
+            // text tombol beli
             $deals[0]['button_text'] = $deals[0]['deals_voucher_price_type']=='free'?'Ambil':'Tukar';
+            //text konfirmasi pembelian
+            if($deals[0]['deals_voucher_price_type']=='free'){
+                //voucher free
+                $payment_message = Setting::where('key', 'payment_message')->pluck('value')->first()??'Kamu yakin ingin mengambil voucher ini?';
+            }elseif($deals[0]['deals_voucher_price_type']=='point'){
+                $payment_message = Setting::where('key', 'payment_message_point')->pluck('value')->first()??'Anda akan menukarkan %point% points anda dengan Voucher %voucher_name%?';
+                $payment_message = MyHelper::simpleReplace($payment_message,['point'=>$deals[0]['deals_voucher_price_point'],'voucher_name'=>$deals[0]['deals_title']]);
+            }
+            $payment_success_message = Setting::where('key', 'payment_success_message')->pluck('value')->first()??'Apakah kamu ingin menggunakan Voucher sekarang?';
+            $deals[0]['payment_message'] = $payment_message;
+            $deals[0]['payment_success_message'] = $payment_success_message;
             if($deals[0]['deals_voucher_price_type']=='free'){
                 $deals[0]['button_status']=1;
             }else {
