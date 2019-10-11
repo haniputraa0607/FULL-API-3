@@ -42,6 +42,7 @@ Route::group(['middleware' => ['auth:api', 'log_request'], 'prefix' => 'api/sett
 
     Route::any('jobs_list', 'ApiSetting@jobsList');
     Route::any('celebrate_list', 'ApiSetting@celebrateList');
+    Route::any('/text_menu/update', 'ApiSetting@updateTextMenu');
 
     Route::group(['middleware' => 'auth:api', 'prefix' => 'dashboard'], function()
     {
@@ -62,6 +63,16 @@ Route::group(['middleware' => ['auth:api', 'log_request'], 'prefix' => 'api/sett
         Route::post('update', 'ApiBanner@update');
         Route::post('reorder', 'ApiBanner@reorder');
         Route::post('delete', 'ApiBanner@destroy');
+    });
+
+    // featured_deal
+    Route::group(['middleware' => 'auth:api', 'prefix' => 'featured_deal'], function()
+    {
+        Route::get('list', 'ApiFeaturedDeal@index');
+        Route::post('create', 'ApiFeaturedDeal@create');
+        Route::post('update', 'ApiFeaturedDeal@update');
+        Route::post('reorder', 'ApiFeaturedDeal@reorder');
+        Route::post('delete', 'ApiFeaturedDeal@destroy');
     });
 
     // complete profile
@@ -119,6 +130,7 @@ Route::group(['middleware' => ['auth_client', 'log_request'], 'prefix' => 'api/s
 Route::group(['prefix' => 'api/setting', 'namespace' => 'Modules\Setting\Http\Controllers'], function()
 {    
     Route::post('/version', 'ApiSetting@Version');
+    Route::any('/text_menu_list', 'ApiSetting@textMenuList');
 });
 
 Route::group(['prefix' => 'api/setting', 'middleware' => ['log_request', 'auth:api'], 'namespace' => 'Modules\Setting\Http\Controllers'], function()

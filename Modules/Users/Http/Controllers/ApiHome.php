@@ -39,7 +39,7 @@ class ApiHome extends Controller
 		$this->point  = "Modules\Deals\Http\Controllers\ApiDealsClaim";
 		$this->autocrm  = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
         $this->setting_fraud = "Modules\SettingFraud\Http\Controllers\ApiSettingFraud";
-		$this->endPoint  = env('AWS_URL');
+		$this->endPoint  = env('S3_URL_API');
     }
 
 	public function homeNotLoggedIn(Request $request) {
@@ -83,7 +83,7 @@ class ApiHome extends Controller
 
         foreach ($banners as $key => $value) {
 
-            $item['image_url']  = env('AWS_URL').$value->image;
+            $item['image_url']  = env('S3_URL_API').$value->image;
             $item['id_news']    = $value->id_news;
             $item['news_title'] = "";
             $item['url']        = $value->url;
@@ -245,7 +245,7 @@ class ApiHome extends Controller
                     $greetingss2     = app($this->autocrm)->TextReplace($greetings[$greetingKey]['greeting2'], $user['phone']);
                     if (!empty($background)) {
 						$backgroundKey = array_rand($background, 1);
-						$background    = env('AWS_URL').$background[$backgroundKey]['picture'];
+						$background    = env('S3_URL_API').$background[$backgroundKey]['picture'];
 					}
                 }
             }
@@ -289,7 +289,7 @@ class ApiHome extends Controller
 
                 $membership['webview_detail_membership'] = env('VIEW_URL').'/membership/web/view?data='.$base;
 				if(isset($membership['membership_image']))
-					$membership['membership_image'] = env('AWS_URL').$membership['membership_image'];
+					$membership['membership_image'] = env('S3_URL_API').$membership['membership_image'];
 			} else {
 				$membership = null;
 			}
@@ -464,7 +464,7 @@ class ApiHome extends Controller
                 }
                 else {
                     $backgroundKey = array_rand($background, 1);
-                    $background    = env('AWS_URL').$background[$backgroundKey]['picture'];
+                    $background    = env('S3_URL_API').$background[$backgroundKey]['picture'];
                 }
             }
 
@@ -729,7 +729,7 @@ class ApiHome extends Controller
     public function featuredDeals(Request $request){
         $now=date('Y-m-d H-i-s');
         $deals=FeaturedDeal::select('id_featured_deals','id_deals')->with(['deals'=>function($query){
-            $query->select('deals_title','deals_image','deals_total_voucher','deals_total_claimed','deals_publish_end','deals_start','deals_end','id_deals','deals_voucher_price_point','deals_voucher_price_cash');
+            $query->select('deals_title','deals_image','deals_total_voucher','deals_total_claimed','deals_publish_end','deals_start','deals_end','id_deals','deals_voucher_price_point','deals_voucher_price_cash','deals_voucher_type');
         }])
             ->whereHas('deals',function($query){
                 $query->where('deals_publish_end','>=',DB::raw('CURRENT_TIMESTAMP()'));
@@ -741,8 +741,12 @@ class ApiHome extends Controller
             ->get();
         if($deals){
             $deals=array_map(function($value){
-                $calc = $value['deals']['deals_total_voucher'] - $value['deals']['deals_total_claimed'];
-                $value['deals']['available_voucher'] = $calc;
+                if ($value['deals']['deals_voucher_type'] == "Unlimited") {
+                    $calc = '*';
+                }else{
+                    $calc = $value['deals']['deals_total_voucher'] - $value['deals']['deals_total_claimed'];
+                }
+                $value['deals']['available_voucher'] = (string) $calc;
                 if($calc&&is_numeric($calc)){
                     $value['deals']['percent_voucher'] = $calc*100/$value['deals']['deals_total_voucher'];
                 }else{

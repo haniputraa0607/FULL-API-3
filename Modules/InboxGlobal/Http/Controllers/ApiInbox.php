@@ -54,7 +54,7 @@ class ApiInbox extends Controller
 								->where('inbox_global_end', '>=', $today)
 								->get()
 								->toArray();
-		
+
 		foreach($globals as $ind => $global){
 			$cons = array();
 			$cons['subject'] = 'phone';
@@ -81,12 +81,10 @@ class ApiInbox extends Controller
 
 				if($content['clickto'] == 'News'){
 					$news = News::find($global['inbox_global_id_reference']);
-					if(!$news){
-						continue;
+					if($news){
+						$content['news_title'] = $news->news_title;
+						$content['url'] = env('APP_URL').'news/webview/'.$news->id_news;
 					}
-
-					$content['news_title'] = $news->news_title;
-					$content['url'] = env('APP_URL').'news/webview/'.$news->id_news;
 				}
 				
 				if($content['clickto'] == 'Content'){
@@ -142,12 +140,11 @@ class ApiInbox extends Controller
 			
 			if($content['clickto'] == 'News'){
 				$news = News::find($private['inboxes_id_reference']);
-				if(!$news){
-					continue;
+				if($news){
+					$content['news_title'] = $news->news_title;
+					$content['url'] = env('APP_URL').'news/webview/'.$news->id_news;
 				}
 
-				$content['news_title'] = $news->news_title;
-				$content['url'] = env('APP_URL').'news/webview/'.$news->id_news;
 			}
 			
 			if($content['clickto'] == 'Content'){
@@ -294,14 +291,14 @@ class ApiInbox extends Controller
 			array_push($global['inbox_global_rule_parents'], ['rule' => 'and', 'rule_next' => 'and', 'rules' => [$cons]]);
 			$users = app($this->user)->UserFilter($global['inbox_global_rule_parents']);
 			
-			if($users){
+			if(($users['status']??false)=='success'){
 				$read = InboxGlobalRead::where('id_inbox_global', $global['id_inbox_global'])->where('id_user', $id_user)->first();
 				if(empty($read)){
 					$countUnread += 1;
 				}
 			}
 		}
-		
+
 		$privates = UserInbox::where('id_user','=',$user['id'])->where('read', '0')->get();
 
 		

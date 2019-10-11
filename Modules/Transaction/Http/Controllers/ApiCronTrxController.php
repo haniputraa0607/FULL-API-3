@@ -56,7 +56,7 @@ class ApiCronTrxController extends Controller
         }
 
         foreach ($getTrx as $key => $value) {
-            $singleTrx = Transaction::where('id_transaction', $value->id_transaction)->first();
+            $singleTrx = Transaction::where('id_transaction', $value->id_transaction)->with('outlet_name')->first();
             if (empty($singleTrx)) {
                 continue;
             }
@@ -96,6 +96,22 @@ class ApiCronTrxController extends Controller
             $logBalance = LogBalance::where('id_reference', $singleTrx->id_transaction)->where('source', 'Transaction')->where('balance', '<', 0)->get();
             foreach($logBalance as $logB){
                 $reversal = app($this->balance)->addLogBalance( $singleTrx->id_user, abs($logB['balance']), $singleTrx->id_transaction, 'Reversal', $singleTrx->transaction_grandtotal);
+                $usere= User::where('id',$singleTrx->id_user)->first();
+                $send = app($this->autocrm)->SendAutoCRM('Transaction Failed Point Refund', $usere->phone, 
+                    [
+                        "outlet_name"       => $singleTrx->outlet_name->outlet_name, 
+                        "transaction_date"  => $singleTrx->transaction_date,
+                        'receipt_number'    => $singleTrx->transaction_receipt_number,
+                        'point'             => abs($logB['balance'])
+                    ]
+                );
+                if($send != true){
+                    DB::rollback();
+                    return response()->json([
+                            'status' => 'fail',
+                            'messages' => ['Failed Send notification to customer']
+                        ]);
+                }
             }
         }
 

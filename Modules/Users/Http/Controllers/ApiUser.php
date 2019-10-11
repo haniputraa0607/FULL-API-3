@@ -407,6 +407,15 @@ class ApiUser extends Controller
 
 		foreach($conditions as $index => $condition){
 			if(isset($condition['subject'])){
+				if($condition['operator']=='WHERE IN'){
+					$param=explode(',', $condition['parameter']);
+					if($rule == 'and'){
+						$query = $query->whereIn($condition['subject'],$param);
+					} else {
+						$query = $query->orWhereIn($condition['subject'],$param);
+					}
+					continue;
+				}
 				if($condition['subject'] == 'all_user'){
 					if($rule == 'and'){
 						$query = $query->whereRaw('1');
@@ -1651,7 +1660,20 @@ class ApiUser extends Controller
 									'messages' => 'Failed to save data'
 								];
 							}
-
+							if($balance_nominal??false){
+				                $send   = app($this->autocrm)->SendAutoCRM('Complete User Profile Point Bonus', $datauser[0]['phone'], 
+				                    [
+				                        'point' => $balance_nominal
+				                    ]
+				                );
+				                if($send != true){
+				                    DB::rollback();
+				                    return response()->json([
+				                        'status' => 'fail',
+				                        'messages' => ['Failed Send notification to customer']
+				                    ]);
+				                }
+							}
 							$update = User::where('id','=',$data[0]['id'])->update(['complete_profile' => '1']);
 
 							$checkMembership = app($this->membership)->calculateMembership($datauser[0]['phone']);
@@ -1672,7 +1694,8 @@ class ApiUser extends Controller
 											'celebrate' => $datauser[0]['celebrate'],
 											'job' => $datauser[0]['job'],
 											'address' => $datauser[0]['address']
-										   ]
+										   ],
+						    'message'	=> 'Your profile was successfully updated'
 						];
 				// } else {
 				// 	$result = [

@@ -43,7 +43,7 @@ class ApiMembershipWebview extends Controller
 		$result = [];
 
 		$result['user_membership'] = UsersMembership::with('user')->where('id_user', $post['id_user'])->orderBy('id_log_membership', 'desc')->first();
-
+		
 		$settingCashback = Setting::where('key', 'cashback_conversion_value')->first();
 		if(!$settingCashback || !$settingCashback->value){
 			return response()->json([
@@ -52,7 +52,7 @@ class ApiMembershipWebview extends Controller
 			]);
 		}
 
-		$allMembership = Membership::orderBy('min_total_value','asc')->orderBy('min_total_count', 'asc')->orderBy('min_total_balance', 'asc')->get()->toArray();
+		$allMembership = Membership::with('membership_promo_id')->orderBy('min_total_value','asc')->orderBy('min_total_count', 'asc')->orderBy('min_total_balance', 'asc')->get()->toArray();
 
 		$nextMembershipName = "";
 		$nextMembershipImage = "";
@@ -91,7 +91,7 @@ class ApiMembershipWebview extends Controller
 							}
 						}
 					}
-					$allMembership[$index]['membership_image'] = env('AWS_URL').$allMembership[$index]['membership_image']; 
+					$allMembership[$index]['membership_image'] = env('S3_URL_API').$allMembership[$index]['membership_image']; 
 					$allMembership[$index]['benefit_cashback_multiplier'] = $allMembership[$index]['benefit_cashback_multiplier'] * $settingCashback->value;
 				}
 			}else{
@@ -108,7 +108,7 @@ class ApiMembershipWebview extends Controller
 				}
 
 				foreach($allMembership as $j => $dataMember){
-					$allMembership[$j]['membership_image'] = env('AWS_URL').$allMembership[$j]['membership_image']; 
+					$allMembership[$j]['membership_image'] = env('S3_URL_API').$allMembership[$j]['membership_image']; 
 					$allMembership[$j]['benefit_cashback_multiplier'] = $allMembership[$j]['benefit_cashback_multiplier'] * $settingCashback->value;
 				}
 			}

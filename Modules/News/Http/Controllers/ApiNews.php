@@ -546,6 +546,9 @@ class ApiNews extends Controller
             array_walk($updateNews, function(&$newsItem) use ($post){
                 $newsItem['news_category']=$newsItem['news_category']?:['id_news_category'=>0,'category_name'=>'Uncategories'];
             });
+            if(!$updateNews){
+                return response()->json(MyHelper::checkGet([]));
+            }
             return response()->json(MyHelper::checkGet($news));
     }
 

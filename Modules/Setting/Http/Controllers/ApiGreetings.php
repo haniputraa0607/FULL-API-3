@@ -76,6 +76,7 @@ class ApiGreetings extends Controller
      */
 	function createGreetings(greetings_create $request) {
 		$data = $request->all();
+		$data['greeting'] = substr($data['greeting'], 0,25);
 		$query = Greeting::create($data);
         return MyHelper::checkGet($query);
     }
@@ -94,6 +95,7 @@ class ApiGreetings extends Controller
      */
 	function updateGreetings(greetings_update $request) {
 		$request = $request->all();
+		$request['greeting'] = substr($data['greeting'], 0,25);
 		$query = Greeting::where('id_greetings','=',$request['id_greetings'])->update($request);
         return MyHelper::checkGet($query);
     }

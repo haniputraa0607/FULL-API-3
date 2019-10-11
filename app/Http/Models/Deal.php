@@ -136,10 +136,10 @@ class Deal extends Model
 	// ATTRIBUTE IMAGE URL
 	public function getUrlDealsImageAttribute() {
 		if (empty($this->deals_image)) {
-            return env('AWS_URL').'img/default.jpg';
+            return env('S3_URL_API').'img/default.jpg';
         }
         else {
-            return env('AWS_URL').$this->deals_image;
+            return env('S3_URL_API').$this->deals_image;
         }
 	}
 
@@ -180,5 +180,10 @@ class Deal extends Model
 	public function deals_subscriptions()
 	{
 		return $this->hasMany(DealsSubscription::class, 'id_deals');
+	}
+
+	public function featured_deals()
+	{
+		return $this->hasOne(FeaturedDeal::class, 'id_deals','id_deals');
 	}
 }
