@@ -16,6 +16,7 @@ use App\Http\Models\DealsPaymentMidtran;
 use App\Http\Models\DealsUser;
 use App\Http\Models\DealsVoucher;
 use App\Http\Models\SpinTheWheel;
+use App\Http\Models\Setting;
 
 use DB;
 
@@ -36,6 +37,29 @@ class ApiDeals extends Controller
     }
 
     public $saveImage = "img/deals/";
+
+    
+    function rangePoint()
+    {
+        $start = Setting::where('key', 'point_range_start')->get()->first();
+        $end = Setting::where('key', 'point_range_end')->get()->first();
+        
+        if (!$start) {
+            $start['value'] = 0;
+        }
+
+        if (!$end) {
+            $end['value'] = 1000000;
+        }
+
+        return response()->json([
+            'status'    => 'success',
+            'result'    => [
+                'point_range_start' => $start['value'],
+                'point_range_end'   => $end['value'],
+            ]
+        ]);
+    }
 
     /* CHECK INPUTAN */
     function checkInputan($post)
@@ -214,6 +238,8 @@ class ApiDeals extends Controller
 
         // return $request->json()->all();
         $deals = (new Deal)->newQuery();
+        $user = $request->user();
+        $curBalance = (int) $user->balance??0;
 
         if ($request->json('id_outlet') && is_integer($request->json('id_outlet'))) {
             $deals = $deals->join('deals_outlets', 'deals.id_deals', 'deals_outlets.id_deals')
@@ -400,7 +426,17 @@ class ApiDeals extends Controller
         // if deals detail, add webview url & btn text
         if ($request->json('id_deals') && !empty($deals)) {
             $deals[0]['webview_url'] = env('APP_URL') . "webview/deals/" . $deals[0]['id_deals'] . "/" . $deals[0]['deals_type'];
-            $deals[0]['button_text'] = 'BELI';
+            $deals[0]['button_text'] = $deals[0]['deals_voucher_price_type']=='free'?'Ambil':'Tukar';
+            if($deals[0]['deals_voucher_price_type']=='free'){
+                $deals[0]['button_status']=1;
+            }else {
+                if($deals[0]['deals_voucher_price_type']=='point'){
+                    $deals[0]['button_status']=$deals[0]['deals_voucher_price_point']<=$curBalance?1:0;
+                }else{
+                    $deals[0]['button_text'] = 'Beli';
+                    $deals[0]['button_status'] = 1;
+                }
+            }
         }
 
         //jika mobile di pagination

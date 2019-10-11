@@ -124,7 +124,6 @@ class BalanceController extends Controller
             DB::rollback();
             return false;
         }
-        $autocrm = app($this->autocrm)->SendAutoCRM('Point Achievements', $user->phone, $dataHashBalance); 
 
         DB::commit();
 

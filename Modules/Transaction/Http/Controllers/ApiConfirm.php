@@ -1,3 +1,4 @@
+
 <?php
 
 namespace Modules\Transaction\Http\Controllers;
@@ -16,7 +17,7 @@ use App\Http\Models\TransactionPaymentMidtran;
 use App\Http\Models\TransactionMultiplePayment;
 use App\Http\Models\TransactionPaymentBalance;
 use App\Http\Models\TransactionPaymentOvo;
-use App\Http\Models\LogActivitiesApps;
+use App\Http\Models\LogRequest;
 use App\Http\Models\OvoReversal;
 use App\Http\Models\OvoReference;
 
@@ -35,6 +36,7 @@ class ApiConfirm extends Controller
         date_default_timezone_set('Asia/Jakarta');
         $this->notif = "Modules\Transaction\Http\Controllers\ApiNotification";
         $this->trx = "Modules\Transaction\Http\Controllers\ApiOnlineTransaction";
+        $this->autocrm  = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
     }
 
     public function confirmTransaction(ConfirmPayment $request) {

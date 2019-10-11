@@ -357,9 +357,27 @@ class SettingsTableSeeder extends Seeder
                 'id_setting' => 39,
                 'key' => 'text_menu_account',
                 'value' => NULL,
-                'value_text' => '{"my_profile":{"text_menu":"My Profile","text_header":"My Profile"},"outlet":{"text_menu":"Lokasi Outlet","text_header":"Lokasi Outlet"},"news":{"text_menu":"Berita","text_header":"Berita"},"delivery_service":{"text_menu":"Delivery Service","text_header":"Delivery Service"},"faq":{"text_menu":"FAQ","text_header":"FAQ"},"terms_service":{"text_menu":"Ketentuan Layanan","text_header":"Ketentuan Layanan"},"contact":{"text_menu":"Kontak Kami","text_header":"Kontak Kami"}}',
+                'value_text' => '{"my_profile":{"text_menu":"My Profile","text_header":"My Profile"},"outlet":{"text_menu":"Lokasi Outlet","text_header":"Lokasi Outlet"},"benefit":{"text_menu":"Benefit","text_header":"Benefit"},"news":{"text_menu":"Berita","text_header":"Berita"},"delivery_service":{"text_menu":"Delivery Service","text_header":"Delivery Service"},"faq":{"text_menu":"FAQ","text_header":"FAQ"},"terms_service":{"text_menu":"Ketentuan Layanan","text_header":"Ketentuan Layanan"},"contact":{"text_menu":"Kontak Kami","text_header":"Kontak Kami"}}',
                 'created_at' => '2019-10-08 09:04:01',
                 'updated_at' => '2019-10-08 09:04:02',
+            ),
+            39 =>
+            array(
+                'id_setting' => 40,
+                'key' => 'point_range_start',
+                'value' => '0',
+                'value_text' => NULL,
+                'created_at' => '2018-05-15 13:55:55',
+                'updated_at' => '2018-05-15 13:55:55',
+            ),
+            40 =>
+            array(
+                'id_setting' => 41,
+                'key' => 'point_range_end',
+                'value' => '1000000',
+                'value_text' => NULL,
+                'created_at' => '2018-05-15 13:55:55',
+                'updated_at' => '2018-05-15 13:55:55',
             ),
         ));
     }

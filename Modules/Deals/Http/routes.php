@@ -1,3 +1,4 @@
+
 <?php
 Route::group(['middleware' => ['auth:api', 'log_activities'], 'prefix' => 'api/deals', 'namespace' => 'Modules\Deals\Http\Controllers'], function () {
     /* MASTER DEALS */
@@ -43,9 +44,8 @@ Route::group(['middleware' => ['auth:api', 'log_activities'], 'prefix' => 'api/d
     });
 });
 
-Route::group(['prefix' => 'api/deals', 'middleware' => 'log_activities', 'namespace' => 'Modules\Deals\Http\Controllers'], function () {
-    /* MASTER DEALS */
-    // Route::any('list', 'ApiDeals@listDeal')->middleware('auth_client');
+Route::group(['prefix' => 'api/deals', 'namespace' => 'Modules\Deals\Http\Controllers'], function () {
+    Route::get('range/point', 'ApiDeals@rangePoint');
 });
 
 Route::group(['middleware' => ['auth:api', 'log_activities'], 'prefix' => 'api/voucher', 'namespace' => 'Modules\Deals\Http\Controllers'], function () {
@@ -65,3 +65,4 @@ Route::group(['middleware' => ['auth:api', 'log_activities'], 'prefix' => 'api/d
     Route::post('update', 'ApiDealsSubscription@update');
     Route::get('delete/{id_deals}', 'ApiDealsSubscription@destroy');
 });
+
