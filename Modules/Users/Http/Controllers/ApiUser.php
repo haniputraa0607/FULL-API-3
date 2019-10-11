@@ -13,7 +13,7 @@ use App\Http\Models\UserLocation;
 use App\Http\Models\Level;
 use App\Http\Models\Doctor;
 use App\Http\Models\UserOutlet;
-use App\Http\Models\LogRequest;
+use App\Http\Models\LogActivitiesApps;
 use App\Http\Models\UserInbox;
 use App\Http\Models\LogPoint;
 use App\Http\Models\UserNotification;
@@ -2042,9 +2042,9 @@ class ApiUser extends Controller
 		}
 
 
-		$query = LogRequest::where('phone','=',$post['phone'])
-							->orderBy('id_log_activity','desc')
-							->select('id_log_activity', 'response_status', 'ip', 'created_at', 'subject', 'useragent', 'module');
+		$query = LogActivitiesApps::where('phone','=',$post['phone'])
+							->orderBy('id_log_activities_apps','desc')
+							->select('id_log_activities_apps', 'response_status', 'ip', 'created_at', 'subject', 'useragent', 'module');
 		if(isset($post['type']) && $post['type'] == "backend"){
 		    $query = $query->where('subject', 'LIKE', 'BE %');
 		}
@@ -2104,7 +2104,7 @@ class ApiUser extends Controller
 	}
 
 	public function detailLog($id, Request $request){
-		$log = LogRequest::where('id_log_activity', $id)->first();
+		$log = LogActivitiesApps::where('id_log_activities_apps', $id)->first();
 		if($log){
 		    if($log['response']){
     			$res = MyHelper::decrypt2019($log['response']);

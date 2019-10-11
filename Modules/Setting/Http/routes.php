@@ -1,11 +1,11 @@
 <?php
 
-Route::group(['middleware' => ['api', 'log_request'], 'prefix' => 'api/setting', 'namespace' => 'Modules\Setting\Http\Controllers'], function()
+Route::group(['middleware' => ['api', 'log_activities'], 'prefix' => 'api/setting', 'namespace' => 'Modules\Setting\Http\Controllers'], function()
 {
     Route::get('/courier', 'ApiSetting@settingCourier');
 });
 
-Route::group(['middleware' => ['auth:api', 'log_request'], 'prefix' => 'api/setting', 'namespace' => 'Modules\Setting\Http\Controllers'], function()
+Route::group(['middleware' => ['auth:api', 'log_activities'], 'prefix' => 'api/setting', 'namespace' => 'Modules\Setting\Http\Controllers'], function()
 {
     Route::any('email/update', 'ApiSetting@emailUpdate');
     Route::any('/', 'ApiSetting@settingList');
@@ -91,20 +91,20 @@ Route::group(['middleware' => ['auth:api', 'log_request'], 'prefix' => 'api/sett
     Route::post('reset/{type}/update', 'ApiSetting@pointResetUpdate');
 });
 
-Route::group(['middleware' => ['api', 'log_request'], 'prefix' => 'api/timesetting', 'namespace' => 'Modules\Setting\Http\Controllers'], function()
+Route::group(['middleware' => ['api', 'log_activities'], 'prefix' => 'api/timesetting', 'namespace' => 'Modules\Setting\Http\Controllers'], function()
 {
 	Route::get('/', 'ApiGreetings@listTimeSetting');
 	Route::post('/', 'ApiGreetings@updateTimeSetting');
 });
 
-Route::group(['middleware' => ['api','log_request'], 'prefix' => 'api/background', 'namespace' => 'Modules\Setting\Http\Controllers'], function()
+Route::group(['middleware' => ['api','log_activities'], 'prefix' => 'api/background', 'namespace' => 'Modules\Setting\Http\Controllers'], function()
 {
 	Route::any('/', 'ApiBackground@listBackground');
 	Route::post('create', 'ApiBackground@createBackground');
 	Route::post('delete', 'ApiBackground@deleteBackground');
 });
 
-Route::group(['middleware' => ['api', 'log_request'], 'prefix' => 'api/greetings', 'namespace' => 'Modules\Setting\Http\Controllers'], function()
+Route::group(['middleware' => ['api', 'log_activities'], 'prefix' => 'api/greetings', 'namespace' => 'Modules\Setting\Http\Controllers'], function()
 {
 	Route::any('/', 'ApiGreetings@listGreetings');
 	Route::post('selected', 'ApiGreetings@selectGreetings');
@@ -113,7 +113,7 @@ Route::group(['middleware' => ['api', 'log_request'], 'prefix' => 'api/greetings
 	Route::post('delete', 'ApiGreetings@deleteGreetings');
 });
 
-Route::group(['middleware' => ['auth_client', 'log_request'], 'prefix' => 'api/setting', 'namespace' => 'Modules\Setting\Http\Controllers'], function()
+Route::group(['middleware' => ['auth_client', 'log_activities'], 'prefix' => 'api/setting', 'namespace' => 'Modules\Setting\Http\Controllers'], function()
 {
     Route::any('/', 'ApiSetting@settingList');
     Route::get('/faq', 'ApiSetting@faqList');
@@ -133,7 +133,7 @@ Route::group(['prefix' => 'api/setting', 'namespace' => 'Modules\Setting\Http\Co
     Route::any('/text_menu_list', 'ApiSetting@textMenuList');
 });
 
-Route::group(['prefix' => 'api/setting', 'middleware' => ['log_request', 'auth:api'], 'namespace' => 'Modules\Setting\Http\Controllers'], function()
+Route::group(['prefix' => 'api/setting', 'middleware' => ['log_activities', 'auth:api'], 'namespace' => 'Modules\Setting\Http\Controllers'], function()
 {
     Route::get('/faq', 'ApiSetting@faqList');
     Route::post('webview', 'ApiSetting@settingWebview');

@@ -10,7 +10,7 @@ use App\Http\Models\Consultation;
 use App\Http\Models\Outlet;
 use App\Http\Models\LogPoint;
 use App\Http\Models\Reservation;
-use App\Http\Models\LogRequest;
+use App\Http\Models\LogActivitiesApps;
 use App\Http\Models\Product;
 
 use Illuminate\Http\Request;
@@ -263,7 +263,7 @@ class ApiReport extends Controller
         $log = [];
         $user = User::with('city.province', 'memberships')->where('phone', $id)->first();
         if($type == 'log'){
-            $dataType = LogRequest::where('phone', $id)->orderBy('id_log_activity', 'DESC')->paginate(10)->toArray();
+            $dataType = LogActivitiesApps::where('phone', $id)->orderBy('id_log_activities_apps', 'DESC')->paginate(10)->toArray();
         }elseif($type == 'transactions'){
             $dataType = Transaction::where('id_user', $user->id)->orderBy('transaction_date', 'DESC')->paginate(10)->toArray();
         }elseif($type == 'point'){

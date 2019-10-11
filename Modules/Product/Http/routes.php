@@ -1,6 +1,6 @@
 <?php
 
-Route::group(['prefix' => 'api/product','middleware' => 'log_request', 'namespace' => 'Modules\Product\Http\Controllers'], function()
+Route::group(['prefix' => 'api/product','middleware' => 'log_activities', 'namespace' => 'Modules\Product\Http\Controllers'], function()
 {
     /**
      * product
@@ -29,7 +29,7 @@ Route::group(['prefix' => 'api/product','middleware' => 'log_request', 'namespac
         /* product position */
         Route::post('position/assign', 'ApiProductController@positionProductAssign');
 
-        Route::group(['middleware' => 'log_request'], function() {
+        Route::group(['middleware' => 'log_activities'], function() {
             Route::post('delete', 'ApiProductController@delete');
         });
 

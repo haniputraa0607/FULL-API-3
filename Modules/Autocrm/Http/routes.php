@@ -1,6 +1,6 @@
 <?php
 
-Route::group(['middleware' => ['auth:api', 'log_request'], 'prefix' => 'api/autocrm', 'namespace' => 'Modules\Autocrm\Http\Controllers'], function()
+Route::group(['middleware' => ['auth:api', 'log_activities'], 'prefix' => 'api/autocrm', 'namespace' => 'Modules\Autocrm\Http\Controllers'], function()
 {
     Route::get('list', 'ApiAutoCrm@listAutoCrm');
     Route::post('update', 'ApiAutoCrm@updateAutoCrm');
