@@ -979,18 +979,32 @@ class MyHelper{
 		// path
 		$upload = $path.$pictName;
 
-		$save = File::put($upload,$decoded);
-
-		if ($save) {
+		if(env('STORAGE') &&  env('STORAGE') == 's3'){
+			$save = Storage::disk('s3')->put($upload, 'public');
+			if ($save) {
+					$result = [
+						'status' => 'success',
+						'path'  => $upload
+					];
+			}
+			else {
 				$result = [
-					'status' => 'success',
-					'path'  => $upload
+					'status' => 'fail'
 				];
-		}
-		else {
-			$result = [
-				'status' => 'fail'
-			];
+			}
+		}else{
+			$save = File::put($upload,$decoded);
+			if ($save) {
+					$result = [
+						'status' => 'success',
+						'path'  => $upload
+					];
+			}
+			else {
+				$result = [
+					'status' => 'fail'
+				];
+			}
 		}
 
 		return $result;
