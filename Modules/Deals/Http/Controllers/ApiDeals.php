@@ -16,6 +16,7 @@ use App\Http\Models\DealsPaymentMidtran;
 use App\Http\Models\DealsUser;
 use App\Http\Models\DealsVoucher;
 use App\Http\Models\SpinTheWheel;
+use App\Http\Models\Setting;
 
 use DB;
 
@@ -36,6 +37,29 @@ class ApiDeals extends Controller
     }
 
     public $saveImage = "img/deals/";
+
+    
+    function rangePoint()
+    {
+        $start = Setting::where('key', 'point_range_start')->get()->first();
+        $end = Setting::where('key', 'point_range_end')->get()->first();
+        
+        if (!$start) {
+            $start['value'] = 0;
+        }
+
+        if (!$end) {
+            $end['value'] = 1000000;
+        }
+
+        return response()->json([
+            'status'    => 'success',
+            'result'    => [
+                'point_range_start' => $start['value'],
+                'point_range_end'   => $end['value'],
+            ]
+        ]);
+    }
 
     /* CHECK INPUTAN */
     function checkInputan($post)

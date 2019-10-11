@@ -361,6 +361,24 @@ class SettingsTableSeeder extends Seeder
                 'created_at' => '2019-10-08 09:04:01',
                 'updated_at' => '2019-10-08 09:04:02',
             ),
+            39 =>
+            array(
+                'id_setting' => 40,
+                'key' => 'point_range_start',
+                'value' => '0',
+                'value_text' => NULL,
+                'created_at' => '2018-05-15 13:55:55',
+                'updated_at' => '2018-05-15 13:55:55',
+            ),
+            40 =>
+            array(
+                'id_setting' => 41,
+                'key' => 'point_range_end',
+                'value' => '1000000',
+                'value_text' => NULL,
+                'created_at' => '2018-05-15 13:55:55',
+                'updated_at' => '2018-05-15 13:55:55',
+            ),
         ));
     }
 }

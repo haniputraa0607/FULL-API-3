@@ -43,9 +43,8 @@ Route::group(['middleware' => ['auth:api', 'log_request'], 'prefix' => 'api/deal
     });
 });
 
-Route::group(['prefix' => 'api/deals', 'middleware' => 'log_request', 'namespace' => 'Modules\Deals\Http\Controllers'], function () {
-    /* MASTER DEALS */
-    // Route::any('list', 'ApiDeals@listDeal')->middleware('auth_client');
+Route::group(['prefix' => 'api/deals', 'namespace' => 'Modules\Deals\Http\Controllers'], function () {
+    Route::get('range/point', 'ApiDeals@rangePoint');
 });
 
 Route::group(['middleware' => ['auth:api', 'log_request'], 'prefix' => 'api/voucher', 'namespace' => 'Modules\Deals\Http\Controllers'], function () {
