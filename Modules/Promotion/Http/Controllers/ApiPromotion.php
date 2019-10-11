@@ -456,7 +456,7 @@ class ApiPromotion extends Controller
 							if(count($contentOld) > 0){
 								foreach($contentOld as $old){
 									if($old['content_type'] == 'image' || $old['content_type'] == 'file'){
-										MyHelper::deletePhoto(str_replace(env('AWS_URL'), '', $old['content']));
+										MyHelper::deletePhoto(str_replace(env('S3_URL_API'), '', $old['content']));
 									}
 								}
 			
@@ -481,7 +481,7 @@ class ApiPromotion extends Controller
 								if($content['id_whatsapp_content']){
 									$waContent = WhatsappContent::find($content['id_whatsapp_content']);
 									if($waContent && ($waContent->content_type == 'image' || $waContent->content_type == 'file')){
-										MyHelper::deletePhoto(str_replace(env('AWS_URL'), '', $waContent->content));
+										MyHelper::deletePhoto(str_replace(env('S3_URL_API'), '', $waContent->content));
 									}
 								}
 			
@@ -493,7 +493,7 @@ class ApiPromotion extends Controller
 									//upload file
 									$upload = MyHelper::uploadPhoto($content['content'], $path = 'whatsapp/img/promotion/');
 									if ($upload['status'] == "success") {
-										$content['content'] = env('AWS_URL').$upload['path'];
+										$content['content'] = env('S3_URL_API').$upload['path'];
 									} else{
 										DB::rollBack();
 										$result = [
@@ -517,7 +517,7 @@ class ApiPromotion extends Controller
 			
 									$upload = MyHelper::uploadFile($content['content'], $path = 'whatsapp/file/promotion/', $content['content_file_ext'], $content['content_file_name']);
 									if ($upload['status'] == "success") {
-										$content['content'] = env('AWS_URL').$upload['path'];
+										$content['content'] = env('S3_URL_API').$upload['path'];
 									} else{
 										DB::rollBack();
 										$result = [
@@ -1001,7 +1001,7 @@ class ApiPromotion extends Controller
 						if(count($contentOld) > 0){
 							foreach($contentOld as $old){
 								if($old['content_type'] == 'image' || $old['content_type'] == 'file'){
-									MyHelper::deletePhoto(str_replace(env('AWS_URL'), '', $old['content']));
+									MyHelper::deletePhoto(str_replace(env('S3_URL_API'), '', $old['content']));
 								}
 							}
 		
@@ -1026,7 +1026,7 @@ class ApiPromotion extends Controller
 							if($content['id_whatsapp_content']){
 								$waContent = WhatsappContent::find($content['id_whatsapp_content']);
 								if($waContent && ($waContent->content_type == 'image' || $waContent->content_type == 'file')){
-									MyHelper::deletePhoto(str_replace(env('AWS_URL'), '', $waContent->content));
+									MyHelper::deletePhoto(str_replace(env('S3_URL_API'), '', $waContent->content));
 								}
 							}
 		
@@ -1038,7 +1038,7 @@ class ApiPromotion extends Controller
 								//upload file
 								$upload = MyHelper::uploadPhoto($content['content'], $path = 'whatsapp/img/promotion/');
 								if ($upload['status'] == "success") {
-									$content['content'] = env('AWS_URL').$upload['path'];
+									$content['content'] = env('S3_URL_API').$upload['path'];
 								} else{
 									DB::rollBack();
 									$result = [
@@ -1062,7 +1062,7 @@ class ApiPromotion extends Controller
 		
 								$upload = MyHelper::uploadFile($content['content'], $path = 'whatsapp/file/promotion/', $content['content_file_ext'], $content['content_file_name']);
 								if ($upload['status'] == "success") {
-									$content['content'] = env('AWS_URL').$upload['path'];
+									$content['content'] = env('S3_URL_API').$upload['path'];
 								} else{
 									DB::rollBack();
 									$result = [
@@ -2015,7 +2015,7 @@ class ApiPromotion extends Controller
 								
 		$emailLogo = Setting::where('key', 'email_logo')->first();
 		if($emailLogo){
-			$imagenya = env('AWS_URL').$emailLogo->value;
+			$imagenya = env('S3_URL_API').$emailLogo->value;
 		}
 		$img = Image::make($imagenya);
 		$response = $img->response('png');

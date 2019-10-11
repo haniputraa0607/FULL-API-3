@@ -78,14 +78,16 @@ class Deal extends Model
 		'deals_title',
 		'deals_second_title',
 		'deals_description',
-		'deals_short_description',
+		// 'deals_short_description',
 		'deals_image',
 		// 'deals_video',
+		'id_brand',
 		'id_product',
 		'deals_start',
 		'deals_end',
 		'deals_publish_start',
 		'deals_publish_end',
+		'deals_voucher_start',
 		'deals_voucher_duration',
 		'deals_voucher_expired',
 		'deals_voucher_price_point',
@@ -134,10 +136,10 @@ class Deal extends Model
 	// ATTRIBUTE IMAGE URL
 	public function getUrlDealsImageAttribute() {
 		if (empty($this->deals_image)) {
-            return env('AWS_URL').'img/default.jpg';
+            return env('S3_URL_API').'img/default.jpg';
         }
         else {
-            return env('AWS_URL').$this->deals_image;
+            return env('S3_URL_API').$this->deals_image;
         }
 	}
 
@@ -178,5 +180,10 @@ class Deal extends Model
 	public function deals_subscriptions()
 	{
 		return $this->hasMany(DealsSubscription::class, 'id_deals');
+	}
+
+	public function featured_deals()
+	{
+		return $this->hasOne(FeaturedDeal::class, 'id_deals','id_deals');
 	}
 }

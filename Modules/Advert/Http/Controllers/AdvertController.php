@@ -94,7 +94,7 @@ class AdvertController extends Controller
 
             $upload = MyHelper::uploadPhotoStrict($post['img_top'], $this->saveImage, 1080, 360);
             if (isset($upload['status']) && $upload['status'] == "success") {
-                $data['value'] = env('AWS_URL').$upload['path'];
+                $data['value'] = env('S3_URL_API').$upload['path'];
             }
             else {
                 $result = [
@@ -112,7 +112,7 @@ class AdvertController extends Controller
 
             $upload = MyHelper::uploadPhotoStrict($post['img_bottom'], $this->saveImage, 1080, 360);
             if (isset($upload['status']) && $upload['status'] == "success") {
-                $data['value'] = env('AWS_URL').$upload['path'];
+                $data['value'] = env('S3_URL_API').$upload['path'];
             }
             else {
                 $result = [
@@ -197,7 +197,7 @@ class AdvertController extends Controller
 
         if ($get) {
             if ($get->type == "img_top" || $get->type == "img_bottom") {
-                $img         = explode(env('AWS_URL'), $get->value);
+                $img         = explode(env('S3_URL_API'), $get->value);
                 $deletePhoto = MyHelper::deletePhoto($img[1]);
             }
             

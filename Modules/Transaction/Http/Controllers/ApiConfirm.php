@@ -1,3 +1,4 @@
+
 <?php
 
 namespace Modules\Transaction\Http\Controllers;
@@ -35,6 +36,7 @@ class ApiConfirm extends Controller
         date_default_timezone_set('Asia/Jakarta');
         $this->notif = "Modules\Transaction\Http\Controllers\ApiNotification";
         $this->trx = "Modules\Transaction\Http\Controllers\ApiOnlineTransaction";
+        $this->autocrm  = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
     }
 
     public function confirmTransaction(ConfirmPayment $request) {
@@ -45,7 +47,7 @@ class ApiConfirm extends Controller
         $productMidtrans = [];
         $dataDetailProduct = [];
 
-        $check = Transaction::with('transaction_shipments', 'productTransaction.product')->where('transaction_receipt_number', $post['id'])->first();
+        $check = Transaction::with('transaction_shipments', 'productTransaction.product','outlet_name')->where('transaction_receipt_number', $post['id'])->first();
 
         if (empty($check)) {
             DB::rollback();
@@ -657,6 +659,22 @@ class ApiConfirm extends Controller
                                     'messages'  => ['Insert Cashback Failed']
                                 ]);
                             }
+                            $usere= User::where('id',$trx['id_user'])->first();
+                            $send = app($this->autocrm)->SendAutoCRM('Transaction Failed Point Refund', $usere->phone, 
+                                [
+                                    "outlet_name"       => $trx['outlet_name']['outlet_name']??'', 
+                                    "transaction_date"  => $trx['transaction_date'],
+                                    'receipt_number'    => $trx['transaction_receipt_number'],
+                                    'point'             => $checkBalance['balance_nominal']
+                                ]
+                            );
+                            if($send != true){
+                                DB::rollback();
+                                return response()->json([
+                                        'status' => 'fail',
+                                        'messages' => ['Failed Send notification to customer']
+                                    ]);
+                            }
                         }
                     }
 
@@ -752,6 +770,22 @@ class ApiConfirm extends Controller
                         'status'    => 'fail',
                         'messages'  => ['Insert Cashback Failed']
                     ]);
+                }
+                $usere= User::where('id',$trx['id_user'])->first();
+                $send = app($this->autocrm)->SendAutoCRM('Transaction Failed Point Refund', $usere->phone, 
+                    [
+                        "outlet_name"       => $trx['outlet_name']['outlet_name']??'', 
+                        "transaction_date"  => $trx['transaction_date'],
+                        'receipt_number'    => $trx['transaction_receipt_number'],
+                        'point'             => $checkBalance['balance_nominal']
+                    ]
+                );
+                if($send != true){
+                    DB::rollback();
+                    return response()->json([
+                            'status' => 'fail',
+                            'messages' => ['Failed Send notification to customer']
+                        ]);
                 }
             }
         }

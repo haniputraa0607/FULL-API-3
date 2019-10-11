@@ -13,7 +13,7 @@ use App\Http\Models\UserLocation;
 use App\Http\Models\Level;
 use App\Http\Models\Doctor;
 use App\Http\Models\UserOutlet;
-use App\Http\Models\LogRequest;
+use App\Http\Models\LogActivitiesApps;
 use App\Http\Models\UserInbox;
 use App\Http\Models\LogPoint;
 use App\Http\Models\UserNotification;
@@ -407,6 +407,15 @@ class ApiUser extends Controller
 
 		foreach($conditions as $index => $condition){
 			if(isset($condition['subject'])){
+				if($condition['operator']=='WHERE IN'){
+					$param=explode(',', $condition['parameter']);
+					if($rule == 'and'){
+						$query = $query->whereIn($condition['subject'],$param);
+					} else {
+						$query = $query->orWhereIn($condition['subject'],$param);
+					}
+					continue;
+				}
 				if($condition['subject'] == 'all_user'){
 					if($rule == 'and'){
 						$query = $query->whereRaw('1');
@@ -1651,7 +1660,20 @@ class ApiUser extends Controller
 									'messages' => 'Failed to save data'
 								];
 							}
-
+							if($balance_nominal??false){
+				                $send   = app($this->autocrm)->SendAutoCRM('Complete User Profile Point Bonus', $datauser[0]['phone'], 
+				                    [
+				                        'point' => $balance_nominal
+				                    ]
+				                );
+				                if($send != true){
+				                    DB::rollback();
+				                    return response()->json([
+				                        'status' => 'fail',
+				                        'messages' => ['Failed Send notification to customer']
+				                    ]);
+				                }
+							}
 							$update = User::where('id','=',$data[0]['id'])->update(['complete_profile' => '1']);
 
 							$checkMembership = app($this->membership)->calculateMembership($datauser[0]['phone']);
@@ -1672,7 +1694,8 @@ class ApiUser extends Controller
 											'celebrate' => $datauser[0]['celebrate'],
 											'job' => $datauser[0]['job'],
 											'address' => $datauser[0]['address']
-										   ]
+										   ],
+						    'message'	=> 'Your profile was successfully updated'
 						];
 				// } else {
 				// 	$result = [
@@ -2019,9 +2042,9 @@ class ApiUser extends Controller
 		}
 
 
-		$query = LogRequest::where('phone','=',$post['phone'])
-							->orderBy('id_log_activity','desc')
-							->select('id_log_activity', 'response_status', 'ip', 'created_at', 'subject', 'useragent', 'module');
+		$query = LogActivitiesApps::where('phone','=',$post['phone'])
+							->orderBy('id_log_activities_apps','desc')
+							->select('id_log_activities_apps', 'response_status', 'ip', 'created_at', 'subject', 'useragent', 'module');
 		if(isset($post['type']) && $post['type'] == "backend"){
 		    $query = $query->where('subject', 'LIKE', 'BE %');
 		}
@@ -2081,7 +2104,7 @@ class ApiUser extends Controller
 	}
 
 	public function detailLog($id, Request $request){
-		$log = LogRequest::where('id_log_activity', $id)->first();
+		$log = LogActivitiesApps::where('id_log_activities_apps', $id)->first();
 		if($log){
 		    if($log['response']){
     			$res = MyHelper::decrypt2019($log['response']);

@@ -23,6 +23,7 @@ class ApiWebviewUser extends Controller
     function __construct() {
         date_default_timezone_set('Asia/Jakarta');
         $this->membership    = "Modules\Membership\Http\Controllers\ApiMembership";
+        $this->autocrm  = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
     }
     
     // update profile, point, balance
@@ -102,7 +103,20 @@ class ApiWebviewUser extends Controller
                     'messages' => 'Failed to save data'
                 ];
             }
-            
+            if($balance_nominal??false){
+                $send   = app($this->autocrm)->SendAutoCRM('Complete User Profile Point Bonus', $user->phone, 
+                    [
+                        'point' => $balance_nominal
+                    ]
+                );
+                if($send != true){
+                    DB::rollback();
+                    return response()->json([
+                        'status' => 'fail',
+                        'messages' => ['Failed Send notification to customer']
+                    ]);
+                }
+            }
             $checkMembership = app($this->membership)->calculateMembership($user->phone);
         DB::commit();
         // get user profile success page content

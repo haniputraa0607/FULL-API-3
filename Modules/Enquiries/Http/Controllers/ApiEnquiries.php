@@ -18,37 +18,44 @@ use App\Lib\PushNotificationHelper;
 use DB;
 use Mail;
 use Mailgun;
+use File;
 
 use Modules\Enquiries\Http\Requests\Create;
 use Modules\Enquiries\Http\Requests\Update;
 use Modules\Enquiries\Http\Requests\Delete;
+use Modules\Enquiries\Entities\EnquiriesFile;
 
 class ApiEnquiries extends Controller
 {
-	
-	public $saveImage = "img/enquiry/";
+
+	public $saveImage 	= "img/enquiry/";
+	public $saveFile 	= "files/enquiry/";
     public $endPoint;
-	
+
 	function __construct() {
 		date_default_timezone_set('Asia/Jakarta');
 		$this->autocrm = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
 		$this->rajasms = new classMaskingJson();
-		$this->endPoint = env('AWS_URL');
+		$this->endPoint = env('S3_URL_API');
 	}
     /* Cek inputan */
     function cekInputan($post = []) {
     	// print_r($post); exit();
         $data = [];
 
-        if (isset($post['id_outlet'])) {
-            $data['id_outlet'] = $post['id_outlet'];
+		if (isset($post['id_brand'])) {
+            $data['id_brand'] = $post['id_brand'];
 		}
-		 
+
+		if (isset($post['id_outlet'])) {
+			$data['id_outlet'] = $post['id_outlet'];
+		}
+
         if (isset($post['enquiry_name'])) {
             $data['enquiry_name'] = $post['enquiry_name'];
         }else{
 			$data['enquiry_name'] = null;
-		} 
+		}
 
         if (isset($post['enquiry_phone'])) {
             $data['enquiry_phone'] = $post['enquiry_phone'];
@@ -64,7 +71,18 @@ class ApiEnquiries extends Controller
 
         if (isset($post['enquiry_subject'])) {
             $data['enquiry_subject'] = $post['enquiry_subject'];
-        } 
+          if ($post['enquiry_subject'] == "Customer Feedback") {
+            if (isset($post['visiting_time'])) {
+              $data['visiting_time'] = $post['visiting_time'];
+            }
+          }
+
+          if ($post['enquiry_subject'] == "Career") {
+            if (isset($post['position'])) {
+              $data['position'] = $post['position'];
+            }
+          }
+        }
 
         if (isset($post['enquiry_content'])) {
             $data['enquiry_content'] = $post['enquiry_content'];
@@ -76,25 +94,27 @@ class ApiEnquiries extends Controller
             $data['enquiry_device_token'] = $post['enquiry_device_token'];
         }else{
 			$data['enquiry_device_token'] = null;
-		} 
+		}
+      
+		if (isset($post['enquiry_file'])) {
+        	$dataUploadFile = [];
 
-        if (isset($post['enquiry_photo'])) {
-        	$dataUploadImage = [];
-
-			if (is_array($post['enquiry_photo'])) {
-				foreach ($post['enquiry_photo'] as $value) {
-					$upload = MyHelper::uploadPhotoQuality($value, $this->saveImage, 800,50);
+			if (is_array($post['enquiry_file'])) {
+				foreach ($post['enquiry_file'] as $value) {
+					$ext = MyHelper::checkMime2Ext($value);
+					
+					$upload = MyHelper::uploadFile($value, $this->saveFile, $ext);
 
 					if (isset($upload['status']) && $upload['status'] == "success") {
-					    $data['enquiry_photo'] = $upload['path'];
+					    $data['enquiry_file'] = $upload['path'];
 
-					    array_push($dataUploadImage, $upload['path']);
+					    array_push($dataUploadFile, $upload['path']);
 					}
 					else {
 					    $result = [
 					        'error'    => 1,
 					        'status'   => 'fail',
-					        'messages' => ['fail upload image']
+					        'messages' => ['fail upload file']
 					    ];
 
 					    return $result;
@@ -102,40 +122,42 @@ class ApiEnquiries extends Controller
 				}
 			}
 			else {
-				$upload = MyHelper::uploadPhotoQuality($post['enquiry_photo'], $this->saveImage, 800, 50);
+				$ext = MyHelper::checkMime2Ext($post['enquiry_file']);
+
+				$upload = MyHelper::uploadFile($post['enquiry_file'], $this->saveFile, $ext);
 
 				if (isset($upload['status']) && $upload['status'] == "success") {
-				    $data['enquiry_photo'] = $upload['path'];
+				    $data['enquiry_file'] = $upload['path'];
 
-				    array_push($dataUploadImage, $upload['path']);
+				    array_push($dataUploadFile, $upload['path']);
 				}
 				else {
 				    $result = [
 				        'error'    => 1,
 				        'status'   => 'fail',
-				        'messages' => ['fail upload image']
+				        'messages' => ['fail upload file']
 				    ];
 
 				    return $result;
-				}	
+				}
 			}
 
-			$data['many_upload'] = $dataUploadImage;
-        } 
+			$data['many_upload_file'] = $dataUploadFile;
+        }
 
         if (isset($post['enquiry_status'])) {
             $data['enquiry_status'] = $post['enquiry_status'];
-        } 
+        }
 
         return $data;
-    }
+	}
 
     /* CREATE */
     function create(Create $request) {
         $data = $this->cekInputan($request->json()->all());
 
         if (isset($data['error'])) {
-            unset($data['error']);        
+            unset($data['error']);
             return response()->json($data);
 		}
 
@@ -146,73 +168,74 @@ class ApiEnquiries extends Controller
 				'status' => 'fail',
 				'messages' => ['Outlet not found']
 			]);
-		}        
-		
+		}
+
 		$save = Enquiry::create($data);
 
         // jika berhasil maka ngirim" ke crm
         if ($save) {
-        	// save many photo
-        	if (isset($data['many_upload'])) {
-        		$photos = $this->savePhotos($save->id_enquiry, $data['many_upload']);
-        	}
-
-			// send CRM
-			$enquiryPhoto = EnquiriesPhoto::where('id_enquiry', $save->id_enquiry)->get();
+          
 			$data['attachment'] = [];
-			foreach($enquiryPhoto as $dataPhoto){
-				$data['attachment'] = $dataPhoto->url_enquiry_photo;
-			}
-            $goCrm = $this->sendCrm($data);
-        }
-        return response()->json(MyHelper::checkCreate($save));
+			// save many file
+        	if (isset($data['many_upload_file'])) {
+        		$files = $this->saveFiles($save->id_enquiry, $data['many_upload_file']);
+				$enquiryFile = EnquiriesFile::where('id_enquiry', $save->id_enquiry)->get();
+				foreach($enquiryFile as $dataFile){
+					$data['attachment'][] = $dataFile->url_enquiry_file;
+				}
+				unset($data['enquiry_file']);
+        	}
+			// send CRM
+			$goCrm = $this->sendCrm($data);
+			$data['id_enquiry'] = $save->id_enquiry;
+		}
+        return response()->json(MyHelper::checkCreate($data));
     }
 
-    /* SAVE PHOTO BANYAK */
-    function savePhotos($id, $photo)
+	/* SAVE FILE BANYAK */
+    function saveFiles($id, $file)
     {
     	$data = [];
 
-    	foreach ($photo as $key => $value) {
+    	foreach ($file as $key => $value) {
     		$temp = [
-				'enquiry_photo' => $value,
+				'enquiry_file' 	=> $value,
 				'id_enquiry'    => $id,
 				'created_at'    => date('Y-m-d H:i:s'),
 				'updated_at'    => date('Y-m-d H:i:s')
     		];
-
     		array_push($data, $temp);
     	}
 
     	if (!empty($data)) {
-    		if (!EnquiriesPhoto::insert($data)) {
+    		if (!EnquiriesFile::insert($data)) {
     			return false;
     		}
     	}
 
     	return true;
-    }
-	
+	}
+
 	/* REPLY */
     function reply(Request $request) {
 		$post = $request->json()->all();
 		// return $post;
 		$id_enquiry = $post['id_enquiry'];
 		$check = Enquiry::where('id_enquiry', $id_enquiry)->first();
-		
+
 		if(isset($post['reply_email_subject']) && $post['reply_email_subject'] != ""){
 			if($check['reply_email_subject'] == null && $check['enquiry_email'] != null){
 				$to = $check['enquiry_email'];
-				if($check['enquiry_name'] != "") 
+				if($check['enquiry_name'] != "")
 					$name = $check['enquiry_name'];
 				else $name = "Customer";
-				
+
 				$subject = $post['reply_email_subject'];
 				$content = $post['reply_email_content'];
-				
+
 				/* $subject = $this->TextReplace($post['reply_email_subject'], $check['enquiry_phone']);
 				$content = $this->TextReplace($post['reply_email_content'], $check['enquiry_phone']); */
-				
+
 				// get setting email
 				$setting = array();
 				$set = Setting::where('key', 'email_from')->first();
@@ -319,31 +342,31 @@ class ApiEnquiries extends Controller
 				});
 			}
 		}
-		
+
 		if(isset($post['reply_sms_content'])){
 			if($check['reply_sms_content'] == null && $check['enquiry_phone'] != null){
 				$senddata = array(
-						'apikey' => env('SMS_KEY'),  
-						'callbackurl' => env('APP_URL'), 
+						'apikey' => env('SMS_KEY'),
+						'callbackurl' => env('APP_URL'),
 						'datapacket'=>array()
 					);
 				array_push($senddata['datapacket'],array(
 									'number' => trim($check['enquiry_phone']),
 									'message' => urlencode(stripslashes(utf8_encode($post['reply_sms_content']))),
 									'sendingdatetime' => ""));
-				
+
 				$this->rajasms->setData($senddata);
-				
+
 				$send = $this->rajasms->send();
 			}
 		}
-		
+
 		if(isset($post['reply_push_subject'])){
 			if(!empty($post['reply_push_subject'])){
 				try {
 					$dataOptional          = [];
 					$image = null;
-					
+
 					if (isset($post['reply_push_image'])) {
 						$upload = MyHelper::uploadPhoto($post['reply_push_image'], $path = 'img/push/', 600);
 
@@ -357,40 +380,40 @@ class ApiEnquiries extends Controller
 							return response()->json($result);
 						}
 					}
-					
+
 					if (isset($post['reply_push_image']) && $post['reply_push_image'] != null) {
-						$dataOptional['image'] = env('AWS_URL').$post['reply_push_image'];
-						$image = env('AWS_URL').$post['reply_push_image'];
+						$dataOptional['image'] = env('S3_URL_API').$post['reply_push_image'];
+						$image = env('S3_URL_API').$post['reply_push_image'];
 					}
-					
+
 					if (isset($post['reply_push_clickto']) && $post['reply_push_clickto'] != null) {
 						$dataOptional['type'] = $post['reply_push_clickto'];
 					} else {
 						$dataOptional['type'] = 'Home';
 					}
-					
+
 					if (isset($post['reply_push_link']) && $post['reply_push_link'] != null) {
 						if($dataOptional['type'] == 'Link')
 							$dataOptional['link'] = $post['reply_push_link'];
-						else 
+						else
 							$dataOptional['link'] = null;
 					} else {
 						$dataOptional['link'] = null;
 					}
-					
+
 					if (isset($post['reply_push_id_reference']) && $post['reply_push_id_reference'] != null) {
 						$dataOptional['id_reference'] = (int)$post['reply_push_id_reference'];
 					} else{
 						$dataOptional['id_reference'] = 0;
 					}
 					// return $dataOptional;
-					
+
 					$deviceToken = array($check['enquiry_device_token']);
-	
-					
+
+
 					$subject = $post['reply_push_subject'];
 					$content = $post['reply_push_content'];
-					
+
 					if (!empty($deviceToken)) {
 							$push = PushNotificationHelper::sendPush($deviceToken, $subject, $content, $image, $dataOptional);
 							// return $push;
@@ -400,7 +423,7 @@ class ApiEnquiries extends Controller
 				}
 			}
 		}
-		
+
 		unset($post['id_enquiry']);
 		$post['enquiry_status'] = 'Read';
 		// return $post;
@@ -414,7 +437,7 @@ class ApiEnquiries extends Controller
         $data = $this->cekInputan($request->json()->all());
 
         if (isset($data['error'])) {
-            unset($data['error']);        
+            unset($data['error']);
             return response()->json($data);
         }
 
@@ -464,7 +487,23 @@ class ApiEnquiries extends Controller
 																'attachment' 	  => $data['attachment']
                                                             ]);
 		// print_r($send);exit;
-        return $send; 
+        return $send;
     }
 
+	function listEnquirySubject(){
+		$list = Setting::where('key', 'enquiries_subject_list')->get()->first();
+
+		$result = ['text' => $list['value'], 'value' => explode('| ' ,$list['value_text'])];
+		foreach ($result['value'] as $key => $value) {
+			$result['value'][$key] = explode('* ' ,$value);
+		}
+		return response()->json(MyHelper::checkGet($result));
+	}
+
+	function listEnquiryPosition(){
+		$list = Setting::where('key', 'enquiries_position_list')->get()->first();
+
+		$result = ['text' => $list['value'], 'value' => explode(', ' ,$list['value_text'])];
+		return response()->json(MyHelper::checkGet($result));
+	}
 }
