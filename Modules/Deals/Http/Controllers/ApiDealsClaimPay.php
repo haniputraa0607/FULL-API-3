@@ -315,6 +315,7 @@ class ApiDealsClaimPay extends Controller
                     }else{
                         $result['redirect'] = false;
                     }
+                    $result['webview_later'] = env('APP_URL').'webview/mydeals/'.$return['result']['voucher']['id_deals_user'];
                     unset($return['result']);
                     $return['result'] = $result;
                 }
