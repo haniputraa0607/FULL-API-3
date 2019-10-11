@@ -53,10 +53,10 @@ use Mail;
 
 class ApiSetting extends Controller
 {
-    
+
     public $saveImage = "img/";
     public $endPoint;
-    
+
     function __construct() {
         date_default_timezone_set('Asia/Jakarta');
         $this->endPoint = env('S3_URL_API');
@@ -79,83 +79,83 @@ class ApiSetting extends Controller
                 return $result;
             }
         }
-		
+
 		foreach($data as $key => $row){
             $setting = Setting::updateOrCreate(['key' => $key], ['value' => $row]);
 		}
 		return response()->json(MyHelper::checkUpdate($setting));
 	}
-	
+
 	public function Navigation() {
 		$setting_logo = Setting::where('key','like','app_logo%')->get()->toArray();
 		$setting_navbar = Setting::where('key','like','app_navbar%')->get()->toArray();
 		$setting_sidebar = Setting::where('key','like','app_sidebar%')->get()->toArray();
-		
+
 		$set = array();
 		foreach($setting_logo as $setting){
 			array_push($set, array($setting['key'] => $this->endPoint.$setting['value']));
 		}
-		
+
 		foreach($setting_navbar as $setting){
 			array_push($set, array($setting['key'] => $setting['value']));
 		}
-		
+
 		foreach($setting_sidebar as $setting){
 			array_push($set, array($setting['key'] => $setting['value']));
 		}
-		
+
 		return response()->json(MyHelper::checkGet($set));
 	}
-	
+
     public function NavigationLogo() {
 		$setting_logo = Setting::where('key','like','app_logo%')->get()->toArray();
-		
+
 		$set = array();
 		foreach($setting_logo as $setting){
 			array_push($set, array($setting['key'] => $this->endPoint.$setting['value']."?"));
 		}
-		
+
 		return response()->json(MyHelper::checkGet($set));
 	}
-	
+
 	public function NavigationNavbar() {
 		$setting_navbar = Setting::where('key','like','app_navbar%')->get()->toArray();
-		
+
 		$set = array();
 		foreach($setting_navbar as $setting){
 			array_push($set, array($setting['key'] => $setting['value']));
 		}
-		
+
 		return response()->json(MyHelper::checkGet($set));
 	}
-	
+
 	public function NavigationSidebar() {
 		$setting_sidebar = Setting::where('key','like','app_sidebar%')->get()->toArray();
-		
+
 		$set = array();
 
 		foreach($setting_sidebar as $setting){
 			array_push($set, array($setting['key'] => $setting['value']));
 		}
-		
+
 		return response()->json(MyHelper::checkGet($set));
 	}
-	
+
     public function settingCourier() {
         $setting = Setting::get()->toArray();
 
         return response()->json(MyHelper::checkGet($setting));
     }
-	
+
     public function settingList(SettingList $request){
         $data = $request->json()->all();
-		
+
 		if(isset($data['key']))
         $setting = Setting::where('key', $data['key'])->first();
-	
+
 		if(isset($data['key-like']))
         $setting = Setting::where('key', 'like', "%".$data['key-like']."%")->get()->toArray();
-	
+
         return response()->json(MyHelper::checkGet($setting));
     }
 
@@ -165,7 +165,7 @@ class ApiSetting extends Controller
         $setting = Setting::where('id_setting', $id)->get()->toArray();
 
         return response()->json(MyHelper::checkGet($setting));
-        
+
     }
 
     public function settingUpdate(SettingUpdate $request){
@@ -174,7 +174,7 @@ class ApiSetting extends Controller
 
         $update = Setting::where('id_setting', $id)->update($post);
 
-        return response()->json(MyHelper::checkUpdate($update));		
+        return response()->json(MyHelper::checkUpdate($update));
     }
 
     public function pointResetUpdate(Request $request, $type){
@@ -182,7 +182,7 @@ class ApiSetting extends Controller
 
         if(isset($post['setting'])){
             DB::beginTransaction();
-    
+
             $idSetting = [];
             foreach($post['setting'] as $key => $value){
                 if($value['value']){
@@ -192,26 +192,26 @@ class ApiSetting extends Controller
                             DB::rollback();
                             return response()->json(MyHelper::checkUpdate($save));
                         }
-        
+
                         $idSetting[] = $value['id_setting'];
                     }else{
                         $save = Setting::create([
                             'key' => $type,
                             'value' => $value['value']
                         ]);
-        
+
                         if(!$save){
                             DB::rollback();
                             return response()->json(MyHelper::checkCreate($save));
                         }
-        
+
                         $idSetting[] = $save['id_setting'];
                     }
                 }
             }
-    
+
             $delete = Setting::where('key', $type)->whereNotIn('id_setting', $idSetting)->delete();
-    
+
             DB::commit();
             return response()->json(['status' => 'success']);
         }else{
@@ -227,7 +227,7 @@ class ApiSetting extends Controller
 
         //point reset
         $setting = Setting::where('key', 'point_reset')->get();
-         
+
         DB::beginTransaction();
         if($setting){
             foreach($setting as $date){
@@ -240,7 +240,7 @@ class ApiSetting extends Controller
                                 'point'                       => -$totalPoint,
                                 'source'                      => 'Point Reset',
                             ];
-                
+
                             $insertDataLog = LogPoint::create($dataLog);
                             if (!$insertDataLog) {
                                 DB::rollback();
@@ -270,7 +270,7 @@ class ApiSetting extends Controller
 
         //point reset
         $setting = Setting::where('key', 'balance_reset')->get();
-         
+
         DB::beginTransaction();
         if($setting){
             foreach($setting as $date){
@@ -283,7 +283,7 @@ class ApiSetting extends Controller
                                 'balance'                       => -$totalBalance,
                                 'source'                      => 'Balance Reset',
                             ];
-                
+
                             $insertDataLog = LogBalance::create($dataLog);
                             if (!$insertDataLog) {
                                 DB::rollback();
@@ -345,7 +345,7 @@ class ApiSetting extends Controller
         $post = $request->json()->all();
 
         $id_level = $request->json('id_level');
-        
+
         $update = Level::where('id_level', $id_level)->update($post);
 
         return response()->json(MyHelper::checkUpdate($update));
@@ -392,7 +392,7 @@ class ApiSetting extends Controller
         if ($insertHoliday) {
             $dateHoliday = [];
             $day = $post['day'];
-           
+
             foreach ($day as $value) {
                 $dataDay = [
                     'id_holiday'    => $insertHoliday['id'],
@@ -500,7 +500,7 @@ class ApiSetting extends Controller
         $holiday = [
             'holiday_name'  => $post['holiday_name']
         ];
-     
+
         DB::beginTransaction();
         $updateHoliday = Holiday::where('id_holiday', $post['id_holiday'])->update($holiday);
 
@@ -526,7 +526,7 @@ class ApiSetting extends Controller
 
                 if ($updateDateHoliday) {
                     $deleteOutletHoliday = OutletHoliday::where('id_holiday', $post['id_holiday'])->delete();
-                    
+
                     if ($deleteOutletHoliday) {
                         $outletHoliday = [];
                         $outlet = $post['id_outlet'];
@@ -667,7 +667,7 @@ class ApiSetting extends Controller
 
     public function date(DatePost $request) {
         $post = $request->json()->all();
-        
+
         $setting = Setting::where('key', 'date_limit_reservation')->first();
 
         if (empty($setting)) {
@@ -695,7 +695,7 @@ class ApiSetting extends Controller
                 $post['email_logo'] = $upload['path'];
             }
         }
-        
+
         foreach ($post as $key => $value) {
             $save = Setting::updateOrCreate(['key' => $key], ['key' => $key, 'value' => $value]);
             if(!$save){
@@ -804,7 +804,7 @@ class ApiSetting extends Controller
             $value = array_pluck(Setting::where('key', 'LIKE', '%app_logo%')->get()->toArray(), 'value');
             $defaultHome = array_combine($key, $value);
             if(isset($defaultHome['app_logo'])){
-                $defaultHome['app_logo'] = $this->endPoint.$defaultHome['app_logo']; 
+                $defaultHome['app_logo'] = $this->endPoint.$defaultHome['app_logo'];
             }
             return response()->json(MyHelper::checkGet($defaultHome));
         } else {
@@ -830,11 +830,11 @@ class ApiSetting extends Controller
 					return $result;
 				}
 			}
-			
+
 			return response()->json(['status'   => 'success']);
 		}
 	}
-	
+
 	public function appNavbar(Request $request) {
 		$post = $request->json()->all();
 
@@ -850,7 +850,7 @@ class ApiSetting extends Controller
 			return response()->json(MyHelper::checkUpdate($setting));
 		}
 	}
-	
+
 	public function appSidebar(Request $request) {
 		$post = $request->json()->all();
 
@@ -866,7 +866,7 @@ class ApiSetting extends Controller
 			return response()->json(MyHelper::checkUpdate($setting));
 	   }
 	}
-	
+
     public function homeNotLogin(Request $request) {
         $post = $request->json()->all();
 
@@ -875,10 +875,10 @@ class ApiSetting extends Controller
             $value = array_pluck(Setting::where('key', 'LIKE', '%default_home%')->get()->toArray(), 'value');
             $defaultHome = array_combine($key, $value);
             if(isset($defaultHome['default_home_image'])){
-                $defaultHome['default_home_image_url'] = $this->endPoint.$defaultHome['default_home_image']; 
+                $defaultHome['default_home_image_url'] = $this->endPoint.$defaultHome['default_home_image'];
             }
 			if(isset($defaultHome['default_home_splash_screen'])){
-                $defaultHome['default_home_splash_screen_url'] = $this->endPoint.$defaultHome['default_home_splash_screen']; 
+                $defaultHome['default_home_splash_screen_url'] = $this->endPoint.$defaultHome['default_home_splash_screen'];
             }
             return response()->json(MyHelper::checkGet($defaultHome));
         }
@@ -904,7 +904,7 @@ class ApiSetting extends Controller
                 return $result;
             }
         }
-		
+
 		if (isset($post['default_home_splash_screen'])) {
             $image = Setting::where('key', 'default_home_splash_screen')->first();
 
@@ -926,14 +926,14 @@ class ApiSetting extends Controller
                 return $result;
             }
         }
-		
+
         DB::beginTransaction();
         foreach ($post as $key => $value) {
             $insert = [
                 'key' => $key,
                 'value' => $value
             ];
-            $save = Setting::updateOrCreate(['key' => $key], $insert); 
+            $save = Setting::updateOrCreate(['key' => $key], $insert);
             if(!$save){
                 return $insert;
                 DB::rollBack();
@@ -1009,15 +1009,31 @@ class ApiSetting extends Controller
     public function completeProfile(Request $request)
     {
         $post = $request->json()->all();
-        
-        $update = Setting::updateOrCreate(['key' => 'complete_profile_cashback'], ['key' => 'complete_profile_cashback', 'value' => $post['complete_profile_cashback']]);
-        return MyHelper::checkUpdate($update);
+
+        $update[] = Setting::updateOrCreate(['key' => 'complete_profile_popup'], ['key' => 'complete_profile_popup', 'value' => $post['complete_profile_popup']]);
+        $update[] = Setting::updateOrCreate(['key' => 'complete_profile_point'], ['key' => 'complete_profile_point', 'value' => $post['complete_profile_point']]);
+        $update[] = Setting::updateOrCreate(['key' => 'complete_profile_cashback'], ['key' => 'complete_profile_cashback', 'value' => $post['complete_profile_cashback']]);
+        $update[] = Setting::updateOrCreate(['key' => 'complete_profile_count'], ['key' => 'complete_profile_count', 'value' => $post['complete_profile_count']]);
+        $update[] = Setting::updateOrCreate(['key' => 'complete_profile_interval'], ['key' => 'complete_profile_interval', 'value' => $post['complete_profile_interval']]);
+
+        if (count($update) == 5) {
+            return [
+                'status' => 'success',
+                'result' => $update
+            ];
+        }
+        else {
+            return [
+                'status' => 'fail',
+                'messages' => ['Some data may not saved.']
+            ];
+        }
     }
 
     public function completeProfileSuccessPage(Request $request)
     {
         $post = $request->json()->all();
-        
+
         $update = Setting::updateOrCreate(['key' => 'complete_profile_success_page'], ['value_text' => $post['complete_profile_success_page']]);
         if ($update) {
             return [
@@ -1289,7 +1305,7 @@ class ApiSetting extends Controller
             }
         }
     }
-    
+
     public function viewTOS(){
         $setting = Setting::where('key', 'tos')->first();
         if($setting && $setting['value_text']){
@@ -1298,7 +1314,7 @@ class ApiSetting extends Controller
         }else{
              $data['value'] = "";
         }
-            
+
         return view('setting::tos', $data);
 
     }
@@ -1358,13 +1374,13 @@ class ApiSetting extends Controller
             return MyHelper::checkGet($data);
         }
     }
-    
+
     public function textMenuList(){
-        
+
         try{
             $textMenuHome = Setting::where('key', 'text_menu_home')->first()->value_text;
             $textMenuAccount = Setting::where('key', 'text_menu_account')->first()->value_text;
-            
+
             $result = [
                 'status' => 'success',
                 'result' => [
@@ -1372,27 +1388,27 @@ class ApiSetting extends Controller
                     'text_menu_account' => json_decode($textMenuAccount)
                 ]
             ];
-            
+
             return response()->json($result);
-            
+
         }catch(Exception $e){
-            
+
             return response()->json(['status' => 'fail', 'messages' => []]);
         }
     }
-    
+
     public function updateTextMenu(Request $request){
         $post = $request->json()->all();
-        
-        if(isset($post['category']) && !empty($post['category']) && 
+
+        if(isset($post['category']) && !empty($post['category']) &&
             isset($post['data_menu']) && !empty($post['data_menu'])){
-            
+
             try{
                 $category = $post['category'];
                 $menu = $post['data_menu'];
-                
+
                 if($category == 'menu-home'){
-                    
+
                     $dataMenuForUpdate = [
                         "home" => [
                             "text_menu" => $menu['home_text_menu'],
@@ -1415,9 +1431,9 @@ class ApiSetting extends Controller
                             "text_header" => $menu['account_text_header']
                         ]
                     ];
-                        
+
                     $update = Setting::where('key','text_menu_home')->update(['value_text' => json_encode($dataMenuForUpdate), 'updated_at' => date('Y-m-d H:i:s')]);
-                    
+
                     if(!$update){
                         return response()->json(['status' => 'fail', 'messages' => ['There is an error']]);
                     }
@@ -1430,6 +1446,10 @@ class ApiSetting extends Controller
                         "outlet" => [
                                 "text_menu" => $menu['outlet_text_menu'],
                                 "text_header" => $menu['outlet_text_header']
+                        ],
+                        "benefit" => [
+                                "text_menu" => $menu['benefit_text_menu'],
+                                "text_header" => $menu['benefit_text_menu']
                         ],
                         "news" => [
                                 "text_menu" => $menu['news_text_menu'],
@@ -1452,16 +1472,16 @@ class ApiSetting extends Controller
                                 "text_header" => $menu['contact_text_header']
                         ]
                     ];
-                        
+
                     $update = Setting::where('key','text_menu_account')->update(['value_text' => json_encode($dataMenuForUpdate), 'updated_at' => date('Y-m-d H:i:s')]);
-                    
+
                     if(!$update){
                         return response()->json(['status' => 'fail', 'messages' => ['There is an error']]);
                     }
                 }else{
                     return response()->json(['status' => 'fail', 'messages' => ['No data for update']]);
                 }
-                
+
                 $result = [
                     'status' => 'success',
                     'result' => []
