@@ -355,6 +355,9 @@ class ApiDeals extends Controller
         } else {
             $deals->orderBy('deals_end', 'ASC');
         }
+        if ($request->json('id_city')) {
+            $deals->with('outlets','outlets.city');
+        }
 
         $deals = $deals->get()->toArray();
         // print_r($deals); exit();
@@ -685,8 +688,7 @@ class ApiDeals extends Controller
             if (!empty($city)) {
                 if ($markerCity == 0) {
                     unset($deals[$key]);
-                }else{
-                    // kalkulasi point
+                    continue;
                 }
             }
 
