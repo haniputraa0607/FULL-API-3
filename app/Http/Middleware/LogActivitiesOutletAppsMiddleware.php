@@ -66,7 +66,7 @@ class LogActivitiesOutletAppsMiddleware
                 if(stristr($url, 'outletapp/product')) $subject = 'Outlet Product';
                 if(stristr($url, 'outletapp/product/sold-out')) $subject = 'Outlet Product Sold-out';
                 if(stristr($url, 'outletapp/delete-token')) $subject = 'Delete Device Token';
-                if(stristr($url, 'outletapp/delete-token')) $subject = 'Delete Device Token';
+                if(stristr($url, 'outletapp/update-token')) $subject = 'Update Device Token';
                 if(stristr($url, 'outletapp/order/detail/view')) $subject = 'Outlet Product Detail View';
                 
                 if(!empty($request->header('ip-address-view'))){

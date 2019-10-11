@@ -33,6 +33,9 @@ class LogActivitiesMiddleware
                 $status = 'fail';
                 if($st) $status = 'success';
                 $reqnya = $request->json()->all();
+                if(isset($reqnya['pin'])) $reqnya['pin'] = "******";
+                if(isset($reqnya['pin_old'])) $reqnya['pin'] = "******";
+                if(isset($reqnya['pin_new'])) $reqnya['pin'] = "******";
                 $requestnya = json_encode($reqnya);
                 $requeste = json_decode($requestnya, true);
 
