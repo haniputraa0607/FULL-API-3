@@ -994,7 +994,9 @@ class ApiPOS extends Controller
                         unset($post['transactions'][$key]);
                     }
                 }
-                
+
+                $countSettingCashback = TransactionSetting::get();
+                $fraudTrxDay = FraudSetting::where('parameter', 'LIKE', '%transactions in 1 day%')->first();
                 foreach ($post['transactions'] as $key => $trx) {
                     if(!empty($trx['date_time']) &&
                         isset($trx['total']) &&
@@ -1002,7 +1004,7 @@ class ApiPOS extends Controller
                         isset($trx['discount']) && isset($trx['grand_total']) &&  
                         !empty($trx['payments']) && isset($trx['menu'])){
 
-                        $insertTrx = $this->insertTransaction($checkOutlet, $trx, $config, $settingPoint);
+                        $insertTrx = $this->insertTransaction($checkOutlet, $trx, $config, $settingPoint, $countSettingCashback, $fraudTrxDay);
                         if(isset($insertTrx['id_transaction'])){
                                 $countTransactionSuccess++;
                                 $result[] = $insertTrx;
@@ -1103,7 +1105,7 @@ class ApiPOS extends Controller
         }
     }
     
-    function insertTransaction($outlet, $trx, $config, $settingPoint){
+    function insertTransaction($outlet, $trx, $config, $settingPoint, $countSettingCashback, $fraudTrxDay){
         DB::beginTransaction();
         try{
             if(!isset($trx['order_id'])){
@@ -1114,7 +1116,6 @@ class ApiPOS extends Controller
                             'transaction_date'            => date('Y-m-d H:i:s', strtotime($trx['date_time'])),
                             'transaction_receipt_number'  => $trx['trx_id'],
                             'trasaction_type'             => 'Offline',
-                            'sales_type'                  => $trx['sales_type'],
                             'transaction_subtotal'        => $trx['total'],
                             'transaction_service'         => $trx['service'],
                             'transaction_discount'        => $trx['discount'],
@@ -1125,6 +1126,10 @@ class ApiPOS extends Controller
                             'trasaction_payment_type'     => 'Offline',
                             'transaction_payment_status'  => 'Completed'
                     ];
+
+                    if(!empty($trx['sales_type'])){
+                        $dataTrx['membership_level']  = $trx['sales_type'];
+                    }
 
                     $trxVoucher = [];
                     $pointBefore = 0;
@@ -1138,11 +1143,9 @@ class ApiPOS extends Controller
 
                         if (empty($user)) {
                             $user['id'] = null;
-                            $user['id'] = null;
                             $dataTrx['membership_level']    = null;
                             $dataTrx['membership_promo_id'] = null;
                         }elseif(isset($user['is_suspended']) && $user['is_suspended'] == '1'){
-                            $user['id'] = null;
                             $user['id'] = null;
                             $dataTrx['membership_level']    = null;
                             $dataTrx['membership_promo_id'] = null;
@@ -1156,63 +1159,64 @@ class ApiPOS extends Controller
                             if (!empty($trx['voucher'])) {
                                 foreach ($trx['voucher'] as $keyV => $valueV) {
                                     $checkVoucher = DealsVoucher::join('deals_users', 'deals_voucher.id_deals_voucher', 'deals_users.id_deals_voucher')
-                                                                                    ->where('voucher_code', $valueV['voucher_code'])
-                                                                                    ->where('deals_users.id_outlet', $outlet['id_outlet'])
-                                                                                    ->where('deals_users.id_user', $user['id'])
-                                                                                    ->whereNotNull('deals_users.used_at')
-                                                                                    ->whereNull('id_transaction')
-                                                                                    ->first();
+                                                        ->leftJoin('transaction_vouchers', 'deals_voucher.id_deals_voucher', 'transaction_vouchers.id_deals_voucher')
+                                                        ->where('voucher_code', $valueV['voucher_code'])
+                                                        ->where('deals_users.id_outlet', $outlet['id_outlet'])
+                                                        ->where('deals_users.id_user', $user['id'])
+                                                        ->whereNotNull('deals_users.used_at')
+                                                        ->whereNull('transaction_vouchers.id_transaction_voucher')
+                                                        ->first();
+
                                     if (empty($checkVoucher)) {
-                                            // for invalid voucher
-                                            $dataVoucher['deals_voucher_invalid'] = $valueV;
+                                        // for invalid voucher
+                                        $dataVoucher['deals_voucher_invalid'] = $valueV;
                                     }else{
-                                            $dataVoucher['id_deals_voucher'] =  $checkUsed['id_deals_voucher'];
+                                        $dataVoucher['id_deals_voucher'] =  $checkVoucher['id_deals_voucher'];
                                     }
                                     $trxVoucher[] = $dataVoucher;
                                 }
-                            }
-
-                            if($config['point'] == '1'){
-                                if (isset($user['memberships'][0]['membership_name'])) {
+                            }else{
+                                if($config['point'] == '1'){
+                                    if (isset($user['memberships'][0]['membership_name'])) {
                                         $level = $user['memberships'][0]['membership_name'];
                                         $percentageP = $user['memberships'][0]['benefit_point_multiplier'] / 100;
-                                } else {
+                                    } else {
                                         $level = null;
                                         $percentageP = 0;
+                                    }
+
+                                    $point = floor(app($this->pos)->count('point', $trx) * $percentageP);
+                                    $dataTrx['transaction_point_earned'] = $point;
                                 }
 
-                                $point = floor(app($this->pos)->count('point', $trx) * $percentageP);
-                                $dataTrx['transaction_point_earned'] = $point;
-                            }
-
-                            if($config['balance'] == '1'){
-                                if (isset($user['memberships'][0]['membership_name'])) {
+                                if($config['balance'] == '1'){
+                                    if (isset($user['memberships'][0]['membership_name'])) {
                                         $level = $user['memberships'][0]['membership_name'];
                                         $percentageB = $user['memberships'][0]['benefit_cashback_multiplier'] / 100;
                                         $cashMax = $user['memberships'][0]['cashback_maximum'];
-                                } else {
+                                    } else {
                                         $level = null;
                                         $percentageB = 0;
-                                }
+                                    }
 
-                                $data = $trx;
-                                $data['total'] = $trx['grand_total'];
-                                $cashback = floor(app($this->pos)->count('cashback', $data) * $percentageB);
+                                    $data = $trx;
+                                    $data['total'] = $trx['grand_total'];
+                                    $cashback = floor(app($this->pos)->count('cashback', $data) * $percentageB);
 
-                                //count some trx user
-                                $countUserTrx = Transaction::where('id_user', $user['id'])->count();
-                                $countSettingCashback = TransactionSetting::get();
-                                if ($countUserTrx < count($countSettingCashback)) {
-                                    $cashback = $cashback * $countSettingCashback[$countUserTrx]['cashback_percent'] / 100;
-                                    if ($cashback > $countSettingCashback[$countUserTrx]['cashback_maximum']) {
+                                    //count some trx user
+                                    $countUserTrx = Transaction::where('id_user', $user['id'])->count();
+                                    if ($countUserTrx < count($countSettingCashback)) {
+                                        $cashback = $cashback * $countSettingCashback[$countUserTrx]['cashback_percent'] / 100;
+                                        if ($cashback > $countSettingCashback[$countUserTrx]['cashback_maximum']) {
                                             $cashback = $countSettingCashback[$countUserTrx]['cashback_maximum'];
-                                    }
-                                } else{
-                                    if(isset($cashMax) && $cashback > $cashMax){
+                                        }
+                                    } else{
+                                        if(isset($cashMax) && $cashback > $cashMax){
                                             $cashback = $cashMax;
+                                        }
                                     }
+                                    $dataTrx['transaction_cashback_earned'] = $cashback;
                                 }
-                                $dataTrx['transaction_cashback_earned'] = $cashback;
                             }
                         }
                     }
@@ -1231,6 +1235,7 @@ class ApiPOS extends Controller
                         return ['status' => 'fail', 'messages' => ['Transaction sync failed']];
                     }
 
+                    $dataPayments = [];
                     foreach ($trx['payments'] as $col => $pay) {
                         if(isset($pay['type']) && isset($pay['name'])
                             && isset($pay['nominal'])){
@@ -1240,28 +1245,29 @@ class ApiPOS extends Controller
                                     'payment_bank'   => $pay['name'],
                                     'payment_amount' => $pay['nominal']
                             ];
-
-                            $createPay = TransactionPaymentOffline::create($dataPay);
-                            if (!$createPay) {
-                                    DB::rollback();
-                                    return ['status' => 'fail', 'messages' => ['Transaction sync failed']];
-                            }
+                            array_push($dataPayments,$dataPay);
                         }else{
                             DB::rollback();
                             return ['status' => 'fail', 'messages' => ['There is an incomplete input in the payment list']];
                         }
                     }
 
+                    $insertPayments = TransactionPaymentOffline::insert($dataPayments);
+                    if (!$insertPayments) {
+                        DB::rollback();
+                        return ['status' => 'fail', 'messages' => ['Transaction sync failed']];
+                    }
+
                     $userTrxProduct = [];
                     $allMenuId = array_column($trx['menu'], 'plu_id');
                     $checkProduct = Product::select('id_product', 'product_code')->whereIn('product_code', $allMenuId)->get()->toArray();
 
+                    $allProductCode = array_column($checkProduct, 'product_code');
                     foreach ($trx['menu'] as $row => $menu) {
                         if(!empty($menu['plu_id']) && !empty($menu['name']) 
-                            && isset($menu['price']) && isset($menu['qty']) 
-                            && !empty($menu['category'])){
+                            && isset($menu['price']) && isset($menu['qty'])){
 
-                            $getIndexProduct = array_search($menu['plu_id'], array_column($checkProduct, 'product_code'));
+                            $getIndexProduct = array_search($menu['plu_id'], $allProductCode);
 
                             if($getIndexProduct === false){
                                 //create new product
@@ -1272,7 +1278,7 @@ class ApiPOS extends Controller
                                 $newProduct = Product::create($dataProduct);
                                 if (!$newProduct) {
                                     DB::rollback();
-                                    return ['status' => 'fail', 'messages' => ['Transaction sync failed']];
+                                    return ['status' => 'fail', 'messages' => ['Failed create new product']];
                                 }
 
                                 $productPriceData['id_product']         = $newProduct['id_product'];
@@ -1281,7 +1287,7 @@ class ApiPOS extends Controller
                                 $newProductPrice = ProductPrice::create($productPriceData);
                                 if (!$newProductPrice) {
                                     DB::rollback();
-                                    return ['status' => 'fail', 'messages' => ['Transaction sync failed']];
+                                    return ['status' => 'fail', 'messages' => ['Failed create new product']];
                                 }
 
                                 $product = $newProduct;
@@ -1311,8 +1317,9 @@ class ApiPOS extends Controller
                                         ->whereIn('code', $allModCode)
                                         ->where('id_product', '=', $product['id_product'])->get()->toArray();
 
+                                $allMenuModifier = array_column($detailMod, 'code');
                                 foreach ($menu['modifiers'] as $mod) {
-                                    $getIndexMod = array_search($mod['code'], array_column($detailMod, 'code'));
+                                    $getIndexMod = array_search($mod['code'], $allMenuModifier);
 
                                     if ($getIndexMod !== false) {
                                         $id_product_modifier = $detailMod[$getIndexMod]['id_product_modifier'];
@@ -1437,7 +1444,6 @@ class ApiPOS extends Controller
                             $userData = User::find($user['id']);
 
                             //cek fraud detection transaction per day
-                            $fraudTrxDay = FraudSetting::where('parameter', 'LIKE', '%transactions in 1 day%')->first();
                             if ($fraudTrxDay && $fraudTrxDay['parameter_detail'] != null) {
                                 if ($userData['count_transaction_day'] >= $fraudTrxDay['parameter_detail']) {
                                     //send fraud detection to admin
