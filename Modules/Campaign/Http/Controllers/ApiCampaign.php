@@ -287,11 +287,30 @@ class ApiCampaign extends Controller
 
 		if($campaign){
 			if($campaign['campaign_is_sent'] == 'Yes'){
-				$result = [
-					'status'  => 'fail',
-					'messages'  => ['Campaign already sent']
-				];
-				return response()->json($result);
+				if($post['resend']??0 == 1){
+					unset($campaign['id_campaign']);
+					unset($campaign['created_at']);
+					unset($campaign['updated_at']);
+					$campaign['campaign_is_sent'] = 'No';
+					$data = json_decode(json_encode($campaign), true);
+					$c = Campaign::create($data);
+
+					if($c){
+						$campaign = Campaign::where('id_campaign','=',$c->id_campaign)->first();
+					} else {
+						$result = [
+							'status'  => 'fail',
+							'messages'  => ['Re-create Campaign Failed']
+						];
+						return response()->json($result);
+					}
+				} else {
+					$result = [
+						'status'  => 'fail',
+						'messages'  => ['Campaign already sent']
+					];
+					return response()->json($result);
+				}
 			}
 
 			if($campaign['campaign_send_at'] == null){
