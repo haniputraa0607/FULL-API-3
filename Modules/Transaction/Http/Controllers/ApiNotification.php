@@ -219,7 +219,7 @@ class ApiNotification extends Controller {
                                 "outlet_name"       => $newTrx['outlet']['outlet_name'], 
                                 "transaction_date"  => $newTrx['transaction_date'],
                                 'receipt_number'    => $newTrx['transaction_receipt_number'],
-                                'point'             => $checkBalance['balance_nominal']
+                                'received_point'    => (string) $checkBalance['balance_nominal']
                             ]
                         );
                         if($send != true){
@@ -502,7 +502,7 @@ class ApiNotification extends Controller {
                         "outlet_name"       => $data['outlet']['outlet_name'], 
                         "transaction_date"  => $data['transaction_date'],
                         'receipt_number'    => $data['transaction_receipt_number'],
-                        'point'             => $data['transaction_cashback_earned']
+                        'received_point'    => (string) $data['transaction_cashback_earned']
                     ]
                 );
                 if($send != true){
@@ -898,6 +898,19 @@ Detail: ".$link['short'],
         } else {
             $paymentBalanceTrx = TransactionPaymentBalance::where('id_transaction', $data['id_transaction'])->first();
             $insertDataLogCash = app($this->balance)->addLogBalance( $data['id_user'], -$paymentBalanceTrx['balance_nominal'], $data['id_transaction'], 'Transaction', $data['transaction_grandtotal']);
+        }
+        $usere= User::where('id',$data['id_user'])->first();
+        $send = app($this->autocrm)->SendAutoCRM('Transaction Point Achievement', $usere->phone, 
+            [
+                "outlet_name"       => $data['outlet']['outlet_name'], 
+                "transaction_date"  => $data['transaction_date'],
+                'receipt_number'    => $data['transaction_receipt_number'],
+                'received_point'    => (string) $data['transaction_cashback_earned']
+            ]
+        );
+        if($send != true){
+            DB::rollback();
+            return false;
         }
 
         if ($insertDataLogCash == false) {
