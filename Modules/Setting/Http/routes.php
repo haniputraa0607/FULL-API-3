@@ -11,6 +11,7 @@ Route::group(['middleware' => ['auth:api', 'log_activities'], 'prefix' => 'api/s
     Route::any('/', 'ApiSetting@settingList');
     Route::post('/edit', 'ApiSetting@settingEdit');
     Route::post('/update', 'ApiSetting@settingUpdate');
+    Route::post('/update2','ApiSetting@update');
     Route::post('/date', 'ApiSetting@date');
 	Route::any('/app_logo', 'ApiSetting@appLogo');
     Route::any('/app_navbar', 'ApiSetting@appNavbar');
@@ -122,8 +123,6 @@ Route::group(['middleware' => ['auth_client', 'log_activities'], 'prefix' => 'ap
 	Route::get('/navigation-logo', 'ApiSetting@NavigationLogo');
 	Route::get('/navigation-sidebar', 'ApiSetting@NavigationSidebar');
     Route::get('/navigation-navbar', 'ApiSetting@NavigationNavbar');
-
-    Route::get('/update','ApiSetting@update');
 
     Route::get('/version/list', 'ApiSetting@getVersion');
     Route::post('/version/update', 'ApiSetting@updateVersion');
