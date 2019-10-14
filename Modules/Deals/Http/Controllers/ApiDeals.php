@@ -448,6 +448,9 @@ class ApiDeals extends Controller
             }else {
                 if($deals[0]['deals_voucher_price_type']=='point'){
                     $deals[0]['button_status']=$deals[0]['deals_voucher_price_point']<=$curBalance?1:0;
+                    if($deals[0]['deals_voucher_price_point']>$curBalance){
+                        $deals[0]['payment_fail_message'] = Setting::where('key', 'payment_fail_message')->pluck('value')->first()??'Mohon maaf, point anda tidak cukup';
+                    }
                 }else{
                     $deals[0]['button_text'] = 'Beli';
                     $deals[0]['button_status'] = 1;
