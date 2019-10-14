@@ -135,8 +135,8 @@ class ApiUser extends Controller
 	}
 
 	function UserFilter($conditions = null, $order_field='id', $order_method='asc', $skip=0, $take=99999999999){
-		$hasilSebelum = [];
-		$hasilAkhir = [];
+		$prevResult = [];
+		$finalResult = [];
 
 		if($conditions != null){
 			$key = 0;
@@ -166,6 +166,7 @@ class ApiUser extends Controller
 						$cond = $cond['rules'];
 					}
 
+					/*========= Check conditions related to the subject of the transaction =========*/
 					$countTrxDate = 0;
 					foreach($cond as $i => $condition){
 						if(stristr($condition['subject'], 'trx')) $scanTrx = true;
@@ -187,118 +188,64 @@ class ApiUser extends Controller
 
 						if($condition['subject'] == 'trx_product' || $condition['subject'] == 'trx_product_count' || $condition['subject'] == 'trx_product_tag' || $condition['subject'] == 'trx_product_tag_count'){
 							$userTrxProduct = true;
-						}elseif($condition['subject']  != 'trx_date'){
-							if(stristr($condition['subject'], 'trx')){
-								$scanOtherProduct = true;
-							}
+						}elseif($condition['subject']  != 'trx_date' && stristr($condition['subject'], 'trx')){
+                            $scanOtherProduct = true;
 						}
 						if($condition['subject'] == 'trx_date'){
 							$countTrxDate++;
-							if($condition['parameter'] == date('Y-m-d') && ($condition['operator'] == '<=')){
-								// $exceptUserTrxProduct == false;
-							}else{
-								$exceptUserTrxProduct = true;
+							if($condition['parameter'] != date('Y-m-d') && $condition['operator'] != '<='){
+                                $exceptUserTrxProduct = true;
 							}
 						}
 
 						if($condition['subject'] == 'last_trx_date'){
 							$exceptUserTrxProduct = true;
 						}
-
-
 					}
 
 					if($exceptUserTrxProduct == true || $countTrxDate > 1){
 						$userTrxProduct = false;
 					}
+                    /*================================== END check ==================================*/
 
 					if($scanTrx == true){
 						if($userTrxProduct == true){
 							if($scanOtherProduct == true){
+                                $query = $query->leftJoin('transactions','transactions.id_user','=','users.id');
+                                $query = $query->leftJoin('transaction_shipments','transactions.id_transaction','=','transaction_shipments.id_transaction');
 								if($scanTag == true){
-									$query = $query->leftJoin('transactions','transactions.id_user','=','users.id');
-									$query = $query->leftJoin('transaction_shipments','transactions.id_transaction','=','transaction_shipments.id_transaction');
 									$query = $query->leftJoin('user_trx_products','users.id','=','user_trx_products.id_user');
 									$query = $query->leftJoin('product_tags','product_tags.id_product','=','user_trx_products.id_product');
-									$query = $query->groupBy('users.id');
-									$query = $query->select('users.*',
-													'cities.*',
-													'provinces.*',
-													DB::raw('YEAR(CURDATE()) - YEAR(users.birthday) AS age'),
-													DB::raw('count(*) as total')
-												);
 								}else{
-									$query = $query->leftJoin('transactions','transactions.id_user','=','users.id');
-									$query = $query->leftJoin('transaction_shipments','transactions.id_transaction','=','transaction_shipments.id_transaction');
 									$query = $query->leftJoin('user_trx_products','transactions.id_user','=','user_trx_products.id_user');
-									$query = $query->groupBy('users.id');
-									$query = $query->select('users.*',
-													'cities.*',
-													'provinces.*',
-													DB::raw('YEAR(CURDATE()) - YEAR(users.birthday) AS age'),
-													DB::raw('count(*) as total')
-												);
 								}
 							}else{
+                                $query = $query->leftJoin('user_trx_products','users.id','=','user_trx_products.id_user');
 								if($scanTag == true){
-									$query = $query->leftJoin('user_trx_products','users.id','=','user_trx_products.id_user');
 									$query = $query->leftJoin('product_tags','product_tags.id_product','=','user_trx_products.id_product');
-									$query = $query->groupBy('users.id');
-									$query = $query->select('users.*',
-													'cities.*',
-													'provinces.*',
-													DB::raw('YEAR(CURDATE()) - YEAR(users.birthday) AS age'),
-													DB::raw('count(*) as total')
-												);
-								}else{
-									$query = $query->leftJoin('user_trx_products','users.id','=','user_trx_products.id_user');
-									$query = $query->groupBy('users.id');
-									$query = $query->select('users.*',
-													'cities.*',
-													'provinces.*',
-													DB::raw('YEAR(CURDATE()) - YEAR(users.birthday) AS age'),
-													DB::raw('count(*) as total')
-												);
 								}
-							}
+							};
 
 						}elseif($scanProd == true){
+                            $query = $query->leftJoin('transaction_products','users.id','=','transaction_products.id_user');
+                            $query = $query->leftJoin('transactions','transactions.id_transaction','=','transaction_products.id_transaction');
+                            $query = $query->leftJoin('transaction_shipments','transactions.id_transaction','=','transaction_shipments.id_transaction');
 							if($scanTag == true){
-								$query = $query->leftJoin('transaction_products','users.id','=','transaction_products.id_user');
-								$query = $query->leftJoin('transactions','transactions.id_transaction','=','transaction_products.id_transaction');
-								$query = $query->leftJoin('transaction_shipments','transactions.id_transaction','=','transaction_shipments.id_transaction');
 								$query = $query->leftJoin('products','transaction_products.id_product','=','products.id_product');
 								$query = $query->leftJoin('product_tags','products.id_product','=','product_tags.id_product');
-								$query = $query->groupBy('users.id');
-								$query = $query->select('users.*',
-											'cities.*',
-											'provinces.*',
-											DB::raw('YEAR(CURDATE()) - YEAR(users.birthday) AS age'),
-											DB::raw('count(*) as total')
-										);
-							} else{
-								$query = $query->leftJoin('transaction_products','users.id','=','transaction_products.id_user');
-								$query = $query->leftJoin('transactions','transactions.id_transaction','=','transaction_products.id_transaction');
-								$query = $query->leftJoin('transaction_shipments','transactions.id_transaction','=','transaction_shipments.id_transaction');
-								$query = $query->groupBy('users.id');
-								$query = $query->select('users.*',
-											'cities.*',
-											'provinces.*',
-											DB::raw('YEAR(CURDATE()) - YEAR(users.birthday) AS age'),
-											DB::raw('count(*) as total')
-											);
 							}
 						} else {
 							$query = $query->leftJoin('transactions','transactions.id_user','=','users.id');
 							$query = $query->leftJoin('transaction_shipments','transactions.id_transaction','=','transaction_shipments.id_transaction');
-							$query = $query->groupBy('users.id');
-							$query = $query->select('users.*',
-										'cities.*',
-										'provinces.*',
-										DB::raw('YEAR(CURDATE()) - YEAR(users.birthday) AS age'),
-										DB::raw('count(*) as total')
-										);
 						}
+
+                        $query = $query->groupBy('users.id');
+                        $query = $query->select('users.*',
+                            'cities.*',
+                            'provinces.*',
+                            DB::raw('YEAR(CURDATE()) - YEAR(users.birthday) AS age'),
+                            DB::raw('count(*) as total')
+                        );
 					} else {
 						$query = $query->select('users.*',
 									'cities.*',
@@ -314,7 +261,6 @@ class ApiUser extends Controller
 					}else{
 						$query = $this->queryFilter($cond, $rule, $query, $userTrxProduct);
 					}
-					// $query = $query->select('users.id');
 				}else {
 					$query = $query->select('users.*',
 								'cities.*',
@@ -349,23 +295,25 @@ class ApiUser extends Controller
 								)
 							->whereNotIn('users.id', $exceptUser);
 				}
-				$hasil = array_pluck($query->get()->toArray(),'id');
+				$result = array_pluck($query->get()->toArray(),'id');
 
 				if($key > 0){
 					if($ruleNext == 'and'){
-						$hasilSebelum = array_intersect($hasil,$hasilSebelum);
+                        $prevResult = array_intersect($result,$prevResult);
 					}else{
-						$hasilSebelum = array_unique(array_merge($hasil, $hasilSebelum));
+                        $prevResult = array_unique(array_merge($result, $prevResult));
 					}
 					$ruleNext = $conRuleNext;
 				}else{
-					$hasilSebelum = $hasil;
+                    $prevResult = $result;
 					$ruleNext = $conRuleNext;
 				}
 
 				$key++;
 			}
-			$hasilAkhir = User::leftJoin('cities','cities.id_city','=','users.id_city')
+
+			/*============= Final query when condition not null =============*/
+            $finalResult = User::leftJoin('cities','cities.id_city','=','users.id_city')
 						->leftJoin('provinces','provinces.id_province','=','cities.id_province')
 						->orderBy($order_field, $order_method)
 						->select('users.*',
@@ -373,40 +321,45 @@ class ApiUser extends Controller
 							'provinces.*',
 							DB::raw('YEAR(CURDATE()) - YEAR(users.birthday) AS age')
 							)
-						->whereIn('users.id', $hasilSebelum);
+						->whereIn('users.id', $prevResult);
 		}else {
 			$query = User::leftJoin('cities','cities.id_city','=','users.id_city')
 				->leftJoin('provinces','provinces.id_province','=','cities.id_province')
 				->orderBy($order_field, $order_method);
-			$hasilAkhir = $query->select('users.*',
+
+            /*============= Final query when condition is null =============*/
+            $finalResult = $query->select('users.*',
 						'cities.*',
 						'provinces.*',
 						DB::raw('YEAR(CURDATE()) - YEAR(users.birthday) AS age')
 						);
 		}
-		// return $hasilAkhir->get();
-		// return json_encode($query->toSql());
-		$hasilcount = count($hasilAkhir->get());
-		$hasil = $hasilAkhir->skip($skip)->take($take)->get()->toArray();
-		if($hasil){
-			$result = ['status'	=> 'success',
-                       'result'	=> $hasil,
-					   'total' => $hasilcount
+
+		$resultCount = count($finalResult->get()); // get total result
+        $result = $finalResult->skip($skip)->take($take)->get()->toArray();
+		if($result){
+			$response = ['status'	=> 'success',
+                       'result'	=> $result,
+					   'total' => $resultCount
 					];
 		} else{
-			$result = [
+            $response = [
                         'status'	=> 'fail',
                         'messages'	=> ['User Not Found']
 						];
 		}
 
-		return $result;
+		return $response;
 	}
 
 	function queryFilter($conditions, $rule, $query, $userTrxProduct){
 
 		foreach($conditions as $index => $condition){
 			if(isset($condition['subject'])){
+                if($condition['operator'] != '='){
+                    $conditionParameter = $condition['operator'];
+                }
+
 				if($condition['operator']=='WHERE IN'){
 					$param=explode(',', $condition['parameter']);
 					if($rule == 'and'){
@@ -416,399 +369,390 @@ class ApiUser extends Controller
 					}
 					continue;
 				}
-				if($condition['subject'] == 'all_user'){
-					if($rule == 'and'){
-						$query = $query->whereRaw('1');
-					} else {
-						$query = $query->orWhereRaw('1');
-					}
-				}
-				if($condition['subject'] == 'name' || $condition['subject'] == 'phone' || $condition['subject'] == 'email' || $condition['subject'] == 'address'){
-					$var = "users.".$condition['subject'];
 
-					if($rule == 'and'){
-						if($condition['operator'] == 'like')
-							$query = $query->where($var,'like','%'.$condition['parameter'].'%');
-						else
-							$query = $query->where($var,'=',$condition['parameter']);
-					} else {
-						if($condition['operator'] == 'like')
-							$query = $query->orWhere($var,'like','%'.$condition['parameter'].'%');
-						else
-							$query = $query->orWhere($var,'=',$condition['parameter']);
-					}
-				}
+				/*============= All query with rule 'AND' ==================*/
+				if($rule == 'and'){
+                    if($condition['subject'] == 'name' || $condition['subject'] == 'phone' || $condition['subject'] == 'email' || $condition['subject'] == 'address'){
+                        $var = "users.".$condition['subject'];
 
-				if($condition['subject'] == 'gender' || $condition['subject'] == 'is_suspended' || $condition['subject'] == 'email_verified' || $condition['subject'] == 'phone_verified' || $condition['subject'] == 'email_unsubscribed' || $condition['subject'] == 'provider' || $condition['subject'] == 'city_name' || $condition['subject'] == 'city_postal_code' || $condition['subject'] == 'province_name' || $condition['subject'] == 'level'){
-					if($condition['subject'] == 'city_name' || $condition['subject'] == 'city_postal_code') $var = "cities.".$condition['subject'];
-					else if($condition['subject'] == 'province_name') $var = "provinces.".$condition['subject'];
-					else $var = "users.".$condition['subject'];
+                        if($condition['operator'] == 'like')
+                            $query = $query->where($var,'like','%'.$condition['parameter'].'%');
+                        else
+                            $query = $query->where($var,'=',$condition['parameter']);
+                    }
 
-					if($condition['operator'] != '='){
-						$condition['parameter'] = $condition['operator'];
-					}
+                    if($condition['subject'] == 'gender' || $condition['subject'] == 'is_suspended' || $condition['subject'] == 'email_verified' || $condition['subject'] == 'phone_verified' || $condition['subject'] == 'email_unsubscribed' || $condition['subject'] == 'provider' || $condition['subject'] == 'city_name' || $condition['subject'] == 'city_postal_code' || $condition['subject'] == 'province_name' || $condition['subject'] == 'level'){
+                        if($condition['subject'] == 'city_name' || $condition['subject'] == 'city_postal_code') $var = "cities.".$condition['subject'];
+                        else if($condition['subject'] == 'province_name') $var = "provinces.".$condition['subject'];
+                        else $var = "users.".$condition['subject'];
 
-					if($rule == 'and'){
-						$query = $query->where($var,'=',$condition['parameter']);
-					} else {
-						$query = $query->orWhere($var,'=',$condition['parameter']);
-					}
-				}
+                        $query = $query->where($var,'=',$conditionParameter);
+                    }
 
-				if($condition['subject'] == 'device'){
-					if($condition['operator'] != '='){
-						$condition['parameter'] = $condition['operator'];
-					}
+                    if($condition['subject'] == 'device'){
 
-					if($condition['parameter'] == 'None'){
-						if($rule == 'and'){
-							$query = $query->whereNull('users.android_device');
-							$query = $query->whereNull('users.ios_device');
-						} else {
-							$query = $query->orWhereNull('users.android_device');
-							$query = $query->orWhereNull('users.ios_device');
-						}
-					}
+                        if($conditionParameter == 'None'){
+                            $query = $query->whereNull('users.android_device')->whereNull('users.ios_device');
+                        }
 
-					if($condition['parameter'] == 'Android'){
-						if($rule == 'and'){
-							$query = $query->whereNotNull('users.android_device');
-							$query = $query->whereNull('users.ios_device');
-						} else {
-							$query = $query->orwhereNotNull('users.android_device');
-							$query = $query->orWhereNull('users.ios_device');
-						}
-					}
+                        if($conditionParameter == 'Android'){
+                            $query = $query->whereNotNull('users.android_device')->whereNull('users.ios_device');
+                        }
 
-					if($condition['parameter'] == 'IOS'){
-						if($rule == 'and'){
-							$query = $query->notNull('users.android_device');
-							$query = $query->whereNotNull('users.ios_device');
-						} else {
-							$query = $query->orwhereNull('users.android_device');
-							$query = $query->orwhereNotNull('users.ios_device');
-						}
-					}
+                        if($conditionParameter == 'IOS'){
+                            $query = $query->notNull('users.android_device')->whereNotNull('users.ios_device');
+                        }
 
-					if($condition['parameter'] == 'Both'){
-						if($rule == 'and'){
-							$query = $query->whereNotNull('users.android_device');
-							$query = $query->whereNotNull('users.ios_device');
-						} else {
-							$query = $query->orwhereNotNull('users.android_device');
-							$query = $query->orwhereNotNull('users.ios_device');
-						}
-					}
-				}
+                        if($conditionParameter == 'Both'){
+                            $query = $query->whereNotNull('users.android_device')->whereNotNull('users.ios_device');
+                        }
+                    }
 
-				if($condition['subject'] == 'age'){
-					if($rule == 'and'){
-						$query = $query->whereRaw(DB::raw('timestampdiff(year,users.birthday,curdate()) '.$condition['operator'].' '.$condition['parameter']));
-					} else {
-						$query = $query->orWhereRaw(DB::raw('timestampdiff(year,users.birthday,curdate()) '.$condition['operator'].' '.$condition['parameter']));
-					}
-				}
+                    if($condition['subject'] == 'age'){
+                        $query = $query->whereRaw(DB::raw('timestampdiff(year,users.birthday,curdate()) '.$condition['operator'].' '.$condition['parameter']));
+                    }
 
-				if($condition['subject'] == 'birthday_date'){
-					$var = 'users.birthday';
-					if($rule == 'and'){
-						$query = $query->where($var, $condition['operator'], $condition['parameter']);
-					} else {
-						$query = $query->orWhere($var, $condition['operator'], $condition['parameter']);
-					}
-				}
+                    if($condition['subject'] == 'birthday_date'){
+                        $var = 'users.birthday';
+                        $query = $query->where($var, $condition['operator'], $condition['parameter']);
+                    }
 
-				if($condition['subject'] == 'birthday_month'){
-					$var = 'users.birthday';
-					if($condition['operator'] != '='){
-						$condition['parameter'] = $condition['operator'];
-					}
-					if($rule == 'and'){
-						$query = $query->whereMonth($var,'=',$condition['parameter']);
-					} else {
-						$query = $query->orWhereRaw('MONTH('.$var.')='.$condition['parameter']);
-					}
-				}
+                    if($condition['subject'] == 'birthday_month'){
+                        $var = 'users.birthday';
 
-				if($condition['subject'] == 'birthday_year'){
-					$var = 'users.birthday';
-					if($rule == 'and'){
-						$query = $query->whereYear($var, $condition['operator'], $condition['parameter']);
-					} else {
-						$query = $query->orWhereRaw('YEAR('.$var.')='.$condition['parameter']);
-					}
-				}
+                        $query = $query->whereMonth($var,'=',$conditionParameter);
+                    }
 
-				if($condition['subject'] == 'birthday_today'){
-					$var = 'users.birthday';
-					if($rule == 'and'){
-						$query = $query->where(function ($query) use ($var){
-							$query->whereDay($var, '=', date('d'))
-								  ->whereMonth($var, '=', date('m'));
-						});
-					} else {
-						$query = $query->orWhere(function ($query) use ($var){
-							$query->whereDay($var, '=', date('d'))
-								  ->whereMonth($var, '=', date('m'));
-						});
-					}
-				}
+                    if($condition['subject'] == 'birthday_year'){
+                        $var = 'users.birthday';
+                        $query = $query->whereYear($var, $condition['operator'], $condition['parameter']);
+                    }
 
-				if($condition['subject'] == 'membership'){
-					if($condition['operator'] != '='){
-						$condition['parameter'] = $condition['operator'];
-					}
-					if($rule == 'and'){
-						$query = $query->where('users.id_membership','=',$condition['parameter']);
-					} else {
-						$query = $query->orWhere('users.id_membership','=',$condition['parameter']);
-					}
-				}
+                    if($condition['subject'] == 'birthday_today'){
+                        $var = 'users.birthday';
+                        $query = $query->where(function ($query) use ($var){
+                            $query->whereDay($var, '=', date('d'))
+                                ->whereMonth($var, '=', date('m'));
+                        });
+                    }
 
-				if($condition['subject'] == 'points'){
-					if($rule == 'and'){
-						$query = $query->where('users.points',$condition['operator'],$condition['parameter']);
-					} else {
-						$query = $query->orWhere('users.points',$condition['operator'],$condition['parameter']);
-					}
-				}
+                    if($condition['subject'] == 'membership'){
+                        $query = $query->where('users.id_membership','=',$conditionParameter);
+                    }
 
-				if($condition['subject'] == 'balance'){
-					if($rule == 'and'){
-						$query = $query->where('users.balance',$condition['operator'],$condition['parameter']);
-					} else {
-						$query = $query->orWhere('users.balance',$condition['operator'],$condition['parameter']);
-					}
-				}
+                    if($condition['subject'] == 'points'){
+                        $query = $query->where('users.points',$condition['operator'],$condition['parameter']);
+                    }
 
-				if($condition['subject'] == 'register_date'){
-					if($rule == 'and'){
-						$query = $query->where('users.created_at',$condition['operator'],$condition['parameter']);
-					} else {
-						$query = $query->orWhere('users.created_at',$condition['operator'],$condition['parameter']);
-					}
-				}
+                    if($condition['subject'] == 'balance'){
+                        $query = $query->where('users.balance',$condition['operator'],$condition['parameter']);
+                    }
 
-				if($condition['subject'] == 'register_today'){
-					$today = date('Y-m-d');
-					if($rule == 'and'){
-						$query = $query->where('users.created_at', '=', $today);
-					} else {
-						$query = $query->orWhere('users.created_at', '=', $today);
-					}
-				}
+                    if($condition['subject'] == 'register_date'){
+                        $query = $query->where('users.created_at',$condition['operator'],$condition['parameter']);
+                    }
 
+                    if($condition['subject'] == 'register_today'){
+                        $today = date('Y-m-d');
+                        $query = $query->where('users.created_at', '=', $today);
+                    }
 
-				if($condition['subject'] == 'trx_type' || $condition['subject'] == 'trx_shipment_courier' || $condition['subject'] == 'trx_payment_type' || $condition['subject'] == 'trx_payment_status'){
-					if($condition['subject'] == 'trx_type')
-						$var = "transactions.trasaction_type";
-					if($condition['subject'] == 'trx_payment_type')
-						$var = "transactions.trasaction_payment_type";
-					if($condition['subject'] == 'trx_payment_status')
-						$var = "transactions.transaction_payment_status";
-					if($condition['subject'] == 'trx_shipment_courier')
-						$var = "transaction_shipments.shipment_courier";
+                    /*======= Array tmp for condition =======*/
+                    $arrVar = [
+                        'trx_type' => 'transactions.trasaction_type',
+                        'trx_payment_type' => 'transactions.trasaction_payment_type',
+                        'trx_payment_status' => 'transactions.transaction_payment_status',
+                        'trx_shipment_courier' => 'transaction_shipments.shipment_courier'
+                    ];
 
-					if($condition['operator'] != '='){
-						$condition['parameter'] = $condition['operator'];
-					}
+                    if($condition['subject'] == 'trx_type' || $condition['subject'] == 'trx_shipment_courier' || $condition['subject'] == 'trx_payment_type' || $condition['subject'] == 'trx_payment_status'){
+                        $conditionSubject = $condition['subject'];
+                        $query = $query->where($arrVar[$conditionSubject],'=',$conditionParameter);
+                    }
 
-					if($rule == 'and'){
-						$query = $query->where($var,'=',$condition['parameter']);
-					} else {
-						$query = $query->orWhere($var,'=',$condition['parameter']);
-					}
-				}
+                    if($condition['subject'] == 'trx_date' && $userTrxProduct == false){
+                        $query = $query->where('transactions.transaction_date',$condition['operator'],$condition['parameter']);
+                    }
 
-				if($condition['subject'] == 'trx_date'){
-					if($rule == 'and'){
-						if($userTrxProduct == false){
-							$query = $query->where('transactions.transaction_date',$condition['operator'],$condition['parameter']);
-						}
-					} else {
-						if($userTrxProduct == false){
-							$query = $query->orWhere('transactions.transaction_date',$condition['operator'],$condition['parameter']);
-						}
-					}
-				}
+                    if($condition['subject'] == 'last_trx'){
+                        $condition['parameter'] = (int)$condition['parameter'] - 1;
+                        $lastDate = date('Y-m-d', strtotime('-'.$condition['parameter'].' days'));
+                        // return $condition['operator'];
+                        $query = $query->whereDate('transactions.transaction_date',$condition['operator'],$lastDate);
+                    }
 
-				if($condition['subject'] == 'last_trx'){
-					$condition['parameter'] = (int)$condition['parameter'] - 1;
-					$lastDate = date('Y-m-d', strtotime('-'.$condition['parameter'].' days'));
-					// return $condition['operator'];
-					if($rule == 'and'){
-						$query = $query->whereDate('transactions.transaction_date',$condition['operator'],$lastDate);
-					} else {
-						$query = $query->orWhereDate('transactions.transaction_date',$condition['operator'],$lastDate);
-					}
-				}
+                    if($condition['subject'] == 'trx_outlet'){
+                        $query = $query->where('transactions.id_outlet','=',$conditionParameter);
+                    }
 
-				if($condition['subject'] == 'trx_outlet'){
-					if($condition['operator'] != '='){
-						$condition['parameter'] = $condition['operator'];
-					}
-					if($rule == 'and'){
-						$query = $query->where('transactions.id_outlet','=',$condition['parameter']);
-					} else {
-						$query = $query->orWhere('transactions.id_outlet','=',$condition['parameter']);
-					}
-				}
+                    if($condition['subject'] == 'trx_outlet_not'){
+                        $query = $query->where('transactions.id_outlet','=',$conditionParameter);
+                    }
 
-				if($condition['subject'] == 'trx_outlet_not'){
-					if($condition['operator'] != '='){
-						$condition['parameter'] = $condition['operator'];
-					}
-					if($rule == 'and'){
-						$query = $query->where('transactions.id_outlet','=',$condition['parameter']);
-					} else {
-						$query = $query->orWhere('transactions.id_outlet','=',$condition['parameter']);
-					}
-				}
+                    if($condition['subject'] == 'trx_count'){
+                        if($condition['parameter'] != 0){
+                            $query = $query->havingRaw('COUNT(*) '.$condition['operator'].' '.$condition['parameter'].'');
+                        }else{
+                            if($condition['parameter'] == 0 && $condition['operator'] == '>'){
+                                $query = $query->whereNotNull('transactions.id_transaction');
+                            }
+                        }
+                    }
 
-				if($condition['subject'] == 'trx_count'){
-					if($condition['parameter'] != 0){
-						if($rule == 'and'){
-							$query = $query->havingRaw('COUNT(*) '.$condition['operator'].' '.$condition['parameter'].'');
-						} else {
-							$query = $query->orHavingRaw('COUNT(*) '.$condition['operator'].' '.$condition['parameter'].'');
-						}
-					}else{
-						if($condition['parameter'] == 0 && $condition['operator'] == '>'){
-							if($rule == 'and'){
-								$query = $query->whereNotNull('transactions.id_transaction');
-							} else {
-								$query = $query->orWhereNotNull('transactions.id_transaction');
-							}
-						}
-					}
-				}
+                    if($condition['subject'] == 'trx_subtotal'){
+                        $query = $query->where('transactions.transaction_subtotal',$condition['operator'],$condition['parameter']);
+                    }
 
-				if($condition['subject'] == 'trx_subtotal'){
-					if($rule == 'and'){
-						$query = $query->where('transactions.transaction_subtotal',$condition['operator'],$condition['parameter']);
-					} else {
-						$query = $query->orWhere('transactions.transaction_subtotal',$condition['operator'],$condition['parameter']);
-					}
-				}
+                    if($condition['subject'] == 'trx_tax'){
+                        $query = $query->where('transactions.transaction_tax',$condition['operator'],$condition['parameter']);
+                    }
 
-				if($condition['subject'] == 'trx_tax'){
-					if($rule == 'and'){
-						$query = $query->where('transactions.transaction_tax',$condition['operator'],$condition['parameter']);
-					} else {
-						$query = $query->orWhere('transactions.transaction_tax',$condition['operator'],$condition['parameter']);
-					}
-				}
+                    if($condition['subject'] == 'trx_service'){
+                        $query = $query->where('transactions.transaction_service',$condition['operator'],$condition['parameter']);
+                    }
 
-				if($condition['subject'] == 'trx_service'){
-					if($rule == 'and'){
-						$query = $query->where('transactions.transaction_service',$condition['operator'],$condition['parameter']);
-					} else {
-						$query = $query->orWhere('transactions.transaction_service',$condition['operator'],$condition['parameter']);
-					}
-				}
+                    if($condition['subject'] == 'trx_discount'){
+                        $query = $query->where('transactions.transaction_discount',$condition['operator'],$condition['parameter']);
+                    }
 
-				if($condition['subject'] == 'trx_discount'){
-					if($rule == 'and'){
-						$query = $query->where('transactions.transaction_discount',$condition['operator'],$condition['parameter']);
-					} else {
-						$query = $query->orWhere('transactions.transaction_discount',$condition['operator'],$condition['parameter']);
-					}
-				}
+                    if($condition['subject'] == 'trx_payment_type'){
+                        $query = $query->where('transactions.trasaction_payment_type','=',$conditionParameter);
+                    }
 
-				if($condition['subject'] == 'trx_payment_type'){
-					if($condition['operator'] != '='){
-						$condition['parameter'] = $condition['operator'];
-					}
-					if($rule == 'and'){
-						$query = $query->where('transactions.trasaction_payment_type','=',$condition['parameter']);
-					} else {
-						$query = $query->orWhere('transactions.trasaction_payment_type','=',$condition['parameter']);
-					}
-				}
+                    if($condition['subject'] == 'trx_payment_status'){
+                        $query = $query->where('transactions.transaction_payment_status','=',$conditionParameter);
+                    }
 
-				if($condition['subject'] == 'trx_payment_status'){
-					if($condition['operator'] != '='){
-						$condition['parameter'] = $condition['operator'];
-					}
-					if($rule == 'and'){
-						$query = $query->where('transactions.transaction_payment_status','=',$condition['parameter']);
-					} else {
-						$query = $query->orWhere('transactions.transaction_payment_status','=',$condition['parameter']);
-					}
-				}
+                    if($condition['subject'] == 'trx_void_count'){
+                        $query = $query->whereNotNull('transactions.void_date')->havingRaw('COUNT(*) '.$condition['operator'].' '.$condition['parameter']);
+                    }
 
-				if($condition['subject'] == 'trx_void_count'){
-					if($rule == 'and'){
-						$query = $query->whereNotNull('transactions.void_date')->havingRaw('COUNT(*) '.$condition['operator'].' '.$condition['parameter']);
-					} else {
-						$query = $query->orWhereNotNull('transactions.void_date')->havingRaw('COUNT(*) '.$condition['operator'].' '.$condition['parameter']);
-					}
-				}
+                    if($condition['subject'] == 'trx_shipment_value'){
+                        $query = $query->where('transactions.transaction_shipment',$condition['operator'],$condition['parameter']);
+                    }
 
-				if($condition['subject'] == 'trx_shipment_value'){
-					if($rule == 'and'){
-						$query = $query->where('transactions.transaction_shipment',$condition['operator'],$condition['parameter']);
-					} else {
-						$query = $query->orWhere('transactions.transaction_shipment',$condition['operator'],$condition['parameter']);
-					}
-				}
+                    if($condition['subject'] == 'trx_product'){
+                        if($userTrxProduct == true){
+                            $query = $query->where('user_trx_products.id_product','=',$conditionParameter);
+                        }else{
+                            $query = $query->where('transaction_products.id_product','=',$conditionParameter);
+                        }
+                    }
 
-				if($condition['subject'] == 'trx_product'){
-					if($condition['operator'] != '='){
-						$condition['parameter'] = $condition['operator'];
-					}
-					if($rule == 'and'){
-						if($userTrxProduct == true){
-							$query = $query->where('user_trx_products.id_product','=',$condition['parameter']);
-						}else{
-							$query = $query->where('transaction_products.id_product','=',$condition['parameter']);
-						}
-					} else {
-						if($userTrxProduct == true){
-							$query = $query->orWhere('user_trx_products.id_product','=',$condition['parameter']);
-						}else{
-							$query = $query->orWhere('transaction_products.id_product','=',$condition['parameter']);
-						}
-					}
-				}
+                    if($condition['subject'] == 'trx_product_not'){
+                        if($userTrxProduct == true){
+                            $query = $query->where('user_trx_products.id_product','=',$conditionParameter);
+                        }else{
+                            $query = $query->where('transaction_products.id_product','=',[$conditionParameter]);
+                        }
+                    }
 
-				if($condition['subject'] == 'trx_product_not'){
-					if($condition['operator'] != '='){
-						$condition['parameter'] = $condition['operator'];
-					}
-					if($rule == 'and'){
-						if($userTrxProduct == true){
-							$query = $query->where('user_trx_products.id_product','=',$condition['parameter']);
-						}else{
-							$query = $query->where('transaction_products.id_product','=',[$condition['parameter']]);
-						}
-					} else {
-						if($userTrxProduct == true){
-							$query = $query->orWhere('user_trx_products.id_product','=',$condition['parameter']);
-						}else{
-							$query = $query->orWhere('transaction_products.id_product','=',[$condition['parameter']]);
-						}
-					}
-				}
+                    if($condition['subject'] == 'trx_product_count'){
+                        if($userTrxProduct == true){
+                            $query = $query->havingRaw('SUM(user_trx_products.product_qty)'.$condition['operator'].$condition['parameter']);
+                        }else{
+                            $query = $query->havingRaw('SUM(transaction_products.transaction_product_qty)'.$condition['operator'].$condition['parameter']);
+                        }
+                    }
 
-				if($condition['subject'] == 'trx_product_count'){
-					if($userTrxProduct == true){
-						$query = $query->havingRaw('SUM(user_trx_products.product_qty)'.$condition['operator'].$condition['parameter']);
-					}else{
-						$query = $query->havingRaw('SUM(transaction_products.transaction_product_qty)'.$condition['operator'].$condition['parameter']);
-					}
-				}
+                    if($condition['subject'] == 'trx_product_tag'){
+                        $query = $query->where('product_tags.id_tag','=',$conditionParameter);
+                    }
+                }
+				/*====================== End IF ============================*/
 
-				if($condition['subject'] == 'trx_product_tag'){
-					if($condition['operator'] != '='){
-						$condition['parameter'] = $condition['operator'];
-					}
-					if($rule == 'and'){
-						$query = $query->where('product_tags.id_tag','=',$condition['parameter']);
-					} else {
-						$query = $query->orWhere('product_tags.id_tag','=',$condition['parameter']);
-					}
-				}
+                /*============= All query with rule 'OR' ==================*/
+				else{
+                    if($condition['subject'] == 'all_user'){
+                        $query = $query->orWhereRaw('1');
+                    }
+                    if($condition['subject'] == 'name' || $condition['subject'] == 'phone' || $condition['subject'] == 'email' || $condition['subject'] == 'address'){
+                        $var = "users.".$condition['subject'];
+
+                        if($condition['operator'] == 'like')
+                            $query = $query->orWhere($var,'like','%'.$condition['parameter'].'%');
+                        else
+                            $query = $query->orWhere($var,'=',$condition['parameter']);
+                    }
+
+                    if($condition['subject'] == 'gender' || $condition['subject'] == 'is_suspended' || $condition['subject'] == 'email_verified' || $condition['subject'] == 'phone_verified' || $condition['subject'] == 'email_unsubscribed' || $condition['subject'] == 'provider' || $condition['subject'] == 'city_name' || $condition['subject'] == 'city_postal_code' || $condition['subject'] == 'province_name' || $condition['subject'] == 'level'){
+                        if($condition['subject'] == 'city_name' || $condition['subject'] == 'city_postal_code') $var = "cities.".$condition['subject'];
+                        else if($condition['subject'] == 'province_name') $var = "provinces.".$condition['subject'];
+                        else $var = "users.".$condition['subject'];
+
+                        $query = $query->orWhere($var,'=',$conditionParameter);
+                    }
+
+                    if($condition['subject'] == 'device'){
+
+                        if($conditionParameter == 'None'){
+                            $query = $query->orWhereNull('users.android_device')->orWhereNull('users.ios_device');
+                        }
+
+                        if($conditionParameter == 'Android'){
+                            $query = $query->orwhereNotNull('users.android_device')->orWhereNull('users.ios_device');
+                        }
+
+                        if($conditionParameter == 'IOS'){
+                            $query = $query->orwhereNull('users.android_device')->orwhereNotNull('users.ios_device');
+                        }
+
+                        if($conditionParameter == 'Both'){
+                            $query = $query->orwhereNotNull('users.android_device')->orwhereNotNull('users.ios_device');
+                        }
+                    }
+
+                    if($condition['subject'] == 'age'){
+                        $query = $query->orWhereRaw(DB::raw('timestampdiff(year,users.birthday,curdate()) '.$condition['operator'].' '.$condition['parameter']));
+                    }
+
+                    if($condition['subject'] == 'birthday_date'){
+                        $var = 'users.birthday';
+                        $query = $query->orWhere($var, $condition['operator'], $condition['parameter']);
+                    }
+
+                    if($condition['subject'] == 'birthday_month'){
+                        $var = 'users.birthday';
+                        $query = $query->orWhereRaw('MONTH('.$var.')='.$conditionParameter);
+                    }
+
+                    if($condition['subject'] == 'birthday_year'){
+                        $var = 'users.birthday';
+                        $query = $query->orWhereRaw('YEAR('.$var.')='.$condition['parameter']);
+                    }
+
+                    if($condition['subject'] == 'birthday_today'){
+                        $var = 'users.birthday';
+                        $query = $query->orWhere(function ($query) use ($var){
+                            $query->whereDay($var, '=', date('d'))
+                                ->whereMonth($var, '=', date('m'));
+                        });
+                    }
+
+                    if($condition['subject'] == 'membership'){
+                        $query = $query->orWhere('users.id_membership','=',$conditionParameter);
+                    }
+
+                    if($condition['subject'] == 'points'){
+                        $query = $query->orWhere('users.points',$condition['operator'],$condition['parameter']);
+                    }
+
+                    if($condition['subject'] == 'balance'){
+                        $query = $query->orWhere('users.balance',$condition['operator'],$condition['parameter']);
+                    }
+
+                    if($condition['subject'] == 'register_date'){
+                        $query = $query->orWhere('users.created_at',$condition['operator'],$condition['parameter']);
+                    }
+
+                    if($condition['subject'] == 'register_today'){
+                        $today = date('Y-m-d');
+                        $query = $query->orWhere('users.created_at', '=', $today);
+                    }
+
+                    /*======= Array tmp for condition =======*/
+                    $arrVar = [
+                        'trx_type' => 'transactions.trasaction_type',
+                        'trx_payment_type' => 'transactions.trasaction_payment_type',
+                        'trx_payment_status' => 'transactions.transaction_payment_status',
+                        'trx_shipment_courier' => 'transaction_shipments.shipment_courier'
+                    ];
+
+                    if($condition['subject'] == 'trx_type' || $condition['subject'] == 'trx_shipment_courier' || $condition['subject'] == 'trx_payment_type' || $condition['subject'] == 'trx_payment_status'){
+                        $conditionSubject = $condition['subject'];
+                        $query = $query->orWhere($arrVar[$conditionSubject],'=',$conditionParameter);
+                    }
+
+                    if($condition['subject'] == 'trx_date' && $userTrxProduct == false){
+                        $query = $query->orWhere('transactions.transaction_date',$condition['operator'],$condition['parameter']);
+                    }
+
+                    if($condition['subject'] == 'last_trx'){
+                        $condition['parameter'] = (int)$condition['parameter'] - 1;
+                        $lastDate = date('Y-m-d', strtotime('-'.$condition['parameter'].' days'));
+                        // return $condition['operator'];
+                        $query = $query->orWhereDate('transactions.transaction_date',$condition['operator'],$lastDate);
+                    }
+
+                    if($condition['subject'] == 'trx_outlet'){
+                        $query = $query->orWhere('transactions.id_outlet','=',$conditionParameter);
+                    }
+
+                    if($condition['subject'] == 'trx_outlet_not'){
+                        $query = $query->orWhere('transactions.id_outlet','=',$conditionParameter);
+                    }
+
+                    if($condition['subject'] == 'trx_count'){
+                        if($condition['parameter'] != 0){
+                            $query = $query->orHavingRaw('COUNT(*) '.$condition['operator'].' '.$condition['parameter'].'');
+                        }else{
+                            if($condition['parameter'] == 0 && $condition['operator'] == '>'){
+                                $query = $query->orWhereNotNull('transactions.id_transaction');
+                            }
+                        }
+                    }
+
+                    if($condition['subject'] == 'trx_subtotal'){
+                        $query = $query->orWhere('transactions.transaction_subtotal',$condition['operator'],$condition['parameter']);
+                    }
+
+                    if($condition['subject'] == 'trx_tax'){
+                        $query = $query->orWhere('transactions.transaction_tax',$condition['operator'],$condition['parameter']);
+                    }
+
+                    if($condition['subject'] == 'trx_service'){
+                        $query = $query->orWhere('transactions.transaction_service',$condition['operator'],$condition['parameter']);
+                    }
+
+                    if($condition['subject'] == 'trx_discount'){
+                        $query = $query->orWhere('transactions.transaction_discount',$condition['operator'],$condition['parameter']);
+                    }
+
+                    if($condition['subject'] == 'trx_payment_type'){
+                        $query = $query->orWhere('transactions.trasaction_payment_type','=',$conditionParameter);
+                    }
+
+                    if($condition['subject'] == 'trx_payment_status'){
+                        $query = $query->orWhere('transactions.transaction_payment_status','=',$conditionParameter);
+                    }
+
+                    if($condition['subject'] == 'trx_void_count'){
+                        $query = $query->orWhereNotNull('transactions.void_date')->havingRaw('COUNT(*) '.$condition['operator'].' '.$condition['parameter']);
+                    }
+
+                    if($condition['subject'] == 'trx_shipment_value'){
+                        $query = $query->orWhere('transactions.transaction_shipment',$condition['operator'],$condition['parameter']);
+                    }
+
+                    if($condition['subject'] == 'trx_product'){
+                        if($userTrxProduct == true){
+                            $query = $query->orWhere('user_trx_products.id_product','=',$conditionParameter);
+                        }else{
+                            $query = $query->orWhere('transaction_products.id_product','=',$conditionParameter);
+                        }
+                    }
+
+                    if($condition['subject'] == 'trx_product_not'){
+                        if($userTrxProduct == true){
+                            $query = $query->orWhere('user_trx_products.id_product','=',$conditionParameter);
+                        }else{
+                            $query = $query->orWhere('transaction_products.id_product','=',[$conditionParameter]);
+                        }
+                    }
+
+                    if($condition['subject'] == 'trx_product_count'){
+                        if($userTrxProduct == true){
+                            $query = $query->havingRaw('SUM(user_trx_products.product_qty)'.$condition['operator'].$condition['parameter']);
+                        }else{
+                            $query = $query->havingRaw('SUM(transaction_products.transaction_product_qty)'.$condition['operator'].$condition['parameter']);
+                        }
+                    }
+
+                    if($condition['subject'] == 'trx_product_tag'){
+                        $query = $query->orWhere('product_tags.id_tag','=',$conditionParameter);
+                    }
+                }
+                /*====================== End ELSE ============================*/
 
 				if($condition['subject'] == 'trx_product_tag_count'){
 					if($userTrxProduct == true){
