@@ -7,6 +7,7 @@ Route::group(['middleware' => ['auth:api', 'log_activities'], 'prefix' => 'api/a
     Route::get('textreplace', 'ApiAutoCrm@listTextReplace');
     Route::post('textreplace/update', 'ApiAutoCrm@updateTextReplace');
     Route::get('textreplace/{var}', 'ApiAutoCrm@listTextReplace');
+    Route::get('listPushNotif', 'ApiAutoCrm@listPushNotif');
     
     Route::group(['prefix' => 'cron'], function()
     {
