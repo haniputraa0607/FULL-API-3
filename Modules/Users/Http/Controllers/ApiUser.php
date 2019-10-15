@@ -1607,7 +1607,7 @@ class ApiUser extends Controller
 							if($balance_nominal??false){
 				                $send   = app($this->autocrm)->SendAutoCRM('Complete User Profile Point Bonus', $datauser[0]['phone'], 
 				                    [
-				                        'point' => $balance_nominal
+				                        'received_point' => (string) $balance_nominal
 				                    ]
 				                );
 				                if($send != true){

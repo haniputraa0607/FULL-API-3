@@ -236,9 +236,8 @@ class ApiDealsVoucher extends Controller
 
         $voucher = DealsUser::where('id_user', $request->user()->id)
                             ->whereIn('paid_status', ['Free', 'Completed'])
-                            ->where('voucher_expired_at', '>', date('Y-m-d H:i:s'))
                             ->with(['dealVoucher', 'dealVoucher.deal', 'dealVoucher.deal.outlets.city', 'dealVoucher.deal.outlets.city']);
-        $voucher->select('deals_users.id_deals','voucher_expired_at','deals_users.id_deals_voucher','id_deals_user','id_outlet','voucher_hash','redeemed_at');
+        $voucher->select('deals_users.id_deals','voucher_expired_at','deals_users.id_deals_voucher','id_deals_user','id_outlet','voucher_hash','redeemed_at','used_at');
         if (isset($post['id_deals_user'])) {
             $voucher->addselect('deals_users.redeemed_at', 'deals_users.used_at');
             $voucher->where('id_deals_user', $post['id_deals_user']);
@@ -366,7 +365,13 @@ class ApiDealsVoucher extends Controller
             } else {
                 $voucher[$index]['deal_voucher']['deal']['label_outlet'] = 'Some';
             }
-
+            if($datavoucher['used_at']){
+                $voucher[$index]['label']='Used';
+            }elseif($datavoucher['voucher_expired_at']<date('Y-m-d H:i:s')){
+                $voucher[$index]['label']='Expired';
+            }else{
+                $voucher[$index]['label']='Gunakan';
+            }
             $outlet = null;
             if($datavoucher['deal_voucher'] == null){
                 unset($voucher[$index]);
@@ -417,8 +422,6 @@ class ApiDealsVoucher extends Controller
 
             $voucher = $this->kotacuks($voucher);
         }
-
-
         // add webview url & btn text
         /*if (isset($post['used'])) {
             if ($post['used'] == 0) {
@@ -462,7 +465,8 @@ class ApiDealsVoucher extends Controller
                     'webview_url_v2'=>$var['webview_url_v2']??'',
                     'webview_url'=>$var['webview_url']??'',
                     'url_deals_image'=>$var['deal_voucher']['deal']['url_deals_image'],
-                    'status_redeem'=>($var['redeemed_at']??false)?1:0
+                    'status_redeem'=>($var['redeemed_at']??false)?1:0,
+                    'label'=>$var['label']
                 ];
             },$voucher);
             $result['current_page'] = $current_page;

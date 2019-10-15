@@ -1520,10 +1520,10 @@ class ApiPOS extends Controller
                                     $usere= User::where('id',$createTrx['id_user'])->first();
                                     $send = app($this->autocrm)->SendAutoCRM('Transaction Point Achievement', $usere->phone, 
                                         [
-                                            "outlet_name"       => $outlet['outlet_name'], 
+                                            "outlet_name"       => $checkOutlet['outlet_name'], 
                                             "transaction_date"  => $createTrx['transaction_date'],
                                             'receipt_number'    => $createTrx['transaction_receipt_number'],
-                                            'point'             => $createTrx['transaction_cashback_earned']
+                                            'received_point'    => (string) $createTrx['transaction_cashback_earned']
                                         ]
                                     );
                                     if($send != true){
@@ -1661,10 +1661,10 @@ class ApiPOS extends Controller
                                     $usere= User::where('id',$createTrx['id_user'])->first();
                                     $send = app($this->autocrm)->SendAutoCRM('Transaction Point Achievement', $usere->phone, 
                                         [
-                                            "outlet_name"       => $outlet['outlet_name'], 
+                                            "outlet_name"       => $checkOutlet['outlet_name'], 
                                             "transaction_date"  => $createTrx['transaction_date'],
                                             'receipt_number'    => $createTrx['transaction_receipt_number'],
-                                            'point'             => $createTrx['transaction_cashback_earned']
+                                            'received_point'    => (string) $createTrx['transaction_cashback_earned']
                                         ]
                                     );
                                     if($send != true){

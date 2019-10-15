@@ -729,6 +729,51 @@ class ApiAutoCrm extends Controller
 		return $text;
 	}
 
+	public function listPushNotif(){
+		$query = Setting::where('key', 'push_notification_list')->get()->first();
+		
+		if (!$query) {
+			$data = [
+				'key' 			=> 'push_notification_list',
+				'value_text'	=> json_encode([
+					'flexible' 	=> [
+						'Home',
+						'News List',
+						'News Detail',
+						'Inbox List',
+						'Outlet List',
+						'Outlet Detail',
+						'Voucher List',
+						'Deals List',
+						'Deals Detail',
+						'History Transaction List',
+						'History Point List',
+						'Profile',
+						'Delivery Service',
+						'FAQ',
+						'TOS',
+						'Contact US',
+						'Link',
+						'Logout',
+						'Custom Page'
+					],
+					'voucher'	=> [
+						'Voucher Detail'
+					],
+					'history_trx'	=> [
+						'History Transaction Detail'
+					],
+					'history_point'	=> [
+						'History Point Detail'
+					]
+				])
+			];
+			$query = Setting::create($data);
+		}
+		$result = json_decode($query['value_text']);
+		return response()->json(MyHelper::checkGet($result));
+	}
+
 	public function listAutoCrm(){
 		$query = Autocrm::with('whatsapp_content')->get()->toArray();
 		return response()->json(MyHelper::checkGet($query));

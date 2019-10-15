@@ -102,7 +102,7 @@ class ApiCronTrxController extends Controller
                         "outlet_name"       => $singleTrx->outlet_name->outlet_name, 
                         "transaction_date"  => $singleTrx->transaction_date,
                         'receipt_number'    => $singleTrx->transaction_receipt_number,
-                        'point'             => abs($logB['balance'])
+                        'received_point'    => (string) abs($logB['balance'])
                     ]
                 );
                 if($send != true){

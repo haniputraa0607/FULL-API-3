@@ -823,9 +823,9 @@ class ApiOrder extends Controller
                         $send = app($this->autocrm)->SendAutoCRM('Rejected Order Point Refund', $user['phone'], 
                             [
                                 "outlet_name"       => $outlet['outlet_name'], 
-                                "transaction_date"  => $order->transaction_date,
-                                'receipt_number'    => $order->transaction_receipt_number,
-                                'point'             => $point
+                                "transaction_date"  => $order['transaction_date'],
+                                'receipt_number'    => $order['transaction_receipt_number'],
+                                'received_point'    => (string) $point
                             ]
                         );
                         if($send != true){
@@ -876,7 +876,7 @@ class ApiOrder extends Controller
                             "outlet_name"       => $outlet['outlet_name'], 
                             "transaction_date"  => $order->transaction_date,
                             'receipt_number'    => $order->transaction_receipt_number,
-                            'point'             => $point
+                            'received_point'    => (string) $point
                         ]
                     );
                     if($send != true){
