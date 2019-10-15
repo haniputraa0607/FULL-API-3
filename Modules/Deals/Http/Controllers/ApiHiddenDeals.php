@@ -33,6 +33,9 @@ class ApiHiddenDeals extends Controller
         $this->dealsVoucher = "Modules\Deals\Http\Controllers\ApiDealsVoucher";
         $this->dealsClaim = "Modules\Deals\Http\Controllers\ApiDealsClaim";
         $this->user     = "Modules\Users\Http\Controllers\ApiUser";
+        if(\Module::collections()->has('Autocrm')) {
+            $this->autocrm  = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
+        }
     }
 
     public $saveImage = "img/deals/";
@@ -231,6 +234,12 @@ class ApiHiddenDeals extends Controller
                     //         'messages' => ['All user already claimed.']
                     //     ]);
                     // }
+                    
+                    $autocrm = app($this->autocrm)->SendAutoCRM('Claim Deals Success', $user->phone,
+                        [
+                            'deals_title'      => $deals->deals_title,
+                        ]
+                    );
                     $countUser++;
                 }
             }
