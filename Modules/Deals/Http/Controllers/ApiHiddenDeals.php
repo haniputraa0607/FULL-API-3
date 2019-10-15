@@ -235,7 +235,7 @@ class ApiHiddenDeals extends Controller
                     //     ]);
                     // }
                     
-                    $autocrm = app($this->autocrm)->SendAutoCRM('Claim Deals Success', $user->phone,
+                    $autocrm = app($this->autocrm)->SendAutoCRM('Receive Hidden Deals', $datauser['phone'],
                         [
                             'deals_title'      => $deals->deals_title,
                         ]
