@@ -37,7 +37,7 @@ class ApiDealsInvalidate extends Controller
         $deals = $this->outletAvailable($request->user(), $request->json('id_deals_user'), $request->json('outlet_code'));
         // dd($deals);
 
-        if ($deals&&optional($deals)->status_outlet??false) {
+        if ($deals&&optional($deals)->status_outlet) {
             $now = date('Y-m-d H:i:s');
             // if deals subscription, check voucher start time
             if ($deals->deals->deals_type == "Subscription") {
