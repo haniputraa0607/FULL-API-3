@@ -178,14 +178,6 @@ class ApiUser extends Controller
 							unset($cond[$i]);
 						}
 
-						if($condition['subject'] == 'trx_product_not'){
-							$notProduct = true;
-						}
-
-						if($condition['subject'] == 'trx_outlet_not'){
-							$notOutlet = true;
-						}
-
 						if($condition['subject'] == 'trx_product' || $condition['subject'] == 'trx_product_count' || $condition['subject'] == 'trx_product_tag' || $condition['subject'] == 'trx_product_tag_count'){
 							$userTrxProduct = true;
 						}elseif($condition['subject']  != 'trx_date' && stristr($condition['subject'], 'trx')){
@@ -269,32 +261,6 @@ class ApiUser extends Controller
 								);
 				}
 
-				if($notProduct){
-					$exceptUser = array_pluck($query->get()->toArray(),'id');
-					$query = User::leftJoin('cities','cities.id_city','=','users.id_city')
-							->leftJoin('provinces','provinces.id_province','=','cities.id_province')
-							->orderBy($order_field, $order_method)
-							->select('users.*',
-								'cities.*',
-								'provinces.*',
-								DB::raw('YEAR(CURDATE()) - YEAR(users.birthday) AS age')
-								)
-							->whereNotIn('users.id', $exceptUser);
-
-				}
-
-				if($notOutlet){
-					$exceptUser = array_pluck($query->get()->toArray(),'id');
-					$query = User::leftJoin('cities','cities.id_city','=','users.id_city')
-							->leftJoin('provinces','provinces.id_province','=','cities.id_province')
-							->orderBy($order_field, $order_method)
-							->select('users.*',
-								'cities.*',
-								'provinces.*',
-								DB::raw('YEAR(CURDATE()) - YEAR(users.birthday) AS age')
-								)
-							->whereNotIn('users.id', $exceptUser);
-				}
 				$result = array_pluck($query->get()->toArray(),'id');
 
 				if($key > 0){
@@ -486,7 +452,7 @@ class ApiUser extends Controller
                     }
 
                     if($condition['subject'] == 'trx_outlet_not'){
-                        $query = $query->where('transactions.id_outlet','=',$conditionParameter);
+                        $query = $query->whereNotIn('transactions.id_outlet',[$conditionParameter]);
                     }
 
                     if($condition['subject'] == 'trx_count'){
@@ -541,9 +507,9 @@ class ApiUser extends Controller
 
                     if($condition['subject'] == 'trx_product_not'){
                         if($userTrxProduct == true){
-                            $query = $query->where('user_trx_products.id_product','=',$conditionParameter);
+                            $query = $query->whereNotIn('user_trx_products.id_product',[$conditionParameter]);
                         }else{
-                            $query = $query->where('transaction_products.id_product','=',[$conditionParameter]);
+                            $query = $query->whereNotIn('transaction_products.id_product',[$conditionParameter]);
                         }
                     }
 
@@ -679,7 +645,7 @@ class ApiUser extends Controller
                     }
 
                     if($condition['subject'] == 'trx_outlet_not'){
-                        $query = $query->orWhere('transactions.id_outlet','=',$conditionParameter);
+                        $query = $query->orWhereNotIn('transactions.id_outlet',[$conditionParameter]);
                     }
 
                     if($condition['subject'] == 'trx_count'){
@@ -734,9 +700,9 @@ class ApiUser extends Controller
 
                     if($condition['subject'] == 'trx_product_not'){
                         if($userTrxProduct == true){
-                            $query = $query->orWhere('user_trx_products.id_product','=',$conditionParameter);
+                            $query = $query->orWhereNotIn('user_trx_products.id_product',[$conditionParameter]);
                         }else{
-                            $query = $query->orWhere('transaction_products.id_product','=',[$conditionParameter]);
+                            $query = $query->orWhereNotIn('transaction_products.id_product',[$conditionParameter]);
                         }
                     }
 
