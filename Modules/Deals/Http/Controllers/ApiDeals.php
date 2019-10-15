@@ -88,6 +88,9 @@ class ApiDeals extends Controller
         if (isset($post['deals_description'])) {
             $data['deals_description'] = $post['deals_description'];
         }
+        if (isset($post['deals_tos'])) {
+            $data['deals_tos'] = $post['deals_tos'];
+        }
         if (isset($post['deals_short_description'])) {
             $data['deals_short_description'] = $post['deals_short_description'];
         }
