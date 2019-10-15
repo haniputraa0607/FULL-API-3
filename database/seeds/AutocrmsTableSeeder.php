@@ -829,7 +829,7 @@ Message :
                 'autocrm_forward_email' => '',
                 'autocrm_forward_email_subject' => '',
                 'autocrm_forward_email_content' => '',
-                'custom_text_replace'=>'%deals_title%',
+                'custom_text_replace'=>'%deals_title%;',
                 'created_at' => date('Y-m-d H:i:s'),
                 'updated_at' => date('Y-m-d H:i:s'),
             ),
