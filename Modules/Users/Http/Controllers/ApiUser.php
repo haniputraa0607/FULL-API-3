@@ -144,10 +144,7 @@ class ApiUser extends Controller
 				$query = User::leftJoin('cities','cities.id_city','=','users.id_city')
 				->leftJoin('provinces','provinces.id_province','=','cities.id_province')
 				->orderBy($order_field, $order_method);
-
-				$notProduct = false;
-				$notOutlet = false;
-
+				
 				if($cond != null){
 					$scanTrx = false;
 					$scanProd = false;
