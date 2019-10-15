@@ -317,6 +317,11 @@ class ApiDealsVoucher extends Controller
 
         // if voucher detail, no need pagination
         if (isset($post['id_deals_user']) && $post['id_deals_user'] != "") {
+            $vcr=$voucher->first();
+            if(($post['no_qr']??false)&&!$vcr->used_at){
+                $vcr->redeemed_at=null;
+                $vcr->save();
+            }
             $voucher = $voucher->get()->toArray();
         }
         else {
