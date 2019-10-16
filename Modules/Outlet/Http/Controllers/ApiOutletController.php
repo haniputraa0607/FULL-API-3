@@ -716,7 +716,7 @@ class ApiOutletController extends Controller
             $end        = $all;
             $next       = true;
 
-            if ($all > count($data)) {
+            if ($all >= count($data)) {
                 $end = count($data);
                 $next = false;
             }
