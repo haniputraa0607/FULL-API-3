@@ -1,5 +1,5 @@
-
 <?php
+
 Route::group(['middleware' => ['auth:api', 'log_activities'], 'prefix' => 'api/deals', 'namespace' => 'Modules\Deals\Http\Controllers'], function () {
     /* MASTER DEALS */
     Route::any('list', 'ApiDeals@listDeal');

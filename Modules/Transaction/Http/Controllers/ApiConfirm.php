@@ -1,4 +1,3 @@
-
 <?php
 
 namespace Modules\Transaction\Http\Controllers;
@@ -660,9 +659,9 @@ class ApiConfirm extends Controller
                                 ]);
                             }
                             $usere= User::where('id',$trx['id_user'])->first();
-                            $send = app($this->autocrm)->SendAutoCRM('Transaction Failed Point Refund', $usere->phone, 
+                            $send = app($this->autocrm)->SendAutoCRM('Transaction Failed Point Refund', $usere->phone,
                                 [
-                                    "outlet_name"       => $trx['outlet_name']['outlet_name']??'', 
+                                    "outlet_name"       => $trx['outlet_name']['outlet_name']??'',
                                     "transaction_date"  => $trx['transaction_date'],
                                     'receipt_number'    => $trx['transaction_receipt_number'],
                                     'received_point'    => (string) $checkBalance['balance_nominal']
@@ -772,9 +771,9 @@ class ApiConfirm extends Controller
                     ]);
                 }
                 $usere= User::where('id',$trx['id_user'])->first();
-                $send = app($this->autocrm)->SendAutoCRM('Transaction Failed Point Refund', $usere->phone, 
+                $send = app($this->autocrm)->SendAutoCRM('Transaction Failed Point Refund', $usere->phone,
                     [
-                        "outlet_name"       => $trx['outlet_name']['outlet_name']??'', 
+                        "outlet_name"       => $trx['outlet_name']['outlet_name']??'',
                         "transaction_date"  => $trx['transaction_date'],
                         'receipt_number'    => $trx['transaction_receipt_number'],
                         'received_point'    => (string) $checkBalance['balance_nominal']
