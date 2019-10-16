@@ -43,7 +43,7 @@ Route::group(['prefix' => 'api', 'middleware' => 'log_activities'], function(){
 	    Route::post('activity', 'ApiUser@activity');
 	    Route::post('detail', 'ApiUser@show');
 		Route::post('log', 'ApiUser@log');
-	    Route::get('log/detail/{id}', 'ApiUser@detailLog');
+	    Route::get('log/detail/{id}/{log_type}', 'ApiUser@detailLog');
 	    Route::post('delete', 'ApiUser@delete');
 		Route::post('update', 'ApiUser@updateProfileByAdmin');
 		Route::post('update/photo', 'ApiUser@updateProfilePhotoByAdmin');
