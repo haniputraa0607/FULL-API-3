@@ -502,6 +502,10 @@ class ApiNews extends Controller
                 $query->select('id_news_category','category_name');
             }]);
 
+            if(!$request->json('admin')){
+                $news->whereHas('newsCategory');
+            }
+
             if(!isset($post['id_news'])){
                 $news->select('id_news','id_news_category','news_title','news_publish_date','news_expired_date','news_slug','news_content_short','news_image_luar','news_image_dalam');
             }else{
@@ -527,7 +531,8 @@ class ApiNews extends Controller
             }
 
             if (isset($post['admin'])) {
-                $news = $news->orderBy('news_post_date', 'DESC')->get()->toArray();
+                $news = $news
+                ->select('*')->orderBy('news_post_date', 'DESC')->get()->toArray();
             }
             else {
 
