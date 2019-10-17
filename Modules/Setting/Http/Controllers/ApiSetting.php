@@ -50,6 +50,7 @@ use Validator;
 use Hash;
 use DB;
 use Mail;
+use Image;
 
 class ApiSetting extends Controller
 {
@@ -1364,12 +1365,20 @@ class ApiSetting extends Controller
         try{
             $textMenuHome = Setting::where('key', 'text_menu_home')->first()->value_text;
             $textMenuAccount = Setting::where('key', 'text_menu_account')->first()->value_text;
+            $menuAccount = (array)json_decode($textMenuAccount);
+
+            foreach ($menuAccount as $key=>$value){
+                $val = (array)$value;
+                if($val['icon'] != ''){
+                    $menuAccount[$key]->icon = env('API_URL').$val['icon'];
+                }
+            }
 
             $result = [
                 'status' => 'success',
                 'result' => [
                     'text_menu_home' => json_decode($textMenuHome),
-                    'text_menu_account' => json_decode($textMenuAccount)
+                    'text_menu_account' => $menuAccount
                 ]
             ];
 
@@ -1390,6 +1399,7 @@ class ApiSetting extends Controller
             try{
                 $category = $post['category'];
                 $menu = $post['data_menu'];
+                $arrFailedUploadImage = [];
 
                 if($category == 'menu-home'){
 
@@ -1422,42 +1432,39 @@ class ApiSetting extends Controller
                         return response()->json(['status' => 'fail', 'messages' => ['There is an error']]);
                     }
                 }elseif($category == 'menu-account'){
-                    $dataMenuForUpdate = [
-                        "my_profile" => [
-                                "text_menu" => $menu['my_profile_text_menu'],
-                                "text_header" => $menu['my_profile_text_header']
-                        ],
-                        "outlet" => [
-                                "text_menu" => $menu['outlet_text_menu'],
-                                "text_header" => $menu['outlet_text_header']
-                        ],
-                        "benefit" => [
-                                "text_menu" => $menu['benefit_text_menu'],
-                                "text_header" => $menu['benefit_text_menu']
-                        ],
-                        "news" => [
-                                "text_menu" => $menu['news_text_menu'],
-                                "text_header" => $menu['news_text_header']
-                        ],
-                        "delivery_service" => [
-                                "text_menu" => $menu['delivery_service_text_menu'],
-                                "text_header" => $menu['delivery_service_text_header']
-                        ],
-                        "faq" => [
-                                "text_menu" => $menu['delivery_service_text_menu'],
-                                "text_header" => $menu['delivery_service_text_header']
-                        ],
-                        "terms_service" => [
-                                "text_menu" =>$menu['terms_service_text_menu'],
-                                "text_header" => $menu['terms_service_text_header']
-                        ],
-                        "contact" => [
-                                "text_menu" => $menu['contact_text_menu'],
-                                "text_header" => $menu['contact_text_header']
-                        ]
-                    ];
+                    $textMenuAccount = Setting::where('key', 'text_menu_account')->first()->value_text;
+                    $menuAccount = (array)json_decode($textMenuAccount);
 
-                    $update = Setting::where('key','text_menu_account')->update(['value_text' => json_encode($dataMenuForUpdate), 'updated_at' => date('Y-m-d H:i:s')]);
+                    foreach ($menuAccount as $key=>$value){
+                        $nameIcon = 'icon_'.$key;
+                        $val = (array)$value;
+                        if(isset($menu['images'][$nameIcon])){
+                            if($val['icon'] != ''){
+                                //Delete old icon
+                                MyHelper::deletePhoto($val['icon']);
+                            }
+                            $imgEncode = $menu['images'][$nameIcon];
+
+                            $decoded = base64_decode($imgEncode);
+                            $img    = Image::make($decoded);
+                            $width  = $img->width();
+                            $height = $img->height();
+
+                            if($width == $height){
+                                $upload = MyHelper::uploadPhoto($imgEncode, $path = 'img/icon/');
+
+                                if ($upload['status'] == "success") {
+                                    $menuAccount[$key]->icon= $upload['path'];
+                                } else {
+                                    array_push($arrFailedUploadImage, $key);
+                                }
+                            }else{
+                                array_push($arrFailedUploadImage, $key.'[dimensions not allowed]');
+                            }
+                        }
+                    }
+
+                    $update = Setting::where('key','text_menu_account')->update(['value_text' => json_encode($menuAccount), 'updated_at' => date('Y-m-d H:i:s')]);
 
                     if(!$update){
                         return response()->json(['status' => 'fail', 'messages' => ['There is an error']]);
@@ -1468,7 +1475,8 @@ class ApiSetting extends Controller
 
                 $result = [
                     'status' => 'success',
-                    'result' => []
+                    'result' => [],
+                    'upload_image_failed' => $arrFailedUploadImage
                 ];
 
                 return response()->json($result);
