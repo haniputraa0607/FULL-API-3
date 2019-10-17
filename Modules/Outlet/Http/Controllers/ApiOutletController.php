@@ -538,6 +538,11 @@ class ApiOutletController extends Controller
                 ];
             },$outlet);
         }
+        if($outlet&&$post['id_outlet']??false){
+            $var=&$outlet[0];
+            $var['deep_link_gojek']=$var['deep_link_gojek']??'';
+            $var['deep_link_grab']=$var['deep_link_grab']??'';
+        }
         if(isset($request['page']) && $request['page'] > 0){
             $page = $request['page'];
             $next_page = $page + 1;
