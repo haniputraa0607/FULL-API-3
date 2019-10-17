@@ -1370,7 +1370,7 @@ class ApiSetting extends Controller
             foreach ($menuAccount as $key=>$value){
                 $val = (array)$value;
                 if($val['icon'] != ''){
-                    $menuAccount[$key]->icon = env('API_URL').$val['icon'];
+                    $menuAccount[$key]->icon = env('S3_URL_API').$val['icon'];
                 }
             }
 
