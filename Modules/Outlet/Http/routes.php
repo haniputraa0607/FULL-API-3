@@ -39,7 +39,7 @@ Route::group(['prefix' => 'api/outlet', 'namespace' => 'Modules\Outlet\Http\Cont
         Route::post('update/status', 'ApiOutletController@updateStatus');
         Route::post('update/pin', 'ApiOutletController@updatePin');
         Route::post('delete', 'ApiOutletController@delete');
-        Route::get('export', 'ApiOutletController@export');
+        Route::post('export', 'ApiOutletController@export');
         Route::post('import', 'ApiOutletController@import');
 
         /**

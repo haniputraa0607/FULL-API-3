@@ -1306,21 +1306,78 @@ class ApiOutletController extends Controller
     }
 
     function export(Request $request) {
-            $outlet = Outlet::select('outlets.outlet_code as code',
+        $brands=$request->json('brands');
+        $combo=$request->json('outlet_type')=='combo';
+        $all=$request->json('outlet_type')=='all';
+        $return=[];
+        foreach ($brands??[[]] as $brand) {
+            $outlets = Outlet::select('id_outlet','outlets.outlet_code as code',
             'outlets.outlet_name as name',
             'outlets.outlet_address as address',
             'cities.city_name as city',
             'outlets.outlet_phone as phone',
             'outlets.outlet_email as email',
             'outlets.outlet_latitude as latitude',
-            'outlets.outlet_longitude as longitude',
-            'outlets.outlet_open_hours as open_hours',
-            'outlets.outlet_close_hours as close_hours'
-            )->join('cities', 'outlets.id_city', '=', 'cities.id_city');
+            'outlets.outlet_longitude as longitude'
+            )->with('brands')->join('cities', 'outlets.id_city', '=', 'cities.id_city');
 
-            $outlet = $outlet->get()->toArray();
+            foreach ($brand as $bran) {
+                $outlets->whereHas('brands',function($query) use ($brand){
+                    $query->where('brands.id_brand',$brand);
+                });
+            }
 
-            return response()->json(MyHelper::checkGet($outlet));
+            $outlets = $outlets->get();
+            $count=0;
+            foreach ($outlets as $outlet) {
+                if($all){
+                    $name='All Type';
+                }else{
+                    if(count($outlet->brands)!=count($brand)){
+                        continue;
+                    }
+                    $continue=false;
+                    foreach ($outlet->brands as $outlet_brand) {
+                        if(!in_array($outlet_brand->id_brand, $brand)){
+                            $continue=true;
+                            continue;
+                        }
+                    }
+                    if($continue){
+                        continue;
+                    }
+                    if($combo){
+                        $name=$outlet->brands[0]->name_brand.','.$outlet->brands[1]->name_brand;
+                    }else{
+                        $name=$outlet->brands[0]->name_brand;
+                    }
+                }
+                $outlet_array=$outlet->toArray();
+                unset($outlet_array['call']);
+                unset($outlet_array['url']);
+                unset($outlet_array['brands']);
+                $return[$name][]=$outlet_array;
+                $count++;
+            }
+            // if no outlet found
+            if(!$count){
+                //get name brand
+                $brand_name=Brand::select('name_brand')->whereIn('id_brand',$brand)->get()->pluck('name_brand')->toArray();
+                //return empty
+                $return[implode(',', $brand_name)][]=[
+                    'code'=>'',
+                    'name'=>'',
+                    'address'=>'',
+                    'city'=>'',
+                    'phone'=>'',
+                    'email'=>'',
+                    'latitude'=>'',
+                    'longitude'=>''
+                ];
+            }
+
+        }
+        return response()->json(MyHelper::checkGet($return));
     }
 
     function import(Request $request) {
