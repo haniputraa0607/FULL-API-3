@@ -265,10 +265,10 @@ class ApiPOS extends Controller
             foreach ($voucher as $index => $vou) {
                 array_push($voucher_name, ['name' => $vou->dealVoucher->deal->deals_title]);
 
-                /* if($index > 0){ 
-                    $voucher_name[0] = $voucher_name[0]."\n".$vou->dealVoucher->deal->deals_title; 
-                }else{ 
-                   $voucher_name[0] = $vou->dealVoucher->deal->deals_title; 
+                /* if($index > 0){
+                    $voucher_name[0] = $voucher_name[0]."\n".$vou->dealVoucher->deal->deals_title;
+                }else{
+                   $voucher_name[0] = $vou->dealVoucher->deal->deals_title;
                 }  */
             }
 
@@ -330,7 +330,7 @@ class ApiPOS extends Controller
         }
 
         // if($voucher['deals_user'][0]){
-        //     return response()->json(['status' => 'fail', 'messages' => ['Gagal void voucher '.$post['voucher_code'].'. Voucher sudah digunakan.']]); 
+        //     return response()->json(['status' => 'fail', 'messages' => ['Gagal void voucher '.$post['voucher_code'].'. Voucher sudah digunakan.']]);
         // }
 
         //update voucher redeem
@@ -386,6 +386,12 @@ class ApiPOS extends Controller
                 try {
                     $cekOutlet->outlet_name = $value['store_name'];
                     $cekOutlet->outlet_status = $value['store_status'];
+                    if(!empty($value['store_address'])){
+                        $cekOutlet->outlet_address = $value['store_address'];
+                    }
+                    if(!empty($value['store_phone'])){
+                        $cekOutlet->outlet_phone = $value['store_phone'];
+                    }
                     $cekOutlet->save();
                 } catch (\Exception $e) {
                     LogBackendError::logExceptionMessage("ApiPOS/syncOutlet=>" . $e->getMessage(), $e);
@@ -428,11 +434,17 @@ class ApiPOS extends Controller
                 }
             } else {
                 try {
-                    $save = Outlet::create([
-                        'outlet_name'   => $value['store_name'],
-                        'outlet_status' => $value['store_status'],
-                        'outlet_code'   => $value['store_code']
-                    ]);
+                    $dataOutlet['outlet_name'] = $value['store_name'];
+                    $dataOutlet['outlet_status'] = $value['store_status'];
+                    $dataOutlet['outlet_code'] = $value['store_code'];
+                    if(!empty($value['store_address'])){
+                        $dataOutlet['outlet_address'] = $value['store_address'];
+                    }
+                    if(!empty($value['store_phone'])){
+                        $dataOutlet['outlet_phone'] = $value['store_phone'];
+                    }
+
+                    $save = Outlet::create($dataOutlet);
                 } catch (\Exception $e) {
                     LogBackendError::logExceptionMessage("ApiPOS/syncOutlet=>" . $e->getMessage(), $e);
                     $failedOutlet[] = 'fail to sync, outlet ' . $value['store_name'];
@@ -569,7 +581,7 @@ class ApiPOS extends Controller
                             }
                             // cek name pos, jika beda product tidak di update
                             if (empty($product->product_name_pos) || $product->product_name_pos == $menu['name']) {
-                                // update modifiers 
+                                // update modifiers
                                 if (isset($menu['modifiers'])) {
                                     foreach ($menu['modifiers'] as $mod) {
                                         $dataProductMod['type'] = $mod['type'];
@@ -585,7 +597,7 @@ class ApiPOS extends Controller
                                     }
                                 }
 
-                                // update price 
+                                // update price
                                 $productPrice = ProductPrice::where('id_product', $product->id_product)->where('id_outlet', $outlet->id_outlet)->first();
                                 if ($productPrice) {
                                     $oldPrice =  $productPrice->product_price;
@@ -1193,7 +1205,7 @@ class ApiPOS extends Controller
                     $createProduct = TransactionProduct::create($dataProduct);
                     // 	$createProduct = TransactionProduct::updateOrCreate(['id_transaction' => $createTrx['id_transaction'], 'id_product' => $checkProduct['id_product']], $dataProduct);
 
-                    // update modifiers 
+                    // update modifiers
                     if (isset($menu['modifiers'])) {
                         if (!empty($menu['modifiers'])) {
                             foreach ($menu['modifiers'] as $mod) {
@@ -1381,7 +1393,7 @@ class ApiPOS extends Controller
                     }
 
                     if ($createTrx['transaction_payment_status'] == 'Completed') {
-                        //get last point 
+                        //get last point
                         $pointBefore = LogBalance::where('id_user', $user['id'])->whereNotIn('id_log_balance', function ($q) use ($createTrx) {
                             $q->from('log_balances')
                                 ->where('source', 'Transaction')
@@ -1518,9 +1530,9 @@ class ApiPOS extends Controller
                                         ]);
                                     }
                                     $usere= User::where('id',$createTrx['id_user'])->first();
-                                    $send = app($this->autocrm)->SendAutoCRM('Transaction Point Achievement', $usere->phone, 
+                                    $send = app($this->autocrm)->SendAutoCRM('Transaction Point Achievement', $usere->phone,
                                         [
-                                            "outlet_name"       => $checkOutlet['outlet_name'], 
+                                            "outlet_name"       => $checkOutlet['outlet_name'],
                                             "transaction_date"  => $createTrx['transaction_date'],
                                             'receipt_number'    => $createTrx['transaction_receipt_number'],
                                             'received_point'    => (string) $createTrx['transaction_cashback_earned']
@@ -1659,9 +1671,9 @@ class ApiPOS extends Controller
                                     }
 
                                     $usere= User::where('id',$createTrx['id_user'])->first();
-                                    $send = app($this->autocrm)->SendAutoCRM('Transaction Point Achievement', $usere->phone, 
+                                    $send = app($this->autocrm)->SendAutoCRM('Transaction Point Achievement', $usere->phone,
                                         [
-                                            "outlet_name"       => $checkOutlet['outlet_name'], 
+                                            "outlet_name"       => $checkOutlet['outlet_name'],
                                             "transaction_date"  => $createTrx['transaction_date'],
                                             'receipt_number'    => $createTrx['transaction_receipt_number'],
                                             'received_point'    => (string) $createTrx['transaction_cashback_earned']
@@ -1674,7 +1686,7 @@ class ApiPOS extends Controller
                                                 'messages' => ['Failed Send notification to customer']
                                             ]);
                                     }
-                                    
+
                                     $pointValue = $insertDataLogCash->balance;
                                 }
 
@@ -2069,7 +2081,7 @@ class ApiPOS extends Controller
                     }
                 }
             }
-            
+
             if (count($listRejected) > 0) {
                 $this->syncSendEmail($syncDatetime, $outlet->outlet_code, $outlet->outlet_name, $rejectedProduct, null);
             }
