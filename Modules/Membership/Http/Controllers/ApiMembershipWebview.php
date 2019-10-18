@@ -125,13 +125,11 @@ class ApiMembershipWebview extends Controller
 				$result['user_membership']['user']['progress_now'] = $subtotal_transaction;
 				$result['progress_active'] = ($subtotal_transaction / $nextTrx) * 100;
 				$result['next_trx']		= $nextTrx - $subtotal_transaction;
-				$result['total_trx']	= $subtotal_transaction;
 			}elseif($nextTrxType == 'balance'){
 				$total_balance = LogBalance::where('id_user', $post['id_user'])->whereNotIn('source', [ 'Rejected Order', 'Rejected Order Midtrans', 'Rejected Order Point', 'Reversal'])->where('balance', '>', 0)->sum('balance');
 				$result['user_membership']['user']['progress_now'] = $total_balance;
 				$result['progress_active'] = ($total_balance / $nextTrx) * 100;
 				$result['next_trx']		= $nextTrx - $total_balance;
-				$result['total_trx']	= $total_balance;
 			}
 		}
 
