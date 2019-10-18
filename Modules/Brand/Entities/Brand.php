@@ -20,11 +20,17 @@ class Brand extends Model
 
     public function getLogoBrandAttribute($value)
     {
+        if(empty($value)){
+            return '';
+        }
         return env('S3_URL_API') . $value;
     }
 
     public function getImageBrandAttribute($value)
     {
+        if(empty($value)){
+            return '';
+        }
         return env('S3_URL_API') . $value;
     }
 
