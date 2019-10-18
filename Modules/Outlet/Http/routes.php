@@ -36,6 +36,7 @@ Route::group(['prefix' => 'api/outlet', 'namespace' => 'Modules\Outlet\Http\Cont
     Route::group(['middleware' => 'auth:api'], function() {
         Route::post('create', 'ApiOutletController@create');
         Route::post('update', 'ApiOutletController@update');
+        Route::post('batch-update', 'ApiOutletController@batchUpdate');
         Route::post('update/status', 'ApiOutletController@updateStatus');
         Route::post('update/pin', 'ApiOutletController@updatePin');
         Route::post('delete', 'ApiOutletController@delete');

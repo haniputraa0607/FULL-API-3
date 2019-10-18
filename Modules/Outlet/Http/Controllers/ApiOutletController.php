@@ -441,6 +441,12 @@ class ApiOutletController extends Controller
                 $outlet->select('outlets.id_outlet','outlets.outlet_name','outlets.outlet_code','outlets.outlet_status','outlets.outlet_address','outlets.id_city','outlet_latitude','outlet_longitude');
             }
         }
+        if($post['rule']??false){
+            $this->filterList($outlet,$post['rule'],$post['operator']??'and');
+        }
+        if(($post['order_field']??false)&&($post['order_method']??false)){
+            $outlet->orderBy($post['order_field'],$post['order_method']);
+        }
         if($post['simple_result']??false){
             $outlet->select('outlets.id_outlet','outlets.outlet_name');
         }
@@ -549,7 +555,7 @@ class ApiOutletController extends Controller
 
             $dataOutlet = $outlet;
             $outlet = [];
-            $pagingOutlet=$this->pagingOutlet($dataOutlet, $page);
+            $pagingOutlet=$this->pagingOutlet($dataOutlet, $page,$post['take']??15);
             if (isset($pagingOutlet['data']) && count($pagingOutlet['data']) > 0) {
                 $outlet['current_page']  = $page;
                 $outlet['data']          = $pagingOutlet['data'];
@@ -710,12 +716,11 @@ class ApiOutletController extends Controller
         return response()->json(MyHelper::checkGet($outlet));
     }
 
-    public function pagingOutlet($data, $page) {
+    public function pagingOutlet($data, $page,$paginate=15) {
         $next = false;
 
         if ($page > 0) {
             $resultData = [];
-            $paginate   = 15;
             $start      = $paginate * ($page - 1);
             $all        = $paginate * $page;
             $end        = $all;
@@ -1595,5 +1600,52 @@ class ApiOutletController extends Controller
 
         DB::commit();
         return response()->json(['status' => 'success']);
+    }
+
+    public function filterList($model,$rule,$operator='and'){
+        $newRule=[];
+        $where=$operator=='and'?'where':'orWhere';
+        foreach ($rule as $var) {
+            $newRule[$var['subject']][]=['operator'=>$var['operator']??null,'parameter'=>$var['parameter']??null];
+        }
+        if($newRule['all_empty']??false){
+                $model->$where(function($query){
+                    $all=['id_city','outlet_latitude','outlet_longitude'];
+                    foreach ($all as $field) {
+                        $query->where(function($query) use($field){
+                            $query->where($field,'=','')->orWhereNull($field);
+                        });
+                    }
+                });
+        }
+        if($newRule['empty']??false){
+            $all=array_column($newRule['empty'],'parameter');
+            foreach ($all as $field) {
+                $model->$where(function($query) use ($field){
+                    $query->where($field,'')->orWhereNull($field);
+                });
+            }
+        }
+    }
+
+    public function batchUpdate(Request $request){
+        $posts=$request->json()->all();
+        DB::beginTransaction();
+        $save=1;
+        foreach ($posts['outlets']??[] as $id_outlet=>$data) {
+            $post = $this->checkInputOutlet($data);
+            $save_t = Outlet::where('id_outlet', $id_outlet)->update($post);
+            // return Outlet::where('id_outlet', $request->json('id_outlet'))->first();
+            if(!$save_t){
+                $save=0;
+                break;
+            }
+        }
+        if($save){
+            DB::commit();
+            return ['status'=>'success'];
+        }
+        DB::rollBack();
+        return ['status'=>'fail'];
     }
 }
