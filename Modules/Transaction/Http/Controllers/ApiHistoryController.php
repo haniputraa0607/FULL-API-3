@@ -456,7 +456,8 @@ class ApiHistoryController extends Controller
 
     public function transaction($post, $id)
     {
-        $transaction = Transaction::join('outlets', 'transactions.id_outlet', '=', 'outlets.id_outlet')
+        $transaction = Transaction::distinct('transactions.*')
+            ->join('outlets', 'transactions.id_outlet', '=', 'outlets.id_outlet')
             ->join('brand_outlet', 'outlets.id_outlet', '=', 'brand_outlet.id_outlet')
             ->where('transaction_payment_status', '!=', 'Cancelled')
             ->with('outlet', 'logTopup')
