@@ -146,7 +146,7 @@ class ApiUser extends Controller
         return $response;
     }
 
-    function UserFilter($conditions = null, $order_field='id', $order_method='asc', $skip=0, $take=99999999999){
+    function UserFilter($conditions = null, $order_field='id', $order_method='asc', $skip=0, $take=99999999999, $keyword=null,$columns=null,$objOnly=false){
         $hasilSebelum = [];
         $hasilAkhir = [];
 
@@ -397,8 +397,24 @@ class ApiUser extends Controller
             );
         }
         // return $hasilAkhir->get();
-        // return json_encode($query->toSql());
-        $hasilcount = count($hasilAkhir->get());
+		// return json_encode($query->toSql());
+
+		$recordsTotal = $hasilAkhir->count();
+		if($columns){
+			$hasilAkhir->select($columns);
+		}
+		if($key_free??false){
+			$hasilAkhir->where(function($query) use ($keyword){
+				$query->orWhere('name','like','%'.$keyword.'%')->orWhere('email','like','%'.$keyword.'%')->orWhere('phone','like','%'.$keyword.'%');
+			});
+		}
+
+		$hasilcount = count($hasilAkhir->get());
+
+		if($objOnly){
+			return $hasilAkhir;
+		}
+
         $hasil = $hasilAkhir->skip($skip)->take($take)->get()->toArray();
         if($hasil){
             $result = ['status'	=> 'success',
