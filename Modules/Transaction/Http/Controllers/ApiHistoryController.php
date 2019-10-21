@@ -467,7 +467,7 @@ class ApiHistoryController extends Controller
         }
 
         if (!is_null($post['outlet'])) {
-            $transaction->orWhere('outlets.id_outlet', $post['outlet']);
+            $transaction->orWhere('transactions.id_outlet', $post['outlet']);
         }
 
         if (!is_null($post['date_start']) && !is_null($post['date_end'])) {
