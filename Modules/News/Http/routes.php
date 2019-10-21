@@ -47,3 +47,9 @@ Route::group(['prefix' => 'api/news', 'middleware' => ['log_activities', 'auth:a
         // Route::any('list', 'ApiNews@listNews');
         Route::any('webview', 'ApiNews@webview');
 });
+
+
+Route::group(['prefix' => 'news', 'namespace' => 'Modules\News\Http\Controllers','middleware' => 'auth:api'], function()
+{
+    Route::any('/webview/{id}', 'ApiNewsWebview@detail');
+});
