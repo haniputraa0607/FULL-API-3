@@ -5,6 +5,7 @@ Route::group(['middleware' => ['auth:api','log_activities'], 'prefix' => 'api/ca
     Route::post('create', 'ApiCampaign@CreateCampaign');
     Route::post('step1', 'ApiCampaign@ShowCampaignStep1');
     Route::post('step3', 'ApiCampaign@ShowCampaignStep2');
+    Route::post('recipient', 'ApiCampaign@showRecipient');
     Route::post('send', 'ApiCampaign@SendCampaign');
     Route::post('update', 'ApiCampaign@update');
     Route::post('list', 'ApiCampaign@campaignList');
