@@ -201,13 +201,13 @@ class ApiHistoryController extends Controller
             }
         }
 
-        // if (!is_null($post['oldest'])) {
-        //     $order = 'old';
-        // }
+        if (!is_null($post['oldest'])) {
+            $order = 'old';
+        }
 
-        // if (!is_null($post['newest'])) {
-        //     $order = 'new';
-        // }
+        if (!is_null($post['newest'])) {
+            $order = 'new';
+        }
 
         if (!is_null($request->get('page'))) {
             $page = $request->get('page');
