@@ -233,7 +233,7 @@ class SendCampaignJob implements ShouldQueue
                 }
                 break;
 
-            case 'push_notif':
+            case 'push':
 
                 foreach($recipient as $key => $receipient){
                     $dataOptional          = [];
