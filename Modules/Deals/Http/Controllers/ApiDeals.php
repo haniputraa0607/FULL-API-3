@@ -437,6 +437,7 @@ class ApiDeals extends Controller
             $deals[0]['webview_url'] = env('APP_URL') . "webview/deals/" . $deals[0]['id_deals'] . "/" . $deals[0]['deals_type'];
             // text tombol beli
             $deals[0]['button_text'] = $deals[0]['deals_voucher_price_type']=='free'?'Ambil':'Tukar';
+            $deals[0]['button_status'] = 0;
             //text konfirmasi pembelian
             if($deals[0]['deals_voucher_price_type']=='free'){
                 //voucher free
@@ -448,7 +449,7 @@ class ApiDeals extends Controller
             $payment_success_message = Setting::where('key', 'payment_success_message')->pluck('value')->first()??'Apakah kamu ingin menggunakan Voucher sekarang?';
             $deals[0]['payment_message'] = $payment_message;
             $deals[0]['payment_success_message'] = $payment_success_message;
-            if($deals[0]['deals_voucher_price_type']=='free'){
+            if($deals[0]['deals_voucher_price_type']=='free'&&$deals[0]['deals_status']=='available'){
                 $deals[0]['button_status']=1;
             }else {
                 if($deals[0]['deals_voucher_price_type']=='point'){
@@ -458,7 +459,9 @@ class ApiDeals extends Controller
                     }
                 }else{
                     $deals[0]['button_text'] = 'Beli';
-                    $deals[0]['button_status'] = 1;
+                    if($deals[0]['deals_status']=='available'){
+                        $deals[0]['button_status'] = 1;
+                    }
                 }
             }
         }
