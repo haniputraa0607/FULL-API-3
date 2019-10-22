@@ -293,7 +293,7 @@ class ApiDeals extends Controller
         }
 
         if ($request->json('key_free')) {
-            $deals->where(function($query){
+            $deals->where(function($query) use ($request){
                 $query->where('deals_title', 'LIKE', '%' . $request->json('key_free') . '%')
                     ->orWhere('deals_second_title', 'LIKE', '%' . $request->json('key_free') . '%');
             });
