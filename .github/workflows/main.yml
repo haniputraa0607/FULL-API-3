@@ -13,4 +13,4 @@ jobs:
     - name: Install git-ftp
       run: sudo apt-get -qq install git-ftp
     - name: Push to staging
-      run: sudo git ftp catchup --insecure --user deployer@sapi.champresto.id --passwd ilovedeployer ftp://sapi.champresto.id -vv
+      run: sudo git ftp catchup --user deployer@sapi.champresto.id --passwd ilovedeployer ftp://sapi.champresto.id -vv
