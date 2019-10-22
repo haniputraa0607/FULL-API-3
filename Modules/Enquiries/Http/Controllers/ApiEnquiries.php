@@ -46,6 +46,10 @@ class ApiEnquiries extends Controller
 		if (isset($post['id_brand'])) {
             $data['id_brand'] = $post['id_brand'];
 		}
+
+		if (isset($post['id_outlet'])) {
+			$data['id_outlet'] = $post['id_outlet'];
+		}
 		
         if (isset($post['enquiry_name'])) {
             $data['enquiry_name'] = $post['enquiry_name'];
