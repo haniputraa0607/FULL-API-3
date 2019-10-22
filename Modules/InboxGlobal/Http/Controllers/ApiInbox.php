@@ -76,7 +76,7 @@ class ApiInbox extends Controller
 				if($global['inbox_global_id_reference']){
     				$content['id_reference'] = $global['inbox_global_id_reference'];
     			}else{
-    				$content['id_reference'] = null;
+    				$content['id_reference'] = 0;
     			}
 
 				if($content['clickto'] == 'News'){
@@ -135,7 +135,7 @@ class ApiInbox extends Controller
 			if($private['inboxes_id_reference']){
 				$content['id_reference'] = $private['inboxes_id_reference'];
 			}else{
-				$content['id_reference'] = null;
+				$content['id_reference'] = 0;
 			}
 			
 			if($content['clickto'] == 'News'){
