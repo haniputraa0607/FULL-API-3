@@ -1606,6 +1606,10 @@ class ApiOutletController extends Controller
         $newRule=[];
         $where=$operator=='and'?'where':'orWhere';
         foreach ($rule as $var) {
+            $var1=['operator'=>$var['operator']??'=','parameter'=>$var['parameter']??null];
+            if($var1['operator']=='like'){
+                $var1['parameter']='%'.$var1['parameter'].'%';
+            }
             $newRule[$var['subject']][]=['operator'=>$var['operator']??null,'parameter'=>$var['parameter']??null];
         }
         if($newRule['all_empty']??false){
@@ -1623,6 +1627,13 @@ class ApiOutletController extends Controller
             foreach ($all as $field) {
                 $model->$where(function($query) use ($field){
                     $query->where($field,'')->orWhereNull($field);
+                });
+            }
+        }
+        if($rules=$newRule['id_brand']??false){
+            foreach ($rules as $rul) {
+                $model->{$where.'Has'}('brands',function($query) use ($rul){
+                    $query->where('brands.id_brand',$rul['operator'],$rul['parameter']);
                 });
             }
         }
@@ -1647,5 +1658,17 @@ class ApiOutletController extends Controller
         }
         DB::rollBack();
         return ['status'=>'fail'];
+    }
+
+    public function ajaxHandler(Request $request){
+        $post=$request->except('_token');
+        $q=(new Outlet)->newQuery();
+        if($post['select']??false){
+            $q->select($post['select']);
+        }
+        if($condition=$post['condition']??false){
+            $this->filterList($q,$condition['rules']??'',$condition['operator']??'and');
+        }
+        return MyHelper::checkGet($q->get());
     }
 }
