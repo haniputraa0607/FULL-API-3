@@ -750,32 +750,8 @@ class ApiUser extends Controller
 				}
 			}
 		}
-		if($key_free??false){
-			$hasilAkhir->where(function($query) use ($keyword){
-				$query->orWhere('name','like','%'.$keyword.'%')->orWhere('email','like','%'.$keyword.'%')->orWhere('phone','like','%'.$keyword.'%');
-			});
-		}
 
-		$hasilcount = count($hasilAkhir->get());
-
-		if($objOnly){
-			return $hasilAkhir;
-		}
-
-        $hasil = $hasilAkhir->skip($skip)->take($take)->get()->toArray();
-        if($hasil){
-            $result = ['status'	=> 'success',
-                'result'	=> $hasil,
-                'total' => $hasilcount
-            ];
-        } else{
-            $result = [
-                'status'	=> 'fail',
-                'messages'	=> ['User Not Found']
-            ];
-        }
-
-        return $result;
+        return $query;
     }
 
     function getFeatureControl(Request $request){
