@@ -76,17 +76,15 @@ class ApiInbox extends Controller
 				if($global['inbox_global_id_reference']){
     				$content['id_reference'] = $global['inbox_global_id_reference'];
     			}else{
-    				$content['id_reference'] = null;
+    				$content['id_reference'] = 0;
     			}
 
 				if($content['clickto'] == 'News'){
 					$news = News::find($global['inbox_global_id_reference']);
-					if(!$news){
-						continue;
+					if($news){
+						$content['news_title'] = $news->news_title;
+						$content['url'] = env('APP_URL').'news/webview/'.$news->id_news;
 					}
-
-					$content['news_title'] = $news->news_title;
-					$content['url'] = env('APP_URL').'news/webview/'.$news->id_news;
 				}
 				
 				if($content['clickto'] == 'Content'){
@@ -137,17 +135,16 @@ class ApiInbox extends Controller
 			if($private['inboxes_id_reference']){
 				$content['id_reference'] = $private['inboxes_id_reference'];
 			}else{
-				$content['id_reference'] = null;
+				$content['id_reference'] = 0;
 			}
 			
 			if($content['clickto'] == 'News'){
 				$news = News::find($private['inboxes_id_reference']);
-				if(!$news){
-					continue;
+				if($news){
+					$content['news_title'] = $news->news_title;
+					$content['url'] = env('APP_URL').'news/webview/'.$news->id_news;
 				}
 
-				$content['news_title'] = $news->news_title;
-				$content['url'] = env('APP_URL').'news/webview/'.$news->id_news;
 			}
 			
 			if($content['clickto'] == 'Content'){
@@ -301,7 +298,7 @@ class ApiInbox extends Controller
 				}
 			}
 		}
-		
+
 		$privates = UserInbox::where('id_user','=',$user['id'])->where('read', '0')->get();
 
 		

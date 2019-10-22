@@ -33,6 +33,9 @@ use App\Http\Models\OauthAccessToken;
 //use Modules\Campaign\Http\Requests\campaign_update;
 //use Modules\Campaign\Http\Requests\campaign_delete;
 
+use App\Jobs\SendCampaignJob;
+use App\Jobs\GenerateCampaignRecipient;
+
 use App\Lib\MyHelper;
 use App\Lib\PushNotificationHelper;
 use App\Lib\classMaskingJson;
@@ -232,11 +235,6 @@ class ApiCampaign extends Controller
 				}
 			}
 
-			$cond = Campaign::with(['campaign_rule_parents', 'campaign_rule_parents.rules'])->where('id_campaign','=',$post['id_campaign'])->first();
-
-			$users = app($this->user)->UserFilter($cond['campaign_rule_parents']);
-			if($users['status'] == 'success') $campaign['users'] = $users['result'];
-
 			$result = [
 				'status'  => 'success',
 				'result'  => $campaign
@@ -251,6 +249,36 @@ class ApiCampaign extends Controller
 		return response()->json($result);
     }
 
+	public function showRecipient(Request $request){
+		$post=$request->json()->all();
+		$limiter=[];
+		$column=['id','name','email','phone','gender','city_name','birthday'];
+		$limiter=[
+			$column[$post['order'][0]['column']??0]??'id',
+			$post['order'][0]['dir']??'asc',
+			$post['start']??0,
+			$post['length']??99999999,
+			$post['search']['value']??null,
+		];
+		$cond = Campaign::with(['campaign_rule_parents', 'campaign_rule_parents.rules'])->where('id_campaign','=',$post['id_campaign'])->first();
+		if(!$cond){
+			return [
+					'status'  => 'fail',
+					'messages'  => ['Campaign Not Found']
+				];
+		}
+		// UserFilter($conditions = null, $order_field='id', $order_method='asc', $skip=0, $take=99999999999,$keyword=null)
+		$users = app($this->user)->UserFilter($cond['campaign_rule_parents'],...$limiter);
+		if($users['status'] == 'success') $cond['users'] = $users['result'];
+		$result = [
+				'status'  => 'success',
+				'result'  => $cond,
+				'recordsFiltered' => $users['recordsFiltered']??0,
+				'recordsTotal' => $users['recordsTotal']??0
+			];
+		return $result;
+	}
+
 	public function SendCampaign(Request $request){
 		$post = $request->json()->all();
 		$user = $request->user();
@@ -259,363 +287,74 @@ class ApiCampaign extends Controller
 
 		if($campaign){
 			if($campaign['campaign_is_sent'] == 'Yes'){
-				$result = [
-					'status'  => 'fail',
-					'messages'  => ['Campaign already sent']
-				];
-				return response()->json($result);
+				if($post['resend']??0 == 1){
+					unset($campaign['id_campaign']);
+					unset($campaign['created_at']);
+					unset($campaign['updated_at']);
+					$campaign['campaign_is_sent'] = 'No';
+					$data = json_decode(json_encode($campaign), true);
+					$c = Campaign::create($data);
+
+					if($c){
+						$campaign = Campaign::where('id_campaign','=',$c->id_campaign)->first();
+					} else {
+						$result = [
+							'status'  => 'fail',
+							'messages'  => ['Re-create Campaign Failed']
+						];
+						return response()->json($result);
+					}
+				} else {
+					$result = [
+						'status'  => 'fail',
+						'messages'  => ['Campaign already sent']
+					];
+					return response()->json($result);
+				}
 			}
 
 			if($campaign['campaign_send_at'] == null){
 				//Kirimnya NOW
 				if($campaign['campaign_media_email'] == "Yes"){
 					$receipient_email = explode(',', str_replace(' ', ',', str_replace(';', ',', $campaign['campaign_email_receipient'])));
-					foreach($receipient_email as $key => $receipient){
-						if($key < 10){
-							$to = $receipient;
-							$em_arr = explode('@',$receipient);
-							$name = ucwords(str_replace("_"," ", str_replace("-"," ", str_replace("."," ", $em_arr[0]))));
-
-							$subject = app($this->autocrm)->TextReplace($campaign['campaign_email_subject'], $receipient, null, 'email');
-							$content = app($this->autocrm)->TextReplace($campaign['campaign_email_content'], $receipient, null, 'email');
-
-							// get setting email
-							$setting = array();
-							$set = Setting::where('key', 'email_from')->first();
-							if(!empty($set)){
-								$setting['email_from'] = $set['value'];
-							}else{
-								$setting['email_from'] = null;
-							}
-							$set = Setting::where('key', 'email_sender')->first();
-							if(!empty($set)){
-								$setting['email_sender'] = $set['value'];
-							}else{
-								$setting['email_sender'] = null;
-							}
-							$set = Setting::where('key', 'email_reply_to')->first();
-							if(!empty($set)){
-								$setting['email_reply_to'] = $set['value'];
-							}else{
-								$setting['email_reply_to'] = null;
-							}
-							$set = Setting::where('key', 'email_reply_to_name')->first();
-							if(!empty($set)){
-								$setting['email_reply_to_name'] = $set['value'];
-							}else{
-								$setting['email_reply_to_name'] = null;
-							}
-							$set = Setting::where('key', 'email_cc')->first();
-							if(!empty($set)){
-								$setting['email_cc'] = $set['value'];
-							}else{
-								$setting['email_cc'] = null;
-							}
-							$set = Setting::where('key', 'email_cc_name')->first();
-							if(!empty($set)){
-								$setting['email_cc_name'] = $set['value'];
-							}else{
-								$setting['email_cc_name'] = null;
-							}
-							$set = Setting::where('key', 'email_bcc')->first();
-							if(!empty($set)){
-								$setting['email_bcc'] = $set['value'];
-							}else{
-								$setting['email_bcc'] = null;
-							}
-							$set = Setting::where('key', 'email_bcc_name')->first();
-							if(!empty($set)){
-								$setting['email_bcc_name'] = $set['value'];
-							}else{
-								$setting['email_bcc_name'] = null;
-							}
-							$set = Setting::where('key', 'email_logo')->first();
-							if(!empty($set)){
-								$setting['email_logo'] = $set['value'];
-							}else{
-								$setting['email_logo'] = null;
-							}
-							$set = Setting::where('key', 'email_logo_position')->first();
-							if(!empty($set)){
-								$setting['email_logo_position'] = $set['value'];
-							}else{
-								$setting['email_logo_position'] = null;
-							}
-							$set = Setting::where('key', 'email_copyright')->first();
-							if(!empty($set)){
-								$setting['email_copyright'] = $set['value'];
-							}else{
-								$setting['email_copyright'] = null;
-							}
-							$set = Setting::where('key', 'email_contact')->first();
-							if(!empty($set)){
-								$setting['email_contact'] = $set['value'];
-							}else{
-								$setting['email_contact'] = null;
-							}
-
-							$data = array(
-								'customer' => $name,
-								'html_message' => $content,
-								'setting' => $setting
-							);
-
-							Mailgun::send('emails.test', $data, function($message) use ($to,$subject,$name,$setting)
-							{
-
-								if(stristr($to, 'gmail.con')){
-									$to = str_replace('gmail.con', 'gmail.com', $to);
-								}
-
-								$message->to($to, $name)->subject($subject)
-												->trackClicks(true)
-												->trackOpens(true);
-								if(!empty($setting['email_from']) && !empty($setting['email_sender'])){
-									$message->from($setting['email_from'], $setting['email_sender']);
-								}else if(!empty($setting['email_from'])){
-									$message->from($setting['email_from']);
-								}
-
-								if(!empty($setting['email_reply_to'])){
-									$message->replyTo($setting['email_reply_to'], $setting['email_reply_to_name']);
-								}
-
-								if(!empty($setting['email_cc']) && !empty($setting['email_cc_name'])){
-									$message->cc($setting['email_cc'], $setting['email_cc_name']);
-								}
-
-								if(!empty($setting['email_bcc']) && !empty($setting['email_bcc_name'])){
-									$message->bcc($setting['email_bcc'], $setting['email_bcc_name']);
-								}
-							});
-
-							$outbox = [];
-							$outbox['id_campaign'] = $campaign['id_campaign'];
-							$outbox['email_sent_to'] = $receipient;
-							$outbox['email_sent_subject'] = $subject;
-							$outbox['email_sent_message'] = $content;
-							$outbox['email_sent_send_at'] = date("Y-m-d H:i:s");
-
-							$logs = CampaignEmailSent::create($outbox);
-							DB::table('campaigns')
-							   ->where('id_campaign', $campaign['id_campaign'])
-							   ->update([
-								   'campaign_email_count_sent' => DB::raw('campaign_email_count_sent + 1')
-							   ]);
-						} else {
-							//masuk queue
-							$subject = app($this->autocrm)->TextReplace($campaign['campaign_email_subject'], $receipient, null, 1);
-							$content = app($this->autocrm)->TextReplace($campaign['campaign_email_content'], $receipient, null, 1);
-
-							$queue = [];
-							$queue['id_campaign'] = $campaign['id_campaign'];
-							$queue['email_queue_to'] = $receipient;
-							$queue['email_queue_subject'] = $subject;
-							$queue['email_queue_content'] = $content;
-							$queue['email_queue_send_at'] = date('Y-m-d H:i:s', strtotime("+ 5 minutes"));
-
-							$logs = CampaignEmailQueue::create($queue);
-
-							DB::table('campaigns')
-							   ->where('id_campaign', $campaign['id_campaign'])
-							   ->update([
-								   'campaign_email_count_queue' => DB::raw('campaign_email_count_queue + 1')
-							   ]);
-						}
+					$data['campaign'] = $campaign;
+					$data['type'] = 'email';
+					foreach (array_chunk($receipient_email,10) as $recipients) {
+						$data['recipient']=array_filter($recipients,function($var){return !empty($var);});
+						SendCampaignJob::dispatch($data)->allOnConnection('database');
 					}
 				}
 
 				if($campaign['campaign_media_sms'] == "Yes"){
 					$receipient_sms = explode(',', str_replace(' ', ',', str_replace(';', ',', $campaign['campaign_sms_receipient'])));
 
-					$senddata = array(
-						'apikey' => env('SMS_KEY'),
-						'callbackurl' => env('APP_URL'),
-						'datapacket'=>array()
-					);
-
-
-					foreach($receipient_sms as $key => $receipient){
-						if($key < 10){
-							$content 	= app($this->autocrm)->TextReplace($campaign['campaign_sms_content'], $receipient);
-
-							array_push($senddata['datapacket'],array(
-									'number' => trim($receipient),
-									'message' => urlencode(stripslashes(utf8_encode($content))),
-									'sendingdatetime' => ""));
-
-							$this->rajasms->setData($senddata);
-							$send = $this->rajasms->send();
-
-							$outbox = [];
-							$outbox['id_campaign'] = $campaign['id_campaign'];
-							$outbox['sms_sent_to'] = $receipient;
-							$outbox['sms_sent_content'] = $content;
-							$outbox['sms_sent_send_at'] = date("Y-m-d H:i:s");
-
-							$logs = CampaignSmsSent::create($outbox);
-
-							DB::table('campaigns')
-							   ->where('id_campaign', $campaign['id_campaign'])
-							   ->update([
-								   'campaign_sms_count_sent' => DB::raw('campaign_sms_count_sent + 1')
-							   ]);
-
-						} else {
-							$content = app($this->autocrm)->TextReplace($campaign['campaign_sms_content'], $receipient);
-
-							$queue = [];
-							$queue['id_campaign'] = $campaign['id_campaign'];
-							$queue['sms_queue_to'] = $receipient;
-							$queue['sms_queue_content'] = $content;
-							$queue['sms_queue_send_at'] = date('Y-m-d H:i:s', strtotime("+ 5 minutes"));
-
-							$logs = CampaignSmsQueue::create($queue);
-
-							DB::table('campaigns')
-							   ->where('id_campaign', $campaign['id_campaign'])
-							   ->update([
-								   'campaign_sms_count_queue' => DB::raw('campaign_sms_count_queue + 1')
-							   ]);
-						}
+					$data['campaign'] = $campaign;
+					$data['type'] = 'sms';
+					foreach (array_chunk($receipient_sms,10) as $recipients) {
+						$data['recipient']=array_filter($recipients,function($var){return !empty($var);});
+						SendCampaignJob::dispatch($data)->allOnConnection('database');
 					}
 				}
 
 				if($campaign['campaign_media_push'] == "Yes"){
 					$receipient_push = explode(',', str_replace(' ', ',', str_replace(';', ',', $campaign['campaign_push_receipient'])));
 
-					foreach($receipient_push as $key => $receipient){
-						if($key < 100){
-							$dataOptional          = [];
-							$image = null;
-							if (isset($campaign['campaign_push_image']) && $campaign['campaign_push_image'] != null) {
-								$dataOptional['image'] = env('S3_URL_API').$campaign['campaign_push_image'];
-								$image = env('S3_URL_API').$campaign['campaign_push_image'];
-							}
-
-							if (isset($campaign['campaign_push_clickto']) && $campaign['campaign_push_clickto'] != null) {
-								$dataOptional['type'] = $campaign['campaign_push_clickto'];
-							} else {
-								$dataOptional['type'] = 'Home';
-							}
-
-							if (isset($campaign['campaign_push_link']) && $campaign['campaign_push_link'] != null) {
-								if($dataOptional['type'] == 'Link')
-									$dataOptional['link'] = $campaign['campaign_push_link'];
-								else
-									$dataOptional['link'] = null;
-							} else {
-								$dataOptional['link'] = null;
-							}
-
-							if (isset($campaign['campaign_push_id_reference']) && $campaign['campaign_push_id_reference'] != null) {
-								$dataOptional['id_reference'] = (int)$campaign['campaign_push_id_reference'];
-							} else{
-								$dataOptional['id_reference'] = 0;
-							}
-
-							if($campaign['campaign_push_clickto'] == 'News' && $campaign['campaign_push_id_reference'] != null){
-								$news = News::find($campaign['campaign_push_id_reference']);
-								if($news){
-									$dataOptional['news_title'] = $news->news_title;
-								}
-								$dataOptional['url'] = env('APP_URL').'news/webview/'.$campaign['campaign_push_id_reference'];
-							}
-
-							if($campaign['campaign_push_clickto'] == 'Order' && $campaign['campaign_push_id_reference'] != null){
-								$outlet = Outlet::find($campaign['campaign_push_id_reference']);
-								if($outlet){
-									$dataOptional['news_title'] = $outlet->outlet_name;
-								}
-							}
-
-							//push notif logout
-							if($campaign['campaign_push_clickto'] == 'Logout'){
-								$user = User::where('phone', $receipient)->first();
-								if($user){
-									//delete token
-									$del = OauthAccessToken::join('oauth_access_token_providers', 'oauth_access_tokens.id', 'oauth_access_token_providers.oauth_access_token_id')
-											->where('oauth_access_tokens.user_id', $user['id'])->where('oauth_access_token_providers.provider', 'users')->delete();
-
-								}
-
-							}
-
-							$deviceToken = PushNotificationHelper::searchDeviceToken("phone", $receipient);
-
-							$subject = app($this->autocrm)->TextReplace($campaign['campaign_push_subject'], $receipient);
-							$content = app($this->autocrm)->TextReplace($campaign['campaign_push_content'], $receipient);
-							$deviceToken = PushNotificationHelper::searchDeviceToken("phone", $receipient);
-
-							if (!empty($deviceToken)) {
-								if (isset($deviceToken['token']) && !empty($deviceToken['token'])) {
-									$push = PushNotificationHelper::sendPush($deviceToken['token'], $subject, $content, $image, $dataOptional);
-
-									if (isset($push['success']) && $push['success'] > 0) {
-										$push = [];
-										$push['id_campaign'] = $campaign['id_campaign'];
-										$push['push_sent_to'] = $receipient;
-										$push['push_sent_subject'] = $subject;
-										$push['push_sent_content'] = $content;
-										$push['push_sent_send_at'] = date('Y-m-d H:i:s', strtotime("+ 5 minutes"));
-
-									$logs = CampaignPushSent::create($push);
-									}
-								}
-							}
-
-						} else {
-							$push_subject = app($this->autocrm)->TextReplace($campaign['campaign_push_subject'], $receipient, null, 'id');
-							$push_content = app($this->autocrm)->TextReplace($campaign['campaign_push_content'], $receipient, null, 'id');
-
-							$push = [];
-							$push['id_campaign'] = $campaign['id_campaign'];
-							$push['push_queue_to'] = $receipient;
-							$push['push_queue_subject'] = $push_subject;
-							$push['push_queue_content'] = $push_content;
-							$push['push_queue_send_at'] = date('Y-m-d H:i:s', strtotime("+ 5 minutes"));
-
-							$logs = CampaignPushQueue::create($push);
-
-							DB::table('campaigns')
-							   ->where('id_campaign', $campaign['id_campaign'])
-							   ->update([
-								   'campaign_push_count_queue' => DB::raw('campaign_push_count_queue + 1')
-							   ]);
-						}
+					$data['campaign'] = $campaign;
+					$data['type'] = 'push';
+					foreach (array_chunk($receipient_push,10) as $recipients) {
+						$data['recipient']=array_filter($recipients,function($var){return !empty($var);});
+						SendCampaignJob::dispatch($data)->allOnConnection('database');
 					}
 				}
 
 				if($campaign['campaign_media_inbox'] == "Yes"){
 					$receipient_inbox = explode(',', str_replace(' ', ',', str_replace(';', ',', $campaign['campaign_inbox_receipient'])));
 
-					$user = User::whereIn('phone',$receipient_inbox)->get()->toArray();
-
-					foreach($user as $key => $receipient){
-
-						$inbox = [];
-						$inbox['id_campaign'] = $campaign['id_campaign'];
-						$inbox['id_user'] 	  = $receipient['id'];
-						$inbox['inboxes_subject'] = app($this->autocrm)->TextReplace($campaign['campaign_inbox_subject'], $receipient['id'], null, 'id');
-						$inbox['inboxes_clickto'] = $campaign['campaign_inbox_clickto'];
-
-						if($campaign['campaign_inbox_clickto'] == 'Content'){
-							$inbox['inboxes_content'] = app($this->autocrm)->TextReplace($campaign['campaign_inbox_content'], $receipient['id'], null, 'id');
-						}
-
-						if($campaign['campaign_inbox_clickto'] == 'Link'){
-							$inbox['inboxes_link'] = $campaign['campaign_inbox_link'];
-						}
-
-						if(!empty($campaign['campaign_inbox_id_reference'])){
-							$inbox['inboxes_id_reference'] = $campaign['campaign_inbox_id_reference'];
-						}
-
-						$inbox['inboxes_send_at'] = date("Y-m-d H:i:s");
-						$inbox['created_at'] = date("Y-m-d H:i:s");
-						$inbox['updated_at'] = date("Y-m-d H:i:s");
-
-						$inboxQuery = UserInbox::insert($inbox);
+					$data['campaign'] = $campaign;
+					$data['type'] = 'inbox';
+					foreach (array_chunk($receipient_inbox,10) as $recipients) {
+						$data['recipient']=array_filter($recipients,function($var){return !empty($var);});
+						SendCampaignJob::dispatch($data)->allOnConnection('database');
 					}
 				}
 
@@ -624,75 +363,13 @@ class ApiCampaign extends Controller
 
 					$receipient_whatsapp = explode(',', str_replace(' ', ',', str_replace(';', ',', $campaign['campaign_whatsapp_receipient'])));
 
-					$api_key = Setting::where('key', 'api_key_whatsapp')->first();
-					if($api_key){
-						if($api_key->value){
-							foreach($receipient_whatsapp as $key => $receipient){
-								if($key < 100){
-
-									$contentWaSent = [];
-									//send every content whatsapp
-									foreach($campaign->whatsapp_content as $contentWhatsapp){
-										if($contentWhatsapp['content_type'] == 'text'){
-											$content = app($this->autocrm)->TextReplace($contentWhatsapp['content'], $receipient);
-										}else{
-											$content = $contentWhatsapp['content'];
-										}
-										// add country code in number
-										$ptn = "/^0/";
-										$rpltxt = "62";
-										$phone = preg_replace($ptn, $rpltxt, $receipient);
-
-										$send = $this->apiwha->send($api_key->value, $phone, $content);
-
-										//api key whatsapp not valid
-										if(isset($send['result_code']) && $send['result_code'] == -1){
-											break 2;
-										}
-
-										$dataContent['content'] = $content;
-										$dataContent['content_type'] = $contentWhatsapp['content_type'];
-										array_push($contentWaSent, $dataContent);
-
-									}
-
-									$outbox = [];
-									$outbox['id_campaign'] = $campaign['id_campaign'];
-									$outbox['whatsapp_sent_to'] = $receipient;
-									$outbox['whatsapp_sent_send_at'] = date("Y-m-d H:i:s");
-
-									$logs = CampaignWhatsappSent::create($outbox);
-									if($logs){
-										foreach($dataContent as $data){
-											$data['id_campaign_whatsapp_sent'] = $logs['id_campaign_whatsapp_sent'];
-											$create = CampaignWhatsappSentContent::create($data);
-										}
-									}
-
-									DB::table('campaigns')
-									->where('id_campaign', $campaign['id_campaign'])
-									->update([
-										'campaign_whatsapp_count_sent' => DB::raw('campaign_whatsapp_count_sent + 1')
-									]);
-								}else{
-
-									$queue = [];
-									$queue['id_campaign'] 			 = $campaign['id_campaign'];
-									$queue['whatsapp_queue_to'] 	 = $receipient;
-									$queue['whatsapp_queue_send_at'] = $sendAt;
-
-									$logs = CampaignWhatsappQueue::create($queue);
-
-									DB::table('campaigns')
-									->where('id_campaign', $campaign['id_campaign'])
-									->update([
-										'campaign_whatsapp_count_queue' => DB::raw('campaign_whatsapp_count_queue + 1')
-									]);
-
-								}
-							}
-						}
+					$data['campaign'] = $campaign;
+					$data['type'] = 'whatsapp';
+					foreach (array_chunk($receipient_whatsapp,10) as $recipients) {
+						$data['recipient']=array_filter($recipients,function($var){return !empty($var);});
+						SendCampaignJob::dispatch($data)->allOnConnection('database');
 					}
+
 				}
 				$update = Campaign::where('id_campaign','=',$campaign['id_campaign'])->update(['campaign_is_sent' => 'Yes']);
 
@@ -720,7 +397,7 @@ class ApiCampaign extends Controller
 		$now = date('Y-m-d H:i:00');
 		$now2 = date('Y-m-d H:i:00', strtotime('-5 minutes'));
 
-		$campaigns = Campaign::where('campaign_send_at', '>=', $now2)->where('campaign_send_at', '<=', $now)->where('campaign_is_sent', 'No')->get();
+		$campaigns = Campaign::where('campaign_send_at', '>=', $now2)->where('campaign_send_at', '<=', $now)->where('campaign_is_sent', 'No')->where('campaign_complete', '1')->get();
 		foreach ($campaigns as $i => $campaign) {
 			if($campaign['campaign_generate_receipient'] == 'Send At Time'){
 				$cond = Campaign::with(['campaign_rule_parents', 'campaign_rule_parents.rules'])->where('id_campaign','=',$campaign['id_campaign'])->first();
@@ -1262,7 +939,6 @@ class ApiCampaign extends Controller
 		$post = $request->json()->all();
 
 		$id_campaign = $post['id_campaign'];
-		unset($post['id_campaign']);
 		if(isset($post['campaign_email_receipient']) && $post['campaign_email_receipient'] != "")
 			$post['campaign_email_count_all'] = count(explode(',',$post['campaign_email_receipient']));
 		if(isset($post['campaign_sms_receipient']) && $post['campaign_sms_receipient'] != "")
@@ -1288,7 +964,16 @@ class ApiCampaign extends Controller
 			}
 		}
 
+		$campaign=Campaign::where('id_campaign',$id_campaign)->first();
 		DB::beginTransaction();
+		if($campaign->campaign_generate_receipient=='Now'){
+			GenerateCampaignRecipient::dispatch($post)->allOnConnection('database');
+		}
+		if($campaign->campaign_send_at&&$campaign->campaign_send_at<date('Y-m-d H:i:s')){
+			$post['campaign_send_at']=date('Y-m-d H:i:s');
+		}
+		unset($post['id_campaign']);
+		$post['campaign_complete']=1;
 
 		$contentWa = null;
 		if(isset($post['campaign_whatsapp_content'])){

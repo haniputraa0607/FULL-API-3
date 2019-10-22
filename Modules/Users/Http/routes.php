@@ -1,8 +1,8 @@
 <?php
 
-Route::group(['prefix' => 'api', 'middleware' => 'log_request'], function(){
+Route::group(['prefix' => 'api', 'middleware' => 'log_activities'], function(){
 	Route::get('users/list/{var}', 'Modules\Users\Http\Controllers\ApiUser@listVar');
-	Route::group(['middleware' => ['auth_client','log_request'], 'prefix' => 'users', 'namespace' => 'Modules\Users\Http\Controllers'], function()
+	Route::group(['middleware' => ['auth_client','log_activities'], 'prefix' => 'users', 'namespace' => 'Modules\Users\Http\Controllers'], function()
 	{
 	    Route::post('new', 'ApiUser@newUser');
 		Route::post('phone/check', 'ApiUser@check');
@@ -43,7 +43,7 @@ Route::group(['prefix' => 'api', 'middleware' => 'log_request'], function(){
 	    Route::post('activity', 'ApiUser@activity');
 	    Route::post('detail', 'ApiUser@show');
 		Route::post('log', 'ApiUser@log');
-	    Route::get('log/detail/{id}', 'ApiUser@detailLog');
+	    Route::get('log/detail/{id}/{log_type}', 'ApiUser@detailLog');
 	    Route::post('delete', 'ApiUser@delete');
 		Route::post('update', 'ApiUser@updateProfileByAdmin');
 		Route::post('update/photo', 'ApiUser@updateProfilePhotoByAdmin');

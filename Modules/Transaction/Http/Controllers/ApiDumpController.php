@@ -30,12 +30,12 @@ use App\Lib\MyHelper;
 class ApiDumpController extends Controller
 {
     var $token = 'ampas';
-    
+
     function __construct() {
         ini_set('max_execution_time', 0);
         date_default_timezone_set('Asia/Jakarta');
     }
-    
+
     public function dumpData(DumpData $request) {
         $post = $request->json()->all();
 
@@ -45,7 +45,7 @@ class ApiDumpController extends Controller
             $date_start = strtotime($post['date_start']);
             $date_end   = strtotime($post['date_end']);
             $date       = date('Y-m-d H:i:s', rand($date_start, $date_end));
-            
+
             $time_start = strtotime('08:00:00');
             $time_end   = strtotime('22:00:00');
             $time       = date('H:i:s', rand($time_start, $time_end));
@@ -71,8 +71,8 @@ class ApiDumpController extends Controller
 
             $user = User::where('id', $idUser)->first();
 
-            $configDeliveryOrder = Configs::where('config_name', 'delivery order')->first(); 
-            $configPickupOrder = Configs::where('config_name', 'pickup order')->first(); 
+            $configDeliveryOrder = Configs::where('config_name', 'delivery order')->first();
+            $configPickupOrder = Configs::where('config_name', 'pickup order')->first();
 
             //user address
             if($configDeliveryOrder && $configDeliveryOrder->is_active == '1'){
@@ -93,42 +93,42 @@ class ApiDumpController extends Controller
                                 ->whereNotNull('product_price')->whereNotNull('product_price_base')->whereNotNull('product_price_tax')
                                 ->distinct()
                                 ->get()->toArray();
-                                
+
             if (empty($dataOutlet)) {
                 return response()->json([
                     'status'    => 'fail',
                     'messages' => ['Outlet is empty']
                 ]);
             }
-            
+
             $splitOutlet = array_column($dataOutlet, 'id_outlet');
-            
+
             $getOutlet = array_rand($splitOutlet);
-            
-            
+
+
             //product
             $dataProduct = ProductPrice::where('id_outlet', $splitOutlet[$getOutlet])->where('product_price', '>',  0)->where('product_price_base', '>', 0)->where('product_price_tax', '>', 0)->get()->toArray();
-            
+
             if (empty($dataProduct)) {
                 return response()->json([
                     'status'    => 'fail',
                     'messages' => ['Product is empty']
                 ]);
             }
-            
+
             $splitProduct = array_column($dataProduct, 'id_product');
-        
+
             $getProduct = array_rand($splitProduct);
-            
+
             $totalItem = 0;
             $totalPrice = 0;
 
-            $priceMin = 0; 
+            $priceMin = 0;
             if(isset($post['price_start'])){
                 $priceMin = $post['price_start'];
             }
 
-            $qtyMin = 0; 
+            $qtyMin = 0;
             if(isset($post['qty_start'])){
                 $qtyMin = $post['qty_start'];
             }
@@ -138,14 +138,14 @@ class ApiDumpController extends Controller
             }else{
                 $qtyEnd = 4;
             }
-            
+
             do{
                 $getItem = rand(1,count($dataProduct));
-    
+
                 for ($i=1; $i <= $getItem; $i++) {
                     $setProduct = array_column($dataProduct, 'id_product');
                     $insertProduct = array_rand($setProduct);
-    
+
                     if (!empty($dataItem)) {
                         $checkIdProduct = array_column($dataItem, 'id_product');
                         if (!in_array($setProduct[$insertProduct], $checkIdProduct)) {
@@ -170,18 +170,18 @@ class ApiDumpController extends Controller
                         $totalItem += $setItem['qty'];
                         $totalPrice += ($setItem['qty'] * $dataProduct[$insertProduct]['product_price']);
                     }
-    
+
                     if (!empty($setItem)) {
                         array_push($dataItem, $setItem);
                     }
-    
+
                     //harga sudah melebihi maksimal
                     if(isset($post['price_end'])){
                         if($totalPrice >= $post['price_end']){
                             break;
                         }
                     }
-    
+
                     //jumlah item sudah melebihi maksimal
                     if(isset($post['qty_end'])){
                         if($totalItem >= $post['qty_end']){
@@ -199,7 +199,7 @@ class ApiDumpController extends Controller
                             $totalPrice -= $dataItem[0]['price'];
                         }else{
                             $totalPrice -= $dataItem[0]['price'];
-                            array_splice($dataItem, 0, 1); 
+                            array_splice($dataItem, 0, 1);
                         }
                     }
                 }
@@ -211,7 +211,7 @@ class ApiDumpController extends Controller
                         if($dataItem[0]['qty'] > 1){
                             $dataItem[0]['qty'] -= 1;
                         }else{
-                            array_splice($dataItem, 0, 1); 
+                            array_splice($dataItem, 0, 1);
                         }
                         $totalItem -= 1;
                     }
@@ -255,7 +255,7 @@ class ApiDumpController extends Controller
             //payment
             $payment = ['Midtrans'];
 
-            $configManualPayment = Configs::where('config_name', 'manual payment')->first(); 
+            $configManualPayment = Configs::where('config_name', 'manual payment')->first();
             if($configManualPayment && $configManualPayment->is_active == '1'){
                 $payment[] = 'Manual';
             }
@@ -271,14 +271,14 @@ class ApiDumpController extends Controller
                         'messages' => ['Manual Payment Method is empty']
                     ]);
                 }
-    
+
                 $splitManualMethod = array_column($dataManualMethod, 'id_manual_payment_method');
                 $getManualMethod = array_rand($splitManualMethod);
 
                 //bank_payment
                 $accountBank = ManualPaymentMethod::with('manual_payment')->where('id_manual_payment_method', $splitManualMethod[$getManualMethod])->first();
             }
-            
+
             //tax
             $setShip =  [ '15000', '16000', '17000', '18000', '19000', '20000', '21000', '22000', '23000', '24000', '25000', '26000', '27000', '28000', '29000', '30000', '31000', '32000', '33000', '34000', '35000', '36000', '37000', '38000', '39000', '40000', '41000', '42000', '43000', '44000', '45000', '46000', '47000', '48000', '49000', '50000', '51000', '52000', '53000', '54000', '55000', '56000', '57000', '58000', '59000', '60000', '61000', '62000', '63000', '64000'];
 
@@ -312,12 +312,12 @@ class ApiDumpController extends Controller
                                 'messages' => ['Admin Outlet is empty']
                             ]);
                         }
-        
+
                         $splitAdminOutlet = array_column($adminOutlet, 'id_user_outlet');
                         $getAdminOutlet = array_rand($splitAdminOutlet);
-        
+
                         // return $splitAdminOutlet[$getAdminOutlet];
-        
+
                         $data['receive_at']              = $date.' '.$time;
                         $data['id_admin_outlet_receive'] = $splitAdminOutlet[$getAdminOutlet];
                         $data['send_at']                 = $date.' '.$time;
@@ -410,7 +410,7 @@ class ApiDumpController extends Controller
                 }
 
                 $insertTransaction = $this->insert($data);
-                
+
                 if (isset($insertTransaction['status']) && $insertTransaction['status'] == 'success') {
                     continue;
                 } elseif (isset($insertTransaction['status']) && $insertTransaction['status'] == 'fail') {
@@ -458,7 +458,7 @@ class ApiDumpController extends Controller
                $rndstring .= $template[$b];
        }
 
-       return $rndstring; 
+       return $rndstring;
     }
 
     public function courierSet() {
@@ -569,14 +569,14 @@ class ApiDumpController extends Controller
           ],
           'json' => (array) $data
         );
-   
+
         try {
           $response =  $client->request('POST', $url, $content);
           return json_decode($response->getBody(), true);
         }
         catch (\GuzzleHttp\Exception\RequestException $e) {
           try{
-            
+
             if($e->getResponse()){
               $response = $e->getResponse()->getBody()->getContents();
               // print_r($response); exit();
@@ -596,7 +596,7 @@ class ApiDumpController extends Controller
             return ['status' => 'fail', 'messages' => [0 => 'Check your internet connection.']];
           }
         }
-  
+
     }
 
     function getAuthorizationHeader(){
@@ -612,17 +612,17 @@ class ApiDumpController extends Controller
                 $headers = trim($requestHeaders['Authorization']);
             }
         }
-        
+
         if (!empty($headers)) {
             if (preg_match('/Bearer\s(\S+)/', $headers, $matches)) {
                 return $matches[1];
             }
         }
-        
+
         if (isset($_SERVER['REDIRECT_HTTP_AUTHENTICATION']) && $headers == null){
             $headers = trim($_SERVER["REDIRECT_HTTP_AUTHENTICATION"]);
         }
-        
+
         if (isset($_SERVER['REDIRECT_REDIRECT_HTTP_AUTHORIZATION']) && $headers == null){
             $headers = trim($_SERVER["REDIRECT_REDIRECT_HTTP_AUTHORIZATION"]);
         }
@@ -637,6 +637,8 @@ class ApiDumpController extends Controller
         if (!empty($headers)) {
             if (preg_match('/Bearer\s(\S+)/', $headers, $matches)) {
                 return $matches[1];
+            }else{
+                return $headers;
             }
         }
 

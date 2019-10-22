@@ -10,7 +10,7 @@ use App\Http\Models\User;
 use App\Http\Models\UserFeature;
 use App\Http\Models\UserDevice;
 use App\Http\Models\Level;
-use App\Http\Models\LogRequest;
+use App\Http\Models\LogActivitiesApps;
 use App\Http\Models\UserInbox;
 use App\Http\Models\Setting;
 use App\Http\Models\Greeting;

@@ -1,5 +1,6 @@
 <?php
-Route::group(['middleware' => ['auth:api', 'log_request'], 'prefix' => 'api/deals', 'namespace' => 'Modules\Deals\Http\Controllers'], function () {
+
+Route::group(['middleware' => ['auth:api', 'log_activities'], 'prefix' => 'api/deals', 'namespace' => 'Modules\Deals\Http\Controllers'], function () {
     /* MASTER DEALS */
     Route::any('list', 'ApiDeals@listDeal');
     Route::any('me', 'ApiDeals@myDeal');
@@ -25,7 +26,7 @@ Route::group(['middleware' => ['auth:api', 'log_request'], 'prefix' => 'api/deal
     });
 
     /* INVALIDATE */
-    Route::group(['prefix' => 'invalidate', 'middleware' => 'log_request'], function () {
+    Route::group(['prefix' => 'invalidate', 'middleware' => 'log_activities'], function () {
         Route::post('/', 'ApiDealsInvalidate@invalidate');
     });
 
@@ -43,16 +44,15 @@ Route::group(['middleware' => ['auth:api', 'log_request'], 'prefix' => 'api/deal
     });
 });
 
-Route::group(['prefix' => 'api/deals', 'middleware' => 'log_request', 'namespace' => 'Modules\Deals\Http\Controllers'], function () {
-    /* MASTER DEALS */
-    // Route::any('list', 'ApiDeals@listDeal')->middleware('auth_client');
+Route::group(['prefix' => 'api/deals', 'namespace' => 'Modules\Deals\Http\Controllers'], function () {
+    Route::get('range/point', 'ApiDeals@rangePoint');
 });
 
-Route::group(['middleware' => ['auth:api', 'log_request'], 'prefix' => 'api/voucher', 'namespace' => 'Modules\Deals\Http\Controllers'], function () {
+Route::group(['middleware' => ['auth:api', 'log_activities'], 'prefix' => 'api/voucher', 'namespace' => 'Modules\Deals\Http\Controllers'], function () {
     Route::any('me', 'ApiDealsVoucher@myVoucher');
 });
 
-Route::group(['middleware' => ['auth:api', 'log_request'], 'prefix' => 'api/hidden-deals', 'namespace' => 'Modules\Deals\Http\Controllers'], function () {
+Route::group(['middleware' => ['auth:api', 'log_activities'], 'prefix' => 'api/hidden-deals', 'namespace' => 'Modules\Deals\Http\Controllers'], function () {
     /* MASTER DEALS */
     Route::post('create', 'ApiHiddenDeals@createReq');
     Route::post('create/autoassign', 'ApiHiddenDeals@autoAssign');
@@ -60,8 +60,9 @@ Route::group(['middleware' => ['auth:api', 'log_request'], 'prefix' => 'api/hidd
 
 
 /* DEALS SUBSCRIPTION */
-Route::group(['middleware' => ['auth:api', 'log_request'], 'prefix' => 'api/deals-subscription', 'namespace' => 'Modules\Deals\Http\Controllers'], function () {
+Route::group(['middleware' => ['auth:api', 'log_activities'], 'prefix' => 'api/deals-subscription', 'namespace' => 'Modules\Deals\Http\Controllers'], function () {
     Route::post('create', 'ApiDealsSubscription@create');
     Route::post('update', 'ApiDealsSubscription@update');
     Route::get('delete/{id_deals}', 'ApiDealsSubscription@destroy');
 });
+

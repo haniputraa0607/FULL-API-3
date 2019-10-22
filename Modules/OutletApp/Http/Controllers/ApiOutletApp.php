@@ -14,6 +14,7 @@ use App\Http\Models\TransactionPickupGoSend;
 use App\Http\Models\TransactionMultiplePayment;
 use App\Http\Models\TransactionPaymentMidtran;
 use App\Http\Models\TransactionPaymentBalance;
+use App\Http\Models\TransactionPaymentOvo;
 use App\Http\Models\TransactionPaymentOffline;
 use App\Http\Models\Setting;
 use App\Http\Models\User;
@@ -1015,7 +1016,20 @@ class ApiOutletApp extends Controller
                         if($pay['type'] == 'Balance'){
                             $payBalance = TransactionPaymentBalance::find($pay['id_payment']);
                             if($payBalance){
-                                $refund = app($this->balance)->addLogBalance( $order['id_user'], $payBalance['balance_nominal'], $order['id_transaction'], 'Rejected Order Point', $order['transaction_grandtotal']);
+                                $refund = app($this->balance)->addLogBalance( $order['id_user'], $point=$payBalance['balance_nominal'], $order['id_transaction'], 'Rejected Order Point', $order['transaction_grandtotal']);
+                                if ($refund == false) {
+                                    DB::rollback();
+                                    return response()->json([
+                                        'status'    => 'fail',
+                                        'messages'  => ['Insert Cashback Failed']
+                                    ]);
+                                }
+                            }
+                        }
+                        elseif($pay['type'] == 'Ovo'){
+                            $payOvo = TransactionPaymentOvo::find($pay['id_payment']);
+                            if($payOvo){
+                                $refund = app($this->balance)->addLogBalance( $order['id_user'], $point=$payOvo['amount'], $order['id_transaction'], 'Rejected Order Ovo', $order['transaction_grandtotal']);
                                 if ($refund == false) {
                                     DB::rollback();
                                     return response()->json([
@@ -1028,7 +1042,7 @@ class ApiOutletApp extends Controller
                         else{
                             $payMidtrans = TransactionPaymentMidtran::find($pay['id_payment']);
                             if($payMidtrans){
-                                $refund = app($this->balance)->addLogBalance( $order['id_user'], $payMidtrans['gross_amount'], $order['id_transaction'], 'Rejected Order Midtrans', $order['transaction_grandtotal']);
+                                $refund = app($this->balance)->addLogBalance( $order['id_user'], $point=$payMidtrans['gross_amount'], $order['id_transaction'], 'Rejected Order Midtrans', $order['transaction_grandtotal']);
                                 if ($refund == false) {
                                     DB::rollback();
                                     return response()->json([
@@ -1038,11 +1052,37 @@ class ApiOutletApp extends Controller
                                 }
                             }
                         }
+                        $user = User::where('id', $order['id_user'])->first()->toArray();
+                        $send = app($this->autocrm)->SendAutoCRM('Rejected Order Point Refund', $user['phone'], 
+                            [
+                                "outlet_name"       => $outlet['outlet_name'], 
+                                "transaction_date"  => $order['transaction_date'],
+                                'receipt_number'    => $order['transaction_receipt_number'],
+                                'received_point'    => (string) $point
+                            ]
+                        );
+                        if($send != true){
+                            DB::rollback();
+                            return response()->json([
+                                    'status' => 'fail',
+                                    'messages' => ['Failed Send notification to customer']
+                                ]);
+                        }
                     }
                 }else{
                     $payMidtrans = TransactionPaymentMidtran::where('id_transaction', $order['id_transaction'])->first();
+                    $payOvo = TransactionPaymentOvo::where('id_transaction', $order['id_transaction'])->first();
                     if($payMidtrans){
-                        $refund = app($this->balance)->addLogBalance( $order['id_user'], $payMidtrans['gross_amount'], $order['id_transaction'], 'Rejected Order Midtrans', $order['transaction_grandtotal']);
+                        $refund = app($this->balance)->addLogBalance( $order['id_user'], $point=$payMidtrans['gross_amount'], $order['id_transaction'], 'Rejected Order Midtrans', $order['transaction_grandtotal']);
+                        if ($refund == false) {
+                            DB::rollback();
+                            return response()->json([
+                                'status'    => 'fail',
+                                'messages'  => ['Insert Cashback Failed']
+                            ]);
+                        }
+                    }elseif($payOvo){
+                        $refund = app($this->balance)->addLogBalance( $order['id_user'], $point=$payOvo['amount'], $order['id_transaction'], 'Rejected Order Ovo', $order['transaction_grandtotal']);
                         if ($refund == false) {
                             DB::rollback();
                             return response()->json([
@@ -1053,7 +1093,7 @@ class ApiOutletApp extends Controller
                     }else{
                         $payBalance = TransactionPaymentBalance::where('id_transaction', $order['id_transaction'])->first();
                         if($payBalance){
-                            $refund = app($this->balance)->addLogBalance( $order['id_user'], $payBalance['balance_nominal'], $order['id_transaction'], 'Rejected Order Point', $order['transaction_grandtotal']);
+                            $refund = app($this->balance)->addLogBalance( $order['id_user'], $point=$payBalance['balance_nominal'], $order['id_transaction'], 'Rejected Order Point', $order['transaction_grandtotal']);
                             if ($refund == false) {
                                 DB::rollback();
                                 return response()->json([
@@ -1063,19 +1103,36 @@ class ApiOutletApp extends Controller
                             }
                         }
                     }
+                    //send notif to customer
+                    $user = User::where('id', $order['id_user'])->first()->toArray();
+                    $send = app($this->autocrm)->SendAutoCRM('Rejected Order Point Refund', $user['phone'], 
+                        [
+                            "outlet_name"       => $outlet['outlet_name'], 
+                            "transaction_date"  => $order['transaction_date'],
+                            'receipt_number'    => $order['transaction_receipt_number'],
+                            'received_point'    => (string) $point
+                        ]
+                    );
+                    if($send != true){
+                        DB::rollback();
+                        return response()->json([
+                                'status' => 'fail',
+                                'messages' => ['Failed Send notification to customer']
+                            ]);
+                    }
+
+                    $send = app($this->autocrm)->SendAutoCRM('Order Reject', $user['phone'], ["outlet_name" => $outlet['outlet_name'], "id_reference" => $order->transaction_receipt_number.','.$order->id_outlet, "transaction_date" => $order->transaction_date]);
+                    if($send != true){
+                        DB::rollback();
+                        return response()->json([
+                                'status' => 'fail',
+                                'messages' => ['Failed Send notification to customer']
+                            ]);
+                    }
                 }
             // }
 
-            //send notif to customer
-            $user = User::where('id', $order['id_user'])->first()->toArray();
-            $send = app($this->autocrm)->SendAutoCRM('Order Reject', $user['phone'], ["outlet_name" => $outlet['outlet_name'], "id_reference" => $order->transaction_receipt_number.','.$order->id_outlet, "transaction_date" => $order->transaction_date]);
-            if($send != true){
-                DB::rollback();
-                return response()->json([
-                        'status' => 'fail',
-                        'messages' => ['Failed Send notification to customer']
-                    ]);
-            }
+
             
             
             $checkMembership = app($this->membership)->calculateMembership($user['phone']);
@@ -1086,44 +1143,4 @@ class ApiOutletApp extends Controller
 
         return response()->json(MyHelper::checkUpdate($pickup));
     }
-
-    //refund pembayaran ke point dari transaksi yg multiple payment
-    public function returnRejectMidtrans(){
-        $trxReject = Transaction::join('transaction_pickups', 'transactions.id_tranasction', 'trasnaction_pickups.id_trasnaction')
-                    ->whereNotNull('reject_at')->get();
-        foreach($trxReject as $dataReject){
-            $multiple = TransactionMultiplePayment::where('id_transaction', $order->id_transaction)->get()->toArray();
-            if($multiple){
-                foreach($multiple as $pay){
-                    if($pay['type'] == 'Balance'){
-                        $payBalance = TransactionPaymentBalance::find($pay['id_payment']);
-                        if($payBalance){
-                            $refund = app($this->balance)->addLogBalance( $order['id_user'], $payBalance['balance_nominal'], $order['id_transaction'], 'Rejected Order Point', $order['transaction_grandtotal']);
-                            if ($refund == false) {
-                                DB::rollback();
-                                return response()->json([
-                                    'status'    => 'fail',
-                                    'messages'  => ['Insert Cashback Failed']
-                                ]);
-                            }
-                        }
-                    }
-                    else{
-                        $payMidtrans = TransactionPaymentMidtran::find($pay['id_payment']);
-                        if($payMidtrans){
-                            $refund = app($this->balance)->addLogBalance( $order['id_user'], $payMidtrans['gross_amount'], $order['id_transaction'], 'Rejected Order Midtrans', $order['transaction_grandtotal']);
-                            if ($refund == false) {
-                                DB::rollback();
-                                return response()->json([
-                                    'status'    => 'fail',
-                                    'messages'  => ['Insert Cashback Failed']
-                                ]);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
 }

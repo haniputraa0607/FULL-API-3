@@ -16,7 +16,6 @@ class UpdateRequest extends FormRequest
         return [
             'id_featured_deals'=>'required|exists:featured_deals,id_featured_deals',
             'id_deals'=>'required|exists:deals,id_deals',
-            'start_date'=>'required|date|after_or_equal:'.date('Y-m-d H:i:s'),
             'end_date'=>'required|date|after_or_equal:start_date',
         ];
     }

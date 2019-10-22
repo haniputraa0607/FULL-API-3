@@ -43,10 +43,10 @@ class ApiEnquiries extends Controller
     	// print_r($post); exit();
         $data = [];
 
-        if (isset($post['id_outlet'])) {
-            $data['id_outlet'] = $post['id_outlet'];
+		if (isset($post['id_brand'])) {
+            $data['id_brand'] = $post['id_brand'];
 		}
-
+		
         if (isset($post['enquiry_name'])) {
             $data['enquiry_name'] = $post['enquiry_name'];
         }else{
@@ -67,6 +67,17 @@ class ApiEnquiries extends Controller
 
         if (isset($post['enquiry_subject'])) {
             $data['enquiry_subject'] = $post['enquiry_subject'];
+          if ($post['enquiry_subject'] == "Customer Feedback") {
+            if (isset($post['visiting_time'])) {
+              $data['visiting_time'] = $post['visiting_time'];
+            }
+          }
+
+          if ($post['enquiry_subject'] == "Career") {
+            if (isset($post['position'])) {
+              $data['position'] = $post['position'];
+            }
+          }
         }
 
         if (isset($post['enquiry_content'])) {
@@ -80,61 +91,15 @@ class ApiEnquiries extends Controller
         }else{
 			$data['enquiry_device_token'] = null;
 		}
-
-        if (isset($post['enquiry_photo'])) {
-        	$dataUploadImage = [];
-
-			if (is_array($post['enquiry_photo'])) {
-				foreach ($post['enquiry_photo'] as $value) {
-					$upload = MyHelper::uploadPhotoQuality($value, $this->saveImage, 800,50);
-
-					if (isset($upload['status']) && $upload['status'] == "success") {
-					    $data['enquiry_photo'] = $upload['path'];
-
-					    array_push($dataUploadImage, $upload['path']);
-					}
-					else {
-					    $result = [
-					        'error'    => 1,
-					        'status'   => 'fail',
-					        'messages' => ['fail upload image']
-					    ];
-
-					    return $result;
-					}
-				}
-			}
-			else {
-				$upload = MyHelper::uploadPhotoQuality($post['enquiry_photo'], $this->saveImage, 800, 50);
-
-				if (isset($upload['status']) && $upload['status'] == "success") {
-				    $data['enquiry_photo'] = $upload['path'];
-
-				    array_push($dataUploadImage, $upload['path']);
-				}
-				else {
-				    $result = [
-				        'error'    => 1,
-				        'status'   => 'fail',
-				        'messages' => ['fail upload image']
-				    ];
-
-				    return $result;
-				}
-			}
-
-			$data['many_upload'] = $dataUploadImage;
-		}
-
+      
 		if (isset($post['enquiry_file'])) {
         	$dataUploadFile = [];
 
 			if (is_array($post['enquiry_file'])) {
 				foreach ($post['enquiry_file'] as $value) {
-					$decoded = base64_decode($value);
-					$ext = MyHelper::checkExtensionImageBase64($decoded);
-
-					$upload = MyHelper::uploadFile($value, $this->saveFile, str_replace('.','',$ext));
+					$ext = MyHelper::checkMime2Ext($value);
+					
+					$upload = MyHelper::uploadFile($value, $this->saveFile, $ext);
 
 					if (isset($upload['status']) && $upload['status'] == "success") {
 					    $data['enquiry_file'] = $upload['path'];
@@ -153,10 +118,9 @@ class ApiEnquiries extends Controller
 				}
 			}
 			else {
-				$decoded = base64_decode($post['enquiry_file']);
-				$ext = MyHelper::checkExtensionImageBase64($decoded);
+				$ext = MyHelper::checkMime2Ext($post['enquiry_file']);
 
-				$upload = MyHelper::uploadFile($post['enquiry_file'], $this->saveFile, str_replace('.','',$ext));
+				$upload = MyHelper::uploadFile($post['enquiry_file'], $this->saveFile, $ext);
 
 				if (isset($upload['status']) && $upload['status'] == "success") {
 				    $data['enquiry_file'] = $upload['path'];
@@ -182,7 +146,7 @@ class ApiEnquiries extends Controller
         }
 
         return $data;
-    }
+	}
 
     /* CREATE */
     function create(Create $request) {
@@ -206,54 +170,22 @@ class ApiEnquiries extends Controller
 
         // jika berhasil maka ngirim" ke crm
         if ($save) {
-        	// save many photo
+          
 			$data['attachment'] = [];
-        	if (isset($data['many_upload'])) {
-        		$photos = $this->savePhotos($save->id_enquiry, $data['many_upload']);
-				$enquiryPhoto = EnquiriesPhoto::where('id_enquiry', $save->id_enquiry)->get();
-				foreach($enquiryPhoto as $dataPhoto){
-					$data['attachment'] = $dataPhoto->url_enquiry_photo;
-				}
-			}
-
 			// save many file
         	if (isset($data['many_upload_file'])) {
         		$files = $this->saveFiles($save->id_enquiry, $data['many_upload_file']);
 				$enquiryFile = EnquiriesFile::where('id_enquiry', $save->id_enquiry)->get();
 				foreach($enquiryFile as $dataFile){
-					$data['attachment'] = $dataFile->url_enquiry_file;
+					$data['attachment'][] = $dataFile->url_enquiry_file;
 				}
+				unset($data['enquiry_file']);
         	}
-
 			// send CRM
-            $goCrm = $this->sendCrm($data);
-        }
-        return response()->json(MyHelper::checkCreate($save));
-    }
-
-    /* SAVE PHOTO BANYAK */
-    function savePhotos($id, $photo)
-    {
-    	$data = [];
-
-    	foreach ($photo as $key => $value) {
-    		$temp = [
-				'enquiry_photo' => $value,
-				'id_enquiry'    => $id,
-				'created_at'    => date('Y-m-d H:i:s'),
-				'updated_at'    => date('Y-m-d H:i:s')
-    		];
-
-    		array_push($data, $temp);
-    	}
-
-    	if (!empty($data)) {
-    		if (!EnquiriesPhoto::insert($data)) {
-    			return false;
-    		}
-    	}
-
-    	return true;
+			$goCrm = $this->sendCrm($data);
+			$data['id_enquiry'] = $save->id_enquiry;
+		}
+        return response()->json(MyHelper::checkCreate($data));
     }
 
 	/* SAVE FILE BANYAK */
@@ -268,7 +200,6 @@ class ApiEnquiries extends Controller
 				'created_at'    => date('Y-m-d H:i:s'),
 				'updated_at'    => date('Y-m-d H:i:s')
     		];
-
     		array_push($data, $temp);
     	}
 
