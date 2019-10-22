@@ -189,18 +189,10 @@ class ApiHistoryController extends Controller
 
         $transaction = [];
         $voucher = [];
-        if (is_null($post['pickup_order']) && is_null($post['delivery_order']) && is_null($post['offline_order']) && is_null($post['online_order']) && is_null($post['buy_voucher'])) {
-            $transaction = $this->transaction($post, $id);
-            $voucher = $this->voucher($post, $id);
-        } else {
-            if (!is_null($post['pickup_order']) || !is_null($post['delivery_order']) || !is_null($post['offline_order']) || !is_null($post['online_order'])) {
-                $transaction = $this->transaction($post, $id);
-            }
-            if (!is_null($post['buy_voucher'])) {
-                $voucher = $this->voucher($post, $id);
-            }
-        }
-
+        
+        $transaction = $this->transaction($post, $id);
+        $voucher = $this->voucher($post, $id);
+        
         if (!is_null($post['oldest'])) {
             $order = 'old';
         }
@@ -388,8 +380,8 @@ class ApiHistoryController extends Controller
         $next_page = $page + 1;
 
         $balance = $this->balance($post, $id);
+        
         $sortBalance = $this->sorting($balance, $order, $page);
-
         $check = MyHelper::checkGet($sortBalance);
         if (count($balance) > 0) {
             $result['status'] = 'success';
@@ -460,15 +452,20 @@ class ApiHistoryController extends Controller
             ->join('outlets', 'transactions.id_outlet', '=', 'outlets.id_outlet')
             ->join('brand_outlet', 'outlets.id_outlet', '=', 'brand_outlet.id_outlet')
             ->where('transaction_payment_status', '!=', 'Cancelled')
+            ->where('transactions.id_user', $id)
             ->with('outlet', 'logTopup')
-            ->orderBy('transaction_date', 'DESC');
-
-        if (!is_null($post['brand'])) {
-            $transaction->orWhere('brand_outlet.id_brand', $post['brand']);
-        }
-
-        if (!is_null($post['outlet'])) {
-            $transaction->orWhere('transactions.id_outlet', $post['outlet']);
+            ->orderBy('transaction_date', 'DESC')
+            ->groupBy('transactions.id_transaction');
+            
+        if (isset($post['outlet']) || isset($post['brand'])) {
+            if (isset($post['outlet']) && !isset($post['brand'])) {
+                $transaction->where('transactions.id_outlet', $post['outlet']);
+            } elseif (!isset($post['outlet']) && isset($post['brand'])) {
+                $transaction->where('brand_outlet.id_brand', $post['brand']);
+            } else {
+                $transaction->where('transactions.id_outlet', $post['outlet']);
+                $transaction->orWhere('brand_outlet.id_brand', $post['brand']);
+            }
         }
 
         if (!is_null($post['date_start']) && !is_null($post['date_end'])) {
@@ -529,11 +526,9 @@ class ApiHistoryController extends Controller
                 });
             }
         });
-
-        $transaction->where('id_user', $id);
-
-        $transaction = $transaction->get()->toArray();
-
+        
+        $transaction = $transaction->get();
+        
         $listTransaction = [];
 
         foreach ($transaction as $key => $value) {
@@ -615,7 +610,7 @@ class ApiHistoryController extends Controller
 
     public function voucher($post, $id)
     {
-        $voucher = DealsUser::with('outlet')->orderBy('claimed_at', 'DESC');
+        $voucher = DealsUser::distinct('id_deals_users')->with('outlet')->orderBy('claimed_at', 'DESC');
 
         if (!is_null($post['date_start']) && !is_null($post['date_end'])) {
             $date_start = date('Y-m-d', strtotime($post['date_start'])) . " 00.00.00";
@@ -858,7 +853,7 @@ class ApiHistoryController extends Controller
         // }
 
         $log = $log->get();
-
+        
         $listBalance = [];
 
         foreach ($log as $key => $value) {
