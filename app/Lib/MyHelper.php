@@ -1889,10 +1889,14 @@ class MyHelper{
 		return $result;
 	}
 
-	public static function dateFormatInd($date){
-		$bulan = ['','Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+	public static function dateFormatInd($date,$jam=true){
+		if($jam){
+			$bulan = ['','Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+		}else{
+			$bulan = ['','Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+		}
 
-		return date('d', strtotime($date)).' '.$bulan[date('n', strtotime($date))].' '.date('Y', strtotime($date)).' '.date('H:i', strtotime($date));
+		return date('d', strtotime($date)).' '.$bulan[date('n', strtotime($date))].' '.date('Y', strtotime($date)).' '.($jam?date('H:i', strtotime($date)):'');
 	}    
 	public static function isJoined($query, $table){
         $joins = $query->getQuery()->joins;
