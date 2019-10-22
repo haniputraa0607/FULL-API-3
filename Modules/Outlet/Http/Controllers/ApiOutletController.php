@@ -1610,7 +1610,7 @@ class ApiOutletController extends Controller
             if($var1['operator']=='like'){
                 $var1['parameter']='%'.$var1['parameter'].'%';
             }
-            $newRule[$var['subject']][]=['operator'=>$var['operator']??null,'parameter'=>$var['parameter']??null];
+            $newRule[$var['subject']][]=$var1;
         }
         if($newRule['all_empty']??false){
                 $model->$where(function($query){
@@ -1635,6 +1635,14 @@ class ApiOutletController extends Controller
                 $model->{$where.'Has'}('brands',function($query) use ($rul){
                     $query->where('brands.id_brand',$rul['operator'],$rul['parameter']);
                 });
+            }
+        }
+        $inner=['outlet_code'];
+        foreach ($inner as $col_name) {
+            if($rules=$newRule[$col_name]??false){
+                foreach ($rules as $rul) {
+                    $model->$where('outlets.'.$col_name,$rul['operator'],$rul['parameter']);
+                }
             }
         }
     }
