@@ -8,13 +8,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v1
-    - name: update repo
+    - name: update apt
       run: sudo apt-get update
-    - name: Copy ENV Laravel Configuration for CI
-      run: php -r "file_exists('.env') || copy('.env.staging', '.env');"
-    - name: Install Dependencies (PHP vendors)
-      run: composer install -q --no-ansi --no-interaction --no-scripts --no-suggest --no-progress --prefer-dist
-    - name: Composer load
-      run: composer dump-autoload
-    - name: copy key
-      run: cp -a .key/. ~/.ssh/ && chmod 0700 ~/.ssh && touch ~/.ssh/authorized_keys && chmod 0644 ~/.ssh/authorized_keys && rsync -avz . -e "ssh -p 4636" apichamp@139.99.122.165:/home/apichamp/public_html
+    - name: Install git-ftp
+      run: sudo apt-get -qq install git-ftp
+    - name: Push to staging
+      run: sudo git ftp catchup --insecure --user deployer@sapi.champresto.id --passwd ilovedeployer ftp://sapi.champresto.id -vv
