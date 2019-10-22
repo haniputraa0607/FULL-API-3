@@ -16,7 +16,6 @@ class Create extends FormRequest
     public function rules()
     {
         return [
-            'id_outlet'       => 'required',
             'enquiry_name'    => '',
             'enquiry_phone'   => 'required',
             'enquiry_email'   => 'required',
