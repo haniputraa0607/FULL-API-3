@@ -1242,6 +1242,78 @@ class FeaturesTableSeeder extends Seeder
                 'feature_module' => 'Delivery Service',
                 'created_at' => date('Y-m-d H:00:00'),
                 'updated_at' => date('Y-m-d H:00:00'),
+            ),
+            154 =>
+            array(
+                'id_feature' => 155,
+                'feature_type' => 'List',
+                'feature_module' => 'Brand',
+                'created_at' => date('Y-m-d H:00:00'),
+                'updated_at' => date('Y-m-d H:00:00'),
+            ),
+            155 =>
+            array(
+                'id_feature' => 156,
+                'feature_type' => 'Create',
+                'feature_module' => 'Brand',
+                'created_at' => date('Y-m-d H:00:00'),
+                'updated_at' => date('Y-m-d H:00:00'),
+            ),
+            156 =>
+            array(
+                'id_feature' => 157,
+                'feature_type' => 'Update',
+                'feature_module' => 'Brand',
+                'created_at' => date('Y-m-d H:00:00'),
+                'updated_at' => date('Y-m-d H:00:00'),
+            ),
+            157 =>
+            array(
+                'id_feature' => 158,
+                'feature_type' => 'Delete',
+                'feature_module' => 'Brand',
+                'created_at' => date('Y-m-d H:00:00'),
+                'updated_at' => date('Y-m-d H:00:00'),
+            ),
+            158 =>
+            array(
+                'id_feature' => 159,
+                'feature_type' => 'Detail',
+                'feature_module' => 'Brand',
+                'created_at' => date('Y-m-d H:00:00'),
+                'updated_at' => date('Y-m-d H:00:00'),
+            ),
+            159 =>
+            array(
+                'id_feature' => 160,
+                'feature_type' => 'List',
+                'feature_module' => 'Text Menu',
+                'created_at' => date('Y-m-d H:00:00'),
+                'updated_at' => date('Y-m-d H:00:00'),
+            ),
+            160 =>
+            array(
+                'id_feature' => 161,
+                'feature_type' => 'Update',
+                'feature_module' => 'Text Menu',
+                'created_at' => date('Y-m-d H:00:00'),
+                'updated_at' => date('Y-m-d H:00:00'),
+            ),
+            161 =>
+            array(
+                'id_feature' => 162,
+                'feature_type' => 'List',
+                'feature_module' => 'Confirmation Messages',
+                'created_at' => date('Y-m-d H:00:00'),
+                'updated_at' => date('Y-m-d H:00:00'),
+            ),
+            162 =>
+            array(
+                'id_feature' => 163,
+                'feature_type' => 'Update',
+                'feature_module' => 'Confirmation Messages',
+                'created_at' => date('Y-m-d H:00:00'),
+                'updated_at' => date('Y-m-d H:00:00'),
             )
         ));
     }

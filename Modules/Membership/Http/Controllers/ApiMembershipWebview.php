@@ -43,7 +43,7 @@ class ApiMembershipWebview extends Controller
 		$result = [];
 
 		$result['user_membership'] = UsersMembership::with('user')->where('id_user', $post['id_user'])->orderBy('id_log_membership', 'desc')->first();
-
+		
 		$settingCashback = Setting::where('key', 'cashback_conversion_value')->first();
 		if(!$settingCashback || !$settingCashback->value){
 			return response()->json([
@@ -52,7 +52,7 @@ class ApiMembershipWebview extends Controller
 			]);
 		}
 
-		$allMembership = Membership::orderBy('min_total_value','asc')->orderBy('min_total_count', 'asc')->orderBy('min_total_balance', 'asc')->get()->toArray();
+		$allMembership = Membership::with('membership_promo_id')->orderBy('min_total_value','asc')->orderBy('min_total_count', 'asc')->orderBy('min_total_balance', 'asc')->get()->toArray();
 
 		$nextMembershipName = "";
 		$nextMembershipImage = "";
@@ -91,7 +91,7 @@ class ApiMembershipWebview extends Controller
 							}
 						}
 					}
-					$allMembership[$index]['membership_image'] = env('AWS_URL').$allMembership[$index]['membership_image']; 
+					$allMembership[$index]['membership_image'] = env('S3_URL_API').$allMembership[$index]['membership_image']; 
 					$allMembership[$index]['benefit_cashback_multiplier'] = $allMembership[$index]['benefit_cashback_multiplier'] * $settingCashback->value;
 				}
 			}else{
@@ -108,7 +108,7 @@ class ApiMembershipWebview extends Controller
 				}
 
 				foreach($allMembership as $j => $dataMember){
-					$allMembership[$j]['membership_image'] = env('AWS_URL').$allMembership[$j]['membership_image']; 
+					$allMembership[$j]['membership_image'] = env('S3_URL_API').$allMembership[$j]['membership_image']; 
 					$allMembership[$j]['benefit_cashback_multiplier'] = $allMembership[$j]['benefit_cashback_multiplier'] * $settingCashback->value;
 				}
 			}
@@ -123,13 +123,13 @@ class ApiMembershipWebview extends Controller
 			}elseif($nextTrxType == 'value'){
 				$subtotal_transaction = Transaction::where('id_user', $post['id_user'])->where('transaction_payment_status', 'Completed')->sum('transaction_subtotal');
 				$result['user_membership']['user']['progress_now'] = $subtotal_transaction;
-				$result['progress_active'] = $subtotal_transaction / $nextTrx * 100;
-				$result['next_trx']	= $nextTrx - $subtotal_transaction;
+				$result['progress_active'] = ($subtotal_transaction / $nextTrx) * 100;
+				$result['next_trx']		= $nextTrx - $subtotal_transaction;
 			}elseif($nextTrxType == 'balance'){
 				$total_balance = LogBalance::where('id_user', $post['id_user'])->whereNotIn('source', [ 'Rejected Order', 'Rejected Order Midtrans', 'Rejected Order Point', 'Reversal'])->where('balance', '>', 0)->sum('balance');
 				$result['user_membership']['user']['progress_now'] = $total_balance;
-				$result['progress_active'] = $total_balance / $nextTrx * 100;
-				$result['next_trx']	= $nextTrx - $total_balance;
+				$result['progress_active'] = ($total_balance / $nextTrx) * 100;
+				$result['next_trx']		= $nextTrx - $total_balance;
 			}
 		}
 

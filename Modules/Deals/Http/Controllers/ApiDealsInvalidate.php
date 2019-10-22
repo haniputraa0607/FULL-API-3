@@ -37,20 +37,29 @@ class ApiDealsInvalidate extends Controller
         $deals = $this->outletAvailable($request->user(), $request->json('id_deals_user'), $request->json('outlet_code'));
         // dd($deals);
 
-        if ($deals) {
+        if ($deals&&optional($deals)->status_outlet) {
             $now = date('Y-m-d H:i:s');
             // if deals subscription, check voucher start time
             if ($deals->deals->deals_type == "Subscription") {
-                $condition = (strtotime($deals->voucher_active_at) <= strtotime($now) &&
-                    strtotime($deals->voucher_expired_at) >= strtotime($now));
-                $voucher_active  = date('d F Y H:i:s', strtotime($deals->voucher_active_at));
+                $condition = (strtotime($deals->deals->deals_voucher_start??$deals->voucher_active_at) <= strtotime($now) &&
+                    strtotime($deals->deals->deals_voucher_start??$deals->voucher_expired_at) >= strtotime($now));
+                $voucher_active  = date('d F Y H:i:s', strtotime($deals->deals->deals_voucher_start??$deals->voucher_active_at));
                 $voucher_expired = date('d F Y H:i:s', strtotime($deals->voucher_expired_at));
                 $messages = ['Voucher is expired or not yet active.',
                         'Voucher validity period: '.$voucher_active.' - '.$voucher_expired."."];
             }
             else{
-                $condition = strtotime($deals->voucher_expired_at) >= strtotime($now);
-                $messages = ['Voucher is expired.'];
+                if($deals->deals->deals_voucher_start){
+                    $condition = (strtotime($deals->deals->deals_voucher_start) <= strtotime($now) &&
+                        strtotime($deals->voucher_expired_at) >= strtotime($now));
+                    $voucher_active  = date('d F Y H:i:s', strtotime($deals->deals->deals_voucher_start));
+                    $voucher_expired = date('d F Y H:i:s', strtotime($deals->voucher_expired_at));
+                    $messages = ['Voucher is expired or not yet active.',
+                            'Voucher validity period: '.$voucher_active.' - '.$voucher_expired."."];
+                }else{
+                    $condition = strtotime($deals->voucher_expired_at) >= strtotime($now);
+                    $messages = ['Voucher is expired.'];
+                }
             }
 
             if ($condition) {
@@ -69,15 +78,13 @@ class ApiDealsInvalidate extends Controller
                             $deals = $this->outletAvailable($request->user(), $request->json('id_deals_user'), $request->json('outlet_code'))->toArray();
                             
                             // add voucher invalidate success webview url
-                            $deals['webview_url'] = env('APP_URL') ."webview/voucher/". $deals['id_deals_user'];
+                            $deals['webview_url'] = env('APP_URL') ."webview/voucher/v2/". $deals['id_deals_user'];
 
                             // SEND NOTIFICATION
-                            $send = app($this->autocrm)->SendAutoCRM('Deals', 
+                            $send = app($this->autocrm)->SendAutoCRM('Redeem Voucher Success', 
                                 $deals['user']['phone'], 
                                 [
                                     'redeemed_at'       => $deals['redeemed_at'], 
-                                    'voucher_hash'      => $deals['voucher_hash'],
-                                    'voucher_hash_code' => $deals['voucher_hash_code'],
                                     'id_deals_user'     => $deals['id_deals_user'],
                                     'voucher_code'      => $deals['deal_voucher']['voucher_code'],
                                     'outlet_name'       => $deals['outlet_name'],
@@ -106,6 +113,9 @@ class ApiDealsInvalidate extends Controller
         }
         else {
             $fail['messages'] = ['Voucher not available in this store.'];
+            if(optional($deals)->id_outlet){
+                $fail['messages'] = ['Voucher only available at '.$deals->outlet_name];
+            }
         }
 
         DB::rollback();
@@ -134,9 +144,10 @@ class ApiDealsInvalidate extends Controller
         ->where('outlet_code', strtoupper($outlet_code))
         ->where('id_user', $user->id)
         ->where('id_deals_user', $id_deals_user)
+        ->addSelect(DB::raw('*,((deals_users.id_outlet is null) or deals_users.id_outlet = outlets.id_outlet) as status_outlet'))
         ->with('user', 'dealVoucher', 'dealVoucher.deal')
         ->first();
-        
+
         return $deals;
     }
 

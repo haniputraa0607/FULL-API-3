@@ -26,10 +26,10 @@ class ApiCustomPageController extends Controller
      */
     public function index()
     {
-        $customPage = CustomPage::orderBy('order_custom_page')->get()->toArray();
+        $customPage = CustomPage::orderBy('custom_page_order')->get()->toArray();
 
         foreach ($customPage as $key => $value) {
-            if ($value['order_custom_page'] == null || $value['order_custom_page'] == 0) {
+            if ($value['custom_page_order'] == null || $value['custom_page_order'] == 0) {
                 $nullOrZero[] = $customPage[$key];
                 unset($customPage[$key]);
             } else {
@@ -59,11 +59,15 @@ class ApiCustomPageController extends Controller
 
         $request->validate([
             'custom_page_title'         => 'required',
+            'custom_page_menu'         => 'required',
             'custom_page_description'   => 'required'
         ]);
 
         if (isset($post['custom_page_title'])) {
             $data['custom_page_title'] = $post['custom_page_title'];
+        }
+        if (isset($post['custom_page_menu'])) {
+            $data['custom_page_menu'] = $post['custom_page_menu'];
         }
         if (isset($post['custom_page_description'])) {
             $data['custom_page_description'] = $post['custom_page_description'];
@@ -237,7 +241,7 @@ class ApiCustomPageController extends Controller
             } catch (\Exception $e) {
                 $result = [
                     'status'  => 'fail',
-                    'message' => 'Update Custom Page Failed'
+                    'messages' => 'Update Custom Page Failed'
                 ];
                 DB::rollBack();
                 return response()->json($result);
@@ -273,7 +277,7 @@ class ApiCustomPageController extends Controller
             } catch (\Exception $e) {
                 $result = [
                     'status'  => 'fail',
-                    'message' => 'Create Custom Page Failed'
+                    'messages' => 'Create Custom Page Failed'
                 ];
                 DB::rollBack();
                 return response()->json($result);
@@ -330,10 +334,10 @@ class ApiCustomPageController extends Controller
 
     public function listCustomPage()
     {
-        $customPage = CustomPage::orderBy('order_custom_page')->get()->toArray();
+        $customPage = CustomPage::orderBy('custom_page_order')->get()->toArray();
 
         foreach ($customPage as $key => $value) {
-            if ($value['order_custom_page'] == null || $value['order_custom_page'] == 0) {
+            if ($value['custom_page_order'] == null || $value['custom_page_order'] == 0) {
                 $nullOrZero[] = $customPage[$key];
                 unset($customPage[$key]);
             } else {
@@ -353,8 +357,8 @@ class ApiCustomPageController extends Controller
         if ($dataMerge) {
             foreach ($dataMerge as $key => $value) {
                 $result[$key]['url']            = env("APP_URL") . 'custom-page/webview/' . $value['id_custom_page'];
-                $result[$key]['title']          = $value['title'];
-                $result[$key]['icon_image']     = env("APP_API_URL") . $value['icon_image'];
+                $result[$key]['title']          = $value['custom_page_title'];
+                $result[$key]['icon_image']     = env("APP_API_URL") . $value['custom_page_icon_image'];
             }
         }
 

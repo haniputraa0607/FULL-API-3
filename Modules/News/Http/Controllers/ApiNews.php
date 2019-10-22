@@ -49,6 +49,9 @@ class ApiNews extends Controller
         if (isset($post['news_title'])) {
             $data['news_title'] = $post['news_title'];
         }
+        if (isset($post['id_news_category'])) {
+            $data['id_news_category'] = $post['id_news_category'];
+        }
         if (isset($post['news_second_title'])) {
             $data['news_second_title'] = $post['news_second_title'];
         }
@@ -245,15 +248,19 @@ class ApiNews extends Controller
             // data news
             $post = $request->json()->all();
             if(isset($request->news_video)){
-                $youtube = MyHelper::parseYoutube($post['news_video']);
-                if($youtube['status'] == 'success'){
-                    $post['news_video'] = $youtube['data'];
-                }else{
-                    return response()->json([
-                        'status'   => 'fail',
-                        'messages' => ['url youtube not valid.']
-                    ]);
+                $post['news_video']='';
+                foreach ($request->news_video as $vid_url) {
+                    $youtube = MyHelper::parseYoutube($vid_url);
+                    if($youtube['status'] == 'success'){
+                        $post['news_video'].= $youtube['data'].';';
+                    }else{
+                        return response()->json([
+                            'status'   => 'fail',
+                            'messages' => ['url youtube not valid.']
+                        ]);
+                    }
                 }
+                $post['news_video']=trim($post['news_video'],';');
             }
 
             $data = $this->cekInputan($post);
@@ -298,7 +305,7 @@ class ApiNews extends Controller
                 }
                 DB::commit();
 
-                return response()->json(MyHelper::checkUpdate($save));
+                return response()->json(MyHelper::checkCreate($save));
             }
             else {
                 return response()->json([
@@ -315,16 +322,20 @@ class ApiNews extends Controller
     function update(Update $request) {
             // info news
             $post = $request->json()->all();
-            if(isset($post['news_video'])){
-                $youtube = MyHelper::parseYoutube($post['news_video']);
-                if($youtube['status'] == 'success'){
-                    $post['news_video'] = $youtube['data'];
-                }else{
-                    return response()->json([
-                        'status'   => 'fail',
-                        'messages' => ['url youtube not valid.']
-                    ]);
+            if(isset($request->news_video)){
+                $post['news_video']='';
+                foreach ($request->news_video as $vid_url) {
+                    $youtube = MyHelper::parseYoutube($vid_url);
+                    if($youtube['status'] == 'success'){
+                        $post['news_video'].= $youtube['data'].';';
+                    }else{
+                        return response()->json([
+                            'status'   => 'fail',
+                            'messages' => ['url youtube not valid.']
+                        ]);
+                    }
                 }
+                $post['news_video']=trim($post['news_video'],';');
             }
             $dataNews = News::where('id_news', $request->json('id_news'))->get()->toArray();
 
@@ -502,6 +513,10 @@ class ApiNews extends Controller
                 $query->select('id_news_category','category_name');
             }]);
 
+            if(!$request->json('admin')){
+                $news->whereHas('newsCategory');
+            }
+
             if(!isset($post['id_news'])){
                 $news->select('id_news','id_news_category','news_title','news_publish_date','news_expired_date','news_slug','news_content_short','news_image_luar','news_image_dalam');
             }else{
@@ -523,11 +538,16 @@ class ApiNews extends Controller
 
             if (isset($post['published'])) {
                 $now = date('Y-m-d');
-                $news->where('news_publish_date', '<=', $now)->where('news_expired_date', '>=', $now)->orWhere('news_expired_date', null);
+                $news->where('news_publish_date', '<=', $now);
+                $news->where(function ($query) use ($now) {
+                    $query->where('news_expired_date', '>=', $now)
+                        ->orWhere('news_expired_date', null);
+                });
             }
 
             if (isset($post['admin'])) {
-                $news = $news->orderBy('news_post_date', 'DESC')->get()->toArray();
+                $news = $news
+                ->select('*')->orderBy('news_post_date', 'DESC')->get()->toArray();
             }
             else {
 
@@ -546,6 +566,9 @@ class ApiNews extends Controller
             array_walk($updateNews, function(&$newsItem) use ($post){
                 $newsItem['news_category']=$newsItem['news_category']?:['id_news_category'=>0,'category_name'=>'Uncategories'];
             });
+            if(!$updateNews){
+                return response()->json(MyHelper::checkGet([]));
+            }
             return response()->json(MyHelper::checkGet($news));
     }
 

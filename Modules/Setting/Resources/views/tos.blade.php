@@ -14,14 +14,14 @@
             font-family: 'Seravek';
             font-style: normal;
             font-weight: 400;
-            src: url('{{env("AWS_ASSET_URL")}}{{"assets/fonts/Seravek.ttf"}}') format('truetype'); 
+            src: url('{{env("S3_URL_VIEW")}}{{"assets/fonts/Seravek.ttf"}}') format('truetype'); 
         }
 
         @font-face {
             font-family: 'Seravek Light';
             font-style: normal;
             font-weight: 400;
-            src: url('{{env("AWS_ASSET_URL")}}{{"assets/fonts/Seravek-Light.ttf"}}') format('truetype'); 
+            src: url('{{env("S3_URL_VIEW")}}{{"assets/fonts/Seravek-Light.ttf"}}') format('truetype'); 
         }
         .kotak {
             margin : 10px;

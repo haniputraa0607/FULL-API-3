@@ -67,61 +67,63 @@ class BalanceController extends Controller
         }
 
         DB::beginTransaction();
-            $checkLog = LogBalance::where('source', $source)->where('id_reference', $id_reference)->first();
-            if($checkLog){
-                $balance_before = $checkLog->balance_before;
-                if($balance_nominal == $checkLog->balance){
-                    $balance_after = $checkLog->balance_after;
-                }else{
-                    $balance_after = $balance_before + $balance_nominal; 
-                }
-            }   
-
-            $LogBalance = [
-                'id_user'                        => $id_user,
-                'balance'                        => $balance_nominal,
-                'balance_before'                 => $balance_before,
-                'balance_after'                  => $balance_after,
-                'id_reference'                   => $id_reference,
-                'source'                         => $source,
-                'grand_total'                    => $grand_total,
-                'ccashback_conversion'           => $setting_cashback->value,
-                'membership_level'               => $level,
-                'membership_cashback_percentage' => $cashback_percentage
-            ];
-
-           $create = LogBalance::updateOrCreate(['id_user' => $id_user, 'id_reference' => $id_reference, 'source' => $source], $LogBalance);
-
-            // get inserted data to hash
-            $log_balance = LogBalance::find($create->id_log_balance);
-            // hash the inserted data
-            $dataHashBalance = [
-                'id_log_balance'                 => $log_balance->id_log_balance,
-                'id_user'                        => $log_balance->id_user,
-                'balance'                        => $log_balance->balance,
-                'balance_before'                 => $log_balance->balance_before,
-                'balance_after'                  => $log_balance->balance_after,
-                'id_reference'                   => $log_balance->id_reference,
-                'source'                         => $log_balance->source,
-                'grand_total'                    => $log_balance->grand_total,
-                'ccashback_conversion'           => $log_balance->ccashback_conversion,
-                'membership_level'               => $log_balance->membership_level,
-                'membership_cashback_percentage' => $log_balance->membership_cashback_percentage
-            ];
-            // $encodeCheck = utf8_encode(json_encode(($dataHashBalance)));
-            // $enc = MyHelper::encryptkhususnew($encodeCheck);
-            
-            $enc = base64_encode(json_encode(($dataHashBalance)));
-            // update enc column
-            $log_balance->update(['enc' => $enc]);
-            
-            $new_user_balance = LogBalance::where('id_user', $user->id)->sum('balance');
-            $update_user = $user->update(['balance' => $new_user_balance]);
-
-            if (!($log_balance && $update_user)) {
-                DB::rollback();
-                return false;
+        $checkLog = LogBalance::where('source', $source)->where('id_reference', $id_reference)->first();
+        if($checkLog){
+            $balance_before = $checkLog->balance_before;
+            if($balance_nominal == $checkLog->balance){
+                $balance_after = $checkLog->balance_after;
+            }else{
+                $balance_after = $balance_before + $balance_nominal; 
             }
+        }   
+
+        $LogBalance = [
+            'id_user'                        => $id_user,
+            'balance'                        => $balance_nominal,
+            'balance_before'                 => $balance_before,
+            'balance_after'                  => $balance_after,
+            'id_reference'                   => $id_reference,
+            'source'                         => $source,
+            'grand_total'                    => $grand_total,
+            'ccashback_conversion'           => $setting_cashback->value,
+            'membership_level'               => $level,
+            'membership_cashback_percentage' => $cashback_percentage
+        ];
+
+       $create = LogBalance::updateOrCreate(['id_user' => $id_user, 'id_reference' => $id_reference, 'source' => $source], $LogBalance);
+
+        // get inserted data to hash
+        $log_balance = LogBalance::find($create->id_log_balance);
+        // hash the inserted data
+        $dataHashBalance = [
+            'id_log_balance'                 => $log_balance->id_log_balance,
+            'id_user'                        => $log_balance->id_user,
+            'balance'                        => $log_balance->balance,
+            'balance_before'                 => $log_balance->balance_before,
+            'balance_after'                  => $log_balance->balance_after,
+            'id_reference'                   => $log_balance->id_reference,
+            'source'                         => $log_balance->source,
+            'grand_total'                    => $log_balance->grand_total,
+            'ccashback_conversion'           => $log_balance->ccashback_conversion,
+            'membership_level'               => $log_balance->membership_level,
+            'membership_cashback_percentage' => $log_balance->membership_cashback_percentage
+        ];
+        // $encodeCheck = utf8_encode(json_encode(($dataHashBalance)));
+        // $enc = MyHelper::encryptkhususnew($encodeCheck);
+        
+        // AutoCRM Taruh sini
+
+        $enc = base64_encode(json_encode(($dataHashBalance)));
+        // update enc column
+        $log_balance->update(['enc' => $enc]);
+        
+        $new_user_balance = LogBalance::where('id_user', $user->id)->sum('balance');
+        $update_user = $user->update(['balance' => $new_user_balance]);
+
+        if (!($log_balance && $update_user)) {
+            DB::rollback();
+            return false;
+        }
 
         DB::commit();
 
@@ -217,7 +219,7 @@ class BalanceController extends Controller
         if ($data['balance_before'] >= $grandTotal) {
 
             if (!is_null($idTrx)) {
-                $dataTrx = Transaction::where('id_transaction', $idTrx)->first();
+                $dataTrx = Transaction::where('id_transaction', $idTrx)->with('outlet')->first();
 
                 if (empty($dataTrx)) {
                     return [
@@ -281,7 +283,7 @@ class BalanceController extends Controller
             }
         } else {
             if (!is_null($idTrx)) {
-                $dataTrx = Transaction::where('id_transaction', $idTrx)->first();
+                $dataTrx = Transaction::where('id_transaction', $idTrx)->with('outlet')->first();
 
                 if (empty($dataTrx)) {
                     return [

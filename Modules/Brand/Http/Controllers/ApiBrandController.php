@@ -21,18 +21,15 @@ class ApiBrandController extends Controller
      * Display a listing of the resource.
      * @return Response
      */
-    public function index()
+    public function index(Request $request)
     {
-        return view('brand::index');
-    }
+        $post = $request->json()->all();
 
-    /**
-     * Show the form for creating a new resource.
-     * @return Response
-     */
-    public function create()
-    {
-        return view('brand::create');
+        $brand = Brand::orderByRaw('CASE WHEN order_brand = 0 THEN 1 ELSE 0 END')->orderBy('order_brand');
+
+        $brand = $brand->get()->toArray();
+
+        return response()->json(MyHelper::checkGet($brand));
     }
 
     /**
@@ -41,40 +38,106 @@ class ApiBrandController extends Controller
      * @return Response
      */
     public function store(Request $request)
-    { }
+    {
+        $post = $request->json()->all();
+
+        if (isset($post['logo_brand'])) {
+            $upload = MyHelper::uploadPhoto($post['logo_brand'], $path = 'img/brand/logo/');
+            if ($upload['status'] == "success") {
+                $post['logo_brand'] = $upload['path'];
+            } else {
+                $result = [
+                    'status'    => 'fail',
+                    'messages'    => ['fail upload image']
+                ];
+                return response()->json($result);
+            }
+        }
+
+        if (isset($post['image_brand'])) {
+            $upload = MyHelper::uploadPhoto($post['image_brand'], $path = 'img/brand/image/');
+            if ($upload['status'] == "success") {
+                $post['image_brand'] = $upload['path'];
+            } else {
+                $result = [
+                    'status'    => 'fail',
+                    'messages'    => ['fail upload image']
+                ];
+                return response()->json($result);
+            }
+        }
+
+        DB::beginTransaction();
+        if (isset($post['id_brand'])) {
+            $request->validate([
+                'name_brand'    => 'required'
+            ]);
+
+            if (isset($post['code_brand'])) {
+                unset($post['code_brand']);
+            }
+
+            try {
+                Brand::where('id_brand', $post['id_brand'])->update($post);
+            } catch (\Exception $e) {
+                $result = [
+                    'status'  => 'fail',
+                    'message' => 'Update Brand Failed'
+                ];
+                DB::rollBack();
+                return response()->json($result);
+            }
+            DB::commit();
+            return response()->json(['status'  => 'success', 'result' => ['id_brand' => $post['id_brand']]]);
+        } else {
+            $request->validate([
+                'name_brand'    => 'required',
+                'code_brand'    => 'required'
+            ]);
+            try {
+                $save = Brand::create($post);
+            } catch (\Exception $e) {
+                $result = [
+                    'status'  => 'fail',
+                    'message' => 'Create Brand Failed'
+                ];
+                DB::rollBack();
+                return response()->json($result);
+            }
+            DB::commit();
+            return response()->json(['status'  => 'success', 'result' => ['id_brand' => $save->id_brand]]);
+        }
+    }
 
     /**
      * Show the specified resource.
      * @return Response
      */
-    public function show()
+    public function show(Request $request)
     {
-        return view('brand::show');
-    }
+        $post = $request->json()->all();
 
-    /**
-     * Show the form for editing the specified resource.
-     * @return Response
-     */
-    public function edit()
-    {
-        return view('brand::edit');
-    }
+        $getBrand = Brand::where('id_brand', $post['id_brand'])->get()->first();
 
-    /**
-     * Update the specified resource in storage.
-     * @param  Request $request
-     * @return Response
-     */
-    public function update(Request $request)
-    { }
+        return response()->json(['status'  => 'success', 'result' => $getBrand]);
+    }
 
     /**
      * Remove the specified resource from storage.
      * @return Response
      */
-    public function destroy()
-    { }
+    public function destroy(Request $request)
+    {
+        try {
+            $delete = Brand::where('id_brand', $request->json('id_brand'))->delete();
+            return response()->json(MyHelper::checkDelete($delete));
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'fail',
+                'messages' => ['outlet has been used.']
+            ]);
+        }
+    }
 
     public function listBrand()
     {

@@ -100,7 +100,7 @@ class ApiDealsClaim extends Controller
                                         $deals_voucher = DealsVoucher::create([
                                             'id_deals'             => $id_deals,
                                             'id_deals_subscription'=> $deals_sub->id_deals_subscription,
-                                            'voucher_code'         => $code,
+                                            'voucher_code'         => strtoupper($code),
                                             'deals_voucher_status' => 'Sent',
                                         ]);
                                         if (!$deals_voucher) {
@@ -199,17 +199,16 @@ class ApiDealsClaim extends Controller
                             $autocrm = app($this->autocrm)->SendAutoCRM('Claim Deals Success', $phone,
                                 [
                                     'claimed_at'       => $voucher['claimed_at'], 
-                                    'voucher_hash'      => $voucher['voucher_hash'],
-                                    'voucher_hash_code' => $voucher['voucher_hash_code'],
-                                    'id_deals_user'     => $voucher['id_deals_user'],
-                                    'voucher_code'      => $voucher['deal_voucher']['voucher_code']
+                                    'deals_title'      => $dataDeals->deals_title,
+                                    'deals_voucher_price_point' => $dataDeals->deals_voucher_price_point
                                 ]
                             );
                         }
                         $return=[
                             'id_deals_user'=>$voucher['id_deals_user'],
                             'id_deals_voucher'=>$voucher['id_deals_voucher'],
-                            'paid_status'=>$voucher['paid_status']
+                            'paid_status'=>$voucher['paid_status'],
+                            'webview_later'=>env('APP_URL').'webview/mydeals/'.$voucher['id_deals_user']
                         ];
                         return response()->json(MyHelper::checkCreate($return));
                         }
@@ -372,7 +371,11 @@ class ApiDealsClaim extends Controller
         }
         else{
             if (!empty($dataDeals->deals_voucher_duration)) {
-                $data['voucher_expired_at'] = date('Y-m-d H:i:s', strtotime("+".$dataDeals->deals_voucher_duration." days"));
+                if($dataDeals->deals_voucher_start>date('Y-m-d H:i:s')){
+                    $data['voucher_expired_at'] = date('Y-m-d H:i:s', strtotime($dataDeals->deals_voucher_start." +".$dataDeals->deals_voucher_duration." days"));
+                }else{
+                    $data['voucher_expired_at'] = date('Y-m-d H:i:s', strtotime("+".$dataDeals->deals_voucher_duration." days"));
+                }
             }
             else {
                 $data['voucher_expired_at'] = $dataDeals->deals_voucher_expired;
