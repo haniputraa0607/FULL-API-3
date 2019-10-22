@@ -372,13 +372,13 @@ class ApiDealsVoucher extends Controller
             }
             if($datavoucher['used_at']){
                 $voucher[$index]['label']='Used';
-                $voucher[$index]['status_text']='Sudah digunakan pada '.date('d M Y H:i',strtotime($voucher[$index]['used_at']));
+                $voucher[$index]['status_text']="Sudah digunakan pada \n".MyHelper::dateFormatInd($voucher[$index]['used_at'],false);
             }elseif($datavoucher['voucher_expired_at']<date('Y-m-d H:i:s')){
                 $voucher[$index]['label']='Expired';
-                $voucher[$index]['status_text']='Telah berakhir pada '.date('d M Y H:i',strtotime($voucher[$index]['voucher_expired_at']));
+                $voucher[$index]['status_text']="Telah berakhir pada \n".MyHelper::dateFormatInd($voucher[$index]['voucher_expired_at'],false);
             }else{
                 $voucher[$index]['label']='Gunakan';
-                $voucher[$index]['status_text']='Berlaku hingga '.date('d M Y H:i',strtotime($voucher[$index]['voucher_expired_at']));
+                $voucher[$index]['status_text']="Berlaku hingga \n".MyHelper::dateFormatInd($voucher[$index]['voucher_expired_at'],false);
             }
             $outlet = null;
             if($datavoucher['deal_voucher'] == null){
