@@ -12,40 +12,40 @@
                 font-family: "ProductSans-Bold";
                 font-style: normal;
                 font-weight: 400;
-                src: url('{{ env('S3_URL_VIEW') }}{{ ('/fonts/ProductSans-Regular.ttf') }}');
+                src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/ProductSans-Bold.ttf') }}');
         }
         @font-face {
                 font-family: "ProductSans-BoldItalic";
                 font-style: normal;
                 font-weight: 400;
-                src: url('{{ env('S3_URL_VIEW') }}{{ ('/fonts/ProductSans-BoldItalic.ttf') }}');
+                src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/ProductSans-BoldItalic.ttf') }}');
         }
         @font-face {
                 font-family: "ProductSans-Italic";
                 font-style: normal;
                 font-weight: 400;
-                src: url('{{ env('S3_URL_VIEW') }}{{ ('/fonts/ProductSans-Italic.ttf') }}');
+                src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/ProductSans-Italic.ttf') }}');
         }
         @font-face {
                 font-family: "ProductSans-Medium";
                 font-style: normal;
                 font-weight: 400;
-                src: url('{{ env('S3_URL_VIEW') }}{{ ('/fonts/ProductSans-Medium.ttf') }}');
+                src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/ProductSans-Medium.ttf') }}');
         }
         @font-face {
                 font-family: "ProductSans-MediumItalic";
                 font-style: normal;
                 font-weight: 400;
-                src: url('{{ env('S3_URL_VIEW') }}{{ ('/fonts/ProductSans-MediumItalic.ttf') }}');
+                src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/ProductSans-MediumItalic.ttf') }}');
         }
         @font-face {
-                font-family: "ProductSans";
+                font-family: "ProductSans-Regular";
                 font-style: normal;
                 font-weight: 400;
-                src: url('{{ env('S3_URL_VIEW') }}{{ ('/fonts/ProductSans-Regular.ttf') }}');
+                src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/ProductSans-Regular.ttf') }}');
         }
         .ProductSans{
-            font-family: "ProductSans";
+            font-family: "ProductSans-Regular";
         }
         .ProductSans-MediumItalic{
             font-family: "ProductSans-MediumItalic";
@@ -280,17 +280,17 @@
         }
 
         #grad1 {
-          background: rgba(255,255,255,0);
-background: -moz-linear-gradient(top, rgba(255,255,255,0) 50%, rgba(255,255,255,1) 82%);
-background: -webkit-gradient(left top, left bottom, color-stop(50%, rgba(255,255,255,0)), color-stop(82%, rgba(255,255,255,1)));
-background: -webkit-linear-gradient(top, rgba(255,255,255,0) 50%, rgba(255,255,255,1) 82%);
-background: -o-linear-gradient(top, rgba(255,255,255,0) 50%, rgba(255,255,255,1) 82%);
-background: -ms-linear-gradient(top, rgba(255,255,255,0) 50%, rgba(255,255,255,1) 82%);
-background: linear-gradient(to bottom, rgba(255,255,255,0) 60%, rgba(255,255,255,1) 82%);
-filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#ffffff', endColorstr='#ffffff', GradientType=0 );
-    height: 100px;
-    width: 100%;
-    margin-top: -81px;
+            background: rgba(255,255,255,0);
+            background: -moz-linear-gradient(top, rgba(255,255,255,0) 50%, rgba(255,255,255,1) 82%);
+            background: -webkit-gradient(left top, left bottom, color-stop(50%, rgba(255,255,255,0)), color-stop(82%, rgba(255,255,255,1)));
+            background: -webkit-linear-gradient(top, rgba(255,255,255,0) 50%, rgba(255,255,255,1) 82%);
+            background: -o-linear-gradient(top, rgba(255,255,255,0) 50%, rgba(255,255,255,1) 82%);
+            background: -ms-linear-gradient(top, rgba(255,255,255,0) 50%, rgba(255,255,255,1) 82%);
+            background: linear-gradient(to bottom, rgba(255,255,255,0) 60%, rgba(255,255,255,1) 82%);
+            filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#ffffff', endColorstr='#ffffff', GradientType=0 );
+            height: 100px;
+            width: 100%;
+            margin-top: -81px;
         }
 
         </style>
@@ -330,7 +330,7 @@ filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#ffffff', end
                 @else
                     <div class="row space-bottom">
                          <div class="col-12 text-red text-11-7px ProductSans-Medium">TANGGAL</div>
-                         <div class="col-12 text-grey-black text-13-3px ProductSans-Reguler"> {{ date('d F', strtotime($news[0]['news_event_date_start'])) }} - {{ date('d F Y', strtotime($news[0]['news_event_date_end'])) }}</div>
+                         <div class="col-12 text-grey-black text-13-3px ProductSans"> {{ date('d F', strtotime($news[0]['news_event_date_start'])) }} - {{ date('d F Y', strtotime($news[0]['news_event_date_end'])) }}</div>
                     </div>
                 @endif
             @endif
@@ -338,33 +338,33 @@ filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#ffffff', end
                 @if ($news[0]['news_event_time_start'] == $news[0]['news_event_time_end'])
                     <div class="row space-bottom">
                         <div class="col-12 text-red text-11-7px ProductSans-Medium">JAM</div>
-                        <div class="col-12 text-grey-black text-13-3px ProductSans-Reguler"> {{ date('H:i', strtotime($news[0]['news_event_time_start'])) }}</div>
+                        <div class="col-12 text-grey-black text-13-3px ProductSans"> {{ date('H:i', strtotime($news[0]['news_event_time_start'])) }}</div>
                     </div>
                 @else
                     <div class="row space-bottom">
                         <div class="col-12 text-red text-11-7px ProductSans-Medium">JAM</div>
-                        <div class="col-12 text-grey-black text-13-3px ProductSans-Reguler">{{ date('H:i', strtotime($news[0]['news_event_time_start'])) }} - {{ date('H:i', strtotime($news[0]['news_event_time_end'])) }}</div>
+                        <div class="col-12 text-grey-black text-13-3px ProductSans">{{ date('H:i', strtotime($news[0]['news_event_time_start'])) }} - {{ date('H:i', strtotime($news[0]['news_event_time_end'])) }}</div>
                     </div>
                 @endif
             @endif
             @if (isset($news[0]['news_event_location_name']))
                 <div class="row space-bottom">
                     <div class="col-12 text-red text-11-7px ProductSans-Medium">LOKASI</div>
-                    <div class="col-12 text-grey-black text-13-3px ProductSans-Reguler"> {{ $news[0]['news_event_location_name'] }} </div>
+                    <div class="col-12 text-grey-black text-13-3px ProductSans"> {{ $news[0]['news_event_location_name'] }} </div>
                 </div>
             @endif
 
             @if (isset($news[0]['news_event_location_address']))
                 <div class="row space-bottom">
                      <div class="col-12 text-red text-11-7px ProductSans-Medium">ALAMAT</div>
-                     <div class="col-12 text-grey-black text-13-3px ProductSans-Reguler">{{ $news[0]['news_event_location_address'] }} </div>
+                     <div class="col-12 text-grey-black text-13-3px ProductSans">{{ $news[0]['news_event_location_address'] }} </div>
                 </div>
             @endif
 
             @if (isset($news[0]['news_event_location_phone']))
                 <div class="row space-bottom">
                     <div class="col-12 text-red text-11-7px ProductSans-Medium">TELEPON</div>
-                    <div class="col-12 text-grey-black text-13-3px ProductSans-Reguler"> {{ $news[0]['news_event_location_phone'] }} </div>
+                    <div class="col-12 text-grey-black text-13-3px ProductSans"> {{ $news[0]['news_event_location_phone'] }} </div>
                 </div>
             @endif
 
@@ -373,16 +373,15 @@ filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#ffffff', end
                     <div class="col-12 text-grey-black text-12px seravek-font"><div id="map-canvas" style="width:500;height:180px;"></div></div>
                 </div>
             @endif
-
             </div>
             <div class="line-bottom">
-                </div>
+            </div>
         </div>
         @endif
 
         <div class="kotak2">
             <div class="container">
-                <div class="row space-bottom text-13-3px ProductSans-Reguler">{!! $news[0]['news_content_long'] !!}
+                <div class="row space-bottom text-13-3px ProductSans">{!! $news[0]['news_content_long'] !!}
                 </div>
             </div>
         </div>
@@ -392,7 +391,7 @@ filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#ffffff', end
                 <div class="container">
                     @if (isset($news[0]['news_video_text']))
                         <div class="row space-bottom">
-                            <div class="col-12 text-bot text-black text-15px ProductSans-Reguler"> <span> {{ $news[0]['news_video_text'] }} :  </span></div>
+                            <div class="col-12 text-bot text-black text-15px ProductSans"> <span> {{ $news[0]['news_video_text'] }} :  </span></div>
                         </div>
                     @endif
 
@@ -417,8 +416,7 @@ filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#ffffff', end
                 <div class="container">
                 @if (isset($news[0]['news_outlet_text']))
                     <div class="row space-bottom">
-                        <div class="col-12 text-bot text-black text-15px ProductSans-Reguler"> <span> {{ $news[0]['news_outlet_text'] }} :  </span></div>
-
+                        <div class="col-12 text-bot text-black text-15px ProductSans"> <span> {{ $news[0]['news_outlet_text'] }} :  </span></div>
                     </div>
                 @endif
 
@@ -450,8 +448,7 @@ filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#ffffff', end
                 <div class="container">
                     @if (isset($news[0]['news_product_text']))
                         <div class="row space-bottom">
-                            <div class="col-12 text-bot text-black text-15px ProductSans-Reguler"> <span> {{ $news[0]['news_product_text'] }} :  </span></div>
-
+                            <div class="col-12 text-bot text-black text-15px ProductSans"> <span> {{ $news[0]['news_product_text'] }} :  </span></div>
                         </div>
                     @endif
                     @if (isset($news[0]['news_product']))
