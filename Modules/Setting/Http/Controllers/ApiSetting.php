@@ -1335,6 +1335,9 @@ class ApiSetting extends Controller
                     foreach ($menuAccount as $key=>$value){
                         $nameIcon = 'icon_'.$key;
                         $val = (array)$value;
+
+                        $menuAccount[$key]->text_menu = $menu[$key.'_text_menu'];
+                        $menuAccount[$key]->text_header = $menu[$key.'_text_header'];
                         if(isset($menu['images'][$nameIcon])){
                             if($val['icon'] != ''){
                                 //Delete old icon
