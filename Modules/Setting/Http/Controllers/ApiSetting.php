@@ -912,7 +912,8 @@ class ApiSetting extends Controller
             if(isset($image['value']) && file_exists($image['value'])){
                 unlink($image['value']);
             }
-            $upload = MyHelper::uploadPhotoStrict($post['default_home_splash_screen'], $this->saveImage, 1080, 1920,'splash','.jpg');
+            // base64 image,path,h,w,name,ext
+            $upload = MyHelper::uploadPhotoStrict($post['default_home_splash_screen'], $this->saveImage, 1080, 1920,'splash');
 
             if (isset($upload['status']) && $upload['status'] == "success") {
                 $post['default_home_splash_screen'] = $upload['path'];

@@ -114,7 +114,7 @@ class ApiDealsInvalidate extends Controller
         else {
             $fail['messages'] = ['Voucher not available in this store.'];
             if(optional($deals)->id_outlet){
-                $fail['messages'] = ['Voucher only available at '.$deals->outlet_name];
+                $fail['messages'] = ['Voucher only available at '.$deals->old_outlet_name];
             }
         }
 
@@ -140,11 +140,12 @@ class ApiDealsInvalidate extends Controller
     {
         $deals = DealsUser::join('deals_vouchers', 'deals_vouchers.id_deals_voucher', '=', 'deals_users.id_deals_voucher')
         ->leftjoin('deals_outlets', 'deals_vouchers.id_deals', '=', 'deals_outlets.id_deals')
+        ->leftjoin('outlets as o2', 'o2.id_outlet', '=', 'deals_users.id_outlet')
         ->leftjoin('outlets', 'outlets.id_outlet', '=', 'deals_outlets.id_outlet')
-        ->where('outlet_code', strtoupper($outlet_code))
+        ->where('outlets.outlet_code', strtoupper($outlet_code))
         ->where('id_user', $user->id)
         ->where('id_deals_user', $id_deals_user)
-        ->addSelect(DB::raw('*,((deals_users.id_outlet is null) or deals_users.id_outlet = outlets.id_outlet) as status_outlet'))
+        ->addSelect(DB::raw('*,((deals_users.id_outlet is null) or deals_users.id_outlet = outlets.id_outlet) as status_outlet,o2.outlet_name as old_outlet_name,outlets.outlet_name as outlet_name,outlets.id_outlet as id_outlet'))
         ->with('user', 'dealVoucher', 'dealVoucher.deal')
         ->first();
 

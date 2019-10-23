@@ -372,10 +372,13 @@ class ApiDealsVoucher extends Controller
             }
             if($datavoucher['used_at']){
                 $voucher[$index]['label']='Used';
+                $voucher[$index]['status_text']="Sudah digunakan pada \n".MyHelper::dateFormatInd($voucher[$index]['used_at'],false);
             }elseif($datavoucher['voucher_expired_at']<date('Y-m-d H:i:s')){
                 $voucher[$index]['label']='Expired';
+                $voucher[$index]['status_text']="Telah berakhir pada \n".MyHelper::dateFormatInd($voucher[$index]['voucher_expired_at'],false);
             }else{
                 $voucher[$index]['label']='Gunakan';
+                $voucher[$index]['status_text']="Berlaku hingga \n".MyHelper::dateFormatInd($voucher[$index]['voucher_expired_at'],false);
             }
             $outlet = null;
             if($datavoucher['deal_voucher'] == null){
@@ -471,7 +474,8 @@ class ApiDealsVoucher extends Controller
                     'webview_url'=>$var['webview_url']??'',
                     'url_deals_image'=>$var['deal_voucher']['deal']['url_deals_image'],
                     'status_redeem'=>($var['redeemed_at']??false)?1:0,
-                    'label'=>$var['label']
+                    'label'=>$var['label'],
+                    'status_text'=>$var['status_text']
                 ];
             },$voucher);
             $result['current_page'] = $current_page;

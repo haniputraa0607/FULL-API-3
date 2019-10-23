@@ -208,7 +208,7 @@ class ApiDeals extends Controller
 
         if ($save) {
             if (isset($data['id_outlet'])) {
-                $saveOutlet = $this->saveOutlet($save->id_deals, $data['id_outlet']);
+                $saveOutlet = $this->saveOutlet($save, $data['id_outlet']);
 
                 if (!$saveOutlet) {
                     return false;
@@ -293,7 +293,7 @@ class ApiDeals extends Controller
         }
 
         if ($request->json('key_free')) {
-            $deals->where(function($query){
+            $deals->where(function($query) use ($request){
                 $query->where('deals_title', 'LIKE', '%' . $request->json('key_free') . '%')
                     ->orWhere('deals_second_title', 'LIKE', '%' . $request->json('key_free') . '%');
             });
@@ -437,6 +437,7 @@ class ApiDeals extends Controller
             $deals[0]['webview_url'] = env('APP_URL') . "webview/deals/" . $deals[0]['id_deals'] . "/" . $deals[0]['deals_type'];
             // text tombol beli
             $deals[0]['button_text'] = $deals[0]['deals_voucher_price_type']=='free'?'Ambil':'Tukar';
+            $deals[0]['button_status'] = 0;
             //text konfirmasi pembelian
             if($deals[0]['deals_voucher_price_type']=='free'){
                 //voucher free
@@ -448,7 +449,7 @@ class ApiDeals extends Controller
             $payment_success_message = Setting::where('key', 'payment_success_message')->pluck('value')->first()??'Apakah kamu ingin menggunakan Voucher sekarang?';
             $deals[0]['payment_message'] = $payment_message;
             $deals[0]['payment_success_message'] = $payment_success_message;
-            if($deals[0]['deals_voucher_price_type']=='free'){
+            if($deals[0]['deals_voucher_price_type']=='free'&&$deals[0]['deals_status']=='available'){
                 $deals[0]['button_status']=1;
             }else {
                 if($deals[0]['deals_voucher_price_type']=='point'){
@@ -458,7 +459,9 @@ class ApiDeals extends Controller
                     }
                 }else{
                     $deals[0]['button_text'] = 'Beli';
-                    $deals[0]['button_status'] = 1;
+                    if($deals[0]['deals_status']=='available'){
+                        $deals[0]['button_status'] = 1;
+                    }
                 }
             }
         }
@@ -771,7 +774,8 @@ class ApiDeals extends Controller
             $this->deleteOutlet($id);
 
             // SAVE
-            $saveOutlet = $this->saveOutlet($id, $data['id_outlet']);
+            $deals=Deal::find($id);
+            $saveOutlet = $this->saveOutlet($deals, $data['id_outlet']);
             unset($data['id_outlet']);
         }
 
@@ -886,13 +890,17 @@ class ApiDeals extends Controller
     }
 
     /* OUTLET */
-    function saveOutlet($id_deals, $id_outlet = [])
+    function saveOutlet($deals, $id_outlet = [])
     {
+        $id_deals=$deals->id_deals;
+        $id_brand=$deals->id_brand;
         $dataOutlet = [];
 
         if (in_array("all", $id_outlet)) {
             /* SELECT ALL OUTLET */
-            $id_outlet = Outlet::select('id_outlet')->get()->toArray();
+            $id_outlet = Outlet::select('id_outlet')->whereHas('brands',function($query) use ($id_brand){
+                $query->where('brands.id_brand',$id_brand);
+            })->get()->toArray();
 
             if (empty($id_outlet)) {
                 return false;

@@ -538,7 +538,11 @@ class ApiNews extends Controller
 
             if (isset($post['published'])) {
                 $now = date('Y-m-d');
-                $news->where('news_publish_date', '<=', $now)->where('news_expired_date', '>=', $now)->orWhere('news_expired_date', null);
+                $news->where('news_publish_date', '<=', $now);
+                $news->where(function ($query) use ($now) {
+                    $query->where('news_expired_date', '>=', $now)
+                        ->orWhere('news_expired_date', null);
+                });
             }
 
             if (isset($post['admin'])) {
