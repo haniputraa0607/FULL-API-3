@@ -123,14 +123,16 @@ Route::group(['middleware' => ['auth_client', 'log_activities'], 'prefix' => 'ap
 	Route::get('/navigation-logo', 'ApiSetting@NavigationLogo');
 	Route::get('/navigation-sidebar', 'ApiSetting@NavigationSidebar');
     Route::get('/navigation-navbar', 'ApiSetting@NavigationNavbar');
+});
 
-    Route::get('/version/list', 'ApiSetting@getVersion');
-    Route::post('/version/update', 'ApiSetting@updateVersion');
+Route::group(['middleware' => ['auth_client', 'log_activities'], 'prefix' => 'api/version', 'namespace' => 'Modules\Setting\Http\Controllers'], function()
+{
+    Route::get('/list', 'ApiVersion@getVersion');
+    Route::post('/update', 'ApiVersion@updateVersion');
 });
 
 Route::group(['prefix' => 'api/setting', 'namespace' => 'Modules\Setting\Http\Controllers'], function()
-{    
-    Route::post('/version', 'ApiSetting@Version');
+{
     Route::any('/text_menu_list', 'ApiSetting@textMenuList');
 });
 
