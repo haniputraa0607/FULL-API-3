@@ -851,21 +851,51 @@ class MyHelper{
 	}
 
 	public static function uploadPhotoStrict($foto, $path, $width=800, $height=800, $name=null, $forceextension=null) {
-			// kalo ada foto1
-			$decoded = base64_decode($foto);
-			if($forceextension != null)
-				$ext = $forceextension;
-			else
-				$ext = MyHelper::checkExtensionImageBase64($decoded);
-			// set picture name
-			if($name != null)
-				$pictName = $name.$ext;
-			else
-				$pictName = mt_rand(0, 1000).''.time().''.$ext;
+		// kalo ada foto1
+		$decoded = base64_decode($foto);
+		if($forceextension != null)
+			$ext = $forceextension;
+		else
+			$ext = MyHelper::checkExtensionImageBase64($decoded);
+		// set picture name
+		if($name != null)
+			$pictName = $name.$ext;
+		else
+			$pictName = mt_rand(0, 1000).''.time().''.$ext;
 
-			// path
-			$upload = $path.$pictName;
+		// path
+		$upload = $path.$pictName;
 
+		if($ext=='.gif'){
+			if(env('STORAGE') &&  env('STORAGE') == 's3'){
+				$resource = $decoded;
+
+				$save = Storage::disk('s3')->put($upload, $resource, 'public');
+				if ($save) {
+						$result = [
+							'status' => 'success',
+							'path'  => $upload
+						];
+				}
+				else {
+					$result = [
+						'status' => 'fail'
+					];
+				}
+			}else{
+				if (file_put_contents($upload, $decoded)) {
+						$result = [
+							'status' => 'success',
+							'path'  => $upload
+						];
+				}
+				else {
+					$result = [
+						'status' => 'fail'
+					];
+				}
+			}
+		}else{
 			$img = Image::make($decoded);
 			$imgwidth = $img->width();
 			$imgheight = $img->height();
@@ -960,10 +990,10 @@ class MyHelper{
 					];
 				}
 			}
+		}
 
 
-
-			return $result;
+		return $result;
 	}
 
 	public static function uploadFile($file, $path, $ext="apk", $name=null) {

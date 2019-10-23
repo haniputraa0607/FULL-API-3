@@ -39,7 +39,7 @@ class ApiDealsSubscription extends Controller
         if ($save) {
             if (isset($data['id_outlet'])) {
                 $apiDeals = new ApiDeals();
-                $saveOutlet = $apiDeals->saveOutlet($save->id_deals, $data['id_outlet']);
+                $saveOutlet = $apiDeals->saveOutlet($save, $data['id_outlet']);
 
                 if (!$saveOutlet) {
                     DB::rollback();
@@ -183,7 +183,7 @@ class ApiDealsSubscription extends Controller
                 $apiDeals = new ApiDeals();
 
                 $apiDeals->deleteOutlet($id_deals);
-                $saveOutlet = $apiDeals->saveOutlet($update->id_deals, $id_outlets);
+                $saveOutlet = $apiDeals->saveOutlet($update, $id_outlets);
 
                 if (!$saveOutlet) {
                     DB::rollback();

@@ -24,6 +24,7 @@ use Modules\Enquiries\Http\Requests\Create;
 use Modules\Enquiries\Http\Requests\Update;
 use Modules\Enquiries\Http\Requests\Delete;
 use Modules\Enquiries\Entities\EnquiriesFile;
+use Modules\Brand\Entities\Brand;
 
 class ApiEnquiries extends Controller
 {
@@ -163,12 +164,12 @@ class ApiEnquiries extends Controller
             return response()->json($data);
 		}
 
-		//cek outlet
-		$outlet = Outlet::find($data['id_outlet']);
-		if(!$outlet){
+		//cek brand
+		$brand = Brand::find($data['id_brand']);
+		if(!$brand){
 			return response()->json([
 				'status' => 'fail',
-				'messages' => ['Outlet not found']
+				'messages' => ['Brand not found']
 			]);
 		}
 
@@ -436,8 +437,8 @@ class ApiEnquiries extends Controller
 
     /* UPDATE */
     function update(Update $request) {
-        $data = $this->cekInputan($request->json()->all());
-
+        $data = $request->json()->all();
+		
         if (isset($data['error'])) {
             unset($data['error']);
             return response()->json($data);
@@ -459,7 +460,7 @@ class ApiEnquiries extends Controller
     function index(Request $request) {
         $post = $request->json()->all();
 
-        $data = Enquiry::with(['outlet', 'photos']);
+        $data = Enquiry::with(['brand', 'outlet', 'files']);
 
         if (isset($post['id_enquiry'])) {
             $data->where('id_enquiry', $post['id_enquiry']);

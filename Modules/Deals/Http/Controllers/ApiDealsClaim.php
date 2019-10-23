@@ -417,8 +417,7 @@ class ApiDealsClaim extends Controller
     /* GET VOUCHER GENERATE */
     function getVoucherGenerate($user, $dataDeals) {
         $available = DealsVoucher::where('id_deals', $dataDeals->id_deals)->count();
-
-        if ($dataDeals->deals_total_voucher >= $available || $dataDeals->deals_voucher_type == "Unlimited") {
+        if ($dataDeals->deals_total_voucher > $available || $dataDeals->deals_voucher_type == "Unlimited") {
             // GENERATE VOUCHER
             $voucher = $this->generateVoucher($dataDeals->id_deals);
 
