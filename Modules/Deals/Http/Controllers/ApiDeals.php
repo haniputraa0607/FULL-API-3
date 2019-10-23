@@ -208,7 +208,7 @@ class ApiDeals extends Controller
 
         if ($save) {
             if (isset($data['id_outlet'])) {
-                $saveOutlet = $this->saveOutlet($save->id_deals, $data['id_outlet']);
+                $saveOutlet = $this->saveOutlet($save, $data['id_outlet']);
 
                 if (!$saveOutlet) {
                     return false;
@@ -774,7 +774,8 @@ class ApiDeals extends Controller
             $this->deleteOutlet($id);
 
             // SAVE
-            $saveOutlet = $this->saveOutlet($id, $data['id_outlet']);
+            $deals=Deal::find($id);
+            $saveOutlet = $this->saveOutlet($deals, $data['id_outlet']);
             unset($data['id_outlet']);
         }
 
@@ -889,13 +890,17 @@ class ApiDeals extends Controller
     }
 
     /* OUTLET */
-    function saveOutlet($id_deals, $id_outlet = [])
+    function saveOutlet($deals, $id_outlet = [])
     {
+        $id_deals=$deals->id_deals;
+        $id_brand=$deals->id_brand;
         $dataOutlet = [];
 
         if (in_array("all", $id_outlet)) {
             /* SELECT ALL OUTLET */
-            $id_outlet = Outlet::select('id_outlet')->get()->toArray();
+            $id_outlet = Outlet::select('id_outlet')->whereHas('brands',function($query) use ($id_brand){
+                $query->where('brands.id_brand',$id_brand);
+            })->get()->toArray();
 
             if (empty($id_outlet)) {
                 return false;
