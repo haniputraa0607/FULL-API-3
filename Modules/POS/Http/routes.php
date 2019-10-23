@@ -7,7 +7,7 @@ Route::group(['middleware' => 'web', 'prefix' => 'pos', 'namespace' => 'Modules\
 
 Route::group(['prefix' => 'api/v1/pos/', 'namespace' => 'Modules\POS\Http\Controllers'], function()
 {
-    Route::group(['middleware' => ['auth_client','log_request']], function() {
+    Route::group(['middleware' => ['auth_client','log_activities_pos']], function() {
         Route::any('check/member', 'ApiPOS@checkMember');
         Route::any('check/voucher', 'ApiPOS@checkVoucher');
         Route::any('voucher/void', 'ApiPOS@voidVoucher');

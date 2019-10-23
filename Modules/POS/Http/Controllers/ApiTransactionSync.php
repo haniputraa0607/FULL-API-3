@@ -16,6 +16,9 @@ use App\Http\Models\TransactionPaymentOffline;
 use App\Http\Models\TransactionMultiplePayment;
 use App\Http\Models\TransactionPaymentMidtran;
 use App\Http\Models\TransactionPaymentBalance;
+use App\Http\Models\TransactionDuplicate;
+use App\Http\Models\TransactionDuplicatePayment;
+use App\Http\Models\TransactionDuplicateProduct;
 use App\Http\Models\TransactionVoucher;
 use App\Http\Models\TransactionSetting;
 use App\Http\Models\User;
@@ -103,34 +106,46 @@ class ApiTransactionSync extends Controller
             
             //check possibility duplicate
             $receiptDuplicate = Transaction::where('id_outlet', '!=', $checkOutlet['id_outlet'])
-                                                                            ->whereIn('transaction_receipt_number', $validReceipt)
-                                                                            ->where('trasaction_type', 'Offline')
-                                                                            ->select('transaction_receipt_number')
-                                                                            ->get()->pluck('transaction_receipt_number')->toArray();
+                                ->whereIn('transaction_receipt_number', $validReceipt)
+                                ->where('trasaction_type', 'Offline')
+                                ->select('transaction_receipt_number')
+                                ->get()->pluck('transaction_receipt_number')->toArray();
+
+            $transactionDuplicate = TransactionDuplicate::where('id_outlet', '=', $checkOutlet['id_outlet'])
+                                    ->whereIn('transaction_receipt_number', $validReceipt)
+                                    ->select('transaction_receipt_number')
+                                    ->get()->pluck('transaction_receipt_number')->toArray();
 
             $receiptDuplicate = array_intersect($receipt, $receiptDuplicate);
             $contentDuplicate = [];
             foreach($receiptDuplicate as $key => $receipt){
-                $duplicate = $this->processDuplicate($dataTrans[$key], $checkOutlet);
-                if(isset($duplicate['status']) && $duplicate['status'] == 'duplicate'){
-                    $data = [
-                        'trx' => $duplicate['trx'],
-                        'duplicate' =>$duplicate['duplicate']
-                    ];
-                    $contentDuplicate[] = $data;
+                if(in_array($receipt, $transactionDuplicate)){
+                    $checkDuplicate++;
                     unset($dataTrans[$key]);
+                }else{
+                    $duplicate = $this->processDuplicate($dataTrans[$key], $checkOutlet);
+                    if(isset($duplicate['status']) && $duplicate['status'] == 'duplicate'){
+                        $checkDuplicate++;
+                        $data = [
+                            'trx' => $duplicate['trx'],
+                            'duplicate' =>$duplicate['duplicate']
+                        ];
+                        $contentDuplicate[] = $data;
+                        unset($dataTrans[$key]);
+                    }
                 }
             }
 
             $fraudTrxDay = FraudSetting::where('parameter', 'LIKE', '%transactions in 1 day%')->first();
+            $fraudTrxWeek = FraudSetting::where('parameter', 'LIKE', '%transactions in 1 week%')->first();
             $countSettingCashback = TransactionSetting::get();
             foreach ($dataTrans as $key => $trx) {
                 if(!empty($trx->date_time) &&
                     isset($trx->total) && isset($trx->service) &&
                     isset($trx->tax) && isset($trx->discount) && isset($trx->grand_total) &&  
-                    !empty($trx->payments) && isset($trx->menu)){
+                    isset($trx->menu)){
 
-                    $insertTrx = $this->insertTransaction($checkOutlet, $trx, $config, $settingPoint, $countSettingCashback, $fraudTrxDay);
+                    $insertTrx = $this->insertTransaction($checkOutlet, $trx, $config, $settingPoint, $countSettingCashback, $fraudTrxDay, $fraudTrxWeek);
                     if(isset($insertTrx['id_transaction'])){
                             $checkSuccess++;
                             $result[] = $insertTrx;
@@ -161,14 +176,16 @@ class ApiTransactionSync extends Controller
                     SyncTransactionFaileds::create($data);
                 }
             }
-            
-            if($countDataTrans == $checkSuccess || $countDataTrans == $checkDuplicate){
+
+            $newTranAndDuplicate = $checkSuccess + $checkDuplicate;
+            if($countDataTrans == $checkSuccess || $countDataTrans == $checkDuplicate ||
+                $countDataTrans == $newTranAndDuplicate){
                 SyncTransactionQueues::where('id_sync_transaction_queues', $trans['id_sync_transaction_queues'])->delete();
             }
         }
     }
     
-    function insertTransaction($outlet, $trx, $config, $settingPoint, $countSettingCashback, $fraudTrxDay){
+    function insertTransaction($outlet, $trx, $config, $settingPoint, $countSettingCashback, $fraudTrxDay, $fraudTrxWeek){
         $trx = (array)$trx;
         DB::beginTransaction();
         try{
@@ -192,7 +209,7 @@ class ApiTransactionSync extends Controller
                     ];
 
                     if(!empty($trx['sales_type'])){
-                        $dataTrx['membership_level']  = $trx['sales_type'];
+                        $dataTrx['sales_type']  = $trx['sales_type'];
                     }
 
                     $trxVoucher = [];
@@ -299,28 +316,41 @@ class ApiTransactionSync extends Controller
                     }
 
                     $dataPayments = [];
-                    foreach ($trx['payments'] as $col => $pay) {
-                        $pay = (array)$pay;
-                        if(isset($pay['type']) && isset($pay['name'])
-                            && isset($pay['nominal'])){
-                            $dataPay = [
+                    if(!empty($trx['payments'])){
+                        foreach ($trx['payments'] as $col => $pay) {
+                            $pay = (array)$pay;
+                            if(isset($pay['type']) && isset($pay['name'])
+                                && isset($pay['nominal'])){
+                                $dataPay = [
                                     'id_transaction' => $createTrx['id_transaction'],
                                     'payment_type'   => $pay['type'],
                                     'payment_bank'   => $pay['name'],
-                                    'payment_amount' => $pay['nominal']
-                            ];
+                                    'payment_amount' => $pay['nominal'],
+                                    'created_at' => date('Y-m-d H:i:s'),
+                                    'updated_at' => date('Y-m-d H:i:s')
+                                ];
 
-                            array_push($dataPayments,$dataPay);
-                        }else{
-                            DB::rollback();
-                            return ['status' => 'fail', 'messages' => ['There is an incomplete input in the payment list']];
+                                array_push($dataPayments,$dataPay);
+                            }else{
+                                DB::rollback();
+                                return ['status' => 'fail', 'messages' => ['There is an incomplete input in the payment list']];
+                            }
                         }
+                    }else{
+                        $dataPayments = [
+                            'id_transaction' => $createTrx['id_transaction'],
+                            'payment_type'   => 'offline',
+                            'payment_bank'   => 'null',
+                            'payment_amount' => 10000,
+                            'created_at' => date('Y-m-d H:i:s'),
+                            'updated_at' => date('Y-m-d H:i:s')
+                        ];
                     }
 
                     $insertPayments = TransactionPaymentOffline::insert($dataPayments);
                     if (!$insertPayments) {
                         DB::rollback();
-                        return ['status' => 'fail', 'messages' => ['Transaction sync failed']];
+                        return ['status' => 'fail', 'messages' => ['Failed insert transaction payments']];
                     }
 
                     $userTrxProduct = [];
@@ -531,14 +561,13 @@ class ApiTransactionSync extends Controller
                                 ];
                             }
 
-                            //cek fraud detection transaction per week (last 7 days)
-                            $userData = User::find($user['id']);
 
-                            $fraudTrx = FraudSetting::where('parameter', 'LIKE', '%transactions in 1 week%')->first();
-                            if ($fraudTrx && $fraudTrx['parameter_detail'] != null) {
-                                if ($userData['count_transaction_week'] >= $fraudTrx['parameter_detail']) {
+                            $userData = User::find($user['id']);
+                            //cek fraud detection transaction per week (last 7 days)
+                            if ($fraudTrxWeek && $fraudTrxWeek['parameter_detail'] != null) {
+                                if ($userData['count_transaction_week'] >= $fraudTrxWeek['parameter_detail']) {
                                     //send fraud detection to admin
-                                    $sendFraud = app($this->setting_fraud)->SendFraudDetection($fraudTrx['id_fraud_setting'], $userData, $createTrx['id_transaction'], $lastDeviceId = null);
+                                    $sendFraud = app($this->setting_fraud)->SendFraudDetection($fraudTrxWeek['id_fraud_setting'], $userData, $createTrx['id_transaction'], $lastDeviceId = null);
                                 }
                             }
                         }
@@ -569,151 +598,175 @@ class ApiTransactionSync extends Controller
     }
 
     function processDuplicate($trx, $outlet){
-        $trxDuplicate = Transaction::where('transaction_receipt_number',  $trx->trx_id)
-                            ->with('user', 'outlet', 'productTransaction.product')
-                            ->whereNotIn('transactions.id_outlet', [$outlet['id_outlet']])
-                            ->where('transaction_date', date('Y-m-d H:i:s', strtotime($trx->date_time)))
-                            ->where('transaction_grandtotal', $trx->grand_total)
-                            ->where('transaction_subtotal', $trx->total)
-                            ->where('trasaction_type', 'Offline');
+        $trx = (array)$trx;
+        DB::beginTransaction();
+        try{
+            $trxDuplicate = Transaction::where('transaction_receipt_number',  $trx['trx_id'])
+                ->with('user', 'outlet', 'productTransaction.product')
+                ->whereNotIn('transactions.id_outlet', [$outlet['id_outlet']])
+                ->where('transaction_date', date('Y-m-d H:i:s', strtotime($trx['date_time'])))
+                ->where('transaction_grandtotal', $trx['grand_total'])
+                ->where('transaction_subtotal', $trx['total'])
+                ->where('trasaction_type', 'Offline');
 
-        if(isset($trx->cashier)){
-            $trxDuplicate = $trxDuplicate->where('transaction_cashier', $trx->cashier);
-        }
+            if(isset($trx['cashier'])){
+                $trxDuplicate = $trxDuplicate->where('transaction_cashier', $trx['cashier']);
+            }
 
-        $trxDuplicate = $trxDuplicate->first();
-        if($trxDuplicate){
-            //cek detail productnya
-            $statusDuplicate = true;
+            $trxDuplicate = $trxDuplicate->first();
+            if($trxDuplicate){
+                //cek detail productnya
+                $statusDuplicate = true;
 
-            $trx->product = [];
-            $detailproduct = [];
+                $trx['product'] = [];
+                $detailproduct = [];
 
-            foreach ($trx->menu as $row => $menu) {
-                $productDuplicate = false;
-                foreach($trxDuplicate['productTransaction'] as $i => $dataProduct){
-                    if($menu['plu_id'] == $dataProduct['product']['product_code']){
-                        //cek jumlah quantity
-                        if($menu['qty'] == $dataProduct['transaction_product_qty']){
-                            //set status product duplicate true
-                            $productDuplicate = true;
-                            $menu['id_product'] = $dataProduct['id_product'];
-                            $menu['product_name'] = $dataProduct['product']['product_name'];
-                            $trx->product[] = $menu;
-                            $detailproduct[] = $dataProduct;
-                            unset($trxDuplicate['productTransaction'][$i]);
+                foreach ($trx['menu'] as $row => $menu) {
+                    $menu = (array)$menu;
+                    $productDuplicate = false;
+                    foreach($trxDuplicate['productTransaction'] as $i => $dataProduct){
+                        if($menu['plu_id'] == $dataProduct['product']['product_code']){
+                            //cek jumlah quantity
+                            if($menu['qty'] == $dataProduct['transaction_product_qty']){
+                                //set status product duplicate true
+                                $productDuplicate = true;
+                                $menu['id_product'] = $dataProduct['id_product'];
+                                $menu['product_name'] = $dataProduct['product']['product_name'];
+                                $trx['product'][] = $menu;
+                                $detailproduct[] = $dataProduct;
+                                unset($trxDuplicate['productTransaction'][$i]);
+                            }
                         }
                     }
-                }
 
-                //jika status product duplicate false maka detail product ada yg berbeda
-                if($productDuplicate == false){
+                    //jika status product duplicate false maka detail product ada yg berbeda
+                    if($productDuplicate == false){
                         $statusDuplicate = false;
                         break;
-                }
-            }
-
-            $trxDuplicate['product'] = $detailproduct;
-
-            if($statusDuplicate == true){
-                //insert into table transaction_duplicates
-                if (isset($trx->member_uid)) {
-                    $qr = MyHelper::readQR($trx->member_uid);
-                    $timestamp = $qr['timestamp'];
-                    $phoneqr = $qr['phone'];
-                    $user      = User::where('phone', $phoneqr)->with('memberships')->first();
-                    if ($user) {
-                        $dataDuplicate['id_user'] = $user['id'];
                     }
                 }
 
-                $dataDuplicate['id_transaction'] = $trxDuplicate['id_transaction'];
-                $dataDuplicate['id_outlet_duplicate'] = $trxDuplicate['outlet']['id_outlet'];
-                $dataDuplicate['id_outlet'] = $outlet['id_outlet'];
-                $dataDuplicate['transaction_receipt_number'] = $trx->trx_id;
-                $dataDuplicate['outlet_code_duplicate'] = $trxDuplicate['outlet']['outlet_code'];
-                $dataDuplicate['outlet_code'] = $outlet['outlet_code'];
-                $dataDuplicate['outlet_name_duplicate'] = $trxDuplicate['outlet']['outlet_name'];
-                $dataDuplicate['outlet_name'] = $outlet['outlet_name'];
+                $trxDuplicate['product'] = $detailproduct;
 
-                if(isset($user['name'])){
-                    $dataDuplicate['user_name'] = $user['name'];
-                }
-
-                if(isset($user['phone'])){
-                    $dataDuplicate['user_phone'] = $user['phone'];
-                }
-
-                $dataDuplicate['transaction_cashier'] = $trx->cashier;
-                $dataDuplicate['transaction_date'] = date('Y-m-d H:i:s',strtotime($trx->date_time));
-                $dataDuplicate['transaction_subtotal'] = $trx->total;
-                $dataDuplicate['transaction_tax'] = $trx->tax;
-                $dataDuplicate['transaction_service'] = $trx->service;
-                $dataDuplicate['transaction_grandtotal'] = $trx->grand_total;
-                $dataDuplicate['sync_datetime_duplicate'] = $trxDuplicate['created_at'];
-                $dataDuplicate['sync_datetime'] = date('Y-m-d H:i:s');
-                $insertDuplicate = TransactionDuplicate::create($dataDuplicate);
-                if(!$insertDuplicate){
-                    DB::rollback();
-                    return response()->json(['status' => 'fail', 'messages' => ['Transaction sync failed']]);
-                }
-
-                //insert transaction duplicate product
-                $prodDuplicate = [];
-                foreach ($trx->product as $row => $menu) {
-                    $dataTrxDuplicateProd['id_transaction_duplicate'] = $insertDuplicate['id_transaction_duplicate'];
-
-                    $dataTrxDuplicateProd['id_product'] = $menu['id_product'];
-                    $dataTrxDuplicateProd['transaction_product_code'] = $menu['plu_id'];
-                    $dataTrxDuplicateProd['transaction_product_name'] = $menu['product_name'];
-                    $dataTrxDuplicateProd['transaction_product_qty'] = $menu['qty'];
-                    $dataTrxDuplicateProd['transaction_product_price'] = $menu['price'];
-                    $dataTrxDuplicateProd['transaction_product_subtotal'] = $menu['qty'] * $menu['price'];
-                    if(isset($menu['open_modifier'])){
-                        $dataTrxDuplicateProd['transaction_product_note'] = $menu['open_modifier'];
+                if($statusDuplicate == true){
+                    //insert into table transaction_duplicates
+                    if (isset($trx['member_uid'])) {
+                        $qr = MyHelper::readQR($trx['member_uid']);
+                        $timestamp = $qr['timestamp'];
+                        $phoneqr = $qr['phone'];
+                        $user      = User::where('phone', $phoneqr)->with('memberships')->first();
+                        if ($user) {
+                            $dataDuplicate['id_user'] = $user['id'];
+                        }
                     }
-                    $dataTrxDuplicateProd['created_at'] = date('Y-m-d H:i:s');
-                    $dataTrxDuplicateProd['updated_at'] = date('Y-m-d H:i:s');
 
-                    $prodDuplicate[] = $dataTrxDuplicateProd;
+                    $dataDuplicate['id_transaction'] = $trxDuplicate['id_transaction'];
+                    $dataDuplicate['id_outlet_duplicate'] = $trxDuplicate['outlet']['id_outlet'];
+                    $dataDuplicate['id_outlet'] = $outlet['id_outlet'];
+                    $dataDuplicate['transaction_receipt_number'] = $trx['trx_id'];
+                    $dataDuplicate['outlet_code_duplicate'] = $trxDuplicate['outlet']['outlet_code'];
+                    $dataDuplicate['outlet_code'] = $outlet['outlet_code'];
+                    $dataDuplicate['outlet_name_duplicate'] = $trxDuplicate['outlet']['outlet_name'];
+                    $dataDuplicate['outlet_name'] = $outlet['outlet_name'];
+
+                    if(isset($user['name'])){
+                        $dataDuplicate['user_name'] = $user['name'];
+                    }
+
+                    if(isset($user['phone'])){
+                        $dataDuplicate['user_phone'] = $user['phone'];
+                    }
+
+                    $dataDuplicate['transaction_cashier'] = $trx['cashier'];
+                    $dataDuplicate['transaction_date'] = date('Y-m-d H:i:s',strtotime($trx['date_time']));
+                    $dataDuplicate['transaction_subtotal'] = $trx['total'];
+                    $dataDuplicate['transaction_tax'] = $trx['tax'];
+                    $dataDuplicate['transaction_service'] = $trx['service'];
+                    $dataDuplicate['transaction_grandtotal'] = $trx['grand_total'];
+                    $dataDuplicate['sync_datetime_duplicate'] = $trxDuplicate['created_at'];
+                    $dataDuplicate['sync_datetime'] = date('Y-m-d H:i:s');
+                    $insertDuplicate = TransactionDuplicate::create($dataDuplicate);
+                    if(!$insertDuplicate){
+                        DB::rollback();
+                        return ['status' => 'Transaction sync failed'];
+                    }
+
+                    //insert transaction duplicate product
+                    $prodDuplicate = [];
+                    foreach ($trx['product'] as $row => $menu) {
+                        $dataTrxDuplicateProd['id_transaction_duplicate'] = $insertDuplicate['id_transaction_duplicate'];
+
+                        $dataTrxDuplicateProd['id_product'] = $menu['id_product'];
+                        $dataTrxDuplicateProd['transaction_product_code'] = $menu['plu_id'];
+                        $dataTrxDuplicateProd['transaction_product_name'] = $menu['product_name'];
+                        $dataTrxDuplicateProd['transaction_product_qty'] = $menu['qty'];
+                        $dataTrxDuplicateProd['transaction_product_price'] = $menu['price'];
+                        $dataTrxDuplicateProd['transaction_product_subtotal'] = $menu['qty'] * $menu['price'];
+                        if(isset($menu['open_modifier'])){
+                            $dataTrxDuplicateProd['transaction_product_note'] = $menu['open_modifier'];
+                        }
+                        $dataTrxDuplicateProd['created_at'] = date('Y-m-d H:i:s');
+                        $dataTrxDuplicateProd['updated_at'] = date('Y-m-d H:i:s');
+
+                        $prodDuplicate[] = $dataTrxDuplicateProd;
+                    }
+
+                    $insertTrxDuplicateProd = TransactionDuplicateProduct::insert($prodDuplicate);
+                    if(!$insertTrxDuplicateProd){
+                        DB::rollback();
+                        return ['status' => 'Transaction sync failed'];
+                    }
+
+                    //insert payment
+                    $payDuplicate = [];
+                    if(!empty($trx['payments'])){
+                        foreach($trx['payments'] as $pay){
+                            $pay = (array)$pay;
+                            $dataTrxDuplicatePay['id_transaction_duplicate'] = $insertDuplicate['id_transaction_duplicate'];
+                            $dataTrxDuplicatePay['payment_name'] = $pay['name'];
+                            $dataTrxDuplicatePay['payment_type'] = $pay['type'];
+                            $dataTrxDuplicatePay['payment_amount'] = $pay['nominal'];
+                            $dataTrxDuplicatePay['created_at'] = date('Y-m-d H:i:s');
+                            $dataTrxDuplicatePay['updated_at'] = date('Y-m-d H:i:s');
+                            $payDuplicate[] = $dataTrxDuplicatePay;
+                        }
+
+                    }else{
+                        $dataTrxDuplicatePay = [
+                            'id_transaction_duplicate' => $insertDuplicate['id_transaction_duplicate'],
+                            'payment_name' => 'NULL',
+                            'payment_type' => 'offline',
+                            'payment_amount' => 10000,
+                            'created_at' => date('Y-m-d H:i:s'),
+                            'updated_at' => date('Y-m-d H:i:s')
+                        ];
+                        $payDuplicate[] = $dataTrxDuplicatePay;
+                    }
+
+                    $insertTrxDuplicatePay = TransactionDuplicatePayment::create($dataTrxDuplicatePay);
+                    if(!$insertTrxDuplicatePay){
+                        DB::rollback();
+                        return ['status' => 'Transaction sync failed'];
+                    }
+
+                    $trx['outlet_name'] = $outlet['outlet_name'];
+                    $trx['outlet_code'] = $outlet['outlet_code'];
+                    $trx['sync_datetime'] = $dataDuplicate['sync_datetime'];
+
+                    DB::commit();
+                    return [
+                        'status' => 'duplicate',
+                        'duplicate' => $trxDuplicate,
+                        'trx' => $trx,
+                    ];
                 }
-
-                $insertTrxDuplicateProd = TransactionDuplicateProduct::insert($prodDuplicate);
-                if(!$insertTrxDuplicateProd){
-                    DB::rollback();
-                    return response()->json(['status' => 'fail', 'messages' => ['Transaction sync failed']]);
-                }
-
-                //insert payment
-                $payDuplicate = [];
-                foreach($trx->payments as $pay){
-                    $dataTrxDuplicatePay['id_transaction_duplicate'] = $insertDuplicate['id_transaction_duplicate'];
-                    $dataTrxDuplicatePay['payment_name'] = $pay['name'];
-                    $dataTrxDuplicatePay['payment_type'] = $pay['type'];
-                    $dataTrxDuplicatePay['payment_amount'] = $pay['nominal'];
-                    $dataTrxDuplicatePay['created_at'] = date('Y-m-d H:i:s');
-                    $dataTrxDuplicatePay['updated_at'] = date('Y-m-d H:i:s');
-                    $payDuplicate[] = $dataTrxDuplicatePay;
-                }
-
-                $insertTrxDuplicatePay = TransactionDuplicatePayment::create($dataTrxDuplicatePay);
-                if(!$insertTrxDuplicatePay){
-                    DB::rollback();
-                    return response()->json(['status' => 'fail', 'messages' => ['Transaction sync failed']]);
-                }
-
-                $trx->outlet_name = $outlet['outlet_name'];
-                $trx->outlet_code = $outlet['outlet_code'];
-                $trx->sync_datetime = $dataDuplicate['sync_datetime'];
-                return [
-                    'status' => 'duplicate',
-                    'duplicate' => $trxDuplicate,
-                    'trx' => $trx,
-                ];
             }
+
+            return ['status' => 'not duplicate'];
+        }catch (Exception $e){
+            DB::rollback();
+            return ['status' => 'fail', 'messages' => ['There is an error']];
         }
-
-        return ['status' => 'not duplicate'];
     }
      
 }
