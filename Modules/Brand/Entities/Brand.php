@@ -12,6 +12,7 @@ class Brand extends Model
 
     protected $fillable   = [
         'name_brand',
+        'brand_active',
         'code_brand',
         'logo_brand',
         'image_brand',
@@ -34,11 +35,11 @@ class Brand extends Model
         return env('S3_URL_API') . $value;
     }
 
-    public function products(){
-        return $this->belongsToMany(\App\Http\Models\Product::class, 'brand_product','id_brand','id_product');
+    public function brand_product(){
+        return $this->hasMany(BrandProduct::class, 'id_brand', 'id_brand');
     }
 
-    public function outlets(){
-        return $this->belongsToMany(\App\Http\Models\Outlet::class, 'brand_outlet','id_brand','id_outlet');
+    public function brand_outlet(){
+        return $this->hasMany(BrandOutlet::class, 'id_brand', 'id_brand');
     }
 }
