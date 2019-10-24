@@ -139,9 +139,14 @@ class ApiBrandController extends Controller
         }
     }
 
-    public function listBrand()
+    public function listBrand(Request $request)
     {
         $brand = Brand::select('id_brand', 'name_brand', 'logo_brand', 'image_brand')->orderByRaw('CASE WHEN order_brand = 0 THEN 1 ELSE 0 END')->orderBy('order_brand');
+        if($request->json('active')){
+            $brand->where('brand_active',1);
+        }else{
+            $brand->addSelect('brand_active');
+        }
         if (isset($_GET['page'])) {
             $brand = $brand->paginate(10)->toArray();
             if (!$brand) {
