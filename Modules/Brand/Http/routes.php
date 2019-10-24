@@ -2,7 +2,7 @@
 
 Route::group(['middleware' => ['auth:api'], 'prefix' => 'api/brand', 'namespace' => 'Modules\Brand\Http\Controllers'], function () {
     Route::any('/', 'ApiBrandController@index');
-    Route::get('list', 'ApiBrandController@listBrand');
+    Route::any('list', 'ApiBrandController@listBrand');
     Route::post('store', 'ApiBrandController@store');
     Route::post('show', 'ApiBrandController@show');
     Route::post('delete', 'ApiBrandController@destroy');
