@@ -355,6 +355,9 @@ class ApiNews extends Controller
                 $customform = $data['customform'];
 				unset($data['customform']);
 
+                if(!isset($data['news_expired_date'])){
+                    $data['news_expired_date']=null;
+                }
                 $save = News::where('id_news', $request->json('id_news'))->update($data);
 
                 // jika ada upload file
