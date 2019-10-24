@@ -2,11 +2,16 @@
 
 namespace Modules\Brand\Http\Controllers;
 
+use App\Http\Models\Deal;
+use App\Http\Models\Outlet;
+use App\Http\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
 
 use Modules\Brand\Entities\Brand;
+use Modules\Brand\Entities\BrandOutlet;
+use Modules\Brand\Entities\BrandProduct;
 use App\Lib\MyHelper;
 use DB;
 
@@ -117,7 +122,8 @@ class ApiBrandController extends Controller
     {
         $post = $request->json()->all();
 
-        $getBrand = Brand::where('id_brand', $post['id_brand'])->get()->first();
+        $getBrand = Brand::with(['brand_outlet.outlets', 'brand_product.products'])->where('id_brand', $post['id_brand'])->get()->first();
+        $getBrand['brand_deal'] = Deal::where('id_brand', $post['id_brand'])->get()->toArray();
 
         return response()->json(['status'  => 'success', 'result' => $getBrand]);
     }
@@ -130,6 +136,42 @@ class ApiBrandController extends Controller
     {
         try {
             $delete = Brand::where('id_brand', $request->json('id_brand'))->delete();
+            return response()->json(MyHelper::checkDelete($delete));
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'fail',
+                'messages' => ['outlet has been used.']
+            ]);
+        }
+    }
+    public function destroyOutlet(Request $request)
+    {
+        try {
+            $delete = BrandOutlet::where('id_brand_outlet', $request->json('id_brand_outlet'))->delete();
+            return response()->json(MyHelper::checkDelete($delete));
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'fail',
+                'messages' => ['outlet has been used.']
+            ]);
+        }
+    }
+    public function destroyProduct(Request $request)
+    {
+        try {
+            $delete = BrandProduct::where('id_brand_product', $request->json('id_brand_product'))->delete();
+            return response()->json(MyHelper::checkDelete($delete));
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'fail',
+                'messages' => ['outlet has been used.']
+            ]);
+        }
+    }
+    public function destroyDeals(Request $request)
+    {
+        try {
+            $delete = Deal::where('id_deals', $request->json('id_deals'))->delete();
             return response()->json(MyHelper::checkDelete($delete));
         } catch (\Exception $e) {
             return response()->json([
@@ -163,5 +205,53 @@ class ApiBrandController extends Controller
         }
 
         return response()->json(['status'  => 'success', 'result' => $data]);
+    }
+
+    public function outletList(Request $request)
+    {
+        $post = $request->json()->all();
+
+        $listOutlet = Outlet::whereNotIn('id_outlet', BrandOutlet::where('id_brand', $post['id_brand'])->get()->pluck('id_outlet'))->get();
+
+        return response()->json($listOutlet);
+    }
+
+    public function productList(Request $request)
+    {
+        $post = $request->json()->all();
+
+        $listProduct = Product::whereNotIn('id_product', BrandProduct::where('id_brand', $post['id_brand'])->get()->pluck('id_product'))->get();
+
+        return response()->json($listProduct);
+    }
+
+    public function outletStore(Request $request)
+    {
+        $post = $request->json()->all();
+
+        try {
+            $create = BrandOutlet::insert($post);
+            return response()->json(MyHelper::checkDelete($create));
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'fail',
+                'messages' => ['outlet has been used.']
+            ]);
+        }
+    }
+
+    public function productStore(Request $request)
+    {
+        $post = $request->json()->all();
+
+        try {
+            $create = BrandProduct::insert($post);
+            return response()->json(MyHelper::checkDelete($create));
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'fail',
+                'messages' => ['product has been used.']
+            ]);
+        }
     }
 }
