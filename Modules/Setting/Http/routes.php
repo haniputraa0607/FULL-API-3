@@ -127,6 +127,7 @@ Route::group(['middleware' => ['auth_client', 'log_activities'], 'prefix' => 'ap
 
 Route::group(['middleware' => ['auth_client', 'log_activities'], 'prefix' => 'api/version', 'namespace' => 'Modules\Setting\Http\Controllers'], function()
 {
+    Route::post('/', 'ApiVersion@index');
     Route::get('/list', 'ApiVersion@getVersion');
     Route::post('/update', 'ApiVersion@updateVersion');
 });
