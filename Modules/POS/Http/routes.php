@@ -13,34 +13,14 @@ Route::group(['prefix' => 'api/v1/pos/', 'namespace' => 'Modules\POS\Http\Contro
         Route::any('voucher/void', 'ApiPOS@voidVoucher');
         Route::post('outlet/sync', 'ApiPOS@syncOutlet');
         Route::any('menu', 'ApiPOS@syncMenuReturn');
-        Route::any('outlet/menu', 'ApiPOS@syncOutletMenu');
-
+        Route::any('outlet/menu', 'ApiPOS@syncOutletMenuReturn');
+        
         Route::post('menu/sync', 'ApiPOS@syncMenu');
+        Route::any('outlet/menu/sync', 'ApiPOS@syncOutletMenu');
+        Route::any('transaction', 'ApiPOS@transaction');
         Route::any('transaction/refund', 'ApiPOS@transactionRefund');
         Route::any('transaction/detail', 'ApiPOS@transactionDetail');
-    });
-    Route::group(['middleware' => 'auth_client'], function() {
-        Route::post('transaction/last', 'ApiPOS@getLastTransaction');
 
-        Route::post('order/detail/view', 'ApiOrder@detailWebviewPage');
-    });
-});
-
-Route::group(['middleware' => ['auth_client','log_activities_pos'], 'prefix' => 'api/v1/pos/', 'namespace' => 'Modules\Brand\Http\Controllers'], function()
-{
-    Route::post('brand', 'ApiSyncBrandController@syncBrand');
-});
-
-Route::group(['prefix' => 'api/v1/pos/', 'namespace' => 'Modules\POS\Http\Controllers'], function()
-{
-    Route::group(['middleware' => ['auth_client','log_activities_pos_transaction']], function() {
-        Route::any('transaction', 'ApiPOS@transaction');
-    });
-});
-
-Route::group(['prefix' => 'api/v1/pos/', 'namespace' => 'Modules\POS\Http\Controllers'], function()
-{
-    Route::group(['middleware' => ['auth_client','log_activities']], function() {
         Route::any('/order', 'ApiOrder@listOrder');
         Route::post('order/detail', 'ApiOrder@detailOrder');
         Route::post('order/accept', 'ApiOrder@acceptOrder');
@@ -50,6 +30,11 @@ Route::group(['prefix' => 'api/v1/pos/', 'namespace' => 'Modules\POS\Http\Contro
         Route::get('profile', 'ApiOrder@profile');
         Route::get('product', 'ApiOrder@listProduct');
         Route::post('product/sold-out', 'ApiOrder@productSoldOut');
+    });
+    Route::group(['middleware' => 'auth_client'], function() {
+        Route::post('transaction/last', 'ApiPOS@getLastTransaction');
+        
+        Route::post('order/detail/view', 'ApiOrder@detailWebviewPage');
     });
 });
 
@@ -66,8 +51,7 @@ Route::group(['prefix' => 'api/quinos', 'namespace' => 'Modules\POS\Http\Control
     });
 });
 
-Route::group(['prefix' => 'api/v1/pos/', 'namespace' => 'Modules\POS\Http\Controllers'], function()
+Route::group(['prefix' => 'api/pos/cron', 'namespace' => 'Modules\POS\Http\Controllers'], function()
 {
-    Route::post('outlet/menu/cron', 'ApiPOS@syncOutletMenuCron');
+    Route::any('queue', 'ApiTransactionSync@transaction');
 });
-
