@@ -48,6 +48,7 @@ class ApiSyncBrandController extends Controller
                     ]);
                 }
             } else {
+                $data['brand_active'] = $value['brand_active']??0;
                 $save = Brand::create($data);
                 $countSave = $countSave + 1;
                 if (!$save) {
