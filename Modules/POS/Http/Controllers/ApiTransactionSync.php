@@ -734,7 +734,7 @@ class ApiTransactionSync extends Controller
                     }else{
                         $dataTrxDuplicatePay = [
                             'id_transaction_duplicate' => $insertDuplicate['id_transaction_duplicate'],
-                            'payment_name' => 'NULL',
+                            'payment_name' => 'Offline',
                             'payment_type' => 'offline',
                             'payment_amount' => 10000,
                             'created_at' => date('Y-m-d H:i:s'),
