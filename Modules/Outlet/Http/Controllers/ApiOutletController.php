@@ -510,20 +510,22 @@ class ApiOutletController extends Controller
                 }
             }
             $request['page'] = 0;
+            $loopdata=&$outlet['data'];
         }else{
             $outlet = $outlet->orderBy('outlet_name')->get()->toArray();
+            $loopdata=&$outlet;
         }
 
         if(isset($post['type']) && $post['type'] == 'transaction'){
             $outlet = $this->setAvailableOutlet($outlet);
         }
-        $outlet = array_map(function($var) use ($post){
+        $loopdata = array_map(function($var) use ($post){
             $var['url']=env('VIEW_URL').'/outlet/webview/'.$var['id_outlet'];
             if(($post['latitude']??false)&&($post['longitude']??false)){
                 $var['distance']=number_format((float)$this->distance($post['latitude'], $post['longitude'], $var['outlet_latitude'], $var['outlet_longitude'], "K"), 2, '.', '').' km';
             }
             return $var;
-        }, $outlet);
+        }, $loopdata);
         if (isset($post['webview'])) {
             if(isset($outlet[0])){
                 $latitude  = $post['latitude'];
