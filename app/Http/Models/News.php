@@ -30,10 +30,12 @@ class News extends Model
     	'id_news_category',
     	'news_slug',
 		'news_title',
+		'id_news_category',
 		'news_second_title',
 		'news_content_short',
 		'news_content_long',
 		'news_video',
+		'news_video_text',
 		'news_image_luar',
 		'news_image_dalam',
 		'news_post_date',
@@ -60,7 +62,7 @@ class News extends Model
 	];
 
 	public function getUrlWebviewAttribute() {
-		return env('APP_URL') ."news/webview/". $this->id_news;
+		return env('API_URL') ."news/webview/". $this->id_news;
 	}
 
 	public function getUrlFormAttribute() {

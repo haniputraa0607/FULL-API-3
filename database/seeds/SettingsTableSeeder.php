@@ -343,6 +343,41 @@ class SettingsTableSeeder extends Seeder
                 'value_text' => 'Part Time, Supervisor',
                 'created_at' => '2019-10-03 12:00:00',
                 'updated_at' => '2019-10-03 12:00:00',
+            ),37 => 
+            array (
+                'id_setting' => 38,
+                'key' => 'text_menu_home',
+                'value' => NULL,
+                'value_text' => '{"home":{"text_menu":"Home","text_header":"Home"},"deals":{"text_menu":"Deals","text_header":"Deals"},"voucher":{"text_menu":"My Voucher","text_header":"My Voucher"},"history":{"text_menu":"History","text_header":"History"},"account":{"text_menu":"Account","text_header":"Account"}}',
+                'created_at' => '2019-10-08 09:03:16',
+                'updated_at' => '2019-10-08 09:03:19',
+            ),
+            38 => 
+            array (
+                'id_setting' => 39,
+                'key' => 'text_menu_account',
+                'value' => NULL,
+                'value_text' => '{"my_profile":{"text_menu":"My Profile","text_header":"My Profile","icon":""},"outlet":{"text_menu":"Lokasi Outlet","text_header":"Lokasi Outlet","icon":""},"benefit":{"text_menu":"Benefit","text_header":"Benefit","icon":""},"news":{"text_menu":"Berita","text_header":"Berita","icon":""},"delivery_service":{"text_menu":"Delivery Service","text_header":"Delivery Service","icon":""},"faq":{"text_menu":"FAQ","text_header":"FAQ","icon":""},"terms_service":{"text_menu":"Ketentuan Layanan","text_header":"Ketentuan Layanan","icon":""},"contact":{"text_menu":"Kontak Kami","text_header":"Kontak Kami","icon":""}}',
+                'created_at' => '2019-10-08 09:04:01',
+                'updated_at' => '2019-10-08 09:04:02',
+            ),
+            39 =>
+            array(
+                'id_setting' => 40,
+                'key' => 'point_range_start',
+                'value' => '0',
+                'value_text' => NULL,
+                'created_at' => '2018-05-15 13:55:55',
+                'updated_at' => '2018-05-15 13:55:55',
+            ),
+            40 =>
+            array(
+                'id_setting' => 41,
+                'key' => 'point_range_end',
+                'value' => '1000000',
+                'value_text' => NULL,
+                'created_at' => '2018-05-15 13:55:55',
+                'updated_at' => '2018-05-15 13:55:55',
             ),
         ));
     }

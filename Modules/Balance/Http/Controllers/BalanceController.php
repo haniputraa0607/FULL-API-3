@@ -124,7 +124,6 @@ class BalanceController extends Controller
             DB::rollback();
             return false;
         }
-        $autocrm = app($this->autocrm)->SendAutoCRM('Point Achievements', $user->phone, $dataHashBalance); 
 
         DB::commit();
 
@@ -220,7 +219,7 @@ class BalanceController extends Controller
         if ($data['balance_before'] >= $grandTotal) {
 
             if (!is_null($idTrx)) {
-                $dataTrx = Transaction::where('id_transaction', $idTrx)->first();
+                $dataTrx = Transaction::where('id_transaction', $idTrx)->with('outlet')->first();
 
                 if (empty($dataTrx)) {
                     return [
@@ -284,7 +283,7 @@ class BalanceController extends Controller
             }
         } else {
             if (!is_null($idTrx)) {
-                $dataTrx = Transaction::where('id_transaction', $idTrx)->first();
+                $dataTrx = Transaction::where('id_transaction', $idTrx)->with('outlet')->first();
 
                 if (empty($dataTrx)) {
                     return [

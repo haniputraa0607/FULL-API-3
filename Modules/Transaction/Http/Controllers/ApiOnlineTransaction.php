@@ -995,6 +995,24 @@ class ApiOnlineTransaction extends Controller
                         'messages'  => ['Insert Cashback Failed']
                     ]);
                 }
+                $usere  = User::where('id',$insertTransaction['id_user'])->first();
+                $outlet = Outlet::where('id_outlet',$insertTransaction['id_outlet'])->first();
+                $send   = app($this->autocrm)->SendAutoCRM('Transaction Point Achievement', $usere->phone, 
+                    [
+                        "outlet_name"       => $outlet->outlet_name, 
+                        "transaction_date"  => $insertTransaction['transaction_date'],
+                        'id_transaction'    => $insertTransaction['id_transaction'], 
+                        'receipt_number'    => $insertTransaction['transaction_receipt_number'],
+                        'received_point'    => (string) $insertTransaction['transaction_cashback_earned']
+                    ]
+                );
+                if($send != true){
+                    DB::rollback();
+                    return response()->json([
+                        'status' => 'fail',
+                        'messages' => ['Failed Send notification to customer']
+                    ]);
+                }
 
             }
 

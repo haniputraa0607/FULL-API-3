@@ -10,7 +10,7 @@ use App\Http\Models\User;
 use App\Http\Models\UserFeature;
 use App\Http\Models\UserDevice;
 use App\Http\Models\Level;
-use App\Http\Models\LogRequest;
+use App\Http\Models\LogActivitiesApps;
 use App\Http\Models\UserInbox;
 use App\Http\Models\Setting;
 use App\Http\Models\Greeting;
@@ -701,17 +701,20 @@ class ApiHome extends Controller
 
     public function splash(Request $request){
         $splash = Setting::where('key', '=', 'default_home_splash_screen')->first();
+        $duration = Setting::where('key', '=', 'default_home_splash_duration')->pluck('value')->first();
 
         if(!empty($splash)){
             $splash = $this->endPoint.$splash['value'];
         } else {
             $splash = null;
         }
-
+        $ext=explode('.', $splash);
         $result = [
             'status' => 'success',
             'result' => [
                 'splash_screen_url' => $splash."?update=".time(),
+                'splash_screen_duration' => $duration??5,
+                'splash_screen_ext' => '.'.end($ext)
             ]
         ];
         return $result;

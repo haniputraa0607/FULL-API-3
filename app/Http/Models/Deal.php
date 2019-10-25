@@ -78,6 +78,7 @@ class Deal extends Model
 		'deals_title',
 		'deals_second_title',
 		'deals_description',
+		'deals_tos',
 		// 'deals_short_description',
 		'deals_image',
 		// 'deals_video',

@@ -189,18 +189,10 @@ class ApiHistoryController extends Controller
 
         $transaction = [];
         $voucher = [];
-        if (is_null($post['pickup_order']) && is_null($post['delivery_order']) && is_null($post['offline_order']) && is_null($post['online_order']) && is_null($post['buy_voucher'])) {
-            $transaction = $this->transaction($post, $id);
-            $voucher = $this->voucher($post, $id);
-        } else {
-            if (!is_null($post['pickup_order']) || !is_null($post['delivery_order']) || !is_null($post['offline_order']) || !is_null($post['online_order'])) {
-                $transaction = $this->transaction($post, $id);
-            }
-            if (!is_null($post['buy_voucher'])) {
-                $voucher = $this->voucher($post, $id);
-            }
-        }
-
+        
+        $transaction = $this->transaction($post, $id);
+        $voucher = $this->voucher($post, $id);
+        
         if (!is_null($post['oldest'])) {
             $order = 'old';
         }
@@ -388,8 +380,8 @@ class ApiHistoryController extends Controller
         $next_page = $page + 1;
 
         $balance = $this->balance($post, $id);
+        
         $sortBalance = $this->sorting($balance, $order, $page);
-
         $check = MyHelper::checkGet($sortBalance);
         if (count($balance) > 0) {
             $result['status'] = 'success';
@@ -456,17 +448,24 @@ class ApiHistoryController extends Controller
 
     public function transaction($post, $id)
     {
-        $transaction = Transaction::join('brand_outlet', 'brand_outlet.id_outlet', '=', 'transactions.id_outlet')
+        $transaction = Transaction::distinct('transactions.*')
+            ->join('outlets', 'transactions.id_outlet', '=', 'outlets.id_outlet')
+            ->join('brand_outlet', 'outlets.id_outlet', '=', 'brand_outlet.id_outlet')
             ->where('transaction_payment_status', '!=', 'Cancelled')
+            ->where('transactions.id_user', $id)
             ->with('outlet', 'logTopup')
-            ->orderBy('transaction_date', 'DESC');
-
-        if (!is_null($post['brand'])) {
-            $transaction->orWhere('brand_outlet.id_brand', $post['brand']);
-        }
-
-        if (!is_null($post['outlet'])) {
-            $transaction->orWhere('transactions.id_outlet', $post['outlet']);
+            ->orderBy('transaction_date', 'DESC')
+            ->groupBy('transactions.id_transaction');
+            
+        if (isset($post['outlet']) || isset($post['brand'])) {
+            if (isset($post['outlet']) && !isset($post['brand'])) {
+                $transaction->where('transactions.id_outlet', $post['outlet']);
+            } elseif (!isset($post['outlet']) && isset($post['brand'])) {
+                $transaction->where('brand_outlet.id_brand', $post['brand']);
+            } else {
+                $transaction->where('transactions.id_outlet', $post['outlet']);
+                $transaction->orWhere('brand_outlet.id_brand', $post['brand']);
+            }
         }
 
         if (!is_null($post['date_start']) && !is_null($post['date_end'])) {
@@ -527,11 +526,9 @@ class ApiHistoryController extends Controller
                 });
             }
         });
-
-        $transaction->where('id_user', $id);
-
-        $transaction = $transaction->get()->toArray();
-
+        
+        $transaction = $transaction->get();
+        
         $listTransaction = [];
 
         foreach ($transaction as $key => $value) {
@@ -613,7 +610,7 @@ class ApiHistoryController extends Controller
 
     public function voucher($post, $id)
     {
-        $voucher = DealsUser::with('outlet')->orderBy('claimed_at', 'DESC');
+        $voucher = DealsUser::distinct('id_deals_users')->with('outlet')->orderBy('claimed_at', 'DESC');
 
         if (!is_null($post['date_start']) && !is_null($post['date_end'])) {
             $date_start = date('Y-m-d', strtotime($post['date_start'])) . " 00.00.00";
@@ -773,6 +770,51 @@ class ApiHistoryController extends Controller
     {
         $log = LogBalance::where('log_balances.id_user', $id);
 
+        if (isset($post['outlet']) || isset($post['brand'])) {
+            $log->where(function ($query) use ($post) {
+                $query->whereIn(
+                    'log_balances.id_log_balance',
+                    function ($query) use ($post) {
+                        $query->select('id_log_balance')
+                            ->from('log_balances')
+                            ->join('transactions', 'log_balances.id_reference', '=', 'transactions.id_transaction')
+                            ->join('outlets', 'transactions.id_outlet', '=', 'outlets.id_outlet')
+                            ->join('brand_outlet', 'outlets.id_outlet', '=', 'brand_outlet.id_outlet')
+                            ->where('log_balances.source', 'Transaction');
+                        if (isset($post['outlet']) && !isset($post['brand'])) {
+                            $query->where('outlets.id_outlet', $post['outlet']);
+                        } elseif (!isset($post['outlet']) && isset($post['brand'])) {
+                            $query->where('brand_outlet.id_brand', $post['brand']);
+                        } else {
+                            $query->where('outlets.id_outlet', $post['outlet']);
+                            $query->orWhere('brand_outlet.id_brand', $post['brand']);
+                        }
+                    }
+                );
+                $query->orWhereIn(
+                    'log_balances.id_log_balance',
+                    function ($query) use ($post) {
+                        $query->select('id_log_balance')
+                            ->from('log_balances')
+                            ->join('deals_users', 'log_balances.id_reference', '=', 'deals_users.id_deals_user')
+                            ->join('deals_vouchers', 'deals_users.id_deals_voucher', '=', 'deals_vouchers.id_deals_voucher')
+                            ->join('deals', 'deals_vouchers.id_deals', '=', 'deals.id_deals')
+                            ->where('log_balances.source', 'Deals Balance');
+                        if (isset($post['outlet']) && !isset($post['brand'])) {
+                            $query->where('deals_users.id_outlet', $post['outlet']);
+                        } elseif (!isset($post['outlet']) && isset($post['brand'])) {
+                            $query->where('deals.id_brand', $post['brand']);
+                        } else {
+                            $query->where(function ($query) use ($post) {
+                                $query->where('deals_users.id_outlet', $post['outlet'])
+                                    ->orWhere('deals.id_brand', $post['brand']);
+                            });
+                        }
+                    }
+                );
+            });
+        }
+
         $log->where(function ($query) use ($post) {
             if (!is_null($post['use_point'])) {
                 $query->orWhere(function ($queryLog) {
@@ -786,32 +828,32 @@ class ApiHistoryController extends Controller
             }
         });
 
-        if (!is_null($post['online_order']) || !is_null($post['offline_order'])) {
-            $log->leftJoin('transactions', 'transactions.id_transaction', 'log_balances.id_reference')
-                ->where(function ($query) use ($post) {
-                    if (!is_null($post['online_order'])) {
-                        $query->orWhere(function ($queryLog) {
-                            $queryLog->whereIn('source', ['Transaction', 'Transaction Failed', 'Rejected Order', 'Rejected Order Midtrans', 'Rejected Order Point', 'Rejected Order Ovo', 'Reversal'])
-                                ->where('trasaction_type', '!=', 'Offline');
-                        });
-                    }
-                    if (!is_null($post['offline_order'])) {
-                        $query->orWhere(function ($queryLog) {
-                            $queryLog->where('source', 'Transaction')
-                                ->where('trasaction_type', '=', 'Offline');
-                        });
-                    }
-                });
-        }
+        // if (!is_null($post['online_order']) || !is_null($post['offline_order'])) {
+        //     $log->leftJoin('transactions', 'transactions.id_transaction', 'log_balances.id_reference')
+        //         ->where(function ($query) use ($post) {
+        //             if (!is_null($post['online_order'])) {
+        //                 $query->orWhere(function ($queryLog) {
+        //                     $queryLog->whereIn('source', ['Transaction', 'Transaction Failed', 'Rejected Order', 'Rejected Order Midtrans', 'Rejected Order Point', 'Rejected Order Ovo', 'Reversal'])
+        //                         ->where('trasaction_type', '!=', 'Offline');
+        //                 });
+        //             }
+        //             if (!is_null($post['offline_order'])) {
+        //                 $query->orWhere(function ($queryLog) {
+        //                     $queryLog->where('source', 'Transaction')
+        //                         ->where('trasaction_type', '=', 'Offline');
+        //                 });
+        //             }
+        //         });
+        // }
 
-        if (!is_null($post['voucher'])) {
-            $query->orWhere(function ($queryLog) {
-                $queryLog->where('source', 'Deals Balance');
-            });
-        }
+        // if (!is_null($post['voucher'])) {
+        //     $query->orWhere(function ($queryLog) {
+        //         $queryLog->where('source', 'Deals Balance');
+        //     });
+        // }
 
         $log = $log->get();
-
+        
         $listBalance = [];
 
         foreach ($log as $key => $value) {

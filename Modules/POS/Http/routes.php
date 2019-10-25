@@ -7,15 +7,16 @@ Route::group(['middleware' => 'web', 'prefix' => 'pos', 'namespace' => 'Modules\
 
 Route::group(['prefix' => 'api/v1/pos/', 'namespace' => 'Modules\POS\Http\Controllers'], function()
 {
-    Route::group(['middleware' => ['auth_client','log_request']], function() {
+    Route::group(['middleware' => ['auth_client','log_activities_pos']], function() {
         Route::any('check/member', 'ApiPOS@checkMember');
         Route::any('check/voucher', 'ApiPOS@checkVoucher');
         Route::any('voucher/void', 'ApiPOS@voidVoucher');
         Route::post('outlet/sync', 'ApiPOS@syncOutlet');
         Route::any('menu', 'ApiPOS@syncMenuReturn');
-        Route::any('outlet/menu', 'ApiPOS@syncOutletMenu');
+        Route::any('outlet/menu', 'ApiPOS@syncOutletMenuReturn');
         
         Route::post('menu/sync', 'ApiPOS@syncMenu');
+        Route::any('outlet/menu/sync', 'ApiPOS@syncOutletMenu');
         Route::any('transaction', 'ApiPOS@transaction');
         Route::any('transaction/refund', 'ApiPOS@transactionRefund');
         Route::any('transaction/detail', 'ApiPOS@transactionDetail');
@@ -50,7 +51,7 @@ Route::group(['prefix' => 'api/quinos', 'namespace' => 'Modules\POS\Http\Control
     });
 });
 
-Route::group(['prefix' => 'api/v1/pos/', 'namespace' => 'Modules\POS\Http\Controllers'], function()
+Route::group(['prefix' => 'api/pos/cron', 'namespace' => 'Modules\POS\Http\Controllers'], function()
 {
-    Route::post('outlet/menu/cron', 'ApiPOS@syncOutletMenuCron');
+    Route::any('queue', 'ApiTransactionSync@transaction');
 });

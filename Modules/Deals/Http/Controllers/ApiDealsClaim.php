@@ -200,7 +200,8 @@ class ApiDealsClaim extends Controller
                                 [
                                     'claimed_at'       => $voucher['claimed_at'], 
                                     'deals_title'      => $dataDeals->deals_title,
-                                    'deals_voucher_price_point' => $dataDeals->deals_voucher_price_point
+                                    'deals_voucher_price_point' => $dataDeals->deals_voucher_price_point,
+                                    'id_deals_user' => $voucher['id_deals_user']
                                 ]
                             );
                         }
@@ -371,7 +372,7 @@ class ApiDealsClaim extends Controller
         }
         else{
             if (!empty($dataDeals->deals_voucher_duration)) {
-                if($dataDeals->deals_voucher_start??false){
+                if($dataDeals->deals_voucher_start>date('Y-m-d H:i:s')){
                     $data['voucher_expired_at'] = date('Y-m-d H:i:s', strtotime($dataDeals->deals_voucher_start." +".$dataDeals->deals_voucher_duration." days"));
                 }else{
                     $data['voucher_expired_at'] = date('Y-m-d H:i:s', strtotime("+".$dataDeals->deals_voucher_duration." days"));
@@ -417,8 +418,7 @@ class ApiDealsClaim extends Controller
     /* GET VOUCHER GENERATE */
     function getVoucherGenerate($user, $dataDeals) {
         $available = DealsVoucher::where('id_deals', $dataDeals->id_deals)->count();
-
-        if ($dataDeals->deals_total_voucher >= $available || $dataDeals->deals_voucher_type == "Unlimited") {
+        if ($dataDeals->deals_total_voucher > $available || $dataDeals->deals_voucher_type == "Unlimited") {
             // GENERATE VOUCHER
             $voucher = $this->generateVoucher($dataDeals->id_deals);
 

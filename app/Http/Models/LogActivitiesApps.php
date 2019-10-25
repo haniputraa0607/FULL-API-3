@@ -14,7 +14,7 @@ use Illuminate\Database\Eloquent\Model;
  * @property string $updated_at
  * @property User $user
  */
-class LogRequest extends Model
+class LogActivitiesApps extends Model
 {
 	/**
 	 * The database name used by the model.
@@ -28,11 +28,25 @@ class LogRequest extends Model
      * 
      * @var string
      */
-    protected $table = 'log_activities';
+    protected $table = 'log_activities_apps';
 
     /**
      * @var array
      */
-    protected $fillable = ['id_log_activity', 'module', 'subject', 'url', 'phone', 'id_store', 'user', 'request', 'response_status', 'response', 'ip', 'useragent', 'created_at', 'updated_at'];
+    protected $fillable = [
+        'id_log_activities_apps',  
+        'module', 
+        'url', 
+        'subject',
+        'phone',
+        'user', 
+        'request', 
+        'response_status', 
+        'response', 
+        'ip', 
+        'useragent', 
+        'created_at', 
+        'updated_at'
+    ];
 
 }
