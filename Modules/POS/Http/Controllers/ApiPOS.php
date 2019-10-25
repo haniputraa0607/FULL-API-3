@@ -203,7 +203,12 @@ class ApiPOS extends Controller
                 $pick = TransactionPickup::where('id_transaction', $check['id_transaction'])->update(['receive_at' => date('Y-m-d H:i:s')]);
             }
 
-            $send = app($this->autocrm)->SendAutoCRM('Order Accepted', $user['phone'], ["outlet_name" => $outlet['outlet_name'], "id_reference" => $check['transaction_receipt_number'] . ',' . $outlet['id_outlet'], "transaction_date" => $check['transaction_date']]);
+            $send = app($this->autocrm)->SendAutoCRM('Order Accepted', $user['phone'], [
+                "outlet_name" => $outlet['outlet_name'], 
+                "id_reference" => $check['transaction_receipt_number'] . ',' . $outlet['id_outlet'], 
+                'id_transaction' => $check['id_transaction'], 
+                "transaction_date" => $check['transaction_date']
+            ]);
 
             return response()->json(['status' => 'success', 'result' => $transactions]);
         } else {
@@ -1448,7 +1453,23 @@ class ApiPOS extends Controller
                                 'messages'  => ['Insert Cashback Failed']
                             ];
                         }
-
+                        $usere= User::where('id',$createTrx['id_user'])->first();
+                        $send = app($this->autocrm)->SendAutoCRM('Transaction Point Achievement', $usere->phone, 
+                            [
+                                "outlet_name"       => $checkOutlet['outlet_name'], 
+                                "transaction_date"  => $createTrx['transaction_date'],
+                                'id_transaction'    => $createTrx['id_transaction'],
+                                'receipt_number'    => $createTrx['transaction_receipt_number'],
+                                'received_point'    => (string) $createTrx['transaction_cashback_earned']
+                            ]
+                        );
+                        if($send != true){
+                            DB::rollback();
+                            return response()->json([
+                                    'status' => 'fail',
+                                    'messages' => ['Failed Send notification to customer']
+                                ]);
+                        }
                         $pointValue = $insertDataLogCash->balance;
                     }
                     
