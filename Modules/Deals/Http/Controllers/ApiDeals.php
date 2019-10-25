@@ -243,11 +243,14 @@ class ApiDeals extends Controller
         $deals = (new Deal)->newQuery();
         $user = $request->user();
         $curBalance = (int) $user->balance??0;
-
+        if($request->json('admin')){
+            $deals->addSelect('id_brand');
+            $deals->with('brand');
+        }
         if ($request->json('id_outlet') && is_integer($request->json('id_outlet'))) {
             $deals = $deals->join('deals_outlets', 'deals.id_deals', 'deals_outlets.id_deals')
                 ->where('id_outlet', $request->json('id_outlet'))
-                ->select('deals.*')->distinct();
+                ->addSelect('deals.*')->distinct();
         }
 
         // brand
@@ -266,7 +269,7 @@ class ApiDeals extends Controller
                 // 'deals_vouchers.deals_user.user'
             ])->where('id_deals', $request->json('id_deals'))->with(['outlets', 'outlets.city', 'product','brand']);
         }else{
-            $deals->select('id_deals','deals_title','deals_second_title','deals_voucher_price_point','deals_voucher_price_cash','deals_total_voucher','deals_total_claimed','deals_voucher_type','deals_image','deals_start','deals_end','deals_type');
+            $deals->addSelect('id_deals','deals_title','deals_second_title','deals_voucher_price_point','deals_voucher_price_cash','deals_total_voucher','deals_total_claimed','deals_voucher_type','deals_image','deals_start','deals_end','deals_type');
             if(strpos($request->user()->level,'Admin')>=0){
                 $deals->addSelect('deals_promo_id','deals_publish_start','deals_publish_end');
             }
