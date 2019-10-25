@@ -1097,7 +1097,7 @@ class ApiSetting extends Controller
     public function viewTOS(){
         $setting = Setting::where('key', 'tos')->first();
         if($setting && $setting['value_text']){
-            $data['value'] =preg_replace('/font face="[^;"]*(")?/', 'div class="seravek-light-font"' , $setting['value_text']);
+            $data['value'] =preg_replace('/font face="[^;"]*(")?/', 'div class="ProductSans"' , $setting['value_text']);
             $data['value'] =preg_replace('/face="[^;"]*(")?/', '' , $data['value']);
         }else{
              $data['value'] = "";
@@ -1305,17 +1305,17 @@ class ApiSetting extends Controller
                     return [
                         'status'=>'fail',
                         'messages'=>['Something went wrong']
-                    ];        
+                    ];
                 }
             }
             DB::commit();
             return [
                 'status'=>'success'
-            ];    
+            ];
         }
         return [
             'status'=>'fail',
             'messages'=>['No setting updated']
-        ];        
+        ];
     }
 }

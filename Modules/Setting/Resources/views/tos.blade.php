@@ -37,18 +37,18 @@
             box-shadow: 0px 0px 21px 0px rgba(168,168,168,1);
             border-radius: 3px;
             background: #fff;
-            font-family: 'Seravek Light';
+            font-family: 'ProductSans-Regular';
         }
 
         .kotak-full {
             background: #fff;
-            font-family: 'Seravek Light';
+            font-family: 'ProductSans-Regular';
             padding: 30px 0;
         }
 
         .kotak-biasa {
             margin-left: 5px;
-            font-family: 'Seravek Light';
+            font-family: 'ProductSans-Regular';
         }
 
         .kotak-inside {
@@ -115,14 +115,14 @@
 
     <div class="header">
         <div class="container">
-            <div class="text-24px seravek-font text-white">Champ Resto</div>
-            <div class="text-20px seravek-light-font text-white">Terms Of Service</div>
+            <div class="text-24px ProductSans text-white">Champ Resto</div>
+            <div class="text-20px ProductSans text-white">Terms Of Service</div>
         </div>
     </div>
     <div class="kotak-full">
         <div class="container">
             <div class="row">
-                <div class="col-12 text-13-3px seravek-light-font text-grey-white"><?php echo $value; ?></div>
+                <div class="col-12 text-14px ProductSans text-grey-white"><?php echo $value; ?></div>
             </div>
         </div>
     </div>
