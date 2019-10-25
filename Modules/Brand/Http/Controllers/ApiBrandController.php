@@ -30,7 +30,7 @@ class ApiBrandController extends Controller
     {
         $post = $request->json()->all();
 
-        $brand = Brand::orderByRaw('CASE WHEN order_brand = 0 THEN 1 ELSE 0 END')->orderBy('order_brand');
+        $brand = Brand::orderBy('order_brand');
 
         $brand = $brand->get()->toArray();
 
@@ -253,5 +253,32 @@ class ApiBrandController extends Controller
                 'messages' => ['product has been used.']
             ]);
         }
+    }
+
+    public function reOrder(Request $request){
+        if (($order=$request->post('order'))&&is_array($order)) {
+            \DB::beginTransaction();
+            $start=$request->post('data_start')??0;
+            foreach ($order as $id) {
+                $update=['order_brand'=>$start];
+                $save=Brand::find($id)->update($update);
+                if(!$save){
+                    \DB::rollBack();
+                    return [
+                        'status'=>'fail',
+                        'messages'=>['Update brand fail']
+                    ];
+                }
+                $start++;
+            }
+            \DB::commit();
+            return [
+                'status'=>'success'
+            ];
+        }
+        return [
+            'status'=>'fail',
+            'messages'=>['No brand updated']
+        ];
     }
 }
