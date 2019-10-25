@@ -78,11 +78,16 @@ class ApiHiddenDeals extends Controller
 
     /* AUTO CLAIMED & ASSIGN */
     function autoClaimedAssign($deals, $to) {
+        $ret=false;
         foreach ($to as $key => $user) {
             $voucher = app($this->dealsVoucher)->generateVoucher($deals->id_deals, 1, 1);
 
             if ($voucher) {
                 $userVoucher = app($this->dealsClaim)->createVoucherUser($user, $voucher->id_deals_voucher, $deals);
+                // return first voucher
+                if(!$ret){
+                    $ret=$userVoucher;
+                }
 
                 if ($userVoucher) {
                     continue;
@@ -95,7 +100,7 @@ class ApiHiddenDeals extends Controller
                 return false;
             }
         }
-        return true;
+        return $ret;
     }
 
     /* CEK USER */
@@ -153,14 +158,17 @@ class ApiHiddenDeals extends Controller
 
                 $user = $this->cekUser($datauser['phone'], $request->json('id_deals'));
                 if (!empty($user)) {
+                    $first_deal=null;
                     for($i = 1; $i<= $amount; $i++){
                         // AUTO GENERATE
                         if ($deals->deals_voucher_type == "Auto generated") {
                             // LIMIT USER
                             $user = $this->limitAvailableUser($deals, $user);
                             if ($user) {
-                                    
                                 $claim = $this->autoClaimedAssign($deals, $user);
+                                if(!$first_deal){
+                                    $first_deal=$claim;
+                                }
                                 if (!$claim) {
                                     DB::rollback();
                                     return response()->json(MyHelper::checkUpdate($claim));
@@ -238,6 +246,7 @@ class ApiHiddenDeals extends Controller
                     $autocrm = app($this->autocrm)->SendAutoCRM('Receive Hidden Deals', $datauser['phone'],
                         [
                             'deals_title'      => $deals->deals_title,
+                            'id_deals_user'    => $first_deal->id_deals_user
                         ]
                     );
                     $countUser++;

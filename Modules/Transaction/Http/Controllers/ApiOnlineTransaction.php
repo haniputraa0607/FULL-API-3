@@ -1001,6 +1001,7 @@ class ApiOnlineTransaction extends Controller
                     [
                         "outlet_name"       => $outlet->outlet_name, 
                         "transaction_date"  => $insertTransaction['transaction_date'],
+                        'id_transaction'    => $insertTransaction['id_transaction'], 
                         'receipt_number'    => $insertTransaction['transaction_receipt_number'],
                         'received_point'    => (string) $insertTransaction['transaction_cashback_earned']
                     ]
