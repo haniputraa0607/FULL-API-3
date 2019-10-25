@@ -708,12 +708,13 @@ class ApiHome extends Controller
         } else {
             $splash = null;
         }
-
+        $ext=explode('.', $splash);
         $result = [
             'status' => 'success',
             'result' => [
                 'splash_screen_url' => $splash."?update=".time(),
                 'splash_screen_duration' => $duration??5,
+                'splash_screen_ext' => '.'.end($ext)
             ]
         ];
         return $result;
