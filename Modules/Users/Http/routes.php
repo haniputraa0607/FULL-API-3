@@ -51,6 +51,7 @@ Route::group(['prefix' => 'api', 'middleware' => 'log_activities'], function(){
 		Route::post('update/level', 'ApiUser@updateProfileLevelByAdmin');
 		Route::post('update/outlet', 'ApiUser@updateDoctorOutletByAdmin');
 		Route::post('update/permission', 'ApiUser@updateProfilePermissionByAdmin');
+		Route::post('update/suspend', 'ApiUser@updateSuspendByAdmin');
 		Route::post('update/outlet', 'ApiUser@updateUserOutletByAdmin');
 	    Route::post('phone/verified', 'ApiUser@phoneVerified');
 	    Route::post('phone/unverified', 'ApiUser@phoneUnverified');
