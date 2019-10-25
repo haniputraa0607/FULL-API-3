@@ -200,7 +200,8 @@ class ApiDealsClaim extends Controller
                                 [
                                     'claimed_at'       => $voucher['claimed_at'], 
                                     'deals_title'      => $dataDeals->deals_title,
-                                    'deals_voucher_price_point' => $dataDeals->deals_voucher_price_point
+                                    'deals_voucher_price_point' => $dataDeals->deals_voucher_price_point,
+                                    'id_deals_user' => $voucher['id_deals_user']
                                 ]
                             );
                         }

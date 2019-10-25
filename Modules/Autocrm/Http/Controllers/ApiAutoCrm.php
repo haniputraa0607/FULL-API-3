@@ -363,13 +363,17 @@ class ApiAutoCrm extends Controller
 							$dataOptional['id_reference'] = (int)$crm['autocrm_push_id_reference'];
 						} else{
 							if ($dataOptional['type'] == 'Transaction') {
-								if (isset($variables['id_reference'])) {
-									$dataOptional['id_reference'] = $variables['id_reference'];
+								// $dataOptional['id_reference'] = $variables['id_reference'];
+								$dataOptional['id_reference'] = 0;
+							}elseif ($dataOptional['type'] == 'Transaction Detail') {
+								if (isset($variables['id_transaction'])) {
+									$dataOptional['id_reference'] = $variables['id_transaction'];
 								} else {
 									$dataOptional['id_reference'] = 0;
 								}
-							}
-							elseif ($dataOptional['type'] == 'Voucher') {
+							}elseif ($dataOptional['type'] == 'Voucher') {
+								$dataOptional['id_reference'] = 0;
+							}elseif ($dataOptional['type'] == 'Voucher Detail') {
 								if (isset($variables['id_deals_user'])) {
 									$dataOptional['id_reference'] = $variables['id_deals_user'];
 								} else {
@@ -440,13 +444,18 @@ class ApiAutoCrm extends Controller
 						$inbox['inboxes_id_reference'] = (int)$crm['autocrm_inbox_id_reference'];
 					} else{
 						if ($crm['autocrm_inbox_clickto'] == 'Transaction') {
-							if (isset($variables['id_reference'])) {
-								$inbox['inboxes_id_reference'] = $variables['id_reference'];
+								// $inbox['inboxes_id_reference'] = $variables['id_reference'];
+								$inbox['inboxes_id_reference'] = 0;
+						}elseif ($crm['autocrm_inbox_clickto'] == 'Transaction Detail') {
+							if (isset($variables['id_transaction'])) {
+								$inbox['inboxes_id_reference'] = $variables['id_transaction'];
 							} else {
 								$inbox['inboxes_id_reference'] = 0;
 							}
+						}elseif ($crm['autocrm_inbox_clickto'] == 'Voucher') {
+							$inbox['inboxes_id_reference'] = 0;
 						}
-						elseif ($crm['autocrm_inbox_clickto'] == 'Voucher') {
+						elseif ($crm['autocrm_inbox_clickto'] == 'Voucher Detail') {
 							if (isset($variables['id_deals_user'])) {
 								$inbox['inboxes_id_reference'] = $variables['id_deals_user'];
 							} else {
