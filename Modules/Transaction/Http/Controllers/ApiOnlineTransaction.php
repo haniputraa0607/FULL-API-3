@@ -190,7 +190,7 @@ class ApiOnlineTransaction extends Controller
             DB::rollback();
             return response()->json([
                 'status'    => 'fail',
-                'messages'  => ['Akun Anda telah diblokir karena menunjukkan aktivitas mencurigakan. Untuk informasi lebih lanjut harap hubungi customer service kami di hello@kopikenangan.com']
+                'messages'  => ['Akun Anda telah diblokir karena menunjukkan aktivitas mencurigakan. Untuk informasi lebih lanjut harap hubungi customer service kami di hello@champresto.id']
             ]);
         }
 
@@ -997,9 +997,9 @@ class ApiOnlineTransaction extends Controller
                 }
                 $usere  = User::where('id',$insertTransaction['id_user'])->first();
                 $outlet = Outlet::where('id_outlet',$insertTransaction['id_outlet'])->first();
-                $send   = app($this->autocrm)->SendAutoCRM('Transaction Point Achievement', $usere->phone, 
+                $send   = app($this->autocrm)->SendAutoCRM('Transaction Point Achievement', $usere->phone,
                     [
-                        "outlet_name"       => $outlet->outlet_name, 
+                        "outlet_name"       => $outlet->outlet_name,
                         "transaction_date"  => $insertTransaction['transaction_date'],
                         'id_transaction'    => $insertTransaction['id_transaction'], 
                         'receipt_number'    => $insertTransaction['transaction_receipt_number'],

@@ -48,9 +48,14 @@ class MyHelper{
 		'ciphermode' => 'AES-256-CBC'
 	);
 
-	public static function  checkGet($data){
+	public static function  checkGet($data, $message = null){
 			if($data && !empty($data)) return ['status' => 'success', 'result' => $data];
-			else if(empty($data)) return ['status' => 'fail', 'messages' => ['empty']];
+			else if(empty($data)) {
+				if($message == null){
+					$message = 'Maaf, halaman ini tidak tersedia';
+				}
+				return ['status' => 'fail', 'messages' => [$message]];
+			}
 			else return ['status' => 'fail', 'messages' => ['failed to retrieve data']];
 	}
 
@@ -619,12 +624,12 @@ class MyHelper{
             'multipart/x-zip'                                                           => 'zip',
             'text/x-scriptzsh'                                                          => 'zsh',
 		];
-		
+
 		$file_info = finfo_buffer(finfo_open(), base64_decode($value), FILEINFO_MIME_TYPE);
 
         return isset($mime_map[$file_info]) === true ? $mime_map[$file_info] : false;
 	}
-	
+
 	public static function uploadPhoto($foto, $path, $resize=800, $name=null) {
 			// kalo ada foto
 			$decoded = base64_decode($foto);
@@ -1927,7 +1932,7 @@ class MyHelper{
 		}
 
 		return date('d', strtotime($date)).' '.$bulan[date('n', strtotime($date))].' '.date('Y', strtotime($date)).' '.($jam?date('H:i', strtotime($date)):'');
-	}    
+	}
 	public static function isJoined($query, $table){
         $joins = $query->getQuery()->joins;
         if($joins == null) {
