@@ -660,9 +660,12 @@ class MyHelper{
 			// 		});
 			// }
 
-			$img->resize($resize, null, function ($constraint) {
-				$constraint->aspectRatio();
-			});
+			// ga usah di resize kalau ga perlu
+			if($resize){
+				$img->resize($resize, null, function ($constraint) {
+					$constraint->aspectRatio();
+				});
+			}
 
 			if(env('STORAGE') &&  env('STORAGE') == 's3'){
 				$resource = $img->stream()->detach();

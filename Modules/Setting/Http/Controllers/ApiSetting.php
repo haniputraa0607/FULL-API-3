@@ -1318,4 +1318,15 @@ class ApiSetting extends Controller
             'messages'=>['No setting updated']
         ];        
     }
+    public function get($key){
+        $allowed=['inactive_logo_brand','inactive_image_brand'];
+        if(in_array($key, $allowed)){
+            $val=Setting::where('key',$key)->first();
+            return MyHelper::checkGet($val);
+        }
+        return [
+            'status'=>'fail',
+            'messages'=>['No setting updated']
+        ];        
+    }
 }

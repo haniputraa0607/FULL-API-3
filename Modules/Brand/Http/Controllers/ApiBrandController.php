@@ -5,6 +5,7 @@ namespace Modules\Brand\Http\Controllers;
 use App\Http\Models\Deal;
 use App\Http\Models\Outlet;
 use App\Http\Models\Product;
+use App\Http\Models\Setting;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
@@ -183,12 +184,7 @@ class ApiBrandController extends Controller
 
     public function listBrand(Request $request)
     {
-        $brand = Brand::select('id_brand', 'name_brand', 'logo_brand', 'image_brand')->orderByRaw('CASE WHEN order_brand = 0 THEN 1 ELSE 0 END')->orderBy('order_brand');
-        if($request->json('active')){
-            $brand->where('brand_active',1);
-        }else{
-            $brand->addSelect('brand_active');
-        }
+        $brand = Brand::select('id_brand','brand_active', 'name_brand', 'logo_brand', 'image_brand')->orderByRaw('CASE WHEN order_brand = 0 THEN 1 ELSE 0 END')->orderBy('order_brand');
         if (isset($_GET['page'])) {
             $brand = $brand->paginate(10)->toArray();
             if (!$brand) {
@@ -196,14 +192,35 @@ class ApiBrandController extends Controller
             }
             $data['data']           = $brand['data'];
             $data['next_page_url']  = $brand['next_page_url'];
+            $loop=&$data['data'];
         } else {
             $brand = $brand->get()->toArray();
             if (!$brand) {
                 return response()->json(['status'  => 'fail', 'messages' => ['empty!']]);
             }
             $data = $brand;
+            $loop=&$data;
         }
-
+        //get default image
+        if($inactive_image=Setting::where('key','inactive_image_brand')->pluck('value')->first()){
+            $inactive_image=env('S3_URL_API').'/'.$inactive_image;
+        }else{
+            $inactive_image='';
+        }
+        //get_default_logo
+        if($inactive_logo=Setting::where('key','inactive_logo_brand')->pluck('value')->first()){
+            $inactive_logo=env('S3_URL_API').'/'.$inactive_logo;
+        }else{
+            $inactive_image='';
+        }
+        //replace if inactive
+        foreach ($loop as &$bran) {
+            if(!$bran['brand_active']){
+                $bran['logo_brand']=$bran['logo_brand']?:$inactive_logo;
+                $bran['image_brand']=$bran['image_brand']?:$inactive_image;
+            }
+        }
+        //return
         return response()->json(['status'  => 'success', 'result' => $data]);
     }
 
@@ -280,5 +297,36 @@ class ApiBrandController extends Controller
             'status'=>'fail',
             'messages'=>['No brand updated']
         ];
+    }
+    public function inactiveImage(Request $request){
+        $post = $request->json()->all();
+
+        if (isset($post['logo_brand'])) {
+            $upload = MyHelper::uploadPhoto($post['logo_brand'], $path = 'img/brand/',null,'default_logo');
+            if ($upload['status'] == "success") {
+                $logo_brand = $upload['path'];
+                Setting::updateOrCreate(['key'=>'inactive_logo_brand'],['value'=>$logo_brand]);
+            } else {
+                $messages[]='fail upload logo';
+            }
+        }
+
+        if (isset($post['image_brand'])) {
+            $upload = MyHelper::uploadPhoto($post['image_brand'], $path = 'img/brand/image/',null,'default_image');
+            if ($upload['status'] == "success") {
+                $image_brand = $upload['path'];
+                Setting::updateOrCreate(['key'=>'inactive_image_brand'],['value'=>$image_brand]);
+            } else {
+                $messages[]='fail upload image';
+            }
+        }
+
+        if($messages??false){
+            return [
+                'status'=>'fail',
+                'messages'=>$messages
+            ];
+        }
+        return ['status'=>'success'];
     }
 }
