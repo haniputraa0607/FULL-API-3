@@ -189,10 +189,10 @@ class ApiHistoryController extends Controller
 
         $transaction = [];
         $voucher = [];
-        
+
         $transaction = $this->transaction($post, $id);
         $voucher = $this->voucher($post, $id);
-        
+
         if (!is_null($post['oldest'])) {
             $order = 'old';
         }
@@ -222,8 +222,20 @@ class ApiHistoryController extends Controller
                 $result['next_page_url'] = ENV('APP_API_URL') . '/api/transaction/history-trx?page=' . $next_page;
             }
         } else {
+
+            if(
+                $request->json('date_start') ||
+                $request->json('date_end') ||
+                $request->json('outlet') ||
+                $request->json('brand')
+            ){
+                $resultMessage = 'Data tidak ditemukan';
+            }else{
+                $resultMessage = 'Belum ada transaksi';
+            }
+
             $result['status'] = 'fail';
-            $result['messages'] = ['empty'];
+            $result['messages'] = [$resultMessage];
         }
 
         return response()->json($result);
@@ -380,7 +392,7 @@ class ApiHistoryController extends Controller
         $next_page = $page + 1;
 
         $balance = $this->balance($post, $id);
-        
+
         $sortBalance = $this->sorting($balance, $order, $page);
         $check = MyHelper::checkGet($sortBalance);
         if (count($balance) > 0) {
@@ -394,8 +406,21 @@ class ApiHistoryController extends Controller
                 $result['next_page_url'] = ENV('APP_API_URL') . '/api/transaction/history-balance?page=' . $next_page;
             }
         } else {
+            if(
+                $request->json('date_start') ||
+                $request->json('date_end') ||
+                $request->json('outlet') ||
+                $request->json('brand') ||
+                $request->json('use_point') ||
+                $request->json('earn_point')
+            ){
+                $resultMessage = 'Data tidak ditemukan';
+            }else{
+                $resultMessage = 'Kamu belum memiliki point saat ini';
+            }
+
             $result['status'] = 'fail';
-            $result['messages'] = ['empty'];
+            $result['messages'] = [$resultMessage];
         }
 
         return response()->json($result);
@@ -456,7 +481,7 @@ class ApiHistoryController extends Controller
             ->with('outlet', 'logTopup')
             ->orderBy('transaction_date', 'DESC')
             ->groupBy('transactions.id_transaction');
-            
+
         if (isset($post['outlet']) || isset($post['brand'])) {
             if (isset($post['outlet']) && !isset($post['brand'])) {
                 $transaction->where('transactions.id_outlet', $post['outlet']);
@@ -526,9 +551,9 @@ class ApiHistoryController extends Controller
                 });
             }
         });
-        
+
         $transaction = $transaction->get();
-        
+
         $listTransaction = [];
 
         foreach ($transaction as $key => $value) {
@@ -853,7 +878,7 @@ class ApiHistoryController extends Controller
         // }
 
         $log = $log->get();
-        
+
         $listBalance = [];
 
         foreach ($log as $key => $value) {

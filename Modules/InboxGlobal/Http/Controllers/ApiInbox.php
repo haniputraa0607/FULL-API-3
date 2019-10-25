@@ -30,7 +30,7 @@ class ApiInbox extends Controller
 		$this->inboxGlobal  = "Modules\InboxGlobal\Http\Controllers\ApiInboxGlobal";
 		$this->autocrm  = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
     }
-	
+
     public function deleteInboxUser(DeleteUserInbox $request){
     	$delete=UserInbox::where('id_user_inboxes',$request->json('id_inbox'))->delete();
     	return MyHelper::checkDelete($delete);
@@ -42,13 +42,13 @@ class ApiInbox extends Controller
     	}else{
 			$user = $request->user();
     	}
-		
+
 		$today = date("Y-m-d H:i:s");
 		$arrInbox = [];
 		$countUnread = 0;
 		$countInbox = 0;
 		$arrDate = [];
-		
+
 		$globals = InboxGlobal::with('inbox_global_rule_parents', 'inbox_global_rule_parents.rules')
 								->where('inbox_global_start', '<=', $today)
 								->where('inbox_global_end', '>=', $today)
@@ -60,19 +60,19 @@ class ApiInbox extends Controller
 			$cons['subject'] = 'phone';
 			$cons['operator'] = '=';
 			$cons['parameter'] = $user['phone'];
-			
+
 			array_push($global['inbox_global_rule_parents'], ['rule' => 'and', 'rule_next' => 'and', 'rules' => [$cons]]);
 			$users = app($this->user)->UserFilter($global['inbox_global_rule_parents']);
 
-			
+
 			if(isset($users['status']) && $users['status'] == 'success'){
 				$content = [];
 				$content['type'] 		 = 'global';
 				$content['id_inbox'] 	 = $global['id_inbox_global'];
 				$content['subject'] 	 = app($this->autocrm)->TextReplace($global['inbox_global_subject'], $user['phone']);
 				$content['clickto'] 	 = $global['inbox_global_clickto'];
-				
-				
+
+
 				if($global['inbox_global_id_reference']){
     				$content['id_reference'] = $global['inbox_global_id_reference'];
     			}else{
@@ -86,19 +86,19 @@ class ApiInbox extends Controller
 						$content['url'] = env('APP_URL').'news/webview/'.$news->id_news;
 					}
 				}
-				
+
 				if($content['clickto'] == 'Content'){
 					$content['content'] = app($this->autocrm)->TextReplace($global['inbox_global_content'], $user['phone']);
 				}else{
 					$content['content']	= null;
 				}
-				
+
 				if($content['clickto'] == 'Link'){
 					$content['link'] = $global['inbox_global_link'];
 				}else{
 					$content['link'] = null;
 				}
-				
+
 				$content['created_at'] 	 = $global['inbox_global_start'];
 
 				$read = InboxGlobalRead::where('id_inbox_global', $global['id_inbox_global'])->where('id_user', $user['id'])->first();
@@ -124,20 +124,20 @@ class ApiInbox extends Controller
 		}
 
 		$privates = UserInbox::where('id_user','=',$user['id'])->get()->toArray();
-		
+
 		foreach($privates as $private){
 			$content = [];
 			$content['type'] 		 = 'private';
 			$content['id_inbox'] 	 = $private['id_user_inboxes'];
 			$content['subject'] 	 = $private['inboxes_subject'];
 			$content['clickto'] 	 = $private['inboxes_clickto'];
-			
+
 			if($private['inboxes_id_reference']){
 				$content['id_reference'] = $private['inboxes_id_reference'];
 			}else{
 				$content['id_reference'] = 0;
 			}
-			
+
 			if($content['clickto'] == 'News'){
 				$news = News::find($private['inboxes_id_reference']);
 				if($news){
@@ -146,21 +146,21 @@ class ApiInbox extends Controller
 				}
 
 			}
-			
+
 			if($content['clickto'] == 'Content'){
 				$content['content'] = $private['inboxes_content'];
 			}else{
 				$content['content']	= null;
 			}
-			
+
 			if($content['clickto'] == 'Link'){
 				$content['link'] = $private['inboxes_link'];
 			}else{
 				$content['link'] = null;
 			}
-			
+
 			$content['created_at'] 	 = $private['inboxes_send_at'];
-			
+
 			if($private['read'] === '0'){
 				$content['status'] = 'unread';
 				$countUnread++;
@@ -177,7 +177,7 @@ class ApiInbox extends Controller
 				$position = array_search(date('Y-m-d', strtotime($content['created_at'])), $arrDate);
 				$arrInbox[$position]['list'][] = $content;
 			}
-			
+
 			$countInbox++;
 		}
 
@@ -195,7 +195,7 @@ class ApiInbox extends Controller
 				$t2 = strtotime($b['created']);
 				return $t2 - $t1;
 			});
-			
+
 			$result = [
 					'status'  => 'success',
 					'result'  => $arrInbox,
@@ -205,11 +205,11 @@ class ApiInbox extends Controller
 		} else {
 			$result = [
 					'status'  => 'fail',
-					'messages'  => ['No Inbox']
+					'messages'  => ['Belum ada pesan']
 				];
 		}
 		return response()->json($result);
-	}  
+	}
 
 	public function markedInbox(MarkedInbox $request){
 		$user = $request->user();
@@ -239,7 +239,7 @@ class ApiInbox extends Controller
 		}else{
 			$inboxGlobal = InboxGlobal::where('id_inbox_global', $post['id_inbox'])->first();
 			if(!empty($inboxGlobal)){
-				
+
 				$inboxGlobalRead = InboxGlobalRead::where('id_inbox_global', $post['id_inbox'])->where('id_user', $user['id'])->first();
 				if(empty($inboxGlobalRead)){
 					$create = InboxGlobalRead::create(['id_inbox_global' => $post['id_inbox'], 'id_user' => $user['id']]);
@@ -270,27 +270,27 @@ class ApiInbox extends Controller
 
 	public function listInboxUnread($id_user){
 		$user = User::find($id_user);
-		
+
 		$today = date("Y-m-d H:i:s");
 		$countUnread = 0;
 
 		$read = array_pluck(InboxGlobalRead::where('id_user', $user['id'])->get(), 'id_inbox_global');
-		
+
 		$globals = InboxGlobal::with('inbox_global_rule_parents', 'inbox_global_rule_parents.rules')
 							->where('inbox_global_start', '<=', $today)
 							->where('inbox_global_end', '>=', $today)
 							->get()
 							->toArray();
-		
+
 		foreach($globals as $global){
 			$cons = array();
 			$cons['subject'] = 'phone';
 			$cons['operator'] = '=';
 			$cons['parameter'] = $user['phone'];
-			
+
 			array_push($global['inbox_global_rule_parents'], ['rule' => 'and', 'rule_next' => 'and', 'rules' => [$cons]]);
 			$users = app($this->user)->UserFilter($global['inbox_global_rule_parents']);
-			
+
 			if(($users['status']??false)=='success'){
 				$read = InboxGlobalRead::where('id_inbox_global', $global['id_inbox_global'])->where('id_user', $id_user)->first();
 				if(empty($read)){
@@ -301,7 +301,7 @@ class ApiInbox extends Controller
 
 		$privates = UserInbox::where('id_user','=',$user['id'])->where('read', '0')->get();
 
-		
+
 		$countUnread = $countUnread + count($privates);
 
 		return $countUnread;

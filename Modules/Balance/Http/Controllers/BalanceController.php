@@ -73,9 +73,9 @@ class BalanceController extends Controller
             if($balance_nominal == $checkLog->balance){
                 $balance_after = $checkLog->balance_after;
             }else{
-                $balance_after = $balance_before + $balance_nominal; 
+                $balance_after = $balance_before + $balance_nominal;
             }
-        }   
+        }
 
         $LogBalance = [
             'id_user'                        => $id_user,
@@ -110,13 +110,13 @@ class BalanceController extends Controller
         ];
         // $encodeCheck = utf8_encode(json_encode(($dataHashBalance)));
         // $enc = MyHelper::encryptkhususnew($encodeCheck);
-        
+
         // AutoCRM Taruh sini
 
         $enc = base64_encode(json_encode(($dataHashBalance)));
         // update enc column
         $log_balance->update(['enc' => $enc]);
-        
+
         $new_user_balance = LogBalance::where('id_user', $user->id)->sum('balance');
         $update_user = $user->update(['balance' => $new_user_balance]);
 
@@ -131,19 +131,19 @@ class BalanceController extends Controller
     }
 
     /* REQUEST */
-    function requestCashBackBalance(Request $request) 
+    function requestCashBackBalance(Request $request)
     {
         $balance = $this->balance("add", $request->user()->id, null, 800, "Transaction", 50000);
     }
 
     /* REQUEST */
-    function requestTopUpBalance(Request $request) 
+    function requestTopUpBalance(Request $request)
     {
         return $this->topUp($request->user()->id, 1339800, 25);
     }
 
     /* REQUEST */
-    function requestPoint(Request $request) 
+    function requestPoint(Request $request)
     {
         // $point = CalculatePoint::calculate($request->user()->id);
         $point = Membership::calculate(null, '083847090002');
@@ -176,7 +176,7 @@ class BalanceController extends Controller
         }
 
         $save = LogBalance::updateOrCreate(['id_user' => $data['id_user'], 'id_reference' => $data['id_reference'], 'source' => $data['source']], $data);
-        
+
         return $save;
     }
 
@@ -212,7 +212,7 @@ class BalanceController extends Controller
         if ($data['balance_before'] < 1) {
             return [
                 'status'   => 'fail',
-                'messages' => ['You need more kopi point']
+                'messages' => ['You need more point']
             ];
         }
 
@@ -353,7 +353,7 @@ class BalanceController extends Controller
         $tembakMitrans = Midtrans::token($check['transaction_receipt_number'], $saveTopUp['topup_value']);
 
         if (isset($tembakMitrans['token'])) {
-            // save log midtrans 
+            // save log midtrans
             if ($this->saveMidtransTopUp($saveTopUp)) {
                 return [
                     'status'   => 'waiting',
@@ -380,7 +380,7 @@ class BalanceController extends Controller
             $save = LogTopupMidtrans::create($midtrans);
             return $save;
         }
-        return false;        
+        return false;
     }
 
     /* ADD TOPUP TO BALANCE */

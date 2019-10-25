@@ -572,7 +572,7 @@ class ApiNews extends Controller
                 $newsItem['news_category']=$newsItem['news_category']?:['id_news_category'=>0,'category_name'=>'Uncategories'];
             });
             if(!$updateNews){
-                return response()->json(MyHelper::checkGet([]));
+                return response()->json(MyHelper::checkGet([], 'Belum ada berita'));
             }
             return response()->json(MyHelper::checkGet($news));
     }

@@ -38,12 +38,12 @@ class ApiDeals extends Controller
 
     public $saveImage = "img/deals/";
 
-    
+
     function rangePoint()
     {
         $start = Setting::where('key', 'point_range_start')->get()->first();
         $end = Setting::where('key', 'point_range_end')->get()->first();
-        
+
         if (!$start) {
             $start['value'] = 0;
         }
@@ -507,7 +507,19 @@ class ApiDeals extends Controller
             if(!$result['total']){
                 $result=[];
             }
-            return response()->json(MyHelper::checkGet($result));
+
+            if(
+                $request->json('voucher_type_point') ||
+                $request->json('voucher_type_paid') ||
+                $request->json('voucher_type_free') ||
+                $request->json('id_city') ||
+                $request->json('key_free')
+            ){
+                $resultMessage = 'Maaf, voucher yang kamu cari belum tersedia';
+            }else{
+                $resultMessage = 'Nantikan penawaran menarik dari kami';
+            }
+            return response()->json(MyHelper::checkGet($result, $resultMessage));
 
         }else{
             return response()->json(MyHelper::checkGet($deals));
