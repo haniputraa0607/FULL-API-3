@@ -1456,7 +1456,7 @@ class ApiPOS extends Controller
                         $usere= User::where('id',$createTrx['id_user'])->first();
                         $send = app($this->autocrm)->SendAutoCRM('Transaction Point Achievement', $usere->phone, 
                             [
-                                "outlet_name"       => $checkOutlet['outlet_name'], 
+                                "outlet_name"       => $outlet['outlet_name'],
                                 "transaction_date"  => $createTrx['transaction_date'],
                                 'id_transaction'    => $createTrx['id_transaction'],
                                 'receipt_number'    => $createTrx['transaction_receipt_number'],
@@ -1545,7 +1545,7 @@ class ApiPOS extends Controller
             }
         }catch (Exception $e) {
             DB::rollback();
-            return ['status' => 'fail', 'messages' => ['There is an error']];
+            return ['status' => 'fail', 'messages' => $e];
         }
     }
 
@@ -1714,7 +1714,7 @@ class ApiPOS extends Controller
             return ['status' => 'not duplicate'];
         }catch (Exception $e){
             DB::rollback();
-            return ['status' => 'fail', 'messages' => ['There is an error']];
+            return ['status' => 'fail', 'messages' => $e];
         }
     }
 
