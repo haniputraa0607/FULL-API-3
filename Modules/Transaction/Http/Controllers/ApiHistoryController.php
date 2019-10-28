@@ -241,6 +241,101 @@ class ApiHistoryController extends Controller
         return response()->json($result);
     }
 
+    public function historyTrxList(Request $request)
+    {
+
+        $post = $request->json()->all();
+        // return $post;
+        $id = $request->user()->id;
+        $order = 'new';
+        $page = 1;
+
+        if (!isset($post['pickup_order'])) {
+            $post['pickup_order'] = null;
+        }
+
+        if (!isset($post['delivery_order'])) {
+            $post['delivery_order'] = null;
+        }
+
+        if (!isset($post['online_order'])) {
+            $post['online_order'] = null;
+        }
+
+        if (!isset($post['offline_order'])) {
+            $post['offline_order'] = null;
+        }
+
+        if (!isset($post['pending'])) {
+            $post['pending'] = null;
+        }
+
+        if (!isset($post['brand'])) {
+            $post['brand'] = null;
+        }
+
+        if (!isset($post['outlet'])) {
+            $post['outlet'] = null;
+        }
+
+        if (!isset($post['paid'])) {
+            $post['paid'] = null;
+        }
+
+        if (!isset($post['completed'])) {
+            $post['completed'] = null;
+        }
+
+        if (!isset($post['cancel'])) {
+            $post['cancel'] = null;
+        }
+
+        if (!isset($post['buy_voucher'])) {
+            $post['buy_voucher'] = null;
+        }
+
+        $transaction = [];
+        $voucher = [];
+
+        $transaction = $this->transaction($post, $id);
+        $voucher = $this->voucher($post, $id);
+
+        $next_page = $page + 1;
+
+        $merge = array_merge($transaction, $voucher);
+        $sortTrx = $this->sorting($merge, $order, $page);
+
+        $check = MyHelper::checkGet($sortTrx);
+        if (count($merge) > 0) {
+            $result['status'] = 'success';
+            $result['current_page']  = $page;
+            $result['data']          = $sortTrx['data'];
+            $result['total']         = count($merge);
+            $result['next_page_url'] = null;
+
+            if ($sortTrx['status'] == true) {
+                $result['next_page_url'] = ENV('APP_API_URL') . '/api/transaction/history-trx?page=' . $next_page;
+            }
+        } else {
+
+            if(
+                $request->json('date_start') ||
+                $request->json('date_end') ||
+                $request->json('outlet') ||
+                $request->json('brand')
+            ){
+                $resultMessage = 'Data tidak ditemukan';
+            }else{
+                $resultMessage = 'Belum ada transaksi';
+            }
+
+            $result['status'] = 'fail';
+            $result['messages'] = [$resultMessage];
+        }
+
+        return response()->json($result);
+    }
+
     public function historyTrxOnGoing(Request $request)
     {
 
@@ -394,6 +489,72 @@ class ApiHistoryController extends Controller
         $balance = $this->balance($post, $id);
 
         $sortBalance = $this->sorting($balance, $order, $page);
+        $check = MyHelper::checkGet($sortBalance);
+        if (count($balance) > 0) {
+            $result['status'] = 'success';
+            $result['current_page']  = $page;
+            $result['data']          = $sortBalance['data'];
+            $result['total']         = count($balance);
+            $result['next_page_url'] = null;
+
+            if ($sortBalance['status'] == true) {
+                $result['next_page_url'] = ENV('APP_API_URL') . '/api/transaction/history-balance?page=' . $next_page;
+            }
+        } else {
+            if(
+                $request->json('date_start') ||
+                $request->json('date_end') ||
+                $request->json('outlet') ||
+                $request->json('brand') ||
+                $request->json('use_point') ||
+                $request->json('earn_point')
+            ){
+                $resultMessage = 'Data tidak ditemukan';
+            }else{
+                $resultMessage = 'Kamu belum memiliki point saat ini';
+            }
+
+            $result['status'] = 'fail';
+            $result['messages'] = [$resultMessage];
+        }
+
+        return response()->json($result);
+    }
+
+    public function historyBalanceList(Request $request)
+    {
+        $post = $request->json()->all();
+        $id = $request->user()->id;
+        $order = 'new';
+        $page = 0;
+
+        if (!isset($post['use_point'])) {
+            $post['use_point'] = null;
+        }
+        if (!isset($post['earn_point'])) {
+            $post['earn_point'] = null;
+        }
+        if (!isset($post['offline_order'])) {
+            $post['offline_order'] = null;
+        }
+        if (!isset($post['online_order'])) {
+            $post['online_order'] = null;
+        }
+        if (!isset($post['voucher'])) {
+            $post['voucher'] = null;
+        }
+        if (!isset($post['oldest'])) {
+            $post['oldest'] = null;
+        }
+        if (!isset($post['newest'])) {
+            $post['newest'] = null;
+        }
+
+        $next_page = $page + 1;
+
+        $balance = $this->balance($post, $id);
+        $sortBalance = $this->sorting($balance, $order, $page);
+        
         $check = MyHelper::checkGet($sortBalance);
         if (count($balance) > 0) {
             $result['status'] = 'success';
