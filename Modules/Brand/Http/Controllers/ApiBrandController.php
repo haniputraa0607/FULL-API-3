@@ -322,4 +322,8 @@ class ApiBrandController extends Controller
         }
         return ['status'=>'success'];
     }
+    public function switchStatus(Request $request){
+        $save=Brand::where('id_brand',$request->json('id_brand'))->update(['brand_active'=>$request->json('brand_active')=="true"?1:0]);
+        return MyHelper::checkUpdate($save);
+    }
 }
