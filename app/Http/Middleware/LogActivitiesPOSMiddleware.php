@@ -109,6 +109,7 @@ class LogActivitiesPOSMiddleware
                 if(stristr($url, 'pos/menu/sync')) $subject = 'POS Menu Sync';
                 if(stristr($url, 'pos/transaction/detail')) $subject = 'Fetch Pre Order';
                 if(stristr($url, 'pos/transaction/refund')) $subject = 'POS Transaction Refund';
+                if(stristr($url, 'pos/brand')) $subject = 'POS Brand Sync';
                 
                 if(!empty($request->header('ip-address-view'))){
                     $ip = $request->header('ip-address-view');
