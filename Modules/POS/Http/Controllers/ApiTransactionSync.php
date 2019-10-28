@@ -593,7 +593,7 @@ class ApiTransactionSync extends Controller
             }
         }catch (Exception $e) {
             DB::rollback();
-            return ['status' => 'fail', 'messages' => ['There is an error']];
+            return ['status' => 'fail', 'messages' => $e];
         }
     }
 
@@ -765,7 +765,7 @@ class ApiTransactionSync extends Controller
             return ['status' => 'not duplicate'];
         }catch (Exception $e){
             DB::rollback();
-            return ['status' => 'fail', 'messages' => ['There is an error']];
+            return ['status' => 'fail', 'messages' => $e];
         }
     }
      
