@@ -207,17 +207,10 @@ class ApiBrandController extends Controller
         }else{
             $inactive_image='';
         }
-        //get_default_logo
-        if($inactive_logo=Setting::where('key','inactive_logo_brand')->pluck('value')->first()){
-            $inactive_logo=env('S3_URL_API').'/'.$inactive_logo;
-        }else{
-            $inactive_image='';
-        }
         //replace if inactive
         foreach ($loop as &$bran) {
             if(!$bran['brand_active']){
-                $bran['logo_brand']=$bran['logo_brand']?:$inactive_logo;
-                $bran['image_brand']=$bran['image_brand']?:$inactive_image;
+                $bran['image_brand']=$inactive_image;
             }
         }
         //return
