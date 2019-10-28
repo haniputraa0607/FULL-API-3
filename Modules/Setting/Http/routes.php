@@ -7,6 +7,7 @@ Route::group(['middleware' => ['api', 'log_activities'], 'prefix' => 'api/settin
 
 Route::group(['middleware' => ['auth:api', 'log_activities'], 'prefix' => 'api/setting', 'namespace' => 'Modules\Setting\Http\Controllers'], function()
 {
+    Route::get('/get/{key}', 'ApiSetting@get');
     Route::any('email/update', 'ApiSetting@emailUpdate');
     Route::any('/', 'ApiSetting@settingList');
     Route::post('/edit', 'ApiSetting@settingEdit');

@@ -5,6 +5,8 @@ Route::group(['middleware' => ['auth:api'], 'prefix' => 'api/brand', 'namespace'
     Route::any('list', 'ApiBrandController@listBrand');
     Route::post('store', 'ApiBrandController@store');
     Route::post('show', 'ApiBrandController@show');
+    Route::post('reorder', 'ApiBrandController@reOrder');
+    Route::any('inactive-image', 'ApiBrandController@inactiveImage');
 
     Route::post('delete', 'ApiBrandController@destroy');
     Route::group(['prefix' => 'delete'], function () {
