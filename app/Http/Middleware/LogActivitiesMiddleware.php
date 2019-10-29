@@ -26,9 +26,12 @@ class LogActivitiesMiddleware
 
             if(!isset($arrReq['page']) || (int)$arrReq['page'] <= 1){
 
-                $user = json_encode($request->user());
+                $ruser =$request->user();
+                if(!$ruser){
+                    $ruser=auth('api')->user();
+                }
                 $url = $request->url();
-                $user = json_decode(json_encode($request->user()), true);
+                $user = json_decode(json_encode($ruser),true);
                 $st = stristr(json_encode($response),'success');
                 $status = 'fail';
                 if($st) $status = 'success';
@@ -248,8 +251,8 @@ class LogActivitiesMiddleware
                     'url' 			=> $url,
                     'subject' 			=> $subject,
                     'phone' 			=> $phone,
-                    // 'user' 			=> MyHelper::encrypt2019(json_encode($request->user())),
-                    'user' 			=> json_encode($request->user()),
+                    // 'user' 			=> MyHelper::encrypt2019(json_encode($ruser)),
+                    'user' 			=> json_encode($ruser),
                     // 'request' 		=> MyHelper::encrypt2019($requestnya),
                     'request' 			=> $requestnya,
                     'response_status'           => $status,
