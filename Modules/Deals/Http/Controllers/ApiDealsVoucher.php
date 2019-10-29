@@ -447,8 +447,8 @@ class ApiDealsVoucher extends Controller
         if (!($post['used']??false)) {
 
                 foreach($voucher as $index => $dataVou){
-                    $voucher[$index]['webview_url'] = env('APP_URL') ."webview/voucher/". $dataVou['id_deals_user'];
-                    $voucher[$index]['webview_url_v2'] = env('APP_URL') ."webview/voucher/v2/". $dataVou['id_deals_user'];
+                    $voucher[$index]['webview_url'] = env('API_URL') ."api/webview/voucher/". $dataVou['id_deals_user'];
+                    $voucher[$index]['webview_url_v2'] = env('API_URL') ."api/webview/voucher/v2/". $dataVou['id_deals_user'];
                     $voucher[$index]['button_text'] = 'Redeem';
                 }
 

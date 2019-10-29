@@ -1956,6 +1956,43 @@ class MyHelper{
     		$string=str_replace($symbol.$key.$symbol, $to,$string);
     	}
     	return $string;
-    }
+	}
+	
+	public static function postCURLWithBearer($url, $data, $bearer) {
+		$uri = env('APP_API_URL');
+        $ch = curl_init($uri.$url);
+        $data = json_encode($data);
+		curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
+		curl_setopt($ch, CURLOPT_USERAGENT, $_SERVER['HTTP_USER_AGENT']);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                    'Accept: application/json',
+                    'Content-Type: application/json',
+                    'Authorization: '. $bearer,
+					'X-Forwarded-For: ' . MyHelper::get_client_ip(),
+					'REMOTE_ADDR: ' . MyHelper::get_client_ip(),
+        ]);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        $result = curl_exec($ch);
+		curl_close($ch);
+		return json_decode($result, true);
+	}
+
+	public static function get_client_ip() {
+		$ipaddress = '';
+		if (isset($_SERVER['HTTP_CLIENT_IP']))
+			$ipaddress = $_SERVER['HTTP_CLIENT_IP'];
+		else if(isset($_SERVER['HTTP_X_FORWARDED_FOR']))
+			$ipaddress = $_SERVER['HTTP_X_FORWARDED_FOR'];
+		else if(isset($_SERVER['HTTP_X_FORWARDED']))
+			$ipaddress = $_SERVER['HTTP_X_FORWARDED'];
+		else if(isset($_SERVER['HTTP_FORWARDED_FOR']))
+			$ipaddress = $_SERVER['HTTP_FORWARDED_FOR'];
+		else if(isset($_SERVER['HTTP_FORWARDED']))
+			$ipaddress = $_SERVER['HTTP_FORWARDED'];
+		else if(isset($_SERVER['REMOTE_ADDR']))
+			$ipaddress = $_SERVER['REMOTE_ADDR'];
+		else
+			$ipaddress = 'UNKNOWN';
+		return $ipaddress;
+	}
 }
-?>
