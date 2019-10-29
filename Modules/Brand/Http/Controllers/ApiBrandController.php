@@ -31,7 +31,7 @@ class ApiBrandController extends Controller
     {
         $post = $request->json()->all();
 
-        $brand = Brand::orderBy('order_brand');
+        $brand = Brand::orderByRaw('CASE WHEN order_brand = 0 THEN 1 ELSE 0 END')->orderBy('order_brand');
 
         $brand = $brand->get()->toArray();
 
