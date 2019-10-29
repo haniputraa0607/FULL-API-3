@@ -38,12 +38,12 @@ class ApiDeals extends Controller
 
     public $saveImage = "img/deals/";
 
-    
+
     function rangePoint()
     {
         $start = Setting::where('key', 'point_range_start')->get()->first();
         $end = Setting::where('key', 'point_range_end')->get()->first();
-        
+
         if (!$start) {
             $start['value'] = 0;
         }
@@ -243,11 +243,14 @@ class ApiDeals extends Controller
         $deals = (new Deal)->newQuery();
         $user = $request->user();
         $curBalance = (int) $user->balance??0;
-
+        if($request->json('admin')){
+            $deals->addSelect('id_brand');
+            $deals->with('brand');
+        }
         if ($request->json('id_outlet') && is_integer($request->json('id_outlet'))) {
             $deals = $deals->join('deals_outlets', 'deals.id_deals', 'deals_outlets.id_deals')
                 ->where('id_outlet', $request->json('id_outlet'))
-                ->select('deals.*')->distinct();
+                ->addSelect('deals.*')->distinct();
         }
 
         // brand
@@ -266,7 +269,7 @@ class ApiDeals extends Controller
                 // 'deals_vouchers.deals_user.user'
             ])->where('id_deals', $request->json('id_deals'))->with(['outlets', 'outlets.city', 'product','brand']);
         }else{
-            $deals->select('id_deals','deals_title','deals_second_title','deals_voucher_price_point','deals_voucher_price_cash','deals_total_voucher','deals_total_claimed','deals_voucher_type','deals_image','deals_start','deals_end','deals_type');
+            $deals->addSelect('id_deals','deals_title','deals_second_title','deals_voucher_price_point','deals_voucher_price_cash','deals_total_voucher','deals_total_claimed','deals_voucher_type','deals_image','deals_start','deals_end','deals_type');
             if(strpos($request->user()->level,'Admin')>=0){
                 $deals->addSelect('deals_promo_id','deals_publish_start','deals_publish_end');
             }
@@ -375,7 +378,7 @@ class ApiDeals extends Controller
                 $city = $request->json('id_city');
             }
 
-            $deals = $this->kotacuks($deals, $city);
+            $deals = $this->kotacuks($deals, $city,$request->json('admin'));
         }
 
         if ($request->json('highest_available_voucher')) {
@@ -507,7 +510,19 @@ class ApiDeals extends Controller
             if(!$result['total']){
                 $result=[];
             }
-            return response()->json(MyHelper::checkGet($result));
+
+            if(
+                $request->json('voucher_type_point') ||
+                $request->json('voucher_type_paid') ||
+                $request->json('voucher_type_free') ||
+                $request->json('id_city') ||
+                $request->json('key_free')
+            ){
+                $resultMessage = 'Maaf, voucher yang kamu cari belum tersedia';
+            }else{
+                $resultMessage = 'Nantikan penawaran menarik dari kami';
+            }
+            return response()->json(MyHelper::checkGet($result, $resultMessage));
 
         }else{
             return response()->json(MyHelper::checkGet($deals));
@@ -647,7 +662,7 @@ class ApiDeals extends Controller
     }
 
     /* INI LIST KOTA */
-    function kotacuks($deals, $city = "")
+    function kotacuks($deals, $city = "",$admin=false)
     {
         $timeNow = date('Y-m-d H:i:s');
 
@@ -709,12 +724,18 @@ class ApiDeals extends Controller
                 $calc = '*';
             }
 
-            if($calc&&is_numeric($calc)){
-                $deals[$key]['percent_voucher'] = $calc*100/$value['deals_total_voucher'];
+            if(is_numeric($calc)){
+                if($calc||$admin){
+                    $deals[$key]['percent_voucher'] = $calc*100/$value['deals_total_voucher'];
+                }else{
+                    unset($deals[$key]);
+                    continue;
+                }
             }else{
                 $deals[$key]['percent_voucher'] = 100;
             }
             $deals[$key]['available_voucher'] = (string) $calc;
+            // deals masih ada?
             // print_r($deals[$key]['available_voucher']);
         }
 

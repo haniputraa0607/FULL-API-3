@@ -447,8 +447,8 @@ class ApiDealsVoucher extends Controller
         if (!($post['used']??false)) {
 
                 foreach($voucher as $index => $dataVou){
-                    $voucher[$index]['webview_url'] = env('APP_URL') ."webview/voucher/". $dataVou['id_deals_user'];
-                    $voucher[$index]['webview_url_v2'] = env('APP_URL') ."webview/voucher/v2/". $dataVou['id_deals_user'];
+                    $voucher[$index]['webview_url'] = env('API_URL') ."api/webview/voucher/". $dataVou['id_deals_user'];
+                    $voucher[$index]['webview_url_v2'] = env('API_URL') ."api/webview/voucher/v2/". $dataVou['id_deals_user'];
                     $voucher[$index]['button_text'] = 'Redeem';
                 }
 
@@ -488,7 +488,19 @@ class ApiDealsVoucher extends Controller
             }
         }
 
-        return response()->json(MyHelper::checkGet($result));
+        if(
+            $request->json('id_outlet') ||
+            $request->json('id_brand') ||
+            $request->json('expired_start') ||
+            $request->json('expired_end') ||
+            $request->json('key_free')
+        ){
+            $resultMessage = 'Voucher yang kamu cari tidak tersedia';
+        }else{
+            $resultMessage = 'Kamu belum memiliki voucher saat ini';
+        }
+
+        return response()->json(MyHelper::checkGet($result, $resultMessage));
     }
 
     function kotacuks($deals)

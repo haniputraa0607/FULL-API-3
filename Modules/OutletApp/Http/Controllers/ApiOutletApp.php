@@ -651,7 +651,12 @@ class ApiOutletApp extends Controller
         if($pickup){
             //send notif to customer
             $user = User::find($order->id_user);
-            $send = app($this->autocrm)->SendAutoCRM('Order Accepted', $user['phone'], ["outlet_name" => $outlet['outlet_name'], "id_reference" => $order->transaction_receipt_number.','.$order->id_outlet, "transaction_date" => $order->transaction_date]);
+            $send = app($this->autocrm)->SendAutoCRM('Order Accepted', $user['phone'], [
+                "outlet_name" => $outlet['outlet_name'], 
+                'id_transaction' => $order->id_transaction, 
+                "id_reference" => $order->transaction_receipt_number.','.$order->id_outlet, 
+                "transaction_date" => $order->transaction_date]
+            );
             if($send != true){
                 DB::rollback();
                 return response()->json([
@@ -716,7 +721,12 @@ class ApiOutletApp extends Controller
         if($pickup){
             //send notif to customer
             $user = User::find($order->id_user);
-            $send = app($this->autocrm)->SendAutoCRM('Order Ready', $user['phone'], ["outlet_name" => $outlet['outlet_name'], "id_reference" => $order->transaction_receipt_number.','.$order->id_outlet,  "transaction_date" => $order->transaction_date]);
+            $send = app($this->autocrm)->SendAutoCRM('Order Ready', $user['phone'], [
+                "outlet_name" => $outlet['outlet_name'], 
+                'id_transaction' => $order->id_transaction, 
+                "id_reference" => $order->transaction_receipt_number.','.$order->id_outlet,  
+                "transaction_date" => $order->transaction_date
+            ]);
             if($send != true){
                 // DB::rollback();
                 return response()->json([
@@ -807,7 +817,12 @@ class ApiOutletApp extends Controller
         if($pickup){
             //send notif to customer
             $user = User::find($order->id_user);
-            $send = app($this->autocrm)->SendAutoCRM('Order Taken', $user['phone'], ["outlet_name" => $outlet['outlet_name'], "id_reference" => $order->transaction_receipt_number.','.$order->id_outlet, "transaction_date" => $order->transaction_date]);
+            $send = app($this->autocrm)->SendAutoCRM('Order Taken', $user['phone'], [
+                "outlet_name" => $outlet['outlet_name'], 
+                'id_transaction' => $order->id_transaction, 
+                "id_reference" => $order->transaction_receipt_number.','.$order->id_outlet, 
+                "transaction_date" => $order->transaction_date
+            ]);
             if($send != true){
                 DB::rollback();
                 return response()->json([
@@ -1056,6 +1071,7 @@ class ApiOutletApp extends Controller
                         $send = app($this->autocrm)->SendAutoCRM('Rejected Order Point Refund', $user['phone'], 
                             [
                                 "outlet_name"       => $outlet['outlet_name'], 
+                                'id_transaction'    => $order['id_transaction'], 
                                 "transaction_date"  => $order['transaction_date'],
                                 'receipt_number'    => $order['transaction_receipt_number'],
                                 'received_point'    => (string) $point
@@ -1109,6 +1125,7 @@ class ApiOutletApp extends Controller
                         [
                             "outlet_name"       => $outlet['outlet_name'], 
                             "transaction_date"  => $order['transaction_date'],
+                            'id_transaction'    => $order['id_transaction'], 
                             'receipt_number'    => $order['transaction_receipt_number'],
                             'received_point'    => (string) $point
                         ]
@@ -1121,7 +1138,12 @@ class ApiOutletApp extends Controller
                             ]);
                     }
 
-                    $send = app($this->autocrm)->SendAutoCRM('Order Reject', $user['phone'], ["outlet_name" => $outlet['outlet_name'], "id_reference" => $order->transaction_receipt_number.','.$order->id_outlet, "transaction_date" => $order->transaction_date]);
+                    $send = app($this->autocrm)->SendAutoCRM('Order Reject', $user['phone'], [
+                        "outlet_name" => $outlet['outlet_name'], 
+                        "id_reference" => $order->transaction_receipt_number.','.$order->id_outlet, 
+                        "transaction_date" => $order->transaction_date,
+                        'id_transaction' => $order->id_transaction, 
+                    ]);
                     if($send != true){
                         DB::rollback();
                         return response()->json([

@@ -306,18 +306,19 @@ class ApiDealsClaimPay extends Controller
             elseif ($pay) {
                 DB::commit();
                 $return = MyHelper::checkCreate($pay);
-                if(\Module::collections()->has('Autocrm')) {
-                    $phone=User::where('id', $voucher->id_user)->pluck('phone')->first();
-                    $voucher->load('dealVoucher.deals');
-                    $autocrm = app($this->autocrm)->SendAutoCRM('Claim Deals Success', $phone,
-                        [
-                            'claimed_at'       => $voucher->claimed_at, 
-                            'deals_title'      => $voucher->dealVoucher->deals->deals_title,
-                            'deals_voucher_price_point' => $voucher->dealVoucher->deals->deals_voucher_price_point
-                        ]
-                    );
-                }
                 if(isset($return['status']) && $return['status'] == 'success'){
+                    if(\Module::collections()->has('Autocrm')) {
+                        $phone=User::where('id', $voucher->id_user)->pluck('phone')->first();
+                        $voucher->load('dealVoucher.deals');
+                        $autocrm = app($this->autocrm)->SendAutoCRM('Claim Deals Success', $phone,
+                            [
+                                'claimed_at'       => $voucher->claimed_at, 
+                                'deals_title'      => $voucher->dealVoucher->deals->deals_title,
+                                'id_deals_user'    => $return['result']['voucher']['id_deals_user'],
+                                'deals_voucher_price_point' => $voucher->dealVoucher->deals->deals_voucher_price_point
+                            ]
+                        );
+                    }
                     $result = [
                         'id_deals_user'=>$return['result']['voucher']['id_deals_user'],
                         'id_deals_voucher'=>$return['result']['voucher']['id_deals_voucher'],
@@ -329,7 +330,7 @@ class ApiDealsClaimPay extends Controller
                     }else{
                         $result['redirect'] = false;
                     }
-                    $result['webview_later'] = env('APP_URL').'webview/mydeals/'.$return['result']['voucher']['id_deals_user'];
+                    $result['webview_later'] = env('API_URL').'api/webview/mydeals/'.$return['result']['voucher']['id_deals_user'];
                     unset($return['result']);
                     $return['result'] = $result;
                 }

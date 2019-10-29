@@ -137,8 +137,6 @@ class ApiHome extends Controller
 			$result = [
 					'status' => 'success',
 					'result' => [
-						// 'total_point'   => (int) $point,
-						// 'total_kopi_point' => (int) $balance,
 						'total_point' => (int) $balance,
 						'qr_code'        => $qrCode,
                         'expired_qr'    => $expired
@@ -344,7 +342,7 @@ class ApiHome extends Controller
                         if (isset($setting_profile_popup->value)) {
                             $popup_text = $setting_profile_popup->value;
                         }else{
-                            $popup_text = "Lengkapi data dan dapatkan Kopi Points";
+                            $popup_text = "Lengkapi data dan dapatkan Points";
                         }
                     }
                 }
@@ -355,7 +353,7 @@ class ApiHome extends Controller
                     if (isset($setting_profile_popup->value)) {
                         $popup_text = $setting_profile_popup->value;
                     }else{
-                        $popup_text = "Lengkapi data dan dapatkan Kopi Points";
+                        $popup_text = "Lengkapi data dan dapatkan Points";
                     }
                 }
             }
@@ -375,8 +373,6 @@ class ApiHome extends Controller
                     // 'background'    => $background,
                     'banners'       => $banners,
                     'splash_screen_url' => $splash."?update=".time(),
-                    // 'total_point'   => (int) $point,
-                    // 'total_kopi_point' => (int) $user->balance,
                     'total_point' => (int) $user->balance,
                     // 'notification'  =>[
                     //     'total' => $countUnread + $transactionPending,
@@ -565,7 +561,7 @@ class ApiHome extends Controller
         return $result;
     }
 
-    public function membership(Request $request){   
+    public function membership(Request $request){
         $user = $request->user();
         $user->load(['city','city.province']);
         $birthday = "";
@@ -708,12 +704,13 @@ class ApiHome extends Controller
         } else {
             $splash = null;
         }
-
+        $ext=explode('.', $splash);
         $result = [
             'status' => 'success',
             'result' => [
                 'splash_screen_url' => $splash."?update=".time(),
                 'splash_screen_duration' => $duration??5,
+                'splash_screen_ext' => '.'.end($ext)
             ]
         ];
         return $result;
@@ -736,6 +733,9 @@ class ApiHome extends Controller
             ->whereHas('deals',function($query){
                 $query->where('deals_publish_end','>=',DB::raw('CURRENT_TIMESTAMP()'));
                 $query->where('deals_publish_start','<=',DB::raw('CURRENT_TIMESTAMP()'));
+                $query->whereHas('brand',function($query){
+                    $query->where('brand_active',1);
+                });
             })
             ->orderBy('order')
             ->where('start_date','<=',$now)

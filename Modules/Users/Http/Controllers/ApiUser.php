@@ -809,7 +809,7 @@ class ApiUser extends Controller
             return response()->json([
                 'status' => 'success',
                 'result' => $data,
-                'messages' => ['Akun Anda telah diblokir karena menunjukkan aktivitas mencurigakan. Untuk informasi lebih lanjut harap hubungi customer service kami di hello@kopikenangan.com']
+                'messages' => ['Akun Anda telah diblokir karena menunjukkan aktivitas mencurigakan. Untuk informasi lebih lanjut harap hubungi customer service kami di hello@champresto.id']
             ]);
         }
 
@@ -1136,7 +1136,7 @@ class ApiUser extends Controller
 
                 $result 			= [];
                 $result['status'] 	= 'fail';
-                $result['messages'] = ['Maaf, Pin Anda Salah'];
+                $result['messages'] = ['Kata sandi yang kamu masukkan kurang tepat'];
                 $result['date'] 	= date('Y-m-d H:i:s');
                 $result['device'] 	= $device;
                 $result['ip'] 		= $ip;
@@ -1150,7 +1150,7 @@ class ApiUser extends Controller
         }
         else {
             $result['status'] 	= 'fail';
-            $result['messages'] = ['Maaf, Pin Anda Salah'];
+            $result['messages'] = ['Nomor HP belum terdaftar'];
         }
 
 
@@ -1286,7 +1286,7 @@ class ApiUser extends Controller
         } else {
             $result = [
                 'status'	=> 'fail',
-                'messages'	=> ['Email didn\'t match. Please check Your input.']
+                'messages'	=> ['Email yang kamu masukkan kurang tepat']
             ];
             return response()->json($result);
         }
@@ -1340,7 +1340,7 @@ class ApiUser extends Controller
                 } else {
                     $result = [
                         'status'	=> 'fail',
-                        'messages'	=> ['PIN doesn\'t match']
+                        'messages'	=> ['OTP yang kamu masukkan salah']
                     ];
                 }
             } else {

@@ -66,3 +66,11 @@ Route::group(['middleware' => ['auth:api', 'log_activities'], 'prefix' => 'api/d
     Route::get('delete/{id_deals}', 'ApiDealsSubscription@destroy');
 });
 
+/* Webview */
+Route::group(['middleware' => ['web'], 'prefix' => 'api/webview', 'namespace' => 'Modules\Deals\Http\Controllers'], function () {
+    Route::any('deals/{id_deals}/{deals_type}', 'ApiDealsWebview@webviewDealsDetail');
+    Route::any('mydeals/{id_deals_user}', 'ApiDealsWebview@dealsClaim');
+    Route::any('voucher/{id_deals_user}', 'ApiDealsVoucherWebviewController@voucherDetail');
+    Route::any('voucher/v2/{id_deals_user}', 'ApiDealsVoucherWebviewController@voucherDetailV2');
+    Route::any('voucher/used/{id_deals_user}', 'ApiDealsVoucherWebviewController@voucherUsed');
+});

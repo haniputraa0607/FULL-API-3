@@ -437,7 +437,7 @@ class ApiOutletController extends Controller
             $outlet = Outlet::select('outlets.id_outlet','outlets.outlet_name');
         }else{
             $outlet = Outlet::with(['city', 'outlet_photos', 'outlet_schedules', 'today', 'user_outlets','brands']);
-            if(!($post['id_outlet']??false)||!($post['id_outlet']??false)){                
+            if(!($post['id_outlet']??false)||!($post['id_outlet']??false)){
                 $outlet->select('outlets.id_outlet','outlets.outlet_name','outlets.outlet_code','outlets.outlet_status','outlets.outlet_address','outlets.id_city','outlet_latitude','outlet_longitude');
             }
         }
@@ -498,6 +498,7 @@ class ApiOutletController extends Controller
 
                     $outlet['data'][$key]['qrcode'] = $qrCode;
                 }
+                $loopdata=&$outlet['data'];
             }else{
                 $outlet = $outlet->orderBy('outlet_name')->get()->toArray();
                 foreach ($outlet as $key => $value) {
@@ -508,22 +509,24 @@ class ApiOutletController extends Controller
 
                     $outlet[$key]['qrcode'] = $qrCode;
                 }
+                $loopdata=&$outlet;
             }
             $request['page'] = 0;
         }else{
             $outlet = $outlet->orderBy('outlet_name')->get()->toArray();
+            $loopdata=&$outlet;
         }
 
         if(isset($post['type']) && $post['type'] == 'transaction'){
             $outlet = $this->setAvailableOutlet($outlet);
         }
-        $outlet = array_map(function($var) use ($post){
+        $loopdata = array_map(function($var) use ($post){
             $var['url']=env('VIEW_URL').'/outlet/webview/'.$var['id_outlet'];
             if(($post['latitude']??false)&&($post['longitude']??false)){
                 $var['distance']=number_format((float)$this->distance($post['latitude'], $post['longitude'], $var['outlet_latitude'], $var['outlet_longitude'], "K"), 2, '.', '').' km';
             }
             return $var;
-        }, $outlet);
+        }, $loopdata);
         if (isset($post['webview'])) {
             if(isset($outlet[0])){
                 $latitude  = $post['latitude'];
@@ -590,7 +593,7 @@ class ApiOutletController extends Controller
         $longitude = $request->json('longitude');
 
         if(!$latitude || !$longitude){
-            return response()->json(['status' => 'fail', 'messages' => ['We need to access your location']]);
+            return response()->json(['status' => 'fail', 'messages' => ['Pastikan pengaturan lokasi pada smartphone terhubung']]);
         }
 
         // outlet
@@ -598,6 +601,9 @@ class ApiOutletController extends Controller
         if($request->json('search') && $request->json('search') != ""){
             $outlet = $outlet->where('outlet_name', 'LIKE', '%'.$request->json('search').'%');
         }
+        $outlet->whereHas('brands',function($query){
+            $query->where('brand_active','1');
+        });
         $outlet = $outlet->get()->toArray();
 
         if (!empty($outlet)) {
@@ -654,7 +660,7 @@ class ApiOutletController extends Controller
         $longitude = $request->json('longitude');
 
         if(!$latitude || !$longitude){
-            return response()->json(['status' => 'success', 'messages' => ['We need to access your location']]);
+            return response()->json(['status' => 'success', 'messages' => ['Pastikan pengaturan lokasi pada smartphone terhubung']]);
         }
 
         // outlet
@@ -787,7 +793,7 @@ class ApiOutletController extends Controller
         if(!isset($latitude) || !isset($longitude)){
             return response()->json([
                 'status' => 'fail',
-                'messages' => ['We need to access your location']
+                'messages' => ['Pastikan pengaturan lokasi pada smartphone terhubung']
             ]);
         }
 
@@ -800,8 +806,12 @@ class ApiOutletController extends Controller
         // outlet
         $outlet = Outlet::with(['today'])->select('outlets.id_outlet','outlets.outlet_name','outlets.outlet_phone','outlets.outlet_code','outlets.outlet_status','outlets.outlet_address','outlets.id_city','outlet_latitude','outlet_longitude')->where('outlet_status', 'Active')->whereNotNull('id_city')->orderBy('outlet_name','asc');
 
+        $outlet->whereHas('brands',function($query){
+            $query->where('brand_active','1');
+        });
+
         $countAll=$outlet->count();
-        
+
         if(is_array($post['id_brand']??false)&&$post['id_brand']){
             $outlet->leftJoin('brand_outlet','outlets.id_outlet','brand_outlet.id_outlet');
             $id_brands=$post['id_brand'];
@@ -928,7 +938,7 @@ class ApiOutletController extends Controller
         if(!isset($latitude) || !isset($longitude)){
             return response()->json([
                 'status' => 'success',
-                'messages' => ['We need to access your location']
+                'messages' => ['Pastikan pengaturan lokasi pada smartphone terhubung']
             ]);
         }
 
@@ -1083,6 +1093,10 @@ class ApiOutletController extends Controller
     /* Penghitung jarak */
     function distance($lat1, $lon1, $lat2, $lon2, $unit) {
         $theta = $lon1 - $lon2;
+        $lat1=floatval($lat1);
+        $lat2=floatval($lat2);
+        $lon1=floatval($lon1);
+        $lon2=floatval($lon2);
         $dist  = sin(deg2rad($lat1)) * sin(deg2rad($lat2)) +  cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * cos(deg2rad($theta));
         $dist  = acos($dist);
         $dist  = rad2deg($dist);

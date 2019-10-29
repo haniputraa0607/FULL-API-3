@@ -322,7 +322,7 @@ class ApiNews extends Controller
     function update(Update $request) {
             // info news
             $post = $request->json()->all();
-            if(isset($request->news_video)){
+            if($request->news_video&&is_array($request->news_video)&&$request->news_video[0]){
                 $post['news_video']='';
                 foreach ($request->news_video as $vid_url) {
                     $youtube = MyHelper::parseYoutube($vid_url);
@@ -336,6 +336,8 @@ class ApiNews extends Controller
                     }
                 }
                 $post['news_video']=trim($post['news_video'],';');
+            }else{
+                $post['news_video']=null;
             }
             $dataNews = News::where('id_news', $request->json('id_news'))->get()->toArray();
 
@@ -355,6 +357,9 @@ class ApiNews extends Controller
                 $customform = $data['customform'];
 				unset($data['customform']);
 
+                if(!isset($data['news_expired_date'])){
+                    $data['news_expired_date']=null;
+                }
                 $save = News::where('id_news', $request->json('id_news'))->update($data);
 
                 // jika ada upload file
@@ -567,7 +572,7 @@ class ApiNews extends Controller
                 $newsItem['news_category']=$newsItem['news_category']?:['id_news_category'=>0,'category_name'=>'Uncategories'];
             });
             if(!$updateNews){
-                return response()->json(MyHelper::checkGet([]));
+                return response()->json(MyHelper::checkGet([], 'Belum ada berita'));
             }
             return response()->json(MyHelper::checkGet($news));
     }

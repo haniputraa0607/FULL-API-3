@@ -101,6 +101,7 @@ class ApiCronTrxController extends Controller
                     [
                         "outlet_name"       => $singleTrx->outlet_name->outlet_name, 
                         "transaction_date"  => $singleTrx->transaction_date,
+                        'id_transaction'    => $singleTrx->id_transaction, 
                         'receipt_number'    => $singleTrx->transaction_receipt_number,
                         'received_point'    => (string) abs($logB['balance'])
                     ]

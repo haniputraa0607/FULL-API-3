@@ -48,9 +48,14 @@ class MyHelper{
 		'ciphermode' => 'AES-256-CBC'
 	);
 
-	public static function  checkGet($data){
+	public static function  checkGet($data, $message = null){
 			if($data && !empty($data)) return ['status' => 'success', 'result' => $data];
-			else if(empty($data)) return ['status' => 'fail', 'messages' => ['empty']];
+			else if(empty($data)) {
+				if($message == null){
+					$message = 'Maaf, halaman ini tidak tersedia';
+				}
+				return ['status' => 'fail', 'messages' => [$message]];
+			}
 			else return ['status' => 'fail', 'messages' => ['failed to retrieve data']];
 	}
 
@@ -619,12 +624,12 @@ class MyHelper{
             'multipart/x-zip'                                                           => 'zip',
             'text/x-scriptzsh'                                                          => 'zsh',
 		];
-		
+
 		$file_info = finfo_buffer(finfo_open(), base64_decode($value), FILEINFO_MIME_TYPE);
 
         return isset($mime_map[$file_info]) === true ? $mime_map[$file_info] : false;
 	}
-	
+
 	public static function uploadPhoto($foto, $path, $resize=800, $name=null) {
 			// kalo ada foto
 			$decoded = base64_decode($foto);
@@ -660,9 +665,12 @@ class MyHelper{
 			// 		});
 			// }
 
-			$img->resize($resize, null, function ($constraint) {
-				$constraint->aspectRatio();
-			});
+			// ga usah di resize kalau ga perlu
+			if($resize){
+				$img->resize($resize, null, function ($constraint) {
+					$constraint->aspectRatio();
+				});
+			}
 
 			if(env('STORAGE') &&  env('STORAGE') == 's3'){
 				$resource = $img->stream()->detach();
@@ -1927,7 +1935,7 @@ class MyHelper{
 		}
 
 		return date('d', strtotime($date)).' '.$bulan[date('n', strtotime($date))].' '.date('Y', strtotime($date)).' '.($jam?date('H:i', strtotime($date)):'');
-	}    
+	}
 	public static function isJoined($query, $table){
         $joins = $query->getQuery()->joins;
         if($joins == null) {
@@ -1948,6 +1956,43 @@ class MyHelper{
     		$string=str_replace($symbol.$key.$symbol, $to,$string);
     	}
     	return $string;
-    }
+	}
+	
+	public static function postCURLWithBearer($url, $data, $bearer) {
+		$uri = env('APP_API_URL');
+        $ch = curl_init($uri.$url);
+        $data = json_encode($data);
+		curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
+		curl_setopt($ch, CURLOPT_USERAGENT, $_SERVER['HTTP_USER_AGENT']);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                    'Accept: application/json',
+                    'Content-Type: application/json',
+                    'Authorization: '. $bearer,
+					'X-Forwarded-For: ' . MyHelper::get_client_ip(),
+					'REMOTE_ADDR: ' . MyHelper::get_client_ip(),
+        ]);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        $result = curl_exec($ch);
+		curl_close($ch);
+		return json_decode($result, true);
+	}
+
+	public static function get_client_ip() {
+		$ipaddress = '';
+		if (isset($_SERVER['HTTP_CLIENT_IP']))
+			$ipaddress = $_SERVER['HTTP_CLIENT_IP'];
+		else if(isset($_SERVER['HTTP_X_FORWARDED_FOR']))
+			$ipaddress = $_SERVER['HTTP_X_FORWARDED_FOR'];
+		else if(isset($_SERVER['HTTP_X_FORWARDED']))
+			$ipaddress = $_SERVER['HTTP_X_FORWARDED'];
+		else if(isset($_SERVER['HTTP_FORWARDED_FOR']))
+			$ipaddress = $_SERVER['HTTP_FORWARDED_FOR'];
+		else if(isset($_SERVER['HTTP_FORWARDED']))
+			$ipaddress = $_SERVER['HTTP_FORWARDED'];
+		else if(isset($_SERVER['REMOTE_ADDR']))
+			$ipaddress = $_SERVER['REMOTE_ADDR'];
+		else
+			$ipaddress = 'UNKNOWN';
+		return $ipaddress;
+	}
 }
-?>
