@@ -31,7 +31,7 @@ class ApiBrandController extends Controller
     {
         $post = $request->json()->all();
 
-        $brand = Brand::orderBy('order_brand');
+        $brand = Brand::orderByRaw('CASE WHEN order_brand = 0 THEN 1 ELSE 0 END')->orderBy('order_brand');
 
         $brand = $brand->get()->toArray();
 
@@ -184,7 +184,7 @@ class ApiBrandController extends Controller
 
     public function listBrand(Request $request)
     {
-        $brand = Brand::select('id_brand','brand_active', 'name_brand', 'logo_brand', 'image_brand')->orderBy('order_brand');
+        $brand = Brand::select('id_brand','brand_active', 'name_brand', 'logo_brand', 'image_brand')->orderByRaw('CASE WHEN order_brand = 0 THEN 1 ELSE 0 END')->orderBy('order_brand');
         if($request->json('active')){
             $brand->where('brand_active',1);
         }
@@ -273,6 +273,7 @@ class ApiBrandController extends Controller
             \DB::beginTransaction();
             $start=$request->post('data_start')??0;
             foreach ($order as $id) {
+                $start++;
                 $update=['order_brand'=>$start];
                 $save=Brand::find($id)->update($update);
                 if(!$save){
@@ -282,7 +283,6 @@ class ApiBrandController extends Controller
                         'messages'=>['Update brand fail']
                     ];
                 }
-                $start++;
             }
             \DB::commit();
             return [
