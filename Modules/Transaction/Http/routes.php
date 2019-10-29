@@ -48,11 +48,9 @@ Route::group(['middleware' => ['auth:api', 'log_activities'], 'prefix' => 'api/t
 
     // Route::post('history', 'ApiHistoryController@historyAll');
     Route::post('history-trx', 'ApiHistoryController@historyTrx');
-    Route::post('history-trx/list', 'ApiHistoryController@historyTrxList');
     Route::post('history-ongoing', 'ApiHistoryController@historyTrxOnGoing');
     // Route::post('history-point', 'ApiHistoryController@historyPoint');
     Route::post('history-balance', 'ApiHistoryController@historyBalance');
-    Route::post('history-balance/list', 'ApiHistoryController@historyBalanceList');
 
     Route::post('/shipping', 'ApiTransaction@getShippingFee');
     Route::get('/address', 'ApiTransaction@getAddress');
