@@ -600,6 +600,9 @@ class ApiOutletController extends Controller
         if($request->json('search') && $request->json('search') != ""){
             $outlet = $outlet->where('outlet_name', 'LIKE', '%'.$request->json('search').'%');
         }
+        $outlet->whereHas('brands',function($query){
+            $query->where('brand_active','1');
+        });
         $outlet = $outlet->get()->toArray();
 
         if (!empty($outlet)) {
@@ -801,6 +804,10 @@ class ApiOutletController extends Controller
 
         // outlet
         $outlet = Outlet::with(['today'])->select('outlets.id_outlet','outlets.outlet_name','outlets.outlet_phone','outlets.outlet_code','outlets.outlet_status','outlets.outlet_address','outlets.id_city','outlet_latitude','outlet_longitude')->where('outlet_status', 'Active')->whereNotNull('id_city')->orderBy('outlet_name','asc');
+
+        $outlet->whereHas('brands',function($query){
+            $query->where('brand_active','1');
+        });
 
         $countAll=$outlet->count();
 
@@ -1085,6 +1092,10 @@ class ApiOutletController extends Controller
     /* Penghitung jarak */
     function distance($lat1, $lon1, $lat2, $lon2, $unit) {
         $theta = $lon1 - $lon2;
+        $lat1=floatval($lat1);
+        $lat2=floatval($lat2);
+        $lon1=floatval($lon1);
+        $lon2=floatval($lon2);
         $dist  = sin(deg2rad($lat1)) * sin(deg2rad($lat2)) +  cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * cos(deg2rad($theta));
         $dist  = acos($dist);
         $dist  = rad2deg($dist);
