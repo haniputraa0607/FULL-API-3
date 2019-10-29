@@ -37,7 +37,6 @@ class CheckVoucher
         if (isset($post['qrcode'])) {
             $validQr = Self::newValidateQr('qr', $post['qrcode'], $post['store_code']);
         }
-// dd($validQr);
         // validate qr code
         if ($validQr) {
 
@@ -53,6 +52,8 @@ class CheckVoucher
                 }else{
                     $fail['messages'] = "The voucher cannot be redeem in this store.";
                 }
+            }elseif($validQr[0]['used_at'] != null){
+                $fail['messages'] = "The voucher has been scanned or used.";
             }else{
                 // validate store voucher
                 if ($validStore = Self::cekStore($validQr[0], $post['store_code'])) {
@@ -110,12 +111,7 @@ class CheckVoucher
         }
 
 		$dealsUser = DealsUser::where('voucher_hash_code', $qrcode)
-								->whereNull('used_at')
 								->with(['dealVoucher', 'dealVoucher.deal', 'user'])->get()->toArray();
-
-
-
-
 
 		if ($dealsUser) {
 			return $dealsUser;
