@@ -223,9 +223,8 @@ class ApiTransactionSync extends Controller
                         $user       = User::where('phone', $phoneqr)->with('memberships')->first();
 
                         if (empty($user)) {
-                            $user['id'] = null;
-                            $dataTrx['membership_level']    = null;
-                            $dataTrx['membership_promo_id'] = null;
+                            DB::rollback();
+                            return ['status' => 'fail', 'messages' => ['User not found']];
                         }elseif(isset($user['is_suspended']) && $user['is_suspended'] == '1'){
                             $user['id'] = null;
                             $dataTrx['membership_level']    = null;
@@ -241,7 +240,7 @@ class ApiTransactionSync extends Controller
                                 foreach ($trx['voucher'] as $keyV => $valueV) {
                                     $checkVoucher = DealsVoucher::join('deals_users', 'deals_voucher.id_deals_voucher', 'deals_users.id_deals_voucher')
                                                                                     ->leftJoin('transaction_vouchers', 'deals_voucher.id_deals_voucher', 'transaction_vouchers.id_deals_voucher')
-                                                                                    ->where('voucher_code', $valueV['voucher_code'])
+                                                                                    ->where('voucher_code', $valueV->voucher_code)
                                                                                     ->where('deals_users.id_outlet', $outlet['id_outlet'])
                                                                                     ->where('deals_users.id_user', $user['id'])
                                                                                     ->whereNotNull('deals_users.used_at')
@@ -249,7 +248,7 @@ class ApiTransactionSync extends Controller
                                                                                     ->first();
                                     if (empty($checkVoucher)) {
                                             // for invalid voucher
-                                            $dataVoucher['deals_voucher_invalid'] = $valueV;
+                                            $dataVoucher['deals_voucher_invalid'] = $valueV->voucher_code;
                                     }else{
                                             $dataVoucher['id_deals_voucher'] =  $checkVoucher['id_deals_voucher'];
                                     }
