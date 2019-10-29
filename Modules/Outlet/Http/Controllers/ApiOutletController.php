@@ -498,6 +498,7 @@ class ApiOutletController extends Controller
 
                     $outlet['data'][$key]['qrcode'] = $qrCode;
                 }
+                $loopdata=&$outlet['data'];
             }else{
                 $outlet = $outlet->orderBy('outlet_name')->get()->toArray();
                 foreach ($outlet as $key => $value) {
@@ -508,9 +509,9 @@ class ApiOutletController extends Controller
 
                     $outlet[$key]['qrcode'] = $qrCode;
                 }
+                $loopdata=&$outlet;
             }
             $request['page'] = 0;
-            $loopdata=&$outlet['data'];
         }else{
             $outlet = $outlet->orderBy('outlet_name')->get()->toArray();
             $loopdata=&$outlet;
