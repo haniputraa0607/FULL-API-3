@@ -16,6 +16,7 @@ Route::group(['prefix' => 'api/outlet','namespace' => 'Modules\Outlet\Http\Contr
 Route::group(['prefix' => 'api/outlet', 'middleware' => ['log_activities', 'auth_client'], 'namespace' => 'Modules\Outlet\Http\Controllers'], function()
 {
     Route::any('filter/android', 'ApiOutletController@filter');
+    Route::any('nearme', 'ApiOutletController@nearMe');
 });
 
 Route::group(['prefix' => 'api/outlet', 'namespace' => 'Modules\Outlet\Http\Controllers'], function()
@@ -25,7 +26,6 @@ Route::group(['prefix' => 'api/outlet', 'namespace' => 'Modules\Outlet\Http\Cont
      */
     Route::group(['middleware' => 'auth:api'], function() {
         Route::get('city', 'ApiOutletController@cityOutlet');
-        Route::any('nearme', 'ApiOutletController@nearMe');
         // Route::any('filter', 'ApiOutletController@filter');
         Route::any('nearme/geolocation', 'ApiOutletController@nearMeGeolocation');
         Route::any('filter/geolocation', 'ApiOutletController@filterGeolocation');
