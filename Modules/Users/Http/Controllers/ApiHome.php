@@ -733,6 +733,9 @@ class ApiHome extends Controller
             ->whereHas('deals',function($query){
                 $query->where('deals_publish_end','>=',DB::raw('CURRENT_TIMESTAMP()'));
                 $query->where('deals_publish_start','<=',DB::raw('CURRENT_TIMESTAMP()'));
+                $query->whereHas('brand',function($query){
+                    $query->where('brand_active',1);
+                });
             })
             ->orderBy('order')
             ->where('start_date','<=',$now)

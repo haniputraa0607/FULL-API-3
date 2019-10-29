@@ -378,7 +378,7 @@ class ApiDeals extends Controller
                 $city = $request->json('id_city');
             }
 
-            $deals = $this->kotacuks($deals, $city);
+            $deals = $this->kotacuks($deals, $city,$request->json('admin'));
         }
 
         if ($request->json('highest_available_voucher')) {
@@ -662,7 +662,7 @@ class ApiDeals extends Controller
     }
 
     /* INI LIST KOTA */
-    function kotacuks($deals, $city = "")
+    function kotacuks($deals, $city = "",$admin=false)
     {
         $timeNow = date('Y-m-d H:i:s');
 
@@ -724,12 +724,18 @@ class ApiDeals extends Controller
                 $calc = '*';
             }
 
-            if($calc&&is_numeric($calc)){
-                $deals[$key]['percent_voucher'] = $calc*100/$value['deals_total_voucher'];
+            if(is_numeric($calc)){
+                if($calc||$admin){
+                    $deals[$key]['percent_voucher'] = $calc*100/$value['deals_total_voucher'];
+                }else{
+                    unset($deals[$key]);
+                    continue;
+                }
             }else{
                 $deals[$key]['percent_voucher'] = 100;
             }
             $deals[$key]['available_voucher'] = (string) $calc;
+            // deals masih ada?
             // print_r($deals[$key]['available_voucher']);
         }
 
