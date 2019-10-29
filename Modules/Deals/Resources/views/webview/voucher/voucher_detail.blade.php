@@ -333,7 +333,7 @@
 
                         @if($voucher['used_at'] == null)
                         <div class="col-xs-12 valid-date">
-                            Berlaku hingga {{ $voucher_expired_date }} <span style="margin-left: 10px;">{{ $voucher_expired_time }}</span>
+                            Masa berlaku hingga {{ $voucher_expired_date }} <span style="margin-left: 10px;">{{ $voucher_expired_time }}</span>
                         </div>
                         @endif
                     </div>
