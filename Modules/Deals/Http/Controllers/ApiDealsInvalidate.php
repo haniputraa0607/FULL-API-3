@@ -78,7 +78,7 @@ class ApiDealsInvalidate extends Controller
                             $deals = $this->outletAvailable($request->user(), $request->json('id_deals_user'), $request->json('outlet_code'))->toArray();
                             
                             // add voucher invalidate success webview url
-                            $deals['webview_url'] = env('APP_URL') ."webview/voucher/v2/". $deals['id_deals_user'];
+                            $deals['webview_url'] = env('API_URL') ."api/webview/voucher/v2/". $deals['id_deals_user'];
 
                             // SEND NOTIFICATION
                             $send = app($this->autocrm)->SendAutoCRM('Redeem Voucher Success', 

@@ -209,7 +209,7 @@ class ApiDealsClaim extends Controller
                             'id_deals_user'=>$voucher['id_deals_user'],
                             'id_deals_voucher'=>$voucher['id_deals_voucher'],
                             'paid_status'=>$voucher['paid_status'],
-                            'webview_later'=>env('APP_URL').'webview/mydeals/'.$voucher['id_deals_user']
+                            'webview_later'=>env('API_URL').'api/webview/mydeals/'.$voucher['id_deals_user']
                         ];
                         return response()->json(MyHelper::checkCreate($return));
                         }
