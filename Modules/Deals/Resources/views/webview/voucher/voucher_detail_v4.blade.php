@@ -226,7 +226,7 @@
                 </a>
 
                 <div class="description-wrapper ProductSans">
-                    <div class="subtitle2 text-center ProductSans">Pindai QR Code ini untuk validasi voucher</div>
+                    <div class="subtitle2 text-center ProductSans" style="font-size: 18px;">Pindai QR Code ini untuk validasi voucher</div>
 
                     <div class="deals-qr">
                         <img class="img-responsive" style="display: block; max-width: 100%;" src="{{ $voucher['voucher_hash'] }}">
@@ -234,6 +234,7 @@
 
                     <center class="kode-text">Kode Voucher</center>
                     <center class="voucher-code font-red ProductSans" style="color: rgba(32, 32, 32);">{{ $voucher['deal_voucher']['voucher_code'] }}</center>
+                    <center class="kode-text">Atau input kode ini ke dalam POS` cek gambar</center>
                     <div class="line"></div>
 				</div>
 
