@@ -17,8 +17,8 @@ class ApiMembershipWebview extends Controller
 {
     public function webview(Request $request)
     {
-        $check = $request->json('check');
-		
+		$check = $request->json('check');
+
         if (empty($check)) {
 			$user = $request->user();
 			$dataEncode = [
@@ -31,7 +31,7 @@ class ApiMembershipWebview extends Controller
 			$send = [
 				'status' => 'success',
 				'result' => [
-					'url'              => env('VIEW_URL').'/membership/web/view?data='.$base
+					'url'              => env('API_URL').'api/membership/web/view?data='.$base
 				],
 			];
 
@@ -152,5 +152,29 @@ class ApiMembershipWebview extends Controller
 		}
 
 		return response()->json(MyHelper::checkGet($result));
-    }
+	}
+	
+	public function detailWebview(Request $request)
+	{
+		$bearer = $request->header('Authorization');
+
+		if ($bearer == "") {
+			return view('error', ['msg' => 'Unauthenticated']);
+		}
+		
+		$data = json_decode(base64_decode($request->get('data')), true);
+		$data['check'] = 1;
+
+		$check = MyHelper::postCURLWithBearer('api/membership/detail/webview?log_save=0', $data, $bearer);
+		
+		if (isset($check['status']) && $check['status'] == 'success') {
+			$data['result'] = $check['result'];
+		} elseif (isset($check['status']) && $check['status'] == 'fail') {
+			return view('error', ['msg' => 'Data failed']);
+		} else {
+			return view('error', ['msg' => 'Something went wrong, try again']);
+		}
+
+		return view('membership::webview.detail_membership', $data);
+	}
 }
