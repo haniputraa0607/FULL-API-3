@@ -1627,7 +1627,7 @@ class ApiUser extends Controller
                         'job' => $datauser[0]['job'],
                         'address' => $datauser[0]['address']
                     ],
-                    'message'	=> 'Your profile was successfully updated'
+                    'message'	=> 'Data telah berhasil diubah'
                 ];
                 // } else {
                 // 	$result = [
