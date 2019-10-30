@@ -8,3 +8,8 @@ Route::group(['middleware' => ['auth:api', 'log_activities'], 'prefix' => 'api/m
     Route::any('/detail/webview', 'ApiMembershipWebview@webview');
     Route::get('update/transaction', 'ApiMembership@updateSubtotalTrxUser');
 });
+
+Route::group([ 'prefix' => 'api/membership', 'namespace' => 'Modules\Membership\Http\Controllers'], function()
+{
+    Route::any('/web/view', 'ApiMembershipWebview@detailWebview');
+});

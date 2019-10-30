@@ -285,7 +285,7 @@ class ApiHome extends Controller
                 $encode = json_encode($dataEncode);
                 $base = base64_encode($encode);
 
-                $membership['webview_detail_membership'] = env('VIEW_URL').'/membership/web/view?data='.$base;
+                $membership['webview_detail_membership'] = env('API_URL').'api/membership/web/view?data='.$base;
 				if(isset($membership['membership_image']))
 					$membership['membership_image'] = env('S3_URL_API').$membership['membership_image'];
 			} else {
@@ -660,7 +660,7 @@ class ApiHome extends Controller
             $encode = json_encode($dataEncode);
             $base = base64_encode($encode);
 
-            $membership['webview_detail_membership'] = env('VIEW_URL').'/membership/web/view?data='.$base;
+            $membership['webview_detail_membership'] = env('API_URL').'api/membership/web/view?data='.$base;
         } else {
             $membership = null;
         }
