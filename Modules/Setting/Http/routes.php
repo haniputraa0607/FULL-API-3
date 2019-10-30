@@ -143,7 +143,7 @@ Route::group(['prefix' => 'api/setting', 'namespace' => 'Modules\Setting\Http\Co
 
 Route::group(['prefix' => 'api/setting', 'middleware' => ['log_activities', 'auth:api'], 'namespace' => 'Modules\Setting\Http\Controllers'], function()
 {
-    Route::get('/faq', 'ApiSetting@faqList');
+    Route::any('/faq', 'ApiSetting@faqList');
     Route::post('webview', 'ApiSetting@settingWebview');
     
     Route::get('/cron/point-reset', 'ApiSetting@cronPointReset');
@@ -154,4 +154,9 @@ Route::group(['prefix' => 'api/setting', 'middleware' => ['log_activities', 'aut
 Route::group(['namespace' => 'Modules\Setting\Http\Controllers'], function()
 {
     Route::any('terms-of-service', 'ApiSetting@viewTOS');
+});
+
+Route::group([ 'prefix' => 'api/setting', 'namespace' => 'Modules\Setting\Http\Controllers'], function()
+{
+    Route::any('/faq/webview', 'ApiSetting@faqWebviewView');
 });
