@@ -124,3 +124,12 @@ Route::group(['prefix' => 'api/transaction', 'namespace' => 'Modules\Transaction
         return response()->json(App\Lib\MyHelper::encrypt2019($data));
     });
 });
+
+Route::group(['prefix' => 'api/transaction', 'namespace' => 'Modules\Transaction\Http\Controllers'], function() {
+    Route::any('/web/view/detail', 'ApiWebviewController@detail');
+    Route::any('/web/view/detail/check', 'ApiWebviewController@check');
+    Route::any('/web/view/detail/point', 'ApiWebviewController@detailPoint');
+    Route::any('/web/view/detail/balance', 'ApiWebviewController@detailBalance');
+    Route::any('/web/view/trx', 'ApiWebviewController@success');
+    Route::any('/web/view/outletapp', 'ApiWebviewController@receiptOutletapp');
+});
