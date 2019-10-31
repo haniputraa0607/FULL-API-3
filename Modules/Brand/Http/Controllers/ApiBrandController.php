@@ -184,7 +184,8 @@ class ApiBrandController extends Controller
 
     public function listBrand(Request $request)
     {
-        $brand = Brand::select('id_brand','brand_active', 'name_brand', 'logo_brand', 'image_brand')->orderByRaw('CASE WHEN order_brand = 0 THEN 1 ELSE 0 END')->orderBy('order_brand');
+        $post = $request->json()->all();
+        $brand = Brand::select('id_brand','brand_active', 'name_brand', 'logo_brand', 'image_brand')->where('brand_visibility' , 1)->orderByRaw('CASE WHEN order_brand = 0 THEN 1 ELSE 0 END')->orderBy('order_brand');
         if($request->json('active')){
             $brand->where('brand_active',1);
         }
@@ -325,8 +326,14 @@ class ApiBrandController extends Controller
         }
         return ['status'=>'success'];
     }
+
     public function switchStatus(Request $request){
         $save=Brand::where('id_brand',$request->json('id_brand'))->update(['brand_active'=>$request->json('brand_active')=="true"?1:0]);
+        return MyHelper::checkUpdate($save);
+    }
+
+    public function switchVisibility(Request $request){
+        $save=Brand::where('id_brand',$request->json('id_brand'))->update(['brand_visibility'=>$request->json('brand_visibility')=="true"?1:0]);
         return MyHelper::checkUpdate($save);
     }
 }

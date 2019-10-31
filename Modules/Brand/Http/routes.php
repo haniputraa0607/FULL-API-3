@@ -18,6 +18,7 @@ Route::group(['middleware' => ['auth:api'], 'prefix' => 'api/brand', 'namespace'
     Route::post('product/list', 'ApiBrandController@productList');
 
     Route::post('switch_status', 'ApiBrandController@switchStatus');
+    Route::post('switch_visibility', 'ApiBrandController@switchVisibility');
 
     Route::post('outlet/store', 'ApiBrandController@outletStore');
     Route::post('product/store', 'ApiBrandController@productStore');
