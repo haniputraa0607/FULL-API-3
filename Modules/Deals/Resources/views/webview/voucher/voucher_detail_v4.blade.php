@@ -234,7 +234,7 @@
 
                     <center class="kode-text">Kode Voucher</center>
                     <center class="voucher-code font-red ProductSans" style="color: rgba(32, 32, 32);">{{ $voucher['deal_voucher']['voucher_code'] }}</center>
-                    <center class="kode-text">Atau input kode ini ke dalam POS</center>
+                    <center class="kode-text" style="margin-top: 8px;">Atau input kode ini ke dalam POS</center>
                     <div class="line"></div>
 				</div>
 
