@@ -520,7 +520,7 @@ class ApiOutletController extends Controller
             $outlet = $this->setAvailableOutlet($outlet);
         }
         $loopdata = array_map(function($var) use ($post){
-            $var['url']=env('VIEW_URL').'/outlet/webview/'.$var['id_outlet'];
+            $var['url']=env('API_URL').'api/outlet/webview/'.$var['id_outlet'];
             if(($post['latitude']??false)&&($post['longitude']??false)){
                 $var['distance']=number_format((float)$this->distance($post['latitude'], $post['longitude'], $var['outlet_latitude'], $var['outlet_longitude'], "K"), 2, '.', '').' km';
             }
@@ -533,7 +533,7 @@ class ApiOutletController extends Controller
                 $jaraknya = number_format((float)$this->distance($latitude, $longitude, $outlet[0]['outlet_latitude'], $outlet[0]['outlet_longitude'], "K"), 2, '.', '');
                 $outlet[0]['distance'] = $jaraknya." km";
 
-                $outlet[0]['url'] = env('VIEW_URL').'/outlet/webview/'.$post['id_outlet'];
+                $outlet[0]['url'] = env('API_URL').'api/outlet/webview/'.$post['id_outlet'];
 
                 if(isset($outlet[0]['holidays'])) unset($outlet[0]['holidays']);
             }
