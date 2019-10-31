@@ -156,7 +156,7 @@
     <div class="kotak">
         <div class="container line-bottom ProductSans">
             <div class="row space-bottom">
-                <div class="col-6 text-grey-black text-14-3px">Beli Kupon</div>
+                <div class="col-6 text-grey-black text-14-3px">Tukar Voucher</div>
                 @php $bulan = ['', 'Januari', 'Februari','Maret','April','Mei','Juni','Juli','Agustus','September','November','Desember']; @endphp
                 <div class="col-6 text-right text-grey text-13-3px">{{ date('d', strtotime($data['date'])) }} {{$bulan[date('n', strtotime($data['date']))]}} {{date('Y H:i', strtotime($data['date'])) }}</div>
             </div>

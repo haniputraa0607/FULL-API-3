@@ -158,5 +158,6 @@ Route::group(['namespace' => 'Modules\Setting\Http\Controllers'], function()
 
 Route::group([ 'prefix' => 'api/setting', 'namespace' => 'Modules\Setting\Http\Controllers'], function()
 {
-    Route::any('/faq/webview', 'ApiSetting@faqWebviewView');
+    Route::any('webview/{key}', 'ApiSettingWebview@aboutWebview');
+    Route::any('/faq/webview', 'ApiSettingWebview@faqWebviewView');
 });

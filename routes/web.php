@@ -14,3 +14,6 @@
 Route::get('/', function () {
     return Redirect::to('http://www.google.com');
 });
+Route::any('api/webview/default', function(){
+    return view('webview.default');
+});

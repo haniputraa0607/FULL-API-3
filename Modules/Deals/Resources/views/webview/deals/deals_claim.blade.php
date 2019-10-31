@@ -141,7 +141,7 @@
 								@php $bulan = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', "Jul", 'Agu', 'Sep', 'Okt', 'Nov', 'Des']; @endphp
 								<p style="font-size:13.5px; color:rgba(32, 32, 32)">{{$deals['deals_voucher']['deal']['deals_title']}}</p>
 								<br>
-								<p style="font-size:10px; color:rgba(170, 170, 170)">Masa berlaku habis</p>
+								<p style="font-size:10px; color:rgba(170, 170, 170)">Masa berlaku hingga</p>
 								<p style="font-size:10px; color:rgba(170, 170, 170)">{{date('d', strtotime($deals['deals_voucher']['deal']['deals_end']))}} {{$bulan[date('m', strtotime($deals['deals_voucher']['deal']['deals_end']))-1]}} {{ date('Y', strtotime($deals['deals_voucher']['deal']['deals_end'])) }}</p>
 								<br>
 							</div>

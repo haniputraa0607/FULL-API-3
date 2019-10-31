@@ -263,7 +263,7 @@
 			</div>
 			<div class="row space-text">
 	   			<div class="col-6 text-13-3px text-black product-sans-reguler ">Total Pembayaran</div>
-                <div class="col-6 text-right text-13-3px text-dark-grey product-sans-reguler">{{ str_replace(',', '.', number_format($data['grand_total'] + $data['balance'])) }}</div>
+                <div class="col-6 text-right text-13-3px text-dark-grey product-sans-reguler">Rp {{ str_replace(',', '.', number_format($data['grand_total'] + $data['balance'])) }}</div>
 	   		</div>
 			@endif
 	   	</div>

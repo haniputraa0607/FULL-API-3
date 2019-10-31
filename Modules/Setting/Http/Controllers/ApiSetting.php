@@ -1048,23 +1048,6 @@ class ApiSetting extends Controller
         ]);
     }
 
-    public function faqWebviewView(Request $request)
-    {
-        $bearer = $request->header('Authorization');
-        
-        if ($bearer == "") {
-            return view('error', ['msg' => 'Unauthenticated']);
-        }
-        
-        $faqList = MyHelper::postCURLWithBearer('api/setting/faq?log_save=0', null, $bearer);
-        
-        if(isset($faqList['result'])){
-            return view('setting::webview.faq', ['faq' => $faqList['result']]);
-        }else{
-            return view('setting::webview.faq', ['faq' => null]);
-        }
-    }
-
     public function settingWebview(SettingList $request){
         $post = $request->json()->all();
         if(isset($post['data'])){
@@ -1074,7 +1057,7 @@ class ApiSetting extends Controller
 
         return response()->json([
             'status' => 'success',
-            'url' => env('VIEW_URL').'/setting/webview/'.$post['key']
+            'url' => env('API_URL').'api/setting/webview/'.$post['key']
         ]);
 
     }
