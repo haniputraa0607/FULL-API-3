@@ -27,7 +27,7 @@ class ApiDealsInvalidate extends Controller
     }
 
     /* INVALIDATE */
-    function invalidate(Request $request) 
+    function invalidate(Request $request)
     {
         DB::beginTransaction();
 
@@ -76,15 +76,15 @@ class ApiDealsInvalidate extends Controller
                         if ($totalRedeem) {
                             // query lagi
                             $deals = $this->outletAvailable($request->user(), $request->json('id_deals_user'), $request->json('outlet_code'))->toArray();
-                            
+
                             // add voucher invalidate success webview url
                             $deals['webview_url'] = env('API_URL') ."api/webview/voucher/v2/". $deals['id_deals_user'];
 
                             // SEND NOTIFICATION
-                            $send = app($this->autocrm)->SendAutoCRM('Redeem Voucher Success', 
-                                $deals['user']['phone'], 
+                            $send = app($this->autocrm)->SendAutoCRM('Redeem Voucher Success',
+                                $deals['user']['phone'],
                                 [
-                                    'redeemed_at'       => $deals['redeemed_at'], 
+                                    'redeemed_at'       => $deals['redeemed_at'],
                                     'id_deals_user'     => $deals['id_deals_user'],
                                     'voucher_code'      => $deals['deal_voucher']['voucher_code'],
                                     'outlet_name'       => $deals['outlet_name'],
@@ -96,7 +96,7 @@ class ApiDealsInvalidate extends Controller
                             return response()->json(MyHelper::checkGet($deals));
                         }
                         else {
-                            $fail['messages'] = ['Redeem voucher failed.'];
+                            $fail['messages'] = ['Proses penukaran Voucher gagal, silakan mencoba kembali'];
                         }
                     }else{
                         $fail['messages'] = ['Redeem voucher failed.', 'Voucher has been redeemed.'];
@@ -124,7 +124,7 @@ class ApiDealsInvalidate extends Controller
     }
 
     /* CHECK BERBAYAR APA BELUM DAN UDAH LUNAS BELUM */
-    function checkPaidOrNot($deals) 
+    function checkPaidOrNot($deals)
     {
         if (!empty($deals->voucher_price_cash)) {
             if ($deals->paid_status == "Pending" || $deals->paid_status == "Cancelled") {
@@ -136,7 +136,7 @@ class ApiDealsInvalidate extends Controller
     }
 
     /* CHECK OUTLET AVAILABLE */
-    function outletAvailable($user, $id_deals_user, $outlet_code) 
+    function outletAvailable($user, $id_deals_user, $outlet_code)
     {
         $deals = DealsUser::join('deals_vouchers', 'deals_vouchers.id_deals_voucher', '=', 'deals_users.id_deals_voucher')
         ->leftjoin('deals_outlets', 'deals_vouchers.id_deals', '=', 'deals_outlets.id_deals')
@@ -153,14 +153,14 @@ class ApiDealsInvalidate extends Controller
     }
 
     /* UPDATE STATUS REDEEM */
-    function redeem($deals) 
+    function redeem($deals)
     {
         if (!empty($deals->redeemed_at)) {
             return false;
         }
 
         $code   = $this->checkRandomVoucher();
-        
+
         $update = $this->updateStatusDealsUser($deals->id_deals_user, [
             'redeemed_at'       => date('Y-m-d H:i:s'),
             // 'used_at'           => date('Y-m-d H:i:s'),
@@ -185,14 +185,14 @@ class ApiDealsInvalidate extends Controller
     }
 
     /* UPDATE STATUS REDEEM */
-    function updateStatusDealsUser($id_deals_user, $data) 
+    function updateStatusDealsUser($id_deals_user, $data)
     {
         $update = DealsUser::where('id_deals_user', $id_deals_user)->update($data);
         return $update;
     }
 
     /* UPDATE TOTAL REDEMEED DEALS */
-    function updateTotalRedemeedDeals($id_deals) 
+    function updateTotalRedemeedDeals($id_deals)
     {
           //update count deals
           $deal = Deal::find($id_deals);
@@ -201,5 +201,5 @@ class ApiDealsInvalidate extends Controller
 
           return $deal;
     }
-    
+
 }

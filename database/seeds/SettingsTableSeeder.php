@@ -188,8 +188,8 @@ class SettingsTableSeeder extends Seeder
                 'key' => 'point_conversion_value',
                 'value' => '10000',
                 'value_text' => NULL,
-                'created_at' => '2018-05-15 13:55:55',
-                'updated_at' => '2018-05-15 13:55:55',
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
             ),
             20 =>
             array(
@@ -197,8 +197,8 @@ class SettingsTableSeeder extends Seeder
                 'key' => 'cashback_conversion_value',
                 'value' => '10',
                 'value_text' => NULL,
-                'created_at' => '2018-05-15 13:55:55',
-                'updated_at' => '2018-05-15 13:55:55',
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
             ),
             21 =>
             array(
@@ -206,8 +206,8 @@ class SettingsTableSeeder extends Seeder
                 'key' => 'service',
                 'value' => '0.05',
                 'value_text' => NULL,
-                'created_at' => '2018-05-15 13:55:55',
-                'updated_at' => '2018-05-15 13:55:55',
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
             ),
             22 =>
             array(
@@ -215,8 +215,8 @@ class SettingsTableSeeder extends Seeder
                 'key' => 'tax',
                 'value' => '0.1',
                 'value_text' => NULL,
-                'created_at' => '2018-05-15 13:55:55',
-                'updated_at' => '2018-05-15 13:55:55',
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
             ),
             23 =>
             array(
@@ -224,8 +224,8 @@ class SettingsTableSeeder extends Seeder
                 'key' => 'cashback_maximum',
                 'value' => '100000',
                 'value_text' => NULL,
-                'created_at' => '2018-05-15 13:55:55',
-                'updated_at' => '2018-05-15 13:55:55',
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
             ),
             24 =>
             array(
@@ -233,8 +233,8 @@ class SettingsTableSeeder extends Seeder
                 'key' => 'default_home_text1',
                 'value' => 'Please Login / Register',
                 'value_text' => NULL,
-                'created_at' => '2018-05-15 13:55:55',
-                'updated_at' => '2018-05-15 13:55:55',
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
             ),
             25 =>
             array(
@@ -242,8 +242,8 @@ class SettingsTableSeeder extends Seeder
                 'key' => 'default_home_text2',
                 'value' => 'to enjoy the full experience',
                 'value_text' => NULL,
-                'created_at' => '2018-05-15 13:55:55',
-                'updated_at' => '2018-05-15 13:55:55',
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
             ),
             26 =>
             array(
@@ -251,8 +251,8 @@ class SettingsTableSeeder extends Seeder
                 'key' => 'default_home_text3',
                 'value' => 'of Gudeg Techno Mobile Apps',
                 'value_text' => NULL,
-                'created_at' => '2018-05-15 13:55:55',
-                'updated_at' => '2018-05-15 13:55:55',
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
             ),
             27 =>
             array(
@@ -260,8 +260,8 @@ class SettingsTableSeeder extends Seeder
                 'key' => ' 	default_home_image',
                 'value' => 'img/7991531810380.jpg',
                 'value_text' => NULL,
-                'created_at' => '2018-05-15 13:55:55',
-                'updated_at' => '2018-05-15 13:55:55',
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
             ),
             28 =>
             array(
@@ -269,8 +269,8 @@ class SettingsTableSeeder extends Seeder
                 'key' => 'api_key',
                 'value' => 'c5d5410e7f14ba184b44f51bf3aaa691',
                 'value_text' => NULL,
-                'created_at' => '2018-05-15 13:55:55',
-                'updated_at' => '2018-05-15 13:55:55',
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
             ),
             29 =>
             array(
@@ -278,8 +278,8 @@ class SettingsTableSeeder extends Seeder
                 'key' => 'api_secret',
                 'value' => 'C82FBB254221B637AF1CF1E6007C83FD6F5D8FD272DCB5CE915CA486A855C456',
                 'value_text' => NULL,
-                'created_at' => '2018-05-15 13:55:55',
-                'updated_at' => '2018-05-15 13:55:55',
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
             ),
             30 =>
             array(
@@ -287,8 +287,8 @@ class SettingsTableSeeder extends Seeder
                 'key' => 'default_home_splash_screen',
                 'value' => 'img/splash.jpg',
                 'value_text' => NULL,
-                'created_at' => '2018-05-15 13:55:55',
-                'updated_at' => '2018-05-15 13:55:55',
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
             ),
             31 =>
             array(
@@ -296,8 +296,8 @@ class SettingsTableSeeder extends Seeder
                 'key' => 'email_sync_menu',
                 'value' => NULL,
                 'value_text' => NULL,
-                'created_at' => '2018-05-15 13:55:55',
-                'updated_at' => '2018-05-15 13:55:55',
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
             ),
             32 =>
             array(
@@ -305,8 +305,8 @@ class SettingsTableSeeder extends Seeder
                 'key' => 'qrcode_expired',
                 'value' => 10,
                 'value_text' => NULL,
-                'created_at' => '2018-05-15 13:55:55',
-                'updated_at' => '2018-05-15 13:55:55',
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
             ),
             33 =>
             array(
@@ -314,8 +314,8 @@ class SettingsTableSeeder extends Seeder
                 'key' => 'delivery_services',
                 'value' => 'Delivery Services',
                 'value_text' => NULL,
-                'created_at' => '2018-05-15 13:55:55',
-                'updated_at' => '2018-05-15 13:55:55',
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
             ),
             34 =>
             array(
@@ -323,8 +323,8 @@ class SettingsTableSeeder extends Seeder
                 'key' => 'delivery_service_content',
                 'value' => 'Big Order Delivery Service',
                 'value_text' => NULL,
-                'created_at' => '2018-05-15 13:55:55',
-                'updated_at' => '2018-05-15 13:55:55',
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
             ),
             35 =>
             array(
@@ -367,8 +367,8 @@ class SettingsTableSeeder extends Seeder
                 'key' => 'point_range_start',
                 'value' => '0',
                 'value_text' => NULL,
-                'created_at' => '2018-05-15 13:55:55',
-                'updated_at' => '2018-05-15 13:55:55',
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
             ),
             40 =>
             array(
@@ -376,8 +376,8 @@ class SettingsTableSeeder extends Seeder
                 'key' => 'point_range_end',
                 'value' => '1000000',
                 'value_text' => NULL,
-                'created_at' => '2018-05-15 13:55:55',
-                'updated_at' => '2018-05-15 13:55:55',
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
             ),
             41 =>
             array(
@@ -385,8 +385,17 @@ class SettingsTableSeeder extends Seeder
                 'key' => 'count_login_failed',
                 'value' => '3',
                 'value_text' => NULL,
-                'created_at' => '2018-05-15 13:55:55',
-                'updated_at' => '2018-05-15 13:55:55',
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ),
+            42 =>
+            array(
+                'id_setting' => 43,
+                'key' => 'processing_time',
+                'value' => '15',
+                'value_text' => NULL,
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
             ),
         ));
     }
