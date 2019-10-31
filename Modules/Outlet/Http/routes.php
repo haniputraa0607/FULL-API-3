@@ -73,3 +73,10 @@ Route::group(['prefix' => 'api/outlet', 'namespace' => 'Modules\Outlet\Http\Cont
 
     });
 });
+
+Route::group(['prefix' => 'api/outlet', 'namespace' => 'Modules\Outlet\Http\Controllers'], function()
+{
+    Route::any('webview/{id}', 'ApiOutletWebview@detailWebview');
+    Route::any('webview/gofood/list', 'ApiOutletWebview@listOutletGofood');
+    Route::any('webview/gofood/list/v2', 'ApiOutletWebview@listOutletGofood');
+});
