@@ -343,7 +343,7 @@ class SettingsTableSeeder extends Seeder
                 'value_text' => 'Part Time, Supervisor',
                 'created_at' => '2019-10-03 12:00:00',
                 'updated_at' => '2019-10-03 12:00:00',
-            ),37 => 
+            ),37 =>
             array (
                 'id_setting' => 38,
                 'key' => 'text_menu_home',
@@ -352,7 +352,7 @@ class SettingsTableSeeder extends Seeder
                 'created_at' => '2019-10-08 09:03:16',
                 'updated_at' => '2019-10-08 09:03:19',
             ),
-            38 => 
+            38 =>
             array (
                 'id_setting' => 39,
                 'key' => 'text_menu_account',
@@ -375,6 +375,15 @@ class SettingsTableSeeder extends Seeder
                 'id_setting' => 41,
                 'key' => 'point_range_end',
                 'value' => '1000000',
+                'value_text' => NULL,
+                'created_at' => '2018-05-15 13:55:55',
+                'updated_at' => '2018-05-15 13:55:55',
+            ),
+            41 =>
+            array(
+                'id_setting' => 42,
+                'key' => 'count_login_failed',
+                'value' => '3',
                 'value_text' => NULL,
                 'created_at' => '2018-05-15 13:55:55',
                 'updated_at' => '2018-05-15 13:55:55',

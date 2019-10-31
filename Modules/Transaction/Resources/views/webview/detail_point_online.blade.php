@@ -191,7 +191,7 @@
 	   		</div>
 	   		<div class="row">
 	   			<div class="col-6 text-13-3px text-black seravek-light-font">Total Pembayaran</div>
-                <div class="col-6 text-right text-13-3px text-dark-grey seravek-light-font">{{ str_replace(',', '.', number_format($data['grand_total'])) }}</div>
+                <div class="col-6 text-right text-13-3px text-dark-grey seravek-light-font">Rp {{ str_replace(',', '.', number_format($data['grand_total'])) }}</div>
 	   			<div class="col-12"><hr></div>
 	   		</div>
 	   		<div class="row space-text">

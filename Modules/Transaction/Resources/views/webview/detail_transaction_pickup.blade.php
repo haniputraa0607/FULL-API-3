@@ -488,9 +488,9 @@
 
                 <div class="col-6 text-13-3px ProductSans text-black ">Total Pembayaran</div>
                 @if(isset($data['balance']))
-                <div class="col-6 text-13-3px text-right ProductSans text-black">{{ str_replace(',', '.', number_format($data['transaction_grandtotal'] - $data['balance'])) }}</div>
+                <div class="col-6 text-13-3px text-right ProductSans text-black">Rp {{ str_replace(',', '.', number_format($data['transaction_grandtotal'] - $data['balance'])) }}</div>
                 @else
-                <div class="col-6 text-13-3px text-right ProductSans text-black">{{ str_replace(',', '.', number_format($data['transaction_grandtotal'])) }}</div>
+                <div class="col-6 text-13-3px text-right ProductSans text-black">Rp {{ str_replace(',', '.', number_format($data['transaction_grandtotal'])) }}</div>
                 @endif
             </div>
         </div>
