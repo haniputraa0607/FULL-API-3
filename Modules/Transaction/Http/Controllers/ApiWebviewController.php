@@ -88,7 +88,7 @@ class ApiWebviewController extends Controller
                         'transaction_receipt_number' => $list['transaction_receipt_number'],
                         'transaction_grandtotal'     => $list['transaction_grandtotal'],
                         'type'                       => $type,
-                        'url'                        => env('VIEW_URL').'/transaction/web/view/detail?data='.$base
+                        'url'                        => env('API_URL').'api/transaction/web/view/detail?data='.$base
                     ],
                 ];
 
@@ -115,7 +115,7 @@ class ApiWebviewController extends Controller
                         'transaction_receipt_number' => $list['id_deals_user'],
                         'transaction_grandtotal'     => $list['voucher_price_cash'],
                         'type'                       => $type,
-                        'url'                        => env('VIEW_URL').'/transaction/web/view/detail?data='.$base
+                        'url'                        => env('API_URL').'api/transaction/web/view/detail?data='.$base
                     ],
 
                 ];
@@ -415,7 +415,7 @@ class ApiWebviewController extends Controller
                 'result' => [
                     'type'                       => $type,
                     'transaction_receipt_number' => $receipt,
-                    'url'                        => env('VIEW_URL').'/transaction/web/view/detail/point?data='.$base
+                    'url'                        => env('API_URL').'api/transaction/web/view/detail/point?data='.$base
                 ],
             ];
 
@@ -494,7 +494,7 @@ class ApiWebviewController extends Controller
                             'transaction_receipt_number' => $list['id_deals_user'],
                             'transaction_grandtotal'     => $list['voucher_price_cash'],
                             'type'                       => $type,
-                            'url'                        => env('VIEW_URL').'/transaction/web/view/detail?data='.$base
+                            'url'                        => env('API_URL').'api/transaction/web/view/detail?data='.$base
                         ],
 
                     ];
@@ -518,7 +518,7 @@ class ApiWebviewController extends Controller
                     'type'                       => $type,
                     'transaction_receipt_number' => $receipt,
                     'button'                     => 'LIHAT DETAIL',
-                    'url'                        => env('VIEW_URL').'/transaction/web/view/detail/balance?data='.$base
+                    'url'                        => env('API_URL').'api/transaction/web/view/detail/balance?data='.$base
                 ],
             ];
 
