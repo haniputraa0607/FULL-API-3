@@ -214,11 +214,11 @@ class ApiNotification extends Controller {
                             }
                         }
                         $usere = User::where('id', $order['id_user'])->first();
-                        $send = app($this->autocrm)->SendAutoCRM('Rejected Order Point Refund', $usere->phone, 
+                        $send = app($this->autocrm)->SendAutoCRM('Rejected Order Point Refund', $usere->phone,
                             [
-                                "outlet_name"       => $newTrx['outlet']['outlet_name'], 
+                                "outlet_name"       => $newTrx['outlet']['outlet_name'],
                                 "transaction_date"  => $newTrx['transaction_date'],
-                                'id_transaction'    => $newTrx['id_transaction'], 
+                                'id_transaction'    => $newTrx['id_transaction'],
                                 'receipt_number'    => $newTrx['transaction_receipt_number'],
                                 'received_point'    => (string) $checkBalance['balance_nominal']
                             ]
@@ -352,16 +352,16 @@ class ApiNotification extends Controller {
         $payment = $this->getPayment($mid);
 
         $send = app($this->autocrm)->SendAutoCRM('Transaction Payment', $trx->user->phone, [
-            'notif_type' => 'trx', 
-            'header_label' => $title, 
-            'date' => $trx['transaction_date'], 
-            'status' => $trx['transaction_payment_status'], 
-            'id_transaction' => $trx['id_transaction'], 
-            'name'  => $trx->user->name, 
-            'id' => $mid['order_id'], 
-            'outlet_name' => $outlet, 
-            'detail' => $detail, 
-            'payment' => $payment, 
+            'notif_type' => 'trx',
+            'header_label' => $title,
+            'date' => $trx['transaction_date'],
+            'status' => $trx['transaction_payment_status'],
+            'id_transaction' => $trx['id_transaction'],
+            'name'  => $trx->user->name,
+            'id' => $mid['order_id'],
+            'outlet_name' => $outlet,
+            'detail' => $detail,
+            'payment' => $payment,
             'id_reference' => $mid['order_id'].','.$trx['id_outlet']
         ]);
 
@@ -394,15 +394,15 @@ class ApiNotification extends Controller {
         }
 
         $send = app($this->autocrm)->SendAutoCRM('Transaction Expired', $trx->user->phone, [
-            'notif_type' => 'trx', 
-            'header_label' => $title, 
-            'id_transaction' => $trx['id_transaction'], 
-            'date' => $trx['transaction_date'], 
-            'status' => $trx['transaction_payment_status'], 
-            'name'  => $trx->user->name, 
-            'id' => $mid['order_id'], 
-            'outlet_name' => $outlet, 
-            'detail' => $detail, 
+            'notif_type' => 'trx',
+            'header_label' => $title,
+            'id_transaction' => $trx['id_transaction'],
+            'date' => $trx['transaction_date'],
+            'status' => $trx['transaction_payment_status'],
+            'name'  => $trx->user->name,
+            'id' => $mid['order_id'],
+            'outlet_name' => $outlet,
+            'detail' => $detail,
             'id_reference' => $mid['order_id'].','.$trx['id_outlet']
         ]);
 
@@ -435,15 +435,15 @@ class ApiNotification extends Controller {
         }
 
         $send = app($this->autocrm)->SendAutoCRM('Transaction Failed', $trx->user->phone, [
-            'notif_type' => 'trx', 
-            'header_label' => $title, 
-            'date' => $trx['transaction_date'], 
-            'id_transaction' => $trx['id_transaction'], 
-            'status' => $trx['transaction_payment_status'], 
-            'name'  => $trx->user->name, 
-            'id' => $mid['order_id'], 
-            'outlet_name' => $outlet, 
-            'detail' => $detail, 
+            'notif_type' => 'trx',
+            'header_label' => $title,
+            'date' => $trx['transaction_date'],
+            'id_transaction' => $trx['id_transaction'],
+            'status' => $trx['transaction_payment_status'],
+            'name'  => $trx->user->name,
+            'id' => $mid['order_id'],
+            'outlet_name' => $outlet,
+            'detail' => $detail,
             'id_reference' => $mid['order_id'].','.$trx['id_outlet']
         ]);
 
@@ -482,15 +482,15 @@ class ApiNotification extends Controller {
         }
 
         $send = app($this->autocrm)->SendAutoCRM('Transaction Success', $trx->user->phone, [
-            'notif_type' => 'trx', 
-            'header_label' => $title, 
-            'id_transaction' => $trx['id_transaction'], 
-            'date' => $trx['transaction_date'], 
-            'status' => $trx['transaction_payment_status'], 
-            'name'  => $trx->user->name, 
-            'id' => $mid['order_id'], 
-            'outlet_name' => $outlet, 
-            'detail' => $detail, 
+            'notif_type' => 'trx',
+            'header_label' => $title,
+            'id_transaction' => $trx['id_transaction'],
+            'date' => $trx['transaction_date'],
+            'status' => $trx['transaction_payment_status'],
+            'name'  => $trx->user->name,
+            'order_id' => $mid['order_id'],
+            'outlet_name' => $outlet,
+            'detail' => $detail,
             'id_reference' => $mid['order_id'].','.$trx['id_outlet']
         ]);
 
@@ -543,11 +543,11 @@ class ApiNotification extends Controller {
                     return false;
                 }
                 $usere= User::where('id',$data['id_user'])->first();
-                $send = app($this->autocrm)->SendAutoCRM('Transaction Point Achievement', $usere->phone, 
+                $send = app($this->autocrm)->SendAutoCRM('Transaction Point Achievement', $usere->phone,
                     [
-                        "outlet_name"       => $data['outlet']['outlet_name'], 
+                        "outlet_name"       => $data['outlet']['outlet_name'],
                         "transaction_date"  => $data['transaction_date'],
-                        'id_transaction'    => $data['id_transaction'], 
+                        'id_transaction'    => $data['id_transaction'],
                         'receipt_number'    => $data['transaction_receipt_number'],
                         'received_point'    => (string) $data['transaction_cashback_earned']
                     ]
@@ -947,11 +947,11 @@ Detail: ".$link['short'],
             $insertDataLogCash = app($this->balance)->addLogBalance( $data['id_user'], -$paymentBalanceTrx['balance_nominal'], $data['id_transaction'], 'Transaction', $data['transaction_grandtotal']);
         }
         $usere= User::where('id',$data['id_user'])->first();
-        $send = app($this->autocrm)->SendAutoCRM('Transaction Point Achievement', $usere->phone, 
+        $send = app($this->autocrm)->SendAutoCRM('Transaction Point Achievement', $usere->phone,
             [
-                "outlet_name"       => $data['outlet']['outlet_name'], 
+                "outlet_name"       => $data['outlet']['outlet_name'],
                 "transaction_date"  => $data['transaction_date'],
-                'id_transaction'    => $data['id_transaction'], 
+                'id_transaction'    => $data['id_transaction'],
                 'receipt_number'    => $data['transaction_receipt_number'],
                 'received_point'    => (string) $data['transaction_cashback_earned']
             ]

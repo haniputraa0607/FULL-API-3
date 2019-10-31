@@ -53,7 +53,7 @@ class ApiEnquiries extends Controller
 		} else {
 			$data['id_outlet'] = null;
 		}
-		
+
         if (isset($post['enquiry_name'])) {
             $data['enquiry_name'] = $post['enquiry_name'];
         }else{
@@ -98,14 +98,14 @@ class ApiEnquiries extends Controller
         }else{
 			$data['enquiry_device_token'] = null;
 		}
-      
+
 		if (isset($post['enquiry_file'])) {
         	$dataUploadFile = [];
 
 			if (is_array($post['enquiry_file'])) {
 				foreach ($post['enquiry_file'] as $value) {
 					$ext = MyHelper::checkMime2Ext($value);
-					
+
 					$upload = MyHelper::uploadFile($value, $this->saveFile, $ext);
 
 					if (isset($upload['status']) && $upload['status'] == "success") {
@@ -177,7 +177,7 @@ class ApiEnquiries extends Controller
 
         // jika berhasil maka ngirim" ke crm
         if ($save) {
-          
+
 			$data['attachment'] = [];
 			// save many file
         	if (isset($data['many_upload_file'])) {
@@ -438,7 +438,7 @@ class ApiEnquiries extends Controller
     /* UPDATE */
     function update(Update $request) {
         $data = $request->json()->all();
-		
+
         if (isset($data['error'])) {
             unset($data['error']);
             return response()->json($data);
@@ -481,12 +481,22 @@ class ApiEnquiries extends Controller
 
     /* SEND CRM */
     function sendCrm($data) {
+		$outlet_name = "";
+		if($data['id_outlet']){
+			$outlet = Outlet::find($data['id_outlet']);
+			if(isset($outlet['outlet_name'])){
+				$outlet_name = $outlet['outlet_name'];
+			}
+		}
         $send = app($this->autocrm)->SendAutoCRM('Enquiry '.$data['enquiry_subject'], $data['enquiry_phone'], [
                                                                 'enquiry_subject' => $data['enquiry_subject'],
                                                                 'enquiry_message' => $data['enquiry_content'],
                                                                 'enquiry_phone'   => $data['enquiry_phone'],
                                                                 'enquiry_name'    => $data['enquiry_name'],
 																'enquiry_email'   => $data['enquiry_email'],
+																'outlet_name'     => $outlet_name,
+																'visiting_time'   => isset($data['visiting_time'])?$data['visiting_time']:"",
+																'position'   	  => isset($data['position'])?$data['position']:"",
 																'attachment' 	  => $data['attachment']
                                                             ]);
 		// print_r($send);exit;
