@@ -875,6 +875,9 @@ class ApiOutletController extends Controller
             }
         } else {
             if($countAll){
+                if($request->json('search')){
+                    return response()->json(['status' => 'fail', 'messages' => ['Data tidak ditemukan']]);
+                }
                 return response()->json(['status' => 'fail', 'messages' => ['empty']]);
             }else{
                 return response()->json(['status' => 'fail', 'messages' => ['There is no open store','at this moment']]);
