@@ -179,7 +179,7 @@ class ApiDealsClaim extends Controller
                             DB::rollback();
                             return response()->json([
                                 'status'   => 'fail',
-                                'messages' => ['Fail update point.']
+                                'messages' => ['Proses pengambilan voucher gagal, silakan mencoba kembali']
                             ]);
                         }
 
@@ -198,7 +198,7 @@ class ApiDealsClaim extends Controller
                             $phone=$request->user()->phone;
                             $autocrm = app($this->autocrm)->SendAutoCRM('Claim Deals Success', $phone,
                                 [
-                                    'claimed_at'       => $voucher['claimed_at'], 
+                                    'claimed_at'       => $voucher['claimed_at'],
                                     'deals_title'      => $dataDeals->deals_title,
                                     'deals_voucher_price_point' => $dataDeals->deals_voucher_price_point,
                                     'id_deals_user' => $voucher['id_deals_user']
