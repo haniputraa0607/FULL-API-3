@@ -332,6 +332,11 @@ class ApiPOS extends Controller
             return response()->json($api);
         }
 
+        $outlet = Outlet::where('outlet_code', strtoupper($post['store_code']))->first();
+        if (empty($outlet)) {
+            return response()->json(['status' => 'fail', 'messages' => 'Store not found']);
+        }
+
         DB::beginTransaction();
 
         $voucher = DealsVoucher::with('deals_user')->where('voucher_code', $post['voucher_code'])->first();
@@ -339,9 +344,13 @@ class ApiPOS extends Controller
             return response()->json(['status' => 'fail', 'messages' => 'Voucher tidak ditemukan']);
         }
 
-        // if($voucher['deals_user'][0]){
-        //     return response()->json(['status' => 'fail', 'messages' => ['Gagal void voucher '.$post['voucher_code'].'. Voucher sudah digunakan.']]);
-        // }
+        if(isset($voucher['deals_user'][0]['id_outlet']) && $voucher['deals_user'][0]['id_outlet'] != $outlet['id_outlet']){
+            $outletDeals = Outlet::find($voucher['deals_user'][0]['id_outlet']);
+            if($outlet){
+                return response()->json(['status' => 'fail', 'messages' => ['Gagal void voucher '.$post['voucher_code'].'. Void voucher hanya dapat dilakukan di outlet '.$outletDeals['outlet_name'].'.']]);
+            }
+            return response()->json(['status' => 'fail', 'messages' => ['Gagal void voucher '.$post['voucher_code'].'. Void voucher tidak dapat dilakukan di outlet '.$outlet['outlet_name'].'.']]);
+        }
 
         //update voucher redeem
         foreach ($voucher['deals_user'] as $dealsUser) {
