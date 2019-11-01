@@ -70,7 +70,7 @@ class ApiPOS extends Controller
         $this->balance    = "Modules\Balance\Http\Controllers\BalanceController";
         $this->autocrm  = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
         $this->setting_fraud = "Modules\SettingFraud\Http\Controllers\ApiSettingFraud";
-        
+
         $this->pos = "Modules\POS\Http\Controllers\ApiPos";
     }
 
@@ -85,7 +85,7 @@ class ApiPOS extends Controller
 
         $outlet = Outlet::where('outlet_code', strtoupper($post['store_code']))->first();
         if (empty($outlet)) {
-            return response()->json(['status' => 'fail', 'messages' => ['Store not found']]);
+            return response()->json(['status' => 'fail', 'messages' => 'Store not found']);
         }
 
         $check = Transaction::join('transaction_pickups', 'transactions.id_transaction', '=', 'transaction_pickups.id_transaction')
@@ -204,15 +204,15 @@ class ApiPOS extends Controller
             }
 
             $send = app($this->autocrm)->SendAutoCRM('Order Accepted', $user['phone'], [
-                "outlet_name" => $outlet['outlet_name'], 
-                "id_reference" => $check['transaction_receipt_number'] . ',' . $outlet['id_outlet'], 
-                'id_transaction' => $check['id_transaction'], 
+                "outlet_name" => $outlet['outlet_name'],
+                "id_reference" => $check['transaction_receipt_number'] . ',' . $outlet['id_outlet'],
+                'id_transaction' => $check['id_transaction'],
                 "transaction_date" => $check['transaction_date']
             ]);
 
             return response()->json(['status' => 'success', 'result' => $transactions]);
         } else {
-            return response()->json(['status' => 'fail', 'messages' => ['Invalid Order ID']]);
+            return response()->json(['status' => 'fail', 'messages' => 'Invalid Order ID']);
         }
         return response()->json(['status' => 'success', 'message' => 'API is not ready yet. Stay tuned!', 'result' => $post]);
     }
@@ -228,7 +228,7 @@ class ApiPOS extends Controller
 
         $outlet = Outlet::where('outlet_code', strtoupper($post['store_code']))->first();
         if (empty($outlet)) {
-            return response()->json(['status' => 'fail', 'messages' => ['Store not found']]);
+            return response()->json(['status' => 'fail', 'messages' => 'Store not found']);
         }
 
         $qr = MyHelper::readQR($post['uid']);
@@ -236,12 +236,12 @@ class ApiPOS extends Controller
         $phoneqr = $qr['phone'];
 
         if (date('Y-m-d H:i:s') > date('Y-m-d H:i:s', $timestamp)) {
-            return response()->json(['status' => 'fail', 'messages' => ['Mohon refresh qrcode dan ulangi scan member']]);
+            return response()->json(['status' => 'fail', 'messages' => 'Mohon refresh qrcode dan ulangi scan member']);
         }
 
         $user = User::where('phone', $phoneqr)->first();
         if (empty($user)) {
-            return response()->json(['status' => 'fail', 'messages' => ['User not found']]);
+            return response()->json(['status' => 'fail', 'messages' => 'User not found']);
         }
 
         //suspend
@@ -249,7 +249,7 @@ class ApiPOS extends Controller
             DB::rollback();
             return response()->json([
                 'status'    => 'fail',
-                'messages'  => ['Maaf, akun Anda sedang di-suspend']
+                'messages'  => 'Maaf, akun Anda sedang di-suspend'
             ]);
         }
 
@@ -275,10 +275,10 @@ class ApiPOS extends Controller
             foreach ($voucher as $index => $vou) {
                 array_push($voucher_name, ['name' => $vou->dealVoucher->deal->deals_title]);
 
-                /* if($index > 0){ 
-                    $voucher_name[0] = $voucher_name[0]."\n".$vou->dealVoucher->deal->deals_title; 
-                }else{ 
-                   $voucher_name[0] = $vou->dealVoucher->deal->deals_title; 
+                /* if($index > 0){
+                    $voucher_name[0] = $voucher_name[0]."\n".$vou->dealVoucher->deal->deals_title;
+                }else{
+                   $voucher_name[0] = $vou->dealVoucher->deal->deals_title;
                 }  */
             }
 
@@ -336,11 +336,11 @@ class ApiPOS extends Controller
 
         $voucher = DealsVoucher::with('deals_user')->where('voucher_code', $post['voucher_code'])->first();
         if (!$voucher) {
-            return response()->json(['status' => 'fail', 'messages' => ['Voucher tidak ditemukan']]);
+            return response()->json(['status' => 'fail', 'messages' => 'Voucher tidak ditemukan']);
         }
 
         // if($voucher['deals_user'][0]){
-        //     return response()->json(['status' => 'fail', 'messages' => ['Gagal void voucher '.$post['voucher_code'].'. Voucher sudah digunakan.']]); 
+        //     return response()->json(['status' => 'fail', 'messages' => ['Gagal void voucher '.$post['voucher_code'].'. Voucher sudah digunakan.']]);
         // }
 
         //update voucher redeem
@@ -354,7 +354,7 @@ class ApiPOS extends Controller
 
             if (!$dealsUser) {
                 DB::rollBack();
-                return response()->json(['status' => 'fail', 'messages' => ['Gagal void voucher ' . $post['voucher_code'] . '. Segera hubungi team support']]);
+                return response()->json(['status' => 'fail', 'messages' => 'Gagal void voucher ' . $post['voucher_code'] . '. Segera hubungi team support']);
             }
         }
 
@@ -364,7 +364,7 @@ class ApiPOS extends Controller
         $deals->update();
         if (!$deals) {
             DB::rollBack();
-            return response()->json(['status' => 'fail', 'messages' => ['Gagal void voucher ' . $post['voucher_code'] . '. Segera hubungi team support']]);
+            return response()->json(['status' => 'fail', 'messages' => 'Gagal void voucher ' . $post['voucher_code'] . '. Segera hubungi team support']);
         }
 
         DB::commit();
@@ -533,7 +533,7 @@ class ApiPOS extends Controller
                             }
                             // cek name pos, jika beda product tidak di update
                             if (empty($product->product_name_pos) || $product->product_name_pos == $menu['name']) {
-                                // update modifiers 
+                                // update modifiers
                                 if (isset($menu['modifiers'])) {
                                     foreach ($menu['modifiers'] as $mod) {
                                         $dataProductMod['type'] = $mod['type'];
@@ -549,7 +549,7 @@ class ApiPOS extends Controller
                                     }
                                 }
 
-                                // update price 
+                                // update price
                                 $productPrice = ProductPrice::where('id_product', $product->id_product)->where('id_outlet', $outlet->id_outlet)->first();
                                 if ($productPrice) {
                                     $oldPrice =  $productPrice->product_price;
@@ -764,7 +764,7 @@ class ApiPOS extends Controller
         } else {
             return response()->json([
                 'status'    => 'fail',
-                'messages'  => ['store_code isn\'t match']
+                'messages'  => 'store_code isn\'t match'
             ]);
         }
     }
@@ -935,10 +935,10 @@ class ApiPOS extends Controller
     public function transaction(Request $request)
     {
         $post = $request->json()->all();
-        
+
         if(!empty($post['api_key']) && !empty($post['api_secret']) &&
             !empty($post['store_code']) && !empty($post['transactions'])){
-            
+
             $api = $this->checkApi($post['api_key'], $post['api_secret']);
             if ($api['status'] != 'success') {
                 return response()->json($api);
@@ -946,17 +946,17 @@ class ApiPOS extends Controller
 
             $checkOutlet = Outlet::where('outlet_code', strtoupper($post['store_code']))->first();
             if (empty($checkOutlet)) {
-                return response()->json(['status' => 'fail', 'messages' => ['Store not found']]);
+                return response()->json(['status' => 'fail', 'messages' => 'Store not found']);
             }
-            
+
             $countTransaction = count($post['transactions']);
             $x = 10;
-            
+
             $countTransactionFail = 0;
             $countTransactionSuccess = 0;
             $countTransactionDuplicate = 0;
             $detailTransactionFail = [];
-            
+
             if($countTransaction <= $x){
                 $config['point']    = Configs::where('config_name', 'point')->first()->is_active;
                 $config['balance']  = Configs::where('config_name', 'balance')->first()->is_active;
@@ -975,13 +975,13 @@ class ApiPOS extends Controller
                 $receiptExist = $checkReceipt->pluck('transaction_receipt_number')->toArray();
 
                 $validReceipt = array_diff($receipt,$receiptExist);
-                
+
                 $invalidReceipt = array_intersect($receipt,$receiptExist);
                 foreach($invalidReceipt as $key => $invalid){
                     $countTransactionDuplicate++;
                     unset($post['transactions'][$key]);
                 }
-                
+
                 //check possibility duplicate
                 $receiptDuplicate = Transaction::where('id_outlet', '!=', $checkOutlet['id_outlet'])
                                     ->whereIn('transaction_receipt_number', $validReceipt)
@@ -1021,7 +1021,7 @@ class ApiPOS extends Controller
                     if(!empty($trx['date_time']) &&
                         isset($trx['total']) &&
                         isset($trx['service']) && !empty($trx['tax']) &&
-                        isset($trx['discount']) && isset($trx['grand_total']) &&  
+                        isset($trx['discount']) && isset($trx['grand_total']) &&
                         isset($trx['menu'])){
 
                         $insertTrx = $this->insertTransaction($checkOutlet, $trx, $config, $settingPoint, $countSettingCashback, $fraudTrxDay, $fraudTrxWeek);
@@ -1078,11 +1078,11 @@ class ApiPOS extends Controller
                 $countDataTransToSave = $countTransaction / $x;
                 $checkFloat = is_float($countDataTransToSave);
                 $getDataFrom = 0;
-                
+
                 if($checkFloat === true){
                     $countDataTransToSave = (int)$countDataTransToSave + 1;
                 }
-                
+
                 for($i=0;$i<$countDataTransToSave;$i++){
                     $dataTransToSave = array_slice($post['transactions'], $getDataFrom, $x);
                     $data = [
@@ -1108,7 +1108,7 @@ class ApiPOS extends Controller
 
                     $getDataFrom = $getDataFrom + $countDataTransToSave;
                 }
-                
+
                 return response()->json([
                     'status'    => 'success',
                     'result'    => [
@@ -1119,12 +1119,12 @@ class ApiPOS extends Controller
                     ]
                 ]);
             }
-            
+
         }else{
-            return response()->json(['status' => 'fail', 'messages' => ['Input is incomplete']]);
+            return response()->json(['status' => 'fail', 'messages' => 'Input is incomplete']);
         }
     }
-    
+
     function insertTransaction($outlet, $trx, $config, $settingPoint, $countSettingCashback, $fraudTrxDay, $fraudTrxWeek){
         DB::beginTransaction();
         try{
@@ -1163,7 +1163,7 @@ class ApiPOS extends Controller
 
                         if (empty($user)) {
                             DB::rollback();
-                            return ['status' => 'fail', 'messages' => ['User not found']];
+                            return ['status' => 'fail', 'messages' => 'User not found'];
                         }elseif(isset($user['is_suspended']) && $user['is_suspended'] == '1'){
                             $user['id'] = null;
                             $dataTrx['membership_level']    = null;
@@ -1238,9 +1238,9 @@ class ApiPOS extends Controller
                                 }
                             }
                         }
+                        $dataTrx['id_user'] = $user['id'];
                     }
 
-                    $dataTrx['id_user'] = $user['id'];
                     if(isset($qr['device'])){
                         $dataTrx['transaction_device_type'] = $qr['device'];
                     }
@@ -1251,7 +1251,7 @@ class ApiPOS extends Controller
                     $createTrx = Transaction::create($dataTrx);
                     if (!$createTrx) {
                         DB::rollback();
-                        return ['status' => 'fail', 'messages' => ['Transaction sync failed']];
+                        return ['status' => 'fail', 'messages' => 'Transaction sync failed'];
                     }
 
                     $dataPayments = [];
@@ -1270,7 +1270,7 @@ class ApiPOS extends Controller
                                 array_push($dataPayments,$dataPay);
                             }else{
                                 DB::rollback();
-                                return ['status' => 'fail', 'messages' => ['There is an incomplete input in the payment list']];
+                                return ['status' => 'fail', 'messages' => 'There is an incomplete input in the payment list'];
                             }
                         }
                     }else{
@@ -1287,7 +1287,7 @@ class ApiPOS extends Controller
                     $insertPayments = TransactionPaymentOffline::insert($dataPayments);
                     if (!$insertPayments) {
                         DB::rollback();
-                        return ['status' => 'fail', 'messages' => ['Failed insert transaction payments']];
+                        return ['status' => 'fail', 'messages' => 'Failed insert transaction payments'];
                     }
 
                     $userTrxProduct = [];
@@ -1296,7 +1296,7 @@ class ApiPOS extends Controller
 
                     $allProductCode = array_column($checkProduct, 'product_code');
                     foreach ($trx['menu'] as $row => $menu) {
-                        if(!empty($menu['plu_id']) && !empty($menu['name']) 
+                        if(!empty($menu['plu_id']) && !empty($menu['name'])
                             && isset($menu['price']) && isset($menu['qty'])){
 
                             $getIndexProduct = array_search($menu['plu_id'], $allProductCode);
@@ -1310,7 +1310,7 @@ class ApiPOS extends Controller
                                 $newProduct = Product::create($dataProduct);
                                 if (!$newProduct) {
                                     DB::rollback();
-                                    return ['status' => 'fail', 'messages' => ['Failed create new product']];
+                                    return ['status' => 'fail', 'messages' => 'Failed create new product'];
                                 }
 
                                 $productPriceData['id_product']         = $newProduct['id_product'];
@@ -1319,7 +1319,7 @@ class ApiPOS extends Controller
                                 $newProductPrice = ProductPrice::create($productPriceData);
                                 if (!$newProductPrice) {
                                     DB::rollback();
-                                    return ['status' => 'fail', 'messages' => ['Failed create new product']];
+                                    return ['status' => 'fail', 'messages' => 'Failed create new product'];
                                 }
 
                                 $product = $newProduct;
@@ -1341,7 +1341,7 @@ class ApiPOS extends Controller
 
                             $createProduct = TransactionProduct::create($dataProduct);
 
-                            // update modifiers 
+                            // update modifiers
                             if (!empty($menu['modifiers'])) {
 
                                 $allModCode = array_column($menu['modifiers'], 'code');
@@ -1398,11 +1398,11 @@ class ApiPOS extends Controller
                             }
                             if (!$createProduct) {
                                 DB::rollback();
-                                return ['status' => 'fail', 'messages' => ['Transaction product sync failed']];
+                                return ['status' => 'fail', 'messages' => 'Transaction product sync failed'];
                             }
                         }else{
                             DB::rollback();
-                            return['status' => 'fail', 'messages' => ['There is an incomplete input in the menu list']];
+                            return['status' => 'fail', 'messages' => 'There is an incomplete input in the menu list'];
                         }
 
                     }
@@ -1424,7 +1424,7 @@ class ApiPOS extends Controller
                             DB::rollback();
                             return [
                                     'status'    => 'fail',
-                                    'messages'  => ['Insert Point Failed']
+                                    'messages'  => 'Insert Point Failed'
                             ];
                         }
 
@@ -1437,11 +1437,11 @@ class ApiPOS extends Controller
                             DB::rollback();
                             return [
                                     'status'    => 'fail',
-                                    'messages'  => ['Insert Point Failed']
+                                    'messages'  => 'Insert Point Failed'
                             ];
                         }
                     }
-                    
+
                     if ($createTrx['transaction_cashback_earned']) {
 
                         $insertDataLogCash = app($this->balance)->addLogBalance($createTrx['id_user'], $createTrx['transaction_cashback_earned'], $createTrx['id_transaction'], 'Transaction', $createTrx['transaction_grandtotal']);
@@ -1449,11 +1449,11 @@ class ApiPOS extends Controller
                             DB::rollback();
                             return [
                                 'status'    => 'fail',
-                                'messages'  => ['Insert Cashback Failed']
+                                'messages'  => 'Insert Cashback Failed'
                             ];
                         }
                         $usere= User::where('id',$createTrx['id_user'])->first();
-                        $send = app($this->autocrm)->SendAutoCRM('Transaction Point Achievement', $usere->phone, 
+                        $send = app($this->autocrm)->SendAutoCRM('Transaction Point Achievement', $usere->phone,
                             [
                                 "outlet_name"       => $outlet['outlet_name'],
                                 "transaction_date"  => $createTrx['transaction_date'],
@@ -1466,12 +1466,12 @@ class ApiPOS extends Controller
                             DB::rollback();
                             return response()->json([
                                     'status' => 'fail',
-                                    'messages' => ['Failed Send notification to customer']
+                                    'messages' => 'Failed Send notification to customer'
                                 ]);
                         }
                         $pointValue = $insertDataLogCash->balance;
                     }
-                    
+
                     if (isset($user['phone'])) {
                         $checkMembership = app($this->membership)->calculateMembership($user['phone']);
 
@@ -1485,7 +1485,7 @@ class ApiPOS extends Controller
                                 DB::rollback();
                                 return [
                                     'status'    => 'fail',
-                                    'messages'  => ['Update User Count Transaction Failed']
+                                    'messages'  => 'Update User Count Transaction Failed'
                                 ];
                             }
 
@@ -1509,7 +1509,7 @@ class ApiPOS extends Controller
                                 DB::rollback();
                                 return [
                                     'status'    => 'fail',
-                                    'messages'  => ['Update User Count Transaction Failed']
+                                    'messages'  => 'Update User Count Transaction Failed'
                                 ];
                             }
 
@@ -1529,7 +1529,7 @@ class ApiPOS extends Controller
                         $dataTrxVoucher['id_transaction'] = $createTrx['id_transaction'];
                         $create = TransactionVoucher::create($dataTrxVoucher);
                     }
-                    
+
                     DB::commit();
                     return [
                         'id_transaction'    => $createTrx->id_transaction,
@@ -1539,7 +1539,7 @@ class ApiPOS extends Controller
                     ];
                 }else{
                     DB::rollback();
-                    return ['status' => 'fail', 'messages' => ['trx_id does not exist']];
+                    return ['status' => 'fail', 'messages' => 'trx_id does not exist'];
                 }
             }
         }catch (Exception $e) {
@@ -1731,21 +1731,21 @@ class ApiPOS extends Controller
         $checkTrx = Transaction::where('transaction_receipt_number', $post['trx_id'])->first();
         if (empty($checkTrx)) {
             DB::rollback();
-            return response()->json(['status' => 'fail', 'messages' => ['Transaction not found']]);
+            return response()->json(['status' => 'fail', 'messages' => 'Transaction not found']);
         }
 
         //if use voucher, cannot refund
         $trxVou = TransactionVoucher::where('id_transaction', $checkTrx->id_transaction)->first();
         if ($trxVou) {
             DB::rollback();
-            return response()->json(['status' => 'fail', 'messages' => ['Transaction cannot be refund. This transaction use voucher']]);
+            return response()->json(['status' => 'fail', 'messages' => 'Transaction cannot be refund. This transaction use voucher']);
         }
 
         if ($checkTrx->id_user) {
             $user = User::where('id', $checkTrx->id_user)->first();
             if (empty($user)) {
                 DB::rollback();
-                return response()->json(['status' => 'fail', 'messages' => ['User not found']]);
+                return response()->json(['status' => 'fail', 'messages' => 'User not found']);
             }
         }
 
@@ -1755,7 +1755,7 @@ class ApiPOS extends Controller
         $checkTrx->update();
         if (!$checkTrx) {
             DB::rollback();
-            return response()->json(['status' => 'fail', 'messages' => ['Transaction refund sync failed1']]);
+            return response()->json(['status' => 'fail', 'messages' => 'Transaction refund sync failed1']);
         }
 
         $user = User::where('id', $checkTrx->id_user)->first();
@@ -1765,7 +1765,7 @@ class ApiPOS extends Controller
                 $point->delete();
                 if (!$point) {
                     DB::rollback();
-                    return response()->json(['status' => 'fail', 'messages' => ['Transaction refund sync failed2']]);
+                    return response()->json(['status' => 'fail', 'messages' => 'Transaction refund sync failed2']);
                 }
 
                 //update user point
@@ -1776,7 +1776,7 @@ class ApiPOS extends Controller
                     DB::rollback();
                     return response()->json([
                         'status'    => 'fail',
-                        'messages'  => ['Update point failed']
+                        'messages'  => 'Update point failed'
                     ]);
                 }
             }
@@ -1786,7 +1786,7 @@ class ApiPOS extends Controller
                 $balance->delete();
                 if (!$balance) {
                     DB::rollback();
-                    return response()->json(['status' => 'fail', 'messages' => ['Transaction refund sync failed3']]);
+                    return response()->json(['status' => 'fail', 'messages' => 'Transaction refund sync failed']);
                 }
 
                 //update user balance
@@ -1797,7 +1797,7 @@ class ApiPOS extends Controller
                     DB::rollback();
                     return response()->json([
                         'status'    => 'fail',
-                        'messages'  => ['Update cashback failed']
+                        'messages'  => 'Update cashback failed'
                     ]);
                 }
             }
@@ -1813,22 +1813,22 @@ class ApiPOS extends Controller
     {
         $api_key = Setting::where('key', 'api_key')->first();
         if (empty($api_key)) {
-            return ['status' => 'fail', 'messages' => ['api_key not found']];
+            return ['status' => 'fail', 'messages' => 'api_key not found'];
         }
 
         $api_key = $api_key['value'];
         if ($api_key != $key) {
-            return ['status' => 'fail', 'messages' => ['api_key isn\’t match']];
+            return ['status' => 'fail', 'messages' => 'api_key isn\’t match'];
         }
 
         $api_secret = Setting::where('key', 'api_secret')->first();
         if (empty($api_secret)) {
-            return ['status' => 'fail', 'messages' => ['api_secret not found']];
+            return ['status' => 'fail', 'messages' => 'api_secret not found'];
         }
 
         $api_secret = $api_secret['value'];
         if ($api_secret != $secret) {
-            return ['status' => 'fail', 'messages' => ['api_secret isn\’t match']];
+            return ['status' => 'fail', 'messages' => 'api_secret isn\’t match'];
         }
 
         return ['status' => 'success'];
@@ -1942,7 +1942,7 @@ class ApiPOS extends Controller
 
         $checkOutlet = Outlet::where('outlet_code', strtoupper($post['store_code']))->first();
         if (empty($checkOutlet)) {
-            return response()->json(['status' => 'fail', 'messages' => ['Store not found']]);
+            return response()->json(['status' => 'fail', 'messages' => 'Store not found']);
         }
 
         $trx = TransactionPickup::join('transactions', 'transactions.id_transaction', 'transaction_pickups.id_transaction')
@@ -1973,13 +1973,13 @@ class ApiPOS extends Controller
         if ($post['api_key'] != $apikey) {
             return response()->json([
                 'status'    => 'fail',
-                'messages'  => ['Api key doesn\'t match.']
+                'messages'  => 'Api key doesn\'t match.'
             ]);
         }
         if ($post['api_secret'] != $apisecret) {
             return response()->json([
                 'status'    => 'fail',
-                'messages'  => ['Api secret doesn\'t match.']
+                'messages'  => 'Api secret doesn\'t match.'
             ]);
         }
 
@@ -2008,7 +2008,7 @@ class ApiPOS extends Controller
                     DB::rollback();
                     return response()->json([
                         'status'   => 'fail',
-                        'messages' => ['Store with code ' . $dataoutlet['store_code'] . ' not found.', 'Add store_name to create a new data store.']
+                        'messages' => 'Store with code ' . $dataoutlet['store_code'] . ' not found.', 'Add store_name to create a new data store.'
                     ]);
                 }
                 $dataInsert['outlet_name'] = $dataoutlet['store_name'];
@@ -2026,7 +2026,7 @@ class ApiPOS extends Controller
                 DB::rollback();
                 return response()->json([
                     'status'   => 'fail',
-                    'messages' => ['fail to sync']
+                    'messages' => 'fail to sync'
                 ]);
             }
 
@@ -2050,7 +2050,7 @@ class ApiPOS extends Controller
                             if (empty($product->product_name_pos) || $product->product_name_pos == $menu['name']) {
                                 $update = $product->update(['product_name_pos' => $menu['name']]);
                                 if ($update) {
-                                    // update modifiers 
+                                    // update modifiers
                                     if (isset($menu['modifiers'])) {
                                         if (!empty($menu['modifiers'])) {
                                             foreach ($menu['modifiers'] as $mod) {
@@ -2068,7 +2068,7 @@ class ApiPOS extends Controller
                                         }
                                     }
 
-                                    // update price 
+                                    // update price
                                     $productPrice = ProductPrice::where('id_product', $product->id_product)->where('id_outlet', $outlet->id_outlet)->first();
                                     if ($productPrice) {
                                         $oldPrice =  $productPrice->product_price;
@@ -2092,7 +2092,7 @@ class ApiPOS extends Controller
                                         DB::rollBack();
                                         return response()->json([
                                             'status'    => 'fail',
-                                            'messages'  => ['Something went wrong.']
+                                            'messages'  => 'Something went wrong.'
                                         ]);
                                     } else {
 
@@ -2124,7 +2124,7 @@ class ApiPOS extends Controller
                                                         DB::rollBack();
                                                         $result = [
                                                             'status'   => 'fail',
-                                                            'messages' => ['fail upload image']
+                                                            'messages' => 'fail upload image'
                                                         ];
 
                                                         return response()->json($result);
@@ -2136,7 +2136,7 @@ class ApiPOS extends Controller
                                                     DB::rollBack();
                                                     $result = [
                                                         'status'   => 'fail',
-                                                        'messages' => ['fail upload image']
+                                                        'messages' => 'fail upload image'
                                                     ];
 
                                                     return response()->json($result);
@@ -2167,7 +2167,7 @@ class ApiPOS extends Controller
                                     DB::rollBack();
                                     return response()->json([
                                         'status'    => 'fail',
-                                        'messages'  =>  ['Something went wrong.']
+                                        'messages'  =>  'Something went wrong.'
                                     ]);
                                 }
                             } else {
@@ -2190,7 +2190,7 @@ class ApiPOS extends Controller
                             }
                         }
                         array_push($idProduct, $product->id_product);
-                        // $idProduct[] = $product->id_product; 
+                        // $idProduct[] = $product->id_product;
                     }
 
                     // insert product
@@ -2212,7 +2212,7 @@ class ApiPOS extends Controller
                                 DB::rollBack();
                                 return response()->json([
                                     'status'    => 'fail',
-                                    'messages'  => ['Something went wrong.']
+                                    'messages'  => 'Something went wrong.'
                                 ]);
                             } else {
 
@@ -2238,7 +2238,7 @@ class ApiPOS extends Controller
                                                 DB::rollBack();
                                                 $result = [
                                                     'status'   => 'fail',
-                                                    'messages' => ['fail upload image']
+                                                    'messages' => 'fail upload image'
                                                 ];
 
                                                 return response()->json($result);
@@ -2250,7 +2250,7 @@ class ApiPOS extends Controller
                                             DB::rollBack();
                                             $result = [
                                                 'status'   => 'fail',
-                                                'messages' => ['fail upload image']
+                                                'messages' => 'fail upload image'
                                             ];
 
                                             return response()->json($result);
@@ -2304,7 +2304,7 @@ class ApiPOS extends Controller
                 DB::rollback();
                 return response()->json([
                     'status'    => 'fail',
-                    'messages'  => ['store_code ' . $dataoutlet['store_code'] . ' isn\'t match']
+                    'messages'  => 'store_code ' . $dataoutlet['store_code'] . ' isn\'t match'
                 ]);
             }
         }
