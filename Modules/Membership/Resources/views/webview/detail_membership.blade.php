@@ -151,7 +151,6 @@
             display: flex;
             flex: 1;
             flex-direction: row;
-            padding: 8px 0px;
         }
         .content-list .content-list-item img{
             margin-right: 8px;
@@ -311,29 +310,32 @@
                             @endif
                             @if($item['benefit_cashback_multiplier'] != null && $item['benefit_cashback_multiplier'] > 0)
                             <div class="content-list-item">
-                                <img src="{{$item['membership_image']}}"/>
-                                <div class=font-regular-gray>
-                                    <p style="margin-bottom: 0px;">Benefit Cashback {{number_format($item['benefit_cashback_multiplier'])}}%</p>
+                                <div class="font-regular-gray">
+                                    <li style="list-style-type:none;">
+                                        <img src="{{$item['membership_image']}}"/> Benefit Cashback {{number_format($item['benefit_cashback_multiplier'])}}%
+                                    </li>
                                     @if($item['cashback_maximum'] != null)
-                                    <p style="margin-bottom: 0px;">Cashback Maksimum {{number_format($item['cashback_maximum'])}}</p>
+                                    <li style="list-style-type:none;">
+                                        <img src="{{$item['membership_image']}}"/> Cashback Maksimum {{number_format($item['cashback_maximum'])}}
+                                    </li>
                                     @endif
                                 </div>
                             </div>
                             @endif
                             @if($item['benefit_discount'] != null && $item['benefit_discount'] > 0)
                             <div class="content-list-item">
-                                <img src="{{$item['membership_image']}}"/>
                                 <div class=font-regular-gray>
-                                    Benefit Discount {{number_format($item['benefit_discount'])}}
+                                    <img src="{{$item['membership_image']}}"/> Benefit Discount {{number_format($item['benefit_discount'])}}
                                 </div>
                             </div>
                             @endif
                             @if($item['membership_promo_id'] != null && count($item['membership_promo_id']) > 0)
                             <div class="content-list-item">
-                                <img src="{{$item['membership_image']}}"/>
                                 <div class=font-regular-gray>
                                     @foreach ($item['membership_promo_id'] as $data)
-                                        <p style="margin-bottom: 0px;">{{$data['promo_name']}}</p>
+                                        <li style="list-style-type:none;">
+                                            <img src="{{$item['membership_image']}}"/> {{$data['promo_name']}}
+                                        </li>
                                     @endforeach
                                 </div>
                             </div>
