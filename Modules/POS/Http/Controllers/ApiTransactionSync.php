@@ -154,7 +154,7 @@ class ApiTransactionSync extends Controller
                         $data = [
                             'outlet_code' => $trans['outlet_code'],
                             'request' => json_encode($trx),
-                            'message_failed' => $insertTrx['messages'][0],
+                            'message_failed' => $insertTrx['messages'],
                             'created_at' => date('Y-m-d H:i:s'),
                             'updated_at' => date('Y-m-d H:i:s')
                         ];
@@ -217,6 +217,10 @@ class ApiTransactionSync extends Controller
                     $pointValue = 0;
 
                     if (isset($trx['member_uid'])) {
+                        if(strlen($trx['member_uid']) < 35){
+                            DB::rollback();
+                            return ['status' => 'fail', 'messages' => 'Minimum length of member uid is 35'];
+                        }
                         $qr         = MyHelper::readQR($trx['member_uid']);
                         $timestamp  = $qr['timestamp'];
                         $phoneqr    = $qr['phone'];

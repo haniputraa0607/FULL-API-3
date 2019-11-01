@@ -1020,7 +1020,7 @@ class ApiPOS extends Controller
                 foreach ($post['transactions'] as $key => $trx) {
                     if(!empty($trx['date_time']) &&
                         isset($trx['total']) &&
-                        isset($trx['service']) && !empty($trx['tax']) &&
+                        isset($trx['service']) && isset($trx['tax']) &&
                         isset($trx['discount']) && isset($trx['grand_total']) &&
                         isset($trx['menu'])){
 
@@ -1039,7 +1039,7 @@ class ApiPOS extends Controller
                             $data = [
                                 'outlet_code' => $post['store_code'],
                                 'request' => json_encode($trx),
-                                'message_failed' => $insertTrx['messages'][0],
+                                'message_failed' => $insertTrx['messages'],
                                 'created_at' => date('Y-m-d H:i:s'),
                                 'updated_at' => date('Y-m-d H:i:s')
                             ];
@@ -1156,6 +1156,10 @@ class ApiPOS extends Controller
                     $pointValue = 0;
 
                     if (isset($trx['member_uid'])) {
+                        if(strlen($trx['member_uid']) < 35){
+                            DB::rollback();
+                            return ['status' => 'fail', 'messages' => 'Minimum length of member uid is 35'];
+                        }
                         $qr         = MyHelper::readQR($trx['member_uid']);
                         $timestamp  = $qr['timestamp'];
                         $phoneqr    = $qr['phone'];
