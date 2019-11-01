@@ -70,7 +70,7 @@ class ApiPOS extends Controller
         $this->balance    = "Modules\Balance\Http\Controllers\BalanceController";
         $this->autocrm  = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
         $this->setting_fraud = "Modules\SettingFraud\Http\Controllers\ApiSettingFraud";
-        
+
         $this->pos = "Modules\POS\Http\Controllers\ApiPos";
     }
 
@@ -204,9 +204,9 @@ class ApiPOS extends Controller
             }
 
             $send = app($this->autocrm)->SendAutoCRM('Order Accepted', $user['phone'], [
-                "outlet_name" => $outlet['outlet_name'], 
-                "id_reference" => $check['transaction_receipt_number'] . ',' . $outlet['id_outlet'], 
-                'id_transaction' => $check['id_transaction'], 
+                "outlet_name" => $outlet['outlet_name'],
+                "id_reference" => $check['transaction_receipt_number'] . ',' . $outlet['id_outlet'],
+                'id_transaction' => $check['id_transaction'],
                 "transaction_date" => $check['transaction_date']
             ]);
 
@@ -275,10 +275,10 @@ class ApiPOS extends Controller
             foreach ($voucher as $index => $vou) {
                 array_push($voucher_name, ['name' => $vou->dealVoucher->deal->deals_title]);
 
-                /* if($index > 0){ 
-                    $voucher_name[0] = $voucher_name[0]."\n".$vou->dealVoucher->deal->deals_title; 
-                }else{ 
-                   $voucher_name[0] = $vou->dealVoucher->deal->deals_title; 
+                /* if($index > 0){
+                    $voucher_name[0] = $voucher_name[0]."\n".$vou->dealVoucher->deal->deals_title;
+                }else{
+                   $voucher_name[0] = $vou->dealVoucher->deal->deals_title;
                 }  */
             }
 
@@ -340,7 +340,7 @@ class ApiPOS extends Controller
         }
 
         // if($voucher['deals_user'][0]){
-        //     return response()->json(['status' => 'fail', 'messages' => ['Gagal void voucher '.$post['voucher_code'].'. Voucher sudah digunakan.']]); 
+        //     return response()->json(['status' => 'fail', 'messages' => ['Gagal void voucher '.$post['voucher_code'].'. Voucher sudah digunakan.']]);
         // }
 
         //update voucher redeem
@@ -533,7 +533,7 @@ class ApiPOS extends Controller
                             }
                             // cek name pos, jika beda product tidak di update
                             if (empty($product->product_name_pos) || $product->product_name_pos == $menu['name']) {
-                                // update modifiers 
+                                // update modifiers
                                 if (isset($menu['modifiers'])) {
                                     foreach ($menu['modifiers'] as $mod) {
                                         $dataProductMod['type'] = $mod['type'];
@@ -549,7 +549,7 @@ class ApiPOS extends Controller
                                     }
                                 }
 
-                                // update price 
+                                // update price
                                 $productPrice = ProductPrice::where('id_product', $product->id_product)->where('id_outlet', $outlet->id_outlet)->first();
                                 if ($productPrice) {
                                     $oldPrice =  $productPrice->product_price;
@@ -935,10 +935,10 @@ class ApiPOS extends Controller
     public function transaction(Request $request)
     {
         $post = $request->json()->all();
-        
+
         if(!empty($post['api_key']) && !empty($post['api_secret']) &&
             !empty($post['store_code']) && !empty($post['transactions'])){
-            
+
             $api = $this->checkApi($post['api_key'], $post['api_secret']);
             if ($api['status'] != 'success') {
                 return response()->json($api);
@@ -948,15 +948,15 @@ class ApiPOS extends Controller
             if (empty($checkOutlet)) {
                 return response()->json(['status' => 'fail', 'messages' => ['Store not found']]);
             }
-            
+
             $countTransaction = count($post['transactions']);
             $x = 10;
-            
+
             $countTransactionFail = 0;
             $countTransactionSuccess = 0;
             $countTransactionDuplicate = 0;
             $detailTransactionFail = [];
-            
+
             if($countTransaction <= $x){
                 $config['point']    = Configs::where('config_name', 'point')->first()->is_active;
                 $config['balance']  = Configs::where('config_name', 'balance')->first()->is_active;
@@ -975,13 +975,13 @@ class ApiPOS extends Controller
                 $receiptExist = $checkReceipt->pluck('transaction_receipt_number')->toArray();
 
                 $validReceipt = array_diff($receipt,$receiptExist);
-                
+
                 $invalidReceipt = array_intersect($receipt,$receiptExist);
                 foreach($invalidReceipt as $key => $invalid){
                     $countTransactionDuplicate++;
                     unset($post['transactions'][$key]);
                 }
-                
+
                 //check possibility duplicate
                 $receiptDuplicate = Transaction::where('id_outlet', '!=', $checkOutlet['id_outlet'])
                                     ->whereIn('transaction_receipt_number', $validReceipt)
@@ -1021,7 +1021,7 @@ class ApiPOS extends Controller
                     if(!empty($trx['date_time']) &&
                         isset($trx['total']) &&
                         isset($trx['service']) && !empty($trx['tax']) &&
-                        isset($trx['discount']) && isset($trx['grand_total']) &&  
+                        isset($trx['discount']) && isset($trx['grand_total']) &&
                         isset($trx['menu'])){
 
                         $insertTrx = $this->insertTransaction($checkOutlet, $trx, $config, $settingPoint, $countSettingCashback, $fraudTrxDay, $fraudTrxWeek);
@@ -1078,11 +1078,11 @@ class ApiPOS extends Controller
                 $countDataTransToSave = $countTransaction / $x;
                 $checkFloat = is_float($countDataTransToSave);
                 $getDataFrom = 0;
-                
+
                 if($checkFloat === true){
                     $countDataTransToSave = (int)$countDataTransToSave + 1;
                 }
-                
+
                 for($i=0;$i<$countDataTransToSave;$i++){
                     $dataTransToSave = array_slice($post['transactions'], $getDataFrom, $x);
                     $data = [
@@ -1108,7 +1108,7 @@ class ApiPOS extends Controller
 
                     $getDataFrom = $getDataFrom + $countDataTransToSave;
                 }
-                
+
                 return response()->json([
                     'status'    => 'success',
                     'result'    => [
@@ -1119,12 +1119,12 @@ class ApiPOS extends Controller
                     ]
                 ]);
             }
-            
+
         }else{
             return response()->json(['status' => 'fail', 'messages' => ['Input is incomplete']]);
         }
     }
-    
+
     function insertTransaction($outlet, $trx, $config, $settingPoint, $countSettingCashback, $fraudTrxDay, $fraudTrxWeek){
         DB::beginTransaction();
         try{
@@ -1238,9 +1238,9 @@ class ApiPOS extends Controller
                                 }
                             }
                         }
+                        $dataTrx['id_user'] = $user['id'];
                     }
 
-                    $dataTrx['id_user'] = $user['id'];
                     if(isset($qr['device'])){
                         $dataTrx['transaction_device_type'] = $qr['device'];
                     }
@@ -1296,7 +1296,7 @@ class ApiPOS extends Controller
 
                     $allProductCode = array_column($checkProduct, 'product_code');
                     foreach ($trx['menu'] as $row => $menu) {
-                        if(!empty($menu['plu_id']) && !empty($menu['name']) 
+                        if(!empty($menu['plu_id']) && !empty($menu['name'])
                             && isset($menu['price']) && isset($menu['qty'])){
 
                             $getIndexProduct = array_search($menu['plu_id'], $allProductCode);
@@ -1341,7 +1341,7 @@ class ApiPOS extends Controller
 
                             $createProduct = TransactionProduct::create($dataProduct);
 
-                            // update modifiers 
+                            // update modifiers
                             if (!empty($menu['modifiers'])) {
 
                                 $allModCode = array_column($menu['modifiers'], 'code');
@@ -1441,7 +1441,7 @@ class ApiPOS extends Controller
                             ];
                         }
                     }
-                    
+
                     if ($createTrx['transaction_cashback_earned']) {
 
                         $insertDataLogCash = app($this->balance)->addLogBalance($createTrx['id_user'], $createTrx['transaction_cashback_earned'], $createTrx['id_transaction'], 'Transaction', $createTrx['transaction_grandtotal']);
@@ -1453,7 +1453,7 @@ class ApiPOS extends Controller
                             ];
                         }
                         $usere= User::where('id',$createTrx['id_user'])->first();
-                        $send = app($this->autocrm)->SendAutoCRM('Transaction Point Achievement', $usere->phone, 
+                        $send = app($this->autocrm)->SendAutoCRM('Transaction Point Achievement', $usere->phone,
                             [
                                 "outlet_name"       => $outlet['outlet_name'],
                                 "transaction_date"  => $createTrx['transaction_date'],
@@ -1471,7 +1471,7 @@ class ApiPOS extends Controller
                         }
                         $pointValue = $insertDataLogCash->balance;
                     }
-                    
+
                     if (isset($user['phone'])) {
                         $checkMembership = app($this->membership)->calculateMembership($user['phone']);
 
@@ -1529,7 +1529,7 @@ class ApiPOS extends Controller
                         $dataTrxVoucher['id_transaction'] = $createTrx['id_transaction'];
                         $create = TransactionVoucher::create($dataTrxVoucher);
                     }
-                    
+
                     DB::commit();
                     return [
                         'id_transaction'    => $createTrx->id_transaction,
@@ -2050,7 +2050,7 @@ class ApiPOS extends Controller
                             if (empty($product->product_name_pos) || $product->product_name_pos == $menu['name']) {
                                 $update = $product->update(['product_name_pos' => $menu['name']]);
                                 if ($update) {
-                                    // update modifiers 
+                                    // update modifiers
                                     if (isset($menu['modifiers'])) {
                                         if (!empty($menu['modifiers'])) {
                                             foreach ($menu['modifiers'] as $mod) {
@@ -2068,7 +2068,7 @@ class ApiPOS extends Controller
                                         }
                                     }
 
-                                    // update price 
+                                    // update price
                                     $productPrice = ProductPrice::where('id_product', $product->id_product)->where('id_outlet', $outlet->id_outlet)->first();
                                     if ($productPrice) {
                                         $oldPrice =  $productPrice->product_price;
@@ -2190,7 +2190,7 @@ class ApiPOS extends Controller
                             }
                         }
                         array_push($idProduct, $product->id_product);
-                        // $idProduct[] = $product->id_product; 
+                        // $idProduct[] = $product->id_product;
                     }
 
                     // insert product
