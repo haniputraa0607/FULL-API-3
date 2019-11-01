@@ -332,6 +332,11 @@ class ApiPOS extends Controller
             return response()->json($api);
         }
 
+        $outlet = Outlet::where('outlet_code', strtoupper($post['store_code']))->first();
+        if (empty($outlet)) {
+            return response()->json(['status' => 'fail', 'messages' => 'Store not found']);
+        }
+
         DB::beginTransaction();
 
         $voucher = DealsVoucher::with('deals_user')->where('voucher_code', $post['voucher_code'])->first();
@@ -339,9 +344,13 @@ class ApiPOS extends Controller
             return response()->json(['status' => 'fail', 'messages' => 'Voucher tidak ditemukan']);
         }
 
-        // if($voucher['deals_user'][0]){
-        //     return response()->json(['status' => 'fail', 'messages' => ['Gagal void voucher '.$post['voucher_code'].'. Voucher sudah digunakan.']]);
-        // }
+        if(isset($voucher['deals_user'][0]['id_outlet']) && $voucher['deals_user'][0]['id_outlet'] != $outlet['id_outlet']){
+            $outletDeals = Outlet::find($voucher['deals_user'][0]['id_outlet']);
+            if($outlet){
+                return response()->json(['status' => 'fail', 'messages' => ['Gagal void voucher '.$post['voucher_code'].'. Void voucher hanya dapat dilakukan di outlet '.$outletDeals['outlet_name'].'.']]);
+            }
+            return response()->json(['status' => 'fail', 'messages' => ['Gagal void voucher '.$post['voucher_code'].'. Void voucher tidak dapat dilakukan di outlet '.$outlet['outlet_name'].'.']]);
+        }
 
         //update voucher redeem
         foreach ($voucher['deals_user'] as $dealsUser) {
@@ -1020,7 +1029,7 @@ class ApiPOS extends Controller
                 foreach ($post['transactions'] as $key => $trx) {
                     if(!empty($trx['date_time']) &&
                         isset($trx['total']) &&
-                        isset($trx['service']) && !empty($trx['tax']) &&
+                        isset($trx['service']) && isset($trx['tax']) &&
                         isset($trx['discount']) && isset($trx['grand_total']) &&
                         isset($trx['menu'])){
 
@@ -1039,7 +1048,7 @@ class ApiPOS extends Controller
                             $data = [
                                 'outlet_code' => $post['store_code'],
                                 'request' => json_encode($trx),
-                                'message_failed' => $insertTrx['messages'][0],
+                                'message_failed' => $insertTrx['messages'],
                                 'created_at' => date('Y-m-d H:i:s'),
                                 'updated_at' => date('Y-m-d H:i:s')
                             ];
@@ -1156,6 +1165,10 @@ class ApiPOS extends Controller
                     $pointValue = 0;
 
                     if (isset($trx['member_uid'])) {
+                        if(strlen($trx['member_uid']) < 35){
+                            DB::rollback();
+                            return ['status' => 'fail', 'messages' => 'Minimum length of member uid is 35'];
+                        }
                         $qr         = MyHelper::readQR($trx['member_uid']);
                         $timestamp  = $qr['timestamp'];
                         $phoneqr    = $qr['phone'];
