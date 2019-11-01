@@ -484,6 +484,9 @@ class ApiOutletController extends Controller
         if(stristr($_SERVER['HTTP_USER_AGENT'],'okhttp')) $useragent = 'Android';
         if($useragent == 'Android' || $useragent == 'iOS'){
             $outlet = $outlet->where('outlet_status', 'Active')->whereNotNull('id_city');
+            $outlet->whereHas('brands',function($query){
+                $query->where('brand_active','1');
+            });
         }
 
         // qrcode
