@@ -328,7 +328,7 @@ class ApiPOS extends Controller
         $post = $request->json()->all();
 
         if(!empty($post['api_key']) && !empty($post['api_secret']) &&
-            isset($post['store_code']) && isset($post['voucher_code'])){
+            !empty($post['store_code']) && !empty($post['voucher_code'])){
 
             $api = $this->checkApi($post['api_key'], $post['api_secret']);
             if ($api['status'] != 'success') {
