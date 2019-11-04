@@ -323,61 +323,76 @@ class ApiPOS extends Controller
         return CheckVoucher::check($post);
     }
 
-    public function voidVoucher(voidVoucher $request)
+    public function voidVoucher(Request $request)
     {
         $post = $request->json()->all();
 
-        $api = $this->checkApi($post['api_key'], $post['api_secret']);
-        if ($api['status'] != 'success') {
-            return response()->json($api);
-        }
+        if(!empty($post['api_key']) && !empty($post['api_secret']) &&
+            isset($post['store_code']) && isset($post['voucher_code'])){
 
-        $outlet = Outlet::where('outlet_code', strtoupper($post['store_code']))->first();
-        if (empty($outlet)) {
-            return response()->json(['status' => 'fail', 'messages' => 'Store not found']);
-        }
-
-        DB::beginTransaction();
-
-        $voucher = DealsVoucher::with('deals_user')->where('voucher_code', $post['voucher_code'])->first();
-        if (!$voucher) {
-            return response()->json(['status' => 'fail', 'messages' => 'Voucher tidak ditemukan']);
-        }
-
-        if(isset($voucher['deals_user'][0]['id_outlet']) && $voucher['deals_user'][0]['id_outlet'] != $outlet['id_outlet']){
-            $outletDeals = Outlet::find($voucher['deals_user'][0]['id_outlet']);
-            if($outlet){
-                return response()->json(['status' => 'fail', 'messages' => ['Gagal void voucher '.$post['voucher_code'].'. Void voucher hanya dapat dilakukan di outlet '.$outletDeals['outlet_name'].'.']]);
+            $api = $this->checkApi($post['api_key'], $post['api_secret']);
+            if ($api['status'] != 'success') {
+                return response()->json($api);
             }
-            return response()->json(['status' => 'fail', 'messages' => ['Gagal void voucher '.$post['voucher_code'].'. Void voucher tidak dapat dilakukan di outlet '.$outlet['outlet_name'].'.']]);
-        }
 
-        //update voucher redeem
-        foreach ($voucher['deals_user'] as $dealsUser) {
-            $dealsUser->redeemed_at = null;
-            $dealsUser->used_at = null;
-            $dealsUser->voucher_hash = null;
-            $dealsUser->voucher_hash_code = null;
-            $dealsUser->id_outlet = null;
-            $dealsUser->update();
+            $outlet = Outlet::where('outlet_code', strtoupper($post['store_code']))->first();
+            if (empty($outlet)) {
+                return response()->json(['status' => 'fail', 'messages' => 'Store not found']);
+            }
 
-            if (!$dealsUser) {
+            DB::beginTransaction();
+
+            $voucher = DealsVoucher::join('deals_users', 'deals_vouchers.id_deals_voucher', 'deals_users.id_deals_voucher')
+                ->leftJoin('transaction_vouchers', 'deals_vouchers.id_deals_voucher', 'transaction_vouchers.id_deals_voucher')
+                ->leftJoin('transaction_vouchers as transaction_vouchers2', 'deals_vouchers.voucher_code', 'transaction_vouchers2.deals_voucher_invalid')
+                ->where('deals_vouchers.voucher_code', $post['voucher_code'])
+                ->select('deals_vouchers.*','deals_users.*', 'transaction_vouchers.id_deals_voucher as id_deals_voucher_transaction', 'transaction_vouchers2.deals_voucher_invalid as voucher_code_transaction')
+                ->first();
+
+            if (!$voucher) {
+                return response()->json(['status' => 'fail', 'messages' => 'Voucher not found']);
+            }elseif ($voucher['id_deals_voucher_transaction'] || $voucher['voucher_code_transaction']){
+                return response()->json(['status' => 'fail', 'messages' => 'Void voucher failed, voucher has already been used.']);
+            }
+
+            if(isset($voucher['id_outlet']) && $voucher['id_outlet'] != $outlet['id_outlet']){
+                $outletDeals = Outlet::find($voucher['deals_user'][0]['id_outlet']);
+                if($outletDeals){
+                    return response()->json(['status' => 'fail', 'messages' => 'Void voucher  '.$post['voucher_code'].'. Void vouchers can only be done at '.$outletDeals['outlet_name'].' outlets.']);
+                }
+                return response()->json(['status' => 'fail', 'messages' => 'Void voucher failed '.$post['voucher_code'].'. Void vouchers can only be done at '.$outlet['outlet_name'].' outlets.']);
+            }
+
+            //update voucher redeem
+            foreach ($voucher['deals_user'] as $dealsUser) {
+                $dealsUser->redeemed_at = null;
+                $dealsUser->used_at = null;
+                $dealsUser->voucher_hash = null;
+                $dealsUser->voucher_hash_code = null;
+                $dealsUser->id_outlet = null;
+                $dealsUser->update();
+
+                if (!$dealsUser) {
+                    DB::rollBack();
+                    return response()->json(['status' => 'fail', 'messages' => 'Void voucher failed ' . $post['voucher_code'] . '. Please contact team support.']);
+                }
+            }
+
+            //update count deals
+            $deals = Deal::find($voucher['id_deals']);
+            $deals->deals_total_redeemed = $deals->deals_total_redeemed - 1;
+            $deals->update();
+            if (!$deals) {
                 DB::rollBack();
-                return response()->json(['status' => 'fail', 'messages' => 'Gagal void voucher ' . $post['voucher_code'] . '. Segera hubungi team support']);
+                return response()->json(['status' => 'fail', 'messages' => 'Void voucher failed ' . $post['voucher_code'] . '. Please contact team support.']);
             }
+
+            DB::commit();
+            return response()->json(['status' => 'success', 'messages' => 'Voucher ' . $post['voucher_code'] . ' was successfully voided']);
+        }else{
+            return response()->json(['status' => 'fail', 'messages' => 'Input is incomplete']);
         }
 
-        //update count deals
-        $deals = Deal::find($voucher['id_deals']);
-        $deals->deals_total_redeemed = $deals->deals_total_redeemed - 1;
-        $deals->update();
-        if (!$deals) {
-            DB::rollBack();
-            return response()->json(['status' => 'fail', 'messages' => 'Gagal void voucher ' . $post['voucher_code'] . '. Segera hubungi team support']);
-        }
-
-        DB::commit();
-        return response()->json(['status' => 'success', 'messages' => ['Void Voucher ' . $post['voucher_code'] . ' telah berhasil']]);
     }
 
     public function syncOutlet(reqOutlet $request)
