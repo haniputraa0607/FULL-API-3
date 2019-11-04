@@ -96,7 +96,7 @@
         }
 
         body {
-            background: #fafafa;
+            background: rgb(255, 255, 255);
         }
     </style>
   </head>
