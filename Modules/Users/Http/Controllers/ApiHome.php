@@ -757,6 +757,11 @@ class ApiHome extends Controller
                 $value['deals']['time_to_end']=strtotime($value['deals']['deals_end'])-time();
                 return $value;
             },$deals->toArray());
+            foreach ($deals as $key => $value) {
+                if ($value['deals']['available_voucher'] == "0") {
+                    unset($deals[$key]);
+                }
+            }
             return [
                 'status'=>'success',
                 'result'=>$deals

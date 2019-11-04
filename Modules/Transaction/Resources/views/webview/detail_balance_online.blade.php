@@ -239,12 +239,12 @@
 	   		</div>
 			@if($data['balance'] > 0)
 	   		<div class="row">
-	   			<div class="col-6 text-13-3px text-black product-sans-reguler margin-top5px">Total Pembayaran</div>
+	   			<div class="col-6 text-13-3px text-black product-sans-reguler">Total Pembayaran</div>
                 <div class="col-6 text-right text-13-3px text-dark-grey product-sans-reguler">Rp {{ str_replace(',', '.', number_format($data['grand_total'])) }}</div>
 	   			<div class="col-12"><hr></div>
 	   		</div>
 	   		<div class="row space-text">
-	   			<div class="col-6 text-13-3px text-black product-sans-reguler margin-top5px">{{env('POINT_NAME', 'Points')}}</div>
+	   			<div class="col-6 text-13-3px text-black product-sans-reguler">{{env('POINT_NAME', 'Points')}}</div>
 	   			<div class="col-6 text-right text-13-3px text-dark-grey product-sans-reguler">@if($data['balance'] > 0) +{{ str_replace(',', '.', number_format($data['balance'])) }} points @else {{ str_replace(',', '.', number_format($data['balance'])) }} points  @endif</div>
 	   		</div>
 			@else
@@ -253,7 +253,7 @@
 				@foreach($data['detail']['product_transaction'] as $productTransaction)
 					@php $countItem += $productTransaction['transaction_product_qty']; @endphp
 				@endforeach
-	   			<div class="col-6 text-13-3px text-black product-sans-reguler margin-top5px">Subtotal ({{$countItem}} item) </div>
+	   			<div class="col-6 text-13-3px text-black product-sans-reguler">Subtotal ({{$countItem}} item) </div>
 	   			<div class="col-6 text-right text-13-3px text-dark-grey product-sans-reguler">{{ str_replace(',', '.', number_format($data['detail']['transaction_grandtotal'])) }}</div>
 	   		</div>
 	   		<div class="row">
