@@ -214,101 +214,112 @@ class ApiPOS extends Controller
         } else {
             return response()->json(['status' => 'fail', 'messages' => 'Invalid Order ID']);
         }
-        return response()->json(['status' => 'success', 'message' => 'API is not ready yet. Stay tuned!', 'result' => $post]);
+        return response()->json(['status' => 'success', 'messages' => 'API is not ready yet. Stay tuned!', 'result' => $post]);
     }
 
-    public function checkMember(reqMember $request)
+    public function checkMember(Request $request)
     {
         $post = $request->json()->all();
 
-        $api = $this->checkApi($post['api_key'], $post['api_secret']);
-        if ($api['status'] != 'success') {
-            return response()->json($api);
-        }
+        if(!empty($post['api_key']) && !empty($post['api_secret']) &&
+            !empty($post['store_code']) && !empty($post['uid'])){
 
-        $outlet = Outlet::where('outlet_code', strtoupper($post['store_code']))->first();
-        if (empty($outlet)) {
-            return response()->json(['status' => 'fail', 'messages' => 'Store not found']);
-        }
-
-        $qr = MyHelper::readQR($post['uid']);
-        $timestamp = $qr['timestamp'];
-        $phoneqr = $qr['phone'];
-
-        if (date('Y-m-d H:i:s') > date('Y-m-d H:i:s', $timestamp)) {
-            return response()->json(['status' => 'fail', 'messages' => 'Mohon refresh qrcode dan ulangi scan member']);
-        }
-
-        $user = User::where('phone', $phoneqr)->first();
-        if (empty($user)) {
-            return response()->json(['status' => 'fail', 'messages' => 'User not found']);
-        }
-
-        //suspend
-        if (isset($user['is_suspended']) && $user['is_suspended'] == '1') {
-            DB::rollback();
-            return response()->json([
-                'status'    => 'fail',
-                'messages'  => 'Maaf, akun Anda sedang di-suspend'
-            ]);
-        }
-
-        $result['uid'] = $post['uid'];
-        $result['name'] = $user->name;
-
-        $voucher = DealsUser::with('dealVoucher', 'dealVoucher.deal')->where('id_user', $user->id)
-            ->where(function ($query) use ($outlet) {
-                $query->where('id_outlet', $outlet->id_outlet)
-                    ->orWhereNull('id_outlet');
-            })
-            ->whereDate('voucher_expired_at', '>=', date("Y-m-d"))
-            ->where(function ($q) {
-                $q->where('paid_status', 'Completed')
-                    ->orWhere('paid_status', 'Free');
-            })
-            ->get();
-        if (count($voucher) <= 0) {
-            $result['vouchers'] = [];
-        } else {
-            // $arr = [];
-            $voucher_name = [];
-            foreach ($voucher as $index => $vou) {
-                array_push($voucher_name, ['name' => $vou->dealVoucher->deal->deals_title]);
-
-                /* if($index > 0){
-                    $voucher_name[0] = $voucher_name[0]."\n".$vou->dealVoucher->deal->deals_title;
-                }else{
-                   $voucher_name[0] = $vou->dealVoucher->deal->deals_title;
-                }  */
+            if(strlen($post['uid']) < 35){
+                DB::rollback();
+                return ['status' => 'fail', 'messages' => 'Minimum length of member uid is 35'];
             }
 
+            $api = $this->checkApi($post['api_key'], $post['api_secret']);
+            if ($api['status'] != 'success') {
+                return response()->json($api);
+            }
 
-            // array_push($arr, $voucher_name);
+            $outlet = Outlet::where('outlet_code', strtoupper($post['store_code']))->first();
+            if (empty($outlet)) {
+                return response()->json(['status' => 'fail', 'messages' => 'Store not found']);
+            }
 
-            $result['vouchers'] = $voucher_name;
-        }
+            $qr = MyHelper::readQR($post['uid']);
+            $timestamp = $qr['timestamp'];
+            $phoneqr = $qr['phone'];
 
-        $membership = UsersMembership::with('users_membership_promo_id')->where('id_user', $user->id)->orderBy('id_log_membership', 'DESC')->first();
-        if (empty($membership)) {
-            $result['customer_level'] = "";
-            $result['promo_id'] = [];
-        } else {
-            $result['customer_level'] = $membership->membership_name;
-            if ($membership->users_membership_promo_id) {
-                $result['promo_id'] = [];
-                foreach ($membership->users_membership_promo_id as $promoid) {
-                    if ($promoid['promo_id']) {
-                        $result['promo_id'][] = $promoid['promo_id'];
-                    }
-                }
+            if (date('Y-m-d H:i:s') > date('Y-m-d H:i:s', $timestamp)) {
+                return response()->json(['status' => 'fail', 'messages' => 'Mohon refresh qrcode dan ulangi scan member']);
+            }
+
+            $user = User::where('phone', $phoneqr)->first();
+            if (empty($user)) {
+                return response()->json(['status' => 'fail', 'messages' => 'User not found']);
+            }
+
+            //suspend
+            if (isset($user['is_suspended']) && $user['is_suspended'] == '1') {
+                DB::rollback();
+                return response()->json([
+                    'status'    => 'fail',
+                    'messages'  => 'Maaf, akun Anda sedang di-suspend'
+                ]);
+            }
+
+            $result['uid'] = $post['uid'];
+            $result['name'] = $user->name;
+
+            $voucher = DealsUser::with('dealVoucher', 'dealVoucher.deal')->where('id_user', $user->id)
+                ->where(function ($query) use ($outlet) {
+                    $query->where('id_outlet', $outlet->id_outlet)
+                        ->orWhereNull('id_outlet');
+                })
+                ->whereDate('voucher_expired_at', '>=', date("Y-m-d"))
+                ->where(function ($q) {
+                    $q->where('paid_status', 'Completed')
+                        ->orWhere('paid_status', 'Free');
+                })
+                ->get();
+            if (count($voucher) <= 0) {
+                $result['vouchers'] = [];
             } else {
-                $result['promo_id'] = [];
+                // $arr = [];
+                $voucher_name = [];
+                foreach ($voucher as $index => $vou) {
+                    array_push($voucher_name, ['name' => $vou->dealVoucher->deal->deals_title]);
+
+                    /* if($index > 0){
+                        $voucher_name[0] = $voucher_name[0]."\n".$vou->dealVoucher->deal->deals_title;
+                    }else{
+                    $voucher_name[0] = $vou->dealVoucher->deal->deals_title;
+                    }  */
+                }
+
+
+                // array_push($arr, $voucher_name);
+
+                $result['vouchers'] = $voucher_name;
             }
+
+            $membership = UsersMembership::with('users_membership_promo_id')->where('id_user', $user->id)->orderBy('id_log_membership', 'DESC')->first();
+            if (empty($membership)) {
+                $result['customer_level'] = "";
+                $result['promo_id'] = [];
+            } else {
+                $result['customer_level'] = $membership->membership_name;
+                if ($membership->users_membership_promo_id) {
+                    $result['promo_id'] = [];
+                    foreach ($membership->users_membership_promo_id as $promoid) {
+                        if ($promoid['promo_id']) {
+                            $result['promo_id'][] = $promoid['promo_id'];
+                        }
+                    }
+                } else {
+                    $result['promo_id'] = [];
+                }
+            }
+
+            $result['saldo'] = $user->balance;
+
+            return response()->json(['status' => 'success', 'result' => $result]);
+        }else{
+            return response()->json(['status' => 'fail', 'messages' => 'Input is incomplete']);
         }
-
-        $result['saldo'] = $user->balance;
-
-        return response()->json(['status' => 'success', 'result' => $result]);
     }
 
     public function checkVoucher(reqVoucher $request)
