@@ -346,7 +346,7 @@ class ApiPOS extends Controller
                 ->leftJoin('transaction_vouchers', 'deals_vouchers.id_deals_voucher', 'transaction_vouchers.id_deals_voucher')
                 ->leftJoin('transaction_vouchers as transaction_vouchers2', 'deals_vouchers.voucher_code', 'transaction_vouchers2.deals_voucher_invalid')
                 ->where('deals_vouchers.voucher_code', $post['voucher_code'])
-                ->select('deals_vouchers.*','deals_users.*', 'transaction_vouchers.id_deals_voucher as id_deals_voucher_transaction', 'transaction_vouchers2.deals_voucher_invalid as voucher_code_transaction')
+                ->select('deals_vouchers.*','deals_users.id_outlet', 'transaction_vouchers.id_deals_voucher as id_deals_voucher_transaction', 'transaction_vouchers2.deals_voucher_invalid as voucher_code_transaction')
                 ->first();
 
             if (!$voucher) {
