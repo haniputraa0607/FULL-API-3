@@ -1051,8 +1051,8 @@ class ApiUser extends Controller
                         ->toArray();
                     if(!$checkdevice){
                         //not trusted device or new device
-                        $createdevice = UserDevice::create(['id_user' => $datauser[0]['id'],
-                            'device_id' 		=> $device_id,
+                        $createdevice = UserDevice::updateOrCreate(['device_id' => $device_id], [
+                            'id_user'           => $datauser[0]['id'],
                             'device_token'		=> $device_token,
                             'device_type'		=> $device_type
                         ]);
