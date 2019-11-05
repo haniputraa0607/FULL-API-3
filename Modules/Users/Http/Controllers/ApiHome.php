@@ -519,8 +519,8 @@ class ApiHome extends Controller
 								->count();
 
         if ($checkDevice == 0) {
-            $dataUpdate['id_user'] = $user->id;
             $update                = UserDevice::updateOrCreate(['device_id' => $device_id], [
+                'id_user'           => $user->id,
                 'device_token'		=> $device_token,
                 'device_type'		=> $device_type
             ]);
