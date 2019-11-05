@@ -45,8 +45,7 @@ class ApiDealsInvalidate extends Controller
                     strtotime($deals->deals->deals_voucher_start??$deals->voucher_expired_at) >= strtotime($now));
                 $voucher_active  = date('d F Y H:i:s', strtotime($deals->deals->deals_voucher_start??$deals->voucher_active_at));
                 $voucher_expired = date('d F Y H:i:s', strtotime($deals->voucher_expired_at));
-                $messages = ['Voucher is expired or not yet active.',
-                        'Voucher validity period: '.$voucher_active.' - '.$voucher_expired."."];
+                $messages = ['Voucher belum aktif'];
             }
             else{
                 if($deals->deals->deals_voucher_start){
@@ -54,8 +53,7 @@ class ApiDealsInvalidate extends Controller
                         strtotime($deals->voucher_expired_at) >= strtotime($now));
                     $voucher_active  = date('d F Y H:i:s', strtotime($deals->deals->deals_voucher_start));
                     $voucher_expired = date('d F Y H:i:s', strtotime($deals->voucher_expired_at));
-                    $messages = ['Voucher is expired or not yet active.',
-                            'Voucher validity period: '.$voucher_active.' - '.$voucher_expired."."];
+                    $messages = ['Voucher belum aktif'];
                 }else{
                     $condition = strtotime($deals->voucher_expired_at) >= strtotime($now);
                     $messages = ['Voucher is expired.'];
@@ -112,9 +110,9 @@ class ApiDealsInvalidate extends Controller
             }
         }
         else {
-            $fail['messages'] = ['Voucher not available in this store.'];
+            $fail['messages'] = ['Kode outlet yang kamu masukkan tidak terdaftar'];
             if(optional($deals)->id_outlet){
-                $fail['messages'] = ['Voucher only available at '.$deals->old_outlet_name];
+                $fail['messages'] = ['Kode outlet yang kamu masukkan salah'];
             }
         }
 
