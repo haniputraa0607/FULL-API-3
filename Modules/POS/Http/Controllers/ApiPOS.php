@@ -311,16 +311,22 @@ class ApiPOS extends Controller
         return response()->json(['status' => 'success', 'result' => $result]);
     }
 
-    public function checkVoucher(reqVoucher $request)
+    public function checkVoucher(Request $request)
     {
         $post = $request->json()->all();
 
-        $api = $this->checkApi($post['api_key'], $post['api_secret']);
-        if ($api['status'] != 'success') {
-            return response()->json($api);
-        }
+        if(!empty($post['api_key']) && !empty($post['api_secret']) && !empty($post['store_code']) &&
+        (!empty($post['qrcode']) || !empty($post['code']))){
 
-        return CheckVoucher::check($post);
+            $api = $this->checkApi($post['api_key'], $post['api_secret']);
+            if ($api['status'] != 'success') {
+                return response()->json($api);
+            }
+
+            return CheckVoucher::check($post);
+        }else{
+            return response()->json(['status' => 'fail', 'messages' => ['Input is incomplete']]);
+        }
     }
 
     public function voidVoucher(voidVoucher $request)
