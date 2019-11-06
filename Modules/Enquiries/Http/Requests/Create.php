@@ -16,11 +16,10 @@ class Create extends FormRequest
     public function rules()
     {
         return [
-            'id_outlet'       => 'required',
             'enquiry_name'    => '',
             'enquiry_phone'   => 'required',
             'enquiry_email'   => 'required',
-            'enquiry_subject' => 'required|in:Question,Complaint,Partnership',
+            'enquiry_subject' => 'required',
             'enquiry_content' => 'required',
             'enquiry_photo'   => ''
         ];

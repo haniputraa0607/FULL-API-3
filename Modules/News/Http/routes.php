@@ -1,9 +1,10 @@
 <?php
 
-Route::group(['prefix' => 'api/news', 'middleware' => 'log_request', 'namespace' => 'Modules\News\Http\Controllers'], function()
+Route::group(['prefix' => 'api/news', 'middleware' => 'log_activities', 'namespace' => 'Modules\News\Http\Controllers'], function()
 {
 	Route::group(['middleware' => 'auth:api'], function() {
     	Route::any('list', 'ApiNews@listNews');
+        Route::any('category', 'ApiNews@listCategory');
 	
         // get news for custom form webview
         Route::post('get', 'ApiNews@getNewsById');
@@ -13,6 +14,16 @@ Route::group(['prefix' => 'api/news', 'middleware' => 'log_request', 'namespace'
         Route::post('custom-form/file', 'ApiNews@customFormUploadFile');
     });
     
+    Route::group(['prefix'=>'category','middleware' => 'auth:api'], function() {
+        Route::any('/', 'ApiNewsCategoryController@index');
+        // create news category
+        Route::post('create', 'ApiNewsCategoryController@store');
+        // update news category
+        Route::post('update', 'ApiNewsCategoryController@update');
+        // delete news category
+        Route::post('delete', 'ApiNewsCategoryController@destroy');
+    });
+
 	/* AUTH */
 	Route::group(['middleware' => 'auth:api'], function() {
     	Route::post('create', 'ApiNews@create');
@@ -29,10 +40,16 @@ Route::group(['prefix' => 'api/news', 'middleware' => 'log_request', 'namespace'
     
 });
 
-Route::group(['prefix' => 'api/news', 'middleware' => ['log_request', 'auth:api'], 'namespace' => 'Modules\News\Http\Controllers'], function()
+Route::group(['prefix' => 'api/news', 'middleware' => ['log_activities', 'auth:api'], 'namespace' => 'Modules\News\Http\Controllers'], function()
 {
         Route::any('list/test', 'ApiNews@listNews');
         // Route::any('list/web', 'ApiNews@listNews');
         // Route::any('list', 'ApiNews@listNews');
         Route::any('webview', 'ApiNews@webview');
+});
+
+
+Route::group(['prefix' => 'news', 'namespace' => 'Modules\News\Http\Controllers','middleware' => 'auth:api'], function()
+{
+    Route::any('/webview/{id}', 'ApiNewsWebview@detail');
 });

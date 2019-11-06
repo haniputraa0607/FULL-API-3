@@ -1,16 +1,18 @@
 <?php
 
-Route::group(['middleware' => ['api', 'log_request'], 'prefix' => 'api/setting', 'namespace' => 'Modules\Setting\Http\Controllers'], function()
+Route::group(['middleware' => ['api', 'log_activities'], 'prefix' => 'api/setting', 'namespace' => 'Modules\Setting\Http\Controllers'], function()
 {
     Route::get('/courier', 'ApiSetting@settingCourier');
 });
 
-Route::group(['middleware' => ['auth:api', 'log_request'], 'prefix' => 'api/setting', 'namespace' => 'Modules\Setting\Http\Controllers'], function()
+Route::group(['middleware' => ['auth:api', 'log_activities'], 'prefix' => 'api/setting', 'namespace' => 'Modules\Setting\Http\Controllers'], function()
 {
+    Route::get('/get/{key}', 'ApiSetting@get');
     Route::any('email/update', 'ApiSetting@emailUpdate');
     Route::any('/', 'ApiSetting@settingList');
     Route::post('/edit', 'ApiSetting@settingEdit');
     Route::post('/update', 'ApiSetting@settingUpdate');
+    Route::post('/update2','ApiSetting@update');
     Route::post('/date', 'ApiSetting@date');
 	Route::any('/app_logo', 'ApiSetting@appLogo');
     Route::any('/app_navbar', 'ApiSetting@appNavbar');
@@ -40,6 +42,10 @@ Route::group(['middleware' => ['auth:api', 'log_request'], 'prefix' => 'api/sett
 
     Route::any('whatsapp', 'ApiSetting@settingWhatsApp');
 
+    Route::any('jobs_list', 'ApiSetting@jobsList');
+    Route::any('celebrate_list', 'ApiSetting@celebrateList');
+    Route::any('/text_menu/update', 'ApiSetting@updateTextMenu');
+
     Route::group(['middleware' => 'auth:api', 'prefix' => 'dashboard'], function()
     {
         Route::any('', 'ApiDashboardSetting@getDashboard');
@@ -61,6 +67,16 @@ Route::group(['middleware' => ['auth:api', 'log_request'], 'prefix' => 'api/sett
         Route::post('delete', 'ApiBanner@destroy');
     });
 
+    // featured_deal
+    Route::group(['middleware' => 'auth:api', 'prefix' => 'featured_deal'], function()
+    {
+        Route::get('list', 'ApiFeaturedDeal@index');
+        Route::post('create', 'ApiFeaturedDeal@create');
+        Route::post('update', 'ApiFeaturedDeal@update');
+        Route::post('reorder', 'ApiFeaturedDeal@reorder');
+        Route::post('delete', 'ApiFeaturedDeal@destroy');
+    });
+
     // complete profile
     Route::group(['middleware' => 'auth:api', 'prefix' => 'complete-profile'], function()
     {
@@ -77,20 +93,20 @@ Route::group(['middleware' => ['auth:api', 'log_request'], 'prefix' => 'api/sett
     Route::post('reset/{type}/update', 'ApiSetting@pointResetUpdate');
 });
 
-Route::group(['middleware' => ['api', 'log_request'], 'prefix' => 'api/timesetting', 'namespace' => 'Modules\Setting\Http\Controllers'], function()
+Route::group(['middleware' => ['api', 'log_activities'], 'prefix' => 'api/timesetting', 'namespace' => 'Modules\Setting\Http\Controllers'], function()
 {
 	Route::get('/', 'ApiGreetings@listTimeSetting');
 	Route::post('/', 'ApiGreetings@updateTimeSetting');
 });
 
-Route::group(['middleware' => ['api','log_request'], 'prefix' => 'api/background', 'namespace' => 'Modules\Setting\Http\Controllers'], function()
+Route::group(['middleware' => ['api','log_activities'], 'prefix' => 'api/background', 'namespace' => 'Modules\Setting\Http\Controllers'], function()
 {
 	Route::any('/', 'ApiBackground@listBackground');
 	Route::post('create', 'ApiBackground@createBackground');
 	Route::post('delete', 'ApiBackground@deleteBackground');
 });
 
-Route::group(['middleware' => ['api', 'log_request'], 'prefix' => 'api/greetings', 'namespace' => 'Modules\Setting\Http\Controllers'], function()
+Route::group(['middleware' => ['api', 'log_activities'], 'prefix' => 'api/greetings', 'namespace' => 'Modules\Setting\Http\Controllers'], function()
 {
 	Route::any('/', 'ApiGreetings@listGreetings');
 	Route::post('selected', 'ApiGreetings@selectGreetings');
@@ -99,7 +115,7 @@ Route::group(['middleware' => ['api', 'log_request'], 'prefix' => 'api/greetings
 	Route::post('delete', 'ApiGreetings@deleteGreetings');
 });
 
-Route::group(['middleware' => ['auth_client', 'log_request'], 'prefix' => 'api/setting', 'namespace' => 'Modules\Setting\Http\Controllers'], function()
+Route::group(['middleware' => ['auth_client', 'log_activities'], 'prefix' => 'api/setting', 'namespace' => 'Modules\Setting\Http\Controllers'], function()
 {
     Route::any('/', 'ApiSetting@settingList');
     Route::get('/faq', 'ApiSetting@faqList');
@@ -108,19 +124,26 @@ Route::group(['middleware' => ['auth_client', 'log_request'], 'prefix' => 'api/s
 	Route::get('/navigation-logo', 'ApiSetting@NavigationLogo');
 	Route::get('/navigation-sidebar', 'ApiSetting@NavigationSidebar');
     Route::get('/navigation-navbar', 'ApiSetting@NavigationNavbar');
+});
 
-    Route::get('/version/list', 'ApiSetting@getVersion');
-    Route::post('/version/update', 'ApiSetting@updateVersion');
+Route::group(['middleware' => ['auth_client', 'log_activities'], 'prefix' => 'api/version', 'namespace' => 'Modules\Setting\Http\Controllers'], function()
+{
+    Route::get('/list', 'ApiVersion@getVersion');
+    Route::post('/update', 'ApiVersion@updateVersion');
+});
+
+Route::group(['prefix' => 'api/version', 'namespace' => 'Modules\Setting\Http\Controllers'], function () {
+    Route::post('/', 'ApiVersion@index');
 });
 
 Route::group(['prefix' => 'api/setting', 'namespace' => 'Modules\Setting\Http\Controllers'], function()
-{    
-    Route::post('/version', 'ApiSetting@Version');
+{
+    Route::any('/text_menu_list', 'ApiSetting@textMenuList');
 });
 
-Route::group(['prefix' => 'api/setting', 'middleware' => ['log_request', 'auth:api'], 'namespace' => 'Modules\Setting\Http\Controllers'], function()
+Route::group(['prefix' => 'api/setting', 'middleware' => ['log_activities', 'auth:api'], 'namespace' => 'Modules\Setting\Http\Controllers'], function()
 {
-    Route::get('/faq', 'ApiSetting@faqList');
+    Route::any('/faq', 'ApiSetting@faqList');
     Route::post('webview', 'ApiSetting@settingWebview');
     
     Route::get('/cron/point-reset', 'ApiSetting@cronPointReset');
@@ -131,4 +154,10 @@ Route::group(['prefix' => 'api/setting', 'middleware' => ['log_request', 'auth:a
 Route::group(['namespace' => 'Modules\Setting\Http\Controllers'], function()
 {
     Route::any('terms-of-service', 'ApiSetting@viewTOS');
+});
+
+Route::group([ 'prefix' => 'api/setting', 'namespace' => 'Modules\Setting\Http\Controllers'], function()
+{
+    Route::any('webview/{key}', 'ApiSettingWebview@aboutWebview');
+    Route::any('/faq/webview', 'ApiSettingWebview@faqWebviewView');
 });

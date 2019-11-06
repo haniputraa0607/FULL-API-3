@@ -3,7 +3,9 @@
 namespace App\Exceptions;
 
 use Exception;
+use Illuminate\Support\Arr;
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
+use Illuminate\Auth\AuthenticationException;
 
 class Handler extends ExceptionHandler
 {
@@ -49,5 +51,26 @@ class Handler extends ExceptionHandler
     public function render($request, Exception $exception)
     {
         return parent::render($request, $exception);
+    }
+
+    protected function convertExceptionToArray(Exception $e)
+    {
+        return config('app.debug') ? [
+            'message' => $e->getMessage(),
+            'exception' => get_class($e),
+            'file' => $e->getFile(),
+            'line' => $e->getLine(),
+            'trace' => collect($e->getTrace())->map(function ($trace) {
+                return Arr::except($trace, ['args']);
+            })->all(),
+        ] : [
+            'status'  => 'fail',
+            'message' => $this->isHttpException($e) ? $e->getMessage() : 'Server Error',
+        ];
+    }
+
+    protected function unauthenticated($request, AuthenticationException $exception)
+    {
+        return response()->json(['error' => 'Unauthenticated.'], 401);
     }
 }

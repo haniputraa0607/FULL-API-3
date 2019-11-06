@@ -1,8 +1,8 @@
 <?php
 
-Route::group(['prefix' => 'api', 'middleware' => 'log_request'], function(){
+Route::group(['prefix' => 'api', 'middleware' => 'log_activities'], function(){
 	Route::get('users/list/{var}', 'Modules\Users\Http\Controllers\ApiUser@listVar');
-	Route::group(['middleware' => ['auth_client','log_request'], 'prefix' => 'users', 'namespace' => 'Modules\Users\Http\Controllers'], function()
+	Route::group(['middleware' => ['auth_client','log_activities'], 'prefix' => 'users', 'namespace' => 'Modules\Users\Http\Controllers'], function()
 	{
 	    Route::post('new', 'ApiUser@newUser');
 		Route::post('phone/check', 'ApiUser@check');
@@ -43,7 +43,7 @@ Route::group(['prefix' => 'api', 'middleware' => 'log_request'], function(){
 	    Route::post('activity', 'ApiUser@activity');
 	    Route::post('detail', 'ApiUser@show');
 		Route::post('log', 'ApiUser@log');
-	    Route::get('log/detail/{id}', 'ApiUser@detailLog');
+	    Route::get('log/detail/{id}/{log_type}', 'ApiUser@detailLog');
 	    Route::post('delete', 'ApiUser@delete');
 		Route::post('update', 'ApiUser@updateProfileByAdmin');
 		Route::post('update/photo', 'ApiUser@updateProfilePhotoByAdmin');
@@ -51,6 +51,7 @@ Route::group(['prefix' => 'api', 'middleware' => 'log_request'], function(){
 		Route::post('update/level', 'ApiUser@updateProfileLevelByAdmin');
 		Route::post('update/outlet', 'ApiUser@updateDoctorOutletByAdmin');
 		Route::post('update/permission', 'ApiUser@updateProfilePermissionByAdmin');
+		Route::post('update/suspend', 'ApiUser@updateSuspendByAdmin');
 		Route::post('update/outlet', 'ApiUser@updateUserOutletByAdmin');
 	    Route::post('phone/verified', 'ApiUser@phoneVerified');
 	    Route::post('phone/unverified', 'ApiUser@phoneUnverified');
@@ -64,12 +65,15 @@ Route::group(['prefix' => 'api', 'middleware' => 'log_request'], function(){
 	});
 	Route::group(['middleware' => 'auth:api', 'prefix' => 'home', 'namespace' => 'Modules\Users\Http\Controllers'], function()
 	{
-	    Route::post('/', 'ApiHome@home');
+		Route::post('/membership','ApiHome@membership');
+		Route::any('/banner','ApiHome@banner');
+		Route::any('/featured-deals','ApiHome@featuredDeals');
 	    Route::post('refresh-point-balance', 'ApiHome@refreshPointBalance');
 	});
 	
 	Route::group(['prefix' => 'home', 'namespace' => 'Modules\Users\Http\Controllers'], function()
 	{
+		Route::any('splash','ApiHome@splash');
 	    Route::any('notloggedin', 'ApiHome@homeNotLoggedIn');
 	});
 

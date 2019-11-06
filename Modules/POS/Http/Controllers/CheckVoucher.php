@@ -14,6 +14,7 @@ use App\Http\Models\DealsUser;
 use App\Http\Models\Deals;
 use App\Http\Models\DealsOutlet;
 use App\Http\Models\Outlet;
+use App\Http\Models\Setting;
 use App\Lib\MyHelper;
 
 class CheckVoucher
@@ -21,7 +22,7 @@ class CheckVoucher
 	function __construct() {
         date_default_timezone_set('Asia/Jakarta');
     }
-	
+
 	/* CHECK */
 	static function check($post=[])
 	{
@@ -36,7 +37,6 @@ class CheckVoucher
         if (isset($post['qrcode'])) {
             $validQr = Self::newValidateQr('qr', $post['qrcode'], $post['store_code']);
         }
-// dd($validQr);
         // validate qr code
         if ($validQr) {
 
@@ -45,19 +45,21 @@ class CheckVoucher
 
                 // validate store
                 if ($validStore = Self::validateStore($post['store_code'], $validQr[0]['deal_voucher']['id_deals'])) {
-                    
+
                     $get = Self::returnVoucher($validQr, $post['store_code']);
-    
+
                     return response()->json(MyHelper::checkGet($get));
                 }else{
                     $fail['messages'] = "The voucher cannot be redeem in this store.";
                 }
+            }elseif($validQr[0]['used_at'] != null){
+                $fail['messages'] = "The voucher has been scanned or used.";
             }else{
                 // validate store voucher
                 if ($validStore = Self::cekStore($validQr[0], $post['store_code'])) {
                     $get = Self::returnVoucher($validQr, $post['store_code']);
-    
-                    return response()->json(MyHelper::checkGet($get));            
+
+                    return response()->json(MyHelper::checkGet($get));
                 }else{
                     $fail['messages'] = "This voucher is not available at this outlet.";
                 }
@@ -72,9 +74,9 @@ class CheckVoucher
     }
 
     /* VALIDATE QR */
-    /*static function validateQr($qrcode) 
+    /*static function validateQr($qrcode)
     {
-        
+
         // $var = 'https://chart.googleapis.com/chart?chl='.MyHelper::encryptQRCode($qrcode."-".time()).'&chs=250x250&cht=qr&chld=H%7C0';
         // $var = 'https://chart.googleapis.com/chart?chl='.MyHelper::encryptQRCode($deals->id_deals_user.MyHelper::createRandomPIN(6)).'&chs=250x250&cht=qr&chld=H%7C0';
         // print_r($var); exit();
@@ -98,33 +100,28 @@ class CheckVoucher
     }*/
 
     /* VALIDATE QR */
-    static function newValidateQr($type, $qrcode, $storecode) 
+    static function newValidateQr($type, $qrcode, $storecode)
     {
-    	
+
     	// $var = 'https://chart.googleapis.com/chart?chl='.MyHelper::encryptQRCode($deals->id_deals_user.MyHelper::createRandomPIN(6)).'&chs=250x250&cht=qr&chld=H%7C0';
     	// print_r($var); exit();
 
         if ($type == "qr") {
-    	   $qrcode = MyHelper::decryptQRCode($qrcode); 
+    	   $qrcode = MyHelper::decryptQRCode($qrcode);
         }
 
 		$dealsUser = DealsUser::where('voucher_hash_code', $qrcode)
-								->whereNull('used_at')
-								->with(['dealVoucher', 'dealVoucher.deal'])->get()->toArray();
-								
-								
-								
-		
+								->with(['dealVoucher', 'dealVoucher.deal', 'user'])->get()->toArray();
 
 		if ($dealsUser) {
 			return $dealsUser;
 		}
-    	
+
         return false;
     }
 
     /* CHECK DEALS */
-    static function validateStore($store_code, $idDeals) 
+    static function validateStore($store_code, $idDeals)
     {
     	$valid  = DealsOutlet::with(['outlet' => function($q) use ($store_code){
     	    $q->where('outlet_code', $store_code);
@@ -140,9 +137,9 @@ class CheckVoucher
 
     	return false;
     }
-    
+
     /* CHECK OUTLET VOUCHER */
-    static function cekStore($dealsUser, $outlet_code) 
+    static function cekStore($dealsUser, $outlet_code)
     {
         $outlet = Outlet::where('outlet_code', $outlet_code)->first();
         if($outlet){
@@ -165,26 +162,36 @@ class CheckVoucher
     	}
         $value = $deals[0]['deal_voucher']['deal']['deals_promo_id'];
 
+        $expired = Setting::where('key', 'qrcode_expired')->first();
+        if(!$expired || ($expired && $expired->value == null)){
+            $expired = '10';
+        }else{
+            $expired = $expired->value;
+        }
+
+        $timestamp = strtotime('+'.$expired.' minutes');
+
     	$voucher = [
     		'voucher' => [
 				'code'  => $deals[0]['deal_voucher']['voucher_code'],
 				'value' => $value,
 				'type'  => $type
-    		]
+            ],
+            'uid' => MyHelper::createQR($timestamp, $deals[0]['user']['phone'])
     	];
-    	
+
     	$outlet = Outlet::where('outlet_code', $storecode)->first();
-								
+
 								if($outlet){
 								    // foreach($dealsUser as $del){
                             		    $dealsUser = DealsUser::where('id_deals_user', $deals[0]['id_deals_user'])
                             								->update(['used_at' => date('Y-m-d H:i:s'), 'id_outlet' => $outlet['id_outlet']]);
                             // 		}
 								}
-    	
+
 
     	return $voucher;
     }
 
-	
+
 }

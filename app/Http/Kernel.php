@@ -19,7 +19,7 @@ class Kernel extends HttpKernel
         \App\Http\Middleware\TrimStrings::class,
         \Illuminate\Foundation\Http\Middleware\ConvertEmptyStringsToNull::class,
         // \App\Http\Middleware\TrustProxies::class,
-        \Fideloper\Proxy\TrustProxies::class,
+        //\Fideloper\Proxy\TrustProxies::class,
     ];
 
     /**
@@ -55,12 +55,15 @@ class Kernel extends HttpKernel
         // 'auth' => \Illuminate\Auth\Middleware\Authenticate::class,
         'auth' => \SMartins\PassportMultiauth\Http\Middleware\MultiAuthenticate::class,
         'auth.basic' => \Illuminate\Auth\Middleware\AuthenticateWithBasicAuth::class,
-		'auth_client' => \Laravel\Passport\Http\Middleware\CheckClientCredentials::class,
+        'auth_client' => \Laravel\Passport\Http\Middleware\CheckClientCredentials::class,
         'bindings' => \Illuminate\Routing\Middleware\SubstituteBindings::class,
         'can' => \Illuminate\Auth\Middleware\Authorize::class,
         'guest' => \App\Http\Middleware\RedirectIfAuthenticated::class,
         'throttle' => \Illuminate\Routing\Middleware\ThrottleRequests::class,
-        'log_request'    => \App\Http\Middleware\LogRequestMiddleware::class, 
+        'log_activities'    => \App\Http\Middleware\LogActivitiesMiddleware::class,
+        'log_activities_pos'    => \App\Http\Middleware\LogActivitiesPOSMiddleware::class,
+        'log_activities_pos_transaction'    => \App\Http\Middleware\LogActivitiesPOSTransactionMiddleware::class,
+        'log_activities_outlet_apps'    => \App\Http\Middleware\LogActivitiesOutletAppsMiddleware::class,
         'oauth.providers' => \SMartins\PassportMultiauth\Http\Middleware\AddCustomProvider::class,
         'custom_auth'    => \App\Http\Middleware\CustomAuth::class,
     ];

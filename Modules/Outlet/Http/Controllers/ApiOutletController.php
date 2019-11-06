@@ -21,6 +21,9 @@ use App\Http\Models\OutletSchedule;
 use App\Http\Models\Setting;
 use App\Http\Models\OauthAccessToken;
 
+use App\Imports\ExcelImport;
+use App\Imports\FirstSheetOnlyImport;
+
 use App\Lib\MyHelper;
 use Validator;
 use Hash;
@@ -28,6 +31,9 @@ use DB;
 use Mail;
 use Excel;
 use Storage;
+
+use Modules\Brand\Entities\BrandOutlet;
+use Modules\Brand\Entities\Brand;
 
 use Modules\Outlet\Http\Requests\outlet\Upload;
 use Modules\Outlet\Http\Requests\outlet\Update;
@@ -102,8 +108,19 @@ class ApiOutletController extends Controller
         if (isset($post['outlet_status'])) {
             $data['outlet_status'] = $post['outlet_status'];
         }
-        if (isset($post['deep_link'])) {
-            $data['deep_link'] = $post['deep_link'];
+        if (isset($post['outlet_brands'])) {
+            $data['outlet_brands'] = $post['outlet_brands'];
+        }
+        if (isset($post['deep_link_gojek'])) {
+            $data['deep_link_gojek'] = $post['deep_link_gojek'];
+        }
+        if (isset($post['deep_link_grab'])) {
+            $data['deep_link_grab'] = $post['deep_link_grab'];
+        }
+        if (isset($post['big_order'])) {
+            $data['big_order'] = $post['big_order'];
+        }else{
+            $data['big_order'] = 0;
         }
 
         return $data;
@@ -145,6 +162,18 @@ class ApiOutletController extends Controller
             DB::rollBack();
         }
 
+        if(is_array($brands=$post['outlet_brands']??false)){
+            if(in_array('*', $post['outlet_brands'])){
+                $brands=Brand::select('id_brand')->get()->toArray();
+                $brands=array_column($brands, 'id_brand');
+            }
+            foreach ($brands as $id_brand) {
+                BrandOutlet::create([
+                    'id_outlet'=>$save['id_outlet'],
+                    'id_brand'=>$id_brand
+                ]);
+            }
+        }
         //schedule
         if($request->json('day') && $request->json('open') && $request->json('close')){
             $days = $request->json('day');
@@ -154,7 +183,7 @@ class ApiOutletController extends Controller
             foreach($days as $key => $value){
                 $data['open'] = $opens[$key];
                 $data['close'] = $closes[$key];
-                $data['is_close'] = $is_closes[$key];
+                $data['is_close'] = $is_closed[$key];
                 $saveSchedule = OutletSchedule::updateOrCreate(['id_outlet' => $save['id_outlet'], 'day' => $value], $data);
                 if (!$saveSchedule) {
                     DB::rollBack();
@@ -172,9 +201,30 @@ class ApiOutletController extends Controller
      */
     function update(Update $request) {
         $post = $this->checkInputOutlet($request->json()->all());
+
+        DB::beginTransaction();
+        if(is_array($brands=$post['outlet_brands']??false)){
+            if(in_array('*', $post['outlet_brands'])){
+                $brands=Brand::select('id_brand')->get()->toArray();
+                $brands=array_column($brands, 'id_brand');
+            }
+            BrandOutlet::where('id_outlet',$request->json('id_outlet'))->delete();
+            foreach ($brands as $id_brand) {
+                BrandOutlet::create([
+                    'id_outlet'=>$request->json('id_outlet'),
+                    'id_brand'=>$id_brand
+                ]);
+            }
+        }
+
+        unset($post['outlet_brands']);
         $save = Outlet::where('id_outlet', $request->json('id_outlet'))->update($post);
         // return Outlet::where('id_outlet', $request->json('id_outlet'))->first();
-
+        if($save){
+            DB::commit();
+        }else{
+            DB::rollBack();
+        }
         return response()->json(MyHelper::checkUpdate($save));
     }
 
@@ -376,8 +426,10 @@ class ApiOutletController extends Controller
 
         if (isset($post['webview'])) {
             $outlet = Outlet::with(['today']);
+        }elseif(isset($post['admin']) && isset($post['type']) && $post['type'] == 'export'){
+            $outlet = Outlet::with(['user_outlets','city','today','product_prices','product_prices.product'])->select('*');
         }elseif(isset($post['admin'])){
-            $outlet = Outlet::with(['user_outlets'])->select('outlets.id_outlet', 'outlets.outlet_code', 'outlets.outlet_name');
+            $outlet = Outlet::with(['user_outlets','city','today'])->select('*');
             if(isset($post['id_product'])){
                 $outlet = $outlet->with(['product_prices'=> function($q) use ($post){
                     $q->where('id_product', $post['id_product']);
@@ -386,12 +438,39 @@ class ApiOutletController extends Controller
                 $outlet = $outlet->with(['product_prices']);
             }
         }
-        else {
-            $outlet = Outlet::with(['city', 'outlet_photos', 'outlet_schedules', 'today', 'user_outlets']);
+        elseif($post['simple_result']??false) {
+            $outlet = Outlet::select('outlets.id_outlet','outlets.outlet_name');
+        }else{
+            $outlet = Outlet::with(['city', 'outlet_photos', 'outlet_schedules', 'today', 'user_outlets','brands']);
+            if(!($post['id_outlet']??false)||!($post['id_outlet']??false)){
+                $outlet->select('outlets.id_outlet','outlets.outlet_name','outlets.outlet_code','outlets.outlet_status','outlets.outlet_address','outlets.id_city','outlet_latitude','outlet_longitude');
+            }
+        }
+        if($post['rule']??false){
+            $this->filterList($outlet,$post['rule'],$post['operator']??'and');
+        }
+        if(($post['order_field']??false)&&($post['order_method']??false)){
+            $outlet->orderBy($post['order_field'],$post['order_method']);
+        }
+        if($post['simple_result']??false){
+            $outlet->select('outlets.id_outlet','outlets.outlet_name');
+        }
+        if(is_array($post['id_brand']??false)&&$post['id_brand']){
+            $outlet->leftJoin('brand_outlet','outlets.id_outlet','brand_outlet.id_outlet');
+            $id_brands=$post['id_brand'];
+            $outlet->where(function($query) use ($id_brands){
+                foreach ($id_brands as $id_brand) {
+                    $query->orWhere('brand_outlet.id_brand',$id_brand);
+                }
+            });
+        }
+
+        if($post['key_free']??false){
+            $outlet->where('outlets.outlet_name','LIKE','%'.$post['key_free'].'%');
         }
 
         if (isset($post['outlet_code'])) {
-            $outlet->with(['holidays', 'holidays.date_holidays'])->where('outlet_code', $post['outlet_code']);
+            $outlet->with(['holidays', 'holidays.date_holidays','brands'])->where('outlet_code', $post['outlet_code']);
         }
 
         if (isset($post['id_outlet'])) {
@@ -410,6 +489,9 @@ class ApiOutletController extends Controller
         if(stristr($_SERVER['HTTP_USER_AGENT'],'okhttp')) $useragent = 'Android';
         if($useragent == 'Android' || $useragent == 'iOS'){
             $outlet = $outlet->where('outlet_status', 'Active')->whereNotNull('id_city');
+            $outlet->whereHas('brands',function($query){
+                $query->where('brand_active','1');
+            });
         }
 
         // qrcode
@@ -424,6 +506,7 @@ class ApiOutletController extends Controller
 
                     $outlet['data'][$key]['qrcode'] = $qrCode;
                 }
+                $loopdata=&$outlet['data'];
             }else{
                 $outlet = $outlet->orderBy('outlet_name')->get()->toArray();
                 foreach ($outlet as $key => $value) {
@@ -434,16 +517,24 @@ class ApiOutletController extends Controller
 
                     $outlet[$key]['qrcode'] = $qrCode;
                 }
+                $loopdata=&$outlet;
             }
             $request['page'] = 0;
         }else{
             $outlet = $outlet->orderBy('outlet_name')->get()->toArray();
+            $loopdata=&$outlet;
         }
 
         if(isset($post['type']) && $post['type'] == 'transaction'){
             $outlet = $this->setAvailableOutlet($outlet);
         }
-
+        $loopdata = array_map(function($var) use ($post){
+            $var['url']=env('API_URL').'api/outlet/webview/'.$var['id_outlet'];
+            if(($post['latitude']??false)&&($post['longitude']??false)){
+                $var['distance']=number_format((float)$this->distance($post['latitude'], $post['longitude'], $var['outlet_latitude'], $var['outlet_longitude'], "K"), 2, '.', '').' km';
+            }
+            return $var;
+        }, $loopdata);
         if (isset($post['webview'])) {
             if(isset($outlet[0])){
                 $latitude  = $post['latitude'];
@@ -451,22 +542,32 @@ class ApiOutletController extends Controller
                 $jaraknya = number_format((float)$this->distance($latitude, $longitude, $outlet[0]['outlet_latitude'], $outlet[0]['outlet_longitude'], "K"), 2, '.', '');
                 $outlet[0]['distance'] = $jaraknya." km";
 
-                $outlet[0]['url'] = env('VIEW_URL').'/outlet/webview/'.$post['id_outlet'];
+                $outlet[0]['url'] = env('API_URL').'api/outlet/webview/'.$post['id_outlet'];
 
                 if(isset($outlet[0]['holidays'])) unset($outlet[0]['holidays']);
             }
         }
-
+        if($post['simple_result']??false){
+            $outlet=array_map(function($var){
+                return [
+                    'id_outlet'=>$var['id_outlet'],
+                    'outlet_name'=>$var['outlet_name']
+                ];
+            },$outlet);
+        }
+        if($outlet&&($post['id_outlet']??false)){
+            $var=&$outlet[0];
+            $var['deep_link_gojek']=$var['deep_link_gojek']??'';
+            $var['deep_link_grab']=$var['deep_link_grab']??'';
+        }
         if(isset($request['page']) && $request['page'] > 0){
             $page = $request['page'];
             $next_page = $page + 1;
 
             $dataOutlet = $outlet;
             $outlet = [];
-
-            $pagingOutlet = $this->pagingOutlet($dataOutlet, $page);
+            $pagingOutlet=$this->pagingOutlet($dataOutlet, $page,$post['take']??15);
             if (isset($pagingOutlet['data']) && count($pagingOutlet['data']) > 0) {
-                $outlet['status'] = 'success';
                 $outlet['current_page']  = $page;
                 $outlet['data']          = $pagingOutlet['data'];
                 $outlet['total']         = count($dataOutlet);
@@ -476,9 +577,7 @@ class ApiOutletController extends Controller
                     $outlet['next_page_url'] = ENV('APP_API_URL').'api/outlet/list?page='.$next_page;
                 }
             } else {
-                $outlet['status'] = 'fail';
-                $outlet['messages'] = ['empty'];
-
+                $outlet = [];
             }
         }
 
@@ -502,14 +601,17 @@ class ApiOutletController extends Controller
         $longitude = $request->json('longitude');
 
         if(!$latitude || !$longitude){
-            return response()->json(['status' => 'success', 'messages' => ['We need to access your location']]);
+            return response()->json(['status' => 'fail', 'messages' => ['Pastikan pengaturan lokasi pada smartphone terhubung']]);
         }
 
         // outlet
-        $outlet = Outlet::with(['today', 'city', 'outlet_photos'])->where('outlet_status', 'Active')->whereNotNull('id_city')->orderBy('outlet_name','asc');
+        $outlet = Outlet::select('outlets.id_outlet','outlets.outlet_name','outlets.outlet_phone','outlets.outlet_code','outlets.outlet_status','outlets.outlet_address','outlets.id_city','outlet_latitude','outlet_longitude')->where('outlet_status', 'Active')->whereNotNull('id_city')->orderBy('outlet_name','asc');
         if($request->json('search') && $request->json('search') != ""){
             $outlet = $outlet->where('outlet_name', 'LIKE', '%'.$request->json('search').'%');
         }
+        $outlet->whereHas('brands',function($query){
+            $query->where('brand_active','1');
+        });
         $outlet = $outlet->get()->toArray();
 
         if (!empty($outlet)) {
@@ -528,7 +630,7 @@ class ApiOutletController extends Controller
                 $outlet = $this->setAvailableOutlet($outlet);
             }
         }else{
-            return response()->json(['status' => 'success', 'messages' => ['There is no open store','at this moment']]);
+            return response()->json(['status' => 'fail', 'messages' => ['There is no open store','at this moment']]);
         }
 
         if(isset($request['page']) && $request['page'] > 0){
@@ -540,7 +642,6 @@ class ApiOutletController extends Controller
 
             $pagingOutlet = $this->pagingOutlet($dataOutlet, $page);
             if (isset($pagingOutlet['data']) && count($pagingOutlet['data']) > 0) {
-                $outlet['status'] = 'success';
                 $outlet['current_page']  = $page;
                 $outlet['data']          = $pagingOutlet['data'];
                 $outlet['total']         = count($dataOutlet);
@@ -550,12 +651,12 @@ class ApiOutletController extends Controller
                     $outlet['next_page_url'] = ENV('APP_API_URL').'api/outlet/nearme?page='.$next_page;
                 }
             } else {
-                return response()->json(['status' => 'success', 'messages' => ['There is no open store','at this moment']]);
+                return response()->json(['status' => 'fail', 'messages' => ['There is no open store','at this moment']]);
             }
         }
 
         if(!$outlet){
-            return response()->json(['status' => 'success', 'messages' => ['There is no open store','at this moment']]);
+            return response()->json(['status' => 'fail', 'messages' => ['There is no open store','at this moment']]);
         }
 
         return response()->json(MyHelper::checkGet($outlet));
@@ -567,7 +668,7 @@ class ApiOutletController extends Controller
         $longitude = $request->json('longitude');
 
         if(!$latitude || !$longitude){
-            return response()->json(['status' => 'success', 'messages' => ['We need to access your location']]);
+            return response()->json(['status' => 'success', 'messages' => ['Pastikan pengaturan lokasi pada smartphone terhubung']]);
         }
 
         // outlet
@@ -629,18 +730,17 @@ class ApiOutletController extends Controller
         return response()->json(MyHelper::checkGet($outlet));
     }
 
-    public function pagingOutlet($data, $page) {
+    public function pagingOutlet($data, $page,$paginate=15) {
         $next = false;
 
         if ($page > 0) {
             $resultData = [];
-            $paginate   = 15;
             $start      = $paginate * ($page - 1);
             $all        = $paginate * $page;
             $end        = $all;
             $next       = true;
 
-            if ($all > count($data)) {
+            if ($all >= count($data)) {
                 $end = count($data);
                 $next = false;
             }
@@ -694,13 +794,14 @@ class ApiOutletController extends Controller
 
 	/* Filter*/
     function filter(Filter $request) {
+        $post=$request->except('_token');
         $latitude  = $request->json('latitude');
         $longitude = $request->json('longitude');
 
         if(!isset($latitude) || !isset($longitude)){
             return response()->json([
-                'status' => 'success',
-                'messages' => ['We need to access your location']
+                'status' => 'fail',
+                'messages' => ['Pastikan pengaturan lokasi pada smartphone terhubung']
             ]);
         }
 
@@ -708,15 +809,37 @@ class ApiOutletController extends Controller
         $id_city = $request->json('id_city');
         $sort = $request->json('sort');
         $gofood = $request->json('gofood');
+        $grabfood = $request->json('grabfood');
 
         // outlet
-        $outlet = Outlet::with(['today', 'city', 'outlet_photos'])->where('outlet_status', 'Active')->whereNotNull('id_city')->orderBy('outlet_name','asc');
+        $outlet = Outlet::with(['today'])->select('outlets.id_outlet','outlets.outlet_name','outlets.outlet_phone','outlets.outlet_code','outlets.outlet_status','outlets.outlet_address','outlets.id_city','outlet_latitude','outlet_longitude')->where('outlet_status', 'Active')->whereNotNull('id_city')->orderBy('outlet_name','asc');
+
+        $outlet->whereHas('brands',function($query){
+            $query->where('brand_active','1');
+        });
+
+        $countAll=$outlet->count();
+
+        if(is_array($post['id_brand']??false)&&$post['id_brand']){
+            $outlet->leftJoin('brand_outlet','outlets.id_outlet','brand_outlet.id_outlet');
+            $id_brands=$post['id_brand'];
+            $outlet->where(function($query) use ($id_brands){
+                foreach ($id_brands as $id_brand) {
+                    $query->orWhere('brand_outlet.id_brand',$id_brand);
+                }
+            });
+        }
+
         if($request->json('search') && $request->json('search') != ""){
             $outlet = $outlet->where('outlet_name', 'LIKE', '%'.$request->json('search').'%');
         }
 
-        if (isset($gofood)) {
-            $outlet = $outlet->whereNotNull('deep_link');
+        if ($gofood) {
+            $outlet = $outlet->whereNotNull('deep_link_gojek');
+        }
+
+        if ($grabfood) {
+            $outlet = $outlet->whereNotNull('deep_link_grab');
         }
 
         $outlet = $outlet->get()->toArray();
@@ -769,7 +892,14 @@ class ApiOutletController extends Controller
                 $urutan = $this->setAvailableOutlet($urutan);
             }
         } else {
-            return response()->json(['status' => 'success', 'messages' => ['There is no open store','at this moment']]);
+            if($countAll){
+                if($request->json('search')){
+                    return response()->json(['status' => 'fail', 'messages' => ['Data tidak ditemukan']]);
+                }
+                return response()->json(['status' => 'fail', 'messages' => ['empty']]);
+            }else{
+                return response()->json(['status' => 'fail', 'messages' => ['There is no open store','at this moment']]);
+            }
         }
 
         // if (!isset($request['page'])) {
@@ -785,7 +915,6 @@ class ApiOutletController extends Controller
 
             $pagingOutlet = $this->pagingOutlet($dataOutlet, $page);
             if (isset($pagingOutlet['data']) && count($pagingOutlet['data']) > 0) {
-                $urutan['status'] = 'success';
                 $urutan['current_page']  = $page;
                 $urutan['data']          = $pagingOutlet['data'];
                 $urutan['total']         = count($dataOutlet);
@@ -795,11 +924,19 @@ class ApiOutletController extends Controller
                     $urutan['next_page_url'] = ENV('APP_API_URL').'api/outlet/filter?page='.$next_page;
                 }
             } else {
-                return response()->json(['status' => 'success', 'messages' => ['There is no open store','at this moment']]);
+                if($countAll){
+                    return response()->json(['status' => 'fail', 'messages' => ['empty']]);
+                }else{
+                    return response()->json(['status' => 'fail', 'messages' => ['There is no open store','at this moment']]);
+                }
             }
         }
         if(!$urutan){
-            return response()->json(['status' => 'success', 'messages' => ['There is no open store','at this moment']]);
+            if($countAll){
+                return response()->json(['status' => 'fail', 'messages' => ['empty']]);
+            }else{
+                return response()->json(['status' => 'fail', 'messages' => ['There is no open store','at this moment']]);
+            }
         }
         return response()->json(MyHelper::checkGet($urutan));
     }
@@ -812,7 +949,7 @@ class ApiOutletController extends Controller
         if(!isset($latitude) || !isset($longitude)){
             return response()->json([
                 'status' => 'success',
-                'messages' => ['We need to access your location']
+                'messages' => ['Pastikan pengaturan lokasi pada smartphone terhubung']
             ]);
         }
 
@@ -967,6 +1104,10 @@ class ApiOutletController extends Controller
     /* Penghitung jarak */
     function distance($lat1, $lon1, $lat2, $lon2, $unit) {
         $theta = $lon1 - $lon2;
+        $lat1=floatval($lat1);
+        $lat2=floatval($lat2);
+        $lon1=floatval($lon1);
+        $lon2=floatval($lon2);
         $dist  = sin(deg2rad($lat1)) * sin(deg2rad($lat2)) +  cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * cos(deg2rad($theta));
         $dist  = acos($dist);
         $dist  = rad2deg($dist);
@@ -1195,125 +1336,160 @@ class ApiOutletController extends Controller
     }
 
     function export(Request $request) {
-            $outlet = Outlet::select('outlets.outlet_code as code',
+        $brands=$request->json('brands');
+        $combo=$request->json('outlet_type')=='combo';
+        $all=$request->json('outlet_type')=='all';
+        $return=[];
+        foreach ($brands??[[]] as $brand) {
+            $outlets = Outlet::select('id_outlet','outlets.outlet_code as code',
             'outlets.outlet_name as name',
             'outlets.outlet_address as address',
             'cities.city_name as city',
             'outlets.outlet_phone as phone',
             'outlets.outlet_email as email',
             'outlets.outlet_latitude as latitude',
-            'outlets.outlet_longitude as longitude',
-            'outlets.outlet_open_hours as open_hours',
-            'outlets.outlet_close_hours as close_hours'
-            )->join('cities', 'outlets.id_city', '=', 'cities.id_city');
+            'outlets.outlet_longitude as longitude'
+            )->with('brands')->join('cities', 'outlets.id_city', '=', 'cities.id_city');
 
-            $outlet = $outlet->get()->toArray();
+            foreach ($brand as $bran) {
+                $outlets->whereHas('brands',function($query) use ($brand){
+                    $query->where('brands.id_brand',$brand);
+                });
+            }
 
-            return response()->json(MyHelper::checkGet($outlet));
+            $outlets = $outlets->get();
+            $count=0;
+            foreach ($outlets as $outlet) {
+                if($all){
+                    $name='All Type';
+                }else{
+                    if(count($outlet->brands)!=count($brand)){
+                        continue;
+                    }
+                    $continue=false;
+                    foreach ($outlet->brands as $outlet_brand) {
+                        if(!in_array($outlet_brand->id_brand, $brand)){
+                            $continue=true;
+                            continue;
+                        }
+                    }
+                    if($continue){
+                        continue;
+                    }
+                    if($combo){
+                        $name=$outlet->brands[0]->name_brand.','.$outlet->brands[1]->name_brand;
+                    }else{
+                        $name=$outlet->brands[0]->name_brand;
+                    }
+                }
+                $outlet_array=$outlet->toArray();
+                unset($outlet_array['call']);
+                unset($outlet_array['url']);
+                unset($outlet_array['brands']);
+                $return[$name][]=$outlet_array;
+                $count++;
+            }
+            // if no outlet found
+            if(!$count){
+                //get name brand
+                $brand_name=Brand::select('name_brand')->whereIn('id_brand',$brand)->get()->pluck('name_brand')->toArray();
+                //return empty
+                $return[implode(',', $brand_name)][]=[
+                    'code'=>'',
+                    'name'=>'',
+                    'address'=>'',
+                    'city'=>'',
+                    'phone'=>'',
+                    'email'=>'',
+                    'latitude'=>'',
+                    'longitude'=>''
+                ];
+            }
+
+        }
+        return response()->json(MyHelper::checkGet($return));
     }
 
-    function import(Request $request) {
-        $path = $request->file('import_file')->getRealPath();
-        $dataimport = Excel::load($path, function($reader) {})->get();
+    function import(Request $request)
+    {
+        $post = $request->json()->all();
+        $dataimport = $post['data_import'];
 
-        if(!empty($dataimport) && $dataimport->count()){
-        $city = City::get();
-        $id_city = array_pluck($city, 'id_city');
-        $city_name = array_pluck($city, 'city_name');
-        $city_name = array_map('strtolower', $city_name);
+        if(!empty($dataimport) && count($dataimport)){
+            $city = City::get();
+            $id_city = array_pluck($city, 'id_city');
+            $city_name = array_pluck($city, 'city_name');
+            $city_name = array_map('strtolower', $city_name);
 
-        DB::beginTransaction();
-        $countImport = 0;
-        foreach ($dataimport as $key => $value) {
-            if(
-                empty($value->code) &&
-                empty($value->name) &&
-                empty($value->address) &&
-                empty($value->city) &&
-                empty($value->phone) &&
-                empty($value->latitude) &&
-                empty($value->longitude) &&
-                empty($value->open_hours) &&
-                empty($value->close_hours)
-            )
-            {}else{
-                $search = array_search(strtolower($value->city), $city_name);
-                if(!empty($search) && $key < count($dataimport)){
-                    if(!empty($value->open_hours)){
-                        $value->open_hours = date('H:i:s', strtotime($value->open_hours));
-                    }
-                    if(!empty($value->close_hours)){
-                        $value->close_hours = date('H:i:s', strtotime($value->open_hours));
-                    }
-                    if(empty($value->code)){
-                        do{
-                            $value->code = MyHelper::createRandomPIN(3);
-                            $code = Outlet::where('outlet_code', $value->code)->first();
-                        }while($code != null);
-                    }
-                    $code = ['outlet_code' => $value->code];
-                    $insert = [
-                        'outlet_code' => $value->code,
-                        'outlet_name' => $value->name,
-                        'outlet_address' => $value->address,
-                        'outlet_postal_code' => $value->postal_code,
-                        'outlet_phone' => $value->phone,
-                        'outlet_email' => $value->email,
-                        'outlet_latitude' => $value->latitude,
-                        'outlet_longitude' => $value->longitude,
-                        'outlet_open_hours' => $value->open_hours,
-                        'outlet_close_hours' => $value->close_hours,
-                        'id_city' => $id_city[$search]
-                    ];
-
-                    if(!empty($insert['outlet_name'])){
-                        $save = Outlet::updateOrCreate($code, $insert);
-
-                        if(empty($save)){
-                            DB::rollBack();
-                            return response()->json([
-                                'status'    => 'fail',
-                                'messages'      => [
-                                    'Something went wrong'
-                                ]
-                            ]);
-                        }else{
-                            $countImport++;
+            DB::beginTransaction();
+            $countImport = 0;
+            foreach ($dataimport as $key => $value) {
+                if(
+                    empty($value['code']) &&
+                    empty($value['name']) &&
+                    empty($value['address']) &&
+                    empty($value['city']) &&
+                    empty($value['phone']) &&
+                    empty($value['latitude']) &&
+                    empty($value['longitude']) &&
+                    empty($value['open_hours']) &&
+                    empty($value['close_hours'])
+                ){}else{
+                    $search = array_search(strtolower($value['city']), $city_name);
+                    if(!empty($search) && $key < count($dataimport)){
+                        if(!empty($value['open_hours'])){
+                            $value['open_hours'] = date('H:i:s', strtotime($value['open_hours']));
                         }
-                    }else{
-                        if($key == count($dataimport) - 1){
+                        if(!empty($value['close_hours'])){
+                            $value['close_hours'] = date('H:i:s', strtotime($value['close_hours']));
+                        }
+                        if(empty($value['code'])){
+                            do{
+                                $value['code'] = MyHelper::createRandomPIN(3);
+                                $code = Outlet::where('outlet_code', $value['code'])->first();
+                            }while($code != null);
+                        }
+                        $code = ['outlet_code' => $value['code']];
+                        $insert = [
+                            'outlet_code' => $value['code']??'',
+                            'outlet_name' => $value['name']??'',
+                            'outlet_address' => $value['address']??'',
+                            'outlet_postal_code' => $value['postal_code']??'',
+                            'outlet_phone' => $value['phone']??'',
+                            'outlet_email' => $value['email']??'',
+                            'outlet_latitude' => $value['latitude']??'',
+                            'outlet_longitude' => $value['longitude']??'',
+                            'outlet_open_hours' => $value['open_hours']??'',
+                            'outlet_close_hours' => $value['close_hours']??'',
+                            'id_city' => $id_city[$search]??null
+                        ];
+                        if(!empty($insert['outlet_name'])){
+                            $save = Outlet::updateOrCreate($code, $insert);
+
+                            if(empty($save)){
+                                DB::rollBack();
+                                return response()->json([
+                                    'status'    => 'fail',
+                                    'messages'      => [
+                                        'Data city not found.'
+                                    ]
+                                ]);
+                            } else {
+                                $countImport++;
+                            }
+                        } else {
                             DB::commit();
-                            if($save) return ['status' => 'success', 'message' => $countImport.' data successfully imported.'];
-                            else return ['status' => 'fail','messages' => ['failed to update data']];
-                        }else{
-                            DB::rollBack();
-                            return response()->json([
-                                'status'    => 'fail',
-                                'messages'  => 'outlet name is required.'
-                            ]);
+                            if ($save) return ['status' => 'success', 'message' => $countImport . ' data successfully imported.'];
+                            else return ['status' => 'fail', 'messages' => ['failed to update data']];
                         }
-                    }
-                }else{
-                    if($key < count($dataimport)){
-                        DB::rollBack();
-                        return response()->json([
-                            'status'    => 'fail',
-                            'messages'      => [
-                                'Data city not found.'
-                                ]
-                            ]);
-                    }else{
-                    DB::commit();
-                    if($save) return ['status' => 'success', 'message' => $countImport.' data successfully imported.'];
-                    else return ['status' => 'fail','messages' => ['failed to update data']];
                     }
                 }
             }
-        }
 
-        DB::commit();
-        if($save) return ['status' => 'success', 'message' => $countImport.' data successfully imported.'];
-        else return ['status' => 'fail','messages' => ['failed to update data']];
+            DB::commit();
+
+            if($save??false) return ['status' => 'success', 'message' => $countImport.' data successfully imported.'];
+            else return ['status' => 'fail','messages' => ['failed to update data']];
         }else{
             return response()->json([
                 'status'    => 'fail',
@@ -1427,5 +1603,83 @@ class ApiOutletController extends Controller
 
         DB::commit();
         return response()->json(['status' => 'success']);
+    }
+
+    public function filterList($model,$rule,$operator='and'){
+        $newRule=[];
+        $where=$operator=='and'?'where':'orWhere';
+        foreach ($rule as $var) {
+            $var1=['operator'=>$var['operator']??'=','parameter'=>$var['parameter']??null];
+            if($var1['operator']=='like'){
+                $var1['parameter']='%'.$var1['parameter'].'%';
+            }
+            $newRule[$var['subject']][]=$var1;
+        }
+        if($newRule['all_empty']??false){
+                $model->$where(function($query){
+                    $all=['id_city','outlet_latitude','outlet_longitude'];
+                    foreach ($all as $field) {
+                        $query->where(function($query) use($field){
+                            $query->where($field,'=','')->orWhereNull($field);
+                        });
+                    }
+                });
+        }
+        if($newRule['empty']??false){
+            $all=array_column($newRule['empty'],'parameter');
+            foreach ($all as $field) {
+                $model->$where(function($query) use ($field){
+                    $query->where($field,'')->orWhereNull($field);
+                });
+            }
+        }
+        if($rules=$newRule['id_brand']??false){
+            foreach ($rules as $rul) {
+                $model->{$where.'Has'}('brands',function($query) use ($rul){
+                    $query->where('brands.id_brand',$rul['operator'],$rul['parameter']);
+                });
+            }
+        }
+        $inner=['outlet_code'];
+        foreach ($inner as $col_name) {
+            if($rules=$newRule[$col_name]??false){
+                foreach ($rules as $rul) {
+                    $model->$where('outlets.'.$col_name,$rul['operator'],$rul['parameter']);
+                }
+            }
+        }
+    }
+
+    public function batchUpdate(Request $request){
+        $posts=$request->json()->all();
+        DB::beginTransaction();
+        $save=1;
+        foreach ($posts['outlets']??[] as $id_outlet=>$data) {
+            $post = $this->checkInputOutlet($data);
+            $save_t = Outlet::where('id_outlet', $id_outlet)->update($post);
+            // return Outlet::where('id_outlet', $request->json('id_outlet'))->first();
+            if(!$save_t){
+                $save=0;
+                break;
+            }
+        }
+        if($save){
+            DB::commit();
+            return ['status'=>'success'];
+        }
+        DB::rollBack();
+        return ['status'=>'fail'];
+    }
+
+    public function ajaxHandler(Request $request){
+        $post=$request->except('_token');
+        $q=(new Outlet)->newQuery();
+        if($post['select']??false){
+            $q->select($post['select']);
+        }
+        if($condition=$post['condition']??false){
+            $this->filterList($q,$condition['rules']??'',$condition['operator']??'and');
+        }
+        return MyHelper::checkGet($q->get());
     }
 }

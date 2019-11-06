@@ -6,24 +6,24 @@ class AutocrmsTableSeeder extends Seeder
 {
     public function run()
     {
-        
+
 
         \DB::table('autocrms')->delete();
-        
+
         \DB::table('autocrms')->insert(array (
-            0 => 
+            0 =>
             array (
                 'id_autocrm' => 1,
                 'autocrm_type' => 'Response',
                 'autocrm_trigger' => 'Daily',
                 'autocrm_cron_reference' => NULL,
                 'autocrm_title' => 'Login Success',
-                'autocrm_email_toogle' => '1',
+                'autocrm_email_toogle' => '0',
                 'autocrm_sms_toogle' => '0',
-                'autocrm_push_toogle' => '0',
+                'autocrm_push_toogle' => '1',
                 'autocrm_inbox_toogle' => '0',
-                'autocrm_forward_toogle' => '1',
-                'autocrm_email_subject' => 'Login Success in Your Natasha account',
+                'autocrm_forward_toogle' => '0',
+                'autocrm_email_subject' => 'Login Success in Your account',
                 'autocrm_email_content' => 'Hello %name%, You are recently logged in Your Account:
 <br><br>
 Time: %now%<br>
@@ -33,35 +33,36 @@ Device: %useragent%
 If this is not You, please change Your password immidiately!',
                 'autocrm_sms_content' => 'Hello, This is SMS. Login success detected',
                 'autocrm_push_subject' => 'Hello, This is Push Notification Subject. Login success detected',
-                'autocrm_push_content' => 'Halo, Anda sudah login ke account Natasha Anda.',
+                'autocrm_push_content' => 'Halo, Anda sudah berhasil login ke account Anda.',
                 'autocrm_push_image' => NULL,
                 'autocrm_push_clickto' => 'Home',
                 'autocrm_push_link' => NULL,
                 'autocrm_push_id_reference' => NULL,
                 'autocrm_inbox_subject' => 'Hello, This is Inbox Notification Subject. Login success detected',
                 'autocrm_inbox_content' => 'Hello, This is Inbox Notification Subject. Login success detected',
-                'autocrm_forward_email' => 'wizemakers@gmail.com;ivankp@technopartner.id',
+                'autocrm_forward_email' => NULL,
                 'autocrm_forward_email_subject' => 'Login detected',
             'autocrm_forward_email_content' => '<p>There are login at account %title%,%name% (%phone%):</p><p>Time: %now%<br>
 IP Address: %ip%<br>
 Device: %useragent%
 </p><p>City: %city%</p><p>Level: %level%</p><p>Birthday: %birthday%</p><p>Points: %points%</p><p>Now: %now%</p><p>%useragent%<br></p>',
+                'custom_text_replace'=>'%ip%;%useragent%;%now%',
                 'created_at' => '2018-03-12 13:53:17',
                 'updated_at' => '2018-05-03 15:01:56',
             ),
-            1 => 
+            1 =>
             array (
                 'id_autocrm' => 2,
                 'autocrm_type' => 'Response',
                 'autocrm_trigger' => 'Daily',
                 'autocrm_cron_reference' => NULL,
                 'autocrm_title' => 'Login Failed',
-                'autocrm_email_toogle' => '1',
+                'autocrm_email_toogle' => '0',
                 'autocrm_sms_toogle' => '0',
                 'autocrm_push_toogle' => '1',
                 'autocrm_inbox_toogle' => '1',
-                'autocrm_forward_toogle' => '1',
-                'autocrm_email_subject' => 'Login Failed in Your Natasha account',
+                'autocrm_forward_toogle' => '0',
+                'autocrm_email_subject' => 'Login Failed in Your account',
                 'autocrm_email_content' => 'Hello %name%, There are an attempt to login in Your Account:
 <br><br>
 Time: %now%<br>
@@ -76,15 +77,16 @@ The login is failed. Make sure Your password is safe.',
                 'autocrm_push_clickto' => 'Home',
                 'autocrm_push_link' => NULL,
                 'autocrm_push_id_reference' => NULL,
-                'autocrm_inbox_subject' => 'Ini subjectnya',
-                'autocrm_inbox_content' => '<p>Test wkwkwkw, Hello %name%<br></p>',
-                'autocrm_forward_email' => 'wizemakers@gmail.com;ivankp@technopartner.id',
+                'autocrm_inbox_subject' => 'Login Failed Detected',
+                'autocrm_inbox_content' => NULL,
+                'autocrm_forward_email' => NULL,
                 'autocrm_forward_email_subject' => 'Failed to Login',
                 'autocrm_forward_email_content' => '<p>Failed to Login<br></p>',
+                'custom_text_replace'=>'%ip%;%useragent%;%now%',
                 'created_at' => '2018-03-12 13:53:17',
                 'updated_at' => '2018-05-03 15:02:00',
             ),
-            2 => 
+            2 =>
             array (
                 'id_autocrm' => 3,
                 'autocrm_type' => 'Response',
@@ -92,8 +94,8 @@ The login is failed. Make sure Your password is safe.',
                 'autocrm_cron_reference' => NULL,
                 'autocrm_title' => 'Pin Sent',
                 'autocrm_email_toogle' => '0',
-                'autocrm_sms_toogle' => '0',
-                'autocrm_push_toogle' => '1',
+                'autocrm_sms_toogle' => '1',
+                'autocrm_push_toogle' => '0',
                 'autocrm_inbox_toogle' => '0',
                 'autocrm_forward_toogle' => '0',
                 'autocrm_email_subject' => 'Hello, Bro Your PIN is %pin%',
@@ -110,19 +112,20 @@ The login is failed. Make sure Your password is safe.',
                 'autocrm_forward_email' => NULL,
                 'autocrm_forward_email_subject' => NULL,
                 'autocrm_forward_email_content' => NULL,
+                'custom_text_replace'=>'%pin%',
                 'created_at' => '2018-03-12 13:53:17',
                 'updated_at' => '2018-05-03 15:02:05',
             ),
-            3 => 
+            3 =>
             array (
                 'id_autocrm' => 4,
                 'autocrm_type' => 'Response',
                 'autocrm_trigger' => 'Daily',
                 'autocrm_cron_reference' => NULL,
                 'autocrm_title' => 'Pin Changed',
-                'autocrm_email_toogle' => '1',
+                'autocrm_email_toogle' => '0',
                 'autocrm_sms_toogle' => '0',
-                'autocrm_push_toogle' => '0',
+                'autocrm_push_toogle' => '1',
                 'autocrm_inbox_toogle' => '0',
                 'autocrm_forward_toogle' => '0',
                 'autocrm_email_subject' => 'Hello, Your PIN is was changed',
@@ -139,10 +142,11 @@ The login is failed. Make sure Your password is safe.',
                 'autocrm_forward_email' => NULL,
                 'autocrm_forward_email_subject' => NULL,
                 'autocrm_forward_email_content' => NULL,
+                'custom_text_replace'=>'',
                 'created_at' => '2018-03-12 13:53:17',
                 'updated_at' => '2018-05-03 15:02:10',
             ),
-            4 => 
+            4 =>
             array (
                 'id_autocrm' => 5,
                 'autocrm_type' => 'Response',
@@ -151,14 +155,14 @@ The login is failed. Make sure Your password is safe.',
                 'autocrm_title' => 'Pin Verify',
                 'autocrm_email_toogle' => '0',
                 'autocrm_sms_toogle' => '0',
-                'autocrm_push_toogle' => '0',
+                'autocrm_push_toogle' => '1',
                 'autocrm_inbox_toogle' => '0',
                 'autocrm_forward_toogle' => '0',
                 'autocrm_email_subject' => 'Hello, Your Phone Number is Verified',
                 'autocrm_email_content' => 'Hello, Your Phone Number is Verified',
                 'autocrm_sms_content' => 'Hello, Your Phone Number is Verified',
-                'autocrm_push_subject' => NULL,
-                'autocrm_push_content' => NULL,
+                'autocrm_push_subject' => 'Hello, Your Phone Number is Verified',
+                'autocrm_push_content' => 'Hello, Your Phone Number is Verified',
                 'autocrm_push_image' => NULL,
                 'autocrm_push_clickto' => NULL,
                 'autocrm_push_link' => NULL,
@@ -168,10 +172,11 @@ The login is failed. Make sure Your password is safe.',
                 'autocrm_forward_email' => NULL,
                 'autocrm_forward_email_subject' => NULL,
                 'autocrm_forward_email_content' => NULL,
+                'custom_text_replace'=>'',
                 'created_at' => '2018-03-12 13:53:17',
                 'updated_at' => '2018-05-03 15:02:14',
             ),
-            5 => 
+            5 =>
             array (
                 'id_autocrm' => 6,
                 'autocrm_type' => 'Response',
@@ -181,26 +186,27 @@ The login is failed. Make sure Your password is safe.',
                 'autocrm_email_toogle' => '1',
                 'autocrm_sms_toogle' => '0',
                 'autocrm_push_toogle' => '1',
-                'autocrm_inbox_toogle' => '1',
-                'autocrm_forward_toogle' => '1',
+                'autocrm_inbox_toogle' => '0',
+                'autocrm_forward_toogle' => '0',
                 'autocrm_email_subject' => 'Transaction Success',
                 'autocrm_email_content' => 'Transaction Success',
-                'autocrm_sms_content' => 'Hello, Your Phone Number is Verified',
-                'autocrm_push_subject' => NULL,
-                'autocrm_push_content' => NULL,
+                'autocrm_sms_content' => NULL,
+                'autocrm_push_subject' => 'Transaction Success',
+                'autocrm_push_content' => 'Transaction Success',
                 'autocrm_push_image' => NULL,
                 'autocrm_push_clickto' => NULL,
                 'autocrm_push_link' => NULL,
                 'autocrm_push_id_reference' => NULL,
                 'autocrm_inbox_subject' => NULL,
                 'autocrm_inbox_content' => NULL,
-                'autocrm_forward_email' => 'wizemakers@gmail.com;ivankp@technopartner.id',
+                'autocrm_forward_email' => NULL,
                 'autocrm_forward_email_subject' => 'There is a Transaction Success',
                 'autocrm_forward_email_content' => 'There is a Transaction Success',
+                'custom_text_replace'=>'%date%;%status%;%order_id%;%outlet_name%;%detail%',
                 'created_at' => '2018-03-12 13:53:17',
                 'updated_at' => '2018-05-03 15:02:20',
             ),
-            6 => 
+            6 =>
             array (
                 'id_autocrm' => 7,
                 'autocrm_type' => 'Response',
@@ -210,8 +216,8 @@ The login is failed. Make sure Your password is safe.',
                 'autocrm_email_toogle' => '1',
                 'autocrm_sms_toogle' => '0',
                 'autocrm_push_toogle' => '1',
-                'autocrm_inbox_toogle' => '1',
-                'autocrm_forward_toogle' => '1',
+                'autocrm_inbox_toogle' => '0',
+                'autocrm_forward_toogle' => '0',
                 'autocrm_email_subject' => 'We have receive Your Question',
                 'autocrm_email_content' => 'We have receive Your Question
 <br>
@@ -226,7 +232,7 @@ Subject :
 %enquiry_subject%
 <br>
 <br>
-Message : 
+Message :
 <br>
 %enquiry_message%',
                 'autocrm_sms_content' => NULL,
@@ -250,10 +256,10 @@ Subject :
 %enquiry_subject%
 <br>
 <br>
-Message : 
+Message :
 <br>
 %enquiry_message%',
-                'autocrm_forward_email' => 'wizemakers@gmail.com;ivankp@technopartner.id',
+                'autocrm_forward_email' => NULL,
                 'autocrm_forward_email_subject' => 'There is an Email Enquiry Question',
                 'autocrm_forward_email_content' => '<p>There is an Email Enquiry Question
 <br>
@@ -268,13 +274,14 @@ Subject :
 %enquiry_subject%
 <br>
 <br>
-Message : 
+Message :
 <br>
 %enquiry_message%</p><p>Please respond to this customer within 24 hours.<br></p>',
+                'custom_text_replace'=>'%enquiry_name%;%enquiry_phone%;%enquiry_email%;%enquiry_message%;%enquiry_subject%',
                 'created_at' => '2018-03-12 13:53:17',
                 'updated_at' => '2018-04-23 06:42:19',
             ),
-            7 => 
+            7 =>
             array (
                 'id_autocrm' => 8,
                 'autocrm_type' => 'Response',
@@ -285,7 +292,7 @@ Message :
                 'autocrm_sms_toogle' => '0',
                 'autocrm_push_toogle' => '1',
                 'autocrm_inbox_toogle' => '0',
-                'autocrm_forward_toogle' => '1',
+                'autocrm_forward_toogle' => '0',
                 'autocrm_email_subject' => 'We have receive Your Complaint',
                 'autocrm_email_content' => 'We have receive Your Complaint
 <br>
@@ -300,17 +307,17 @@ Subject :
 %enquiry_subject%
 <br>
 <br>
-Message : 
+Message :
 <br>
 %enquiry_message%',
                 'autocrm_sms_content' => NULL,
                 'autocrm_push_subject' => 'Complaint Received',
                 'autocrm_push_content' => ' Enquiry Complaint Content',
-                'autocrm_push_image' => 'img/push/2021524214254.jpg',
-                'autocrm_push_clickto' => 'Product',
+                'autocrm_push_image' => NULL,
+                'autocrm_push_clickto' => NULL,
                 'autocrm_push_link' => NULL,
                 'autocrm_push_id_reference' => NULL,
-                'autocrm_inbox_subject' => 'Natasha Enquiry',
+                'autocrm_inbox_subject' => 'Enquiry',
                 'autocrm_inbox_content' => 'There is an Inbox Enquiry Complaint
 <br>
 <br>
@@ -324,10 +331,10 @@ Subject :
 %enquiry_subject%
 <br>
 <br>
-Message : 
+Message :
 <br>
 %enquiry_message%',
-                'autocrm_forward_email' => 'wizemakers@gmail.com;ivankp@technopartner.id',
+                'autocrm_forward_email' => NULL,
                 'autocrm_forward_email_subject' => 'There is an Email Enquiry Complaint',
                 'autocrm_forward_email_content' => '<p>There is an Email Enquiry Complaint
 <br>
@@ -342,13 +349,14 @@ Subject :
 %enquiry_subject%
 <br>
 <br>
-Message : 
+Message :
 <br>
 %enquiry_message%</p><p>Please respond to this customer within 24 hours.<br></p>',
+                'custom_text_replace'=>'%enquiry_name%;%enquiry_phone%;%enquiry_email%;%enquiry_message%;%enquiry_subject%',
                 'created_at' => '2018-03-12 13:53:17',
                 'updated_at' => '2018-04-27 09:55:11',
             ),
-            8 => 
+            8 =>
             array (
                 'id_autocrm' => 9,
                 'autocrm_type' => 'Response',
@@ -374,7 +382,7 @@ Subject :
 %enquiry_subject%
 <br>
 <br>
-Message : 
+Message :
 <br>
 %enquiry_message%',
                 'autocrm_sms_content' => 'We have receive Your Partnerhip',
@@ -398,10 +406,10 @@ Subject :
 %enquiry_subject%
 <br>
 <br>
-Message : 
+Message :
 <br>
 %enquiry_message%',
-                'autocrm_forward_email' => 'wizemakers@gmail.com;ivankp@technopartner.id',
+                'autocrm_forward_email' => NULL,
                 'autocrm_forward_email_subject' => 'There is an Email Enquiry Partnership',
                 'autocrm_forward_email_content' => '<p>There is an Email Enquiry Partnerhip
 <br>
@@ -416,24 +424,25 @@ Subject :
 %enquiry_subject%
 <br>
 <br>
-Message : 
+Message :
 <br>
 %enquiry_message%</p><p>Please respond to this customer within 24 hours.<br></p>',
+                'custom_text_replace'=>'%enquiry_name%;%enquiry_phone%;%enquiry_email%;%enquiry_message%;%enquiry_subject%',
                 'created_at' => '2018-03-12 13:53:17',
                 'updated_at' => '2018-04-23 06:42:39',
             ),
-            9 => 
+            9 =>
             array (
                 'id_autocrm' => 10,
                 'autocrm_type' => 'Response',
                 'autocrm_trigger' => 'Daily',
                 'autocrm_cron_reference' => NULL,
                 'autocrm_title' => 'Deals',
-                'autocrm_email_toogle' => '1',
+                'autocrm_email_toogle' => '0',
                 'autocrm_sms_toogle' => '0',
                 'autocrm_push_toogle' => '1',
                 'autocrm_inbox_toogle' => '0',
-                'autocrm_forward_toogle' => '1',
+                'autocrm_forward_toogle' => '0',
                 'autocrm_email_subject' => 'New Deals',
                 'autocrm_email_content' => 'New Deals',
                 'autocrm_sms_content' => 'New Deals',
@@ -445,13 +454,14 @@ Message :
                 'autocrm_push_id_reference' => NULL,
                 'autocrm_inbox_subject' => 'New Deals',
                 'autocrm_inbox_content' => 'New Deals',
-                'autocrm_forward_email' => 'wizemakers@gmail.com;ivankp@technopartner.id',
+                'autocrm_forward_email' => NULL,
                 'autocrm_forward_email_subject' => 'New Deals',
                 'autocrm_forward_email_content' => 'New Deals',
+                'custom_text_replace'=>'',
                 'created_at' => '2018-03-12 13:53:17',
                 'updated_at' => '2018-04-23 06:42:39',
             ),
-            10 => 
+            10 =>
             array (
                 'id_autocrm' => 11,
                 'autocrm_type' => 'Response',
@@ -480,10 +490,11 @@ Message :
                 'autocrm_forward_email' => NULL,
                 'autocrm_forward_email_subject' => NULL,
                 'autocrm_forward_email_content' => NULL,
+                'custom_text_replace'=>'%outlet_name%;%transaction_date%',
                 'created_at' => '2018-03-12 13:53:17',
                 'updated_at' => '2018-04-23 06:42:39',
             ),
-            11 => 
+            11 =>
             array (
                 'id_autocrm' => 12,
                 'autocrm_type' => 'Response',
@@ -512,10 +523,11 @@ Message :
                 'autocrm_forward_email' => NULL,
                 'autocrm_forward_email_subject' => NULL,
                 'autocrm_forward_email_content' => NULL,
+                'custom_text_replace'=>'%outlet_name%;%transaction_date%',
                 'created_at' => '2018-03-12 13:53:17',
                 'updated_at' => '2018-04-23 06:42:39',
             ),
-            12 => 
+            12 =>
             array (
                 'id_autocrm' => 13,
                 'autocrm_type' => 'Response',
@@ -544,10 +556,11 @@ Message :
                 'autocrm_forward_email' => NULL,
                 'autocrm_forward_email_subject' => NULL,
                 'autocrm_forward_email_content' => NULL,
+                'custom_text_replace'=>'%outlet_name%;%transaction_date%',
                 'created_at' => '2018-03-12 13:53:17',
                 'updated_at' => '2018-04-23 06:42:39',
             ),
-            13 => 
+            13 =>
             array (
                 'id_autocrm' => 14,
                 'autocrm_type' => 'Response',
@@ -576,10 +589,11 @@ Message :
                 'autocrm_forward_email' => NULL,
                 'autocrm_forward_email_subject' => NULL,
                 'autocrm_forward_email_content' => NULL,
+                'custom_text_replace'=>'%outlet_name%;%transaction_date%',
                 'created_at' => '2018-03-12 13:53:17',
                 'updated_at' => '2018-04-23 06:42:39',
             ),
-            14 => 
+            14 =>
             array (
                 'id_autocrm' => 15,
                 'autocrm_type' => 'Response',
@@ -605,11 +619,400 @@ Message :
                 'autocrm_forward_email' => NULL,
                 'autocrm_forward_email_subject' => NULL,
                 'autocrm_forward_email_content' => NULL,
+                'custom_text_replace'=>'%pin%',
                 'created_at' => '2018-03-12 13:53:17',
                 'updated_at' => '2018-05-03 15:02:05',
             ),
+            15 =>
+            array (
+                'id_autocrm' => 16,
+                'autocrm_type' => 'Response',
+                'autocrm_trigger' => 'Daily',
+                'autocrm_cron_reference' => NULL,
+                'autocrm_title' => 'Claim Deals Success',
+                'autocrm_email_toogle' => '0',
+                'autocrm_sms_toogle' => '0',
+                'autocrm_push_toogle' => '0',
+                'autocrm_inbox_toogle' => '0',
+                'autocrm_forward_toogle' => '0',
+                'autocrm_email_subject' => '',
+                'autocrm_email_content' => '',
+                'autocrm_sms_content' => '',
+                'autocrm_push_subject' => '',
+                'autocrm_push_content' => '',
+                'autocrm_push_image' => NULL,
+                'autocrm_push_clickto' => '',
+                'autocrm_push_link' => NULL,
+                'autocrm_push_id_reference' => NULL,
+                'autocrm_inbox_subject' => '',
+                'autocrm_inbox_content' => '',
+                'autocrm_forward_email' => '',
+                'autocrm_forward_email_subject' => '',
+                'autocrm_forward_email_content' => '',
+                'custom_text_replace'=>'%claimed_at%;%deals_title%;%deals_voucher_price_point%;',
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ),
+            16 =>
+            array (
+                'id_autocrm' => 17,
+                'autocrm_type' => 'Response',
+                'autocrm_trigger' => 'Daily',
+                'autocrm_cron_reference' => NULL,
+                'autocrm_title' => 'Redeem Voucher Success',
+                'autocrm_email_toogle' => '0',
+                'autocrm_sms_toogle' => '0',
+                'autocrm_push_toogle' => '1',
+                'autocrm_inbox_toogle' => '0',
+                'autocrm_forward_toogle' => '0',
+                'autocrm_email_subject' => 'New Deals',
+                'autocrm_email_content' => 'New Deals',
+                'autocrm_sms_content' => 'New Deals',
+                'autocrm_push_subject' => 'New Deals',
+                'autocrm_push_content' => NULL,
+                'autocrm_push_image' => NULL,
+                'autocrm_push_clickto' => NULL,
+                'autocrm_push_link' => NULL,
+                'autocrm_push_id_reference' => NULL,
+                'autocrm_inbox_subject' => 'New Deals',
+                'autocrm_inbox_content' => 'New Deals',
+                'autocrm_forward_email' => NULL,
+                'autocrm_forward_email_subject' => 'New Deals',
+                'autocrm_forward_email_content' => 'New Deals',
+                'custom_text_replace'=>'%redeemed_at%;%voucher_code%;%outlet_name%;%outlet_code%;',
+                'created_at' => '2018-03-12 13:53:17',
+                'updated_at' => '2018-04-23 06:42:39',
+            ),
+            17 =>
+            array (
+                'id_autocrm' => 18,
+                'autocrm_type' => 'Response',
+                'autocrm_trigger' => 'Daily',
+                'autocrm_cron_reference' => NULL,
+                'autocrm_title' => 'Transaction Point Achievement',
+                'autocrm_email_toogle' => '0',
+                'autocrm_sms_toogle' => '0',
+                'autocrm_push_toogle' => '0',
+                'autocrm_inbox_toogle' => '0',
+                'autocrm_forward_toogle' => '0',
+                'autocrm_email_subject' => '',
+                'autocrm_email_content' => '',
+                'autocrm_sms_content' => '',
+                'autocrm_push_subject' => '',
+                'autocrm_push_content' => '',
+                'autocrm_push_image' => NULL,
+                'autocrm_push_clickto' => '',
+                'autocrm_push_link' => NULL,
+                'autocrm_push_id_reference' => NULL,
+                'autocrm_inbox_subject' => '',
+                'autocrm_inbox_content' => '',
+                'autocrm_forward_email' => '',
+                'autocrm_forward_email_subject' => '',
+                'autocrm_forward_email_content' => '',
+                'custom_text_replace'=>'%receipt_number%;%received_point%;%outlet_name%;%transaction_date%;',
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ),
+            18 =>
+            array (
+                'id_autocrm' => 19,
+                'autocrm_type' => 'Response',
+                'autocrm_trigger' => 'Daily',
+                'autocrm_cron_reference' => NULL,
+                'autocrm_title' => 'Transaction Failed Point Refund',
+                'autocrm_email_toogle' => '0',
+                'autocrm_sms_toogle' => '0',
+                'autocrm_push_toogle' => '0',
+                'autocrm_inbox_toogle' => '0',
+                'autocrm_forward_toogle' => '0',
+                'autocrm_email_subject' => '',
+                'autocrm_email_content' => '',
+                'autocrm_sms_content' => '',
+                'autocrm_push_subject' => '',
+                'autocrm_push_content' => '',
+                'autocrm_push_image' => NULL,
+                'autocrm_push_clickto' => '',
+                'autocrm_push_link' => NULL,
+                'autocrm_push_id_reference' => NULL,
+                'autocrm_inbox_subject' => '',
+                'autocrm_inbox_content' => '',
+                'autocrm_forward_email' => '',
+                'autocrm_forward_email_subject' => '',
+                'autocrm_forward_email_content' => '',
+                'custom_text_replace'=>'%receipt_number%;%received_point%;%outlet_name%;%transaction_date%;',
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ),
+            19 =>
+            array (
+                'id_autocrm' => 20,
+                'autocrm_type' => 'Response',
+                'autocrm_trigger' => 'Daily',
+                'autocrm_cron_reference' => NULL,
+                'autocrm_title' => 'Rejected Order Point Refund',
+                'autocrm_email_toogle' => '0',
+                'autocrm_sms_toogle' => '0',
+                'autocrm_push_toogle' => '0',
+                'autocrm_inbox_toogle' => '0',
+                'autocrm_forward_toogle' => '0',
+                'autocrm_email_subject' => '',
+                'autocrm_email_content' => '',
+                'autocrm_sms_content' => '',
+                'autocrm_push_subject' => '',
+                'autocrm_push_content' => '',
+                'autocrm_push_image' => NULL,
+                'autocrm_push_clickto' => '',
+                'autocrm_push_link' => NULL,
+                'autocrm_push_id_reference' => NULL,
+                'autocrm_inbox_subject' => '',
+                'autocrm_inbox_content' => '',
+                'autocrm_forward_email' => '',
+                'autocrm_forward_email_subject' => '',
+                'autocrm_forward_email_content' => '',
+                'custom_text_replace'=>'%receipt_number%;%received_point%;%outlet_name%;%transaction_date%;',
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ),
+            20 =>
+            array (
+                'id_autocrm' => 21,
+                'autocrm_type' => 'Response',
+                'autocrm_trigger' => 'Daily',
+                'autocrm_cron_reference' => NULL,
+                'autocrm_title' => 'Complete User Profile Point Bonus',
+                'autocrm_email_toogle' => '0',
+                'autocrm_sms_toogle' => '0',
+                'autocrm_push_toogle' => '0',
+                'autocrm_inbox_toogle' => '0',
+                'autocrm_forward_toogle' => '0',
+                'autocrm_email_subject' => '',
+                'autocrm_email_content' => '',
+                'autocrm_sms_content' => '',
+                'autocrm_push_subject' => '',
+                'autocrm_push_content' => '',
+                'autocrm_push_image' => NULL,
+                'autocrm_push_clickto' => '',
+                'autocrm_push_link' => NULL,
+                'autocrm_push_id_reference' => NULL,
+                'autocrm_inbox_subject' => '',
+                'autocrm_inbox_content' => '',
+                'autocrm_forward_email' => '',
+                'autocrm_forward_email_subject' => '',
+                'autocrm_forward_email_content' => '',
+                'custom_text_replace'=>'%received_point%;',
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ),
+            21 =>
+            array (
+                'id_autocrm' => 22,
+                'autocrm_type' => 'Response',
+                'autocrm_trigger' => 'Daily',
+                'autocrm_cron_reference' => NULL,
+                'autocrm_title' => 'Receive Hidden Deals',
+                'autocrm_email_toogle' => '0',
+                'autocrm_sms_toogle' => '0',
+                'autocrm_push_toogle' => '0',
+                'autocrm_inbox_toogle' => '0',
+                'autocrm_forward_toogle' => '0',
+                'autocrm_email_subject' => '',
+                'autocrm_email_content' => '',
+                'autocrm_sms_content' => '',
+                'autocrm_push_subject' => '',
+                'autocrm_push_content' => '',
+                'autocrm_push_image' => NULL,
+                'autocrm_push_clickto' => '',
+                'autocrm_push_link' => NULL,
+                'autocrm_push_id_reference' => NULL,
+                'autocrm_inbox_subject' => '',
+                'autocrm_inbox_content' => '',
+                'autocrm_forward_email' => '',
+                'autocrm_forward_email_subject' => '',
+                'autocrm_forward_email_content' => '',
+                'custom_text_replace'=>'%deals_title%;',
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ),
+            22 =>
+            array (
+                'id_autocrm' => 23,
+                'autocrm_type' => 'Response',
+                'autocrm_trigger' => 'Daily',
+                'autocrm_cron_reference' => NULL,
+                'autocrm_title' => 'Enquiry Customer Feedback',
+                'autocrm_email_toogle' => '0',
+                'autocrm_sms_toogle' => '0',
+                'autocrm_push_toogle' => '0',
+                'autocrm_inbox_toogle' => '0',
+                'autocrm_forward_toogle' => '0',
+                'autocrm_email_subject' => '',
+                'autocrm_email_content' => '',
+                'autocrm_sms_content' => '',
+                'autocrm_push_subject' => '',
+                'autocrm_push_content' => '',
+                'autocrm_push_image' => NULL,
+                'autocrm_push_clickto' => '',
+                'autocrm_push_link' => NULL,
+                'autocrm_push_id_reference' => NULL,
+                'autocrm_inbox_subject' => '',
+                'autocrm_inbox_content' => '',
+                'autocrm_forward_email' => '',
+                'autocrm_forward_email_subject' => '',
+                'autocrm_forward_email_content' => '',
+                'custom_text_replace'=>'%enquiry_name%;%enquiry_phone%;%enquiry_email%;%enquiry_message%;%enquiry_subject%;%visiting_time%;%outlet_name%',
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ),
+            23 =>
+            array (
+                'id_autocrm' => 24,
+                'autocrm_type' => 'Response',
+                'autocrm_trigger' => 'Daily',
+                'autocrm_cron_reference' => NULL,
+                'autocrm_title' => 'Enquiry Marketing Partnership',
+                'autocrm_email_toogle' => '0',
+                'autocrm_sms_toogle' => '0',
+                'autocrm_push_toogle' => '0',
+                'autocrm_inbox_toogle' => '0',
+                'autocrm_forward_toogle' => '0',
+                'autocrm_email_subject' => '',
+                'autocrm_email_content' => '',
+                'autocrm_sms_content' => '',
+                'autocrm_push_subject' => '',
+                'autocrm_push_content' => '',
+                'autocrm_push_image' => NULL,
+                'autocrm_push_clickto' => '',
+                'autocrm_push_link' => NULL,
+                'autocrm_push_id_reference' => NULL,
+                'autocrm_inbox_subject' => '',
+                'autocrm_inbox_content' => '',
+                'autocrm_forward_email' => '',
+                'autocrm_forward_email_subject' => '',
+                'autocrm_forward_email_content' => '',
+                'custom_text_replace'=>'%enquiry_name%;%enquiry_phone%;%enquiry_email%;%enquiry_message%;%enquiry_subject%',
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ),
+            24 =>
+            array (
+                'id_autocrm' => 25,
+                'autocrm_type' => 'Response',
+                'autocrm_trigger' => 'Daily',
+                'autocrm_cron_reference' => NULL,
+                'autocrm_title' => 'Enquiry Business Development',
+                'autocrm_email_toogle' => '0',
+                'autocrm_sms_toogle' => '0',
+                'autocrm_push_toogle' => '0',
+                'autocrm_inbox_toogle' => '0',
+                'autocrm_forward_toogle' => '0',
+                'autocrm_email_subject' => '',
+                'autocrm_email_content' => '',
+                'autocrm_sms_content' => '',
+                'autocrm_push_subject' => '',
+                'autocrm_push_content' => '',
+                'autocrm_push_image' => NULL,
+                'autocrm_push_clickto' => '',
+                'autocrm_push_link' => NULL,
+                'autocrm_push_id_reference' => NULL,
+                'autocrm_inbox_subject' => '',
+                'autocrm_inbox_content' => '',
+                'autocrm_forward_email' => '',
+                'autocrm_forward_email_subject' => '',
+                'autocrm_forward_email_content' => '',
+                'custom_text_replace'=>'%enquiry_name%;%enquiry_phone%;%enquiry_email%;%enquiry_message%;%enquiry_subject%',
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ),
+            25 =>
+            array (
+                'id_autocrm' => 26,
+                'autocrm_type' => 'Response',
+                'autocrm_trigger' => 'Daily',
+                'autocrm_cron_reference' => NULL,
+                'autocrm_title' => 'Enquiry Career',
+                'autocrm_email_toogle' => '0',
+                'autocrm_sms_toogle' => '0',
+                'autocrm_push_toogle' => '0',
+                'autocrm_inbox_toogle' => '0',
+                'autocrm_forward_toogle' => '0',
+                'autocrm_email_subject' => '',
+                'autocrm_email_content' => '',
+                'autocrm_sms_content' => '',
+                'autocrm_push_subject' => '',
+                'autocrm_push_content' => '',
+                'autocrm_push_image' => NULL,
+                'autocrm_push_clickto' => '',
+                'autocrm_push_link' => NULL,
+                'autocrm_push_id_reference' => NULL,
+                'autocrm_inbox_subject' => '',
+                'autocrm_inbox_content' => '',
+                'autocrm_forward_email' => '',
+                'autocrm_forward_email_subject' => '',
+                'autocrm_forward_email_content' => '',
+                'custom_text_replace'=>'%enquiry_name%;%enquiry_phone%;%enquiry_email%;%enquiry_message%;%enquiry_subject%;%position%',
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ),
+            26 =>
+            array (
+                'id_autocrm' => 27,
+                'autocrm_type' => 'Response',
+                'autocrm_trigger' => 'Daily',
+                'autocrm_cron_reference' => NULL,
+                'autocrm_title' => 'Cron Transaction',
+                'autocrm_email_toogle' => '0',
+                'autocrm_sms_toogle' => '0',
+                'autocrm_push_toogle' => '0',
+                'autocrm_inbox_toogle' => '0',
+                'autocrm_forward_toogle' => '0',
+                'autocrm_email_subject' => '',
+                'autocrm_email_content' => '',
+                'autocrm_sms_content' => '',
+                'autocrm_push_subject' => '',
+                'autocrm_push_content' => '',
+                'autocrm_push_image' => NULL,
+                'autocrm_push_clickto' => '',
+                'autocrm_push_link' => NULL,
+                'autocrm_push_id_reference' => NULL,
+                'autocrm_inbox_subject' => '',
+                'autocrm_inbox_content' => '',
+                'autocrm_forward_email' => '',
+                'autocrm_forward_email_subject' => '',
+                'autocrm_forward_email_content' => '',
+                'custom_text_replace'=>'%table_trx%',
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ),
+            27 =>
+            array (
+                'id_autocrm' => 28,
+                'autocrm_type' => 'Response',
+                'autocrm_trigger' => 'Daily',
+                'autocrm_cron_reference' => NULL,
+                'autocrm_title' => 'Pin Changed Forgot Password',
+                'autocrm_email_toogle' => '0',
+                'autocrm_sms_toogle' => '0',
+                'autocrm_push_toogle' => '0',
+                'autocrm_inbox_toogle' => '0',
+                'autocrm_forward_toogle' => '0',
+                'autocrm_email_subject' => '',
+                'autocrm_email_content' => '',
+                'autocrm_sms_content' => '',
+                'autocrm_push_subject' => '',
+                'autocrm_push_content' => '',
+                'autocrm_push_image' => NULL,
+                'autocrm_push_clickto' => '',
+                'autocrm_push_link' => NULL,
+                'autocrm_push_id_reference' => NULL,
+                'autocrm_inbox_subject' => '',
+                'autocrm_inbox_content' => '',
+                'autocrm_forward_email' => '',
+                'autocrm_forward_email_subject' => '',
+                'autocrm_forward_email_content' => '',
+                'custom_text_replace'=>'',
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ),
         ));
-        
-        
     }
 }

@@ -10,7 +10,7 @@ class classMaskingJson {
 	}
 	public function send() {
 		$dt=json_encode($this->data);
-		$curlHandle = curl_init("http://45.32.107.195/sms/api_sms_masking_send_json.php");
+		$curlHandle = curl_init(env('SMS_URL')."/sms/api_sms_masking_send_json.php");
 		curl_setopt($curlHandle, CURLOPT_CUSTOMREQUEST, "POST");
 		curl_setopt($curlHandle, CURLOPT_POSTFIELDS, $dt);
 		curl_setopt($curlHandle, CURLOPT_RETURNTRANSFER, true);
@@ -47,7 +47,7 @@ class classMaskingJson {
 	}
 	public function balance() {	
 		$dt=json_encode($this->data);
-		$curlHandle = curl_init("http://45.32.107.195/sms/api_sms_masking_balance_json.php");
+		$curlHandle = curl_init(env('SMS_URL')."/sms/api_sms_masking_balance_json.php");
 		curl_setopt($curlHandle, CURLOPT_CUSTOMREQUEST, "POST");
 		curl_setopt($curlHandle, CURLOPT_POSTFIELDS, $dt);
 		curl_setopt($curlHandle, CURLOPT_RETURNTRANSFER, true);

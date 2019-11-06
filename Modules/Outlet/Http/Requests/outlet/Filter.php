@@ -16,8 +16,6 @@ class Filter extends FormRequest
     public function rules()
     {
         return [
-            'latitude'		=> 'required',
-            'longitude'		=> 'required',
             'sort'			=> 'in:Alphabetical,Nearest'
         ];
     }

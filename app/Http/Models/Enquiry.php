@@ -37,6 +37,7 @@ class Enquiry extends Model
 	];
 
 	protected $fillable = [
+		'id_brand',
 		'id_outlet',
 		'enquiry_name',
 		'enquiry_phone',
@@ -60,16 +61,21 @@ class Enquiry extends Model
 		return $this->belongsTo(\App\Http\Models\Outlet::class, 'id_outlet', 'id_outlet');
 	}
 
+	public function brand()
+	{
+		return $this->belongsTo(\Modules\Brand\Entities\Brand::class, 'id_brand', 'id_brand');
+	}
+
 	protected $appends    = ['url_enquiry_photo'];
 
 	public function getUrlEnquiryPhotoAttribute() {
 	    if (!empty($this->enquiry_photo)) {
-	        return env('AWS_URL').$this->enquiry_photo;
+	        return env('S3_URL_API').$this->enquiry_photo;
 	    }
 	}
 
-	public function photos()
+	public function files()
 	{
-		return $this->hasMany(\App\Http\Models\EnquiriesPhoto::class, 'id_enquiry');
+		return $this->hasMany(\Modules\Enquiries\Entities\EnquiriesFile::class, 'id_enquiry');
 	}
 }

@@ -22,6 +22,7 @@ class reqMenu extends FormRequest
             'api_secret'	    => 'required',
             'store_code'	    => 'required',
             'menu'			    => 'required|array',
+            'menu.*.brand_code' => 'required',
             'menu.*.plu_id'	    => 'required',
             'menu.*.name'		=> 'required',
             'menu.*.category'	=> 'required',

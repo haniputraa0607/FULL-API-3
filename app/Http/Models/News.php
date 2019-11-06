@@ -27,12 +27,15 @@ class News extends Model
      * @var array
      */
     protected $fillable = [
+    	'id_news_category',
     	'news_slug',
 		'news_title',
+		'id_news_category',
 		'news_second_title',
 		'news_content_short',
 		'news_content_long',
 		'news_video',
+		'news_video_text',
 		'news_image_luar',
 		'news_image_dalam',
 		'news_post_date',
@@ -59,7 +62,7 @@ class News extends Model
 	];
 
 	public function getUrlWebviewAttribute() {
-		return env('APP_URL') ."news/webview/". $this->id_news;
+		return env('API_URL') ."news/webview/". $this->id_news;
 	}
 
 	public function getUrlFormAttribute() {
@@ -83,19 +86,19 @@ class News extends Model
 
 	public function getUrlNewsImageLuarAttribute() {
 		if (empty($this->news_image_luar)) {
-            return env('AWS_URL').'img/default.jpg';
+            return env('S3_URL_API').'img/default.jpg';
         }
         else {
-            return env('AWS_URL').$this->news_image_luar;
+            return env('S3_URL_API').$this->news_image_luar;
         }
 	}
 
 	public function getUrlNewsImageDalamAttribute() {
 		if (empty($this->news_image_dalam)) {
-            return env('AWS_URL').'img/default.jpg';
+            return env('S3_URL_API').'img/default.jpg';
         }
         else {
-            return env('AWS_URL').$this->news_image_dalam;
+            return env('S3_URL_API').$this->news_image_dalam;
         }
 	}
 
@@ -123,5 +126,8 @@ class News extends Model
 	public function newsTreatment()
 	{
 	    return $this->hasMany(NewsTreatment::class, 'id_news', 'id_news');
+	}
+	public function newsCategory(){
+		return $this->belongsTo(NewsCategory::class,'id_news_category','id_news_category');
 	}
 }
