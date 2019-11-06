@@ -483,11 +483,9 @@ class ApiOutletController extends Controller
         if (isset($post['id_city'])) {
             $outlet->where('id_city',$post['id_city']);
         }
+        
 
-        $useragent = $_SERVER['HTTP_USER_AGENT'];
-        if(stristr($_SERVER['HTTP_USER_AGENT'],'iOS')) $useragent = 'iOS';
-        if(stristr($_SERVER['HTTP_USER_AGENT'],'okhttp')) $useragent = 'Android';
-        if($useragent == 'Android' || $useragent == 'iOS'){
+        if(!isset($post['all_outlet'])){
             $outlet = $outlet->where('outlet_status', 'Active')->whereNotNull('id_city');
             $outlet->whereHas('brands',function($query){
                 $query->where('brand_active','1');
