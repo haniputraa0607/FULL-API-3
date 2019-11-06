@@ -485,7 +485,7 @@ class ApiOutletController extends Controller
         }
         
 
-        if(!isset($post['all_outlet'])){
+        if(isset($post['all_outlet']) && $post['all_outlet'] == 0){
             $outlet = $outlet->where('outlet_status', 'Active')->whereNotNull('id_city');
             $outlet->whereHas('brands',function($query){
                 $query->where('brand_active','1');
