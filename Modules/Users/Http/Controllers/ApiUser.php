@@ -1039,7 +1039,7 @@ class ApiUser extends Controller
                                 $sendFraud = app($this->setting_fraud)->SendFraudDetection($fraud['id_fraud_setting'], $datauser[0], null, $lastDevice);
                             }
                         } else {
-                            UserFraud::create(['id_user' => $datauser[0]['id']], ['device_id' => $device_id, 'device_type' => $device_type]);
+                            UserFraud::updateOrCreate(['id_user' => $datauser[0]['id']], ['device_id' => $device_id, 'device_type' => $device_type]);
                         }
                     }
 
