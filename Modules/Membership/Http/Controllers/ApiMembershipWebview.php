@@ -62,6 +62,7 @@ class ApiMembershipWebview extends Controller
 			if($result['user_membership']){
 				foreach($allMembership as $index => $dataMembership){
 					if($dataMembership['membership_type'] == 'count'){
+					    $allMembership[$index]['min_value'] = $dataMembership['min_total_count'];
 						if($dataMembership['min_total_count'] > $result['user_membership']['min_total_count']){
 							if($nextMembershipName == ""){
 								$nextTrx = $dataMembership['min_total_count'];
@@ -72,6 +73,7 @@ class ApiMembershipWebview extends Controller
 						}
 					}
 					if($dataMembership['membership_type'] == 'value'){
+						$allMembership[$index]['min_value'] = $dataMembership['min_total_value'];
 						if($dataMembership['min_total_value'] > $result['user_membership']['min_total_value']){
 							if($nextMembershipName == ""){
 								$nextTrx = $dataMembership['min_total_value'];
@@ -82,6 +84,7 @@ class ApiMembershipWebview extends Controller
 						}
 					}
 					if($dataMembership['membership_type'] == 'balance'){
+					    $allMembership[$index]['min_value'] = $dataMembership['min_total_balance'];
 						if($dataMembership['min_total_balance'] > $result['user_membership']['min_total_balance']){
 							if($nextMembershipName == ""){
 								$nextTrx = $dataMembership['min_total_balance'];
@@ -124,7 +127,7 @@ class ApiMembershipWebview extends Controller
 				$subtotal_transaction = Transaction::where('id_user', $post['id_user'])->where('transaction_payment_status', 'Completed')->sum('transaction_subtotal');
 				$result['user_membership']['user']['progress_now'] = $subtotal_transaction;
 				$result['progress_active'] = ($subtotal_transaction / $nextTrx) * 100;
-				$result['next_trx']		= $nextTrx - $subtotal_transaction;
+				$result['next_trx']		= $subtotal_transaction - $nextTrx;
 			}elseif($nextTrxType == 'balance'){
 				$total_balance = LogBalance::where('id_user', $post['id_user'])->whereNotIn('source', [ 'Rejected Order', 'Rejected Order Midtrans', 'Rejected Order Point', 'Reversal'])->where('balance', '>', 0)->sum('balance');
 				$result['user_membership']['user']['progress_now'] = $total_balance;
@@ -174,7 +177,7 @@ class ApiMembershipWebview extends Controller
 		} else {
 			return view('error', ['msg' => 'Something went wrong, try again']);
 		}
-
+// 		dd($data);
 		return view('membership::webview.detail_membership', $data);
 	}
 }
