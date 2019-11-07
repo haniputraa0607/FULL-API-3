@@ -519,7 +519,25 @@ class ApiOutletController extends Controller
             }
             $request['page'] = 0;
         }else{
-            $outlet = $outlet->orderBy('outlet_name')->get()->toArray();
+            $useragent = $_SERVER['HTTP_USER_AGENT'];
+            if(stristr($_SERVER['HTTP_USER_AGENT'],'iOS')) $useragent = 'iOS';
+            if(stristr($_SERVER['HTTP_USER_AGENT'],'okhttp')) $useragent = 'Android';
+            if($useragent == 'Android' || $useragent == 'iOS'){
+                $outlet = $outlet->orderBy('outlet_name')->get()->toArray();
+                foreach ($outlet as $keyOutlet => $valueOutlet) {
+                    $countBrandNotActive = 0;
+                    foreach ($valueOutlet['brands'] as $keyBrand => $valueBrand) {
+                        if ($valueBrand['brand_active'] == 0) {
+                            $countBrandNotActive++;
+                        }
+                    }
+                    if (count($valueOutlet['brands']) == $countBrandNotActive) {
+                        $outlet[$keyOutlet]['outlet_status'] = 'Inactive';
+                    }
+                }
+            } else {
+                $outlet = $outlet->orderBy('outlet_name')->get()->toArray();
+            }
             $loopdata=&$outlet;
         }
 
