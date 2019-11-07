@@ -91,7 +91,7 @@ class ApiHome extends Controller
             if ($value->id_news != "") {
                 $item['news_title'] = $value->news->news_title;
                 // if news, generate webview news detail url
-                $item['url']        = env('APP_URL') .'news/webview/'. $value->id_news;
+                $item['url']        = env('API_URL') .'news/webview/'. $value->id_news;
             }
 
             if ($value->type == 'gofood') {
