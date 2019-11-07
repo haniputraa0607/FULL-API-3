@@ -69,6 +69,7 @@ return [
              */
             'databases' => [
                 'mysql',
+                'mysql2',
             ],
         ],
 
@@ -96,7 +97,7 @@ return [
              * The disk names on which the backups will be stored.
              */
             'disks' => [
-                's3',
+                's3_backup',
             ],
         ],
 
@@ -105,12 +106,7 @@ return [
          */
         'temporary_directory' => storage_path('app/backup-temp'),
     ],
-    'monitorBackups' => [
-        [
-            'name' => env('APP_URL'),
-            'disks' => ['s3'],
-        ],
-    ],
+
     /*
      * You can get notified when specific events occur. Out of the box you can use 'mail' and 'slack'.
      * For Slack you need to install guzzlehttp/guzzle and laravel/slack-notification-channel.
@@ -136,7 +132,7 @@ return [
         'notifiable' => \Spatie\Backup\Notifications\Notifiable::class,
 
         'mail' => [
-            'to' => 'your@example.com',
+            'to' => env('MAIL_TO_BACKUP', 'hello@example.com'),
 
             'from' => [
                 'address' => env('MAIL_FROM_ADDRESS', 'hello@example.com'),
@@ -167,7 +163,7 @@ return [
     'monitor_backups' => [
         [
             'name' => env('APP_NAME', 'laravel-backup'),
-            'disks' => ['local'],
+            'disks' => ['s3_backup'],
             'health_checks' => [
                 \Spatie\Backup\Tasks\Monitor\HealthChecks\MaximumAgeInDays::class => 1,
                 \Spatie\Backup\Tasks\Monitor\HealthChecks\MaximumStorageInMegabytes::class => 5000,
