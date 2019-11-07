@@ -36,6 +36,7 @@ use Modules\Users\Http\Requests\users_create;
 use Modules\Users\Http\Requests\users_profile;
 use Modules\Users\Http\Requests\users_profile_admin;
 use Modules\Users\Http\Requests\users_notification;
+use Modules\Users\Entities\UserFraud;
 
 use Modules\Balance\Http\Controllers\BalanceController;
 
@@ -1025,20 +1026,20 @@ class ApiUser extends Controller
                     //check fraud
                     if($device_type && $device_id && $device_token){
                         $cekFraud = 1;
-                        $deviceCus = UserDevice::where('device_type','=',$device_type)
-                            ->where('device_id','=',$device_id)
-                            // ->where('device_token','=',$device_token)
-                            ->orderBy('id_device_user', 'ASC')
-                            ->first();
+                        $deviceCus = UserFraud::where('device_id','=',$device_id)
+                            ->where('id_user','=',$datauser[0]['id'])
+                            ->count();
 
                         $lastDevice = UserDevice::where('id_user','=',$datauser[0]['id'])->orderBy('id_device_user', 'desc')->first();
 
-                        if($deviceCus && $deviceCus['id_user'] != $datauser[0]['id']){
+                        if($deviceCus && $deviceCus >= 3){
                             // send notif fraud detection
                             $fraud = FraudSetting::where('parameter', 'LIKE', '%device ID%')->first();
                             if($fraud){
                                 $sendFraud = app($this->setting_fraud)->SendFraudDetection($fraud['id_fraud_setting'], $datauser[0], null, $lastDevice);
                             }
+                        } else {
+                            UserFraud::create(['id_user' => $datauser[0]['id'], 'device_id' => $device_id, 'device_type' => $device_type]);
                         }
                     }
 
