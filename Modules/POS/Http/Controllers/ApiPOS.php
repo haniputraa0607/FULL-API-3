@@ -1229,6 +1229,7 @@ class ApiPOS extends Controller
                                                         ->where('deals_users.id_user', $user['id'])
                                                         ->whereNotNull('deals_users.used_at')
                                                         ->whereNull('transaction_vouchers.id_transaction_voucher')
+                                                        ->select('deals_vouchers.*')
                                                         ->first();
 
                                     if (empty($checkVoucher)) {
