@@ -225,6 +225,7 @@ class ApiUser extends Controller
                         $userTrxProduct = false;
                     }
                     /*================================== END check ==================================*/
+                    if(!is_array($cond)) $cond = [];
                     if(count($arr_tmp_outlet) > 0)array_push($cond, ['outlets' => $arr_tmp_outlet]);
 
                     if($scanTrx == true){
@@ -738,12 +739,19 @@ class ApiUser extends Controller
                     }
 
                     foreach($condition['products'] as $prod){
-                        $parameter = $prod['parameterSpecialCondition'];
-                        if($prod['parameterSpecialCondition'] == 0 || $prod['parameterSpecialCondition'] == NULL || $prod['parameterSpecialCondition'] == ""){
+                        if(isset($prod['parameterSpecialCondition'])){
+                            $parameter = $prod['parameterSpecialCondition'];
+                            $operator = $prod['operatorSpecialCondition'];
+                        }else{
+                            $parameter = $prod['parameter'];
+                            $operator = $prod['operator'];
+                        }
+
+                        if($parameter == 0 || $parameter == NULL || $parameter == ""){
                             $parameter = 1;
                         }
                         $id = DB::table('users')->join($join_table, $join_table.'.id_user', '=', 'users.id')
-                            ->where($join_table.'.id_product',$prod['id'])->havingRaw('SUM('.$having_column.')'.$prod['operatorSpecialCondition'].$parameter)
+                            ->where($join_table.'.id_product',$prod['id'])->havingRaw('SUM('.$having_column.')'.$operator.$parameter)
                             ->groupBy($join_table.'.id_user')
                             ->select($join_table.'.id_product')->first();
                         if($id){
@@ -764,12 +772,19 @@ class ApiUser extends Controller
                     $arr_id_outlet = [];
 
                     foreach($condition['outlets'] as $prod){
-                        $parameter = $prod['parameterSpecialCondition'];
-                        if($prod['parameterSpecialCondition'] == 0 || $prod['parameterSpecialCondition'] == NULL || $prod['parameterSpecialCondition'] == ""){
+                        if(isset($prod['parameterSpecialCondition'])){
+                            $parameter = $prod['parameterSpecialCondition'];
+                            $operator = $prod['operatorSpecialCondition'];
+                        }else{
+                            $parameter = $prod['parameter'];
+                            $operator = $prod['operator'];
+                        }
+
+                        if($parameter == 0 || $parameter == NULL || $parameter == ""){
                             $parameter = 1;
                         }
                         $id = DB::table('users')->join('transactions', 'transactions.id_user', '=', 'users.id')
-                            ->where('transactions.id_outlet',$prod['id'])->havingRaw('Count(transactions.id_outlet)'.$prod['operatorSpecialCondition'].$parameter)
+                            ->where('transactions.id_outlet',$prod['id'])->havingRaw('Count(transactions.id_outlet)'.$operator.$parameter)
                             ->groupBy('transactions.id_user')
                             ->select('transactions.id_outlet')->first();
 
