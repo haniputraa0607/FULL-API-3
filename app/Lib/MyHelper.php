@@ -1768,7 +1768,9 @@ class MyHelper{
 
 				if($row['subject'] == 'all_user'){
 					$condition[$type.'_rule_operator'] = "";
-				}elseif(in_array($row['subject'], $operatorexception)){
+				}elseif($row['subject'] == 'trx_product' || $row['subject'] == 'trx_outlet'){
+                    $condition[$type.'_rule_operator'] = $row['operatorSpecialCondition'];
+                }elseif(in_array($row['subject'], $operatorexception)){
 					$condition[$type.'_rule_operator'] = '=';
 				} else {
 					$condition[$type.'_rule_operator'] = $row['operator'];
@@ -1776,7 +1778,10 @@ class MyHelper{
 
 				if($row['subject'] == 'all_user'){
 					$condition[$type.'_rule_param'] = "";
-				}elseif(in_array($row['subject'], $operatorexception)){
+				}elseif($row['subject'] == 'trx_product' || $row['subject'] == 'trx_outlet'){
+                    $condition[$type.'_rule_param'] = $row['parameterSpecialCondition'];
+                    $condition[$type.'_rule_param_id'] = $row['id'];
+                }elseif(in_array($row['subject'], $operatorexception)){
 					$condition[$type.'_rule_param'] = $row['operator'];
 				} else {
 					$condition[$type.'_rule_param'] = $row['parameter'];
