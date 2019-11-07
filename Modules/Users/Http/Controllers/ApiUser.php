@@ -945,7 +945,6 @@ class ApiUser extends Controller
         $device_id 		= null;
         $device_token 	= null;
 
-
         $ip = null;
         if(!empty($request->json('ip'))){
             $ip = $request->json('ip');
@@ -1017,6 +1016,7 @@ class ApiUser extends Controller
         $datauser = User::where('phone', '=', $phone)
             ->get()
             ->toArray();
+
         $cekFraud = 0;
         if($datauser){
             if(Auth::attempt(['phone' => $phone, 'password' => $request->json('pin')])){
@@ -1027,19 +1027,19 @@ class ApiUser extends Controller
                     if($device_type && $device_id && $device_token){
                         $cekFraud = 1;
                         $deviceCus = UserFraud::where('device_id','=',$device_id)
-                            ->where('id_user','=',$datauser[0]['id'])
-                            ->count();
+                            ->groupBy('id_user')
+                            ->get()->toArray();
 
                         $lastDevice = UserDevice::where('id_user','=',$datauser[0]['id'])->orderBy('id_device_user', 'desc')->first();
 
-                        if($deviceCus && $deviceCus >= 3){
+                        if($deviceCus && count($deviceCus) >= 3){
                             // send notif fraud detection
                             $fraud = FraudSetting::where('parameter', 'LIKE', '%device ID%')->first();
                             if($fraud){
                                 $sendFraud = app($this->setting_fraud)->SendFraudDetection($fraud['id_fraud_setting'], $datauser[0], null, $lastDevice);
                             }
                         } else {
-                            UserFraud::create(['id_user' => $datauser[0]['id'], 'device_id' => $device_id, 'device_type' => $device_type]);
+                            UserFraud::create(['id_user' => $datauser[0]['id']], ['device_id' => $device_id, 'device_type' => $device_type]);
                         }
                     }
 
