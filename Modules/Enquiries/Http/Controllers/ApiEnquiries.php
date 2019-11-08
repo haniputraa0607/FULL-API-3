@@ -103,11 +103,9 @@ class ApiEnquiries extends Controller
         	$dataUploadFile = [];
 
 			if (is_array($post['enquiry_file'])) {
-				foreach ($post['enquiry_file'] as $value) {
-					$ext = MyHelper::checkMime2Ext($value);
-
-					$upload = MyHelper::uploadFile($value, $this->saveFile, $ext);
-
+				for ($i=0; $i < count($post['enquiry_file']); $i++) { 
+					$upload = MyHelper::uploadFile($post['enquiry_file'][$i], $this->saveFile, strtolower($post['ext'][$i]));
+					
 					if (isset($upload['status']) && $upload['status'] == "success") {
 					    $data['enquiry_file'] = $upload['path'];
 
@@ -127,7 +125,7 @@ class ApiEnquiries extends Controller
 			else {
 				$ext = MyHelper::checkMime2Ext($post['enquiry_file']);
 
-				$upload = MyHelper::uploadFile($post['enquiry_file'], $this->saveFile, $ext);
+				$upload = MyHelper::uploadFile($post['enquiry_file'], $this->saveFile, $post['ext']);
 
 				if (isset($upload['status']) && $upload['status'] == "success") {
 				    $data['enquiry_file'] = $upload['path'];

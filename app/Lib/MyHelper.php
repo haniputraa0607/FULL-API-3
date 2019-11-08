@@ -1018,7 +1018,7 @@ class MyHelper{
 		$upload = $path.$pictName;
 
 		if(env('STORAGE') &&  env('STORAGE') == 's3'){
-			$save = Storage::disk('s3')->put($upload, 'public');
+			$save = Storage::disk('s3')->put($upload, $decoded, 'public');
 			if ($save) {
 					$result = [
 						'status' => 'success',
