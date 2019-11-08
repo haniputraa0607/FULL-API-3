@@ -358,7 +358,7 @@ class ApiCustomPageController extends Controller
             foreach ($dataMerge as $key => $value) {
                 $result[$key]['url']            = env("APP_URL") . 'custom-page/webview/' . $value['id_custom_page'];
                 $result[$key]['title']          = $value['custom_page_title'];
-                $result[$key]['icon_image']     = env("APP_API_URL") . $value['custom_page_icon_image'];
+                $result[$key]['icon_image']     = env("S3_URL_API") . $value['custom_page_icon_image'];
             }
         }
 
