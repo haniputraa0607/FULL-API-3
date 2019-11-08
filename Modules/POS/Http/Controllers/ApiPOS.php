@@ -1188,16 +1188,6 @@ class ApiPOS extends Controller
                             'transaction_payment_status'  => 'Completed'
                     ];
 
-                    /*=============== For check when uid is already exist ===============*/
-                    if(isset($trx['member_uid'])){
-                        $check_memberuid = Transaction::where('member_uid',$trx['member_uid'])->select('member_uid')->first();
-
-                        if($check_memberuid){
-                            return ['status' => 'fail', 'messages' => 'UID already exist in transactions'];
-                        }
-                        $dataTrx['member_uid']  = $trx['member_uid'];
-                    }
-
                     if(!empty($trx['sales_type'])){
                         $dataTrx['sales_type']  = $trx['sales_type'];
                     }
