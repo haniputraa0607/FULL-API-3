@@ -251,12 +251,20 @@
                                        </div>
                                    @else
                                        <div class="current-level-info">
-                                           <div style="width:{{ (($result['user_membership']['user']['progress_now'] / $result['all_membership'][$key]['min_value']) * 100) - 100 }}%;"></div>
+                                            @if ((($result['user_membership']['user']['progress_now'] - $result['all_membership'][$key]['min_value']) / ($result['all_membership'][$key+1]['min_value'] - $result['all_membership'][$key]['min_value']) * 100) <= 0)
+                                                <div style="width:0%;"></div>
+                                            @else
+                                                <div style="width:{{(($result['user_membership']['user']['progress_now'] - $result['all_membership'][$key]['min_value']) / ($result['all_membership'][$key+1]['min_value'] - $result['all_membership'][$key]['min_value']) * 100)}}%;"></div>
+                                            @endif
                                            <img src="{{env('APP_URL')}}images/coin.png"/>
                                            <div class="font-regular-brown">{{number_format($result['user_membership']['user']['progress_now'])}}</div>
                                        </div>
                                        <div class="level-progress-container" style="margin-right: 10px; height: 6px;">
-                                           <div class="level-progress" style="width:{{ (($result['user_membership']['user']['progress_now'] / $result['all_membership'][$key]['min_value']) * 100) - 100 }}%; height: 6px;"></div>
+                                            @if ((($result['user_membership']['user']['progress_now'] - $result['all_membership'][$key]['min_value']) / ($result['all_membership'][$key+1]['min_value'] - $result['all_membership'][$key]['min_value']) * 100) <= 0)
+                                                <div style="width:0%;"></div>
+                                            @else
+                                                <div class="level-progress" style="width:{{ (($result['user_membership']['user']['progress_now'] - $result['all_membership'][$key]['min_value']) / ($result['all_membership'][$key+1]['min_value'] - $result['all_membership'][$key]['min_value']) * 100) }}%; height: 6px;"></div>
+                                            @endif
                                        </div>
                                    @endif
                                     <div class="level-info">
