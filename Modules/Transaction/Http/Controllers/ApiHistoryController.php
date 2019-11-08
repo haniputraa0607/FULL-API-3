@@ -589,6 +589,11 @@ class ApiHistoryController extends Controller
                     $dataList['outlet'] = $value['outlet']['outlet_name'];
                     $dataList['amount'] = number_format($value['transaction_grandtotal'], 0, ',', '.');
                     $dataList['cashback'] = number_format($value['transaction_cashback_earned'], 0, ',', '.');
+                    if ($dataList['cashback'] >= 0) {
+                        $dataList['status_point'] = 1;
+                    } else {
+                        $dataList['status_point'] = 0;
+                    }
 
                     $listTransaction[] = $dataList;
                 }

@@ -151,7 +151,6 @@
             display: flex;
             flex: 1;
             flex-direction: row;
-            padding: 8px 0px;
         }
         .content-list .content-list-item img{
             margin-right: 8px;
@@ -232,7 +231,7 @@
                     <div class="tab-pane fade show @if($item['membership_name'] == $result['user_membership']['membership_name']) active @endif" id="nav-{{strtolower($item['membership_name'])}}" role="tabpanel" aria-labelledby="nav-home-tab">
                         @if (isset($result['all_membership'][$key+1]))
                             @php
-                                $trx_total = $result['all_membership'][$key+1]['min_total_balance'] - $result['user_membership']['user']['progress_now']
+                                $trx_total = $result['all_membership'][$key+1]['min_value'] - $result['user_membership']['user']['progress_now']
                             @endphp
                             @if ($trx_total <= 0)
                                 <div class="font-regular-gray">Anda telah melewati tingkatan ini</div>
@@ -252,28 +251,37 @@
                                        </div>
                                    @else
                                        <div class="current-level-info">
-                                           <div style="width:{{ ($result['user_membership']['user']['progress_now'] / $result['all_membership'][$key+1]['min_total_balance']) * 100 }}%;"></div>
+                                            @if ((($result['user_membership']['user']['progress_now'] - $result['all_membership'][$key]['min_value']) / ($result['all_membership'][$key+1]['min_value'] - $result['all_membership'][$key]['min_value']) * 100) <= 0)
+                                                <div style="width:0%;"></div>
+                                            @else
+                                                <div style="width:{{(($result['user_membership']['user']['progress_now'] - $result['all_membership'][$key]['min_value']) / ($result['all_membership'][$key+1]['min_value'] - $result['all_membership'][$key]['min_value']) * 100)}}%;"></div>
+                                            @endif
                                            <img src="{{env('APP_URL')}}images/coin.png"/>
                                            <div class="font-regular-brown">{{number_format($result['user_membership']['user']['progress_now'])}}</div>
                                        </div>
                                        <div class="level-progress-container" style="margin-right: 10px; height: 6px;">
-                                           <div class="level-progress" style="width:{{ ($result['user_membership']['user']['progress_now'] / $result['all_membership'][$key+1]['min_total_balance']) * 100 }}%; height: 6px;"></div>
+                                            @if ((($result['user_membership']['user']['progress_now'] - $result['all_membership'][$key]['min_value']) / ($result['all_membership'][$key+1]['min_value'] - $result['all_membership'][$key]['min_value']) * 100) <= 0)
+                                                <div style="width:0%;"></div>
+                                            @else
+                                                <div class="level-progress" style="width:{{ (($result['user_membership']['user']['progress_now'] - $result['all_membership'][$key]['min_value']) / ($result['all_membership'][$key+1]['min_value'] - $result['all_membership'][$key]['min_value']) * 100) }}%; height: 6px;"></div>
+                                            @endif
                                        </div>
                                    @endif
                                     <div class="level-info">
-                                        @if ($result['all_membership'][$key+1]['min_total_balance'] == $result['all_membership'][$key+1]['min_total_balance'] - $result['all_membership'][$key]['min_total_balance'])
+                                        @if ($result['all_membership'][$key+1]['min_value'] == $result['all_membership'][$key+1]['min_value'] - $result['all_membership'][$key]['min_value'])
                                             <div class="font-regular-black">{{number_format(0)}}</div>
                                         @else
-                                            <div class="font-regular-black">{{number_format($result['all_membership'][$key]['min_total_balance'])}}</div>
+                                            <div class="font-regular-black">{{number_format($result['all_membership'][$key]['min_value'])}}</div>
                                         @endif
-                                        <div class="font-regular-black">{{number_format($result['all_membership'][$key+1]['min_total_balance'])}}</div>
+                                        <div class="font-regular-black">{{number_format($result['all_membership'][$key+1]['min_value'])}}</div>
                                     </div>
                                 </div>
                                 <img src="{{$result['all_membership'][$key+1]['membership_image']}}"/>
                             </div>
                         @else
                             @php
-                                $trx_total = 15000000 - $result['user_membership']['user']['progress_now']
+                                $trx_total = 15000000 - $result['user_membership']['user']['progress_now'];
+                                $dataNext = end($result['all_membership'])['min_value'];
                             @endphp
                             @if ($trx_total <= 0)
                                 <div class="font-regular-gray">Anda telah melewati tingkatan ini</div>
@@ -283,15 +291,23 @@
                             <div class="level-container">
                                 <div class="level-wrapper">
                                    <div class="current-level-info">
-                                       <div style="width:{{ ($result['user_membership']['user']['progress_now'] / 15000000) * 100 }}%;"></div>
+                                        @if (($result['user_membership']['user']['progress_now'] - end($result['all_membership'])['min_value']) <= 0)
+                                            <div style="width:0%;"></div>
+                                        @else
+                                            <div style="width:{{ ($result['user_membership']['user']['progress_now'] / 15000000) * 100 }}%;"></div>
+                                        @endif
                                        <img src="{{env('APP_URL')}}images/coin.png"/>
                                        <div class="font-regular-brown">{{number_format($result['user_membership']['user']['progress_now'])}}</div>
                                    </div>
                                    <div class="level-progress-container" style="margin-right: 10px; height: 6px;">
-                                       <div class="level-progress" style="width:{{ ($result['user_membership']['user']['progress_now'] / 15000000) * 100 }}%; height: 6px;"></div>
+                                        @if (($result['user_membership']['user']['progress_now'] - end($result['all_membership'])['min_value']) <= 0)
+                                            <div class="level-progress" style="width:0%; height: 6px;"></div>
+                                        @else
+                                            <div class="level-progress" style="width:{{ ($result['user_membership']['user']['progress_now'] / 15000000) * 100 }}%; height: 6px;"></div>
+                                        @endif
                                    </div>
                                     <div class="level-info">
-                                        <div class="font-regular-black">{{number_format($result['all_membership'][$key]['min_total_balance'])}}</div>
+                                        <div class="font-regular-black">{{number_format($result['all_membership'][$key]['min_value'])}}</div>
                                         <div class="font-regular-black">{{number_format(15000000)}}</div>
                                     </div>
                                 </div>
@@ -309,31 +325,34 @@
                                 </div>
                             </div>
                             @endif
-                            @if($item['benefit_cashback_multiplier'] != null && $item['benefit_cashback_multiplier'] > 0)
+                            {{-- @if($item['benefit_cashback_multiplier'] != null && $item['benefit_cashback_multiplier'] > 0)
                             <div class="content-list-item">
-                                <img src="{{$item['membership_image']}}"/>
-                                <div class=font-regular-gray>
-                                    <p style="margin-bottom: 0px;">Benefit Cashback {{number_format($item['benefit_cashback_multiplier'])}}%</p>
+                                <div class="font-regular-gray">
+                                    <li style="list-style-type:none;">
+                                        <img src="{{$item['membership_image']}}"/> Benefit Cashback {{number_format($item['benefit_cashback_multiplier'])}}%
+                                    </li>
                                     @if($item['cashback_maximum'] != null)
-                                    <p style="margin-bottom: 0px;">Cashback Maksimum {{number_format($item['cashback_maximum'])}}</p>
+                                    <li style="list-style-type:none;">
+                                        <img src="{{$item['membership_image']}}"/> Cashback Maksimum {{number_format($item['cashback_maximum'])}}
+                                    </li>
                                     @endif
                                 </div>
                             </div>
-                            @endif
+                            @endif --}}
                             @if($item['benefit_discount'] != null && $item['benefit_discount'] > 0)
                             <div class="content-list-item">
-                                <img src="{{$item['membership_image']}}"/>
-                                <div class=font-regular-gray>
-                                    Benefit Discount {{number_format($item['benefit_discount'])}}
+                                <div class="font-regular-gray">
+                                    <img src="{{$item['membership_image']}}"/> Benefit Discount {{number_format($item['benefit_discount'])}}
                                 </div>
                             </div>
                             @endif
                             @if($item['membership_promo_id'] != null && count($item['membership_promo_id']) > 0)
                             <div class="content-list-item">
-                                <img src="{{$item['membership_image']}}"/>
                                 <div class=font-regular-gray>
                                     @foreach ($item['membership_promo_id'] as $data)
-                                        <p style="margin-bottom: 0px;">{{$data['promo_name']}}</p>
+                                        <li style="list-style-type:none; margin-bottom:10px;">
+                                            <img src="{{$item['membership_image']}}"/> {{$data['promo_name']}}
+                                        </li>
                                     @endforeach
                                 </div>
                             </div>

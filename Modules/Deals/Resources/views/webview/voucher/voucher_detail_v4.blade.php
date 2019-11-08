@@ -340,6 +340,7 @@
 				</div>
 				<br>
 				<br>
+				<br>
 		@else
 			<div class="col-md-4 col-md-offset-4">
 				<h4 class="text-center" style="margin-top: 30px;">Voucher not found</h4>
@@ -441,7 +442,11 @@
 			$(document).on('click', '#showSK', function() {
 				$('#textSK').slideDown( "slow" );
 				$( "#showSK" ).replaceWith( '<div id="hideSK" style="background-color: rgb(248, 249, 251);" class="title-wrapper col-md-12 clearfix ProductSans-Bold"><div class="title col-left" style="font-size: 15px; color: rgb(102, 102, 102);">Syarat & Ketentuan</div><div class="title" style="font-size: 15px; color: rgb(102, 102, 102);"><i class="fas fa-chevron-up"></i></i></div></div>' );
-				$('html, body').animate({scrollTop: $(document).height()-100}, 'slow');
+				if ($("#textTP").is(":visible")) {
+				    $('html, body').animate({scrollTop: ($(document).height()-$("#textTP").height())-250}, 'slow');
+				} else {
+				    $('html, body').animate({scrollTop: $(document).height()-220}, 'slow');
+				}
 			});
 			$(document).on('click', '#hideSK', function() {
 				$('#textSK').slideUp( "slow" );
@@ -450,7 +455,7 @@
 			$(document).on('click', '#showTP', function(e) {
 				$('#textTP').slideDown( "slow" );
 				$( "#showTP" ).replaceWith( '<div id="hideTP" style="background-color: rgb(248, 249, 251);" class="title-wrapper col-md-12 clearfix ProductSans-Bold"><div class="title col-left" style="font-size: 15px; color: rgb(102, 102, 102);">Tempat Penukaran</div><div class="title" style="font-size: 15px; color: rgb(102, 102, 102);"><i class="fas fa-chevron-up"></i></div></div>' );
-				$('html, body').animate({scrollTop: $(document).height()-100}, 'slow');
+				$('html, body').animate({scrollTop: $(document).height()-160}, 'slow');
 			});
 			$(document).on('click', '#hideTP', function() {
 				$('#textTP').slideUp( "slow" );

@@ -292,7 +292,9 @@
             width: 100%;
             margin-top: -81px;
         }
-
+        table {
+            max-width: 100%;
+        }
         </style>
 
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/OwlCarousel2/2.3.4/assets/owl.carousel.min.css">

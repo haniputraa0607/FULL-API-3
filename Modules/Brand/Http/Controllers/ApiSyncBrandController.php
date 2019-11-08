@@ -44,7 +44,7 @@ class ApiSyncBrandController extends Controller
                     DB::rollBack();
                     return response()->json([
                         'status'   => 'fail',
-                        'messages' => ['fail to sync']
+                        'messages' => 'fail to sync'
                     ]);
                 }
             } else {
@@ -55,7 +55,7 @@ class ApiSyncBrandController extends Controller
                     DB::rollBack();
                     return response()->json([
                         'status'   => 'fail',
-                        'messages' => ['fail to sync']
+                        'messages' => 'fail to sync'
                     ]);
                 }
             }

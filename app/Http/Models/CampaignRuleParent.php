@@ -26,6 +26,6 @@ class CampaignRuleParent extends Model
 	public function rules()
 	{
 		return $this->hasMany(\App\Http\Models\CampaignRule::class, 'id_campaign_rule_parent')
-					->select('id_campaign_rule','id_campaign_rule_parent','campaign_rule_subject as subject', 'campaign_rule_operator as operator', 'campaign_rule_param as parameter');
+					->select('id_campaign_rule','id_campaign_rule_parent','campaign_rule_subject as subject', 'campaign_rule_operator as operator', 'campaign_rule_param as parameter', 'campaign_rule_param_id as id');
 	}
 }

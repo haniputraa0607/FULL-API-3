@@ -154,7 +154,7 @@ class ApiTransactionSync extends Controller
                         $data = [
                             'outlet_code' => $trans['outlet_code'],
                             'request' => json_encode($trx),
-                            'message_failed' => $insertTrx['messages'][0],
+                            'message_failed' => $insertTrx['messages'],
                             'created_at' => date('Y-m-d H:i:s'),
                             'updated_at' => date('Y-m-d H:i:s')
                         ];
@@ -208,6 +208,16 @@ class ApiTransactionSync extends Controller
                             'transaction_payment_status'  => 'Completed'
                     ];
 
+                    /*=============== For check when uid is already exist ===============*/
+                    if(isset($trx['member_uid'])){
+                        $check_memberuid = Transaction::where('member_uid',$trx['member_uid'])->select('member_uid')->first();
+
+                        if($check_memberuid){
+                            return ['status' => 'fail', 'messages' => 'UID already exist in transactions'];
+                        }
+                        $dataTrx['member_uid']  = $trx['member_uid'];
+                    }
+
                     if(!empty($trx['sales_type'])){
                         $dataTrx['sales_type']  = $trx['sales_type'];
                     }
@@ -217,6 +227,10 @@ class ApiTransactionSync extends Controller
                     $pointValue = 0;
 
                     if (isset($trx['member_uid'])) {
+                        if(strlen($trx['member_uid']) < 35){
+                            DB::rollback();
+                            return ['status' => 'fail', 'messages' => 'Minimum length of member uid is 35'];
+                        }
                         $qr         = MyHelper::readQR($trx['member_uid']);
                         $timestamp  = $qr['timestamp'];
                         $phoneqr    = $qr['phone'];

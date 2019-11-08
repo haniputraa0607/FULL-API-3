@@ -21,6 +21,9 @@ use App\Http\Models\OutletSchedule;
 use App\Http\Models\Setting;
 use App\Http\Models\OauthAccessToken;
 
+use App\Imports\ExcelImport;
+use App\Imports\FirstSheetOnlyImport;
+
 use App\Lib\MyHelper;
 use Validator;
 use Hash;
@@ -423,6 +426,8 @@ class ApiOutletController extends Controller
 
         if (isset($post['webview'])) {
             $outlet = Outlet::with(['today']);
+        }elseif(isset($post['admin']) && isset($post['type']) && $post['type'] == 'export'){
+            $outlet = Outlet::with(['user_outlets','city','today','product_prices','product_prices.product'])->select('*');
         }elseif(isset($post['admin'])){
             $outlet = Outlet::with(['user_outlets','city','today'])->select('*');
             if(isset($post['id_product'])){
@@ -478,12 +483,13 @@ class ApiOutletController extends Controller
         if (isset($post['id_city'])) {
             $outlet->where('id_city',$post['id_city']);
         }
+        
 
-        $useragent = $_SERVER['HTTP_USER_AGENT'];
-        if(stristr($_SERVER['HTTP_USER_AGENT'],'iOS')) $useragent = 'iOS';
-        if(stristr($_SERVER['HTTP_USER_AGENT'],'okhttp')) $useragent = 'Android';
-        if($useragent == 'Android' || $useragent == 'iOS'){
+        if(isset($post['all_outlet']) && $post['all_outlet'] == 0){
             $outlet = $outlet->where('outlet_status', 'Active')->whereNotNull('id_city');
+            $outlet->whereHas('brands',function($query){
+                $query->where('brand_active','1');
+            });
         }
 
         // qrcode
@@ -513,7 +519,25 @@ class ApiOutletController extends Controller
             }
             $request['page'] = 0;
         }else{
-            $outlet = $outlet->orderBy('outlet_name')->get()->toArray();
+            $useragent = $_SERVER['HTTP_USER_AGENT'];
+            if(stristr($_SERVER['HTTP_USER_AGENT'],'iOS')) $useragent = 'iOS';
+            if(stristr($_SERVER['HTTP_USER_AGENT'],'okhttp')) $useragent = 'Android';
+            if($useragent == 'Android' || $useragent == 'iOS'){
+                $outlet = $outlet->orderBy('outlet_name')->get()->toArray();
+                foreach ($outlet as $keyOutlet => $valueOutlet) {
+                    $countBrandNotActive = 0;
+                    foreach ($valueOutlet['brands'] as $keyBrand => $valueBrand) {
+                        if ($valueBrand['brand_active'] == 0) {
+                            $countBrandNotActive++;
+                        }
+                    }
+                    if (count($valueOutlet['brands']) == $countBrandNotActive) {
+                        $outlet[$keyOutlet]['outlet_status'] = 'Inactive';
+                    }
+                }
+            } else {
+                $outlet = $outlet->orderBy('outlet_name')->get()->toArray();
+            }
             $loopdata=&$outlet;
         }
 
@@ -1402,108 +1426,86 @@ class ApiOutletController extends Controller
         return response()->json(MyHelper::checkGet($return));
     }
 
-    function import(Request $request) {
-        $path = $request->file('import_file')->getRealPath();
-        $dataimport = Excel::load($path, function($reader) {})->get();
+    function import(Request $request)
+    {
+        $post = $request->json()->all();
+        $dataimport = $post['data_import'];
 
-        if(!empty($dataimport) && $dataimport->count()){
-        $city = City::get();
-        $id_city = array_pluck($city, 'id_city');
-        $city_name = array_pluck($city, 'city_name');
-        $city_name = array_map('strtolower', $city_name);
+        if(!empty($dataimport) && count($dataimport)){
+            $city = City::get();
+            $id_city = array_pluck($city, 'id_city');
+            $city_name = array_pluck($city, 'city_name');
+            $city_name = array_map('strtolower', $city_name);
 
-        DB::beginTransaction();
-        $countImport = 0;
-        foreach ($dataimport as $key => $value) {
-            if(
-                empty($value->code) &&
-                empty($value->name) &&
-                empty($value->address) &&
-                empty($value->city) &&
-                empty($value->phone) &&
-                empty($value->latitude) &&
-                empty($value->longitude) &&
-                empty($value->open_hours) &&
-                empty($value->close_hours)
-            )
-            {}else{
-                $search = array_search(strtolower($value->city), $city_name);
-                if(!empty($search) && $key < count($dataimport)){
-                    if(!empty($value->open_hours)){
-                        $value->open_hours = date('H:i:s', strtotime($value->open_hours));
-                    }
-                    if(!empty($value->close_hours)){
-                        $value->close_hours = date('H:i:s', strtotime($value->open_hours));
-                    }
-                    if(empty($value->code)){
-                        do{
-                            $value->code = MyHelper::createRandomPIN(3);
-                            $code = Outlet::where('outlet_code', $value->code)->first();
-                        }while($code != null);
-                    }
-                    $code = ['outlet_code' => $value->code];
-                    $insert = [
-                        'outlet_code' => $value->code,
-                        'outlet_name' => $value->name,
-                        'outlet_address' => $value->address,
-                        'outlet_postal_code' => $value->postal_code,
-                        'outlet_phone' => $value->phone,
-                        'outlet_email' => $value->email,
-                        'outlet_latitude' => $value->latitude,
-                        'outlet_longitude' => $value->longitude,
-                        'outlet_open_hours' => $value->open_hours,
-                        'outlet_close_hours' => $value->close_hours,
-                        'id_city' => $id_city[$search]
-                    ];
-
-                    if(!empty($insert['outlet_name'])){
-                        $save = Outlet::updateOrCreate($code, $insert);
-
-                        if(empty($save)){
-                            DB::rollBack();
-                            return response()->json([
-                                'status'    => 'fail',
-                                'messages'      => [
-                                    'Something went wrong'
-                                ]
-                            ]);
-                        }else{
-                            $countImport++;
+            DB::beginTransaction();
+            $countImport = 0;
+            foreach ($dataimport as $key => $value) {
+                if(
+                    empty($value['code']) &&
+                    empty($value['name']) &&
+                    empty($value['address']) &&
+                    empty($value['city']) &&
+                    empty($value['phone']) &&
+                    empty($value['latitude']) &&
+                    empty($value['longitude']) &&
+                    empty($value['open_hours']) &&
+                    empty($value['close_hours'])
+                ){}else{
+                    $search = array_search(strtolower($value['city']), $city_name);
+                    if(!empty($search) && $key < count($dataimport)){
+                        if(!empty($value['open_hours'])){
+                            $value['open_hours'] = date('H:i:s', strtotime($value['open_hours']));
                         }
-                    }else{
-                        if($key == count($dataimport) - 1){
+                        if(!empty($value['close_hours'])){
+                            $value['close_hours'] = date('H:i:s', strtotime($value['close_hours']));
+                        }
+                        if(empty($value['code'])){
+                            do{
+                                $value['code'] = MyHelper::createRandomPIN(3);
+                                $code = Outlet::where('outlet_code', $value['code'])->first();
+                            }while($code != null);
+                        }
+                        $code = ['outlet_code' => $value['code']];
+                        $insert = [
+                            'outlet_code' => $value['code']??'',
+                            'outlet_name' => $value['name']??'',
+                            'outlet_address' => $value['address']??'',
+                            'outlet_postal_code' => $value['postal_code']??'',
+                            'outlet_phone' => $value['phone']??'',
+                            'outlet_email' => $value['email']??'',
+                            'outlet_latitude' => $value['latitude']??'',
+                            'outlet_longitude' => $value['longitude']??'',
+                            'outlet_open_hours' => $value['open_hours']??'',
+                            'outlet_close_hours' => $value['close_hours']??'',
+                            'id_city' => $id_city[$search]??null
+                        ];
+                        if(!empty($insert['outlet_name'])){
+                            $save = Outlet::updateOrCreate($code, $insert);
+
+                            if(empty($save)){
+                                DB::rollBack();
+                                return response()->json([
+                                    'status'    => 'fail',
+                                    'messages'      => [
+                                        'Data city not found.'
+                                    ]
+                                ]);
+                            } else {
+                                $countImport++;
+                            }
+                        } else {
                             DB::commit();
-                            if($save) return ['status' => 'success', 'message' => $countImport.' data successfully imported.'];
-                            else return ['status' => 'fail','messages' => ['failed to update data']];
-                        }else{
-                            DB::rollBack();
-                            return response()->json([
-                                'status'    => 'fail',
-                                'messages'  => 'outlet name is required.'
-                            ]);
+                            if ($save) return ['status' => 'success', 'message' => $countImport . ' data successfully imported.'];
+                            else return ['status' => 'fail', 'messages' => ['failed to update data']];
                         }
-                    }
-                }else{
-                    if($key < count($dataimport)){
-                        DB::rollBack();
-                        return response()->json([
-                            'status'    => 'fail',
-                            'messages'      => [
-                                'Data city not found.'
-                                ]
-                            ]);
-                    }else{
-                    DB::commit();
-                    if($save) return ['status' => 'success', 'message' => $countImport.' data successfully imported.'];
-                    else return ['status' => 'fail','messages' => ['failed to update data']];
                     }
                 }
             }
-        }
 
-        DB::commit();
-        if($save) return ['status' => 'success', 'message' => $countImport.' data successfully imported.'];
-        else return ['status' => 'fail','messages' => ['failed to update data']];
+            DB::commit();
+
+            if($save??false) return ['status' => 'success', 'message' => $countImport.' data successfully imported.'];
+            else return ['status' => 'fail','messages' => ['failed to update data']];
         }else{
             return response()->json([
                 'status'    => 'fail',

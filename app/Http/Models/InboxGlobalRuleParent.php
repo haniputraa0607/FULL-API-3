@@ -26,6 +26,6 @@ class InboxGlobalRuleParent extends Model
 	public function rules()
 	{
 		return $this->hasMany(\App\Http\Models\InboxGlobalRule::class, 'id_inbox_global_rule_parent')
-					->select('id_inbox_global_rule','id_inbox_global_rule_parent','inbox_global_rule_subject as subject', 'inbox_global_rule_operator as operator', 'inbox_global_rule_param as parameter');
+					->select('id_inbox_global_rule','id_inbox_global_rule_parent','inbox_global_rule_subject as subject', 'inbox_global_rule_operator as operator', 'inbox_global_rule_param as parameter', 'inbox_global_rule_param_id as id');
 	}
 }

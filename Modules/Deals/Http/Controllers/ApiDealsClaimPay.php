@@ -310,12 +310,12 @@ class ApiDealsClaimPay extends Controller
                     if(\Module::collections()->has('Autocrm')) {
                         $phone=User::where('id', $voucher->id_user)->pluck('phone')->first();
                         $voucher->load('dealVoucher.deals');
-                        $autocrm = app($this->autocrm)->SendAutoCRM('Claim Deals Success', $phone,
+                        $autocrm = app($this->autocrm)->SendAutoCRM('Claim Paid Deals Success', $phone,
                             [
                                 'claimed_at'       => $voucher->claimed_at, 
                                 'deals_title'      => $voucher->dealVoucher->deals->deals_title,
                                 'id_deals_user'    => $return['result']['voucher']['id_deals_user'],
-                                'deals_voucher_price_point' => $voucher->dealVoucher->deals->deals_voucher_price_point
+                                'deals_voucher_price_point' => (string) $voucher->voucher_price_point,
                             ]
                         );
                     }

@@ -15,37 +15,37 @@
                 font-family: "ProductSans-Bold";
                 font-style: normal;
                 font-weight: 400;
-                src: url('{{ env('S3_URL_VIEW') }}{{ ('/fonts/ProductSans-Regular.ttf') }}');
+                src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/ProductSans-Regular.ttf') }}');
         }
         @font-face {
                 font-family: "ProductSans-BoldItalic";
                 font-style: normal;
                 font-weight: 400;
-                src: url('{{ env('S3_URL_VIEW') }}{{ ('/fonts/ProductSans-BoldItalic.ttf') }}');
+                src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/ProductSans-BoldItalic.ttf') }}');
         }
         @font-face {
                 font-family: "ProductSans-Italic";
                 font-style: normal;
                 font-weight: 400;
-                src: url('{{ env('S3_URL_VIEW') }}{{ ('/fonts/ProductSans-Italic.ttf') }}');
+                src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/ProductSans-Italic.ttf') }}');
         }
         @font-face {
                 font-family: "ProductSans-Medium";
                 font-style: normal;
                 font-weight: 400;
-                src: url('{{ env('S3_URL_VIEW') }}{{ ('/fonts/ProductSans-Medium.ttf') }}');
+                src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/ProductSans-Medium.ttf') }}');
         }
         @font-face {
                 font-family: "ProductSans-MediumItalic";
                 font-style: normal;
                 font-weight: 400;
-                src: url('{{ env('S3_URL_VIEW') }}{{ ('/fonts/ProductSans-MediumItalic.ttf') }}');
+                src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/ProductSans-MediumItalic.ttf') }}');
         }
         @font-face {
                 font-family: "ProductSans";
                 font-style: normal;
                 font-weight: 400;
-                src: url('{{ env('S3_URL_VIEW') }}{{ ('/fonts/ProductSans-Regular.ttf') }}');
+                src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/ProductSans-Regular.ttf') }}');
         }
         .ProductSans{
             font-family: "ProductSans";
@@ -96,7 +96,7 @@
         }
 
         body {
-            background: #fafafa;
+            background: rgb(255, 255, 255);
         }
     </style>
   </head>
@@ -105,7 +105,7 @@
     <div class="kotak-full">
         <div class="container">
             <div class="row">
-                <div class="col-12 ProductSans brownishGrey" style="font-size: 16px; line-height: 26px"><?php echo $value; ?></div>
+                <div class="col-12 ProductSans brownishGrey" style="font-size: 16px; line-height: 26px">{!! $value !!}</div>
             </div>
         </div>
     </div>

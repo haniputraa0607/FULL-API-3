@@ -270,7 +270,7 @@
 
     <div class="kotak1" @if($data[0]['big_order'] == 0) style='margin-bottom: 220px;' @endif>
   		<div class="container">
-  		    <div class="ProductSans space-text" id="testClick" style="color: rgb(74, 0, 0); font-size: 12.7px; padding-bottom: 5px;">Jam Operasional <i style="color: rgb(74, 0, 0);" class="pull-right icon fa fa-angle-down"></i></div>
+  		    <div class="ProductSans space-text" id="testClick" style="color: rgb(74, 0, 0); font-size: 12.7px; padding-bottom: 5px;">Jam Operasional @if (!empty($data[0]['outlet_schedules']))<i style="color: rgb(74, 0, 0);" class="pull-right icon fa fa-angle-down"></i>@endif</div>
   			@php
   				$hari = date ("D");
 

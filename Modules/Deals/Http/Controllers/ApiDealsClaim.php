@@ -196,11 +196,10 @@ class ApiDealsClaim extends Controller
                         // }
                         if(\Module::collections()->has('Autocrm')) {
                             $phone=$request->user()->phone;
-                            $autocrm = app($this->autocrm)->SendAutoCRM('Claim Deals Success', $phone,
+                            $autocrm = app($this->autocrm)->SendAutoCRM('Claim Free Deals Success', $phone,
                                 [
                                     'claimed_at'       => $voucher['claimed_at'],
                                     'deals_title'      => $dataDeals->deals_title,
-                                    'deals_voucher_price_point' => $dataDeals->deals_voucher_price_point,
                                     'id_deals_user' => $voucher['id_deals_user']
                                 ]
                             );

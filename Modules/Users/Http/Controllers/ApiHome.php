@@ -91,7 +91,7 @@ class ApiHome extends Controller
             if ($value->id_news != "") {
                 $item['news_title'] = $value->news->news_title;
                 // if news, generate webview news detail url
-                $item['url']        = env('APP_URL') .'news/webview/'. $value->id_news;
+                $item['url']        = env('API_URL') .'news/webview/'. $value->id_news;
             }
 
             if ($value->type == 'gofood') {
@@ -489,7 +489,10 @@ class ApiHome extends Controller
 								->where('device_type', $device_type)
 								->count();
         if ($checkDevice == 0) {
-            $update                = UserDevice::create($dataUpdate);
+            $update                = UserDevice::updateOrCreate(['device_id' => $device_id], [
+                'device_token'		=> $device_token,
+                'device_type'		=> $device_type
+            ]);
             $result = [
                 'status' => 'updated'
             ];
@@ -516,8 +519,11 @@ class ApiHome extends Controller
 								->count();
 
         if ($checkDevice == 0) {
-            $dataUpdate['id_user'] = $user->id;
-            $update                = UserDevice::create($dataUpdate);
+            $update                = UserDevice::updateOrCreate(['device_id' => $device_id], [
+                'id_user'           => $user->id,
+                'device_token'		=> $device_token,
+                'device_type'		=> $device_type
+            ]);
         }
         else {
             $update = UserDevice::where('id_user','=',$user->id)->update($dataUpdate);
@@ -757,6 +763,11 @@ class ApiHome extends Controller
                 $value['deals']['time_to_end']=strtotime($value['deals']['deals_end'])-time();
                 return $value;
             },$deals->toArray());
+            foreach ($deals as $key => $value) {
+                if ($value['deals']['available_voucher'] == "0") {
+                    unset($deals[$key]);
+                }
+            }
             return [
                 'status'=>'success',
                 'result'=>$deals
