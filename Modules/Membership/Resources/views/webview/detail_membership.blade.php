@@ -325,7 +325,7 @@
                                 </div>
                             </div>
                             @endif
-                            @if($item['benefit_cashback_multiplier'] != null && $item['benefit_cashback_multiplier'] > 0)
+                            {{-- @if($item['benefit_cashback_multiplier'] != null && $item['benefit_cashback_multiplier'] > 0)
                             <div class="content-list-item">
                                 <div class="font-regular-gray">
                                     <li style="list-style-type:none;">
@@ -338,10 +338,10 @@
                                     @endif
                                 </div>
                             </div>
-                            @endif
+                            @endif --}}
                             @if($item['benefit_discount'] != null && $item['benefit_discount'] > 0)
                             <div class="content-list-item">
-                                <div class=font-regular-gray>
+                                <div class="font-regular-gray">
                                     <img src="{{$item['membership_image']}}"/> Benefit Discount {{number_format($item['benefit_discount'])}}
                                 </div>
                             </div>
@@ -350,7 +350,7 @@
                             <div class="content-list-item">
                                 <div class=font-regular-gray>
                                     @foreach ($item['membership_promo_id'] as $data)
-                                        <li style="list-style-type:none;">
+                                        <li style="list-style-type:none; margin-bottom:10px;">
                                             <img src="{{$item['membership_image']}}"/> {{$data['promo_name']}}
                                         </li>
                                     @endforeach
