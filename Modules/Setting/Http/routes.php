@@ -37,6 +37,9 @@ Route::group(['middleware' => ['auth:api', 'log_activities'], 'prefix' => 'api/s
     Route::post('/faq/delete', 'ApiSetting@faqDelete');
     Route::get('/webview/faq', 'ApiSetting@faqWebview');
 
+    Route::post('/intro/save', 'ApiSetting@introSave');
+    Route::any('/intro/list', 'ApiSetting@introList');
+
     Route::post('email', 'ApiSetting@settingEmail');
     Route::get('email', 'ApiSetting@getSettingEmail');
 
