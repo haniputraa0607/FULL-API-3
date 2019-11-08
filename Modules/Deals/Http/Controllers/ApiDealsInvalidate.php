@@ -84,6 +84,7 @@ class ApiDealsInvalidate extends Controller
                                 [
                                     'redeemed_at'       => $deals['redeemed_at'],
                                     'id_deals_user'     => $deals['id_deals_user'],
+                                    'deals_title'       => $deals['deal_voucher']['deal']['deals_title'],
                                     'voucher_code'      => $deals['deal_voucher']['voucher_code'],
                                     'outlet_name'       => $deals['outlet_name'],
                                     'outlet_code'       => $deals['outlet_code']
