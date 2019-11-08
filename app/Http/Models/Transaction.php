@@ -86,8 +86,7 @@ class Transaction extends Model
 		'id_deals_voucher',
 		'latitude',
 		'longitude',
-		'membership_promo_id',
-        'member_uid'
+		'membership_promo_id'
 	];
 
 	public function user()
