@@ -339,7 +339,7 @@ class ApiUser extends Controller
             });
         }
         if($objOnly){
-            return $finalResult->get();
+            return $finalResult;
         }
 
         $result = $finalResult->skip($skip)->take($take)->get()->toArray();
