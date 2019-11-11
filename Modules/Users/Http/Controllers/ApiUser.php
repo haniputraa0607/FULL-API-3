@@ -2364,15 +2364,30 @@ class ApiUser extends Controller
             return response()->json($result);
         }
 
-        $user = User::where('phone',$post['phone'])->get()->toArray();
-
+        $user = User::where('phone',$post['phone'])->first();
+        if(!$user){
+            return [
+                'status'=>'fail',
+                'messages'=>'User not found'
+            ];
+        }
+        DB::beginTransaction();
         $create = null;
         if(isset($post['module'])){
+            $delete=UserFeature::where('id_user',$user->id)->delete();
             foreach($post['module'] as $id_feature){
-                $create = DB::insert('insert into user_features (id_user, id_feature) values (?, ?)', [$user[0]['id'], $id_feature]);
-
+                $create = UserFeature::updateOrCreate(['id_user'=>$user->id,'id_feature'=>$id_feature]);
+                // $create = DB::insert('insert into user_features (id_user, id_feature) values (?, ?)', [$user->id, $id_feature]);
+                if(!$create){
+                    DB::rollback();
+                    return [
+                        'status'=>'fail',
+                        'messages'=>['Update user permission failed']
+                    ];
+                }
             }
         }
+        DB::commit();
         $result = ['status'	=> 'success'];
         return response()->json($result);
     }
