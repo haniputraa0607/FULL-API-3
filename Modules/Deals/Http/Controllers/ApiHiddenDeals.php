@@ -246,7 +246,9 @@ class ApiHiddenDeals extends Controller
                     $autocrm = app($this->autocrm)->SendAutoCRM('Receive Hidden Deals', $datauser['phone'],
                         [
                             'deals_title'      => $deals->deals_title,
-                            'id_deals_user'    => $first_deal->id_deals_user
+                            'id_deals_user'    => $first_deal->id_deals_user,
+                            'id_deals'         => $deals->id_deals,
+                            'id_brand'         => $deals->id_brand
                         ]
                     );
                     $countUser++;
