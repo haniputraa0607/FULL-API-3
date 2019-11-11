@@ -1346,6 +1346,38 @@ class FeaturesTableSeeder extends Seeder
                 'feature_module' => 'News Category',
                 'created_at' => date('Y-m-d H:00:00'),
                 'updated_at' => date('Y-m-d H:00:00'),
+            ),
+            167 =>
+            array(
+                'id_feature' => 168,
+                'feature_type' => 'List',
+                'feature_module' => 'Intro',
+                'created_at' => date('Y-m-d H:00:00'),
+                'updated_at' => date('Y-m-d H:00:00'),
+            ),
+            168 =>
+            array(
+                'id_feature' => 169,
+                'feature_type' => 'Create',
+                'feature_module' => 'Intro',
+                'created_at' => date('Y-m-d H:00:00'),
+                'updated_at' => date('Y-m-d H:00:00'),
+            ),
+            169 =>
+            array(
+                'id_feature' => 170,
+                'feature_type' => 'Update',
+                'feature_module' => 'Intro',
+                'created_at' => date('Y-m-d H:00:00'),
+                'updated_at' => date('Y-m-d H:00:00'),
+            ),
+            170 =>
+            array(
+                'id_feature' => 171,
+                'feature_type' => 'Delete',
+                'feature_module' => 'Intro',
+                'created_at' => date('Y-m-d H:00:00'),
+                'updated_at' => date('Y-m-d H:00:00'),
             )
         ));
     }
