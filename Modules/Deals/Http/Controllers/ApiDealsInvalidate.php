@@ -87,7 +87,9 @@ class ApiDealsInvalidate extends Controller
                                     'deals_title'       => $deals['deal_voucher']['deal']['deals_title'],
                                     'voucher_code'      => $deals['deal_voucher']['voucher_code'],
                                     'outlet_name'       => $deals['outlet_name'],
-                                    'outlet_code'       => $deals['outlet_code']
+                                    'outlet_code'       => $deals['outlet_code'],
+                                    'id_deals'          => $deals['deal_voucher']['deal']['id_deals'],
+                                    'id_brand'          => $deals['deal_voucher']['deal']['id_brand']
                                 ]);
 
                             // RETURN INFO REDEEM

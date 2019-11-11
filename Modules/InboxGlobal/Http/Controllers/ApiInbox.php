@@ -138,6 +138,10 @@ class ApiInbox extends Controller
 				$content['id_reference'] = 0;
 			}
 
+			if($content['clickto']=='Deals Detail'){
+				$content['id_brand'] = $private['id_brand'];
+			}
+
 			if($content['clickto'] == 'News'){
 				$news = News::find($private['inboxes_id_reference']);
 				if($news){
