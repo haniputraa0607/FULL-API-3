@@ -1776,6 +1776,7 @@ class MyHelper{
 					$condition[$type.'_rule_operator'] = $row['operator'];
 				}
 
+                $condition[$type.'_rule_param_id'] = NULL;
 				if($row['subject'] == 'all_user'){
 					$condition[$type.'_rule_param'] = "";
 				}elseif($row['subject'] == 'trx_product' || $row['subject'] == 'trx_outlet'){
