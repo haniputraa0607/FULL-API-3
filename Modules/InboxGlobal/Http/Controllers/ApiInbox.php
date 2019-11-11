@@ -218,18 +218,18 @@ class ApiInbox extends Controller
 			$userInbox = UserInbox::where('id_user_inboxes', $post['id_inbox'])->first();
 			if(!empty($userInbox)){
 				$update = UserInbox::where('id_user_inboxes', $post['id_inbox'])->update(['read' => '1']);
-				if(!$update){
-					$result = [
-						'status'  => 'fail',
-						'messages'  => ['Failed marked inbox']
-					];
-				}else{
+				// if(!$update){
+				// 	$result = [
+				// 		'status'  => 'fail',
+				// 		'messages'  => ['Failed marked inbox']
+				// 	];
+				// }else{
 					$countUnread = $this->listInboxUnread( $user['id']);
 					$result = [
 						'status'  => 'success',
 						'result'  => ['count_unread' => $countUnread]
 					];
-				}
+				// }
 			}else{
 				$result = [
 					'status'  => 'fail',
