@@ -93,7 +93,7 @@ class Outlet extends Authenticatable
 
 	public function getUrlAttribute()
 	{
-		return env('VIEW_URL').'/outlet/webview/'.$this->id_outlet;
+		return env('API_URL').'/api/outlet/webview/'.$this->id_outlet;
 	}
 
 	public function brands(){
