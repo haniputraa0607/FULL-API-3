@@ -225,7 +225,7 @@ class ApiUser extends Controller
                         $userTrxProduct = false;
                     }
                     /*================================== END check ==================================*/
-                    if(!is_array($cond)) $cond = [];
+                    if(!is_object($cond)) $cond = $cond->toArray();
                     if(count($arr_tmp_outlet) > 0)array_push($cond, ['outlets' => $arr_tmp_outlet]);
 
                     if($scanTrx == true){
@@ -339,7 +339,7 @@ class ApiUser extends Controller
             });
         }
         if($objOnly){
-            return $finalResult;
+            return $finalResult->get();
         }
 
         $result = $finalResult->skip($skip)->take($take)->get()->toArray();
