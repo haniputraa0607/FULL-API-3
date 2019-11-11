@@ -30,6 +30,11 @@ class UserFeature extends Model
 		'id_feature' => 'int'
 	];
 
+	protected $fillable=[
+		'id_feature',
+		'id_user'
+	];
+
 	public function feature()
 	{
 		return $this->belongsTo(\App\Http\Models\Feature::class, 'id_feature');
