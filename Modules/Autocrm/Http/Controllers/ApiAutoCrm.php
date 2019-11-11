@@ -379,6 +379,11 @@ class ApiAutoCrm extends Controller
 								} else {
 									$dataOptional['id_reference'] = 0;
 								}
+							}elseif ($dataOptional['type'] == 'Deals') {
+								$dataOptional['id_reference'] = $variables['id_brand'];
+							}elseif ($dataOptional['type'] == 'Deals Detail') {
+								$dataOptional['id_reference'] = $variables['id_deals'];
+								$dataOptional['id_brand'] = $variables['id_brand'];
 							}
 							else {
 								$dataOptional['id_reference'] = 0;
@@ -461,8 +466,12 @@ class ApiAutoCrm extends Controller
 							} else {
 								$inbox['inboxes_id_reference'] = 0;
 							}
-						}
-						else {
+						}elseif ($crm['autocrm_inbox_clickto'] == 'Deals') {
+							$inbox['inboxes_id_reference'] = $variables['id_brand'];
+						}elseif ($crm['autocrm_inbox_clickto'] == 'Deals Detail') {
+							$inbox['inboxes_id_reference'] = $variables['id_deals'];
+							$inbox['id_brand'] = $variables['id_brand'];
+						}else {
 							$inbox['inboxes_id_reference'] = 0;
 						}
 					}
