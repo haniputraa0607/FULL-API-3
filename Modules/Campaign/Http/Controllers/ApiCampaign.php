@@ -315,67 +315,10 @@ class ApiCampaign extends Controller
 
 			if($campaign['campaign_send_at'] == null){
 				//Kirimnya NOW
-				if($campaign['campaign_media_email'] == "Yes"){
-					$receipient_email = explode(',', str_replace(' ', ',', str_replace(';', ',', $campaign['campaign_email_receipient'])));
-					$data['campaign'] = $campaign;
-					$data['type'] = 'email';
-					foreach (array_chunk($receipient_email,10) as $recipients) {
-						$data['recipient']=array_filter($recipients,function($var){return !empty($var);});
-						SendCampaignJob::dispatch($data)->allOnConnection('database');
-					}
-				}
-
-				if($campaign['campaign_media_sms'] == "Yes"){
-					$receipient_sms = explode(',', str_replace(' ', ',', str_replace(';', ',', $campaign['campaign_sms_receipient'])));
-
-					$data['campaign'] = $campaign;
-					$data['type'] = 'sms';
-					foreach (array_chunk($receipient_sms,10) as $recipients) {
-						$data['recipient']=array_filter($recipients,function($var){return !empty($var);});
-						SendCampaignJob::dispatch($data)->allOnConnection('database');
-					}
-				}
-
-				if($campaign['campaign_media_push'] == "Yes"){
-					$receipient_push = explode(',', str_replace(' ', ',', str_replace(';', ',', $campaign['campaign_push_receipient'])));
-
-					$data['campaign'] = $campaign;
-					$data['type'] = 'push';
-					foreach (array_chunk($receipient_push,10) as $recipients) {
-						$data['recipient']=array_filter($recipients,function($var){return !empty($var);});
-						SendCampaignJob::dispatch($data)->allOnConnection('database');
-					}
-				}
-
-				if($campaign['campaign_media_inbox'] == "Yes"){
-					$receipient_inbox = explode(',', str_replace(' ', ',', str_replace(';', ',', $campaign['campaign_inbox_receipient'])));
-
-					$data['campaign'] = $campaign;
-					$data['type'] = 'inbox';
-					foreach (array_chunk($receipient_inbox,10) as $recipients) {
-						$data['recipient']=array_filter($recipients,function($var){return !empty($var);});
-						SendCampaignJob::dispatch($data)->allOnConnection('database');
-					}
-				}
-
-				if($campaign['campaign_media_whatsapp'] == "Yes"){
-					$sendAt = date('Y-m-d H:i:s', strtotime("+ 5 minutes"));
-
-					$receipient_whatsapp = explode(',', str_replace(' ', ',', str_replace(';', ',', $campaign['campaign_whatsapp_receipient'])));
-
-					$data['campaign'] = $campaign;
-					$data['type'] = 'whatsapp';
-					foreach (array_chunk($receipient_whatsapp,10) as $recipients) {
-						$data['recipient']=array_filter($recipients,function($var){return !empty($var);});
-						SendCampaignJob::dispatch($data)->allOnConnection('database');
-					}
-
-				}
-				$update = Campaign::where('id_campaign','=',$campaign['id_campaign'])->update(['campaign_is_sent' => 'Yes']);
-
+				$send=$this->sendCampaignInternal($campaign);
 				$result = [
 					'status'  => 'success',
-					'result'  => $campaign
+					'result'  => $send
 				];
 			} else {
 				$result = [
@@ -399,234 +342,11 @@ class ApiCampaign extends Controller
 
 		$campaigns = Campaign::where('campaign_send_at', '>=', $now2)->where('campaign_send_at', '<=', $now)->where('campaign_is_sent', 'No')->where('campaign_complete', '1')->get();
 		foreach ($campaigns as $i => $campaign) {
-			if($campaign['campaign_generate_receipient'] == 'Send At Time'){
-				$cond = Campaign::with(['campaign_rule_parents', 'campaign_rule_parents.rules'])->where('id_campaign','=',$campaign['id_campaign'])->first();
-				$userFilter = app($this->user)->UserFilter($cond['campaign_rule_parents']);
-				$receipient = [];
-				if($userFilter){
-					$receipient = $userFilter['result'];
-
-					//update email receipient
-					if($campaign['campaign_media_email'] == "Yes"){
-						$emailReceipient = $campaign['campaign_email_receipient'];
-						if(count($receipient) > 0){
-							if($emailReceipient != null){
-								$emailReceipient = $emailReceipient.','.implode(',', array_pluck($receipient,'email'));
-							}else{
-								$emailReceipient = implode(',', array_pluck($receipient,'email'));
-							}
-
-							DB::table('campaigns')
-							->where('id_campaign', $campaign['id_campaign'])
-							->update([
-								'campaign_email_receipient' => $emailReceipient,
-								'campaign_email_count_all' => count(explode(',',$emailReceipient))
-							]);
-						}
-					}
-					//update sms receipient
-					if($campaign['campaign_media_sms'] == "Yes"){
-						$smsReceipient = $campaign['campaign_sms_receipient'];
-						if(count($receipient) > 0){
-							if($smsReceipient != null){
-								$smsReceipient = $smsReceipient.','.implode(',', array_pluck($receipient,'phone'));
-							}else{
-								$smsReceipient = implode(',', array_pluck($receipient,'phone'));
-							}
-
-							DB::table('campaigns')
-							->where('id_campaign', $campaign['id_campaign'])
-							->update([
-								'campaign_sms_receipient' => $smsReceipient,
-								'campaign_sms_count_all' => count(explode(',',$smsReceipient))
-							]);
-						}
-					}
-					//update push receipient
-					if($campaign['campaign_media_push'] == "Yes"){
-						$pushReceipient = $campaign['campaign_push_receipient'];
-						if(count($receipient) > 0){
-							if($pushReceipient != null){
-								$pushReceipient = $pushReceipient.','.implode(',', array_pluck($receipient,'phone'));
-							}else{
-								$pushReceipient = implode(',', array_pluck($receipient,'phone'));
-							}
-
-							DB::table('campaigns')
-							->where('id_campaign', $campaign['id_campaign'])
-							->update([
-								'campaign_push_receipient' => $pushReceipient,
-								'campaign_push_count_all' => count(explode(',',$pushReceipient))
-							]);
-						}
-					}
-					//update inbox receipient
-					if($campaign['campaign_media_inbox'] == "Yes"){
-						$inboxReceipient = $campaign['campaign_inbox_receipient'];
-						if(count($receipient) > 0){
-							if($inboxReceipient != null){
-								$inboxReceipient = $inboxReceipient.','.implode(',', array_pluck($receipient,'phone'));
-							}else{
-								$inboxReceipient = implode(',', array_pluck($receipient,'phone'));
-							}
-
-							DB::table('campaigns')
-							->where('id_campaign', $campaign['id_campaign'])
-							->update([
-								'campaign_inbox_receipient' => $inboxReceipient,
-								'campaign_inbox_count' => count(explode(',',$inboxReceipient))
-							]);
-						}
-					}
-					//update whatsapp receipient
-					if($campaign['campaign_media_whatsapp'] == "Yes"){
-						$whatsappReceipient = $campaign['campaign_whatsapp_receipient'];
-						if(count($receipient) > 0){
-							if($whatsappReceipient != null){
-								$whatsappReceipient = $whatsappReceipient.','.implode(',', array_pluck($receipient,'phone'));
-							}else{
-								$whatsappReceipient = implode(',', array_pluck($receipient,'phone'));
-							}
-
-							DB::table('campaigns')
-							->where('id_campaign', $campaign['id_campaign'])
-							->update([
-								'campaign_whatsapp_receipient' => $whatsappReceipient,
-								'campaign_whatsapp_count_all' => count(explode(',',$whatsappReceipient))
-							]);
-						}
-					}
-
-				}
+			if($campaign->campaign_generate_receipient=='Send At Time'){
+				$post=['id_campaign'=>$campaign->id_campaign];
+				GenerateCampaignRecipient::dispatch($post)->allOnConnection('database');
 			}
-			$campaign = Campaign::find($campaign['id_campaign']);
-			// add email queue
-			if($campaign['campaign_media_email'] == "Yes"){
-				$receipient_email = explode(',', str_replace(' ', ',', str_replace(';', ',', $campaign['campaign_email_receipient'])));
-				foreach($receipient_email as $key => $receipient){
-					//masuk queue
-					$subject = app($this->autocrm)->TextReplace($campaign['campaign_email_subject'], $receipient, null, 'email');
-					$content = app($this->autocrm)->TextReplace($campaign['campaign_email_content'], $receipient, null, 'email');
-
-					$queue = [];
-					$queue['id_campaign'] = $campaign['id_campaign'];
-					$queue['email_queue_to'] = $receipient;
-					$queue['email_queue_subject'] = $subject;
-					$queue['email_queue_content'] = $content;
-					$queue['email_queue_send_at'] = date('Y-m-d H:i:s');
-
-					$logs = CampaignEmailQueue::create($queue);
-
-					DB::table('campaigns')
-						->where('id_campaign', $campaign['id_campaign'])
-						->update([
-							'campaign_email_count_queue' => DB::raw('campaign_email_count_queue + 1')
-						]);
-				}
-
-			}
-			// add sms queue
-			if($campaign['campaign_media_sms'] == "Yes"){
-				$receipient_sms = explode(',', str_replace(' ', ',', str_replace(';', ',', $campaign['campaign_sms_receipient'])));
-
-				foreach($receipient_sms as $key => $receipient){
-					$content = app($this->autocrm)->TextReplace($campaign['campaign_sms_content'], $receipient);
-
-					$queue = [];
-					$queue['id_campaign'] = $campaign['id_campaign'];
-					$queue['sms_queue_to'] = $receipient;
-					$queue['sms_queue_content'] = $content;
-					$queue['sms_queue_send_at'] = date('Y-m-d H:i:s');
-
-					$logs = CampaignSmsQueue::create($queue);
-
-					DB::table('campaigns')
-						->where('id_campaign', $campaign['id_campaign'])
-						->update([
-							'campaign_sms_count_queue' => DB::raw('campaign_sms_count_queue + 1')
-						]);
-				}
-			}
-
-			// add push queue
-			if($campaign['campaign_media_push'] == "Yes"){
-				$receipient_push = explode(',', str_replace(' ', ',', str_replace(';', ',', $campaign['campaign_push_receipient'])));
-
-				foreach($receipient_push as $key => $receipient){
-					$push_subject = app($this->autocrm)->TextReplace($campaign['campaign_push_subject'], $receipient, null, 'phone');
-					$push_content = app($this->autocrm)->TextReplace($campaign['campaign_push_content'], $receipient, null, 'phone');
-
-					$push = [];
-					$push['id_campaign'] = $campaign['id_campaign'];
-					$push['push_queue_to'] = $receipient;
-					$push['push_queue_subject'] = $push_subject;
-					$push['push_queue_content'] = $push_content;
-					$push['push_queue_send_at'] = date('Y-m-d H:i:s');
-
-					$logs = CampaignPushQueue::create($push);
-
-					DB::table('campaigns')
-						->where('id_campaign', $campaign['id_campaign'])
-						->update([
-							'campaign_push_count_queue' => DB::raw('campaign_push_count_queue + 1')
-						]);
-				}
-			}
-
-			// add inbox queue
-			if($campaign['campaign_media_inbox'] == "Yes"){
-				$receipient_inbox = explode(',', str_replace(' ', ',', str_replace(';', ',', $campaign['campaign_inbox_receipient'])));
-
-				$user = User::whereIn('phone',$receipient_inbox)->get()->toArray();
-
-				foreach($user as $key => $receipient){
-
-					$inbox = [];
-					$inbox['id_campaign'] = $campaign['id_campaign'];
-					$inbox['id_user'] 	  = $receipient['id'];
-					$inbox['inboxes_subject'] = app($this->autocrm)->TextReplace($campaign['campaign_inbox_subject'], $receipient['id'], null, 'id');
-					$inbox['inboxes_clickto'] = $campaign['campaign_inbox_clickto'];
-
-					if($campaign['campaign_inbox_clickto'] == 'Content'){
-						$inbox['inboxes_content'] = app($this->autocrm)->TextReplace($campaign['campaign_inbox_content'], $receipient['id'], null, 'id');
-					}
-
-					if($campaign['campaign_inbox_clickto'] == 'Link'){
-						$inbox['inboxes_link'] = $campaign['campaign_inbox_link'];
-					}
-
-					if(!empty($campaign['campaign_inbox_id_reference'])){
-						$inbox['inboxes_id_reference'] = $campaign['campaign_inbox_id_reference'];
-					}
-					$inbox['inboxes_send_at'] = date("Y-m-d H:i:s");
-					$inbox['created_at'] = date("Y-m-d H:i:s");
-					$inbox['updated_at'] = date("Y-m-d H:i:s");
-
-					$inboxQuery = UserInbox::insert($inbox);
-				}
-			}
-
-			// add whatsapp queue
-			if($campaign['campaign_media_whatsapp'] == "Yes"){
-				$receipient_Whatsapp = explode(',', str_replace(' ', ',', str_replace(';', ',', $campaign['campaign_push_receipient'])));
-
-				foreach($receipient_Whatsapp as $key => $receipient){
-
-					$whatsapp = [];
-					$whatsapp['id_campaign'] = $campaign['id_campaign'];
-					$whatsapp['whatsapp_queue_to'] = $receipient;
-					$whatsapp['whatsapp_queue_send_at'] = date('Y-m-d H:i:s');
-
-					$logs = CampaignWhatsappQueue::create($whatsapp);
-
-					DB::table('campaigns')
-						->where('id_campaign', $campaign['id_campaign'])
-						->update([
-							'campaign_push_count_queue' => DB::raw('campaign_push_count_queue + 1')
-						]);
-				}
-			}
-			$update = Campaign::where('id_campaign','=',$campaign['id_campaign'])->update(['campaign_is_sent' => 'Yes']);
+			$this->sendCampaignInternal($campaign->toArray());
 		}
 
 		return response()->json([
@@ -636,6 +356,66 @@ class ApiCampaign extends Controller
 
 	}
 
+	public function sendCampaignInternal($campaign){
+		if($campaign['campaign_media_email'] == "Yes"){
+			$receipient_email = explode(',', str_replace(' ', ',', str_replace(';', ',', $campaign['campaign_email_receipient'])));
+			$data['campaign'] = $campaign;
+			$data['type'] = 'email';
+			foreach (array_chunk($receipient_email,10) as $recipients) {
+				$data['recipient']=array_filter($recipients,function($var){return !empty($var);});
+				SendCampaignJob::dispatch($data)->allOnConnection('database');
+			}
+		}
+
+		if($campaign['campaign_media_sms'] == "Yes"){
+			$receipient_sms = explode(',', str_replace(' ', ',', str_replace(';', ',', $campaign['campaign_sms_receipient'])));
+
+			$data['campaign'] = $campaign;
+			$data['type'] = 'sms';
+			foreach (array_chunk($receipient_sms,10) as $recipients) {
+				$data['recipient']=array_filter($recipients,function($var){return !empty($var);});
+				SendCampaignJob::dispatch($data)->allOnConnection('database');
+			}
+		}
+
+		if($campaign['campaign_media_push'] == "Yes"){
+			$receipient_push = explode(',', str_replace(' ', ',', str_replace(';', ',', $campaign['campaign_push_receipient'])));
+
+			$data['campaign'] = $campaign;
+			$data['type'] = 'push';
+			foreach (array_chunk($receipient_push,10) as $recipients) {
+				$data['recipient']=array_filter($recipients,function($var){return !empty($var);});
+				SendCampaignJob::dispatch($data)->allOnConnection('database');
+			}
+		}
+
+		if($campaign['campaign_media_inbox'] == "Yes"){
+			$receipient_inbox = explode(',', str_replace(' ', ',', str_replace(';', ',', $campaign['campaign_inbox_receipient'])));
+
+			$data['campaign'] = $campaign;
+			$data['type'] = 'inbox';
+			foreach (array_chunk($receipient_inbox,10) as $recipients) {
+				$data['recipient']=array_filter($recipients,function($var){return !empty($var);});
+				SendCampaignJob::dispatch($data)->allOnConnection('database');
+			}
+		}
+
+		if($campaign['campaign_media_whatsapp'] == "Yes"){
+			$sendAt = date('Y-m-d H:i:s', strtotime("+ 5 minutes"));
+
+			$receipient_whatsapp = explode(',', str_replace(' ', ',', str_replace(';', ',', $campaign['campaign_whatsapp_receipient'])));
+
+			$data['campaign'] = $campaign;
+			$data['type'] = 'whatsapp';
+			foreach (array_chunk($receipient_whatsapp,10) as $recipients) {
+				$data['recipient']=array_filter($recipients,function($var){return !empty($var);});
+				SendCampaignJob::dispatch($data)->allOnConnection('database');
+			}
+
+		}
+		$update = Campaign::where('id_campaign','=',$campaign['id_campaign'])->update(['campaign_is_sent' => 'Yes']);
+		return $update;
+	}
 
 	public function sendCampaignCron(){
 		$now = date('Y-m-d H:i:00');
