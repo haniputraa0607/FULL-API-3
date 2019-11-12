@@ -584,7 +584,7 @@ class ApiHistoryController extends Controller
 
                 if ($found == true) {
                     $dataList['type'] = 'trx';
-                    $dataList['id'] = $value['transaction_receipt_number'] . ',' . $value['id_outlet'];
+                    $dataList['id'] = $value['transaction_receipt_number'] . ',' . $value['id_transaction'];
                     $dataList['date']    = date('Y-m-d H:i', strtotime($value['transaction_date']));
                     $dataList['outlet'] = $value['outlet']['outlet_name'];
                     $dataList['amount'] = number_format($value['transaction_grandtotal'], 0, ',', '.');
