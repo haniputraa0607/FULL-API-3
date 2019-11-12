@@ -1589,12 +1589,8 @@ class ApiUser extends Controller
                 if($request->json('address')){
                     $dataupdate['address'] = $request->json('address');
                 }
-                if($data[0]['complete_profile'] != "1"){
-                    $dataupdate['first_login'] = 1;
-                }
-                DB::beginTransaction();
 
-                $update = User::where('id','=',$data[0]['id'])->update($dataupdate);
+                DB::beginTransaction();
 
                 $datauser = User::where('id','=',$data[0]['id'])->get()->toArray();
 
