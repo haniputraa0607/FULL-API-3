@@ -1635,7 +1635,7 @@ class ApiUser extends Controller
                         $balance_nominal = $complete_profile_cashback;
                         // add log balance & update user balance
                         $balanceController = new BalanceController();
-                        $addLogBalance = $balanceController->addLogBalance($datauser[0]['id'], $balance_nominal, null, "Completing User Profile", 0);
+                        $addLogBalance = $balanceController->addLogBalance($datauser[0]['id'], $balance_nominal, null, "Welcome Point", 0);
 
                         if ( !$addLogBalance ) {
                             DB::rollback();

@@ -961,7 +961,7 @@ class ApiHistoryController extends Controller
                 $dataList['type']   = 'profile';
                 $dataList['id']      = $value['id_log_balance'];
                 $dataList['date']    = date('Y-m-d H:i:s', strtotime($value['created_at']));
-                $dataList['outlet'] = 'Completing User Profile';
+                $dataList['outlet'] = 'Welcome Point';
                 $dataList['amount'] = '+ ' . number_format($value['balance'], 0, ',', '.');
 
                 $listBalance[$key] = $dataList;
