@@ -286,25 +286,85 @@ class ApiCampaign extends Controller
 		$campaign = Campaign::where('id_campaign','=',$post['id_campaign'])->first();
 
 		if($campaign){
+            DB::beginTransaction();
 			if($campaign['campaign_is_sent'] == 'Yes'){
 				if($post['resend']??0 == 1){
 					unset($campaign['id_campaign']);
 					unset($campaign['created_at']);
 					unset($campaign['updated_at']);
 					$campaign['campaign_is_sent'] = 'No';
+                    $campaign['campaign_email_receipient'] = NULL;
+                    $campaign['campaign_sms_receipient'] = NULL;
+                    $campaign['campaign_push_receipient'] = NULL;
+                    $campaign['campaign_inbox_receipient'] = NULL;
+                    $campaign['campaign_whatsapp_receipient'] = NULL;
+
+                    $campaign['campaign_email_count_all'] = 0;
+                    $campaign['campaign_sms_count_all'] = 0;
+                    $campaign['campaign_push_count_all'] = 0;
+                    $campaign['campaign_whatsapp_count_all'] = 0;
+
+                    $campaign['campaign_email_count_sent'] = 0;
+                    $campaign['campaign_sms_count_sent'] = 0;
+                    $campaign['campaign_push_count_sent'] = 0;
+                    $campaign['campaign_inbox_count'] = 0;
+                    $campaign['campaign_whatsapp_count_sent'] = 0;
 					$data = json_decode(json_encode($campaign), true);
 					$c = Campaign::create($data);
 
-					if($c){
-						$campaign = Campaign::where('id_campaign','=',$c->id_campaign)->first();
-					} else {
-						$result = [
-							'status'  => 'fail',
-							'messages'  => ['Re-create Campaign Failed']
-						];
-						return response()->json($result);
-					}
+                    if($c){
+                        $id_campaign = $c->id_campaign;
+                        $campaign = Campaign::where('id_campaign','=',$c->id_campaign)->first();
+                        $rules = CampaignRuleParent::with('rules')->where('id_campaign','=',$post['id_campaign'])->get();
+
+                        foreach ($rules as $value) {
+                            $rule_parent = CampaignRuleParent::create([
+                                "id_campaign" => $c->id_campaign,
+                                "campaign_rule" => $value['campaign_rule'],
+                                "campaign_rule_next" => $value['campaign_rule_next'],
+                                "created_at" => date('Y-m-d H:i:s'),
+                                "updated_at" => date('Y-m-d H:i:s')
+                            ]);
+
+                            if($rule_parent){
+                                foreach($value['rules'] as $val){
+                                    $rule = CampaignRule::create([
+                                        "id_campaign_rule_parent" => $rule_parent->id_campaign_rule_parent,
+                                        "campaign_rule_subject" => $val['subject'],
+                                        "campaign_rule_operator" => $val['operator'],
+                                        "campaign_rule_param" => $val['parameter'],
+                                        "campaign_rule_param_id"=> $val['id'],
+                                        "created_at" => date('Y-m-d H:i:s'),
+                                        "updated_at" => date('Y-m-d H:i:s')
+                                    ]);
+
+                                    if(!$rule){
+                                        DB::rollBack();
+                                        $result = [
+                                            'status'  => 'fail',
+                                            'messages'  => ['Failed create Rule']
+                                        ];
+                                    }
+                                }
+                            }else{
+                                DB::rollBack();
+                                $result = [
+                                    'status'  => 'fail',
+                                    'messages'  => ['Failed create Rule Parent']
+                                ];
+                            }
+                        }
+                    } else {
+                        DB::rollBack();
+                        $result = [
+                            'status'  => 'fail',
+                            'messages'  => ['Re-create Campaign Failed']
+                        ];
+                        return response()->json($result);
+                    }
+
 				} else {
+                    DB::rollBack();
 					$result = [
 						'status'  => 'fail',
 						'messages'  => ['Campaign already sent']
@@ -313,7 +373,7 @@ class ApiCampaign extends Controller
 				}
 			}
 
-			if($campaign['campaign_send_at'] == null){
+			if($campaign['campaign_send_at'] == null && $post['resend'] != 1){
 				//Kirimnya NOW
 				if($campaign['campaign_media_email'] == "Yes"){
 					$receipient_email = explode(',', str_replace(' ', ',', str_replace(';', ',', $campaign['campaign_email_receipient'])));
@@ -377,13 +437,25 @@ class ApiCampaign extends Controller
 					'status'  => 'success',
 					'result'  => $campaign
 				];
-			} else {
-				$result = [
-					'status'  => 'fail',
-					'messages'  => ['Campaign Will be automatically sent at '.date("d F Y - H:i", strtotime($campaign['campaign_send_at']))]
-				];
-			}
+			} elseif($campaign['campaign_send_at'] == null && $post['resend'] == 1) {
 
+				$result = [
+					'status'  => 'success',
+                    'result'  => $campaign
+				];
+			}else{
+                DB::rollBack();
+                $result = [
+                    'status'  => 'fail',
+                    'messages'  => ['Campaign Will be automatically sent at '.date("d F Y - H:i", strtotime($campaign['campaign_send_at']))]
+                ];
+            }
+            DB::commit();
+
+			if($post['resend'] == 1){
+			    $post['id_campaign'] = $id_campaign;
+                GenerateCampaignRecipient::dispatch($post)->allOnConnection('database');
+            }
 		} else {
 			$result = [
 					'status'  => 'fail',
