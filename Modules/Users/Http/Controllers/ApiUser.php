@@ -166,6 +166,7 @@ class ApiUser extends Controller
                     $userTrxProduct = false;
                     $exceptUserTrxProduct = false;
                     $scanOtherProduct = false;
+                    $trxOutlet = false;
 
                     $rule = $cond['rule'];
                     unset($cond['rule']);
@@ -191,17 +192,13 @@ class ApiUser extends Controller
                         }
 
                         if($condition['subject'] == 'trx_product'){
-                            if(isset($condition['subject']) && $condition['subject'] == 'trx_product'){
-                                array_push($arr_tmp_product,$condition);
-                                unset($cond[$i]);
-                            }
+                            array_push($arr_tmp_product,$condition);
+                            unset($cond[$i]);
                         }
 
                         if($condition['subject'] == 'trx_outlet'){
-                            if(isset($condition['subject']) && $condition['subject'] == 'trx_outlet'){
-                                array_push($arr_tmp_outlet,$condition);
-                                unset($cond[$i]);
-                            }
+                            array_push($arr_tmp_outlet,$condition);
+                            unset($cond[$i]);
                         }
 
                         if($condition['subject'] == 'trx_product' || $condition['subject'] == 'trx_product_count' || $condition['subject'] == 'trx_product_tag' || $condition['subject'] == 'trx_product_tag_count'){
@@ -225,7 +222,7 @@ class ApiUser extends Controller
                         $userTrxProduct = false;
                     }
                     /*================================== END check ==================================*/
-                    if(!is_object($cond)) $cond = $cond->toArray();
+                    if(is_object($cond)) $cond = $cond->toArray();
                     if(count($arr_tmp_outlet) > 0)array_push($cond, ['outlets' => $arr_tmp_outlet]);
 
                     if($scanTrx == true){
@@ -391,7 +388,8 @@ class ApiUser extends Controller
                         else if($condition['subject'] == 'province_name') $var = "provinces.".$condition['subject'];
                         else $var = "users.".$condition['subject'];
 
-                        $query = $query->where($var,'=',$conditionParameter);
+                        if(isset($conditionParameter))$query = $query->where($var,'=',$conditionParameter);
+                        else $query = $query->where($var,'=',$condition['parameter']);
                     }
 
                     if($condition['subject'] == 'device'){
@@ -564,7 +562,8 @@ class ApiUser extends Controller
                         else if($condition['subject'] == 'province_name') $var = "provinces.".$condition['subject'];
                         else $var = "users.".$condition['subject'];
 
-                        $query = $query->orWhere($var,'=',$conditionParameter);
+                        if(isset($conditionParameter))$query = $query->orWhere($var,'=',$conditionParameter);
+                        else $query = $query->orWhere($var,'=',$condition['parameter']);
                     }
 
                     if($condition['subject'] == 'device'){
@@ -1589,7 +1588,9 @@ class ApiUser extends Controller
                 if($request->json('address')){
                     $dataupdate['address'] = $request->json('address');
                 }
-
+                if($data[0]['complete_profile'] != "1"){
+                    $dataupdate['first_login'] = 1;
+                }
                 DB::beginTransaction();
 
                 $update = User::where('id','=',$data[0]['id'])->update($dataupdate);
@@ -1635,7 +1636,7 @@ class ApiUser extends Controller
                         $balance_nominal = $complete_profile_cashback;
                         // add log balance & update user balance
                         $balanceController = new BalanceController();
-                        $addLogBalance = $balanceController->addLogBalance($datauser[0]['id'], $balance_nominal, null, "Completing User Profile", 0);
+                        $addLogBalance = $balanceController->addLogBalance($datauser[0]['id'], $balance_nominal, null, "Welcome Point", 0);
 
                         if ( !$addLogBalance ) {
                             DB::rollback();
