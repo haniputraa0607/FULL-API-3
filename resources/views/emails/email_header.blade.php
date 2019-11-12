@@ -38,9 +38,9 @@
                                    @endif
                                </tr>
                                <tr>
-                                  <td style="border-collapse:collapse;border-spacing:0;color:#000;font-family:'Arial',sans-serif;line-height:1.5;margin:0;padding:0" height="30" width="15"></td>
-                                  <td style="border-collapse:collapse;border-spacing:0;color:#000;font-family:'Arial',sans-serif;line-height:1.5;margin:0;padding:0" height="30" width="550"></td>
-                                  <td style="border-collapse:collapse;border-spacing:0;color:#000;font-family:'Arial',sans-serif;line-height:1.5;margin:0;padding:0" height="30" width="15"></td>
+                                  <td style="border-collapse:collapse;border-spacing:0;color:#000;font-family:'Arial',sans-serif;line-height:1.5;margin:0;padding:0" width="15"></td>
+                                  <td style="border-collapse:collapse;border-spacing:0;color:#000;font-family:'Arial',sans-serif;line-height:1.5;margin:0;padding:0" width="550"></td>
+                                  <td style="border-collapse:collapse;border-spacing:0;color:#000;font-family:'Arial',sans-serif;line-height:1.5;margin:0;padding:0" width="15"></td>
                                </tr>
                             </tbody>
                          </table>
@@ -50,11 +50,6 @@
                       <td style="border-collapse:collapse;border-spacing:0;color:#000;font-family:'Arial',sans-serif;line-height:1.5;margin:0;padding:0" bgcolor="#ffffff">
                          <table style="border-collapse:collapse;border-spacing:0;margin:0;padding:0" width="100%" align="left">
                             <tbody>
-                               <tr>
-                                  <td style="border-collapse:collapse;border-spacing:0;color:#000;font-family:'Arial',sans-serif;line-height:1.5;margin:0;padding:0" height="20" width="15"></td>
-                                  <td style="border-collapse:collapse;border-spacing:0;color:#000;font-family:'Arial',sans-serif;line-height:1.5;margin:0;padding:0" height="20" width="550"></td>
-                                  <td style="border-collapse:collapse;border-spacing:0;color:#000;font-family:'Arial',sans-serif;line-height:1.5;margin:0;padding:0" height="20" width="15"></td>
-                               </tr>
                                <tr>
                                   <td style="border-collapse:collapse;border-spacing:0;color:#000;font-family:'Arial',sans-serif;line-height:1.5;margin:0;padding:0" width="15"></td>
                                   <td style="border-collapse:collapse;border-spacing:0;color:#000;font-family:'Arial',sans-serif;line-height:1.5;margin:0;padding:0" width="550" align="left">
