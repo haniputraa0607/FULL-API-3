@@ -667,23 +667,19 @@ class ApiSetting extends Controller
         $post = $request->json()->all();
 
         if (isset($post['value_text'])) {
-            foreach ($post['value_text'] as $key => $value) {
-                if ($key != 'value_text' && $value == null) {
-                    unset($post['value_text'][$key]);
+            foreach ($post['value_text'] as $value) {
+                if (explode('=', $value)[0] == 'value') {
+                    $value_text[] = explode('=', $value)[1];
                 } else {
-                    if (explode('=', $value)[0] == 'id_value_text') {
-                        $value_text[] = (int) explode('=', $value)[1];
+                    $upload = MyHelper::uploadPhoto($value, $path = 'img/intro/', 1080);
+                    if ($upload['status'] == "success") {
+                        $value_text[] = $upload['path'];
                     } else {
-                        $upload = MyHelper::uploadPhoto($value, $path = 'img/intro/', 1080);
-                        if ($upload['status'] == "success") {
-                            $value_text[] = $upload['path'];
-                        } else {
-                            $result = [
-                                'status'    => 'fail',
-                                'messages'    => ['fail upload image']
-                            ];
-                            return response()->json($result);
-                        }
+                        $result = [
+                            'status'    => 'fail',
+                            'messages'    => ['fail upload image']
+                        ];
+                        return response()->json($result);
                     }
                 }
             }
@@ -692,7 +688,7 @@ class ApiSetting extends Controller
             $value_text = null;
             $post['value_text'] = json_encode($value_text);
         }
-
+        
         $insert = Setting::updateOrCreate(['key' => 'intro'], $post);
 
         return response()->json(MyHelper::checkCreate($insert));
@@ -705,7 +701,7 @@ class ApiSetting extends Controller
         
         $list['active']      = $data['value'];
         foreach (json_decode($data['value_text']) as $key => $value) {
-            $list['image'][$key] = env('S3_URL_API') . $value;
+            $list['image'][$key] = $value;
         }
         
         return response()->json(MyHelper::checkGet($list));
