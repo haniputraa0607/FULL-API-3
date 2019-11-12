@@ -135,7 +135,7 @@ class ApiWebviewController extends Controller
                 if(count($arrId) != 2){
                     $list = Transaction::where('transaction_receipt_number', $id)->with('user.city.province', 'productTransaction.product.product_category', 'productTransaction.product.product_photos', 'productTransaction.product.product_discounts', 'transaction_payment_offlines', 'outlet.city', 'transaction_vouchers.deals_voucher')->first();
                 }else{
-                    $list = Transaction::where('transaction_receipt_number', $arrId[0])->where('id_outlet', $arrId[1])->with('user.city.province', 'productTransaction.product.product_category', 'productTransaction.product.product_photos', 'productTransaction.product.product_discounts', 'transaction_payment_offlines', 'outlet.city', 'transaction_vouchers.deals_voucher')->first();
+                    $list = Transaction::where('transaction_receipt_number', $arrId[0])->where('id_transaction', $arrId[1])->with('user.city.province', 'productTransaction.product.product_category', 'productTransaction.product.product_photos', 'productTransaction.product.product_discounts', 'transaction_payment_offlines', 'outlet.city', 'transaction_vouchers.deals_voucher')->first();
                 }
             }
             $label = [];
