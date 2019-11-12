@@ -569,6 +569,15 @@ class ApiHome extends Controller
 
     public function membership(Request $request){
         $user = $request->user();
+        if($user->first_login){
+            $send = app($this->autocrm)->SendAutoCRM('Login First Time', $user['phone']);
+            if (!$send) {
+                DB::rollback();
+                return response()->json(['status' => 'fail', 'messages' => ['Send notification failed']]);
+            }
+            $user->first_login=0;
+            $user->save();
+        }
         $user->load(['city','city.province']);
         $birthday = "";
         if ($user->birthday != "") {
