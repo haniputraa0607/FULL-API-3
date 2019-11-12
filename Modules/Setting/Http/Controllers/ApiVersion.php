@@ -109,16 +109,41 @@ class ApiVersion extends Controller
     function getVersion()
     {
         $display = Setting::where('key', 'LIKE', 'version%')->get();
-        $android = Version::select('app_type', 'app_version', 'rules')->orderBy('app_version', 'desc')->where('app_type', 'Android')->get()->toArray();
-        $ios = Version::select('app_type', 'app_version', 'rules')->orderBy('app_version', 'desc')->where('app_type', 'IOS')->get()->toArray();
-        $outlet = Version::select('app_type', 'app_version', 'rules')->orderBy('app_version', 'desc')->where('app_type', 'OutletApp')->get()->toArray();
-        $result = [];
-        foreach ($display as $data) {
-            $result[$data['key']] = $data['value'];
+        $version = Version::select('app_type', 'app_version', 'rules')->orderBy('app_version', 'desc')->get()->toArray();
+
+        foreach ($version as $value) {
+            if ($value['app_type'] == 'Android') {
+                if ($value['rules'] == 1) {
+                    $result['Android']['allowed'][] = $value;
+                } else {
+                    $result['Android']['not_allowed'][] = $value;
+                }
+            } elseif ($value['app_type'] == 'IOS') {
+                if ($value['rules'] == 1) {
+                    $result['IOS']['allowed'][] = $value;
+                } else {
+                    $result['IOS']['not_allowed'][] = $value;
+                }
+            } elseif ($value['app_type'] == 'OutletApp') {
+                if ($value['rules'] == 1) {
+                    $result['OutletApp']['allowed'][] = $value;
+                } else {
+                    $result['OutletApp']['not_allowed'][] = $value;
+                }
+            }
         }
-        $result['Android'] = $android;
-        $result['IOS'] = $ios;
-        $result['OutletApp'] = $outlet;
+
+        foreach ($display as $value) {
+            $explode = explode('_', $value['key']);
+            if (end($explode) == 'android') {
+                $result['Android'][$value['key']] = $value['value'];
+            } elseif (end($explode) == 'ios') {
+                $result['IOS'][$value['key']] = $value['value'];
+            } elseif (end($explode) == 'outlet') {
+                $result['OutletApp'][$value['key']] = $value['value'];
+            }
+        }
+        
         return response()->json(MyHelper::checkGet($result));
     }
 
