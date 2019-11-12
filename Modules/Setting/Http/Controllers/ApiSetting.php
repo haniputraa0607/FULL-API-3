@@ -701,7 +701,7 @@ class ApiSetting extends Controller
         
         $list['active']      = $data['value'];
         foreach (json_decode($data['value_text']) as $key => $value) {
-            $list['image'][$key] = env('S3_URL_API') . $value;
+            $list['image'][$key] = $value;
         }
         
         return response()->json(MyHelper::checkGet($list));
