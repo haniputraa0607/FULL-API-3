@@ -8,9 +8,9 @@ Route::group(['prefix' => 'api/outlet', 'middleware' => ['log_activities', 'auth
     Route::any('filter/gofood', 'ApiOutletController@filter');
 });
 
-Route::group(['prefix' => 'api/outlet','namespace' => 'Modules\Outlet\Http\Controllers'], function()
+Route::group(['prefix' => 'api/outlet', 'middleware' => ['log_activities', 'auth_client'],'namespace' => 'Modules\Outlet\Http\Controllers'], function()
 {
-    Route::any('list/android', 'ApiOutletController@listOutlet');
+    Route::any('list/mobile', 'ApiOutletController@listOutlet');
 });
 
 Route::group(['prefix' => 'api/outlet', 'middleware' => ['log_activities', 'auth_client'], 'namespace' => 'Modules\Outlet\Http\Controllers'], function()
