@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
-	<head>
-		<meta charset="UTF-8" />
+	<head><meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <meta http-equiv="X-UA-Compatible" content="ie=edge" />
         <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
@@ -244,7 +244,7 @@
                                        <div class="current-level-info">
                                            <div style="width:100%"></div>
                                            <img src="{{env('APP_URL')}}images/coin.png"/>
-                                           <div class="font-regular-brown">{{number_format($result['user_membership']['user']['progress_now'])}}</div>
+                                           <div class="font-regular-brown">{{number_format($result['user_membership']['user']['balance'])}}</div>
                                        </div>
                                        <div class="level-progress-container" style="margin-right: 10px; height: 6px;">
                                            <div class="level-progress" style="width:100%; height: 6px;"></div>
@@ -257,7 +257,7 @@
                                                 <div style="width:{{(($result['user_membership']['user']['progress_now'] - $result['all_membership'][$key]['min_value']) / ($result['all_membership'][$key+1]['min_value'] - $result['all_membership'][$key]['min_value']) * 100)}}%;"></div>
                                             @endif
                                            <img src="{{env('APP_URL')}}images/coin.png"/>
-                                           <div class="font-regular-brown">{{number_format($result['user_membership']['user']['progress_now'])}}</div>
+                                           <div class="font-regular-brown">{{number_format($result['user_membership']['user']['balance'])}}</div>
                                        </div>
                                        <div class="level-progress-container" style="margin-right: 10px; height: 6px;">
                                             @if ((($result['user_membership']['user']['progress_now'] - $result['all_membership'][$key]['min_value']) / ($result['all_membership'][$key+1]['min_value'] - $result['all_membership'][$key]['min_value']) * 100) <= 0)
@@ -268,11 +268,7 @@
                                        </div>
                                    @endif
                                     <div class="level-info">
-                                        @if ($result['all_membership'][$key+1]['min_value'] == $result['all_membership'][$key+1]['min_value'] - $result['all_membership'][$key]['min_value'])
-                                            <div class="font-regular-black">{{number_format(0)}}</div>
-                                        @else
-                                            <div class="font-regular-black">{{number_format($result['all_membership'][$key]['min_value'])}}</div>
-                                        @endif
+                                            <div class="font-regular-black">{{number_format($result['user_membership']['user']['progress_now'])}}</div>
                                         <div class="font-regular-black">{{number_format($result['all_membership'][$key+1]['min_value'])}}</div>
                                     </div>
                                 </div>
@@ -297,7 +293,7 @@
                                             <div style="width:{{ ($result['user_membership']['user']['progress_now'] / 15000000) * 100 }}%;"></div>
                                         @endif
                                        <img src="{{env('APP_URL')}}images/coin.png"/>
-                                       <div class="font-regular-brown">{{number_format($result['user_membership']['user']['progress_now'])}}</div>
+                                       <div class="font-regular-brown">{{number_format($result['user_membership']['user']['balance'])}}</div>
                                    </div>
                                    <div class="level-progress-container" style="margin-right: 10px; height: 6px;">
                                         @if (($result['user_membership']['user']['progress_now'] - end($result['all_membership'])['min_value']) <= 0)
@@ -307,7 +303,7 @@
                                         @endif
                                    </div>
                                     <div class="level-info">
-                                        <div class="font-regular-black">{{number_format($result['all_membership'][$key]['min_value'])}}</div>
+                                        <div class="font-regular-black">{{number_format($result['user_membership']['user']['progress_now'])}}</div>
                                         <div class="font-regular-black">{{number_format(15000000)}}</div>
                                     </div>
                                 </div>
