@@ -276,7 +276,7 @@
                                         <div class="font-regular-black">{{number_format($result['all_membership'][$key+1]['min_value'])}}</div>
                                     </div>
                                 </div>
-                                <img src="{{$result['all_membership'][$key+1]['membership_image']}}"/>
+                                <img src="{{$result['all_membership'][$key]['membership_next_image']?:$result['all_membership'][$key+1]['membership_image']}}"/>
                             </div>
                         @else
                             @php
@@ -317,6 +317,19 @@
 
                         <div class="font-title">{{$item['membership_name']}} Benefit : </div>
                         <div class="content-list">
+                            @if($item['benefit_text'] != null && count($item['benefit_text']) > 0)
+                            <div class="content-list-item">
+                                <div class=font-regular-gray>
+                                    @foreach ($item['benefit_text'] as $data)
+                                        @if($data)
+                                        <li style="list-style-type:none; margin-bottom:10px;">
+                                            <img src="{{$item['membership_image']}}"/> {{$data}}
+                                        </li>
+                                        @endif
+                                    @endforeach
+                                </div>
+                            </div>
+                            @endif
                             @if($item['benefit_point_multiplier'] != null && $item['benefit_point_multiplier'] > 0)
                             <div class="content-list-item">
                                 <img src="{{$item['membership_image']}}"/>
