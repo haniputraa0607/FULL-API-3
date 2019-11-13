@@ -1591,6 +1591,8 @@ class ApiUser extends Controller
 
                 DB::beginTransaction();
 
+                $update = User::where('id','=',$data[0]['id'])->update($dataupdate);
+
                 $datauser = User::where('id','=',$data[0]['id'])->get()->toArray();
 
                 //cek complete profile ?
