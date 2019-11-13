@@ -443,7 +443,8 @@ class ApiCronReport extends Controller
     function newDailyReport($date) 
     {
         $trans = DB::select(DB::raw('
-                    SELECT id_outlet, 
+                    SELECT id_outlet,
+				    (CASE WHEN trasaction_type = \'Offline\' THEN CASE WHEN id_user IS NOT NULL THEN \'Offline Member\' ELSE \'Offline Non Member\' END ELSE \'Online\' END) AS trx_type,
 					(select SUM(Case When users.gender = \'Male\' Then 1 Else 0 End)) as cust_male, 
 					(select SUM(Case When users.gender = \'Female\' Then 1 Else 0 End)) as cust_female, 
 					(select SUM(Case When users.android_device is not null Then 1 Else 0 End)) as cust_android, 
@@ -474,13 +475,13 @@ class ApiCronReport extends Controller
                     WHERE transaction_date BETWEEN "'. date('Y-m-d', strtotime($date)) .' 00:00:00" 
                     AND "'. date('Y-m-d', strtotime($date)) .' 23:59:59"
                     AND transaction_payment_status = "Completed"
-                    GROUP BY id_outlet
+                    GROUP BY id_outlet,trx_type
                 '));
-
         if ($trans) {
             $trans = json_decode(json_encode($trans), true);
 			$sum = array();
 			$sum['trx_date'] = $date;
+			$sum['trx_type'] = $trans[0]['trx_type'];
 			$sum['trx_subtotal'] = 0;
 			$sum['trx_tax'] = 0;
 			$sum['trx_shipment'] = 0;

@@ -21,6 +21,7 @@ class DailyReportTrx extends Model
      */
     protected $fillable = [
         'id_outlet',
+        'trx_type',
         'trx_date',
         'trx_count',
         'trx_tax',
