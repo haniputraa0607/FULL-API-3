@@ -11,18 +11,11 @@ Route::group(['middleware' => ['auth:api','log_activities'], 'prefix' => 'api/ca
     Route::post('list', 'ApiCampaign@campaignList');
     Route::post('email/outbox/list', 'ApiCampaign@campaignEmailOutboxList');
     Route::post('email/outbox/detail', 'ApiCampaign@campaignEmailOutboxDetail');
-    Route::post('email/queue/list', 'ApiCampaign@campaignEmailQueueList');
-    Route::post('email/queue/detail', 'ApiCampaign@campaignEmailQueueDetail');
 	Route::post('sms/outbox/list', 'ApiCampaign@campaignSmsOutboxList');
 	Route::post('sms/outbox/detail', 'ApiCampaign@campaignSmsOutboxDetail');
-    Route::post('sms/queue/list', 'ApiCampaign@campaignSmsQueueList');
-    Route::post('sms/queue/detail', 'ApiCampaign@campaignSmsQueueDetail');
 	Route::post('push/outbox/list', 'ApiCampaign@campaignPushOutboxList');
 	Route::post('push/outbox/detail', 'ApiCampaign@campaignPushOutboxDetail');
-    Route::post('push/queue/list', 'ApiCampaign@campaignPushQueueList');
-    Route::post('push/queue/detail', 'ApiCampaign@campaignPushQueueDetail');
     Route::post('whatsapp/outbox/list', 'ApiCampaign@campaignWhatsappOutboxList');
-    Route::post('whatsapp/queue/list', 'ApiCampaign@campaignWhatsappQueueList');
 
 });
 
