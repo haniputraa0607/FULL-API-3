@@ -156,7 +156,11 @@ class ApiHiddenDeals extends Controller
                    $amount = $post['amount'];    
                 }
 
-                $user = $this->cekUser($datauser['phone'], $request->json('id_deals'));
+                if($datauser['phone']??false){
+                    $user = $this->cekUser($datauser['phone'], $request->json('id_deals'));
+                }else{
+                    $user = '';
+                }
                 if (!empty($user)) {
                     $first_deal=null;
                     for($i = 1; $i<= $amount; $i++){
