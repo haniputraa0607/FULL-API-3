@@ -1073,26 +1073,6 @@ class ApiUser extends Controller
                 //kalo login success
                 if($is_android != 0 || $is_ios != 0){
 
-                    //check fraud
-                    if($device_type && $device_id && $device_token){
-                        $cekFraud = 1;
-                        $deviceCus = UserFraud::where('device_id','=',$device_id)
-                            ->groupBy('id_user')
-                            ->get()->toArray();
-
-                        $lastDevice = UserDevice::where('id_user','=',$datauser[0]['id'])->orderBy('id_device_user', 'desc')->first();
-
-                        if($deviceCus && count($deviceCus) >= 3){
-                            // send notif fraud detection
-                            $fraud = FraudSetting::where('parameter', 'LIKE', '%device ID%')->first();
-                            if($fraud){
-                                $sendFraud = app($this->setting_fraud)->SendFraudDetection($fraud['id_fraud_setting'], $datauser[0], null, $lastDevice);
-                            }
-                        } else {
-                            UserFraud::updateOrCreate(['id_user' => $datauser[0]['id']], ['device_id' => $device_id, 'device_type' => $device_type]);
-                        }
-                    }
-
                     //kalo dari device
                     $checkdevice = UserDevice::where('device_type','=',$device_type)
                         ->where('device_id','=',$device_id)
@@ -1159,11 +1139,27 @@ class ApiUser extends Controller
                         'lng' => $request->json('longitude'),
                         'action' => 'Login'
                     ]);
-
                 }
+                
+                $createUserFraud = UserFraud::updateOrCreate(['id_user' => $datauser[0]['id'], 'device_id' => $device_id], ['device_type' => $device_type]);
 
-                if($cekFraud == 0){
-                    $updateUserLogin = User::where('phone', $datauser[0]['phone'])->update(['new_login' => '1']);
+                $deviceCus = UserFraud::where('device_id', '=' ,$device_id)
+                    ->groupBy('id_user')
+                    ->get()->toArray();
+
+                $lastDevice = UserDevice::where('id_user','=',$datauser[0]['id'])->orderBy('id_device_user', 'desc')->first();
+
+                if($deviceCus && count($deviceCus) >= 3){
+                    // send notif fraud detection
+                    $fraud = FraudSetting::where('parameter', 'LIKE', '%device ID%')->first();
+                    
+                    UserFraud::where('id_user_fraud', $createUserFraud->id_user_fraud)->delete();
+                    
+                    if($fraud){
+                        $sendFraud = app($this->setting_fraud)->SendFraudDetection($fraud['id_fraud_setting'], $datauser[0], null, $lastDevice);
+                    }
+                    OauthAccessToken::join('oauth_access_token_providers', 'oauth_access_tokens.id', 'oauth_access_token_providers.oauth_access_token_id')
+                    ->where('oauth_access_tokens.user_id', $datauser[0]['id'])->where('oauth_access_token_providers.provider', 'users')->delete();
                 }
             } else{
                 //kalo login gagal

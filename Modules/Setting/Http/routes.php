@@ -55,6 +55,7 @@ Route::group(['middleware' => ['auth:api', 'log_activities'], 'prefix' => 'api/s
         Route::post('update', 'ApiDashboardSetting@updateDashboard');
         Route::post('delete', 'ApiDashboardSetting@deleteDashboard');
         Route::post('update/date-range', 'ApiDashboardSetting@updateDateRange');
+        Route::post('update-visibility', 'ApiDashboardSetting@updateVisibilitySection');
         Route::post('order-section', 'ApiDashboardSetting@updateOrderSection');
         Route::post('order-card', 'ApiDashboardSetting@updateOrderCard');
     });

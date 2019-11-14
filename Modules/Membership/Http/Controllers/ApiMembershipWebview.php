@@ -61,6 +61,7 @@ class ApiMembershipWebview extends Controller
 		if(count($allMembership) > 0){
 			if($result['user_membership']){
 				foreach($allMembership as $index => $dataMembership){
+					$allMembership[$index]['benefit_text']=json_decode($dataMembership['benefit_text'],true)??[];
 					if($dataMembership['membership_type'] == 'count'){
 					    $allMembership[$index]['min_value'] = $dataMembership['min_total_count'];
 						if($dataMembership['min_total_count'] > $result['user_membership']['min_total_count']){
@@ -95,6 +96,7 @@ class ApiMembershipWebview extends Controller
 						}
 					}
 					$allMembership[$index]['membership_image'] = env('S3_URL_API').$allMembership[$index]['membership_image'];
+					$allMembership[$index]['membership_next_image'] = $allMembership[$index]['membership_next_image']?env('S3_URL_API').$allMembership[$index]['membership_next_image']:null;
 					$allMembership[$index]['benefit_cashback_multiplier'] = $allMembership[$index]['benefit_cashback_multiplier'] * $settingCashback->value;
 				}
 			}else{
