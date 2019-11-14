@@ -65,6 +65,7 @@ class Membership extends Model
 		'benefit_cashback_multiplier',
 		'benefit_promo_id',
 		'benefit_discount',
+		'benefit_text',
 		'cashback_maximum'
 	];
 

@@ -35,6 +35,9 @@ class ApiMembership extends Controller
 
     function create(Request $request) {
         $post = $request->json()->all();
+        if($post['benefit_text']??false){
+        	$post['benefit_text']=json_encode($post['benefit_text']);
+        }
         $save = Membership::create($post);
 
         return response()->json(MyHelper::checkCreate($save));
@@ -148,6 +151,7 @@ class ApiMembership extends Controller
 					$data['benefit_point_multiplier'] = $membership['benefit_point_multiplier'];
 					$data['benefit_cashback_multiplier'] = $membership['benefit_cashback_multiplier'];
 					$data['benefit_discount'] = $membership['benefit_discount'];
+					$data['benefit_text'] = $membership['benefit_text']??null;
 					// $data['benefit_promo_id'] = $membership['benefit_promo_id'];
 
 					if(isset($membership['cashback_maximum'])){
@@ -776,6 +780,9 @@ class ApiMembership extends Controller
         }
         if (!isset($data['benefit_discount'])) {
             $data['benefit_discount'] = 0;
+        }
+        if($data['benefit_text']??false){
+        	$data['benefit_text']=json_encode(array_column($data['benefit_text'],'benefit_text'));
         }
 
         return $data;
