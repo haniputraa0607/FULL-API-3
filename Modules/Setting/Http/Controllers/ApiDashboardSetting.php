@@ -209,6 +209,15 @@ class ApiDashboardSetting extends Controller
 
 	}
 
+	public function updateVisibilitySection(Request $request){
+		$post = $request->json()->all();
+
+		$dataUpdate = ['section_visible'=>$post['section_visible']];
+		$update = DashboardUser::where('id_dashboard_user',$post['id_dashboard_user'])->update($dataUpdate);
+
+		return MyHelper::checkUpdate($update);
+	}
+
 	function updateOrderCard(Request $request){
 		$post = $request->json()->all();
 
@@ -344,7 +353,7 @@ class ApiDashboardSetting extends Controller
 			$end = date('Y-m-d');
 		}
 
-		$dashboard = DashboardUser::with('dashboard_card')->where('id_user', $user->id)->orderBy('section_order', 'ASC')->get();
+		$dashboard = DashboardUser::with('dashboard_card')->where([['id_user', $user->id],['section_visible',1]])->orderBy('section_order', 'ASC')->get();
 
 		if(count($dashboard) == 0){
 			$dashboard = [];
@@ -382,6 +391,18 @@ class ApiDashboardSetting extends Controller
 								->whereDate('daily_report_trx.trx_date', '<=', $end)
 								->groupBy('outlets.id_outlet');
 	
+						if(strpos($card['card_name'], 'Online Transaction')!==false){
+							$value->where('trx_type','Online');
+						}
+
+						if(strpos($card['card_name'], 'Offline Transaction Member')!==false){
+							$value->where('trx_type','Offline Member');
+						}
+
+						if(strpos($card['card_name'], 'Offline Transaction Non Member')!==false){
+							$value->where('trx_type','Offline Non Member');
+						}
+
 						if(strpos($card['card_name'], 'Count') !== false){
 							$value = $value->select(DB::raw('outlets.outlet_code, outlets.outlet_name, outlets.id_outlet as id, SUM(daily_report_trx.trx_count) as transaction_count'))
 										   ->orderBy('transaction_count', 'DESC');
@@ -510,13 +531,25 @@ class ApiDashboardSetting extends Controller
 				elseif(strpos($card['card_name'], 'Transaction') !== false){
 					$value = DailyReportTrx::whereDate('trx_date', '<=', $end)->whereDate('trx_date', '>=', $start);
 
-					if($card['card_name'] == 'Total Transaction Count'){
+					if(strpos($card['card_name'], 'Online Transaction')!==false){
+						$value->where('trx_type','Online');
+					}
+
+					if(strpos($card['card_name'], 'Offline Transaction Member')!==false){
+						$value->where('trx_type','Offline Member');
+					}
+
+					if(strpos($card['card_name'], 'Offline Transaction Non Member')!==false){
+						$value->where('trx_type','Offline Non Member');
+					}
+
+					if(strpos($card['card_name'], 'Total')!==false&&strpos($card['card_name'], 'Count')!==false){
 						$value = $value->sum('trx_count');
 					}
-					if($card['card_name'] == 'Total Transaction Value'){
+					if(strpos($card['card_name'], 'Total')!==false&&strpos($card['card_name'], 'Value')!==false){
 						$value = $value->sum('trx_grand');
 					}
-					if($card['card_name'] == 'Transaction Average'){
+					if(strpos($card['card_name'], 'Average')!==false&&strpos($card['card_name'], 'per Day')===false){
 						$sum = $value->sum('trx_grand');
 						$count = $value->sum('trx_count');
 						if($sum > 0 && $count > 0){
@@ -525,7 +558,7 @@ class ApiDashboardSetting extends Controller
 							$value = 0;
 						}
 					}
-					if($card['card_name'] == 'Transaction Average per Day'){
+					if(strpos($card['card_name'], 'Average per Day')!==false){
 						$sum = $value->sum('trx_grand');
 						$count = $value->get()->groupBy('trx_date')->count();
 						if($sum > 0 && $count > 0){
