@@ -14,7 +14,6 @@ use App\Http\Models\CampaignEmailSent;
 use App\Http\Models\CampaignSmsSent;
 use App\Http\Models\CampaignSmsQueue;
 use App\Http\Models\CampaignPushSent;
-use App\Http\Models\CampaignPushQueue;
 use App\Http\Models\Outlet;
 use App\Http\Models\Product;
 use App\Http\Models\Treatment;
@@ -857,56 +856,6 @@ class ApiCampaign extends Controller
 			$result = [
 					'status'  => 'fail',
 					'messages'  => ['No Campaign Push Notification Outbox']
-				];
-		}
-		return response()->json($result);
-	}
-	public function campaignPushQueueList(Request $request){
-		$post = $request->json()->all();
-
-		$query = CampaignPushQueue::join('campaigns','campaigns.id_campaign','=','campaign_push_queues.id_campaign')
-									->orderBy('id_campaign_push_queue', 'Desc');
-		$count = CampaignPushQueue::join('campaigns','campaigns.id_campaign','=','campaign_push_queues.id_campaign')->get();
-
-		if(isset($post['push_queue_subject']) && $post['push_queue_subject'] != ""){
-			$query = $query->where('push_queue_subject','like','%'.$post['push_queue_subject'].'%');
-			$count = $count->where('push_queue_subject','like','%'.$post['push_queue_subject'].'%');
-		}
-
-		$query = $query->skip($post['skip'])->take($post['take'])->get()->toArray();
-		$count = $count->count();
-
-		if(isset($query) && !empty($query)) {
-			$result = [
-					'status'  => 'success',
-					'result'  => $query,
-					'count'  => $count
-				];
-		} else {
-			$result = [
-					'status'  => 'fail',
-					'messages'  => ['No Campaign Push Notification Queue']
-				];
-		}
-		return response()->json($result);
-	}
-
-	public function campaignPushQueueDetail(Request $request){
-		$post = $request->json()->all();
-
-		$query = CampaignPushQueue::join('campaigns','campaigns.id_campaign','=','campaign_push_queues.id_campaign')
-								->where('id_campaign_push_queue',$post['id_campaign_push_queue'])
-								->first();
-
-		if(isset($query) && !empty($query)) {
-			$result = [
-					'status'  => 'success',
-					'result'  => $query
-				];
-		} else {
-			$result = [
-					'status'  => 'fail',
-					'messages'  => ['No Campaign Push Notification Queue']
 				];
 		}
 		return response()->json($result);

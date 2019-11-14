@@ -15,7 +15,7 @@ class DeleteQueueTable extends Migration
     {
         Schema::dropIfExists('campaign_whatsapp_queues');
         Schema::dropIfExists('campaign_email_queues');
-
+        Schema::dropIfExists('campaign_push_queues');
     }
 
     /**
@@ -48,6 +48,18 @@ class DeleteQueueTable extends Migration
             $table->timestamps();
             
             $table->foreign('id_campaign', 'fk_campaign_email_queues_campaigns')->references('id_campaign')->on('campaigns')->onUpdate('CASCADE')->onDelete('CASCADE');
+        });
+        Schema::create('campaign_push_queues', function(Blueprint $table)
+        {
+          $table->increments('id_campaign_push_queue');
+          $table->integer('id_campaign')->unsigned()->index('fk_campaign_push_queues_campaigns');
+          $table->string('push_queue_to');
+          $table->string('push_queue_subject');
+          $table->text('push_queue_content', 16777215)->nullable();
+          $table->dateTime('push_queue_send_at')->nullable();
+          $table->timestamps();
+
+          $table->foreign('id_campaign', 'fk_campaign_push_queues_campaigns')->references('id_campaign')->on('campaigns')->onUpdate('CASCADE')->onDelete('CASCADE');
         });
     }
 }

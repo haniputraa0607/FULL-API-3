@@ -17,8 +17,6 @@ Route::group(['middleware' => ['auth:api','log_activities'], 'prefix' => 'api/ca
     Route::post('sms/queue/detail', 'ApiCampaign@campaignSmsQueueDetail');
 	Route::post('push/outbox/list', 'ApiCampaign@campaignPushOutboxList');
 	Route::post('push/outbox/detail', 'ApiCampaign@campaignPushOutboxDetail');
-    Route::post('push/queue/list', 'ApiCampaign@campaignPushQueueList');
-    Route::post('push/queue/detail', 'ApiCampaign@campaignPushQueueDetail');
     Route::post('whatsapp/outbox/list', 'ApiCampaign@campaignWhatsappOutboxList');
 
 });

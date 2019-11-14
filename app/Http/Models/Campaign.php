@@ -144,11 +144,6 @@ class Campaign extends Model
 		return $this->hasMany(\App\Http\Models\CampaignEmailSent::class, 'id_campaign');
 	}
 
-	public function campaign_push_queues()
-	{
-		return $this->hasMany(\App\Http\Models\CampaignPushQueue::class, 'id_campaign');
-	}
-
 	public function campaign_push_sents()
 	{
 		return $this->hasMany(\App\Http\Models\CampaignPushSent::class, 'id_campaign');
