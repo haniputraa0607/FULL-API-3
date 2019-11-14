@@ -22,7 +22,6 @@ Route::group(['middleware' => ['auth:api','log_activities'], 'prefix' => 'api/ca
     Route::post('push/queue/list', 'ApiCampaign@campaignPushQueueList');
     Route::post('push/queue/detail', 'ApiCampaign@campaignPushQueueDetail');
     Route::post('whatsapp/outbox/list', 'ApiCampaign@campaignWhatsappOutboxList');
-    Route::post('whatsapp/queue/list', 'ApiCampaign@campaignWhatsappQueueList');
 
 });
 
