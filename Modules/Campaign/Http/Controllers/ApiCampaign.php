@@ -759,57 +759,6 @@ class ApiCampaign extends Controller
 		return response()->json($result);
 	}
 
-	public function campaignSmsQueueList(Request $request){
-		$post = $request->json()->all();
-
-		$query = CampaignSmsQueue::join('campaigns','campaigns.id_campaign','=','campaign_sms_queues.id_campaign')
-									->orderBy('id_campaign_sms_queue', 'Desc');
-		$count = CampaignSmsQueue::join('campaigns','campaigns.id_campaign','=','campaign_sms_queues.id_campaign')->get();
-
-		if(isset($post['sms_queue_content']) && $post['sms_queue_content'] != ""){
-			$query = $query->where('sms_queue_content','like','%'.$post['sms_queue_content'].'%');
-			$count = $count->where('sms_queue_content','like','%'.$post['sms_queue_content'].'%');
-		}
-
-		$query = $query->skip($post['skip'])->take($post['take'])->get()->toArray();
-		$count = $count->count();
-
-		if(isset($query) && !empty($query)) {
-			$result = [
-					'status'  => 'success',
-					'result'  => $query,
-					'count'  => $count
-				];
-		} else {
-			$result = [
-					'status'  => 'fail',
-					'messages'  => ['No Campaign SMS Queue']
-				];
-		}
-		return response()->json($result);
-	}
-
-	public function campaignSmsQueueDetail(Request $request){
-		$post = $request->json()->all();
-
-		$query = CampaignSmsQueue::join('campaigns','campaigns.id_campaign','=','campaign_sms_queues.id_campaign')
-								->where('id_campaign_sms_queue',$post['id_campaign_sms_queue'])
-								->first();
-
-		if(isset($query) && !empty($query)) {
-			$result = [
-					'status'  => 'success',
-					'result'  => $query
-				];
-		} else {
-			$result = [
-					'status'  => 'fail',
-					'messages'  => ['No Campaign Sms Queue']
-				];
-		}
-		return response()->json($result);
-	}
-
 	public function campaignPushOutboxList(Request $request){
 		$post = $request->json()->all();
 

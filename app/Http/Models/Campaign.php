@@ -155,11 +155,6 @@ class Campaign extends Model
 					->select('id_campaign_rule_parent', 'id_campaign', 'campaign_rule as rule', 'campaign_rule_next as rule_next');
 	}
 
-	public function campaign_sms_queues()
-	{
-		return $this->hasMany(\App\Http\Models\CampaignSmsQueue::class, 'id_campaign');
-	}
-
 	public function campaign_sms_sents()
 	{
 		return $this->hasMany(\App\Http\Models\CampaignSmsSent::class, 'id_campaign');
