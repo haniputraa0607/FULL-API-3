@@ -809,7 +809,7 @@ Message :
                 'autocrm_type' => 'Response',
                 'autocrm_trigger' => 'Daily',
                 'autocrm_cron_reference' => NULL,
-                'autocrm_title' => 'Receive Hidden Deals',
+                'autocrm_title' => 'Receive Inject Voucher',
                 'autocrm_email_toogle' => '0',
                 'autocrm_sms_toogle' => '0',
                 'autocrm_push_toogle' => '0',
