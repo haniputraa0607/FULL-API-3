@@ -11,8 +11,6 @@ Route::group(['middleware' => ['auth:api','log_activities'], 'prefix' => 'api/ca
     Route::post('list', 'ApiCampaign@campaignList');
     Route::post('email/outbox/list', 'ApiCampaign@campaignEmailOutboxList');
     Route::post('email/outbox/detail', 'ApiCampaign@campaignEmailOutboxDetail');
-    Route::post('email/queue/list', 'ApiCampaign@campaignEmailQueueList');
-    Route::post('email/queue/detail', 'ApiCampaign@campaignEmailQueueDetail');
 	Route::post('sms/outbox/list', 'ApiCampaign@campaignSmsOutboxList');
 	Route::post('sms/outbox/detail', 'ApiCampaign@campaignSmsOutboxDetail');
     Route::post('sms/queue/list', 'ApiCampaign@campaignSmsQueueList');

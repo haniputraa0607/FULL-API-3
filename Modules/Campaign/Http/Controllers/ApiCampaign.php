@@ -11,7 +11,6 @@ use App\Http\Models\UserInbox;
 use App\Http\Models\Campaign;
 use App\Http\Models\CampaignRule;
 use App\Http\Models\CampaignEmailSent;
-use App\Http\Models\CampaignEmailQueue;
 use App\Http\Models\CampaignSmsSent;
 use App\Http\Models\CampaignSmsQueue;
 use App\Http\Models\CampaignPushSent;
@@ -705,57 +704,6 @@ class ApiCampaign extends Controller
 			$result = [
 					'status'  => 'fail',
 					'messages'  => ['No Campaign Email Outbox']
-				];
-		}
-		return response()->json($result);
-	}
-
-	public function campaignEmailQueueList(Request $request){
-		$post = $request->json()->all();
-
-		$query = CampaignEmailQueue::join('campaigns','campaigns.id_campaign','=','campaign_email_queues.id_campaign')
-									->orderBy('id_campaign_email_queue', 'Desc');
-		$count = CampaignEmailQueue::join('campaigns','campaigns.id_campaign','=','campaign_email_queues.id_campaign')->get();
-
-		if(isset($post['email_queue_subject']) && $post['email_queue_subject'] != ""){
-			$query = $query->where('email_queue_subject','like','%'.$post['email_queue_subject'].'%');
-			$count = $count->where('email_queue_subject','like','%'.$post['email_queue_subject'].'%');
-		}
-
-		$query = $query->skip($post['skip'])->take($post['take'])->get()->toArray();
-		$count = $count->count();
-
-		if(isset($query) && !empty($query)) {
-			$result = [
-					'status'  => 'success',
-					'result'  => $query,
-					'count'  => $count
-				];
-		} else {
-			$result = [
-					'status'  => 'fail',
-					'messages'  => ['No Campaign Email Queue']
-				];
-		}
-		return response()->json($result);
-	}
-
-	public function campaignEmailQueueDetail(Request $request){
-		$post = $request->json()->all();
-
-		$query = CampaignEmailQueue::join('campaigns','campaigns.id_campaign','=','campaign_email_queues.id_campaign')
-								->where('id_campaign_email_queue',$post['id_campaign_email_queue'])
-								->first();
-
-		if(isset($query) && !empty($query)) {
-			$result = [
-					'status'  => 'success',
-					'result'  => $query
-				];
-		} else {
-			$result = [
-					'status'  => 'fail',
-					'messages'  => ['No Campaign Email Queue']
 				];
 		}
 		return response()->json($result);
