@@ -150,21 +150,6 @@ class ApiSetting extends Controller
         
 		if(isset($data['key']))
         $setting = Setting::where('key', $data['key'])->first();
-        
-        if (!$setting) {
-            if ($data['key'] == 'tutorial') {
-                $setting = Setting::create(['key' => $data['key'], 'value' => json_encode([
-                    'active'        => 0,
-                    'skippable'     => 0,
-                    'text_next'     => 'Selanjutnya',
-                    'text_skip'     => 'Lewati',
-                    'text_last'     => 'Mulai'
-                    ])
-                ]);
-            } else {
-                $setting = Setting::create(['key' => $data['key']]);
-            }
-        }
 
 		if(isset($data['key-like']))
         $setting = Setting::where('key', 'like', "%".$data['key-like']."%")->get()->toArray();
@@ -700,50 +685,6 @@ class ApiSetting extends Controller
         }
 
         return response()->json($result);
-    }
-
-    public function tutorialSave(Request $request) {
-        $post = $request->json()->all();
-
-        if (isset($post['value_text'])) {
-            foreach ($post['value_text'] as $value) {
-                if (explode('=', $value)[0] == 'value') {
-                    $value_text[] = explode('=', $value)[1];
-                } else {
-                    $upload = MyHelper::uploadPhoto($value, $path = 'img/tutorial/', 1080);
-                    if ($upload['status'] == "success") {
-                        $value_text[] = $upload['path'];
-                    } else {
-                        $result = [
-                            'status'    => 'fail',
-                            'messages'    => ['fail upload image']
-                        ];
-                        return response()->json($result);
-                    }
-                }
-            }
-            $post['value_text'] = json_encode($value_text);
-        } else {
-            $value_text = null;
-            $post['value_text'] = json_encode($value_text);
-        }
-        
-        $insert = Setting::updateOrCreate(['key' => 'tutorial'], $post);
-
-        return response()->json(MyHelper::checkCreate($insert));
-    }
-
-    public function tutorialList(Request $request) {
-        $post = $request->json()->all();
-
-        $data = Setting::where('key', 'tutorial')->get()->toArray()[0];
-        
-        $list = json_decode($data['value'], true);
-        foreach (json_decode($data['value_text']) as $key => $value) {
-            $list['image'][$key] = env('S3_URL_API') . $value;
-        }
-        
-        return response()->json(MyHelper::checkGet($list));
     }
 
     public function date(DatePost $request) {
