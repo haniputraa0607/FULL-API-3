@@ -38,7 +38,8 @@ Route::group(['middleware' => ['auth:api', 'log_activities'], 'prefix' => 'api/s
     Route::get('/webview/faq', 'ApiSetting@faqWebview');
     Route::post('faq/sort/update', 'ApiSetting@faqSortUpdate');
 
-    Route::post('/tutorial/save', 'ApiSetting@tutorialSave');
+    Route::any('/intro', 'ApiTutorial@introList');
+    Route::post('/intro/save', 'ApiTutorial@introSave');
 
     Route::post('email', 'ApiSetting@settingEmail');
     Route::get('email', 'ApiSetting@getSettingEmail');
@@ -164,5 +165,5 @@ Route::group([ 'prefix' => 'api/setting', 'namespace' => 'Modules\Setting\Http\C
 {
     Route::any('webview/{key}', 'ApiSettingWebview@aboutWebview');
     Route::any('/faq/webview', 'ApiSettingWebview@faqWebviewView');
-    Route::any('/intro/list', 'ApiSetting@tutorialList');
+    Route::any('/intro/list', 'ApiTutorial@introListFrontend');
 });
