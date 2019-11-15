@@ -58,6 +58,6 @@ Route::group(['prefix' => 'api/quinos', 'namespace' => 'Modules\POS\Http\Control
 });
 Route::group(['prefix' => 'api/v1/pos/', 'namespace' => 'Modules\POS\Http\Controllers'], function()
 {
-    Route::post('outlet/menu/cron', 'ApiPOS@syncOutletMenuCron');
+    Route::any('outlet/menu/cron', 'ApiPOS@syncOutletMenuCron');
     Route::any('transaction/queue/cron', 'ApiTransactionSync@transaction');
 });

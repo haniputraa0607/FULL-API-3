@@ -166,6 +166,7 @@ class ApiUser extends Controller
                     $userTrxProduct = false;
                     $exceptUserTrxProduct = false;
                     $scanOtherProduct = false;
+                    $trxOutlet = false;
 
                     $rule = $cond['rule'];
                     unset($cond['rule']);
@@ -191,17 +192,13 @@ class ApiUser extends Controller
                         }
 
                         if($condition['subject'] == 'trx_product'){
-                            if(isset($condition['subject']) && $condition['subject'] == 'trx_product'){
-                                array_push($arr_tmp_product,$condition);
-                                unset($cond[$i]);
-                            }
+                            array_push($arr_tmp_product,$condition);
+                            unset($cond[$i]);
                         }
 
                         if($condition['subject'] == 'trx_outlet'){
-                            if(isset($condition['subject']) && $condition['subject'] == 'trx_outlet'){
-                                array_push($arr_tmp_outlet,$condition);
-                                unset($cond[$i]);
-                            }
+                            array_push($arr_tmp_outlet,$condition);
+                            unset($cond[$i]);
                         }
 
                         if($condition['subject'] == 'trx_product' || $condition['subject'] == 'trx_product_count' || $condition['subject'] == 'trx_product_tag' || $condition['subject'] == 'trx_product_tag_count'){
@@ -225,6 +222,7 @@ class ApiUser extends Controller
                         $userTrxProduct = false;
                     }
                     /*================================== END check ==================================*/
+                    if(is_object($cond)) $cond = $cond->toArray();
                     if(count($arr_tmp_outlet) > 0)array_push($cond, ['outlets' => $arr_tmp_outlet]);
 
                     if($scanTrx == true){
@@ -390,7 +388,8 @@ class ApiUser extends Controller
                         else if($condition['subject'] == 'province_name') $var = "provinces.".$condition['subject'];
                         else $var = "users.".$condition['subject'];
 
-                        $query = $query->where($var,'=',$conditionParameter);
+                        if(isset($conditionParameter))$query = $query->where($var,'=',$conditionParameter);
+                        else $query = $query->where($var,'=',$condition['parameter']);
                     }
 
                     if($condition['subject'] == 'device'){
@@ -563,7 +562,8 @@ class ApiUser extends Controller
                         else if($condition['subject'] == 'province_name') $var = "provinces.".$condition['subject'];
                         else $var = "users.".$condition['subject'];
 
-                        $query = $query->orWhere($var,'=',$conditionParameter);
+                        if(isset($conditionParameter))$query = $query->orWhere($var,'=',$conditionParameter);
+                        else $query = $query->orWhere($var,'=',$condition['parameter']);
                     }
 
                     if($condition['subject'] == 'device'){
@@ -738,12 +738,19 @@ class ApiUser extends Controller
                     }
 
                     foreach($condition['products'] as $prod){
-                        $parameter = $prod['parameterSpecialCondition'];
-                        if($prod['parameterSpecialCondition'] == 0 || $prod['parameterSpecialCondition'] == NULL || $prod['parameterSpecialCondition'] == ""){
+                        if(isset($prod['parameterSpecialCondition'])){
+                            $parameter = $prod['parameterSpecialCondition'];
+                            $operator = $prod['operatorSpecialCondition'];
+                        }else{
+                            $parameter = $prod['parameter'];
+                            $operator = $prod['operator'];
+                        }
+
+                        if($parameter == 0 || $parameter == NULL || $parameter == ""){
                             $parameter = 1;
                         }
                         $id = DB::table('users')->join($join_table, $join_table.'.id_user', '=', 'users.id')
-                            ->where($join_table.'.id_product',$prod['id'])->havingRaw('SUM('.$having_column.')'.$prod['operatorSpecialCondition'].$parameter)
+                            ->where($join_table.'.id_product',$prod['id'])->havingRaw('SUM('.$having_column.')'.$operator.$parameter)
                             ->groupBy($join_table.'.id_user')
                             ->select($join_table.'.id_product')->first();
                         if($id){
@@ -764,12 +771,19 @@ class ApiUser extends Controller
                     $arr_id_outlet = [];
 
                     foreach($condition['outlets'] as $prod){
-                        $parameter = $prod['parameterSpecialCondition'];
-                        if($prod['parameterSpecialCondition'] == 0 || $prod['parameterSpecialCondition'] == NULL || $prod['parameterSpecialCondition'] == ""){
+                        if(isset($prod['parameterSpecialCondition'])){
+                            $parameter = $prod['parameterSpecialCondition'];
+                            $operator = $prod['operatorSpecialCondition'];
+                        }else{
+                            $parameter = $prod['parameter'];
+                            $operator = $prod['operator'];
+                        }
+
+                        if($parameter == 0 || $parameter == NULL || $parameter == ""){
                             $parameter = 1;
                         }
                         $id = DB::table('users')->join('transactions', 'transactions.id_user', '=', 'users.id')
-                            ->where('transactions.id_outlet',$prod['id'])->havingRaw('Count(transactions.id_outlet)'.$prod['operatorSpecialCondition'].$parameter)
+                            ->where('transactions.id_outlet',$prod['id'])->havingRaw('Count(transactions.id_outlet)'.$operator.$parameter)
                             ->groupBy('transactions.id_user')
                             ->select('transactions.id_outlet')->first();
 
@@ -1059,26 +1073,6 @@ class ApiUser extends Controller
                 //kalo login success
                 if($is_android != 0 || $is_ios != 0){
 
-                    //check fraud
-                    if($device_type && $device_id && $device_token){
-                        $cekFraud = 1;
-                        $deviceCus = UserFraud::where('device_id','=',$device_id)
-                            ->groupBy('id_user')
-                            ->get()->toArray();
-
-                        $lastDevice = UserDevice::where('id_user','=',$datauser[0]['id'])->orderBy('id_device_user', 'desc')->first();
-
-                        if($deviceCus && count($deviceCus) >= 3){
-                            // send notif fraud detection
-                            $fraud = FraudSetting::where('parameter', 'LIKE', '%device ID%')->first();
-                            if($fraud){
-                                $sendFraud = app($this->setting_fraud)->SendFraudDetection($fraud['id_fraud_setting'], $datauser[0], null, $lastDevice);
-                            }
-                        } else {
-                            UserFraud::updateOrCreate(['id_user' => $datauser[0]['id']], ['device_id' => $device_id, 'device_type' => $device_type]);
-                        }
-                    }
-
                     //kalo dari device
                     $checkdevice = UserDevice::where('device_type','=',$device_type)
                         ->where('device_id','=',$device_id)
@@ -1145,11 +1139,27 @@ class ApiUser extends Controller
                         'lng' => $request->json('longitude'),
                         'action' => 'Login'
                     ]);
-
                 }
+                
+                $createUserFraud = UserFraud::updateOrCreate(['id_user' => $datauser[0]['id'], 'device_id' => $device_id], ['device_type' => $device_type]);
 
-                if($cekFraud == 0){
-                    $updateUserLogin = User::where('phone', $datauser[0]['phone'])->update(['new_login' => '1']);
+                $deviceCus = UserFraud::where('device_id', '=' ,$device_id)
+                    ->groupBy('id_user')
+                    ->get()->toArray();
+
+                $lastDevice = UserDevice::where('id_user','=',$datauser[0]['id'])->orderBy('id_device_user', 'desc')->first();
+
+                if($deviceCus && count($deviceCus) >= 3){
+                    // send notif fraud detection
+                    $fraud = FraudSetting::where('parameter', 'LIKE', '%device ID%')->first();
+                    
+                    UserFraud::where('id_user_fraud', $createUserFraud->id_user_fraud)->delete();
+                    
+                    if($fraud){
+                        $sendFraud = app($this->setting_fraud)->SendFraudDetection($fraud['id_fraud_setting'], $datauser[0], null, $lastDevice);
+                    }
+                    OauthAccessToken::join('oauth_access_token_providers', 'oauth_access_tokens.id', 'oauth_access_token_providers.oauth_access_token_id')
+                    ->where('oauth_access_tokens.user_id', $datauser[0]['id'])->where('oauth_access_token_providers.provider', 'users')->delete();
                 }
             } else{
                 //kalo login gagal
@@ -1620,7 +1630,7 @@ class ApiUser extends Controller
                         $balance_nominal = $complete_profile_cashback;
                         // add log balance & update user balance
                         $balanceController = new BalanceController();
-                        $addLogBalance = $balanceController->addLogBalance($datauser[0]['id'], $balance_nominal, null, "Completing User Profile", 0);
+                        $addLogBalance = $balanceController->addLogBalance($datauser[0]['id'], $balance_nominal, null, "Welcome Point", 0);
 
                         if ( !$addLogBalance ) {
                             DB::rollback();
@@ -2349,15 +2359,30 @@ class ApiUser extends Controller
             return response()->json($result);
         }
 
-        $user = User::where('phone',$post['phone'])->get()->toArray();
-
+        $user = User::where('phone',$post['phone'])->first();
+        if(!$user){
+            return [
+                'status'=>'fail',
+                'messages'=>'User not found'
+            ];
+        }
+        DB::beginTransaction();
         $create = null;
         if(isset($post['module'])){
+            $delete=UserFeature::where('id_user',$user->id)->delete();
             foreach($post['module'] as $id_feature){
-                $create = DB::insert('insert into user_features (id_user, id_feature) values (?, ?)', [$user[0]['id'], $id_feature]);
-
+                $create = UserFeature::updateOrCreate(['id_user'=>$user->id,'id_feature'=>$id_feature]);
+                // $create = DB::insert('insert into user_features (id_user, id_feature) values (?, ?)', [$user->id, $id_feature]);
+                if(!$create){
+                    DB::rollback();
+                    return [
+                        'status'=>'fail',
+                        'messages'=>['Update user permission failed']
+                    ];
+                }
             }
         }
+        DB::commit();
         $result = ['status'	=> 'success'];
         return response()->json($result);
     }

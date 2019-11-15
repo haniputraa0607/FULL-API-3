@@ -44,7 +44,7 @@ class ApiBanner extends Controller
         ]);
 
         $post = $request->json()->all();
-        
+
         // upload image
         $path = "img/banner/";
         if(!file_exists($path)){
@@ -52,7 +52,7 @@ class ApiBanner extends Controller
         }
 
         // img 4:3
-        $upload = MyHelper::uploadPhotoStrict($post['image'], $path, 800, 600);
+        $upload = MyHelper::uploadPhotoStrict($post['image'], $path, 750, 375);
 
         if (isset($upload['status']) && $upload['status'] == "success") {
             $post['image'] = $upload['path'];
@@ -123,7 +123,7 @@ class ApiBanner extends Controller
             }
 
             // upload image
-            $upload = MyHelper::uploadPhotoStrict($post['image'], $path, 800, 600);
+            $upload = MyHelper::uploadPhotoStrict($post['image'], $path, 750, 375);
 
             if (isset($upload['status']) && $upload['status'] == "success") {
                 $post['image'] = $upload['path'];

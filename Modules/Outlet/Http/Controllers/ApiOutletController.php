@@ -425,11 +425,11 @@ class ApiOutletController extends Controller
         $post = $request->json()->all();
 
         if (isset($post['webview'])) {
-            $outlet = Outlet::with(['today']);
+            $outlet = Outlet::with(['today', 'brands']);
         }elseif(isset($post['admin']) && isset($post['type']) && $post['type'] == 'export'){
             $outlet = Outlet::with(['user_outlets','city','today','product_prices','product_prices.product'])->select('*');
         }elseif(isset($post['admin'])){
-            $outlet = Outlet::with(['user_outlets','city','today'])->select('*');
+            $outlet = Outlet::with(['user_outlets','city','today', 'outlet_schedules'])->select('*');
             if(isset($post['id_product'])){
                 $outlet = $outlet->with(['product_prices'=> function($q) use ($post){
                     $q->where('id_product', $post['id_product']);
@@ -483,7 +483,7 @@ class ApiOutletController extends Controller
         if (isset($post['id_city'])) {
             $outlet->where('id_city',$post['id_city']);
         }
-        
+
 
         if(isset($post['all_outlet']) && $post['all_outlet'] == 0){
             $outlet = $outlet->where('outlet_status', 'Active')->whereNotNull('id_city');

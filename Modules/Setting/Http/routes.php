@@ -36,6 +36,7 @@ Route::group(['middleware' => ['auth:api', 'log_activities'], 'prefix' => 'api/s
     Route::post('/faq/update', 'ApiSetting@faqUpdate');
     Route::post('/faq/delete', 'ApiSetting@faqDelete');
     Route::get('/webview/faq', 'ApiSetting@faqWebview');
+    Route::post('faq/sort/update', 'ApiSetting@faqSortUpdate');
 
     Route::post('/tutorial/save', 'ApiSetting@tutorialSave');
 
@@ -55,6 +56,7 @@ Route::group(['middleware' => ['auth:api', 'log_activities'], 'prefix' => 'api/s
         Route::post('update', 'ApiDashboardSetting@updateDashboard');
         Route::post('delete', 'ApiDashboardSetting@deleteDashboard');
         Route::post('update/date-range', 'ApiDashboardSetting@updateDateRange');
+        Route::post('update-visibility', 'ApiDashboardSetting@updateVisibilitySection');
         Route::post('order-section', 'ApiDashboardSetting@updateOrderSection');
         Route::post('order-card', 'ApiDashboardSetting@updateOrderCard');
     });

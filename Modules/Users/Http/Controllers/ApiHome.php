@@ -569,6 +569,15 @@ class ApiHome extends Controller
 
     public function membership(Request $request){
         $user = $request->user();
+        if($user->first_login===0){
+            $send = app($this->autocrm)->SendAutoCRM('Login First Time', $user['phone']);
+            if (!$send) {
+                DB::rollback();
+                return response()->json(['status' => 'fail', 'messages' => ['Send notification failed']]);
+            }
+            $user->first_login=1;
+            $user->save();
+        }
         $user->load(['city','city.province']);
         $birthday = "";
         if ($user->birthday != "") {
@@ -749,22 +758,28 @@ class ApiHome extends Controller
             ->get();
         if($deals){
             $deals=array_map(function($value){
-                if ($value['deals']['deals_voucher_type'] == "Unlimited") {
-                    $calc = '*';
+                if($value['deals']['deals_status'] == 'soon'){
+                     $value['deals']['available_voucher'] = "-";
+                     $value['deals']['percent_voucher'] = 0;
                 }else{
-                    $calc = $value['deals']['deals_total_voucher'] - $value['deals']['deals_total_claimed'];
+                    if ($value['deals']['deals_voucher_type'] == "Unlimited") {
+                        $calc = '*';
+                    }else{
+                        $calc = $value['deals']['deals_total_voucher'] - $value['deals']['deals_total_claimed'];
+                    }
+                    $value['deals']['available_voucher'] = (string) $calc;
+                    if($calc&&is_numeric($calc)){
+                        $value['deals']['percent_voucher'] = $calc*100/$value['deals']['deals_total_voucher'];
+                    }else{
+                        $value['deals']['percent_voucher'] = 100;
+                    }
                 }
-                $value['deals']['available_voucher'] = (string) $calc;
-                if($calc&&is_numeric($calc)){
-                    $value['deals']['percent_voucher'] = $calc*100/$value['deals']['deals_total_voucher'];
-                }else{
-                    $value['deals']['percent_voucher'] = 100;
-                }
+                $value['deals']['show'] = 1;
                 $value['deals']['time_to_end']=strtotime($value['deals']['deals_end'])-time();
                 return $value;
             },$deals->toArray());
             foreach ($deals as $key => $value) {
-                if ($value['deals']['available_voucher'] == "0") {
+                if ($value['deals']['available_voucher'] == "0" && $value['deals']['deals_status'] != 'soon') {
                     unset($deals[$key]);
                 }
             }

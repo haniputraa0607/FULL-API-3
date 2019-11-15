@@ -14,6 +14,7 @@ use App\Http\Models\DealsPaymentManual;
 use App\Http\Models\DealsPaymentMidtran;
 use App\Http\Models\DealsUser;
 use App\Http\Models\DealsVoucher;
+use App\Http\Models\Outlet;
 
 use Modules\Deals\Http\Requests\Deals\Voucher;
 
@@ -29,9 +30,19 @@ class ApiDealsInvalidate extends Controller
     /* INVALIDATE */
     function invalidate(Request $request)
     {
-        DB::beginTransaction();
 
         $fail['status'] = "fail";
+        // outlet_code empty?
+        if(!$request->json('outlet_code')){
+            $fail['messages']=['Kamu harus memasukkan kode outlet'];
+            return $fail;
+        }
+        // outlet not found?
+        if(Outlet::where('outlet_code',$request->json('outlet_code'))->count()<1){
+            $fail['messages']=['Kode outlet yang kamu masukkan tidak terdaftar'];
+            return $fail;
+        }
+        DB::beginTransaction();
 
         // CHECK OUTLET AND GET DEALS USER
         $deals = $this->outletAvailable($request->user(), $request->json('id_deals_user'), $request->json('outlet_code'));
@@ -84,9 +95,12 @@ class ApiDealsInvalidate extends Controller
                                 [
                                     'redeemed_at'       => $deals['redeemed_at'],
                                     'id_deals_user'     => $deals['id_deals_user'],
+                                    'deals_title'       => $deals['deal_voucher']['deal']['deals_title'],
                                     'voucher_code'      => $deals['deal_voucher']['voucher_code'],
                                     'outlet_name'       => $deals['outlet_name'],
-                                    'outlet_code'       => $deals['outlet_code']
+                                    'outlet_code'       => $deals['outlet_code'],
+                                    'id_deals'          => $deals['deal_voucher']['deal']['id_deals'],
+                                    'id_brand'          => $deals['deal_voucher']['deal']['id_brand']
                                 ]);
 
                             // RETURN INFO REDEEM
@@ -110,10 +124,10 @@ class ApiDealsInvalidate extends Controller
             }
         }
         else {
-            $fail['messages'] = ['Kode outlet yang kamu masukkan tidak terdaftar'];
-            if(optional($deals)->id_outlet){
-                $fail['messages'] = ['Kode outlet yang kamu masukkan salah'];
-            }
+            // $fail['messages'] = ['Kode outlet yang kamu masukkan tidak terdaftar'];
+            // if(optional($deals)->id_outlet){
+            $fail['messages'] = ['Kode outlet yang kamu masukkan salah'];
+            // }
         }
 
         DB::rollback();

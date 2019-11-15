@@ -584,11 +584,16 @@ class ApiHistoryController extends Controller
 
                 if ($found == true) {
                     $dataList['type'] = 'trx';
-                    $dataList['id'] = $value['transaction_receipt_number'] . ',' . $value['id_outlet'];
+                    $dataList['id'] = $value['transaction_receipt_number'] . ',' . $value['id_transaction'];
                     $dataList['date']    = date('Y-m-d H:i', strtotime($value['transaction_date']));
                     $dataList['outlet'] = $value['outlet']['outlet_name'];
                     $dataList['amount'] = number_format($value['transaction_grandtotal'], 0, ',', '.');
                     $dataList['cashback'] = number_format($value['transaction_cashback_earned'], 0, ',', '.');
+                    if ($dataList['cashback'] >= 0) {
+                        $dataList['status_point'] = 1;
+                    } else {
+                        $dataList['status_point'] = 0;
+                    }
 
                     $listTransaction[] = $dataList;
                 }
@@ -956,7 +961,7 @@ class ApiHistoryController extends Controller
                 $dataList['type']   = 'profile';
                 $dataList['id']      = $value['id_log_balance'];
                 $dataList['date']    = date('Y-m-d H:i:s', strtotime($value['created_at']));
-                $dataList['outlet'] = 'Completing User Profile';
+                $dataList['outlet'] = 'Welcome Point';
                 $dataList['amount'] = '+ ' . number_format($value['balance'], 0, ',', '.');
 
                 $listBalance[$key] = $dataList;

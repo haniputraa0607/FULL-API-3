@@ -100,7 +100,7 @@ class ApiDeals extends Controller
                 mkdir($this->saveImage, 0777, true);
             }
 
-            $upload = MyHelper::uploadPhotoStrict($post['deals_image'], $this->saveImage, 600, 450);
+            $upload = MyHelper::uploadPhotoStrict($post['deals_image'], $this->saveImage, 500, 500);
 
             if (isset($upload['status']) && $upload['status'] == "success") {
                 $data['deals_image'] = $upload['path'];
@@ -246,6 +246,8 @@ class ApiDeals extends Controller
         if($request->json('admin')){
             $deals->addSelect('id_brand');
             $deals->with('brand');
+        }else{
+            $deals->where('deals_end', '>', date('Y-m-d H:i:s'));
         }
         if ($request->json('id_outlet') && is_integer($request->json('id_outlet'))) {
             $deals = $deals->join('deals_outlets', 'deals.id_deals', 'deals_outlets.id_deals')
@@ -444,12 +446,13 @@ class ApiDeals extends Controller
             //text konfirmasi pembelian
             if($deals[0]['deals_voucher_price_type']=='free'){
                 //voucher free
-                $payment_message = Setting::where('key', 'payment_message')->pluck('value')->first()??'Kamu yakin ingin mengambil voucher ini?';
+                $payment_message = Setting::where('key', 'payment_messages')->pluck('value_text')->first()??'Kamu yakin ingin mengambil voucher ini?';
+                $payment_message = MyHelper::simpleReplace($payment_message,['deals_title'=>$deals[0]['deals_title']]);
             }elseif($deals[0]['deals_voucher_price_type']=='point'){
-                $payment_message = Setting::where('key', 'payment_message_point')->pluck('value')->first()??'Anda akan menukarkan %point% points anda dengan Voucher %deals_title%?';
+                $payment_message = Setting::where('key', 'payment_messages_point')->pluck('value_text')->first()??'Anda akan menukarkan %point% points anda dengan Voucher %deals_title%?';
                 $payment_message = MyHelper::simpleReplace($payment_message,['point'=>$deals[0]['deals_voucher_price_point'],'deals_title'=>$deals[0]['deals_title']]);
             }
-            $payment_success_message = Setting::where('key', 'payment_success_message')->pluck('value')->first()??'Apakah kamu ingin menggunakan Voucher sekarang?';
+            $payment_success_message = Setting::where('key', 'payment_success_messages')->pluck('value_text')->first()??'Apakah kamu ingin menggunakan Voucher sekarang?';
             $deals[0]['payment_message'] = $payment_message;
             $deals[0]['payment_success_message'] = $payment_success_message;
             if($deals[0]['deals_voucher_price_type']=='free'&&$deals[0]['deals_status']=='available'){
@@ -458,7 +461,7 @@ class ApiDeals extends Controller
                 if($deals[0]['deals_voucher_price_type']=='point'){
                     $deals[0]['button_status']=$deals[0]['deals_voucher_price_point']<=$curBalance?1:0;
                     if($deals[0]['deals_voucher_price_point']>$curBalance){
-                        $deals[0]['payment_fail_message'] = Setting::where('key', 'payment_fail_message')->pluck('value')->first()??'Mohon maaf, point anda tidak cukup';
+                        $deals[0]['payment_fail_message'] = Setting::where('key', 'payment_fail_messages')->pluck('value_text')->first()??'Mohon maaf, point anda tidak cukup';
                     }
                 }else{
                     $deals[0]['button_text'] = 'Beli';
@@ -734,6 +737,13 @@ class ApiDeals extends Controller
             }else{
                 $deals[$key]['percent_voucher'] = 100;
             }
+
+            if($value['deals_status'] == 'soon'){
+                $calc = "-";
+                $deals[$key]['percent_voucher'] = 0;
+            }
+
+            $deals[$key]['show'] = 1;
             $deals[$key]['available_voucher'] = (string) $calc;
             // deals masih ada?
             // print_r($deals[$key]['available_voucher']);

@@ -36,14 +36,16 @@ class ApiWebviewController extends Controller
 
         $success = $request->json('trx_success');
 
+        $user = $request->user();
+
         if (empty($check)) {
             if ($type == 'trx') {
                 $arrId = explode(',',$id);
-                if(count($arrId) != 2){
-                    $list = Transaction::where('transaction_receipt_number', $id)->first();
-                }else{
-                     $list = Transaction::where('transaction_receipt_number', $arrId[0])->where('id_outlet', $arrId[1])->first();
-                }
+                // if(count($arrId) != 2){
+                //     $list = Transaction::where('transaction_receipt_number', $id)->first();
+                // }else{
+                $list = Transaction::where([['transaction_receipt_number', $arrId[0]],['id_transaction', $arrId[1]],['id_user', $user->id]])->first();
+                // }
 
                 if (empty($list)) {
                     return response()->json(['status' => 'fail', 'messages' => ['Transaction not found']]);
@@ -133,7 +135,7 @@ class ApiWebviewController extends Controller
                 if(count($arrId) != 2){
                     $list = Transaction::where('transaction_receipt_number', $id)->with('user.city.province', 'productTransaction.product.product_category', 'productTransaction.product.product_photos', 'productTransaction.product.product_discounts', 'transaction_payment_offlines', 'outlet.city', 'transaction_vouchers.deals_voucher')->first();
                 }else{
-                    $list = Transaction::where('transaction_receipt_number', $arrId[0])->where('id_outlet', $arrId[1])->with('user.city.province', 'productTransaction.product.product_category', 'productTransaction.product.product_photos', 'productTransaction.product.product_discounts', 'transaction_payment_offlines', 'outlet.city', 'transaction_vouchers.deals_voucher')->first();
+                    $list = Transaction::where('transaction_receipt_number', $arrId[0])->where('id_transaction', $arrId[1])->with('user.city.province', 'productTransaction.product.product_category', 'productTransaction.product.product_photos', 'productTransaction.product.product_discounts', 'transaction_payment_offlines', 'outlet.city', 'transaction_vouchers.deals_voucher')->first();
                 }
             }
             $label = [];
@@ -516,7 +518,7 @@ class ApiWebviewController extends Controller
                 'status'                     => 'success',
                 'result' => [
                     'type'                       => $type,
-                    'transaction_receipt_number' => $receipt,
+                    'transaction_receipt_number' => $receipt.','.$select['id_transaction'],
                     'button'                     => 'LIHAT DETAIL',
                     'url'                        => env('API_URL').'api/transaction/web/view/detail/balance?data='.$base
                 ],

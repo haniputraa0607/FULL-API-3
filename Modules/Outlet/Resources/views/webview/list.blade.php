@@ -245,6 +245,7 @@
 		transform: rotate(180deg);
 		transition: transform 0.25s linear;
 	}
+	p { margin: 0 0 0.0001pt; }
 
     </style>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/OwlCarousel2/2.3.4/assets/owl.carousel.min.css">
