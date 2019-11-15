@@ -678,6 +678,30 @@ class ApiSetting extends Controller
         return response()->json(MyHelper::checkDelete($delete));
     }
 
+    public function faqSortUpdate(Request $request) {
+        $id_faq = $request->json('id_faq');
+        $number_list = 0;
+
+        foreach ($id_faq as $dt){
+            $status = Faq::where('id_faq', $dt)->update(['faq_number_list' => $number_list + 1]);
+            if(!$status){
+                $result = [
+                    'status' => 'fail'
+                ];
+                return response()->json($result);
+            }
+            $number_list++;
+        }
+
+        if($status){
+            $result = [
+                'status' => 'success'
+            ];
+        }
+
+        return response()->json($result);
+    }
+
     public function tutorialSave(Request $request) {
         $post = $request->json()->all();
 
