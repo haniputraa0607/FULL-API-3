@@ -383,7 +383,7 @@
 
         <div class="kotak2">
             <div class="container">
-                <div class="row space-bottom text-13-3px ProductSans">{!! $news[0]['news_content_long'] !!}
+                <div class="space-bottom text-13-3px ProductSans">{!! $news[0]['news_content_long'] !!}
                 </div>
             </div>
         </div>
