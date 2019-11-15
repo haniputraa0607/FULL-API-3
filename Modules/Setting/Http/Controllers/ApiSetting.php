@@ -634,7 +634,7 @@ class ApiSetting extends Controller
     }
 
     public function faqList(FaqList $request) {
-        $faqList = Faq::orderBy('id_faq', 'ASC')->get()->toArray();
+        $faqList = Faq::orderBy('faq_number_list', 'ASC')->get()->toArray();
 
         return response()->json(MyHelper::checkGet($faqList));
     }
@@ -661,6 +661,30 @@ class ApiSetting extends Controller
         $delete = Faq::where('id_faq', $id)->delete();
 
         return response()->json(MyHelper::checkDelete($delete));
+    }
+
+    public function faqSortUpdate(Request $request) {
+        $id_faq = $request->json('id_faq');
+        $number_list = 0;
+
+        foreach ($id_faq as $dt){
+            $status = Faq::where('id_faq', $dt)->update(['faq_number_list' => $number_list + 1]);
+            if(!$status){
+                $result = [
+                    'status' => 'fail'
+                ];
+                return response()->json($result);
+            }
+            $number_list++;
+        }
+
+        if($status){
+            $result = [
+                'status' => 'success'
+            ];
+        }
+
+        return response()->json($result);
     }
 
     public function introSave(Request $request) {
