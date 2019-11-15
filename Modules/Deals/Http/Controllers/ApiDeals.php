@@ -246,6 +246,8 @@ class ApiDeals extends Controller
         if($request->json('admin')){
             $deals->addSelect('id_brand');
             $deals->with('brand');
+        }else{
+            $deals->where('deals_end', '>', date('Y-m-d H:i:s'));
         }
         if ($request->json('id_outlet') && is_integer($request->json('id_outlet'))) {
             $deals = $deals->join('deals_outlets', 'deals.id_deals', 'deals_outlets.id_deals')
@@ -735,6 +737,13 @@ class ApiDeals extends Controller
             }else{
                 $deals[$key]['percent_voucher'] = 100;
             }
+
+            if($value['deals_status'] == 'soon'){
+                $calc = "-";
+                $deals[$key]['percent_voucher'] = 0;
+            }
+
+            $deals[$key]['show'] = 1;
             $deals[$key]['available_voucher'] = (string) $calc;
             // deals masih ada?
             // print_r($deals[$key]['available_voucher']);
