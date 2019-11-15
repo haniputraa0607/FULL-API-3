@@ -121,9 +121,7 @@
     </div>
     <div class="kotak-full">
         <div class="container">
-            <div class="row">
-                <div class="col-12 text-14px ProductSans text-grey-white"><?php echo $value; ?></div>
-            </div>
+            <div class="col-12 text-14px ProductSans text-grey-white"><?php echo $value; ?></div>
         </div>
     </div>
 

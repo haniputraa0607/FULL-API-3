@@ -151,6 +151,21 @@ class ApiSetting extends Controller
 		if(isset($data['key']))
         $setting = Setting::where('key', $data['key'])->first();
         
+        if (!$setting) {
+            if ($data['key'] == 'tutorial') {
+                $setting = Setting::create(['key' => $data['key'], 'value' => json_encode([
+                    'active'        => 0,
+                    'skippable'     => 0,
+                    'text_next'     => 'Selanjutnya',
+                    'text_skip'     => 'Lewati',
+                    'text_last'     => 'Mulai'
+                    ])
+                ]);
+            } else {
+                $setting = Setting::create(['key' => $data['key']]);
+            }
+        }
+
 		if(isset($data['key-like']))
         $setting = Setting::where('key', 'like', "%".$data['key-like']."%")->get()->toArray();
 
@@ -663,31 +678,7 @@ class ApiSetting extends Controller
         return response()->json(MyHelper::checkDelete($delete));
     }
 
-    public function faqSortUpdate(Request $request) {
-        $id_faq = $request->json('id_faq');
-        $number_list = 0;
-
-        foreach ($id_faq as $dt){
-            $status = Faq::where('id_faq', $dt)->update(['faq_number_list' => $number_list + 1]);
-            if(!$status){
-                $result = [
-                    'status' => 'fail'
-                ];
-                return response()->json($result);
-            }
-            $number_list++;
-        }
-
-        if($status){
-            $result = [
-                'status' => 'success'
-            ];
-        }
-
-        return response()->json($result);
-    }
-
-    public function introSave(Request $request) {
+    public function tutorialSave(Request $request) {
         $post = $request->json()->all();
 
         if (isset($post['value_text'])) {
@@ -695,7 +686,7 @@ class ApiSetting extends Controller
                 if (explode('=', $value)[0] == 'value') {
                     $value_text[] = explode('=', $value)[1];
                 } else {
-                    $upload = MyHelper::uploadPhoto($value, $path = 'img/intro/', 1080);
+                    $upload = MyHelper::uploadPhoto($value, $path = 'img/tutorial/', 1080);
                     if ($upload['status'] == "success") {
                         $value_text[] = $upload['path'];
                     } else {
@@ -713,17 +704,17 @@ class ApiSetting extends Controller
             $post['value_text'] = json_encode($value_text);
         }
         
-        $insert = Setting::updateOrCreate(['key' => 'intro'], $post);
+        $insert = Setting::updateOrCreate(['key' => 'tutorial'], $post);
 
         return response()->json(MyHelper::checkCreate($insert));
     }
 
-    public function introList(Request $request) {
+    public function tutorialList(Request $request) {
         $post = $request->json()->all();
 
-        $data = Setting::where('key', 'intro')->get()->toArray()[0];
+        $data = Setting::where('key', 'tutorial')->get()->toArray()[0];
         
-        $list['active']      = $data['value'];
+        $list = json_decode($data['value'], true);
         foreach (json_decode($data['value_text']) as $key => $value) {
             $list['image'][$key] = env('S3_URL_API') . $value;
         }
