@@ -36,7 +36,6 @@ Route::group(['middleware' => ['auth:api', 'log_activities'], 'prefix' => 'api/s
     Route::post('/faq/update', 'ApiSetting@faqUpdate');
     Route::post('/faq/delete', 'ApiSetting@faqDelete');
     Route::get('/webview/faq', 'ApiSetting@faqWebview');
-    Route::get('faq/sort', 'ApiSetting@faqSort');
     Route::post('faq/sort/update', 'ApiSetting@faqSortUpdate');
 
     Route::post('/intro/save', 'ApiSetting@introSave');

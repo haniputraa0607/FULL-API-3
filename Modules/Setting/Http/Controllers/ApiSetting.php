@@ -634,7 +634,7 @@ class ApiSetting extends Controller
     }
 
     public function faqList(FaqList $request) {
-        $faqList = Faq::orderBy('id_faq', 'ASC')->get()->toArray();
+        $faqList = Faq::orderBy('faq_number_list', 'ASC')->get()->toArray();
 
         return response()->json(MyHelper::checkGet($faqList));
     }
@@ -661,12 +661,6 @@ class ApiSetting extends Controller
         $delete = Faq::where('id_faq', $id)->delete();
 
         return response()->json(MyHelper::checkDelete($delete));
-    }
-
-    public function faqSort(Request $request) {
-        $faqList = Faq::orderBy('faq_number_list', 'ASC')->get()->toArray();
-
-        return response()->json(MyHelper::checkGet($faqList));
     }
 
     public function faqSortUpdate(Request $request) {
