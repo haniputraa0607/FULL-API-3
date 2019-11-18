@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class ProductModifier extends Model
 {
+    protected $hidden = ['pivot'];
+    
 	protected $primaryKey = 'id_product_modifier';
 
 	protected $casts = [

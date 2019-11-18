@@ -17,7 +17,7 @@ class ApiFavoriteController extends Controller
      * @return Response
      */
     public function index(Request $request){
-        $data = Favorite::with('modifiers');
+        $data = Favorite::with('modifiers','product','outlet');
         // need pagination?
         $id_favorite = $request->json('id_favorite');
         if($id_favorite){
@@ -43,22 +43,42 @@ class ApiFavoriteController extends Controller
     public function list(Request $request){
         $user = $request->user();
         $id_favorite = $request->json('id_favorite');
+        $latitude = $request->json('latitude');
+        $longitude = $request->json('longitude');
+
+        $favorite = Favorite::where('id_user',$user->id);
+        $select = ['id_favorite','id_outlet','id_product','id_user','product_qty','notes'];
+        $with = [
+            'modifiers'=>function($query){
+                $query->select('product_modifiers.id_product_modifier','type','code','text','price');
+            }
+        ];
         // detail or list
         if($id_favorite){
-            $data = Favorite::where('id_user',$user->id)->with('modifiers')->where('id_favorite',$id_favorite)->first();
+            $data = $favorite->select($select)->with($with)->where('id_favorite',$id_favorite)->first();
         }else{
             //get list favorite product outlet
-            $outlets = Favorite::select('id_outlet')->where('id_user',$user->id)->with('outlet')->groupBy('id_outlet')->get()->pluck('outlet');
+            $outlets = $favorite->select('id_outlet')->with(['outlet'=>function($query){
+                $query->select('id_outlet','outlet_name','outlet_address','outlet_latitude','outlet_longitude');
+            }])->groupBy('id_outlet')->get()->pluck('outlet');
             $data=[];
             foreach ($outlets as $outlet) {
+                $outlet = $outlet->toArray();
+                $outlet['outlet_address']=$outlet['outlet_address']??'';
+                $outlet['distance_raw'] = MyHelper::count_distance($latitude,$longitude,$outlet['outlet_latitude'],$outlet['outlet_longitude']);
+                $outlet['distance'] = MyHelper::count_distance($latitude,$longitude,$outlet['outlet_latitude'],$outlet['outlet_longitude'],'K',true);
                 $data[]=[
                     'outlet' => $outlet,
                     'favorites' => Favorite::where([
                             ['id_user',$user->id],
-                            ['id_outlet',$outlet->id_outlet]
-                        ])->with('modifiers')->get()
+                            ['id_outlet',$outlet['id_outlet']]
+                        ])->select($select)->with($with)->get()
                 ];
             }
+            //order by nearest
+            usort($data, function($a,$b){
+                return $a['outlet']['distance_raw'] <=> $b['outlet']['distance_raw'];
+            });
         }
         return MyHelper::checkGet($data,'empty');
     }
