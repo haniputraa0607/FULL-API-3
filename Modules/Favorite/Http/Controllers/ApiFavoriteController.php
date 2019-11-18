@@ -42,21 +42,23 @@ class ApiFavoriteController extends Controller
      */
     public function list(Request $request){
         $user = $request->user();
-        $data = Favorite::where('id_user',$user->id)->with('modifiers');
         $id_favorite = $request->json('id_favorite');
+        // detail or list
         if($id_favorite){
-            $data->where('id_favorite',$id_favorite);
-        }
-        // need pagination?
-        if($request->page&&!$id_favorite){
-            $data=$data->paginate(10);
-            if(!$data->total()){
-                $data=[];
-            }
-        }elseif($id_favorite){
-            $data = $data->first();
+            $data = Favorite::where('id_user',$user->id)->with('modifiers')->where('id_favorite',$id_favorite)->first();
         }else{
-            $data = $data->get();
+            //get list favorite product outlet
+            $outlets = Favorite::select('id_outlet')->where('id_user',$user->id)->with('outlet')->groupBy('id_outlet')->get()->pluck('outlet');
+            $data=[];
+            foreach ($outlets as $outlet) {
+                $data[]=[
+                    'outlet' => $outlet,
+                    'favorites' => Favorite::where([
+                            ['id_user',$user->id],
+                            ['id_outlet',$outlet->id_outlet]
+                        ])->with('modifiers')->get()
+                ];
+            }
         }
         return MyHelper::checkGet($data,'empty');
     }
@@ -76,14 +78,14 @@ class ApiFavoriteController extends Controller
      */
     public function store(Request $request){
         $id_user = $request->user()->id;
-        $modifiers = $request->modifiers;
+        $modifiers = $request->json('modifiers');
         // check is already exist
         $data = Favorite::where([
-            ['id_outlet',$request->id_outlet],
-            ['id_product',$request->id_product],
+            ['id_outlet',$request->json('id_outlet')],
+            ['id_product',$request->json('id_product')],
             ['id_user',$id_user],
-            ['notes',$request->notes??''],
-            ['product_qty',$request->product_qty]
+            ['notes',$request->json('notes')??''],
+            ['product_qty',$request->json('product_qty')]
         ])->where(function($query) use ($modifiers){
             foreach ($modifiers as $id_product_modifier) {
                 $query->whereHas('modifiers',function($query) use ($id_product_modifier){
@@ -96,11 +98,11 @@ class ApiFavoriteController extends Controller
             \DB::beginTransaction();
             // create favorite
             $insert_data = [
-                'id_outlet' => $request->id_outlet,
-                'id_product' => $request->id_product,
-                'product_qty' => $request->product_qty,
+                'id_outlet' => $request->json('id_outlet'),
+                'id_product' => $request->json('id_product'),
+                'product_qty' => $request->json('product_qty'),
                 'id_user' => $id_user,
-                'notes' => $request->notes?:''];
+                'notes' => $request->json('notes')?:''];
 
             $data = Favorite::create($insert_data);
             if($data){
@@ -137,7 +139,11 @@ class ApiFavoriteController extends Controller
      * @return Response
      */
     public function destroy(Request $request){
-        $delete = Favorite::where('id_favorite',$request->id_favorite)->delete();
+        $user = $request->user();
+        $delete = Favorite::where([
+            ['id_favorite',$request->json('id_favorite')],
+            ['id_user',$user->id]
+        ])->delete();
         return MyHelper::checkDelete($delete);
     }
 }
