@@ -13,6 +13,9 @@ use Illuminate\Http\Request;
 |
 */
 
-Route::middleware('auth:api')->get('/favorite', function (Request $request) {
-    return $request->user();
+Route::middleware('auth:api')->prefix('/favorite')->group(function () {
+    Route::any('/', 'ApiFavoriteController@index');
+    Route::any('list', 'ApiFavoriteController@list');
+    Route::post('create', 'ApiFavoriteController@store');
+    Route::post('delete', 'ApiFavoriteController@destroy');
 });
