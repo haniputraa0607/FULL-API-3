@@ -68,6 +68,7 @@ Route::group(['prefix' => 'api', 'middleware' => 'log_activities'], function(){
 		Route::post('/membership','ApiHome@membership');
 		Route::any('/banner','ApiHome@banner');
 		Route::any('/featured-deals','ApiHome@featuredDeals');
+		Route::any('/featured-subscription','ApiHome@featuredSubscription');
 	    Route::post('refresh-point-balance', 'ApiHome@refreshPointBalance');
 	});
 	
