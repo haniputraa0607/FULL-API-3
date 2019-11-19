@@ -162,7 +162,7 @@ class ApiMembershipWebview extends Controller
 	public function detailWebview(Request $request)
 	{
 		$bearer = $request->header('Authorization');
-
+		$bearer = 'Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsImp0aSI6IjExNjg2MmU0MTdhMzViMTAxY2M4YjFkN2JiNWRjYzE0ZjY5Yjk4MGMyZTY4M2Q3NzUxMWU2YzQ5Y2MwNGUwZWQyNjJhMDFiNzM0ZmFhNTY5In0.eyJhdWQiOiIyIiwianRpIjoiMTE2ODYyZTQxN2EzNWIxMDFjYzhiMWQ3YmI1ZGNjMTRmNjliOTgwYzJlNjgzZDc3NTExZTZjNDljYzA0ZTBlZDI2MmEwMWI3MzRmYWE1NjkiLCJpYXQiOjE1NzQxMzQzNDQsIm5iZiI6MTU3NDEzNDM0NCwiZXhwIjoyODcwMTM0MzQ0LCJzdWIiOiI5Iiwic2NvcGVzIjpbIioiXX0.M1OUIU9FRbQy4BPepSb3uB_X6zlPLUCfICY9EepFArp6l99eopQPZAKXBh6Erepm6cwh2-EDKoAx4WKNtTVY-HyvJr_Hq1Z3reTniW19ZRleuUy-KM5IC6Z3wklVpW420KRA4Zp-z-t_kOpa3YJQXQVutFX0O9gUB0udRd9f3E7lEgA2oKTL6_db3mc2_aeef1OAnT2n2DTjl16IzjS1mHB3gWWsiexYNUK4ZbYkf4fCMXbOiRj4lUDmNoVcxl-_8escYCUbvYlNrTPF7zYdgwnxtg_ynBMgS-DbNL1WrQJUfDrANIPENLatTL2NMdQgJSvRHkP2itiSLNZCu5SqH0XijGNc9k5a_Hhfj3XA5L_S7CV_HZNyYrvv8iV2qbNDBIWWQtGT-njPMvdGTfv4jHtf-6etk2OmzyI1Yw-B_2tpKUXLZjARemHlChjY3YCEkWrZ71MOAb1qHz2FDK8hQKIDuZ-dHRWVBI4_zcyobBcODhBSGyWeV84JyPo44zhax7xliG9AE-6YBN0VHfw_f_XhkTkcGvZxlf1_w4dNaF-_m8iX9X3H67jbthuVm5pUnASxMXwBzVckOqULXAmHwQ60FbyumsLLcdmQqd7bn3GRpYf3zBYQucj1k8r78clWiYAl0Rxbcys04Xc3ieKdoUxVXBkz7PQyptm-HaVcq5U';
 		if ($bearer == "") {
 			return view('error', ['msg' => 'Unauthenticated']);
 		}
@@ -179,7 +179,7 @@ class ApiMembershipWebview extends Controller
 		} else {
 			return view('error', ['msg' => 'Something went wrong, try again']);
 		}
-// 		dd($data);
+		$data['max_value'] = end($check['result']['all_membership'])['min_value'];
 		return view('membership::webview.detail_membership', $data);
 	}
 }

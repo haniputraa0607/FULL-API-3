@@ -5,8 +5,7 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <meta http-equiv="X-UA-Compatible" content="ie=edge" />
         <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
-        <link rel="stylesheet" href="http://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.css" />
-        <link rel="stylesheet" href="asset/css/App.css" />
+        <link rel="stylesheet" href="https://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.css" />
         <title>Champ Membership</title>
         <style>
 
@@ -212,7 +211,95 @@
         </style>
 	</head>
 	<body>
+        <div id="carouselExampleFade" class="carousel slide carousel-fade" data-ride="carousel" data-interval="false">
+            <div class="carousel-inner" style="text-shadow: none;">
+                @foreach ($result['all_membership'] as $item)
+                    @if($item['membership_name'] == $result['user_membership']['membership_name']) 
+                    <div class="carousel-item active">
+                        <div style="padding: 20px 0px 20px 0px;background: #ffffff;box-shadow: 0px 0.7px 3.3px 0 #d0d4dd;">
+                            <div class="card" style="height: 155px;width: 85%;margin: auto;background: linear-gradient(#f2f5fc 0%, #d0d4dd 16%, #d2d4d8 48%, #797b7e 100%);border: #aaaaaa;border-radius: 20px;box-shadow: 2.7px 6.7px 5px 0 #d0d4dd;">
+                                <div class="card-body" style="display: flex;flex-wrap: wrap;">
+                                    <div class="col-8 text-left" style="margin-bottom: 27px;">
+                                        <p style="margin-bottom: 4px;font-size: 15px;">{{$result['user_membership']['user']['name']}}</p>
+                                        <p style="font-size: 10.7px;">@if ($result['user_membership']['user']['is_suspended'] == 0) Active @else Suspended @endif</p>
+                                    </div>
+                                    <div class="col-4">
+                                        <img src="{{$item['membership_image']}}" style="width: 30px;float: right;"/>
+                                    </div>
+                                    <div class="col-6 text-left">
+                                        <p style="font-size: 10.7px;margin-bottom: 4px;">Poin saat ini</p>
+                                        <p style="font-size: 13.3px;color: #383b67;font-weight: bold;">{{number_format($result['user_membership']['user']['progress_now'])}} poin</p>
+                                    </div>
+                                    <div class="col-6 text-right">
+                                        <p style="font-size: 10.7px;margin-bottom: 4px;">Status member</p>
+                                        <p style="font-size: 13.3px;color: #383b67;font-weight: bold;">{{strtoupper($result['user_membership']['membership_name'])}}</p>
+                                    </div>
+                                </div>
+                                <a class="carousel-control-prev" href="#carouselExampleFade" role="button" data-slide="prev">
+                                    <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                                    <span class="sr-only">Previous</span>
+                                </a>
+                                <a class="carousel-control-next" href="#carouselExampleFade" role="button" data-slide="next">
+                                    <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                                    <span class="sr-only">Next</span>
+                                </a>
+                            </div>
+                        </div>
+                        <div style="position: relative;left: auto;right: auto;padding: 20px 0px 20px 0px;background: #ffffff;box-shadow: 0px 0.7px 3.3px 0 #d0d4dd; top: 10px;" class="carousel-caption">
+                            <div class="level-wrapper">
+                                <div>
+                                    <div class="current-level-info" style="position:absolute; width:50%; z-index:10">
+                                        <div style="width:50%;"></div>
+                                        <img src="{{env('APP_URL')}}images/coin.png"/>
+                                        <div class="font-regular-brown">{{number_format($result['user_membership']['user']['balance'])}}</div>
+                                    </div>
+                                    <div style="display:flex;">
+                                        @foreach ($result['all_membership'] as $item)
+                                        <div class="current-level-info" style="margin-left: {{(100/count($result['all_membership'])) - 8}}%">
+                                            <img src="{{$item['membership_image']}}" style="width: 20px;float: right;"/>
+                                        </div>
+                                        @endforeach
+                                    </div>
+                                </div>
+                                <div class="level-progress-container" style="margin: 5px 15px; height: 6px;">
+                                    <div class="level-progress" style="width:100%; height: 6px;"></div>
+                                </div>
+                                <div class="level-info">
+                                    <div class="font-regular-black">0</div>
+                                    <div class="font-regular-black">{{number_format($max_value)}}</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="position: relative;left: auto;right: auto;" class="carousel-caption">
+                            <h3>Qeqnwkjdajsbkjabskcb</h3>
+                            <p>askdhkajhsckj</p>
+                        </div>
+                    </div>
+                    @else
+                    <div class="carousel-item">
+                        <div class="card" style="height: 155px;width: 85%;margin: auto; background: linear-gradient(#f2f5fc 0%, #d0d4dd 16%, #d2d4d8 48%, #797b7e 100%);border: none;">
+                            <div class="card-body" style="display: flex;flex-wrap: wrap;">
+                                <div class="col-8 text-left" style="margin-bottom: 27px;">
+                                    <p style="margin-bottom: 4px;font-size: 15px;">{{$result['user_membership']['user']['name']}}</p>
+                                    <p style="font-size: 10.7px;">@if ($result['user_membership']['user']['is_suspended'] == 0) Active @else Suspended @endif</p>
+                                </div>
+                            </div>
+                            <a class="carousel-control-prev" href="#carouselExampleFade" role="button" data-slide="prev">
+                                <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                                <span class="sr-only">Previous</span>
+                            </a>
+                            <a class="carousel-control-next" href="#carouselExampleFade" role="button" data-slide="next">
+                                <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                                <span class="sr-only">Next</span>
+                            </a>
+                        </div>
+                    </div>
+                    @endif
+                @endforeach
+            </div>
+        </div>
 		<div class="container">
+            
 			<div class="content">
                 <div class="nav nav-tabs navtop-container" id="nav-tab" role="tablist">
                     @foreach ($result['all_membership'] as $item)
@@ -375,8 +462,8 @@
         <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
         <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
-        <script src="http://code.jquery.com/jquery-1.11.1.min.js"></script>
-        <script src="http://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.js"></script>
+        <script src="https://code.jquery.com/jquery-1.11.1.min.js"></script>
+        <script src="https://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.js"></script>
 
         <script>
             $(function(){
@@ -384,6 +471,7 @@
                 function swiperightHandler(){
                     var active = $(".navtop-item.active")
                     var length = active.prev(".navtop-item").length
+                    console.log('right'+active)
                     if(length > 0) {
                         var id = active.attr("href")
                         var prev_id = active.prev(".navtop-item").attr("href")
@@ -402,6 +490,7 @@
                 function swipeleftHandler(){
                     var active = $(".navtop-item.active")
                     var length = active.next(".navtop-item").length
+                    console.log('left'+active)
                     if (length > 0) {
                         var id = active.attr("href")
                         var next_id = active.next(".navtop-item").attr("href")
