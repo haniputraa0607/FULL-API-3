@@ -36,7 +36,7 @@ class ApiInbox extends Controller
     	return MyHelper::checkDelete($delete);
     }
 
-    public function listInboxUser(Request $request){
+    public function listInboxUser(Request $request, $mode = false){
     	if(is_numeric($phone=$request->json('phone'))){
     		$user=User::where('phone',$phone)->first();
     	}else{
@@ -109,16 +109,19 @@ class ApiInbox extends Controller
 					$countUnread++;
 				}
 
-				if(!in_array(date('Y-m-d', strtotime($content['created_at'])), $arrDate)){
-					$arrDate[] = date('Y-m-d', strtotime($content['created_at']));
-					$temp['created'] =  date('Y-m-d', strtotime($content['created_at']));
-					$temp['list'][0] =  $content;
-					$arrInbox[] = $temp;
+				if($mode == 'simple'){
+					$arrInbox[] = $content;
 				}else{
-					$position = array_search(date('Y-m-d', strtotime($content['created_at'])), $arrDate);
-					$arrInbox[$position]['list'][] = $content;
+					if(!in_array(date('Y-m-d', strtotime($content['created_at'])), $arrDate)){
+						$arrDate[] = date('Y-m-d', strtotime($content['created_at']));
+						$temp['created'] =  date('Y-m-d', strtotime($content['created_at']));
+						$temp['list'][0] =  $content;
+						$arrInbox[] = $temp;
+					}else{
+						$position = array_search(date('Y-m-d', strtotime($content['created_at'])), $arrDate);
+						$arrInbox[$position]['list'][] = $content;
+					}
 				}
-
 				$countInbox++;
 			}
 		}
@@ -171,34 +174,45 @@ class ApiInbox extends Controller
 			}else{
 				$content['status'] = 'read';
 			}
-
-			if(!in_array(date('Y-m-d', strtotime($content['created_at'])), $arrDate)){
-				$arrDate[] = date('Y-m-d', strtotime($content['created_at']));
-				$temp['created'] =  date('Y-m-d', strtotime($content['created_at']));
-				$temp['list'][0] =  $content;
-				$arrInbox[] = $temp;
+			if($mode == 'simple'){
+				$arrInbox[] = $content;
 			}else{
-				$position = array_search(date('Y-m-d', strtotime($content['created_at'])), $arrDate);
-				$arrInbox[$position]['list'][] = $content;
+				if(!in_array(date('Y-m-d', strtotime($content['created_at'])), $arrDate)){
+					$arrDate[] = date('Y-m-d', strtotime($content['created_at']));
+					$temp['created'] =  date('Y-m-d', strtotime($content['created_at']));
+					$temp['list'][0] =  $content;
+					$arrInbox[] = $temp;
+				}else{
+					$position = array_search(date('Y-m-d', strtotime($content['created_at'])), $arrDate);
+					$arrInbox[$position]['list'][] = $content;
+				}
 			}
 
 			$countInbox++;
 		}
 
 		if(isset($arrInbox) && !empty($arrInbox)) {
-			foreach ($arrInbox as $key => $value) {
-				usort($arrInbox[$key]['list'], function($a, $b){
+			if($mode == 'simple'){
+				usort($arrInbox, function($a, $b){
 					$t1 = strtotime($a['created_at']);
 					$t2 = strtotime($b['created_at']);
 					return $t2 - $t1;
 				});
-			}
+			}else{
+				foreach ($arrInbox as $key => $value) {
+					usort($arrInbox[$key]['list'], function($a, $b){
+						$t1 = strtotime($a['created_at']);
+						$t2 = strtotime($b['created_at']);
+						return $t2 - $t1;
+					});
+				}
 
-			usort($arrInbox, function($a, $b){
-				$t1 = strtotime($a['created']);
-				$t2 = strtotime($b['created']);
-				return $t2 - $t1;
-			});
+				usort($arrInbox, function($a, $b){
+					$t1 = strtotime($a['created']);
+					$t2 = strtotime($b['created']);
+					return $t2 - $t1;
+				});
+			}
 
 			$result = [
 					'status'  => 'success',
