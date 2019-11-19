@@ -63,8 +63,10 @@ class ApiFavoriteController extends Controller
             }])->groupBy('id_outlet')->get()->pluck('outlet');
             $data=[];
             foreach ($outlets as $outlet) {
-                $outlet = $outlet->toArray();
+                $outlet = $outlet->load('today')->toArray();
+                $status = app('Modules\Outlet\Http\Controllers\ApiOutletController')->checkOutletStatus($outlet);
                 $outlet['outlet_address']=$outlet['outlet_address']??'';
+                $outlet['status']=$status;
                 $outlet['distance_raw'] = MyHelper::count_distance($latitude,$longitude,$outlet['outlet_latitude'],$outlet['outlet_longitude']);
                 $outlet['distance'] = MyHelper::count_distance($latitude,$longitude,$outlet['outlet_latitude'],$outlet['outlet_longitude'],'K',true);
                 $data[]=[

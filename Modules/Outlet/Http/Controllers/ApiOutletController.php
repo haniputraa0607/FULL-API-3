@@ -1117,6 +1117,52 @@ class ApiOutletController extends Controller
         return array_values($outlet);
     }
 
+    /**
+     * Cek outlet buka atau tutup
+     * @param  Array $dataOutlet outlet
+     * @return string 'open'/'closed'
+     */
+    public function checkOutletStatus($dataOutlet){
+        if($dataOutlet['today']['open'] == null || $dataOutlet['today']['close'] == null){
+            return 'closed';
+        }else{
+            $processing = '0';
+            $settingTime = Setting::where('key', 'processing_time')->first();
+            if($settingTime && $settingTime->value){
+                $processing = $settingTime->value;
+            }
+            if($dataOutlet['today']['is_closed'] == '1'){
+                return 'closed';
+            }else{
+                if($dataOutlet['today']['open'] != "00:00" && $dataOutlet['today']['close'] != "00:00"){
+                    if($dataOutlet['today']['open'] && date('H:i:01') < date('H:i', strtotime($dataOutlet['today']['open']))){
+                        return 'closed';
+                    }elseif($dataOutlet['today']['close'] && date('H:i') > date('H:i', strtotime('-'.$processing.' minutes', strtotime($dataOutlet['today']['close'])))){
+                        return 'closed';
+                    }else{
+                        $holiday = Holiday::join('outlet_holidays', 'holidays.id_holiday', 'outlet_holidays.id_holiday')->join('date_holidays', 'holidays.id_holiday', 'date_holidays.id_holiday')
+                        ->where('id_outlet', $dataOutlet['id_outlet'])->whereDay('date_holidays.date', date('d'))->whereMonth('date_holidays.date', date('m'))->get();
+                        if(count($holiday) > 0){
+                            foreach($holiday as $i => $holi){
+                                if($holi['yearly'] == '0'){
+                                    if($holi['date'] == date('Y-m-d')){
+                                            return 'closed';
+                                        break;
+                                    }
+                                }else{
+                                        return 'closed';
+                                    break;
+                                }
+                            }
+
+                        }
+                    }
+                }
+            }
+        }
+        return 'open';
+    }
+
     /* Penghitung jarak */
     function distance($lat1, $lon1, $lat2, $lon2, $unit) {
         $theta = $lon1 - $lon2;
