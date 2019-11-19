@@ -23,7 +23,7 @@ class ApiDealsWebview extends Controller
             $response = [
                 'status' => 'success',
                 'result' => [
-                    'webview_url' => env('APP_URL') ."webview/deals/". $deals['id_deals'] ."/". $deals['deals_type'],
+                    'webview_url' => env('APP_URL') ."api/webview/deals/". $deals['id_deals'] ."/". $deals['deals_type'],
                     'button_text' => 'BELI'
                 ]
             ];
