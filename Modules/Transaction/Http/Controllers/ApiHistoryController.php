@@ -482,14 +482,6 @@ class ApiHistoryController extends Controller
                 $next = false;
             }
 
-            for ($i = $start; $i < $end; $i++) {
-                $useragent = $_SERVER['HTTP_USER_AGENT'];
-                if (stristr($useragent, 'okhttp')) {
-                    $data[$i]['date'] = MyHelper::dateFormatInd($data[$i]['date']);
-                }
-                array_push($resultData, $data[$i]);
-            }
-
             return ['data' => $resultData, 'status' => $next];
         }
 
