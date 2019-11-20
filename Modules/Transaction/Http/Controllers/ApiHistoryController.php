@@ -499,9 +499,10 @@ class ApiHistoryController extends Controller
 
     public function transaction($post, $id)
     {
-        $transaction = Transaction::distinct('transactions.*')
+        $transaction = Transaction::select(\DB::raw('*,sum(transaction_products.transaction_product_qty) as sum_qty'))->distinct('transactions.*')
             ->join('outlets', 'transactions.id_outlet', '=', 'outlets.id_outlet')
             ->join('brand_outlet', 'outlets.id_outlet', '=', 'brand_outlet.id_outlet')
+            ->leftJoin('transaction_products', 'transactions.id_transaction', '=', 'transaction_products.id_transaction')
             ->where('transaction_payment_status', '!=', 'Cancelled')
             ->where('transactions.id_user', $id)
             ->with('outlet', 'logTopup')
@@ -615,6 +616,7 @@ class ApiHistoryController extends Controller
                     $dataList['outlet'] = $value['outlet']['outlet_name'];
                     $dataList['amount'] = number_format($value['transaction_grandtotal'], 0, ',', '.');
                     $dataList['cashback'] = number_format($value['transaction_cashback_earned'], 0, ',', '.');
+                    $dataList['subtitle'] = $value['sum_qty'].($value['sum_qty']>1?' items':' item');
                     if ($dataList['cashback'] >= 0) {
                         $dataList['status_point'] = 1;
                     } else {
@@ -631,14 +633,16 @@ class ApiHistoryController extends Controller
 
     public function transactionOnGoingPickup($post, $id)
     {
-        $transaction = Transaction::join('transaction_pickups', 'transactions.id_transaction', 'transaction_pickups.id_transaction')
+        $transaction = Transaction::select(\DB::raw('*,sum(transaction_products.transaction_product_qty) as sum_qty'))->join('transaction_pickups', 'transactions.id_transaction', 'transaction_pickups.id_transaction')
+            ->leftJoin('transaction_products', 'transactions.id_transaction', '=', 'transaction_products.id_transaction')
             ->with('outlet')
             ->where('transaction_payment_status', 'Completed')
             ->whereDate('transaction_date', date('Y-m-d'))
             ->whereNull('taken_at')
             ->whereNull('reject_at')
-            ->where('id_user', $id)
+            ->where('transactions.id_user', $id)
             ->orderBy('transaction_date', 'DESC')
+            ->groupBy('transactions.id_transaction')
             ->get()->toArray();
 
         $listTransaction = [];
@@ -657,6 +661,7 @@ class ApiHistoryController extends Controller
             } else {
                 $dataList['status'] = "Pesanan Menunggu Konfirmasi";
             }
+            $dataList['subtitle'] = $value['sum_qty'].($value['sum_qty']>1?' items':' item');
 
             $listTransaction[] = $dataList;
         }
