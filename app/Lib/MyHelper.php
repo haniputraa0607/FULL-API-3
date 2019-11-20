@@ -2001,4 +2001,31 @@ class MyHelper{
 			$ipaddress = 'UNKNOWN';
 		return $ipaddress;
 	}
+
+    public static function count_distance($lat1, $lon1, $lat2, $lon2, $unit = 'K', $convert = false) {
+        $theta = $lon1 - $lon2;
+        $lat1=floatval($lat1);
+        $lat2=floatval($lat2);
+        $lon1=floatval($lon1);
+        $lon2=floatval($lon2);
+        $dist  = sin(deg2rad($lat1)) * sin(deg2rad($lat2)) +  cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * cos(deg2rad($theta));
+        $dist  = acos($dist);
+        $dist  = rad2deg($dist);
+        $miles = $dist * 60 * 1.1515;
+        $unit  = strtoupper($unit);
+
+        if ($unit == "K") {
+            $hasil = ($miles * 1.609344);
+        } else if ($unit == "N") {
+            $hasil = ($miles * 0.8684);
+        } else {
+            $hasil = $miles;
+        }
+
+        if($convert){
+        	return number_format((float)$hasil, 2, '.', '').' km';
+        }else{
+        	return $hasil;
+        }
+    }
 }
