@@ -134,7 +134,7 @@ class ApiHistoryController extends Controller
         return response()->json($result);
     }
 
-    public function historyTrx(Request $request)
+    public function historyTrx(Request $request,$mode='group')
     {
 
         $post = $request->json()->all();
@@ -208,11 +208,19 @@ class ApiHistoryController extends Controller
         $next_page = $page + 1;
 
         $merge = array_merge($transaction, $voucher);
-        $sortTrx = $this->sorting($merge, $order, $page);
-
-        $check = MyHelper::checkGet($sortTrx);
         if (count($merge) > 0) {
-            $result['status'] = 'success';
+            $sortTrx = $this->sorting($merge, $order, $page);
+            if($mode=='group'){
+                $sortTrx['data'] = $this->groupIt($sortTrx['data'],'date',function($key,&$val){
+                    $explode = explode(' ',$key);
+                    $val['time'] = $explode[1];
+                    return $explode[0];
+                },function($key){
+                    return MyHelper::dateFormatInd($key,true,false,false);
+                });
+            }
+            $check = MyHelper::checkGet($sortTrx);
+
             $result['current_page']  = $page;
             $result['data']          = $sortTrx['data'];
             $result['total']         = count($merge);
@@ -221,6 +229,7 @@ class ApiHistoryController extends Controller
             if ($sortTrx['status'] == true) {
                 $result['next_page_url'] = ENV('APP_API_URL') . '/api/transaction/history-trx?page=' . $next_page;
             }
+            $result = MyHelper::checkGet($result);
         } else {
 
             if(
@@ -241,7 +250,7 @@ class ApiHistoryController extends Controller
         return response()->json($result);
     }
 
-    public function historyTrxOnGoing(Request $request)
+    public function historyTrxOnGoing(Request $request,$mode='group')
     {
 
         $post = $request->json()->all();
@@ -266,11 +275,18 @@ class ApiHistoryController extends Controller
 
         $next_page = $page + 1;
 
-        $sortTrx = $this->sorting($transaction, $order, $page);
-
-        $check = MyHelper::checkGet($sortTrx);
         if (count($transaction) > 0) {
-            $result['status'] = 'success';
+            $sortTrx = $this->sorting($transaction, $order, $page);
+            if($mode=='group'){
+                $sortTrx['data'] = $this->groupIt($sortTrx['data'],'date',function($key,&$val){
+                    $explode = explode(' ',$key);
+                    $val['time'] = substr($explode[1],0,5);
+                    return $explode[0];
+                },function($key){
+                    return MyHelper::dateFormatInd($key,true,false,false);
+                });
+            }
+            $check = MyHelper::checkGet($sortTrx);
             $result['current_page']  = $page;
             $result['data']          = $sortTrx['data'];
             $result['total']         = count($transaction);
@@ -279,6 +295,7 @@ class ApiHistoryController extends Controller
             if ($sortTrx['status'] == true) {
                 $result['next_page_url'] = ENV('APP_API_URL') . '/api/transaction/history-ongoing?page=' . $next_page;
             }
+            $result = MyHelper::checkGet($result);
         } else {
             $result['status'] = 'fail';
             $result['messages'] = ['empty'];
@@ -348,7 +365,7 @@ class ApiHistoryController extends Controller
         return response()->json($result);
     }
 
-    public function historyBalance(Request $request)
+    public function historyBalance(Request $request,$mode='group')
     {
         $post = $request->json()->all();
         $id = $request->user()->id;
@@ -393,10 +410,18 @@ class ApiHistoryController extends Controller
 
         $balance = $this->balance($post, $id);
 
-        $sortBalance = $this->sorting($balance, $order, $page);
-        $check = MyHelper::checkGet($sortBalance);
         if (count($balance) > 0) {
-            $result['status'] = 'success';
+            $sortBalance = $this->sorting($balance, $order, $page);
+            if($mode=='group'){
+                $sortBalance['data'] = $this->groupIt($sortBalance['data'],'date',function($key,&$val){
+                    $explode = explode(' ',$key);
+                    $val['time'] = substr($explode[1],0,5);
+                    return $explode[0];
+                },function($key){
+                    return MyHelper::dateFormatInd($key,true,false,false);
+                });
+            }
+            $check = MyHelper::checkGet($sortBalance);
             $result['current_page']  = $page;
             $result['data']          = $sortBalance['data'];
             $result['total']         = count($balance);
@@ -405,6 +430,7 @@ class ApiHistoryController extends Controller
             if ($sortBalance['status'] == true) {
                 $result['next_page_url'] = ENV('APP_API_URL') . '/api/transaction/history-balance?page=' . $next_page;
             }
+            $result = MyHelper::checkGet($result);
         } else {
             if(
                 $request->json('date_start') ||
@@ -456,14 +482,6 @@ class ApiHistoryController extends Controller
                 $next = false;
             }
 
-            for ($i = $start; $i < $end; $i++) {
-                $useragent = $_SERVER['HTTP_USER_AGENT'];
-                if (stristr($useragent, 'okhttp')) {
-                    $data[$i]['date'] = MyHelper::dateFormatInd($data[$i]['date']);
-                }
-                array_push($resultData, $data[$i]);
-            }
-
             return ['data' => $resultData, 'status' => $next];
         }
 
@@ -473,9 +491,10 @@ class ApiHistoryController extends Controller
 
     public function transaction($post, $id)
     {
-        $transaction = Transaction::distinct('transactions.*')
+        $transaction = Transaction::select(\DB::raw('*,sum(transaction_products.transaction_product_qty) as sum_qty'))->distinct('transactions.*')
             ->join('outlets', 'transactions.id_outlet', '=', 'outlets.id_outlet')
             ->join('brand_outlet', 'outlets.id_outlet', '=', 'brand_outlet.id_outlet')
+            ->leftJoin('transaction_products', 'transactions.id_transaction', '=', 'transaction_products.id_transaction')
             ->where('transaction_payment_status', '!=', 'Cancelled')
             ->where('transactions.id_user', $id)
             ->with('outlet', 'logTopup')
@@ -589,6 +608,7 @@ class ApiHistoryController extends Controller
                     $dataList['outlet'] = $value['outlet']['outlet_name'];
                     $dataList['amount'] = number_format($value['transaction_grandtotal'], 0, ',', '.');
                     $dataList['cashback'] = number_format($value['transaction_cashback_earned'], 0, ',', '.');
+                    $dataList['subtitle'] = $value['sum_qty'].($value['sum_qty']>1?' items':' item');
                     if ($dataList['cashback'] >= 0) {
                         $dataList['status_point'] = 1;
                     } else {
@@ -605,21 +625,23 @@ class ApiHistoryController extends Controller
 
     public function transactionOnGoingPickup($post, $id)
     {
-        $transaction = Transaction::join('transaction_pickups', 'transactions.id_transaction', 'transaction_pickups.id_transaction')
+        $transaction = Transaction::select(\DB::raw('*,sum(transaction_products.transaction_product_qty) as sum_qty'))->join('transaction_pickups', 'transactions.id_transaction', 'transaction_pickups.id_transaction')
+            ->leftJoin('transaction_products', 'transactions.id_transaction', '=', 'transaction_products.id_transaction')
             ->with('outlet')
             ->where('transaction_payment_status', 'Completed')
             ->whereDate('transaction_date', date('Y-m-d'))
             ->whereNull('taken_at')
             ->whereNull('reject_at')
-            ->where('id_user', $id)
+            ->where('transactions.id_user', $id)
             ->orderBy('transaction_date', 'DESC')
+            ->groupBy('transactions.id_transaction')
             ->get()->toArray();
 
         $listTransaction = [];
 
         foreach ($transaction as $key => $value) {
             $dataList['type'] = 'trx';
-            $dataList['id'] = $value['transaction_receipt_number'] . ',' . $value['id_outlet'];
+            $dataList['id'] = $value['transaction_receipt_number'] . ',' . $value['id_transaction'];
             $dataList['date']    = date('Y-m-d H:i:s', strtotime($value['transaction_date']));
             $dataList['outlet'] = $value['outlet']['outlet_name'];
             $dataList['amount'] = number_format($value['transaction_grandtotal'], 0, ',', '.');
@@ -631,6 +653,7 @@ class ApiHistoryController extends Controller
             } else {
                 $dataList['status'] = "Pesanan Menunggu Konfirmasi";
             }
+            $dataList['subtitle'] = $value['sum_qty'].($value['sum_qty']>1?' items':' item');
 
             $listTransaction[] = $dataList;
         }
@@ -1014,5 +1037,31 @@ class ApiHistoryController extends Controller
         }
 
         return array_values($listBalance);
+    }
+    /**
+     * Group some array based on a column
+     * @param  array        $array        data
+     * @param  string       $col          column as key for grouping
+     * @param  function     $modifier     function to modify key value
+     * @return array                      grouped array
+     */
+    public function groupIt($array,$col,$col_modifier=null,$key_modifier=null) {
+        $newArray=[];
+        foreach ($array as $value) {
+            if($col_modifier!==null){
+                $key = $col_modifier($value[$col],$value);
+            }else{
+                $key = $value[$col];
+            }
+            $newArray[$key][]=$value;
+        }
+        if($key_modifier!==null){
+            foreach ($newArray as $key => $value) {
+                $new_key=$key_modifier($key,$value);
+                $newArray[$new_key]=$value;
+                unset($newArray[$key]);
+            }
+        }
+        return $newArray;
     }
 }
