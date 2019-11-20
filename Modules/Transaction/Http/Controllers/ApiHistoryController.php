@@ -280,7 +280,7 @@ class ApiHistoryController extends Controller
             if($mode=='group'){
                 $sortTrx['data'] = $this->groupIt($sortTrx['data'],'date',function($key,&$val){
                     $explode = explode(' ',$key);
-                    $val['time'] = $explode[1];
+                    $val['time'] = substr($explode[1],0,5);
                     return $explode[0];
                 },function($key){
                     return MyHelper::dateFormatInd($key,true,false,false);
@@ -415,7 +415,7 @@ class ApiHistoryController extends Controller
             if($mode=='group'){
                 $sortBalance['data'] = $this->groupIt($sortBalance['data'],'date',function($key,&$val){
                     $explode = explode(' ',$key);
-                    $val['time'] = $explode[1];
+                    $val['time'] = substr($explode[1],0,5);
                     return $explode[0];
                 },function($key){
                     return MyHelper::dateFormatInd($key,true,false,false);
