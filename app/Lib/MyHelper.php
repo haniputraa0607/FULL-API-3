@@ -1933,14 +1933,17 @@ class MyHelper{
 		return $result;
 	}
 
-	public static function dateFormatInd($date,$jam=true){
-		if($jam){
+	public static function dateFormatInd($date,$full=true,$clock=true,$hari=false){
+		if($hari){
+			$days = ['Minggu','Senin','Selasa','Rabu','Kamis','Jum\'at','Sabtu'];
+		}
+		if($full){
 			$bulan = ['','Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
 		}else{
 			$bulan = ['','Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
 		}
 
-		return date('d', strtotime($date)).' '.$bulan[date('n', strtotime($date))].' '.date('Y', strtotime($date)).' '.($jam?date('H:i', strtotime($date)):'');
+		return trim(($hari?$days[date('w', strtotime($date))].', ':'').date('d', strtotime($date)).' '.$bulan[date('n', strtotime($date))].' '.date('Y', strtotime($date)).($clock?date(' H:i', strtotime($date)):''));
 	}
 	public static function isJoined($query, $table){
         $joins = $query->getQuery()->joins;
