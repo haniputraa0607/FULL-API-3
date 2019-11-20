@@ -134,7 +134,7 @@ class ApiHistoryController extends Controller
         return response()->json($result);
     }
 
-    public function historyTrx(Request $request)
+    public function historyTrx(Request $request,$mode='group')
     {
 
         $post = $request->json()->all();
@@ -208,11 +208,19 @@ class ApiHistoryController extends Controller
         $next_page = $page + 1;
 
         $merge = array_merge($transaction, $voucher);
-        $sortTrx = $this->sorting($merge, $order, $page);
-
-        $check = MyHelper::checkGet($sortTrx);
         if (count($merge) > 0) {
-            $result['status'] = 'success';
+            $sortTrx = $this->sorting($merge, $order, $page);
+            if($mode=='group'){
+                $sortTrx['data'] = $this->groupIt($sortTrx['data'],'date',function($key,&$val){
+                    $explode = explode(' ',$key);
+                    $val['time'] = $explode[1];
+                    return $explode[0];
+                },function($key){
+                    return MyHelper::dateFormatInd($key,true,false,false);
+                });
+            }
+            $check = MyHelper::checkGet($sortTrx);
+
             $result['current_page']  = $page;
             $result['data']          = $sortTrx['data'];
             $result['total']         = count($merge);
@@ -221,6 +229,7 @@ class ApiHistoryController extends Controller
             if ($sortTrx['status'] == true) {
                 $result['next_page_url'] = ENV('APP_API_URL') . '/api/transaction/history-trx?page=' . $next_page;
             }
+            $result = MyHelper::checkGet($result);
         } else {
 
             if(
@@ -241,7 +250,7 @@ class ApiHistoryController extends Controller
         return response()->json($result);
     }
 
-    public function historyTrxOnGoing(Request $request)
+    public function historyTrxOnGoing(Request $request,$mode='group')
     {
 
         $post = $request->json()->all();
@@ -266,11 +275,18 @@ class ApiHistoryController extends Controller
 
         $next_page = $page + 1;
 
-        $sortTrx = $this->sorting($transaction, $order, $page);
-
-        $check = MyHelper::checkGet($sortTrx);
         if (count($transaction) > 0) {
-            $result['status'] = 'success';
+            $sortTrx = $this->sorting($transaction, $order, $page);
+            if($mode=='group'){
+                $sortTrx['data'] = $this->groupIt($sortTrx['data'],'date',function($key,&$val){
+                    $explode = explode(' ',$key);
+                    $val['time'] = $explode[1];
+                    return $explode[0];
+                },function($key){
+                    return MyHelper::dateFormatInd($key,true,false,false);
+                });
+            }
+            $check = MyHelper::checkGet($sortTrx);
             $result['current_page']  = $page;
             $result['data']          = $sortTrx['data'];
             $result['total']         = count($transaction);
@@ -279,6 +295,7 @@ class ApiHistoryController extends Controller
             if ($sortTrx['status'] == true) {
                 $result['next_page_url'] = ENV('APP_API_URL') . '/api/transaction/history-ongoing?page=' . $next_page;
             }
+            $result = MyHelper::checkGet($result);
         } else {
             $result['status'] = 'fail';
             $result['messages'] = ['empty'];
@@ -348,7 +365,7 @@ class ApiHistoryController extends Controller
         return response()->json($result);
     }
 
-    public function historyBalance(Request $request)
+    public function historyBalance(Request $request,$mode='group')
     {
         $post = $request->json()->all();
         $id = $request->user()->id;
@@ -393,10 +410,18 @@ class ApiHistoryController extends Controller
 
         $balance = $this->balance($post, $id);
 
-        $sortBalance = $this->sorting($balance, $order, $page);
-        $check = MyHelper::checkGet($sortBalance);
         if (count($balance) > 0) {
-            $result['status'] = 'success';
+            $sortBalance = $this->sorting($balance, $order, $page);
+            if($mode=='group'){
+                $sortBalance['data'] = $this->groupIt($sortBalance['data'],'date',function($key,&$val){
+                    $explode = explode(' ',$key);
+                    $val['time'] = $explode[1];
+                    return $explode[0];
+                },function($key){
+                    return MyHelper::dateFormatInd($key,true,false,false);
+                });
+            }
+            $check = MyHelper::checkGet($sortBalance);
             $result['current_page']  = $page;
             $result['data']          = $sortBalance['data'];
             $result['total']         = count($balance);
@@ -405,6 +430,7 @@ class ApiHistoryController extends Controller
             if ($sortBalance['status'] == true) {
                 $result['next_page_url'] = ENV('APP_API_URL') . '/api/transaction/history-balance?page=' . $next_page;
             }
+            $result = MyHelper::checkGet($result);
         } else {
             if(
                 $request->json('date_start') ||
@@ -1014,5 +1040,31 @@ class ApiHistoryController extends Controller
         }
 
         return array_values($listBalance);
+    }
+    /**
+     * Group some array based on a column
+     * @param  array        $array        data
+     * @param  string       $col          column as key for grouping
+     * @param  function     $modifier     function to modify key value
+     * @return array                      grouped array
+     */
+    public function groupIt($array,$col,$col_modifier=null,$key_modifier=null) {
+        $newArray=[];
+        foreach ($array as $value) {
+            if($col_modifier!==null){
+                $key = $col_modifier($value[$col],$value);
+            }else{
+                $key = $value[$col];
+            }
+            $newArray[$key][]=$value;
+        }
+        if($key_modifier!==null){
+            foreach ($newArray as $key => $value) {
+                $new_key=$key_modifier($key,$value);
+                $newArray[$new_key]=$value;
+                unset($newArray[$key]);
+            }
+        }
+        return $newArray;
     }
 }
