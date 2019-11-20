@@ -1070,6 +1070,10 @@ class ApiUser extends Controller
         $cekFraud = 0;
         if($datauser){
             if(Auth::attempt(['phone' => $phone, 'password' => $request->json('pin')])){
+                //untuk verifikasi admin panel
+                if($request->json('admin_panel')){
+                    return ['status'=>'success'];
+                }
                 //kalo login success
                 if($is_android != 0 || $is_ios != 0){
 
@@ -2658,5 +2662,21 @@ class ApiUser extends Controller
         }
 
         return response()->json(MyHelper::checkGet($user));
+    }
+
+    public function favorite(Request $request) {
+        $data = User::with([
+            'favorites',
+            'favorites.product'=>function($query){
+                $query->select('id_product','product_name','product_code');
+            },
+            'favorites.outlet'=>function($query){
+                $query->select('id_outlet','outlet_name','outlet_code');
+            },
+            'favorites.modifiers'=>function($query){
+                $query->select('text');
+            }
+        ])->where('phone',$request->json('phone'))->first();
+        return MyHelper::checkGet($data['favorites']??[]);
     }
 }
