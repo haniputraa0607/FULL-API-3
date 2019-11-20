@@ -436,11 +436,31 @@ class ApiSubscription extends Controller
         $post = $request->json()->all();
         $user = $request->user();
 
-        $subs = SubscriptionUser::with(['subscription'])
-        ->where('id_user', $user['id'])
-        ->whereIn('paid_status', ['Completed','Free'])
-        ->get();
+        $subs = SubscriptionUser::
+                select(
+                    'subscriptions.id_subscription',
+                    'subscription_users.id_subscription_user',
+                    'subscription_image',
+                    'subscription_end',
+                    'subscription_publish_end'
+                )
+                ->leftjoin('subscriptions', 'subscription_users.id_subscription', '=', 'subscriptions.id_subscription')
+                ->where('id_user', $user['id'])
+                ->whereIn('paid_status', ['Completed','Free'])
+                ->get();
 
+        if($subs){
+            foreach ($subs as $key => $sub) {
+                if (empty($sub['subscription_image'])) {
+                    $subs[$key]['url_subscription_image'] = env('S3_URL_API').'img/default.jpg';
+                }
+                else {
+                    $subs[$key]['url_subscription_image'] = env('S3_URL_API').$sub['subscription_image'];
+                }
+                $subs[$key]['time_to_end']=strtotime($sub['subscription_end'])-time();
+                $subs[$key]['url_webview']=env('APP_API_URL') ."api/webview/mysubscription/". $sub['id_subscription_user'];
+            }
+        }
         return response()->json(MyHelper::checkGet($subs));
     }
     /**
