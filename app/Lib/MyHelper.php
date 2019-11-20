@@ -1933,14 +1933,17 @@ class MyHelper{
 		return $result;
 	}
 
-	public static function dateFormatInd($date,$jam=true){
-		if($jam){
+	public static function dateFormatInd($date,$full=true,$clock=true,$hari=false){
+		if($hari){
+			$days = ['Minggu','Senin','Selasa','Rabu','Kamis','Jum\'at','Sabtu'];
+		}
+		if($full){
 			$bulan = ['','Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
 		}else{
 			$bulan = ['','Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
 		}
 
-		return date('d', strtotime($date)).' '.$bulan[date('n', strtotime($date))].' '.date('Y', strtotime($date)).' '.($jam?date('H:i', strtotime($date)):'');
+		return trim(($hari?$days[date('w', strtotime($date))].', ':'').date('d', strtotime($date)).' '.$bulan[date('n', strtotime($date))].' '.date('Y', strtotime($date)).($clock?date(' H:i', strtotime($date)):''));
 	}
 	public static function isJoined($query, $table){
         $joins = $query->getQuery()->joins;
@@ -2001,4 +2004,31 @@ class MyHelper{
 			$ipaddress = 'UNKNOWN';
 		return $ipaddress;
 	}
+
+    public static function count_distance($lat1, $lon1, $lat2, $lon2, $unit = 'K', $convert = false) {
+        $theta = $lon1 - $lon2;
+        $lat1=floatval($lat1);
+        $lat2=floatval($lat2);
+        $lon1=floatval($lon1);
+        $lon2=floatval($lon2);
+        $dist  = sin(deg2rad($lat1)) * sin(deg2rad($lat2)) +  cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * cos(deg2rad($theta));
+        $dist  = acos($dist);
+        $dist  = rad2deg($dist);
+        $miles = $dist * 60 * 1.1515;
+        $unit  = strtoupper($unit);
+
+        if ($unit == "K") {
+            $hasil = ($miles * 1.609344);
+        } else if ($unit == "N") {
+            $hasil = ($miles * 0.8684);
+        } else {
+            $hasil = $miles;
+        }
+
+        if($convert){
+        	return number_format((float)$hasil, 2, '.', '').' km';
+        }else{
+        	return $hasil;
+        }
+    }
 }
