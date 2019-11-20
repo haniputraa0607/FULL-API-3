@@ -482,7 +482,7 @@ class ApiHistoryController extends Controller
                 $next = false;
             }
 
-            return ['data' => $resultData, 'status' => $next];
+            return ['data' => $data, 'status' => $next];
         }
 
 
