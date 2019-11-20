@@ -87,7 +87,8 @@ class Subscription extends Eloquent
 		'subscription_voucher_nominal',
 		'subscription_minimal_transaction',
 		'is_all_product',
-		'is_all_outlet'
+		'is_all_outlet',
+		'user_limit'
 	];
 
 	protected $appends  = [
@@ -164,5 +165,10 @@ class Subscription extends Eloquent
 		return $this->belongsToMany(\App\Http\Models\User::class, 'subscription_users', 'id_subscription', 'id_user')
 					->withPivot('id_subscription_user', 'bought_at', 'subscription_expired_at')
 					->withTimestamps();
+	}
+
+	public function subscription_payment_midtrans()
+	{
+		return $this->hasMany(\App\Http\Models\SubscriptionPaymentMidtran::class, 'id_subscription');
 	}
 }

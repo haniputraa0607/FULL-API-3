@@ -13,12 +13,23 @@ use Illuminate\Http\Request;
 |
 */
 Route::group(['middleware' => ['auth:api', 'log_activities'], 'prefix' => 'subscription'], function () {
+
     /* MASTER SUBSCRIPTION */
     Route::any('list', 'ApiSubscription@listSubscription');
     Route::any('detail', 'ApiSubscriptionWebview@subscriptionDetail');
+    Route::any('me', 'ApiSubscription@mySubscription');
+
+    /* CLAIM */
+    Route::group(['prefix' => 'claim'], function () {
+        Route::post('/', 'ApiSubscriptionClaim@claim');
+        Route::post('paid', 'ApiSubscriptionClaimPay@claim');
+        Route::post('pay-now', 'ApiSubscriptionClaimPay@bayarSekarang');
+    });
 });
 
 /* Webview */
 Route::group(['middleware' => ['web'], 'prefix' => 'webview'], function () {
     Route::any('subscription/{id_subscription}', 'ApiSubscriptionWebview@webviewSubscriptionDetail');
+    Route::any('mySubscription/{id_subscription_user}', 'ApiSubscriptionWebview@subscriptionBuy');
+    Route::any('subscription/success/{id_subscription_user}', 'ApiSubscriptionWebview@subscriptionSuccess');
 });

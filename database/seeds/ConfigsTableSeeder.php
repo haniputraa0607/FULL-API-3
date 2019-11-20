@@ -756,6 +756,42 @@ class ConfigsTableSeeder extends Seeder
                 'created_at' => date('Y-m-d H:i:s'),
                 'updated_at' => date('Y-m-d H:i:s'),
             ),
+            83 => 
+            array (
+                'id_config' => 84,
+                'config_name' => 'subscription voucher',
+                'description' => '',
+                'is_active' => 1,
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ),,
+            84 => 
+            array (
+                'id_config' => 85,
+                'config_name' => 'subscription voucher by money',
+                'description' => '',
+                'is_active' => 1,
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ),,
+            85 => 
+            array (
+                'id_config' => 86,
+                'config_name' => 'subscription voucher by point',
+                'description' => '',
+                'is_active' => 1,
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ),,
+            86 => 
+            array (
+                'id_config' => 87,
+                'config_name' => 'subscription voucher free',
+                'description' => '',
+                'is_active' => 1,
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ),
         ));
     }
 }

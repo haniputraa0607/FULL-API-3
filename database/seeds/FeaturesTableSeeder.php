@@ -1378,6 +1378,54 @@ class FeaturesTableSeeder extends Seeder
                 'feature_module' => 'Intro',
                 'created_at' => date('Y-m-d H:00:00'),
                 'updated_at' => date('Y-m-d H:00:00'),
+            ),
+            171 =>
+            array(
+                'id_feature' => 172,
+                'feature_type' => 'Create',
+                'feature_module' => 'Subscription',
+                'created_at' => date('Y-m-d H:00:00'),
+                'updated_at' => date('Y-m-d H:00:00'),
+            ),
+            172 =>
+            array(
+                'id_feature' => 173,
+                'feature_type' => 'List',
+                'feature_module' => 'Subscription',
+                'created_at' => date('Y-m-d H:00:00'),
+                'updated_at' => date('Y-m-d H:00:00'),
+            ),
+            173 =>
+            array(
+                'id_feature' => 174,
+                'feature_type' => 'Detail',
+                'feature_module' => 'Subscription',
+                'created_at' => date('Y-m-d H:00:00'),
+                'updated_at' => date('Y-m-d H:00:00'),
+            ),
+            174 =>
+            array(
+                'id_feature' => 175,
+                'feature_type' => 'Update',
+                'feature_module' => 'Subscription',
+                'created_at' => date('Y-m-d H:00:00'),
+                'updated_at' => date('Y-m-d H:00:00'),
+            ),
+            175 =>
+            array(
+                'id_feature' => 176,
+                'feature_type' => 'Delete',
+                'feature_module' => 'Subscription',
+                'created_at' => date('Y-m-d H:00:00'),
+                'updated_at' => date('Y-m-d H:00:00'),
+            ),
+            176 =>
+            array(
+                'id_feature' => 177,
+                'feature_type' => 'Report',
+                'feature_module' => 'Subscription',
+                'created_at' => date('Y-m-d H:00:00'),
+                'updated_at' => date('Y-m-d H:00:00'),
             )
         ));
     }

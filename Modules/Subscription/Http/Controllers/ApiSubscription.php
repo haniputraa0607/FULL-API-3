@@ -25,7 +25,6 @@ class ApiSubscription extends Controller
     {
         date_default_timezone_set('Asia/Jakarta');
         $this->user     = "Modules\Users\Http\Controllers\ApiUser";
-        $this->deals     = "Modules\Users\Http\Controllers\ApiDeals";
     }
 
     public $saveImage = "img/subscription/";
@@ -430,6 +429,19 @@ class ApiSubscription extends Controller
         $deals = array_values($deals);
 
         return $deals;
+    }
+
+    public function mySubscription(Request $request)
+    {
+        $post = $request->json()->all();
+        $user = $request->user();
+
+        $subs = SubscriptionUser::with(['subscription'])
+        ->where('id_user', $user['id'])
+        ->whereIn('paid_status', ['Completed','Free'])
+        ->get();
+
+        return response()->json(MyHelper::checkGet($subs));
     }
     /**
      * Display a listing of the resource.

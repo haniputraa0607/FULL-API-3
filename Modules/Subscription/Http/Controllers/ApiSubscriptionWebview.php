@@ -85,28 +85,33 @@ class ApiSubscriptionWebview extends Controller
         return view('deals::webview.deals.deals_detail', $data);
     }
 
-    public function dealsClaim(Request $request, $id_deals_user)
+    public function subscriptionBuy(Request $request, $id_subscription_user)
     {
+        return $id_subscription_user;
         $bearer = $request->header('Authorization');
-
         if ($bearer == "") {
             return abort(404);
         }
 
-        $post['id_deals_user'] = $id_deals_user;
+        $post['id_subscription_user'] = $id_subscription_user;
 
-        $action = MyHelper::postCURLWithBearer('api/deals/me', $post, $bearer);
-
+        $action = MyHelper::postCURLWithBearer('api/subscription/me', $post, $bearer);
+        return $action;
         if ($action['status'] != 'success') {
             return [
                 'status' => 'fail',
-                'messages' => ['Deals is not found']
+                'messages' => ['Subscription is not found']
             ];
         } else {
             $data['deals'] = $action['result'];
         }
 
         return view('deals::webview.deals.deals_claim', $data);
+    }
+
+    public function subscriptionSuccess(Request $request)
+    {
+        return response('ok');
     }
     
     // voucher detail webview
