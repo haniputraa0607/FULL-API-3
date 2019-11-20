@@ -190,4 +190,8 @@ class User extends Authenticatable
     public function promotionSents() {
     	return $this->hasMany(PromotionSent::class, 'id_user', 'id')->orderBy('series_no', 'ASC');
     }
+
+    public function favorites() {
+    	return $this->hasMany(\Modules\Favorite\Entities\Favorite::class, 'id_user');
+    }
 }
