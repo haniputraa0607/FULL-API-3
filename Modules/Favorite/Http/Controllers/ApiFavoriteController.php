@@ -8,6 +8,8 @@ use Illuminate\Routing\Controller;
 use Modules\Favorite\Entities\Favorite;
 use Modules\Favorite\Entities\FavoriteModifier;
 
+use App\Http\Models\Outlet;
+
 use App\Lib\MyHelper;
 
 class ApiFavoriteController extends Controller
@@ -54,7 +56,30 @@ class ApiFavoriteController extends Controller
             }
         ];
         // detail or list
-        if($id_favorite){
+        if($request->page&&!$id_favorite){
+            $data = Favorite::where('id_user',$user->id)->select($select)->with($with)->paginate(10)->toArray();
+            if(count($data['data'])>=1){
+                $data['data'] = MyHelper::groupIt($data['data'],'id_outlet',null,function($key,&$val) use ($latitude,$longitude){
+                    $outlet = Outlet::select('id_outlet','outlet_name','outlet_address','outlet_latitude','outlet_longitude')->with('today')->find($key)->toArray();
+                    $status = app('Modules\Outlet\Http\Controllers\ApiOutletController')->checkOutletStatus($outlet);
+                    $outlet['outlet_address']=$outlet['outlet_address']??'';
+                    $outlet['status']=$status;
+                    $outlet['distance_raw'] = MyHelper::count_distance($latitude,$longitude,$outlet['outlet_latitude'],$outlet['outlet_longitude']);
+                    $outlet['distance'] = MyHelper::count_distance($latitude,$longitude,$outlet['outlet_latitude'],$outlet['outlet_longitude'],'K',true);
+                    $val=[
+                        'outlet'=>$outlet,
+                        'favorites'=>$val
+                    ];
+                    return $key;
+                });
+                $data['data'] = array_values($data['data']);
+                usort($data['data'], function(&$a,&$b){
+                    return $a['outlet']['distance_raw'] <=> $b['outlet']['distance_raw'];
+                });
+            }else{
+                $data = [];
+            }
+        }elseif($id_favorite){
             $data = $favorite->select($select)->with($with)->where('id_favorite',$id_favorite)->first();
         }else{
             //get list favorite product outlet
