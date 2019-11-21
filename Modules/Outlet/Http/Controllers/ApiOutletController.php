@@ -157,6 +157,8 @@ class ApiOutletController extends Controller
         }
 
         DB::beginTransaction();
+        $post['outlet_address_detail'] = $post['outlet_address'];
+        $post['outlet_address'] = strip_tags($post['outlet_address']);
         $save = Outlet::create($post);
         if (!$save) {
             DB::rollBack();
@@ -218,6 +220,8 @@ class ApiOutletController extends Controller
         }
 
         unset($post['outlet_brands']);
+        $post['outlet_address_detail'] = $post['outlet_address'];
+        $post['outlet_address'] = strip_tags($post['outlet_address']);
         $save = Outlet::where('id_outlet', $request->json('id_outlet'))->update($post);
         // return Outlet::where('id_outlet', $request->json('id_outlet'))->first();
         if($save){
