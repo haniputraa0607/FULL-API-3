@@ -30,6 +30,6 @@ Route::group(['middleware' => ['auth:api', 'log_activities'], 'prefix' => 'subsc
 /* Webview */
 Route::group(['middleware' => ['web'], 'prefix' => 'webview'], function () {
     Route::any('subscription/{id_subscription}', 'ApiSubscriptionWebview@webviewSubscriptionDetail');
-    Route::any('mysubscription/{id_subscription_user}', 'ApiSubscriptionWebview@subscriptionBuy');
+    Route::any('mysubscription/{id_subscription_user}', 'ApiSubscriptionWebview@mySubscription');
     Route::any('subscription/success/{id_subscription_user}', 'ApiSubscriptionWebview@subscriptionSuccess');
 });

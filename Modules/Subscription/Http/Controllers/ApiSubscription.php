@@ -437,31 +437,63 @@ class ApiSubscription extends Controller
         $user = $request->user();
 
         $subs = SubscriptionUser::
-                select(
-                    'subscriptions.id_subscription',
-                    'subscription_users.id_subscription_user',
-                    'subscription_image',
-                    'subscription_end',
-                    'subscription_publish_end'
-                )
-                ->leftjoin('subscriptions', 'subscription_users.id_subscription', '=', 'subscriptions.id_subscription')
+                leftjoin('subscriptions', 'subscription_users.id_subscription', '=', 'subscriptions.id_subscription')
                 ->where('id_user', $user['id'])
+                ->where('subscription_users.subscription_expired_at', '>=',date('Y-m-d H:i:s'))
                 ->whereIn('paid_status', ['Completed','Free'])
-                ->get();
+                ->withCount(['subscription_user_vouchers' => function($q){
+                    $q->whereNotNull('used_at');
+                }]);
+                // ->where('subscription_user_vouchers_count', '<', 'subscriptions.subscription_voucher_total');
+                // ->get();
+                // return date('Y-m-d H:i:s');
+        if ( isset($post['id_subscription_user']) ) {
+            $subs = $subs->leftjoin('subscription_user_vouchers', 'subscription_users.id_subscription_user', '=', 'subscription_user_vouchers.id_subscription_user')
+                         ->where('subscription_users.id_subscription_user', '=', $post['id_subscription_user'])
+                         ->addselect('subscriptions.*', 'subscription_users.*')
+                         ->first();
+            if ($subs) {
+                $subs['time_to_end'] = strtotime($subs['subscription_end'])-time();
+                $subs['url_webview'] = env('APP_API_URL') ."api/webview/mysubscription/". $subs['id_subscription_user'];
+            }
+            $data = $subs;
+        }
+        else{
+            $subs = $subs->addSelect(
+                            'subscriptions.id_subscription',
+                            'subscription_users.id_subscription_user',
+                            'subscription_image',
+                            'subscription_end',
+                            'subscription_publish_end',
+                            'subscription_voucher_total'
+                        )
+                        ->get();
+            $data = [];
+            if($subs){
+                foreach ($subs as $key => $sub) {
+                    //check voucher total
+                    if ($sub['subscription_user_vouchers_count'] < $sub['subscription_voucher_total']) {
 
-        if($subs){
-            foreach ($subs as $key => $sub) {
-                if (empty($sub['subscription_image'])) {
-                    $subs[$key]['url_subscription_image'] = env('S3_URL_API').'img/default.jpg';
+                        $data[$key]['id_subscription']              = $sub['id_subscription'];
+                        $data[$key]['id_subscription_user']         = $sub['id_subscription_user'];
+                        $data[$key]['subscription_end']             = $sub['subscription_end'];
+                        $data[$key]['subscription_publish_end']     = $sub['subscription_publish_end'];
+                        $data[$key]['subscription_voucher_total']   = $sub['subscription_voucher_total'];
+                        $data[$key]['used_voucher']                 = $sub['subscription_user_vouchers_count'];
+                        if (empty($sub['subscription_image'])) {
+                            $data[$key]['url_subscription_image'] = env('S3_URL_API').'img/default.jpg';
+                        }
+                        else {
+                            $data[$key]['url_subscription_image'] = env('S3_URL_API').$sub['subscription_image'];
+                        }
+
+                        $data[$key]['time_to_end']                  = strtotime($sub['subscription_end'])-time();
+                        $data[$key]['url_webview']                  = env('APP_API_URL') ."api/webview/mysubscription/". $sub['id_subscription_user'];
+                    }
                 }
-                else {
-                    $subs[$key]['url_subscription_image'] = env('S3_URL_API').$sub['subscription_image'];
-                }
-                $subs[$key]['time_to_end']=strtotime($sub['subscription_end'])-time();
-                $subs[$key]['url_webview']=env('APP_API_URL') ."api/webview/mysubscription/". $sub['id_subscription_user'];
             }
         }
-        return response()->json(MyHelper::checkGet($subs));
+        return response()->json(MyHelper::checkGet($data));
     }
     /**
      * Display a listing of the resource.

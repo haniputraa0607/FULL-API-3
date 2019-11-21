@@ -85,9 +85,8 @@ class ApiSubscriptionWebview extends Controller
         return view('deals::webview.deals.deals_detail', $data);
     }
 
-    public function subscriptionBuy(Request $request, $id_subscription_user)
+    public function mySubscription(Request $request, $id_subscription_user)
     {
-        return $id_subscription_user;
         $bearer = $request->header('Authorization');
         if ($bearer == "") {
             return abort(404);
