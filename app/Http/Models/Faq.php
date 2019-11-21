@@ -25,6 +25,7 @@ class Faq extends Model
 	protected $primaryKey = 'id_faq';
 
 	protected $fillable = [
+	    'faq_number_list',
 		'question',
 		'answer'
 	];

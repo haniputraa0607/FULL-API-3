@@ -1392,11 +1392,16 @@ class ApiTransaction extends Controller
     }
 
     public function transactionDetail(TransactionDetail $request){
-        $id = $request->json('id_transaction');
+        $id_trx = explode(',',$request->json('transaction_receipt_number'));
+        $id = @$id_trx[1];
+        $rn = @$id_trx[0];
         $type = $request->json('type');
 
         if ($type == 'trx') {
-            $list = Transaction::where('id_transaction', $id)->with('user.city.province', 'productTransaction.product.product_category', 'productTransaction.product.product_photos', 'productTransaction.product.product_discounts', 'transaction_payment_offlines', 'outlet.city')->first();
+            $list = Transaction::where([['id_transaction', $id],['transaction_receipt_number',$rn]])->with('user.city.province', 'productTransaction.product.product_category', 'productTransaction.product.product_photos', 'productTransaction.product.product_discounts', 'transaction_payment_offlines', 'outlet.city')->first();
+            if(!$list){
+                return MyHelper::checkGet([],'empty');
+            }
             $label = [];
             $label2 = [];
 

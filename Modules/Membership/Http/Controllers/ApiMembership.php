@@ -35,6 +35,9 @@ class ApiMembership extends Controller
 
     function create(Request $request) {
         $post = $request->json()->all();
+        if($post['benefit_text']??false){
+        	$post['benefit_text']=json_encode($post['benefit_text']);
+        }
         $save = Membership::create($post);
 
         return response()->json(MyHelper::checkCreate($save));
@@ -148,6 +151,7 @@ class ApiMembership extends Controller
 					$data['benefit_point_multiplier'] = $membership['benefit_point_multiplier'];
 					$data['benefit_cashback_multiplier'] = $membership['benefit_cashback_multiplier'];
 					$data['benefit_discount'] = $membership['benefit_discount'];
+					$data['benefit_text'] = $membership['benefit_text']??null;
 					// $data['benefit_promo_id'] = $membership['benefit_promo_id'];
 
 					if(isset($membership['cashback_maximum'])){
@@ -387,13 +391,13 @@ class ApiMembership extends Controller
 											->whereDate('transaction_date','>=',$date_start)
 											->whereDate('transaction_date','<=',date('Y-m-d', strtotime($check['retain_date'])))
 											->where('transaction_payment_status', 'Completed')
-											->count('transaction_subtotal');
+											->count('transaction_grandtotal');
 
 					$trx_value = Transaction::where('id_user',$check['id'])
 											->whereDate('transaction_date','>=',$date_start)
 											->whereDate('transaction_date','<=', date('Y-m-d', strtotime($check['retain_date'])))
 											->where('transaction_payment_status', 'Completed')
-											->sum('transaction_subtotal');
+											->sum('transaction_grandtotal');
 
 					$total_balance = LogBalance::where('id_user',$check['id'])
 											->whereNotIn('source', ['Rejected Order', 'Rejected Order Midtrans', 'Rejected Order Point', 'Reversal'])
@@ -516,11 +520,11 @@ class ApiMembership extends Controller
 				else{
 					$trx_count = Transaction::where('id_user',$check['id'])
 											->where('transaction_payment_status', 'Completed')
-											->count('transaction_subtotal');
+											->count('transaction_grandtotal');
 
 					$trx_value = Transaction::where('id_user',$check['id'])
 											->where('transaction_payment_status', 'Completed')
-											->sum('transaction_subtotal');
+											->sum('transaction_grandtotal');
 
 					$total_balance = LogBalance::where('id_user',$check['id'])
 											->where('balance', '>', 0)
@@ -569,11 +573,11 @@ class ApiMembership extends Controller
 
 				$trx_count = Transaction::where('id_user',$check['id'])
 											->where('transaction_payment_status', 'Completed')
-											->count('transaction_subtotal');
+											->count('transaction_grandtotal');
 
 				$trx_value = Transaction::where('id_user',$check['id'])
 										->where('transaction_payment_status', 'Completed')
-										->sum('transaction_subtotal');
+										->sum('transaction_grandtotal');
 
 				$total_balance = LogBalance::whereNotIn('source', ['Rejected Order', 'Rejected Order Midtrans', 'Rejected Order Point', 'Reversal'])
 											->where('balance', '>', 0)
@@ -777,6 +781,9 @@ class ApiMembership extends Controller
         if (!isset($data['benefit_discount'])) {
             $data['benefit_discount'] = 0;
         }
+        if($data['benefit_text']??false){
+        	$data['benefit_text']=json_encode(array_column($data['benefit_text'],'benefit_text'));
+        }
 
         return $data;
 	}
@@ -787,11 +794,11 @@ class ApiMembership extends Controller
 
 			$trx_count = Transaction::where('id_user',$datauser->id)
 										->where('transaction_payment_status', 'Completed')
-										->count('transaction_subtotal');
+										->count('transaction_grandtotal');
 
 			$trx_value = Transaction::where('id_user',$datauser->id)
 									->where('transaction_payment_status', 'Completed')
-									->sum('transaction_subtotal');
+									->sum('transaction_grandtotal');
 
 			$total_balance = LogBalance::where('id_user', $datauser->id)
 										->whereNotIn('source', ['Rejected Order', 'Rejected Order Midtrans', 'Rejected Order Point', 'Reversal'])

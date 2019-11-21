@@ -150,7 +150,7 @@ class ApiSetting extends Controller
         
 		if(isset($data['key']))
         $setting = Setting::where('key', $data['key'])->first();
-        
+
 		if(isset($data['key-like']))
         $setting = Setting::where('key', 'like', "%".$data['key-like']."%")->get()->toArray();
 
@@ -634,7 +634,7 @@ class ApiSetting extends Controller
     }
 
     public function faqList(FaqList $request) {
-        $faqList = Faq::orderBy('id_faq', 'ASC')->get()->toArray();
+        $faqList = Faq::orderBy('faq_number_list', 'ASC')->get()->toArray();
 
         return response()->json(MyHelper::checkGet($faqList));
     }
@@ -663,52 +663,28 @@ class ApiSetting extends Controller
         return response()->json(MyHelper::checkDelete($delete));
     }
 
-    public function introSave(Request $request) {
-        $post = $request->json()->all();
+    public function faqSortUpdate(Request $request) {
+        $id_faq = $request->json('id_faq');
+        $number_list = 0;
 
-        if (isset($post['value_text'])) {
-            foreach ($post['value_text'] as $key => $value) {
-                if ($key != 'value_text' && $value == null) {
-                    unset($post['value_text'][$key]);
-                } else {
-                    if (explode('=', $value)[0] == 'id_value_text') {
-                        $value_text[] = (int) explode('=', $value)[1];
-                    } else {
-                        $upload = MyHelper::uploadPhoto($value, $path = 'img/intro/', 1080);
-                        if ($upload['status'] == "success") {
-                            $value_text[] = $upload['path'];
-                        } else {
-                            $result = [
-                                'status'    => 'fail',
-                                'messages'    => ['fail upload image']
-                            ];
-                            return response()->json($result);
-                        }
-                    }
-                }
+        foreach ($id_faq as $dt){
+            $status = Faq::where('id_faq', $dt)->update(['faq_number_list' => $number_list + 1]);
+            if(!$status){
+                $result = [
+                    'status' => 'fail'
+                ];
+                return response()->json($result);
             }
-            $post['value_text'] = json_encode($value_text);
-        } else {
-            $value_text = null;
-            $post['value_text'] = json_encode($value_text);
+            $number_list++;
         }
 
-        $insert = Setting::updateOrCreate(['key' => 'intro'], $post);
-
-        return response()->json(MyHelper::checkCreate($insert));
-    }
-
-    public function introList(Request $request) {
-        $post = $request->json()->all();
-
-        $data = Setting::where('key', 'intro')->get()->toArray()[0];
-        
-        $list['active']      = $data['value'];
-        foreach (json_decode($data['value_text']) as $key => $value) {
-            $list['image'][$key] = env('S3_URL_API') . $value;
+        if($status){
+            $result = [
+                'status' => 'success'
+            ];
         }
-        
-        return response()->json(MyHelper::checkGet($list));
+
+        return response()->json($result);
     }
 
     public function date(DatePost $request) {

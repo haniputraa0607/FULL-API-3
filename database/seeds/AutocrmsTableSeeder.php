@@ -809,7 +809,7 @@ Message :
                 'autocrm_type' => 'Response',
                 'autocrm_trigger' => 'Daily',
                 'autocrm_cron_reference' => NULL,
-                'autocrm_title' => 'Receive Hidden Deals',
+                'autocrm_title' => 'Receive Inject Voucher',
                 'autocrm_email_toogle' => '0',
                 'autocrm_sms_toogle' => '0',
                 'autocrm_push_toogle' => '0',
@@ -1043,25 +1043,25 @@ Message :
                 'created_at' => date('Y-m-d H:i:s'),
                 'updated_at' => date('Y-m-d H:i:s'),
             ),
-            29 =>
+          29 =>
             array (
                 'id_autocrm' => 30,
                 'autocrm_type' => 'Response',
                 'autocrm_trigger' => 'Daily',
                 'autocrm_cron_reference' => NULL,
-                'autocrm_title' => 'Get Free Subscription Success',
+                'autocrm_title' => 'Login First Time',
                 'autocrm_email_toogle' => '0',
                 'autocrm_sms_toogle' => '0',
-                'autocrm_push_toogle' => '0',
+                'autocrm_push_toogle' => '1',
                 'autocrm_inbox_toogle' => '0',
                 'autocrm_forward_toogle' => '0',
                 'autocrm_email_subject' => '',
                 'autocrm_email_content' => '',
                 'autocrm_sms_content' => '',
-                'autocrm_push_subject' => '',
-                'autocrm_push_content' => '',
+                'autocrm_push_subject' => 'Selamat bergabung di aplikasi RESTO!',
+                'autocrm_push_content' => 'Silahkan lengkapi data diri kamu untuk mendapatkan Champoints tambahan, tingkatkan transaksi kamu untuk mendapatkan Champoints dan tukarkan dengan penawaran menarik dari kami.',
                 'autocrm_push_image' => NULL,
-                'autocrm_push_clickto' => '',
+                'autocrm_push_clickto' => 'Profil',
                 'autocrm_push_link' => NULL,
                 'autocrm_push_id_reference' => NULL,
                 'autocrm_inbox_subject' => '',
@@ -1072,7 +1072,7 @@ Message :
                 'custom_text_replace'=>'%bought_at%;%subscription_title%;',
                 'created_at' => date('Y-m-d H:i:s'),
                 'updated_at' => date('Y-m-d H:i:s'),
-            )
+            ),
             30 =>
             array (
                 'id_autocrm' => 31,
@@ -1102,7 +1102,38 @@ Message :
                 'custom_text_replace'=>'%bought_at%;%subscription_title%;%subscription_price_point%;',
                 'created_at' => date('Y-m-d H:i:s'),
                 'updated_at' => date('Y-m-d H:i:s'),
+            ),
+            31 =>
+            array (
+                'id_autocrm' => 32,
+                'autocrm_type' => 'Response',
+                'autocrm_trigger' => 'Daily',
+                'autocrm_cron_reference' => NULL,
+                'autocrm_title' => 'Get Free Subscription Success',
+                'autocrm_email_toogle' => '0',
+                'autocrm_sms_toogle' => '0',
+                'autocrm_push_toogle' => '0',
+                'autocrm_inbox_toogle' => '0',
+                'autocrm_forward_toogle' => '0',
+                'autocrm_email_subject' => '',
+                'autocrm_email_content' => '',
+                'autocrm_sms_content' => '',
+                'autocrm_push_subject' => '',
+                'autocrm_push_content' => '',
+                'autocrm_push_image' => NULL,
+                'autocrm_push_clickto' => '',
+                'autocrm_push_link' => NULL,
+                'autocrm_push_id_reference' => NULL,
+                'autocrm_inbox_subject' => '',
+                'autocrm_inbox_content' => '',
+                'autocrm_forward_email' => '',
+                'autocrm_forward_email_subject' => '',
+                'autocrm_forward_email_content' => '',
+                'custom_text_replace'=>'%bought_at%;%subscription_title%;',
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
             )
+           
         ));
     }
 }
