@@ -5,7 +5,7 @@
  * Date: Fri, 15 Nov 2019 14:34:14 +0700.
  */
 
-namespace App\Http\Models;
+namespace Modules\Subscription\Entities;
 
 use Reliese\Database\Eloquent\Model as Eloquent;
 
@@ -41,7 +41,7 @@ use Reliese\Database\Eloquent\Model as Eloquent;
  * @property \Illuminate\Database\Eloquent\Collection $products
  * @property \Illuminate\Database\Eloquent\Collection $users
  *
- * @package App\Http\Models
+ * @package Modules\Subscription\Entities
  */
 class Subscription extends Eloquent
 {
@@ -87,7 +87,8 @@ class Subscription extends Eloquent
 		'subscription_voucher_nominal',
 		'subscription_minimal_transaction',
 		'is_all_product',
-		'is_all_outlet'
+		'is_all_outlet',
+		'user_limit'
 	];
 
 	protected $appends  = [
@@ -142,7 +143,7 @@ class Subscription extends Eloquent
 
 	public function featured_subscriptions()
 	{
-		return $this->hasMany(\App\Http\Models\FeaturedSubscription::class, 'id_subscription');
+		return $this->hasMany(\Modules\Subscription\Entities\FeaturedSubscription::class, 'id_subscription');
 	}
 
 	public function outlets()
@@ -164,5 +165,10 @@ class Subscription extends Eloquent
 		return $this->belongsToMany(\App\Http\Models\User::class, 'subscription_users', 'id_subscription', 'id_user')
 					->withPivot('id_subscription_user', 'bought_at', 'subscription_expired_at')
 					->withTimestamps();
+	}
+
+	public function subscription_payment_midtrans()
+	{
+		return $this->hasMany(\Modules\Subscription\Entities\SubscriptionPaymentMidtran::class, 'id_subscription');
 	}
 }

@@ -21,7 +21,7 @@ use App\Http\Models\Banner;
 use App\Http\Models\FraudSetting;
 use App\Http\Models\OauthAccessToken;
 use App\Http\Models\FeaturedDeal;
-use App\Http\Models\FeaturedSubscription;
+use Modules\Subscription\Entities\FeaturedSubscription;
 
 use DB;
 use App\Lib\MyHelper;
@@ -800,7 +800,7 @@ class ApiHome extends Controller
 
         $now=date('Y-m-d H-i-s');
         $subs=featuredSubscription::select('id_featured_subscription','id_subscription')->with(['subscription'=>function($query){
-            $query->select('subscription_title','subscription_image','subscription_voucher_total','subscription_bought','subscription_publish_start','subscription_publish_end','subscription_start','subscription_end','id_subscription','subscription_price_point','subscription_price_cash');
+            $query->select('subscription_title','subscription_image','subscription_total', 'subscription_voucher_total','subscription_bought','subscription_publish_start','subscription_publish_end','subscription_start','subscription_end','id_subscription','subscription_price_point','subscription_price_cash');
         }])
             ->whereHas('subscription',function($query){
                 $query->where('subscription_publish_end','>=',DB::raw('CURRENT_TIMESTAMP()'));
@@ -816,13 +816,13 @@ class ApiHome extends Controller
                 if ( empty($value['subscription']['subscription_price_point']) && empty($value['subscription']['subscription_price_cash'])) {
                     $calc = '*';
                 }else{
-                    $calc = $value['subscription']['subscription_voucher_total'] - $value['subscription']['subscription_bought'];
+                    $calc = $value['subscription']['subscription_total'] - $value['subscription']['subscription_bought'];
                 }
-                $value['subscription']['available_voucher'] = (string) $calc;
+                $value['subscription']['available_subscription'] = (string) $calc;
                 if($calc&&is_numeric($calc)){
-                    $value['subscription']['percent_voucher'] = $calc*100/$value['subscription']['subscription_voucher_total'];
+                    $value['subscription']['percent_subscription'] = $calc*100/$value['subscription']['subscription_total'];
                 }else{
-                    $value['subscription']['percent_voucher'] = 100;
+                    $value['subscription']['percent_subscription'] = 100;
                 }
                 $value['subscription']['time_to_end']=strtotime($value['subscription']['subscription_end'])-time();
                 return $value;
@@ -832,7 +832,7 @@ class ApiHome extends Controller
             $tempList = [];
             $i = 0;
             foreach ($subs as $key => $value) {
-                if ($value['subscription']['available_voucher'] == "0") {
+                if ($value['subscription']['available_subscription'] == "0" && isset($value['subscription']['total'])) {
                     unset($subs[$key]);
                 }else{
 
