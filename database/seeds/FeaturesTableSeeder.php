@@ -1426,7 +1426,15 @@ class FeaturesTableSeeder extends Seeder
                 'feature_module' => 'Subscription',
                 'created_at' => date('Y-m-d H:00:00'),
                 'updated_at' => date('Y-m-d H:00:00'),
-            )
+            ),
+            177 =>
+            array(
+                'id_feature' => 178,
+                'feature_type' => 'Update',
+                'feature_module' => 'Auto CRM Subscription',
+                'created_at' => date('Y-m-d H:00:00'),
+                'updated_at' => date('Y-m-d H:00:00'),
+            ),
         ));
     }
 }
