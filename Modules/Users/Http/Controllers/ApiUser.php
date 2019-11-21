@@ -24,6 +24,7 @@ use App\Http\Models\Setting;
 use App\Http\Models\Feature;
 use App\Http\Models\OauthAccessToken;
 use App\Http\Models\LogBalance;
+use Modules\Favorite\Entities\Favorite;
 
 use Modules\Users\Http\Requests\users_list;
 use Modules\Users\Http\Requests\users_forgot;
@@ -2665,18 +2666,24 @@ class ApiUser extends Controller
     }
 
     public function favorite(Request $request) {
-        $data = User::with([
-            'favorites',
-            'favorites.product'=>function($query){
+        $data = Favorite::whereHas('user',function($query) use ($request){
+            $query->where('phone',$request->json('phone'));
+        })->with([
+            'product'=>function($query){
                 $query->select('id_product','product_name','product_code');
             },
-            'favorites.outlet'=>function($query){
+            'outlet'=>function($query){
                 $query->select('id_outlet','outlet_name','outlet_code');
             },
-            'favorites.modifiers'=>function($query){
+            'modifiers'=>function($query){
                 $query->select('text');
             }
-        ])->where('phone',$request->json('phone'))->first();
-        return MyHelper::checkGet($data['favorites']??[]);
+        ]);
+        if($request->page){
+            $data = $data->paginate(10);
+        }else{
+            $data = $data->get();
+        }
+        return MyHelper::checkGet($data??[]);
     }
 }
