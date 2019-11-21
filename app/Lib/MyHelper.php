@@ -2028,4 +2028,32 @@ class MyHelper{
         	return $hasil;
         }
     }
+    /**
+     * Group some array based on a column
+     * @param  array        $array        data
+     * @param  string       $col          column as key for grouping
+     * @param  function     $modifier     function to modify key value
+     * @return array                      grouped array
+     */
+    public static function groupIt($array,$col,$col_modifier=null,$key_modifier=null) {
+        $newArray=[];
+        foreach ($array as $old => $value) {
+            if($col_modifier!==null){
+                $key = $col_modifier($value[$col],$value,$old);
+            }else{
+                $key = $value[$col];
+            }
+            $newArray[$key][]=$value;
+        }
+        if($key_modifier!==null){
+            foreach ($newArray as $key => $value) {
+                $new_key=$key_modifier($key,$value);
+                $newArray[$new_key]=$value;
+                if($new_key != $key){
+	                unset($newArray[$key]);
+                }
+            }
+        }
+        return $newArray;
+    }
 }
