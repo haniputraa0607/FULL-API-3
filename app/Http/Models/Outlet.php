@@ -70,6 +70,7 @@ class Outlet extends Authenticatable
 		'outlet_pin',
 		'outlet_name',
 		'outlet_address',
+		'outlet_address_detail',
 		'id_city',
 		'outlet_postal_code',
 		'outlet_phone',
