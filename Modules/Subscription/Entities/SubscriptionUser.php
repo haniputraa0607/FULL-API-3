@@ -5,7 +5,7 @@
  * Date: Fri, 15 Nov 2019 14:34:57 +0700.
  */
 
-namespace App\Http\Models;
+namespace Modules\Subscription\Entities;
 
 use Reliese\Database\Eloquent\Model as Eloquent;
 
@@ -20,11 +20,11 @@ use Reliese\Database\Eloquent\Model as Eloquent;
  * @property \Carbon\Carbon $created_at
  * @property \Carbon\Carbon $updated_at
  * 
- * @property \App\Http\Models\Subscription $subscription
- * @property \App\Http\Models\User $user
+ * @property \Modules\Subscription\Entities\Subscription $subscription
+ * @property \Modules\Subscription\Entities\User $user
  * @property \Illuminate\Database\Eloquent\Collection $subscription_user_vouchers
  *
- * @package App\Http\Models
+ * @package Modules\Subscription\Entities
  */
 class SubscriptionUser extends Eloquent
 {
@@ -53,7 +53,7 @@ class SubscriptionUser extends Eloquent
 
 	public function subscription()
 	{
-		return $this->belongsTo(\App\Http\Models\Subscription::class, 'id_subscription');
+		return $this->belongsTo(\Modules\Subscription\Entities\Subscription::class, 'id_subscription');
 	}
 
 	public function user()
@@ -63,6 +63,6 @@ class SubscriptionUser extends Eloquent
 
 	public function subscription_user_vouchers()
 	{
-		return $this->hasMany(\App\Http\Models\SubscriptionUserVoucher::class, 'id_subscription_user');
+		return $this->hasMany(\Modules\Subscription\Entities\SubscriptionUserVoucher::class, 'id_subscription_user');
 	}
 }

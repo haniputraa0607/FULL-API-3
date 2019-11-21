@@ -5,7 +5,7 @@
  * Date: Fri, 15 Nov 2019 14:34:14 +0700.
  */
 
-namespace App\Http\Models;
+namespace Modules\Subscription\Entities;
 
 use Reliese\Database\Eloquent\Model as Eloquent;
 
@@ -41,7 +41,7 @@ use Reliese\Database\Eloquent\Model as Eloquent;
  * @property \Illuminate\Database\Eloquent\Collection $products
  * @property \Illuminate\Database\Eloquent\Collection $users
  *
- * @package App\Http\Models
+ * @package Modules\Subscription\Entities
  */
 class Subscription extends Eloquent
 {
@@ -143,7 +143,7 @@ class Subscription extends Eloquent
 
 	public function featured_subscriptions()
 	{
-		return $this->hasMany(\App\Http\Models\FeaturedSubscription::class, 'id_subscription');
+		return $this->hasMany(\Modules\Subscription\Entities\FeaturedSubscription::class, 'id_subscription');
 	}
 
 	public function outlets()
@@ -169,6 +169,6 @@ class Subscription extends Eloquent
 
 	public function subscription_payment_midtrans()
 	{
-		return $this->hasMany(\App\Http\Models\SubscriptionPaymentMidtran::class, 'id_subscription');
+		return $this->hasMany(\Modules\Subscription\Entities\SubscriptionPaymentMidtran::class, 'id_subscription');
 	}
 }

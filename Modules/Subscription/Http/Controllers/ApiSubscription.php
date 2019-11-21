@@ -8,12 +8,12 @@ use Illuminate\Routing\Controller;
 
 use App\Lib\MyHelper;
 
-use App\Http\Models\Subscription;
-use App\Http\Models\FeaturedSubscription;
-use App\Http\Models\SubscriptionOutlet;
-use App\Http\Models\SubscriptionProduct;
-use App\Http\Models\SubscriptionUser;
-use App\Http\Models\SubscriptionUserVoucher;
+use Modules\Subscription\Entities\Subscription;
+use Modules\Subscription\Entities\FeaturedSubscription;
+use Modules\Subscription\Entities\SubscriptionOutlet;
+use Modules\Subscription\Entities\SubscriptionProduct;
+use Modules\Subscription\Entities\SubscriptionUser;
+use Modules\Subscription\Entities\SubscriptionUserVoucher;
 use App\Http\Models\Setting;
 
 use Modules\Subscription\Http\Requests\ListSubscription;

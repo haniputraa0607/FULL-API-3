@@ -5,7 +5,7 @@
  * Date: Fri, 15 Nov 2019 14:35:11 +0700.
  */
 
-namespace App\Http\Models;
+namespace Modules\Subscription\Entities;
 
 use Reliese\Database\Eloquent\Model as Eloquent;
 
@@ -20,10 +20,10 @@ use Reliese\Database\Eloquent\Model as Eloquent;
  * @property \Carbon\Carbon $created_at
  * @property \Carbon\Carbon $updated_at
  * 
- * @property \App\Http\Models\SubscriptionUser $subscription_user
- * @property \App\Http\Models\Transaction $transaction
+ * @property \Modules\Subscription\Entities\SubscriptionUser $subscription_user
+ * @property \Modules\Subscription\Entities\Transaction $transaction
  *
- * @package App\Http\Models
+ * @package Modules\Subscription\Entities
  */
 class SubscriptionUserVoucher extends Eloquent
 {
@@ -47,7 +47,7 @@ class SubscriptionUserVoucher extends Eloquent
 
 	public function subscription_user()
 	{
-		return $this->belongsTo(\App\Http\Models\SubscriptionUser::class, 'id_subscription_user');
+		return $this->belongsTo(\Modules\Subscription\Entities\SubscriptionUser::class, 'id_subscription_user');
 	}
 
 	public function transaction()

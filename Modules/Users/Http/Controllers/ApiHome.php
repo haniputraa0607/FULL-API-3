@@ -21,7 +21,7 @@ use App\Http\Models\Banner;
 use App\Http\Models\FraudSetting;
 use App\Http\Models\OauthAccessToken;
 use App\Http\Models\FeaturedDeal;
-use App\Http\Models\FeaturedSubscription;
+use Modules\Subscription\Entities\FeaturedSubscription;
 
 use DB;
 use App\Lib\MyHelper;

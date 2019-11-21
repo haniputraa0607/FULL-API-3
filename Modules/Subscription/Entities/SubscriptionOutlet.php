@@ -5,7 +5,7 @@
  * Date: Fri, 15 Nov 2019 14:34:33 +0700.
  */
 
-namespace App\Http\Models;
+namespace Modules\Subscription\Entities;
 
 use Reliese\Database\Eloquent\Model as Eloquent;
 
@@ -18,10 +18,10 @@ use Reliese\Database\Eloquent\Model as Eloquent;
  * @property \Carbon\Carbon $created_at
  * @property \Carbon\Carbon $updated_at
  * 
- * @property \App\Http\Models\Outlet $outlet
- * @property \App\Http\Models\Subscription $subscription
+ * @property \Modules\Subscription\Entities\Outlet $outlet
+ * @property \Modules\Subscription\Entities\Subscription $subscription
  *
- * @package App\Http\Models
+ * @package Modules\Subscription\Entities
  */
 class SubscriptionOutlet extends Eloquent
 {
@@ -44,6 +44,6 @@ class SubscriptionOutlet extends Eloquent
 
 	public function subscription()
 	{
-		return $this->belongsTo(\App\Http\Models\Subscription::class, 'id_subscription');
+		return $this->belongsTo(\Modules\Subscription\Entities\Subscription::class, 'id_subscription');
 	}
 }
