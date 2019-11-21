@@ -671,6 +671,7 @@ Detail: ".$link['short'],
     function checkDealsPayment($deals, $midtrans) {
         DB::beginTransaction();
         $midtrans = $this->processMidtrans($midtrans);
+        unset($midtrans['store']);
 
         // UPDATE
         $update = DealsPaymentMidtran::where('order_id', $midtrans['order_id'])->update($midtrans);
