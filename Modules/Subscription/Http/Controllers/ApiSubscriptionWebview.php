@@ -6,12 +6,12 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
 
-use App\Http\Models\Subscription;
-use App\Http\Models\FeaturedSubscription;
-use App\Http\Models\SubscriptionOutlet;
-use App\Http\Models\SubscriptionProduct;
-use App\Http\Models\SubscriptionUser;
-use App\Http\Models\SubscriptionUserVoucher;
+use Modules\Subscription\Entities\Subscription;
+use Modules\Subscription\Entities\FeaturedSubscription;
+use Modules\Subscription\Entities\SubscriptionOutlet;
+use Modules\Subscription\Entities\SubscriptionProduct;
+use Modules\Subscription\Entities\SubscriptionUser;
+use Modules\Subscription\Entities\SubscriptionUserVoucher;
 use App\Lib\MyHelper;
 use Route;
 
@@ -85,28 +85,32 @@ class ApiSubscriptionWebview extends Controller
         return view('deals::webview.deals.deals_detail', $data);
     }
 
-    public function dealsClaim(Request $request, $id_deals_user)
+    public function mySubscription(Request $request, $id_subscription_user)
     {
         $bearer = $request->header('Authorization');
-
         if ($bearer == "") {
             return abort(404);
         }
 
-        $post['id_deals_user'] = $id_deals_user;
+        $post['id_subscription_user'] = $id_subscription_user;
 
-        $action = MyHelper::postCURLWithBearer('api/deals/me', $post, $bearer);
-
+        $action = MyHelper::postCURLWithBearer('api/subscription/me', $post, $bearer);
+        return $action;
         if ($action['status'] != 'success') {
             return [
                 'status' => 'fail',
-                'messages' => ['Deals is not found']
+                'messages' => ['Subscription is not found']
             ];
         } else {
             $data['deals'] = $action['result'];
         }
 
         return view('deals::webview.deals.deals_claim', $data);
+    }
+
+    public function subscriptionSuccess(Request $request)
+    {
+        return response('ok');
     }
     
     // voucher detail webview
