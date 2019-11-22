@@ -57,7 +57,7 @@ class Favorite extends Model
 		])->first();
 		return [
 			'product_name' => $product->product_name,
-			'url_product_photo' => $product->photos[0]->url_product_photo,
+			'url_product_photo' => optional($product->photos[0]??null)->url_product_photo?:env('S3_URL_API').'img/product/item/default.png',
 			'price' => $this->getProductPrice($id_outlet,$id_product,$product_qty)
 		];
 	}
