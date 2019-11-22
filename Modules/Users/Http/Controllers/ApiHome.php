@@ -759,21 +759,16 @@ class ApiHome extends Controller
             ->get();
         if($deals){
             $deals=array_map(function($value){
-                if($value['deals']['deals_status'] == 'soon'){
-                     $value['deals']['available_voucher'] = "-";
-                     $value['deals']['percent_voucher'] = 0;
+                if ($value['deals']['deals_voucher_type'] == "Unlimited") {
+                    $calc = '*';
                 }else{
-                    if ($value['deals']['deals_voucher_type'] == "Unlimited") {
-                        $calc = '*';
-                    }else{
-                        $calc = $value['deals']['deals_total_voucher'] - $value['deals']['deals_total_claimed'];
-                    }
-                    $value['deals']['available_voucher'] = (string) $calc;
-                    if($calc&&is_numeric($calc)){
-                        $value['deals']['percent_voucher'] = $calc*100/$value['deals']['deals_total_voucher'];
-                    }else{
-                        $value['deals']['percent_voucher'] = 100;
-                    }
+                    $calc = $value['deals']['deals_total_voucher'] - $value['deals']['deals_total_claimed'];
+                }
+                $value['deals']['available_voucher'] = (string) $calc;
+                if($calc&&is_numeric($calc)){
+                    $value['deals']['percent_voucher'] = $calc*100/$value['deals']['deals_total_voucher'];
+                }else{
+                    $value['deals']['percent_voucher'] = 100;
                 }
                 $value['deals']['show'] = 1;
                 $value['deals']['time_to_end']=strtotime($value['deals']['deals_end'])-time();
