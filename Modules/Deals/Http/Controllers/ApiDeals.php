@@ -738,11 +738,6 @@ class ApiDeals extends Controller
                 $deals[$key]['percent_voucher'] = 100;
             }
 
-            if($value['deals_status'] == 'soon'){
-                $calc = "-";
-                $deals[$key]['percent_voucher'] = 0;
-            }
-
             $deals[$key]['show'] = 1;
             $deals[$key]['available_voucher'] = (string) $calc;
             // deals masih ada?
