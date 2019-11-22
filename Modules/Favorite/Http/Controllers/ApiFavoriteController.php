@@ -86,7 +86,11 @@ class ApiFavoriteController extends Controller
                 $data = [];
             }
         }elseif($id_favorite){
-            $data = $favorite->select($select)->with($with)->where('id_favorite',$id_favorite)->first();
+            $data = $favorite->select($select)->with($with)->where('id_favorite',$id_favorite)->first()->toArray();
+            $data['product']['price']=number_format($data['product']['price'],0,",",".");
+            foreach ($data['modifiers'] as &$modifier) {
+                $modifier['price'] = '+ '.number_format($modifier['price'],0,",",".");
+            }
         }else{
             //get list favorite product outlet
             $outlets = $favorite->select('id_outlet')->with(['outlet'=>function($query){
