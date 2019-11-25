@@ -12,58 +12,85 @@
     <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.6.1/css/all.css" integrity="sha384-gfdkjb5BdAXd+lj+gudLWI+BXq4IuLW5IT+brZEZsLFm++aCMlF1V92rMkPaX4PP" crossorigin="anonymous">
     <style type="text/css">
         @font-face {
-                font-family: "ProductSans-Bold";
+                font-family: "WorkSans-Black";
                 font-style: normal;
                 font-weight: 400;
-                src: url('{{ env('S3_URL_VIEW') }}{{ ('/fonts/ProductSans-Regular.ttf') }}');
+                src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/Work_Sans/WorkSans-Black.ttf') }}');
         }
         @font-face {
-                font-family: "ProductSans-BoldItalic";
+                font-family: "WorkSans-Bold";
                 font-style: normal;
                 font-weight: 400;
-                src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/ProductSans-BoldItalic.ttf') }}');
+                src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/Work_Sans/WorkSans-Bold.ttf') }}');
         }
         @font-face {
-                font-family: "ProductSans-Italic";
+                font-family: "WorkSans-ExtraBold";
                 font-style: normal;
                 font-weight: 400;
-                src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/ProductSans-Italic.ttf') }}');
+                src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/Work_Sans/WorkSans-ExtraBold.ttf') }}');
         }
         @font-face {
-                font-family: "ProductSans-Medium";
+                font-family: "WorkSans-ExtraLight";
                 font-style: normal;
                 font-weight: 400;
-                src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/ProductSans-Medium.ttf') }}');
+                src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/Work_Sans/WorkSans-ExtraLight.ttf') }}');
         }
         @font-face {
-                font-family: "ProductSans-MediumItalic";
+                font-family: "WorkSans-Light";
                 font-style: normal;
                 font-weight: 400;
-                src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/ProductSans-MediumItalic.ttf') }}');
+                src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/Work_Sans/WorkSans-Light.ttf') }}');
         }
         @font-face {
-                font-family: "ProductSans-Regular";
+                font-family: "WorkSans-Medium";
                 font-style: normal;
                 font-weight: 400;
-                src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/ProductSans-Regular.ttf') }}');
+                src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/Work_Sans/WorkSans-Medium.ttf') }}');
         }
-        .ProductSans{
-            font-family: "ProductSans-Regular";
+        @font-face {
+                font-family: "WorkSans-Regular";
+                font-style: normal;
+                font-weight: 400;
+                src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/Work_Sans/WorkSans-Regular.ttf') }}');
         }
-        .ProductSans-MediumItalic{
-            font-family: "ProductSans-MediumItalic";
+        @font-face {
+                font-family: "WorkSans-SemiBold";
+                font-style: normal;
+                font-weight: 400;
+                src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/Work_Sans/WorkSans-SemiBold.ttf') }}');
         }
-        .ProductSans-Medium{
-            font-family: "ProductSans-Medium";
+        @font-face {
+                font-family: "WorkSans-Thin";
+                font-style: normal;
+                font-weight: 400;
+                src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/Work_Sans/WorkSans-Thin.ttf') }}');
         }
-        .ProductSans-Italic{
-            font-family: "ProductSans-Italic";
+        .WorkSans-Black{
+            font-family: "WorkSans-Black";
         }
-        .ProductSans-BoldItalic{
-            font-family: "ProductSans-BoldItalic";
+        .WorkSans-Bold{
+            font-family: "WorkSans-Bold";
         }
-        .ProductSans-Bold{
-            font-family: "ProductSans-Bold";
+        .WorkSans-ExtraBold{
+            font-family: "WorkSans-ExtraBold";
+        }
+        .WorkSans-ExtraLight{
+            font-family: "WorkSans-ExtraLight";
+        }
+        .WorkSans-Medium{
+            font-family: "WorkSans-Medium";
+        }
+        .WorkSans-Regular{
+            font-family: "WorkSans-Regular";
+        }
+        .WorkSans{
+            font-family: "WorkSans-Regular";
+        }
+        .WorkSans-SemiBold{
+            font-family: "WorkSans-SemiBold";
+        }
+        .WorkSans-Thin{
+            font-family: "WorkSans-Thin";
         }
         .kotak {
             margin : 10px;
@@ -120,7 +147,7 @@
         }
 
         body {
-            background: #fff;
+            background: #f8f9fb;
         }
 
         .completed {
@@ -245,24 +272,68 @@
         .brownishGrey {
             color: rgb(102,102,102);
         }
+        
+        .sb3 {
+            background: #ffffff;
+            width: 90%;
+            margin-bottom: 35px;
+            padding: 25px;
+            text-align: center;
+            position: relative;
+            box-shadow: #eeeeee 1.3px 2px 3.3px;
+            border-radius: 5px;
+        }
+
+        .sb3:after {
+            content: "";
+            position: absolute;
+            box-shadow: #eeeeee 1.3px 2px 3.3px;
+            -moz-transform: rotate(45deg);
+            -webkit-transform: rotate(45deg);
+            bottom: -10px;
+            left: 40px;
+            border-width: 10px;
+            border-style: solid;
+            border-color: transparent #FFF #FFF transparent;
+        }
+
+        .sb4 {
+            background: #ffffff;
+            width: 90%;
+            margin-bottom: 35px;
+            padding: 25px;
+            text-align: center;
+            position: relative;
+            box-shadow: #eeeeee 1.3px 2px 3.3px;
+            border-radius: 5px;
+        }
+
+        .sb4:after {
+            content: "";
+            position: absolute;
+            box-shadow: #eeeeee 1.3px 2px 3.3px;
+            -moz-transform: rotate(45deg);
+            -webkit-transform: rotate(45deg);
+            bottom: -10px;
+            right: 40px;
+            border-width: 10px;
+            border-style: solid;
+            border-color: transparent #FFF #FFF transparent;
+        }
     </style>
   </head>
   <body>
-    @php
-        // print_r($data);die();
-    @endphp
-
     @foreach ($faq as $key => $value)
-	    <div class="kotak-full" >
+	    <div class="@if ($key % 2 == 0) sb3 @else sb4 @endif kotak-full text-left">
 	        <div class="div-panah brownishGrey">
                 <a href="#" data-toggle="collapse" data-target="#multi-collapse{{ $key }}" aria-expanded="false">
     	            <div class="row">
-    	                <div class="col-10 ProductSans text-grey-white">{{ $value['question'] }}</div>
-    	                <div class="col-2 ProductSans panah text-right" style="color: #000"> <i class="fa fa-angle-down kelas-panah add"></i></div>
+    	                <div class="col-12 WorkSans-Medium" style="color: #333333;">{{ $value['question'] }}</div>
     	            </div>
                 </a>
             </div>
-            <div class="collapse ProductSans" id="multi-collapse{{ $key }}" style="color: rgb(128,0,0);padding-top: 16px">
+            <div class="collapse WorkSans-SemiBold" id="multi-collapse{{ $key }}" style="color: #383b67;padding-top: 16px">
+            <hr style="margin-top: 0px;">
                 <div class="row">
                     <div class="col-12">{{ $value['answer'] }}</div>
                 </div>
