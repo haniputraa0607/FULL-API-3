@@ -456,7 +456,7 @@ class ApiHistoryController extends Controller
     {
         $date = [];
         foreach ($data as $key => &$row) {
-            $row['date'] = date('Y:m:d H:i',strtotime($row['date']));
+            $row['date'] = date('Y-m-d H:i',strtotime($row['date']));
             $date[$key] = $row['date'];
         }
 
