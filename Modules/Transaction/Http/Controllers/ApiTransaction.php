@@ -1398,7 +1398,7 @@ class ApiTransaction extends Controller
         $type = $request->json('type');
 
         if ($type == 'trx') {
-            $list = Transaction::where([['id_transaction', $id],['transaction_receipt_number',$rn]])->with('user.city.province', 'productTransaction.product.product_category', 'productTransaction.product.product_photos', 'productTransaction.product.product_discounts', 'transaction_payment_offlines', 'outlet.city')->first();
+            $list = Transaction::where([['id_transaction', $id],['transaction_receipt_number',$rn]])->with('user.city.province', 'productTransaction.product.product_category', 'productTransaction.modifiers', 'productTransaction.product.product_photos', 'productTransaction.product.product_discounts', 'transaction_payment_offlines', 'outlet.city')->first();
             if(!$list){
                 return MyHelper::checkGet([],'empty');
             }
