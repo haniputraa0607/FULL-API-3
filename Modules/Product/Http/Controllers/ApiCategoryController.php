@@ -340,24 +340,28 @@ class ApiCategoryController extends Controller
 
     /**
      * list tree
-     * bisa by id parent category
+     * bisa by id parent category and id brand
      */
     function listCategoryTree(Request $request) {
         $post = $request->json()->all();
-        $products = Product::whereHas('brand_category')->whereHas('product_prices',function($query) use ($request){
+        $products = Product::select('id_product','product_name','product_code','product_description','product_visibility')->whereHas('brand_category')->whereHas('product_prices',function($query) use ($request){
             $query->where('id_outlet',$request['id_outlet'])
             ->whereNotNull('product_price')
             ->where('product_status','=','Active');
         })
-        ->with(['brand_category','photos','product_prices'])->orderBy('products.position')->get()->toArray();
+        ->with(['brand_category','photos','product_prices'])->orderBy('products.position')->get();
         $result = [];
         // grouping by id
         foreach ($products as $product) {
             if(!(empty($product['product_prices']['product_visibility'])&&$product['product_visibility']=='Visible') && ($product['product_prices'][0]['product_visibility']??false)!='Visible'){
                 continue;
             }
+            $product->append('photo');
+            $product = $product->toArray();
             $pivots = $product['brand_category'];
+            $product['product_price'] = number_format($product['product_prices'][0]['product_price'],0,',','.');
             unset($product['brand_category']);
+            unset($product['photos']);
             foreach ($pivots as $pivot) {
                 $result[$pivot['id_brand']][$pivot['id_product_category']][] = $product;
             }
