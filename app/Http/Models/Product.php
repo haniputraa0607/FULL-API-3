@@ -54,7 +54,9 @@ class Product extends Model
 		'product_visibility',
 		'position'
 	];
-
+	public function getPhotoAttribute() {
+		return env('S3_URL_API').($this->photos[0]['product_photo']??'img/product/item/default.png');
+	}
 	public function product_category()
 	{
 		return $this->belongsTo(\App\Http\Models\ProductCategory::class, 'id_product_category');
@@ -126,5 +128,12 @@ class Product extends Model
 	public function brands()
     {
         return $this->belongsToMany(\Modules\Brand\Entities\Brand::class, 'brand_product','id_product','id_brand');
+    }
+	public function brand_category()
+    {
+        return $this->hasMany(\Modules\Brand\Entities\BrandProduct::class, 'id_product','id_product')->select('id_brand','id_product_category','id_product');
+    }
+    public function modifiers(){
+        return $this->hasMany(ProductModifier::class, 'id_product','id_product');
     }
 }

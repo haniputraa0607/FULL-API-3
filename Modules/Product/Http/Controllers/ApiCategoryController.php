@@ -10,6 +10,8 @@ use App\Http\Models\ProductPrice;
 use App\Http\Models\NewsProduct;
 use App\Http\Models\Setting;
 
+use Modules\Brand\Entities\Brand;
+
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
@@ -255,7 +257,7 @@ class ApiCategoryController extends Controller
      * list tree
      * bisa by id parent category
      */
-    function listCategoryTree(Request $request) {
+    function listCategoryTreeX(Request $request) {
         $post = $request->json()->all();
 
         $category = $this->getData($post);
@@ -332,6 +334,54 @@ class ApiCategoryController extends Controller
             $result['uncategorized_name'] = "Product";
             $result['uncategorized'] = $uncategorized;
         }
+
+        return response()->json(MyHelper::checkGet($result));
+    }
+
+    /**
+     * list tree
+     * bisa by id parent category and id brand
+     */
+    function listCategoryTree(Request $request) {
+        $post = $request->json()->all();
+        $products = Product::select('id_product','product_name','product_code','product_description','product_visibility')->whereHas('brand_category')->whereHas('product_prices',function($query) use ($request){
+            $query->where('id_outlet',$request['id_outlet'])
+            ->whereNotNull('product_price')
+            ->where('product_status','=','Active');
+        })
+        ->with(['brand_category','photos','product_prices'])->orderBy('products.position')->get();
+        $result = [];
+        // grouping by id
+        foreach ($products as $product) {
+            if(!(empty($product['product_prices']['product_visibility'])&&$product['product_visibility']=='Visible') && ($product['product_prices'][0]['product_visibility']??false)!='Visible'){
+                continue;
+            }
+            $product->append('photo');
+            $product = $product->toArray();
+            $pivots = $product['brand_category'];
+            $product['product_price'] = number_format($product['product_prices'][0]['product_price'],0,',','.');
+            unset($product['brand_category']);
+            unset($product['photos']);
+            foreach ($pivots as $pivot) {
+                $result[$pivot['id_brand']][$pivot['id_product_category']][] = $product;
+            }
+        }
+        // get detail of every key
+        foreach ($result as $id_brand => $categories) {
+            foreach ($categories as $id_category => $products) {
+                $category = ProductCategory::find($id_category);
+                $categories[$id_category] = [
+                    'category' => $category,
+                    'list' =>$products
+                ];
+            }
+            $brand = Brand::find($id_brand);
+            $result[$id_brand] = [
+                'brand' => $brand,
+                'list' => array_values($categories)
+            ];
+        }
+        $result = array_values($result);
 
         return response()->json(MyHelper::checkGet($result));
     }

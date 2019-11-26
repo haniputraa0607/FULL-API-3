@@ -32,6 +32,7 @@ use App\Http\Models\DealsUser;
 use App\Http\Models\DealsPaymentMidtran;
 use App\Http\Models\DealsPaymentManual;
 use App\Http\Models\UserTrxProduct;
+use Modules\Brand\Entities\Brand;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -1398,13 +1399,19 @@ class ApiTransaction extends Controller
         $type = $request->json('type');
 
         if ($type == 'trx') {
-            $list = Transaction::where([['id_transaction', $id],['transaction_receipt_number',$rn]])->with('user.city.province', 'productTransaction.product.product_category', 'productTransaction.product.product_photos', 'productTransaction.product.product_discounts', 'transaction_payment_offlines', 'outlet.city')->first();
+            $list = Transaction::where([['id_transaction', $id],['transaction_receipt_number',$rn]])->with('user.city.province', 'productTransaction.product.product_category', 'productTransaction.modifiers', 'productTransaction.product.product_photos', 'productTransaction.product.product_discounts', 'transaction_payment_offlines', 'outlet.city')->first()->toArray();
             if(!$list){
                 return MyHelper::checkGet([],'empty');
             }
             $label = [];
             $label2 = [];
-
+            $list['product_transaction'] = MyHelper::groupIt($list['product_transaction'],'id_brand',null,function($key,&$val){
+                $brand = Brand::select('name_brand')->find($key);
+                if(!$brand){
+                    return 'No Brand';
+                }
+                return $brand->name_brand;
+            });
             $cart = $list['transaction_subtotal'] + $list['transaction_shipment'] + $list['transaction_service'] + $list['transaction_tax'] - $list['transaction_discount'];
 
             $list['transaction_carttotal'] = $cart;
