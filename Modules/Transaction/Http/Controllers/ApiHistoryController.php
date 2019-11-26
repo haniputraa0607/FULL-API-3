@@ -455,7 +455,8 @@ class ApiHistoryController extends Controller
     public function sorting($data, $order, $page)
     {
         $date = [];
-        foreach ($data as $key => $row) {
+        foreach ($data as $key => &$row) {
+            $row['date'] = date('Y:m:d H:i',strtotime($row['date']));
             $date[$key] = $row['date'];
         }
 
