@@ -1748,4 +1748,16 @@ class ApiOutletController extends Controller
         }
         return MyHelper::checkGet($q->get());
     }
+
+    public function detailTransaction(Request $request) {
+        $outlet = Outlet::with(['today','brands'=>function($query){
+                    $query->where([['brand_active',1],['brand_visibility',1]]);
+                    $query->select('brands.id_brand','name_brand');
+                }])->select('id_outlet','outlet_code','outlet_name','outlet_address','outlet_latitude','outlet_longitude','outlet_phone','outlet_status')->find($request->json('id_outlet'))->toArray();
+        if(!$outlet){
+            return MyHelper::checkGet([]);
+        }
+        $outlet['status'] = $this->checkOutletStatus($outlet);
+        return MyHelper::checkGet($outlet);
+    }
 }

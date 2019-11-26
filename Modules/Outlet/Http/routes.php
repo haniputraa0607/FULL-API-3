@@ -11,6 +11,7 @@ Route::group(['prefix' => 'api/outlet', 'middleware' => ['log_activities', 'auth
 Route::group(['prefix' => 'api/outlet', 'middleware' => ['log_activities', 'auth_client'],'namespace' => 'Modules\Outlet\Http\Controllers'], function()
 {
     Route::any('list/mobile', 'ApiOutletController@listOutlet');
+    Route::any('/detail', 'ApiOutletController@detailTransaction');
 });
 
 Route::group(['prefix' => 'api/outlet', 'middleware' => ['log_activities', 'auth_client'], 'namespace' => 'Modules\Outlet\Http\Controllers'], function()
