@@ -349,7 +349,9 @@ class ApiCategoryController extends Controller
             ->whereNotNull('product_price')
             ->where('product_status','=','Active');
         })
-        ->with(['brand_category','photos','product_prices'])->orderBy('products.position')->get();
+        ->with(['brand_category','photos','product_prices'=>function($query) use ($request){
+            $query->where('id_outlet',$request['id_outlet']);
+        }])->orderBy('products.position')->get();
         $result = [];
         // grouping by id
         foreach ($products as $product) {

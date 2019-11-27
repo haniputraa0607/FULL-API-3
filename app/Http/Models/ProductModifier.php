@@ -27,9 +27,12 @@ class ProductModifier extends Model
 		return $this->belongsToMany(Product::class,'product_modifier_products','id_product_modifier','id_product');
 	}
 	public function brands(){
-		return $this->belongsToMany(Product::class,'product_modifier_brands','id_product_modifier','id_brand');
+		return $this->belongsToMany(\Modules\Brand\Entities\Brand::class,'product_modifier_brands','id_product_modifier','id_brand');
 	}
 	public function product_categories(){
-		return $this->belongsToMany(Product::class,'product_modifier_product_categories','id_product_modifier','id_product_category');
+		return $this->belongsToMany(ProductCategory::class,'product_modifier_product_categories','id_product_modifier','id_product_category');
+	}
+	public function product_modifier_prices() {
+		return $this->hasMany(ProductModifierPrice::class,'id_product_modifier','id_product_modifier');
 	}
 }

@@ -9,6 +9,7 @@ use App\Http\Models\ProductPhoto;
 use App\Http\Models\NewsProduct;
 use App\Http\Models\TransactionProduct;
 use App\Http\Models\ProductPrice;
+use App\Http\Models\ProductModifier;
 use App\Http\Models\Outlet;
 
 use Illuminate\Http\Request;
@@ -763,5 +764,62 @@ class ApiProductController extends Controller
     function getNextID($id){
         $product = Product::where('id_product', '>', $id)->orderBy('id_product')->first();
         return response()->json(MyHelper::checkGet($product));
+    }
+    public function detail(Request $request) {
+        $post = $request->json()->all();
+        //get product
+        $product = Product::select('id_product','product_name','product_code','product_visibility')
+        ->where('id_product',$post['id_product'])
+        ->whereHas('brand_category')
+        ->whereHas('product_prices',function($query) use ($post){
+            $query->where('id_outlet',$post['id_outlet'])
+            ->whereNotNull('product_price')
+            ->where('product_status','=','Active');
+        })
+        ->with(['brand_category'=>function($query) use ($post){
+            $query->where('id_product',$post['id_product']);
+            $query->where('id_brand',$post['id_brand']);
+        },'product_prices'=>function($query) use ($post){
+            $query->select('id_product','product_price','id_outlet','product_status','product_visibility');
+            $query->where('id_outlet',$post['id_outlet']);
+        }])->first();
+        if(!$product){
+            return MyHelper::checkGet([]);
+        }else{
+            // toArray error jika $product Null,
+            $product = $product->toArray();
+        }
+        $product['product_price'] = number_format($product['product_prices'][0]['product_price'],0,',','.');
+        if(!(empty($product['product_prices']['product_visibility'])&&$product['product_visibility']=='Visible') && ($product['product_prices'][0]['product_visibility']??false)!='Visible'){
+            return MyHelper::checkGet([]);
+        }
+        $post['id_product_category'] = $product['brand_category'][0]['id_product_category'];
+        //get modifiers
+        $product['modifiers'] = ProductModifier::select('id_product_modifier','text')
+            ->where('modifier_type','Global')
+            ->orWhere(function($query) use ($post){
+                $query->whereHas('products',function($query) use ($post){
+                    $query->where('products.id_product',$post['id_product']);
+                });
+                $query->orWhereHas('product_categories',function($query) use ($post){
+                    $query->where('product_categories.id_product_category',$post['id_product_category']);
+                });
+                $query->orWhereHas('brands',function($query) use ($post){
+                    $query->where('brands.id_brand',$post['id_brand']);
+                });
+            })
+            ->with(['product_modifier_prices'=>function($query) use ($post){
+                $query->select('id_product_modifier_price','id_product_modifier','product_modifier_price');
+                $query->where('id_outlet',$post['id_outlet']);
+            }])
+            ->get()->toArray();
+        foreach ($product['modifiers'] as $key => &$modifier) {
+            if(empty($modifier['product_modifier_prices'])){
+                unset($product['modifiers'][$key]);
+                continue;
+            }
+            $modifier['price'] = number_format($modifier['product_modifier_prices'][0]['product_modifier_price'],0,',','.');
+        }
+        return MyHelper::checkGet($product);
     }
 }
