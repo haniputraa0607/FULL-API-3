@@ -793,6 +793,7 @@ class ApiProductController extends Controller
         if(!(empty($product['product_prices']['product_visibility'])&&$product['product_visibility']=='Visible') && ($product['product_prices'][0]['product_visibility']??false)!='Visible'){
             return MyHelper::checkGet([]);
         }
+        unset($product['product_prices']);
         $post['id_product_category'] = $product['brand_category'][0]['id_product_category'];
         //get modifiers
         $product['modifiers'] = ProductModifier::select('id_product_modifier','text')
@@ -819,6 +820,7 @@ class ApiProductController extends Controller
                 continue;
             }
             $modifier['price'] = number_format($modifier['product_modifier_prices'][0]['product_modifier_price'],0,',','.');
+            unset($modifier['product_modifier_prices']);
         }
         return MyHelper::checkGet($product);
     }
