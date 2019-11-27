@@ -9,11 +9,13 @@ use Illuminate\Routing\Controller;
 use App\Http\Models\Setting;
 use App\Http\Models\Product;
 use App\Http\Models\ProductPrice;
+use App\Http\Models\ProductModifier;
 use App\Http\Models\User;
 use App\Http\Models\UserAddress;
 use App\Http\Models\Outlet;
 use App\Http\Models\Transaction;
 use App\Http\Models\TransactionProduct;
+use App\Http\Models\TransactionProductModifier;
 use App\Http\Models\TransactionShipment;
 use App\Http\Models\TransactionPickup;
 use App\Http\Models\TransactionPickupGoSend;
@@ -581,6 +583,7 @@ class ApiOnlineTransaction extends Controller
             $dataProduct = [
                 'id_transaction'               => $insertTransaction['id_transaction'],
                 'id_product'                   => $checkProduct['id_product'],
+                'id_brand'                     => $valueProduct['id_brand'],
                 'id_outlet'                    => $insertTransaction['id_outlet'],
                 'id_user'                      => $insertTransaction['id_user'],
                 'transaction_product_qty'      => $valueProduct['qty'],
@@ -599,9 +602,73 @@ class ApiOnlineTransaction extends Controller
                 'name'     => $checkProduct['product_name'],
                 'quantity' => $valueProduct['qty'],
             ];
-
-
-            array_push($dataInsertProduct, $dataProduct);
+            $trx_product = TransactionProduct::create($dataProduct);
+            if (!$trx_product) {
+                DB::rollback();
+                return response()->json([
+                    'status'    => 'fail',
+                    'messages'  => ['Insert Product Transaction Failed']
+                ]);
+            }
+            if(strtotime($insertTransaction['transaction_date'])){
+                $trx_product->created_at = strtotime($insertTransaction['transaction_date']);
+            }
+            // array_push($dataInsertProduct, $dataProduct);
+            
+            $modifiers = [];
+            $insert_modifier = [];
+            $mod_subtotal = 0;
+            foreach ($valueProduct['modifiers'] as $modifier) {
+                $id_product_modifier = is_numeric($modifier)?$modifier:$modifier['id_product_modifier'];
+                $qty_product_modifier = is_numeric($modifier)?1:$modifier['qty'];
+                $mod = ProductModifier::with(['product_modifier_prices'=>function($query) use ($post){
+                        $query->select('id_product_modifier_price','id_product_modifier','product_modifier_price');
+                        $query->where('id_outlet',$post['id_outlet']);
+                    }])
+                    ->whereHas('product_modifier_prices',function($query) use ($post){
+                        $query->where('id_outlet',$post['id_outlet']);
+                        $query->whereNotNull('product_modifier_price');
+                    })
+                    ->find($id_product_modifier);
+                if(!$mod||!isset($mod['product_modifier_prices'][0]['product_modifier_price'])){
+                    DB::rollBack();
+                    return [
+                        'status' => 'fail',
+                        'messages' => ['Modifier not found']
+                    ];
+                }
+                $mod = $mod->toArray();
+                $insert_modifier[] = [
+                    'id_transaction_product'=>$trx_product['id_transaction_product'],
+                    'id_transaction'=>$insertTransaction['id_transaction'],
+                    'id_product'=>$checkProduct['id_product'],
+                    'id_product_modifier'=>$id_product_modifier,
+                    'id_outlet'=>$insertTransaction['id_outlet'],
+                    'id_user'=>$insertTransaction['id_user'],
+                    'type'=>$mod['type']??'',
+                    'code'=>$mod['code']??'',
+                    'text'=>$mod['text']??'',
+                    'qty'=>$qty_product_modifier,
+                    'transaction_product_modifier_price'=>$mod['product_modifier_prices'][0]['product_modifier_price']*$qty_product_modifier,
+                    'datetime'=>$insertTransaction['transaction_date']??date(),
+                    // 'trx_type'=>'',
+                    // 'sales_type'=>'',
+                    'created_at'                   => date('Y-m-d H:i:s'),
+                    'updated_at'                   => date('Y-m-d H:i:s')
+                ];
+                $mod_subtotal += $mod['product_modifier_prices'][0]['product_modifier_price']*$qty_product_modifier;
+            }
+            $trx_modifier = TransactionProductModifier::insert($insert_modifier); 
+            if (!$trx_modifier) {
+                DB::rollback();
+                return response()->json([
+                    'status'    => 'fail',
+                    'messages'  => ['Insert Product Modifier Transaction Failed']
+                ]);
+            }
+            $trx_product->transaction_modifier_subtotal = $mod_subtotal*$valueProduct['qty'];
+            $trx_product->transaction_product_subtotal += $trx_product->transaction_modifier_subtotal;
+            $trx_product->save();
             array_push($productMidtrans, $dataProductMidtrans);
             $totalWeight += $checkProduct['product_weight'] * $valueProduct['qty'];
 
@@ -648,15 +715,14 @@ class ApiOnlineTransaction extends Controller
         ];
         array_push($dataDetailProduct, $dataDis);
 
-        $insrtProduct = TransactionProduct::insert($dataInsertProduct);
-        if (!$insrtProduct) {
-            DB::rollback();
-            return response()->json([
-                'status'    => 'fail',
-                'messages'  => ['Insert Product Transaction Failed']
-            ]);
-        }
-
+        // $insrtProduct = TransactionProduct::insert($dataInsertProduct);
+        // if (!$insrtProduct) {
+        //     DB::rollback();
+        //     return response()->json([
+        //         'status'    => 'fail',
+        //         'messages'  => ['Insert Product Transaction Failed']
+        //     ]);
+        // }
         $insertUserTrxProduct = app($this->transaction)->insertUserTrxProduct($userTrxProduct);
         if ($insertUserTrxProduct == 'fail') {
             DB::rollback();

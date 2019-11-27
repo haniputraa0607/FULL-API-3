@@ -2061,11 +2061,12 @@ class ApiTransaction extends Controller
     public function insertUserTrxProduct($data){
         foreach ($data as $key => $value) {
             # code...
-            $check = UserTrxProduct::where('id_user', $value['id_user'])->where('id_product', $value['id_product'])->first();
+            $check = UserTrxProduct::where('id_user', $value['id_user'])->where('id_product', $value['id_product'])->get();
             
             if(empty($check)){
                 $insertData = UserTrxProduct::create($value);
             }else{
+                $check=$check[0];
                 $value['product_qty'] = $check->product_qty + $value['product_qty'];
                 $insertData = $check->update($value);
             }
