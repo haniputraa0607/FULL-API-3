@@ -596,12 +596,6 @@ class ApiOnlineTransaction extends Controller
                 'updated_at'                   => date('Y-m-d H:i:s')
             ];
 
-            $dataProductMidtrans = [
-                'id'       => $checkProduct['id_product'],
-                'price'    => $checkPriceProduct['product_price_base'],
-                'name'     => $checkProduct['product_name'],
-                'quantity' => $valueProduct['qty'],
-            ];
             $trx_product = TransactionProduct::create($dataProduct);
             if (!$trx_product) {
                 DB::rollback();
@@ -617,6 +611,7 @@ class ApiOnlineTransaction extends Controller
             
             $insert_modifier = [];
             $mod_subtotal = 0;
+            $more_mid_text = '';
             foreach ($valueProduct['modifiers'] as $modifier) {
                 $id_product_modifier = is_numeric($modifier)?$modifier:$modifier['id_product_modifier'];
                 $qty_product_modifier = is_numeric($modifier)?1:$modifier['qty'];
@@ -656,6 +651,11 @@ class ApiOnlineTransaction extends Controller
                     'updated_at'                   => date('Y-m-d H:i:s')
                 ];
                 $mod_subtotal += $mod['product_modifier_prices'][0]['product_modifier_price']*$qty_product_modifier;
+                if($qty_product_modifier>1){
+                    $more_mid_text .= ','.$qty_product_modifier.'x '.$mod['text'];
+                }else{
+                    $more_mid_text .= ','.$mod['text'];
+                }
             }
             $trx_modifier = TransactionProductModifier::insert($insert_modifier); 
             if (!$trx_modifier) {
@@ -668,6 +668,12 @@ class ApiOnlineTransaction extends Controller
             $trx_product->transaction_modifier_subtotal = $mod_subtotal;
             $trx_product->transaction_product_subtotal += $trx_product->transaction_modifier_subtotal * $valueProduct['qty'];
             $trx_product->save();
+            $dataProductMidtrans = [
+                'id'       => $checkProduct['id_product'],
+                'price'    => $checkPriceProduct['product_price']+$mod_subtotal,
+                'name'     => $checkProduct['product_name'].($more_mid_text?'('.trim($more_mid_text,',').')':''),
+                'quantity' => $valueProduct['qty'],
+            ];
             array_push($productMidtrans, $dataProductMidtrans);
             $totalWeight += $checkProduct['product_weight'] * $valueProduct['qty'];
 
