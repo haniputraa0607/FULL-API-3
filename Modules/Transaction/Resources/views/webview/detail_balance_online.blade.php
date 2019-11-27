@@ -222,10 +222,10 @@
 		@if($data['balance'] > 0)
 		<div class="row" style="margin-top: 30px;">
 			<div class="col-6 text-13-3px text-black WorkSans-SemiBold">Subtotal ( item)</div>
-			<div class="col-6 text-right text-13-3px text-black WorkSans-SemiBold">Rp {{ str_replace(',', '.', number_format($data['grand_total'])) }}</div>
+			<div class="col-6 text-right text-13-3px text-black WorkSans-SemiBold">{{ str_replace(',', '.', number_format($data['grand_total'])) }}</div>
 			<div class="col-12"><hr style="margin-bottom: 20px;margin-top: 16.7px;"></div>
 			<div class="col-6 text-13-3px text-black WorkSans-SemiBold">Total Pembayaran</div>
-			<div class="col-6 text-right text-13-3px text-black WorkSans-SemiBold">Rp {{ str_replace(',', '.', number_format($data['grand_total'])) }}</div>
+			<div class="col-6 text-right text-13-3px text-black WorkSans-SemiBold">{{ str_replace(',', '.', number_format($data['grand_total'])) }}</div>
 			<br>
 			<div class="col-6 text-13-3px text-black WorkSans-SemiBold">{{env('POINT_NAME', 'Points')}}</div>
 			<div class="col-6 text-right text-13-3px text-dark-grey WorkSans-SemiBold">@if($data['balance'] > 0) + {{ str_replace(',', '.', number_format($data['balance'])) }} @else {{ str_replace(',', '.', number_format($data['balance'])) }}  @endif</div>
