@@ -666,8 +666,8 @@ class ApiOnlineTransaction extends Controller
                     'messages'  => ['Insert Product Modifier Transaction Failed']
                 ]);
             }
-            $trx_product->transaction_modifier_subtotal = $mod_subtotal*$valueProduct['qty'];
-            $trx_product->transaction_product_subtotal += $trx_product->transaction_modifier_subtotal;
+            $trx_product->transaction_modifier_subtotal = $mod_subtotal;
+            $trx_product->transaction_product_subtotal += $trx_product->transaction_modifier_subtotal * $valueProduct['qty'];
             $trx_product->save();
             array_push($productMidtrans, $dataProductMidtrans);
             $totalWeight += $checkProduct['product_weight'] * $valueProduct['qty'];
