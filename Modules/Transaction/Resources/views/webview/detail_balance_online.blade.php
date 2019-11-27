@@ -12,18 +12,18 @@
     <style type="text/css">
     	.kotak {
     		margin : 10px;
-    		padding: 10px;
+    		padding: 16.7px 11.7px;
     		/*margin-right: 15px;*/
             -webkit-box-shadow: 0px 1px 3.3px 0px rgba(168,168,168,1);
             -moz-box-shadow: 0px 1px 3.3px 0px rgba(168,168,168,1);
             box-shadow: 0px 1px 3.3px 0px rgba(168,168,168,1);
 			/* border-radius: 3px; */
 			background: #fff;
-			font-family: 'Open Sans', sans-serif;
+			border-radius: 10px;
     	}
 
     	body {
-    		background: #fafafa;
+    		background: #ffffff;
     	}
 
     	.completed {
@@ -48,7 +48,7 @@
     	}
 
     	.text-grey {
-    		color: #aaaaaa;
+    		color: #707070;
     	}
 
     	.text-much-grey {
@@ -56,7 +56,7 @@
     	}
 
     	.text-black {
-    		color: #000000;
+    		color: #333333;
     	}
 
     	.text-medium-grey {
@@ -88,94 +88,85 @@
     	}
 
 		@font-face {
-                font-family: "ProductSans-Bold";
+                font-family: "WorkSans-Black";
                 font-style: normal;
                 font-weight: 400;
-                src: url('{{ env("S3_URL_VIEW") }}{{ ("fonts/ProductSans-Bold.ttf") }}');
+                src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/Work_Sans/WorkSans-Black.ttf') }}');
         }
-
         @font-face {
-                font-family: "ProductSans-BoldItalic";
+                font-family: "WorkSans-Bold";
                 font-style: normal;
                 font-weight: 400;
-                src: url('{{ env("S3_URL_VIEW") }}{{ ("fonts/ProductSans-BoldItalic.ttf") }}');
+                src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/Work_Sans/WorkSans-Bold.ttf') }}');
         }
-
         @font-face {
-                font-family: "ProductSans-Italic";
+                font-family: "WorkSans-ExtraBold";
                 font-style: normal;
                 font-weight: 400;
-                src: url('{{ env("S3_URL_VIEW") }}{{ ("fonts/ProductSans-Italic.ttf") }}');
+                src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/Work_Sans/WorkSans-ExtraBold.ttf') }}');
         }
-
         @font-face {
-                font-family: "ProductSans-Regular";
+                font-family: "WorkSans-ExtraLight";
                 font-style: normal;
                 font-weight: 400;
-                src: url('{{ env("S3_URL_VIEW") }}{{ ("fonts/ProductSans-Regular.ttf") }}');
+                src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/Work_Sans/WorkSans-ExtraLight.ttf') }}');
         }
-
-		@font-face {
-            font-family: 'Seravek';
-            font-style: normal;
-            font-weight: 400;
-            src: url('{{env("S3_URL_VIEW") }}{{("assets/fonts/Seravek.ttf")}}') format('truetype');
-        }
-
         @font-face {
-            font-family: 'Seravek Light';
-            font-style: normal;
-            font-weight: 400;
-            src: url('{{env("S3_URL_VIEW") }}{{("assets/fonts/Seravek-Light.ttf")}}') format('truetype');
+                font-family: "WorkSans-Light";
+                font-style: normal;
+                font-weight: 400;
+                src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/Work_Sans/WorkSans-Light.ttf') }}');
         }
-
         @font-face {
-            font-family: 'Seravek Medium';
-            font-style: normal;
-            font-weight: 400;
-            src: url('{{env("S3_URL_VIEW") }}{{("assets/fonts/Seravek-Medium.ttf")}}') format('truetype');
+                font-family: "WorkSans-Medium";
+                font-style: normal;
+                font-weight: 400;
+                src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/Work_Sans/WorkSans-Medium.ttf') }}');
         }
-
         @font-face {
-            font-family: 'Seravek Italic';
-            font-style: normal;
-            font-weight: 400;
-            src: url('{{env("S3_URL_VIEW") }}{{("assets/fonts/Seravek-Italic.ttf")}}') format('truetype');
+                font-family: "WorkSans-Regular";
+                font-style: normal;
+                font-weight: 400;
+                src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/Work_Sans/WorkSans-Regular.ttf') }}');
         }
-
         @font-face {
-            font-family: 'Roboto Regular';
-            font-style: normal;
-            font-weight: 400;
-            src: url('{{env("S3_URL_VIEW") }}{{("assets/fonts/Roboto-Regular.ttf")}}') format('truetype');
+                font-family: "WorkSans-SemiBold";
+                font-style: normal;
+                font-weight: 400;
+                src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/Work_Sans/WorkSans-SemiBold.ttf') }}');
         }
-
-    	.open-sans-font {
-            font-family: 'Open Sans', sans-serif;
+        @font-face {
+                font-family: "WorkSans-Thin";
+                font-style: normal;
+                font-weight: 400;
+                src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/Work_Sans/WorkSans-Thin.ttf') }}');
         }
-
-        .questrial-font {
-            font-family: 'Questrial', sans-serif;
+        .WorkSans-Black{
+            font-family: "WorkSans-Black";
         }
-
-        .product-sans {
-            font-family: 'ProductSans-Regular';
+        .WorkSans-Bold{
+            font-family: "WorkSans-Bold";
         }
-
-        .product-sans-reguler {
-            font-family: 'ProductSans-Regular';
+        .WorkSans-ExtraBold{
+            font-family: "WorkSans-ExtraBold";
         }
-
-        .seravek-medium-font {
-            font-family: 'Seravek Medium';
+        .WorkSans-ExtraLight{
+            font-family: "WorkSans-ExtraLight";
         }
-
-        .seravek-italic-font {
-            font-family: 'Seravek Italic';
+        .WorkSans-Medium{
+            font-family: "WorkSans-Medium";
         }
-
-        .roboto-regular-font {
-            font-family: 'Roboto Regular';
+        .WorkSans-Regular{
+            font-family: "WorkSans-Regular";
+        }
+        .WorkSans{
+            font-family: "WorkSans-Regular";
+        }
+        .WorkSans-SemiBold{
+            font-family: "WorkSans-SemiBold";
+        }
+        .WorkSans-Thin{
+            font-family: "WorkSans-Thin";
         }
 
     	.text-14-3px {
@@ -219,54 +210,45 @@
     </style>
   </head>
   <body>
-    {{ csrf_field() }}
+	{{ csrf_field() }}
+	
+	<div class="col-6 text-black text-14-3px WorkSans-Bold" style="margin-top:10px">{{ $data['detail']['outlet']['outlet_name'] }}</div>
   	<div class="kotak">
-  		<div class="container">
-	   		<div class="row space-bottom">
-	   			<div class="col-6 text-grey-black text-14-3px product-sans">{{ $data['detail']['outlet']['outlet_name'] }}</div>
-	   			<div class="col-6 text-right text-medium-grey text-13-3px product-sans-reguler">{{ date('d F Y H:i', strtotime($data['detail']['transaction_date'])) }}</div>
-	   		</div>
-	   		<div class="row space-text">
-	   			<div class="col-6"></div>
-	   			<div class="col-12 text-right bold text-13-3px product-sans">#{{ $data['detail']['transaction_receipt_number'] }}</div>
-	   		</div>
-	   	</div>
-		<hr class="margin-10px">
-	   	<div class="container">
-	   		<div class="row">
-	   			<div class="col-12 text-grey-light text-13-3px product-sans-reguler margin-top5px">Transaksi Anda</div>
-                <div class="col-12"><hr></div>
-	   		</div>
-			@if($data['balance'] > 0)
-	   		<div class="row">
-	   			<div class="col-6 text-13-3px text-black product-sans-reguler">Total Pembayaran</div>
-                <div class="col-6 text-right text-13-3px text-dark-grey product-sans-reguler">Rp {{ str_replace(',', '.', number_format($data['grand_total'])) }}</div>
-	   			<div class="col-12"><hr></div>
-	   		</div>
-	   		<div class="row space-text">
-	   			<div class="col-6 text-13-3px text-black product-sans-reguler">{{env('POINT_NAME', 'Points')}}</div>
-	   			<div class="col-6 text-right text-13-3px text-dark-grey product-sans-reguler">@if($data['balance'] > 0) +{{ str_replace(',', '.', number_format($data['balance'])) }} points @else {{ str_replace(',', '.', number_format($data['balance'])) }} points  @endif</div>
-	   		</div>
-			@else
-	   		<div class="row space-text">
-				@php $countItem = 0; @endphp
-				@foreach($data['detail']['product_transaction'] as $productTransaction)
-					@php $countItem += $productTransaction['transaction_product_qty']; @endphp
-				@endforeach
-	   			<div class="col-6 text-13-3px text-black product-sans-reguler">Subtotal ({{$countItem}} item) </div>
-	   			<div class="col-6 text-right text-13-3px text-dark-grey product-sans-reguler">{{ str_replace(',', '.', number_format($data['detail']['transaction_grandtotal'])) }}</div>
-	   		</div>
-	   		<div class="row">
-	   			<div class="col-6 text-13-3px text-black product-sans-reguler">{{env('POINT_NAME', 'Points')}}</div>
-	   			<div class="col-6 text-right text-13-3px text-dark-grey product-sans-reguler">@if($data['balance'] > 0) + @endif {{ str_replace(',', '.', number_format($data['balance'])) }}</div>
-				<div class="col-12"><hr></div>
-			</div>
-			<div class="row space-text">
-	   			<div class="col-6 text-13-3px text-black product-sans-reguler ">Total Pembayaran</div>
-                <div class="col-6 text-right text-13-3px text-dark-grey product-sans-reguler">Rp {{ str_replace(',', '.', number_format($data['grand_total'] + $data['balance'])) }}</div>
-	   		</div>
-			@endif
-	   	</div>
+		<div class="row">
+			<div class="col-4 text-grey text-14-3px WorkSans-Bold">Transaksi</div>
+			<div class="col-8 text-right text-grey text-13-3px WorkSans">{{ date('d F Y', strtotime($data['detail']['transaction_date'])) }}</div>
+			<div class="col-12 text-right text-13-3px WorkSans-Bold" style="margin-top: 10px;">#{{ $data['detail']['transaction_receipt_number'] }}</div>
+		</div>
+		@if($data['balance'] > 0)
+		<div class="row" style="margin-top: 30px;">
+			<div class="col-6 text-13-3px text-black WorkSans-SemiBold">Subtotal ( item)</div>
+			<div class="col-6 text-right text-13-3px text-black WorkSans-SemiBold">Rp {{ str_replace(',', '.', number_format($data['grand_total'])) }}</div>
+			<div class="col-12"><hr style="margin-bottom: 20px;margin-top: 16.7px;"></div>
+			<div class="col-6 text-13-3px text-black WorkSans-SemiBold">Total Pembayaran</div>
+			<div class="col-6 text-right text-13-3px text-black WorkSans-SemiBold">Rp {{ str_replace(',', '.', number_format($data['grand_total'])) }}</div>
+			<br>
+			<div class="col-6 text-13-3px text-black WorkSans-SemiBold">{{env('POINT_NAME', 'Points')}}</div>
+			<div class="col-6 text-right text-13-3px text-dark-grey WorkSans-SemiBold">@if($data['balance'] > 0) + {{ str_replace(',', '.', number_format($data['balance'])) }} @else {{ str_replace(',', '.', number_format($data['balance'])) }}  @endif</div>
+		</div>
+		@else
+		<div class="row space-text">
+			@php $countItem = 0; @endphp
+			@foreach($data['detail']['product_transaction'] as $productTransaction)
+				@php $countItem += $productTransaction['transaction_product_qty']; @endphp
+			@endforeach
+			<div class="col-6 text-13-3px text-black WorkSans">Subtotal ({{$countItem}} item) </div>
+			<div class="col-6 text-right text-13-3px text-dark-grey WorkSans">{{ str_replace(',', '.', number_format($data['detail']['transaction_grandtotal'])) }}</div>
+		</div>
+		<div class="row">
+			<div class="col-6 text-13-3px text-black WorkSans">{{env('POINT_NAME', 'Points')}}</div>
+			<div class="col-6 text-right text-13-3px text-dark-grey WorkSans">@if($data['balance'] > 0) + @endif {{ str_replace(',', '.', number_format($data['balance'])) }}</div>
+			<div class="col-12"><hr></div>
+		</div>
+		<div class="row space-text">
+			<div class="col-6 text-13-3px text-black WorkSans ">Total Pembayaran</div>
+			<div class="col-6 text-right text-13-3px text-dark-grey WorkSans">Rp {{ str_replace(',', '.', number_format($data['grand_total'] + $data['balance'])) }}</div>
+		</div>
+		@endif
   	</div>
 
 
