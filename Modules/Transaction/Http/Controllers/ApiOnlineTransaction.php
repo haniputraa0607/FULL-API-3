@@ -615,7 +615,6 @@ class ApiOnlineTransaction extends Controller
             }
             // array_push($dataInsertProduct, $dataProduct);
             
-            $modifiers = [];
             $insert_modifier = [];
             $mod_subtotal = 0;
             foreach ($valueProduct['modifiers'] as $modifier) {
@@ -651,7 +650,7 @@ class ApiOnlineTransaction extends Controller
                     'qty'=>$qty_product_modifier,
                     'transaction_product_modifier_price'=>$mod['product_modifier_prices'][0]['product_modifier_price']*$qty_product_modifier,
                     'datetime'=>$insertTransaction['transaction_date']??date(),
-                    // 'trx_type'=>'',
+                    'trx_type'=>$type,
                     // 'sales_type'=>'',
                     'created_at'                   => date('Y-m-d H:i:s'),
                     'updated_at'                   => date('Y-m-d H:i:s')
