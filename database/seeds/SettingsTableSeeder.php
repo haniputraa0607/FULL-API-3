@@ -346,18 +346,18 @@ class SettingsTableSeeder extends Seeder
             ),37 =>
             array (
                 'id_setting' => 38,
-                'key' => 'text_menu_home',
+                'key' => 'text_menu_main',
                 'value' => NULL,
-                'value_text' => '{"home":{"text_menu":"Home","text_header":"Home"},"deals":{"text_menu":"Deals","text_header":"Deals"},"voucher":{"text_menu":"My Voucher","text_header":"My Voucher"},"history":{"text_menu":"History","text_header":"History"},"account":{"text_menu":"Account","text_header":"Account"}}',
+                'value_text' => '{"menu1":{"text_menu":"Home","text_header":"Home","icon1":"","icon2":""},"menu2":{"text_menu":"Promo","text_header":"Promo","icon1":"","icon2":""},"menu3":{"text_menu":"Order","text_header":"Order","icon1":"","icon2":""},"menu4":{"text_menu":"Riwayat","text_header":"Riwayat","icon1":"","icon2":""},"menu5":{"text_menu":"Other","text_header":"Other","icon1":"","icon2":""}}',
                 'created_at' => '2019-10-08 09:03:16',
                 'updated_at' => '2019-10-08 09:03:19',
             ),
             38 =>
             array (
                 'id_setting' => 39,
-                'key' => 'text_menu_account',
+                'key' => 'text_menu_other',
                 'value' => NULL,
-                'value_text' => '{"my_profile":{"text_menu":"My Profile","text_header":"My Profile","icon":""},"outlet":{"text_menu":"Lokasi Outlet","text_header":"Lokasi Outlet","icon":""},"benefit":{"text_menu":"Benefit","text_header":"Benefit","icon":""},"news":{"text_menu":"Berita","text_header":"Berita","icon":""},"delivery_service":{"text_menu":"Delivery Service","text_header":"Delivery Service","icon":""},"faq":{"text_menu":"FAQ","text_header":"FAQ","icon":""},"terms_service":{"text_menu":"Ketentuan Layanan","text_header":"Ketentuan Layanan","icon":""},"contact":{"text_menu":"Kontak Kami","text_header":"Kontak Kami","icon":""}}',
+                'value_text' => '{"menu1":{"text_menu":"Profile","text_header":"Profile","icon":""},"menu2":{"text_menu":"Membership","text_header":"Membership","icon":""},"menu3":{"text_menu":"Outlet","text_header":"Outlet","icon":""},"menu4":{"text_menu":"Kabar","text_header":"Kabar","icon":""},"menu5":{"text_menu":"Tentang","text_header":"Tentang","icon":""},"menu6":{"text_menu":"FAQ","text_header":"FAQ","icon":""},"menu7":{"text_menu":"Ketentuan","text_header":"Ketentuan","icon":""},"menu8":{"text_menu":"Kontak","text_header":"Kontak","icon":""}}',
                 'created_at' => '2019-10-08 09:04:01',
                 'updated_at' => '2019-10-08 09:04:02',
             ),
