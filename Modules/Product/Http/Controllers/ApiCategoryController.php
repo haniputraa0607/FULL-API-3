@@ -344,12 +344,14 @@ class ApiCategoryController extends Controller
      */
     function listCategoryTree(Request $request) {
         $post = $request->json()->all();
-        $products = Product::select('id_product','product_name','product_code','product_description','product_visibility')->whereHas('brand_category')->whereHas('product_prices',function($query) use ($request){
+        $products = Product::select('id_product','product_name','product_description','product_visibility')->whereHas('brand_category')->whereHas('product_prices',function($query) use ($request){
             $query->where('id_outlet',$request['id_outlet'])
             ->whereNotNull('product_price')
             ->where('product_status','=','Active');
         })
-        ->with(['brand_category','photos','product_prices'])->orderBy('products.position')->get();
+        ->with(['brand_category','photos','product_prices'=>function($query) use ($request){
+            $query->where('id_outlet',$request['id_outlet']);
+        }])->orderBy('products.position')->get();
         $result = [];
         // grouping by id
         foreach ($products as $product) {
@@ -362,6 +364,8 @@ class ApiCategoryController extends Controller
             $product['product_price'] = number_format($product['product_prices'][0]['product_price'],0,',','.');
             unset($product['brand_category']);
             unset($product['photos']);
+            unset($product['product_visibility']);
+            unset($product['product_prices']);
             foreach ($pivots as $pivot) {
                 $result[$pivot['id_brand']][$pivot['id_product_category']][] = $product;
             }
@@ -369,13 +373,13 @@ class ApiCategoryController extends Controller
         // get detail of every key
         foreach ($result as $id_brand => $categories) {
             foreach ($categories as $id_category => $products) {
-                $category = ProductCategory::find($id_category);
+                $category = ProductCategory::select('id_product_category','product_category_name')->find($id_category);
                 $categories[$id_category] = [
                     'category' => $category,
                     'list' =>$products
                 ];
             }
-            $brand = Brand::find($id_brand);
+            $brand = Brand::select('id_brand','name_brand')->find($id_brand);
             $result[$id_brand] = [
                 'brand' => $brand,
                 'list' => array_values($categories)

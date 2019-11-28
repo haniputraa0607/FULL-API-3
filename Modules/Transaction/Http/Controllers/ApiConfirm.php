@@ -71,7 +71,7 @@ class ApiConfirm extends Controller
             foreach ($check['productTransaction'] as $key => $value) {
                 $dataProductMidtrans = [
                     'id'       => $value['id_product'],
-                    'price'    => abs($value['transaction_product_price']),
+                    'price'    => abs($value['transaction_product_price']+$value['transaction_modifier_subtotal']),
                     'name'     => $value['product']['product_name'],
                     'quantity' => $value['transaction_product_qty'],
                 ];

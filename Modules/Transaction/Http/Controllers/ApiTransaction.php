@@ -1405,7 +1405,9 @@ class ApiTransaction extends Controller
             }
             $label = [];
             $label2 = [];
-            $list['product_transaction'] = MyHelper::groupIt($list['product_transaction'],'id_brand',null,function($key,&$val){
+            $product_count=0;
+            $list['product_transaction'] = MyHelper::groupIt($list['product_transaction'],'id_brand',null,function($key,&$val) use (&$product_count){
+                $product_count += array_sum(array_column($val,'transaction_product_qty'));
                 $brand = Brand::select('name_brand')->find($key);
                 if(!$brand){
                     return 'No Brand';
@@ -1415,6 +1417,7 @@ class ApiTransaction extends Controller
             $cart = $list['transaction_subtotal'] + $list['transaction_shipment'] + $list['transaction_service'] + $list['transaction_tax'] - $list['transaction_discount'];
 
             $list['transaction_carttotal'] = $cart;
+            $list['transaction_item_total'] = $product_count;
 
             $order = Setting::where('key', 'transaction_grand_total_order')->value('value');
             $exp   = explode(',', $order);
@@ -1617,10 +1620,11 @@ class ApiTransaction extends Controller
         $data   = LogBalance::where('id_log_balance', $id)->first();
 
         if ($data['source'] == 'Transaction' || $data['source'] == 'Rejected Order') {
-            $select = Transaction::with('outlet')->where('id_transaction', $data['id_reference'])->first();
+            $select = Transaction::select(DB::raw('transactions.*,sum(transaction_products.transaction_product_qty) item_total'))->leftJoin('transaction_products','transactions.id_transaction','=','transaction_products.id_transaction')->with('outlet')->where('transactions.id_transaction', $data['id_reference'])->groupBy('transactions.id_transaction')->first();
 
             $data['date'] = $select['transaction_date'];
             $data['type'] = 'trx';
+            $data['item_total'] = $select['item_total'];
             $data['outlet'] = $select['outlet']['outlet_name'];
             if ($select['trasaction_type'] == 'Offline') {
                 $data['online'] = 0;
@@ -2061,11 +2065,12 @@ class ApiTransaction extends Controller
     public function insertUserTrxProduct($data){
         foreach ($data as $key => $value) {
             # code...
-            $check = UserTrxProduct::where('id_user', $value['id_user'])->where('id_product', $value['id_product'])->first();
+            $check = UserTrxProduct::where('id_user', $value['id_user'])->where('id_product', $value['id_product'])->get();
             
             if(empty($check)){
                 $insertData = UserTrxProduct::create($value);
             }else{
+                $check=$check[0];
                 $value['product_qty'] = $check->product_qty + $value['product_qty'];
                 $insertData = $check->update($value);
             }
