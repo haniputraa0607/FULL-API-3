@@ -348,9 +348,13 @@ class ApiCategoryController extends Controller
                 'products.id_product','products.product_name','products.product_description',
                 'product_prices.product_price','product_prices.product_stock_status'
             ])
-            ->join('product_prices','product_prices.id_product','=','products.id_product')
             ->join('brand_product','brand_product.id_product','=','products.id_product')
+            // produk tersedia di outlet
+            ->join('product_prices','product_prices.id_product','=','products.id_product')
             ->where('product_prices.id_outlet','=',$post['id_outlet'])
+            // brand produk ada di outlet
+            ->where('brand_outlet.id_outlet','=',$post['id_outlet'])
+            ->join('brand_outlet','brand_outlet.id_brand','=','brand_product.id_brand')
             ->where(function($query){
                 $query->where('product_prices.product_visibility','=','Visible')
                         ->orWhere(function($q){
@@ -407,12 +411,16 @@ class ApiCategoryController extends Controller
         $products = Product::select([
                 'products.id_product','products.product_name','products.product_description',
                 'product_prices.product_price','product_prices.product_stock_status',
-                'brand_product.id_product_category'
+                'brand_product.id_product_category','brand_product.id_brand'
             ])
-            ->join('product_prices','product_prices.id_product','=','products.id_product')
             ->join('brand_product','brand_product.id_product','=','products.id_product')
-            ->where('brand_product.id_brand','=',$post['id_brand'])
+            // produk tersedia di outlet
+            ->join('product_prices','product_prices.id_product','=','products.id_product')
             ->where('product_prices.id_outlet','=',$post['id_outlet'])
+            // brand produk ada di outlet
+            ->where('brand_outlet.id_outlet','=',$post['id_outlet'])
+            ->join('brand_outlet','brand_outlet.id_brand','=','brand_product.id_brand')
+            // cari produk
             ->where('products.product_name','like','%'.$post['product_name'].'%')
             ->where(function($query){
                 $query->where('product_prices.product_visibility','=','Visible')
