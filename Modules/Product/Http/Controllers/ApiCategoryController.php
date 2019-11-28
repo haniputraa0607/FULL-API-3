@@ -362,6 +362,7 @@ class ApiCategoryController extends Controller
             $product = $product->toArray();
             $pivots = $product['brand_category'];
             $product['product_price'] = number_format($product['product_prices'][0]['product_price'],0,',','.');
+            $product['product_stock_status'] = $product['product_prices'][0]['product_stock_status'];
             unset($product['brand_category']);
             unset($product['photos']);
             unset($product['product_visibility']);
