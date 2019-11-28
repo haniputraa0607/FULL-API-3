@@ -6,6 +6,7 @@ Route::group(['prefix' => 'api/product','middleware' => 'log_activities', 'names
      * product
      */
     Route::group(['middleware' => 'auth:api'], function() {
+        Route::post('search', 'ApiCategoryController@search');
         Route::any('list', 'ApiProductController@listProduct');
         Route::post('detail', 'ApiProductController@detail');
         Route::get('list/price/{id_outlet}', 'ApiProductController@listProductPriceByOutlet');

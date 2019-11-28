@@ -351,7 +351,9 @@ class ApiCategoryController extends Controller
         })
         ->with(['brand_category','photos','product_prices'=>function($query) use ($request){
             $query->where('id_outlet',$request['id_outlet']);
-        }])->orderBy('products.position')->get();
+        }])
+        ->groupBy('products.id_product')
+        ->orderBy('products.position')->get();
         $result = [];
         // grouping by id
         foreach ($products as $product) {
@@ -389,6 +391,46 @@ class ApiCategoryController extends Controller
         $result = array_values($result);
 
         return response()->json(MyHelper::checkGet($result));
+    }
+
+    public function search(Request $request) {
+        $post = $request->except('_token');
+        $products = Product::select([
+                'products.id_product','products.product_name','products.product_description',
+                'product_prices.product_price','product_prices.product_stock_status',
+                'brand_product.id_product_category'
+            ])
+            ->join('product_prices','product_prices.id_product','=','products.id_product')
+            ->join('brand_product','brand_product.id_product','=','products.id_product')
+            ->where('brand_product.id_brand','=',$post['id_brand'])
+            ->where('product_prices.id_outlet','=',$post['id_outlet'])
+            ->where('products.product_name','like','%'.$post['product_name'].'%')
+            ->where(function($query){
+                $query->where('product_prices.product_visibility','=','Visible')
+                        ->orWhere(function($q){
+                            $q->whereNull('product_prices.product_visibility')
+                            ->where('products.product_visibility', 'Visible');
+                        });
+            })
+            ->where('product_prices.product_status','=','Active')
+            ->whereNotNull('product_prices.product_price')
+            ->with([
+                'photos'=>function($query){
+                    $query->select('id_product','product_photo');
+                }
+            ])
+            ->groupBy('products.id_product')
+            ->orderBy('products.position')
+            ->get();
+        $result = [];
+        foreach ($products as $product) {
+            $product->append('photo');
+            $result[$product->id_product_category]['list'][] = $product;
+            if(!isset($result[$product->id_product_category]['category'])){
+                $result[$product->id_product_category]['category']=ProductCategory::select('id_product_category','product_category_name')->find($product->id_product_category);
+            }
+        }
+        return MyHelper::checkGet(array_values($result));
     }
 
     function getData($post=[]) {
