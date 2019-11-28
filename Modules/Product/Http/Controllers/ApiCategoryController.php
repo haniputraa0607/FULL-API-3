@@ -344,30 +344,39 @@ class ApiCategoryController extends Controller
      */
     function listCategoryTree(Request $request) {
         $post = $request->json()->all();
-        $products = Product::select('id_product','product_name','product_description','product_visibility')->whereHas('brand_category')->whereHas('product_prices',function($query) use ($request){
-            $query->where('id_outlet',$request['id_outlet'])
-            ->whereNotNull('product_price')
-            ->where('product_status','=','Active');
-        })
-        ->with(['brand_category','photos','product_prices'=>function($query) use ($request){
-            $query->where('id_outlet',$request['id_outlet']);
-        }])
-        ->groupBy('products.id_product')
-        ->orderBy('products.position')->get();
-        $result = [];
+        $products = Product::select([
+                'products.id_product','products.product_name','products.product_description',
+                'product_prices.product_price','product_prices.product_stock_status'
+            ])
+            ->join('product_prices','product_prices.id_product','=','products.id_product')
+            ->join('brand_product','brand_product.id_product','=','products.id_product')
+            ->where('product_prices.id_outlet','=',$post['id_outlet'])
+            ->where(function($query){
+                $query->where('product_prices.product_visibility','=','Visible')
+                        ->orWhere(function($q){
+                            $q->whereNull('product_prices.product_visibility')
+                            ->where('products.product_visibility', 'Visible');
+                        });
+            })
+            ->where('product_prices.product_status','=','Active')
+            ->whereNotNull('product_prices.product_price')
+            ->with([
+                'brand_category',
+                'photos'=>function($query){
+                    $query->select('id_product','product_photo');
+                }
+            ])
+            ->groupBy('products.id_product')
+            ->orderBy('products.position')
+            ->get();
         // grouping by id
+        $result = [];
         foreach ($products as $product) {
-            if(!(empty($product['product_prices']['product_visibility'])&&$product['product_visibility']=='Visible') && ($product['product_prices'][0]['product_visibility']??false)!='Visible'){
-                continue;
-            }
             $product->append('photo');
             $product = $product->toArray();
             $pivots = $product['brand_category'];
-            $product['product_price'] = number_format($product['product_prices'][0]['product_price'],0,',','.');
-            $product['product_stock_status'] = $product['product_prices'][0]['product_stock_status'];
             unset($product['brand_category']);
             unset($product['photos']);
-            unset($product['product_visibility']);
             unset($product['product_prices']);
             foreach ($pivots as $pivot) {
                 $result[$pivot['id_brand']][$pivot['id_product_category']][] = $product;
