@@ -323,6 +323,13 @@ class ApiDealsVoucher extends Controller
                 $vcr->save();
             }
             $voucher = $voucher->get()->toArray();
+
+            if (!$voucher) {
+                return response()->json([
+                    'status'   => 'fail',
+                    'messages' => ['Voucher not found']
+                ]);
+            }
         }
         else {
             if (isset($post['used']) && ($post['used'] == 1 || $post['used'] == '1'))  {
