@@ -28,7 +28,7 @@ class ApiSubscriptionWebview extends Controller
             $response = [
                 'status' => 'success',
                 'result' => [
-                    'webview_url' => env('APP_URL') ."api/webview/subscription/". $subs['id_subscription'],
+                    'webview_url' => env('API_URL') ."api/webview/subscription/". $subs['id_subscription'],
                     'button_text' => 'BELI'
                 ]
             ];
