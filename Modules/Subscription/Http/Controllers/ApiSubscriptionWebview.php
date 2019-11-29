@@ -58,7 +58,7 @@ class ApiSubscriptionWebview extends Controller
         $post['web'] = 1;
         
         $action = MyHelper::postCURLWithBearer('/api/subscription/list', $post, $bearer);
-        return $action;
+        
         if ($action['status'] != 'success') {
             return [
                 'status' => 'fail',
@@ -82,7 +82,7 @@ class ApiSubscriptionWebview extends Controller
             'status' => 'success',
             'messages' => ['Subscription found']
         ];
-        return view('deals::webview.deals.deals_detail', $data);
+        return view('subscription::webview.subscription_detail', $data);
     }
 
     public function mySubscription(Request $request, $id_subscription_user)
