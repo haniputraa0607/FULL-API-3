@@ -397,7 +397,7 @@ class ApiOnlineTransaction extends Controller
         ];
 
         // return $detailPayment;
-        $post['grandTotal'] = $post['subtotal'] + $post['discount'] + $post['service'] + $post['tax'] + $post['shipping'];
+        $post['grandTotal'] = (int)$post['subtotal'] + (int)$post['discount'] + (int)$post['service'] + (int)$post['tax'] + (int)$post['shipping'];
         // return $post;
         if ($post['type'] == 'Delivery') {
             $dataUser = [

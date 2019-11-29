@@ -31,14 +31,12 @@ use Reliese\Database\Eloquent\Model as Eloquent;
  * @property int $subscription_voucher_total
  * @property int $subscription_voucher_nominal
  * @property int $subscription_minimal_transaction
- * @property bool $is_all_product
  * @property bool $is_all_outlet
  * @property \Carbon\Carbon $created_at
  * @property \Carbon\Carbon $updated_at
  * 
  * @property \Illuminate\Database\Eloquent\Collection $featured_subscriptions
  * @property \Illuminate\Database\Eloquent\Collection $outlets
- * @property \Illuminate\Database\Eloquent\Collection $products
  * @property \Illuminate\Database\Eloquent\Collection $users
  *
  * @package Modules\Subscription\Entities
@@ -56,7 +54,6 @@ class Subscription extends Eloquent
 		'subscription_voucher_total' => 'int',
 		'subscription_voucher_nominal' => 'int',
 		'subscription_minimal_transaction' => 'int',
-		'is_all_product' => 'bool',
 		'is_all_outlet' => 'bool'
 	];
 
@@ -86,7 +83,6 @@ class Subscription extends Eloquent
 		'subscription_voucher_total',
 		'subscription_voucher_nominal',
 		'subscription_minimal_transaction',
-		'is_all_product',
 		'is_all_outlet',
 		'user_limit'
 	];
@@ -150,13 +146,6 @@ class Subscription extends Eloquent
 	{
 		return $this->belongsToMany(\App\Http\Models\Outlet::class, 'subscription_outlets', 'id_subscription', 'id_outlet')
 					->withPivot('id_subscription_outlets')
-					->withTimestamps();
-	}
-
-	public function products()
-	{
-		return $this->belongsToMany(\App\Http\Models\Product::class, 'subscription_products', 'id_subscription', 'id_product')
-					->withPivot('id_subscription_product')
 					->withTimestamps();
 	}
 
