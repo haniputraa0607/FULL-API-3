@@ -11,7 +11,6 @@ use App\Lib\MyHelper;
 use Modules\Subscription\Entities\Subscription;
 use Modules\Subscription\Entities\FeaturedSubscription;
 use Modules\Subscription\Entities\SubscriptionOutlet;
-use Modules\Subscription\Entities\SubscriptionProduct;
 use Modules\Subscription\Entities\SubscriptionUser;
 use Modules\Subscription\Entities\SubscriptionUserVoucher;
 use App\Http\Models\Setting;
@@ -38,7 +37,7 @@ class ApiSubscription extends Controller
 
         // return $post;
         if ($request->json('forSelect2')) {
-            return MyHelper::checkGet($subs->with(['outlets', 'products', 'users'])->whereDoesntHave('featured_subscriptions')->get());
+            return MyHelper::checkGet($subs->with(['outlets', 'users'])->whereDoesntHave('featured_subscriptions')->get());
         }
 
         if ($request->json('id_outlet') && is_integer($request->json('id_outlet'))) {
@@ -49,7 +48,7 @@ class ApiSubscription extends Controller
 
         if ($request->json('id_subscription')) {
             $subs = $subs->where('id_subscription', '=', $request->json('id_subscription'))
-                        ->with('outlets', 'products', 'users');
+                        ->with('outlets', 'users');
         }
 
         if ($request->json('publish')) {
@@ -257,12 +256,13 @@ class ApiSubscription extends Controller
 
             for ($i=$start; $i < $end; $i++) {
                 $subs[$i]['time_to_end']=strtotime($subs[$i]['subscription_end'])-time();
-                // return $subs[$i];
+
                 $list[$i]['id_subscription'] = $subs[$i]['id_subscription'];
                 $list[$i]['url_subscription_image'] = $subs[$i]['url_subscription_image'];
                 $list[$i]['time_to_end'] = $subs[$i]['time_to_end'];
                 $list[$i]['subscription_end'] = $subs[$i]['subscription_end'];
                 $list[$i]['subscription_publish_end'] = $subs[$i]['subscription_publish_end'];
+                $list[$i]['time_server'] = date('Y-m-d H:i:s');
                 array_push($resultData, $subs[$i]);
                 array_push($listData, $list[$i]);
             }
