@@ -13,7 +13,6 @@ use Modules\Subscription\Entities\Subscription;
 use Modules\Subscription\Entities\SubscriptionPaymentMidtran;
 use Modules\Subscription\Entities\FeaturedSubscription;
 use Modules\Subscription\Entities\SubscriptionOutlet;
-use Modules\Subscription\Entities\SubscriptionProduct;
 use Modules\Subscription\Entities\SubscriptionUser;
 use Modules\Subscription\Entities\SubscriptionUserVoucher;
 use App\Http\Models\Outlet;
