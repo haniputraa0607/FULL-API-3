@@ -831,6 +831,7 @@ class ApiHome extends Controller
             $featuredList = [];
             $tempList = [];
             $i = 0;
+
             foreach ($subs as $key => $value) {
                 if ($value['subscription']['available_subscription'] == "0" && isset($value['subscription']['total'])) {
                     unset($subs[$key]);
@@ -839,6 +840,10 @@ class ApiHome extends Controller
                     $featuredList[$i]['id_featured_subscription'] = $value['id_featured_subscription'];
                     $featuredList[$i]['id_subscription'] = $value['id_subscription'];
                     $featuredList[$i]['url_subscription_image'] = $value['subscription']['url_subscription_image'];
+                    $featuredList[$i]['time_to_end'] = $value['subscription']['time_to_end'];
+                    $featuredList[$i]['subscription_end'] = $value['subscription']['subscription_end'];
+                    $featuredList[$i]['subscription_publish_end'] = $value['subscription']['subscription_publish_end'];
+                    $featuredList[$i]['time_server'] = date('Y-m-d H:i:s');
                     $i++;
                 }
 

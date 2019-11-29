@@ -257,12 +257,13 @@ class ApiSubscription extends Controller
 
             for ($i=$start; $i < $end; $i++) {
                 $subs[$i]['time_to_end']=strtotime($subs[$i]['subscription_end'])-time();
-                // return $subs[$i];
+
                 $list[$i]['id_subscription'] = $subs[$i]['id_subscription'];
                 $list[$i]['url_subscription_image'] = $subs[$i]['url_subscription_image'];
                 $list[$i]['time_to_end'] = $subs[$i]['time_to_end'];
                 $list[$i]['subscription_end'] = $subs[$i]['subscription_end'];
                 $list[$i]['subscription_publish_end'] = $subs[$i]['subscription_publish_end'];
+                $list[$i]['time_server'] = date('Y-m-d H:i:s');
                 array_push($resultData, $subs[$i]);
                 array_push($listData, $list[$i]);
             }
