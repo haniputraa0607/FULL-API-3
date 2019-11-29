@@ -505,6 +505,13 @@ class ApiWebviewController extends Controller
                 }
                 return response()->json(['status' => 'fail', 'messages' => ['Data not valid']]);
             }
+            $dataEncode2 = [
+                'transaction_receipt_number'   => $receipt.','.$select['id_transaction'],
+                'type' => $type
+            ];
+
+            $encode2 = json_encode($dataEncode2);
+            $base2 = base64_encode($encode2);
 
             $dataEncode = [
                 'id'   => $id
@@ -520,7 +527,8 @@ class ApiWebviewController extends Controller
                     'type'                       => $type,
                     'transaction_receipt_number' => $receipt.','.$select['id_transaction'],
                     'button'                     => 'LIHAT DETAIL',
-                    'url'                        => env('API_URL').'api/transaction/web/view/detail/balance?data='.$base
+                    'url'                        => env('API_URL').'api/transaction/web/view/detail/balance?data='.$base,
+                    'trx_url'                    => env('API_URL').'api/transaction/web/view/detail?data='.$base2
                 ],
             ];
 
