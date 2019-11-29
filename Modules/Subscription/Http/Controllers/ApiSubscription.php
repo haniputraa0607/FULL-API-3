@@ -453,6 +453,13 @@ class ApiSubscription extends Controller
                          ->addselect('subscriptions.*', 'subscription_users.*')
                          ->first();
             if ($subs) {
+                if (empty($subs['subscription_image'])) {
+                    $subs['url_subscription_image'] = env('S3_URL_API').'img/default.jpg';
+                }
+                else {
+                    $subs['url_subscription_image'] = env('S3_URL_API').$subs['subscription_image'];
+                }
+                $subs['time_server'] = date('Y-m-d H:i:s');
                 $subs['time_to_end'] = strtotime($subs['subscription_end'])-time();
                 $subs['url_webview'] = env('APP_API_URL') ."api/webview/mysubscription/". $subs['id_subscription_user'];
             }
