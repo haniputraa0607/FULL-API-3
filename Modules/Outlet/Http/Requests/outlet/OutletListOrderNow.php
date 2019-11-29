@@ -16,7 +16,6 @@ class OutletListOrderNow extends FormRequest
     public function rules()
     {
         return [
-            'phone' => 'required',
             'latitude'        => 'required',
             'longitude'        => 'required',
         ];

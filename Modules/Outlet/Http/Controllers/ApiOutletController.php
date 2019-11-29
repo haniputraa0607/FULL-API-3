@@ -1766,18 +1766,19 @@ class ApiOutletController extends Controller
 
     public function listOutletOrderNow(OutletListOrderNow $request){
         $post = $request->json()->all();
+        $user = $request->user();
 
         try{
             $outlet = Outlet::join('transactions','outlets.id_outlet', '=', 'transactions.id_outlet')
                 ->join('users', 'users.id', '=', 'transactions.id_user')
                 ->selectRaw('outlets.*, 
                         (111.111 * DEGREES(ACOS(LEAST(1.0, COS(RADIANS(outlet_latitude))
-                             * COS(RADIANS(-7.787683799999999))
-                             * COS(RADIANS(outlet_longitude - 110.66456829999993))
+                             * COS(RADIANS('.$post['latitude'].'))
+                             * COS(RADIANS(outlet_longitude - '.$post['longitude'].'))
                              + SIN(RADIANS(outlet_latitude))
-                             * SIN(RADIANS(-7.787683799999999)))))) AS distance_in_km' )
+                             * SIN(RADIANS('.$post['latitude'].')))))) AS distance_in_km' )
                 ->with(['user_outlets','city','today', 'outlet_schedules', 'brands'])
-                ->where('users.phone',$post['phone'])
+                ->where('users.phone',$user['phone'])
                 ->where('outlets.outlet_status', 'Active')
                 ->whereHas('brands',function($query){
                     $query->where('brand_active','1');
@@ -1788,10 +1789,10 @@ class ApiOutletController extends Controller
             if(empty($outlet)){
                 $outlet = Outlet::selectRaw('outlets.*, 
                         (111.111 * DEGREES(ACOS(LEAST(1.0, COS(RADIANS(outlet_latitude))
-                             * COS(RADIANS(-7.787683799999999))
-                             * COS(RADIANS(outlet_longitude - 110.66456829999993))
+                             * COS(RADIANS('.$post['latitude'].'))
+                             * COS(RADIANS(outlet_longitude - '.$post['longitude'].'))
                              + SIN(RADIANS(outlet_latitude))
-                             * SIN(RADIANS(-7.787683799999999)))))) AS distance_in_km' )
+                             * SIN(RADIANS('.$post['latitude'].')))))) AS distance_in_km' )
                     ->with(['user_outlets','city','today', 'outlet_schedules', 'brands'])
                     ->where('outlets.outlet_status', 'Active')
                     ->whereHas('brands',function($query){
@@ -1822,7 +1823,7 @@ class ApiOutletController extends Controller
             }else{
                 $result = [
                     'status' => 'fail',
-                    'messages' => [],
+                    'messages' => ['empty'],
                     'result' => [
                         'data' => null
                     ]
