@@ -13,6 +13,10 @@ use Illuminate\Http\Request;
 |
 */
 
-Route::middleware('auth:api')->get('/userfeedback', function (Request $request) {
-    return $request->user();
+Route::group(['middleware' => ['auth:api', 'log_activities'], 'prefix' => 'user-feedback'], function () {
+    Route::post('/', 'ApiUserFeedbackController@index');
+    Route::post('detail', 'ApiUserFeedbackController@show');
+    Route::post('create', 'ApiUserFeedbackController@store');
+    Route::post('get-detail', 'ApiUserFeedbackController@getDetail');
+    Route::post('delete', 'ApiUserFeedbackController@destroy');
 });

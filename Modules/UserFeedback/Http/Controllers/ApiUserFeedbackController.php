@@ -1,0 +1,155 @@
+<?php
+
+namespace Modules\UserFeedback\Http\Controllers;
+
+use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Illuminate\Routing\Controller;
+
+use Modules\UserFeedback\Entities\UserFeedback;
+use Modules\UserFeedback\Entities\RatingItem;
+
+use App\Http\Models\Transaction;
+use App\Http\Models\Outlet;
+
+use App\Lib\MyHelper;
+
+class ApiUserFeedbackController extends Controller
+{
+    /**
+     * Display a listing of the resource.
+     * @return Response
+     */
+    public function index(Request $request)
+    {
+        $list = UserFeedback::with(['transaction'=>function($query){
+            $query->select('id_transaction','transaction_receipt_number','transaction_grandtotal');
+        },'outlet'=>function($query){
+            $query->select('id_outlet','outlet_name','outlet_code');
+        },'user'=>function($query){
+            $query->select('id','name','phone');
+        }]);
+        if($id_outlet = $request->json('id_outlet')){
+            $list->where('id_outlet',$id_outlet);
+        }
+        if($request->page){
+            $list = $list->paginate(10);
+        }else{
+            $list = $list->get();
+        }
+        return MyHelper::checkGet($list);
+    }
+
+    /**
+     * Store a newly created resource in storage.
+     * @param Request $request
+     * @return Response
+     */
+    public function store(Request $request)
+    {
+        $post = $request->json()->all();
+        $user = $request->user();
+        $id_trx = explode(',',$post['id']);
+        $id_transaction = $id_trx[1]??'';
+        $rn = $id_trx[0]??'';
+        $transaction = Transaction::select('id_transaction','id_outlet')
+        ->where('transaction_receipt_number',$id_trx[0])
+        ->find($id_transaction);
+        if(!$transaction){
+            return [
+                'status' => 'fail',
+                'messages' => ['Transaction not found']
+            ];
+        }
+        $rating = RatingItem::select('text')->find($post['id_rating_item']);
+        if(!$rating){
+            return [
+                'status' => 'fail',
+                'messages' => ['Rating item not found']
+            ];
+        }
+        if(($post['image']??false)&&($post['ext']??false)){
+            $upload = MyHelper::uploadFile($post['image'],'img/user_feedback/',$post['ext']);
+            if($upload['status']!='success'){
+                return [
+                    'status' => 'fail',
+                    'messages' => ['Fail upload file']
+                ];
+            }
+        }
+        $insert = [
+            'id_outlet' => $transaction->id_outlet,
+            'id_user' => $user->id,
+            'id_rating_item'=> $post['id_rating_item'],
+            'rating_item_text'=> $rating->text,
+            'id_transaction'=> $id_transaction,
+            'notes'=> $post['notes'],
+            'image'=> $upload['path']??null
+        ];
+        $create = UserFeedback::updateOrCreate(['id_transaction'=>$id_transaction],$insert);
+        return MyHelper::checkCreate($create);
+    }
+
+    /**
+     * Show the specified resource.
+     * @param int $id
+     * @return Response
+     */
+    public function show(Request $request)
+    {
+        $feedback = UserFeedback::find($request->post('id_user_feedback'));
+        if(!$feedback){
+            return [
+                'status'=>'fail',
+                'messages'=>['User feedback not found']
+            ];
+        }
+        $feedback->load(['transaction'=>function($query){
+            $query->select('id_transaction','transaction_receipt_number','transaction_grandtotal');
+        },'outlet'=>function($query){
+            $query->select('id_outlet','outlet_name','outlet_code');
+        },'user'=>function($query){
+            $query->select('id','name','phone');
+        }]);
+        return MyHelper::checkGet($feedback);
+    }
+
+    /**
+     * Remove the specified resource from storage.
+     * @param int $id
+     * @return Response
+     */
+    public function destroy(Request $request)
+    {
+        $delete = UserFeedback::where(['id_user_feedback'=>$request->json('id_user_feedback')])->delete();
+        return MyHelper::checkDelete($delete);
+    }
+
+    /**
+     * Remove the specified resource from storage.
+     * @param int $id
+     * @return Response
+     */
+    public function getDetail(Request $request) {
+        $post = $request->json()->all();
+        $id_trx = explode(',',$post['id']);
+        $id_transaction = $id_trx[1]??'';
+        $rn = $id_trx[0]??'';
+        // rating item
+        $transaction = Transaction::select('id_transaction','id_outlet')->with(['outlet'=>function($query){
+            $query->select('outlet_name','id_outlet');
+        }])
+        ->where('transaction_receipt_number',$id_trx[0])
+        ->find($id_transaction);
+        if(!$transaction){
+            return [
+                'status' => 'fail',
+                'messages' => ['Transaction not found']
+            ];
+        }
+        $result['id_transaction'] = $id_transaction;
+        $result['outlet'] = $transaction['outlet'];
+        $result['ratings'] = RatingItem::select('id_rating_item','image','text')->orderBy('order')->get();
+        return $result;
+    }
+}

@@ -10,7 +10,3 @@
 | contains the "web" middleware group. Now create something great!
 |
 */
-
-Route::prefix('userfeedback')->group(function() {
-    Route::get('/', 'UserFeedbackController@index');
-});
