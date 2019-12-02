@@ -19,7 +19,7 @@ class CreateUserFeedbacksTable extends Migration
             $table->unsignedInteger('id_user');
             $table->unsignedInteger('id_transaction');
             $table->unsignedInteger('id_rating_item')->nullable();
-            $table->unsignedInteger('rating_item_text');
+            $table->string('rating_item_text');
             $table->text('notes')->nullable();
             $table->string('image')->nullable();
             $table->timestamps();

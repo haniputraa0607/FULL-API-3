@@ -28,7 +28,7 @@ class ApiUserFeedbackController extends Controller
     public function index(Request $request)
     {
         $list = UserFeedback::select('user_feedbacks.*')->join('outlets','outlets.id_outlet','=','user_feedbacks.id_outlet')->with(['transaction'=>function($query){
-            $query->select('id_transaction','transaction_receipt_number','transaction_grandtotal');
+            $query->select('id_transaction','transaction_receipt_number','trasaction_type','transaction_grandtotal');
         },'user'=>function($query){
             $query->select('id','name','phone');
         }]);
@@ -100,7 +100,7 @@ class ApiUserFeedbackController extends Controller
      */
     public function show(DetailRequest $request)
     {
-        $feedback = UserFeedback::find($request->post('id_user_feedback'));
+        $feedback = UserFeedback::where(['id_transaction'=>$request->post('id_transaction')])->find($request->post('id_user_feedback'));
         if(!$feedback){
             return [
                 'status'=>'fail',
@@ -108,7 +108,7 @@ class ApiUserFeedbackController extends Controller
             ];
         }
         $feedback->load(['transaction'=>function($query){
-            $query->select('id_transaction','transaction_receipt_number','transaction_grandtotal');
+            $query->select('id_transaction','transaction_receipt_number','trasaction_type','transaction_grandtotal');
         },'outlet'=>function($query){
             $query->select('id_outlet','outlet_name','outlet_code');
         },'user'=>function($query){
