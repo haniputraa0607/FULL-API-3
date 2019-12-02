@@ -104,6 +104,19 @@ class ApiSubscriptionClaim extends Controller
                                         ]);
                                     }
 
+                                    $subs_receipt = 'SUBS-'.time().sprintf("%05d", $voucher->id_subscription_user);
+                                    $updateSubs = SubscriptionUser::where('id_subscription_user', '=', $voucher->id_subscription_user)->update(['subscription_user_receipt_number' => $subs_receipt]);
+
+                                    if (!$updateSubs) {
+                                        DB::rollback();
+                                        return response()->json([
+                                            'status'   => 'fail',
+                                            'messages' => ['Failed to update data.']
+                                        ]);
+                                    }
+
+                                    $voucher['subscription_user_receipt_number'] = $subs_receipt;
+
                                     for ($i=1; $i <= $dataSubs->subscription_voucher_total; $i++) {
 
                                         // generate voucher code
