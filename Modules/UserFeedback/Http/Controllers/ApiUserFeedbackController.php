@@ -27,15 +27,13 @@ class ApiUserFeedbackController extends Controller
      */
     public function index(Request $request)
     {
-        $list = UserFeedback::with(['transaction'=>function($query){
+        $list = UserFeedback::select('user_feedbacks.*')->join('outlets','outlets.id_outlet','=','user_feedbacks.id_outlet')->with(['transaction'=>function($query){
             $query->select('id_transaction','transaction_receipt_number','transaction_grandtotal');
-        },'outlet'=>function($query){
-            $query->select('id_outlet','outlet_name','outlet_code');
         },'user'=>function($query){
             $query->select('id','name','phone');
         }]);
-        if($id_outlet = $request->json('id_outlet')){
-            $list->where('id_outlet',$id_outlet);
+        if($outlet_code = $request->json('outlet_code')){
+            $list->where('outlet_code',$outlet_code);
         }
         if($request->page){
             $list = $list->paginate(10);
