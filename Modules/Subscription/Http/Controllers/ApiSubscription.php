@@ -198,7 +198,7 @@ class ApiSubscription extends Controller
             //text konfirmasi pembelian
             if($subs[0]['subscription_price_type']=='free'){
                 //voucher free
-                $payment_message = Setting::where('key', 'payment_messages')->pluck('value_text')->first()??'Kamu yakin ingin mengambil subscription ini?';
+                $payment_message = Setting::where('key', 'payment_messages')->pluck('value_text')->first()??'Kamu yakin ingin membeli subscription ini?';
                 $payment_message = MyHelper::simpleReplace($payment_message,['subscription_title'=>$subs[0]['subscription_title']]);
             }elseif($subs[0]['subscription_price_type']=='point'){
                 $payment_message = Setting::where('key', 'payment_messages_point')->pluck('value_text')->first()??'Anda akan menukarkan %point% points anda dengan Subscription %subscription_title%?';
@@ -262,6 +262,9 @@ class ApiSubscription extends Controller
                 $list[$i]['time_to_end'] = $subs[$i]['time_to_end'];
                 $list[$i]['subscription_end'] = $subs[$i]['subscription_end'];
                 $list[$i]['subscription_publish_end'] = $subs[$i]['subscription_publish_end'];
+                $list[$i]['subscription_price_cash'] = $subs[$i]['subscription_price_cash'];
+                $list[$i]['subscription_price_point'] = $subs[$i]['subscription_price_point'];
+                $list[$i]['subscription_price_type'] = $subs[$i]['subscription_price_type'];
                 $list[$i]['time_server'] = date('Y-m-d H:i:s');
                 array_push($resultData, $subs[$i]);
                 array_push($listData, $list[$i]);
