@@ -9,6 +9,11 @@ use Illuminate\Routing\Controller;
 use Modules\UserFeedback\Entities\UserFeedback;
 use Modules\UserFeedback\Entities\RatingItem;
 
+use Modules\UserFeedback\Http\Requests\CreateRequest;
+use Modules\UserFeedback\Http\Requests\DeleteRequest;
+use Modules\UserFeedback\Http\Requests\DetailRequest;
+use Modules\UserFeedback\Http\Requests\GetFormRequest;
+
 use App\Http\Models\Transaction;
 use App\Http\Models\Outlet;
 
@@ -45,7 +50,7 @@ class ApiUserFeedbackController extends Controller
      * @param Request $request
      * @return Response
      */
-    public function store(Request $request)
+    public function store(CreateRequest $request)
     {
         $post = $request->json()->all();
         $user = $request->user();
@@ -95,7 +100,7 @@ class ApiUserFeedbackController extends Controller
      * @param int $id
      * @return Response
      */
-    public function show(Request $request)
+    public function show(DetailRequest $request)
     {
         $feedback = UserFeedback::find($request->post('id_user_feedback'));
         if(!$feedback){
@@ -119,7 +124,7 @@ class ApiUserFeedbackController extends Controller
      * @param int $id
      * @return Response
      */
-    public function destroy(Request $request)
+    public function destroy(DeleteRequest $request)
     {
         $delete = UserFeedback::where(['id_user_feedback'=>$request->json('id_user_feedback')])->delete();
         return MyHelper::checkDelete($delete);
@@ -130,7 +135,7 @@ class ApiUserFeedbackController extends Controller
      * @param int $id
      * @return Response
      */
-    public function getDetail(Request $request) {
+    public function getDetail(GetFormRequest $request) {
         $post = $request->json()->all();
         $id_trx = explode(',',$post['id']);
         $id_transaction = $id_trx[1]??'';
