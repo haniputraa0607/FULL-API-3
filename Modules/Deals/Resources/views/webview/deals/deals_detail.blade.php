@@ -154,10 +154,10 @@
 			@php
 				$deals = $deals[0];
                 if ($deals['deals_voucher_price_cash'] != "") {
-                    $deals_fee = MyHelper::thousand_number_format($deals['deals_voucher_price_cash']);
+					$deals_fee = number_format($deals['deals_voucher_price_cash'],0,",",".");
                 }
                 elseif ($deals['deals_voucher_price_point']) {
-                    $deals_fee = $deals['deals_voucher_price_point'] . " poin";
+                    $deals_fee = number_format($deals['deals_voucher_price_point'],0,",",".") . " poin";
                 }
                 else {
                     $deals_fee = "GRATIS";

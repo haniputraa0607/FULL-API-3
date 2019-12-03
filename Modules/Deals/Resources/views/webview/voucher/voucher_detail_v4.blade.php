@@ -250,9 +250,9 @@
 				<div style="background-color: rgb(255, 255, 255);" class="title-wrapper col-md-12 clearfix ProductSans">
 					<div class="title" style="padding-top: 0px; padding-bottom: 5px;">
 						@if (isset($voucher['deal_voucher']['deal']['deals_voucher_price_point']))
-							{{number_format($voucher['deal_voucher']['deal']['deals_voucher_price_point'])}} points
+							{{number_format($voucher['deal_voucher']['deal']['deals_voucher_price_point'],0,",",".")}} points
 						@elseif (isset($voucher['deal_voucher']['deal']['deals_voucher_price_cash']))
-							Rp {{number_format($voucher['deal_voucher']['deal']['deals_voucher_price_cash'])}}
+							{{number_format($voucher['deal_voucher']['deal']['deals_voucher_price_cash'],0,",",".")}}
 						@else
 							Gratis
 						@endif

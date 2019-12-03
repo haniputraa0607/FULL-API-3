@@ -249,9 +249,9 @@
 
 				@php
 					if ($deals['voucher_price_point'] != null) {
-						$payment = number_format($deals['voucher_price_point']).' points';
+						$payment = number_format($deals['voucher_price_point'],0,",",".").' points';
 					} elseif ($deals['voucher_price_cash'] != null) {
-						$payment = number_format($deals['voucher_price_cash']).' points';
+						$payment = number_format($deals['voucher_price_cash'],0,",",".");
 					} else {
 						$payment = 'Gratis';
 					}
