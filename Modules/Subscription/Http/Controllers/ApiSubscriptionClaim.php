@@ -57,7 +57,7 @@ class ApiSubscriptionClaim extends Controller
             // CEK VALID DATE
             if ($this->checkValidDate($dataSubs)) {
                 // if (!empty($dataSubs->deals_voucher_price_cash) || $dataSubs->deals_promo_id_type == "nominal") {
-                if (!empty($dataSubs->subscription_price_cash)) {
+                if (!empty($dataSubs->subscription_price_cash) || !empty($dataSubs->subscription_price_point)) {
                     return response()->json([
                         'status' => 'fail',
                         'messages' => ['You have to pay subscription.']

@@ -7,6 +7,7 @@ use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
 
 use App\Lib\MyHelper;
+use App\Lib\Midtrans;
 
 use Modules\Subscription\Entities\Subscription;
 use Modules\Subscription\Entities\FeaturedSubscription;
@@ -14,6 +15,7 @@ use Modules\Subscription\Entities\SubscriptionOutlet;
 use Modules\Subscription\Entities\SubscriptionUser;
 use Modules\Subscription\Entities\SubscriptionUserVoucher;
 use App\Http\Models\Setting;
+use App\Http\Models\LogBalance;
 
 class ApiSubscriptionCron extends Controller
 {
@@ -33,13 +35,13 @@ class ApiSubscriptionCron extends Controller
 
         $getSubs = SubscriptionUser::where('paid_status', 'Pending')->where('bought_at', '<=', $now)->get();
 
-        return $getSubs;
         if (empty($getSubs)) {
             return response()->json(['empty']);
         }
 
         foreach ($getSubs as $key => $value) {
-            $singleSubs = Subscription::where('id_subscription_user', '=', $value->id_subscription_user)->first();
+            $singleSubs = SubscriptionUser::where('id_subscription_user', '=', $value->id_subscription_user)->with('subscription')->first();
+            
             if (empty($singleSubs)) {
                 continue;
             }
@@ -61,8 +63,32 @@ class ApiSubscriptionCron extends Controller
             }
 
             $logBalance = LogBalance::where('id_reference', $singleSubs->id_subscription_user)->where('source', 'Subscription Balance')->where('balance', '<', 0)->get();
+
+            foreach ($logBalance as $key => $value) {
+                $reversal = app($this->balance)->addLogBalance($singleSubs->id_user, abs($value['balance']), $singleSubs->subscription_user_receipt_number, 'Reversal', $singleSubs->subscription_price_cash);
+                $user = User::where('id', $singleSubs->id_user)->first();
+
+                $send = app($this->autocrm)->SendAutoCRM('Buy Subscription Failed Point Refund', $user->phone,
+                    [
+                        "subscription_title"        => $singleSubs->subscription['subscription_title'],
+                        "subscription_price_cash"   => $singleSubs->subscription_price_cash,
+                        "bought_at"                 => $singleSubs->bought_at,
+                        "id_subscription"           => $singleSubs->id_subscription,
+                        "used_point"                => (string) abs($value['balance'])
+
+                    ]
+                );
+                if($send != true){
+                    DB::rollback();
+                    return response()->json([
+                            'status' => 'fail',
+                            'messages' => ['Failed Send notification to customer']
+                        ]);
+                }
+            }
         }
-        return ['ok'];
+
+        return response()->json(['success']);
     }
 
 }
