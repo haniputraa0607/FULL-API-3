@@ -1435,6 +1435,14 @@ class FeaturesTableSeeder extends Seeder
                 'created_at' => date('Y-m-d H:00:00'),
                 'updated_at' => date('Y-m-d H:00:00'),
             ),
+            178 =>
+            array(
+                'id_feature' => 179,
+                'feature_type' => 'List',
+                'feature_module' => 'User Feedback',
+                'created_at' => date('Y-m-d H:00:00'),
+                'updated_at' => date('Y-m-d H:00:00'),
+            ),
         ));
     }
 }
