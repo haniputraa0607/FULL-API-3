@@ -97,6 +97,18 @@ class ApiUserFeedbackController extends Controller
     }
 
     /**
+     * User refuse to rate
+     * @param Request $request
+     * @return Response
+     */
+    public function refuse(Request $request)
+    {
+        $user = $request->user();
+        $update = Transaction::where('id_user',$user->id)->update(['show_rate_popup'=>0]);
+        return MyHelper::checkUpdate($update);
+    }
+
+    /**
      * Show the specified resource.
      * @param int $id
      * @return Response
