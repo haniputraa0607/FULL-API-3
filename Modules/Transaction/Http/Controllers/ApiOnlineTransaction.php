@@ -786,8 +786,9 @@ class ApiOnlineTransaction extends Controller
 
             $order_id = MyHelper::createrandom(4, 'Besar Angka');
 
-            //cek unique order id today
+            //cek unique order id uniq today and outlet 
             $cekOrderId = TransactionShipment::join('transactions', 'transactions.id_transaction', 'transaction_shipments.id_transaction')
+                                            ->where('id_outlet', $insertTransaction['id_outlet'])
                                             ->where('order_id', $order_id)
                                             ->whereDate('transaction_date', date('Y-m-d'))
                                             ->first();
@@ -795,6 +796,7 @@ class ApiOnlineTransaction extends Controller
                 $order_id = MyHelper::createrandom(4, 'Besar Angka');
 
                 $cekOrderId = TransactionShipment::join('transactions', 'transactions.id_transaction', 'transaction_shipments.id_transaction')
+                                                ->where('id_outlet', $insertTransaction['id_outlet'])
                                                 ->where('order_id', $order_id)
                                                 ->whereDate('transaction_date', date('Y-m-d'))
                                                 ->first();
@@ -861,6 +863,7 @@ class ApiOnlineTransaction extends Controller
 
             //cek unique order id today
             $cekOrderId = TransactionPickup::join('transactions', 'transactions.id_transaction', 'transaction_pickups.id_transaction')
+                                            ->where('id_outlet', $insertTransaction['id_outlet'])
                                             ->where('order_id', $order_id)
                                             ->whereDate('transaction_date', date('Y-m-d'))
                                             ->first();
@@ -868,6 +871,7 @@ class ApiOnlineTransaction extends Controller
                 $order_id = MyHelper::createrandom(4, 'Besar Angka');
 
                 $cekOrderId = TransactionPickup::join('transactions', 'transactions.id_transaction', 'transaction_pickups.id_transaction')
+                                                ->where('id_outlet', $insertTransaction['id_outlet'])
                                                 ->where('order_id', $order_id)
                                                 ->whereDate('transaction_date', date('Y-m-d'))
                                                 ->first();
@@ -875,6 +879,7 @@ class ApiOnlineTransaction extends Controller
 
             //cek unique order id today
             $cekOrderId = TransactionPickup::join('transactions', 'transactions.id_transaction', 'transaction_pickups.id_transaction')
+                                            ->where('id_outlet', $insertTransaction['id_outlet'])
                                             ->where('order_id', $order_id)
                                             ->whereDate('transaction_date', date('Y-m-d'))
                                             ->first();
@@ -882,6 +887,7 @@ class ApiOnlineTransaction extends Controller
                 $order_id = MyHelper::createrandom(4, 'Besar Angka');
 
                 $cekOrderId = TransactionPickup::join('transactions', 'transactions.id_transaction', 'transaction_pickups.id_transaction')
+                                                ->where('id_outlet', $insertTransaction['id_outlet'])
                                                 ->where('order_id', $order_id)
                                                 ->whereDate('transaction_date', date('Y-m-d'))
                                                 ->first();
