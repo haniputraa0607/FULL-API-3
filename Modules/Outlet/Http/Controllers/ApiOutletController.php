@@ -548,9 +548,7 @@ class ApiOutletController extends Controller
             $loopdata=&$outlet;
         }
 
-        if(isset($post['type']) && $post['type'] == 'transaction'){
-            $outlet = $this->setAvailableOutlet($outlet);
-        }
+        $outlet = $this->setAvailableOutlet($outlet,($post['type']??false) == 'transaction');
         $loopdata = array_map(function($var) use ($post){
             $var['url']=env('API_URL').'api/outlet/webview/'.$var['id_outlet'];
             if(($post['latitude']??false)&&($post['longitude']??false)){
@@ -628,7 +626,7 @@ class ApiOutletController extends Controller
         }
 
         // outlet
-        $outlet = Outlet::select('outlets.id_outlet','outlets.outlet_name','outlets.outlet_phone','outlets.outlet_code','outlets.outlet_status','outlets.outlet_address','outlets.id_city','outlet_latitude','outlet_longitude')->where('outlet_status', 'Active')->whereNotNull('id_city')->orderBy('outlet_name','asc');
+        $outlet = Outlet::select('outlets.id_outlet','outlets.outlet_name','outlets.outlet_phone','outlets.outlet_code','outlets.outlet_status','outlets.outlet_address','outlets.id_city','outlet_latitude','outlet_longitude')->with(['today','brands'=>function($query){$query->select('brands.id_brand','name_brand','logo_brand');}])->where('outlet_status', 'Active')->whereNotNull('id_city')->orderBy('outlet_name','asc');
         if($request->json('search') && $request->json('search') != ""){
             $outlet = $outlet->where('outlet_name', 'LIKE', '%'.$request->json('search').'%');
         }
@@ -649,9 +647,7 @@ class ApiOutletController extends Controller
                 return $a['dist'] <=> $b['dist'];
             });
 
-            if($request->json('type') && $request->json('type') == 'transaction'){
-                $outlet = $this->setAvailableOutlet($outlet);
-            }
+            $outlet = $this->setAvailableOutlet($outlet,($post['type']??false) == 'transaction');
         }else{
             return response()->json(['status' => 'fail', 'messages' => ['There is no open store','at this moment']]);
         }
@@ -835,7 +831,7 @@ class ApiOutletController extends Controller
         $grabfood = $request->json('grabfood');
 
         // outlet
-        $outlet = Outlet::with(['today'])->select('outlets.id_outlet','outlets.outlet_name','outlets.outlet_phone','outlets.outlet_code','outlets.outlet_status','outlets.outlet_address','outlets.id_city','outlet_latitude','outlet_longitude')->where('outlet_status', 'Active')->whereNotNull('id_city')->orderBy('outlet_name','asc');
+        $outlet = Outlet::with(['today'])->select('outlets.id_outlet','outlets.outlet_name','outlets.outlet_phone','outlets.outlet_code','outlets.outlet_status','outlets.outlet_address','outlets.id_city','outlet_latitude','outlet_longitude')->with(['brands'=>function($query){$query->select('brands.id_brand','name_brand','logo_brand');}])->where('outlet_status', 'Active')->whereNotNull('id_city')->orderBy('outlet_name','asc');
 
         $outlet->whereHas('brands',function($query){
             $query->where('brand_active','1');
@@ -911,9 +907,7 @@ class ApiOutletController extends Controller
 				}
             }
 
-            if($request->json('type') && $request->json('type') == 'transaction'){
-                $urutan = $this->setAvailableOutlet($urutan);
-            }
+            $urutan = $this->setAvailableOutlet($urutan,($post['type']??false) == 'transaction');
         } else {
             if($countAll){
                 if($request->json('search')){
@@ -1075,7 +1069,7 @@ class ApiOutletController extends Controller
     }
 
     // unset outlet yang tutup dan libur
-    function setAvailableOutlet($listOutlet){
+    function setAvailableOutlet($listOutlet,$unset=true){
         $processing = '0';
         $settingTime = Setting::where('key', 'processing_time')->first();
         if($settingTime && $settingTime->value){
@@ -1085,16 +1079,32 @@ class ApiOutletController extends Controller
         $outlet = $listOutlet;
         foreach($listOutlet as $index => $dataOutlet){
             if($dataOutlet['today']['open'] == null || $dataOutlet['today']['close'] == null){
-                unset($outlet[$index]);
+                if($unset){
+                    unset($outlet[$index]);
+                }else{
+                    $outlet[$index]['status'] = 'closed';
+                }
             }else{
                 if($dataOutlet['today']['is_closed'] == '1'){
-                    unset($outlet[$index]);
+                    if($unset){
+                        unset($outlet[$index]);
+                    }else{
+                        $outlet[$index]['status'] = 'closed';
+                    }
                 }else{
                     if($dataOutlet['today']['open'] != "00:00" && $dataOutlet['today']['close'] != "00:00"){
                         if($dataOutlet['today']['open'] && date('H:i:01') < date('H:i', strtotime($dataOutlet['today']['open']))){
-                            unset($outlet[$index]);
+                            if($unset){
+                                unset($outlet[$index]);
+                            }else{
+                                $outlet[$index]['status'] = 'closed';
+                            }
                         }elseif($dataOutlet['today']['close'] && date('H:i') > date('H:i', strtotime('-'.$processing.' minutes', strtotime($dataOutlet['today']['close'])))){
-                            unset($outlet[$index]);
+                            if($unset){
+                                unset($outlet[$index]);
+                            }else{
+                                $outlet[$index]['status'] = 'closed';
+                            }
                         }else{
                             $holiday = Holiday::join('outlet_holidays', 'holidays.id_holiday', 'outlet_holidays.id_holiday')->join('date_holidays', 'holidays.id_holiday', 'date_holidays.id_holiday')
                             ->where('id_outlet', $dataOutlet['id_outlet'])->whereDay('date_holidays.date', date('d'))->whereMonth('date_holidays.date', date('m'))->get();
@@ -1102,11 +1112,19 @@ class ApiOutletController extends Controller
                                 foreach($holiday as $i => $holi){
                                     if($holi['yearly'] == '0'){
                                         if($holi['date'] == date('Y-m-d')){
-                                            unset($outlet[$index]);
+                                            if($unset){
+                                                unset($outlet[$index]);
+                                            }else{
+                                                $outlet[$index]['status'] = 'closed';
+                                            }
                                             break;
                                         }
                                     }else{
-                                        unset($outlet[$index]);
+                                        if($unset){
+                                            unset($outlet[$index]);
+                                        }else{
+                                            $outlet[$index]['status'] = 'closed';
+                                        }
                                         break;
                                     }
                                 }
@@ -1115,6 +1133,9 @@ class ApiOutletController extends Controller
                         }
                     }
                 }
+            }
+            if(!($outlet[$index]['status']??false)&&!$unset){
+                $outlet[$index]['status'] = 'open';
             }
             unset($outlet[$index]['product_prices']);
             unset($outlet[$index]['outlet_schedules']);
