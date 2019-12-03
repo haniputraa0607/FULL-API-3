@@ -951,7 +951,9 @@ class ApiOnlineTransaction extends Controller
                     'messages'  => ['Insert Pickup Order Transaction Failed']
                 ]);
             }
-
+            if($dataPickup['taken_at']){
+                Transaction::where('id_transaction',$dataPickup['id_transaction'])->update(['show_rate_popup'=>1]);
+            }
             //insert pickup go-send
             if($post['type'] == 'GO-SEND'){
                 $dataGoSend['id_transaction_pickup'] = $insertPickup['id_transaction_pickup'];

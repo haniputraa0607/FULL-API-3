@@ -966,6 +966,8 @@ Detail: ".$link['short'],
             } else {
                 $detail->taken_at = date('Y-m-d H:i:s');
                 $detail->id_admin_outlet_taken = $post['id'];
+                $transaction->show_rate_popup = 1;
+                $transaction->save();
             }
         }
 
