@@ -27,6 +27,11 @@ Route::group(['middleware' => ['auth:api', 'log_activities'], 'prefix' => 'subsc
     });
 });
 
+/* CRON */
+Route::group(['prefix' => 'cron/subscription'], function () {
+    Route::any('/expire', 'ApiSubscriptionCron@cron');
+});
+
 /* Webview */
 Route::group(['middleware' => ['web'], 'prefix' => 'webview'], function () {
     Route::any('subscription/{id_subscription}', 'ApiSubscriptionWebview@webviewSubscriptionDetail');

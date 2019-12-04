@@ -696,6 +696,12 @@ class ApiHome extends Controller
             unset($retUser[$hide]);
         }
 
+        // chek vote transaksi
+        $trx = Transaction::where([
+            ['id_user',$user->id],
+            ['show_rate_popup',1]
+        ])->orderBy('transaction_date')->first();
+        $rate_popup = $trx?$trx->transaction_receipt_number.','.$trx->id_transaction:null;
         $retUser['membership']=$membership;
         $result = [
             'status' => 'success',
@@ -704,7 +710,8 @@ class ApiHome extends Controller
                 'user_info'     => $retUser,
                 'qr_code'       => $qrCode??'',
                 'greeting'      => $greetingss??'',
-                'expired_qr'    => $expired??''
+                'expired_qr'    => $expired??'',
+                'rate_popup'    => $rate_popup
             ]
         ];
 

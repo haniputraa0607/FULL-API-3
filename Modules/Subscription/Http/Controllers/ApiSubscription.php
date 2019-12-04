@@ -16,6 +16,7 @@ use Modules\Subscription\Entities\SubscriptionUserVoucher;
 use App\Http\Models\Setting;
 
 use Modules\Subscription\Http\Requests\ListSubscription;
+use DB;
 
 class ApiSubscription extends Controller
 {
@@ -27,6 +28,29 @@ class ApiSubscription extends Controller
     }
 
     public $saveImage = "img/subscription/";
+
+    public function create(Request $request)
+    {
+        $data = $this->checkInputan($data);
+
+        // error
+        if (isset($data['error'])) {
+            unset($data['error']);
+            return response()->json($data);
+        }
+        $save = Subscription::create($data);
+
+        if ($save) {
+            if (isset($data['id_outlet'])) {
+                $saveOutlet = $this->saveOutlet($save, $data['id_outlet']);
+
+                if (!$saveOutlet) {
+                    return false;
+                }
+            }
+        }
+        return $save;
+    }
 
     public function listSubscription(ListSubscription $request)
     {
@@ -47,8 +71,30 @@ class ApiSubscription extends Controller
         }
 
         if ($request->json('id_subscription')) {
+            // add content for detail subscription
             $subs = $subs->where('id_subscription', '=', $request->json('id_subscription'))
-                        ->with('outlets', 'users');
+                        ->with([
+                            'outlets.city',
+                            'subscription_content' => function($q) {
+                                $q->orderBy('order')
+                                    ->where('is_active', '=', 1)
+                                    ->addSelect(
+                                        'id_subscription', 
+                                        'id_subscription_content', 
+                                        'title',
+                                        'order'
+                                    );
+                            },
+                            'subscription_content.subscription_content_details' => function($q) {
+                                $q->orderBy('order')
+                                    ->addSelect(
+                                        'id_subscription_content_detail',
+                                        'id_subscription_content',
+                                        'content',
+                                        'order'
+                                    );
+                            }
+                        ]);
         }
 
         if ($request->json('publish')) {
@@ -198,10 +244,10 @@ class ApiSubscription extends Controller
             //text konfirmasi pembelian
             if($subs[0]['subscription_price_type']=='free'){
                 //voucher free
-                $payment_message = Setting::where('key', 'payment_messages')->pluck('value_text')->first()??'Kamu yakin ingin mengambil subscription ini?';
+                $payment_message = Setting::where('key', 'payment_messages')->pluck('value_text')->first()??'Kamu yakin ingin membeli subscription ini?';
                 $payment_message = MyHelper::simpleReplace($payment_message,['subscription_title'=>$subs[0]['subscription_title']]);
             }elseif($subs[0]['subscription_price_type']=='point'){
-                $payment_message = Setting::where('key', 'payment_messages_point')->pluck('value_text')->first()??'Anda akan menukarkan %point% points anda dengan Subscription %subscription_title%?';
+                $payment_message = Setting::where('key', 'payment_messages_point')->pluck('value_text')->first()??'Anda akan menukarkan %point% points anda dengan subscription %subscription_title%?';
                 $payment_message = MyHelper::simpleReplace($payment_message,['point'=>$subs[0]['subscription_price_point'],'subscription_title'=>$subs[0]['subscription_title']]);
             }else{
                 $payment_message = Setting::where('key', 'payment_messages')->pluck('value_text')->first()??'Kamu yakin ingin membeli subscription %subscription_title%?';
@@ -262,6 +308,9 @@ class ApiSubscription extends Controller
                 $list[$i]['time_to_end'] = $subs[$i]['time_to_end'];
                 $list[$i]['subscription_end'] = $subs[$i]['subscription_end'];
                 $list[$i]['subscription_publish_end'] = $subs[$i]['subscription_publish_end'];
+                $list[$i]['subscription_price_cash'] = $subs[$i]['subscription_price_cash'];
+                $list[$i]['subscription_price_point'] = $subs[$i]['subscription_price_point'];
+                $list[$i]['subscription_price_type'] = $subs[$i]['subscription_price_type'];
                 $list[$i]['time_server'] = date('Y-m-d H:i:s');
                 array_push($resultData, $subs[$i]);
                 array_push($listData, $list[$i]);
@@ -347,23 +396,24 @@ class ApiSubscription extends Controller
     }
 
     /* INI LIST KOTA */
-    public function kota($deals, $city = "", $admin=false)
+    public function kota($subs, $city = "", $admin=false)
     {
-
         $timeNow = date('Y-m-d H:i:s');
 
-        foreach ($deals as $key => $value) {
+        foreach ($subs as $key => $value) {
             $markerCity = 0;
 
-            $deals[$key]['outlet_by_city'] = [];
+            $subs[$key]['outlet_by_city'] = [];
 
             // set time
-            $deals[$key]['time_server'] = $timeNow;
+            $subs[$key]['time_server'] = $timeNow;
 
             if (!empty($value['outlets'])) {
                 // ambil kotanya dulu
+        // return $value['outlets'];
                 $kota = array_column($value['outlets'], 'city');
                 $kota = array_values(array_map("unserialize", array_unique(array_map("serialize", $kota))));
+        // return [$kota];
 
                 // jika ada pencarian kota
                 if (!empty($city)) {
@@ -392,14 +442,14 @@ class ApiSubscription extends Controller
                     }
                 }
 
-                $deals[$key]['outlet_by_city'] = $kota;
+                $subs[$key]['outlet_by_city'] = $kota;
             }
 
-            // unset($deals[$key]['outlets']);
+            // unset($subs[$key]['outlets']);
             // jika ada pencarian kota
             if (!empty($city)) {
                 if ($markerCity == 0) {
-                    unset($deals[$key]);
+                    unset($subs[$key]);
                     continue;
                 }
             }
@@ -412,23 +462,23 @@ class ApiSubscription extends Controller
 
             if(is_numeric($calc)){
                 if($calc||$admin){
-                    $deals[$key]['percent_subscription'] = $calc*100/$value['subscription_total'];
+                    $subs[$key]['percent_subscription'] = $calc*100/$value['subscription_total'];
                 }else{
-                    unset($deals[$key]);
+                    unset($subs[$key]);
                     continue;
                 }
             }else{
-                $deals[$key]['percent_voucher'] = 100;
+                $subs[$key]['percent_voucher'] = 100;
             }
-            $deals[$key]['available_subscription'] = (string) $calc;
-            // deals masih ada?
-            // print_r($deals[$key]['available_voucher']);
+            $subs[$key]['available_subscription'] = (string) $calc;
+            // subs masih ada?
+            // print_r($subs[$key]['available_voucher']);
         }
 
-        // print_r($deals); exit();
-        $deals = array_values($deals);
+        // print_r($subs); exit();
+        $subs = array_values($subs);
 
-        return $deals;
+        return $subs;
     }
 
     public function mySubscription(Request $request)
@@ -437,21 +487,40 @@ class ApiSubscription extends Controller
         $user = $request->user();
 
         $subs = SubscriptionUser::
-                leftjoin('subscriptions', 'subscription_users.id_subscription', '=', 'subscriptions.id_subscription')
+                with([
+                    'subscription.outlets.city', 
+                    'subscription_user_vouchers.transaction' => function($q){
+                        $q->select('id_outlet', 'id_transaction');
+                    },
+                    'subscription_user_vouchers.transaction.productTransaction' => function($q){
+                        $q->select(
+                            DB::raw('SUM(transaction_product_qty) as total_item'),
+                            'id_transaction_product',
+                            'id_transaction'
+                        );
+                    },
+                    'subscription_user_vouchers.transaction.outlet' => function($q){
+                        // $q->select('id_outlet','outlet_name');
+                    }
+                ])
                 ->where('id_user', $user['id'])
-                ->where('subscription_users.subscription_expired_at', '>=',date('Y-m-d H:i:s'))
+                ->where('subscription_expired_at', '>=',date('Y-m-d H:i:s'))
                 ->whereIn('paid_status', ['Completed','Free'])
                 ->withCount(['subscription_user_vouchers' => function($q){
                     $q->whereNotNull('used_at');
                 }]);
-                // ->where('subscription_user_vouchers_count', '<', 'subscriptions.subscription_voucher_total');
-                // ->get();
-                // return date('Y-m-d H:i:s');
+
         if ( isset($post['id_subscription_user']) ) {
-            $subs = $subs->leftjoin('subscription_user_vouchers', 'subscription_users.id_subscription_user', '=', 'subscription_user_vouchers.id_subscription_user')
-                         ->where('subscription_users.id_subscription_user', '=', $post['id_subscription_user'])
-                         ->addselect('subscriptions.*', 'subscription_users.*')
-                         ->first();
+            $subs = $subs->where('id_subscription_user', '=', $post['id_subscription_user'])
+                         ->first()->toArray();
+
+            if (!empty($subs)) {
+
+                $subscription = $this->kota([$subs['subscription']], "", $request->json('admin'));
+
+                $subs['outlet_by_city'] = $subscription[0]['outlet_by_city']??'';
+            }
+            return $subs;
             if ($subs) {
                 if (empty($subs['subscription_image'])) {
                     $subs['url_subscription_image'] = env('S3_URL_API').'img/default.jpg';
@@ -466,108 +535,35 @@ class ApiSubscription extends Controller
             $data = $subs;
         }
         else{
-            $subs = $subs->addSelect(
-                            'subscriptions.id_subscription',
-                            'subscription_users.id_subscription_user',
-                            'subscription_image',
-                            'subscription_end',
-                            'subscription_publish_end',
-                            'subscription_voucher_total'
-                        )
-                        ->get();
+            $subs = $subs->get();
             $data = [];
             if($subs){
+                // return $subs;
                 foreach ($subs as $key => $sub) {
                     //check voucher total
-                    if ($sub['subscription_user_vouchers_count'] < $sub['subscription_voucher_total']) {
+                    if ($sub['subscription_user_vouchers_count'] < $sub['subscription']['subscription_voucher_total']) {
 
-                        $data[$key]['id_subscription']              = $sub['id_subscription'];
+                        $data[$key]['id_subscription']              = $sub['subscription']['id_subscription'];
                         $data[$key]['id_subscription_user']         = $sub['id_subscription_user'];
-                        $data[$key]['subscription_end']             = $sub['subscription_end'];
-                        $data[$key]['subscription_publish_end']     = $sub['subscription_publish_end'];
-                        $data[$key]['subscription_voucher_total']   = $sub['subscription_voucher_total'];
+                        $data[$key]['subscription_end']             = date('Y-m-d H:i:s', strtotime($sub['subscription']['subscription_end']));
+                        $data[$key]['subscription_publish_end']     = date('Y-m-d H:i:s', strtotime($sub['subscription']['subscription_publish_end']));
+                        $data[$key]['subscription_voucher_total']   = $sub['subscription']['subscription_voucher_total'];
                         $data[$key]['used_voucher']                 = $sub['subscription_user_vouchers_count'];
                         if (empty($sub['subscription_image'])) {
                             $data[$key]['url_subscription_image'] = env('S3_URL_API').'img/default.jpg';
                         }
                         else {
-                            $data[$key]['url_subscription_image'] = env('S3_URL_API').$sub['subscription_image'];
+                            $data[$key]['url_subscription_image'] = env('S3_URL_API').$sub['subscription']['subscription_image'];
                         }
 
-                        $data[$key]['time_to_end']                  = strtotime($sub['subscription_end'])-time();
+                        $data[$key]['time_to_end']                  = strtotime($sub['subscription']['subscription_end'])-time();
                         $data[$key]['url_webview']                  = env('APP_API_URL') ."api/webview/mysubscription/". $sub['id_subscription_user'];
+                        $data[$key]['time_server']                  = date('Y-m-d H:i:s');
                     }
                 }
             }
         }
         return response()->json(MyHelper::checkGet($data));
     }
-    /**
-     * Display a listing of the resource.
-     * @return Response
-     */
-    public function index()
-    {
-        return view('subscription::index');
-    }
 
-    /**
-     * Show the form for creating a new resource.
-     * @return Response
-     */
-    public function create()
-    {
-        return view('subscription::create');
-    }
-
-    /**
-     * Store a newly created resource in storage.
-     * @param Request $request
-     * @return Response
-     */
-    public function store(Request $request)
-    {
-        //
-    }
-
-    /**
-     * Show the specified resource.
-     * @param int $id
-     * @return Response
-     */
-    public function show($id)
-    {
-        return view('subscription::show');
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     * @param int $id
-     * @return Response
-     */
-    public function edit($id)
-    {
-        return view('subscription::edit');
-    }
-
-    /**
-     * Update the specified resource in storage.
-     * @param Request $request
-     * @param int $id
-     * @return Response
-     */
-    public function update(Request $request, $id)
-    {
-        //
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     * @param int $id
-     * @return Response
-     */
-    public function destroy($id)
-    {
-        //
-    }
 }

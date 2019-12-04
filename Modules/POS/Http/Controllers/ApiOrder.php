@@ -569,6 +569,8 @@ class ApiOrder extends Controller
         DB::beginTransaction();
 
         $pickup = TransactionPickup::where('id_transaction', $order->id_transaction)->update(['taken_at' => date('Y-m-d H:i:s')]);
+        $order->show_rate_popup = 1;
+        $order->save();
         if($pickup){
             //send notif to customer
             $user = User::find($order->id_user);

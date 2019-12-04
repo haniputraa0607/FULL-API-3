@@ -15,6 +15,7 @@ use Illuminate\Http\Request;
 
 Route::group(['middleware' => ['auth:api', 'log_activities'], 'prefix' => 'user-feedback'], function () {
     Route::post('/', 'ApiUserFeedbackController@index');
+    Route::any('refuse', 'ApiUserFeedbackController@refuse');
     Route::post('detail', 'ApiUserFeedbackController@show');
     Route::post('create', 'ApiUserFeedbackController@store');
     Route::post('get-detail', 'ApiUserFeedbackController@getDetail');
