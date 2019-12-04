@@ -43,12 +43,14 @@ class SubscriptionUser extends Eloquent
 	protected $fillable = [
 		'id_user',
 		'id_subscription',
+		'subscription_user_receipt_number',
 		'bought_at',
 		'subscription_expired_at',
 		'subscription_price_point',
 		'subscription_price_cash',
 		'payment_method',
-		'paid_status'
+		'paid_status',
+		'void_date'
 	];
 
 	public function subscription()
