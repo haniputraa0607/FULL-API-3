@@ -397,6 +397,24 @@ class SettingsTableSeeder extends Seeder
                 'created_at' => date('Y-m-d H:i:s'),
                 'updated_at' => date('Y-m-d H:i:s'),
             ),
+            43 =>
+            array(
+                'id_setting' => 44,
+                'key' => 'home_subscription_title',
+                'value' => 'Subscription',
+                'value_text' => NULL,
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ),
+            44 =>
+            array(
+                'id_setting' => 45,
+                'key' => 'home_subscription_sub_title',
+                'value' => 'Banyak untungnya kalo berlangganan',
+                'value_text' => NULL,
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ),
         ));
     }
 }

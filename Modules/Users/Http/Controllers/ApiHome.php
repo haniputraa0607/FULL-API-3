@@ -799,6 +799,10 @@ class ApiHome extends Controller
     public function featuredSubscription(Request $request){
 
         $now=date('Y-m-d H-i-s');
+        $home_text = Setting::where('key','=','home_subscription_title')->orWhere('key','=','home_subscription_sub_title')->orderBy('id_setting')->get();
+        $text['title'] = $home_text[0]['value']??'';
+        $text['sub_title'] = $home_text[1]['value']??'';
+
         $subs=featuredSubscription::select('id_featured_subscription','id_subscription')->with(['subscription'=>function($query){
             $query->select('subscription_title','subscription_sub_title','subscription_image','subscription_total', 'subscription_voucher_total','subscription_bought','subscription_publish_start','subscription_publish_end','subscription_start','subscription_end','id_subscription','subscription_price_point','subscription_price_cash');
         }])
@@ -813,7 +817,7 @@ class ApiHome extends Controller
 
         if($subs){
             $subs=array_map(function($value){
-                if ( empty($value['subscription']['subscription_price_point']) && empty($value['subscription']['subscription_price_cash'])) {
+                if ( (empty($value['subscription']['subscription_price_point']) && empty($value['subscription']['subscription_price_cash'])) || empty($value['subscription']['subscription_total']) ) {
                     $calc = '*';
                 }else{
                     $calc = $value['subscription']['subscription_total'] - $value['subscription']['subscription_bought'];
@@ -850,9 +854,11 @@ class ApiHome extends Controller
                 }
 
             }
+            $data_home['text'] = $text;
+            $data_home['featured_list'] = $featuredList;
             return [
                 'status'=>'success',
-                'result'=>$featuredList
+                'result'=> $data_home
             ];
         }else{
             return [
