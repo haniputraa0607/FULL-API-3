@@ -153,10 +153,22 @@ class ApiProductController extends Controller
     public function categoryAssign(Request $request) {
 		$post = $request->json()->all();
 		foreach ($post['id_product'] as $key => $idprod) {
-			if($post['id_product_category'][$key] == 0)
+            $count = BrandProduct::where('id_product',$idprod)->count();
+			if($post['id_product_category'][$key] == 0){
 				$update = Product::where('id_product','=',$idprod)->update(['id_product_category' => null, 'product_name' => $post['product_name'][$key]]);
-			else
+                if($count){
+                    BrandProduct::where(['id_product'=>$idprod])->update(['id_product_category' => null]);
+                }else{
+                    BrandProduct::create(['id_product'=>$idprod,'id_product_category' => null]);
+                }
+			}else{
 				$update = Product::where('id_product','=',$idprod)->update(['id_product_category' => $post['id_product_category'][$key], 'product_name' => $post['product_name'][$key]]);
+                if($count){
+                    BrandProduct::where(['id_product'=>$idprod])->update(['id_product_category' => $post['id_product_category'][$key]]);
+                }else{
+                    BrandProduct::create(['id_product'=>$idprod,'id_product_category' => $post['id_product_category'][$key]]);
+                }
+            }
 		}
 		return response()->json(MyHelper::checkUpdate($update));
 	}
