@@ -97,7 +97,7 @@ class Product extends Model
 
 	public function product_prices()
 	{
-		return $this->hasMany(\App\Http\Models\ProductPrice::class, 'id_product')->where('product_visibility', 'Visible');
+		return $this->hasMany(\App\Http\Models\ProductPrice::class, 'id_product');
 	}
 
 	public function prices()
