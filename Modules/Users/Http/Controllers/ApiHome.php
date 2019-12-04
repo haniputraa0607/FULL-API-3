@@ -800,7 +800,7 @@ class ApiHome extends Controller
 
         $now=date('Y-m-d H-i-s');
         $subs=featuredSubscription::select('id_featured_subscription','id_subscription')->with(['subscription'=>function($query){
-            $query->select('subscription_title','subscription_image','subscription_total', 'subscription_voucher_total','subscription_bought','subscription_publish_start','subscription_publish_end','subscription_start','subscription_end','id_subscription','subscription_price_point','subscription_price_cash');
+            $query->select('subscription_title','subscription_sub_title','subscription_image','subscription_total', 'subscription_voucher_total','subscription_bought','subscription_publish_start','subscription_publish_end','subscription_start','subscription_end','id_subscription','subscription_price_point','subscription_price_cash');
         }])
             ->whereHas('subscription',function($query){
                 $query->where('subscription_publish_end','>=',DB::raw('CURRENT_TIMESTAMP()'));
@@ -839,6 +839,8 @@ class ApiHome extends Controller
 
                     $featuredList[$i]['id_featured_subscription'] = $value['id_featured_subscription'];
                     $featuredList[$i]['id_subscription'] = $value['id_subscription'];
+                    $featuredList[$i]['subscription_title'] = $value['subscription']['subscription_title'];
+                    $featuredList[$i]['subscription_sub_title'] = $value['subscription']['subscription_sub_title'];
                     $featuredList[$i]['url_subscription_image'] = $value['subscription']['url_subscription_image'];
                     $featuredList[$i]['time_to_end'] = $value['subscription']['time_to_end'];
                     $featuredList[$i]['subscription_end'] = $value['subscription']['subscription_end'];
