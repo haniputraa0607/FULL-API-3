@@ -8,9 +8,15 @@ use Illuminate\Routing\Controller;
 
 use App\Lib\MyHelper;
 use App\Http\Models\Setting;
+use App\Http\Models\User;
 
 class ApiTutorial extends Controller
 {
+    function __construct() {
+        date_default_timezone_set('Asia/Jakarta');
+		$this->user     = "Modules\Users\Http\Controllers\ApiUser";
+    }
+
     /**
      * Display a listing of the resource.
      * @return Response
@@ -72,18 +78,63 @@ class ApiTutorial extends Controller
     public function introListFrontend(Request $request)
     {
         $post = $request->json()->all();
-        
-        if (isset($post['key'])) {
-            $data = Setting::where('key', $post['key'])->get()->toArray()[0];
-        } else {
-            $data = Setting::where('key', 'intro_home')->get()->toArray()[0];
+
+        if(!isset($post['key'])){
+            $post['key'] = 'intro_home';
         }
+        $data = Setting::where('key', $post['key'])->first();
         
-        $list = json_decode($data['value'], true);
-        foreach (json_decode($data['value_text']) as $key => $value) {
-            $list['image'][$key] = env('S3_URL_API') . $value;
+        if (!$data) {
+            return response()->json([
+                'status'    => 'fail',
+                'messages'  => 'Tutorial belum di setup'
+            ]);
         }
 
+        $list = json_decode($data->value, true);
+        
+        if ($data->value_text != 'null') {
+            foreach (json_decode($data->value_text, true) as $key => $value) {
+                $list['image'][$key] = env('S3_URL_API') . $value;
+            }
+        } else {
+            $list['image'] = [];
+        }
+
+        return response()->json(MyHelper::checkGet($list));
+    }
+
+    public function introHomeFrontend(Request $request)
+    {
+        $post = $request->json()->all();
+        $user = $request->user();
+
+        if ($user['status_new_user'] == 1) {
+
+            $data = Setting::where('key', $post['key'])->first();
+    
+            if ($data) {
+                User::where('id', $user['id'])->update(['status_new_user' => 0]);
+            } else {
+                return response()->json([
+                    'status'    => 'fail',
+                    'messages'  => 'Tutorial belum di setup'
+                ]);
+            }
+            
+            $list = json_decode($data->value, true);
+        
+            if ($data->value_text != 'null') {
+                foreach (json_decode($data->value_text, true) as $key => $value) {
+                    $list['image'][$key] = env('S3_URL_API') . $value;
+                }
+            } else {
+                $list['image'] = [];
+            }
+        } else {
+            $list['active'] = 0;
+        }
+        
         return response()->json(MyHelper::checkGet($list));
     }
 }
