@@ -1137,7 +1137,6 @@ class ApiOutletController extends Controller
             if(!($outlet[$index]['status']??false)&&!$unset){
                 $outlet[$index]['status'] = 'open';
             }
-            unset($outlet[$index]['product_prices']);
             unset($outlet[$index]['outlet_schedules']);
             unset($outlet[$index]['outlet_photos']);
             unset($outlet[$index]['outlet_pin']);

@@ -369,7 +369,8 @@ class ApiProductController extends Controller
             foreach ($brands as $id_brand) {
                 BrandProduct::create([
                     'id_product'=>$request->json('id_product'),
-                    'id_brand'=>$id_brand
+                    'id_brand'=>$id_brand,
+                    'id_product_category'=>$request->json('id_product_category')
                 ]);
             }
         }
