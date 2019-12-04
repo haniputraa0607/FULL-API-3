@@ -1772,24 +1772,24 @@ class ApiOutletController extends Controller
         $user = $request->user();
 
         try{
-            $outlet = Outlet::join('transactions','outlets.id_outlet', '=', 'transactions.id_outlet')
-                ->join('users', 'users.id', '=', 'transactions.id_user')
-                ->selectRaw('outlets.*,
-                        (111.111 * DEGREES(ACOS(LEAST(1.0, COS(RADIANS(outlet_latitude))
-                             * COS(RADIANS('.$post['latitude'].'))
-                             * COS(RADIANS(outlet_longitude - '.$post['longitude'].'))
-                             + SIN(RADIANS(outlet_latitude))
-                             * SIN(RADIANS('.$post['latitude'].')))))) AS distance_in_km' )
-                ->with(['user_outlets','city','today', 'outlet_schedules', 'brands'])
-                ->where('users.phone',$user['phone'])
-                ->where('outlets.outlet_status', 'Active')
-                ->whereHas('brands',function($query){
-                    $query->where('brand_active','1');
-                })
-                ->orderBy('distance_in_km')
-                ->get()->toArray();
-
-            if(empty($outlet)){
+//            $outlet = Outlet::join('transactions','outlets.id_outlet', '=', 'transactions.id_outlet')
+//                ->join('users', 'users.id', '=', 'transactions.id_user')
+//                ->selectRaw('outlets.*,
+//                        (111.111 * DEGREES(ACOS(LEAST(1.0, COS(RADIANS(outlet_latitude))
+//                             * COS(RADIANS('.$post['latitude'].'))
+//                             * COS(RADIANS(outlet_longitude - '.$post['longitude'].'))
+//                             + SIN(RADIANS(outlet_latitude))
+//                             * SIN(RADIANS('.$post['latitude'].')))))) AS distance_in_km' )
+//                ->with(['user_outlets','city','today', 'outlet_schedules', 'brands'])
+//                ->where('users.phone',$user['phone'])
+//                ->where('outlets.outlet_status', 'Active')
+//                ->whereHas('brands',function($query){
+//                    $query->where('brand_active','1');
+//                })
+//                ->orderBy('distance_in_km')
+//                ->get()->toArray();
+//
+//            if(empty($outlet)){
                 $outlet = Outlet::selectRaw('outlets.*,
                         (111.111 * DEGREES(ACOS(LEAST(1.0, COS(RADIANS(outlet_latitude))
                              * COS(RADIANS('.$post['latitude'].'))
@@ -1804,7 +1804,7 @@ class ApiOutletController extends Controller
                     ->orderBy('distance_in_km')
                     ->limit(5)
                     ->get()->toArray();
-            }
+//            }
 
             if(count($outlet) > 0){
                 $loopdata=&$outlet;
@@ -1820,14 +1820,18 @@ class ApiOutletController extends Controller
                     'status' => 'success',
                     'messages' => [],
                     'result' => [
+                        'title' => 'Pesan Sekarang',
+                        'sub_title' => 'Cek outlet terdekatmu',
                         'data' => $outlet
                     ]
                 ];
             }else{
                 $result = [
                     'status' => 'fail',
-                    'messages' => ['empty'],
+                    'messages' => ['Tidak ada outlet yang tersedia'],
                     'result' => [
+                        'title' => 'Pesan Sekarang',
+                        'sub_title' => 'Tidak ada outlet yang tersedia',
                         'data' => null
                     ]
                 ];
