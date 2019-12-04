@@ -16,6 +16,7 @@ use Modules\Subscription\Entities\SubscriptionUserVoucher;
 use App\Http\Models\Setting;
 
 use Modules\Subscription\Http\Requests\ListSubscription;
+use Modules\Subscription\Http\Requests\Step1Subscription;
 use DB;
 
 class ApiSubscription extends Controller
@@ -29,11 +30,110 @@ class ApiSubscription extends Controller
 
     public $saveImage = "img/subscription/";
 
-    public function create(Request $request)
+        /* CHECK INPUTAN */
+    function checkInputan($post)
     {
+
+        $data = [];
+
+        if (isset($post['subscription_title'])) {
+            $data['subscription_title'] = $post['subscription_title'];
+        }
+        if (isset($post['subscription_sub_title'])) {
+            $data['subscription_sub_title'] = $post['subscription_sub_title'];
+        }
+        if (isset($post['deals_description'])) {
+            $data['deals_description'] = $post['deals_description'];
+        }
+        if (isset($post['deals_tos'])) {
+            $data['deals_tos'] = $post['deals_tos'];
+        }
+        if (isset($post['deals_short_description'])) {
+            $data['deals_short_description'] = $post['deals_short_description'];
+        }
+        if (isset($post['subscription_image'])) {
+
+            if (!file_exists($this->saveImage)) {
+                mkdir($this->saveImage, 0777, true);
+            }
+
+            $upload = MyHelper::uploadPhotoStrict($post['subscription_image'], $this->saveImage, 600, 250);
+
+            if (isset($upload['status']) && $upload['status'] == "success") {
+                $data['subscription_image'] = $upload['path'];
+            } else {
+                $result = [
+                    'error'    => 1,
+                    'status'   => 'fail',
+                    'messages' => ['fail upload image']
+                ];
+
+                return $result;
+            }
+        }
+
+        if (isset($post['subscription_start'])) {
+            $data['subscription_start'] = date('Y-m-d H:i:s', strtotime($post['subscription_start']));
+        }
+        if (isset($post['subscription_end'])) {
+            $data['subscription_end'] = date('Y-m-d H:i:s', strtotime($post['subscription_end']));
+        }
+        if (isset($post['subscription_publish_start'])) {
+            $data['subscription_publish_start'] = date('Y-m-d H:i:s', strtotime($post['subscription_publish_start']));
+        }
+        if (isset($post['subscription_publish_end'])) {
+            $data['subscription_publish_end'] = date('Y-m-d H:i:s', strtotime($post['subscription_publish_end']));
+        }
+
+        // ---------------------------- DURATION
+        if (isset($post['deals_voucher_duration'])) {
+            $data['deals_voucher_duration'] = $post['deals_voucher_duration'];
+        }
+
+        // ---------------------------- EXPIRED
+        if (isset($post['deals_voucher_expired'])) {
+            $data['deals_voucher_expired'] = $post['deals_voucher_expired'];
+        }
+
+        // ---------------------------- POINT
+        if (isset($post['deals_voucher_price_point'])) {
+            $data['deals_voucher_price_point'] = $post['deals_voucher_price_point'];
+        }
+
+        // ---------------------------- CASH
+        if (isset($post['deals_voucher_price_cash'])) {
+            $data['deals_voucher_price_cash'] = $post['deals_voucher_price_cash'];
+        }
+
+        if (isset($post['deals_total_voucher'])) {
+            $data['deals_total_voucher'] = $post['deals_total_voucher'];
+        }
+        if (isset($post['deals_total_claimed'])) {
+            $data['deals_total_claimed'] = $post['deals_total_claimed'];
+        }
+        if (isset($post['deals_total_redeemed'])) {
+            $data['deals_total_redeemed'] = $post['deals_total_redeemed'];
+        }
+        if (isset($post['deals_total_used'])) {
+            $data['deals_total_used'] = $post['deals_total_used'];
+        }
+        if (isset($post['id_outlet'])) {
+            $data['id_outlet'] = $post['id_outlet'];
+        }
+        if (isset($post['user_limit'])) {
+            $data['user_limit'] = $post['user_limit'];
+        }
+
+        return $data;
+    }
+
+    public function create(Step1Subscription $request)
+    {
+        $data = $request->json()->all();
         $data = $this->checkInputan($data);
 
         // error
+        DB::beginTransaction();
         if (isset($data['error'])) {
             unset($data['error']);
             return response()->json($data);
@@ -41,15 +141,31 @@ class ApiSubscription extends Controller
         $save = Subscription::create($data);
 
         if ($save) {
-            if (isset($data['id_outlet'])) {
-                $saveOutlet = $this->saveOutlet($save, $data['id_outlet']);
-
-                if (!$saveOutlet) {
-                    return false;
-                }
-            }
+            DB::commit();
+        } else {
+            DB::rollback();
         }
-        return $save;
+        return response()->json(MyHelper::checkCreate($save));
+    }
+
+    public function showStep1(Request $request)
+    {
+        $post = $request->json()->all();
+        $data = Subscription::
+                    where('id_subscription','=',$post['id_subscription'])
+                    ->select(
+                        'id_subscription',
+                        'subscription_title',
+                        'subscription_sub_title',
+                        'subscription_start',
+                        'subscription_end',
+                        'subscription_publish_start',
+                        'subscription_publish_end',
+                        'subscription_image'
+                    )
+                    ->first()
+                    ->toArray();
+        return response()->json(MyHelper::checkGet($data));
     }
 
     public function listSubscription(ListSubscription $request)

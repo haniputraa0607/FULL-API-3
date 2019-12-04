@@ -18,6 +18,8 @@ Route::group(['middleware' => ['auth:api', 'log_activities'], 'prefix' => 'subsc
     Route::any('list', 'ApiSubscription@listSubscription');
     Route::any('detail', 'ApiSubscriptionWebview@subscriptionDetail');
     Route::any('me', 'ApiSubscription@mySubscription');
+    Route::post('step1', 'ApiSubscription@create');
+    Route::post('show-step1', 'ApiSubscription@showStep1');
 
     /* CLAIM */
     Route::group(['prefix' => 'claim'], function () {
