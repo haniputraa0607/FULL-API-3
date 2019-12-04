@@ -15,6 +15,7 @@ class AddModifiersTypeToProductModifiersTable extends Migration
     {
         Schema::table('product_modifiers', function (Blueprint $table) {
             $table->enum('modifier_type',['Global','Specific'])->after('id_product_modifier');
+            $table->dropForeign('fk_product_modifiers_products');
             $table->dropColumn('id_product');
         });
     }
@@ -29,6 +30,7 @@ class AddModifiersTypeToProductModifiersTable extends Migration
         Schema::table('product_modifiers', function (Blueprint $table) {
             $table->dropColumn('modifier_type');
             $table->unsignedInteger('id_product')->after('id_product_modifier');
+            $table->foreign('id_product', 'fk_product_modifiers_products')->references('id_product')->on('products')->onUpdate('CASCADE')->onDelete('CASCADE');
         });
     }
 }
