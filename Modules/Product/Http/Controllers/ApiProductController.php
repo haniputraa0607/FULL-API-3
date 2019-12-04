@@ -789,7 +789,7 @@ class ApiProductController extends Controller
             // toArray error jika $product Null,
             $product = $product->toArray();
         }
-        $product['product_price'] = number_format($product['product_prices'][0]['product_price'],0,',','.');
+        $product['product_price'] = $product['product_prices'][0]['product_price'];
         if(!(empty($product['product_prices']['product_visibility'])&&$product['product_visibility']=='Visible') && ($product['product_prices'][0]['product_visibility']??false)!='Visible'){
             return MyHelper::checkGet([]);
         }
@@ -819,7 +819,7 @@ class ApiProductController extends Controller
                 unset($product['modifiers'][$key]);
                 continue;
             }
-            $modifier['price'] = number_format($modifier['product_modifier_prices'][0]['product_modifier_price'],0,',','.');
+            $modifier['price'] = (int) $modifier['product_modifier_prices'][0]['product_modifier_price'];
             unset($modifier['product_modifier_prices']);
         }
         return MyHelper::checkGet($product);
