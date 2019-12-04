@@ -9,3 +9,7 @@ Route::group(['middleware' => ['auth:api', 'log_activities'], 'prefix' => 'api/c
     Route::get('list_custom_page', 'ApiCustomPageController@listCustomPage');
     Route::get('webview/{id}', 'ApiCustomPageController@webviewCustomPage');
 });
+
+Route::group(['prefix' => 'api/custom-page', 'namespace' => 'Modules\CustomPage\Http\Controllers'], function () {
+    Route::get('webview/{id}', ['uses' => 'ApiCustomPageController@webviewCustomPage']);
+});
