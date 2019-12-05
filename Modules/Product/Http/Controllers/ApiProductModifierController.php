@@ -12,6 +12,9 @@ use App\Http\Models\ProductModifierPrice;
 use App\Http\Models\ProductModifierProduct;
 use App\Http\Models\ProductModifierProductCategory;
 
+use Modules\Product\Http\Requests\Modifier\CreateRequest;
+use Modules\Product\Http\Requests\Modifier\UpdateRequest;
+
 use App\Lib\MyHelper;
 use DB;
 
@@ -36,7 +39,7 @@ class ApiProductModifierController extends Controller
      * @param Request $request
      * @return Response
      */
-    public function store(Request $request)
+    public function store(CreateRequest $request)
     {
         $post = $request->json()->all();
         $data = [
@@ -126,7 +129,7 @@ class ApiProductModifierController extends Controller
      * @param int $id
      * @return Response
      */
-    public function update(Request $request)
+    public function update(UpdateRequest $request)
     {
         $post = $request->json()->all();
         $id_product_modifier =$post['id_product_modifier'];
