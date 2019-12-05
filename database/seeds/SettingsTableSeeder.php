@@ -442,6 +442,15 @@ class SettingsTableSeeder extends Seeder
                     'created_at' => date('Y-m-d H:i:s'),
                     'updated_at' => date('Y-m-d H:i:s'),
                 ),
+            49 =>
+            array(
+                'id_setting' => 50,
+                'key' => 'payment_messages_cash',
+                'value' => 'Anda akan membeli Voucher %deals_title% dengan harga %cash% ?',
+                'value_text' => NULL,
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ),
         ));
     }
 }
