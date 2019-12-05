@@ -11,6 +11,7 @@ use App\Http\Models\LogTopup;
 use App\Http\Models\LogTopupMidtrans;
 use App\Http\Models\LogTopupManual;
 use App\Http\Models\Transaction;
+use App\Http\Models\TransactionProductModifier;
 use App\Http\Models\ManualPaymentMethod;
 use App\Http\Models\TransactionPaymentMidtran;
 use App\Http\Models\TransactionMultiplePayment;
@@ -69,10 +70,20 @@ class ApiConfirm extends Controller
 
         if (isset($check['productTransaction'])) {
             foreach ($check['productTransaction'] as $key => $value) {
+                // get modifiers name
+                $mods = TransactionProductModifier::select('qty','text')->where('id_transaction_product',$value['id_transaction_product'])->get()->toArray();
+                $more_name_text = '';
+                foreach ($mods as $mod) {
+                    if($mod['qty']>1){
+                        $more_name_text .= ','.$mod['qty'].'x '.$mod['text'];
+                    }else{
+                        $more_name_text .= ','.$mod['text'];
+                    }
+                }
                 $dataProductMidtrans = [
                     'id'       => $value['id_product'],
-                    'price'    => abs($value['transaction_product_price']),
-                    'name'     => $value['product']['product_name'],
+                    'price'    => abs($value['transaction_product_price']+$value['transaction_modifier_subtotal']),
+                    'name'     => $value['product']['product_name'].($more_name_text?'('.trim($more_name_text,',').')':''),
                     'quantity' => $value['transaction_product_qty'],
                 ];
 

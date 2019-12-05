@@ -6,11 +6,14 @@ Route::group(['prefix' => 'api/outlet', 'middleware' => ['log_activities', 'auth
     Route::any('list/gofood', 'ApiOutletGofoodController@listOutletGofood');
     Route::any('filter', 'ApiOutletController@filter');
     Route::any('filter/gofood', 'ApiOutletController@filter');
+
+    Route::any('list/ordernow', 'ApiOutletController@listOutletOrderNow');
 });
 
 Route::group(['prefix' => 'api/outlet', 'middleware' => ['log_activities', 'auth_client'],'namespace' => 'Modules\Outlet\Http\Controllers'], function()
 {
     Route::any('list/mobile', 'ApiOutletController@listOutlet');
+    Route::any('/detail', 'ApiOutletController@detailTransaction');
 });
 
 Route::group(['prefix' => 'api/outlet', 'middleware' => ['log_activities', 'auth_client'], 'namespace' => 'Modules\Outlet\Http\Controllers'], function()

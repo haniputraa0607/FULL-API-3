@@ -48,7 +48,10 @@ Route::group(['middleware' => ['auth:api', 'log_activities'], 'prefix' => 'api/s
 
     Route::any('jobs_list', 'ApiSetting@jobsList');
     Route::any('celebrate_list', 'ApiSetting@celebrateList');
+
+    /* Menu Setting */
     Route::any('/text_menu/update', 'ApiSetting@updateTextMenu');
+    Route::get('/text_menu/configs', 'ApiSetting@configsMenu');
 
     Route::group(['middleware' => 'auth:api', 'prefix' => 'dashboard'], function()
     {
@@ -166,4 +169,9 @@ Route::group([ 'prefix' => 'api/setting', 'namespace' => 'Modules\Setting\Http\C
     Route::any('webview/{key}', 'ApiSettingWebview@aboutWebview');
     Route::any('/faq/webview', 'ApiSettingWebview@faqWebviewView');
     Route::any('/intro/list', 'ApiTutorial@introListFrontend');
+});
+
+Route::group(['middleware' => ['auth:api'], 'prefix' => 'api/setting', 'namespace' => 'Modules\Setting\Http\Controllers'], function()
+{
+    Route::any('/intro/home', 'ApiTutorial@introHomeFrontend');
 });

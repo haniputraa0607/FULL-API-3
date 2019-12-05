@@ -12,58 +12,85 @@
     <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.6.1/css/all.css" integrity="sha384-gfdkjb5BdAXd+lj+gudLWI+BXq4IuLW5IT+brZEZsLFm++aCMlF1V92rMkPaX4PP" crossorigin="anonymous">
     <style type="text/css">
         @font-face {
-                font-family: "ProductSans-Bold";
+                font-family: "WorkSans-Black";
                 font-style: normal;
                 font-weight: 400;
-                src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/ProductSans-Regular.ttf') }}');
+                src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/Work_Sans/WorkSans-Black.ttf') }}');
         }
         @font-face {
-                font-family: "ProductSans-BoldItalic";
+                font-family: "WorkSans-Bold";
                 font-style: normal;
                 font-weight: 400;
-                src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/ProductSans-BoldItalic.ttf') }}');
+                src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/Work_Sans/WorkSans-Bold.ttf') }}');
         }
         @font-face {
-                font-family: "ProductSans-Italic";
+                font-family: "WorkSans-ExtraBold";
                 font-style: normal;
                 font-weight: 400;
-                src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/ProductSans-Italic.ttf') }}');
+                src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/Work_Sans/WorkSans-ExtraBold.ttf') }}');
         }
         @font-face {
-                font-family: "ProductSans-Medium";
+                font-family: "WorkSans-ExtraLight";
                 font-style: normal;
                 font-weight: 400;
-                src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/ProductSans-Medium.ttf') }}');
+                src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/Work_Sans/WorkSans-ExtraLight.ttf') }}');
         }
         @font-face {
-                font-family: "ProductSans-MediumItalic";
+                font-family: "WorkSans-Light";
                 font-style: normal;
                 font-weight: 400;
-                src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/ProductSans-MediumItalic.ttf') }}');
+                src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/Work_Sans/WorkSans-Light.ttf') }}');
         }
         @font-face {
-                font-family: "ProductSans";
+                font-family: "WorkSans-Medium";
                 font-style: normal;
                 font-weight: 400;
-                src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/ProductSans-Regular.ttf') }}');
+                src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/Work_Sans/WorkSans-Medium.ttf') }}');
         }
-        .ProductSans{
-            font-family: "ProductSans";
+        @font-face {
+                font-family: "WorkSans-Regular";
+                font-style: normal;
+                font-weight: 400;
+                src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/Work_Sans/WorkSans-Regular.ttf') }}');
         }
-        .ProductSans-MediumItalic{
-            font-family: "ProductSans-MediumItalic";
+        @font-face {
+                font-family: "WorkSans-SemiBold";
+                font-style: normal;
+                font-weight: 400;
+                src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/Work_Sans/WorkSans-SemiBold.ttf') }}');
         }
-        .ProductSans-Medium{
-            font-family: "ProductSans-Medium";
+        @font-face {
+                font-family: "WorkSans-Thin";
+                font-style: normal;
+                font-weight: 400;
+                src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/Work_Sans/WorkSans-Thin.ttf') }}');
         }
-        .ProductSans-Italic{
-            font-family: "ProductSans-Italic";
+        .WorkSans-Black{
+            font-family: "WorkSans-Black";
         }
-        .ProductSans-BoldItalic{
-            font-family: "ProductSans-BoldItalic";
+        .WorkSans-Bold{
+            font-family: "WorkSans-Bold";
         }
-        .ProductSans-Bold{
-            font-family: "ProductSans-Bold";
+        .WorkSans-ExtraBold{
+            font-family: "WorkSans-ExtraBold";
+        }
+        .WorkSans-ExtraLight{
+            font-family: "WorkSans-ExtraLight";
+        }
+        .WorkSans-Medium{
+            font-family: "WorkSans-Medium";
+        }
+        .WorkSans-Regular{
+            font-family: "WorkSans-Regular";
+        }
+        .WorkSans{
+            font-family: "WorkSans-Regular";
+        }
+        .WorkSans-SemiBold{
+            font-family: "WorkSans-SemiBold";
+        }
+        .WorkSans-Thin{
+            font-family: "WorkSans-Thin";
         }
         .kotak {
             margin : 10px;
@@ -105,7 +132,7 @@
     <div class="kotak-full">
         <div class="container">
             <div class="row">
-                <div class="col-12 ProductSans brownishGrey" style="font-size: 16px; line-height: 26px">{!! $value !!}</div>
+                <div class="col-12 WorkSans" style="color: #707070;font-size: 11.7px; line-height: 26px">{!! $value !!}</div>
             </div>
         </div>
     </div>

@@ -46,6 +46,7 @@ use Modules\Outlet\Http\Requests\outlet\DeletePhoto;
 use Modules\Outlet\Http\Requests\outlet\Nearme;
 use Modules\Outlet\Http\Requests\outlet\Filter;
 use Modules\Outlet\Http\Requests\outlet\OutletList;
+use Modules\Outlet\Http\Requests\outlet\OutletListOrderNow;
 
 use Modules\Outlet\Http\Requests\UserOutlet\Create as CreateUserOutlet;
 use Modules\Outlet\Http\Requests\UserOutlet\Update as UpdateUserOutlet;
@@ -54,6 +55,8 @@ use Modules\Outlet\Http\Requests\Holiday\HolidayStore;
 use Modules\Outlet\Http\Requests\Holiday\HolidayEdit;
 use Modules\Outlet\Http\Requests\Holiday\HolidayUpdate;
 use Modules\Outlet\Http\Requests\Holiday\HolidayDelete;
+
+use App\Http\Models\Transaction;
 
 class ApiOutletController extends Controller
 {
@@ -157,6 +160,8 @@ class ApiOutletController extends Controller
         }
 
         DB::beginTransaction();
+        $post['outlet_address_detail'] = $post['outlet_address'];
+        $post['outlet_address'] = strip_tags($post['outlet_address']);
         $save = Outlet::create($post);
         if (!$save) {
             DB::rollBack();
@@ -218,6 +223,8 @@ class ApiOutletController extends Controller
         }
 
         unset($post['outlet_brands']);
+        $post['outlet_address_detail'] = $post['outlet_address'];
+        $post['outlet_address'] = strip_tags($post['outlet_address']);
         $save = Outlet::where('id_outlet', $request->json('id_outlet'))->update($post);
         // return Outlet::where('id_outlet', $request->json('id_outlet'))->first();
         if($save){
@@ -541,9 +548,6 @@ class ApiOutletController extends Controller
             $loopdata=&$outlet;
         }
 
-        if(isset($post['type']) && $post['type'] == 'transaction'){
-            $outlet = $this->setAvailableOutlet($outlet);
-        }
         $loopdata = array_map(function($var) use ($post){
             $var['url']=env('API_URL').'api/outlet/webview/'.$var['id_outlet'];
             if(($post['latitude']??false)&&($post['longitude']??false)){
@@ -621,7 +625,7 @@ class ApiOutletController extends Controller
         }
 
         // outlet
-        $outlet = Outlet::select('outlets.id_outlet','outlets.outlet_name','outlets.outlet_phone','outlets.outlet_code','outlets.outlet_status','outlets.outlet_address','outlets.id_city','outlet_latitude','outlet_longitude')->where('outlet_status', 'Active')->whereNotNull('id_city')->orderBy('outlet_name','asc');
+        $outlet = Outlet::select('outlets.id_outlet','outlets.outlet_name','outlets.outlet_phone','outlets.outlet_code','outlets.outlet_status','outlets.outlet_address','outlets.id_city','outlet_latitude','outlet_longitude')->with(['today','brands'=>function($query){$query->select('brands.id_brand','name_brand','logo_brand');}])->where('outlet_status', 'Active')->whereNotNull('id_city')->orderBy('outlet_name','asc');
         if($request->json('search') && $request->json('search') != ""){
             $outlet = $outlet->where('outlet_name', 'LIKE', '%'.$request->json('search').'%');
         }
@@ -631,20 +635,24 @@ class ApiOutletController extends Controller
         $outlet = $outlet->get()->toArray();
 
         if (!empty($outlet)) {
+            $processing = '0';
+            $settingTime = Setting::where('key', 'processing_time')->first();
+            if($settingTime && $settingTime->value){
+                $processing = $settingTime->value;
+            }
             foreach ($outlet as $key => $value) {
                 $jaraknya =   number_format((float)$this->distance($latitude, $longitude, $value['outlet_latitude'], $value['outlet_longitude'], "K"), 2, '.', '');
                 settype($jaraknya, "float");
 
                 $outlet[$key]['distance'] = number_format($jaraknya, 2, '.', ',')." km";
                 $outlet[$key]['dist']     = (float) $jaraknya;
+
+                $outlet[$key] = $this->setAvailableOutlet($outlet[$key], $processing);
             }
             usort($outlet, function($a, $b) {
                 return $a['dist'] <=> $b['dist'];
             });
 
-            if($request->json('type') && $request->json('type') == 'transaction'){
-                $outlet = $this->setAvailableOutlet($outlet);
-            }
         }else{
             return response()->json(['status' => 'fail', 'messages' => ['There is no open store','at this moment']]);
         }
@@ -695,20 +703,25 @@ class ApiOutletController extends Controller
         $outlet = $outlet->get()->toArray();
 
         if (!empty($outlet)) {
+            $processing = '0';
+            $settingTime = Setting::where('key', 'processing_time')->first();
+            if($settingTime && $settingTime->value){
+                $processing = $settingTime->value;
+            }
+
             foreach ($outlet as $key => $value) {
                 $jaraknya =   number_format((float)$this->distance($latitude, $longitude, $value['outlet_latitude'], $value['outlet_longitude'], "K"), 2, '.', '');
                 settype($jaraknya, "float");
 
                 $outlet[$key]['distance'] = number_format($jaraknya, 2, '.', ',')." km";
                 $outlet[$key]['dist']     = (float) $jaraknya;
+
+                $outlet[$key] = $this->setAvailableOutlet($outlet[$key], $processing);
             }
             usort($outlet, function($a, $b) {
                 return $a['dist'] <=> $b['dist'];
             });
 
-            if($request->json('type') && $request->json('type') == 'transaction'){
-                $outlet = $this->setAvailableOutlet($outlet);
-            }
         }
 
         if(isset($request['page']) && $request['page'] > 0){
@@ -828,7 +841,7 @@ class ApiOutletController extends Controller
         $grabfood = $request->json('grabfood');
 
         // outlet
-        $outlet = Outlet::with(['today'])->select('outlets.id_outlet','outlets.outlet_name','outlets.outlet_phone','outlets.outlet_code','outlets.outlet_status','outlets.outlet_address','outlets.id_city','outlet_latitude','outlet_longitude')->where('outlet_status', 'Active')->whereNotNull('id_city')->orderBy('outlet_name','asc');
+        $outlet = Outlet::with(['today'])->select('outlets.id_outlet','outlets.outlet_name','outlets.outlet_phone','outlets.outlet_code','outlets.outlet_status','outlets.outlet_address','outlets.id_city','outlet_latitude','outlet_longitude')->with(['brands'=>function($query){$query->select('brands.id_brand','name_brand','logo_brand');}])->where('outlet_status', 'Active')->whereNotNull('id_city')->orderBy('outlet_name','asc');
 
         $outlet->whereHas('brands',function($query){
             $query->where('brand_active','1');
@@ -862,6 +875,12 @@ class ApiOutletController extends Controller
 
 
         if (!empty($outlet)) {
+            $processing = '0';
+            $settingTime = Setting::where('key', 'processing_time')->first();
+            if($settingTime && $settingTime->value){
+                $processing = $settingTime->value;
+            }
+
             foreach ($outlet as $key => $value) {
                 $jaraknya =   number_format((float)$this->distance($latitude, $longitude, $value['outlet_latitude'], $value['outlet_longitude'], "K"), 2, '.', '');
                 settype($jaraknya, "float");
@@ -890,7 +909,9 @@ class ApiOutletController extends Controller
 				if($id_city != "" && $id_city != $value['id_city']){
                     unset($outlet[$key]);
                     continue;
-				}
+                }
+
+                $outlet[$key] = $this->setAvailableOutlet($outlet[$key], $processing);;
             }
 			if($sort != 'Alphabetical'){
 				usort($outlet, function($a, $b) {
@@ -902,10 +923,6 @@ class ApiOutletController extends Controller
 				foreach($outlet as $o){
 					array_push($urutan, $o);
 				}
-            }
-
-            if($request->json('type') && $request->json('type') == 'transaction'){
-                $urutan = $this->setAvailableOutlet($urutan);
             }
         } else {
             if($countAll){
@@ -981,6 +998,12 @@ class ApiOutletController extends Controller
         $outlet = $outlet->get()->toArray();
 
         if (!empty($outlet)) {
+            $processing = '0';
+            $settingTime = Setting::where('key', 'processing_time')->first();
+            if($settingTime && $settingTime->value){
+                $processing = $settingTime->value;
+            }
+
             foreach ($outlet as $key => $value) {
                 $jaraknya =   number_format((float)$this->distance($latitude, $longitude, $value['outlet_latitude'], $value['outlet_longitude'], "K"), 2, '.', '');
                 settype($jaraknya, "float");
@@ -1006,6 +1029,8 @@ class ApiOutletController extends Controller
                 if($id_city != "" && $id_city != $value['id_city']){
                     unset($outlet[$key]);
                 }
+
+                $outlet[$key] = $this->setAvailableOutlet($outlet[$key], $processing);
             }
             if($sort != 'Alphabetical'){
                 usort($outlet, function($a, $b) {
@@ -1019,9 +1044,6 @@ class ApiOutletController extends Controller
                 }
             }
 
-            if($request->json('type') && $request->json('type') == 'transaction'){
-                $urutan = $this->setAvailableOutlet($urutan);
-            }
         } else {
             return response()->json(MyHelper::checkGet($outlet));
         }
@@ -1068,53 +1090,87 @@ class ApiOutletController extends Controller
     }
 
     // unset outlet yang tutup dan libur
-    function setAvailableOutlet($listOutlet){
-        $processing = '0';
-        $settingTime = Setting::where('key', 'processing_time')->first();
-        if($settingTime && $settingTime->value){
-            $processing = $settingTime->value;
-        }
+    function setAvailableOutlet($outlet, $processing){
+        $outlet['today']['status'] = 'open';
 
-        $outlet = $listOutlet;
-        foreach($listOutlet as $index => $dataOutlet){
-            if($dataOutlet['today']['open'] == null || $dataOutlet['today']['close'] == null){
-                unset($outlet[$index]);
+        if($outlet['today']['open'] == null || $outlet['today']['close'] == null){
+            $outlet['today']['status'] = 'closed';
+        }else{
+            if($outlet['today']['is_closed'] == '1'){
+                $outlet['today']['status'] = 'closed';
             }else{
-                if($dataOutlet['today']['is_closed'] == '1'){
-                    unset($outlet[$index]);
-                }else{
-                    if($dataOutlet['today']['open'] != "00:00" && $dataOutlet['today']['close'] != "00:00"){
-                        if($dataOutlet['today']['open'] && date('H:i:01') < date('H:i', strtotime($dataOutlet['today']['open']))){
-                            unset($outlet[$index]);
-                        }elseif($dataOutlet['today']['close'] && date('H:i') > date('H:i', strtotime('-'.$processing.' minutes', strtotime($dataOutlet['today']['close'])))){
-                            unset($outlet[$index]);
-                        }else{
-                            $holiday = Holiday::join('outlet_holidays', 'holidays.id_holiday', 'outlet_holidays.id_holiday')->join('date_holidays', 'holidays.id_holiday', 'date_holidays.id_holiday')
-                            ->where('id_outlet', $dataOutlet['id_outlet'])->whereDay('date_holidays.date', date('d'))->whereMonth('date_holidays.date', date('m'))->get();
-                            if(count($holiday) > 0){
-                                foreach($holiday as $i => $holi){
-                                    if($holi['yearly'] == '0'){
-                                        if($holi['date'] == date('Y-m-d')){
-                                            unset($outlet[$index]);
-                                            break;
-                                        }
-                                    }else{
-                                        unset($outlet[$index]);
-                                        break;
+                if($outlet['today']['open'] != "00:00" && $outlet['today']['close'] != "00:00"){
+                    if($outlet['today']['open'] && date('H:i:01') < date('H:i', strtotime($outlet['today']['open']))){
+                        $outlet['today']['status'] = 'closed';
+                    }elseif($outlet['today']['close'] && date('H:i') > date('H:i', strtotime('-'.$processing.' minutes', strtotime($outlet['today']['close'])))){
+                        $outlet['today']['status'] = 'closed';
+                    }else{
+                        $holiday = Holiday::join('outlet_holidays', 'holidays.id_holiday', 'outlet_holidays.id_holiday')->join('date_holidays', 'holidays.id_holiday', 'date_holidays.id_holiday')
+                        ->where('id_outlet', $outlet['id_outlet'])->whereDay('date_holidays.date', date('d'))->whereMonth('date_holidays.date', date('m'))->get();
+                        if(count($holiday) > 0){
+                            foreach($holiday as $i => $holi){
+                                if($holi['yearly'] == '0'){
+                                    if($holi['date'] == date('Y-m-d')){
+                                        $outlet['today']['status'] = 'closed';
                                     }
+                                }else{
+                                    $outlet['today']['status'] = 'closed';
                                 }
-
                             }
+
                         }
                     }
                 }
             }
-            unset($outlet[$index]['product_prices']);
-            unset($outlet[$index]['outlet_schedules']);
-            unset($outlet[$index]['outlet_photos']);
-            unset($outlet[$index]['outlet_pin']);
         }
-        return array_values($outlet);
+
+        return $outlet;
+    }
+
+    /**
+     * Cek outlet buka atau tutup
+     * @param  Array $dataOutlet outlet
+     * @return string 'open'/'closed'
+     */
+    public function checkOutletStatus($dataOutlet){
+        if($dataOutlet['today']['open'] == null || $dataOutlet['today']['close'] == null){
+            return 'closed';
+        }else{
+            $processing = '0';
+            $settingTime = Setting::where('key', 'processing_time')->first();
+            if($settingTime && $settingTime->value){
+                $processing = $settingTime->value;
+            }
+            if($dataOutlet['today']['is_closed'] == '1'){
+                return 'closed';
+            }else{
+                if($dataOutlet['today']['open'] != "00:00" && $dataOutlet['today']['close'] != "00:00"){
+                    if($dataOutlet['today']['open'] && date('H:i:01') < date('H:i', strtotime($dataOutlet['today']['open']))){
+                        return 'closed';
+                    }elseif($dataOutlet['today']['close'] && date('H:i') > date('H:i', strtotime('-'.$processing.' minutes', strtotime($dataOutlet['today']['close'])))){
+                        return 'closed';
+                    }else{
+                        $holiday = Holiday::join('outlet_holidays', 'holidays.id_holiday', 'outlet_holidays.id_holiday')->join('date_holidays', 'holidays.id_holiday', 'date_holidays.id_holiday')
+                        ->where('id_outlet', $dataOutlet['id_outlet'])->whereDay('date_holidays.date', date('d'))->whereMonth('date_holidays.date', date('m'))->get();
+                        if(count($holiday) > 0){
+                            foreach($holiday as $i => $holi){
+                                if($holi['yearly'] == '0'){
+                                    if($holi['date'] == date('Y-m-d')){
+                                            return 'closed';
+                                        break;
+                                    }
+                                }else{
+                                        return 'closed';
+                                    break;
+                                }
+                            }
+
+                        }
+                    }
+                }
+            }
+        }
+        return 'open';
     }
 
     /* Penghitung jarak */
@@ -1697,5 +1753,105 @@ class ApiOutletController extends Controller
             $this->filterList($q,$condition['rules']??'',$condition['operator']??'and');
         }
         return MyHelper::checkGet($q->get());
+    }
+
+    public function detailTransaction(Request $request) {
+        $outlet = Outlet::with(['today','brands'=>function($query){
+                    $query->where([['brand_active',1],['brand_visibility',1]]);
+                    $query->select('brands.id_brand','name_brand');
+                }])->select('id_outlet','outlet_code','outlet_name','outlet_address','outlet_latitude','outlet_longitude','outlet_phone','outlet_status')->find($request->json('id_outlet'))->toArray();
+        if(!$outlet){
+            return MyHelper::checkGet([]);
+        }
+        $outlet['status'] = $this->checkOutletStatus($outlet);
+        return MyHelper::checkGet($outlet);
+    }
+
+    public function listOutletOrderNow(OutletListOrderNow $request){
+        $post = $request->json()->all();
+        $user = $request->user();
+
+        try{
+//            $outlet = Outlet::join('transactions','outlets.id_outlet', '=', 'transactions.id_outlet')
+//                ->join('users', 'users.id', '=', 'transactions.id_user')
+//                ->selectRaw('outlets.*,
+//                        (111.111 * DEGREES(ACOS(LEAST(1.0, COS(RADIANS(outlet_latitude))
+//                             * COS(RADIANS('.$post['latitude'].'))
+//                             * COS(RADIANS(outlet_longitude - '.$post['longitude'].'))
+//                             + SIN(RADIANS(outlet_latitude))
+//                             * SIN(RADIANS('.$post['latitude'].')))))) AS distance_in_km' )
+//                ->with(['user_outlets','city','today', 'outlet_schedules', 'brands'])
+//                ->where('users.phone',$user['phone'])
+//                ->where('outlets.outlet_status', 'Active')
+//                ->whereHas('brands',function($query){
+//                    $query->where('brand_active','1');
+//                })
+//                ->orderBy('distance_in_km')
+//                ->get()->toArray();
+//
+//            if(empty($outlet)){
+                $title = Setting::where('key', 'order_now_title')->first()->value;
+                $subTitleSuccess = Setting::where('key', 'order_now_sub_title_success')->first()->value;
+                $subTitleFail = Setting::where('key', 'order_now_sub_title_fail')->first()->value;
+
+                $outlet = Outlet::selectRaw('outlets.id_outlet, outlets.outlet_name, outlets.outlet_code,outlets.outlet_status,outlets.outlet_address,outlets.id_city, outlets.outlet_latitude, outlets.outlet_longitude,
+                        (111.111 * DEGREES(ACOS(LEAST(1.0, COS(RADIANS(outlets.outlet_latitude))
+                             * COS(RADIANS('.$post['latitude'].'))
+                             * COS(RADIANS(outlets.outlet_longitude - '.$post['longitude'].'))
+                             + SIN(RADIANS(outlets.outlet_latitude))
+                             * SIN(RADIANS('.$post['latitude'].')))))) AS distance_in_km' )
+                    ->with(['user_outlets','city','today', 'outlet_schedules', 'brands'])
+                    ->where('outlets.outlet_status', 'Active')
+                    ->whereNotNull('outlets.outlet_latitude')
+                    ->whereNotNull('outlets.outlet_longitude')
+                    ->whereHas('brands',function($query){
+                        $query->where('brand_active','1');
+                    })
+                    ->orderBy('distance_in_km', 'asc')
+                    ->limit(5)
+                    ->get()->toArray();
+//            }
+
+            if(count($outlet) > 0){
+                $loopdata=&$outlet;
+                $loopdata = array_map(function($var) use ($post){
+                    $var['url']=env('API_URL').'api/outlet/webview/'.$var['id_outlet'];
+                    if(($post['latitude']??false)&&($post['longitude']??false)){
+                        $var['distance']=number_format((float)$this->distance($post['latitude'], $post['longitude'], $var['outlet_latitude'], $var['outlet_longitude'], "K"), 2, '.', '').' km';
+                    }
+                    return $var;
+                }, $loopdata);
+
+                $result = [
+                    'status' => 'success',
+                    'messages' => [],
+                    'result' => [
+                        'title' => $title,
+                        'sub_title' => $subTitleSuccess,
+                        'data' => $outlet
+                    ]
+                ];
+            }else{
+                $result = [
+                    'status' => 'fail',
+                    'messages' => [$subTitleFail],
+                    'result' => [
+                        'title' => $title,
+                        'sub_title' => $subTitleFail,
+                        'data' => null
+                    ]
+                ];
+            }
+
+        }catch (Exception $e) {
+            $result = [
+                'status' => 'fail',
+                'messages' => ['something went wrong'],
+                'result' => [
+                    'data' => null
+                ]
+            ];
+        }
+        return response()->json($result);
     }
 }

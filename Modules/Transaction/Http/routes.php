@@ -47,10 +47,10 @@ Route::group(['middleware' => ['auth:api', 'log_activities'], 'prefix' => 'api/t
     Route::post('/balance/detail', 'ApiTransaction@transactionBalanceDetail');
 
     // Route::post('history', 'ApiHistoryController@historyAll');
-    Route::post('history-trx', 'ApiHistoryController@historyTrx');
-    Route::post('history-ongoing', 'ApiHistoryController@historyTrxOnGoing');
+    Route::post('history-trx/{mode?}', 'ApiHistoryController@historyTrx');
+    Route::post('history-ongoing/{mode?}', 'ApiHistoryController@historyTrxOnGoing');
     // Route::post('history-point', 'ApiHistoryController@historyPoint');
-    Route::post('history-balance', 'ApiHistoryController@historyBalance');
+    Route::post('history-balance/{mode?}', 'ApiHistoryController@historyBalance');
 
     Route::post('/shipping', 'ApiTransaction@getShippingFee');
     Route::get('/address', 'ApiTransaction@getAddress');
@@ -59,6 +59,7 @@ Route::group(['middleware' => ['auth:api', 'log_activities'], 'prefix' => 'api/t
     Route::post('/address/delete', 'ApiTransaction@deleteAddress');
     Route::post('/void', 'ApiTransaction@transactionVoid');
 
+    Route::post('/check', 'ApiOnlineTransaction@checkTransaction');
     Route::post('/new', 'ApiOnlineTransaction@newTransaction');
     Route::post('/confirm', 'ApiConfirm@confirmTransaction');
     Route::post('/prod/confirm', 'ApiTransactionProductionController@confirmTransaction2');

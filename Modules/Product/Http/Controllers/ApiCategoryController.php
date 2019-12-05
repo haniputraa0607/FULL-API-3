@@ -10,6 +10,8 @@ use App\Http\Models\ProductPrice;
 use App\Http\Models\NewsProduct;
 use App\Http\Models\Setting;
 
+use Modules\Brand\Entities\Brand;
+
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
@@ -255,7 +257,7 @@ class ApiCategoryController extends Controller
      * list tree
      * bisa by id parent category
      */
-    function listCategoryTree(Request $request) {
+    function listCategoryTreeX(Request $request) {
         $post = $request->json()->all();
 
         $category = $this->getData($post);
@@ -334,6 +336,118 @@ class ApiCategoryController extends Controller
         }
 
         return response()->json(MyHelper::checkGet($result));
+    }
+
+    /**
+     * list tree
+     * bisa by id parent category and id brand
+     */
+    function listCategoryTree(Request $request) {
+        $post = $request->json()->all();
+        $products = Product::select([
+                'products.id_product','products.product_name','products.product_description',
+                'product_prices.product_price','product_prices.product_stock_status'
+            ])
+            ->join('brand_product','brand_product.id_product','=','products.id_product')
+            // produk tersedia di outlet
+            ->join('product_prices','product_prices.id_product','=','products.id_product')
+            ->where('product_prices.id_outlet','=',$post['id_outlet'])
+            // brand produk ada di outlet
+            ->where('brand_outlet.id_outlet','=',$post['id_outlet'])
+            ->join('brand_outlet','brand_outlet.id_brand','=','brand_product.id_brand')
+            ->where(function($query){
+                $query->where('product_prices.product_visibility','=','Visible')
+                        ->orWhere(function($q){
+                            $q->whereNull('product_prices.product_visibility')
+                            ->where('products.product_visibility', 'Visible');
+                        });
+            })
+            ->where('product_prices.product_status','=','Active')
+            ->whereNotNull('product_prices.product_price')
+            ->with([
+                'brand_category',
+                'photos'=>function($query){
+                    $query->select('id_product','product_photo');
+                }
+            ])
+            ->groupBy('products.id_product')
+            ->orderBy('products.position')
+            ->get();
+        // grouping by id
+        $result = [];
+        foreach ($products as $product) {
+            $product->append('photo');
+            $product = $product->toArray();
+            $pivots = $product['brand_category'];
+            unset($product['brand_category']);
+            unset($product['photos']);
+            unset($product['product_prices']);
+            foreach ($pivots as $pivot) {
+                $result[$pivot['id_brand']][$pivot['id_product_category']][] = $product;
+            }
+        }
+        // get detail of every key
+        foreach ($result as $id_brand => $categories) {
+            foreach ($categories as $id_category => $products) {
+                $category = ProductCategory::select('id_product_category','product_category_name')->find($id_category);
+                $categories[$id_category] = [
+                    'category' => $category,
+                    'list' =>$products
+                ];
+            }
+            $brand = Brand::select('id_brand','name_brand')->find($id_brand);
+            $result[$id_brand] = [
+                'brand' => $brand,
+                'list' => array_values($categories)
+            ];
+        }
+        $result = array_values($result);
+
+        return response()->json(MyHelper::checkGet($result));
+    }
+
+    public function search(Request $request) {
+        $post = $request->except('_token');
+        $products = Product::select([
+                'products.id_product','products.product_name','products.product_description',
+                'product_prices.product_price','product_prices.product_stock_status',
+                'brand_product.id_product_category','brand_product.id_brand'
+            ])
+            ->join('brand_product','brand_product.id_product','=','products.id_product')
+            // produk tersedia di outlet
+            ->join('product_prices','product_prices.id_product','=','products.id_product')
+            ->where('product_prices.id_outlet','=',$post['id_outlet'])
+            // brand produk ada di outlet
+            ->where('brand_outlet.id_outlet','=',$post['id_outlet'])
+            ->join('brand_outlet','brand_outlet.id_brand','=','brand_product.id_brand')
+            // cari produk
+            ->where('products.product_name','like','%'.$post['product_name'].'%')
+            ->where(function($query){
+                $query->where('product_prices.product_visibility','=','Visible')
+                        ->orWhere(function($q){
+                            $q->whereNull('product_prices.product_visibility')
+                            ->where('products.product_visibility', 'Visible');
+                        });
+            })
+            ->where('product_prices.product_status','=','Active')
+            ->whereNotNull('product_prices.product_price')
+            ->with([
+                'photos'=>function($query){
+                    $query->select('id_product','product_photo');
+                }
+            ])
+            ->groupBy('products.id_product')
+            ->orderBy('products.position')
+            ->get();
+        $result = [];
+        foreach ($products as $product) {
+            $product->append('photo');
+            $result[$product->id_product_category]['list'][] = $product;
+            if(!isset($result[$product->id_product_category]['category'])){
+                $result[$product->id_product_category]['category']=ProductCategory::select('id_product_category','product_category_name')->find($product->id_product_category);
+            }
+        }
+        return MyHelper::checkGet(array_values($result));
     }
 
     function getData($post=[]) {

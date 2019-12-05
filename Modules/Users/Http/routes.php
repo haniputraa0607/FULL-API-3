@@ -42,6 +42,7 @@ Route::group(['prefix' => 'api', 'middleware' => 'log_activities'], function(){
 	    Route::post('adminoutlet/delete', 'ApiUser@deleteAdminOutlet');
 	    Route::post('activity', 'ApiUser@activity');
 	    Route::post('detail', 'ApiUser@show');
+	    Route::post('favorite', 'ApiUser@favorite');
 		Route::post('log', 'ApiUser@log');
 	    Route::get('log/detail/{id}/{log_type}', 'ApiUser@detailLog');
 	    Route::post('delete', 'ApiUser@delete');
@@ -68,6 +69,7 @@ Route::group(['prefix' => 'api', 'middleware' => 'log_activities'], function(){
 		Route::post('/membership','ApiHome@membership');
 		Route::any('/banner','ApiHome@banner');
 		Route::any('/featured-deals','ApiHome@featuredDeals');
+		Route::any('/featured-subscription','ApiHome@featuredSubscription');
 	    Route::post('refresh-point-balance', 'ApiHome@refreshPointBalance');
 	});
 	

@@ -24,6 +24,7 @@ use App\Http\Models\Setting;
 use App\Http\Models\Feature;
 use App\Http\Models\OauthAccessToken;
 use App\Http\Models\LogBalance;
+use Modules\Favorite\Entities\Favorite;
 
 use Modules\Users\Http\Requests\users_list;
 use Modules\Users\Http\Requests\users_forgot;
@@ -1070,6 +1071,10 @@ class ApiUser extends Controller
         $cekFraud = 0;
         if($datauser){
             if(Auth::attempt(['phone' => $phone, 'password' => $request->json('pin')])){
+                //untuk verifikasi admin panel
+                if($request->json('admin_panel')){
+                    return ['status'=>'success'];
+                }
                 //kalo login success
                 if($is_android != 0 || $is_ios != 0){
 
@@ -2658,5 +2663,27 @@ class ApiUser extends Controller
         }
 
         return response()->json(MyHelper::checkGet($user));
+    }
+
+    public function favorite(Request $request) {
+        $data = Favorite::whereHas('user',function($query) use ($request){
+            $query->where('phone',$request->json('phone'));
+        })->with([
+            'product'=>function($query){
+                $query->select('id_product','product_name','product_code');
+            },
+            'outlet'=>function($query){
+                $query->select('id_outlet','outlet_name','outlet_code');
+            },
+            'modifiers'=>function($query){
+                $query->select('text');
+            }
+        ]);
+        if($request->page){
+            $data = $data->paginate(10);
+        }else{
+            $data = $data->get();
+        }
+        return MyHelper::checkGet($data??[]);
     }
 }

@@ -1,0 +1,25 @@
+{
+    "name": "nwidart/userfeedback",
+    "description": "",
+    "authors": [
+        {
+            "name": "Nicolas Widart",
+            "email": "n.widart@gmail.com"
+        }
+    ],
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Modules\\UserFeedback\\Providers\\UserFeedbackServiceProvider"
+            ],
+            "aliases": {
+                
+            }
+        }
+    },
+    "autoload": {
+        "psr-4": {
+            "Modules\\UserFeedback\\": ""
+        }
+    }
+}

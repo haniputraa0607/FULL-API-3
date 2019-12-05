@@ -49,7 +49,7 @@ class ApiCronTrxController extends Controller
         $dateLine  = date('Y-m-d H:i:s', strtotime('- 1days'));
         $now       = date('Y-m-d H:i:s');
 
-        $getTrx = Transaction::where('transaction_payment_status', 'Pending')->where('created_at', '<=', $now)->get();
+        $getTrx = Transaction::where('transaction_payment_status', 'Pending')->where('transaction_date', '<=', $now)->get();
 
         if (empty($getTrx)) {
             return response()->json(['empty']);
