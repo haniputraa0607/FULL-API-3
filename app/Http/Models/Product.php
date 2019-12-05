@@ -64,7 +64,7 @@ class Product extends Model
 
 	 public function category()
     {
-        return $this->belongsTo(ProductCategory::class, 'id_product_category', 'id_product_category');
+        return $this->belongsToMany(ProductCategory::class,'brand_product', 'id_product', 'id_product_category');
     }
 
     public function photos() {
@@ -97,7 +97,7 @@ class Product extends Model
 
 	public function product_prices()
 	{
-		return $this->hasMany(\App\Http\Models\ProductPrice::class, 'id_product')->where('product_visibility', 'Visible');
+		return $this->hasMany(\App\Http\Models\ProductPrice::class, 'id_product');
 	}
 
 	public function prices()

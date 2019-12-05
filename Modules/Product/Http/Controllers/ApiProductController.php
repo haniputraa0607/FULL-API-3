@@ -153,10 +153,22 @@ class ApiProductController extends Controller
     public function categoryAssign(Request $request) {
 		$post = $request->json()->all();
 		foreach ($post['id_product'] as $key => $idprod) {
-			if($post['id_product_category'][$key] == 0)
+            $count = BrandProduct::where('id_product',$idprod)->count();
+			if($post['id_product_category'][$key] == 0){
 				$update = Product::where('id_product','=',$idprod)->update(['id_product_category' => null, 'product_name' => $post['product_name'][$key]]);
-			else
+                if($count){
+                    BrandProduct::where(['id_product'=>$idprod])->update(['id_product_category' => null]);
+                }else{
+                    BrandProduct::create(['id_product'=>$idprod,'id_product_category' => null]);
+                }
+			}else{
 				$update = Product::where('id_product','=',$idprod)->update(['id_product_category' => $post['id_product_category'][$key], 'product_name' => $post['product_name'][$key]]);
+                if($count){
+                    BrandProduct::where(['id_product'=>$idprod])->update(['id_product_category' => $post['id_product_category'][$key]]);
+                }else{
+                    BrandProduct::create(['id_product'=>$idprod,'id_product_category' => $post['id_product_category'][$key]]);
+                }
+            }
 		}
 		return response()->json(MyHelper::checkUpdate($update));
 	}
@@ -369,7 +381,8 @@ class ApiProductController extends Controller
             foreach ($brands as $id_brand) {
                 BrandProduct::create([
                     'id_product'=>$request->json('id_product'),
-                    'id_brand'=>$id_brand
+                    'id_brand'=>$id_brand,
+                    'id_product_category'=>$request->json('id_product_category')
                 ]);
             }
         }
@@ -794,7 +807,10 @@ class ApiProductController extends Controller
             return MyHelper::checkGet([]);
         }
         unset($product['product_prices']);
-        $post['id_product_category'] = $product['brand_category'][0]['id_product_category'];
+        $post['id_product_category'] = $product['brand_category'][0]['id_product_category']??0;
+        if($post['id_product_category'] === 0){
+            return MyHelper::checkGet([]);
+        }
         //get modifiers
         $product['modifiers'] = ProductModifier::select('id_product_modifier','text')
             ->where('modifier_type','Global')
