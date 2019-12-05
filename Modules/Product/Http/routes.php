@@ -96,8 +96,7 @@ Route::group(['prefix' => 'api/product','middleware' => 'log_activities', 'names
     Route::group(['prefix' => 'modifier', 'middleware' => 'auth:api'], function() {
 
         Route::any('/', 'ApiProductModifierController@index');
-        Route::any('list/tree', 'ApiProductModifierController@listTree');
-        Route::post('type', 'ApiProductModifierController@listType');
+        Route::get('type', 'ApiProductModifierController@listType');
 
         Route::post('detail', 'ApiProductModifierController@show');
         Route::post('create', 'ApiProductModifierController@store');

@@ -220,4 +220,9 @@ class ApiProductModifierController extends Controller
         $delete = ProductModifier::where('id_product_modifier',$id_product_modifier)->delete();
         return MyHelper::checkDelete($delete);
     }
+
+    public function listType() {
+        $data = ProductModifier::select('type')->groupBy('type')->get()->pluck('type');
+        return MyHelper::checkGet($data);
+    }
 }
