@@ -794,7 +794,10 @@ class ApiProductController extends Controller
             return MyHelper::checkGet([]);
         }
         unset($product['product_prices']);
-        $post['id_product_category'] = $product['brand_category'][0]['id_product_category'];
+        $post['id_product_category'] = $product['brand_category'][0]['id_product_category']??0;
+        if($post['id_product_category'] === 0){
+            return MyHelper::checkGet([]);
+        }
         //get modifiers
         $product['modifiers'] = ProductModifier::select('id_product_modifier','text')
             ->where('modifier_type','Global')
