@@ -126,14 +126,24 @@
 			border-bottom: 3px solid #383b67 !important;
 			font-weight: 600;
 			padding: 10px;
-			padding-bottom: 5px;
+			border-radius: 3px;
 		}
 		.nav-item .active:hover{
 			border:none !important;
 			border-bottom: 3px solid #383b67 !important;
 		}
 		.nav-tabs{
-			border-bottom: none !important; 
+			border-bottom: 1px solid #f8f9fb;
+			overflow-x: auto;
+			overflow-y: hidden;
+			display: -webkit-box;
+			display: -moz-box;
+		}
+		.nav-tabs>li {
+			float:none;
+		}
+		.nav>li>a:focus, .nav>li>a:hover {
+			background-color: transparent;
 		}
     </style>
 @stop
@@ -144,10 +154,10 @@
 			@php
 				$deals = $deals[0];
                 if ($deals['deals_voucher_price_cash'] != "") {
-                    $deals_fee = MyHelper::thousand_number_format($deals['deals_voucher_price_cash']);
+					$deals_fee = number_format($deals['deals_voucher_price_cash'],0,",",".");
                 }
                 elseif ($deals['deals_voucher_price_point']) {
-                    $deals_fee = $deals['deals_voucher_price_point'] . " poin";
+                    $deals_fee = number_format($deals['deals_voucher_price_point'],0,",",".") . " poin";
                 }
                 else {
                     $deals_fee = "GRATIS";
@@ -157,13 +167,13 @@
 				<img class="deals-img center-block" src="{{ $deals['url_deals_image'] }}" alt="">
 
 				<div class="title-wrapper clearfix">
-					<div class="col-left voucher font-red WorkSans-Medium" style="color: #707070;">
+					<div class="col-6 voucher font-red WorkSans-Medium" style="color: #707070;">
 					    @if($deals['deals_voucher_type'] != 'Unlimited')
-						    {{ $deals['deals_total_voucher'] }}/{{ $deals['deals_total_claimed'] }}
+						    {{ $deals['deals_total_voucher']-$deals['deals_total_claimed'] }}/{{ $deals['deals_total_voucher'] }}
 						@endif
 						kupon tersedia
 					</div>
-					<div class="col-right">
+					<div class="col-6 text-right">
 					    <div id="timer" style="color: #ffffff;" class="text-center WorkSans-Reguler">
 					        <span id="timerchild">Akan berakhir dalam</span>
 					    </div>
