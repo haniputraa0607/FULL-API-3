@@ -453,7 +453,7 @@ class ApiAutoCrm extends Controller
 								// $inbox['inboxes_id_reference'] = $variables['id_reference'];
 								$inbox['inboxes_id_reference'] = 0;
 						}elseif ($crm['autocrm_inbox_clickto'] == 'Transaction Detail') {
-							$inbox['autocrm_inbox_clickto'] == 'Transaction';
+							$inbox['inboxes_clickto'] == 'Transaction';
 							if (isset($variables['id_transaction'])) {
 								$inbox['inboxes_id_reference'] = $variables['id_transaction'];
 							} else {

@@ -10,11 +10,13 @@ use App\Http\Models\User;
 use App\Http\Models\Outlet;
 use App\Http\Models\Product;
 use App\Http\Models\ProductPrice;
+use App\Http\Models\ProductModifierProduct;
 use App\Http\Models\Courier;
 use App\Http\Models\UserAddress;
 use App\Http\Models\ManualPaymentMethod;
 use App\Http\Models\UserOutlet;
 use App\Http\Models\Configs;
+use Modules\Brand\Entities\BrandProduct;
 
 use GuzzleHttp\Exception\GuzzleException;
 use GuzzleHttp\Client;
@@ -107,7 +109,7 @@ class ApiDumpController extends Controller
 
 
             //product
-            $dataProduct = ProductPrice::where('id_outlet', $splitOutlet[$getOutlet])->where('product_price', '>',  0)->where('product_price_base', '>', 0)->where('product_price_tax', '>', 0)->get()->toArray();
+            $dataProduct = ProductPrice::where('id_outlet', $splitOutlet[$getOutlet])->where('product_price', '>',  0)->where('product_stock_status', 'Available')->get()->toArray();
 
             if (empty($dataProduct)) {
                 return response()->json([
@@ -149,11 +151,19 @@ class ApiDumpController extends Controller
                     if (!empty($dataItem)) {
                         $checkIdProduct = array_column($dataItem, 'id_product');
                         if (!in_array($setProduct[$insertProduct], $checkIdProduct)) {
+                            $modifier = [];
+                            $mod = ProductModifierProduct::where('id_product', $setProduct[$insertProduct])->first();
+                            $brand = BrandProduct::where('id_product', $setProduct[$insertProduct])->first();
+                            if($mod){
+                                $modifier[] = $mod['id_product_modifier'];
+                            }
                             $setItem = [
+                                'id_brand'   => $brand['id_brand'],
                                 'id_product' => $setProduct[$insertProduct],
                                 'qty'        => rand(1,$qtyEnd),
                                 'note'       => $this->getrandomstring(),
-                                'price'      => $dataProduct[$insertProduct]['product_price']
+                                'price'      => $dataProduct[$insertProduct]['product_price'],
+                                'modifiers'   => $modifier
                             ];
                             $totalItem += $setItem['qty'];
                             $totalPrice += ($setItem['qty'] * $dataProduct[$insertProduct]['product_price']);
@@ -161,11 +171,19 @@ class ApiDumpController extends Controller
                             $setItem = [];
                         }
                     } else {
+                        $modifier = [];
+                        $mod = ProductModifierProduct::where('id_product', $setProduct[$insertProduct])->first();
+                        $brand = BrandProduct::where('id_product', $setProduct[$insertProduct])->first();
+                        if($mod){
+                            $modifier[] = $mod['id_product_modifier'];
+                        }
                         $setItem = [
+                            'id_brand'   => $brand['id_brand'],
                             'id_product' => $setProduct[$insertProduct],
                             'qty'        => rand(1,$qtyEnd),
                             'note'       => $this->getrandomstring(),
-                            'price'      => $dataProduct[$insertProduct]['product_price']
+                            'price'      => $dataProduct[$insertProduct]['product_price'],
+                            'modifiers'   => $modifier
                         ];
                         $totalItem += $setItem['qty'];
                         $totalPrice += ($setItem['qty'] * $dataProduct[$insertProduct]['product_price']);
@@ -410,7 +428,7 @@ class ApiDumpController extends Controller
                 }
 
                 $insertTransaction = $this->insert($data);
-
+                // return $insertTransaction;
                 if (isset($insertTransaction['status']) && $insertTransaction['status'] == 'success') {
                     continue;
                 } elseif (isset($insertTransaction['status']) && $insertTransaction['status'] == 'fail') {
