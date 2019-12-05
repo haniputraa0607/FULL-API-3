@@ -201,14 +201,24 @@
 			border-bottom: 3px solid #383b67 !important;
 			font-weight: 600;
 			padding: 10px;
-			padding-bottom: 5px;
+			border-radius: 3px;
 		}
 		.nav-item .active:hover{
 			border:none !important;
 			border-bottom: 3px solid #383b67 !important;
 		}
 		.nav-tabs{
-			border-bottom: none !important; 
+			border-bottom: 1px solid #f8f9fb;
+			overflow-x: auto;
+			overflow-y: hidden;
+			display: -webkit-box;
+			display: -moz-box;
+		}
+		.nav-tabs>li {
+			float:none;
+		}
+		.nav>li>a:focus, .nav>li>a:hover {
+			background-color: transparent;
 		}
     </style>
 @stop
@@ -240,9 +250,9 @@
 				<div style="background-color: rgb(255, 255, 255);" class="title-wrapper col-md-12 clearfix ProductSans">
 					<div class="title" style="padding-top: 0px; padding-bottom: 5px;">
 						@if (isset($voucher['deal_voucher']['deal']['deals_voucher_price_point']))
-							{{number_format($voucher['deal_voucher']['deal']['deals_voucher_price_point'])}} points
+							{{number_format($voucher['deal_voucher']['deal']['deals_voucher_price_point'],0,",",".")}} points
 						@elseif (isset($voucher['deal_voucher']['deal']['deals_voucher_price_cash']))
-							Rp {{number_format($voucher['deal_voucher']['deal']['deals_voucher_price_cash'])}}
+							{{number_format($voucher['deal_voucher']['deal']['deals_voucher_price_cash'],0,",",".")}}
 						@else
 							Gratis
 						@endif
@@ -278,14 +288,15 @@
 					</div>
 				</div>
 				@else
-				<div style="background-color: #ffffff;padding: 10px;box-shadow: 0 0.7px 3.3px #eeeeee;" class="col-md-12 clearfix WorkSans">
+				<div style="background-color: #ffffff;padding: 10px;box-shadow: 0 0.7px 3.3px #eeeeee;height: 190px;" class="col-md-12 clearfix WorkSans">
+					<div id="test" style="width: 100%;height: 110px;position: absolute;background-color: #f8f9fb;left: 0;top: 32%;"></div>
 					<div style="position: relative;margin-top: 26.7px;">
 						<hr style="position:absolute;z-index: 1;border: none;border-left: 1px dashed #eeeeee;height: 98px;left: 36%;top: 3%;">
 						<div style="width: 56%;height: 100px;position: absolute;top: 10%;left: 40%;">
 							<div class="cotainer">
 								<div class="pull-left" style="margin-top: 10px;">
 									@php $bulan = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', "Juli", 'Agustus', 'September', 'Oktober', 'November', 'Desember']; @endphp
-									<p style="font-size: 15px;color: #333333;">{{$voucher['deal_voucher']['deal']['deals_title']}}</p>
+									<p style="font-size: 15px;color: #333333;" 	class="WorkSans-Bold">{{$voucher['deal_voucher']['deal']['deals_title']}}</p>
 									<p style="font-size: 13.3px;color: #333333;">{{$voucher['deal_voucher']['deal']['deals_second_title']}}</p>
 									<div style="@if (isset($voucher['deal_voucher']['deal']['deals_second_title'])) margin-top: 20px; @else margin-top: 38px; @endif"></div>
 									<p style="font-size: 10.7px;color: #707070;padding: 5px 10px;background-color: #f0f3f7;border-radius: 100px;">Kedaluwarsa {{date('d', strtotime($voucher['deal_voucher']['deal']['deals_end']))}} {{$bulan[date('m', strtotime($voucher['deal_voucher']['deal']['deals_end']))-1]}} {{ date('Y', strtotime($voucher['deal_voucher']['deal']['deals_end'])) }}</p>

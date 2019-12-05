@@ -198,14 +198,17 @@
 		 .image-4 {
          clip-path: polygon(30% 0, 100% 0, 100% 100%, 0 100%);
 		}
+        body {
+            background-color: #f8f9fb;
+        }
     </style>
 @stop
 
 @section('content')
 	<div class="deals-detail">
 		@if(!empty($deals))
-			<div class="col-md-4 col-md-offset-4" style="background-color: #f8f9fb;">
-				<div style="background-color: #ffffff;padding: 10px;box-shadow: 0 0.7px 3.3px #eeeeee;" class="col-md-12 clearfix WorkSans">
+			<div class="col-md-4 col-md-offset-4" style="background-color: #f0f3f7;">
+				<div style="background-color: #f8f9fb;padding: 10px;box-shadow: 0 0.7px 3.3px #eeeeee;" class="col-md-12 clearfix WorkSans">
 					<div class="text-center title WorkSans-SemiBold" style="color: #a6ba35;font-size: 20px;">
 						Horayy!
 					</div>
@@ -230,37 +233,37 @@
 					</div>
 				</div>
 
-				<div style="background-color: #ffffff;;margin-top: 10px;" class="title-wrapper col-md-12 clearfix WorkSans-Bold">
+				<div style="background-color: #f8f9fb;;margin-top: 10px;" class="title-wrapper col-md-12 clearfix WorkSans-Bold">
 					<div class="title" style="font-size: 15px; color: #333333;">Transaksi</div>
 				</div>
 
-				<div style="background-color: #ffffff;padding-top: 0px; color: #333333; height: 40px;" class="description-wrapper WorkSans">
+				<div style="background-color: #f8f9fb;padding-top: 0px; color: #333333; height: 40px;" class="description-wrapper WorkSans">
 					<div class="description pull-left WorkSans-SemiBold">Tanggal</div>
 					<div style="color: #707070;" class="description pull-right">{{date('d', strtotime($deals['claimed_at']))}} {{$bulan[date('m', strtotime($deals['claimed_at']))-1]}} {{ date('Y', strtotime($deals['claimed_at'])) }} {{date('H:i', strtotime($deals['claimed_at']))}}</div>
 				</div>
 
-				<div style="background-color: #ffffff;padding-top: 0px; color: #333333; height: 60px;" class="description-wrapper WorkSans">
+				<div style="background-color: #f8f9fb;padding-top: 0px; color: #333333; height: 60px;" class="description-wrapper WorkSans">
 					<div class="description pull-left WorkSans-SemiBold">ID Transaksi</div>
 					<div style="color: #707070;" class="description pull-right">{{strtotime($deals['claimed_at'])}}</div>
 				</div>
 
 				@php
 					if ($deals['voucher_price_point'] != null) {
-						$payment = number_format($deals['voucher_price_point']).' points';
+						$payment = number_format($deals['voucher_price_point'],0,",",".").' points';
 					} elseif ($deals['voucher_price_cash'] != null) {
-						$payment = number_format($deals['voucher_price_cash']).' points';
+						$payment = number_format($deals['voucher_price_cash'],0,",",".");
 					} else {
 						$payment = 'Gratis';
 					}
 				@endphp
-				<div style="background-color: #ffffff;">
+				<div style="background-color: #f8f9fb;">
 					<div style="background-color: #f0f3f7;padding-top: 0px;color: #333333;height: 45px;border-radius: 5px;margin: 0px 15px;" class="description-wrapper WorkSans">
 						<div class="description pull-left WorkSans-SemiBold">Total Pembayaran</div>
 						<div class="description pull-right WorkSans-SemiBold">{{$payment}}</div>
 					</div>
 				</div>
 
-				<div style="background-color: #ffffff;padding-top: 0px; color: rgb(0, 0, 0); height: 70px; position: fixed; bottom: 10px; width: 100%;" class="description-wrapper WorkSans">
+				<div style="background-color: #f8f9fb;padding-top: 0px; color: rgb(0, 0, 0); height: 70px; position: fixed; bottom: 10px; width: 100%;" class="description-wrapper WorkSans">
 					<a style="width:100%; background-color: #383b67; color: #ffffff;" class="btn btn-lg WorkSans-Bold" href="#yes">Lihat Voucher</a>
 				</div>
 			</div>
