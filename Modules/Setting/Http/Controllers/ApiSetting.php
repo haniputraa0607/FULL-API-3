@@ -1241,7 +1241,7 @@ class ApiSetting extends Controller
                 $count = count($menuOther);
                 $row = $count / 2;
                 $arr1 = array_slice($menuOther,0,$row);
-                $arr2 = array_slice($menuOther,$row+1,$count);
+                $arr2 = array_slice($menuOther,$row,$count);
 
                 $arr = [array_values($arr1), array_values($arr2)];
                 $result = [

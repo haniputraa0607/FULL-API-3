@@ -1790,18 +1790,24 @@ class ApiOutletController extends Controller
 //                ->get()->toArray();
 //
 //            if(empty($outlet)){
-                $outlet = Outlet::selectRaw('outlets.*,
-                        (111.111 * DEGREES(ACOS(LEAST(1.0, COS(RADIANS(outlet_latitude))
+                $title = Setting::where('key', 'order_now_title')->first()->value;
+                $subTitleSuccess = Setting::where('key', 'order_now_sub_title_success')->first()->value;
+                $subTitleFail = Setting::where('key', 'order_now_sub_title_fail')->first()->value;
+
+                $outlet = Outlet::selectRaw('outlets.id_outlet, outlets.outlet_name, outlets.outlet_code,outlets.outlet_status,outlets.outlet_address,outlets.id_city, outlets.outlet_latitude, outlets.outlet_longitude,
+                        (111.111 * DEGREES(ACOS(LEAST(1.0, COS(RADIANS(outlets.outlet_latitude))
                              * COS(RADIANS('.$post['latitude'].'))
-                             * COS(RADIANS(outlet_longitude - '.$post['longitude'].'))
-                             + SIN(RADIANS(outlet_latitude))
+                             * COS(RADIANS(outlets.outlet_longitude - '.$post['longitude'].'))
+                             + SIN(RADIANS(outlets.outlet_latitude))
                              * SIN(RADIANS('.$post['latitude'].')))))) AS distance_in_km' )
                     ->with(['user_outlets','city','today', 'outlet_schedules', 'brands'])
                     ->where('outlets.outlet_status', 'Active')
+                    ->whereNotNull('outlets.outlet_latitude')
+                    ->whereNotNull('outlets.outlet_longitude')
                     ->whereHas('brands',function($query){
                         $query->where('brand_active','1');
                     })
-                    ->orderBy('distance_in_km')
+                    ->orderBy('distance_in_km', 'asc')
                     ->limit(5)
                     ->get()->toArray();
 //            }
@@ -1820,18 +1826,18 @@ class ApiOutletController extends Controller
                     'status' => 'success',
                     'messages' => [],
                     'result' => [
-                        'title' => 'Pesan Sekarang',
-                        'sub_title' => 'Cek outlet terdekatmu',
+                        'title' => $title,
+                        'sub_title' => $subTitleSuccess,
                         'data' => $outlet
                     ]
                 ];
             }else{
                 $result = [
                     'status' => 'fail',
-                    'messages' => ['Tidak ada outlet yang tersedia'],
+                    'messages' => [$subTitleFail],
                     'result' => [
-                        'title' => 'Pesan Sekarang',
-                        'sub_title' => 'Tidak ada outlet yang tersedia',
+                        'title' => $title,
+                        'sub_title' => $subTitleFail,
                         'data' => null
                     ]
                 ];
