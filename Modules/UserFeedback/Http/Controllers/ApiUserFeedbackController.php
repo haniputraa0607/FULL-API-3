@@ -90,7 +90,22 @@ class ApiUserFeedbackController extends Controller
             'image'=> $upload['path']??null
         ];
         $create = UserFeedback::updateOrCreate(['id_transaction'=>$id_transaction],$insert);
+        if($create){
+            Transaction::where('id_user',$user->id)->update(['show_rate_popup'=>0]);
+        }
         return MyHelper::checkCreate($create);
+    }
+
+    /**
+     * User refuse to rate
+     * @param Request $request
+     * @return Response
+     */
+    public function refuse(Request $request)
+    {
+        $user = $request->user();
+        $update = Transaction::where('id_user',$user->id)->update(['show_rate_popup'=>0]);
+        return MyHelper::checkUpdate($update);
     }
 
     /**

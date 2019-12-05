@@ -696,6 +696,12 @@ class ApiHome extends Controller
             unset($retUser[$hide]);
         }
 
+        // chek vote transaksi
+        $trx = Transaction::where([
+            ['id_user',$user->id],
+            ['show_rate_popup',1]
+        ])->orderBy('transaction_date')->first();
+        $rate_popup = $trx?$trx->transaction_receipt_number.','.$trx->id_transaction:null;
         $retUser['membership']=$membership;
         $result = [
             'status' => 'success',
@@ -704,7 +710,8 @@ class ApiHome extends Controller
                 'user_info'     => $retUser,
                 'qr_code'       => $qrCode??'',
                 'greeting'      => $greetingss??'',
-                'expired_qr'    => $expired??''
+                'expired_qr'    => $expired??'',
+                'rate_popup'    => $rate_popup
             ]
         ];
 
@@ -794,8 +801,12 @@ class ApiHome extends Controller
     public function featuredSubscription(Request $request){
 
         $now=date('Y-m-d H-i-s');
+        $home_text = Setting::where('key','=','home_subscription_title')->orWhere('key','=','home_subscription_sub_title')->orderBy('id_setting')->get();
+        $text['title'] = $home_text[0]['value']??'';
+        $text['sub_title'] = $home_text[1]['value']??'';
+
         $subs=featuredSubscription::select('id_featured_subscription','id_subscription')->with(['subscription'=>function($query){
-            $query->select('subscription_title','subscription_image','subscription_total', 'subscription_voucher_total','subscription_bought','subscription_publish_start','subscription_publish_end','subscription_start','subscription_end','id_subscription','subscription_price_point','subscription_price_cash');
+            $query->select('subscription_title','subscription_sub_title','subscription_image','subscription_total', 'subscription_voucher_total','subscription_bought','subscription_publish_start','subscription_publish_end','subscription_start','subscription_end','id_subscription','subscription_price_point','subscription_price_cash');
         }])
             ->whereHas('subscription',function($query){
                 $query->where('subscription_publish_end','>=',DB::raw('CURRENT_TIMESTAMP()'));
@@ -808,7 +819,7 @@ class ApiHome extends Controller
 
         if($subs){
             $subs=array_map(function($value){
-                if ( empty($value['subscription']['subscription_price_point']) && empty($value['subscription']['subscription_price_cash'])) {
+                if ( (empty($value['subscription']['subscription_price_point']) && empty($value['subscription']['subscription_price_cash'])) || empty($value['subscription']['subscription_total']) ) {
                     $calc = '*';
                 }else{
                     $calc = $value['subscription']['subscription_total'] - $value['subscription']['subscription_bought'];
@@ -834,6 +845,8 @@ class ApiHome extends Controller
 
                     $featuredList[$i]['id_featured_subscription'] = $value['id_featured_subscription'];
                     $featuredList[$i]['id_subscription'] = $value['id_subscription'];
+                    $featuredList[$i]['subscription_title'] = $value['subscription']['subscription_title'];
+                    $featuredList[$i]['subscription_sub_title'] = $value['subscription']['subscription_sub_title'];
                     $featuredList[$i]['url_subscription_image'] = $value['subscription']['url_subscription_image'];
                     $featuredList[$i]['time_to_end'] = $value['subscription']['time_to_end'];
                     $featuredList[$i]['subscription_end'] = $value['subscription']['subscription_end'];
@@ -843,9 +856,11 @@ class ApiHome extends Controller
                 }
 
             }
+            $data_home['text'] = $text;
+            $data_home['featured_list'] = $featuredList;
             return [
                 'status'=>'success',
-                'result'=>$featuredList
+                'result'=> $data_home
             ];
         }else{
             return [

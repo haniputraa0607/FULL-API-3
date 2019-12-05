@@ -6,9 +6,9 @@ use App\Http\Models\Transaction;
 use App\Http\Models\TransactionPaymentMidtran;
 use App\Http\Models\LogTopupMidtrans;
 use App\Http\Models\DealsPaymentMidtran;
-use App\Http\Models\SubscriptionPaymentMidtran;
+use Modules\Subscription\Entities\SubscriptionPaymentMidtran;
 use App\Http\Models\DealsUser;
-use App\Http\Models\SubscriptionUser;
+use Modules\Subscription\Entities\SubscriptionUser;
 use App\Http\Models\User;
 use App\Http\Models\Outlet;
 use App\Http\Models\LogBalance;
@@ -966,6 +966,8 @@ Detail: ".$link['short'],
             } else {
                 $detail->taken_at = date('Y-m-d H:i:s');
                 $detail->id_admin_outlet_taken = $post['id'];
+                $transaction->show_rate_popup = 1;
+                $transaction->save();
             }
         }
 

@@ -1211,7 +1211,8 @@ class ApiSetting extends Controller
         }
     }
 
-    public function textMenuList(){
+    public function textMenuList(Request $request){
+        $post = $request->json()->all();
 
         try{
             $textMenuMain = Setting::where('key', 'text_menu_main')->first()->value_text;
@@ -1235,13 +1236,30 @@ class ApiSetting extends Controller
                     $menuMain[$key]->icon2 = env('S3_URL_API').$val['icon2'];
                 }
             }
-            $result = [
-                'status' => 'success',
-                'result' => [
-                    'main_menu' => $menuMain,
-                    'other_menu' => $menuOther
-                ]
-            ];
+
+            if(!isset($post['webview'])){
+                $count = count($menuOther);
+                $row = $count / 2;
+                $arr1 = array_slice($menuOther,0,$row);
+                $arr2 = array_slice($menuOther,$row,$count);
+
+                $arr = [array_values($arr1), array_values($arr2)];
+                $result = [
+                    'status' => 'success',
+                    'result' => [
+                        'main_menu' => array_values($menuMain),
+                        'other_menu' => $arr
+                    ]
+                ];
+            }else{
+                $result = [
+                    'status' => 'success',
+                    'result' => [
+                        'main_menu' => $menuMain,
+                        'other_menu' => $menuOther
+                    ]
+                ];
+            }
 
             return response()->json($result);
 

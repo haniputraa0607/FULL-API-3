@@ -397,6 +397,51 @@ class SettingsTableSeeder extends Seeder
                 'created_at' => date('Y-m-d H:i:s'),
                 'updated_at' => date('Y-m-d H:i:s'),
             ),
+            43 =>
+            array(
+                'id_setting' => 44,
+                'key' => 'home_subscription_title',
+                'value' => 'Subscription',
+                'value_text' => NULL,
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ),
+            44 =>
+            array(
+                'id_setting' => 45,
+                'key' => 'home_subscription_sub_title',
+                'value' => 'Banyak untungnya kalo berlangganan',
+                'value_text' => NULL,
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ),
+            45 =>
+                array(
+                    'id_setting' => 46,
+                    'key' => 'order_now_title',
+                    'value' => 'Pesan Sekarang',
+                    'value_text' => NULL,
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
+            47 =>
+                array(
+                    'id_setting' => 48,
+                    'key' => 'order_now_sub_title_success',
+                    'value' => 'Cek outlet terdekatmu',
+                    'value_text' => NULL,
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
+            48 =>
+                array(
+                    'id_setting' => 49,
+                    'key' => 'order_now_sub_title_fail',
+                    'value' => 'Tidak ada outlet yang tersedia',
+                    'value_text' => NULL,
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
         ));
     }
 }

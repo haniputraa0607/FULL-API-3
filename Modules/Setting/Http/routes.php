@@ -170,3 +170,8 @@ Route::group([ 'prefix' => 'api/setting', 'namespace' => 'Modules\Setting\Http\C
     Route::any('/faq/webview', 'ApiSettingWebview@faqWebviewView');
     Route::any('/intro/list', 'ApiTutorial@introListFrontend');
 });
+
+Route::group(['middleware' => ['auth:api'], 'prefix' => 'api/setting', 'namespace' => 'Modules\Setting\Http\Controllers'], function()
+{
+    Route::any('/intro/home', 'ApiTutorial@introHomeFrontend');
+});
