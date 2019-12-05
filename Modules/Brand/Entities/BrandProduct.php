@@ -12,7 +12,8 @@ class BrandProduct extends Model
 
     protected $fillable   = [
         'id_brand',
-        'id_product'
+        'id_product',
+        'id_product_category'
     ];
 
     public function products(){
