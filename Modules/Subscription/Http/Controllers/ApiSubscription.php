@@ -11,6 +11,8 @@ use App\Lib\MyHelper;
 use Modules\Subscription\Entities\Subscription;
 use Modules\Subscription\Entities\FeaturedSubscription;
 use Modules\Subscription\Entities\SubscriptionOutlet;
+use Modules\Subscription\Entities\SubscriptionContent;
+use Modules\Subscription\Entities\SubscriptionContentDetail;
 use Modules\Subscription\Entities\SubscriptionUser;
 use Modules\Subscription\Entities\SubscriptionUserVoucher;
 use App\Http\Models\Setting;
@@ -18,6 +20,7 @@ use App\Http\Models\Setting;
 use Modules\Subscription\Http\Requests\ListSubscription;
 use Modules\Subscription\Http\Requests\Step1Subscription;
 use Modules\Subscription\Http\Requests\Step2Subscription;
+use Modules\Subscription\Http\Requests\Step3Subscription;
 use DB;
 
 class ApiSubscription extends Controller
@@ -235,7 +238,7 @@ class ApiSubscription extends Controller
 
         $data = $this->checkInputan($data);
         // error
-        // DB::beginTransaction();
+        DB::beginTransaction();
 
         if (isset($data['error'])) {
             unset($data['error']);
@@ -268,6 +271,71 @@ class ApiSubscription extends Controller
             DB::rollback();
         }
         return response()->json(MyHelper::checkCreate($save));
+    }
+
+    public function updateContent(Step3Subscription $request)
+    {
+        $post = $request->json()->all();
+
+        $data_content = [];
+        $data_content_detail = [];
+        $content_order = 1;
+
+        DB::beginTransaction();
+
+        //Rapiin data yg masuk
+        foreach ($post['id_subscription_content'] as $key => $value) {
+            $data_content[$key]['id_subscription'] = $post['id_subscription'];
+            $data_content[$key]['id_subscription_content'] = $value;
+            $data_content[$key]['title'] = $post['content_title'][$key];
+            $data_content[$key]['is_active'] = ($post['visible'][$key+1]??0) ? 1 : null;
+            $data_content[$key]['order'] = ($content_order++);
+            $data_content[$key]['created_at'] = date('Y-m-d H:i:s');
+            $data_content[$key]['updated_at'] = date('Y-m-d H:i:s');
+
+            $detail_order = 1;
+            if ( ($post['id_content_detail'][$key+1]??0) ) {
+                foreach ($post['id_content_detail'][$key+1] as $key2 => $value2) {
+                    $data_content_detail[$key][$key2]['id_subscription_content'] = $value;
+                    $data_content_detail[$key][$key2]['id_subscription_content_detail'] = $value2;
+                    $data_content_detail[$key][$key2]['content'] = $post['content_detail'][$key+1][$key2];
+                    $data_content_detail[$key][$key2]['order'] = $detail_order++;
+                    $data_content_detail[$key][$key2]['created_at'] = date('Y-m-d H:i:s');
+                    $data_content_detail[$key][$key2]['updated_at'] = date('Y-m-d H:i:s');
+                }
+            }
+        }
+
+        // hapus content & detail
+        $del_content = SubscriptionContent::where('id_subscription','=',$post['id_subscription'])->delete();
+
+        // create content & detail
+        foreach ($post['id_subscription_content'] as $key => $value) 
+        {
+            $save = SubscriptionContent::create($data_content[$key]);
+
+            $id_subscription_content = $save['id_subscription_content'];
+
+            if ( ($post['id_content_detail'][$key+1]??0) ) {
+
+                foreach ($post['id_content_detail'][$key+1] as $key2 => $value2) {
+
+                    $data_content_detail[$key][$key2]['id_subscription_content'] = $id_subscription_content;
+
+                    $save = SubscriptionContentDetail::create($data_content_detail[$key][$key2]);
+                }
+            }
+        }
+
+        // update description
+        $save = Subscription::where('id_subscription','=',$post['id_subscription'])->update([ 'subscription_description' => $post['subscription_description'] ]);
+
+        if ($save) {
+            DB::commit();
+        } else {
+            DB::rollback();
+        }
+        return response()->json(MyHelper::checkUpdate($save));
     }
 
     /* SAVE OUTLET */
@@ -345,16 +413,13 @@ class ApiSubscription extends Controller
         $post = $request->json()->all();
         $data = Subscription::
                     where('id_subscription','=',$post['id_subscription'])
-                    ->select(
-                        'id_subscription',
-                        'subscription_title',
-                        'subscription_sub_title',
-                        'subscription_start',
-                        'subscription_end',
-                        'subscription_publish_start',
-                        'subscription_publish_end',
-                        'subscription_image'
+                    ->with(
+                        'subscription_content',
+                        'subscription_content.subscription_content_details'
                     )
+                    // ->select(
+                    //     'subscription_description'
+                    // )
                     ->first()
                     ->toArray();
         return response()->json(MyHelper::checkGet($data));
