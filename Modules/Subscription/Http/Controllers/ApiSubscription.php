@@ -614,6 +614,8 @@ class ApiSubscription extends Controller
                 $list[$i]['id_subscription'] = $subs[$i]['id_subscription'];
                 $list[$i]['url_subscription_image'] = $subs[$i]['url_subscription_image'];
                 $list[$i]['time_to_end'] = $subs[$i]['time_to_end'];
+                $list[$i]['subscription_start'] = $subs[$i]['subscription_start'];
+                $list[$i]['subscription_publish_start'] = $subs[$i]['subscription_publish_start'];
                 $list[$i]['subscription_end'] = $subs[$i]['subscription_end'];
                 $list[$i]['subscription_publish_end'] = $subs[$i]['subscription_publish_end'];
                 $list[$i]['subscription_price_cash'] = $subs[$i]['subscription_price_cash'];
@@ -818,7 +820,8 @@ class ApiSubscription extends Controller
                     $q->whereNotNull('used_at');
                 }]);
 
-        if ( isset($post['id_subscription_user']) ) {
+        if ( isset($post['id_subscription_user']) ) 
+        {
             $subs = $subs->where('id_subscription_user', '=', $post['id_subscription_user'])
                          ->first()->toArray();
 
@@ -835,11 +838,12 @@ class ApiSubscription extends Controller
             }
             $data = $subs;
         }
-        else{
+        else
+        {
+
             $subs = $subs->get();
             $data = [];
-            if($subs){
-                // return $subs;
+            if(!empty($subs) && !empty($subs[0])){
                 foreach ($subs as $key => $sub) {
                     //check voucher total
                     if ($sub['subscription_user_vouchers_count'] < $sub['subscription']['subscription_voucher_total']) {
@@ -862,6 +866,19 @@ class ApiSubscription extends Controller
                         $data[$key]['time_server']                  = date('Y-m-d H:i:s');
                     }
                 }
+            }
+            else
+            {   
+                $empty_text = Setting::where('key','=','message_mysubscription_empty_header')
+                                ->orWhere('key','=','message_mysubscription_empty_content')
+                                ->orderBy('id_setting')
+                                ->get();
+                $text['header'] = $empty_text[0]['value']??'Anda belum memiliki Paket.';
+                $text['content'] = $empty_text[1]['value']??'Banyak keuntungan dengan berlangganan.';
+                return  response()->json([
+                    'status'   => 'fail',
+                    'messages' => $text
+                ]);
             }
         }
         return response()->json(MyHelper::checkGet($data));

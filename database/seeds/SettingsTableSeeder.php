@@ -415,6 +415,42 @@ class SettingsTableSeeder extends Seeder
                 'created_at' => date('Y-m-d H:i:s'),
                 'updated_at' => date('Y-m-d H:i:s'),
             ),
+            45 =>
+            array(
+                'id_setting' => 46,
+                'key' => 'message_mysubscription_empty_header',
+                'value' => 'Anda belum memiliki Paket',
+                'value_text' => NULL,
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ),
+            46 =>
+            array(
+                'id_setting' => 47,
+                'key' => 'message_mysubscription_empty_content',
+                'value' => 'Banyak keuntungan dengan berlangganan',
+                'value_text' => NULL,
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ),
+            47 =>
+            array(
+                'id_setting' => 48,
+                'key' => 'message_myvoucher_empty_header',
+                'value' => 'Anda belum memiliki Kupon',
+                'value_text' => NULL,
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ),
+            48 =>
+            array(
+                'id_setting' => 49,
+                'key' => 'message_myvoucher_empty_content',
+                'value' => 'Potongan menarik untuk setiap pembelian',
+                'value_text' => NULL,
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ),
         ));
     }
 }
