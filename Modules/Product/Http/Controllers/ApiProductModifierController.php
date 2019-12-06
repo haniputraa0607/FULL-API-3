@@ -233,4 +233,43 @@ class ApiProductModifierController extends Controller
         $data = ProductModifier::select('type')->groupBy('type')->get()->pluck('type');
         return MyHelper::checkGet($data);
     }
+
+    public function listPrice(Request $request) {
+        $id_outlet = $request->json('id_outlet');
+        $data = ProductModifier::select('product_modifiers.id_product_modifier','product_modifiers.code','product_modifiers.text','product_modifier_prices.product_modifier_price')->leftJoin('product_modifier_prices','product_modifiers.id_product_modifier','=','product_modifier_prices.id_product_modifier')->where(function($query) use ($id_outlet){
+            $query->where('product_modifier_prices.id_outlet',$id_outlet);
+            $query->orWhereNull('product_modifier_prices.id_outlet');
+        })->groupBy('product_modifiers.id_product_modifier');
+        if($request->page){
+            $data = $data->paginate(10);
+        }else{
+            $data = $data->get();
+        }
+        return MyHelper::checkGet($data);
+    }
+
+    public function updatePrice(Request $request) {
+        $id_outlet = $request->json('id_outlet');
+        $insertData = [];
+        DB::beginTransaction();
+        foreach ($request->json('prices') as $id_product_modifier => $price) {
+            $key = [
+                'id_product_modifier' => $id_product_modifier,
+                'id_outlet' => $id_outlet
+            ];
+            $insertData = $key + [
+                'product_modifier_price' => $price
+            ];
+            $insert = ProductModifierPrice::updateOrCreate($key,$insertData);
+            if(!$insert){
+                DB::rollback();
+                return [
+                    'status' => 'fail',
+                    'messages' => ['Update price fail']
+                ];
+            }
+        }
+        DB::commit();
+        return ['status'=>'success'];
+    }
 }

@@ -102,6 +102,9 @@ Route::group(['prefix' => 'api/product','middleware' => 'log_activities', 'names
         Route::post('create', 'ApiProductModifierController@store');
         Route::post('update', 'ApiProductModifierController@update');
         Route::post('delete', 'ApiProductModifierController@destroy');
+
+        Route::post('list-price', 'ApiProductModifierController@listPrice');
+        Route::post('update-price', 'ApiProductModifierController@updatePrice');
     });
 
     /**
