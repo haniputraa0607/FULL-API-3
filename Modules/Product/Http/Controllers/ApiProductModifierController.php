@@ -236,7 +236,10 @@ class ApiProductModifierController extends Controller
 
     public function listPrice(Request $request) {
         $id_outlet = $request->json('id_outlet');
-        $data = ProductModifier::select('product_modifiers.id_product_modifier','product_modifiers.code','product_modifiers.text','product_modifier_prices.product_modifier_price')->leftJoin('product_modifier_prices','product_modifiers.id_product_modifier','=','product_modifier_prices.id_product_modifier')->where(function($query) use ($id_outlet){
+        $data = ProductModifier::select('product_modifiers.id_product_modifier','product_modifiers.code','product_modifiers.text','product_modifier_prices.product_modifier_price')->leftJoin('product_modifier_prices',function($join) use ($id_outlet){
+            $join->on('product_modifiers.id_product_modifier','=','product_modifier_prices.id_product_modifier');
+            $join->where('product_modifier_prices.id_outlet','=',$id_outlet);
+        })->where(function($query) use ($id_outlet){
             $query->where('product_modifier_prices.id_outlet',$id_outlet);
             $query->orWhereNull('product_modifier_prices.id_outlet');
         })->groupBy('product_modifiers.id_product_modifier');
