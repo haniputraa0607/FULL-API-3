@@ -11,6 +11,7 @@ use App\Http\Models\ProductModifierBrand;
 use App\Http\Models\ProductModifierPrice;
 use App\Http\Models\ProductModifierProduct;
 use App\Http\Models\ProductModifierProductCategory;
+use Modules\Brand\Entities\BrandOutlet;
 
 use Modules\Product\Http\Requests\Modifier\CreateRequest;
 use Modules\Product\Http\Requests\Modifier\ShowRequest;
@@ -236,7 +237,14 @@ class ApiProductModifierController extends Controller
 
     public function listPrice(Request $request) {
         $id_outlet = $request->json('id_outlet');
-        $data = ProductModifier::select('product_modifiers.id_product_modifier','product_modifiers.code','product_modifiers.text','product_modifier_prices.product_modifier_price')->leftJoin('product_modifier_prices',function($join) use ($id_outlet){
+        $brands = BrandOutlet::select('id_brand')->where('id_outlet',$id_outlet)->get()->pluck('id_brand');
+        $data = ProductModifier::leftJoin('product_modifier_brands','product_modifier_brands.id_product_modifier','=','product_modifiers.id_product_modifier')
+        ->where(function($query) use($brands){
+            $query->where('modifier_type','Global');
+            $query->orWhereNull('id_brand');
+            $query->orWhereIn('id_brand',$brands);
+        })
+        ->select('product_modifiers.id_product_modifier','product_modifiers.code','product_modifiers.text','product_modifier_prices.product_modifier_price')->leftJoin('product_modifier_prices',function($join) use ($id_outlet){
             $join->on('product_modifiers.id_product_modifier','=','product_modifier_prices.id_product_modifier');
             $join->where('product_modifier_prices.id_outlet','=',$id_outlet);
         })->where(function($query) use ($id_outlet){
