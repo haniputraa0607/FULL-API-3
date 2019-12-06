@@ -6,7 +6,7 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Http\Exceptions\HttpResponseException;
 
-class CreateRequest extends FormRequest
+class ShowRequest extends FormRequest
 {
     /**
      * Get the validation rules that apply to the request.
@@ -16,13 +16,8 @@ class CreateRequest extends FormRequest
     public function rules()
     {
         return [
-            'modifier_type'       => 'in:Global,Specific|required',
-            'type'                => 'string|required',
-            'code'                => 'string|required|unique:product_modifiers,code',
-            'text'                => 'string|required',
-            'id_brand'            => 'array|nullable|sometimes',
-            'id_product_category' => 'array|nullable|sometimes',
-            'id_product'          => 'array|nullable|sometimes'
+            'id_product_modifier' => 'numeric|sometimes',
+            'code' => 'required_without:id_product_modifier'
         ];
     }
 

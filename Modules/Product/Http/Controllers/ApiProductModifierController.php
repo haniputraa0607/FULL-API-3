@@ -13,6 +13,7 @@ use App\Http\Models\ProductModifierProduct;
 use App\Http\Models\ProductModifierProductCategory;
 
 use Modules\Product\Http\Requests\Modifier\CreateRequest;
+use Modules\Product\Http\Requests\Modifier\ShowRequest;
 use Modules\Product\Http\Requests\Modifier\UpdateRequest;
 
 use App\Lib\MyHelper;
@@ -117,9 +118,16 @@ class ApiProductModifierController extends Controller
      * @param int $id
      * @return Response
      */
-    public function show(Request $request)
+    public function show(ShowRequest $request)
     {
-        $result = ProductModifier::with(['products','product_categories','brands'])->find($request->json('id_product_modifier'));
+        if($request->json('id_product_modifier')){
+            $col = 'id_product_modifier';
+            $val = $request->json('id_product_modifier');
+        }else{
+            $col = 'code';
+            $val = $request->json('code');
+        }
+        $result = ProductModifier::with(['products','product_categories','brands'])->where($col,$val)->first();
         return MyHelper::checkGet($result);
     }
 
