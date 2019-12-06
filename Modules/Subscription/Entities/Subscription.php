@@ -86,6 +86,8 @@ class Subscription extends Eloquent
 		'subscription_voucher_percent',
 		'subscription_voucher_percent_max',
 		'subscription_minimal_transaction',
+		'daily_usage_limit',
+		'new_purchase_after',
 		'is_all_outlet'
 	];
 
