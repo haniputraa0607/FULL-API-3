@@ -11,11 +11,16 @@ use App\Lib\MyHelper;
 use Modules\Subscription\Entities\Subscription;
 use Modules\Subscription\Entities\FeaturedSubscription;
 use Modules\Subscription\Entities\SubscriptionOutlet;
+use Modules\Subscription\Entities\SubscriptionContent;
+use Modules\Subscription\Entities\SubscriptionContentDetail;
 use Modules\Subscription\Entities\SubscriptionUser;
 use Modules\Subscription\Entities\SubscriptionUserVoucher;
 use App\Http\Models\Setting;
 
 use Modules\Subscription\Http\Requests\ListSubscription;
+use Modules\Subscription\Http\Requests\Step1Subscription;
+use Modules\Subscription\Http\Requests\Step2Subscription;
+use Modules\Subscription\Http\Requests\Step3Subscription;
 use DB;
 
 class ApiSubscription extends Controller
@@ -29,11 +34,190 @@ class ApiSubscription extends Controller
 
     public $saveImage = "img/subscription/";
 
-    public function create(Request $request)
+        /* CHECK INPUTAN */
+    function checkInputan($post)
     {
+
+        $data = [];
+
+        if (isset($post['id_subscription'])) {
+            $data['id_subscription'] = $post['id_subscription'];
+        }
+
+        // title, img , periode
+        if (isset($post['subscription_title'])) {
+            $data['subscription_title'] = $post['subscription_title'];
+        }
+        if (isset($post['subscription_sub_title'])) {
+            $data['subscription_sub_title'] = $post['subscription_sub_title'];
+        }
+
+        if (isset($post['subscription_image'])) {
+
+            if (!file_exists($this->saveImage)) {
+                mkdir($this->saveImage, 0777, true);
+            }
+
+            $upload = MyHelper::uploadPhotoStrict($post['subscription_image'], $this->saveImage, 600, 250);
+
+            if (isset($upload['status']) && $upload['status'] == "success") {
+                $data['subscription_image'] = $upload['path'];
+            } else {
+                $result = [
+                    'error'    => 1,
+                    'status'   => 'fail',
+                    'messages' => ['fail upload image']
+                ];
+
+                return $result;
+            }
+        }
+
+        if (isset($post['subscription_start'])) {
+            $data['subscription_start'] = date('Y-m-d H:i:s', strtotime($post['subscription_start']));
+        }
+        if (isset($post['subscription_end'])) {
+            $data['subscription_end'] = date('Y-m-d H:i:s', strtotime($post['subscription_end']));
+        }
+        if (isset($post['subscription_publish_start'])) {
+            $data['subscription_publish_start'] = date('Y-m-d H:i:s', strtotime($post['subscription_publish_start']));
+        }
+        if (isset($post['subscription_publish_end'])) {
+            $data['subscription_publish_end'] = date('Y-m-d H:i:s', strtotime($post['subscription_publish_end']));
+        }
+
+        // Rule
+
+        // ---------------------------- POINT
+        if (isset($post['subscription_price_point'])) {
+            $data['subscription_price_cash'] = null;
+            $data['subscription_price_point'] = $post['subscription_price_point'];
+        }
+        // ---------------------------- CASH
+        if (isset($post['subscription_price_cash'])) {
+            $data['subscription_price_cash'] = $post['subscription_price_cash'];
+            $data['subscription_price_point'] = null;
+        }
+        // ---------------------------- FREE
+        if ( ($post['prices_by']??0) == 'free' ) {
+            $data['subscription_price_cash'] = null;
+            $data['subscription_price_point'] = null;
+        } 
+        elseif ( ($post['prices_by']??0) == 'point' ) 
+        {
+            $data['subscription_price_cash'] = null;
+            $data['subscription_price_point'] = $post['subscription_price_point'];
+        }
+        else
+        {
+            $data['subscription_price_cash'] = $post['subscription_price_cash'];
+            $data['subscription_price_point'] = null;   
+        }
+
+        if (isset($post['id_outlet'])) {
+            $data['id_outlet'] = $post['id_outlet'];
+        }
+
+        if (isset($post['subscription_total'])) {
+            $data['subscription_total'] = $post['subscription_total'];
+        }
+
+        if ( ($post['subscription_total_type']??0) == 'unlimited' ) {
+            $data['subscription_total'] = null;
+        }else{
+            $data['subscription_total'] = $post['subscription_total'];
+        }
+
+        if (isset($post['user_limit'])) {
+            $data['user_limit'] = $post['user_limit'];
+        }
+
+        if (isset($post['subscription_voucher_start'])) {
+            $data['subscription_voucher_start'] = date('Y-m-d H:i:s', strtotime($post['subscription_voucher_start']));
+        }
+        // ---------------------------- DURATION
+        if (isset($post['subscription_voucher_duration'])) {
+            $data['subscription_voucher_duration'] = $post['subscription_voucher_duration'];
+            $data['subscription_voucher_expired'] = null;
+        }
+
+        // ---------------------------- EXPIRED
+        if (isset($post['subscription_voucher_expired'])) {
+            $data['subscription_voucher_duration'] = null;
+            $data['subscription_voucher_expired'] = date('Y-m-d H:i:s', strtotime($post['subscription_voucher_expired']));
+        }
+
+        if (isset($post['subscription_voucher_total'])) {
+            $data['subscription_voucher_total'] = $post['subscription_voucher_total'];
+        }
+        if ( ($post['voucher_type']??0)=='percent' ) {
+            
+            if (isset($post['subscription_voucher_percent'])) {
+                $data['subscription_voucher_percent'] = $post['subscription_voucher_percent'];
+                $data['subscription_voucher_nominal'] = null;
+            }
+            if (isset($post['subscription_voucher_percent_max'])) {
+                $data['subscription_voucher_percent_max'] = $post['subscription_voucher_percent_max'];
+            }
+        }else{
+
+            if (isset($post['subscription_voucher_nominal'])) {
+                $data['subscription_voucher_percent'] = null;
+                $data['subscription_voucher_percent_max'] = null;
+                $data['subscription_voucher_nominal'] = $post['subscription_voucher_nominal'];
+            }
+        }
+        if (isset($post['subscription_minimal_transaction'])) {
+            $data['subscription_minimal_transaction'] = $post['subscription_minimal_transaction'];
+        }
+        if (isset($post['daily_usage_limit'])) {
+            $data['daily_usage_limit'] = $post['daily_usage_limit'];
+        }
+        if (isset($post['new_purchase_after'])) {
+            $data['new_purchase_after'] = $post['new_purchase_after'];
+        }
+        if ( ($post['purchase_limit']??0) == 'no_limit' ) {
+            $data['new_purchase_after'] = null;
+        }
+
+
+
+        if (isset($post['deals_description'])) {
+            $data['deals_description'] = $post['deals_description'];
+        }
+        if (isset($post['deals_tos'])) {
+            $data['deals_tos'] = $post['deals_tos'];
+        }
+        if (isset($post['deals_short_description'])) {
+            $data['deals_short_description'] = $post['deals_short_description'];
+        }
+
+
+
+
+        if (isset($post['deals_total_claimed'])) {
+            $data['deals_total_claimed'] = $post['deals_total_claimed'];
+        }
+        if (isset($post['deals_total_redeemed'])) {
+            $data['deals_total_redeemed'] = $post['deals_total_redeemed'];
+        }
+        if (isset($post['deals_total_used'])) {
+            $data['deals_total_used'] = $post['deals_total_used'];
+        }
+        if (isset($post['user_limit'])) {
+            $data['user_limit'] = $post['user_limit'];
+        }
+
+        return $data;
+    }
+
+    public function create(Step1Subscription $request)
+    {
+        $data = $request->json()->all();
         $data = $this->checkInputan($data);
 
         // error
+        DB::beginTransaction();
         if (isset($data['error'])) {
             unset($data['error']);
             return response()->json($data);
@@ -41,15 +225,204 @@ class ApiSubscription extends Controller
         $save = Subscription::create($data);
 
         if ($save) {
-            if (isset($data['id_outlet'])) {
-                $saveOutlet = $this->saveOutlet($save, $data['id_outlet']);
+            DB::commit();
+        } else {
+            DB::rollback();
+        }
+        return response()->json(MyHelper::checkCreate($save));
+    }
 
-                if (!$saveOutlet) {
-                    return false;
+    public function updateRule(Step2Subscription $request)
+    {
+        $data = $request->json()->all();
+
+        $data = $this->checkInputan($data);
+        // error
+        DB::beginTransaction();
+
+        if (isset($data['error'])) {
+            unset($data['error']);
+            return response()->json($data);
+        }
+
+        if (isset($data['id_outlet'])) {
+
+            $data['is_all_outlet'] = null;
+            // DELETE
+            $this->deleteOutlet($data['id_subscription']);
+            if ( ($data['id_outlet'][0]??0) == 'all') 
+            {
+                $data['is_all_outlet'] = 1;
+            }
+            else
+            {
+                // SAVE
+                $subs=Subscription::find($data['id_subscription']);
+                $saveOutlet = $this->saveOutlet($subs['id_subscription'], $data['id_outlet']);
+            }
+            unset($data['id_outlet']);
+        }
+        $save = Subscription::where('id_subscription', $data['id_subscription'])->update($data);
+        // return $save;
+
+        if ($save) {
+            DB::commit();
+        } else {
+            DB::rollback();
+        }
+        return response()->json(MyHelper::checkCreate($save));
+    }
+
+    public function updateContent(Step3Subscription $request)
+    {
+        $post = $request->json()->all();
+
+        $data_content = [];
+        $data_content_detail = [];
+        $content_order = 1;
+
+        DB::beginTransaction();
+
+        //Rapiin data yg masuk
+        foreach ($post['id_subscription_content'] as $key => $value) {
+            $data_content[$key]['id_subscription'] = $post['id_subscription'];
+            $data_content[$key]['id_subscription_content'] = $value;
+            $data_content[$key]['title'] = $post['content_title'][$key];
+            $data_content[$key]['is_active'] = ($post['visible'][$key+1]??0) ? 1 : null;
+            $data_content[$key]['order'] = ($content_order++);
+            $data_content[$key]['created_at'] = date('Y-m-d H:i:s');
+            $data_content[$key]['updated_at'] = date('Y-m-d H:i:s');
+
+            $detail_order = 1;
+            if ( ($post['id_content_detail'][$key+1]??0) ) {
+                foreach ($post['id_content_detail'][$key+1] as $key2 => $value2) {
+                    $data_content_detail[$key][$key2]['id_subscription_content'] = $value;
+                    $data_content_detail[$key][$key2]['id_subscription_content_detail'] = $value2;
+                    $data_content_detail[$key][$key2]['content'] = $post['content_detail'][$key+1][$key2];
+                    $data_content_detail[$key][$key2]['order'] = $detail_order++;
+                    $data_content_detail[$key][$key2]['created_at'] = date('Y-m-d H:i:s');
+                    $data_content_detail[$key][$key2]['updated_at'] = date('Y-m-d H:i:s');
                 }
             }
         }
-        return $save;
+
+        // hapus content & detail
+        $del_content = SubscriptionContent::where('id_subscription','=',$post['id_subscription'])->delete();
+
+        // create content & detail
+        foreach ($post['id_subscription_content'] as $key => $value) 
+        {
+            $save = SubscriptionContent::create($data_content[$key]);
+
+            $id_subscription_content = $save['id_subscription_content'];
+
+            if ( ($post['id_content_detail'][$key+1]??0) ) {
+
+                foreach ($post['id_content_detail'][$key+1] as $key2 => $value2) {
+
+                    $data_content_detail[$key][$key2]['id_subscription_content'] = $id_subscription_content;
+
+                    $save = SubscriptionContentDetail::create($data_content_detail[$key][$key2]);
+                }
+            }
+        }
+
+        // update description
+        $save = Subscription::where('id_subscription','=',$post['id_subscription'])->update([ 'subscription_description' => $post['subscription_description'] ]);
+
+        if ($save) {
+            DB::commit();
+        } else {
+            DB::rollback();
+        }
+        return response()->json(MyHelper::checkUpdate($save));
+    }
+
+    /* SAVE OUTLET */
+    function saveOutlet($id_subs, $id_outlet = [])
+    {
+        $dataOutlet = [];
+
+        foreach ($id_outlet as $value) {
+            array_push($dataOutlet, [
+                'id_outlet' => $value,
+                'id_subscription'  => $id_subs,
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s')
+            ]);
+        }
+
+        if (!empty($dataOutlet)) {
+            $save = SubscriptionOutlet::insert($dataOutlet);
+
+            return $save;
+        } else {
+            return false;
+        }
+
+        return true;
+    }
+
+    /* DELETE OUTLET */
+    function deleteOutlet($id_subscription)
+    {
+        $delete = SubscriptionOutlet::where('id_subscription', $id_subscription)->delete();
+
+        return $delete;
+    }
+
+    public function showStep1(Request $request)
+    {
+        $post = $request->json()->all();
+        $data = Subscription::
+                    where('id_subscription','=',$post['id_subscription'])
+                    ->select(
+                        'id_subscription',
+                        'subscription_title',
+                        'subscription_sub_title',
+                        'subscription_start',
+                        'subscription_end',
+                        'subscription_publish_start',
+                        'subscription_publish_end',
+                        'subscription_image'
+                    )
+                    ->first()
+                    ->toArray();
+        return response()->json(MyHelper::checkGet($data));
+    }
+
+    public function showStep2(Request $request)
+    {
+        $post = $request->json()->all();
+        $data = Subscription::
+                    where('id_subscription','=',$post['id_subscription'])
+                    ->with(['outlets' => function($q){
+                        $q->select(
+                            'outlets.id_outlet',
+                            'outlet_code',
+                            'outlet_name'
+                        );
+                    }])
+                    ->first()
+                    ->toArray();
+        return response()->json(MyHelper::checkGet($data));
+    }
+
+    public function showStep3(Request $request)
+    {
+        $post = $request->json()->all();
+        $data = Subscription::
+                    where('id_subscription','=',$post['id_subscription'])
+                    ->with(
+                        'subscription_content',
+                        'subscription_content.subscription_content_details'
+                    )
+                    // ->select(
+                    //     'subscription_description'
+                    // )
+                    ->first()
+                    ->toArray();
+        return response()->json(MyHelper::checkGet($data));
     }
 
     public function listSubscription(ListSubscription $request)
@@ -306,6 +679,8 @@ class ApiSubscription extends Controller
                 $list[$i]['id_subscription'] = $subs[$i]['id_subscription'];
                 $list[$i]['url_subscription_image'] = $subs[$i]['url_subscription_image'];
                 $list[$i]['time_to_end'] = $subs[$i]['time_to_end'];
+                $list[$i]['subscription_start'] = $subs[$i]['subscription_start'];
+                $list[$i]['subscription_publish_start'] = $subs[$i]['subscription_publish_start'];
                 $list[$i]['subscription_end'] = $subs[$i]['subscription_end'];
                 $list[$i]['subscription_publish_end'] = $subs[$i]['subscription_publish_end'];
                 $list[$i]['subscription_price_cash'] = $subs[$i]['subscription_price_cash'];
@@ -510,7 +885,8 @@ class ApiSubscription extends Controller
                     $q->whereNotNull('used_at');
                 }]);
 
-        if ( isset($post['id_subscription_user']) ) {
+        if ( isset($post['id_subscription_user']) ) 
+        {
             $subs = $subs->where('id_subscription_user', '=', $post['id_subscription_user'])
                          ->first()->toArray();
 
@@ -534,11 +910,12 @@ class ApiSubscription extends Controller
             }
             $data = $subs;
         }
-        else{
+        else
+        {
+
             $subs = $subs->get();
             $data = [];
-            if($subs){
-                // return $subs;
+            if(!empty($subs) && !empty($subs[0])){
                 foreach ($subs as $key => $sub) {
                     //check voucher total
                     if ($sub['subscription_user_vouchers_count'] < $sub['subscription']['subscription_voucher_total']) {
@@ -561,6 +938,19 @@ class ApiSubscription extends Controller
                         $data[$key]['time_server']                  = date('Y-m-d H:i:s');
                     }
                 }
+            }
+            else
+            {   
+                $empty_text = Setting::where('key','=','message_mysubscription_empty_header')
+                                ->orWhere('key','=','message_mysubscription_empty_content')
+                                ->orderBy('id_setting')
+                                ->get();
+                $text['header'] = $empty_text[0]['value']??'Anda belum memiliki Paket.';
+                $text['content'] = $empty_text[1]['value']??'Banyak keuntungan dengan berlangganan.';
+                return  response()->json([
+                    'status'   => 'fail',
+                    'messages' => $text
+                ]);
             }
         }
         return response()->json(MyHelper::checkGet($data));

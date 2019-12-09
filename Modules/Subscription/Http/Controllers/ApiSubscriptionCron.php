@@ -58,6 +58,10 @@ class ApiSubscriptionCron extends Controller
             $singleSubs->void_date = $now;
             $singleSubs->save();
 
+            $subscription = Subscription::where('id_subscription','=', $singleSubs->id_subscription)->first();
+            $subscription->subscription_bought = $subscription->subscription_bought-1;
+            $subscription->save();
+
             if (!$singleSubs) {
                 continue;
             }
