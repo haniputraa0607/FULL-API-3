@@ -455,7 +455,8 @@ class ApiHistoryController extends Controller
     public function sorting($data, $order, $page)
     {
         $date = [];
-        foreach ($data as $key => $row) {
+        foreach ($data as $key => &$row) {
+            $row['date'] = date('Y-m-d H:i',strtotime($row['date']));
             $date[$key] = $row['date'];
         }
 
@@ -609,6 +610,7 @@ class ApiHistoryController extends Controller
                     $dataList['amount'] = number_format($value['transaction_grandtotal'], 0, ',', '.');
                     $dataList['cashback'] = number_format($value['transaction_cashback_earned'], 0, ',', '.');
                     $dataList['subtitle'] = $value['sum_qty'].($value['sum_qty']>1?' items':' item');
+                    $dataList['item_total'] = $value['sum_qty'];
                     if ($dataList['cashback'] >= 0) {
                         $dataList['status_point'] = 1;
                     } else {

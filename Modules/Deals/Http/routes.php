@@ -42,6 +42,12 @@ Route::group(['middleware' => ['auth:api', 'log_activities'], 'prefix' => 'api/d
         Route::post('/confirm', 'ApiDealsPaymentManual@manualPaymentConfirm');
         Route::post('/filter/{type}', 'ApiDealsPaymentManual@transactionPaymentManualFilter');
     });
+
+    /* Welcome Voucher */
+    Route::any('welcome-voucher/setting', 'ApiDeals@welcomeVoucherSetting');
+    Route::post('welcome-voucher/setting/update', 'ApiDeals@welcomeVoucherSettingUpdate');
+    Route::post('welcome-voucher/setting/update/status', 'ApiDeals@welcomeVoucherSettingUpdateStatus');
+    Route::any('welcome-voucher/list/deals', 'ApiDeals@listDealsWelcomeVoucher');
 });
 
 Route::group(['prefix' => 'api/deals', 'namespace' => 'Modules\Deals\Http\Controllers'], function () {

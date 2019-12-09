@@ -1162,7 +1162,37 @@ Message :
                 'custom_text_replace'=>'%bought_at%;%subscription_title%;%subscription_price_cash%;%id_subscription%;%used_point%;',
                 'created_at' => date('Y-m-d H:i:s'),
                 'updated_at' => date('Y-m-d H:i:s'),
-            )
+            ),
+            33 =>
+                array (
+                    'id_autocrm' => 34,
+                    'autocrm_type' => 'Response',
+                    'autocrm_trigger' => 'Daily',
+                    'autocrm_cron_reference' => NULL,
+                    'autocrm_title' => 'Receive Welcome Voucher',
+                    'autocrm_email_toogle' => '0',
+                    'autocrm_sms_toogle' => '0',
+                    'autocrm_push_toogle' => '1',
+                    'autocrm_inbox_toogle' => '1',
+                    'autocrm_forward_toogle' => '0',
+                    'autocrm_email_subject' => '',
+                    'autocrm_email_content' => '',
+                    'autocrm_sms_content' => '',
+                    'autocrm_push_subject' => 'Yeay! Kamu mendapatkan Voucher baru!',
+                    'autocrm_push_content' => 'Selamat! Kamu telah menerima %count_voucher% voucher secara gratis.',
+                    'autocrm_push_image' => NULL,
+                    'autocrm_push_clickto' => 'Voucher',
+                    'autocrm_push_link' => NULL,
+                    'autocrm_push_id_reference' => NULL,
+                    'autocrm_inbox_subject' => 'Yeay! Kamu mendapatkan Voucher baru!',
+                    'autocrm_inbox_content' => 'Selamat! Kamu telah menerima %count_voucher% voucher secara gratis.',
+                    'autocrm_forward_email' => '',
+                    'autocrm_forward_email_subject' => '',
+                    'autocrm_forward_email_content' => '',
+                    'custom_text_replace'=>'%count_voucher%',
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                )
            
         ));
     }

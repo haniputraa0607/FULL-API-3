@@ -41,6 +41,7 @@ class ApiHome extends Controller
 		$this->autocrm  = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
         $this->setting_fraud = "Modules\SettingFraud\Http\Controllers\ApiSettingFraud";
 		$this->endPoint  = env('S3_URL_API');
+        $this->deals = "Modules\Deals\Http\Controllers\ApiDeals";
     }
 
 	public function homeNotLoggedIn(Request $request) {
@@ -576,6 +577,11 @@ class ApiHome extends Controller
                 DB::rollback();
                 return response()->json(['status' => 'fail', 'messages' => ['Send notification failed']]);
             }
+
+            $setting = Setting::where('key','welcome_voucher_setting')->first()->value;
+            if($setting == 1){
+                $injectVoucher = app($this->deals)->injectWelcomeVoucher(['id' => $user['id']], $user['phone']);
+            }
             $user->first_login=1;
             $user->save();
         }
@@ -696,6 +702,12 @@ class ApiHome extends Controller
             unset($retUser[$hide]);
         }
 
+        // chek vote transaksi
+        $trx = Transaction::where([
+            ['id_user',$user->id],
+            ['show_rate_popup',1]
+        ])->orderBy('transaction_date')->first();
+        $rate_popup = $trx?$trx->transaction_receipt_number.','.$trx->id_transaction:null;
         $retUser['membership']=$membership;
         $result = [
             'status' => 'success',
@@ -704,7 +716,8 @@ class ApiHome extends Controller
                 'user_info'     => $retUser,
                 'qr_code'       => $qrCode??'',
                 'greeting'      => $greetingss??'',
-                'expired_qr'    => $expired??''
+                'expired_qr'    => $expired??'',
+                'rate_popup'    => $rate_popup
             ]
         ];
 
@@ -759,21 +772,16 @@ class ApiHome extends Controller
             ->get();
         if($deals){
             $deals=array_map(function($value){
-                if($value['deals']['deals_status'] == 'soon'){
-                     $value['deals']['available_voucher'] = "-";
-                     $value['deals']['percent_voucher'] = 0;
+                if ($value['deals']['deals_voucher_type'] == "Unlimited") {
+                    $calc = '*';
                 }else{
-                    if ($value['deals']['deals_voucher_type'] == "Unlimited") {
-                        $calc = '*';
-                    }else{
-                        $calc = $value['deals']['deals_total_voucher'] - $value['deals']['deals_total_claimed'];
-                    }
-                    $value['deals']['available_voucher'] = (string) $calc;
-                    if($calc&&is_numeric($calc)){
-                        $value['deals']['percent_voucher'] = $calc*100/$value['deals']['deals_total_voucher'];
-                    }else{
-                        $value['deals']['percent_voucher'] = 100;
-                    }
+                    $calc = $value['deals']['deals_total_voucher'] - $value['deals']['deals_total_claimed'];
+                }
+                $value['deals']['available_voucher'] = (string) $calc;
+                if($calc&&is_numeric($calc)){
+                    $value['deals']['percent_voucher'] = $calc*100/$value['deals']['deals_total_voucher'];
+                }else{
+                    $value['deals']['percent_voucher'] = 100;
                 }
                 $value['deals']['show'] = 1;
                 $value['deals']['time_to_end']=strtotime($value['deals']['deals_end'])-time();

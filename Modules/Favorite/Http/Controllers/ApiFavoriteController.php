@@ -59,7 +59,13 @@ class ApiFavoriteController extends Controller
         if($request->page&&!$id_favorite){
             $data = Favorite::where('id_user',$user->id)->select($select)->with($with)->paginate(10)->toArray();
             if(count($data['data'])>=1){
-                $data['data'] = MyHelper::groupIt($data['data'],'id_outlet',null,function($key,&$val) use ($latitude,$longitude){
+                $data['data'] = MyHelper::groupIt($data['data'],'id_outlet',function($key,&$val){
+                    $val['product']['price']=number_format($val['product']['price'],0,",",".");
+                    foreach ($val['modifiers'] as &$modifier) {
+                        $modifier['price'] = '+ '.number_format($modifier['price'],0,",",".");
+                    }
+                    return $key;
+                },function($key,&$val) use ($latitude,$longitude){
                     $outlet = Outlet::select('id_outlet','outlet_name','outlet_address','outlet_latitude','outlet_longitude')->with('today')->find($key)->toArray();
                     $status = app('Modules\Outlet\Http\Controllers\ApiOutletController')->checkOutletStatus($outlet);
                     $outlet['outlet_address']=$outlet['outlet_address']??'';
@@ -80,7 +86,11 @@ class ApiFavoriteController extends Controller
                 $data = [];
             }
         }elseif($id_favorite){
-            $data = $favorite->select($select)->with($with)->where('id_favorite',$id_favorite)->first();
+            $data = $favorite->select($select)->with($with)->where('id_favorite',$id_favorite)->first()->toArray();
+            $data['product']['price']=number_format($data['product']['price'],0,",",".");
+            foreach ($data['modifiers'] as &$modifier) {
+                $modifier['price'] = '+ '.number_format($modifier['price'],0,",",".");
+            }
         }else{
             //get list favorite product outlet
             $outlets = $favorite->select('id_outlet')->with(['outlet'=>function($query){

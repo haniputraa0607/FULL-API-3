@@ -1435,6 +1435,54 @@ class FeaturesTableSeeder extends Seeder
                 'created_at' => date('Y-m-d H:00:00'),
                 'updated_at' => date('Y-m-d H:00:00'),
             ),
+            178 =>
+            array(
+                'id_feature' => 179,
+                'feature_type' => 'List',
+                'feature_module' => 'User Feedback',
+                'created_at' => date('Y-m-d H:00:00'),
+                'updated_at' => date('Y-m-d H:00:00'),
+            ),
+            179 =>
+                array(
+                    'id_feature' => 180,
+                    'feature_type' => 'List',
+                    'feature_module' => 'Welcome Voucher',
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00'),
+                ),
+            180 =>
+                array(
+                    'id_feature' => 181,
+                    'feature_type' => 'Detail',
+                    'feature_module' => 'Welcome Voucher',
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00'),
+                ),
+            181 =>
+                array(
+                    'id_feature' => 182,
+                    'feature_type' => 'Create',
+                    'feature_module' => 'Welcome Voucher',
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00'),
+                ),
+            182 =>
+                array(
+                    'id_feature' => 183,
+                    'feature_type' => 'Update',
+                    'feature_module' => 'Welcome Voucher',
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00'),
+                ),
+            183 =>
+                array(
+                    'id_feature' => 184,
+                    'feature_type' => 'Delete',
+                    'feature_module' => 'Welcome Voucher',
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00'),
+                )
         ));
     }
 }

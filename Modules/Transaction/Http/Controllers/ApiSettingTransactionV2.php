@@ -9,6 +9,7 @@ use Illuminate\Routing\Controller;
 use App\Http\Models\Setting;
 use App\Http\Models\Product;
 use App\Http\Models\ProductPrice;
+use App\Http\Models\ProductModifier;
 
 use DB;
 
@@ -148,8 +149,31 @@ class ApiSettingTransactionV2 extends Controller
                         'product' => $product['product_name']
                     ]);
                 }
+                $mod_subtotal = 0;
+                foreach ($valueData['modifiers'] as $modifier) {
+                    $id_product_modifier = is_numeric($modifier)?$modifier:$modifier['id_product_modifier'];
+                    $qty_product_modifier = is_numeric($modifier)?1:$modifier['qty'];
+                    $mod = ProductModifier::with(['product_modifier_prices'=>function($query) use ($data){
+                            $query->select('id_product_modifier_price','id_product_modifier','product_modifier_price');
+                            $query->where('id_outlet',$data['id_outlet']);
+                        }])
+                        ->whereHas('product_modifier_prices',function($query) use ($data){
+                            $query->where('id_outlet',$data['id_outlet']);
+                            $query->whereNotNull('product_modifier_price');
+                        })
+                        ->find($id_product_modifier);
+                    if(!$mod||!isset($mod['product_modifier_prices'][0]['product_modifier_price'])){
+                        DB::rollBack();
+                        return [
+                            'status' => 'fail',
+                            'messages' => ['Modifier not found']
+                        ];
+                    }
+                    $mod = $mod->toArray();
+                    $mod_subtotal += $mod['product_modifier_prices'][0]['product_modifier_price']*$qty_product_modifier;
+                }
                 // $price = $productPrice['product_price_base'] * $valueData['qty'];
-                $price = $productPrice['product_price'] * $valueData['qty'];
+                $price = ($productPrice['product_price']+$mod_subtotal) * $valueData['qty'];
                 array_push($dataSubtotal, $price);
             }
 

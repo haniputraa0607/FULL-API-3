@@ -27,7 +27,7 @@ class ApiSubscriptionWebview extends Controller
             $response = [
                 'status' => 'success',
                 'result' => [
-                    'webview_url' => env('APP_URL') ."api/webview/subscription/". $subs['id_subscription'],
+                    'webview_url' => env('API_URL') ."api/webview/subscription/". $subs['id_subscription'],
                     'button_text' => 'BELI'
                 ]
             ];
@@ -57,7 +57,7 @@ class ApiSubscriptionWebview extends Controller
         $post['web'] = 1;
         
         $action = MyHelper::postCURLWithBearer('/api/subscription/list', $post, $bearer);
-        return $action;
+        
         if ($action['status'] != 'success') {
             return [
                 'status' => 'fail',
@@ -77,16 +77,13 @@ class ApiSubscriptionWebview extends Controller
             });
         }
         
-        return [
-            'status' => 'success',
-            'messages' => ['Subscription found']
-        ];
-        return view('deals::webview.deals.deals_detail', $data);
+        return view('subscription::webview.subscription_detail', $data);
     }
 
     public function mySubscription(Request $request, $id_subscription_user)
     {
         $bearer = $request->header('Authorization');
+        
         if ($bearer == "") {
             return abort(404);
         }
@@ -94,17 +91,27 @@ class ApiSubscriptionWebview extends Controller
         $post['id_subscription_user'] = $id_subscription_user;
 
         $action = MyHelper::postCURLWithBearer('api/subscription/me', $post, $bearer);
-        return $action;
+        // dd($action);
         if ($action['status'] != 'success') {
             return [
                 'status' => 'fail',
                 'messages' => ['Subscription is not found']
             ];
         } else {
-            $data['deals'] = $action['result'];
+            $data['subscription'] = $action['result'];
         }
 
-        return view('deals::webview.deals.deals_claim', $data);
+        // usort($data['subscription']['outlet_by_city'], function($a, $b) {
+        //     return $a['city_name'] <=> $b['city_name'];
+        // });
+        
+        // for ($i = 0; $i < count($data['subscription']['outlet_by_city']); $i++) {
+        //     usort($data['subscription']['outlet_by_city'][$i]['outlet'] ,function($a, $b) {
+        //         return $a['outlet_name'] <=> $b['outlet_name'];
+        //     });
+        // }
+        
+        return view('subscription::webview.subscription_me', $data);
     }
 
     public function subscriptionSuccess(Request $request)

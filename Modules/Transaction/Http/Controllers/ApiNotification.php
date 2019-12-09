@@ -671,6 +671,7 @@ Detail: ".$link['short'],
     function checkDealsPayment($deals, $midtrans) {
         DB::beginTransaction();
         $midtrans = $this->processMidtrans($midtrans);
+        unset($midtrans['store']);
 
         // UPDATE
         $update = DealsPaymentMidtran::where('order_id', $midtrans['order_id'])->update($midtrans);
@@ -965,6 +966,8 @@ Detail: ".$link['short'],
             } else {
                 $detail->taken_at = date('Y-m-d H:i:s');
                 $detail->id_admin_outlet_taken = $post['id'];
+                $transaction->show_rate_popup = 1;
+                $transaction->save();
             }
         }
 

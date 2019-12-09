@@ -323,6 +323,13 @@ class ApiDealsVoucher extends Controller
                 $vcr->save();
             }
             $voucher = $voucher->get()->toArray();
+
+            if (!$voucher) {
+                return response()->json([
+                    'status'   => 'fail',
+                    'messages' => ['Voucher not found']
+                ]);
+            }
         }
         else {
             if (isset($post['used']) && ($post['used'] == 1 || $post['used'] == '1'))  {
@@ -449,7 +456,7 @@ class ApiDealsVoucher extends Controller
                 foreach($voucher as $index => $dataVou){
                     $voucher[$index]['webview_url'] = env('API_URL') ."api/webview/voucher/". $dataVou['id_deals_user'];
                     $voucher[$index]['webview_url_v2'] = env('API_URL') ."api/webview/voucher/v2/". $dataVou['id_deals_user'];
-                    $voucher[$index]['button_text'] = 'Redeem';
+                    $voucher[$index]['button_text'] = 'Gunakan';
                 }
 
         }

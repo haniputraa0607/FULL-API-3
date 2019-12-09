@@ -59,6 +59,7 @@ Route::group(['middleware' => ['auth:api', 'log_activities'], 'prefix' => 'api/t
     Route::post('/address/delete', 'ApiTransaction@deleteAddress');
     Route::post('/void', 'ApiTransaction@transactionVoid');
 
+    Route::post('/check', 'ApiOnlineTransaction@checkTransaction');
     Route::post('/new', 'ApiOnlineTransaction@newTransaction');
     Route::post('/confirm', 'ApiConfirm@confirmTransaction');
     Route::post('/prod/confirm', 'ApiTransactionProductionController@confirmTransaction2');
