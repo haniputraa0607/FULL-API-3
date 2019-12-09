@@ -391,12 +391,14 @@ class ApiMembership extends Controller
 											->whereDate('transaction_date','>=',$date_start)
 											->whereDate('transaction_date','<=',date('Y-m-d', strtotime($check['retain_date'])))
 											->where('transaction_payment_status', 'Completed')
+                                            ->whereNull('fraud_flag')
 											->count('transaction_grandtotal');
 
 					$trx_value = Transaction::where('id_user',$check['id'])
 											->whereDate('transaction_date','>=',$date_start)
 											->whereDate('transaction_date','<=', date('Y-m-d', strtotime($check['retain_date'])))
 											->where('transaction_payment_status', 'Completed')
+                                            ->whereNull('fraud_flag')
 											->sum('transaction_grandtotal');
 
 					$total_balance = LogBalance::where('id_user',$check['id'])
@@ -520,10 +522,12 @@ class ApiMembership extends Controller
 				else{
 					$trx_count = Transaction::where('id_user',$check['id'])
 											->where('transaction_payment_status', 'Completed')
+                                            ->whereNull('fraud_flag')
 											->count('transaction_grandtotal');
 
 					$trx_value = Transaction::where('id_user',$check['id'])
 											->where('transaction_payment_status', 'Completed')
+                                            ->whereNull('fraud_flag')
 											->sum('transaction_grandtotal');
 
 					$total_balance = LogBalance::where('id_user',$check['id'])
@@ -573,10 +577,12 @@ class ApiMembership extends Controller
 
 				$trx_count = Transaction::where('id_user',$check['id'])
 											->where('transaction_payment_status', 'Completed')
+                                            ->whereNull('fraud_flag')
 											->count('transaction_grandtotal');
 
 				$trx_value = Transaction::where('id_user',$check['id'])
 										->where('transaction_payment_status', 'Completed')
+                                        ->whereNull('fraud_flag')
 										->sum('transaction_grandtotal');
 
 				$total_balance = LogBalance::whereNotIn('source', ['Rejected Order', 'Rejected Order Midtrans', 'Rejected Order Point', 'Reversal'])
@@ -794,10 +800,12 @@ class ApiMembership extends Controller
 
 			$trx_count = Transaction::where('id_user',$datauser->id)
 										->where('transaction_payment_status', 'Completed')
+                                        ->whereNull('fraud_flag')
 										->count('transaction_grandtotal');
 
 			$trx_value = Transaction::where('id_user',$datauser->id)
 									->where('transaction_payment_status', 'Completed')
+                                    ->whereNull('fraud_flag')
 									->sum('transaction_grandtotal');
 
 			$total_balance = LogBalance::where('id_user', $datauser->id)

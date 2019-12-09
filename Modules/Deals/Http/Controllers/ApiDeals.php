@@ -2,6 +2,7 @@
 
 namespace Modules\Deals\Http\Controllers;
 
+use App\Http\Models\DealTotal;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
@@ -34,6 +35,8 @@ class ApiDeals extends Controller
     {
         date_default_timezone_set('Asia/Jakarta');
         $this->user     = "Modules\Users\Http\Controllers\ApiUser";
+        $this->hidden_deals     = "Modules\Deals\Http\Controllers\ApiHiddenDeals";
+        $this->autocrm = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
     }
 
     public $saveImage = "img/deals/";
@@ -247,7 +250,9 @@ class ApiDeals extends Controller
             $deals->addSelect('id_brand');
             $deals->with('brand');
         }else{
-            $deals->where('deals_end', '>', date('Y-m-d H:i:s'));
+            if($request->json('deals_type') != 'WelcomeVoucher'){
+                $deals->where('deals_end', '>', date('Y-m-d H:i:s'));
+            }
         }
         if ($request->json('id_outlet') && is_integer($request->json('id_outlet'))) {
             $deals = $deals->join('deals_outlets', 'deals.id_deals', 'deals_outlets.id_deals')
@@ -448,9 +453,16 @@ class ApiDeals extends Controller
                 //voucher free
                 $payment_message = Setting::where('key', 'payment_messages')->pluck('value_text')->first()??'Kamu yakin ingin mengambil voucher ini?';
                 $payment_message = MyHelper::simpleReplace($payment_message,['deals_title'=>$deals[0]['deals_title']]);
-            }elseif($deals[0]['deals_voucher_price_type']=='point'){
+            }
+            elseif($deals[0]['deals_voucher_price_type']=='point')
+            {
                 $payment_message = Setting::where('key', 'payment_messages_point')->pluck('value_text')->first()??'Anda akan menukarkan %point% points anda dengan Voucher %deals_title%?';
                 $payment_message = MyHelper::simpleReplace($payment_message,['point'=>$deals[0]['deals_voucher_price_point'],'deals_title'=>$deals[0]['deals_title']]);
+            }
+            else
+            {
+                $payment_message = Setting::where('key', 'payment_messages_cash')->pluck('value_text')->first()??'Anda akan membeli Voucher %deals_title% dengan harga %cash% ?';
+                $payment_message = MyHelper::simpleReplace($payment_message,['cash'=>$deals[0]['deals_voucher_price_cash'],'deals_title'=>$deals[0]['deals_title']]);
             }
             $payment_success_message = Setting::where('key', 'payment_success_messages')->pluck('value_text')->first()??'Apakah kamu ingin menggunakan Voucher sekarang?';
             $deals[0]['payment_message'] = $payment_message;
@@ -959,5 +971,98 @@ class ApiDeals extends Controller
         $delete = DealsOutlet::where('id_deals', $id_deals)->delete();
 
         return $delete;
+    }
+
+    /*Welcome Voucher*/
+    function listDealsWelcomeVoucher(Request $request){
+        $getDeals = Deal::join('brands', 'brands.id_brand', 'deals.id_brand')
+            ->where('deals_type','WelcomeVoucher')
+            ->select('deals.*','brands.name_brand')
+            ->get()->toArray();
+
+        $result = [
+            'status' => 'success',
+            'result' => $getDeals
+        ];
+        return response()->json($result);
+    }
+
+    function welcomeVoucherSetting(Request $request){
+        $setting = Setting::where('key', 'welcome_voucher_setting')->first();
+        $getDeals = DealTotal::join('deals', 'deals.id_deals', 'deals_total.id_deals')
+            ->join('brands', 'brands.id_brand', 'deals.id_brand')
+            ->select('deals.*','deals_total.deals_total','brands.name_brand')
+            ->get()->toArray();
+
+        $result = [
+            'status' => 'success',
+            'data' => [
+                'setting' => $setting,
+                'deals' => $getDeals
+            ]
+        ];
+        return response()->json($result);
+    }
+
+    function welcomeVoucherSettingUpdate(Request $request){
+        $post = $request->json()->all();
+
+        $deleteDealsTotal = DB::table('deals_total')->delete();//Delete all data from tabel deals total
+
+        //insert data
+        $arrInsert = [];
+        $list_id = $post['list_deals_id'];
+        $list_deals_total = $post['list_deals_total'];
+        $count = count($list_id);
+
+        for($i=0;$i<$count;$i++){
+            $data = [
+                'id_deals' => $list_id[$i],
+                'deals_total' => $list_deals_total[$i],
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s')
+            ];
+            array_push($arrInsert,$data);
+        }
+
+        $insert = DealTotal::insert($arrInsert);
+        if($insert){
+            $result = [
+                'status' => 'success'
+            ];
+        }else{
+            $result = [
+                'status' => 'fail'
+            ];
+        }
+
+        return response()->json($result);
+    }
+
+    function welcomeVoucherSettingUpdateStatus(Request $request){
+        $post = $request->json()->all();
+        $status = $post['status'];
+        $updateStatus = Setting::where('key', 'welcome_voucher_setting')->update(['value' => $status]);
+
+        return response()->json(MyHelper::checkUpdate($updateStatus));
+    }
+
+    function injectWelcomeVoucher($user, $phone){
+        $getDeals = DealTotal::join('deals', 'deals.id_deals', '=', 'deals_total.id_deals')
+            ->select('deals.*','deals_total.deals_total')->get();
+        $count = 0;
+        foreach ($getDeals as $val){
+            for($i=0;$i<$val['deals_total'];$i++){
+                $generateVoucher = app($this->hidden_deals)->autoClaimedAssign($val, $user, $val['deals_total']);
+                $count++;
+            }
+        }
+
+        $autocrm = app($this->autocrm)->SendAutoCRM('Receive Welcome Voucher', $phone,
+            [
+                'count_voucher'      => (string)$count
+            ]
+        );
+        return true;
     }
 }

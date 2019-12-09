@@ -15,6 +15,7 @@ use App\Http\Models\DealsPaymentMidtran;
 use App\Http\Models\DealsUser;
 use App\Http\Models\DealsVoucher;
 use App\Http\Models\Outlet;
+use App\Http\Models\Setting;
 
 use Modules\Deals\Http\Requests\Deals\Voucher;
 use DB;
@@ -456,7 +457,7 @@ class ApiDealsVoucher extends Controller
                 foreach($voucher as $index => $dataVou){
                     $voucher[$index]['webview_url'] = env('API_URL') ."api/webview/voucher/". $dataVou['id_deals_user'];
                     $voucher[$index]['webview_url_v2'] = env('API_URL') ."api/webview/voucher/v2/". $dataVou['id_deals_user'];
-                    $voucher[$index]['button_text'] = 'Redeem';
+                    $voucher[$index]['button_text'] = 'Gunakan';
                 }
 
         }
@@ -504,7 +505,12 @@ class ApiDealsVoucher extends Controller
         ){
             $resultMessage = 'Voucher yang kamu cari tidak tersedia';
         }else{
-            $resultMessage = 'Kamu belum memiliki voucher saat ini';
+            $empty_text = Setting::where('key','=','message_myvoucher_empty_header')
+                            ->orWhere('key','=','message_myvoucher_empty_content')
+                            ->orderBy('id_setting')
+                            ->get();
+            $resultMessage['header'] =  $empty_text[0]['value']??'Anda belum memiliki Kupon.';
+            $resultMessage['content'] =  $empty_text[1]['value']??'Potongan menarik untuk setiap pembelian.';
         }
 
         return response()->json(MyHelper::checkGet($result, $resultMessage));
