@@ -1482,7 +1482,47 @@ class FeaturesTableSeeder extends Seeder
                     'feature_module' => 'Welcome Voucher',
                     'created_at' => date('Y-m-d H:00:00'),
                     'updated_at' => date('Y-m-d H:00:00'),
-                )
+                ),
+            184 =>
+                array(
+                    'id_feature' => 185,
+                    'feature_type' => 'Update',
+                    'feature_module' => 'Fraud Detection Settings',
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00'),
+                ),
+            185 =>
+                array(
+                    'id_feature' => 186,
+                    'feature_type' => 'Report',
+                    'feature_module' => 'Report Fraud Device',
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00'),
+                ),
+            186 =>
+                array(
+                    'id_feature' => 187,
+                    'feature_type' => 'Report',
+                    'feature_module' => 'Report Fraud Transaction Day',
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00'),
+                ),
+            187 =>
+                array(
+                    'id_feature' => 188,
+                    'feature_type' => 'Report',
+                    'feature_module' => 'Report Fraud Transaction Week',
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00'),
+                ),
+            188 =>
+                array(
+                    'id_feature' => 189,
+                    'feature_type' => 'Update',
+                    'feature_module' => 'List User Fraud',
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00'),
+                ),
         ));
     }
 }

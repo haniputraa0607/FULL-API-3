@@ -1,5 +1,33 @@
 <head>
-      <link href="https://fonts.googleapis.com/css?family=Open+Sans|Source+Sans+Pro" rel="stylesheet">
+        <link href="https://fonts.googleapis.com/css?family=Open+Sans|Source+Sans+Pro" rel="stylesheet">
+        <style>
+            .table-bordered {
+                font-family: "Trebuchet MS", Arial, Helvetica, sans-serif;
+                border-collapse: collapse;
+            }
+            .table-bordered td, .table-bordered th {
+                border: 1px solid #ddd;
+                padding: 8px;
+            }
+
+            #table-fraud-list {
+                font-family: "Trebuchet MS", Arial, Helvetica, sans-serif;
+                border-collapse: collapse;
+            }
+
+            #table-fraud-list td, #table-fraud-list th {
+                border: 1px solid #ddd;
+                padding: 8px;
+            }
+
+            #table-fraud-list th {
+                padding-top: 12px;
+                padding-bottom: 12px;
+                text-align: left;
+                background-color: #BFBFBF;
+                color: white;
+            }
+        </style>
 </head>
 <table style="border-collapse:collapse;margin:0;padding:0;background-color:#f2f2f2;height:100%!important;width:100%!important" align="center" border="0" cellpadding="0" cellspacing="0" height="100%" width="100%">
     <tbody><tr>
