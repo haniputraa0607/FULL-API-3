@@ -169,4 +169,9 @@ class Subscription extends Eloquent
 	{
 		return $this->hasMany(\Modules\Subscription\Entities\SubscriptionContent::class, 'id_subscription');
 	}
+
+	public function subscription_users()
+	{
+		return $this->hasMany(\Modules\Subscription\Entities\SubscriptionUser::class, 'id_subscription');
+	}
 }
