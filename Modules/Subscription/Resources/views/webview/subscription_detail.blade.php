@@ -128,7 +128,18 @@
 			border-bottom: 3px solid #383b67 !important;
 		}
 		.nav-tabs{
-			border-bottom: none !important; 
+			border-bottom: none !important;
+			overflow-x: auto;
+			overflow-y: hidden;
+			display: -webkit-box;
+			display: -moz-box;
+		}
+		.nav-tabs>li {
+			float:none;
+		}
+		::-webkit-scrollbar {
+			width: 0px;
+			background: transparent; /* make scrollbar transparent */
 		}
     </style>
 @stop
@@ -180,38 +191,76 @@
 			<div class="container" style="margin-top: 10px;box-shadow: 0 0.7px 3.3px #0f000000;background-color: #ffffff;">
 				<div class="col-12" style="padding: 10px 15px;">
 					<ul class="nav nav-tabs WorkSans-Bold" id="myTab" role="tablist" style="font-size: 14px;">
+						@foreach ($subscription['subscription_content'] as $item)
+							@if ($item['order'] == 1)
+								<li class="nav-item">
+									<a class="nav-link" id="ketentuan-tab" data-toggle="tab" href="#ketentuan" role="tab" aria-controls="ketentuan" aria-selected="true">Ketentuan</a>
+								</li>
+							@endif
+							@if ($item['order'] == 2)
+								<li class="nav-item">
+									<a class="nav-link" id="howuse-tab" data-toggle="tab" href="#howuse" role="tab" aria-controls="howuse" aria-selected="false">Cara Pakai</a>
+								</li>
+							@endif
+						@endforeach
 						<li class="nav-item">
-							<a class="nav-link active" id="ketentuan-tab" data-toggle="tab" href="#ketentuan" role="tab" aria-controls="ketentuan" aria-selected="true">Ketentuan</a>
+							<a class="nav-link active" id="outlet-tab" data-toggle="tab" href="#outlet" role="tab" aria-controls="outlet" aria-selected="false"> Berlaku di</a>
 						</li>
-						<li class="nav-item">
-							<a class="nav-link" id="howuse-tab" data-toggle="tab" href="#howuse" role="tab" aria-controls="howuse" aria-selected="false">Cara Pakai</a>
-						</li>
-						<li class="nav-item">
-							<a class="nav-link" id="outlet-tab" data-toggle="tab" href="#outlet" role="tab" aria-controls="outlet" aria-selected="false"> Berlaku di</a>
-						</li>
+						@foreach ($subscription['subscription_content'] as $item)
+							@if ($item['order'] != 1 && $item['order'] != 2)
+								<li class="nav-item">
+									<a class="nav-link" id="{{$item['order']}}-tab" data-toggle="tab" href="#{{$item['order']}}" role="tab" aria-controls="{{$item['order']}}" aria-selected="false">{{$item['title']}}</a>
+								</li>
+							@endif
+						@endforeach
 					</ul>
 				</div>
 				<div class="tab-content mt-4 WorkSans-Regular" id="myTabContent" style="padding: 0 15px;padding-bottom: 5px;font-size: 11.7px;color: #707070;">
-					<div class="tab-pane fade show active" id="ketentuan" role="tabpanel" aria-labelledby="ketentuan-tab">
-						@if($subscription['subscription_term'] != "")
-						{!! $subscription['subscription_term'] !!}
+					@foreach ($subscription['subscription_content'] as $items)
+						@if ($items['order'] == 1)
+							<div class="tab-pane fade" id="ketentuan" role="tabpanel" aria-labelledby="ketentuan-tab">
+								<ol class="WorkSans-Regular" style="padding-left: 15px;">
+									@foreach ($items['subscription_content_details'] as $item)
+										<li>{{$item['content']}}</li>
+									@endforeach
+								</ol> 
+							</div>
+						@endif
+						@if ($items['order'] == 2)
+							<div class="tab-pane fade" id="howuse" role="tabpanel" aria-labelledby="howuse-tab">
+								<ol class="WorkSans-Regular" style="padding-left: 15px;">
+									@foreach ($items['subscription_content_details'] as $item)
+										<li>{{$item['content']}}</li>
+									@endforeach
+								</ol> 
+							</div>
+						@endif
+					@endforeach
+					<div class="tab-pane fade show active" id="outlet" role="tabpanel" aria-labelledby="outlet-tab">
+						@if ($subscription['is_all_outlet'] == true)
+							<p class="WorkSans-Bold">Berlaku di semua Outlet</p>
+						@else
+							@foreach($subscription['outlet_by_city'] as $key => $outlet_city)
+							<div class="outlet-city">{{ $outlet_city['city_name'] }}</div>
+							<ul class="nav">
+								@foreach($outlet_city['outlet'] as $key => $outlet)
+								<li>- {{ $outlet['outlet_name'] }}</li>
+								@endforeach
+							</ul>
+							@endforeach
 						@endif
 					</div>
-					<div class="tab-pane fade" id="howuse" role="tabpanel" aria-labelledby="howuse-tab">
-                        @if($subscription['subscription_how_to_use'] != "")
-                        {!! $subscription['subscription_how_to_use'] !!}
-                        @endif
-					</div>
-					<div class="tab-pane fade" id="outlet" role="tabpanel" aria-labelledby="outlet-tab">
-						@foreach($subscription['outlet_by_city'] as $key => $outlet_city)
-						<div class="outlet-city">{{ $outlet_city['city_name'] }}</div>
-						<ul class="nav">
-							@foreach($outlet_city['outlet'] as $key => $outlet)
-							<li>- {{ $outlet['outlet_name'] }}</li>
-							@endforeach
-						</ul>
-						@endforeach
-					</div>
+					@foreach ($subscription['subscription_content'] as $item)
+						@if ($item['order'] != 1 && $item['order'] != 2)
+							<div class="tab-pane fade" id="{{$item['order']}}" role="tabpanel" aria-labelledby="{{$item['order']}}-tab">
+								<ol class="WorkSans-Regular" style="padding-left: 15px;">
+									@foreach ($items['subscription_content_details'] as $item)
+										<li>{{$item['content']}}</li>
+									@endforeach
+								</ol> 
+							</div>
+						@endif
+					@endforeach
 				</div>
 				<br>
 			</div>
