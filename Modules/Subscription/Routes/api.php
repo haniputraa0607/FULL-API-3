@@ -24,6 +24,7 @@ Route::group(['middleware' => ['auth:api', 'log_activities'], 'prefix' => 'subsc
     Route::post('show-step1', 'ApiSubscription@showStep1');
     Route::post('show-step2', 'ApiSubscription@showStep2');
     Route::post('show-step3', 'ApiSubscription@showStep3');
+    Route::post('show-detail', 'ApiSubscription@detail');
 
     /* CLAIM */
     Route::group(['prefix' => 'claim'], function () {

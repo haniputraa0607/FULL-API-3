@@ -1444,45 +1444,61 @@ class FeaturesTableSeeder extends Seeder
                 'updated_at' => date('Y-m-d H:00:00'),
             ),
             179 =>
-                array(
-                    'id_feature' => 180,
-                    'feature_type' => 'List',
-                    'feature_module' => 'Welcome Voucher',
-                    'created_at' => date('Y-m-d H:00:00'),
-                    'updated_at' => date('Y-m-d H:00:00'),
-                ),
+            array(
+                'id_feature' => 180,
+                'feature_type' => 'List',
+                'feature_module' => 'Product Modifier',
+                'created_at' => date('Y-m-d H:00:00'),
+                'updated_at' => date('Y-m-d H:00:00'),
+            ),
             180 =>
-                array(
-                    'id_feature' => 181,
-                    'feature_type' => 'Detail',
-                    'feature_module' => 'Welcome Voucher',
-                    'created_at' => date('Y-m-d H:00:00'),
-                    'updated_at' => date('Y-m-d H:00:00'),
-                ),
+            array(
+                'id_feature' => 181,
+                'feature_type' => 'Create',
+                'feature_module' => 'Product Modifier',
+                'created_at' => date('Y-m-d H:00:00'),
+                'updated_at' => date('Y-m-d H:00:00'),
+            ),
             181 =>
-                array(
-                    'id_feature' => 182,
-                    'feature_type' => 'Create',
-                    'feature_module' => 'Welcome Voucher',
-                    'created_at' => date('Y-m-d H:00:00'),
-                    'updated_at' => date('Y-m-d H:00:00'),
-                ),
+            array(
+                'id_feature' => 182,
+                'feature_type' => 'Detail',
+                'feature_module' => 'Product Modifier',
+                'created_at' => date('Y-m-d H:00:00'),
+                'updated_at' => date('Y-m-d H:00:00'),
+            ),
             182 =>
-                array(
-                    'id_feature' => 183,
-                    'feature_type' => 'Update',
-                    'feature_module' => 'Welcome Voucher',
-                    'created_at' => date('Y-m-d H:00:00'),
-                    'updated_at' => date('Y-m-d H:00:00'),
-                ),
+            array(
+                'id_feature' => 183,
+                'feature_type' => 'Update',
+                'feature_module' => 'Product Modifier',
+                'created_at' => date('Y-m-d H:00:00'),
+                'updated_at' => date('Y-m-d H:00:00'),
+            ),
             183 =>
-                array(
-                    'id_feature' => 184,
-                    'feature_type' => 'Delete',
-                    'feature_module' => 'Welcome Voucher',
-                    'created_at' => date('Y-m-d H:00:00'),
-                    'updated_at' => date('Y-m-d H:00:00'),
-                )
+            array(
+                'id_feature' => 184,
+                'feature_type' => 'Delete',
+                'feature_module' => 'Product Modifier',
+                'created_at' => date('Y-m-d H:00:00'),
+                'updated_at' => date('Y-m-d H:00:00'),
+            ),
+            184 =>
+            array(
+                'id_feature' => 185,
+                'feature_type' => 'List',
+                'feature_module' => 'Product Modifier Price',
+                'created_at' => date('Y-m-d H:00:00'),
+                'updated_at' => date('Y-m-d H:00:00'),
+            ),
+            185 =>
+            array(
+                'id_feature' => 186,
+                'feature_type' => 'Update',
+                'feature_module' => 'Product Modifier Price',
+                'created_at' => date('Y-m-d H:00:00'),
+                'updated_at' => date('Y-m-d H:00:00'),
+            )
         ));
     }
 }

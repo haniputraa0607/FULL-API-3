@@ -417,11 +417,37 @@ class ApiSubscription extends Controller
                         'subscription_content',
                         'subscription_content.subscription_content_details'
                     )
+                    ->first()
+                    ->toArray();
+
+        return response()->json(MyHelper::checkGet($data));
+    }
+
+    public function detail(Request $request)
+    {
+        $post = $request->json()->all();
+        $data = Subscription::
+                    where('id_subscription','=',$post['id_subscription'])
+                    ->with([
+                        'subscription_content',
+                        'subscription_content.subscription_content_details',
+                        'outlets' => function($q){
+                            $q->select(
+                                'outlets.id_outlet',
+                                'outlet_code',
+                                'outlet_name'
+                            );
+                        }
+                    ])
+                    ->withCount('subscription_users')
                     // ->select(
                     //     'subscription_description'
                     // )
                     ->first()
                     ->toArray();
+
+        $data['total_used_voucher'] = SubscriptionUserVoucher::join('subscription_users', 'subscription_user_vouchers.id_subscription_user','=','subscription_users.id_subscription_user')->where('id_subscription','=',$post['id_subscription'])->whereNotNull('used_at')->count();
+
         return response()->json(MyHelper::checkGet($data));
     }
 
