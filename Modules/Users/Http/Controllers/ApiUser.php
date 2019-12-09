@@ -1119,13 +1119,6 @@ class ApiUser extends Controller
                 if(stristr($useragent,'iOS')) $useragent = 'iOS';
                 if(stristr($useragent,'okhttp')) $useragent = 'Android';
                 if(stristr($useragent,'GuzzleHttp')) $useragent = 'Browser';
-                if(\Module::collections()->has('Autocrm')) {
-                    $autocrm = app($this->autocrm)->SendAutoCRM('Login Success', $phone,
-                        ['ip' => $ip,
-                            'useragent' => $useragent,
-                            'now' => date('Y-m-d H:i:s')
-                        ]);
-                }
 
                 //update count login failed
                 if($datauser[0]['count_login_failed'] > 0){
@@ -1179,6 +1172,14 @@ class ApiUser extends Controller
                             }
                         }
                     }
+                }
+
+                if(\Module::collections()->has('Autocrm')) {
+                    $autocrm = app($this->autocrm)->SendAutoCRM('Login Success', $phone,
+                        ['ip' => $ip,
+                            'useragent' => $useragent,
+                            'now' => date('Y-m-d H:i:s')
+                        ]);
                 }
             } else{
                 //kalo login gagal
