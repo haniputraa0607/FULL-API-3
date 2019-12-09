@@ -1188,58 +1188,11 @@ class ApiOnlineTransaction extends Controller
                     $userData = User::find($user['id']);
 
                     if($fraudTrxDay){
-                        $checkFraud = app($this->setting_fraud)->checkFraud($fraudTrxDay, $userData, null, $countTrxDay, $countTrxWeek, $post['transaction_date'], 0, $insertTransaction['transaction_receipt_number']);
+                        $checkFraud = app($this->setting_fraud)->checkFraud($fraudTrxDay, $userData, null, $countTrxDay, $countTrxWeek, $post['transaction_date'], 0);
                     }
 
                     if($fraudTrxWeek){
-                        $checkFraud = app($this->setting_fraud)->checkFraud($fraudTrxWeek, $userData, null, $countTrxDay, $countTrxWeek, $post['transaction_date'], 0, $insertTransaction['transaction_receipt_number']);
-                    }
-
-                    $trxDay = Transaction::where('id_user', $user['id'])
-                    ->whereDate('transaction_date', date('Y-m-d'))
-                    ->where('transaction_payment_status', 'Completed')->count();
-
-                    $trxWeek = Transaction::where('id_user', $user['id'])
-                    ->whereDate('transaction_date','<=', date('Y-m-d'))
-                    ->whereDate('transaction_date', '>=' ,date('Y-m-d', strtotime(' - 6 days')))
-                    ->where('transaction_payment_status', 'Completed')->count();
-
-                    //update count transaction
-                    $updateCountTrx = User::where('id', $user['id'])->update([
-                        'count_transaction_day' => $trxDay,
-                        'count_transaction_week' =>  $trxWeek,
-                    ]);
-
-                    // $updateCountTrx = User::where('id', $user['id'])->update([
-                    //     'count_transaction_day' => $user['count_transaction_day'] + 1,
-                    //     'count_transaction_week' => $user['count_transaction_week'] + 1,
-                    // ]);
-                    if (!$updateCountTrx) {
-                        DB::rollback();
-                        return response()->json([
-                            'status'    => 'fail',
-                            'messages'  => ['Update User Count Transaction Failed']
-                        ]);
-                    }
-
-                    $userData = User::find($user['id']);
-
-                    //cek fraud detection transaction per day
-                    $fraudTrxDay = FraudSetting::where('parameter', 'LIKE', '%transactions in 1 day%')->first();
-                    if($fraudTrxDay && $fraudTrxDay['parameter_detail'] != null){
-                        if($userData['count_transaction_day'] >= $fraudTrxDay['parameter_detail']){
-                            //send fraud detection to admin
-                            $sendFraud = app($this->setting_fraud)->SendFraudDetection($fraudTrxDay['id_fraud_setting'], $userData, $insertTransaction['id_transaction'], null);
-                        }
-                    }
-
-                    //cek fraud detection transaction per week (last 7 days)
-                    $fraudTrxDay = FraudSetting::where('parameter', 'LIKE', '%transactions in 1 week%')->first();
-                    if($fraudTrxDay && $fraudTrxDay['parameter_detail'] != null){
-                        if($userData['count_transaction_week'] >= $fraudTrxDay['parameter_detail']){
-                            //send fraud detection to admin
-                            $sendFraud = app($this->setting_fraud)->SendFraudDetection($fraudTrxDay['id_fraud_setting'], $userData, $insertTransaction['id_transaction'], $lastDeviceId = null);
-                        }
+                        $checkFraud = app($this->setting_fraud)->checkFraud($fraudTrxWeek, $userData, null, $countTrxDay, $countTrxWeek, $post['transaction_date'], 0);
                     }
                 }
 
