@@ -442,6 +442,60 @@ class SettingsTableSeeder extends Seeder
                     'created_at' => date('Y-m-d H:i:s'),
                     'updated_at' => date('Y-m-d H:i:s'),
                 ),
+            49 =>
+            array(
+                'id_setting' => 50,
+                'key' => 'payment_messages_cash',
+                'value' => 'Anda akan membeli Voucher %deals_title% dengan harga %cash% ?',
+                'value_text' => NULL,
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ),
+            50 =>
+                array(
+                    'id_setting' => 51,
+                    'key' => 'welcome_voucher_setting',
+                    'value' => '1',
+                    'value_text' => NULL,
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
+            51 =>
+            array(
+                'id_setting' => 52,
+                'key' => 'message_mysubscription_empty_header',
+                'value' => 'Anda belum memiliki Paket',
+                'value_text' => NULL,
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ),
+            52 =>
+            array(
+                'id_setting' => 53,
+                'key' => 'message_mysubscription_empty_content',
+                'value' => 'Banyak keuntungan dengan berlangganan',
+                'value_text' => NULL,
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ),
+            53 =>
+            array(
+                'id_setting' => 54,
+                'key' => 'message_myvoucher_empty_header',
+                'value' => 'Anda belum memiliki Kupon',
+                'value_text' => NULL,
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ),
+            54 =>
+            array(
+                'id_setting' => 55,
+                'key' => 'message_myvoucher_empty_content',
+                'value' => 'Potongan menarik untuk setiap pembelian',
+                'value_text' => NULL,
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ),
         ));
     }
 }
