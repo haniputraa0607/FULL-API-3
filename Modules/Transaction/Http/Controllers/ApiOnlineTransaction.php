@@ -1134,9 +1134,9 @@ class ApiOnlineTransaction extends Controller
                 }
 
             }else{
-                if($countTrxDay > $fraudTrxDay['parameter_detail'] && $countTrxDay){
+                if($countTrxDay > $fraudTrxDay['parameter_detail'] && $fraudTrxDay){
                     $fraudFlag = 'transaction day';
-                }elseif($countTrxWeek > $countTrxWeek['parameter_detail'] && $countTrxWeek){
+                }elseif($countTrxWeek > $fraudTrxWeek['parameter_detail'] && $fraudTrxWeek){
                     $fraudFlag = 'transaction week';
                 }else{
                     $fraudFlag = NULL;
@@ -1188,11 +1188,11 @@ class ApiOnlineTransaction extends Controller
                     $userData = User::find($user['id']);
 
                     if($fraudTrxDay){
-                        $checkFraud = app($this->setting_fraud)->checkFraud($fraudTrxDay, $userData, null, $countTrxDay, $countTrxWeek, $post['transaction_date'], 0);
+                        $checkFraud = app($this->setting_fraud)->checkFraud($fraudTrxDay, $userData, null, $countTrxDay, $countTrxWeek, $post['transaction_date'], 0, $insertTransaction['transaction_receipt_number']);
                     }
 
                     if($fraudTrxWeek){
-                        $checkFraud = app($this->setting_fraud)->checkFraud($fraudTrxWeek, $userData, null, $countTrxDay, $countTrxWeek, $post['transaction_date'], 0);
+                        $checkFraud = app($this->setting_fraud)->checkFraud($fraudTrxWeek, $userData, null, $countTrxDay, $countTrxWeek, $post['transaction_date'], 0, $insertTransaction['transaction_receipt_number']);
                     }
 
                     $trxDay = Transaction::where('id_user', $user['id'])

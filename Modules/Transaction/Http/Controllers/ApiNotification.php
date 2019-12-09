@@ -1084,11 +1084,11 @@ Detail: ".$link['short'],
         $fraudTrxWeek = FraudSetting::where('parameter', 'LIKE', '%transactions in 1 week%')->where('fraud_settings_status','Active')->first();
         //cek fraud detection transaction per day
         if ($fraudTrxDay) {
-            $checkFraud = app($this->setting_fraud)->checkFraud($fraudTrxDay, $userData, null, $countTrxDay, $countTrxWeek, $trx['date_time'], 0);
+            $checkFraud = app($this->setting_fraud)->checkFraud($fraudTrxDay, $userData, null, $countTrxDay, $countTrxWeek, $trx['date_time'], 0, $trx['transaction_receipt_number']);
         }
         //cek fraud detection transaction per week
         if ($fraudTrxWeek) {
-            $checkFraud = app($this->setting_fraud)->checkFraud($fraudTrxWeek, $userData, null, $countTrxDay, $countTrxWeek, $trx['date_time'], 0);
+            $checkFraud = app($this->setting_fraud)->checkFraud($fraudTrxWeek, $userData, null, $countTrxDay, $countTrxWeek, $trx['date_time'], 0, $trx['transaction_receipt_number']);
         }
 
         return true;
