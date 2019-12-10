@@ -14,9 +14,9 @@
     		margin : 10px;
     		padding: 16.7px 11.7px;
     		/*margin-right: 15px;*/
-            -webkit-box-shadow: 0px 1px 3.3px 0px rgba(168,168,168,1);
-            -moz-box-shadow: 0px 1px 3.3px 0px rgba(168,168,168,1);
-            box-shadow: 0px 1px 3.3px 0px rgba(168,168,168,1);
+            -webkit-box-shadow: 0px 1px 3.3px 0px #eeeeee;
+            -moz-box-shadow: 0px 1px 3.3px 0px #eeeeee;
+            box-shadow: 0px 1px 3.3px 0px #eeeeee;
 			/* border-radius: 3px; */
 			background: #fff;
 			border-radius: 10px;
@@ -212,16 +212,17 @@
   <body>
 	{{ csrf_field() }}
 	
-	<div class="col-6 text-black text-14-3px WorkSans-Bold" style="margin-top:10px">{{ $data['detail']['outlet']['outlet_name'] }}</div>
+	<div class="col-12 text-black text-14px WorkSans-Bold" style="margin-top:10px">{{ $data['detail']['outlet']['outlet_name'] }}</div>
   	<div class="kotak">
 		<div class="row">
-			<div class="col-4 text-grey text-14-3px WorkSans-Bold">Transaksi</div>
-			<div class="col-8 text-right text-grey text-13-3px WorkSans">{{ date('d F Y', strtotime($data['detail']['transaction_date'])) }}</div>
+			<div class="col-4 text-black text-14px WorkSans-Bold">Transaksi</div>
+			@php $bulan = ['','Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember']; @endphp
+			<div class="col-8 text-right text-grey text-11-7px WorkSans">{{ date('d', strtotime($data['detail']['transaction_date'])) }} {{ $bulan[date('n', strtotime($data['detail']['transaction_date']))] }} {{ date('Y', strtotime($data['detail']['transaction_date'])) }}</div>
 			<div class="col-12 text-right text-13-3px WorkSans-Bold" style="margin-top: 10px;">#{{ $data['detail']['transaction_receipt_number'] }}</div>
 		</div>
 		@if($data['balance'] > 0)
 		<div class="row" style="margin-top: 30px;">
-			<div class="col-6 text-13-3px text-black WorkSans-SemiBold">Subtotal ( item)</div>
+			<div class="col-6 text-13-3px text-black WorkSans-SemiBold">Subtotal ({{$data['detail']['transaction_item_total']}} item)</div>
 			<div class="col-6 text-right text-13-3px text-black WorkSans-SemiBold">{{ str_replace(',', '.', number_format($data['grand_total'])) }}</div>
 			<div class="col-12"><hr style="margin-bottom: 20px;margin-top: 16.7px;"></div>
 			<div class="col-6 text-13-3px text-black WorkSans-SemiBold">Total Pembayaran</div>
