@@ -819,7 +819,7 @@ class ApiPOS extends Controller
                     DB::commit();
                 }
             }
-            if($modifier_prices = ($data['modifier_prices']??false)){
+            if($modifier_prices = ($data['modifier']??false)){
                 foreach ($modifier_prices as $modifier) {
                     $promod = ProductModifier::select('id_product_modifier')->where('code',$modifier['code'])->first();
                     if(!$promod){
