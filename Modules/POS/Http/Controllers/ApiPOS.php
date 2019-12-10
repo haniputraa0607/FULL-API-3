@@ -26,6 +26,8 @@ use App\Http\Models\Product;
 use App\Http\Models\ProductPrice;
 use App\Http\Models\ProductPhoto;
 use App\Http\Models\ProductModifier;
+use App\Http\Models\ProductModifierPrice;
+use App\Http\Models\ProductModifierProduct;
 use App\Http\Models\Outlet;
 use App\Http\Models\Setting;
 use App\Http\Models\DealsUser;
@@ -524,7 +526,15 @@ class ApiPOS extends Controller
             ]
         ]);
     }
-
+    /**
+     * Synch menu for single outlet
+     * @param  Request $request laravel Request object
+     * @return array        status update
+     */
+    public function syncMenu(Request $request) {
+        $post = $request->json()->all();
+        return $this->syncMenuProcess($post,'partial');
+    }
     public function syncMenuProcess($data, $flag)
     {
         $syncDatetime = date('d F Y h:i');
@@ -621,16 +631,22 @@ class ApiPOS extends Controller
                             if (empty($product->product_name_pos) || $product->product_name_pos == $menu['name']) {
                                 // update modifiers 
                                 if (isset($menu['modifiers'])) {
+                                    ProductModifierProduct::where('id_product',$product['id_product'])->delete();
                                     foreach ($menu['modifiers'] as $mod) {
                                         $dataProductMod['type'] = $mod['type'];
                                         if (isset($mod['text']))
                                             $dataProductMod['text'] = $mod['text'];
                                         else
                                             $dataProductMod['text'] = null;
+                                        $dataProductMod['modifier_type'] = 'Specific';
                                         $updateProductMod = ProductModifier::updateOrCreate([
-                                            'id_product' => $product->id_product,
                                             'code'  => $mod['code']
-                                        ], $dataProductMod);
+                                        ], $dataProductMod);                                        
+                                        $id_product_modifier = $updateProductMod['id_product_modifier'];
+                                        ProductModifierProduct::create([
+                                            'id_product_modifier' => $id_product_modifier,
+                                            'id_product' => $product['id_product']
+                                        ]);
                                     }
                                 }
                                 // update price 
@@ -801,6 +817,26 @@ class ApiPOS extends Controller
                         }
                     }
                     DB::commit();
+                }
+            }
+            if($modifier_prices = ($data['modifier']??false)){
+                foreach ($modifier_prices as $modifier) {
+                    $promod = ProductModifier::select('id_product_modifier')->where('code',$modifier['code'])->first();
+                    if(!$promod){
+                        continue;
+                    }
+                    $data_key = [
+                        'id_outlet' => $outlet->id_outlet,
+                        'id_product_modifier' => $promod->id_product_modifier
+                    ];
+                    $data_price = [];
+                    if(isset($modifier['price'])){
+                        $data_price['product_modifier_price'] = $modifier['price'];
+                    }
+                    if($modifier['status']??false){
+                        $data_price['product_modifier_status'] = $modifier['status'];
+                    }
+                    ProductModifierPrice::updateOrCreate($data_key,$data_price);
                 }
             }
             if ($flag == 'partial') {
@@ -1450,9 +1486,14 @@ class ApiPOS extends Controller
                                             'id_product' => $product['id_product'],
                                             'type' => $type,
                                             'code' => $mod['code'],
-                                            'text' => $text
+                                            'text' => $text,
+                                            'modifier_type' => 'Specific'
                                         ]);
                                         $id_product_modifier = $newModifier['id_product_modifier'];
+                                        ProductModifierProduct::create([
+                                            'id_product_modifier' => $id_product_modifier,
+                                            'id_product' => $product['id_product']
+                                        ]);
                                     }
                                     $dataProductMod['id_transaction_product'] = $createProduct['id_transaction_product'];
                                     $dataProductMod['id_transaction'] = $createTrx['id_transaction'];
@@ -2060,14 +2101,20 @@ class ApiPOS extends Controller
     
     public function syncOutletMenuCron(Request $request)
     {
-        $getRequest = SyncMenuRequest::get()->first()->toArray();
+        $syncDatetime = date('d F Y h:i');
+        $getRequest = SyncMenuRequest::get()->first();
+        // is $getRequest null
+        if(!$getRequest){
+            return '';
+        }
+        $getRequest = $getRequest->toArray();
         $getRequest['request'] = json_decode($getRequest['request'], true);
-        // $syncMenu = $this->syncMenuProcess($getRequest['request'], 'bulk');
-        // if ($syncMenu['status'] == 'success') {
-        //     SyncMenuResult::create(['result' => json_encode($syncMenu['result'])]);
-        // } else {
-        //     SyncMenuResult::create(['result' => json_encode($syncMenu['messages'])]);
-        // }
+        $syncMenu = $this->syncMenuProcess($getRequest['request'], 'bulk');
+        if ($syncMenu['status'] == 'success') {
+            SyncMenuResult::create(['result' => json_encode($syncMenu['result'])]);
+        } else {
+            SyncMenuResult::create(['result' => json_encode($syncMenu['messages'])]);
+        }
         if ($getRequest['is_end'] == 1) {
             $getResult = SyncMenuResult::pluck('result');
             $totalReject    = 0;
@@ -2093,12 +2140,12 @@ class ApiPOS extends Controller
                 }
             }
             
-            if (count($listRejected) > 0) {
-                $this->syncSendEmail($syncDatetime, $outlet->outlet_code, $outlet->outlet_name, $rejectedProduct, null);
-            }
-            if (count($listFailed) > 0) {
-                $this->syncSendEmail($syncDatetime, $outlet->outlet_code, $outlet->outlet_name, null, $failedProduct);
-            }
+            // if (count($listRejected) > 0) {
+            //     $this->syncSendEmail($syncDatetime, $outlet->outlet_code, $outlet->outlet_name, $rejectedProduct, null);
+            // }
+            // if (count($listFailed) > 0) {
+            //     $this->syncSendEmail($syncDatetime, $outlet->outlet_code, $outlet->outlet_name, null, $failedProduct);
+            // }
         }
         SyncMenuRequest::where('id', $getRequest['id'])->delete();
     }
