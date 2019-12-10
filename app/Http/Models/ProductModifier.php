@@ -17,6 +17,7 @@ class ProductModifier extends Model
 	protected $fillable = [
 		'id_product',
 		'modifier_type',
+		'product_modifier_visibility',
 		'type',
 		'code',
 		'text',
