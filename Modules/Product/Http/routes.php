@@ -91,6 +91,23 @@ Route::group(['prefix' => 'api/product','middleware' => 'log_activities', 'names
     });
 
     /**
+     * product modifier
+     */
+    Route::group(['prefix' => 'modifier', 'middleware' => 'auth:api'], function() {
+
+        Route::any('/', 'ApiProductModifierController@index');
+        Route::get('type', 'ApiProductModifierController@listType');
+
+        Route::post('detail', 'ApiProductModifierController@show');
+        Route::post('create', 'ApiProductModifierController@store');
+        Route::post('update', 'ApiProductModifierController@update');
+        Route::post('delete', 'ApiProductModifierController@destroy');
+
+        Route::post('list-price', 'ApiProductModifierController@listPrice');
+        Route::post('update-price', 'ApiProductModifierController@updatePrice');
+    });
+
+    /**
      * diskon
      */
 
