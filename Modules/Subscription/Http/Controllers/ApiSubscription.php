@@ -1007,11 +1007,11 @@ class ApiSubscription extends Controller
                 $subs['outlet_by_city'] = $subscription[0]['outlet_by_city']??'';
             }
             if ($subs) {
-                if (empty($subs['subscription_image'])) {
+                if (empty($subs['subscription']['subscription_image'])) {
                     $subs['url_subscription_image'] = env('S3_URL_API').'img/default.jpg';
                 }
                 else {
-                    $subs['url_subscription_image'] = env('S3_URL_API').$subs['subscription_image'];
+                    $subs['url_subscription_image'] = env('S3_URL_API').$subs['subscription']['subscription_image'];
                 }
                 $subs['time_server'] = date('Y-m-d H:i:s');
                 $subs['time_to_end'] = strtotime($subs['subscription_expired_at'])-time();
