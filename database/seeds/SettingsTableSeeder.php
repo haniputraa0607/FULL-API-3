@@ -451,6 +451,24 @@ class SettingsTableSeeder extends Seeder
                 'created_at' => date('Y-m-d H:i:s'),
                 'updated_at' => date('Y-m-d H:i:s'),
             ),
+            50 =>
+            array(
+                'id_setting' => 51,
+                'key' => 'home_deals_title',
+                'value' => 'Penawaran Spesial',
+                'value_text' => NULL,
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ),
+            51 =>
+            array(
+                'id_setting' => 52,
+                'key' => 'home_deals_sub_title',
+                'value' => 'Potongan menarik untuk setiap pembelian',
+                'value_text' => NULL,
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ),
         ));
     }
 }

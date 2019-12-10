@@ -750,6 +750,10 @@ class ApiHome extends Controller
 
     public function featuredDeals(Request $request){
         $now=date('Y-m-d H-i-s');
+        $home_text = Setting::where('key','=','home_deals_title')->orWhere('key','=','home_deals_sub_title')->orderBy('id_setting')->get();
+        $text['title'] = $home_text[0]['value']??'Penawaran Spesial.';
+        $text['sub_title'] = $home_text[1]['value']??'Potongan menarik untuk setiap pembelian.';
+
         $deals=FeaturedDeal::select('id_featured_deals','id_deals')->with(['deals'=>function($query){
             $query->select('deals_title','deals_image','deals_total_voucher','deals_total_claimed','deals_publish_end','deals_start','deals_end','id_deals','deals_voucher_price_point','deals_voucher_price_cash','deals_voucher_type');
         }])
@@ -786,9 +790,12 @@ class ApiHome extends Controller
                     unset($deals[$key]);
                 }
             }
+
+            $data_home['text'] = $text;
+            $data_home['featured_list'] = $deals;
             return [
                 'status'=>'success',
-                'result'=>$deals
+                'result'=>$data_home
             ];
         }else{
             return [
@@ -802,8 +809,8 @@ class ApiHome extends Controller
 
         $now=date('Y-m-d H-i-s');
         $home_text = Setting::where('key','=','home_subscription_title')->orWhere('key','=','home_subscription_sub_title')->orderBy('id_setting')->get();
-        $text['title'] = $home_text[0]['value']??'';
-        $text['sub_title'] = $home_text[1]['value']??'';
+        $text['title'] = $home_text[0]['value']??'Subscription';
+        $text['sub_title'] = $home_text[1]['value']??'Banyak untungnya kalo berlangganan';
 
         $subs=featuredSubscription::select('id_featured_subscription','id_subscription')->with(['subscription'=>function($query){
             $query->select('subscription_title','subscription_sub_title','subscription_image','subscription_total', 'subscription_voucher_total','subscription_bought','subscription_publish_start','subscription_publish_end','subscription_start','subscription_end','id_subscription','subscription_price_point','subscription_price_cash');
