@@ -732,6 +732,16 @@ class ApiWebviewController extends Controller
 
         if (isset($check['status']) && $check['status'] == 'success') {
             $data = $check['result'];
+            $product_count=0;
+            $data['detail']['product_transaction'] = MyHelper::groupIt($data['detail']['product_transaction'],'id_brand',null,function($key,&$val) use (&$product_count){
+                $product_count += array_sum(array_column($val,'transaction_product_qty'));
+                $brand = Brand::select('name_brand')->find($key);
+                if(!$brand){
+                    return 'No Brand';
+                }
+                return $brand->name_brand;
+            });
+            $data['detail']['transaction_item_total'] = $product_count;
         } elseif (isset($check['status']) && $check['status'] == 'fail') {
             return view('error', ['msg' => 'Data failed']);
         } else {
