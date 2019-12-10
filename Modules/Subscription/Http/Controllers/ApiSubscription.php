@@ -985,16 +985,71 @@ class ApiSubscription extends Controller
                         );
                     },
                     'subscription_user_vouchers.transaction.outlet' => function($q){
-                        // $q->select('id_outlet','outlet_name');
+                        $q->select('id_outlet','outlet_name');
                     }
                 ])
                 ->where('id_user', $user['id'])
                 ->where('subscription_expired_at', '>=',date('Y-m-d H:i:s'))
                 ->whereIn('paid_status', ['Completed','Free'])
-                ->withCount(['subscription_user_vouchers' => function($q){
+                ->withCount(['subscription_user_vouchers as used_voucher' => function($q){
                     $q->whereNotNull('used_at');
+                }])
+                ->withCount(['subscription_user_vouchers as available_voucher' => function($q){
+                    $q->whereNull('used_at');
                 }]);
 
+        if (isset($post['expired_start'])) {
+            $subs->whereDate('subscription_expired_at', '>=',date('Y-m-d', strtotime($post['expired_start'])));
+        }
+
+        if (isset($post['expired_end'])) {
+            $subs->whereDate('subscription_expired_at', '<=',date('Y-m-d', strtotime($post['expired_end'])));
+        }
+
+        //search by outlet
+        if(isset($post['id_outlet']) && is_numeric($post['id_outlet'])){
+            $subs->join('subscription_user_vouchers', 'subscription_users.id_subscription_user', 'subscription_user_vouchers.id_subscription_user')
+                    ->join('subscriptions', 'subscriptions.id_subscription', 'subscription_users.id_subscription')
+                    ->join('subscription_outlets', 'subscriptions.id_subscription', 'subscription_outlets.id_subscription')
+                    ->where(function ($query) use ($post) {
+                        $query->orWhere('subscription_outlets.id_outlet', $post['id_outlet']);
+                    })
+                    ->distinct();
+        }
+
+        if(isset($post['key_free']) && $post['key_free'] != null){
+            if(!MyHelper::isJoined($subs,'subscription_user_vouchers')){
+                $subs->leftJoin('subscription_user_vouchers', 'subscription_users.id_subscription_user', 'subscription_user_vouchers.id_subscription_user');
+            }
+            if(!MyHelper::isJoined($subs,'subscriptions')){
+                $subs->leftJoin('subscriptions', 'subscriptions.id_subscription', 'subscription_users.id_subscription');
+            }
+            $subs->where(function ($query) use ($post) {
+                $query->where('subscriptions.subscription_title', 'LIKE', '%'.$post['key_free'].'%')
+                        ->orWhere('subscriptions.subscription_sub_title', 'LIKE', '%'.$post['key_free'].'%');
+            });
+        }
+
+        if (isset($post['oldest']) && ($post['oldest'] == 1 || $post['oldest'] == '1')) {
+                $subs = $subs->orderBy('subscription_users.bought_at', 'asc');
+        }
+
+        if (isset($post['newest']) && ($post['newest'] == 1 || $post['newest'] == '1')) {
+                $subs = $subs->orderBy('subscription_users.bought_at', 'desc');
+        }
+
+        elseif (isset($post['newest_expired']) && ($post['newest_expired'] == 1 || $post['newest_expired'] == '1')) {
+            $subs = $subs->orderBy('subscription_expired_at', 'asc');
+        }
+
+        if (isset($post['used']) && ($post['used'] == 1 || $post['used'] == '1'))  {
+            $subs = $subs->orderBy('used_voucher', 'desc');
+        }
+        if (isset($post['available']) && ($post['available'] == 1 || $post['available'] == '1')) {
+            $subs = $subs->orderBy('available_voucher', 'desc');
+        }
+
+// return $subs->get();
         if ( isset($post['id_subscription_user']) ) 
         {
             $subs = $subs->where('id_subscription_user', '=', $post['id_subscription_user'])
@@ -1033,8 +1088,10 @@ class ApiSubscription extends Controller
                         $data[$key]['id_subscription_user']         = $sub['id_subscription_user'];
                         $data[$key]['subscription_end']             = date('Y-m-d H:i:s', strtotime($sub['subscription']['subscription_end']));
                         $data[$key]['subscription_publish_end']     = date('Y-m-d H:i:s', strtotime($sub['subscription']['subscription_publish_end']));
+                        $data[$key]['subscription_expired_at']      = $sub['subscription_expired_at'];
                         $data[$key]['subscription_voucher_total']   = $sub['subscription']['subscription_voucher_total'];
-                        $data[$key]['used_voucher']                 = $sub['subscription_user_vouchers_count'];
+                        $data[$key]['used_voucher']                 = $sub['used_voucher'];
+                        $data[$key]['available_voucher']            = $sub['available_voucher'];
                         if (empty($sub['subscription']['subscription_image'])) {
                             $data[$key]['url_subscription_image'] = env('S3_URL_API').'img/default.jpg';
                         }
@@ -1042,7 +1099,7 @@ class ApiSubscription extends Controller
                             $data[$key]['url_subscription_image'] = env('S3_URL_API').$sub['subscription']['subscription_image'];
                         }
 
-                        $data[$key]['time_to_end']                  = strtotime($sub['subscription']['subscription_end'])-time();
+                        $data[$key]['time_to_end']                  = strtotime($sub['subscription']['subscription_expired_at'])-time();
                         $data[$key]['url_webview']                  = env('APP_API_URL') ."api/webview/mysubscription/". $sub['id_subscription_user'];
                         $data[$key]['time_server']                  = date('Y-m-d H:i:s');
                     }
