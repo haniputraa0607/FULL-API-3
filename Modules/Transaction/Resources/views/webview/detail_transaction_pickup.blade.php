@@ -478,17 +478,21 @@
                             </div>
                         </div>
                     </div>
-                    <div class="row text-center" style="background-color: #FFFFFF;padding: 20px;padding-top: 0px;margin-top: 20px;">
-                        <div class="col-12 text-15px text-black-grey-light space-text WorkSans-Bold">{{ $data['outlet']['outlet_name'] }}</div>
-                        <div class="kotak-inside col-12">
-                            <div class="col-12 text-11-7px text-grey-white space-nice text-center WorkSans">{{ $data['outlet']['outlet_address'] }}</div>
-                        </div>
-                        <div class="col-12 WorkSans-Bold text-14px space-text text-black-grey-light">Kode Pickup Anda</div>
+                    <div class="kotak-biasa" style="background-color: #FFFFFF;padding: 15px;margin-top: 10px;box-shadow: 0 0.7px 3.3px #eeeeee;">
+                        <div class="container">
+                            <div class="row text-center">
+                                <div class="col-12 text-15px text-black-grey-light space-text WorkSans-Bold">{{ $data['outlet']['outlet_name'] }}</div>
+                                <div class="kotak-inside col-12">
+                                    <div class="col-12 text-11-7px text-grey-white space-nice text-center WorkSans">{{ $data['outlet']['outlet_address'] }}</div>
+                                </div>
+                                <div class="col-12 WorkSans-Bold text-14px space-text text-black-grey-light">Kode Pickup Anda</div>
 
-                        <div style="width: 135px;height: 135px;margin: 0 auto;" data-toggle="modal" data-target="#exampleModal">
-                            <div class="col-12 text-14-3px space-top"><img class="img-responsive" style="display: block; max-width: 100%; padding-top: 10px" src="{{ $data['qr'] }}"></div>
+                                <div style="width: 135px;height: 135px;margin: 0 auto;" data-toggle="modal" data-target="#exampleModal">
+                                    <div class="col-12 text-14-3px space-top"><img class="img-responsive" style="display: block; max-width: 100%; padding-top: 10px" src="{{ $data['qr'] }}"></div>
+                                </div>
+                                <div class="col-12 text-black-grey-light text-20px WorkSans-SemiBold">{{ $data['detail']['order_id'] }}</div>
+                            </div>
                         </div>
-                        <div class="col-12 text-black-grey-light text-20px WorkSans-SemiBold">{{ $data['detail']['order_id'] }}</div>
                     </div>
                 </div>
             </div>
@@ -551,12 +555,17 @@
                     <div class="col-2 text-14px WorkSans text-black">
                         <div class="round-grey bg-grey" style="background: #aaaaaa;"></div>
                     </div>
-                    <div class="col-10 text-14px WorkSans-SemiBold text-black" style="margin-left: -40px;">{{$keyProduct}}</div>
+                    <div class="col-10 text-14px WorkSans-SemiBold text-black" style="margin-left: -40px;margin-bottom: 10px;">{{$keyProduct}}</div>
                     @foreach ($itemProduct as $item)
                         <div class="col-2 text-13-3px WorkSans-SemiBold text-black">{{$item['transaction_product_qty']}}x</div>
                         <div class="col-6 text-14px WorkSans-SemiBold text-black" style="margin-left: -30px;margin-right: 20px;">{{$item['product']['product_name']}}</div>
                         <div class="col-4 text-13-3px text-right WorkSans-SemiBold text-black">{{ str_replace(',', '.', number_format(explode('.',$item['transaction_product_price'])[0])) }}</div>
                     @endforeach
+                    @if ($itemProduct != end($data['product_transaction']))
+                        <div class="col-12">
+                            <hr style="border-top: 1px solid #eeeeee;">
+                        </div>
+                    @endif
                     @if ($item['product']['product_discounts'] != [])
                         <div class="col-2 text-13-3px WorkSans text-black">{{$item['transaction_product_qty']}}x</div>
                         <div class="col-6 text-13-3px WorkSans text-black" style="margin-left: -20px;margin-right: 20px;">{{$item['product']['product_name']}}</div>
