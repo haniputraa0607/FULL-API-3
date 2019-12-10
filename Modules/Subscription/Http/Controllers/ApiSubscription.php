@@ -211,6 +211,87 @@ class ApiSubscription extends Controller
         return $data;
     }
 
+    public function participateAjax(Request $request)
+    {
+        $post = $request->json()->all();
+        // return $post['id_subscription'];
+        $query = SubscriptionUser::
+                    where('id_subscription', '=', $post['id_subscription'])
+                    ->select(
+                        'subscription_users.*',
+                        'users.name'
+                    )
+                    ->join('users', 'subscription_users.id_user','=','users.id')
+                    ->withCount(['subscription_user_vouchers' => function($q){
+                        $q->whereNotNull('used_at');
+                    }])
+                    ->groupBy('id_subscription_user');
+
+        $column = ['subscription_receipt', 'user', 'bought_at', 'expired_at', 'payment_status', 'payment_price', 'available', 'history' ];
+
+        $count = $query->get()->count();
+        if($post['start']){
+            $query = $query->skip($post['start']);
+        }
+        if($post['length']>0){
+            $query = $query->take($post['length']);
+        }
+
+        foreach ($post['order'] as $value) {
+            switch ($column[$value['column']]) {
+                case 'subscription_receipt':
+                $query->orderBy('subscription_user_receipt_number',$value['dir']);
+                break;
+                
+                case 'user':
+                $query->orderBy('users.name',$value['dir']);
+                break;
+                
+                case 'bought_at':
+                $query->orderBy('bought_at',$value['dir']);
+                break;
+
+                case 'expired_at':
+                $query->orderBy('expired_at',$value['dir']);
+                break;
+
+                case 'payment_status':
+                $query->orderBy('paid_status',$value['dir']);
+                break;
+
+                case 'payment_price':
+                $query->orderBy('subscription_price_point',$value['dir'])
+                        ->orderBy(' subscription_price_cash',$value['dir']);
+                break;
+
+                case 'available':
+                $query->orderBy('subscription_user_vouchers_count',$value['dir']);
+                break;
+
+                default:
+                $query->orderBy('id_subscription_user',$value['dir']);
+                break;
+            }
+        }
+        $query = $query->get();
+
+        if (isset($query) && !empty($query)) {
+            $query = $query->toArray();
+            $result = [
+                'status'  => 'success',
+                'result'  => $query,
+                'rule'    => $post,
+                'count'   => $count
+            ];
+        } else {
+            $result = [
+                'status'  => 'fail',
+                'message'  => ['No Participate']
+            ];
+        }
+        return response()->json($result);
+    }
+
     public function create(Step1Subscription $request)
     {
         $data = $request->json()->all();
@@ -890,6 +971,9 @@ class ApiSubscription extends Controller
         $subs = SubscriptionUser::
                 with([
                     'subscription.outlets.city', 
+                    'subscription_user_vouchers' => function($q){
+                        $q->whereNotNull('used_at');
+                    },
                     'subscription_user_vouchers.transaction' => function($q){
                         $q->select('id_outlet', 'id_transaction');
                     },
@@ -922,7 +1006,6 @@ class ApiSubscription extends Controller
 
                 $subs['outlet_by_city'] = $subscription[0]['outlet_by_city']??'';
             }
-            return $subs;
             if ($subs) {
                 if (empty($subs['subscription_image'])) {
                     $subs['url_subscription_image'] = env('S3_URL_API').'img/default.jpg';
@@ -931,7 +1014,7 @@ class ApiSubscription extends Controller
                     $subs['url_subscription_image'] = env('S3_URL_API').$subs['subscription_image'];
                 }
                 $subs['time_server'] = date('Y-m-d H:i:s');
-                $subs['time_to_end'] = strtotime($subs['subscription_end'])-time();
+                $subs['time_to_end'] = strtotime($subs['subscription_expired_at'])-time();
                 $subs['url_webview'] = env('APP_API_URL') ."api/webview/mysubscription/". $subs['id_subscription_user'];
             }
             $data = $subs;
@@ -964,6 +1047,44 @@ class ApiSubscription extends Controller
                         $data[$key]['time_server']                  = date('Y-m-d H:i:s');
                     }
                 }
+
+                if ($request->get('page')) {
+                    $page = $request->get('page');
+                } else {
+                    $page = 1;
+                }
+
+                $resultData = [];
+                $listData   = [];
+                $paginate   = 10;
+                $start      = $paginate * ($page - 1);
+                $all        = $paginate * $page;
+                $end        = $all;
+                $next       = true;
+
+                if ($all > count($subs)) {
+                    $end = count($subs);
+                    $next = false;
+                }
+
+                for ($i=$start; $i < $end; $i++) {
+                    array_push($resultData, $data[$i]);
+                }
+
+                $result['current_page']  = $page;
+                $result['data']          = $resultData;
+                $result['total']         = count($resultData);
+                $result['next_page_url'] = null;
+                if ($next == true) {
+                    $next_page = (int) $page + 1;
+                    $result['next_page_url'] = ENV('APP_API_URL') . 'api/subscription/me?page=' . $next_page;
+                }
+
+                // print_r($deals); exit();
+                if(!$result['total']){
+                    $result=[];
+                }
+                $data = $result;
             }
             else
             {   
