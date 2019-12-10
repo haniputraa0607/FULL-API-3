@@ -20,6 +20,7 @@ use App\Http\Models\TransactionShipment;
 use App\Http\Models\TransactionPickup;
 use App\Http\Models\DealsPaymentMidtran;
 use App\Http\Models\DealsPaymentManual;
+use Modules\Brand\Entities\Brand;
 
 use App\Lib\MyHelper;
 
@@ -128,14 +129,57 @@ class ApiWebviewController extends Controller
 
         if ($type == 'trx') {
             if($request->json('id_transaction')){
-                $list = Transaction::where('id_transaction', $request->json('id_transaction'))->with('user.city.province', 'productTransaction.product.product_category', 'productTransaction.product.product_photos', 'productTransaction.product.product_discounts', 'transaction_payment_offlines', 'outlet.city', 'transaction_vouchers.deals_voucher')->first();
+                $list = Transaction::where('id_transaction', $request->json('id_transaction'))->with('user.city.province', 'productTransaction.product.product_category', 'productTransaction.product.product_photos', 'productTransaction.product.product_discounts', 'transaction_payment_offlines', 'outlet.city', 'transaction_vouchers.deals_voucher')->first()->toArray();
+                if(!$list){
+                    return MyHelper::checkGet([],'empty');
+                }
+                $label = [];
+                $label2 = [];
+                $product_count=0;
+                $list['product_transaction'] = MyHelper::groupIt($list['product_transaction'],'id_brand',null,function($key,&$val) use (&$product_count){
+                    $product_count += array_sum(array_column($val,'transaction_product_qty'));
+                    $brand = Brand::select('name_brand')->find($key);
+                    if(!$brand){
+                        return 'No Brand';
+                    }
+                    return $brand->name_brand;
+                });
             }else{
                 $arrId = explode(',',$id);
 
                 if(count($arrId) != 2){
-                    $list = Transaction::where('transaction_receipt_number', $id)->with('user.city.province', 'productTransaction.product.product_category', 'productTransaction.product.product_photos', 'productTransaction.product.product_discounts', 'transaction_payment_offlines', 'outlet.city', 'transaction_vouchers.deals_voucher')->first();
+                    $list = Transaction::where('transaction_receipt_number', $id)->with('user.city.province', 'productTransaction.product.product_category', 'productTransaction.product.product_photos', 'productTransaction.product.product_discounts', 'transaction_payment_offlines', 'outlet.city', 'transaction_vouchers.deals_voucher')->first()->toArray();
+                    if(!$list){
+                        return MyHelper::checkGet([],'empty');
+                    }
+                    $label = [];
+                    $label2 = [];
+                    $product_count=0;
+                    $list['product_transaction'] = MyHelper::groupIt($list['product_transaction'],'id_brand',null,function($key,&$val) use (&$product_count){
+                        $product_count += array_sum(array_column($val,'transaction_product_qty'));
+                        $brand = Brand::select('name_brand')->find($key);
+                        if(!$brand){
+                            return 'No Brand';
+                        }
+                        return $brand->name_brand;
+                    });
                 }else{
-                    $list = Transaction::where('transaction_receipt_number', $arrId[0])->where('id_transaction', $arrId[1])->with('user.city.province', 'productTransaction.product.product_category', 'productTransaction.product.product_photos', 'productTransaction.product.product_discounts', 'transaction_payment_offlines', 'outlet.city', 'transaction_vouchers.deals_voucher')->first();
+                    $list = Transaction::where('transaction_receipt_number', $arrId[0])->where('id_transaction', $arrId[1])->with('user.city.province', 'productTransaction.product.product_category', 'productTransaction.modifiers', 'productTransaction.product.product_photos', 'productTransaction.product.product_discounts', 'transaction_payment_offlines', 'outlet.city', 'transaction_vouchers.deals_voucher')->first()->toArray();
+                    if(!$list){
+                        return MyHelper::checkGet([],'empty');
+                    }
+                    $label = [];
+                    $label2 = [];
+                    $product_count=0;
+                    $list['product_transaction'] = MyHelper::groupIt($list['product_transaction'],'id_brand',null,function($key,&$val) use (&$product_count){
+                        $product_count += array_sum(array_column($val,'transaction_product_qty'));
+                        $brand = Brand::select('name_brand')->find($key);
+                        if(!$brand){
+                            return 'No Brand';
+                        }
+                        return $brand->name_brand;
+                    });
+                    // $list = Transaction::where('transaction_receipt_number', $arrId[0])->where('id_transaction', $arrId[1])->with('user.city.province', 'productTransaction.product.product_category', 'productTransaction.product.product_photos', 'productTransaction.product.product_discounts', 'transaction_payment_offlines', 'outlet.city', 'transaction_vouchers.deals_voucher')->first();
                 }
             }
             $label = [];
@@ -144,6 +188,7 @@ class ApiWebviewController extends Controller
             $cart = $list['transaction_subtotal'] + $list['transaction_shipment'] + $list['transaction_service'] + $list['transaction_tax'] - $list['transaction_discount'];
 
             $list['transaction_carttotal'] = $cart;
+            $list['transaction_item_total'] = $product_count;
 
             $order = Setting::where('key', 'transaction_grand_total_order')->value('value');
             $exp   = explode(',', $order);
@@ -637,6 +682,7 @@ class ApiWebviewController extends Controller
             $data['order_label_v2'] = explode(',', $data['order_label_v2']);
             $data['order_v2'] = explode(',', $data['order_v2']);
         }
+        
         return view('transaction::webview.' . $view . '')->with(compact('data'));
     }
 
@@ -686,6 +732,16 @@ class ApiWebviewController extends Controller
 
         if (isset($check['status']) && $check['status'] == 'success') {
             $data = $check['result'];
+            $product_count=0;
+            $data['detail']['product_transaction'] = MyHelper::groupIt($data['detail']['product_transaction'],'id_brand',null,function($key,&$val) use (&$product_count){
+                $product_count += array_sum(array_column($val,'transaction_product_qty'));
+                $brand = Brand::select('name_brand')->find($key);
+                if(!$brand){
+                    return 'No Brand';
+                }
+                return $brand->name_brand;
+            });
+            $data['detail']['transaction_item_total'] = $product_count;
         } elseif (isset($check['status']) && $check['status'] == 'fail') {
             return view('error', ['msg' => 'Data failed']);
         } else {

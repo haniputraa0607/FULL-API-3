@@ -95,9 +95,9 @@
     		margin : 10px;
     		padding: 16.7px 11.7px;
     		/*margin-right: 15px;*/
-            -webkit-box-shadow: 0px 1px 3.3px 0px rgba(168,168,168,1);
-            -moz-box-shadow: 0px 1px 3.3px 0px rgba(168,168,168,1);
-            box-shadow: 0px 1px 3.3px 0px rgba(168,168,168,1);
+            -webkit-box-shadow: 0px 1px 3.3px 0px #eeeeee;
+            -moz-box-shadow: 0px 1px 3.3px 0px #eeeeee;
+            box-shadow: 0px 1px 3.3px 0px #eeeeee;
 			/* border-radius: 3px; */
 			background: #fff;
 			border-radius: 10px;
