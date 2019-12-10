@@ -23,13 +23,13 @@ class ApiSubscriptionWebview extends Controller
     {
         // return url webview and button text for mobile (native button)
         $subs = Subscription::find($request->get('id_subscription'));
+
         if($subs){
+            $subs['webview_url'] = env('API_URL') ."api/webview/subscription/". $subs['id_subscription'];
+            $subs['button_text'] = 'BELI';
             $response = [
                 'status' => 'success',
-                'result' => [
-                    'webview_url' => env('API_URL') ."api/webview/subscription/". $subs['id_subscription'],
-                    'button_text' => 'BELI'
-                ]
+                'result' => $subs
             ];
         }else{
             $response = [
