@@ -375,13 +375,24 @@ class ApiSubscriptionClaim extends Controller
         // EXPIRED DATE
         // add id deals
         $data['id_subscription'] = $dataSubs->id_subscription;
-
         // get expired date of subscription
-        if ( isset($dataSubs->subscription_day_valid) ) {
-            $data['subscription_expired_at'] = date('Y-m-d H:i:s', strtotime("+".$dataSubs->subscription_day_valid." days"));
+        if (!empty($dataSubs->subscription_voucher_duration)) {
+            if($dataSubs->subscription_voucher_start>date('Y-m-d H:i:s')){
+                $data['subscription_expired_at'] = date('Y-m-d H:i:s', strtotime($dataSubs->subscription_voucher_start." +".$dataSubs->subscription_voucher_duration." days"));
+            }else{
+                $data['subscription_expired_at'] = date('Y-m-d H:i:s', strtotime("+".$dataSubs->subscription_voucher_duration." days"));
+            }
         }
-        else{
-            $data['subscription_expired_at'] = $dataSubs->subscription_end;
+        else {
+            $data['subscription_expired_at'] = $dataSubs->subscription_voucher_expired;
+        }
+
+        if($dataSubs->subscription_voucher_start>date('Y-m-d H:i:s'))
+        {
+            $data['subscription_active_at'] = date('Y-m-d H:i:s', strtotime($dataSubs->subscription_voucher_start));
+        }else
+        {
+            $data['subscription_active_at'] = date('Y-m-d H:i:s');
         }
 
         // CHECK PAYMENT = FREE / NOT
@@ -395,7 +406,7 @@ class ApiSubscriptionClaim extends Controller
 
         // CHECK PAYMENT WITH POINT
         // SUM POINT
-        // if ($dataDeals->deals_voucher_price_point <= $this->getPoint($id)) {
+        // if ($dataSubs->subscription_voucher_price_point <= $this->getPoint($id)) {
         //     $data['paid_status'] = "success";
         // }
         // else {
@@ -452,10 +463,10 @@ class ApiSubscriptionClaim extends Controller
 
         $dataCreate        = [
             'id_user'          => $voucher->id_user,
-            'id_reference'     => $voucher->id_deals_user,
-            'source'           => "Deals User",
-            'point'            => -$voucher->voucher_price_point,
-            'voucher_price'    => $voucher->voucher_price_point,
+            'id_reference'     => $voucher->id_subscription_user,
+            'source'           => "Subscription User",
+            'point'            => -$voucher->subscription_price_point,
+            'voucher_price'    => $voucher->subscription_price_point,
             'point_conversion' => $setting,
             'membership_level'            => $level,
             'membership_point_percentage' => $point_percentage
