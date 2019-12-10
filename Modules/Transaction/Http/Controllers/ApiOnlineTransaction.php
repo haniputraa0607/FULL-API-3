@@ -1027,6 +1027,9 @@ class ApiOnlineTransaction extends Controller
 
             $id_pickup_go_send = $gosend->id_transaction_pickup_go_send;
         }
+		
+		$fraudTrxDay = FraudSetting::where('parameter', 'LIKE', '%transactions in 1 day%')->where('fraud_settings_status','Active')->first();
+		$fraudTrxWeek = FraudSetting::where('parameter', 'LIKE', '%transactions in 1 week%')->where('fraud_settings_status','Active')->first();
 
         if ($post['transaction_payment_status'] == 'Completed') {
 
@@ -1057,8 +1060,7 @@ class ApiOnlineTransaction extends Controller
             $countTrxWeek = $geCountTrxWeek + 1;
             //================================ End ================================//
 
-            $fraudTrxDay = FraudSetting::where('parameter', 'LIKE', '%transactions in 1 day%')->where('fraud_settings_status','Active')->first();
-            $fraudTrxWeek = FraudSetting::where('parameter', 'LIKE', '%transactions in 1 week%')->where('fraud_settings_status','Active')->first();
+         
 
             if((($fraudTrxDay && $countTrxDay <= $fraudTrxDay['parameter_detail']) && ($fraudTrxWeek && $countTrxWeek <= $fraudTrxWeek['parameter_detail']))
                 || (!$fraudTrxDay && !$fraudTrxWeek)){
@@ -1249,6 +1251,15 @@ class ApiOnlineTransaction extends Controller
 
             if ($post['payment_type'] == 'Midtrans') {
                 if ($post['transaction_payment_status'] == 'Completed') {
+                    $userData = User::find($user['id']);
+
+                    if($fraudTrxDay){
+                        $checkFraud = app($this->setting_fraud)->checkFraud($fraudTrxDay, $userData, null, $countTrxDay, $countTrxWeek, $post['transaction_date'], 0, $insertTransaction['transaction_receipt_number']);
+                    }
+
+                    if($fraudTrxWeek){
+                        $checkFraud = app($this->setting_fraud)->checkFraud($fraudTrxWeek, $userData, null, $countTrxDay, $countTrxWeek, $post['transaction_date'], 0, $insertTransaction['transaction_receipt_number']);
+                    }
                     //bank
                     $bank = ['BNI', 'Mandiri', 'BCA'];
                     $getBank = array_rand($bank);
