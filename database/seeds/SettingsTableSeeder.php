@@ -496,6 +496,42 @@ class SettingsTableSeeder extends Seeder
                 'created_at' => date('Y-m-d H:i:s'),
                 'updated_at' => date('Y-m-d H:i:s'),
             ),
+            55 =>
+            array(
+                'id_setting' => 56,
+                'key' => 'subscription_payment_messages',
+                'value' => 'Kamu yakin ingin membeli subscription ini',
+                'value_text' => NULL,
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ),
+            55 =>
+            array(
+                'id_setting' => 56,
+                'key' => 'subscription_payment_messages_point',
+                'value' => 'Anda akan menukarkan %point% points anda dengan subscription %subscription_title%?',
+                'value_text' => NULL,
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ),
+            55 =>
+            array(
+                'id_setting' => 56,
+                'key' => 'subscription_payment_messages_cash',
+                'value' => 'Kamu yakin ingin membeli subscription %subscription_title% dengan harga %cash% ?',
+                'value_text' => NULL,
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ),
+            55 =>
+            array(
+                'id_setting' => 56,
+                'key' => 'subscription_payment_success_messages',
+                'value' => 'Anda telah membeli subscription %subscription_title%',
+                'value_text' => NULL,
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ),
         ));
     }
 }
