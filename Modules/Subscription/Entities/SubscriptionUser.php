@@ -45,6 +45,7 @@ class SubscriptionUser extends Eloquent
 		'id_subscription',
 		'subscription_user_receipt_number',
 		'bought_at',
+		'subscription_active_at',
 		'subscription_expired_at',
 		'subscription_price_point',
 		'subscription_price_cash',
