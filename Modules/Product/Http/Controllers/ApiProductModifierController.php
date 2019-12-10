@@ -46,6 +46,7 @@ class ApiProductModifierController extends Controller
         $post = $request->json()->all();
         $data = [
             'modifier_type'=>$post['modifier_type'],
+            'product_modifier_visibility'=>($post['product_modifier_visibility']??false)?'Visible':'Hidden',
             'type'=>$post['type'],
             'code'=>$post['code'],
             'text'=>$post['text'],
@@ -159,6 +160,7 @@ class ApiProductModifierController extends Controller
             'type'=>$post['type'],
             'code'=>$post['code'],
             'text'=>$post['text'],
+            'product_modifier_visibility'=>($post['product_modifier_visibility']??false)?'Visible':'Hidden',
         ];
         $update = $product_modifier->update($data);
         if(!$update){
