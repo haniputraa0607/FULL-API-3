@@ -1035,7 +1035,7 @@ class ApiSubscription extends Controller
                         $data[$key]['subscription_publish_end']     = date('Y-m-d H:i:s', strtotime($sub['subscription']['subscription_publish_end']));
                         $data[$key]['subscription_voucher_total']   = $sub['subscription']['subscription_voucher_total'];
                         $data[$key]['used_voucher']                 = $sub['subscription_user_vouchers_count'];
-                        if (empty($sub['subscription_image'])) {
+                        if (empty($sub['subscription']['subscription_image'])) {
                             $data[$key]['url_subscription_image'] = env('S3_URL_API').'img/default.jpg';
                         }
                         else {
