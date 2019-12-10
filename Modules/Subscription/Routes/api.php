@@ -18,6 +18,13 @@ Route::group(['middleware' => ['auth:api', 'log_activities'], 'prefix' => 'subsc
     Route::any('list', 'ApiSubscription@listSubscription');
     Route::any('detail', 'ApiSubscriptionWebview@subscriptionDetail');
     Route::any('me', 'ApiSubscription@mySubscription');
+    Route::post('step1', 'ApiSubscription@create');
+    Route::post('step2', 'ApiSubscription@updateRule');
+    Route::post('step3', 'ApiSubscription@updateContent');
+    Route::post('show-step1', 'ApiSubscription@showStep1');
+    Route::post('show-step2', 'ApiSubscription@showStep2');
+    Route::post('show-step3', 'ApiSubscription@showStep3');
+    Route::post('show-detail', 'ApiSubscription@detail');
 
     /* CLAIM */
     Route::group(['prefix' => 'claim'], function () {

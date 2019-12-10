@@ -383,7 +383,9 @@ class ApiCategoryController extends Controller
             unset($product['photos']);
             unset($product['product_prices']);
             foreach ($pivots as $pivot) {
-                $result[$pivot['id_brand']][$pivot['id_product_category']][] = $product;
+                if($pivot['id_product_category']){
+                    $result[$pivot['id_brand']][$pivot['id_product_category']][] = $product;
+                }
             }
         }
         // get detail of every key

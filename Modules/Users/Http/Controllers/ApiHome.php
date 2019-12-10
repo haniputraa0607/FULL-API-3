@@ -41,6 +41,7 @@ class ApiHome extends Controller
 		$this->autocrm  = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
         $this->setting_fraud = "Modules\SettingFraud\Http\Controllers\ApiSettingFraud";
 		$this->endPoint  = env('S3_URL_API');
+        $this->deals = "Modules\Deals\Http\Controllers\ApiDeals";
     }
 
 	public function homeNotLoggedIn(Request $request) {
@@ -575,6 +576,11 @@ class ApiHome extends Controller
             if (!$send) {
                 DB::rollback();
                 return response()->json(['status' => 'fail', 'messages' => ['Send notification failed']]);
+            }
+
+            $setting = Setting::where('key','welcome_voucher_setting')->first()->value;
+            if($setting == 1){
+                $injectVoucher = app($this->deals)->injectWelcomeVoucher(['id' => $user['id']], $user['phone']);
             }
             $user->first_login=1;
             $user->save();

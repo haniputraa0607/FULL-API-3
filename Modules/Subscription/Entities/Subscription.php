@@ -75,16 +75,20 @@ class Subscription extends Eloquent
 		'subscription_price_point',
 		'subscription_price_cash',
 		'subscription_description',
-		'subscription_term',
-		'subscription_how_to_use',
 		'subscription_bought',
 		'subscription_total',
-		'subscription_day_valid',
+		'user_limit',
+		'subscription_voucher_duration',
+		'subscription_voucher_start',
+		'subscription_voucher_expired',
 		'subscription_voucher_total',
 		'subscription_voucher_nominal',
+		'subscription_voucher_percent',
+		'subscription_voucher_percent_max',
 		'subscription_minimal_transaction',
-		'is_all_outlet',
-		'user_limit'
+		'daily_usage_limit',
+		'new_purchase_after',
+		'is_all_outlet'
 	];
 
 	protected $appends  = [
@@ -164,5 +168,10 @@ class Subscription extends Eloquent
 	public function subscription_content()
 	{
 		return $this->hasMany(\Modules\Subscription\Entities\SubscriptionContent::class, 'id_subscription');
+	}
+
+	public function subscription_users()
+	{
+		return $this->hasMany(\Modules\Subscription\Entities\SubscriptionUser::class, 'id_subscription');
 	}
 }

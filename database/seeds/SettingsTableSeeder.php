@@ -452,19 +452,100 @@ class SettingsTableSeeder extends Seeder
                 'updated_at' => date('Y-m-d H:i:s'),
             ),
             50 =>
+                array(
+                    'id_setting' => 51,
+                    'key' => 'welcome_voucher_setting',
+                    'value' => '1',
+                    'value_text' => NULL,
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
+            51 =>
             array(
-                'id_setting' => 51,
+                'id_setting' => 52,
+                'key' => 'message_mysubscription_empty_header',
+                'value' => 'Anda belum memiliki Paket',
+                'value_text' => NULL,
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ),
+            52 =>
+            array(
+                'id_setting' => 53,
+                'key' => 'message_mysubscription_empty_content',
+                'value' => 'Banyak keuntungan dengan berlangganan',
+                'value_text' => NULL,
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ),
+            53 =>
+            array(
+                'id_setting' => 54,
+                'key' => 'message_myvoucher_empty_header',
+                'value' => 'Anda belum memiliki Kupon',
+                'value_text' => NULL,
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ),
+            54 =>
+            array(
+                'id_setting' => 55,
+                'key' => 'message_myvoucher_empty_content',
+                'value' => 'Potongan menarik untuk setiap pembelian',
+                'value_text' => NULL,
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ),
+            55 =>
+            array(
+                'id_setting' => 56,
                 'key' => 'home_deals_title',
                 'value' => 'Penawaran Spesial',
                 'value_text' => NULL,
                 'created_at' => date('Y-m-d H:i:s'),
                 'updated_at' => date('Y-m-d H:i:s'),
             ),
-            51 =>
+            56 =>
             array(
-                'id_setting' => 52,
+                'id_setting' => 57,
                 'key' => 'home_deals_sub_title',
                 'value' => 'Potongan menarik untuk setiap pembelian',
+                'value_text' => NULL,
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ),
+           57 =>
+           array(
+                'id_setting' => 58,
+                'key' => 'subscription_payment_messages',
+                'value' => 'Kamu yakin ingin membeli subscription ini',
+                'value_text' => NULL,
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ),
+            58 =>
+            array(
+                'id_setting' => 59,
+                'key' => 'subscription_payment_messages_point',
+                'value' => 'Anda akan menukarkan %point% points anda dengan subscription %subscription_title%?',
+                'value_text' => NULL,
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ),
+            59 =>
+            array(
+                'id_setting' => 60,
+                'key' => 'subscription_payment_messages_cash',
+                'value' => 'Kamu yakin ingin membeli subscription %subscription_title% dengan harga %cash% ?',
+                'value_text' => NULL,
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ),
+            60 =>
+            array(
+                'id_setting' => 61,
+                'key' => 'subscription_payment_success_messages',
+                'value' => 'Anda telah membeli subscription %subscription_title%',
                 'value_text' => NULL,
                 'created_at' => date('Y-m-d H:i:s'),
                 'updated_at' => date('Y-m-d H:i:s'),
