@@ -9,64 +9,113 @@
         <title>Champ Membership</title>
         <style>
         @font-face {
-                font-family: "ProductSans-Bold";
-                font-style: normal;
-                font-weight: 400;
-                src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/ProductSans-Bold.ttf') }}');
+            font-family: "WorkSans-Black";
+            font-style: normal;
+            font-weight: 400;
+            src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/Work_Sans/WorkSans-Black.ttf') }}');
         }
         @font-face {
-                font-family: "ProductSans-BoldItalic";
-                font-style: normal;
-                font-weight: 400;
-                src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/ProductSans-BoldItalic.ttf') }}');
+            font-family: "WorkSans-Bold";
+            font-style: normal;
+            font-weight: 400;
+            src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/Work_Sans/WorkSans-Bold.ttf') }}');
         }
         @font-face {
-                font-family: "ProductSans-Italic";
-                font-style: normal;
-                font-weight: 400;
-                src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/ProductSans-Italic.ttf') }}');
+            font-family: "WorkSans-ExtraBold";
+            font-style: normal;
+            font-weight: 400;
+            src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/Work_Sans/WorkSans-ExtraBold.ttf') }}');
         }
         @font-face {
-                font-family: "ProductSans-Regular";
-                font-style: normal;
-                font-weight: 400;
-                src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/ProductSans-Regular.ttf') }}');
+            font-family: "WorkSans-ExtraLight";
+            font-style: normal;
+            font-weight: 400;
+            src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/Work_Sans/WorkSans-ExtraLight.ttf') }}');
         }
-        body {
-            background-color: rgba(0, 0, 0, 0.1);
-            font-family: 'ProductSans-Regular';
-            font-size: 14px;
+        @font-face {
+            font-family: "WorkSans-Light";
+            font-style: normal;
+            font-weight: 400;
+            src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/Work_Sans/WorkSans-Light.ttf') }}');
         }
-        a:hover{
-            text-decoration: none
+        @font-face {
+            font-family: "WorkSans-Medium";
+            font-style: normal;
+            font-weight: 400;
+            src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/Work_Sans/WorkSans-Medium.ttf') }}');
+        }
+        @font-face {
+            font-family: "WorkSans-Regular";
+            font-style: normal;
+            font-weight: 400;
+            src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/Work_Sans/WorkSans-Regular.ttf') }}');
+        }
+        @font-face {
+            font-family: "WorkSans-SemiBold";
+            font-style: normal;
+            font-weight: 400;
+            src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/Work_Sans/WorkSans-SemiBold.ttf') }}');
+        }
+        @font-face {
+            font-family: "WorkSans-Thin";
+            font-style: normal;
+            font-weight: 400;
+            src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/Work_Sans/WorkSans-Thin.ttf') }}');
+        }
+        .WorkSans-Black{
+            font-family: "WorkSans-Black";
+        }
+        .WorkSans-Bold{
+            font-family: "WorkSans-Bold";
+        }
+        .WorkSans-ExtraBold{
+            font-family: "WorkSans-ExtraBold";
+        }
+        .WorkSans-ExtraLight{
+            font-family: "WorkSans-ExtraLight";
+        }
+        .WorkSans-Medium{
+            font-family: "WorkSans-Medium";
+        }
+        .WorkSans-Regular{
+            font-family: "WorkSans-Regular";
+        }
+        .WorkSans{
+            font-family: "WorkSans-Regular";
+        }
+        .WorkSans-SemiBold{
+            font-family: "WorkSans-SemiBold";
+        }
+        .WorkSans-Thin{
+            font-family: "WorkSans-Thin";
         }
         .font-header {
-            font-family: 'ProductSans-Regular';
+            font-family: 'WorkSans-Regular';
             font-size: 20px;
             color: #202020;
         }
         .font-title {
-            font-family: 'ProductSans-Regular';
+            font-family: 'WorkSans-Regular';
             font-size: 14px;
             color: #000000;
         }
         .font-nav {
-            font-family: 'ProductSans-Regular';
+            font-family: 'WorkSans-Regular';
             font-size: 14px;
             color: #545454;
         }
         .font-regular-gray{
-            font-family: 'ProductSans-Regular';
+            font-family: 'WorkSans-Regular';
             font-size: 12px;
             color: #545454;
         }
         .font-regular-black {
-            font-family: 'ProductSans-Regular';
+            font-family: 'WorkSans-Regular';
             font-size: 12px;
             color: #000000;
         }
         .font-regular-brown {
-            font-family: 'ProductSans-Regular';
+            font-family: 'WorkSans-Regular';
             font-size: 12px;
             color: #837046;
         }
@@ -215,8 +264,8 @@
             padding: 10px;
             background: #ffffff;
             top: -45px;
-            left: <?php echo (($result['user_membership']['user']['progress_now'] / $max_value) * 100) - 2 ?>%;
-            border-radius: 1px;
+            left: <?php echo (($result['user_membership']['user']['progress_now'] / $max_value) * 100) - 4 ?>%;
+            border-radius: 10px;
             color: #333333;
             box-shadow: 0 1px 2px 0 #cccccc;
             font-size: 13.3px;
@@ -232,40 +281,46 @@
             border-right: 6px solid rgba(255, 0, 0, 0);
             border-top: 6px solid #cccccc;
         }
+        .text-black {
+            color: #333333;
+        }
+        .text-grey {
+            color: #707070;
+        }
         </style>
 	</head>
 	<body>
-        <div id="carouselExampleFade" class="carousel slide carousel-fade" data-ride="carousel" data-interval="false">
+        <div style="background-color: #f8f9fb;" id="carouselExampleFade" class="carousel slide carousel-fade" data-ride="carousel" data-interval="false">
             <div class="carousel-inner" style="text-shadow: none;">
 
                 @foreach ($result['all_membership'] as $member)
                     @if($member['membership_name'] == $result['user_membership']['membership_name']) 
                     <div class="carousel-item active">
                         <div style="padding: 20px 0px 20px 0px;background: #ffffff;box-shadow: 0px 0.7px 3.3px 0 #d0d4dd;">
-                            <div class="card" style="height: 149px;width: 80%;margin: auto;background: linear-gradient(#f2f5fc 0%, #d0d4dd 16%, #d2d4d8 48%, #797b7e 100%);border: #aaaaaa;border-radius: 20px;box-shadow: 2.7px 6.7px 5px 0 #d0d4dd;">
+                            <div class="card" style="height: 149px;width: 80%;margin: auto;background: #f7f8fa;border: #aaaaaa;border-radius: 20px;box-shadow: 2px 6.7px 6.7px 0 #d0d4dd;">
                                 <div class="card-body" style="display: flex;flex-wrap: wrap;padding: 10px;">
                                     <div class="col-9 text-left" style="margin-top: 7px;margin-bottom: 27px;">
-                                        <p style="margin-bottom: 4px;font-size: 15px;">{{$result['user_membership']['user']['name']}}</p>
-                                        <p style="font-size: 10.7px;">@if ($result['user_membership']['user']['is_suspended'] == 0) Active @else Suspended @endif</p>
+                                        <p class="WorkSans-SemiBold text-black" style="margin-bottom: 4px;font-size: 15px;">{{$result['user_membership']['user']['name']}}</p>
+                                        <p class="WorkSans text-grey" style="font-size: 10.7px;">@if ($result['user_membership']['user']['is_suspended'] == 0) Active @else Suspended @endif</p>
                                     </div>
                                     <div class="col-3">
                                         <img src="{{$member['membership_image']}}" style="width: 30px;float: right;"/>
                                     </div>
                                     <div class="col-6 text-left">
-                                        <p style="font-size: 10.7px;margin-bottom: 4px;">Poin saat ini</p>
-                                        <p style="font-size: 13.3px;color: #383b67;font-weight: bold;">{{number_format($result['user_membership']['user']['progress_now'] , 0, ',', '.')}} poin</p>
+                                        <p class="WorkSans text-black" style="font-size: 10.7px;margin-bottom: 4px;">Poin saat ini</p>
+                                        <p class="WorkSans-SemiBold" style="font-size: 13.3px;color: #383b67;">{{number_format($result['user_membership']['user']['progress_now'] , 0, ',', '.')}} poin</p>
                                     </div>
                                     <div class="col-6 text-right">
-                                        <p style="font-size: 10.7px;margin-bottom: 4px;">Status member</p>
-                                        <p style="font-size: 13.3px;color: #383b67;font-weight: bold;">{{strtoupper($member['membership_name'])}}</p>
+                                        <p class="WorkSans text-black" style="font-size: 10.7px;margin-bottom: 4px;">Status member</p>
+                                        <p class="WorkSans-SemiBold" style="font-size: 13.3px;color: #383b67;">{{strtoupper($member['membership_name'])}}</p>
                                     </div>
                                 </div>
-                                <a style="left: -25px;" class="carousel-control-prev" href="#carouselExampleFade" role="button" data-slide="prev">
-                                    <img src="{{env('S3_URL_VIEW').'img/membership/previous.png'}}" style="width: 43px;"/>
+                                <a style="left: -30px;" class="carousel-control-prev" href="#carouselExampleFade" role="button" data-slide="prev">
+                                    <img src="{{env('S3_URL_VIEW').'img/membership/previous.png'}}" style="width: 33px;"/>
                                     <span class="sr-only">Previous</span>
                                 </a>
-                                <a style="right: -25px;" class="carousel-control-next" href="#carouselExampleFade" role="button" data-slide="next">
-                                    <img src="{{env('S3_URL_VIEW').'img/membership/next.png'}}" style="width: 43px;"/>
+                                <a style="right: -30px;" class="carousel-control-next" href="#carouselExampleFade" role="button" data-slide="next">
+                                    <img src="{{env('S3_URL_VIEW').'img/membership/next.png'}}" style="width: 33px;"/>
                                     <span class="sr-only">Next</span>
                                 </a>
                             </div>
@@ -297,7 +352,7 @@
                                 </div>
                             </div>
                         </div>
-                        <div style="position: relative;left: auto;right: auto;padding: 20px 0px 20px 0px;background: #ffffff;box-shadow: 0px 0.7px 3.3px 0 #d0d4dd; top: 10px;margin-bottom: 20px;" class="carousel-caption">
+                        <div style="position: relative;left: auto;right: auto;padding: 20px 0px 20px 0px;background: #ffffff;box-shadow: 0px 0.7px 3.3px 0 #d0d4dd; top: 10px;" class="carousel-caption">
                             <div class="card" style="height: 155px;width: 90%;margin: auto;background: #f8f9fb;border: #aaaaaa;border-radius: 20px;box-shadow: 0 2px 3.3px 0 #d0d4dd;">
                                 <div class="card-body" style="display: flex;flex-wrap: wrap;">
                                     <div class="font-title">Keuntungan {{$member['membership_name']}} member : </div>
@@ -354,7 +409,7 @@
                                 </div>
                             </div>
                         </div>
-                        <div style="position: relative;left: auto;right: auto;padding: 20px 0px 20px 0px;background: #ffffff;box-shadow: 0px 0.7px 3.3px 0 #d0d4dd; top: 10px;margin-bottom: 20px;" class="carousel-caption">
+                        <div style="position: relative;left: auto;right: auto;padding: 20px 0px 20px 0px;background: #ffffff;box-shadow: 0px 0.7px 3.3px 0 #d0d4dd; top: 10px;" class="carousel-caption">
                             <div class="card" style="height: 155px;width: 90%;margin: auto;background: #f8f9fb;border: #aaaaaa;border-radius: 20px;box-shadow: 0 2px 3.3px 0 #d0d4dd;">
                                 <div class="card-body" style="display: flex;flex-wrap: wrap;">
                                     <div class="font-title">Keuntungan {{$member['membership_name']}} member : </div>
@@ -372,5 +427,10 @@
         <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
         <script src="https://code.jquery.com/jquery-1.11.1.min.js"></script>
         <script src="https://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.js"></script>
+        <script>
+        $( document ).ready(function() {
+            $(".ui-page").css("background-color", "#ffffff");
+        });
+        </script>
     </body>
 </html>
