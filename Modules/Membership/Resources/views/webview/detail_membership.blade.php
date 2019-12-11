@@ -269,6 +269,7 @@
             color: #333333;
             box-shadow: 0 1px 2px 0 #cccccc;
             font-size: 13.3px;
+            font-family: WorkSans-SemiBold;
         }
         .myprogress:after {
             position: absolute;
@@ -315,17 +316,22 @@
                                         <p class="WorkSans-SemiBold" style="font-size: 13.3px;color: #383b67;">{{strtoupper($member['membership_name'])}}</p>
                                     </div>
                                 </div>
-                                <a style="left: -30px;" class="carousel-control-prev" href="#carouselExampleFade" role="button" data-slide="prev">
-                                    <img src="{{env('S3_URL_VIEW').'img/membership/previous.png'}}" style="width: 33px;"/>
-                                    <span class="sr-only">Previous</span>
-                                </a>
-                                <a style="right: -30px;" class="carousel-control-next" href="#carouselExampleFade" role="button" data-slide="next">
-                                    <img src="{{env('S3_URL_VIEW').'img/membership/next.png'}}" style="width: 33px;"/>
-                                    <span class="sr-only">Next</span>
-                                </a>
+                                @if (reset($result['all_membership']) != $member)
+                                    <a style="left: -30px;" class="carousel-control-prev" href="#carouselExampleFade" role="button" data-slide="prev">
+                                        <img src="{{env('S3_URL_VIEW').'img/membership/previous.png'}}" style="width: 33px;"/>
+                                        <span class="sr-only">Previous</span>
+                                    </a>
+                                @endif
+                                @if (end($result['all_membership']) != $member)
+                                    <a style="right: -30px;" class="carousel-control-next" href="#carouselExampleFade" role="button" data-slide="next">
+                                        <img src="{{env('S3_URL_VIEW').'img/membership/next.png'}}" style="width: 33px;"/>
+                                        <span class="sr-only">Next</span>
+                                    </a>
+                                @endif
                             </div>
                         </div>
-                        <div style="position: relative;left: auto;right: auto;padding: 20px 0px 20px 0px;background: #ffffff;box-shadow: 0px 0.7px 3.3px 0 #d0d4dd; top: 10px;margin-bottom: 10px;" class="carousel-caption">
+                        <div style="position: relative;left: auto;right: auto;padding: 15px;background: #ffffff;box-shadow: 0px 0.7px 3.3px 0 #d0d4dd; top: 10px;margin-bottom: 10px;" class="carousel-caption">
+                            <div style="margin-bottom: 25px;font-size: 14px;" class="WorkSans-SemiBold text-left text-black">Total transaksi Anda</div>
                             <div class="level-wrapper">
                                 <div>
                                     <div class="current-level-info" style="margin: 0 15px;position:absolute; width:{{($result['user_membership']['user']['progress_now'] / $max_value) * 100}}%; z-index:10">
@@ -347,7 +353,7 @@
                                 </div>
                                 <div class="level-info" style="margin: 0 15px;">
                                     @foreach ($result['all_membership'] as $item)
-                                        <div class="font-regular-black" style="@if ($item != end($result['all_membership']) && $item != reset($result['all_membership'])) margin-left: 50px; @endif">{{number_format($item['min_value'] , 0, ',', '.')}}</div>
+                                        <div class="WorkSans text-black" style="font-size: 13.3px; @if ($item != end($result['all_membership']) && $item != reset($result['all_membership'])) margin-left: 50px; @endif">@if($result['user_membership']['user']['progress_now'] <= $item['min_value']) {{number_format($item['min_value'] , 0, ',', '.')}} @endif</div>
                                     @endforeach
                                 </div>
                             </div>
@@ -355,7 +361,7 @@
                         <div style="position: relative;left: auto;right: auto;padding: 20px 0px 20px 0px;background: #ffffff;box-shadow: 0px 0.7px 3.3px 0 #d0d4dd; top: 10px;" class="carousel-caption">
                             <div class="card" style="height: 155px;width: 90%;margin: auto;background: #f8f9fb;border: #aaaaaa;border-radius: 20px;box-shadow: 0 2px 3.3px 0 #d0d4dd;">
                                 <div class="card-body" style="display: flex;flex-wrap: wrap;">
-                                    <div class="font-title">Keuntungan {{$member['membership_name']}} member : </div>
+                                    <div class="WorkSans-SemiBold text-black" style="font-size: 14px;">Keuntungan {{$member['membership_name']}} member : </div>
                                 </div>
                             </div>
                         </div>
@@ -372,50 +378,55 @@
                                         <p style="font-size: 11.7px;">Naikan terus transaksi Anda untuk menuju <b>{{$member['membership_name']}}</b></p>
                                     </div>
                                 </div>
-                                <a style="left: -25px;" class="carousel-control-prev" href="#carouselExampleFade" role="button" data-slide="prev">
-                                    <img src="{{env('S3_URL_VIEW').'img/membership/previous.png'}}" style="width: 43px;"/>
-                                    <span class="sr-only">Previous</span>
-                                </a>
-                                <a style="right: -25px;" class="carousel-control-next" href="#carouselExampleFade" role="button" data-slide="next">
-                                    <img src="{{env('S3_URL_VIEW').'img/membership/next.png'}}" style="width: 43px;"/>
-                                    <span class="sr-only">Next</span>
-                                </a>
+                                @if (reset($result['all_membership']) != $member)
+                                    <a style="left: -30px;" class="carousel-control-prev" href="#carouselExampleFade" role="button" data-slide="prev">
+                                        <img src="{{env('S3_URL_VIEW').'img/membership/previous.png'}}" style="width: 33px;"/>
+                                        <span class="sr-only">Previous</span>
+                                    </a>
+                                @endif
+                                @if (end($result['all_membership']) != $member)
+                                    <a style="right: -30px;" class="carousel-control-next" href="#carouselExampleFade" role="button" data-slide="next">
+                                        <img src="{{env('S3_URL_VIEW').'img/membership/next.png'}}" style="width: 33px;"/>
+                                        <span class="sr-only">Next</span>
+                                    </a>
+                                @endif
                             </div>
                         </div>
-                        <div style="position: relative;left: auto;right: auto;padding: 20px 0px 20px 0px;background: #ffffff;box-shadow: 0px 0.7px 3.3px 0 #d0d4dd; top: 10px;margin-bottom: 10px;" class="carousel-caption">
-                            <div class="level-wrapper">
-                                <div>
-                                    <div class="current-level-info" style="margin: 0 15px;position:absolute; width:{{($result['user_membership']['user']['progress_now'] / $max_value) * 100}}%; z-index:10">
-                                        <div style="width:{{($result['user_membership']['user']['progress_now'] / $max_value) * 100}}%;"></div> 
-                                        <div style="color: #333333;font-size: 13.3px;"></div>
-                                    </div>
-                                    <div style="display:flex;margin: 5px 15px;flex-direction: row;justify-content: space-between;">
-                                        @foreach ($result['all_membership'] as $item)
-                                        <div class="current-level-info" style="width: 20px;">
-                                            <img src="{{$item['membership_image']}}" style="width: 20px;float: right; @if($result['user_membership']['user']['progress_now'] >= $item['min_value']) display: none; @endif"/>
+                        <div style="position: relative;left: auto;right: auto;padding: 15px;background: #ffffff;box-shadow: 0px 0.7px 3.3px 0 #d0d4dd; top: 10px;margin-bottom: 10px;" class="carousel-caption">
+                            <div style="margin-bottom: 25px;font-size: 14px;" class="WorkSans-SemiBold text-left text-black">Total transaksi Anda</div>
+                                <div class="level-wrapper">
+                                    <div>
+                                        <div class="current-level-info" style="margin: 0 15px;position:absolute; width:{{($result['user_membership']['user']['progress_now'] / $max_value) * 100}}%; z-index:10">
+                                            <div style="width:{{($result['user_membership']['user']['progress_now'] / $max_value) * 100}}%;"></div> 
+                                            <div style="color: #333333;font-size: 13.3px;"></div>
                                         </div>
+                                        <div style="display:flex;margin: 5px 15px;flex-direction: row;justify-content: space-between;">
+                                            @foreach ($result['all_membership'] as $item)
+                                            <div class="current-level-info" style="width: 20px;">
+                                                <img src="{{$item['membership_image']}}" style="width: 20px;float: right; @if($result['user_membership']['user']['progress_now'] >= $item['min_value']) display: none; @endif"/>
+                                            </div>
+                                            @endforeach
+                                        </div>
+                                    </div>
+                                    <div class="level-progress-container" style="margin: 0 15px; height: 6px;">
+                                        <div class="myprogress">
+                                            <div class="level-progress" style="width:{{($result['user_membership']['user']['progress_now'] / $max_value) * 100}}%; height: 6px;background: linear-gradient(#63ba35, #2c7b25);"></div>
+                                        </div>
+                                    </div>
+                                    <div class="level-info" style="margin: 0 15px;">
+                                        @foreach ($result['all_membership'] as $item)
+                                            <div class="WorkSans text-black" style="font-size: 13.3px; @if ($item != end($result['all_membership']) && $item != reset($result['all_membership'])) margin-left: 50px; @endif">@if($result['user_membership']['user']['progress_now'] <= $item['min_value']) {{number_format($item['min_value'] , 0, ',', '.')}} @endif</div>
                                         @endforeach
                                     </div>
                                 </div>
-                                <div class="level-progress-container" style="margin: 0 15px; height: 6px;">
-                                    <div class="myprogress">
-                                        <div class="level-progress" style="width:{{($result['user_membership']['user']['progress_now'] / $max_value) * 100}}%; height: 6px;background: linear-gradient(#63ba35, #2c7b25);"></div>
+                            </div>
+                            <div style="position: relative;left: auto;right: auto;padding: 20px 0px 20px 0px;background: #ffffff;box-shadow: 0px 0.7px 3.3px 0 #d0d4dd; top: 10px;" class="carousel-caption">
+                                <div class="card" style="height: 155px;width: 90%;margin: auto;background: #f8f9fb;border: #aaaaaa;border-radius: 20px;box-shadow: 0 2px 3.3px 0 #d0d4dd;">
+                                    <div class="card-body" style="display: flex;flex-wrap: wrap;">
+                                        <div class="WorkSans-SemiBold text-black" style="font-size: 14px;">Keuntungan {{$member['membership_name']}} member : </div>
                                     </div>
                                 </div>
-                                <div class="level-info" style="margin: 0 15px;">
-                                    @foreach ($result['all_membership'] as $item)
-                                        <div class="font-regular-black" style="@if ($item != end($result['all_membership']) && $item != reset($result['all_membership'])) margin-left: 50px; @endif">{{number_format($item['min_value'] , 0, ',', '.')}}</div>
-                                    @endforeach
-                                </div>
                             </div>
-                        </div>
-                        <div style="position: relative;left: auto;right: auto;padding: 20px 0px 20px 0px;background: #ffffff;box-shadow: 0px 0.7px 3.3px 0 #d0d4dd; top: 10px;" class="carousel-caption">
-                            <div class="card" style="height: 155px;width: 90%;margin: auto;background: #f8f9fb;border: #aaaaaa;border-radius: 20px;box-shadow: 0 2px 3.3px 0 #d0d4dd;">
-                                <div class="card-body" style="display: flex;flex-wrap: wrap;">
-                                    <div class="font-title">Keuntungan {{$member['membership_name']}} member : </div>
-                                </div>
-                            </div>
-                        </div>
                     </div>
                     @endif
                 @endforeach
