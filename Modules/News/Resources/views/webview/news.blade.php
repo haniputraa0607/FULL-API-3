@@ -342,7 +342,6 @@
                         <div class="col-12 text-bot text-black WorkSans-Medium" style=" line-height: 21px;padding-bottom: 10px;padding-top: 4px;"> <strong> @if($news[0]['news_second_title'] == null){{ strtoupper($news[0]['news_title']) }} @else {{ strtoupper($news[0]['news_second_title']) }} @endif</strong></div>
                     </div>
                     <img src="{{ $news[0]['url_news_image_dalam'] }}" style="height: 50vw;">
-                    <div id="grad1" style="margin-bottom: -20px;"></div>
                 </div>
             </div>
         </div>
