@@ -16,8 +16,6 @@ class CreateTransactionAdvanceOrdersTable extends Migration
         Schema::create('transaction_advance_orders', function (Blueprint $table) {
             $table->increments('id_transaction_advance_order');
             $table->unsignedInteger('id_transaction');
-            $table->unsignedInteger('id_user');
-            $table->unsignedInteger('id_outlet');
             $table->text('address');
             $table->string('receiver_name');
             $table->string('receiver_phone',15);

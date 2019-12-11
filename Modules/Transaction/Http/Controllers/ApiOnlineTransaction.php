@@ -23,6 +23,7 @@ use App\Http\Models\TransactionShipment;
 use App\Http\Models\TransactionPickup;
 use App\Http\Models\TransactionPickupGoSend;
 use App\Http\Models\TransactionPaymentMidtran;
+use App\Http\Models\TransactionAdvanceOrder;
 use App\Http\Models\LogPoint;
 use App\Http\Models\LogBalance;
 use App\Http\Models\ManualPaymentMethod;
@@ -89,13 +90,17 @@ class ApiOnlineTransaction extends Controller
         $dataDetailProduct = [];
         $userTrxProduct = [];
 
-        $outlet = Outlet::where('id_outlet', $post['id_outlet'])->with('today')->first();
-        if (empty($outlet)) {
-            DB::rollback();
-            return response()->json([
-                'status'    => 'fail',
-                'messages'  => ['Outlet Not Found']
-                ]);
+        if(isset($post['id_outlet'])){
+            $outlet = Outlet::where('id_outlet', $post['id_outlet'])->with('today')->first();
+            if (empty($outlet)) {
+                DB::rollback();
+                return response()->json([
+                    'status'    => 'fail',
+                    'messages'  => ['Outlet Not Found']
+                    ]);
+            }
+        }else{
+            $outlet = optional();
         }
 
         $issetDate = false;
@@ -1008,7 +1013,23 @@ class ApiOnlineTransaction extends Controller
 
                 $id_pickup_go_send = $gosend->id_transaction_pickup_go_send;
             }
-        }
+        } elseif ($post['type'] == 'Advance Order') {
+            $dataAO = [
+                'id_transaction' => $insertTransaction['id_transaction'],
+                'address' => $post['address'],
+                'receiver_name' => $post['receiver_name'],
+                'receiver_phone' => $post['receiver_phone'],
+                'date_delivery' => $post['date_delivery']
+            ];
+            $insertAO = TransactionAdvanceOrder::create($dataAO);
+            if (!$insertAO) {
+                DB::rollback();
+                return response()->json([
+                    'status'    => 'fail',
+                    'messages'  => ['Insert Advance Order Failed']
+                ]);
+            }
+        } 
 
         //insert pickup go-send
         if($post['type'] == 'GO-SEND'){
