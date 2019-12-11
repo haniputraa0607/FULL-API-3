@@ -14,6 +14,8 @@ class UpdateProductModifierStockStatusOnProductModifierPricesTable extends Migra
     public function up()
     {
         DB::connection('mysql')->statement("ALTER TABLE `product_modifier_prices` CHANGE COLUMN `product_modifier_stock_status` `product_modifier_stock_status` ENUM('Available', 'Sold Out') COLLATE 'utf8mb4_unicode_ci' NOT NULL DEFAULT 'Available' ;");
+        DB::connection('mysql')->statement("ALTER TABLE `product_modifier_prices` CHANGE COLUMN `product_modifier_price` `product_modifier_price` DECIMAL(8,2) UNSIGNED NULL");
+
     }
 
     /**
@@ -24,5 +26,6 @@ class UpdateProductModifierStockStatusOnProductModifierPricesTable extends Migra
     public function down()
     {
         DB::connection('mysql')->statement("ALTER TABLE `product_modifier_prices` CHANGE COLUMN `product_modifier_stock_status` `product_modifier_stock_status` ENUM('Availvable', 'Sold Out') COLLATE 'utf8mb4_unicode_ci' NOT NULL DEFAULT 'Availvable' ;");
+        DB::connection('mysql')->statement("ALTER TABLE `product_modifier_prices` CHANGE COLUMN `product_modifier_price` `product_modifier_price` DECIMAL(8,2) UNSIGNED NOT NULL");
     }
 }

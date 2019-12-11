@@ -812,7 +812,7 @@ class ApiProductController extends Controller
             return MyHelper::checkGet([]);
         }
         //get modifiers
-        $product['modifiers'] = ProductModifier::select('id_product_modifier','text')
+        $product['modifiers'] = ProductModifier::select('product_modifiers.id_product_modifier','text','product_modifier_price as price')
             ->where('modifier_type','Global')
             ->orWhere(function($query) use ($post){
                 $query->whereHas('products',function($query) use ($post){
@@ -824,18 +824,13 @@ class ApiProductController extends Controller
                 $query->orWhereHas('brands',function($query) use ($post){
                     $query->where('brands.id_brand',$post['id_brand']);
                 });
-            })
-            ->with(['product_modifier_prices'=>function($query) use ($post){
-                $query->select('id_product_modifier_price','id_product_modifier','product_modifier_price');
-                $query->where('id_outlet',$post['id_outlet']);
-            }])
+            })->join('product_modifier_prices',function($join) use ($post){
+                $join->on('product_modifier_prices.id_product_modifier','=','product_modifiers.id_product_modifier');
+                $join->where('product_modifier_prices.id_outlet',$post['id_outlet']);
+            })->where('product_modifier_status','Active')
             ->get()->toArray();
         foreach ($product['modifiers'] as $key => &$modifier) {
-            if(empty($modifier['product_modifier_prices'])){
-                unset($product['modifiers'][$key]);
-                continue;
-            }
-            $modifier['price'] = (int) $modifier['product_modifier_prices'][0]['product_modifier_price'];
+            $modifier['price'] = (int) $modifier['price'];
             unset($modifier['product_modifier_prices']);
         }
         return MyHelper::checkGet($product);

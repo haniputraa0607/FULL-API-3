@@ -275,6 +275,12 @@ class ApiProductModifierController extends Controller
                 'id_product_modifier' => $id_product_modifier,
                 'id_outlet' => $id_outlet
             ];
+            if($price['product_modifier_visibility']){
+                $product_modifier_visibility = $price['product_modifier_visibility'];
+            }else{
+                $product_modifier_visibility = ProductModifier::select('product_modifier_visibility')->where('id_product_modifier',$id_product_modifier)->first()->product_modifier_visibility;
+            }
+            $price['product_modifier_status'] = ($product_modifier_visibility=='Visible'&&$price['product_modifier_stock_status']=='Available')?'Active':'Inactive';
             $insertData = $key + [
                 'product_modifier_price' => $price['product_modifier_price'],
                 'product_modifier_visibility' => $price['product_modifier_visibility'],
