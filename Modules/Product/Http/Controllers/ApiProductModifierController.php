@@ -246,7 +246,7 @@ class ApiProductModifierController extends Controller
             $query->orWhereNull('id_brand');
             $query->orWhereIn('id_brand',$brands);
         })
-        ->select('product_modifiers.id_product_modifier','product_modifiers.code','product_modifiers.text','product_modifier_prices.product_modifier_price')->leftJoin('product_modifier_prices',function($join) use ($id_outlet){
+        ->select('product_modifiers.id_product_modifier','product_modifiers.code','product_modifiers.text','product_modifier_prices.product_modifier_price','product_modifier_prices.product_modifier_visibility','product_modifier_prices.product_modifier_status','product_modifier_prices.product_modifier_stock_status')->leftJoin('product_modifier_prices',function($join) use ($id_outlet){
             $join->on('product_modifiers.id_product_modifier','=','product_modifier_prices.id_product_modifier');
             $join->where('product_modifier_prices.id_outlet','=',$id_outlet);
         })->where(function($query) use ($id_outlet){
@@ -261,6 +261,11 @@ class ApiProductModifierController extends Controller
         return MyHelper::checkGet($data);
     }
 
+    /**
+     * Bulk Update price modifier table
+     * @param  Request $request [description]
+     * @return array           Update status
+     */
     public function updatePrice(Request $request) {
         $id_outlet = $request->json('id_outlet');
         $insertData = [];
@@ -271,7 +276,10 @@ class ApiProductModifierController extends Controller
                 'id_outlet' => $id_outlet
             ];
             $insertData = $key + [
-                'product_modifier_price' => $price
+                'product_modifier_price' => $price['product_modifier_price'],
+                'product_modifier_visibility' => $price['product_modifier_visibility'],
+                'product_modifier_stock_status' => $price['product_modifier_stock_status'],
+                'product_modifier_status' => $price['product_modifier_status']
             ];
             $insert = ProductModifierPrice::updateOrCreate($key,$insertData);
             if(!$insert){
