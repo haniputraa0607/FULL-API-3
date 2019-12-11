@@ -1487,6 +1487,7 @@ class ApiOnlineTransaction extends Controller
             $product->append('photo');
             $product = $product->toArray();
             unset($product['photos']);
+            $product['id_custom'] = $item['id_custom']??null;
             $product['qty'] = $item['qty'];
             $product['note'] = $item['note'];
             // get modifier
