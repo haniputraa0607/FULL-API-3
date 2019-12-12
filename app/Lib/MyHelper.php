@@ -2049,13 +2049,12 @@ class MyHelper{
             $newArray[$key][]=$value;
         }
         if($key_modifier!==null){
+        	$arrNew=[];
             foreach ($newArray as $key => $value) {
                 $new_key=$key_modifier($key,$value);
-                $newArray[$new_key]=$value;
-                if($new_key != $key){
-	                unset($newArray[$key]);
-                }
+                $arrNew[$new_key]=$value;
             }
+            $newArray = $arrNew;
         }
         return $newArray;
     }
