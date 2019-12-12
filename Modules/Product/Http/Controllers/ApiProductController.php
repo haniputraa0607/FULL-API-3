@@ -838,6 +838,7 @@ class ApiProductController extends Controller
             $modifier['price'] = (int) $modifier['product_modifier_prices'][0]['product_modifier_price'];
             unset($modifier['product_modifier_prices']);
         }
+        $product['outlet'] = Outlet::select('id_outlet','outlet_address','outlet_name')->find($post['id_outlet']);
         return MyHelper::checkGet($product);
     }
 }
