@@ -21,6 +21,7 @@ use Modules\Subscription\Http\Requests\ListSubscription;
 use Modules\Subscription\Http\Requests\Step1Subscription;
 use Modules\Subscription\Http\Requests\Step2Subscription;
 use Modules\Subscription\Http\Requests\Step3Subscription;
+use Modules\Subscription\Http\Requests\DetailSubscription;
 use DB;
 
 class ApiSubscription extends Controller
@@ -99,9 +100,10 @@ class ApiSubscription extends Controller
             $data['subscription_price_point'] = null;
         }
         // ---------------------------- FREE
-        if ( ($post['prices_by']??0) == 'free' ) {
+        if ( ($post['prices_by']??false) == 'free' ) {
             $data['subscription_price_cash'] = null;
             $data['subscription_price_point'] = null;
+            $data['is_free'] = 1;
         } 
         elseif ( ($post['prices_by']??0) == 'point' ) 
         {
@@ -123,7 +125,7 @@ class ApiSubscription extends Controller
         }
 
         if ( ($post['subscription_total_type']??0) == 'unlimited' ) {
-            $data['subscription_total'] = null;
+            $data['subscription_total'] = 0;
         }else{
             $data['subscription_total'] = $post['subscription_total'];
         }
@@ -177,7 +179,7 @@ class ApiSubscription extends Controller
             $data['new_purchase_after'] = $post['new_purchase_after'];
         }
         if ( ($post['purchase_limit']??0) == 'no_limit' ) {
-            $data['new_purchase_after'] = null;
+            $data['new_purchase_after'] = 'No Limit';
         }
 
 
@@ -219,11 +221,15 @@ class ApiSubscription extends Controller
                     where('id_subscription', '=', $post['id_subscription'])
                     ->select(
                         'subscription_users.*',
-                        'users.name'
+                        'users.*'
                     )
                     ->join('users', 'subscription_users.id_user','=','users.id')
-                    ->withCount(['subscription_user_vouchers' => function($q){
+                    ->withCount(['subscription_user_vouchers as kuota'])
+                    ->withCount(['subscription_user_vouchers as used' => function($q){
                         $q->whereNotNull('used_at');
+                    }])
+                    ->withCount(['subscription_user_vouchers as available' => function($q){
+                        $q->whereNull('used_at');
                     }])
                     ->groupBy('id_subscription_user');
 
@@ -252,7 +258,7 @@ class ApiSubscription extends Controller
                 break;
 
                 case 'expired_at':
-                $query->orderBy('expired_at',$value['dir']);
+                $query->orderBy('subscription_expired_at',$value['dir']);
                 break;
 
                 case 'payment_status':
@@ -261,11 +267,11 @@ class ApiSubscription extends Controller
 
                 case 'payment_price':
                 $query->orderBy('subscription_price_point',$value['dir'])
-                        ->orderBy(' subscription_price_cash',$value['dir']);
+                        ->orderBy('subscription_price_cash',$value['dir']);
                 break;
 
                 case 'available':
-                $query->orderBy('subscription_user_vouchers_count',$value['dir']);
+                $query->orderBy('available',$value['dir']);
                 break;
 
                 default:
@@ -292,6 +298,40 @@ class ApiSubscription extends Controller
         return response()->json($result);
     }
 
+    public function transaction(Request $request)
+    {
+        $post = $request->json()->all();
+
+        $data = SubscriptionUserVoucher::
+                    join('subscription_users', 'subscription_users.id_subscription_user', '=', 'subscription_user_vouchers.id_subscription_user')
+                    // ->join('subscriptions', 'subscription_users.id_subscription', '=', 'subscriptions.id_subscription')
+                    ->where('subscription_user_receipt_number', '=', $post['subscription_user_receipt_number'])
+                    ->whereNotNull('used_at')
+                    ->with([
+                        'transaction' => function($q){
+                            $q->select(
+                                'id_outlet', 
+                                'id_transaction',
+                                'transaction_receipt_number'
+                            );
+                        },
+                        'transaction.productTransaction' => function($q){
+                            $q->select(
+                                DB::raw('SUM(transaction_product_qty) as total_item'),
+                                'id_transaction_product',
+                                'id_transaction'
+                            );
+                        },
+                        'transaction.outlet' => function($q){
+                            $q->select('id_outlet','outlet_name');
+                        }
+                    ])
+                    ->get()
+                    ->toArray();
+        return $data;
+
+    }
+
     public function create(Step1Subscription $request)
     {
         $data = $request->json()->all();
@@ -303,7 +343,7 @@ class ApiSubscription extends Controller
             unset($data['error']);
             return response()->json($data);
         }
-        $save = Subscription::create($data);
+        $save = Subscription::updateOrCreate(['id_subscription' => $data['id_subscription']], $data);
 
         if ($save) {
             DB::commit();
@@ -409,7 +449,9 @@ class ApiSubscription extends Controller
         }
 
         // update description
-        $save = Subscription::where('id_subscription','=',$post['id_subscription'])->update([ 'subscription_description' => $post['subscription_description'] ]);
+        $data_subs['subscription_description'] = $post['subscription_description'];
+        $data_subs['subscription_step_complete'] = 1;
+        $save = Subscription::where('id_subscription','=',$post['id_subscription'])->update($data_subs);
 
         if ($save) {
             DB::commit();
@@ -417,6 +459,16 @@ class ApiSubscription extends Controller
             DB::rollback();
         }
         return response()->json(MyHelper::checkUpdate($save));
+    }
+
+    public function updateAll(DetailSubscription $request)
+    {
+        $data = $request->json()->all();
+
+        return $data;
+        $data = $this->checkInputan($data);
+        // error
+        DB::beginTransaction();        
     }
 
     /* SAVE OUTLET */
