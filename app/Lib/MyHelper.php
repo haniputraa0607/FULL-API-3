@@ -2076,7 +2076,7 @@ class MyHelper{
 		}
 		$first=explode(PHP_EOL, $string);
 		$second=array_map(function($x) use ($delimiter){
-			return explode($delimiter,$x);
+			return explode($delimiter,str_replace("\r", '', $x));
 		},$first);
 		return $second;
 	}
