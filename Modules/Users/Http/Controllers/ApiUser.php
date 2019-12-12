@@ -376,11 +376,13 @@ class ApiUser extends Controller
 
                 /*============= All query with rule 'AND' ==================*/
                 if($rule == 'and'){
-                    if($condition['subject'] == 'name' || $condition['subject'] == 'phone' || $condition['subject'] == 'email' || $condition['subject'] == 'address'){
+                    if($condition['subject'] == 'id' || $condition['subject'] == 'name' || $condition['subject'] == 'phone' || $condition['subject'] == 'email' || $condition['subject'] == 'address'){
                         $var = "users.".$condition['subject'];
 
                         if($condition['operator'] == 'like')
                             $query = $query->where($var,'like','%'.$condition['parameter'].'%');
+                        elseif(strtoupper($condition['operator']) == 'WHERE IN')
+                            $query = $query->whereIn($var,explode(',',$condition['parameter']));
                         else
                             $query = $query->where($var,'=',$condition['parameter']);
                     }
@@ -550,11 +552,13 @@ class ApiUser extends Controller
                     if($condition['subject'] == 'all_user'){
                         $query = $query->orWhereRaw('1');
                     }
-                    if($condition['subject'] == 'name' || $condition['subject'] == 'phone' || $condition['subject'] == 'email' || $condition['subject'] == 'address'){
+                    if($condition['subject'] == 'id' || $condition['subject'] == 'name' || $condition['subject'] == 'phone' || $condition['subject'] == 'email' || $condition['subject'] == 'address'){
                         $var = "users.".$condition['subject'];
 
                         if($condition['operator'] == 'like')
                             $query = $query->orWhere($var,'like','%'.$condition['parameter'].'%');
+                        elseif(strtoupper($condition['operator']) == 'WHERE IN')
+                            $query = $query->orWhereIn($var,explode(',',$condition['parameter']));
                         else
                             $query = $query->orWhere($var,'=',$condition['parameter']);
                     }

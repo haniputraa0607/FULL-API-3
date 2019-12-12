@@ -81,12 +81,66 @@ class ApiCampaign extends Controller
 		return response()->json($result);
 	}
 	public function CreateCampaign(Request $request){
-		$post = $request->json()->all();
+		if($request->hasFile('import_file')){
+			if(!($request->file('import_file')->isValid()&&in_array($request->file('import_file')->getMimeType(), array('text/plain','text/csv','application/csv')))){
+				return [
+					'status'  => 'fail',
+					'messages'  => 'Invalid file',
+				];
+			}
+			$isi=file_get_contents($request->file('import_file')->getRealPath());
+			$post=$request->post();
+			$post=array_map(function($x){
+				return json_decode($x,true);
+			},$post);
+			$arr=MyHelper::csvToArray($isi);
+			$content=isset($post['csv_content'])?$post['csv_content']:'id';
+			$param=array_filter(array_map(function($y){
+				$x=$y[0];
+				if(is_numeric($x)){
+					return $x;
+				}
+			},$arr));
+			if(empty($param)){
+				$erDa=$content=='id'?'User Id':'Phone Number';
+				return [
+					'status'  => 'fail',
+					'messages'  => ['No '.$erDa.' was found in this file']
+				];
+			}
+			$content=isset($post['csv_content'])?$post['csv_content']:'id';
+			$post['conditions']=array(0=>array(
+				0=>array(
+					'subject'=>$content,
+					'operator'=>'WHERE IN',
+					'parameter'=>implode(',',$param)
+				),
+				'rule'=>'and',
+				'rule_next'=>'and'
+			));
+		}else{
+			$post = $request->json()->all();
+			if($request->has('import_file')&&!isset($post['conditions'])){
+				$post = $request->post();
+				$post=array_map(function($x){
+				return json_decode($x,true);},$post);
+				$post['conditions']=[];
+			}
+			if(!isset($post['campaign_description'])){
+				$post['campaign_description']='';
+			}
+		}
+		if(empty($post['conditions'])&&!$request->has('import_file')){
+			return [
+				'status'  => 'fail',
+				'messages'  => ['Rule must be filled in at least one']
+			];
+		}
 		$user = $request->user();
-
-		$data 						= [];
-		$data['campaign_title'] 	= $post['campaign_title'];
-		$data['id_user'] 			= $user['id'];
+		$data 							= [];
+		$data['campaign_title'] 		= $post['campaign_title'];
+		$data['campaign_description'] 	= $post['campaign_description'];
+		$data['id_user'] 				= $user['id'];
 
 		if(!empty($post['campaign_send_at'])){
 			$datetimearr 				= explode(' - ',$post['campaign_send_at']);
@@ -132,8 +186,8 @@ class ApiCampaign extends Controller
 
 		if($queryCampaign){
 			$data = [];
-
-			if(isset($post['id_campaign'])){
+			
+			if(isset($post['id_campaign'])&&!empty($post['conditions'])){
 				$deleteRuleParent = CampaignRuleParent::where('id_campaign','=',$post['id_campaign'])->get();
 				foreach ($deleteRuleParent as $key => $value) {
 					$value->rules()->delete();
@@ -143,24 +197,30 @@ class ApiCampaign extends Controller
 
 			if(isset($post['id_campaign'])) $data['id_campaign'] = $post['id_campaign'];
 				else $data['id_campaign'] = $queryCampaign->id_campaign;
-
-			$queryCampaignRule = MyHelper::insertCondition('campaign', $data['id_campaign'], $post['conditions']);
-			if(isset($queryCampaignRule['status']) && $queryCampaignRule['status'] == 'success'){
-				$resultrule = $queryCampaignRule['data'];
-			}else{
-				DB::rollBack();
+			if(!empty($post['conditions'])){
+				$queryCampaignRule = MyHelper::insertCondition('campaign', $data['id_campaign'], $post['conditions']);
+				if(isset($queryCampaignRule['status']) && $queryCampaignRule['status'] == 'success'){
+					$resultrule = $queryCampaignRule['data'];
+				}else{
+					DB::rollBack();
+					$result = [
+						'status'  => 'fail',
+						'messages'  => ['Create Campaign Failed']
+					];
+				}
 				$result = [
-					'status'  => 'fail',
-					'messages'  => ['Create Campaign Failed']
-				];
-			}
-
-			$result = [
 					'status'  => 'success',
 					'result'  => 'Set Campaign Information & Rule Success',
 					'campaign'  => $queryCampaign,
 					'rule'  => $resultrule
 				];
+			}else{
+				$result = [
+						'status'  => 'success',
+						'result'  => 'Set Campaign Information',
+						'campaign'  => $queryCampaign,
+					];
+			}
 		} else {
 			DB::rollBack();
 			$result = [
