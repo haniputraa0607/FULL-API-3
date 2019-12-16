@@ -18,12 +18,12 @@ class Step3Subscription extends FormRequest
         return [
             'id_subscription'           => 'required',
             'content_title'             => 'required',
-            'id_subscription_content'   => 'required',
+            'id_subscription_content'   => '',
             'id_content_detail'         => '',
             'visible'                   => '',
-            'content_detail'            => 'required',
-            'content_detail_order'      => 'required',
-            'subscription_description'  => 'required'
+            'content_detail'            => '',
+            'content_detail_order'      => '',
+            'subscription_description'  => ''
         ];
     }
 
