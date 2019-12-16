@@ -769,9 +769,6 @@ class ApiOnlineTransaction extends Controller
 
         $configAdminOutlet = Configs::where('config_name', 'admin outlet')->first();
 
-            $fraudTrxDay = FraudSetting::where('parameter', 'LIKE', '%transactions in 1 day%')->where('fraud_settings_status','Active')->first();
-            $fraudTrxWeek = FraudSetting::where('parameter', 'LIKE', '%transactions in 1 week%')->where('fraud_settings_status','Active')->first();
-
         if($configAdminOutlet && $configAdminOutlet['is_active'] == '1'){
 
             if ($post['type'] == 'Delivery') {
@@ -1072,6 +1069,9 @@ class ApiOnlineTransaction extends Controller
             $countTrxDay = $geCountTrxDay + 1;
             $countTrxWeek = $geCountTrxWeek + 1;
             //================================ End ================================//
+
+            $fraudTrxDay = FraudSetting::where('parameter', 'LIKE', '%transactions in 1 day%')->where('fraud_settings_status','Active')->first();
+            $fraudTrxWeek = FraudSetting::where('parameter', 'LIKE', '%transactions in 1 week%')->where('fraud_settings_status','Active')->first();
 
             if((($fraudTrxDay && $countTrxDay <= $fraudTrxDay['parameter_detail']) && ($fraudTrxWeek && $countTrxWeek <= $fraudTrxWeek['parameter_detail']))
                 || (!$fraudTrxDay && !$fraudTrxWeek)){
