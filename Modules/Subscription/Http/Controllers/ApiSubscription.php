@@ -209,6 +209,9 @@ class ApiSubscription extends Controller
         if (isset($post['user_limit'])) {
             $data['user_limit'] = $post['user_limit'];
         }
+        if (isset($post['subscription_description'])) {
+            $data['subscription_description'] = $post['subscription_description'];
+        }
 
         return $data;
     }
@@ -461,14 +464,116 @@ class ApiSubscription extends Controller
         return response()->json(MyHelper::checkUpdate($save));
     }
 
+    public function createOrUpdateContent($data)
+    {
+        $post = $data;
+        $data_content = [];
+        $data_content_detail = [];
+        $content_order = 1;
+        //Rapiin data yg masuk
+        foreach ($post['id_subscription_content'] as $key => $value) {
+            $data_content[$key]['id_subscription'] = $post['id_subscription'];
+            $data_content[$key]['id_subscription_content'] = $value;
+            $data_content[$key]['title'] = $post['content_title'][$key];
+            $data_content[$key]['is_active'] = ($post['visible'][$key+1]??0) ? 1 : null;
+            $data_content[$key]['order'] = ($content_order++);
+            $data_content[$key]['created_at'] = date('Y-m-d H:i:s');
+            $data_content[$key]['updated_at'] = date('Y-m-d H:i:s');
+
+            $detail_order = 1;
+            if ( ($post['id_content_detail'][$key+1]??0) ) {
+                foreach ($post['id_content_detail'][$key+1] as $key2 => $value2) {
+                    $data_content_detail[$key][$key2]['id_subscription_content'] = $value;
+                    $data_content_detail[$key][$key2]['id_subscription_content_detail'] = $value2;
+                    $data_content_detail[$key][$key2]['content'] = $post['content_detail'][$key+1][$key2];
+                    $data_content_detail[$key][$key2]['order'] = $detail_order++;
+                    $data_content_detail[$key][$key2]['created_at'] = date('Y-m-d H:i:s');
+                    $data_content_detail[$key][$key2]['updated_at'] = date('Y-m-d H:i:s');
+                }
+            }
+        }
+
+        // hapus content & detail
+        $del_content = SubscriptionContent::where('id_subscription','=',$post['id_subscription'])->delete();
+
+        // create content & detail
+        foreach ($post['id_subscription_content'] as $key => $value) 
+        {
+            $save = SubscriptionContent::create($data_content[$key]);
+
+            $id_subscription_content = $save['id_subscription_content'];
+
+            if ( ($post['id_content_detail'][$key+1]??0) ) {
+
+                foreach ($post['id_content_detail'][$key+1] as $key2 => $value2) {
+
+                    $data_content_detail[$key][$key2]['id_subscription_content'] = $id_subscription_content;
+
+                    $save = SubscriptionContentDetail::create($data_content_detail[$key][$key2]);
+                }
+            }
+        }
+
+        if ($save) 
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    }
+
     public function updateAll(DetailSubscription $request)
     {
         $data = $request->json()->all();
 
-        return $data;
-        $data = $this->checkInputan($data);
-        // error
-        DB::beginTransaction();        
+        DB::beginTransaction();     
+        $new_data = $this->checkInputan($data);
+
+        //update subscription outlet
+        if (isset($data['id_outlet'])) {
+            $new_data['is_all_outlet'] = null;
+            // DELETE
+            $this->deleteOutlet($data['id_subscription']);
+            if ( ($data['id_outlet'][0]??0) == 'all') 
+            {
+                $new_data['is_all_outlet'] = 1;
+            }
+            else
+            {
+                // SAVE
+                $saveOutlet = $this->saveOutlet($data['id_subscription'], $data['id_outlet']);
+            }
+            unset($new_data['id_outlet']);
+        }
+
+        //update subsscription content
+        $update_content = $this->createOrUpdateContent($data);
+
+        if (!$update_content) {
+            return  response()->json([
+                'status'   => 'fail',
+                'messages' => 'Update Subscription Content failed'
+            ]);
+        }
+
+        //update subscription
+        $new_data['subscription_step_complete'] = 1;
+        $save = Subscription::where('id_subscription', '=', $data['id_subscription'])->update($new_data);
+
+        if ($save) {
+            DB::commit();
+        } else {
+            DB::rollback();
+            return  response()->json([
+                'status'   => 'fail',
+                'messages' => 'Update Subscription failed'
+            ]);
+        }
+
+        return response()->json(MyHelper::checkUpdate($save));
+
     }
 
     /* SAVE OUTLET */
@@ -602,6 +707,9 @@ class ApiSubscription extends Controller
                         ->addSelect('subscriptions.*')->distinct();
         }
 
+        if ( empty($request->json('admin')) ) {
+            $subs = $subs->whereNotNull('subscription_step_complete');
+        }
         if ($request->json('id_subscription')) {
             // add content for detail subscription
             $subs = $subs->where('id_subscription', '=', $request->json('id_subscription'))
