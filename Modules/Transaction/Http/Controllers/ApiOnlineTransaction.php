@@ -620,20 +620,33 @@ class ApiOnlineTransaction extends Controller
             foreach ($valueProduct['modifiers'] as $modifier) {
                 $id_product_modifier = is_numeric($modifier)?$modifier:$modifier['id_product_modifier'];
                 $qty_product_modifier = is_numeric($modifier)?1:$modifier['qty'];
-                $mod = ProductModifier::with(['product_modifier_prices'=>function($query) use ($post){
-                        $query->select('id_product_modifier_price','id_product_modifier','product_modifier_price');
-                        $query->where('id_outlet',$post['id_outlet']);
-                    }])
-                    ->whereHas('product_modifier_prices',function($query) use ($post){
-                        $query->where('id_outlet',$post['id_outlet']);
-                        $query->whereNotNull('product_modifier_price');
+                $mod = ProductModifier::select('product_modifiers.id_product_modifier','text','product_modifier_stock_status','product_modifier_price')
+                    // produk modifier yang tersedia di outlet
+                    ->join('product_modifier_prices','product_modifiers.id_product_modifier','=','product_modifier_prices.id_product_modifier')
+                    ->where('product_modifier_prices.id_outlet',$post['id_outlet'])
+                    // produk aktif
+                    ->where('product_modifier_status','Active')
+                    // product visible
+                    ->where(function($query){
+                        $query->where('product_modifier_prices.product_modifier_visibility','=','Visible')
+                        ->orWhere(function($q){
+                            $q->whereNull('product_modifier_prices.product_modifier_visibility')
+                            ->where('product_modifiers.product_modifier_visibility', 'Visible');
+                        });
                     })
+                    ->groupBy('product_modifiers.id_product_modifier')
+                    // product modifier dengan id
                     ->find($id_product_modifier);
-                if(!$mod||!isset($mod['product_modifier_prices'][0]['product_modifier_price'])){
-                    DB::rollBack();
+                if(!$mod){
                     return [
                         'status' => 'fail',
                         'messages' => ['Modifier not found']
+                    ];
+                }
+                if($mod['product_modifier_stock_status']!='Available'){
+                    return [
+                        'status' => 'fail',
+                        'messages' => ['Modifier not available']
                     ];
                 }
                 $mod = $mod->toArray();
@@ -648,14 +661,14 @@ class ApiOnlineTransaction extends Controller
                     'code'=>$mod['code']??'',
                     'text'=>$mod['text']??'',
                     'qty'=>$qty_product_modifier,
-                    'transaction_product_modifier_price'=>$mod['product_modifier_prices'][0]['product_modifier_price']*$qty_product_modifier,
+                    'transaction_product_modifier_price'=>$mod['product_modifier_price']*$qty_product_modifier,
                     'datetime'=>$insertTransaction['transaction_date']??date(),
                     'trx_type'=>$type,
                     // 'sales_type'=>'',
                     'created_at'                   => date('Y-m-d H:i:s'),
                     'updated_at'                   => date('Y-m-d H:i:s')
                 ];
-                $mod_subtotal += $mod['product_modifier_prices'][0]['product_modifier_price']*$qty_product_modifier;
+                $mod_subtotal += $mod['product_modifier_price']*$qty_product_modifier;
                 if($qty_product_modifier>1){
                     $more_mid_text .= ','.$qty_product_modifier.'x '.$mod['text'];
                 }else{
@@ -1496,11 +1509,20 @@ class ApiOnlineTransaction extends Controller
             foreach ($item['modifiers'] as $modifier) {
                 $id_product_modifier = is_numeric($modifier)?$modifier:$modifier['id_product_modifier'];
                 $qty_product_modifier = is_numeric($modifier)?1:$modifier['qty'];
-                $mod = ProductModifier::select('product_modifiers.id_product_modifier','product_modifiers.text','product_modifier_prices.product_modifier_price')
+                $mod = ProductModifier::select('product_modifiers.id_product_modifier','text','product_modifier_stock_status','product_modifier_price')
                     // produk modifier yang tersedia di outlet
                     ->join('product_modifier_prices','product_modifiers.id_product_modifier','=','product_modifier_prices.id_product_modifier')
                     ->where('product_modifier_prices.id_outlet',$id_outlet)
-
+                    // produk aktif
+                    ->where('product_modifier_status','Active')
+                    // product visible
+                    ->where(function($query){
+                        $query->where('product_modifier_prices.product_modifier_visibility','=','Visible')
+                        ->orWhere(function($q){
+                            $q->whereNull('product_modifier_prices.product_modifier_visibility')
+                            ->where('product_modifiers.product_modifier_visibility', 'Visible');
+                        });
+                    })
                     ->groupBy('product_modifiers.id_product_modifier')
                     // product modifier dengan id
                     ->find($id_product_modifier);
@@ -1508,6 +1530,12 @@ class ApiOnlineTransaction extends Controller
                     return [
                         'status' => 'fail',
                         'messages' => ['Modifier not found']
+                    ];
+                }
+                if($mod['product_modifier_stock_status']!='Available'){
+                    return [
+                        'status' => 'fail',
+                        'messages' => ['Modifier not available']
                     ];
                 }
                 $mod = $mod->toArray();
@@ -1519,8 +1547,9 @@ class ApiOnlineTransaction extends Controller
             if(!isset($tree[$product['id_brand']]['name_brand'])){
                 $tree[$product['id_brand']] = Brand::select('name_brand','id_brand')->find($product['id_brand'])->toArray();
             }
+            $product['product_price_total'] = $product['qty'] * ($product['product_price']+$mod_price);
             $tree[$product['id_brand']]['products'][]=$product;
-            $subtotal += $product['qty'] * ($product['product_price']+$mod_price);
+            $subtotal += $product['product_price_total'];
         }
         foreach ($grandTotal as $keyTotal => $valueTotal) {
             if ($valueTotal == 'subtotal') {

@@ -812,30 +812,35 @@ class ApiProductController extends Controller
             return MyHelper::checkGet([]);
         }
         //get modifiers
-        $product['modifiers'] = ProductModifier::select('id_product_modifier','text')
-            ->where('modifier_type','Global')
-            ->orWhere(function($query) use ($post){
-                $query->whereHas('products',function($query) use ($post){
-                    $query->where('products.id_product',$post['id_product']);
-                });
-                $query->orWhereHas('product_categories',function($query) use ($post){
-                    $query->where('product_categories.id_product_category',$post['id_product_category']);
-                });
-                $query->orWhereHas('brands',function($query) use ($post){
-                    $query->where('brands.id_brand',$post['id_brand']);
+        $product['modifiers'] = ProductModifier::select('product_modifiers.id_product_modifier','text','product_modifier_stock_status','product_modifier_price as price')
+            ->where(function($query) use($post){
+                $query->where('modifier_type','Global')
+                ->orWhere(function($query) use ($post){
+                    $query->whereHas('products',function($query) use ($post){
+                        $query->where('products.id_product',$post['id_product']);
+                    });
+                    $query->orWhereHas('product_categories',function($query) use ($post){
+                        $query->where('product_categories.id_product_category',$post['id_product_category']);
+                    });
+                    $query->orWhereHas('brands',function($query) use ($post){
+                        $query->where('brands.id_brand',$post['id_brand']);
+                    });
                 });
             })
-            ->with(['product_modifier_prices'=>function($query) use ($post){
-                $query->select('id_product_modifier_price','id_product_modifier','product_modifier_price');
-                $query->where('id_outlet',$post['id_outlet']);
-            }])
+            ->join('product_modifier_prices',function($join) use ($post){
+                $join->on('product_modifier_prices.id_product_modifier','=','product_modifiers.id_product_modifier');
+                $join->where('product_modifier_prices.id_outlet',$post['id_outlet']);
+            })->where('product_modifier_status','Active')
+            ->where(function($query){
+                $query->where('product_modifier_prices.product_modifier_visibility','=','Visible')
+                        ->orWhere(function($q){
+                            $q->whereNull('product_modifier_prices.product_modifier_visibility')
+                            ->where('product_modifiers.product_modifier_visibility', 'Visible');
+                        });
+            })
             ->get()->toArray();
         foreach ($product['modifiers'] as $key => &$modifier) {
-            if(empty($modifier['product_modifier_prices'])){
-                unset($product['modifiers'][$key]);
-                continue;
-            }
-            $modifier['price'] = (int) $modifier['product_modifier_prices'][0]['product_modifier_price'];
+            $modifier['price'] = (int) $modifier['price'];
             unset($modifier['product_modifier_prices']);
         }
         $product['outlet'] = Outlet::select('id_outlet','outlet_address','outlet_name')->find($post['id_outlet']);
