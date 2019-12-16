@@ -812,7 +812,7 @@ class ApiProductController extends Controller
             return MyHelper::checkGet([]);
         }
         //get modifiers
-        $product['modifiers'] = ProductModifier::select('product_modifiers.id_product_modifier','text','product_modifier_price as price')
+        $product['modifiers'] = ProductModifier::select('product_modifiers.id_product_modifier','text','product_modifier_stock_status','product_modifier_price as price')
             ->where(function($query) use($post){
                 $query->where('modifier_type','Global')
                 ->orWhere(function($query) use ($post){
