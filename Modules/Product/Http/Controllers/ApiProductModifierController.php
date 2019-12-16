@@ -152,9 +152,6 @@ class ApiProductModifierController extends Controller
         }
         DB::beginTransaction();
         // delete relationship
-        ProductModifierBrand::where('id_product_modifier',$id_product_modifier)->delete();
-        ProductModifierProduct::where('id_product_modifier',$id_product_modifier)->delete();
-        ProductModifierProductCategory::where('id_product_modifier',$id_product_modifier)->delete();
         $data = [
             'modifier_type'=>$post['modifier_type'],
             'type'=>$post['type'],
@@ -167,52 +164,57 @@ class ApiProductModifierController extends Controller
             DB::rollback();
             return MyHelper::checkUpdate($update);
         }
-        if($post['modifier_type']=='Specific'){
-            if($brands = ($post['id_brand']??false)){
-                foreach ($brands as $id_brand) {
-                    $data = [
-                        'id_brand' => $id_brand,
-                        'id_product_modifier' => $id_product_modifier
-                    ];
-                    $create = ProductModifierBrand::create($data);
-                    if(!$create){
-                        DB::rollback();
-                        return [
-                            'status'=>'fail',
-                            'messages'=>['Failed assign id brand to product modifier']
+        if(!($post['patch']??false)){
+            ProductModifierBrand::where('id_product_modifier',$id_product_modifier)->delete();
+            ProductModifierProduct::where('id_product_modifier',$id_product_modifier)->delete();
+            ProductModifierProductCategory::where('id_product_modifier',$id_product_modifier)->delete();
+            if($post['modifier_type']=='Specific'){
+                if($brands = ($post['id_brand']??false)){
+                    foreach ($brands as $id_brand) {
+                        $data = [
+                            'id_brand' => $id_brand,
+                            'id_product_modifier' => $id_product_modifier
                         ];
+                        $create = ProductModifierBrand::create($data);
+                        if(!$create){
+                            DB::rollback();
+                            return [
+                                'status'=>'fail',
+                                'messages'=>['Failed assign id brand to product modifier']
+                            ];
+                        }
                     }
                 }
-            }
-            if($products = ($post['id_product']??false)){
-                foreach ($products as $id_product) {
-                    $data = [
-                        'id_product' => $id_product,
-                        'id_product_modifier' => $id_product_modifier
-                    ];
-                    $create = ProductModifierProduct::create($data);
-                    if(!$create){
-                        DB::rollback();
-                        return [
-                            'status'=>'fail',
-                            'messages'=>['Failed assign id brand to product modifier']
+                if($products = ($post['id_product']??false)){
+                    foreach ($products as $id_product) {
+                        $data = [
+                            'id_product' => $id_product,
+                            'id_product_modifier' => $id_product_modifier
                         ];
+                        $create = ProductModifierProduct::create($data);
+                        if(!$create){
+                            DB::rollback();
+                            return [
+                                'status'=>'fail',
+                                'messages'=>['Failed assign id brand to product modifier']
+                            ];
+                        }
                     }
                 }
-            }
-            if($product_categories = ($post['id_product_category']??false)){
-                foreach ($product_categories as $id_product_category) {
-                    $data = [
-                        'id_product_category' => $id_product_category,
-                        'id_product_modifier' => $id_product_modifier
-                    ];
-                    $create = ProductModifierProductCategory::create($data);
-                    if(!$create){
-                        DB::rollback();
-                        return [
-                            'status'=>'fail',
-                            'messages'=>['Failed assign id brand to product modifier']
+                if($product_categories = ($post['id_product_category']??false)){
+                    foreach ($product_categories as $id_product_category) {
+                        $data = [
+                            'id_product_category' => $id_product_category,
+                            'id_product_modifier' => $id_product_modifier
                         ];
+                        $create = ProductModifierProductCategory::create($data);
+                        if(!$create){
+                            DB::rollback();
+                            return [
+                                'status'=>'fail',
+                                'messages'=>['Failed assign id brand to product modifier']
+                            ];
+                        }
                     }
                 }
             }
@@ -246,7 +248,7 @@ class ApiProductModifierController extends Controller
             $query->orWhereNull('id_brand');
             $query->orWhereIn('id_brand',$brands);
         })
-        ->select('product_modifiers.id_product_modifier','product_modifiers.code','product_modifiers.text','product_modifier_prices.product_modifier_price')->leftJoin('product_modifier_prices',function($join) use ($id_outlet){
+        ->select('product_modifiers.id_product_modifier','product_modifiers.code','product_modifiers.text','product_modifier_prices.product_modifier_price','product_modifier_prices.product_modifier_visibility','product_modifier_prices.product_modifier_status','product_modifier_prices.product_modifier_stock_status')->leftJoin('product_modifier_prices',function($join) use ($id_outlet){
             $join->on('product_modifiers.id_product_modifier','=','product_modifier_prices.id_product_modifier');
             $join->where('product_modifier_prices.id_outlet','=',$id_outlet);
         })->where(function($query) use ($id_outlet){
@@ -261,17 +263,27 @@ class ApiProductModifierController extends Controller
         return MyHelper::checkGet($data);
     }
 
+    /**
+     * Bulk Update price modifier table
+     * @param  Request $request [description]
+     * @return array           Update status
+     */
     public function updatePrice(Request $request) {
         $id_outlet = $request->json('id_outlet');
         $insertData = [];
         DB::beginTransaction();
         foreach ($request->json('prices') as $id_product_modifier => $price) {
+            if(!($price['product_modifier_price']??false)){
+                continue;
+            }
             $key = [
                 'id_product_modifier' => $id_product_modifier,
                 'id_outlet' => $id_outlet
             ];
             $insertData = $key + [
-                'product_modifier_price' => $price
+                'product_modifier_price' => $price['product_modifier_price'],
+                'product_modifier_visibility' => $price['product_modifier_visibility'],
+                'product_modifier_stock_status' => $price['product_modifier_stock_status'],
             ];
             $insert = ProductModifierPrice::updateOrCreate($key,$insertData);
             if(!$insert){
