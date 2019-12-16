@@ -88,7 +88,8 @@ class Subscription extends Eloquent
 		'subscription_minimal_transaction',
 		'daily_usage_limit',
 		'new_purchase_after',
-		'is_all_outlet'
+		'is_all_outlet',
+		'subscription_step_complete'
 	];
 
 	protected $appends  = [
