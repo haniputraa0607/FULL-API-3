@@ -11,6 +11,7 @@ use App\Http\Models\TransactionProduct;
 use App\Http\Models\ProductPrice;
 use App\Http\Models\ProductModifier;
 use App\Http\Models\Outlet;
+use App\Http\Models\Setting;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -793,14 +794,25 @@ class ApiProductController extends Controller
             $query->where('id_product',$post['id_product']);
             $query->where('id_brand',$post['id_brand']);
         },'product_prices'=>function($query) use ($post){
-            $query->select('id_product','product_price','id_outlet','product_status','product_visibility');
+            $query->select('id_product','product_price','id_outlet','product_status','product_visibility','max_order');
             $query->where('id_outlet',$post['id_outlet']);
-        }])->first();
+        }])
+        ->first();
         if(!$product){
             return MyHelper::checkGet([]);
         }else{
             // toArray error jika $product Null,
             $product = $product->toArray();
+        }
+        $max_order = $product['product_prices'][0]['max_order'];
+        if($max_order==null){
+            $max_order = Outlet::select('max_order')->where('id_outlet',$post['id_outlet'])->pluck('max_order')->first();
+            if($max_order == null){
+                $max_order = Setting::select('value')->where('key','max_order')->pluck('value')->first();
+                if($max_order == null){
+                    $max_order = 100;
+                }
+            }
         }
         $product['product_price'] = $product['product_prices'][0]['product_price'];
         if(!(empty($product['product_prices']['product_visibility'])&&$product['product_visibility']=='Visible') && ($product['product_prices'][0]['product_visibility']??false)!='Visible'){
@@ -843,6 +855,7 @@ class ApiProductController extends Controller
             $modifier['price'] = (int) $modifier['price'];
             unset($modifier['product_modifier_prices']);
         }
+        $product['max_order'] = $max_order;
         $product['outlet'] = Outlet::select('id_outlet','outlet_address','outlet_name')->find($post['id_outlet']);
         return MyHelper::checkGet($product);
     }
