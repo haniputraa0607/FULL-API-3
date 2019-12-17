@@ -1016,9 +1016,28 @@ class ApiOnlineTransaction extends Controller
                 $id_pickup_go_send = $gosend->id_transaction_pickup_go_send;
             }
         } elseif ($post['type'] == 'Advance Order') {
+            $order_id = MyHelper::createrandom(4, 'Besar Angka');
+            //cek unique order id today
+            $cekOrderId = TransactionAdvanceOrder::join('transactions', 'transactions.id_transaction', 'transaction_advance_orders.id_transaction')
+                                            ->where('id_outlet', $insertTransaction['id_outlet'])
+                                            ->where('order_id', $order_id)
+                                            ->whereDate('transaction_date', date('Y-m-d'))
+                                            ->first();
+            while($cekOrderId){
+                $order_id = MyHelper::createrandom(4, 'Besar Angka');
+
+                $cekOrderId = TransactionAdvanceOrder::join('transactions', 'transactions.id_transaction', 'transaction_advance_orders.id_transaction')
+                                            ->where('id_outlet', $insertTransaction['id_outlet'])
+                                            ->where('order_id', $order_id)
+                                            ->whereDate('transaction_date', date('Y-m-d'))
+                                            ->first();
+            }
+
             $dataAO = [
                 'id_transaction' => $insertTransaction['id_transaction'],
+                'order_id' => $order_id,
                 'address' => $post['address'],
+                'receive_at' => $post['receive_at'],
                 'receiver_name' => $post['receiver_name'],
                 'receiver_phone' => $post['receiver_phone'],
                 'date_delivery' => $post['date_delivery']

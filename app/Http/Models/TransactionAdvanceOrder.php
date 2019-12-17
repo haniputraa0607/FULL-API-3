@@ -9,6 +9,7 @@ class TransactionAdvanceOrder extends Model
     protected $fillable = [
     	'id_transaction',
     	'id_user',
+    	'order_id',
     	'id_outlet',
     	'address',
     	'receiver_name',
