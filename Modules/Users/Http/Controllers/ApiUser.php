@@ -2,6 +2,7 @@
 
 namespace Modules\Users\Http\Controllers;
 
+use App\Http\Models\UsersDeviceLogin;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
@@ -375,11 +376,13 @@ class ApiUser extends Controller
 
                 /*============= All query with rule 'AND' ==================*/
                 if($rule == 'and'){
-                    if($condition['subject'] == 'name' || $condition['subject'] == 'phone' || $condition['subject'] == 'email' || $condition['subject'] == 'address'){
+                    if($condition['subject'] == 'id' || $condition['subject'] == 'name' || $condition['subject'] == 'phone' || $condition['subject'] == 'email' || $condition['subject'] == 'address'){
                         $var = "users.".$condition['subject'];
 
                         if($condition['operator'] == 'like')
                             $query = $query->where($var,'like','%'.$condition['parameter'].'%');
+                        elseif(strtoupper($condition['operator']) == 'WHERE IN')
+                            $query = $query->whereIn($var,explode(',',$condition['parameter']));
                         else
                             $query = $query->where($var,'=',$condition['parameter']);
                     }
@@ -549,11 +552,13 @@ class ApiUser extends Controller
                     if($condition['subject'] == 'all_user'){
                         $query = $query->orWhereRaw('1');
                     }
-                    if($condition['subject'] == 'name' || $condition['subject'] == 'phone' || $condition['subject'] == 'email' || $condition['subject'] == 'address'){
+                    if($condition['subject'] == 'id' || $condition['subject'] == 'name' || $condition['subject'] == 'phone' || $condition['subject'] == 'email' || $condition['subject'] == 'address'){
                         $var = "users.".$condition['subject'];
 
                         if($condition['operator'] == 'like')
                             $query = $query->orWhere($var,'like','%'.$condition['parameter'].'%');
+                        elseif(strtoupper($condition['operator']) == 'WHERE IN')
+                            $query = $query->orWhereIn($var,explode(',',$condition['parameter']));
                         else
                             $query = $query->orWhere($var,'=',$condition['parameter']);
                     }
@@ -1118,13 +1123,6 @@ class ApiUser extends Controller
                 if(stristr($useragent,'iOS')) $useragent = 'iOS';
                 if(stristr($useragent,'okhttp')) $useragent = 'Android';
                 if(stristr($useragent,'GuzzleHttp')) $useragent = 'Browser';
-                if(\Module::collections()->has('Autocrm')) {
-                    $autocrm = app($this->autocrm)->SendAutoCRM('Login Success', $phone,
-                        ['ip' => $ip,
-                            'useragent' => $useragent,
-                            'now' => date('Y-m-d H:i:s')
-                        ]);
-                }
 
                 //update count login failed
                 if($datauser[0]['count_login_failed'] > 0){
@@ -1145,26 +1143,47 @@ class ApiUser extends Controller
                         'action' => 'Login'
                     ]);
                 }
-                
-                $createUserFraud = UserFraud::updateOrCreate(['id_user' => $datauser[0]['id'], 'device_id' => $device_id], ['device_type' => $device_type]);
 
-                $deviceCus = UserFraud::where('device_id', '=' ,$device_id)
-                    ->groupBy('id_user')
-                    ->get()->toArray();
+                if($device_id) {
+                    $fraud = FraudSetting::where('parameter', 'LIKE', '%device ID%')->where('fraud_settings_status', 'Active')->first();
+                    if ($fraud) {
+                        app($this->setting_fraud)->createUpdateDeviceLogin($datauser[0], $device_id);
+                        $deviceCus = UsersDeviceLogin::where('device_id', '=' ,$device_id)
+                            ->where('status','Active')
+                            ->select('id_user')
+                            ->orderBy('created_at','asc')
+                            ->groupBy('id_user')
+                            ->get()->toArray('id_user');
 
-                $lastDevice = UserDevice::where('id_user','=',$datauser[0]['id'])->orderBy('id_device_user', 'desc')->first();
+                        $count = count($deviceCus);
+                        $check = array_slice($deviceCus, (int)$fraud['parameter_detail']);
+                        $check = array_column($check,'id_user');
 
-                if($deviceCus && count($deviceCus) >= 3){
-                    // send notif fraud detection
-                    $fraud = FraudSetting::where('parameter', 'LIKE', '%device ID%')->first();
-                    
-                    UserFraud::where('id_user_fraud', $createUserFraud->id_user_fraud)->delete();
-                    
-                    if($fraud){
-                        $sendFraud = app($this->setting_fraud)->SendFraudDetection($fraud['id_fraud_setting'], $datauser[0], null, $lastDevice);
+                        if($deviceCus && count($deviceCus) > (int)$fraud['parameter_detail'] && array_search($datauser[0]['id'], $check) !== false){
+                            $sendFraud = app($this->setting_fraud)->SendFraudDetection($fraud['id_fraud_setting'], $datauser[0], null, ['device_id' => $device_id, 'device_type' => $request->json('device_type')], 0, 0, null, 0);
+                            $data = User::with('city')->where('phone', '=', $datauser[0]['phone'])->get()->toArray();
+
+                            if ($data[0]['is_suspended'] == 1) {
+                                return response()->json([
+                                    'status' => 'fail',
+                                    'messages' => ['Akun Anda telah diblokir karena menunjukkan aktivitas mencurigakan. Untuk informasi lebih lanjut harap hubungi customer service kami di suarapelanggan@champ-group.com']
+                                ]);
+                            } else {
+                                return response()->json([
+                                    'status' => 'fail',
+                                    'messages' => ['Akun Anda tidak dapat login di device ini karena menunjukkan aktivitas mencurigakan. Untuk informasi lebih lanjut harap hubungi customer service kami di suarapelanggan@champ-group.com']
+                                ]);
+                            }
+                        }
                     }
-                    OauthAccessToken::join('oauth_access_token_providers', 'oauth_access_tokens.id', 'oauth_access_token_providers.oauth_access_token_id')
-                    ->where('oauth_access_tokens.user_id', $datauser[0]['id'])->where('oauth_access_token_providers.provider', 'users')->delete();
+                }
+
+                if(\Module::collections()->has('Autocrm')) {
+                    $autocrm = app($this->autocrm)->SendAutoCRM('Login Success', $phone,
+                        ['ip' => $ip,
+                            'useragent' => $useragent,
+                            'now' => date('Y-m-d H:i:s')
+                        ]);
                 }
             } else{
                 //kalo login gagal
@@ -1347,6 +1366,7 @@ class ApiUser extends Controller
     function verifyPin(users_phone_pin $request){
 
         $phone = $request->json('phone');
+        $post = $request->json()->all();
 
         $phone = preg_replace("/[^0-9]/", "", $phone);
 
@@ -1372,6 +1392,43 @@ class ApiUser extends Controller
             }
             if($data[0]['phone_verified'] == 0){
                 if(Auth::attempt(['phone' => $phone, 'password' => $request->json('pin')])){
+                    if(isset($post['device_id']) && isset($post['device_type'])) {
+                        $device_id = $post['device_id'];
+                        $device_type = $post['device_type'];
+                        $fraud = FraudSetting::where('parameter', 'LIKE', '%device ID%')->where('fraud_settings_status', 'Active')->first();
+                        if ($fraud) {
+                            app($this->setting_fraud)->createUpdateDeviceLogin($data[0], $device_id);
+
+                            $deviceCus = UsersDeviceLogin::where('device_id', '=' ,$device_id)
+                                ->where('status','Active')
+                                ->select('id_user')
+                                ->orderBy('created_at','asc')
+                                ->groupBy('id_user')
+                                ->get()->toArray('id_user');
+
+                            $count = count($deviceCus);
+                            $check = array_slice($deviceCus, (int)$fraud['parameter_detail']);
+                            $check = array_column($check,'id_user');
+
+                            if($deviceCus && count($deviceCus) > (int)$fraud['parameter_detail'] && array_search($data[0]['id'], $check) !== false){
+                                $sendFraud = app($this->setting_fraud)->SendFraudDetection($fraud['id_fraud_setting'], $data[0], null, ['device_id' => $device_id, 'device_type' => $device_type], 0, 0, null, 0);
+                                $data = User::with('city')->where('phone', '=', $phone)->get()->toArray();
+
+                                if ($data[0]['is_suspended'] == 1) {
+                                    return response()->json([
+                                        'status' => 'fail',
+                                        'messages' => ['Akun Anda telah diblokir karena menunjukkan aktivitas mencurigakan. Untuk informasi lebih lanjut harap hubungi customer service kami di suarapelanggan@champ-group.com']
+                                    ]);
+                                } else {
+                                    return response()->json([
+                                        'status' => 'fail',
+                                        'messages' => ['Akun Anda tidak dapat di daftarkan karena menunjukkan aktivitas mencurigakan. Untuk informasi lebih lanjut harap hubungi customer service kami di suarapelanggan@champ-group.com']
+                                    ]);
+                                }
+                            }
+                        }
+                    }
+
                     $update = User::where('id','=',$data[0]['id'])->update(['phone_verified' => '1']);
                     if($update){
                         $profile = User::select('phone','email','name','id_city','gender','phone_verified', 'email_verified')

@@ -88,7 +88,8 @@ class Subscription extends Eloquent
 		'subscription_minimal_transaction',
 		'daily_usage_limit',
 		'new_purchase_after',
-		'is_all_outlet'
+		'is_all_outlet',
+		'subscription_step_complete'
 	];
 
 	protected $appends  = [
@@ -168,5 +169,10 @@ class Subscription extends Eloquent
 	public function subscription_content()
 	{
 		return $this->hasMany(\Modules\Subscription\Entities\SubscriptionContent::class, 'id_subscription');
+	}
+
+	public function subscription_users()
+	{
+		return $this->hasMany(\Modules\Subscription\Entities\SubscriptionUser::class, 'id_subscription');
 	}
 }

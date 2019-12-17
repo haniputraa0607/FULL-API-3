@@ -2049,14 +2049,35 @@ class MyHelper{
             $newArray[$key][]=$value;
         }
         if($key_modifier!==null){
+        	$arrNew=[];
             foreach ($newArray as $key => $value) {
                 $new_key=$key_modifier($key,$value);
-                $newArray[$new_key]=$value;
-                if($new_key != $key){
-	                unset($newArray[$key]);
-                }
+                $arrNew[$new_key]=$value;
             }
+            $newArray = $arrNew;
         }
         return $newArray;
     }
+
+	/**
+	* Convert csv string or file to PHP array
+	* @param  String  $string    String of csv content or path to csv file
+	* @param  boolean $isPath    Set to true if $string is csv's path, leave it false otherwise
+	* @param  String  $delimiter Set the delimiter of csv column
+	* @return Array          php array of the csv
+	*/
+	public static function csvToArray($string,$isPath=false,$delimiter=','){
+		if($isPath){
+			try{
+				$string=file_get_contents($string);
+			}catch(Exception $e){
+				return array();
+			}
+		}
+		$first=explode(PHP_EOL, $string);
+		$second=array_map(function($x) use ($delimiter){
+			return explode($delimiter,str_replace("\r", '', $x));
+		},$first);
+		return $second;
+	}
 }

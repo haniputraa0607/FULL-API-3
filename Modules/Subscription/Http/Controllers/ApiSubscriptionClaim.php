@@ -45,7 +45,6 @@ class ApiSubscriptionClaim extends Controller
         $dataSubs = $this->checkSubsData($request->json('id_subscription'));
         $id_user = $request->user()->id;
         $dataSubsUser = $this->checkSubsUser($id_user, $dataSubs);
-
         if (empty($dataSubs)) {
             return response()->json([
                 'status'   => 'fail',
@@ -90,7 +89,6 @@ class ApiSubscriptionClaim extends Controller
                                 // check available voucher
                                 if ($dataSubs->subscription_total > $subsClaimed || $dataSubs->subscription_total == null) {
                                     // create subscription voucher x times and subscription user 
-                                    $user_voucher_array = [];
 
                                     // create user Subscription
                                     $user_subs = $this->createSubscriptionUser($id_user, $dataSubs);
@@ -148,9 +146,6 @@ class ApiSubscriptionClaim extends Controller
                                             ]);
                                         }
 
-                                        // keep user voucher in order to return in response
-                                        array_push($user_voucher_array, $subs_voucher_data);
-
                                     }   // end of for
 
                                     // update deals total bought
@@ -173,30 +168,24 @@ class ApiSubscriptionClaim extends Controller
                                     ]);
                                 }
 
-                                // dd($user_voucher_array);
                                 DB::commit();
 
-                                // assign deals subscription vouchers to response
-                                $subscription = $user_voucher_array;
-                                // if(isset($voucher['deals_voucher']['id_deals'])){
-                                //     $voucher['deals'] = Deal::find($voucher['deals_voucher']['id_deals']);
-                                // }
                                 if(\Module::collections()->has('Autocrm')) {
                                     $phone=$request->user()->phone;
                                     $autocrm = app($this->autocrm)->SendAutoCRM('Get Free Subscription Success', $phone,
                                         [
-                                            'bought_at'            => $subscription[0]['bought_at'],
+                                            'bought_at'             => date('Y-m-d H:i:s'),
                                             'subscription_title'    => $dataSubs->subscription_title,
-                                            'id_subscription_user'  => $subscription[0]['id_subscription_user'],
+                                            'id_subscription_user'  => $voucher->id_subscription_user,
                                             'id_subscription'       => $dataSubs->id_subscription
                                         ]
                                     );
                                 }
                                 $return=[
-                                    'id_subscription_user'=>$subscription[0]['id_subscription_user'],
-                                    'id_subscription'=>$subscription[0]['id_subscription'],
-                                    'paid_status'=>$subscription[0]['paid_status'],
-                                    'webview_success'=>env('API_URL').'api/webview/subscription/success/'.$subscription[0]['id_subscription_user']
+                                    'id_subscription_user'=>$voucher->id_subscription_user,
+                                    'id_subscription'=>$dataSubs->id_subscription,
+                                    'paid_status'=>$voucher->paid_status,
+                                    'webview_success'=>env('API_URL').'api/webview/subscription/success/'.$voucher->id_subscription_user
                                 ];
                                 if ($return['paid_status'] == 'Completed') {
                                     $return['title'] = 'Success';
@@ -386,13 +375,24 @@ class ApiSubscriptionClaim extends Controller
         // EXPIRED DATE
         // add id deals
         $data['id_subscription'] = $dataSubs->id_subscription;
-
         // get expired date of subscription
-        if ( isset($dataSubs->subscription_day_valid) ) {
-            $data['subscription_expired_at'] = date('Y-m-d H:i:s', strtotime("+".$dataSubs->subscription_day_valid." days"));
+        if (!empty($dataSubs->subscription_voucher_duration)) {
+            if($dataSubs->subscription_voucher_start>date('Y-m-d H:i:s')){
+                $data['subscription_expired_at'] = date('Y-m-d H:i:s', strtotime($dataSubs->subscription_voucher_start." +".$dataSubs->subscription_voucher_duration." days"));
+            }else{
+                $data['subscription_expired_at'] = date('Y-m-d H:i:s', strtotime("+".$dataSubs->subscription_voucher_duration." days"));
+            }
         }
-        else{
-            $data['subscription_expired_at'] = $dataSubs->subscription_end;
+        else {
+            $data['subscription_expired_at'] = $dataSubs->subscription_voucher_expired;
+        }
+
+        if($dataSubs->subscription_voucher_start>date('Y-m-d H:i:s'))
+        {
+            $data['subscription_active_at'] = date('Y-m-d H:i:s', strtotime($dataSubs->subscription_voucher_start));
+        }else
+        {
+            $data['subscription_active_at'] = date('Y-m-d H:i:s');
         }
 
         // CHECK PAYMENT = FREE / NOT
@@ -406,7 +406,7 @@ class ApiSubscriptionClaim extends Controller
 
         // CHECK PAYMENT WITH POINT
         // SUM POINT
-        // if ($dataDeals->deals_voucher_price_point <= $this->getPoint($id)) {
+        // if ($dataSubs->subscription_voucher_price_point <= $this->getPoint($id)) {
         //     $data['paid_status'] = "success";
         // }
         // else {
@@ -463,10 +463,10 @@ class ApiSubscriptionClaim extends Controller
 
         $dataCreate        = [
             'id_user'          => $voucher->id_user,
-            'id_reference'     => $voucher->id_deals_user,
-            'source'           => "Deals User",
-            'point'            => -$voucher->voucher_price_point,
-            'voucher_price'    => $voucher->voucher_price_point,
+            'id_reference'     => $voucher->id_subscription_user,
+            'source'           => "Subscription User",
+            'point'            => -$voucher->subscription_price_point,
+            'voucher_price'    => $voucher->subscription_price_point,
             'point_conversion' => $setting,
             'membership_level'            => $level,
             'membership_point_percentage' => $point_percentage

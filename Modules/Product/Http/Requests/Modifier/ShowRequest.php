@@ -1,12 +1,12 @@
 <?php
 
-namespace Modules\Subscription\Http\Requests;
+namespace Modules\Product\Http\Requests\Modifier;
 
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Http\Exceptions\HttpResponseException;
 
-class Step3Subscription extends FormRequest
+class ShowRequest extends FormRequest
 {
     /**
      * Get the validation rules that apply to the request.
@@ -16,14 +16,8 @@ class Step3Subscription extends FormRequest
     public function rules()
     {
         return [
-            'id_subscription'           => 'required',
-            'content_title'             => 'required',
-            'id_subscription_content'   => '',
-            'id_content_detail'         => '',
-            'visible'                   => '',
-            'content_detail'            => '',
-            'content_detail_order'      => '',
-            'subscription_description'  => ''
+            'id_product_modifier' => 'numeric|sometimes',
+            'code' => 'required_without:id_product_modifier'
         ];
     }
 
@@ -36,7 +30,6 @@ class Step3Subscription extends FormRequest
     {
         return true;
     }
-
     protected function failedValidation(Validator $validator)
     {
         throw new HttpResponseException(response()->json(['status' => 'fail', 'messages'  => $validator->errors()->all()], 200));
