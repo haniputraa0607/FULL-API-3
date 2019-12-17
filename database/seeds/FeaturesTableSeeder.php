@@ -1594,7 +1594,15 @@ class FeaturesTableSeeder extends Seeder
                     'feature_module' => 'Maximum Order',
                     'created_at' => date('Y-m-d H:00:00'),
                     'updated_at' => date('Y-m-d H:00:00'),
-                )
+                ),
+            198 =>
+            array(
+                'id_feature' => 199,
+                'feature_type' => 'Update',
+                'feature_module' => 'Default Outlet',
+                'created_at' => date('Y-m-d H:00:00'),
+                'updated_at' => date('Y-m-d H:00:00'),
+            ),
         ));
     }
 }
