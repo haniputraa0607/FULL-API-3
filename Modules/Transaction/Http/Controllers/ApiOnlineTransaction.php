@@ -84,7 +84,9 @@ class ApiOnlineTransaction extends Controller
         if (isset($post['headers'])) {
             unset($post['headers']);
         }
-
+        if($post['type'] == 'Advance Order'){
+            $post['id_outlet'] = Setting::where('key','default_outlet')->pluck('value')->first();
+        }
         $dataInsertProduct = [];
         $productMidtrans = [];
         $dataDetailProduct = [];

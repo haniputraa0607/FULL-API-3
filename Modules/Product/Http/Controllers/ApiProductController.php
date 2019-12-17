@@ -781,6 +781,9 @@ class ApiProductController extends Controller
     }
     public function detail(Request $request) {
         $post = $request->json()->all();
+        if(!($post['id_outlet']??false)){
+            $post['id_outlet'] = Setting::where('key','default_outlet')->pluck('value')->first();
+        }
         //get product
         $product = Product::select('id_product','product_name','product_code','product_visibility')
         ->where('id_product',$post['id_product'])
