@@ -1502,7 +1502,7 @@ class ApiOnlineTransaction extends Controller
             unset($product['photos']);
             $product['id_custom'] = $item['id_custom']??null;
             $product['qty'] = $item['qty'];
-            $product['note'] = $item['note'];
+            $product['note'] = $item['note']??'';
             // get modifier
             $mod_price = 0;
             $product['modifiers']=[];
