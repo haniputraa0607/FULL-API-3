@@ -1649,49 +1649,6 @@ class ApiOnlineTransaction extends Controller
             }
         }
 
-        $post['cashback'] = app($this->setting_trx)->countTransaction('cashback', $post);
-
-        //count some trx user
-        $countUserTrx = Transaction::where('id_user', $user->id)->where('transaction_payment_status', 'Completed')->count();
-
-        $countSettingCashback = TransactionSetting::get();
-
-        // return $countSettingCashback;
-        if ($countUserTrx < count($countSettingCashback)) {
-            // return $countUserTrx;
-            $post['cashback'] = $post['cashback'] * $countSettingCashback[$countUserTrx]['cashback_percent'] / 100;
-
-            if ($post['cashback'] > $countSettingCashback[$countUserTrx]['cashback_maximum']) {
-                $post['cashback'] = $countSettingCashback[$countUserTrx]['cashback_maximum'];
-            }
-        } else {
-
-            $maxCash = Setting::where('key', 'cashback_maximum')->first();
-
-            if (count($user['memberships']) > 0) {
-                $post['cashback'] = $post['cashback'] * ($user['memberships'][0]['benefit_cashback_multiplier']) / 100;
-
-                if($user['memberships'][0]['cashback_maximum']){
-                    $maxCash['value'] = $user['memberships'][0]['cashback_maximum'];
-                }
-            }
-
-            $statusCashMax = 'no';
-
-            if (!empty($maxCash) && !empty($maxCash['value'])) {
-                $statusCashMax = 'yes';
-                $totalCashMax = $maxCash['value'];
-            }
-
-            if ($statusCashMax == 'yes') {
-                if ($totalCashMax < $post['cashback']) {
-                    $post['cashback'] = $totalCashMax;
-                }
-            } else {
-                $post['cashback'] = $post['cashback'];
-            }
-        }
-
         $result['outlet'] = [
             'id_outlet' => $outlet['id_outlet'],
             'outlet_name' => $outlet['outlet_name'],
@@ -1704,7 +1661,19 @@ class ApiOnlineTransaction extends Controller
         $result['service'] = $post['service'];
         $result['tax'] = (int) $post['tax'];
         $result['grandtotal'] = (int)$post['subtotal'] + (int)(-$post['discount']) + (int)$post['service'] + (int)$post['tax'] + (int)$post['shipping'];
-        $result['cashback_earned'] = (int) $post['cashback'];
+        $result['used_point'] = 0;
+        $balance = app($this->balance)->balanceNow($user->id);
+        $result['points'] = (int) $balance;
+        if (isset($post['payment_type'])&&$post['payment_type'] == 'Balance') {
+            if($balance>=$result['grandtotal']){
+                $result['used_point'] = $result['grandtotal'];
+                $result['grandtotal'] = 0;
+            }else{
+                $result['used_point'] = $balance;
+                $result['grandtotal'] -= $balance;
+            }
+            $result['points'] -= $result['used_point'];
+        }
         return MyHelper::checkGet($result);
     }
 
