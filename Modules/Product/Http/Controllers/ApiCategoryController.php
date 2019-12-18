@@ -439,6 +439,7 @@ class ApiCategoryController extends Controller
             })
             ->where('product_prices.product_status','=','Active')
             ->whereNotNull('product_prices.product_price')
+            ->whereNotNull('brand_product.id_product_category')
             ->with([
                 'photos'=>function($query){
                     $query->select('id_product','product_photo');
