@@ -1937,7 +1937,7 @@ class ApiOutletController extends Controller
             $newRule[$var['subject']][]=$rule;
         }
         $where=$operator=='and'?'where':'orWhere';
-        $subjects=['product_code','product_name'];
+        $subjects=['product_code','product_name','max_order'];
         foreach ($subjects as $subject) {
             if($rules2=$newRule[$subject]??false){
                 foreach ($rules2 as $rule) {
