@@ -1872,12 +1872,19 @@ class ApiOutletController extends Controller
         }
         $return['outlet'] = $outlet;
         $products = Product::join('product_prices','product_prices.id_product','=','products.id_product')->select('products.id_product','product_code','product_name','product_prices.max_order')->where('product_prices.id_outlet',$outlet->id_outlet);
+
+        if($post['rule']??false){
+            $filter = $this->filterListProduct($products,$post['rule'],$post['operator']??'and');
+        }else{
+            $filter = [];
+        }
+
         if($request->page){
             $return['products'] = $products->paginate(10);
         }else{
             $return['products'] = $products->get();
         }
-        return MyHelper::checkGet($return);
+        return MyHelper::checkGet($return)+$filter;
     }
     public function updateMaxOrder(Request $request) {
         $post = $request->json()->all();
@@ -1918,5 +1925,27 @@ class ApiOutletController extends Controller
         }
         DB::commit();
         return MyHelper::checkUpdate($update);
+    }
+    public function filterListProduct($query,$rules,$operator='and'){
+        $newRule=[];
+        $total = $query->count();
+        foreach ($rules as $var) {
+            $rule=[$var['operator']??'=',$var['parameter']??''];
+            if($rule[0]=='like'){
+                $rule[1]='%'.$rule[1].'%';
+            }
+            $newRule[$var['subject']][]=$rule;
+        }
+        $where=$operator=='and'?'where':'orWhere';
+        $subjects=['product_code','product_name'];
+        foreach ($subjects as $subject) {
+            if($rules2=$newRule[$subject]??false){
+                foreach ($rules2 as $rule) {
+                    $query->$where($subject,$rule[0],$rule[1]);
+                }
+            }
+        }
+        $filtered = $query->count();
+        return ['total'=>$total,'filtered'=>$filtered];
     }
 }
