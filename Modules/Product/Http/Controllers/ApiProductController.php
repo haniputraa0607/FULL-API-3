@@ -793,7 +793,7 @@ class ApiProductController extends Controller
             ->whereNotNull('product_price')
             ->where('product_status','=','Active');
         })
-        ->with(['brand_category'=>function($query) use ($post){
+        ->with(['photos','brand_category'=>function($query) use ($post){
             $query->where('id_product',$post['id_product']);
             $query->where('id_brand',$post['id_brand']);
         },'product_prices'=>function($query) use ($post){
@@ -805,7 +805,8 @@ class ApiProductController extends Controller
             return MyHelper::checkGet([]);
         }else{
             // toArray error jika $product Null,
-            $product = $product->toArray();
+            $product = $product->append('photo')->toArray();
+            unset($product['photos']);
         }
         $max_order = $product['product_prices'][0]['max_order'];
         if($max_order==null){
