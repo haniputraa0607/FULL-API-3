@@ -24,6 +24,7 @@ Route::group(['middleware' => ['auth:api'], 'prefix' => 'promo-campaign'], funct
     Route::post('check', 'ApiPromoCampaign@check');
     Route::post('step1', 'ApiPromoCampaign@step1');
     Route::post('step2', 'ApiPromoCampaign@step2');
+    Route::post('delete', 'ApiPromoCampaign@delete');
 
     Route::post('show-step1', 'ApiPromoCampaign@showStep1');
     Route::post('show-step2', 'ApiPromoCampaign@showStep2');

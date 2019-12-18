@@ -28,10 +28,12 @@ use App\Http\Models\Treatment;
 
 use Modules\PromoCampaign\Http\Requests\Step1PromoCampaignRequest;
 use Modules\PromoCampaign\Http\Requests\Step2PromoCampaignRequest;
+use Modules\PromoCampaign\Http\Requests\DeletePromoCampaignRequest;
 
 use App\Jobs\GeneratePromoCode;
 use App\Lib\MyHelper;
 use DB;
+use Hash;
 
 class ApiPromoCampaign extends Controller
 {
@@ -954,6 +956,33 @@ class ApiPromoCampaign extends Controller
         }
 
         return response()->json($data);
+    }
+
+    public function delete(DeletePromoCampaignRequest $request){
+        $post = $request->json()->all();
+        $user = auth()->user();
+        $password = $request['password'];
+        DB::beginTransaction();
+        if (Hash::check($password, $user->password)){
+
+            $checkData = PromoCampaign::where('id_promo_campaign','=',$post['id_promo_campaign'])->first();
+            if ($checkData) {
+                $delete = PromoCampaign::where('id_promo_campaign','=',$post['id_promo_campaign'])->delete();
+                DB::commit();
+                return MyHelper::checkDelete($delete);
+            }else{
+                return response()->json([
+                    'status'    => 'fail',
+                    'messages'  => ['promo campaign not found']
+                ]);
+            }
+
+        } else {
+            return response()->json([
+                'status'    => 'fail',
+                'messages'  => ['unauthenticated']
+            ]);
+        }
     }
 
 }
