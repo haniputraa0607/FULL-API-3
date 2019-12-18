@@ -16,6 +16,9 @@ Route::group(['middleware' => ['auth:api', 'log_activities'], 'prefix' => 'promo
     // Route::post('getTag', 'ApiPromoCampaign@getTag');
 });
 Route::group(['middleware' => ['auth:api'], 'prefix' => 'promo-campaign'], function () {
+    Route::get('/', 'ApiPromoCampaign@index');
+    Route::any('filter', 'ApiPromoCampaign@index');
+    Route::post('detail', 'ApiPromoCampaign@detail');
     Route::post('getTag', 'ApiPromoCampaign@getTag');
     Route::post('getData', 'ApiPromoCampaign@getData');
     Route::post('check', 'ApiPromoCampaign@check');

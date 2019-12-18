@@ -64,7 +64,7 @@ class PromoCampaignReport extends Eloquent
 
 	public function outlet()
 	{
-		return $this->belongsTo(\App\Models\Outlet::class, 'id_outlet');
+		return $this->belongsTo(\App\Http\Models\Outlet::class, 'id_outlet');
 	}
 
 	public function promo_campaign_promo_code()
@@ -74,11 +74,11 @@ class PromoCampaignReport extends Eloquent
 
 	public function transaction()
 	{
-		return $this->belongsTo(\App\Models\Transaction::class, 'id_transaction');
+		return $this->belongsTo(\App\Http\Models\Transaction::class, 'id_transaction');
 	}
 
 	public function user()
 	{
-		return $this->belongsTo(\App\Models\User::class, 'id_user');
+		return $this->belongsTo(\App\Http\Models\User::class, 'id_user');
 	}
 }

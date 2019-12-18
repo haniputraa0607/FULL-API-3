@@ -51,7 +51,7 @@ class PromoCampaignBuyxgetyRule extends Eloquent
 
 	public function product()
 	{
-		return $this->belongsTo(\App\Models\Product::class, 'benefit_id_product');
+		return $this->belongsTo(\App\Http\Models\Product::class, 'benefit_id_product');
 	}
 
 	public function promo_campaign()

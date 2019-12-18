@@ -43,12 +43,12 @@ class PromoCampaignTierDiscountProduct extends Eloquent
 
 	public function product()
 	{
-		return $this->belongsTo(\App\Models\Product::class, 'id_product');
+		return $this->belongsTo(\App\Http\Models\Product::class, 'id_product');
 	}
 
 	public function product_category()
 	{
-		return $this->belongsTo(\App\Models\ProductCategory::class, 'id_product_category');
+		return $this->belongsTo(\App\Http\Models\ProductCategory::class, 'id_product_category');
 	}
 
 	public function promo_campaign()
