@@ -1493,14 +1493,18 @@ class ApiOnlineTransaction extends Controller
         // hitung product discount
         $totalDisProduct = 0;
         $productDis = app($this->setting_trx)->discountProduct($post);
-        if ($productDis) {
+        if (is_numeric($productDis)) {
             $totalDisProduct = $productDis;
+        }else{
+            return $productDis;
         }
 
         $tree = [];
         // check and group product
         $subtotal = 0;
-        foreach ($post['item'] as $item) {
+        $error_msg=[];
+        $missing_product = 0;
+        foreach ($post['item'] as &$item) {
             // get detail product
             $product = Product::select([
                 'products.id_product','products.product_name','products.product_description',
@@ -1534,21 +1538,30 @@ class ApiOnlineTransaction extends Controller
             ->orderBy('products.position')
             ->find($item['id_product']);
             if(!$product){
-                return [
-                    'status' => 'fail',
-                    'messages' => ['Product not found']
-                ];
+                $missing_product++;
+                continue;
             }
             $product->append('photo');
             $product = $product->toArray();
+            if($product['product_stock_status']!='Available'){
+                $error_msg[] = MyHelper::simpleReplace(
+                    '%product_name% is out of stock',
+                    [
+                        'product_name' => $product['product_name']
+                    ]
+                );
+                continue;
+            }
             unset($product['photos']);
             $product['id_custom'] = $item['id_custom']??null;
             $product['qty'] = $item['qty'];
-            $product['note'] = $item['note'];
+            $product['note'] = $item['note']??'';
             // get modifier
             $mod_price = 0;
-            $product['modifiers']=[];
-            foreach ($item['modifiers'] as $modifier) {
+            $product['modifiers'] = [];
+            $removed_modifier = [];
+            $missing_modifier = 0;
+            foreach ($item['modifiers'] as $key => $modifier) {
                 $id_product_modifier = is_numeric($modifier)?$modifier:$modifier['id_product_modifier'];
                 $qty_product_modifier = is_numeric($modifier)?1:$modifier['qty'];
                 $mod = ProductModifier::select('product_modifiers.id_product_modifier','text','product_modifier_stock_status','product_modifier_price')
@@ -1569,16 +1582,12 @@ class ApiOnlineTransaction extends Controller
                     // product modifier dengan id
                     ->find($id_product_modifier);
                 if(!$mod){
-                    return [
-                        'status' => 'fail',
-                        'messages' => ['Modifier not found']
-                    ];
+                    $missing_modifier++;
+                    continue;
                 }
                 if($mod['product_modifier_stock_status']!='Available'){
-                    return [
-                        'status' => 'fail',
-                        'messages' => ['Modifier not available']
-                    ];
+                    $removed_modifier[] = $mod['text'];
+                    continue;
                 }
                 $mod = $mod->toArray();
                 $mod['qty'] = $qty_product_modifier;
@@ -1586,12 +1595,38 @@ class ApiOnlineTransaction extends Controller
                 $product['modifiers'][]=$mod;
                 $mod_price+=$mod['qty']*$mod['product_modifier_price'];
             }
+            if($missing_modifier){
+                $error_msg[] = MyHelper::simpleReplace(
+                    '%missing_modifier% modifiers for product %product_name% not found',
+                    [
+                        'missing_modifier' => $missing_modifier,
+                        'product_name' => $product['product_name']
+                    ]
+                );
+            }
+            if($removed_modifier){
+                $error_msg[] = MyHelper::simpleReplace(
+                    'Modifier %removed_modifier% for product %product_name% is out of stock',
+                    [
+                        'removed_modifier' => implode(',',$removed_modifier),
+                        'product_name' => $product['product_name']
+                    ]
+                );
+            }
             if(!isset($tree[$product['id_brand']]['name_brand'])){
                 $tree[$product['id_brand']] = Brand::select('name_brand','id_brand')->find($product['id_brand'])->toArray();
             }
             $product['product_price_total'] = $product['qty'] * ($product['product_price']+$mod_price);
             $tree[$product['id_brand']]['products'][]=$product;
             $subtotal += $product['product_price_total'];
+        }
+        if($missing_product){
+            $error_msg[] = MyHelper::simpleReplace(
+                '%missing_product% products not found',
+                [
+                    'missing_product' => $missing_product
+                ]
+            );
         }
         foreach ($grandTotal as $keyTotal => $valueTotal) {
             if ($valueTotal == 'subtotal') {
@@ -1691,7 +1726,31 @@ class ApiOnlineTransaction extends Controller
                 $post['cashback'] = $post['cashback'];
             }
         }
-
+        // check same item inside products
+        foreach ($tree as &$brand) {
+            $oldArr = $brand['products'];
+            $newArr = [];
+            // $oldArr = [product1,product2,product3]
+            while (count($oldArr)) {
+                // $a = product1 ; $oldArr = [product2,product3]
+                $a = array_shift($oldArr);
+                foreach ($oldArr as $k => $b) {
+                    $keys = ['id_product','id_brand','note'];
+                    if($a['id_product']==$b['id_product'] && $a['id_brand']==$b['id_brand'] && $a['note']==$b['note'] && count($a['modifiers']) == count($b['modifiers'])){
+                        foreach($a['modifiers'] as $modifier){
+                            if(!in_array($modifier, $b['modifiers'])){
+                                continue;
+                            }
+                        }
+                        $a['qty'] += $b['qty'];
+                        $a['product_price_total'] += $b['product_price_total'];
+                        unset($oldArr[$k]);
+                    }
+                }
+                $newArr[] = $a;
+            }
+            $brand['products'] = $newArr;
+        }
         $result['outlet'] = [
             'id_outlet' => $outlet['id_outlet'],
             'outlet_name' => $outlet['outlet_name'],
@@ -1705,7 +1764,7 @@ class ApiOnlineTransaction extends Controller
         $result['tax'] = (int) $post['tax'];
         $result['grandtotal'] = (int)$post['subtotal'] + (int)(-$post['discount']) + (int)$post['service'] + (int)$post['tax'] + (int)$post['shipping'];
         $result['cashback_earned'] = (int) $post['cashback'];
-        return MyHelper::checkGet($result);
+        return MyHelper::checkGet($result)+['messages'=>$error_msg];
     }
 
     public function saveLocation($latitude, $longitude, $id_user, $id_transaction, $id_outlet){
