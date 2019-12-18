@@ -25,6 +25,7 @@ class ApiDealsVoucher extends Controller
     function __construct() {
         date_default_timezone_set('Asia/Jakarta');
         $this->deals        = "Modules\Deals\Http\Controllers\ApiDeals";
+        $this->subscription        = "Modules\Subscription\Http\Controllers\ApiSubscription";
     }
 
     /* CREATE VOUCHER */
@@ -511,9 +512,15 @@ class ApiDealsVoucher extends Controller
                             ->get();
             $resultMessage['header'] =  $empty_text[0]['value']??'Anda belum memiliki Kupon.';
             $resultMessage['content'] =  $empty_text[1]['value']??'Potongan menarik untuk setiap pembelian.';
+            return  response()->json([
+                    'status'   => 'fail',
+                    'messages' => ['My voucher is empty'],
+                    'empty'    => $resultMessage
+                ]);
         }
 
-        return response()->json(MyHelper::checkGet($result, $resultMessage));
+        return response()->json(app($this->subscription)->checkGet($result, $resultMessage??''));
+
     }
 
     function kotacuks($deals)
