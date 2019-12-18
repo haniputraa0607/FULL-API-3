@@ -23,6 +23,7 @@ use App\Http\Models\TransactionShipment;
 use App\Http\Models\TransactionPickup;
 use App\Http\Models\TransactionPickupGoSend;
 use App\Http\Models\TransactionPaymentMidtran;
+use App\Http\Models\TransactionAdvanceOrder;
 use App\Http\Models\LogPoint;
 use App\Http\Models\LogBalance;
 use App\Http\Models\ManualPaymentMethod;
@@ -83,19 +84,25 @@ class ApiOnlineTransaction extends Controller
         if (isset($post['headers'])) {
             unset($post['headers']);
         }
-
+        if($post['type'] == 'Advance Order'){
+            $post['id_outlet'] = Setting::where('key','default_outlet')->pluck('value')->first();
+        }
         $dataInsertProduct = [];
         $productMidtrans = [];
         $dataDetailProduct = [];
         $userTrxProduct = [];
 
-        $outlet = Outlet::where('id_outlet', $post['id_outlet'])->with('today')->first();
-        if (empty($outlet)) {
-            DB::rollback();
-            return response()->json([
-                'status'    => 'fail',
-                'messages'  => ['Outlet Not Found']
-                ]);
+        if(isset($post['id_outlet'])){
+            $outlet = Outlet::where('id_outlet', $post['id_outlet'])->with('today')->first();
+            if (empty($outlet)) {
+                DB::rollback();
+                return response()->json([
+                    'status'    => 'fail',
+                    'messages'  => ['Outlet Not Found']
+                    ]);
+            }
+        }else{
+            $outlet = optional();
         }
 
         $issetDate = false;
@@ -1008,7 +1015,42 @@ class ApiOnlineTransaction extends Controller
 
                 $id_pickup_go_send = $gosend->id_transaction_pickup_go_send;
             }
-        }
+        } elseif ($post['type'] == 'Advance Order') {
+            $order_id = MyHelper::createrandom(4, 'Besar Angka');
+            //cek unique order id today
+            $cekOrderId = TransactionAdvanceOrder::join('transactions', 'transactions.id_transaction', 'transaction_advance_orders.id_transaction')
+                                            ->where('id_outlet', $insertTransaction['id_outlet'])
+                                            ->where('order_id', $order_id)
+                                            ->whereDate('transaction_date', date('Y-m-d'))
+                                            ->first();
+            while($cekOrderId){
+                $order_id = MyHelper::createrandom(4, 'Besar Angka');
+
+                $cekOrderId = TransactionAdvanceOrder::join('transactions', 'transactions.id_transaction', 'transaction_advance_orders.id_transaction')
+                                            ->where('id_outlet', $insertTransaction['id_outlet'])
+                                            ->where('order_id', $order_id)
+                                            ->whereDate('transaction_date', date('Y-m-d'))
+                                            ->first();
+            }
+
+            $dataAO = [
+                'id_transaction' => $insertTransaction['id_transaction'],
+                'order_id' => $order_id,
+                'address' => $post['address'],
+                'receive_at' => $post['receive_at'],
+                'receiver_name' => $post['receiver_name'],
+                'receiver_phone' => $post['receiver_phone'],
+                'date_delivery' => $post['date_delivery']
+            ];
+            $insertAO = TransactionAdvanceOrder::create($dataAO);
+            if (!$insertAO) {
+                DB::rollback();
+                return response()->json([
+                    'status'    => 'fail',
+                    'messages'  => ['Insert Advance Order Failed']
+                ]);
+            }
+        } 
 
         //insert pickup go-send
         if($post['type'] == 'GO-SEND'){
