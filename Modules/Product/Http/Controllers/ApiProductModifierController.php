@@ -248,6 +248,7 @@ class ApiProductModifierController extends Controller
     }
 
     public function listPrice(Request $request) {
+        $post = $request->json()->all();
         $id_outlet = $request->json('id_outlet');
         $brands = BrandOutlet::select('id_brand')->where('id_outlet',$id_outlet)->get()->pluck('id_brand');
         $data = ProductModifier::leftJoin('product_modifier_brands','product_modifier_brands.id_product_modifier','=','product_modifiers.id_product_modifier')
@@ -263,12 +264,19 @@ class ApiProductModifierController extends Controller
             $query->where('product_modifier_prices.id_outlet',$id_outlet);
             $query->orWhereNull('product_modifier_prices.id_outlet');
         })->groupBy('product_modifiers.id_product_modifier');
+
+        if($post['rule']??false){
+            $filter = $this->filterList($data,$post['rule'],$post['operator']??'and');
+        }else{
+            $filter = [];
+        }
+
         if($request->page){
             $data = $data->paginate(10);
         }else{
             $data = $data->get();
         }
-        return MyHelper::checkGet($data);
+        return MyHelper::checkGet($data)+$filter;
     }
 
     /**
