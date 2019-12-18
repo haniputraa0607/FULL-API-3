@@ -1451,8 +1451,10 @@ class ApiOnlineTransaction extends Controller
         // hitung product discount
         $totalDisProduct = 0;
         $productDis = app($this->setting_trx)->discountProduct($post);
-        if ($productDis) {
+        if (is_numeric($productDis)) {
             $totalDisProduct = $productDis;
+        }else{
+            return $productDis;
         }
 
         $tree = [];
@@ -1460,7 +1462,7 @@ class ApiOnlineTransaction extends Controller
         $subtotal = 0;
         $error_msg=[];
         $missing_product = 0;
-        foreach ($post['item'] as $item) {
+        foreach ($post['item'] as &$item) {
             // get detail product
             $product = Product::select([
                 'products.id_product','products.product_name','products.product_description',
@@ -1517,7 +1519,7 @@ class ApiOnlineTransaction extends Controller
             $product['modifiers'] = [];
             $removed_modifier = [];
             $missing_modifier = 0;
-            foreach ($item['modifiers'] as $modifier) {
+            foreach ($item['modifiers'] as $key => $modifier) {
                 $id_product_modifier = is_numeric($modifier)?$modifier:$modifier['id_product_modifier'];
                 $qty_product_modifier = is_numeric($modifier)?1:$modifier['qty'];
                 $mod = ProductModifier::select('product_modifiers.id_product_modifier','text','product_modifier_stock_status','product_modifier_price')
@@ -1682,7 +1684,31 @@ class ApiOnlineTransaction extends Controller
                 $post['cashback'] = $post['cashback'];
             }
         }
-
+        // check same item inside products
+        foreach ($tree as &$brand) {
+            $oldArr = $brand['products'];
+            $newArr = [];
+            // $oldArr = [product1,product2,product3]
+            while (count($oldArr)) {
+                // $a = product1 ; $oldArr = [product2,product3]
+                $a = array_shift($oldArr);
+                foreach ($oldArr as $k => $b) {
+                    $keys = ['id_product','id_brand','note'];
+                    if($a['id_product']==$b['id_product'] && $a['id_brand']==$b['id_brand'] && $a['note']==$b['note'] && count($a['modifiers']) == count($b['modifiers'])){
+                        foreach($a['modifiers'] as $modifier){
+                            if(!in_array($modifier, $b['modifiers'])){
+                                continue;
+                            }
+                        }
+                        $a['qty'] += $b['qty'];
+                        $a['product_price_total'] += $b['product_price_total'];
+                        unset($oldArr[$k]);
+                    }
+                }
+                $newArr[] = $a;
+            }
+            $brand['products'] = $newArr;
+        }
         $result['outlet'] = [
             'id_outlet' => $outlet['id_outlet'],
             'outlet_name' => $outlet['outlet_name'],
