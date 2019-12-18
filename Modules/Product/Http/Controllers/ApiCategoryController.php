@@ -344,6 +344,9 @@ class ApiCategoryController extends Controller
      */
     function listCategoryTree(Request $request) {
         $post = $request->json()->all();
+        if(!($post['id_outlet']??false)){
+            $post['id_outlet'] = Setting::where('key','default_outlet')->pluck('value')->first();
+        }
         $products = Product::select([
                 'products.id_product','products.product_name','products.product_description',
                 'product_prices.product_price','product_prices.product_stock_status'
@@ -410,6 +413,9 @@ class ApiCategoryController extends Controller
 
     public function search(Request $request) {
         $post = $request->except('_token');
+        if(!($post['id_outlet']??false)){
+            $post['id_outlet'] = Setting::where('key','default_outlet')->pluck('value')->first();
+        }
         $products = Product::select([
                 'products.id_product','products.product_name','products.product_description',
                 'product_prices.product_price','product_prices.product_stock_status',

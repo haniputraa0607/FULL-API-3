@@ -86,9 +86,9 @@ Route::group(['prefix' => 'api/transaction', 'middleware' => 'log_activities', '
 });
 
 Route::group(['prefix' => 'api/transaction', 'middleware' => ['log_activities', 'auth:api'], 'namespace' => 'Modules\Transaction\Http\Controllers'], function () {
-    Route::post('/detail/webview', 'ApiWebviewController@webview');
     Route::post('/detail/webview/point', 'ApiWebviewController@webviewPoint');
     Route::post('/detail/webview/balance', 'ApiWebviewController@webviewBalance');
+    Route::post('/detail/webview/{mode?}', 'ApiWebviewController@webview');
 
     Route::post('/detail/webview/success', 'ApiWebviewController@trxSuccess');
 });
