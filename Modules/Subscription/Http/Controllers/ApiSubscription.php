@@ -1450,11 +1450,30 @@ class ApiSubscription extends Controller
                 $text['content'] = $empty_text[1]['value']??'Banyak keuntungan dengan berlangganan.';
                 return  response()->json([
                     'status'   => 'fail',
-                    'messages' => $text
+                    'messages' => ['My Subscription is empty'],
+                    'empty'    => $text,
                 ]);
             }
         }
-        return response()->json(MyHelper::checkGet($data));
+        return response()->json($this->checkGet($data));
+    }
+
+    public static function  checkGet($data, $message = null){
+            if($data && !empty($data)) return ['status' => 'success', 'result' => $data];
+            else if(empty($data)) {
+                if($message == null){
+                    $message = 'Maaf, halaman ini tidak tersedia';
+                }
+                return [
+                    'status'    => 'fail', 
+                    'messages'  => [$message], 
+                    'empty'     => [
+                        'header'    => "",
+                        'content'   => ""
+                    ]
+                ];
+            }
+            else return ['status' => 'fail', 'messages' => ['failed to retrieve data']];
     }
 
 }
