@@ -28,12 +28,20 @@ class ApiProductModifierController extends Controller
      */
     public function index(Request $request)
     {
-        if($request->page){
-            $modifiers = ProductModifier::paginate(10);
+        $post = $request->json()->all();
+        $promod = (new ProductModifier)->newQuery();
+
+        if($post['rule']??false){
+            $filter = $this->filterList($promod,$post['rule'],$post['operator']??'and');
         }else{
-            $modifiers = ProductModifier::get();
+            $filter = [];
         }
-        return MyHelper::checkGet($modifiers);
+        if($request->page){
+            $modifiers = $promod->paginate(10);
+        }else{
+            $modifiers = $promod->get();
+        }
+        return MyHelper::checkGet($modifiers) + $filter;
     }
 
     /**
@@ -240,6 +248,7 @@ class ApiProductModifierController extends Controller
     }
 
     public function listPrice(Request $request) {
+        $post = $request->json()->all();
         $id_outlet = $request->json('id_outlet');
         $brands = BrandOutlet::select('id_brand')->where('id_outlet',$id_outlet)->get()->pluck('id_brand');
         $data = ProductModifier::leftJoin('product_modifier_brands','product_modifier_brands.id_product_modifier','=','product_modifiers.id_product_modifier')
@@ -255,12 +264,19 @@ class ApiProductModifierController extends Controller
             $query->where('product_modifier_prices.id_outlet',$id_outlet);
             $query->orWhereNull('product_modifier_prices.id_outlet');
         })->groupBy('product_modifiers.id_product_modifier');
+
+        if($post['rule']??false){
+            $filter = $this->filterList($data,$post['rule'],$post['operator']??'and');
+        }else{
+            $filter = [];
+        }
+
         if($request->page){
             $data = $data->paginate(10);
         }else{
             $data = $data->get();
         }
-        return MyHelper::checkGet($data);
+        return MyHelper::checkGet($data)+$filter;
     }
 
     /**
@@ -296,5 +312,27 @@ class ApiProductModifierController extends Controller
         }
         DB::commit();
         return ['status'=>'success'];
+    }
+    public function filterList($query,$rules,$operator='and'){
+        $newRule=[];
+        $total = $query->count();
+        foreach ($rules as $var) {
+            $rule=[$var['operator']??'=',$var['parameter']??''];
+            if($rule[0]=='like'){
+                $rule[1]='%'.$rule[1].'%';
+            }
+            $newRule[$var['subject']][]=$rule;
+        }
+        $where=$operator=='and'?'where':'orWhere';
+        $subjects=['code','text','modifier_type','type','visibility','product_modifier_visibility'];
+        foreach ($subjects as $subject) {
+            if($rules2=$newRule[$subject]??false){
+                foreach ($rules2 as $rule) {
+                    $query->$where($subject,$rule[0],$rule[1]);
+                }
+            }
+        }
+        $filtered = $query->count();
+        return ['total'=>$total,'filtered'=>$filtered];
     }
 }
