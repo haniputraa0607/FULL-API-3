@@ -10,6 +10,7 @@ class FavoriteModifier extends Model
 
     protected $fillable = [
     	'id_favorite',
+    	'qty',
     	'id_product_modifier'
     ];
 
