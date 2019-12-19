@@ -15,6 +15,7 @@ class AddQtyToFavoriteModifiersTable extends Migration
     {
         Schema::table('favorite_modifiers', function (Blueprint $table) {
             $table->unsignedInteger('qty')->after('id_product_modifier');
+            $table->foreign('id_product_modifier','fk_favorite_modifiers_product_modifier')->references('id_product_modifier')->on('product_modifiers')->onDelete('CASCADE');
         });
     }
 
@@ -26,6 +27,7 @@ class AddQtyToFavoriteModifiersTable extends Migration
     public function down()
     {
         Schema::table('favorite_modifiers', function (Blueprint $table) {
+            $table->dropForeign('fk_favorite_modifiers_product_modifier');
             $table->dropColumn('qty');
         });
     }

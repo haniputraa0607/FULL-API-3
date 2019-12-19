@@ -176,7 +176,7 @@ class ApiFavoriteController extends Controller
                         $id_product_modifier = $modifier;
                         $qty = 1;
                     }
-                    $insert = FavoriteModifier::insert([
+                    $insert = FavoriteModifier::create([
                         'id_favorite'=>$data->id_favorite,
                         'id_product_modifier'=>$id_product_modifier,
                         'qty' => $qty
