@@ -242,7 +242,43 @@ class ApiPromoCampaign extends Controller
         ];
     }
 
-    public function detail(Request $request) {
+    public function detail(Request $request)
+    {
+        $post = $request->json()->all();
+        $data = [
+            'user',
+            'promo_campaign_promo_codes',
+            'promo_campaign_have_tags.promo_campaign_tag',
+            'outlets',
+            'promo_campaign_product_discount_rules',
+            'promo_campaign_product_discount.product.category',
+            'promo_campaign_tier_discount_rules',
+            'promo_campaign_tier_discount_product.product',
+            'promo_campaign_buyxgety_rules.product',
+            'promo_campaign_buyxgety_product_requirement.product'
+        ];
+        $promoCampaign = PromoCampaign::with($data)->where('id_promo_campaign', '=', $post['id_promo_campaign'])->get()->toArray();
+        if ($promoCampaign) {
+            $promoCampaign[0]['used_code'] = PromoCampaignReport::where('promo_campaign_reports.id_promo_campaign', $post['id_promo_campaign'])->get()->count();
+            $total = PromoCampaignReport::where('promo_campaign_reports.id_promo_campaign', $post['id_promo_campaign']);
+            $this->filterReport($total,$request,$foreign);
+            foreach ($foreign as $value) {
+                $total->leftJoin(...$value);
+            }
+            $promoCampaign[0]['total'] = $total->get()->count();
+            $result = [
+                'status'  => 'success',
+                'result'  => $promoCampaign[0]
+            ];
+        } else {
+            $result = [
+                'status'  => 'fail',
+                'message'  => ['Promo Campaign Not Found']
+            ];
+        }
+        return response()->json($result);
+    }
+    public function detail2(Request $request) {
         $post = $request->json()->all();
 
         $promoCampaign = PromoCampaign::with(
@@ -254,7 +290,8 @@ class ApiPromoCampaign extends Controller
                             'promo_campaign_tier_discount_product.product',
                             'promo_campaign_buyxgety_rules.product',
                             'promo_campaign_buyxgety_product_requirement.product',
-                            'promo_campaign_reports'
+                            'promo_campaign_reports',
+                            'outlets'
                         )
                         ->where('id_promo_campaign', '=', $post['id_promo_campaign'])
                         ->first();
@@ -280,6 +317,212 @@ class ApiPromoCampaign extends Controller
             ];
         }
         return response()->json($result);
+    }
+
+    public function report(Request $request)
+    {
+        $post = $request->json()->all();
+        $query = PromoCampaignReport::select('promo_campaign_reports.*')->with(['promo_campaign_promo_code','transaction','outlet'])->where('promo_campaign_reports.id_promo_campaign', $post['id_promo_campaign']);
+        $filter = null;
+        $count = (new PromoCampaignReport)->newQuery()->where('promo_campaign_reports.id_promo_campaign', $post['id_promo_campaign']);
+        $total = (new PromoCampaignReport)->newQuery()->where('promo_campaign_reports.id_promo_campaign', $post['id_promo_campaign']);
+        $foreign=[];
+        $foreign2=[];
+        if($post['rule']??false){
+            $this->filterReport($query,$request,$foreign);
+            $this->filterReport($count,$request,$foreign2);
+        }
+        $column = ['promo_code','user_name','created_at','receipt_number','outlet','device_type'];
+        if($post['start']){
+            $query->skip($post['start']);
+        }
+        if($post['length']>0){
+            $query->take($post['length']);
+        }
+        foreach ($post['order'] as $value) {
+            switch ($column[$value['column']]) {
+                case 'promo_code':
+                $foreign['promo_campaign_promo_codes']=array('promo_campaign_promo_codes','promo_campaign_promo_codes.id_promo_campaign_promo_code','=','promo_campaign_reports.id_promo_campaign_promo_code');
+                $query->orderBy('promo_code',$value['dir']);
+                break;
+                
+                case 'receipt_number':
+                $foreign['transactions']=array('transactions','transactions.id_transaction','=','promo_campaign_reports.id_transaction');
+                $query->orderBy('transaction_receipt_number',$value['dir']);
+                break;
+                
+                case 'outlet':
+                $foreign['outlets']=array('outlets','outlets.id_outlet','=','promo_campaign_reports.id_outlet');
+                $query->orderBy('outlet_name',$value['dir']);
+                break;
+                
+                default:
+                $query->orderBy('promo_campaign_reports.'.$column[$value['column']],$value['dir']);
+                break;
+            }
+        }
+        foreach ($foreign as $value) {
+            $query->leftJoin(...$value);
+        }
+        foreach ($foreign2 as $value) {
+            $count->leftJoin(...$value);
+        }
+
+        $query = $query->get()->toArray();
+        $count = $count->get()->count();
+        $total = $total->get()->count();
+
+        if (isset($query) && !empty($query)) {
+            $result = [
+                'status'  => 'success',
+                'result'  => $query,
+                'total'  => $total,
+                'count'  => $count
+            ];
+        } else {
+            $result = [
+                'status'  => 'fail',
+                'message'  => ['No Report']
+            ];
+        }
+        return response()->json($result);
+    }
+
+    public function Coupon(Request $request)
+    {
+        $post = $request->json()->all();
+
+        $query = PromoCampaignPromoCode::select('promo_campaign_promo_codes.*', 'promo_campaigns.limitation_usage')
+                ->join('promo_campaigns', 'promo_campaigns.id_promo_campaign', '=', 'promo_campaign_promo_codes.id_promo_campaign')
+                ->where('promo_campaign_promo_codes.id_promo_campaign', $post['id_promo_campaign']);
+
+        $filter = null;
+        $count = (new PromoCampaignPromoCode)->newQuery()->where('promo_campaign_promo_codes.id_promo_campaign', $post['id_promo_campaign']);
+        $total = (new PromoCampaignPromoCode)->newQuery()->where('promo_campaign_promo_codes.id_promo_campaign', $post['id_promo_campaign']);
+        $foreign=[];
+        $foreign2=[];
+        
+        $column = ['promo_code','status','usage','available','limitation_usage'];
+        if($post['start']){
+            $query->skip($post['start']);
+        }
+        if($post['length']>0){
+            $query->take($post['length']);
+        }
+        foreach ($post['order'] as $value) {
+            switch ($column[$value['column']]) {
+                case 'status':
+                case 'available':
+                $query->orderBy('usage',$value['dir']);
+                break;
+                
+                case 'limitation_usage':
+                $query->orderBy('limitation_usage',$value['dir']);
+                break;
+                
+                default:
+                $query->orderBy('promo_campaign_promo_codes.'.$column[$value['column']],$value['dir']);
+                break;
+            }
+        }
+        foreach ($foreign as $value) {
+            $query->leftJoin(...$value);
+        }
+        foreach ($foreign2 as $value) {
+            $count->leftJoin(...$value);
+        }
+
+        $query = $query->get()->toArray();
+        $count = $count->get()->count();
+        $total = $total->get()->count();
+
+        if (isset($query) && !empty($query)) {
+            $result = [
+                'status'  => 'success',
+                'result'  => $query,
+                'total'  => $total,
+                'count'  => $count
+            ];
+        } else {
+            $result = [
+                'status'  => 'fail',
+                'message'  => ['No Report']
+            ];
+        }
+        return response()->json($result);
+    }
+
+    protected function filterReport($query, $request,&$foreign='')
+    {
+        $query->groupBy('promo_campaign_reports.id_promo_campaign_report');
+        $allowed = array(
+            'operator' => ['=', 'like', '<', '>', '<=', '>='],
+            'subject' => ['promo_code','user_phone','created_at','receipt_number','id_outlet','device_type','outlet_count','user_count'],
+            'mainSubject' => ['user_phone','created_at','id_outlet','device_type']
+        );
+        $return = [];
+        $where = $request->json('operator') == 'or' ? 'orWhere' : 'where';
+        $rule = $request->json('rule');
+        $query->where(function($queryx) use ($rule,$allowed,$where,$query,&$foreign,$request){
+            $foreign=array();
+            $outletCount=0;
+            $userCount=0;
+            foreach ($rule??[] as $value) {
+                if (!in_array($value['subject'], $allowed['subject'])) {
+                    continue;
+                }
+                if (!(isset($value['operator']) && $value['operator'] && in_array($value['operator'], $allowed['operator']))) {
+                    $value['operator'] = '=';
+                }
+                if ($value['operator'] == 'like') {
+                    $value['parameter'] = '%' . $value['parameter'] . '%';
+                }
+                if (in_array($value['subject'], $allowed['mainSubject'])) {
+                    if($value['subject']=='created_at'){
+                        $queryx->$where(\DB::raw('UNIX_TIMESTAMP(promo_campaign_reports.'.$value['subject'].')'), $value['operator'], strtotime($value['parameter']));
+                    }else{
+                        $queryx->$where('promo_campaign_reports.'.$value['subject'], $value['operator'], $value['parameter']);
+                    }
+                } else {
+                    switch ($value['subject']) {
+                        case 'promo_code':
+                        $foreign['promo_campaign_promo_codes']=['promo_campaign_promo_codes','promo_campaign_promo_codes.id_promo_campaign_promo_code','=','promo_campaign_reports.id_promo_campaign_promo_code'];
+                        $queryx->$where('promo_code', $value['operator'], $value['parameter']);
+                        break;
+                        
+                        case 'receipt_number':
+                        $foreign['transactions']=['transactions','transactions.id_transaction','=','promo_campaign_reports.id_transaction'];
+                        $queryx->$where('transaction_receipt_number', $value['operator'], $value['parameter']);
+                        break;
+
+                        case 'outlet_count':
+                        if(!$outletCount){
+                            $query->addSelect('outlet_total');
+                            $outletCount=1;
+                        }
+                        $foreign['t2']=[\DB::raw('(SELECT COUNT(*) AS outlet_total, id_outlet FROM `promo_campaign_reports` WHERE id_promo_campaign = '.$request->json('id_promo_campaign').' GROUP BY id_outlet) AS `t2`'),'promo_campaign_reports.id_outlet','=','t2.id_outlet'];
+                        $queryx->$where('outlet_total', $value['operator'], $value['parameter']);
+                        break;
+
+
+                        case 'user_count':
+                        if(!$userCount){
+                            $query->addSelect('user_total');
+                            $userCount=1;
+                        }
+                        $foreign['t3']=[\DB::raw('(SELECT COUNT(*) AS user_total, id_user FROM `promo_campaign_reports` WHERE id_promo_campaign = '.$request->json('id_promo_campaign').' GROUP BY id_user) AS `t3`'),'promo_campaign_reports.id_user','=','t3.id_user'];
+                        $queryx->$where('user_total', $value['operator'], $value['parameter']);
+                        break;
+
+                        default:
+                            # code...
+                        break;
+                    }
+                }
+                $return[] = $value;
+            }
+        });
+        return ['filter' => $return, 'filter_operator' => $request->json('operator')];
     }
 
     public function getTag(Request $request)
@@ -867,7 +1110,7 @@ class ApiPromoCampaign extends Controller
     {
         $post = $request->json()->all();
         $user = $request->user();
-        // return $post;
+
         $promoCampaign = PromoCampaign::with([
                             'promo_campaign_have_tags.promo_campaign_tag'
                         ])
