@@ -1,0 +1,14 @@
+{
+    "name": "PromoCampaign",
+    "alias": "promocampaign",
+    "description": "",
+    "keywords": [],
+    "active": 1,
+    "order": 0,
+    "providers": [
+        "Modules\\PromoCampaign\\Providers\\PromoCampaignServiceProvider"
+    ],
+    "aliases": {},
+    "files": [],
+    "requires": []
+}

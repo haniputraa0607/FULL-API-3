@@ -837,6 +837,15 @@ class ConfigsTableSeeder extends Seeder
                 'created_at' => date('Y-m-d H:i:s'),
                 'updated_at' => date('Y-m-d H:i:s'),
             ),
+            92 => 
+                array (
+                    'id_config' => 93,
+                    'config_name' => 'promo campaign',
+                    'description' => '',
+                    'is_active' => 1,
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                )
         ));
     }
 }

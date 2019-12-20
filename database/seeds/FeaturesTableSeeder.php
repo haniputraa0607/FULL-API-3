@@ -1603,6 +1603,45 @@ class FeaturesTableSeeder extends Seeder
                 'created_at' => date('Y-m-d H:00:00'),
                 'updated_at' => date('Y-m-d H:00:00'),
             ),
+            199 => 
+            array(
+                'id_feature' => 200,
+                'feature_type' => 'List',
+                'feature_module' => 'Promo Campaign',
+                'created_at' => date('Y-m-d H:00:00'),
+                'updated_at' => date('Y-m-d H:00:00'),
+            ),
+            200 =>
+            array(
+                'id_feature' => 201,
+                'feature_type' => 'Detail',
+                'feature_module' => 'Promo Campaign',
+                'created_at' => date('Y-m-d H:00:00'),
+                'updated_at' => date('Y-m-d H:00:00'),
+            ),
+            201 =>
+            array(
+                'id_feature' => 202,
+                'feature_type' => 'Create',
+                'feature_module' => 'Promo Campaign',
+                'created_at' => date('Y-m-d H:00:00'),
+                'updated_at' => date('Y-m-d H:00:00'),
+            ),
+            202 =>
+            array(
+                'id_feature' => 203,
+                'feature_type' => 'Update',
+                'feature_module' => 'Promo Campaign',
+                'created_at' => date('Y-m-d H:00:00'),
+                'updated_at' => date('Y-m-d H:00:00'),
+            ),
+            203 =>
+            array(
+                'id_feature' => 204,
+                'feature_type' => 'Delete',
+                'feature_module' => 'Promo Campaign',
+                'created_at' => date('Y-m-d H:00:00'),
+                'updated_at' => date('Y-m-d H:00:00'),
         ));
     }
 }
