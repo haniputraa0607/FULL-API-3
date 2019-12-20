@@ -17,7 +17,7 @@ class UpdateRequest extends FormRequest
     {
         return [
             'id_product_modifier' => 'numeric|required',
-            'modifier_type'       => 'in:Global,Specific|required',
+            'modifier_type'       => 'in:Global,Specific,Global Brand|required',
             'type'                => 'string|required',
             'code'                => 'string|required',
             'text'                => 'string|required',
