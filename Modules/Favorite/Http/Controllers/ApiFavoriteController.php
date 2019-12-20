@@ -8,6 +8,8 @@ use Illuminate\Routing\Controller;
 use Modules\Favorite\Entities\Favorite;
 use Modules\Favorite\Entities\FavoriteModifier;
 
+use Modules\Favorite\Http\Requests\CreateRequest;
+
 use App\Http\Models\Outlet;
 use App\Http\Models\ProductModifierPrice;
 
@@ -67,14 +69,17 @@ class ApiFavoriteController extends Controller
             }
             if(count($datax)>=1){
                 $datax = MyHelper::groupIt($datax,'id_outlet',function($key,&$val) use ($nf,$data){
+                    $total_price = $val['product']['price'];
                     $val['product']['price']=MyHelper::requestNumber($val['product']['price'],$nf);
                     foreach ($val['modifiers'] as &$modifier) {
                         $price = ProductModifierPrice::select('product_modifier_price')->where([
                             'id_product_modifier' => $modifier['id_product_modifier'],
                             'id_outlet' => $val['id_outlet']
                         ])->pluck('product_modifier_price')->first();
-                        $modifier['price'] = MyHelper::requestNumber($price,$nf);
+                        $modifier['product_modifier_price'] = MyHelper::requestNumber($price,$nf);
+                        $total_price+=$price*$modifier['qty'];
                     }
+                    $val['product_price_total'] = $total_price;
                     return $key;
                 },function($key,&$val) use ($latitude,$longitude){
                     $outlet = Outlet::select('id_outlet','outlet_name','outlet_address','outlet_latitude','outlet_longitude')->with('today')->find($key)->toArray();
@@ -102,14 +107,17 @@ class ApiFavoriteController extends Controller
                 return MyHelper::checkGet($data);
             }
             $data = $data->toArray();
+            $total_price = $data['product']['price'];
             $data['product']['price']=MyHelper::requestNumber($data['product']['price'],$nf);
             foreach ($data['modifiers'] as &$modifier) {
                 $price = ProductModifierPrice::select('product_modifier_price')->where([
                     'id_product_modifier' => $modifier['id_product_modifier'],
                     'id_outlet' => $data['id_outlet']
                 ])->pluck('product_modifier_price')->first();
-                $modifier['price'] = MyHelper::requestNumber($price,$nf);
+                $modifier['product_modifier_price'] = MyHelper::requestNumber($price,$nf);
+                $total_price += $price*$modifier['qty'];
             }
+            $data['product_price_total'] = $total_price;
         }
         return MyHelper::checkGet($data,'empty');
     }
@@ -127,7 +135,7 @@ class ApiFavoriteController extends Controller
      * }
      * @return Response
      */
-    public function store(Request $request){
+    public function store(CreateRequest $request){
         $id_user = $request->user()->id;
         $modifiers = $request->json('modifiers');
         // check is already exist

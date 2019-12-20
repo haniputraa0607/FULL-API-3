@@ -1,5 +1,5 @@
 <?php
-Route::group(['prefix' => 'api/outlet', 'middleware' => ['log_activities', 'auth:api'], 'namespace' => 'Modules\Outlet\Http\Controllers'], function()
+Route::group(['prefix' => 'api/outlet', 'middleware' => ['log_activities', 'auth:api', 'user_agent'], 'namespace' => 'Modules\Outlet\Http\Controllers'], function()
 {
     Route::any('list', 'ApiOutletController@listOutlet');
     Route::any('list/ordernow', 'ApiOutletController@listOutletOrderNow');
@@ -28,37 +28,37 @@ Route::group(['prefix' => 'api/outlet', 'middleware' => ['log_activities', 'auth
     Route::any('nearme', 'ApiOutletController@nearMe');
 });
 
-Route::group(['prefix' => 'api/outlet', 'middleware' => ['log_activities', 'auth:api-be'], 'namespace' => 'Modules\Outlet\Http\Controllers'], function()
+Route::group(['prefix' => 'api/outlet', 'middleware' => ['log_activities', 'auth:api-be','user_agent'], 'namespace' => 'Modules\Outlet\Http\Controllers'], function()
 {
-    Route::any('be/list', 'ApiOutletController@listOutlet');
-    Route::any('be/filter', 'ApiOutletController@filter');
-    Route::any('ajax_handler', 'ApiOutletController@ajaxHandler');
+    Route::any('be/list', ['middleware' => 'feature_control:24', 'uses' =>'ApiOutletController@listOutlet']);
+    Route::any('be/filter', ['middleware' => 'feature_control:24', 'uses' =>'ApiOutletController@filter']);
+    Route::any('ajax_handler','ApiOutletController@ajaxHandler');
 
     /* photo */
     Route::group(['prefix' => 'photo'], function() {
-        Route::post('create', 'ApiOutletController@upload');
-        Route::post('update', 'ApiOutletController@updatePhoto');
-        Route::post('delete', 'ApiOutletController@deleteUpload');
+        Route::post('create', ['middleware' => 'feature_control:29', 'uses' =>'ApiOutletController@upload']);
+        Route::post('update', ['middleware' => 'feature_control:30', 'uses' =>'ApiOutletController@updatePhoto']);
+        Route::post('delete', ['middleware' => 'feature_control:30', 'uses' =>'ApiOutletController@deleteUpload']);
     });
 
     /* holiday */
     Route::group(['prefix' => 'holiday'], function() {
-        Route::any('list', 'ApiOutletController@listHoliday');
-        Route::post('create', 'ApiOutletController@createHoliday');
-        Route::post('update', 'ApiOutletController@updateHoliday');
-        Route::post('delete', 'ApiOutletController@deleteHoliday');
+        Route::any('list', ['middleware' => 'feature_control:34', 'uses' =>'ApiOutletController@listHoliday']);
+        Route::post('create', ['middleware' => 'feature_control:36', 'uses' =>'ApiOutletController@createHoliday']);
+        Route::post('update', ['middleware' => 'feature_control:37', 'uses' =>'ApiOutletController@updateHoliday']);
+        Route::post('delete', ['middleware' => 'feature_control:38', 'uses' =>'ApiOutletController@deleteHoliday']);
     });
 
     // admin outlet
     Route::group(['prefix' => 'admin'], function() {
-        Route::post('create', 'ApiOutletController@createAdminOutlet');
-        Route::post('detail', 'ApiOutletController@detailAdminOutlet');
-        Route::post('update', 'ApiOutletController@updateAdminOutlet');
-        Route::post('delete', 'ApiOutletController@deleteAdminOutlet');
+        Route::post('create', ['middleware' => 'feature_control:40', 'uses' =>'ApiOutletController@createAdminOutlet']);
+        Route::post('detail', ['middleware' => 'feature_control:39', 'uses' =>'ApiOutletController@detailAdminOutlet']);
+        Route::post('update', ['middleware' => 'feature_control:41', 'uses' =>'ApiOutletController@updateAdminOutlet']);
+        Route::post('delete', ['middleware' => 'feature_control:42', 'uses' =>'ApiOutletController@deleteAdminOutlet']);
     });
 
-    Route::post('create', 'ApiOutletController@create');
-    Route::post('update', 'ApiOutletController@update');
+    Route::post('create', ['middleware' => 'feature_control:26', 'uses' =>'ApiOutletController@create']);
+    Route::post('update', ['middleware' => 'feature_control:27', 'uses' =>'ApiOutletController@update']);
     Route::post('batch-update', 'ApiOutletController@batchUpdate');
     Route::post('update/status', 'ApiOutletController@updateStatus');
     Route::post('update/pin', 'ApiOutletController@updatePin');

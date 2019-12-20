@@ -12,6 +12,7 @@ use App\Http\Models\City;
 use App\Http\Models\User;
 use App\Http\Models\Courier;
 use App\Http\Models\Product;
+use App\Http\Models\ProductModifierPrice;
 use App\Http\Models\Setting;
 use App\Http\Models\StockLog;
 use App\Http\Models\UserAddress;
@@ -1583,6 +1584,62 @@ class ApiTransaction extends Controller
         }
 
 
+    }
+
+    public function transactionDetailTrx(Request $request) {
+        $trid = explode(',',$request->json('transaction_receipt_number'));
+        $rn = $request->json('request_number');
+        if(count($trid)!=2){
+            return [
+                'status' => 'false',
+                'messages' => ['Invalid receipt number']
+            ];
+        }
+        $id_transaction = Transaction::select('id_transaction')->where([
+            'transaction_receipt_number' => $trid[0],
+            'id_transaction' => $trid[1]
+        ])->pluck('id_transaction')->first();
+        if(!$id_transaction){
+            return [
+                'status'=>'fail',
+                'messages'=>['Transaction not found']
+            ];
+        }
+        $pt = TransactionProduct::select(DB::raw('
+            0 as id_custom,
+            transaction_products.id_product,
+            id_transaction_product,
+            id_brand,
+            transaction_products.id_outlet,
+            transaction_product_qty as qty,
+            product_prices.product_price,
+            products.product_name,
+            transaction_products.transaction_product_note as note
+            '))
+        ->join('products','products.id_product','=','transaction_products.id_product')
+        ->join('product_prices','product_prices.id_product','=','products.id_product')
+        ->whereRaw('product_prices.id_outlet = transaction_products.id_outlet')
+        ->where('id_transaction',$id_transaction)
+        ->with(['modifiers'=>function($query){
+                    $query->select('id_transaction_product','id_product_modifier','qty','text');
+                }])->first()->toArray();
+        if(!$pt){
+            return MyHelper::checkGet($pt);
+        }
+        $id_outlet = $pt['id_outlet'];
+        $total_mod_price = 0;
+        foreach ($pt['modifiers'] as &$modifier) {
+            $price = ProductModifierPrice::select('product_modifier_price')->where([
+                'id_product_modifier'=>$modifier['id_product_modifier'],
+                'id_outlet' => $id_outlet
+            ])->pluck('product_modifier_price')->first();
+            $total_mod_price+=$price*$modifier['qty'];
+            $modifier['product_modifier_price'] = MyHelper::requestNumber($price,$rn);
+        }
+        $pt['product_price_total'] = MyHelper::requestNumber($total_mod_price + $pt['product_price'],$rn);
+        $pt['product_price'] = MyHelper::requestNumber($pt['product_price'],$rn);
+        $pt['note'] = $pt['note']?:'';
+        return MyHelper::checkGet($pt);
     }
 
     public function transactionPointDetail(Request $request) {

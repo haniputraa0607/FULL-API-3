@@ -50,6 +50,7 @@ Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent'], 'pre
     Route::get('/', 'ApiTransaction@transactionList');
     Route::any('/filter', 'ApiTransaction@transactionFilter');
     Route::post('/detail', 'ApiTransaction@transactionDetail');
+    Route::post('/item', 'ApiTransaction@transactionDetailTrx');
     Route::post('/point/detail', 'ApiTransaction@transactionPointDetail');
     Route::post('/balance/detail', 'ApiTransaction@transactionBalanceDetail');
 
