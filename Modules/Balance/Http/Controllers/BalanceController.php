@@ -113,7 +113,7 @@ class BalanceController extends Controller
 
         // AutoCRM Taruh sini
 
-        $enc = base64_encode(json_encode(($dataHashBalance)));
+        $enc = MyHelper::encrypt2019(json_encode(($dataHashBalance)));
         // update enc column
         $log_balance->update(['enc' => $enc]);
 

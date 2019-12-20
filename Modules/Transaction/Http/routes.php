@@ -40,8 +40,8 @@ Route::group(['middleware' => ['auth:api-be', 'log_activities', 'user_agent'], '
 
         Route::post('/method/save', ['middleware' => '67', 'uses' => 'ApiTransaction@manualPaymentMethod']);
         Route::post('/method/delete', ['middleware' => '68', 'uses' => 'ApiTransaction@manualPaymentMethodDelete']);
-        Route::post('/be/new', 'ApiOnlineTransaction@newTransaction');
     });
+    Route::post('/be/new', 'ApiOnlineTransaction@newTransaction');
     Route::get('be/{key}', 'ApiTransaction@transactionList');
 });
 
