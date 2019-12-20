@@ -7,14 +7,83 @@ Route::group(['middleware' => ['api', 'log_activities'], 'prefix' => 'api/settin
 
 Route::group(['middleware' => ['auth:api', 'log_activities'], 'prefix' => 'api/setting', 'namespace' => 'Modules\Setting\Http\Controllers'], function()
 {
-    Route::get('/get/{key}', 'ApiSetting@get');
-    Route::any('email/update', 'ApiSetting@emailUpdate');
+    Route::any('/intro/home', 'ApiTutorial@introHomeFrontend');
+    Route::any('/faq', 'ApiSetting@faqList');
+    Route::get('/webview/faq', 'ApiSetting@faqWebview');
+    Route::any('whatsapp', 'ApiSetting@settingWhatsApp');
+    Route::any('jobs_list', 'ApiSetting@jobsList');
+    Route::any('celebrate_list', 'ApiSetting@celebrateList');
+    Route::post('webview', 'ApiSetting@settingWebview');
+    Route::get('/cron/point-reset', 'ApiSetting@cronPointReset');
+
+    // complete profile
+    Route::group(['middleware' => 'auth:api', 'prefix' => 'complete-profile'], function()
+    {
+        Route::get('/', 'ApiSetting@getCompleteProfile');
+        Route::post('/', 'ApiSetting@completeProfile');
+        Route::post('/success-page', 'ApiSetting@completeProfileSuccessPage');
+    });
+
+    Route::post('/free-delivery', 'ApiSetting@updateFreeDelivery');
+    Route::post('/go-send-package-detail', 'ApiSetting@updateGoSendPackage');
+
+});
+
+Route::group(['middleware' => ['auth_client', 'log_activities'], 'prefix' => 'api/setting', 'namespace' => 'Modules\Setting\Http\Controllers'], function()
+{
     Route::any('/', 'ApiSetting@settingList');
-    Route::post('/edit', 'ApiSetting@settingEdit');
+    Route::get('/faq', 'ApiSetting@faqList');
+    Route::any('/default_home', 'ApiSetting@homeNotLogin');
+	Route::get('/navigation', 'ApiSetting@Navigation');
+	Route::get('/navigation-logo', 'ApiSetting@NavigationLogo');
+	Route::get('/navigation-sidebar', 'ApiSetting@NavigationSidebar');
+    Route::get('/navigation-navbar', 'ApiSetting@NavigationNavbar');
+});
+
+Route::group(['middleware' => ['auth_client', 'log_activities'], 'prefix' => 'api/version', 'namespace' => 'Modules\Setting\Http\Controllers'], function()
+{
+    Route::get('/list', 'ApiVersion@getVersion');
+    Route::post('/update', 'ApiVersion@updateVersion');
+});
+
+Route::group(['prefix' => 'api/version', 'namespace' => 'Modules\Setting\Http\Controllers'], function () {
+    Route::post('/', 'ApiVersion@index');
+});
+
+Route::group(['namespace' => 'Modules\Setting\Http\Controllers'], function()
+{
+    Route::any('terms-of-service', 'ApiSetting@viewTOS');
+});
+
+Route::group([ 'prefix' => 'api/setting', 'namespace' => 'Modules\Setting\Http\Controllers'], function()
+{
+    Route::any('webview/{key}', 'ApiSettingWebview@aboutWebview');
+    Route::any('/faq/webview', 'ApiSettingWebview@faqWebviewView');
+    Route::any('/intro/list', 'ApiTutorial@introListFrontend');
+    Route::any('/text_menu_list', 'ApiSetting@textMenuList');
+});
+
+Route::group(['middleware' => ['auth:api-be', 'log_activities'], 'prefix' => 'api/setting', 'namespace' => 'Modules\Setting\Http\Controllers'], function()
+{
+    Route::any('be/celebrate_list', 'ApiSetting@celebrateList');
+    Route::any('be/jobs_list', 'ApiSetting@jobsList');
+    Route::get('be/complete-profile', 'ApiSetting@getCompleteProfile');
+    Route::post('be/complete-profile', 'ApiSetting@completeProfile');
+    Route::any('be/text_menu_list', 'ApiSetting@textMenuList');
+    Route::any('be/faq', 'ApiSetting@faqList');
+    Route::any('/intro', 'ApiTutorial@introList');
+    Route::post('/intro/save', 'ApiTutorial@introSave');
+    Route::post('email', 'ApiSetting@settingEmail');
+    Route::any('email/update', 'ApiSetting@emailUpdate');
+    Route::get('email', 'ApiSetting@getSettingEmail');
     Route::post('/update', 'ApiSetting@settingUpdate');
     Route::post('/update2','ApiSetting@update');
+
+    Route::get('/get/{key}', 'ApiSetting@get');
+    Route::any('/', 'ApiSetting@settingList');
+    Route::post('/edit', 'ApiSetting@settingEdit');
     Route::post('/date', 'ApiSetting@date');
-	Route::any('/app_logo', 'ApiSetting@appLogo');
+    Route::any('/app_logo', 'ApiSetting@appLogo');
     Route::any('/app_navbar', 'ApiSetting@appNavbar');
     Route::any('/app_sidebar', 'ApiSetting@appSidebar');
     Route::get('/level', 'ApiSetting@levelList');
@@ -35,19 +104,8 @@ Route::group(['middleware' => ['auth:api', 'log_activities'], 'prefix' => 'api/s
     Route::post('/faq/edit', 'ApiSetting@faqEdit');
     Route::post('/faq/update', 'ApiSetting@faqUpdate');
     Route::post('/faq/delete', 'ApiSetting@faqDelete');
-    Route::get('/webview/faq', 'ApiSetting@faqWebview');
     Route::post('faq/sort/update', 'ApiSetting@faqSortUpdate');
-
-    Route::any('/intro', 'ApiTutorial@introList');
-    Route::post('/intro/save', 'ApiTutorial@introSave');
-
-    Route::post('email', 'ApiSetting@settingEmail');
-    Route::get('email', 'ApiSetting@getSettingEmail');
-
-    Route::any('whatsapp', 'ApiSetting@settingWhatsApp');
-
-    Route::any('jobs_list', 'ApiSetting@jobsList');
-    Route::any('celebrate_list', 'ApiSetting@celebrateList');
+    Route::post('reset/{type}/update', 'ApiSetting@pointResetUpdate');// point reset
 
     /* Menu Setting */
     Route::any('/text_menu/update', 'ApiSetting@updateTextMenu');
@@ -85,93 +143,25 @@ Route::group(['middleware' => ['auth:api', 'log_activities'], 'prefix' => 'api/s
         Route::post('delete', 'ApiFeaturedDeal@destroy');
     });
 
-    // complete profile
-    Route::group(['middleware' => 'auth:api', 'prefix' => 'complete-profile'], function()
+    Route::group(['prefix' => 'api/timesetting', 'namespace' => 'Modules\Setting\Http\Controllers'], function()
     {
-        Route::get('/', 'ApiSetting@getCompleteProfile');
-        Route::post('/', 'ApiSetting@completeProfile');
-        Route::post('/success-page', 'ApiSetting@completeProfileSuccessPage');
+        Route::get('/', 'ApiGreetings@listTimeSetting');
+        Route::post('/', 'ApiGreetings@updateTimeSetting');
     });
 
-    
-    Route::post('/free-delivery', 'ApiSetting@updateFreeDelivery');
-    Route::post('/go-send-package-detail', 'ApiSetting@updateGoSendPackage');
+    Route::group(['prefix' => 'api/background', 'namespace' => 'Modules\Setting\Http\Controllers'], function()
+    {
+        Route::any('/', 'ApiBackground@listBackground');
+        Route::post('create', 'ApiBackground@createBackground');
+        Route::post('delete', 'ApiBackground@deleteBackground');
+    });
 
-    // point reset
-    Route::post('reset/{type}/update', 'ApiSetting@pointResetUpdate');
-});
-
-Route::group(['middleware' => ['api', 'log_activities'], 'prefix' => 'api/timesetting', 'namespace' => 'Modules\Setting\Http\Controllers'], function()
-{
-	Route::get('/', 'ApiGreetings@listTimeSetting');
-	Route::post('/', 'ApiGreetings@updateTimeSetting');
-});
-
-Route::group(['middleware' => ['api','log_activities'], 'prefix' => 'api/background', 'namespace' => 'Modules\Setting\Http\Controllers'], function()
-{
-	Route::any('/', 'ApiBackground@listBackground');
-	Route::post('create', 'ApiBackground@createBackground');
-	Route::post('delete', 'ApiBackground@deleteBackground');
-});
-
-Route::group(['middleware' => ['api', 'log_activities'], 'prefix' => 'api/greetings', 'namespace' => 'Modules\Setting\Http\Controllers'], function()
-{
-	Route::any('/', 'ApiGreetings@listGreetings');
-	Route::post('selected', 'ApiGreetings@selectGreetings');
-	Route::post('create', 'ApiGreetings@createGreetings');
-	Route::post('update', 'ApiGreetings@updateGreetings');
-	Route::post('delete', 'ApiGreetings@deleteGreetings');
-});
-
-Route::group(['middleware' => ['auth_client', 'log_activities'], 'prefix' => 'api/setting', 'namespace' => 'Modules\Setting\Http\Controllers'], function()
-{
-    Route::any('/', 'ApiSetting@settingList');
-    Route::get('/faq', 'ApiSetting@faqList');
-    Route::any('/default_home', 'ApiSetting@homeNotLogin');
-	Route::get('/navigation', 'ApiSetting@Navigation');
-	Route::get('/navigation-logo', 'ApiSetting@NavigationLogo');
-	Route::get('/navigation-sidebar', 'ApiSetting@NavigationSidebar');
-    Route::get('/navigation-navbar', 'ApiSetting@NavigationNavbar');
-});
-
-Route::group(['middleware' => ['auth_client', 'log_activities'], 'prefix' => 'api/version', 'namespace' => 'Modules\Setting\Http\Controllers'], function()
-{
-    Route::get('/list', 'ApiVersion@getVersion');
-    Route::post('/update', 'ApiVersion@updateVersion');
-});
-
-Route::group(['prefix' => 'api/version', 'namespace' => 'Modules\Setting\Http\Controllers'], function () {
-    Route::post('/', 'ApiVersion@index');
-});
-
-Route::group(['prefix' => 'api/setting', 'namespace' => 'Modules\Setting\Http\Controllers'], function()
-{
-    Route::any('/text_menu_list', 'ApiSetting@textMenuList');
-});
-
-Route::group(['prefix' => 'api/setting', 'middleware' => ['log_activities', 'auth:api'], 'namespace' => 'Modules\Setting\Http\Controllers'], function()
-{
-    Route::any('/faq', 'ApiSetting@faqList');
-    Route::post('webview', 'ApiSetting@settingWebview');
-    
-    Route::get('/cron/point-reset', 'ApiSetting@cronPointReset');
-});
-
-
-
-Route::group(['namespace' => 'Modules\Setting\Http\Controllers'], function()
-{
-    Route::any('terms-of-service', 'ApiSetting@viewTOS');
-});
-
-Route::group([ 'prefix' => 'api/setting', 'namespace' => 'Modules\Setting\Http\Controllers'], function()
-{
-    Route::any('webview/{key}', 'ApiSettingWebview@aboutWebview');
-    Route::any('/faq/webview', 'ApiSettingWebview@faqWebviewView');
-    Route::any('/intro/list', 'ApiTutorial@introListFrontend');
-});
-
-Route::group(['middleware' => ['auth:api'], 'prefix' => 'api/setting', 'namespace' => 'Modules\Setting\Http\Controllers'], function()
-{
-    Route::any('/intro/home', 'ApiTutorial@introHomeFrontend');
+    Route::group(['prefix' => 'api/greetings', 'namespace' => 'Modules\Setting\Http\Controllers'], function()
+    {
+        Route::any('/', 'ApiGreetings@listGreetings');
+        Route::post('selected', 'ApiGreetings@selectGreetings');
+        Route::post('create', 'ApiGreetings@createGreetings');
+        Route::post('update', 'ApiGreetings@updateGreetings');
+        Route::post('delete', 'ApiGreetings@deleteGreetings');
+    });
 });

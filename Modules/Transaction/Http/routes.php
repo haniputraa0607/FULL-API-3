@@ -1,8 +1,6 @@
 <?php
 
 Route::group(['middleware' => ['auth:api', 'log_activities'], 'prefix' => 'api/transaction', 'namespace' => 'Modules\Transaction\Http\Controllers'], function () {
-    Route::post('/outlet', 'ApiNotification@adminOutlet');
-    Route::post('/admin/confirm', 'ApiNotification@adminOutletComfirm');
     Route::get('/rule', 'ApiTransaction@transactionRule');
     Route::post('/rule/update', 'ApiTransaction@transactionRuleUpdate');
     Route::get('/courier', 'ApiTransaction@internalCourier');
@@ -13,33 +11,6 @@ Route::group(['middleware' => ['auth:api', 'log_activities'], 'prefix' => 'api/t
     Route::post('/admin', 'ApiNotification@adminOutletNotification');
     Route::post('/setting', 'ApiSettingTransaction@settingTrx');
 
-    Route::group(['prefix' => 'manualpayment'], function () {
-        Route::get('/bank', 'ApiTransactionPaymentManual@bankList');
-        Route::post('/bank/delete', 'ApiTransactionPaymentManual@bankDelete');
-        Route::post('/bank/create', 'ApiTransactionPaymentManual@bankCreate');
-        Route::get('/bankmethod', 'ApiTransactionPaymentManual@bankmethodList');
-        Route::post('/bankmethod/delete', 'ApiTransactionPaymentManual@bankmethodDelete');
-        Route::post('/bankmethod/create', 'ApiTransactionPaymentManual@bankmethodCreate');
-        Route::get('/list', 'ApiTransaction@manualPaymentList');
-        Route::post('/edit', 'ApiTransaction@manualPaymentEdit');
-        Route::post('/update', 'ApiTransaction@manualPaymentUpdate');
-        Route::post('/create', 'ApiTransaction@manualPaymentCreate');
-        Route::post('/detail', 'ApiTransaction@manualPaymentDetail');
-        Route::post('/delete', 'ApiTransaction@manualPaymentDelete');
-
-        Route::group(['prefix' => 'data'], function () {
-            Route::get('/{type}', 'ApiTransactionPaymentManual@manualPaymentList');
-            Route::post('/detail', 'ApiTransactionPaymentManual@detailManualPaymentUnpay');
-            Route::post('/confirm', 'ApiTransactionPaymentManual@manualPaymentConfirm');
-            Route::post('/filter/{type}', 'ApiTransactionPaymentManual@transactionPaymentManualFilter');
-        });
-
-        Route::post('/method/save', 'ApiTransaction@manualPaymentMethod');
-        Route::post('/method/delete', 'ApiTransaction@manualPaymentMethodDelete');
-    });
-});
-
-Route::group(['middleware' => ['auth:api', 'log_activities'], 'prefix' => 'api/transaction', 'namespace' => 'Modules\Transaction\Http\Controllers'], function () {
     Route::get('/', 'ApiTransaction@transactionList');
     Route::any('/filter', 'ApiTransaction@transactionFilter');
     Route::post('/detail', 'ApiTransaction@transactionDetail');
@@ -94,7 +65,6 @@ Route::group(['prefix' => 'api/transaction', 'middleware' => ['log_activities', 
 });
 
 Route::group(['middleware' => 'auth:api', 'prefix' => 'api/transaction', 'namespace' => 'Modules\Transaction\Http\Controllers'], function () {
-    Route::post('/dump', 'ApiDumpController@dumpData');
     Route::post('/gen', 'ApiDumpController@generateNumber');
 });
 
@@ -102,11 +72,6 @@ Route::group(['middleware' => 'auth_client', 'prefix' => 'api/manual-payment', '
     Route::get('/', 'ApiTransactionPaymentManual@listPaymentMethod');
     Route::get('/list', 'ApiTransactionPaymentManual@list');
     Route::post('/method', 'ApiTransactionPaymentManual@paymentMethod');
-});
-
-Route::group(['middleware' => ['auth:api', 'log_activities'], 'prefix' => 'api/transaction', 'namespace' => 'Modules\Transaction\Http\Controllers'], function () {
-    Route::get('setting/cashback', 'ApiSettingCashbackController@list');
-    Route::post('setting/cashback/update', 'ApiSettingCashbackController@update');
 });
 
 Route::group(['prefix' => 'api/cron/transaction', 'namespace' => 'Modules\Transaction\Http\Controllers'], function () {
@@ -133,4 +98,37 @@ Route::group(['prefix' => 'api/transaction', 'namespace' => 'Modules\Transaction
     Route::any('/web/view/detail/balance', 'ApiWebviewController@detailBalance');
     Route::any('/web/view/trx', 'ApiWebviewController@success');
     Route::any('/web/view/outletapp', 'ApiWebviewController@receiptOutletapp');
+});
+
+Route::group(['middleware' => ['auth:api-be', 'log_activities'], 'prefix' => 'api/transaction', 'namespace' => 'Modules\Transaction\Http\Controllers'], function () {
+    Route::post('/outlet', 'ApiNotification@adminOutlet');
+    Route::post('/admin/confirm', 'ApiNotification@adminOutletComfirm');
+    Route::get('setting/cashback', 'ApiSettingCashbackController@list');
+    Route::post('setting/cashback/update', 'ApiSettingCashbackController@update');
+    Route::post('/dump', 'ApiDumpController@dumpData');
+    Route::group(['prefix' => 'manualpayment'], function () {
+        Route::get('/bank', 'ApiTransactionPaymentManual@bankList');
+        Route::post('/bank/delete', 'ApiTransactionPaymentManual@bankDelete');
+        Route::post('/bank/create', 'ApiTransactionPaymentManual@bankCreate');
+        Route::get('/bankmethod', 'ApiTransactionPaymentManual@bankmethodList');
+        Route::post('/bankmethod/delete', 'ApiTransactionPaymentManual@bankmethodDelete');
+        Route::post('/bankmethod/create', 'ApiTransactionPaymentManual@bankmethodCreate');
+        Route::get('/list', 'ApiTransaction@manualPaymentList');
+        Route::post('/edit', 'ApiTransaction@manualPaymentEdit');
+        Route::post('/update', 'ApiTransaction@manualPaymentUpdate');
+        Route::post('/create', 'ApiTransaction@manualPaymentCreate');
+        Route::post('/detail', 'ApiTransaction@manualPaymentDetail');
+        Route::post('/delete', 'ApiTransaction@manualPaymentDelete');
+
+        Route::group(['prefix' => 'data'], function () {
+            Route::get('/{type}', 'ApiTransactionPaymentManual@manualPaymentList');
+            Route::post('/detail', 'ApiTransactionPaymentManual@detailManualPaymentUnpay');
+            Route::post('/confirm', 'ApiTransactionPaymentManual@manualPaymentConfirm');
+            Route::post('/filter/{type}', 'ApiTransactionPaymentManual@transactionPaymentManualFilter');
+        });
+
+        Route::post('/method/save', 'ApiTransaction@manualPaymentMethod');
+        Route::post('/method/delete', 'ApiTransaction@manualPaymentMethodDelete');
+        Route::post('/be/new', 'ApiOnlineTransaction@newTransaction');
+    });
 });
