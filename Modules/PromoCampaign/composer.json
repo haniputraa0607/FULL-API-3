@@ -1,0 +1,25 @@
+{
+    "name": "nwidart/promocampaign",
+    "description": "",
+    "authors": [
+        {
+            "name": "Nicolas Widart",
+            "email": "n.widart@gmail.com"
+        }
+    ],
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Modules\\PromoCampaign\\Providers\\PromoCampaignServiceProvider"
+            ],
+            "aliases": {
+                
+            }
+        }
+    },
+    "autoload": {
+        "psr-4": {
+            "Modules\\PromoCampaign\\": ""
+        }
+    }
+}
