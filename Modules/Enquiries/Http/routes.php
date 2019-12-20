@@ -1,22 +1,19 @@
 <?php
 
-Route::group(['prefix' => 'api/enquiries', 'middleware' => 'log_activities', 'namespace' => 'Modules\Enquiries\Http\Controllers'], function()
+Route::group(['middleware' => 'auth:api-be', 'prefix' => 'api/enquiries', 'middleware' => 'log_activities', 'namespace' => 'Modules\Enquiries\Http\Controllers'], function()
 {
-    Route::group(['middleware' => 'auth:api'], function() {
-    	Route::post('create', 'ApiEnquiries@create');
-	});
-	
-	/* AUTH */
-	Route::group(['middleware' => 'auth:api'], function() {
-    	Route::any('list', 'ApiEnquiries@index');
-    	Route::any('detail', 'ApiEnquiries@indexDetail');
-    	Route::post('reply', 'ApiEnquiries@reply');
-    	Route::post('update', 'ApiEnquiries@update');
-    	Route::post('delete', 'ApiEnquiries@delete');
-	});
 
-	Route::group(['middleware' => 'auth:api'], function() {
-    	Route::any('listEnquiries', 'ApiEnquiries@listEnquirySubject');
-    	Route::any('listPosition', 'ApiEnquiries@listEnquiryPosition');
-	});
+    Route::post('create', 'ApiEnquiries@create');
+    Route::any('list', 'ApiEnquiries@index');
+    Route::any('detail', 'ApiEnquiries@indexDetail');
+    Route::post('reply', 'ApiEnquiries@reply');
+    Route::post('update', 'ApiEnquiries@update');
+    Route::post('delete', 'ApiEnquiries@delete');
+
+});
+
+Route::group(['middleware' => 'auth:api', 'prefix' => 'api/enquiries', 'middleware' => 'log_activities', 'namespace' => 'Modules\Enquiries\Http\Controllers'], function()
+{
+    Route::any('listEnquiries', 'ApiEnquiries@listEnquirySubject');
+    Route::any('listPosition', 'ApiEnquiries@listEnquiryPosition');
 });
