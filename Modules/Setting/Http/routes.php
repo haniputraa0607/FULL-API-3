@@ -142,26 +142,26 @@ Route::group(['middleware' => ['auth:api-be', 'log_activities'], 'prefix' => 'ap
         Route::post('reorder', 'ApiFeaturedDeal@reorder');
         Route::post('delete', 'ApiFeaturedDeal@destroy');
     });
+});
 
-    Route::group(['prefix' => 'api/timesetting', 'namespace' => 'Modules\Setting\Http\Controllers'], function()
-    {
-        Route::get('/', 'ApiGreetings@listTimeSetting');
-        Route::post('/', 'ApiGreetings@updateTimeSetting');
-    });
+Route::group(['prefix' => 'api/timesetting', 'namespace' => 'Modules\Setting\Http\Controllers'], function()
+{
+    Route::get('/', 'ApiGreetings@listTimeSetting');
+    Route::post('/', 'ApiGreetings@updateTimeSetting');
+});
 
-    Route::group(['prefix' => 'api/background', 'namespace' => 'Modules\Setting\Http\Controllers'], function()
-    {
-        Route::any('/', 'ApiBackground@listBackground');
-        Route::post('create', 'ApiBackground@createBackground');
-        Route::post('delete', 'ApiBackground@deleteBackground');
-    });
+Route::group(['prefix' => 'api/background', 'namespace' => 'Modules\Setting\Http\Controllers'], function()
+{
+    Route::any('/', 'ApiBackground@listBackground');
+    Route::post('create', 'ApiBackground@createBackground');
+    Route::post('delete', 'ApiBackground@deleteBackground');
+});
 
-    Route::group(['prefix' => 'api/greetings', 'namespace' => 'Modules\Setting\Http\Controllers'], function()
-    {
-        Route::any('/', 'ApiGreetings@listGreetings');
-        Route::post('selected', 'ApiGreetings@selectGreetings');
-        Route::post('create', 'ApiGreetings@createGreetings');
-        Route::post('update', 'ApiGreetings@updateGreetings');
-        Route::post('delete', 'ApiGreetings@deleteGreetings');
-    });
+Route::group(['prefix' => 'api/greetings', 'namespace' => 'Modules\Setting\Http\Controllers'], function()
+{
+    Route::any('/', 'ApiGreetings@listGreetings');
+    Route::post('selected', 'ApiGreetings@selectGreetings');
+    Route::post('create', 'ApiGreetings@createGreetings');
+    Route::post('update', 'ApiGreetings@updateGreetings');
+    Route::post('delete', 'ApiGreetings@deleteGreetings');
 });

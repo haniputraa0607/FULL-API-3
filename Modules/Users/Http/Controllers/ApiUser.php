@@ -2206,25 +2206,11 @@ class ApiUser extends Controller
         }else{
             $log = LogActivitiesBE::where('id_log_activities_be', $id)->first();
         }
-
         if($log){
-            if($log['response']){
-                $res = MyHelper::decrypt2019($log['response']);
-                if(!$log['response']){
-                    $log['response'] = $res;
-                }
-                // $log['response'] = str_replace('}','\r\n}',str_replace(',',',\r\n&emsp;',str_replace('{','{\r\n&emsp;',strip_tags($log['response']))));
-            }
-
-            if($log['request']){
-                $req = MyHelper::decrypt2019($log['request']);
-                if(!$log['request']){
-                    $log['request'] = $request;
-                }
-                // $log['request'] = str_replace('}','\r\n}',str_replace(',',',\r\n&emsp;',str_replace('{','{\r\n&emsp;',strip_tags($log['request']))));
-            }
+            $log->user      = MyHelper::decrypt2019($log->user);
+            $log->request   = MyHelper::decrypt2019($log->request);
+            $log->response  = MyHelper::decrypt2019($log->response);
         }
-
         return response()->json(MyHelper::checkGet($log));
     }
 
