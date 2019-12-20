@@ -606,6 +606,7 @@ class ApiHistoryController extends Controller
                     $dataList['type'] = 'trx';
                     $dataList['id'] = $value['transaction_receipt_number'] . ',' . $value['id_transaction'];
                     $dataList['date']    = date('Y-m-d H:i', strtotime($value['transaction_date']));
+                    $dataList['id_outlet'] = $value['outlet']['id_outlet'];
                     $dataList['outlet'] = $value['outlet']['outlet_name'];
                     $dataList['amount'] = number_format($value['transaction_grandtotal'], 0, ',', '.');
                     $dataList['cashback'] = number_format($value['transaction_cashback_earned'], 0, ',', '.');
