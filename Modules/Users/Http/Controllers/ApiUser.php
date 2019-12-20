@@ -1229,6 +1229,28 @@ class ApiUser extends Controller
         return response()->json($result);
     }
 
+    function checkPinBackend(users_phone_pin $request){
+        $phone = $request->json('phone');
+
+        $datauser = User::where('phone', '=', $phone)
+            ->get()
+            ->toArray();
+
+        if($datauser){
+            if(Auth::attempt(['phone' => $phone, 'password' => $request->json('pin')]) && $request->json('admin_panel')){
+                return ['status'=>'success'];
+            } else{
+                $result 			= [];
+                $result['status'] 	= 'fail';
+            }
+        }
+        else {
+            $result['status'] 	= 'fail';
+            $result['messages'] = ['Nomor HP belum terdaftar'];
+        }
+        return response()->json($result);
+    }
+
     function resendPin(users_phone $request){
         $phone = $request->json('phone');
 

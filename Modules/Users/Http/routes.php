@@ -5,6 +5,7 @@ Route::group(['prefix' => 'api', 'middleware' => 'log_activities'], function(){
 	{
         Route::post('phone/check', 'ApiUser@check');
         Route::post('pin/check', 'ApiUser@checkPin');
+	    Route::post('pin/check-backend', 'ApiUser@checkPinBackend');
         Route::post('pin/resend', 'ApiUser@resendPin');
         Route::post('pin/forgot', 'ApiUser@forgotPin');
         Route::post('pin/verify', 'ApiUser@verifyPin');
@@ -97,4 +98,3 @@ Route::group(['middleware' => ['auth:api-be','log_activities'], 'prefix' => 'api
     Route::get('complete-profile/success-message', 'ApiWebviewUser@getSuccessMessage');
 
 });
-
