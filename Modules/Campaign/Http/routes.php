@@ -1,6 +1,6 @@
 <?php
 
-Route::group(['middleware' => ['auth:api','log_activities'], 'prefix' => 'api/campaign', 'namespace' => 'Modules\Campaign\Http\Controllers'], function()
+Route::group(['middleware' => ['auth:api-be','log_activities'], 'prefix' => 'api/campaign', 'namespace' => 'Modules\Campaign\Http\Controllers'], function()
 {
     Route::post('create', 'ApiCampaign@CreateCampaign');
     Route::post('step1', 'ApiCampaign@ShowCampaignStep1');
@@ -16,12 +16,8 @@ Route::group(['middleware' => ['auth:api','log_activities'], 'prefix' => 'api/ca
 	Route::post('push/outbox/list', 'ApiCampaign@campaignPushOutboxList');
 	Route::post('push/outbox/detail', 'ApiCampaign@campaignPushOutboxDetail');
     Route::post('whatsapp/outbox/list', 'ApiCampaign@campaignWhatsappOutboxList');
-
-});
-
-Route::group(['middleware' => ['auth:api'], 'prefix' => 'api/campaign', 'namespace' => 'Modules\Campaign\Http\Controllers'], function()
-{
     Route::post('step2', 'ApiCampaign@ShowCampaignStep2');
+
 });
 
 Route::group(['prefix' => 'api/campaign/cron', 'namespace' => 'Modules\Campaign\Http\Controllers'], function()

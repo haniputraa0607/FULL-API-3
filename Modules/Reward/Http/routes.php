@@ -1,6 +1,6 @@
 <?php
 
-Route::group(['middleware' => 'auth:api', 'prefix' => 'api/reward', 'namespace' => 'Modules\Reward\Http\Controllers'], function()
+Route::group(['middleware' => 'auth:api-be', 'prefix' => 'api/reward', 'namespace' => 'Modules\Reward\Http\Controllers'], function()
 {
     Route::any('/list', 'ApiReward@list');
     Route::post('/create', 'ApiReward@create');

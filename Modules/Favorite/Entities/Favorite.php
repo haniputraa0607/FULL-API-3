@@ -13,10 +13,9 @@ class Favorite extends Model
 {
 	protected $primaryKey = 'id_favorite';
 
-    protected $hidden = ['pivot'];
-
 	protected $fillable = [
 		'id_outlet',
+		'id_brand',
 		'id_product',
 		'id_user',
 		'notes',
@@ -66,4 +65,7 @@ class Favorite extends Model
 		return $this->belongsTo(User::class,'id_user','id');
 	}
 
+	public function favorite_modifiers() {
+		return $this->hasMany(FavoriteModifier::class,'id_favorite','id_favorite');
+	}
 }

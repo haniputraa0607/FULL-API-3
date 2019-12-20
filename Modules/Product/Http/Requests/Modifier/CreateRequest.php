@@ -16,7 +16,7 @@ class CreateRequest extends FormRequest
     public function rules()
     {
         return [
-            'modifier_type'       => 'in:Global,Specific|required',
+            'modifier_type'       => 'in:Global,Specific,Global Brand|required',
             'type'                => 'string|required',
             'code'                => 'string|required|unique:product_modifiers,code',
             'text'                => 'string|required',
