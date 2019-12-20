@@ -266,6 +266,13 @@ class ApiPromoCampaign extends Controller
                 $total->leftJoin(...$value);
             }
             $promoCampaign[0]['total'] = $total->get()->count();
+
+            $total2 = PromoCampaignPromoCode::join('promo_campaigns', 'promo_campaigns.id_promo_campaign', '=', 'promo_campaign_promo_codes.id_promo_campaign')->where('promo_campaign_promo_codes.id_promo_campaign', $post['id_promo_campaign']);
+            $this->filterCoupon($total2,$request,$foreign);
+            foreach ($foreign as $value) {
+                $total->leftJoin(...$value);
+            }
+            $promoCampaign[0]['total2'] = $total2->get()->count();
             $result = [
                 'status'  => 'success',
                 'result'  => $promoCampaign[0]
@@ -388,70 +395,6 @@ class ApiPromoCampaign extends Controller
         return response()->json($result);
     }
 
-    public function Coupon(Request $request)
-    {
-        $post = $request->json()->all();
-
-        $query = PromoCampaignPromoCode::select('promo_campaign_promo_codes.*', 'promo_campaigns.limitation_usage')
-                ->join('promo_campaigns', 'promo_campaigns.id_promo_campaign', '=', 'promo_campaign_promo_codes.id_promo_campaign')
-                ->where('promo_campaign_promo_codes.id_promo_campaign', $post['id_promo_campaign']);
-
-        $filter = null;
-        $count = (new PromoCampaignPromoCode)->newQuery()->where('promo_campaign_promo_codes.id_promo_campaign', $post['id_promo_campaign']);
-        $total = (new PromoCampaignPromoCode)->newQuery()->where('promo_campaign_promo_codes.id_promo_campaign', $post['id_promo_campaign']);
-        $foreign=[];
-        $foreign2=[];
-        
-        $column = ['promo_code','status','usage','available','limitation_usage'];
-        if($post['start']){
-            $query->skip($post['start']);
-        }
-        if($post['length']>0){
-            $query->take($post['length']);
-        }
-        foreach ($post['order'] as $value) {
-            switch ($column[$value['column']]) {
-                case 'status':
-                case 'available':
-                $query->orderBy('usage',$value['dir']);
-                break;
-                
-                case 'limitation_usage':
-                $query->orderBy('limitation_usage',$value['dir']);
-                break;
-                
-                default:
-                $query->orderBy('promo_campaign_promo_codes.'.$column[$value['column']],$value['dir']);
-                break;
-            }
-        }
-        foreach ($foreign as $value) {
-            $query->leftJoin(...$value);
-        }
-        foreach ($foreign2 as $value) {
-            $count->leftJoin(...$value);
-        }
-
-        $query = $query->get()->toArray();
-        $count = $count->get()->count();
-        $total = $total->get()->count();
-
-        if (isset($query) && !empty($query)) {
-            $result = [
-                'status'  => 'success',
-                'result'  => $query,
-                'total'  => $total,
-                'count'  => $count
-            ];
-        } else {
-            $result = [
-                'status'  => 'fail',
-                'message'  => ['No Report']
-            ];
-        }
-        return response()->json($result);
-    }
-
     protected function filterReport($query, $request,&$foreign='')
     {
         $query->groupBy('promo_campaign_reports.id_promo_campaign_report');
@@ -519,6 +462,148 @@ class ApiPromoCampaign extends Controller
                         break;
                     }
                 }
+                $return[] = $value;
+            }
+        });
+        return ['filter' => $return, 'filter_operator' => $request->json('operator')];
+    }
+
+    public function Coupon(Request $request)
+    {
+        $post = $request->json()->all();
+
+        $query = PromoCampaignPromoCode::select('promo_campaign_promo_codes.*', 'promo_campaigns.limitation_usage')
+                ->join('promo_campaigns', 'promo_campaigns.id_promo_campaign', '=', 'promo_campaign_promo_codes.id_promo_campaign')
+                ->where('promo_campaign_promo_codes.id_promo_campaign', $post['id_promo_campaign']);
+
+        $filter = null;
+        $count = (new PromoCampaignPromoCode)->newQuery()
+                    ->join('promo_campaigns', 'promo_campaigns.id_promo_campaign', '=', 'promo_campaign_promo_codes.id_promo_campaign')
+                    ->where('promo_campaign_promo_codes.id_promo_campaign', $post['id_promo_campaign']);
+        $total = (new PromoCampaignPromoCode)->newQuery()
+                    ->join('promo_campaigns', 'promo_campaigns.id_promo_campaign', '=', 'promo_campaign_promo_codes.id_promo_campaign')
+                    ->where('promo_campaign_promo_codes.id_promo_campaign', $post['id_promo_campaign']);
+        $foreign=[];
+        $foreign2=[];
+        if($post['rule2']??false){
+            $this->filterCoupon($query,$request,$foreign);
+            $this->filterCoupon($count,$request,$foreign2);
+        }
+        $column = ['promo_code','status','usage','available','limitation_usage'];
+        if($post['start']){
+            $query->skip($post['start']);
+        }
+        if($post['length']>0){
+            $query->take($post['length']);
+        }
+        foreach ($post['order'] as $value) {
+            switch ($column[$value['column']]) {
+                case 'status':
+                case 'available':
+                $query->orderBy('usage',$value['dir']);
+                break;
+                
+                case 'limitation_usage':
+                $query->orderBy('limitation_usage',$value['dir']);
+                break;
+                
+                default:
+                $query->orderBy('promo_campaign_promo_codes.'.$column[$value['column']],$value['dir']);
+                break;
+            }
+        }
+        foreach ($foreign as $value) {
+            $query->leftJoin(...$value);
+        }
+        foreach ($foreign2 as $value) {
+            $count->leftJoin(...$value);
+        }
+
+        $query = $query->get()->toArray();
+        $count = $count->get()->count();
+        $total = $total->get()->count();
+
+        if (isset($query) && !empty($query)) {
+            $result = [
+                'status'  => 'success',
+                'result'  => $query,
+                'total'  => $total,
+                'count'  => $count
+            ];
+        } else {
+            $result = [
+                'status'  => 'fail',
+                'message'  => ['No Report']
+            ];
+        }
+        return response()->json($result);
+    }
+
+    protected function filterCoupon($query, $request,&$foreign='')
+    {
+        $query->groupBy('promo_campaign_promo_codes.id_promo_campaign_promo_code');
+        $allowed = array(
+            'operator' => ['=', 'like', '<', '>', '<=', '>='],
+            'subject' => ['coupon_code','status','used','available','max_used'],
+        );
+        $return = [];
+        $where = $request->json('operator2') == 'or' ? 'orWhere' : 'where';
+        $whereRaw = $request->json('operator2') == 'or' ? 'orWhereRaw' : 'whereRaw';
+        $rule = $request->json('rule2');
+        $query->where(function($queryx) use ($rule,$allowed,$where,$query,&$foreign,$request,$whereRaw){
+            $foreign=array();
+            $outletCount=0;
+            $userCount=0;
+            foreach ($rule??[] as $value) {
+                if (!in_array($value['subject'], $allowed['subject'])) {
+                    continue;
+                }
+                if (!(isset($value['operator']) && $value['operator'] && in_array($value['operator'], $allowed['operator']))) {
+                    $value['operator'] = '=';
+                }
+                if ($value['operator'] == 'like') {
+                    $value['parameter'] = '%' . $value['parameter'] . '%';
+                }
+                switch ($value['subject']) {
+                    case 'coupon_code':
+                    $queryx->$where('promo_code', $value['operator'], $value['parameter']);
+                    break;
+                    
+                    case 'status':
+                    if ($value['parameter'] == 'Not used') 
+                    {
+                        $queryx->$where('usage', '=', 0);
+                    }
+                    elseif( $value['parameter'] == 'Used' )
+                    {
+                        $queryx->$where('usage', '=', 'limitation_usage');
+                    }
+                    else
+                    {
+                        $queryx->$where('usage', '!=', 0)->$where('usage', '!=', 'limitation_usage');
+                    }
+
+                    break;
+
+                    case 'used':
+                    $queryx->$where('usage', $value['operator'], $value['parameter']);
+                    break;
+
+                    case 'available':
+                    // $queryx->addSelect( DB::raw('(`promo_campaigns`.`limitation_usage` - `promo_campaign_promo_codes`.`usage`) AS available') )
+                            // $queryx->$where( DB::raw('(limitation_usage - `promo_campaign_promo_codes`.`usage`)') , $value['operator'], $value['parameter']);
+                            $queryx->$whereRaw('limitation_usage - promo_campaign_promo_codes.usage '.$value['operator'].' '.$value['parameter']);
+                    break;
+
+                    case 'max_used':
+                    $queryx->$where('limitation_usage', $value['operator'], $value['parameter']);
+                    break;
+
+                    default:
+                        # code...
+                    break;
+                }
+
                 $return[] = $value;
             }
         });
