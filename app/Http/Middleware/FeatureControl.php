@@ -20,7 +20,7 @@ class FeatureControl
 
     $granted = UserFeature::where('id_user', $request->user()['id'])->where('id_feature', $feature)->first();
     if (!$granted) {
-      return abort(403, 'Unauthorized action.');
+        return response('Unauthorized action.', 403);
     } else {
       $next($request);
     }
