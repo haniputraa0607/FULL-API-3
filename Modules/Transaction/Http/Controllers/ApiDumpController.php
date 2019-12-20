@@ -359,7 +359,6 @@ class ApiDumpController extends Controller
 
                 $insertTransaction = $this->insert($data);
                 // return $insertTransaction;
-
                 if (isset($insertTransaction['status']) && $insertTransaction['status'] == 'success') {
                     continue;
                 } elseif (isset($insertTransaction['status']) && $insertTransaction['status'] == 'fail') {
@@ -428,7 +427,7 @@ class ApiDumpController extends Controller
                 }
 
                 $insertTransaction = $this->insert($data);
-                // return $insertTransaction;
+                
                 if (isset($insertTransaction['status']) && $insertTransaction['status'] == 'success') {
                     continue;
                 } elseif (isset($insertTransaction['status']) && $insertTransaction['status'] == 'fail') {
@@ -452,7 +451,7 @@ class ApiDumpController extends Controller
     }
 
     public function insert($data) {
-        $url = env('API_URL').'api/transaction/new';
+        $url = env('API_URL').'api/transaction/be/new';
 
         $create = $this->sendStatus($url, $data);
 
