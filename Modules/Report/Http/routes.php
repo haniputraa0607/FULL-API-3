@@ -1,36 +1,34 @@
 <?php
 
-Route::group(['middleware' => ['api','log_activities'], 'prefix' => 'api/report', 'namespace' => 'Modules\Report\Http\Controllers'], function()
+Route::group(['middleware' => ['api','log_activities', 'auth:api-be', 'user_agent'], 'prefix' => 'api/report', 'namespace' => 'Modules\Report\Http\Controllers'], function()
 {
-    Route::post('/global', 'ApiReport@global');
-    Route::post('/product', 'ApiReport@product');
-    Route::post('/product/detail', 'ApiReport@productDetail');
-    Route::post('/customer/summary', 'ApiReport@customerSummary');
-    Route::post('/customer/detail', 'ApiReport@customerDetail');
+    Route::post('/global', ['middleware' => 'feature_control:125', 'uses' => 'ApiReport@global']);
+    Route::post('/product', ['middleware' => 'feature_control:127', 'uses' => 'ApiReport@product']);
+    Route::post('/product/detail', ['middleware' => 'feature_control:127', 'uses' => 'ApiReport@productDetail']);
+    Route::post('/customer/summary', ['middleware' => 'feature_control:126', 'uses' => 'ApiReport@customerSummary']);
+    Route::post('/customer/detail', ['middleware' => 'feature_control:126', 'uses' => 'ApiReport@customerDetail']);
 
-
-    
     /* PRODUCT */
-    Route::post('trx/product', 'ApiReportDua@transactionProduct');
-    Route::post('trx/product/detail', 'ApiReportDua@transactionProductDetail');
-    Route::post('trx/transaction', 'ApiReportDua@transactionTrx');
-    Route::post('trx/transaction/user', 'ApiReportDua@transactionUser');
-    Route::post('trx/transaction/point', 'ApiReportDua@transactionPoint');
-    Route::post('trx/transaction/treatment', 'ApiReportDua@reservationTreatment');
+    Route::post('trx/product', ['middleware' => 'feature_control:127', 'uses' => 'ApiReportDua@transactionProduct']);
+    Route::post('trx/product/detail', ['middleware' => 'feature_control:127', 'uses' => 'ApiReportDua@transactionProductDetail']);
+    Route::post('trx/transaction', ['middleware' => 'feature_control:127', 'uses' => 'ApiReportDua@transactionTrx']);
+    Route::post('trx/transaction/user', ['middleware' => 'feature_control:127', 'uses' => 'ApiReportDua@transactionUser']);
+    Route::post('trx/transaction/point', ['middleware' => 'feature_control:127', 'uses' => 'ApiReportDua@transactionPoint']);
+    Route::post('trx/transaction/treatment', ['middleware' => 'feature_control:127', 'uses' => 'ApiReportDua@reservationTreatment']);
     
     /* OUTLET */
-    Route::post('trx/outlet', 'ApiReportDua@transactionOutlet');
-    Route::post('trx/outlet/detail', 'ApiReportDua@transactionOutletDetail');
-    Route::post('outlet/detail/trx', 'ApiReportDua@outletTransactionDetail');
+    Route::post('trx/outlet', ['middleware' => 'feature_control:128', 'uses' => 'ApiReportDua@transactionOutlet']);
+    Route::post('trx/outlet/detail', ['middleware' => 'feature_control:128', 'uses' => 'ApiReportDua@transactionOutletDetail']);
+    Route::post('outlet/detail/trx', ['middleware' => 'feature_control:128', 'uses' => 'ApiReportDua@outletTransactionDetail']);
 
     /* MAGIC REPORT */
-    Route::post('magic', 'ApiMagicReport@magicReport');
-    Route::get('magic/exclude', 'ApiMagicReport@getExclude');
-    Route::any('magic/recommendation', 'ApiMagicReport@getProductRecommendation');
-    Route::any('magic/newtop/{type}', 'ApiMagicReport@newTopProduct');
+    Route::post('magic', ['middleware' => 'feature_control:129', 'uses' => 'ApiMagicReport@magicReport']);
+    Route::get('magic/exclude', ['middleware' => 'feature_control:129', 'uses' => 'ApiMagicReport@getExclude']);
+    Route::any('magic/recommendation', ['middleware' => 'feature_control:129', 'uses' => 'ApiMagicReport@getProductRecommendation']);
+    Route::any('magic/newtop/{type}', ['middleware' => 'feature_control:129', 'uses' => 'ApiMagicReport@newTopProduct']);
 
-    Route::get('min_year', 'ApiMagicReport@getMinYear');
-    Route::post('trx/tag/detail', 'ApiMagicReport@transactionTagDetail');
+    Route::get('min_year', ['middleware' => 'feature_control:129', 'uses' => 'ApiMagicReport@getMinYear']);
+    Route::post('trx/tag/detail', ['middleware' => 'feature_control:129', 'uses' => 'ApiMagicReport@transactionTagDetail']);
 
     /* SINGLE REPORT */
     Route::post('/single', 'ApiSingleReport@getReport');

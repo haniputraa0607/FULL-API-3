@@ -1,13 +1,13 @@
 <?php
 
-Route::group(['middleware' => 'auth:api', 'prefix' => 'api/reward', 'namespace' => 'Modules\Reward\Http\Controllers'], function()
+Route::group(['middleware' => ['auth:api-be', 'user_agent'], 'prefix' => 'api/reward', 'namespace' => 'Modules\Reward\Http\Controllers'], function()
 {
-    Route::any('/list', 'ApiReward@list');
-    Route::post('/create', 'ApiReward@create');
-    Route::post('/update', 'ApiReward@update');
-    Route::post('/delete', 'ApiReward@delete');
-    Route::get('/active', 'ApiReward@listActive');
-    Route::get('/my-coupon', 'ApiReward@myCoupon');
-    Route::post('/buy', 'ApiReward@buyCoupon');
-    Route::post('/winner', 'ApiReward@setWinnerChoosen');
+    Route::any('/list', ['middleware' => 'feature_control:130', 'uses' => 'ApiReward@list']);
+    Route::post('/create', ['middleware' => 'feature_control:132', 'uses' => 'ApiReward@create']);
+    Route::post('/update', ['middleware' => 'feature_control:133', 'uses' => 'ApiReward@update']);
+    Route::post('/delete', ['middleware' => 'feature_control:134', 'uses' => 'ApiReward@delete']);
+    Route::get('/active', ['middleware' => 'feature_control:130', 'uses' => 'ApiReward@listActive']);
+    Route::get('/my-coupon', ['middleware' => 'feature_control:131', 'uses' => 'ApiReward@myCoupon']);
+    Route::post('/buy', ['middleware' => 'feature_control:131', 'uses' => 'ApiReward@buyCoupon']);
+    Route::post('/winner', ['middleware' => 'feature_control:131', 'uses' => 'ApiReward@setWinnerChoosen']);
 });
