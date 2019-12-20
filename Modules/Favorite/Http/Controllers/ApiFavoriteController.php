@@ -8,6 +8,8 @@ use Illuminate\Routing\Controller;
 use Modules\Favorite\Entities\Favorite;
 use Modules\Favorite\Entities\FavoriteModifier;
 
+use Modules\Favorite\Http\Requests\CreateRequest;
+
 use App\Http\Models\Outlet;
 use App\Http\Models\ProductModifierPrice;
 
@@ -73,7 +75,7 @@ class ApiFavoriteController extends Controller
                             'id_product_modifier' => $modifier['id_product_modifier'],
                             'id_outlet' => $val['id_outlet']
                         ])->pluck('product_modifier_price')->first();
-                        $modifier['price'] = MyHelper::requestNumber($price,$nf);
+                        $modifier['product_modifier_price'] = MyHelper::requestNumber($price,$nf);
                     }
                     return $key;
                 },function($key,&$val) use ($latitude,$longitude){
@@ -108,7 +110,7 @@ class ApiFavoriteController extends Controller
                     'id_product_modifier' => $modifier['id_product_modifier'],
                     'id_outlet' => $data['id_outlet']
                 ])->pluck('product_modifier_price')->first();
-                $modifier['price'] = MyHelper::requestNumber($price,$nf);
+                $modifier['product_modifier_price'] = MyHelper::requestNumber($price,$nf);
             }
         }
         return MyHelper::checkGet($data,'empty');
@@ -127,7 +129,7 @@ class ApiFavoriteController extends Controller
      * }
      * @return Response
      */
-    public function store(Request $request){
+    public function store(CreateRequest $request){
         $id_user = $request->user()->id;
         $modifiers = $request->json('modifiers');
         // check is already exist
