@@ -29,9 +29,11 @@ use App\Http\Models\Treatment;
 use Modules\PromoCampaign\Http\Requests\Step1PromoCampaignRequest;
 use Modules\PromoCampaign\Http\Requests\Step2PromoCampaignRequest;
 use Modules\PromoCampaign\Http\Requests\DeletePromoCampaignRequest;
+use Modules\PromoCampaign\Http\Requests\ValidateCode;
 
-use App\Jobs\GeneratePromoCode;
+use Modules\PromoCampaign\Lib\PromoCampaignTools;
 use App\Lib\MyHelper;
+use App\Jobs\GeneratePromoCode;
 use DB;
 use Hash;
 
@@ -590,9 +592,7 @@ class ApiPromoCampaign extends Controller
                     break;
 
                     case 'available':
-                    // $queryx->addSelect( DB::raw('(`promo_campaigns`.`limitation_usage` - `promo_campaign_promo_codes`.`usage`) AS available') )
-                            // $queryx->$where( DB::raw('(limitation_usage - `promo_campaign_promo_codes`.`usage`)') , $value['operator'], $value['parameter']);
-                            $queryx->$whereRaw('limitation_usage - promo_campaign_promo_codes.usage '.$value['operator'].' '.$value['parameter']);
+                    $queryx->$whereRaw('limitation_usage - promo_campaign_promo_codes.usage '.$value['operator'].' '.$value['parameter']);
                     break;
 
                     case 'max_used':
@@ -1313,4 +1313,45 @@ class ApiPromoCampaign extends Controller
         }
     }
 
+    public function validateCode(ValidateCode $request){
+        $id_user=$request->user()->id;
+        $code=PromoCampaignPromoCode::where('promo_code',$request->promo_code)
+                ->join('promo_campaigns', 'promo_campaigns.id_promo_campaign', '=', 'promo_campaign_promo_codes.id_promo_campaign')
+                ->where('usage','<','limitation_usage')
+                ->orWhere('code_type','Single')
+                // ->where(function($query){
+                //     $query->where('usage','<','limitation_usage')
+                //             ->orWhere('code_type','Single');
+                // })
+                ->first();
+        return [$code];
+        if(!$code){
+            return [
+                'status'=>'fail',
+                'messages'=>['Promo code not valid']
+            ];
+        }
+        $pct=new PromoCampaignTools();
+        if(!$pct->validateUser($code->id_promo_campaign,$id_user,$errore)){
+            return [
+                'status'=>'fail',
+                'messages'=>$errore??['Promo code not valid']
+            ];
+        }
+        $errors=[];
+        $trx=$request->item;
+        if($result=$pct->validatePromo($code->id_promo_campaign,$trx,$errors)){
+            $code->load('promo_campaign');
+            $result['discount_source']='promo code';
+            $result['promo_title']=$code->promo_campaign->campaign_name;
+            $result['promo_code']=$request->promo_code;
+        }else{
+            $result=[
+                'status'=>'fail',
+                'messages'=>$errors
+            ];
+            return $result;
+        }
+        return MyHelper::checkGet($result);
+    }
 }
