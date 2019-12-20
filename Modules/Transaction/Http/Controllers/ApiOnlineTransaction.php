@@ -1709,7 +1709,7 @@ class ApiOnlineTransaction extends Controller
             }
             $result['points'] -= $result['used_point'];
         }
-        return MyHelper::checkGet($result);
+        return MyHelper::checkGet($result)+['messages'=>$error_msg];
     }
 
     public function saveLocation($latitude, $longitude, $id_user, $id_transaction, $id_outlet){
