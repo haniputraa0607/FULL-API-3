@@ -40,8 +40,9 @@ Route::group(['prefix' => 'api/cron', 'namespace' => 'Modules\Users\Http\Control
 	Route::any('/reset-trx-day', 'ApiUser@resetCountTransaction');
 });
 
-Route::group(['middleware' => 'auth:api-be', 'prefix' => 'api', 'middleware' => 'log_activities'], function(){
-    Route::get('users/list/{var}', 'Modules\Users\Http\Controllers\ApiUser@listVar');
+Route::group(['middleware' => ['auth:api-be','log_activities'], 'prefix' => 'api/users', 'namespace' => 'Modules\Users\Http\Controllers'], function(){
+    Route::post('pin/check/be', 'ApiUser@checkPin');
+    Route::get('list/{var}', 'ApiUser@listVar');
     Route::post('new', 'ApiUser@newUser');
     Route::post('update/profile', 'ApiUser@updateProfile');
     Route::post('update/pin', 'ApiUser@updatePin');
@@ -93,7 +94,7 @@ Route::group(['middleware' => 'auth:api-be', 'prefix' => 'api', 'middleware' => 
     // submit complete user profile
     Route::post('complete-profile', 'ApiWebviewUser@completeProfile');
     // get complete user profile success message
-    Route::get('users/complete-profile/success-message', 'Modules\Users\Http\Controllers\ApiWebviewUser@getSuccessMessage');
+    Route::get('complete-profile/success-message', 'ApiWebviewUser@getSuccessMessage');
 
 });
 
