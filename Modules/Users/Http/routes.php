@@ -7,6 +7,7 @@ Route::group(['prefix' => 'api', 'middleware' => 'log_activities'], function(){
 	    Route::post('new', 'ApiUser@newUser');
 		Route::post('phone/check', 'ApiUser@check');
 	    Route::post('pin/check', 'ApiUser@checkPin');
+	    Route::post('pin/check-backend', 'ApiUser@checkPinBackend');
 		Route::post('pin/create', 'ApiUser@createPin');
 		
 	    Route::post('pin/resend', 'ApiUser@resendPin');
