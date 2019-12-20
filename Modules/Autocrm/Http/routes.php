@@ -1,6 +1,6 @@
 <?php
 
-Route::group(['middleware' => ['auth:api', 'log_activities'], 'prefix' => 'api/autocrm', 'namespace' => 'Modules\Autocrm\Http\Controllers'], function()
+Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent'], 'prefix' => 'api/autocrm', 'namespace' => 'Modules\Autocrm\Http\Controllers'], function()
 {
     Route::get('listPushNotif', 'ApiAutoCrm@listPushNotif');
 });
@@ -14,11 +14,11 @@ Route::group(['prefix' => 'api/autocrm/cron', 'namespace' => 'Modules\Autocrm\Ht
     Route::post('delete', 'ApiAutoCrmCron@deleteAutocrmCron');
 });
 
-Route::group(['middleware' => ['auth:api-be', 'log_activities'], 'prefix' => 'api/autocrm', 'namespace' => 'Modules\Autocrm\Http\Controllers'], function()
+Route::group(['middleware' => ['auth:api-be', 'log_activities', 'user_agent'], 'prefix' => 'api/autocrm', 'namespace' => 'Modules\Autocrm\Http\Controllers'], function()
 {
-    Route::get('list', 'ApiAutoCrm@listAutoCrm');
-    Route::post('update', 'ApiAutoCrm@updateAutoCrm');
+    Route::get('list', ['middleware' => 'feature_control:199', 'uses' => 'ApiAutoCrm@listAutoCrm']);
+    Route::post('update', ['middleware' => 'feature_control:122', 'uses' =>'ApiAutoCrm@updateAutoCrm']);
     Route::get('textreplace', 'ApiAutoCrm@listTextReplace');
-    Route::post('textreplace/update', 'ApiAutoCrm@updateTextReplace');
+    Route::post('textreplace/update', 'ApiAutoCrm@listTextReplace');
     Route::get('textreplace/{var}', 'ApiAutoCrm@listTextReplace');
 });

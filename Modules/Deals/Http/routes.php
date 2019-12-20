@@ -37,13 +37,13 @@ Route::group(['middleware' => ['auth:api','web'], 'prefix' => 'api/webview', 'na
 });
 
 /*=================== BE Route ===================*/
-Route::group(['middleware' => ['auth:api-be', 'log_activities'], 'prefix' => 'api/deals', 'namespace' => 'Modules\Deals\Http\Controllers'], function () {
-    Route::any('be/list', 'ApiDeals@listDeal');
-    Route::post('create', 'ApiDeals@createReq');
-    Route::post('update', 'ApiDeals@updateReq');
-    Route::post('delete', 'ApiDeals@deleteReq');
-    Route::post('user', 'ApiDeals@listUserVoucher');
-    Route::post('voucher', 'ApiDeals@listVoucher');
+Route::group(['middleware' => ['auth:api-be', 'log_activities','user_agent'], 'prefix' => 'api/deals', 'namespace' => 'Modules\Deals\Http\Controllers'], function () {
+    Route::any('be/list', ['middleware' => 'feature_control:72', 'uses' => 'ApiDeals@listDeal']);
+    Route::post('create', ['middleware' => 'feature_control:74', 'uses' => 'ApiDeals@createReq']);
+    Route::post('update', ['middleware' => 'feature_control:75', 'uses' => 'ApiDeals@updateReq']);
+    Route::post('delete', ['middleware' => 'feature_control:76', 'uses' => 'ApiDeals@deleteReq']);
+    Route::post('user', ['middleware' => 'feature_control:72', 'uses' => 'ApiDeals@listUserVoucher']);
+    Route::post('voucher', ['middleware' => 'feature_control:72', 'uses' => 'ApiDeals@listVoucher']);
 
     /* MANUAL PAYMENT */
     Route::group(['prefix' => 'manualpayment'], function () {
@@ -66,20 +66,20 @@ Route::group(['middleware' => ['auth:api-be', 'log_activities'], 'prefix' => 'ap
     });
 
     /* Welcome Voucher */
-    Route::any('welcome-voucher/setting', 'ApiDeals@welcomeVoucherSetting');
-    Route::post('welcome-voucher/setting/update', 'ApiDeals@welcomeVoucherSettingUpdate');
-    Route::post('welcome-voucher/setting/update/status', 'ApiDeals@welcomeVoucherSettingUpdateStatus');
-    Route::any('welcome-voucher/list/deals', 'ApiDeals@listDealsWelcomeVoucher');
+    Route::any('welcome-voucher/setting', ['middleware' => 'feature_control:188', 'uses' => 'ApiDeals@welcomeVoucherSetting']);
+    Route::post('welcome-voucher/setting/update', ['middleware' => 'feature_control:190', 'uses' => 'ApiDeals@welcomeVoucherSettingUpdate']);
+    Route::post('welcome-voucher/setting/update/status', ['middleware' => 'feature_control:190', 'uses' => 'ApiDeals@welcomeVoucherSettingUpdateStatus']);
+    Route::any('welcome-voucher/list/deals', ['middleware' => 'feature_control:187', 'uses' => 'ApiDeals@listDealsWelcomeVoucher']);
 });
 
 /* DEALS SUBSCRIPTION */
-Route::group(['middleware' => ['auth:api-be', 'log_activities'], 'prefix' => 'api/deals-subscription', 'namespace' => 'Modules\Deals\Http\Controllers'], function () {
+Route::group(['middleware' => ['auth:api-be', 'log_activities','user_agent'], 'prefix' => 'api/deals-subscription', 'namespace' => 'Modules\Deals\Http\Controllers'], function () {
     Route::post('create', 'ApiDealsSubscription@create');
     Route::post('update', 'ApiDealsSubscription@update');
     Route::get('delete/{id_deals}', 'ApiDealsSubscription@destroy');
 });
 
-Route::group(['middleware' => ['auth:api-be', 'log_activities'], 'prefix' => 'api/hidden-deals', 'namespace' => 'Modules\Deals\Http\Controllers'], function () {
+Route::group(['middleware' => ['auth:api-be', 'log_activities','user_agent'], 'prefix' => 'api/hidden-deals', 'namespace' => 'Modules\Deals\Http\Controllers'], function () {
     /* MASTER DEALS */
     Route::post('create', 'ApiHiddenDeals@createReq');
     Route::post('create/autoassign', 'ApiHiddenDeals@autoAssign');

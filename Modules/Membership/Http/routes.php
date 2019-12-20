@@ -1,5 +1,5 @@
 <?php
-Route::group(['middleware' => ['auth:api', 'log_activities'], 'prefix' => 'api/membership', 'namespace' => 'Modules\Membership\Http\Controllers'], function()
+Route::group(['middleware' => ['auth:api', 'log_activities','user_agent'], 'prefix' => 'api/membership', 'namespace' => 'Modules\Membership\Http\Controllers'], function()
 {
     Route::any('/detail/webview', 'ApiMembershipWebview@webview');
 });
@@ -9,11 +9,11 @@ Route::group(['middleware'=>'auth:api', 'prefix' => 'api/membership', 'namespace
     Route::any('/web/view', 'ApiMembershipWebview@detailWebview');
 });
 
-Route::group(['middleware' => ['auth:api-be', 'log_activities'], 'prefix' => 'api/membership', 'namespace' => 'Modules\Membership\Http\Controllers'], function()
+Route::group(['middleware' => ['auth:api-be', 'log_activities','user_agent'], 'prefix' => 'api/membership', 'namespace' => 'Modules\Membership\Http\Controllers'], function()
 {
-    Route::post('be/list', 'ApiMembership@listMembership');
-    Route::post('create', 'ApiMembership@create');
-    Route::post('update', 'ApiMembership@update');
-    Route::post('delete', 'ApiMembership@delete');
-    Route::get('update/transaction', 'ApiMembership@updateSubtotalTrxUser');
+    Route::post('be/list', ['middleware' => 'feature_control:10', 'uses' =>'ApiMembership@listMembership']);
+    Route::post('create', ['middleware' => 'feature_control:12', 'uses' =>'ApiMembership@create']);
+    Route::post('update', ['middleware' => 'feature_control:13', 'uses' =>'ApiMembership@update']);
+    Route::post('delete', ['middleware' => 'feature_control:14', 'uses' =>'ApiMembership@delete']);
+    Route::get('update/transaction', ['middleware' => 'feature_control:13', 'uses' =>'ApiMembership@updateSubtotalTrxUser']);
 });
