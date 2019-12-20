@@ -1,6 +1,6 @@
 <?php
 
-Route::group(['middleware' => ['auth:api-be', 'log_activities'], 'prefix' => 'api/transaction', 'namespace' => 'Modules\Transaction\Http\Controllers'], function () {
+Route::group(['middleware' => ['auth:api-be', 'log_activities', 'user_agent'], 'prefix' => 'api/transaction', 'namespace' => 'Modules\Transaction\Http\Controllers'], function () {
     Route::post('/outlet', 'ApiNotification@adminOutlet');
     Route::post('/admin/confirm', 'ApiNotification@adminOutletComfirm');
     Route::get('setting/cashback', 'ApiSettingCashbackController@list');
@@ -18,34 +18,34 @@ Route::group(['middleware' => ['auth:api-be', 'log_activities'], 'prefix' => 'ap
     Route::post('/setting', 'ApiSettingTransaction@settingTrx');
 
     Route::group(['prefix' => 'manualpayment'], function () {
-        Route::get('/bank', 'ApiTransactionPaymentManual@bankList');
-        Route::post('/bank/delete', 'ApiTransactionPaymentManual@bankDelete');
-        Route::post('/bank/create', 'ApiTransactionPaymentManual@bankCreate');
-        Route::get('/bankmethod', 'ApiTransactionPaymentManual@bankmethodList');
-        Route::post('/bankmethod/delete', 'ApiTransactionPaymentManual@bankmethodDelete');
-        Route::post('/bankmethod/create', 'ApiTransactionPaymentManual@bankmethodCreate');
-        Route::get('/list', 'ApiTransaction@manualPaymentList');
-        Route::post('/edit', 'ApiTransaction@manualPaymentEdit');
-        Route::post('/update', 'ApiTransaction@manualPaymentUpdate');
-        Route::post('/create', 'ApiTransaction@manualPaymentCreate');
-        Route::post('/detail', 'ApiTransaction@manualPaymentDetail');
-        Route::post('/delete', 'ApiTransaction@manualPaymentDelete');
+        Route::get('/bank', ['middleware' => 'feature_control:64', 'uses' => 'ApiTransactionPaymentManual@bankList']);
+        Route::post('/bank/delete', ['middleware' => 'feature_control:68', 'uses' => 'ApiTransactionPaymentManual@bankDelete']);
+        Route::post('/bank/create', ['middleware' => 'feature_control:66', 'uses' => 'ApiTransactionPaymentManual@bankCreate']);
+        Route::get('/bankmethod', ['middleware' => 'feature_control:64', 'uses' => 'ApiTransactionPaymentManual@bankmethodList']);
+        Route::post('/bankmethod/delete', ['middleware' => 'feature_control:68', 'uses' => 'ApiTransactionPaymentManual@bankmethodDelete']);
+        Route::post('/bankmethod/create', ['middleware' => '66', 'uses' => 'ApiTransactionPaymentManual@bankmethodCreate']);
+        Route::get('/list', ['middleware' => '64', 'uses' => 'ApiTransaction@manualPaymentList']);
+        Route::post('/edit', ['middleware' => '67', 'uses' => 'ApiTransaction@manualPaymentEdit']);
+        Route::post('/update', ['middleware' => '67', 'uses' => 'ApiTransaction@manualPaymentUpdate']);
+        Route::post('/create', ['middleware' => '66', 'uses' => 'ApiTransaction@manualPaymentCreate']);
+        Route::post('/detail', ['middleware' => '65', 'uses' => 'ApiTransaction@manualPaymentDetail']);
+        Route::post('/delete', ['middleware' => '68', 'uses' => 'ApiTransaction@manualPaymentDelete']);
 
         Route::group(['prefix' => 'data'], function () {
-            Route::get('/{type}', 'ApiTransactionPaymentManual@manualPaymentList');
-            Route::post('/detail', 'ApiTransactionPaymentManual@detailManualPaymentUnpay');
+            Route::get('/{type}', ['middleware' => '64', 'uses' => 'ApiTransactionPaymentManual@manualPaymentList']);
+            Route::post('/detail', ['middleware' => '65', 'uses' => 'ApiTransactionPaymentManual@detailManualPaymentUnpay']);
             Route::post('/confirm', 'ApiTransactionPaymentManual@manualPaymentConfirm');
             Route::post('/filter/{type}', 'ApiTransactionPaymentManual@transactionPaymentManualFilter');
         });
 
-        Route::post('/method/save', 'ApiTransaction@manualPaymentMethod');
-        Route::post('/method/delete', 'ApiTransaction@manualPaymentMethodDelete');
+        Route::post('/method/save', ['middleware' => '67', 'uses' => 'ApiTransaction@manualPaymentMethod']);
+        Route::post('/method/delete', ['middleware' => '68', 'uses' => 'ApiTransaction@manualPaymentMethodDelete']);
         Route::post('/be/new', 'ApiOnlineTransaction@newTransaction');
     });
     Route::get('be/{key}', 'ApiTransaction@transactionList');
 });
 
-Route::group(['middleware' => ['auth:api', 'log_activities'], 'prefix' => 'api/transaction', 'namespace' => 'Modules\Transaction\Http\Controllers'], function () {
+Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent'], 'prefix' => 'api/transaction', 'namespace' => 'Modules\Transaction\Http\Controllers'], function () {
 
     Route::get('/', 'ApiTransaction@transactionList');
     Route::any('/filter', 'ApiTransaction@transactionFilter');
@@ -73,7 +73,7 @@ Route::group(['middleware' => ['auth:api', 'log_activities'], 'prefix' => 'api/t
     Route::get('/{key}', 'ApiTransaction@transactionList');
 });
 
-Route::group(['middleware' => 'auth_client', 'prefix' => 'api/transaction', 'namespace' => 'Modules\Transaction\Http\Controllers'], function () {
+Route::group(['middleware' => ['auth_client', 'user_agent'], 'prefix' => 'api/transaction', 'namespace' => 'Modules\Transaction\Http\Controllers'], function () {
     Route::post('/province', 'ApiTransaction@getProvince');
     Route::post('/city', 'ApiTransaction@getCity');
     Route::post('/subdistrict', 'ApiTransaction@getSubdistrict');
@@ -85,14 +85,14 @@ Route::group(['middleware' => 'auth_client', 'prefix' => 'api/transaction', 'nam
     Route::post('/shipping/gosend', 'ApiTransaction@shippingCostGoSend');
 });
 
-Route::group(['prefix' => 'api/transaction', 'middleware' => 'log_activities', 'namespace' => 'Modules\Transaction\Http\Controllers'], function () {
+Route::group(['prefix' => 'api/transaction', 'middleware' => ['log_activities', 'user_agent'], 'namespace' => 'Modules\Transaction\Http\Controllers'], function () {
     Route::any('/finish', 'ApiTransaction@transactionFinish');
     Route::any('/cancel', 'ApiTransaction@transactionCancel');
     Route::any('/error', 'ApiTransaction@transactionError');
     Route::any('/notif', 'ApiNotification@receiveNotification');
 });
 
-Route::group(['prefix' => 'api/transaction', 'middleware' => ['log_activities', 'auth:api'], 'namespace' => 'Modules\Transaction\Http\Controllers'], function () {
+Route::group(['prefix' => 'api/transaction', 'middleware' => ['log_activities', 'auth:api', 'user_agent'], 'namespace' => 'Modules\Transaction\Http\Controllers'], function () {
     Route::post('/detail/webview/point', 'ApiWebviewController@webviewPoint');
     Route::post('/detail/webview/balance', 'ApiWebviewController@webviewBalance');
     Route::post('/detail/webview/{mode?}', 'ApiWebviewController@webview');
@@ -100,11 +100,11 @@ Route::group(['prefix' => 'api/transaction', 'middleware' => ['log_activities', 
     Route::post('/detail/webview/success', 'ApiWebviewController@trxSuccess');
 });
 
-Route::group(['middleware' => 'auth:api', 'prefix' => 'api/transaction', 'namespace' => 'Modules\Transaction\Http\Controllers'], function () {
+Route::group(['middleware' => ['auth:api', 'user_agent'], 'prefix' => 'api/transaction', 'namespace' => 'Modules\Transaction\Http\Controllers'], function () {
     Route::post('/gen', 'ApiDumpController@generateNumber');
 });
 
-Route::group(['middleware' => 'auth_client', 'prefix' => 'api/manual-payment', 'namespace' => 'Modules\Transaction\Http\Controllers'], function () {
+Route::group(['middleware' => ['auth_client', 'user_agent'], 'prefix' => 'api/manual-payment', 'namespace' => 'Modules\Transaction\Http\Controllers'], function () {
     Route::get('/', 'ApiTransactionPaymentManual@listPaymentMethod');
     Route::get('/list', 'ApiTransactionPaymentManual@list');
     Route::post('/method', 'ApiTransactionPaymentManual@paymentMethod');

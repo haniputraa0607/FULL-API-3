@@ -13,13 +13,13 @@ use Illuminate\Http\Request;
 |
 */
 
-Route::group(['middleware' => ['auth:api', 'log_activities'], 'prefix' => 'user-feedback'], function () {
+Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent'], 'prefix' => 'user-feedback'], function () {
     Route::any('refuse', 'ApiUserFeedbackController@refuse');
     Route::post('create', 'ApiUserFeedbackController@store');
 });
 
-Route::group(['middleware' => ['auth:api-be', 'log_activities'], 'prefix' => 'user-feedback'], function () {
-    Route::post('/', 'ApiUserFeedbackController@index');
+Route::group(['middleware' => ['auth:api-be', 'log_activities', 'user_agent'], 'prefix' => 'user-feedback'], function () {
+    Route::post('/', ['middleware' => 'feature_control:179', 'uses' => 'ApiUserFeedbackController@index']);
     Route::post('detail', 'ApiUserFeedbackController@show');
     Route::post('get-detail', 'ApiUserFeedbackController@getDetail');
     Route::post('delete', 'ApiUserFeedbackController@destroy');
