@@ -1232,18 +1232,6 @@ class ApiUser extends Controller
     function checkPinBackend(users_phone_pin $request){
         $phone = $request->json('phone');
 
-        $phone = preg_replace("/[^0-9]/", "", $phone);
-
-        if(substr($phone, 0, 2) == '62'){
-            $phone = substr($phone,2);
-        }elseif(substr($phone, 0, 3) == '+62'){
-            $phone = substr($phone,3);
-        }
-
-        if(substr($phone, 0, 1) != '0'){
-            $phone = '0'.$phone;
-        }
-
         $datauser = User::where('phone', '=', $phone)
             ->get()
             ->toArray();
