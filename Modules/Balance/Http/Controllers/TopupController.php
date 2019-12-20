@@ -700,7 +700,7 @@ class TopupController extends Controller
 
         $encodeCheck = json_encode($dataHash);
 
-        if (Hash::check($encodeCheck, $check['enc'])) {
+        if (MyHelper::decrypt2019($check['enc']) == $encodeCheck) {
             return true;
         }
 
