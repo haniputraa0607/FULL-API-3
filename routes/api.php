@@ -13,11 +13,11 @@ use Illuminate\Http\Request;
 |
 */
 
-Route::middleware('auth:api')->get('/user', function (Request $request) {
+Route::middleware('auth:api-be')->get('/user', function (Request $request) {
     return json_decode($request->user(), true);
 });
 
-Route::group(['middleware' => ['auth:api', 'log_activities'] ], function(){
+Route::group(['middleware' => ['auth:api-be', 'log_activities'] ], function(){
 	Route::get('granted-feature', 'Controller@getFeatureControl');
 	Route::get('feature', 'Controller@getFeature');
 	Route::get('feature-module', 'Controller@getFeatureModule');

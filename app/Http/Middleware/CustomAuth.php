@@ -15,8 +15,9 @@ class CustomAuth extends AddCustomProvider
     {
         if($request->get('outlet-app')){
             $request->merge(['provider' => 'outlet-app']);
-        } 
-        elseif($request->get('quinos')){
+        }elseif($request->get('api-be')){
+            $request->merge(['provider' => 'users-be']);
+        }elseif($request->get('quinos')){
             $request->merge(['provider' => 'quinos']);
         }else{
             $request->merge(['provider' => 'users']);
