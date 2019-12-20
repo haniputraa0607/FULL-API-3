@@ -2080,4 +2080,34 @@ class MyHelper{
 		},$first);
 		return $second;
 	}
+
+	/**
+	 * Return int/float based on requested type
+	 * @param  numeric 		$number Number to convert, can be numeric string, integer or anything
+	 * @param  string 		$type   'int' , 'float' , 'double' or 'custom' for custom number format
+	 * @param  $custom 		parameter suplied for customize number
+	 * @return float/int    converted number
+	 */
+	public static function requestNumber($number,$type='int',$custom=[]) {
+		switch ($type) {
+			case 'int':
+				return (int) $number;
+				break;
+			
+			case 'float':
+				return (float) $number;
+				break;
+			
+			case 'double':
+				return (double) $number;
+				break;
+			
+			case 'custom':
+				return number_format($number,...$custom);
+
+			default:
+				return $number;
+				break;
+		}
+	}
 }
