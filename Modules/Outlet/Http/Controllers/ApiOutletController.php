@@ -20,6 +20,8 @@ use App\Http\Models\Configs;
 use App\Http\Models\OutletSchedule;
 use App\Http\Models\Setting;
 use App\Http\Models\OauthAccessToken;
+use App\Http\Models\Product;
+use App\Http\Models\ProductPrice;
 
 use App\Imports\ExcelImport;
 use App\Imports\FirstSheetOnlyImport;
@@ -1853,5 +1855,97 @@ class ApiOutletController extends Controller
             ];
         }
         return response()->json($result);
+    }
+
+    public function listMaxOrder(Request $request) {
+        $post = $request->json()->all();
+        if($post['id_outlet']??false){
+            $col = 'id_outlet';
+            $val = $post['id_outlet'];
+        }else{
+            $col = 'outlet_code';
+            $val = $post['outlet_code'];
+        }
+        $outlet = Outlet::select('id_outlet','advance_order','max_order')->where($col,$val)->first();
+        if(!$outlet){
+            return ['status'=>'fail','messages'=>['Outlet not found']];
+        }
+        $return['outlet'] = $outlet;
+        $products = Product::join('product_prices','product_prices.id_product','=','products.id_product')->select('products.id_product','product_code','product_name','product_prices.max_order')->where('product_prices.id_outlet',$outlet->id_outlet);
+
+        if($post['rule']??false){
+            $filter = $this->filterListProduct($products,$post['rule'],$post['operator']??'and');
+        }else{
+            $filter = [];
+        }
+
+        if($request->page){
+            $return['products'] = $products->paginate(10);
+        }else{
+            $return['products'] = $products->get();
+        }
+        return MyHelper::checkGet($return)+$filter;
+    }
+    public function updateMaxOrder(Request $request) {
+        $post = $request->json()->all();
+        if($post['id_outlet']??false){
+            $col = 'id_outlet';
+            $val = $post['id_outlet'];
+        }else{
+            $col = 'outlet_code';
+            $val = $post['outlet_code'];
+        }
+        $outlet = Outlet::where($col,$val)->first();
+        if(!($post['advance_order']??false)){
+            $post['advance_order'] = 0;
+        }
+        if(!$outlet){
+            return ['status'=>'fail','messages'=>['Outlet not found']];
+        };
+        DB::beginTransaction();
+        $update = Outlet::where($col,$val)->update([
+            'advance_order'=>$post['advance_order'],
+            'max_order'=>$post['max_order']
+        ]);
+        if(!$update){
+            DB::rollBack();
+            return MyHelper::checkUpdate($update);
+        }
+        foreach ($post['products']??[] as $id_product => $max_order) {
+            $up = ProductPrice::where(['id_product'=>$id_product,'id_outlet'=>$outlet->id_outlet])->update([
+                'max_order' => $max_order
+            ]);
+            if(!$up){
+                DB::rollBack();
+                return [
+                    'status' => 'fail',
+                    'messages' => 'Failed update per product max order'
+                ];
+            }
+        }
+        DB::commit();
+        return MyHelper::checkUpdate($update);
+    }
+    public function filterListProduct($query,$rules,$operator='and'){
+        $newRule=[];
+        $total = $query->count();
+        foreach ($rules as $var) {
+            $rule=[$var['operator']??'=',$var['parameter']??''];
+            if($rule[0]=='like'){
+                $rule[1]='%'.$rule[1].'%';
+            }
+            $newRule[$var['subject']][]=$rule;
+        }
+        $where=$operator=='and'?'where':'orWhere';
+        $subjects=['product_code','product_name','max_order'];
+        foreach ($subjects as $subject) {
+            if($rules2=$newRule[$subject]??false){
+                foreach ($rules2 as $rule) {
+                    $query->$where($subject,$rule[0],$rule[1]);
+                }
+            }
+        }
+        $filtered = $query->count();
+        return ['total'=>$total,'filtered'=>$filtered];
     }
 }

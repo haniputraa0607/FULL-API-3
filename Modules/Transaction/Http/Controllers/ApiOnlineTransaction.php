@@ -23,6 +23,7 @@ use App\Http\Models\TransactionShipment;
 use App\Http\Models\TransactionPickup;
 use App\Http\Models\TransactionPickupGoSend;
 use App\Http\Models\TransactionPaymentMidtran;
+use App\Http\Models\TransactionAdvanceOrder;
 use App\Http\Models\LogPoint;
 use App\Http\Models\LogBalance;
 use App\Http\Models\ManualPaymentMethod;
@@ -83,19 +84,25 @@ class ApiOnlineTransaction extends Controller
         if (isset($post['headers'])) {
             unset($post['headers']);
         }
-
+        if($post['type'] == 'Advance Order'){
+            $post['id_outlet'] = Setting::where('key','default_outlet')->pluck('value')->first();
+        }
         $dataInsertProduct = [];
         $productMidtrans = [];
         $dataDetailProduct = [];
         $userTrxProduct = [];
 
-        $outlet = Outlet::where('id_outlet', $post['id_outlet'])->with('today')->first();
-        if (empty($outlet)) {
-            DB::rollback();
-            return response()->json([
-                'status'    => 'fail',
-                'messages'  => ['Outlet Not Found']
-                ]);
+        if(isset($post['id_outlet'])){
+            $outlet = Outlet::where('id_outlet', $post['id_outlet'])->with('today')->first();
+            if (empty($outlet)) {
+                DB::rollback();
+                return response()->json([
+                    'status'    => 'fail',
+                    'messages'  => ['Outlet Not Found']
+                    ]);
+            }
+        }else{
+            $outlet = optional();
         }
 
         $issetDate = false;
@@ -1008,7 +1015,42 @@ class ApiOnlineTransaction extends Controller
 
                 $id_pickup_go_send = $gosend->id_transaction_pickup_go_send;
             }
-        }
+        } elseif ($post['type'] == 'Advance Order') {
+            $order_id = MyHelper::createrandom(4, 'Besar Angka');
+            //cek unique order id today
+            $cekOrderId = TransactionAdvanceOrder::join('transactions', 'transactions.id_transaction', 'transaction_advance_orders.id_transaction')
+                                            ->where('id_outlet', $insertTransaction['id_outlet'])
+                                            ->where('order_id', $order_id)
+                                            ->whereDate('transaction_date', date('Y-m-d'))
+                                            ->first();
+            while($cekOrderId){
+                $order_id = MyHelper::createrandom(4, 'Besar Angka');
+
+                $cekOrderId = TransactionAdvanceOrder::join('transactions', 'transactions.id_transaction', 'transaction_advance_orders.id_transaction')
+                                            ->where('id_outlet', $insertTransaction['id_outlet'])
+                                            ->where('order_id', $order_id)
+                                            ->whereDate('transaction_date', date('Y-m-d'))
+                                            ->first();
+            }
+
+            $dataAO = [
+                'id_transaction' => $insertTransaction['id_transaction'],
+                'order_id' => $order_id,
+                'address' => $post['address'],
+                'receive_at' => $post['receive_at'],
+                'receiver_name' => $post['receiver_name'],
+                'receiver_phone' => $post['receiver_phone'],
+                'date_delivery' => $post['date_delivery']
+            ];
+            $insertAO = TransactionAdvanceOrder::create($dataAO);
+            if (!$insertAO) {
+                DB::rollback();
+                return response()->json([
+                    'status'    => 'fail',
+                    'messages'  => ['Insert Advance Order Failed']
+                ]);
+            }
+        } 
 
         //insert pickup go-send
         if($post['type'] == 'GO-SEND'){
@@ -1451,14 +1493,18 @@ class ApiOnlineTransaction extends Controller
         // hitung product discount
         $totalDisProduct = 0;
         $productDis = app($this->setting_trx)->discountProduct($post);
-        if ($productDis) {
+        if (is_numeric($productDis)) {
             $totalDisProduct = $productDis;
+        }else{
+            return $productDis;
         }
 
         $tree = [];
         // check and group product
         $subtotal = 0;
-        foreach ($post['item'] as $item) {
+        $error_msg=[];
+        $missing_product = 0;
+        foreach ($post['item'] as &$item) {
             // get detail product
             $product = Product::select([
                 'products.id_product','products.product_name','products.product_description',
@@ -1492,21 +1538,30 @@ class ApiOnlineTransaction extends Controller
             ->orderBy('products.position')
             ->find($item['id_product']);
             if(!$product){
-                return [
-                    'status' => 'fail',
-                    'messages' => ['Product not found']
-                ];
+                $missing_product++;
+                continue;
             }
             $product->append('photo');
             $product = $product->toArray();
+            if($product['product_stock_status']!='Available'){
+                $error_msg[] = MyHelper::simpleReplace(
+                    '%product_name% is out of stock',
+                    [
+                        'product_name' => $product['product_name']
+                    ]
+                );
+                continue;
+            }
             unset($product['photos']);
             $product['id_custom'] = $item['id_custom']??null;
             $product['qty'] = $item['qty'];
-            $product['note'] = $item['note'];
+            $product['note'] = $item['note']??'';
             // get modifier
             $mod_price = 0;
-            $product['modifiers']=[];
-            foreach ($item['modifiers'] as $modifier) {
+            $product['modifiers'] = [];
+            $removed_modifier = [];
+            $missing_modifier = 0;
+            foreach ($item['modifiers'] as $key => $modifier) {
                 $id_product_modifier = is_numeric($modifier)?$modifier:$modifier['id_product_modifier'];
                 $qty_product_modifier = is_numeric($modifier)?1:$modifier['qty'];
                 $mod = ProductModifier::select('product_modifiers.id_product_modifier','text','product_modifier_stock_status','product_modifier_price')
@@ -1527,16 +1582,12 @@ class ApiOnlineTransaction extends Controller
                     // product modifier dengan id
                     ->find($id_product_modifier);
                 if(!$mod){
-                    return [
-                        'status' => 'fail',
-                        'messages' => ['Modifier not found']
-                    ];
+                    $missing_modifier++;
+                    continue;
                 }
                 if($mod['product_modifier_stock_status']!='Available'){
-                    return [
-                        'status' => 'fail',
-                        'messages' => ['Modifier not available']
-                    ];
+                    $removed_modifier[] = $mod['text'];
+                    continue;
                 }
                 $mod = $mod->toArray();
                 $mod['qty'] = $qty_product_modifier;
@@ -1544,12 +1595,38 @@ class ApiOnlineTransaction extends Controller
                 $product['modifiers'][]=$mod;
                 $mod_price+=$mod['qty']*$mod['product_modifier_price'];
             }
+            if($missing_modifier){
+                $error_msg[] = MyHelper::simpleReplace(
+                    '%missing_modifier% modifiers for product %product_name% not found',
+                    [
+                        'missing_modifier' => $missing_modifier,
+                        'product_name' => $product['product_name']
+                    ]
+                );
+            }
+            if($removed_modifier){
+                $error_msg[] = MyHelper::simpleReplace(
+                    'Modifier %removed_modifier% for product %product_name% is out of stock',
+                    [
+                        'removed_modifier' => implode(',',$removed_modifier),
+                        'product_name' => $product['product_name']
+                    ]
+                );
+            }
             if(!isset($tree[$product['id_brand']]['name_brand'])){
                 $tree[$product['id_brand']] = Brand::select('name_brand','id_brand')->find($product['id_brand'])->toArray();
             }
             $product['product_price_total'] = $product['qty'] * ($product['product_price']+$mod_price);
             $tree[$product['id_brand']]['products'][]=$product;
             $subtotal += $product['product_price_total'];
+        }
+        if($missing_product){
+            $error_msg[] = MyHelper::simpleReplace(
+                '%missing_product% products not found',
+                [
+                    'missing_product' => $missing_product
+                ]
+            );
         }
         foreach ($grandTotal as $keyTotal => $valueTotal) {
             if ($valueTotal == 'subtotal') {
@@ -1607,49 +1684,6 @@ class ApiOnlineTransaction extends Controller
             }
         }
 
-        $post['cashback'] = app($this->setting_trx)->countTransaction('cashback', $post);
-
-        //count some trx user
-        $countUserTrx = Transaction::where('id_user', $user->id)->where('transaction_payment_status', 'Completed')->count();
-
-        $countSettingCashback = TransactionSetting::get();
-
-        // return $countSettingCashback;
-        if ($countUserTrx < count($countSettingCashback)) {
-            // return $countUserTrx;
-            $post['cashback'] = $post['cashback'] * $countSettingCashback[$countUserTrx]['cashback_percent'] / 100;
-
-            if ($post['cashback'] > $countSettingCashback[$countUserTrx]['cashback_maximum']) {
-                $post['cashback'] = $countSettingCashback[$countUserTrx]['cashback_maximum'];
-            }
-        } else {
-
-            $maxCash = Setting::where('key', 'cashback_maximum')->first();
-
-            if (count($user['memberships']) > 0) {
-                $post['cashback'] = $post['cashback'] * ($user['memberships'][0]['benefit_cashback_multiplier']) / 100;
-
-                if($user['memberships'][0]['cashback_maximum']){
-                    $maxCash['value'] = $user['memberships'][0]['cashback_maximum'];
-                }
-            }
-
-            $statusCashMax = 'no';
-
-            if (!empty($maxCash) && !empty($maxCash['value'])) {
-                $statusCashMax = 'yes';
-                $totalCashMax = $maxCash['value'];
-            }
-
-            if ($statusCashMax == 'yes') {
-                if ($totalCashMax < $post['cashback']) {
-                    $post['cashback'] = $totalCashMax;
-                }
-            } else {
-                $post['cashback'] = $post['cashback'];
-            }
-        }
-
         $result['outlet'] = [
             'id_outlet' => $outlet['id_outlet'],
             'outlet_name' => $outlet['outlet_name'],
@@ -1662,8 +1696,20 @@ class ApiOnlineTransaction extends Controller
         $result['service'] = $post['service'];
         $result['tax'] = (int) $post['tax'];
         $result['grandtotal'] = (int)$post['subtotal'] + (int)(-$post['discount']) + (int)$post['service'] + (int)$post['tax'] + (int)$post['shipping'];
-        $result['cashback_earned'] = (int) $post['cashback'];
-        return MyHelper::checkGet($result);
+        $result['used_point'] = 0;
+        $balance = app($this->balance)->balanceNow($user->id);
+        $result['points'] = (int) $balance;
+        if (isset($post['payment_type'])&&$post['payment_type'] == 'Balance') {
+            if($balance>=$result['grandtotal']){
+                $result['used_point'] = $result['grandtotal'];
+                $result['grandtotal'] = 0;
+            }else{
+                $result['used_point'] = $balance;
+                $result['grandtotal'] -= $balance;
+            }
+            $result['points'] -= $result['used_point'];
+        }
+        return MyHelper::checkGet($result)+['messages'=>$error_msg];
     }
 
     public function saveLocation($latitude, $longitude, $id_user, $id_transaction, $id_outlet){

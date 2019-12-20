@@ -1,6 +1,6 @@
 <?php
 
-namespace Modules\Product\Http\Requests\Modifier;
+namespace Modules\Favorite\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Contracts\Validation\Validator;
@@ -16,13 +16,9 @@ class CreateRequest extends FormRequest
     public function rules()
     {
         return [
-            'modifier_type'       => 'in:Global,Specific,Global Brand|required',
-            'type'                => 'string|required',
-            'code'                => 'string|required|unique:product_modifiers,code',
-            'text'                => 'string|required',
-            'id_brand'            => 'array|nullable|sometimes',
-            'id_product_category' => 'array|nullable|sometimes',
-            'id_product'          => 'array|nullable|sometimes'
+            'id_product'=>'exists:products,id_product',
+            'id_brand'=>'exists:brands,id_brand',
+            'id_outlet'=>'exists:outlets,id_outlet',
         ];
     }
 
@@ -35,6 +31,7 @@ class CreateRequest extends FormRequest
     {
         return true;
     }
+
     protected function failedValidation(Validator $validator)
     {
         throw new HttpResponseException(response()->json(['status' => 'fail', 'messages'  => $validator->errors()->all()], 200));

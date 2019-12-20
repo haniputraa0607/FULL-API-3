@@ -43,6 +43,7 @@ Route::group(['middleware' => ['auth:api', 'log_activities'], 'prefix' => 'api/t
     Route::get('/', 'ApiTransaction@transactionList');
     Route::any('/filter', 'ApiTransaction@transactionFilter');
     Route::post('/detail', 'ApiTransaction@transactionDetail');
+    Route::post('/item', 'ApiTransaction@transactionDetailTrx');
     Route::post('/point/detail', 'ApiTransaction@transactionPointDetail');
     Route::post('/balance/detail', 'ApiTransaction@transactionBalanceDetail');
 
@@ -86,9 +87,9 @@ Route::group(['prefix' => 'api/transaction', 'middleware' => 'log_activities', '
 });
 
 Route::group(['prefix' => 'api/transaction', 'middleware' => ['log_activities', 'auth:api'], 'namespace' => 'Modules\Transaction\Http\Controllers'], function () {
-    Route::post('/detail/webview', 'ApiWebviewController@webview');
     Route::post('/detail/webview/point', 'ApiWebviewController@webviewPoint');
     Route::post('/detail/webview/balance', 'ApiWebviewController@webviewBalance');
+    Route::post('/detail/webview/{mode?}', 'ApiWebviewController@webview');
 
     Route::post('/detail/webview/success', 'ApiWebviewController@trxSuccess');
 });

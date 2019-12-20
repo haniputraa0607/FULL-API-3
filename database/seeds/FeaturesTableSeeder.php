@@ -1580,45 +1580,68 @@ class FeaturesTableSeeder extends Seeder
                     'updated_at' => date('Y-m-d H:00:00'),
                 ),
             196 =>
-            array(
-                'id_feature' => 197,
-                'feature_type' => 'List',
-                'feature_module' => 'Promo Campaign',
-                'created_at' => '2018-05-10 08:00:00',
-                'updated_at' => '2018-05-10 08:00:00',
-            ),
+                array(
+                    'id_feature' => 197,
+                    'feature_type' => 'List',
+                    'feature_module' => 'Maximum Order',
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00'),
+                ),
             197 =>
-            array(
-                'id_feature' => 198,
-                'feature_type' => 'Detail',
-                'feature_module' => 'Promo Campaign',
-                'created_at' => '2018-05-10 08:00:00',
-                'updated_at' => '2018-05-10 08:00:00',
-            ),
+                array(
+                    'id_feature' => 198,
+                    'feature_type' => 'Update',
+                    'feature_module' => 'Maximum Order',
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00'),
+                ),
             198 =>
             array(
                 'id_feature' => 199,
-                'feature_type' => 'Create',
-                'feature_module' => 'Promo Campaign',
-                'created_at' => '2018-05-10 08:00:00',
-                'updated_at' => '2018-05-10 08:00:00',
+                'feature_type' => 'Update',
+                'feature_module' => 'Default Outlet',
+                'created_at' => date('Y-m-d H:00:00'),
+                'updated_at' => date('Y-m-d H:00:00'),
             ),
-            199 =>
+            199 => 
             array(
                 'id_feature' => 200,
-                'feature_type' => 'Update',
+                'feature_type' => 'List',
                 'feature_module' => 'Promo Campaign',
-                'created_at' => '2018-05-10 08:00:00',
-                'updated_at' => '2018-05-10 08:00:00',
+                'created_at' => date('Y-m-d H:00:00'),
+                'updated_at' => date('Y-m-d H:00:00'),
             ),
             200 =>
             array(
                 'id_feature' => 201,
+                'feature_type' => 'Detail',
+                'feature_module' => 'Promo Campaign',
+                'created_at' => date('Y-m-d H:00:00'),
+                'updated_at' => date('Y-m-d H:00:00'),
+            ),
+            201 =>
+            array(
+                'id_feature' => 202,
+                'feature_type' => 'Create',
+                'feature_module' => 'Promo Campaign',
+                'created_at' => date('Y-m-d H:00:00'),
+                'updated_at' => date('Y-m-d H:00:00'),
+            ),
+            202 =>
+            array(
+                'id_feature' => 203,
+                'feature_type' => 'Update',
+                'feature_module' => 'Promo Campaign',
+                'created_at' => date('Y-m-d H:00:00'),
+                'updated_at' => date('Y-m-d H:00:00'),
+            ),
+            203 =>
+            array(
+                'id_feature' => 204,
                 'feature_type' => 'Delete',
                 'feature_module' => 'Promo Campaign',
-                'created_at' => '2018-05-10 08:00:00',
-                'updated_at' => '2018-05-10 08:00:00',
-            ),
+                'created_at' => date('Y-m-d H:00:00'),
+                'updated_at' => date('Y-m-d H:00:00'),
         ));
     }
 }

@@ -8,7 +8,10 @@ use Illuminate\Routing\Controller;
 use Modules\Favorite\Entities\Favorite;
 use Modules\Favorite\Entities\FavoriteModifier;
 
+use Modules\Favorite\Http\Requests\CreateRequest;
+
 use App\Http\Models\Outlet;
+use App\Http\Models\ProductModifierPrice;
 
 use App\Lib\MyHelper;
 
@@ -47,23 +50,36 @@ class ApiFavoriteController extends Controller
         $id_favorite = $request->json('id_favorite');
         $latitude = $request->json('latitude');
         $longitude = $request->json('longitude');
-
+        $nf = $request->json('number_format')?:'float';
         $favorite = Favorite::where('id_user',$user->id);
-        $select = ['id_favorite','id_outlet','id_product','id_user','product_qty','notes'];
+        $select = ['id_favorite','id_outlet','id_product','id_brand','id_user','product_qty','notes'];
         $with = [
             'modifiers'=>function($query){
-                $query->select('product_modifiers.id_product_modifier','type','code','text','price');
+                $query->select('product_modifiers.id_product_modifier','type','code','text','favorite_modifiers.qty');
             }
         ];
         // detail or list
-        if($request->page&&!$id_favorite){
-            $data = Favorite::where('id_user',$user->id)->select($select)->with($with)->paginate(10)->toArray();
-            if(count($data['data'])>=1){
-                $data['data'] = MyHelper::groupIt($data['data'],'id_outlet',function($key,&$val){
-                    $val['product']['price']=number_format($val['product']['price'],0,",",".");
+        if(!$id_favorite){
+            if($request->page){
+                $data = Favorite::where('id_user',$user->id)->select($select)->with($with)->paginate(10)->toArray();
+                $datax = &$data['data'];
+            }else{
+                $data = Favorite::where('id_user',$user->id)->select($select)->with($with)->get()->toArray();
+                $datax = &$data;
+            }
+            if(count($datax)>=1){
+                $datax = MyHelper::groupIt($datax,'id_outlet',function($key,&$val) use ($nf,$data){
+                    $total_price = $val['product']['price'];
+                    $val['product']['price']=MyHelper::requestNumber($val['product']['price'],$nf);
                     foreach ($val['modifiers'] as &$modifier) {
-                        $modifier['price'] = '+ '.number_format($modifier['price'],0,",",".");
+                        $price = ProductModifierPrice::select('product_modifier_price')->where([
+                            'id_product_modifier' => $modifier['id_product_modifier'],
+                            'id_outlet' => $val['id_outlet']
+                        ])->pluck('product_modifier_price')->first();
+                        $modifier['product_modifier_price'] = MyHelper::requestNumber($price,$nf);
+                        $total_price+=$price*$modifier['qty'];
                     }
+                    $val['product_price_total'] = $total_price;
                     return $key;
                 },function($key,&$val) use ($latitude,$longitude){
                     $outlet = Outlet::select('id_outlet','outlet_name','outlet_address','outlet_latitude','outlet_longitude')->with('today')->find($key)->toArray();
@@ -78,44 +94,30 @@ class ApiFavoriteController extends Controller
                     ];
                     return $key;
                 });
-                $data['data'] = array_values($data['data']);
-                usort($data['data'], function(&$a,&$b){
+                $datax = array_values($datax);
+                usort($datax, function(&$a,&$b){
                     return $a['outlet']['distance_raw'] <=> $b['outlet']['distance_raw'];
                 });
             }else{
                 $data = [];
             }
-        }elseif($id_favorite){
-            $data = $favorite->select($select)->with($with)->where('id_favorite',$id_favorite)->first()->toArray();
-            $data['product']['price']=number_format($data['product']['price'],0,",",".");
-            foreach ($data['modifiers'] as &$modifier) {
-                $modifier['price'] = '+ '.number_format($modifier['price'],0,",",".");
-            }
         }else{
-            //get list favorite product outlet
-            $outlets = $favorite->select('id_outlet')->with(['outlet'=>function($query){
-                $query->select('id_outlet','outlet_name','outlet_address','outlet_latitude','outlet_longitude');
-            }])->groupBy('id_outlet')->get()->pluck('outlet');
-            $data=[];
-            foreach ($outlets as $outlet) {
-                $outlet = $outlet->load('today')->toArray();
-                $status = app('Modules\Outlet\Http\Controllers\ApiOutletController')->checkOutletStatus($outlet);
-                $outlet['outlet_address']=$outlet['outlet_address']??'';
-                $outlet['status']=$status;
-                $outlet['distance_raw'] = MyHelper::count_distance($latitude,$longitude,$outlet['outlet_latitude'],$outlet['outlet_longitude']);
-                $outlet['distance'] = MyHelper::count_distance($latitude,$longitude,$outlet['outlet_latitude'],$outlet['outlet_longitude'],'K',true);
-                $data[]=[
-                    'outlet' => $outlet,
-                    'favorites' => Favorite::where([
-                            ['id_user',$user->id],
-                            ['id_outlet',$outlet['id_outlet']]
-                        ])->select($select)->with($with)->get()
-                ];
+            $data = $favorite->select($select)->with($with)->where('id_favorite',$id_favorite)->first();
+            if(!$data){
+                return MyHelper::checkGet($data);
             }
-            //order by nearest
-            usort($data, function($a,$b){
-                return $a['outlet']['distance_raw'] <=> $b['outlet']['distance_raw'];
-            });
+            $data = $data->toArray();
+            $total_price = $data['product']['price'];
+            $data['product']['price']=MyHelper::requestNumber($data['product']['price'],$nf);
+            foreach ($data['modifiers'] as &$modifier) {
+                $price = ProductModifierPrice::select('product_modifier_price')->where([
+                    'id_product_modifier' => $modifier['id_product_modifier'],
+                    'id_outlet' => $data['id_outlet']
+                ])->pluck('product_modifier_price')->first();
+                $modifier['product_modifier_price'] = MyHelper::requestNumber($price,$nf);
+                $total_price += $price*$modifier['qty'];
+            }
+            $data['product_price_total'] = $total_price;
         }
         return MyHelper::checkGet($data,'empty');
     }
@@ -133,20 +135,29 @@ class ApiFavoriteController extends Controller
      * }
      * @return Response
      */
-    public function store(Request $request){
+    public function store(CreateRequest $request){
         $id_user = $request->user()->id;
         $modifiers = $request->json('modifiers');
         // check is already exist
         $data = Favorite::where([
             ['id_outlet',$request->json('id_outlet')],
             ['id_product',$request->json('id_product')],
+            ['id_brand',$request->json('id_brand')],
             ['id_user',$id_user],
             ['notes',$request->json('notes')??''],
             ['product_qty',$request->json('product_qty')]
         ])->where(function($query) use ($modifiers){
-            foreach ($modifiers as $id_product_modifier) {
-                $query->whereHas('modifiers',function($query) use ($id_product_modifier){
-                    $query->where('product_modifiers.id_product_modifier',$id_product_modifier);
+            foreach ($modifiers as $modifier) {
+                if(is_array($modifier)){
+                    $id_product_modifier = $modifier['id_product_modifier'];
+                    $qty = $modifier['qty']??1;
+                }else{
+                    $id_product_modifier = $modifier;
+                    $qty = 1;
+                }
+                $query->whereHas('favorite_modifiers',function($query) use ($id_product_modifier,$qty){
+                    $query->where('favorite_modifiers.id_product_modifier',$id_product_modifier);
+                    $query->where('favorite_modifiers.qty',$qty);
                 });
             }
         })->having('modifiers_count','=',count($modifiers))->withCount('modifiers')->first();
@@ -156,6 +167,7 @@ class ApiFavoriteController extends Controller
             // create favorite
             $insert_data = [
                 'id_outlet' => $request->json('id_outlet'),
+                'id_brand' => $request->json('id_brand'),
                 'id_product' => $request->json('id_product'),
                 'product_qty' => $request->json('product_qty'),
                 'id_user' => $id_user,
@@ -164,10 +176,18 @@ class ApiFavoriteController extends Controller
             $data = Favorite::create($insert_data);
             if($data){
                 //insert modifier
-                foreach ($modifiers as $id_product_modifier) {
-                    $insert = FavoriteModifier::insert([
+                foreach ($modifiers as $modifier) {
+                    if(is_array($modifier)){
+                        $id_product_modifier = $modifier['id_product_modifier'];
+                        $qty = $modifier['qty']??1;
+                    }else{
+                        $id_product_modifier = $modifier;
+                        $qty = 1;
+                    }
+                    $insert = FavoriteModifier::create([
                         'id_favorite'=>$data->id_favorite,
-                        'id_product_modifier'=>$id_product_modifier
+                        'id_product_modifier'=>$id_product_modifier,
+                        'qty' => $qty
                     ]);
                     if(!$insert){
                         \DB::rolBack();

@@ -47,6 +47,9 @@ Route::group(['prefix' => 'api/outlet', 'namespace' => 'Modules\Outlet\Http\Cont
         Route::post('export', 'ApiOutletController@export');
         Route::post('import', 'ApiOutletController@import');
 
+        Route::post('max-order', 'ApiOutletController@listMaxOrder');
+        Route::post('max-order/update', 'ApiOutletController@updateMaxOrder');
+
         /**
          * photo
          */
