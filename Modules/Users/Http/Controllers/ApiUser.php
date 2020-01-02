@@ -121,10 +121,10 @@ class ApiUser extends Controller
             }
         }
 
-        $resultApps = $queryApps->skip($skip)->take($take)->get()->toArray();
         $resultCountApps = $queryApps->count();
-        $resultBe = $queryBe->skip($skip)->take($take)->get()->toArray();
         $resultCountBe = $queryBe->count();
+        $resultApps = $queryApps->skip($skip)->take($take)->get()->toArray();
+        $resultBe = $queryBe->skip($skip)->take($take)->get()->toArray();
 
         if($resultApps || $resultBe){
             $response = ['status'	=> 'success',
@@ -1846,12 +1846,10 @@ class ApiUser extends Controller
     }
     function list(Request $request){
         $post = $request->json()->all();
-        // return response()->json($post);
         if(isset($post['order_field'])) $order_field = $post['order_field']; else $order_field = 'id';
         if(isset($post['order_method'])) $order_method = $post['order_method']; else $order_method = 'desc';
         if(isset($post['skip'])) $skip = $post['skip']; else $skip = '0';
         if(isset($post['take'])) $take = $post['take']; else $take = '10';
-        // if(isset($post['rule'])) $rule = $post['rule']; else $rule = 'and';
         if(isset($post['conditions'])) $conditions = $post['conditions']; else $conditions = null;
 
         $query = $this->UserFilter($conditions, $order_field, $order_method, $skip, $take);
@@ -1861,14 +1859,14 @@ class ApiUser extends Controller
 
     function activity(Request $request){
         $post = $request->json()->all();
-
+        // return $post;
         if(isset($post['order_field'])) $order_field = $post['order_field']; else $order_field = 'id';
         if(isset($post['order_method'])) $order_method = $post['order_method']; else $order_method = 'desc';
         if(isset($post['skip'])) $skip = $post['skip']; else $skip = '0';
         if(isset($post['take'])) $take = $post['take']; else $take = '10';
         if(isset($post['rule'])) $rule = $post['rule']; else $rule = 'and';
         if(isset($post['conditions'])) $conditions = $post['conditions']; else $conditions = null;
-
+        
         $query = $this->LogActivityFilter($rule, $conditions, $order_field, $order_method, $skip, $take);
 
         return response()->json($query);
@@ -1924,6 +1922,38 @@ class ApiUser extends Controller
                 $result = [
                     'status'	=> 'fail',
                     'messages'	=> ['User Not Found']
+                ];
+            }
+        }
+        return response()->json($result);
+    }
+
+    public function deleteLog(Request $request)
+    {
+        $post = $request->json()->all();
+
+        if (isset($post['id_log_activities_apps'])) {
+            $deleteLog = LogActivitiesApps::where('id_log_activities_apps','=',$post['id_log_activities_apps'])->delete();
+            if($deleteLog){
+                $result = ['status'	=> 'success',
+                    'result'	=> ['User Log has been deleted']
+                ];
+            } else {
+                $result = [
+                    'status'	=> 'fail',
+                    'messages'	=> ['User Admin & Super Admin Cannot be deleted']
+                ];
+            }
+        } elseif (isset($post['id_log_activities_be'])) {
+            $deleteLog = LogActivitiesBE::where('id_log_activities_be','=',$post['id_log_activities_be'])->delete();
+            if($deleteLog){
+                $result = ['status'	=> 'success',
+                    'result'	=> ['User Log has been deleted']
+                ];
+            } else {
+                $result = [
+                    'status'	=> 'fail',
+                    'messages'	=> ['User Admin & Super Admin Cannot be deleted']
                 ];
             }
         }
