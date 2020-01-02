@@ -70,9 +70,12 @@ class LogActivitiesMiddleware
                 if(stristr($url, 'gofood')) $module = 'Banner Go-Food';
                 if(stristr($url, 'users')) $module = 'User';
                 if(stristr($url, 'v1/pos')) $module = 'POS';
+                if(stristr($url, 'subscription')) $module = 'Subscription';
 
                 $subject = "Unknown";
 
+                //subscription
+                if(stristr($url, 'subscription')) $subject = 'Subscription';
 
                 //autocrm 
                 if(stristr($url, 'autocrm')) $subject = 'Autocrm';
