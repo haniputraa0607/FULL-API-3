@@ -70,6 +70,7 @@ Route::group(['middleware' => ['auth:api-be','log_activities', 'user_agent'], 'p
     Route::post('log', ['middleware' => 'feature_control:3', 'uses' => 'ApiUser@log']);
     Route::get('log/detail/{id}/{log_type}', ['middleware' => 'feature_control:3', 'uses' => 'ApiUser@detailLog']);
     Route::post('delete', ['middleware' => 'feature_control:6', 'uses' => 'ApiUser@delete']);
+    Route::post('delete/log', ['middleware' => 'feature_control:6', 'uses' => 'ApiUser@deleteLog']);
     Route::post('update', ['middleware' => 'feature_control:5', 'uses' => 'ApiUser@updateProfileByAdmin']);
     Route::post('update/photo', ['middleware' => 'feature_control:5', 'uses' => 'ApiUser@updateProfilePhotoByAdmin']);
     Route::post('update/password', ['middleware' => 'feature_control:5', 'uses' => 'ApiUser@updateProfilePasswordByAdmin']);

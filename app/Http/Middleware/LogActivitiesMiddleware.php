@@ -263,8 +263,7 @@ class LogActivitiesMiddleware
                     // 'response'                  => json_encode($response),
                     'ip'                        => $ip,
                     'useragent'                 => $userAgent
-                ];
-                } else{
+                ];} else {
                     $data = [
                         'module' 		=> ucwords($module),
                         'url' 			=> $url,
@@ -282,6 +281,23 @@ class LogActivitiesMiddleware
                 }
                 
                 if($beStatusUserAgent == 1){
+                    if (stristr($url, 'activity')) {
+                        $data = [
+                            'module' 			=> ucwords($module),
+                            'url' 			=> $url,
+                            'subject' 			=> $subject,
+                            'phone' 			=> $phone,
+                            'user' 			=> MyHelper::encrypt2019(json_encode($ruser)),
+                            // 'user' 			=> json_encode($ruser),
+                            'request' 		=> MyHelper::encrypt2019($requestnya),
+                            // 'request' 			=> $requestnya,
+                            'response_status'           => $status,
+                            'response'               => MyHelper::encrypt2019(json_encode('success')),
+                            // 'response'                  => json_encode($response),
+                            'ip'                        => $ip,
+                            'useragent'                 => $userAgent
+                        ];
+                    }
                     $log = LogActivitiesBE::create($data);
                 }else{
                     $log = LogActivitiesApps::create($data);
