@@ -10,6 +10,7 @@ use Modules\Favorite\Entities\FavoriteModifier;
 
 use Modules\Favorite\Http\Requests\CreateRequest;
 
+use App\Http\Models\Setting;
 use App\Http\Models\Outlet;
 use App\Http\Models\ProductModifierPrice;
 
@@ -161,8 +162,11 @@ class ApiFavoriteController extends Controller
                 });
             }
         })->having('modifiers_count','=',count($modifiers))->withCount('modifiers')->first();
-
+        $extra['message'] = Setting::select('value_text')->where('key','favorite_already_exists_message')->pluck('value_text')->first()?:'Favorite already exists';
+        $new = 0;
         if(!$data){
+            $extra['message'] = Setting::select('value_text')->where('key','favorite_add_success_message')->pluck('value_text')->first()?:'Success add favorite';
+            $new = 1;
             \DB::beginTransaction();
             // create favorite
             $insert_data = [
@@ -207,7 +211,9 @@ class ApiFavoriteController extends Controller
             \DB::commit();
         }
         $data->load('modifiers');
-        return MyHelper::checkCreate($data);
+        $data = $data->toArray();
+        $data['create_new'] = $new;
+        return MyHelper::checkCreate($data)+$extra;
     }
 
     /**

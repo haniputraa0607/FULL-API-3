@@ -559,6 +559,33 @@ class SettingsTableSeeder extends Seeder
                 'created_at' => date('Y-m-d H:i:s'),
                 'updated_at' => date('Y-m-d H:i:s'),
             ),
+            62 =>
+                array(
+                    'id_setting' => 63,
+                    'key' => 'processing_time_text',
+                    'value' => null,
+                    'value_text' => 'Set pickup time minimum %processing_time% minutes from now',
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
+            63 =>
+                array(
+                    'id_setting' => 64,
+                    'key' => 'favorite_already_exists_message',
+                    'value' => null,
+                    'value_text' => 'Favorite already exists',
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
+            64 =>
+                array(
+                    'id_setting' => 65,
+                    'key' => 'favorite_add_success_message',
+                    'value' => null,
+                    'value_text' => 'Success add favorite',
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
         ));
     }
 }
