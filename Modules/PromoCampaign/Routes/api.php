@@ -15,7 +15,7 @@ use Illuminate\Http\Request;
 Route::group(['middleware' => ['auth:api', 'log_activities'], 'prefix' => 'promo-campaign'], function () {
     // Route::post('getTag', 'ApiPromoCampaign@getTag');
 });
-Route::group(['middleware' => ['auth:api'], 'prefix' => 'promo-campaign'], function () {
+Route::group(['middleware' => ['auth:api-be'], 'prefix' => 'promo-campaign'], function () {
     Route::get('/', 'ApiPromoCampaign@index');
     Route::any('filter', 'ApiPromoCampaign@index');
     Route::post('detail', 'ApiPromoCampaign@detail');
