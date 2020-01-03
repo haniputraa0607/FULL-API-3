@@ -591,6 +591,38 @@ class ApiProductController extends Controller
     	}
     }
 
+    function uploadPhotoProductAjax(Request $request) {
+    	$post = $request->json()->all();
+    	$data = [];
+        $checkCode = Product::where('product_code', $post['name'])->first();
+    	if ($checkCode) {
+            $upload = MyHelper::uploadPhotoStrict($post['photo'], $this->saveImage, 300, 300);
+            
+    	    if (isset($upload['status']) && $upload['status'] == "success") {
+    	        $data['product_photo'] = $upload['path'];
+    	    }
+    	    else {
+    	        $result = [
+    	            'status'   => 'fail',
+    	            'messages' => ['fail upload image']
+    	        ];
+    	        return response()->json($result);
+    	    }
+    	}
+    	if (empty($data)) {
+    		return reponse()->json([
+    			'status' => 'fail',
+    			'messages' => ['fail save to database']
+    		]);
+    	}
+    	else {
+            $data['id_product']          = $checkCode->id_product;
+            $data['product_photo_order'] = $this->cekUrutanPhoto($checkCode->id_product);
+            $save                        = ProductPhoto::updateOrCreate(['id_product' => $checkCode->id_product],$data);
+    		return response()->json(MyHelper::checkCreate($save));
+    	}
+    }
+
     /*
     cek urutan
     */
