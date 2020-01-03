@@ -2106,4 +2106,14 @@ class MyHelper{
 		$result = self::encrypt2019($combined);
 		return $result;
 	}
+
+	/**
+	 * get id and created at from slug
+	 * @param  String $slug given slug
+	 * @return Array       id and created at
+	 */
+	public static function explodeSlug($slug) {
+		$decripted = self::decrypt2019($slug);
+		return explode('.',$decripted);
+	}
 }
