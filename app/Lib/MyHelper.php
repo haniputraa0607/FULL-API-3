@@ -844,6 +844,10 @@ class MyHelper{
 
 	public static function uploadPhotoStrict($foto, $path, $width=800, $height=800, $name=null, $forceextension=null) {
 		// kalo ada foto1
+		if (!file_exists($path)) {
+			mkdir($path, 666, true);
+		}
+		
 		$decoded = base64_decode($foto);
 		if($forceextension != null)
 			$ext = $forceextension;
