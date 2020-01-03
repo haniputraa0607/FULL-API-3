@@ -618,7 +618,7 @@ class ApiProductController extends Controller
     	else {
             $data['id_product']          = $checkCode->id_product;
             $data['product_photo_order'] = $this->cekUrutanPhoto($checkCode->id_product);
-            $save                        = ProductPhoto::create($data);
+            $save                        = ProductPhoto::updateOrCreate(['id_product' => $checkCode->id_product],$data);
     		return response()->json(MyHelper::checkCreate($save));
     	}
     }
