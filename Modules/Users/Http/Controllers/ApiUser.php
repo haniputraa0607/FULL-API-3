@@ -2236,11 +2236,11 @@ class ApiUser extends Controller
         }else{
             $log = LogActivitiesBE::where('id_log_activities_be', $id)->first();
         }
-        if($log){
-            $log->user      = MyHelper::decrypt2019($log->user);
-            $log->request   = MyHelper::decrypt2019($log->request);
-            $log->response  = MyHelper::decrypt2019($log->response);
-        }
+        // if($log){
+        //     $log->user      = MyHelper::decrypt2019($log->user);
+        //     $log->request   = MyHelper::decrypt2019($log->request);
+        //     $log->response  = MyHelper::decrypt2019($log->response);
+        // }
         return response()->json(MyHelper::checkGet($log));
     }
 
