@@ -39,6 +39,7 @@ use Modules\Users\Http\Requests\users_profile;
 use Modules\Users\Http\Requests\users_profile_admin;
 use Modules\Users\Http\Requests\users_notification;
 use Modules\Users\Entities\UserFraud;
+use Modules\Users\Entities\UserExtraToken;
 
 use Modules\Balance\Http\Controllers\BalanceController;
 
@@ -1859,17 +1860,31 @@ class ApiUser extends Controller
 
     function activity(Request $request){
         $post = $request->json()->all();
-        // return $post;
-        if(isset($post['order_field'])) $order_field = $post['order_field']; else $order_field = 'id';
-        if(isset($post['order_method'])) $order_method = $post['order_method']; else $order_method = 'desc';
-        if(isset($post['skip'])) $skip = $post['skip']; else $skip = '0';
-        if(isset($post['take'])) $take = $post['take']; else $take = '10';
-        if(isset($post['rule'])) $rule = $post['rule']; else $rule = 'and';
-        if(isset($post['conditions'])) $conditions = $post['conditions']; else $conditions = null;
-        
-        $query = $this->LogActivityFilter($rule, $conditions, $order_field, $order_method, $skip, $take);
+        $user = $request->user();
 
-        return response()->json($query);
+        $verifToken = UserExtraToken::where('extra_token', $post['verify_token'])->first();
+
+        if ($verifToken) {
+            $diffTime = $verifToken->updated_at->diff(now());
+            if ($diffTime->i <= 1 && $diffTime->s <= 15 && MyHelper::decrypt2019($post['verify_token'])['id_user'] == $user['id'] && $verifToken->id_user == $user['id']) {
+                // return $post;
+                if(isset($post['order_field'])) $order_field = $post['order_field']; else $order_field = 'id';
+                if(isset($post['order_method'])) $order_method = $post['order_method']; else $order_method = 'desc';
+                if(isset($post['skip'])) $skip = $post['skip']; else $skip = '0';
+                if(isset($post['take'])) $take = $post['take']; else $take = '10';
+                if(isset($post['rule'])) $rule = $post['rule']; else $rule = 'and';
+                if(isset($post['conditions'])) $conditions = $post['conditions']; else $conditions = null;
+                
+                $query = $this->LogActivityFilter($rule, $conditions, $order_field, $order_method, $skip, $take);
+        
+                return response()->json($query);
+            } else {
+                return response()->json(['status' => 'fail']);
+            }
+        } else {
+            return response()->json(['status' => 'fail']);
+        }
+        
     }
 
     public function delete(Request $request)
@@ -2236,11 +2251,11 @@ class ApiUser extends Controller
         }else{
             $log = LogActivitiesBE::where('id_log_activities_be', $id)->first();
         }
-        if($log){
-            $log->user      = MyHelper::decrypt2019($log->user);
-            $log->request   = MyHelper::decrypt2019($log->request);
-            $log->response  = MyHelper::decrypt2019($log->response);
-        }
+        // if($log){
+        //     $log->user      = MyHelper::decrypt2019($log->user);
+        //     $log->request   = MyHelper::decrypt2019($log->request);
+        //     $log->response  = MyHelper::decrypt2019($log->response);
+        // }
         return response()->json(MyHelper::checkGet($log));
     }
 
@@ -2780,5 +2795,20 @@ class ApiUser extends Controller
             $data = $data->get();
         }
         return MyHelper::checkGet($data??[]);
+    }
+
+    public function getExtraToken(Request $request) {
+        $post = $request->json()->all();
+        $user = $request->user();
+
+        if (isset($post['token_header'])) {
+            $decUser = MyHelper::decrypt2019($post['token_header']);
+            $encUser = MyHelper::encrypt2019($decUser);
+            UserExtraToken::updateOrCreate(['id_user' => $user['id']], ['id_user' => $user['id'], 'extra_token' => $encUser]);
+            return MyHelper::checkGet($encUser);
+        } else {
+            $encUser = MyHelper::encrypt2019(['id_user' => $user['id']]);
+            return MyHelper::checkGet($encUser);
+        }
     }
 }
