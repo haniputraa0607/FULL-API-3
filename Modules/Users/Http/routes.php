@@ -88,6 +88,7 @@ Route::group(['middleware' => ['auth:api-be','log_activities', 'user_agent'], 'p
     Route::any('notification', ['middleware' => 'feature_control:3', 'uses' => 'ApiUser@getUserNotification']);
     Route::get('get-all', ['middleware' => 'feature_control:3', 'uses' => 'ApiUser@getAllName']);
     Route::any('get-detail', ['middleware' => 'feature_control:3', 'uses' => 'ApiUser@getDetailUser']);
+    Route::any('getExtraToken', 'ApiUser@getExtraToken');
 
     // get user profile
     Route::get('get', ['middleware' => 'feature_control:3', 'uses' => 'ApiUser@getUserDetail']);
