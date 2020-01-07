@@ -264,7 +264,7 @@ class ApiProductController extends Controller
 		}
 
         if (isset($post['id_product'])) {
-            $product->with('modifiers')->where('products.id_product', $post['id_product'])->with(['brands']);
+            $product->with('category')->where('products.id_product', $post['id_product'])->with(['brands']);
         }
 
         if (isset($post['product_code'])) {
