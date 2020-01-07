@@ -278,7 +278,7 @@ class ApiDeals extends Controller
         }else{
             $deals->addSelect('id_deals','deals_title','deals_second_title','deals_voucher_price_point','deals_voucher_price_cash','deals_total_voucher','deals_total_claimed','deals_voucher_type','deals_image','deals_start','deals_end','deals_type');
             if(strpos($request->user()->level,'Admin')>=0){
-                $deals->addSelect('deals_promo_id','deals_publish_start','deals_publish_end');
+                $deals->addSelect('deals_promo_id','deals_publish_start','deals_publish_end','created_at');
             }
             // return($deals->toSql());
         }
