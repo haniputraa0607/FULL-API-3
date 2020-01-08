@@ -11,11 +11,10 @@ use Laravel\Passport\HasApiTokens;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 
-use Modules\UserFeedback\Entities\UserFeedbackLog;
-
-class User extends Authenticatable
+class UserBE extends Authenticatable
 {
 	protected $connection = 'mysql';
+	protected $table = 'users';
     use HasApiTokens, Notifiable;
 	
 	public function findForPassport($username) {
@@ -29,7 +28,7 @@ class User extends Authenticatable
 			$username = '0'.$username;
 		}
 
-        return $this->where('phone', $username)->first();
+        return $this->where('phone', $username)->whereRaw('level != "Customer"')->first();
     }
 	protected $primaryKey = "id";
 	protected $casts = [
@@ -195,10 +194,5 @@ class User extends Authenticatable
 
     public function favorites() {
     	return $this->hasMany(\Modules\Favorite\Entities\Favorite::class, 'id_user');
-    }
-
-    public function log_popup()
-    {
-    	return $this->hasOne(UserFeedbackLog::class,'id_user');
     }
 }

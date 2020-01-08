@@ -17,7 +17,7 @@ Route::group(['middleware' => ['auth:api', 'log_activities'], 'prefix' => 'promo
 });
 
 // ADMIN BACKEND
-Route::group(['middleware' => ['auth:api', 'log_activities'], 'prefix' => 'promo-campaign'], function () {
+Route::group(['middleware' => ['auth:api-be', 'log_activities'], 'prefix' => 'promo-campaign'], function () {
     Route::get('/', 'ApiPromoCampaign@index');
     Route::any('filter', 'ApiPromoCampaign@index');
     Route::post('detail', 'ApiPromoCampaign@detail');

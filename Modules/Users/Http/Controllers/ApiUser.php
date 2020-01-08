@@ -39,6 +39,7 @@ use Modules\Users\Http\Requests\users_profile;
 use Modules\Users\Http\Requests\users_profile_admin;
 use Modules\Users\Http\Requests\users_notification;
 use Modules\Users\Entities\UserFraud;
+use Modules\Users\Entities\UserExtraToken;
 
 use Modules\Balance\Http\Controllers\BalanceController;
 
@@ -121,10 +122,10 @@ class ApiUser extends Controller
             }
         }
 
-        $resultApps = $queryApps->skip($skip)->take($take)->get()->toArray();
         $resultCountApps = $queryApps->count();
-        $resultBe = $queryBe->skip($skip)->take($take)->get()->toArray();
         $resultCountBe = $queryBe->count();
+        $resultApps = $queryApps->skip($skip)->take($take)->get()->toArray();
+        $resultBe = $queryBe->skip($skip)->take($take)->get()->toArray();
 
         if($resultApps || $resultBe){
             $response = ['status'	=> 'success',
@@ -1229,6 +1230,28 @@ class ApiUser extends Controller
         return response()->json($result);
     }
 
+    function checkPinBackend(users_phone_pin $request){
+        $phone = $request->json('phone');
+
+        $datauser = User::where('phone', '=', $phone)
+            ->get()
+            ->toArray();
+
+        if($datauser){
+            if(Auth::attempt(['phone' => $phone, 'password' => $request->json('pin')]) && $request->json('admin_panel')){
+                return ['status'=>'success'];
+            } else{
+                $result 			= [];
+                $result['status'] 	= 'fail';
+            }
+        }
+        else {
+            $result['status'] 	= 'fail';
+            $result['messages'] = ['Nomor HP belum terdaftar'];
+        }
+        return response()->json($result);
+    }
+
     function resendPin(users_phone $request){
         $phone = $request->json('phone');
 
@@ -1824,12 +1847,10 @@ class ApiUser extends Controller
     }
     function list(Request $request){
         $post = $request->json()->all();
-        // return response()->json($post);
         if(isset($post['order_field'])) $order_field = $post['order_field']; else $order_field = 'id';
         if(isset($post['order_method'])) $order_method = $post['order_method']; else $order_method = 'desc';
         if(isset($post['skip'])) $skip = $post['skip']; else $skip = '0';
         if(isset($post['take'])) $take = $post['take']; else $take = '10';
-        // if(isset($post['rule'])) $rule = $post['rule']; else $rule = 'and';
         if(isset($post['conditions'])) $conditions = $post['conditions']; else $conditions = null;
 
         $query = $this->UserFilter($conditions, $order_field, $order_method, $skip, $take);
@@ -1839,17 +1860,31 @@ class ApiUser extends Controller
 
     function activity(Request $request){
         $post = $request->json()->all();
+        $user = $request->user();
 
-        if(isset($post['order_field'])) $order_field = $post['order_field']; else $order_field = 'id';
-        if(isset($post['order_method'])) $order_method = $post['order_method']; else $order_method = 'desc';
-        if(isset($post['skip'])) $skip = $post['skip']; else $skip = '0';
-        if(isset($post['take'])) $take = $post['take']; else $take = '10';
-        if(isset($post['rule'])) $rule = $post['rule']; else $rule = 'and';
-        if(isset($post['conditions'])) $conditions = $post['conditions']; else $conditions = null;
+        $verifToken = UserExtraToken::where('extra_token', $post['verify_token'])->first();
 
-        $query = $this->LogActivityFilter($rule, $conditions, $order_field, $order_method, $skip, $take);
-
-        return response()->json($query);
+        if ($verifToken) {
+            $diffTime = $verifToken->updated_at->diff(now());
+            if ($diffTime->i <= 1 && $diffTime->s <= 15 && MyHelper::decrypt2019($post['verify_token'])['id_user'] == $user['id'] && $verifToken->id_user == $user['id']) {
+                // return $post;
+                if(isset($post['order_field'])) $order_field = $post['order_field']; else $order_field = 'id';
+                if(isset($post['order_method'])) $order_method = $post['order_method']; else $order_method = 'desc';
+                if(isset($post['skip'])) $skip = $post['skip']; else $skip = '0';
+                if(isset($post['take'])) $take = $post['take']; else $take = '10';
+                if(isset($post['rule'])) $rule = $post['rule']; else $rule = 'and';
+                if(isset($post['conditions'])) $conditions = $post['conditions']; else $conditions = null;
+                
+                $query = $this->LogActivityFilter($rule, $conditions, $order_field, $order_method, $skip, $take);
+        
+                return response()->json($query);
+            } else {
+                return response()->json(['status' => 'fail']);
+            }
+        } else {
+            return response()->json(['status' => 'fail']);
+        }
+        
     }
 
     public function delete(Request $request)
@@ -1902,6 +1937,38 @@ class ApiUser extends Controller
                 $result = [
                     'status'	=> 'fail',
                     'messages'	=> ['User Not Found']
+                ];
+            }
+        }
+        return response()->json($result);
+    }
+
+    public function deleteLog(Request $request)
+    {
+        $post = $request->json()->all();
+
+        if (isset($post['id_log_activities_apps'])) {
+            $deleteLog = LogActivitiesApps::where('id_log_activities_apps','=',$post['id_log_activities_apps'])->delete();
+            if($deleteLog){
+                $result = ['status'	=> 'success',
+                    'result'	=> ['User Log has been deleted']
+                ];
+            } else {
+                $result = [
+                    'status'	=> 'fail',
+                    'messages'	=> ['User Admin & Super Admin Cannot be deleted']
+                ];
+            }
+        } elseif (isset($post['id_log_activities_be'])) {
+            $deleteLog = LogActivitiesBE::where('id_log_activities_be','=',$post['id_log_activities_be'])->delete();
+            if($deleteLog){
+                $result = ['status'	=> 'success',
+                    'result'	=> ['User Log has been deleted']
+                ];
+            } else {
+                $result = [
+                    'status'	=> 'fail',
+                    'messages'	=> ['User Admin & Super Admin Cannot be deleted']
                 ];
             }
         }
@@ -2184,25 +2251,11 @@ class ApiUser extends Controller
         }else{
             $log = LogActivitiesBE::where('id_log_activities_be', $id)->first();
         }
-
         if($log){
-            if($log['response']){
-                $res = MyHelper::decrypt2019($log['response']);
-                if(!$log['response']){
-                    $log['response'] = $res;
-                }
-                // $log['response'] = str_replace('}','\r\n}',str_replace(',',',\r\n&emsp;',str_replace('{','{\r\n&emsp;',strip_tags($log['response']))));
-            }
-
-            if($log['request']){
-                $req = MyHelper::decrypt2019($log['request']);
-                if(!$log['request']){
-                    $log['request'] = $request;
-                }
-                // $log['request'] = str_replace('}','\r\n}',str_replace(',',',\r\n&emsp;',str_replace('{','{\r\n&emsp;',strip_tags($log['request']))));
-            }
+            $log->user      = MyHelper::decrypt2019($log->user);
+            $log->request   = MyHelper::decrypt2019($log->request);
+            $log->response  = MyHelper::decrypt2019($log->response);
         }
-
         return response()->json(MyHelper::checkGet($log));
     }
 
@@ -2742,5 +2795,20 @@ class ApiUser extends Controller
             $data = $data->get();
         }
         return MyHelper::checkGet($data??[]);
+    }
+
+    public function getExtraToken(Request $request) {
+        $post = $request->json()->all();
+        $user = $request->user();
+
+        if (isset($post['token_header'])) {
+            $decUser = MyHelper::decrypt2019($post['token_header']);
+            $encUser = MyHelper::encrypt2019($decUser);
+            UserExtraToken::updateOrCreate(['id_user' => $user['id']], ['id_user' => $user['id'], 'extra_token' => $encUser]);
+            return MyHelper::checkGet($encUser);
+        } else {
+            $encUser = MyHelper::encrypt2019(['id_user' => $user['id']]);
+            return MyHelper::checkGet($encUser);
+        }
     }
 }

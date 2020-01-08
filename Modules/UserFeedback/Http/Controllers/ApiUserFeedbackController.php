@@ -16,6 +16,9 @@ use Modules\UserFeedback\Http\Requests\GetFormRequest;
 
 use App\Http\Models\Transaction;
 use App\Http\Models\Outlet;
+use App\Http\Models\Setting;
+
+use Modules\UserFeedback\Entities\UserFeedbackLog;
 
 use App\Lib\MyHelper;
 
@@ -90,6 +93,7 @@ class ApiUserFeedbackController extends Controller
             'image'=> $upload['path']??null
         ];
         $create = UserFeedback::updateOrCreate(['id_transaction'=>$id_transaction],$insert);
+        UserFeedbackLog::where('id_user',$request->user()->id)->delete();
         if($create){
             Transaction::where('id_user',$user->id)->update(['show_rate_popup'=>0]);
         }
@@ -148,26 +152,59 @@ class ApiUserFeedbackController extends Controller
      * @param int $id
      * @return Response
      */
-    public function getDetail(GetFormRequest $request) {
+    public function getDetail(Request $request) {
         $post = $request->json()->all();
-        $id_trx = explode(',',$post['id']);
-        $id_transaction = $id_trx[1]??'';
-        $rn = $id_trx[0]??'';
         // rating item
-        $transaction = Transaction::select('id_transaction','id_outlet')->with(['outlet'=>function($query){
-            $query->select('outlet_name','id_outlet');
-        }])
-        ->where('transaction_receipt_number',$id_trx[0])
-        ->find($id_transaction);
-        if(!$transaction){
-            return [
-                'status' => 'fail',
-                'messages' => ['Transaction not found']
-            ];
+        if($post['id']??false){
+            $id_trx = explode(',',$post['id']);
+            $id_transaction = $id_trx[1]??'';
+            $rn = $id_trx[0]??'';
+            $transaction = Transaction::select('id_transaction','transaction_receipt_number','id_outlet')->with(['outlet'=>function($query){
+                $query->select('outlet_name','id_outlet');
+            }])
+            ->where(['transaction_receipt_number'=>$rn,'id_transaction'=>$id_transaction])
+            ->find($id_transaction);
+            if(!$transaction){
+                return [
+                    'status' => 'fail',
+                    'messages' => ['Transaction not found']
+                ];
+            }
+        }else{
+            $user = $request->user();
+            $user->load('log_popup');
+            $log_popup = $user->log_popup;
+            if($log_popup){
+                $interval =(Setting::where('key','popup_min_interval')->pluck('value')->first()?:15)*60;
+                if(
+                    $log_popup->refuse_count>=(Setting::where('key','popup_max_refuse')->pluck('value')->first()?:3) ||
+                    strtotime($log_popup->last_popup)+$interval>time()
+                ){
+                    return MyHelper::checkGet([]);
+                }
+                $log_popup->refuse_count++;
+                $log_popup->last_popup = date('Y-m-d H:i:s');
+                $log_popup->save();
+            }else{
+                UserFeedbackLog::create([
+                    'id_user' => $user->id,
+                    'refuse_count' => 1,
+                    'last_popup' => date('Y-m-d H:i:s')
+                ]);
+            }
+            $transaction = Transaction::select('id_transaction','transaction_receipt_number','id_outlet')->with(['outlet'=>function($query){
+                $query->select('outlet_name','id_outlet');
+            }])
+            ->where('show_rate_popup',1)
+            ->first();
+            if(!$transaction){
+                return MyHelper::checkGet([]);
+            }
         }
-        $result['id_transaction'] = $id_transaction;
+        $result['id_transaction'] = $transaction->id_transaction;
+        $result['id'] = $transaction->transaction_receipt_number.','.$transaction->id_transaction;
         $result['outlet'] = $transaction['outlet'];
-        $result['ratings'] = RatingItem::select('id_rating_item','image','text')->orderBy('order')->get();
-        return $result;
+        $result['ratings'] = RatingItem::select('id_rating_item','image','image_selected','text')->orderBy('order')->get();
+        return MyHelper::checkGet($result);
     }
 }
