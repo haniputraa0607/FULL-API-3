@@ -7,5 +7,9 @@ use Illuminate\Database\Eloquent\Model;
 class RatingItem extends Model
 {
 	protected $primaryKey = 'id_rating_item';
-    protected $fillable = [];
+    protected $fillable = [
+    	'image',
+    	'image_selected',
+    	'text'
+    ];
 }
