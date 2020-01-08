@@ -44,6 +44,8 @@ use Guzzle\Http\Message\Request as RequestGuzzle;
 use Guzzle\Http\Message\Response as ResponseGuzzle;
 use Guzzle\Http\Exception\ServerErrorResponseException;
 
+use Modules\UserFeedback\Entities\UserFeedbackLog;
+
 use DB;
 use DateTime;
 use App\Lib\MyHelper;
@@ -490,6 +492,7 @@ class ApiOnlineTransaction extends Controller
         }
 
         DB::beginTransaction();
+        UserFeedbackLog::where('id_user',$request->user()->id)->delete();
         $transaction = [
             'id_outlet'                   => $post['id_outlet'],
             'id_user'                     => $id,
