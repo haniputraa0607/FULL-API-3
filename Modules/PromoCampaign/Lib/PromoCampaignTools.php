@@ -2,10 +2,12 @@
 
 namespace Modules\PromoCampaign\Lib;
 
-use App\Http\Models\PromoCampaign;
+use Modules\PromoCampaign\Entities\PromoCampaign;
+use Modules\PromoCampaign\Entities\PromoCampaignReport;
 use App\Http\Models\Product;
 use App\Http\Models\UserDevice;
-use App\Http\Models\PromoCampaignReport;
+use App\Http\Models\User;
+use App\Http\Models\Transaction;
 
 class PromoCampaignTools{
 
@@ -20,7 +22,7 @@ class PromoCampaignTools{
 	 * @param  	array 		$error     	error message
 	 * @return 	array/boolean     modified array of trxs if can, otherwise false
 	 */
-	public function validatePromo($id_promo,$trxs,&$errors){
+	public function validatePromo($id_promo, $id_outlet, $trxs, &$errors){
 		/**
 		 $trxs=[
 			{
@@ -37,23 +39,43 @@ class PromoCampaignTools{
 			$errors[]='Transaction data not valid';
 			return false;
 		}
-		$promo=PromoCampaign::with(['promo_codes'])->find($id_promo);
-		if($promo->promo_codes){
-			if(strtotime($promo->promo_codes->date_start)>time()||strtotime($promo->promo_codes->date_end)<time()){
-				$errors[]='Promo campaign tidak berlaku';
-				return false;
-			}
-		}
+		$promo=PromoCampaign::with('promo_campaign_outlets')->find($id_promo);
+		
+
 		if(!$promo){
 			$errors[]='Promo Campaign not found';
 			return false;
 		}
+
+		$outlet = $this->checkOutletRule($id_outlet, $promo->is_all_outlet, $promo->promo_campaign_outlets);
+
+		if(!$outlet){
+			$errors[]='Promo Campaign cannot be used at this outlet';
+			return false;
+		}
+
+		if(strtotime($promo->date_start)>time()||strtotime($promo->date_end)<time()){
+			$errors[]='Promo campaign not valid';
+			return false;
+		}
+		
 		$discount=0;
 		// add product discount if exist
 		foreach ($trxs as  $id_trx => &$trx) {
-			$product=Product::find($trx['id_product']);
+			$product=Product::with(['product_prices' => function($q) use ($id_outlet){ 
+							$q->where('id_outlet', '=', $id_outlet)
+							  ->where('product_status', '=', 'Active')
+							  ->where('product_stock_status', '=', 'Available')
+							  ->where('product_visibility', '=', 'Visible');
+						} ])->find($trx['id_product']);
+			//is product available
+			if(!$product){
+				// product not available
+				$errors[]='Product with id '.$trx['id_product'].' could not be found';
+				continue;
+			}
 			$product_discount=$this->getProductDiscount($product)*$trx['qty'];
-			$product_price=$product->product_price;
+			$product_price=$product->product_prices[0]->product_price??[];
 			// $discount+=$product_discount;
 			if($product_discount){
 				// $trx['discount']=$product_discount;
@@ -74,7 +96,12 @@ class PromoCampaignTools{
 					// is all product get promo
 					if($promo_rules->is_all_product){
 						// get product data
-						$product=Product::find($trx['id_product']);
+						$product=Product::with(['product_prices' => function($q) use ($id_outlet){ 
+							$q->where('id_outlet', '=', $id_outlet)
+							  ->where('product_status', '=', 'Active')
+							  ->where('product_stock_status', '=', 'Available')
+							  ->where('product_visibility', '=', 'Visible');
+						} ])->find($trx['id_product']);
 						//is product available
 						if(!$product){
 							// product not available
@@ -87,7 +114,12 @@ class PromoCampaignTools{
 						// is product available in promo
 						if(is_array($promo_product)&&in_array($trx['id_product'],array_column($promo_product,'id_product'))){
 							// get product data
-							$product=Product::find($trx['id_product']);
+							$product=Product::with(['product_prices' => function($q) use ($id_outlet){ 
+								$q->where('id_outlet', '=', $id_outlet)
+								  ->where('product_status', '=', 'Active')
+								  ->where('product_stock_status', '=', 'Available')
+								  ->where('product_visibility', '=', 'Visible');
+							} ])->find($trx['id_product']);
 							//is product available
 							if(!$product){
 								// product not available
@@ -146,6 +178,9 @@ class PromoCampaignTools{
 					if($rule->min_qty>$product['qty']){
 						continue;
 					}
+					if($rule->max_qty<$product['qty']){
+						continue;
+					}
 					$promo_rule=$rule;
 				}
 				if(!$promo_rule){
@@ -162,6 +197,7 @@ class PromoCampaignTools{
 				$promo->load('promo_campaign_buyxgety_rules','promo_campaign_buyxgety_product_requirement');
 				$promo_product=$promo->promo_campaign_buyxgety_product_requirement;
 				$promo_product->load('product');
+
 				if(!$promo_product){
 					$errors[]='Benefit product is not set correctly';
 					return false;
@@ -192,17 +228,20 @@ class PromoCampaignTools{
 				$promo_rule=false;
 				$min_qty=null;
 				$max_qty=null;
+
 				foreach ($promo_rules as $rule) {
 					// search y product in cart
 					$benefit_qty=$rule->benefit_qty;
-					$sama = $promo_product->id_product==$rule->benefit_id_product;
-					if($sama){
-						$min_req=$rule->min_qty_requirement+$benefit_qty;
-						$max_req=$rule->max_qty_requirement+$benefit_qty;
-					}else{
-						$min_req=$rule->min_qty_requirement;
-						$max_req=$rule->max_qty_requirement;
-					}
+					$min_req=$rule->min_qty_requirement;
+					$max_req=$rule->max_qty_requirement;
+					// $sama = $promo_product->id_product==$rule->benefit_id_product;
+					// if($sama){
+					// 	$min_req=$rule->min_qty_requirement+$benefit_qty;
+					// 	$max_req=$rule->max_qty_requirement+$benefit_qty;
+					// }else{
+					// 	$min_req=$rule->min_qty_requirement;
+					// 	$max_req=$rule->max_qty_requirement;
+					// }
 					if($min_qty===null||$rule->min_qty_requirement<$min_qty){
 						$min_qty=$min_req;
 					}
@@ -212,17 +251,27 @@ class PromoCampaignTools{
 					if($min_req>$product['qty']){
 						continue;
 					}
+					if($max_req<$product['qty']){
+						continue;
+					}
 					$promo_rule=$rule;
 				}
+
 				if(!$promo_rule){
 					$minmax=$min_qty!=$max_qty?"$min_qty - $max_qty":$min_qty;
 					$errors[]="Anda harus menambahkan $minmax {$promo_product->product->product_name} untuk menggunakan promo ini.";
 					return false;
 				}
-				$benefit_product=Product::find($promo_rule->benefit_id_product);
+				$benefit_product=Product::with(['product_prices' => function($q) use ($id_outlet){ 
+							$q->where('id_outlet', '=', $id_outlet)
+							  ->where('product_status', '=', 'Active')
+							  ->where('product_stock_status', '=', 'Available')
+							  ->where('product_visibility', '=', 'Visible');
+						} ])->find($promo_rule->benefit_id_product);
 				$benefit_qty=$promo_rule->benefit_qty;
-				$benefit_value=$promo_rule->discount_percent;
-				$sama = $promo_product->id_product==$benefit_product->id_product;
+				$benefit_value=$promo_rule->discount_nominal??$promo_rule->discount_percent;
+				$benefit_type = $promo_rule->discount_nominal?'Nominal':'Percent';
+				// $sama = $promo_product->id_product==$benefit_product->id_product;
 				if(!$benefit_product){
 					$errors[]="Anda harus menambahkan {$benefit_qty} {$benefit_product->product_name} untuk menggunakan promo ini.";
 					return false;
@@ -245,7 +294,7 @@ class PromoCampaignTools{
 				}
 				$rule=(object) [
 					'max_qty'=>$benefit_qty,
-					'discount_type'=>'Percent',
+					'discount_type'=>$benefit_type,
 					'discount_value'=>$benefit_value
 				];
 				$discount+=$this->discount_product($benefit_product,$rule,$benefit);
@@ -258,9 +307,14 @@ class PromoCampaignTools{
 				// get jumlah harga
 				$total_price=0;
 				foreach ($trxs as  $id_trx => &$trx) {
-					$product=Product::find($trx['id_product']);
+					$product=Product::with(['product_prices' => function($q) use ($id_outlet){ 
+							$q->where('id_outlet', '=', $id_outlet)
+							  ->where('product_status', '=', 'Active')
+							  ->where('product_stock_status', '=', 'Available')
+							  ->where('product_visibility', '=', 'Visible');
+						} ])->find($trx['id_product']);
 					$qty=$trx['qty'];
-					$total_price+=$qty*$product->product_price;
+					$total_price+=$qty*$product->product_prices[0]->product_price??[];
 				}
 				if($promo_rules->discount_type=='Percent'){
 					$discount+=($total_price*$promo_rules->discount_value)/100;
@@ -427,7 +481,15 @@ class PromoCampaignTools{
 		if(($promo_rules->max_qty??false)&&$promo_rules->max_qty<$discount_qty){
 			$discount_qty=$promo_rules->max_qty;
 		}
-		$product_price=$product->product_price;
+		// tier discount only get 1 discount applied
+		if ($promo_rules->id_promo_campaign_tier_discount_rule??false) {
+			$discount_qty=1;
+		}
+		// check 'product discount' limit product qty
+		if(($promo_rules->max_product??false)&&$promo_rules->max_product<$discount_qty){
+			$discount_qty=$promo_rules->max_product;
+		}
+		$product_price=$product->product_prices[0]->product_price??[];
 		if(isset($trx['new_price'])&&$trx['new_price']){
 			$product_price=$trx['new_price']/$trx['qty'];
 		}
@@ -455,52 +517,38 @@ class PromoCampaignTools{
 	 * @param  int 		$id_user  id user
 	 * @return boolean	true/false
 	 */
-	public function validateUser($id_promo,$id_user,&$errors=[]){
-		$promo=PromoCampaign::with('promo_campaign_rules_view','promo_codes')->find($id_promo);
+	public function validateUser($id_promo, $id_user, $phone, $device_type, $device_id, &$errors=[]){
+		$promo=PromoCampaign::find($id_promo);
+
 		if(!$promo){
         	$errors[]='Promo campaign not found';
     		return false;
 		}
-		if($promo->promo_campaign_rules_view){
-	        $conds=json_decode($promo->promo_campaign_rules_view->promo_campaign_rules,true);
-		}else{
+		if(!$promo->step_complete || !$promo->user_type){
         	$errors[]='Promo campaign not finished';
     		return false;
 		}
-        // create id condition
-        $conds['id']=[
-        	['=',$id_user]
-        ];
-        $user=app($this->user)->UserFilter($promo->campaign_rule,$conds)['result']??false;
+
+		//check user 
+		$user = $this->userFilter($id_user, $promo->user_type, $promo->specific_user, $phone);
+
         if(!$user){
         	$errors[]='User not found';
     		return false;
         }
+
         // use promo code?
-        if($promo->promo_codes&&$promo->promo_codes->limitation_usage){
-        	$device=UserDevice::where('id_user',$id_user)->orderBy('updated_at','desc')->first();
+        if($promo->limitation_usage){
         	// limit usage user?
-        	if(PromoCampaignReport::where('id_promo_campaign',$id_promo)->where('id_user',$id_user)->count()>=$promo->promo_codes->limitation_usage){
+        	if(PromoCampaignReport::where('id_promo_campaign',$id_promo)->where('id_user',$id_user)->count()>=$promo->limitation_usage){
 	        	$errors[]='Kuota anda untuk penggunaan kode promo ini telah habis';
 	    		return false;
         	}
-        	if(PromoCampaignReport::where('id_promo_campaign',$id_promo)->where('device_id',$device->device_id)->count()>=$promo->promo_codes->limitation_usage){
+
+        	// limit usage device
+        	if(PromoCampaignReport::where('id_promo_campaign',$id_promo)->where('device_id',$device_id)->count()>=$promo->limitation_usage){
 	        	$errors[]='Kuota device anda untuk penggunaan kode promo ini telah habis';
 	    		return false;
-        	}
-        }else{
-        	$promo->load('vouchers');
-        	if($promo->vouchers->voucher_limit){
-	        	$device=UserDevice::where('id_user',$id_user)->orderBy('updated_at','desc')->first();
-	        	// limit usage user?
-	        	if(PromoCampaignReport::where('id_promo_campaign',$id_promo)->where('id_user',$id_user)->count()>=$promo->vouchers->voucher_limit){
-		        	$errors[]='Kuota anda untuk penggunaan voucher ini telah habis';
-		    		return false;
-	        	}
-	        	if(PromoCampaignReport::where('id_promo_campaign',$id_promo)->where('device_id',$device->device_id)->count()>=$promo->vouchers->voucher_limit){
-		        	$errors[]='Kuota device anda untuk penggunaan voucher ini telah habis';
-		    		return false;
-	        	}
         	}
         }
         return true;
@@ -526,7 +574,7 @@ class PromoCampaignTools{
                 if (!empty($dis['discount_percentage'])) {
                     $jat = $dis['discount_percentage'];
 
-                    $count = $productItem['product_price'] * $jat / 100;
+                    $count = $productItem['product_prices'][0]['product_price']??[] * $jat / 100;
                 } else {
                     $count = $dis['discount_nominal'];
                 }
@@ -559,10 +607,55 @@ class PromoCampaignTools{
                 $count = 0;
             }
         }
-        if($countSemen>$productItem['product_price']){
-        	$countSemen=$productItem['product_price'];
+        if($countSemen>$productItem['product_prices'][0]['product_price']??[]){
+        	$countSemen=$productItem['product_prices'][0]['product_price']??[];
         }
         return $countSemen;
     }
+
+    public function userFilter($id_user, $rule, $valid_user, $phone)
+    {
+    	if ($rule == 'New user') 
+    	{
+    		$check = Transaction::where('id_user', '=', $id_user)->first();
+    		if ($check) {
+    			return false;
+    		}
+    	}
+    	elseif ($rule == 'Specific user') 
+    	{
+    		$valid_user = explode(',', $valid_user);
+    		if (!in_array($phone, $valid_user)) {
+    			return false;
+    		}
+    	}
+
+    	return true;
+    }
+
+    function checkOutletRule($id_outlet, $rule, $outlet = null)
+    {
+        if ($rule == '1') 
+        {
+            return true;
+        } 
+        elseif ($rule == '0') 
+        {
+            foreach ($outlet as $value) 
+            {
+                if ( $value['id_outlet'] == $id_outlet ) 
+                {
+                    return true;
+                } 
+            }
+
+            return false;
+        } 
+        else 
+        {
+            return false;
+        }
+    }
+
 }
 ?>

@@ -651,6 +651,19 @@ class ApiPromoCampaign extends Controller
         $post['date_start'] = $this->generateDate($post['date_start']);
         $post['date_end']   = $this->generateDate($post['date_end']);
 
+        if ($post['code_type'] == 'Multiple') {
+        	
+        	$max_char_digit = 28;
+        	$max_coupon_posibility = pow($max_char_digit, $post['number_last_code']);
+            if ( $max_coupon_posibility < $post['total_coupon'] ) {
+            	$result = [
+                    'status'  => 'fail',
+                    'messages'  => ['Total Coupon must be equal or less than total Generate random code']
+                ];
+                return $result;
+            }
+        }
+
         DB::beginTransaction();
 
         if (isset($post['id_promo_campaign'])) {
@@ -1104,6 +1117,41 @@ class ApiPromoCampaign extends Controller
 
     }
 
+    function removeDuplicateCode($code, $total_coupon)
+    {
+    	$unique_code = array_column($code, 'promo_code');
+        // $unique_code = array_intersect_key($unique_code, array_unique( array_map("strtolower", $unique_code)));
+        $unique_code = array_unique($unique_code);
+        $code = array_filter($code, function ($key, $value) use ($unique_code) {
+        	return in_array($value, array_keys($unique_code));
+        }, ARRAY_FILTER_USE_BOTH);
+        $duplicate = $total_coupon-count($code);
+
+        return [
+        	'code' => $code,
+        	'duplicate' => $duplicate
+        ]; 
+    }
+
+    function generateMultipleCode($old_code=null, $id, $prefix_code, $number_last_code, $total_coupon)
+    {
+    	if (empty($old_code)) {
+    		$i = 0;
+    	}else{
+    		$i = count($old_code)-1;
+    		$total_coupon = $i+$total_coupon;
+    	}
+    	for (; $i < $total_coupon; $i++) 
+        {
+            $generateCode[$i]['id_promo_campaign']  = $id;
+            $generateCode[$i]['promo_code']         = implode('-', [$prefix_code, MyHelper::createrandom($number_last_code, 'PromoCode')]);
+            $generateCode[$i]['created_at']         = date('Y-m-d H:i:s');
+            $generateCode[$i]['updated_at']         = date('Y-m-d H:i:s');
+        	array_push($old_code, $generateCode[$i]);
+        }
+        return $old_code;
+    }
+
     function generateCode($status, $id, $type_code, $promo_code = null, $prefix_code = null, $number_last_code = null, $total_coupon = null)
     {
         $generateCode = [];
@@ -1118,6 +1166,20 @@ class ApiPromoCampaign extends Controller
                     $generateCode[$i]['created_at']         = date('Y-m-d H:i:s');
                     $generateCode[$i]['updated_at']         = date('Y-m-d H:i:s');
                 }
+
+                // $unique_code = $this->removeDuplicateCode($generateCode, $total_coupon);
+                // $duplicate = $unique_code['duplicate'];
+                // $generateCode2 = $unique_code['code'];
+                // $i = 0;
+                // while ($duplicate != 0 ) 
+                // {
+                // 	$generateCode2 = $this->generateMultipleCode($generateCode2, $id, $prefix_code, $number_last_code, $total_coupon);
+                // 	$unique_code = $this->removeDuplicateCode($generateCode2, $total_coupon);
+                // 	$duplicate = $unique_code['duplicate'];
+                // 	$generateCode2 = $unique_code['code'];
+
+                // }
+                // $generateCode = $generateCode2;
             }
             else
             {
@@ -1138,7 +1200,7 @@ class ApiPromoCampaign extends Controller
         {
             try 
             {
-                PromoCampaignPromoCode::insert($generateCode);
+              	PromoCampaignPromoCode::insert($generateCode);
                 $result = ['status'  => 'success'];
             } 
             catch (\Exception $e) 
@@ -1314,17 +1376,20 @@ class ApiPromoCampaign extends Controller
     }
 
     public function validateCode(ValidateCode $request){
-        $id_user=$request->user()->id;
+        $id_user 		= $request->user()->id;
+        $phone 	 		= $request->user()->phone;
+        $device_id		= $request->device_id;
+        $device_type	= $request->device_type;
+        $id_outlet		= $request->id_outlet;
+
         $code=PromoCampaignPromoCode::where('promo_code',$request->promo_code)
                 ->join('promo_campaigns', 'promo_campaigns.id_promo_campaign', '=', 'promo_campaign_promo_codes.id_promo_campaign')
-                ->where('usage','<','limitation_usage')
-                ->orWhere('code_type','Single')
-                // ->where(function($query){
-                //     $query->where('usage','<','limitation_usage')
-                //             ->orWhere('code_type','Single');
-                // })
+                ->where( function($q){
+                	$q->whereColumn('usage','<','limitation_usage')
+                		->orWhere('code_type','Single');
+                } )
                 ->first();
-        return [$code];
+
         if(!$code){
             return [
                 'status'=>'fail',
@@ -1332,7 +1397,7 @@ class ApiPromoCampaign extends Controller
             ];
         }
         $pct=new PromoCampaignTools();
-        if(!$pct->validateUser($code->id_promo_campaign,$id_user,$errore)){
+        if(!$pct->validateUser($code->id_promo_campaign, $id_user, $phone, $device_type, $device_id, $errore)){
             return [
                 'status'=>'fail',
                 'messages'=>$errore??['Promo code not valid']
@@ -1340,9 +1405,10 @@ class ApiPromoCampaign extends Controller
         }
         $errors=[];
         $trx=$request->item;
-        if($result=$pct->validatePromo($code->id_promo_campaign,$trx,$errors)){
+
+        return [$pct->validatePromo($code->id_promo_campaign, $id_outlet, $trx, $errors), $errors];
+        if($result=$pct->validatePromo($code->id_promo_campaign, $id_outlet, $trx, $errors)){
             $code->load('promo_campaign');
-            $result['discount_source']='promo code';
             $result['promo_title']=$code->promo_campaign->campaign_name;
             $result['promo_code']=$request->promo_code;
         }else{

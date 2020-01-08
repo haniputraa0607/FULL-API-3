@@ -107,6 +107,11 @@ class PromoCampaign extends Eloquent
 					->withTimestamps();
 	}
 
+	public function promo_campaign_outlets()
+    {
+        return $this->hasMany(\Modules\PromoCampaign\Entities\PromoCampaignOutlet::class, 'id_promo_campaign', 'id_promo_campaign');
+    }
+
 	public function promo_campaign_product_discount_rules()
 	{
 		return $this->hasOne(\Modules\PromoCampaign\Entities\PromoCampaignProductDiscountRule::class, 'id_promo_campaign');
