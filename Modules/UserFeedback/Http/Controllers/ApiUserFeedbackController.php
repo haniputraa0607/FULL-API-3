@@ -159,7 +159,7 @@ class ApiUserFeedbackController extends Controller
             $id_trx = explode(',',$post['id']);
             $id_transaction = $id_trx[1]??'';
             $rn = $id_trx[0]??'';
-            $transaction = Transaction::select('id_transaction','id_outlet')->with(['outlet'=>function($query){
+            $transaction = Transaction::select('id_transaction','transaction_receipt_number','id_outlet')->with(['outlet'=>function($query){
                 $query->select('outlet_name','id_outlet');
             }])
             ->where(['transaction_receipt_number'=>$rn,'id_transaction'=>$id_transaction])
@@ -201,7 +201,8 @@ class ApiUserFeedbackController extends Controller
                 return MyHelper::checkGet([]);
             }
         }
-        $result['id_transaction'] = $transaction->transaction_receipt_number.','.$transaction->id_transaction;
+        $result['id_transaction'] = $transaction->id_transaction;
+        $result['id'] = $transaction->transaction_receipt_number.','.$transaction->id_transaction;
         $result['outlet'] = $transaction['outlet'];
         $result['ratings'] = RatingItem::select('id_rating_item','image','image_selected','text')->orderBy('order')->get();
         return MyHelper::checkGet($result);
