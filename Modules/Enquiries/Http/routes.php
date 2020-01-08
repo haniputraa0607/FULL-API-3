@@ -3,7 +3,6 @@
 Route::group(['middleware' => ['auth:api-be','user_agent','log_activities'], 'prefix' => 'api/enquiries', 'namespace' => 'Modules\Enquiries\Http\Controllers'], function()
 {
 
-    Route::post('create', ['middleware' => 'feature_control:161', 'uses' =>'ApiEnquiries@create']);
     Route::any('list', ['middleware' => 'feature_control:160', 'uses' =>'ApiEnquiries@index']);
     Route::any('detail', ['middleware' => 'feature_control:160', 'uses' =>'ApiEnquiries@indexDetail']);
     Route::post('reply', ['middleware' => 'feature_control:161', 'uses' =>'ApiEnquiries@reply']);
@@ -14,6 +13,7 @@ Route::group(['middleware' => ['auth:api-be','user_agent','log_activities'], 'pr
 
 Route::group(['middleware' => ['auth:api','user_agent','log_activities'], 'prefix' => 'api/enquiries', 'namespace' => 'Modules\Enquiries\Http\Controllers'], function()
 {
+    Route::post('create', 'ApiEnquiries@create');
     Route::any('listEnquiries', 'ApiEnquiries@listEnquirySubject');
     Route::any('listPosition', 'ApiEnquiries@listEnquiryPosition');
 });
