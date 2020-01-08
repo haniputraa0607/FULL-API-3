@@ -303,7 +303,7 @@ class ApiCustomPageController extends Controller
         }
 
         DB::commit();
-        return response()->json(['status'  => 'success', 'result' => ['id_custom_page' => $insertCustomPage['id_custom_page']]]);
+        return response()->json(['status'  => 'success', 'result' => ['id_custom_page' => $insertCustomPage['id_custom_page'], 'created_at' => $insertCustomPage['created_at']]]);
     }
 
     /**
