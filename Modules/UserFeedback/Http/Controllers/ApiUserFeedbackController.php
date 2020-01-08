@@ -167,7 +167,7 @@ class ApiUserFeedbackController extends Controller
         }
         $result['id_transaction'] = $id_transaction;
         $result['outlet'] = $transaction['outlet'];
-        $result['ratings'] = RatingItem::select('id_rating_item','image','text')->orderBy('order')->get();
-        return $result;
+        $result['ratings'] = RatingItem::select('id_rating_item','image','image_selected','text')->orderBy('order')->get();
+        return MyHelper::checkGet($result);
     }
 }
