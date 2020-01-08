@@ -100,19 +100,19 @@ class ApiSubscription extends Controller
             $data['subscription_price_point'] = null;
         }
         // ---------------------------- FREE
-        if ( ($post['prices_by']??false) == 'free' ) {
-            $data['subscription_price_cash'] = null;
+        if ( ($post['prices_by']??false) == 'money' ) {
+            $data['subscription_price_cash'] = $post['subscription_price_cash'];
             $data['subscription_price_point'] = null;
             $data['is_free'] = 1;
         } 
-        elseif ( ($post['prices_by']??0) == 'point' ) 
+        elseif ( ($post['prices_by']??false) == 'point' ) 
         {
             $data['subscription_price_cash'] = null;
             $data['subscription_price_point'] = $post['subscription_price_point'];
         }
         else
         {
-            $data['subscription_price_cash'] = $post['subscription_price_cash'];
+            $data['subscription_price_cash'] = null;
             $data['subscription_price_point'] = null;   
         }
 
@@ -345,7 +345,7 @@ class ApiSubscription extends Controller
             unset($data['error']);
             return response()->json($data);
         }
-        $save = Subscription::updateOrCreate(['id_subscription' => $data['id_subscription']], $data);
+        $save = Subscription::updateOrCreate(['id_subscription' => $data['id_subscription']??''], $data);
 
         if ($save) {
             DB::commit();

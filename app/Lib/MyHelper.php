@@ -2098,4 +2098,30 @@ class MyHelper{
 				break;
 		}
 	}
+
+	/**
+	 * Create slug for resource based on id and created_at parameter
+	 * @param  String $id         id of resource
+	 * @param  String $created_at created_at value of item
+	 * @return String             slug result
+	 */
+	public static function createSlug($id,$created_at){
+		$combined = $id.'.'.$created_at;
+		$result = self::encrypt2019($combined);
+		return $result;
+	}
+
+	/**
+	 * get id and created at from slug
+	 * @param  String $slug given slug
+	 * @return Array       id and created at or empty array if invalid slug
+	 */
+	public static function explodeSlug($slug) {
+		$decripted = self::decrypt2019($slug);
+		$result = explode('.',$decripted);
+		if(!$result || (count($result) == 1 && empty($result[0]))){
+			return [];
+		}
+		return $result;
+	}
 }
