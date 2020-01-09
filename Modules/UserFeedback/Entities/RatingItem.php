@@ -12,4 +12,12 @@ class RatingItem extends Model
     	'image_selected',
     	'text'
     ];
+    public function getImageAttribute($value)
+    {
+    	return env('S3_URL_API').$value;
+    }
+    public function getImageSelectedAttribute($value)
+    {
+    	return env('S3_URL_API').$value;
+    }
 }
