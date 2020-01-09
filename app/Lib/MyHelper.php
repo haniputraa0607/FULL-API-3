@@ -1,6 +1,7 @@
 <?php
 namespace App\Lib;
 
+use App\Http\Models\Setting;
 use Image;
 use File;
 use DB;
@@ -2124,4 +2125,37 @@ class MyHelper{
 		}
 		return $result;
 	}
+
+    public static function phoneCheckFormat($phone) {
+        $phoneSetting = Setting::where('key', 'phone_setting')->first()->value_text;
+        $phoneSetting = json_decode($phoneSetting);
+        $codePhone = $phoneSetting->code_number;
+        $min = $phoneSetting->min_length_number;
+        $max = $phoneSetting->max_length_number;
+
+        if(substr($phone, 0, 1) == '0'){
+            $phone = $codePhone.substr($phone,1);
+        }elseif(substr($phone, 0, 2) == $codePhone){
+            $phone = $codePhone.substr($phone,2);
+        }elseif(substr($phone, 0, 3) == '+'.$codePhone){
+            $phone = $codePhone.substr($phone,3);
+        }else{
+            return [
+                'status' => 'fail',
+                'messages' => [$phoneSetting->message_failed]
+            ];
+        }
+
+        if(strlen($phone) >= $min && strlen($phone) <= $max){
+            return [
+                'status' => 'success',
+                'messages' => [$phoneSetting->message_success]
+            ];
+        }else{
+            return [
+                'status' => 'fail',
+                'messages' => [$phoneSetting->message_failed]
+            ];
+        }
+    }
 }

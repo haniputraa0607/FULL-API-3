@@ -1445,4 +1445,37 @@ class ApiSetting extends Controller
             'messages'=>['No setting updated']
         ];        
     }
+
+    /* ============== Start Phone Setting ============== */
+    public function phoneSetting(Request $request){
+        $phoneSetting = Setting::where('key', 'phone_setting')->first()->value_text;
+
+        if($phoneSetting){
+            $result = [
+                'status' => 'success',
+                'result' => [
+                    json_decode($phoneSetting),
+                ]
+            ];
+
+            return response()->json($result);
+        }else{
+            return response()->json([
+                'status'=>'fail',
+                'messages'=>['Failed get phone setting']
+            ]);
+        }
+    }
+
+    public function updatePhoneSetting(Request $request){
+        $data = $request->json()->all();
+        $updatePhoneSetting = Setting::where('key', 'phone_setting')->update(['value_text' => json_encode($data)]);
+
+        if($updatePhoneSetting){
+            return response()->json(['status'=>'success']);
+        }else{
+            return response()->json(['status'=>'fail']);
+        }
+    }
+    /* ============== End Phone Setting ============== */
 }

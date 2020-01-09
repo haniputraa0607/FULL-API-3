@@ -1642,7 +1642,15 @@ class FeaturesTableSeeder extends Seeder
                 'feature_module' => 'Promo Campaign',
                 'created_at' => date('Y-m-d H:00:00'),
                 'updated_at' => date('Y-m-d H:00:00'),
-            )
+            ),
+            204 =>
+                array(
+                    'id_feature' => 205,
+                    'feature_type' => 'Update',
+                    'feature_module' => 'Setting Phone',
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00'),
+                ),
         ));
     }
 }

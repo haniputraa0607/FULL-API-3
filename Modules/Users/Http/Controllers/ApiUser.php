@@ -843,21 +843,12 @@ class ApiUser extends Controller
 
         $phone = preg_replace("/[^0-9]/", "", $phone);
 
-        if(substr($phone, 0, 2) == '62'){
-            $phone = substr($phone,2);
-        }elseif(substr($phone, 0, 3) == '+62'){
-            $phone = substr($phone,3);
-        }
+        $checkPhoneFormat = MyHelper::phoneCheckFormat($phone);
 
-        if(substr($phone, 0, 1) != '0'){
-            $phone = '0'.$phone;
-        }
-
-        $charAt2 = substr($phone, 1, 1);
-        if($charAt2 != '8'){
+        if(isset($checkPhoneFormat['status']) && $checkPhoneFormat['status'] == 'fail'){
             return response()->json([
                 'status' => 'fail',
-                'messages' => ['Hanya dapat digunakan untuk nomor Indonesia dengan format 08xxx atau +628xxx']
+                'messages' => [$checkPhoneFormat['messages']]
             ]);
         }
 
@@ -898,15 +889,15 @@ class ApiUser extends Controller
 
         $phone = preg_replace("/[^0-9]/", "", $phone);
 
-        if(substr($phone, 0, 2) == '62'){
-            $phone = substr($phone,2);
-        }elseif(substr($phone, 0, 3) == '+62'){
-            $phone = substr($phone,3);
+        $checkPhoneFormat = MyHelper::phoneCheckFormat($phone);
+
+        if(isset($checkPhoneFormat['status']) && $checkPhoneFormat['status'] == 'fail'){
+            return response()->json([
+                'status' => 'fail',
+                'messages' => [$checkPhoneFormat['messages']]
+            ]);
         }
 
-        if(substr($phone, 0, 1) != '0'){
-            $phone = '0'.$phone;
-        }
         $data = User::where('phone', '=', $phone)
             ->get()
             ->toArray();
@@ -1257,14 +1248,13 @@ class ApiUser extends Controller
 
         $phone = preg_replace("/[^0-9]/", "", $phone);
 
-        if(substr($phone, 0, 2) == '62'){
-            $phone = substr($phone,2);
-        }elseif(substr($phone, 0, 3) == '+62'){
-            $phone = substr($phone,3);
-        }
+        $checkPhoneFormat = MyHelper::phoneCheckFormat($phone);
 
-        if(substr($phone, 0, 1) != '0'){
-            $phone = '0'.$phone;
+        if(isset($checkPhoneFormat['status']) && $checkPhoneFormat['status'] == 'fail'){
+            return response()->json([
+                'status' => 'fail',
+                'messages' => [$checkPhoneFormat['messages']]
+            ]);
         }
 
         $data = User::where('phone', '=', $phone)
