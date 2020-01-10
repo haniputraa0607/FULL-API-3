@@ -623,7 +623,7 @@ class ApiOnlineTransaction extends Controller
                 $trx_product->created_at = strtotime($insertTransaction['transaction_date']);
             }
             // array_push($dataInsertProduct, $dataProduct);
-            
+
             $insert_modifier = [];
             $mod_subtotal = 0;
             $more_mid_text = '';
@@ -685,7 +685,7 @@ class ApiOnlineTransaction extends Controller
                     $more_mid_text .= ','.$mod['text'];
                 }
             }
-            $trx_modifier = TransactionProductModifier::insert($insert_modifier); 
+            $trx_modifier = TransactionProductModifier::insert($insert_modifier);
             if (!$trx_modifier) {
                 DB::rollback();
                 return response()->json([
@@ -810,7 +810,7 @@ class ApiOnlineTransaction extends Controller
 
             $order_id = MyHelper::createrandom(4, 'Besar Angka');
 
-            //cek unique order id uniq today and outlet 
+            //cek unique order id uniq today and outlet
             $cekOrderId = TransactionShipment::join('transactions', 'transactions.id_transaction', 'transaction_shipments.id_transaction')
                                             ->where('id_outlet', $insertTransaction['id_outlet'])
                                             ->where('order_id', $order_id)
@@ -1053,7 +1053,7 @@ class ApiOnlineTransaction extends Controller
                     'messages'  => ['Insert Advance Order Failed']
                 ]);
             }
-        } 
+        }
 
         //insert pickup go-send
         if($post['type'] == 'GO-SEND'){
@@ -1085,11 +1085,14 @@ class ApiOnlineTransaction extends Controller
 
             $id_pickup_go_send = $gosend->id_transaction_pickup_go_send;
         }
-		
+
 		$fraudTrxDay = FraudSetting::where('parameter', 'LIKE', '%transactions in 1 day%')->where('fraud_settings_status','Active')->first();
 		$fraudTrxWeek = FraudSetting::where('parameter', 'LIKE', '%transactions in 1 week%')->where('fraud_settings_status','Active')->first();
 
         if ($post['transaction_payment_status'] == 'Completed') {
+            $updateReview = Transaction::where('id_transaction', $insertTransaction['id_transaction'])->update([
+                'show_rate_popup' => '1'
+            ]);
 
             //========= This process to check if user have fraud ============//
             $geCountTrxDay = Transaction::leftJoin('transaction_pickups', 'transaction_pickups.id_transaction', '=', 'transactions.id_transaction')
@@ -1118,7 +1121,7 @@ class ApiOnlineTransaction extends Controller
             $countTrxWeek = $geCountTrxWeek + 1;
             //================================ End ================================//
 
-         
+
 
             if((($fraudTrxDay && $countTrxDay <= $fraudTrxDay['parameter_detail']) && ($fraudTrxWeek && $countTrxWeek <= $fraudTrxWeek['parameter_detail']))
                 || (!$fraudTrxDay && !$fraudTrxWeek)){
