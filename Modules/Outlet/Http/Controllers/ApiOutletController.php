@@ -1416,13 +1416,15 @@ class ApiOutletController extends Controller
         $return=[];
         foreach ($brands??[[]] as $brand) {
             $outlets = Outlet::select('id_outlet','outlets.outlet_code as code',
-            'outlets.outlet_name as name',
-            'outlets.outlet_address as address',
-            'cities.city_name as city',
-            'outlets.outlet_phone as phone',
-            'outlets.outlet_email as email',
-            'outlets.outlet_latitude as latitude',
-            'outlets.outlet_longitude as longitude'
+                'outlets.outlet_name as name',
+                'outlets.outlet_address as address',
+                'cities.city_name as city',
+                'outlets.outlet_phone as phone',
+                'outlets.outlet_email as email',
+                'outlets.outlet_latitude as latitude',
+                'outlets.outlet_longitude as longitude',
+                'outlets.deep_link_gojek as deep_link_gojek',
+                'outlets.deep_link_grab as deep_link_grab'
             )->with('brands')->join('cities', 'outlets.id_city', '=', 'cities.id_city');
 
             foreach ($brand as $bran) {
@@ -1497,6 +1499,7 @@ class ApiOutletController extends Controller
 
             DB::beginTransaction();
             $countImport = 0;
+
             foreach ($dataimport as $key => $value) {
                 if(
                     empty($value['code']) &&
@@ -1533,8 +1536,8 @@ class ApiOutletController extends Controller
                             'outlet_email' => $value['email']??'',
                             'outlet_latitude' => $value['latitude']??'',
                             'outlet_longitude' => $value['longitude']??'',
-                            'outlet_open_hours' => $value['open_hours']??'',
-                            'outlet_close_hours' => $value['close_hours']??'',
+                            'deep_link_gojek' => $value['deep_link_gojek']??'',
+                            'deep_link_grab' => $value['deep_link_grab']??'',
                             'id_city' => $id_city[$search]??null
                         ];
                         if(!empty($insert['outlet_name'])){
@@ -1549,12 +1552,29 @@ class ApiOutletController extends Controller
                                     ]
                                 ]);
                             } else {
+                                $day = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+
+                                foreach ($day as $val){
+                                    $data = [
+                                        'day'       => $val,
+                                        'open'      => '10:00:00',
+                                        'close'     => '21:30:00',
+                                        'is_closed' => 0,
+                                        'id_outlet' => $save['id_outlet']
+                                    ];
+                                    $save = OutletSchedule::updateOrCreate(['id_outlet' => $save['id_outlet'], 'day' => $val], $data);
+                                    if (!$save) {
+                                        DB::rollBack();
+                                        return response()->json([
+                                            'status'    => 'fail',
+                                            'messages'      => [
+                                                'Add shedule failed.'
+                                            ]
+                                        ]);
+                                    }
+                                }
                                 $countImport++;
                             }
-                        } else {
-                            DB::commit();
-                            if ($save) return ['status' => 'success', 'message' => $countImport . ' data successfully imported.'];
-                            else return ['status' => 'fail', 'messages' => ['failed to update data']];
                         }
                     }
                 }
@@ -1564,6 +1584,74 @@ class ApiOutletController extends Controller
 
             if($save??false) return ['status' => 'success', 'message' => $countImport.' data successfully imported.'];
             else return ['status' => 'fail','messages' => ['failed to update data']];
+        }else{
+            return response()->json([
+                'status'    => 'fail',
+                'messages'      => [
+                    'File is empty.'
+                ]
+            ]);
+        }
+    }
+
+    function importBrand(Request $request)
+    {
+        $post = $request->json()->all();
+        $dataimport = $post['data_import'];
+
+        if(!empty($dataimport) && count($dataimport)){
+            DB::beginTransaction();
+            $countImport = 0;
+
+            $outlets = Outlet::get();
+            $id_outlet = array_pluck($outlets, 'id_outlet');
+            $outlet_code = array_pluck($outlets, 'outlet_code');
+            $outlet_code = array_map('strtolower', $outlet_code);
+
+            $brands = Brand::get();
+            $id_brand = array_pluck($brands, 'id_brand');
+            $name_brand = array_pluck($brands, 'name_brand');
+            $name_brand = array_map('strtolower', $name_brand);
+
+            $countDataImport = count($dataimport);
+            for($i=0;$i<$countDataImport;$i++){
+                $countDetail = count($dataimport[$i]);
+                if(isset($dataimport[$i]['code_outlet'])){
+                    $search_outlet = array_search(strtolower($dataimport[$i]['code_outlet']), $outlet_code);
+                    if(!empty($search_outlet)){
+                        BrandOutlet ::where('id_outlet',$id_outlet[$search_outlet])->delete();
+
+                        foreach ($dataimport[$i] as $key => $val) {
+                            if ($key == 'code_outlet') continue;
+
+                            if(strtoupper($val) == 'YES'){
+                                $search_brand = array_search(strtolower($key), $name_brand);
+                                $insertBrandOutlet = [
+                                    'id_brand' => $id_brand[$search_brand]??null,
+                                    'id_outlet' => $id_outlet[$search_outlet]??null
+                                ];
+
+                                $saveBrandOutlet = BrandOutlet::insert($insertBrandOutlet);
+
+                                if (!$saveBrandOutlet) {
+                                    DB::rollBack();
+                                    return response()->json([
+                                        'status'    => 'fail',
+                                        'messages'      => [
+                                            'Save brand outlet failed.'
+                                        ]
+                                    ]);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            DB::commit();
+
+            if($saveBrandOutlet??false) return ['status' => 'success', 'message' => 'Data successfully imported.'];
+            else return ['status' => 'fail','messages' => ['failed to import data']];
         }else{
             return response()->json([
                 'status'    => 'fail',
@@ -1947,5 +2035,15 @@ class ApiOutletController extends Controller
         }
         $filtered = $query->count();
         return ['total'=>$total,'filtered'=>$filtered];
+    }
+
+    public function getAllCodeOutlet(Request $request){
+        $outlet = Outlet::get()->pluck('outlet_code');
+
+        if($outlet){
+            return response()->json(['status' => 'success', 'result' => $outlet]);
+        }else{
+            return response()->json(['status' => 'fail', 'message' => 'empty']);
+        }
     }
 }
