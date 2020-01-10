@@ -1,6 +1,7 @@
 <?php
 namespace App\Lib;
 
+use App\Http\Models\Setting;
 use Image;
 use File;
 use DB;
@@ -23,6 +24,8 @@ use App\Http\Models\PromotionRuleParent;
 use App\Http\Models\InboxGlobalRule;
 use App\Http\Models\InboxGlobalRuleParent;
 use App\Http\Models\LogTopupManual;
+use Modules\PointInjection\Entities\PointInjectionRule;
+use Modules\PointInjection\Entities\PointInjectionRuleParent;
 
 use App\Http\Requests;
 use Illuminate\Http\JsonResponse;
@@ -44,7 +47,7 @@ class MyHelper{
 			if($data && !empty($data)) return ['status' => 'success', 'result' => $data];
 			else if(empty($data)) {
 				if($message == null){
-					$message = 'Maaf, halaman ini tidak tersedia';
+					$message = 'empty';
 				}
 				return ['status' => 'fail', 'messages' => [$message]];
 			}
@@ -1695,6 +1698,15 @@ class MyHelper{
 				$deleteRuleParent = InboxGlobalRuleParent::where('id_'.$type, $id)->delete();
 			}
 		}
+		elseif ($type == 'point_injection') {
+			$deleteRuleParent = PointInjectionRuleParent::where('id_' . $type, $id)->get();
+			if (count($deleteRuleParent) > 0) {
+				foreach ($deleteRuleParent as $key => $value) {
+					$delete = PointInjectionRule::where('id_' . $type . '_rule_parent', $value['id_' . $type . '_rule_parent'])->delete();
+				}
+				$deleteRuleParent = PointInjectionRuleParent::where('id_' . $type, $id)->delete();
+			}
+		}
 
 		$operatorexception = ['gender',
 							'birthday_month',
@@ -1744,6 +1756,9 @@ class MyHelper{
 			}
 			elseif($type == 'inbox_global'){
 				$createRuleParent = InboxGlobalRuleParent::create($dataRuleParent);
+			} 
+			elseif ($type == 'point_injection') {
+				$createRuleParent = PointInjectionRuleParent::create($dataRuleParent);
 			}
 
 			if(!$createRuleParent){
@@ -1794,6 +1809,9 @@ class MyHelper{
 		}
 		elseif($type == 'inbox_global'){
 			$insert = InboxGlobalRule::insert($data_rule);
+		}
+		elseif ($type == 'point_injection') {
+			$insert = PointInjectionRule::insert($data_rule);
 		}
 
 		if($insert){
@@ -2124,4 +2142,37 @@ class MyHelper{
 		}
 		return $result;
 	}
+
+    public static function phoneCheckFormat($phone) {
+        $phoneSetting = Setting::where('key', 'phone_setting')->first()->value_text;
+        $phoneSetting = json_decode($phoneSetting);
+        $codePhone = $phoneSetting->code_number;
+        $min = $phoneSetting->min_length_number;
+        $max = $phoneSetting->max_length_number;
+
+        if(substr($phone, 0, 1) == '0'){
+            $phone = $codePhone.substr($phone,1);
+        }elseif(substr($phone, 0, 2) == $codePhone){
+            $phone = $codePhone.substr($phone,2);
+        }elseif(substr($phone, 0, 3) == '+'.$codePhone){
+            $phone = $codePhone.substr($phone,3);
+        }else{
+            return [
+                'status' => 'fail',
+                'messages' => [$phoneSetting->message_failed]
+            ];
+        }
+
+        if(strlen($phone) >= $min && strlen($phone) <= $max){
+            return [
+                'status' => 'success',
+                'phone' => $phone
+            ];
+        }else{
+            return [
+                'status' => 'fail',
+                'messages' => [$phoneSetting->message_failed]
+            ];
+        }
+    }
 }
