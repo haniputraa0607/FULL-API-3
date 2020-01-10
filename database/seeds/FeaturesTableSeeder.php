@@ -1642,6 +1642,46 @@ class FeaturesTableSeeder extends Seeder
                 'feature_module' => 'Promo Campaign',
                 'created_at' => date('Y-m-d H:00:00'),
                 'updated_at' => date('Y-m-d H:00:00'),
+            ),
+            204 => 
+            array(
+                'id_feature' => 205,
+                'feature_type' => 'List',
+                'feature_module' => 'Point Injection',
+                'created_at' => date('Y-m-d H:00:00'),
+                'updated_at' => date('Y-m-d H:00:00'),
+            ),
+            205 =>
+            array(
+                'id_feature' => 206,
+                'feature_type' => 'Detail',
+                'feature_module' => 'Point Injection',
+                'created_at' => date('Y-m-d H:00:00'),
+                'updated_at' => date('Y-m-d H:00:00'),
+            ),
+            206 =>
+            array(
+                'id_feature' => 207,
+                'feature_type' => 'Create',
+                'feature_module' => 'Point Injection',
+                'created_at' => date('Y-m-d H:00:00'),
+                'updated_at' => date('Y-m-d H:00:00'),
+            ),
+            207 =>
+            array(
+                'id_feature' => 208,
+                'feature_type' => 'Update',
+                'feature_module' => 'Point Injection',
+                'created_at' => date('Y-m-d H:00:00'),
+                'updated_at' => date('Y-m-d H:00:00'),
+            ),
+            208 =>
+            array(
+                'id_feature' => 209,
+                'feature_type' => 'Delete',
+                'feature_module' => 'Point Injection',
+                'created_at' => date('Y-m-d H:00:00'),
+                'updated_at' => date('Y-m-d H:00:00'),
             )
         ));
     }
