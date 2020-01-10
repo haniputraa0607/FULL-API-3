@@ -1469,12 +1469,19 @@ class ApiSetting extends Controller
 
     public function updatePhoneSetting(Request $request){
         $data = $request->json()->all();
+        if($data['max_length_number'] < $data['min_length_number']){
+            return response()->json(['status'=>'fail','message' => "Please input maximum above the minimum"]);
+        }
+
+        if($data['min_length_number'] > $data['max_length_number']){
+            return response()->json(['status'=>'fail','message' => "Please input minimum below the maximum"]);
+        }
         $updatePhoneSetting = Setting::where('key', 'phone_setting')->update(['value_text' => json_encode($data)]);
 
         if($updatePhoneSetting){
             return response()->json(['status'=>'success']);
         }else{
-            return response()->json(['status'=>'fail']);
+            return response()->json(['status'=>'fail','message' => "Failed update"]);
         }
     }
     /* ============== End Phone Setting ============== */
