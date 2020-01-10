@@ -45,7 +45,7 @@ class MyHelper{
 			if($data && !empty($data)) return ['status' => 'success', 'result' => $data];
 			else if(empty($data)) {
 				if($message == null){
-					$message = 'Maaf, halaman ini tidak tersedia';
+					$message = 'empty';
 				}
 				return ['status' => 'fail', 'messages' => [$message]];
 			}
@@ -2149,7 +2149,7 @@ class MyHelper{
         if(strlen($phone) >= $min && strlen($phone) <= $max){
             return [
                 'status' => 'success',
-                'messages' => [$phoneSetting->message_success]
+                'phone' => $phone
             ];
         }else{
             return [

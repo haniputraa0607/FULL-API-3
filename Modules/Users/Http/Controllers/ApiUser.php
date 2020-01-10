@@ -850,6 +850,8 @@ class ApiUser extends Controller
                 'status' => 'fail',
                 'messages' => [$checkPhoneFormat['messages']]
             ]);
+        }elseif(isset($checkPhoneFormat['status']) && $checkPhoneFormat['status'] == 'success'){
+            $phone = $checkPhoneFormat['phone'];
         }
 
         $data = User::with('city')->where('phone', '=', $phone)->get()->toArray();
@@ -896,6 +898,8 @@ class ApiUser extends Controller
                 'status' => 'fail',
                 'messages' => [$checkPhoneFormat['messages']]
             ]);
+        }elseif(isset($checkPhoneFormat['status']) && $checkPhoneFormat['status'] == 'success'){
+            $phone = $checkPhoneFormat['phone'];
         }
 
         $data = User::where('phone', '=', $phone)
@@ -1051,14 +1055,15 @@ class ApiUser extends Controller
 
         $phone = preg_replace("/[^0-9]/", "", $phone);
 
-        if(substr($phone, 0, 2) == '62'){
-            $phone = substr($phone,2);
-        }elseif(substr($phone, 0, 3) == '+62'){
-            $phone = substr($phone,3);
-        }
+        $checkPhoneFormat = MyHelper::phoneCheckFormat($phone);
 
-        if(substr($phone, 0, 1) != '0'){
-            $phone = '0'.$phone;
+        if(isset($checkPhoneFormat['status']) && $checkPhoneFormat['status'] == 'fail'){
+            return response()->json([
+                'status' => 'fail',
+                'messages' => [$checkPhoneFormat['messages']]
+            ]);
+        }elseif(isset($checkPhoneFormat['status']) && $checkPhoneFormat['status'] == 'success'){
+            $phone = $checkPhoneFormat['phone'];
         }
 
         $datauser = User::where('phone', '=', $phone)
@@ -1255,6 +1260,8 @@ class ApiUser extends Controller
                 'status' => 'fail',
                 'messages' => [$checkPhoneFormat['messages']]
             ]);
+        }elseif(isset($checkPhoneFormat['status']) && $checkPhoneFormat['status'] == 'success'){
+            $phone = $checkPhoneFormat['phone'];
         }
 
         $data = User::where('phone', '=', $phone)
@@ -1306,14 +1313,15 @@ class ApiUser extends Controller
 
         $phone = preg_replace("/[^0-9]/", "", $phone);
 
-        if(substr($phone, 0, 2) == '62'){
-            $phone = substr($phone,2);
-        }elseif(substr($phone, 0, 3) == '+62'){
-            $phone = substr($phone,3);
-        }
+        $checkPhoneFormat = MyHelper::phoneCheckFormat($phone);
 
-        if(substr($phone, 0, 1) != '0'){
-            $phone = '0'.$phone;
+        if(isset($checkPhoneFormat['status']) && $checkPhoneFormat['status'] == 'fail'){
+            return response()->json([
+                'status' => 'fail',
+                'messages' => [$checkPhoneFormat['messages']]
+            ]);
+        }elseif(isset($checkPhoneFormat['status']) && $checkPhoneFormat['status'] == 'success'){
+            $phone = $checkPhoneFormat['phone'];
         }
 
         $user = User::where('phone', '=', $phone)->first();
@@ -1383,14 +1391,15 @@ class ApiUser extends Controller
 
         $phone = preg_replace("/[^0-9]/", "", $phone);
 
-        if(substr($phone, 0, 2) == '62'){
-            $phone = substr($phone,2);
-        }elseif(substr($phone, 0, 3) == '+62'){
-            $phone = substr($phone,3);
-        }
+        $checkPhoneFormat = MyHelper::phoneCheckFormat($phone);
 
-        if(substr($phone, 0, 1) != '0'){
-            $phone = '0'.$phone;
+        if(isset($checkPhoneFormat['status']) && $checkPhoneFormat['status'] == 'fail'){
+            return response()->json([
+                'status' => 'fail',
+                'messages' => [$checkPhoneFormat['messages']]
+            ]);
+        }elseif(isset($checkPhoneFormat['status']) && $checkPhoneFormat['status'] == 'success'){
+            $phone = $checkPhoneFormat['phone'];
         }
 
         $data = User::where('phone', '=', $phone)
@@ -1486,14 +1495,15 @@ class ApiUser extends Controller
 
         $phone = preg_replace("/[^0-9]/", "", $phone);
 
-        if(substr($phone, 0, 2) == '62'){
-            $phone = substr($phone,2);
-        }elseif(substr($phone, 0, 3) == '+62'){
-            $phone = substr($phone,3);
-        }
+        $checkPhoneFormat = MyHelper::phoneCheckFormat($phone);
 
-        if(substr($phone, 0, 1) != '0'){
-            $phone = '0'.$phone;
+        if(isset($checkPhoneFormat['status']) && $checkPhoneFormat['status'] == 'fail'){
+            return response()->json([
+                'status' => 'fail',
+                'messages' => [$checkPhoneFormat['messages']]
+            ]);
+        }elseif(isset($checkPhoneFormat['status']) && $checkPhoneFormat['status'] == 'success'){
+            $phone = $checkPhoneFormat['phone'];
         }
 
         $data = User::where('phone', '=', $phone)
@@ -1609,7 +1619,20 @@ class ApiUser extends Controller
     }
 
     function profileUpdate(users_profile $request){
-        $data = User::where('phone', '=', $request->json('phone'))
+        $phone = preg_replace("/[^0-9]/", "", $request->json('phone'));
+
+        $checkPhoneFormat = MyHelper::phoneCheckFormat($phone);
+
+        if(isset($checkPhoneFormat['status']) && $checkPhoneFormat['status'] == 'fail'){
+            return response()->json([
+                'status' => 'fail',
+                'messages' => [$checkPhoneFormat['messages']]
+            ]);
+        }elseif(isset($checkPhoneFormat['status']) && $checkPhoneFormat['status'] == 'success'){
+            $phone = $checkPhoneFormat['phone'];
+        }
+
+        $data = User::where('phone', '=', $phone)
             ->get()
             ->toArray();
 
@@ -1620,7 +1643,7 @@ class ApiUser extends Controller
                     ->get()
                     ->first();
                 if($checkEmail){
-                    if($checkEmail['phone'] != $request->json('phone')){
+                    if($checkEmail['phone'] != $phone){
                         $result = [
                             'status'	=> 'fail',
                             'messages'	=> ['This email has already been registered to another account. Please choose other email.']
