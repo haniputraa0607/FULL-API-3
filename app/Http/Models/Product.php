@@ -133,6 +133,7 @@ class Product extends Model
     {
         return $this->hasMany(\Modules\Brand\Entities\BrandProduct::class, 'id_product','id_product')->select('id_brand','id_product_category','id_product');
     }
+
     public function modifiers(){
         return $this->hasMany(ProductModifier::class, 'id_product','id_product');
     }

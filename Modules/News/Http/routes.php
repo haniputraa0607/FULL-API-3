@@ -20,7 +20,7 @@ Route::group(['prefix' => 'news', 'namespace' => 'Modules\News\Http\Controllers'
     Route::any('/webview/{id}', 'ApiNewsWebview@detail');
 });
 
-Route::group(['middleware' => ['auth:api-be','user_agent'], 'prefix' => 'api/news', 'middleware' => 'log_activities', 'namespace' => 'Modules\News\Http\Controllers'], function()
+Route::group(['middleware' => ['auth:api-be','user_agent','log_activities'], 'prefix' => 'api/news', 'namespace' => 'Modules\News\Http\Controllers'], function()
 {
     Route::any('be/list', ['middleware' => 'feature_control:19', 'uses' => 'ApiNews@listNews']);
     Route::any('be/category', ['middleware' => 'feature_control:164', 'uses' => 'ApiNews@listCategory']);
