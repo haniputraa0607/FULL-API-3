@@ -37,7 +37,7 @@ Route::group(['middleware' => ['auth:api-be', 'log_activities'], 'prefix' => 'pr
 
 // APPS
 Route::group(['middleware' => ['auth:api', 'log_activities'], 'prefix' => 'promo-campaign'], function () {
-    Route::get('test', 'ApiPromoCampaign@index');
+    Route::post('check-validation', 'ApiPromoCampaign@checkValid');
 });
 
 // DEVELOPMENT

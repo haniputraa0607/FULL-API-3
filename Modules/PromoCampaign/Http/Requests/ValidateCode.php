@@ -17,7 +17,8 @@ class ValidateCode extends FormRequest
     {
         return [
             'promo_code'    => 'required|string',
-            'item'          => 'array|required',
+            'item'          => 'array|nullable',
+            'id_outlet'     => 'nullable',
             'device_id'     => 'required',
             'device_type'   => 'required'
         ];

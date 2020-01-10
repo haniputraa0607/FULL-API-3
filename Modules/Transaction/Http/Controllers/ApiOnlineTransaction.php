@@ -34,8 +34,11 @@ use App\Http\Models\Configs;
 use App\Http\Models\Holiday;
 use App\Http\Models\OutletToken;
 use App\Http\Models\UserLocationDetail;
+use Modules\PromoCampaign\Entities\PromoCampaign;
+use Modules\PromoCampaign\Entities\PromoCampaignPromoCode;
 
 use Modules\Balance\Http\Controllers\NewTopupController;
+use Modules\PromoCampaign\Lib\PromoCampaignTools;
 
 use GuzzleHttp\Exception\GuzzleException;
 use GuzzleHttp\Client;
@@ -1502,12 +1505,56 @@ class ApiOnlineTransaction extends Controller
             return $productDis;
         }
 
+        // check promo code 
+        $promo_error=[];
+        if($request->json('promo_code')){
+        	$code=PromoCampaignPromoCode::where('promo_code',$request->promo_code)
+                ->join('promo_campaigns', 'promo_campaigns.id_promo_campaign', '=', 'promo_campaign_promo_codes.id_promo_campaign')
+                ->where( function($q){
+                	$q->whereColumn('usage','<','limitation_usage')
+                		->orWhere('code_type','Single');
+                } )
+                ->first();
+
+            if ($code) 
+            {
+	            $pct=new PromoCampaignTools();
+	            $validate_user=$pct->validateUser($code->id_promo_campaign, $request->user()->id, $request->user()->phone, $request->device_type, $request->device_id, $errore);
+
+	            $discount_promo=$pct->validatePromo($code->id_promo_campaign, $request->id_outlet, $post['item'], $errors);
+
+	            if ( !empty($errore) || !empty($errors)) {
+	            	$promo_error['title'] = Setting::where('key','=','promo_error_title')->first()['value']??'Promo tidak berlaku';
+			        $promo_error['button_ok'] = Setting::where('key','=','promo_error_ok_button')->first()['value']??'Tambah item';
+			        $promo_error['button_cancel'] = Setting::where('key','=','promo_error_cancel_button')->first()['value']??'Tidak';
+			        $promo_error['product'] = $pct->getRequiredProduct($code->id_promo_campaign)??null;
+	            	$promo_error['message']=[];
+	                if(isset($errore)){
+	            		foreach ($errore as $key => $value) {
+	            			array_push($promo_error['message'], $value);
+	            		}
+	            	}
+	            	if(isset($errors)){
+	            		foreach ($errors as $key => $value) {
+	            			array_push($promo_error['message'], $value);
+	            		}
+	            	}
+	            }
+	            $promo_discount=$discount_promo['discount'];
+            }
+            else
+            {
+            	$promo_error[] = 'Promo code invalid';
+            }
+        }
+
+        $error_msg=[];
         $tree = [];
         // check and group product
         $subtotal = 0;
-        $error_msg=[];
         $missing_product = 0;
-        foreach ($post['item'] as &$item) {
+        // return [$discount_promo['item'],$errors];
+        foreach ($discount_promo['item']??$post['item'] as &$item) {
             // get detail product
             $product = Product::select([
                 'products.id_product','products.product_name','products.product_description',
@@ -1540,6 +1587,7 @@ class ApiOnlineTransaction extends Controller
             ->groupBy('products.id_product')
             ->orderBy('products.position')
             ->find($item['id_product']);
+
             if(!$product){
                 $missing_product++;
                 continue;
@@ -1559,6 +1607,10 @@ class ApiOnlineTransaction extends Controller
             $product['id_custom'] = $item['id_custom']??null;
             $product['qty'] = $item['qty'];
             $product['note'] = $item['note']??'';
+            $product['promo_discount'] = $item['discount']??0;
+            isset($item['new_price']) ? $product['new_price']=$item['new_price'] : '';
+            $product['is_promo'] = $item['is_promo']??0;
+            $product['is_free'] = $item['is_free']??0;
             // get modifier
             $mod_price = 0;
             $product['modifiers'] = [];
@@ -1619,10 +1671,12 @@ class ApiOnlineTransaction extends Controller
             if(!isset($tree[$product['id_brand']]['name_brand'])){
                 $tree[$product['id_brand']] = Brand::select('name_brand','id_brand')->find($product['id_brand'])->toArray();
             }
-            $product['product_price_total'] = $product['qty'] * ($product['product_price']+$mod_price);
+            $product['product_price_total'] = ($product['qty'] * ($product['product_price']+$mod_price)) - $product['promo_discount'];
             $tree[$product['id_brand']]['products'][]=$product;
             $subtotal += $product['product_price_total'];
+            // return $product;
         }
+        // return $tree;
         if($missing_product){
             $error_msg[] = MyHelper::simpleReplace(
                 '%missing_product% products not found',
@@ -1631,6 +1685,7 @@ class ApiOnlineTransaction extends Controller
                 ]
             );
         }
+
         foreach ($grandTotal as $keyTotal => $valueTotal) {
             if ($valueTotal == 'subtotal') {
                 $post['subtotal'] = $subtotal - $totalDisProduct;
@@ -1712,7 +1767,7 @@ class ApiOnlineTransaction extends Controller
             }
             $result['points'] -= $result['used_point'];
         }
-        return MyHelper::checkGet($result)+['messages'=>$error_msg];
+        return MyHelper::checkGet($result)+['messages'=>$error_msg,'promo_error'=>$promo_error];
     }
 
     public function saveLocation($latitude, $longitude, $id_user, $id_transaction, $id_outlet){

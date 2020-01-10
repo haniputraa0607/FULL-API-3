@@ -68,7 +68,7 @@ class PromoCampaign extends Eloquent
 		'code_type',
 		'prefix_code',
 		'number_last_code',
-		'total_code',
+		'total_coupon',
 		'date_start',
 		'date_end',
 		'is_all_outlet',
