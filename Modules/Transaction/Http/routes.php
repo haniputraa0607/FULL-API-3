@@ -16,6 +16,7 @@ Route::group(['middleware' => ['auth:api-be', 'log_activities', 'user_agent'], '
     Route::post('/balance/filter', 'ApiTransaction@balanceUserFilter');
     Route::post('/admin', 'ApiNotification@adminOutletNotification');
     Route::post('/setting', 'ApiSettingTransaction@settingTrx');
+    Route::any('be/filter', 'ApiTransaction@transactionFilter');
 
     Route::group(['prefix' => 'manualpayment'], function () {
         Route::get('/bank', ['middleware' => 'feature_control:64', 'uses' => 'ApiTransactionPaymentManual@bankList']);
