@@ -24,6 +24,8 @@ use App\Http\Models\PromotionRuleParent;
 use App\Http\Models\InboxGlobalRule;
 use App\Http\Models\InboxGlobalRuleParent;
 use App\Http\Models\LogTopupManual;
+use Modules\PointInjection\Entities\PointInjectionRule;
+use Modules\PointInjection\Entities\PointInjectionRuleParent;
 
 use App\Http\Requests;
 use Illuminate\Http\JsonResponse;
@@ -1696,6 +1698,15 @@ class MyHelper{
 				$deleteRuleParent = InboxGlobalRuleParent::where('id_'.$type, $id)->delete();
 			}
 		}
+		elseif ($type == 'point_injection') {
+			$deleteRuleParent = PointInjectionRuleParent::where('id_' . $type, $id)->get();
+			if (count($deleteRuleParent) > 0) {
+				foreach ($deleteRuleParent as $key => $value) {
+					$delete = PointInjectionRule::where('id_' . $type . '_rule_parent', $value['id_' . $type . '_rule_parent'])->delete();
+				}
+				$deleteRuleParent = PointInjectionRuleParent::where('id_' . $type, $id)->delete();
+			}
+		}
 
 		$operatorexception = ['gender',
 							'birthday_month',
@@ -1745,6 +1756,9 @@ class MyHelper{
 			}
 			elseif($type == 'inbox_global'){
 				$createRuleParent = InboxGlobalRuleParent::create($dataRuleParent);
+			} 
+			elseif ($type == 'point_injection') {
+				$createRuleParent = PointInjectionRuleParent::create($dataRuleParent);
 			}
 
 			if(!$createRuleParent){
@@ -1795,6 +1809,9 @@ class MyHelper{
 		}
 		elseif($type == 'inbox_global'){
 			$insert = InboxGlobalRule::insert($data_rule);
+		}
+		elseif ($type == 'point_injection') {
+			$insert = PointInjectionRule::insert($data_rule);
 		}
 
 		if($insert){
