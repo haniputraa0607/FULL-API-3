@@ -1643,7 +1643,7 @@ class FeaturesTableSeeder extends Seeder
                 'created_at' => date('Y-m-d H:00:00'),
                 'updated_at' => date('Y-m-d H:00:00'),
             ),
-            204 => 
+            204 =>
             array(
                 'id_feature' => 205,
                 'feature_type' => 'List',
@@ -1682,7 +1682,15 @@ class FeaturesTableSeeder extends Seeder
                 'feature_module' => 'Point Injection',
                 'created_at' => date('Y-m-d H:00:00'),
                 'updated_at' => date('Y-m-d H:00:00'),
-            )
+            ),
+            209 =>
+                array(
+                    'id_feature' => 210,
+                    'feature_type' => 'Update',
+                    'feature_module' => 'Setting Phone',
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00'),
+                )
         ));
     }
 }

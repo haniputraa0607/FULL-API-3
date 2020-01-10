@@ -111,6 +111,10 @@ Route::group(['middleware' => ['auth:api-be', 'log_activities', 'user_agent'], '
     Route::any('/text_menu/update', ['middleware' => 'feature_control:161', 'uses' => 'ApiSetting@updateTextMenu']);
     Route::get('/text_menu/configs', ['middleware' => 'feature_control:160', 'uses' => 'ApiSetting@configsMenu']);
 
+    /* Phone Setting */
+    Route::any('/phone/update', ['middleware' => 'feature_control:210', 'uses' => 'ApiSetting@updatePhoneSetting']);
+    Route::get('/phone', ['middleware' => 'feature_control:210', 'uses' => 'ApiSetting@phoneSetting']);
+
     Route::group(['middleware' => 'auth:api', 'prefix' => 'dashboard'], function()
     {
         Route::any('', 'ApiDashboardSetting@getDashboard');
