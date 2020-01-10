@@ -68,7 +68,7 @@ class PromoCampaign extends Eloquent
 		'code_type',
 		'prefix_code',
 		'number_last_code',
-		'total_code',
+		'total_coupon',
 		'date_start',
 		'date_end',
 		'is_all_outlet',
@@ -106,6 +106,11 @@ class PromoCampaign extends Eloquent
 					->withPivot('id_promo_campaign_outlet')
 					->withTimestamps();
 	}
+
+	public function promo_campaign_outlets()
+    {
+        return $this->hasMany(\Modules\PromoCampaign\Entities\PromoCampaignOutlet::class, 'id_promo_campaign', 'id_promo_campaign');
+    }
 
 	public function promo_campaign_product_discount_rules()
 	{

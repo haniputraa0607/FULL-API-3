@@ -361,6 +361,8 @@ class MyHelper{
 				$chars = "abcdefghjkmnpqrstuvwxyz";
 			if($custom == 'Besar')
 				$chars = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+			if ($custom == 'PromoCode')
+                $chars = "ABCDEFGHJKLMNPQRTUVWXY123456789";
 		}
 		$i = 0;
 		$generatedstring = '';

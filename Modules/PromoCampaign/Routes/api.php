@@ -15,7 +15,9 @@ use Illuminate\Http\Request;
 Route::group(['middleware' => ['auth:api', 'log_activities'], 'prefix' => 'promo-campaign'], function () {
     // Route::post('getTag', 'ApiPromoCampaign@getTag');
 });
-Route::group(['middleware' => ['auth:api-be'], 'prefix' => 'promo-campaign'], function () {
+
+// ADMIN BACKEND
+Route::group(['middleware' => ['auth:api-be', 'log_activities'], 'prefix' => 'promo-campaign'], function () {
     Route::get('/', 'ApiPromoCampaign@index');
     Route::any('filter', 'ApiPromoCampaign@index');
     Route::post('detail', 'ApiPromoCampaign@detail');
@@ -30,4 +32,15 @@ Route::group(['middleware' => ['auth:api-be'], 'prefix' => 'promo-campaign'], fu
 
     Route::post('show-step1', 'ApiPromoCampaign@showStep1');
     Route::post('show-step2', 'ApiPromoCampaign@showStep2');
+});
+
+
+// APPS
+Route::group(['middleware' => ['auth:api', 'log_activities'], 'prefix' => 'promo-campaign'], function () {
+    Route::post('check-validation', 'ApiPromoCampaign@checkValid');
+});
+
+// DEVELOPMENT
+Route::group(['middleware' => ['auth:api', 'log_activities'], 'prefix' => 'promo-campaign'], function () {
+    Route::post('validate', 'ApiPromoCampaign@validateCode');
 });
