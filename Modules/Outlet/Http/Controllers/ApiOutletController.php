@@ -58,6 +58,8 @@ use Modules\Outlet\Http\Requests\Holiday\HolidayEdit;
 use Modules\Outlet\Http\Requests\Holiday\HolidayUpdate;
 use Modules\Outlet\Http\Requests\Holiday\HolidayDelete;
 
+use Modules\PromoCampaign\Entities\PromoCampaignPromoCode;
+
 use App\Http\Models\Transaction;
 
 class ApiOutletController extends Controller
@@ -557,6 +559,47 @@ class ApiOutletController extends Controller
             }
             return $var;
         }, $loopdata);
+
+        // promo code
+		foreach ($outlet as $key => $value) {
+			$outlet[$key]['is_promo'] = 0;
+		}
+        if (isset($post['promo_code'])) {
+        	$code=PromoCampaignPromoCode::where('promo_code',$request->promo_code)
+	                ->join('promo_campaigns', 'promo_campaigns.id_promo_campaign', '=', 'promo_campaign_promo_codes.id_promo_campaign')
+	                ->where('step_complete', '=', 1)
+	                ->where( function($q){
+	                	$q->whereColumn('usage','<','limitation_usage')
+	                		->orWhere('code_type','Single');
+	                } )
+	                ->with(['promo_campaign.promo_campaign_outlets'])
+	                ->first();
+
+	        if(!$code){
+	            return [
+	                'status'=>'fail',
+	                'messages'=>['Promo code not valid']
+	            ];
+	        }else{
+
+	        	$code = $code->toArray();
+        		if ($code['promo_campaign']['is_all_outlet']) {
+        			foreach ($outlet as $key => $value) {
+    					$outlet[$key]['is_promo'] = 1;
+    				}
+        		}else{
+		        	foreach ($code['promo_campaign']['promo_campaign_outlets'] as $key => $value) {
+	        			foreach ($outlet as $key2 => $value2) {
+	        				if ( $value2['id_outlet'] == $value['id_outlet'] ) {
+	    						$outlet[$key2]['is_promo'] = 1;
+	    						break;
+	    					}
+	        			}
+		        	}
+        		}
+	        }
+        }
+
         if (isset($post['webview'])) {
             if(isset($outlet[0])){
                 $latitude  = $post['latitude'];
