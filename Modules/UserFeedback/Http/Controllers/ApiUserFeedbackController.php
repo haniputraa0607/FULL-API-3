@@ -155,6 +155,7 @@ class ApiUserFeedbackController extends Controller
     public function getDetail(Request $request) {
         $post = $request->json()->all();
         // rating item
+        $user = $request->user();
         if($post['id']??false){
             $id_trx = explode(',',$post['id']);
             $id_transaction = $id_trx[1]??'';
@@ -162,7 +163,7 @@ class ApiUserFeedbackController extends Controller
             $transaction = Transaction::select('id_transaction','transaction_receipt_number','id_outlet')->with(['outlet'=>function($query){
                 $query->select('outlet_name','id_outlet');
             }])
-            ->where(['transaction_receipt_number'=>$rn,'id_transaction'=>$id_transaction])
+            ->where(['transaction_receipt_number'=>$rn,'id_transaction'=>$id_transaction,'id_user'=>$user->id])
             ->find($id_transaction);
             if(!$transaction){
                 return [
@@ -171,7 +172,6 @@ class ApiUserFeedbackController extends Controller
                 ];
             }
         }else{
-            $user = $request->user();
             $user->load('log_popup');
             $log_popup = $user->log_popup;
             if($log_popup){
@@ -195,7 +195,7 @@ class ApiUserFeedbackController extends Controller
             $transaction = Transaction::select('id_transaction','transaction_receipt_number','id_outlet')->with(['outlet'=>function($query){
                 $query->select('outlet_name','id_outlet');
             }])
-            ->where('show_rate_popup',1)
+            ->where(['show_rate_popup'=>1,'id_user'=>$user->id])
             ->first();
             if(!$transaction){
                 return MyHelper::checkGet([]);

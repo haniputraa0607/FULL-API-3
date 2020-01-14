@@ -17,7 +17,11 @@ class ApiRatingItemController extends Controller
      */
     public function index()
     {
-        return MyHelper::checkGet(RatingItem::get());
+        $rating = array_map(function($var){
+            $var['id_rating_item'] = MyHelper::createSlug($var['id_rating_item'],$var['created_at']);
+            return $var;
+        },RatingItem::all()->toArray());
+        return MyHelper::checkGet($rating);
     }
 
     /**
@@ -56,34 +60,55 @@ class ApiRatingItemController extends Controller
      */
     public function update(Request $request)
     {
-        $id_rating_item = $request->json('id_rating_item');
-        $post = $request->json()->all();
-        if($post['image']??false){
-            $upload = MyHelper::uploadFile($post['image'],'img/rating_item/');
-            if($upload['status']!='success'){
-                return [
-                    'status' => 'fail',
-                    'messages' => ['Fail upload file']
-                ];
+        $rating_item = array_map(function($var){
+            if($var['id_rating_item']??false){
+                $exploded = MyHelper::explodeSlug($var['id_rating_item']);
+                $var['id_rating_item'] = $exploded[0];
+                $var['created_at'] = $exploded[1];
             }
-            $post['image'] = $upload['path'];
-        }else{
-            unset($post['image']);
-        }
-        if($post['image_selected']){
-            $upload2 = MyHelper::uploadFile($post['image_selected'],'img/rating_item/');
-            if($upload['status']!='success'){
-                return [
-                    'status' => 'fail',
-                    'messages' => ['Fail upload file']
-                ];
+            return $var;
+        },$request->json('rating_item')?:[]);
+        \DB::beginTransaction();
+        RatingItem::whereNotIn('id_rating_item',array_column($rating_item,'id_rating_item'))->delete();
+        foreach ($rating_item as $item) {
+            if($item['image']??false){
+                $upload = MyHelper::uploadPhotoStrict($item['image'],'img/rating_item/',100,100);
+                if($upload['status']!='success'){
+                    \DB::rollback();
+                    return [
+                        'status' => 'fail',
+                        'messages' => ['Fail upload file']
+                    ];
+                }
+                $item['image'] = $upload['path'];
             }
-            $post['image_selected'] = $upload2['path'];
-        }else{
-            unset($post['image_selected']);
+            if($item['image_selected']??false){
+                $upload = MyHelper::uploadPhotoStrict($item['image_selected'],'img/rating_item/',100,100);
+                if($upload['status']!='success'){
+                    \DB::rollback();
+                    return [
+                        'status' => 'fail',
+                        'messages' => ['Fail upload file']
+                    ];
+                }
+                $item['image_selected'] = $upload['path'];
+            }
+            if($item['id_rating_item']??false){
+                $create = RatingItem::where('id_rating_item',$item['id_rating_item'])->update($item);
+                if(!$create){
+                    \DB::rollback();
+                    return MyHelper::checkUpdate($create);
+                }
+            }else{
+                $update = RatingItem::create($item);
+                if(!$update){
+                    \DB::rollback();
+                    return MyHelper::checkUpdate($update);
+                }
+            }
         }
-        $update = RatingItem::where('id_rating_item',$id_rating_item)->update($post);
-        return MyHelper::checkUpdate($update);
+        \DB::commit();
+        return ['status'=>'success'];
     }
 
     /**
