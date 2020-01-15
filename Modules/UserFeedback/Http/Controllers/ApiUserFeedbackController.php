@@ -38,12 +38,85 @@ class ApiUserFeedbackController extends Controller
         if($outlet_code = $request->json('outlet_code')){
             $list->where('outlet_code',$outlet_code);
         }
+        if(is_array($request->json('rule'))){
+            $this->filterList($list,$request->json('rule'),$request->json('operator'));
+        }
         if($request->page){
             $list = $list->paginate(10);
         }else{
             $list = $list->get();
         }
         return MyHelper::checkGet($list);
+    }
+
+    public function filterList($model,$rule,$operator='and') {
+        $where = $operator=='and'?'where':'orWhere';        $where=$operator=='and'?'where':'orWhere';
+        foreach ($rule as $var) {
+            $var1=['operator'=>$var['operator']??'=','parameter'=>$var['parameter']??null];
+            if($var1['operator']=='like'){
+                $var1['parameter']='%'.$var1['parameter'].'%';
+            }
+            $newRule[$var['subject']][]=$var1;
+        }
+        if($rules=$newRule['review_date']??false){
+            foreach ($rules as $rul) {
+                $model->{$where.'Date'}('user_feedbacks.created_at',$rul['operator'],$rul['parameter']);
+            }
+        }
+        if($rules=$newRule['vote']??false){
+            foreach ($rules as $rul) {
+                $model->$where('rating_item_text',$rul['operator'],$rul['parameter']);
+            }
+        }
+        if($rules=$newRule['transaction_date']??false){
+            foreach ($rules as $rul) {
+                $model->{$where.'Has'}('transaction',function($query) use ($rul){
+                    $query->whereDate('transaction_date',$rul['operator'],$rul['parameter']);
+                });
+            }
+        }
+        if($rules=$newRule['transaction_type']??false){
+            foreach ($rules as $rul) {
+                $model->{$where.'Has'}('transaction',function($query) use ($rul){
+                    $query->where('transaction_type',$rul['operator'],$rul['parameter']);
+                });
+            }
+        }
+        if($rules=$newRule['transaction_receipt_number']??false){
+            foreach ($rules as $rul) {
+                $model->{$where.'Has'}('transaction',function($query) use ($rul){
+                    $query->where('transaction_receipt_number',$rul['operator'],$rul['parameter']);
+                });
+            }
+        }
+        if($rules=$newRule['user_name']??false){
+            foreach ($rules as $rul) {
+                $model->{$where.'Has'}('user',function($query) use ($rul){
+                    $query->where('name',$rul['operator'],$rul['parameter']);
+                });
+            }
+        }
+        if($rules=$newRule['user_phone']??false){
+            foreach ($rules as $rul) {
+                $model->{$where.'Has'}('user',function($query) use ($rul){
+                    $query->where('phone',$rul['operator'],$rul['parameter']);
+                });
+            }
+        }
+        if($rules=$newRule['user_email']??false){
+            foreach ($rules as $rul) {
+                $model->{$where.'Has'}('user',function($query) use ($rul){
+                    $query->where('email',$rul['operator'],$rul['parameter']);
+                });
+            }
+        }
+        if($rules=$newRule['outlet']??false){
+            foreach ($rules as $rul) {
+                $model->{$where.'Has'}('transaction.outlet',function($query) use ($rul){
+                    $query->where('id_outlet',$rul['operator'],$rul['parameter']);
+                });
+            }
+        }
     }
 
     /**

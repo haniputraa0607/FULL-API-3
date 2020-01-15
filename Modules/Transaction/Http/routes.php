@@ -94,6 +94,10 @@ Route::group(['prefix' => 'api/transaction', 'middleware' => ['log_activities', 
     Route::any('/notif', 'ApiNotification@receiveNotification');
 });
 
+Route::group(['prefix' => 'api/transaction', 'middleware' => ['log_activities', 'auth:api-be', 'user_agent'], 'namespace' => 'Modules\Transaction\Http\Controllers'], function () {
+    Route::post('be/detail/webview/{mode?}', 'ApiWebviewController@webview');
+});
+
 Route::group(['prefix' => 'api/transaction', 'middleware' => ['log_activities', 'auth:api', 'user_agent'], 'namespace' => 'Modules\Transaction\Http\Controllers'], function () {
     Route::post('/detail/webview/point', 'ApiWebviewController@webviewPoint');
     Route::post('/detail/webview/balance', 'ApiWebviewController@webviewBalance');
