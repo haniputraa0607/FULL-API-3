@@ -292,7 +292,6 @@ class ApiProductController extends Controller
             $product = $product->get();
         }
 
-
         if (!empty($product)) {
             foreach ($product as $key => $value) {
                 unset($product[$key]['product_price_base']);
@@ -304,6 +303,60 @@ class ApiProductController extends Controller
         $product = $product->toArray();
 
         return response()->json(MyHelper::checkGet($product));
+    }
+
+    function listProductImage(Request $request) {
+        $post = $request->json()->all();
+        
+        if (isset($post['image']) && $post['image'] == 'null') {
+            $product = Product::leftJoin('product_photos','product_photos.id_product','=','products.id_product')
+                            ->whereNull('product_photos.product_photo')->get();
+        } else {
+            $product = Product::get();
+            if (!empty($product)) {
+                foreach ($product as $key => $value) {
+                    unset($product[$key]['product_price_base']);
+                    unset($product[$key]['product_price_tax']);
+                    $product[$key]['photos'] = ProductPhoto::select('*', DB::raw('if(product_photo is not null, (select concat("'.env('S3_URL_API').'", product_photo)), "'.env('S3_URL_API').'img/default.jpg") as url_product_photo'))->where('id_product', $value['id_product'])->orderBy('product_photo_order', 'ASC')->get()->toArray();
+                }
+            }
+        }
+
+        $product = $product->toArray();
+
+        return response()->json(MyHelper::checkGet($product));
+    }
+
+    function imageOverride(Request $request) {
+        $post = $request->json()->all();
+
+        if (isset($post['status'])) {
+            try {
+                Setting::where('key', 'image_override')->update(['value' => $post['status']]);
+                return response()->json(MyHelper::checkGet('true'));
+            } catch (\Exception $e) {
+                return response()->json(MyHelper::checkGet($e));
+            }
+        }
+        
+        $setting = Setting::where('key', 'image_override')->first();
+
+        if (!$setting) {
+            Setting::create([
+                'key'       => 'image_override',
+                'value'     => 0
+            ]);
+
+            $setting = 'false';
+        } else {
+            if ($setting->value == 0) {
+                $setting = 'false';
+            } else {
+                $setting = 'true';
+            }
+        }
+        
+        return response()->json(MyHelper::checkGet($setting));
     }
 
     /**
@@ -596,7 +649,14 @@ class ApiProductController extends Controller
     	$data = [];
         $checkCode = Product::where('product_code', $post['name'])->first();
     	if ($checkCode) {
-            $upload = MyHelper::uploadPhotoStrict($post['photo'], $this->saveImage, 300, 300);
+            $checkSetting = Setting::where('key', 'image_override')->first();
+            if ($checkSetting['value'] == 1) {
+                $productPhoto = ProductPhoto::where('id_product', $checkCode->id_product)->first();
+                if (file_exists($productPhoto->product_photo)) {
+                    unlink($productPhoto->product_photo);
+                }
+            }
+            $upload = MyHelper::uploadPhotoStrict($post['photo'], $this->saveImage, 300, 300, $post['name'].'-'.strtotime("now"));
             
     	    if (isset($upload['status']) && $upload['status'] == "success") {
     	        $data['product_photo'] = $upload['path'];
