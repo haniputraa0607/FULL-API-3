@@ -1,6 +1,6 @@
 <?php
 
-Route::group(['prefix' => 'api/product','middleware' => ['log_activities','auth:api'], 'namespace' => 'Modules\Product\Http\Controllers'], function()
+Route::group(['prefix' => 'api/product','middleware' => ['log_activities','auth:api', 'scopes:*'], 'namespace' => 'Modules\Product\Http\Controllers'], function()
 {
     /* product */
     Route::post('search', 'ApiCategoryController@search');
@@ -22,7 +22,7 @@ Route::group(['prefix' => 'api/product','middleware' => ['log_activities','auth:
 //	});
 });
 
-Route::group(['prefix' => 'api/product','middleware' => ['log_activities','auth:api-be'], 'namespace' => 'Modules\Product\Http\Controllers'], function()
+Route::group(['prefix' => 'api/product','middleware' => ['log_activities','auth:api', 'scopes:ap'], 'namespace' => 'Modules\Product\Http\Controllers'], function()
 {
     Route::any('be/list', 'ApiProductController@listProduct');
     Route::post('category/assign', 'ApiProductController@categoryAssign');

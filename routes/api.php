@@ -15,11 +15,11 @@ use App\Lib\MyHelper;
 |
 */
 
-Route::middleware('auth:api-be')->get('/user', function (Request $request) {
+Route::middleware(['auth:api', 'scopes:ap'])->get('/user', function (Request $request) {
     return json_decode($request->user(), true);
 });
 
-Route::group(['middleware' => ['auth:api-be', 'log_activities'] ], function(){
+Route::group(['middleware' => ['auth:api', 'log_activities', 'scopes:ap'] ], function(){
 	Route::get('granted-feature', 'Controller@getFeatureControl');
 	Route::get('feature', 'Controller@getFeature');
 	Route::get('feature-module', 'Controller@getFeatureModule');
