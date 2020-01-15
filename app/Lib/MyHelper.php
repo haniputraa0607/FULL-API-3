@@ -345,8 +345,10 @@ class MyHelper{
 			return $_SERVER['HTTP_USER_AGENT'];
 	}
 
-	public static function createrandom($digit, $custom = null) {
-		$chars = "abcdefghjkmnpqrstuvwxyzBCDEFGHJKLMNPQRSTUVWXYZ12356789";
+	public static function createrandom($digit, $custom = null, $chars = null) {
+		if ($chars == null) {
+			$chars = "abcdefghjkmnpqrstuvwxyzBCDEFGHJKLMNPQRSTUVWXYZ12356789";
+		}
 		if($custom != null){
 			if($custom == 'Angka')
 				$chars = "0123456789";
@@ -361,17 +363,33 @@ class MyHelper{
 		}
 		$i = 0;
 		$generatedstring = '';
+		$tmp = '';
 
 		while ($i < $digit) {
-			$num = rand() % strlen($chars);
-			$tmp = substr($chars, $num, 1);
+			$charsbaru = str_replace("", "", $chars);
+			$num = rand() % strlen($charsbaru);
+			$tmp = substr($charsbaru, $num, 1);
 			$generatedstring = $generatedstring . $tmp;
 			$i++;
-			// supaya char yg sudah tergenerate tidak akan dipakai lagi
-			$chars = str_replace($tmp, "", $chars);
 		}
 
 		return $generatedstring;
+	}
+
+	public static function encSlug ($id)
+	{
+		$firstRand 	= self::createrandom(env('ENC_FIRST_SLUG', 4), null, '12356789');
+		$lastRand 	= self::createrandom(env('ENC_LAST_SLUG', 3), null, '12356789');
+
+		return implode('', [$firstRand, $id, $lastRand]);
+	}
+
+	public static function decSlug ($id)
+	{
+		$firstString = substr($id, env('ENC_FIRST_SLUG', 4));
+		$string = substr($firstString, 0, -env('ENC_LAST_SLUG', 3));
+
+		return $string;
 	}
 
 	public static function getkey() {

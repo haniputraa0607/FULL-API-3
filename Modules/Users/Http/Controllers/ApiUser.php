@@ -126,7 +126,14 @@ class ApiUser extends Controller
         $resultCountBe = $queryBe->count();
         $resultApps = $queryApps->skip($skip)->take($take)->get()->toArray();
         $resultBe = $queryBe->skip($skip)->take($take)->get()->toArray();
-
+        
+        foreach ($resultApps as $keyApps => $valApps) {
+            $resultApps[$keyApps]->id_log_activities_apps = MyHelper::encSlug($valApps->id_log_activities_apps);
+        }
+        foreach ($resultBe as $keyBe => $valBe) {
+            $resultBe[$keyBe]->id_log_activities_apps = MyHelper::encSlug($valBe->id_log_activities_be);
+        }
+        
         if($resultApps || $resultBe){
             $response = ['status'	=> 'success',
                 'result'	=> [
@@ -1861,30 +1868,17 @@ class ApiUser extends Controller
     function activity(Request $request){
         $post = $request->json()->all();
         $user = $request->user();
-
-        $verifToken = UserExtraToken::where('extra_token', $post['verify_token'])->first();
-
-        if ($verifToken) {
-            $diffTime = $verifToken->updated_at->diff(now());
-            if ($diffTime->i <= 1 && $diffTime->s <= 15 && MyHelper::decrypt2019($post['verify_token'])['id_user'] == $user['id'] && $verifToken->id_user == $user['id']) {
-                // return $post;
-                if(isset($post['order_field'])) $order_field = $post['order_field']; else $order_field = 'id';
-                if(isset($post['order_method'])) $order_method = $post['order_method']; else $order_method = 'desc';
-                if(isset($post['skip'])) $skip = $post['skip']; else $skip = '0';
-                if(isset($post['take'])) $take = $post['take']; else $take = '10';
-                if(isset($post['rule'])) $rule = $post['rule']; else $rule = 'and';
-                if(isset($post['conditions'])) $conditions = $post['conditions']; else $conditions = null;
-                
-                $query = $this->LogActivityFilter($rule, $conditions, $order_field, $order_method, $skip, $take);
         
-                return response()->json($query);
-            } else {
-                return response()->json(['status' => 'fail']);
-            }
-        } else {
-            return response()->json(['status' => 'fail']);
-        }
+        if(isset($post['order_field'])) $order_field = $post['order_field']; else $order_field = 'id';
+        if(isset($post['order_method'])) $order_method = $post['order_method']; else $order_method = 'desc';
+        if(isset($post['skip'])) $skip = $post['skip']; else $skip = '0';
+        if(isset($post['take'])) $take = $post['take']; else $take = '10';
+        if(isset($post['rule'])) $rule = $post['rule']; else $rule = 'and';
+        if(isset($post['conditions'])) $conditions = $post['conditions']; else $conditions = null;
         
+        $query = $this->LogActivityFilter($rule, $conditions, $order_field, $order_method, $skip, $take);
+
+        return response()->json($query);
     }
 
     public function delete(Request $request)
@@ -2247,9 +2241,9 @@ class ApiUser extends Controller
     public function detailLog($id, $log_type, Request $request){
 
         if($log_type == 'apps'){
-            $log = LogActivitiesApps::where('id_log_activities_apps', $id)->first();
+            $log = LogActivitiesApps::where('id_log_activities_apps', MyHelper::decSlug($id))->first();
         }else{
-            $log = LogActivitiesBE::where('id_log_activities_be', $id)->first();
+            $log = LogActivitiesBE::where('id_log_activities_be', MyHelper::decSlug($id))->first();
         }
         if($log){
             $log->user      = MyHelper::decrypt2019($log->user);
