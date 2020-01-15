@@ -511,16 +511,16 @@ class ApiDealsVoucher extends Controller
                 ]);
     	}
     	
-        if(
-            $request->json('id_outlet') ||
-            $request->json('id_brand') ||
-            $request->json('expired_start') ||
-            $request->json('expired_end') ||
-            $request->json('key_free')
-        ){
-            $resultMessage = 'Voucher yang kamu cari tidak tersedia';
-        }else{
-        }
+        // if(
+        //     $request->json('id_outlet') ||
+        //     $request->json('id_brand') ||
+        //     $request->json('expired_start') ||
+        //     $request->json('expired_end') ||
+        //     $request->json('key_free')
+        // ){
+        //     $resultMessage = 'Voucher yang kamu cari tidak tersedia';
+        // }else{
+        // }
 
         return response()->json(app($this->subscription)->checkGet($result, $resultMessage??''));
 
