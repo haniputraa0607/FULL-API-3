@@ -497,15 +497,7 @@ class ApiDealsVoucher extends Controller
             }
         }
 
-        if(
-            $request->json('id_outlet') ||
-            $request->json('id_brand') ||
-            $request->json('expired_start') ||
-            $request->json('expired_end') ||
-            $request->json('key_free')
-        ){
-            $resultMessage = 'Voucher yang kamu cari tidak tersedia';
-        }else{
+    	if (empty($voucher)) {
             $empty_text = Setting::where('key','=','message_myvoucher_empty_header')
                             ->orWhere('key','=','message_myvoucher_empty_content')
                             ->orderBy('id_setting')
@@ -517,6 +509,17 @@ class ApiDealsVoucher extends Controller
                     'messages' => ['My voucher is empty'],
                     'empty'    => $resultMessage
                 ]);
+    	}
+    	
+        if(
+            $request->json('id_outlet') ||
+            $request->json('id_brand') ||
+            $request->json('expired_start') ||
+            $request->json('expired_end') ||
+            $request->json('key_free')
+        ){
+            $resultMessage = 'Voucher yang kamu cari tidak tersedia';
+        }else{
         }
 
         return response()->json(app($this->subscription)->checkGet($result, $resultMessage??''));
