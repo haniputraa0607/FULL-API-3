@@ -1414,7 +1414,7 @@ class ApiPromoCampaign extends Controller
         $errors=[];
         $trx=$request->item;
 
-        return $pct->getRequiredProduct($code->id_promo_campaign);
+        // return $pct->getRequiredProduct($code->id_promo_campaign);
         return [$pct->validatePromo($code->id_promo_campaign, $id_outlet, $trx, $errors), $errors];
         if($result=$pct->validatePromo($code->id_promo_campaign, $id_outlet, $trx, $errors)){
             $code->load('promo_campaign');
@@ -1590,6 +1590,7 @@ class ApiPromoCampaign extends Controller
 		$result['title'] 		= $code['promo_title'];
         $result['description']	= $desc;
 		$result['errors'] 		= $errors;
+		$result['promo_code'] 	= $request->promo_code;
 
 		$result = MyHelper::checkGet($result);
 		// return $result;

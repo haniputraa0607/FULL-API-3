@@ -362,18 +362,20 @@ class MyHelper{
 			if($custom == 'Besar')
 				$chars = "ABCDEFGHJKLMNPQRSTUVWXYZ";
 			if ($custom == 'PromoCode')
-                $chars = "ABCDEFGHJKLMNPQRTUVWXY123456789";
+                $chars = "ABCDEFGHJKLMNPQRTUVWXY23456789";
 		}
 		$i = 0;
 		$generatedstring = '';
+		$tmp = '';
 
 		while ($i < $digit) {
-			$num = rand() % strlen($chars);
-			$tmp = substr($chars, $num, 1);
+			$charsbaru = str_replace($tmp, "", $chars);
+			$num = rand() % strlen($charsbaru);
+			$tmp = substr($charsbaru, $num, 1);
 			$generatedstring = $generatedstring . $tmp;
 			$i++;
 			// supaya char yg sudah tergenerate tidak akan dipakai lagi
-			$chars = str_replace($tmp, "", $chars);
+			// $chars = str_replace($tmp, "", $chars);
 		}
 
 		return $generatedstring;
