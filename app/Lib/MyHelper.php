@@ -335,6 +335,14 @@ class MyHelper{
 			return $pin;
 	}
 
+	public static function encPIN ($pin)
+	{
+		$firstRand 	= self::createrandom(env('ENC_FIRST_PIN', 4), null, '12356789');
+		$lastRand 	= self::createrandom(env('ENC_LAST_PIN', 3), null, '12356789');
+
+		return implode('', [$firstRand, $pin, $lastRand]);
+	}
+
 	public static function  getIPAddress() {
 			$ipAddress = $_SERVER['REMOTE_ADDR'];
 			if (array_key_exists('HTTP_X_FORWARDED_FOR', $_SERVER)) {
