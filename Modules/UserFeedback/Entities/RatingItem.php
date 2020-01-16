@@ -10,7 +10,9 @@ class RatingItem extends Model
     protected $fillable = [
     	'image',
     	'image_selected',
-    	'text'
+    	'text',
+        'rating_value',
+        'order'
     ];
     public function getImageAttribute($value)
     {

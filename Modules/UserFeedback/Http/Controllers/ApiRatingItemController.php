@@ -17,10 +17,7 @@ class ApiRatingItemController extends Controller
      */
     public function index()
     {
-        $rating = array_map(function($var){
-            $var['id_rating_item'] = MyHelper::createSlug($var['id_rating_item'],$var['created_at']);
-            return $var;
-        },RatingItem::all()->toArray());
+        $rating = RatingItem::all()->toArray();
         return MyHelper::checkGet($rating);
     }
 
@@ -60,14 +57,7 @@ class ApiRatingItemController extends Controller
      */
     public function update(Request $request)
     {
-        $rating_item = array_map(function($var){
-            if($var['id_rating_item']??false){
-                $exploded = MyHelper::explodeSlug($var['id_rating_item']);
-                $var['id_rating_item'] = $exploded[0];
-                $var['created_at'] = $exploded[1];
-            }
-            return $var;
-        },$request->json('rating_item')?:[]);
+        $rating_item = $request->json('rating_item')?:[];
         \DB::beginTransaction();
         RatingItem::whereNotIn('id_rating_item',array_column($rating_item,'id_rating_item'))->delete();
         foreach ($rating_item as $item) {
@@ -93,18 +83,12 @@ class ApiRatingItemController extends Controller
                 }
                 $item['image_selected'] = $upload['path'];
             }
-            if($item['id_rating_item']??false){
-                $create = RatingItem::where('id_rating_item',$item['id_rating_item'])->update($item);
-                if(!$create){
-                    \DB::rollback();
-                    return MyHelper::checkUpdate($create);
-                }
-            }else{
-                $update = RatingItem::create($item);
-                if(!$update){
-                    \DB::rollback();
-                    return MyHelper::checkUpdate($update);
-                }
+            $update = RatingItem::updateOrCreate([
+                'rating_value'=>$item['rating_value']
+            ],$item);
+            if(!$update){
+                \DB::rollback();
+                return MyHelper::checkUpdate($update);
             }
         }
         \DB::commit();

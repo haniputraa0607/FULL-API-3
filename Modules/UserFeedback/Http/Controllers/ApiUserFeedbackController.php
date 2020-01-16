@@ -63,9 +63,9 @@ class ApiUserFeedbackController extends Controller
                 $model->{$where.'Date'}('user_feedbacks.created_at',$rul['operator'],$rul['parameter']);
             }
         }
-        if($rules=$newRule['vote']??false){
+        if($rules=$newRule['rating_value']??false){
             foreach ($rules as $rul) {
-                $model->$where('rating_item_text',$rul['operator'],$rul['parameter']);
+                $model->$where('rating_value',$rul['operator'],$rul['parameter']);
             }
         }
         if($rules=$newRule['transaction_date']??false){
@@ -140,7 +140,7 @@ class ApiUserFeedbackController extends Controller
                 'messages' => ['Transaction not found']
             ];
         }
-        $rating = RatingItem::select('text')->find($post['id_rating_item']);
+        $rating = RatingItem::select('rating_value')->find($post['id_rating_item']);
         if(!$rating){
             return [
                 'status' => 'fail',
@@ -159,8 +159,7 @@ class ApiUserFeedbackController extends Controller
         $insert = [
             'id_outlet' => $transaction->id_outlet,
             'id_user' => $user->id,
-            'id_rating_item'=> $post['id_rating_item'],
-            'rating_item_text'=> $rating->text,
+            'rating_value'=> $rating->rating_value,
             'id_transaction'=> $id_transaction,
             'notes'=> $post['notes'],
             'image'=> $upload['path']??null
