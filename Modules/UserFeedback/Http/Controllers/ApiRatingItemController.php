@@ -59,8 +59,14 @@ class ApiRatingItemController extends Controller
     {
         $rating_item = $request->json('rating_item')?:[];
         \DB::beginTransaction();
-        RatingItem::whereNotIn('id_rating_item',array_column($rating_item,'id_rating_item'))->delete();
+        if(count($rating_item)==2){
+            RatingItem::where('rating_value',0)->delete();
+        }
         foreach ($rating_item as $item) {
+            $data_update = [
+                'text' => $item['text'],
+                'order' => $item['order']
+            ];
             if($item['image']??false){
                 $upload = MyHelper::uploadPhotoStrict($item['image'],'img/rating_item/',100,100);
                 if($upload['status']!='success'){
@@ -70,7 +76,7 @@ class ApiRatingItemController extends Controller
                         'messages' => ['Fail upload file']
                     ];
                 }
-                $item['image'] = $upload['path'];
+                $data_update['image'] = $upload['path'];
             }
             if($item['image_selected']??false){
                 $upload = MyHelper::uploadPhotoStrict($item['image_selected'],'img/rating_item/',100,100);
@@ -81,11 +87,11 @@ class ApiRatingItemController extends Controller
                         'messages' => ['Fail upload file']
                     ];
                 }
-                $item['image_selected'] = $upload['path'];
+                $data_update['image_selected'] = $upload['path'];
             }
             $update = RatingItem::updateOrCreate([
                 'rating_value'=>$item['rating_value']
-            ],$item);
+            ],$data_update);
             if(!$update){
                 \DB::rollback();
                 return MyHelper::checkUpdate($update);

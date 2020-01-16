@@ -247,7 +247,7 @@ class ApiUserFeedbackController extends Controller
             $user->load('log_popup');
             $log_popup = $user->log_popup;
             if($log_popup){
-                $interval =(Setting::where('key','popup_min_interval')->pluck('value')->first()?:15)*60;
+                $interval =(Setting::where('key','popup_min_interval')->pluck('value')->first()?:900);
                 if(
                     $log_popup->refuse_count>=(Setting::where('key','popup_max_refuse')->pluck('value')->first()?:3) ||
                     strtotime($log_popup->last_popup)+$interval>time()
