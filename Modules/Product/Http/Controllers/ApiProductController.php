@@ -22,6 +22,7 @@ use Validator;
 use Hash;
 use DB;
 use Mail;
+use Image;
 
 use Modules\Brand\Entities\BrandProduct;
 use Modules\Brand\Entities\Brand;
@@ -649,7 +650,6 @@ class ApiProductController extends Controller
     	$data = [];
         $checkCode = Product::where('product_code', $post['name'])->first();
     	if ($checkCode) {
-            $checkSetting = Setting::where('key', 'image_override')->first();
             if ($checkSetting['value'] == 1) {
                 $productPhoto = ProductPhoto::where('id_product', $checkCode->id_product)->first();
                 if (file_exists($productPhoto->product_photo)) {
