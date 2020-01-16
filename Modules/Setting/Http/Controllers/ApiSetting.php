@@ -1454,7 +1454,9 @@ class ApiSetting extends Controller
             $result = [
                 'status' => 'success',
                 'result' => [
-                    json_decode($phoneSetting),
+                    'data' => json_decode($phoneSetting),
+                    'phone_code' => $codePhone = config('countrycode.country_code.'.env('COUNTRY_CODE').'.code'),
+                    'example_phone' => env('EXAMPLE_PHONE')
                 ]
             ];
 
