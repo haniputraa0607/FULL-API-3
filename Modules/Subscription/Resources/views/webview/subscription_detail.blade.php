@@ -5,7 +5,7 @@
 @extends('webview.main')
 
 @section('css')
-<link rel="stylesheet" href="{{ env('S3_URL_VIEW') }}{{ ('assets/css/bootstrap.min.css') }}" integrity="sha384-PsH8R72JQ3SOdhVi3uxftmaW6Vc51MKb0q5P2rRUpPvrszuE4W1povHYgTpBfshb" crossorigin="anonymous">
+<link rel="stylesheet" href="{{ env('S3_URL_VIEW') }}{{ ('assets/css/bootstrap-4.0.0-beta.2.min.css') }}" integrity="sha384-PsH8R72JQ3SOdhVi3uxftmaW6Vc51MKb0q5P2rRUpPvrszuE4W1povHYgTpBfshb" crossorigin="anonymous">
     <style type="text/css">
     	p{
     		margin-top: 0px !important;
@@ -275,10 +275,10 @@
 
 @section('page-script')
 	
-    <script src="{{ env('S3_URL_VIEW') }}{{ ('assets/js/jquery-3.3.1.slim.min.js') }}" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
-    <script src="{{ env('S3_URL_VIEW') }}{{ ('assets/js/bootstrap.min.js') }}" integrity="sha384-ChfqqxuZUCnJSK3+MXmPNIyE6ZbWh2IMqE241rYiqJxyMiZ6OW/JmZQ5stwEULTy" crossorigin="anonymous"></script>
-    <script src="{{ env('S3_URL_VIEW') }}{{ ('assets/js/popper.min.js') }}" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49" crossorigin="anonymous"></script>
-    @if(!empty($subscription))
+		<script src="{{ env('S3_URL_VIEW') }}{{ ('assets/js/jquery.min.js') }}"></script>
+		<script src="{{ env('S3_URL_VIEW') }}{{ ('assets/js/popper-1.12.3.min.js') }}" integrity="sha384-vFJXuSJphROIrBnz7yo7oB41mKfc8JzQZiCq4NCceLEaO4IHwicKwpJf9c9IpFgh" crossorigin="anonymous"></script>
+		<script src="{{ env('S3_URL_VIEW') }}{{ ('assets/js/bootstrap-4.0.0-beta.2.min.js') }}" integrity="sha384-alpBpkh1PFOepccYVYDB4do5UnbKysX5WZXm3XxPqe5iKTfUKjNkCk9SaVuEZflJ" crossorigin="anonymous"></script>
+		@if(!empty($subscription))
         <script type="text/javascript">
             @php $month = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', "Juli", 'Agustus', 'September', 'Oktober', 'November', 'Desember']; @endphp
 
