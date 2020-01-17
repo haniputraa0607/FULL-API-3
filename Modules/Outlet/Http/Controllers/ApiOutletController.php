@@ -922,6 +922,47 @@ class ApiOutletController extends Controller
                 $processing = $settingTime->value;
             }
 
+            // give all product flag is_promo = 0
+            foreach ($outlet as $key => $value) {
+				$outlet[$key]['is_promo'] = 0;
+			}
+			// check if isset promo_code
+            if (isset($post['promo_code'])) {
+	        	$code=PromoCampaignPromoCode::where('promo_code',$request->promo_code)
+		                ->join('promo_campaigns', 'promo_campaigns.id_promo_campaign', '=', 'promo_campaign_promo_codes.id_promo_campaign')
+		                ->where('step_complete', '=', 1)
+		                ->where( function($q){
+		                	$q->whereColumn('usage','<','limitation_usage')
+		                		->orWhere('code_type','Single');
+		                } )
+		                ->with(['promo_campaign.promo_campaign_outlets'])
+		                ->first();
+
+		        if(!$code){
+		            return [
+		                'status'=>'fail',
+		                'messages'=>['Promo code not valid']
+		            ];
+		        }else{
+
+		        	// if valid give flag is_promo = 1
+		        	$code = $code->toArray();
+	        		if ($code['promo_campaign']['is_all_outlet']) {
+	        			foreach ($outlet as $key => $value) {
+	    					$outlet[$key]['is_promo'] = 1;
+	    				}
+	        		}else{
+			        	foreach ($code['promo_campaign']['promo_campaign_outlets'] as $key => $value) {
+		        			foreach ($outlet as $key2 => $value2) {
+		        				if ( $value2['id_outlet'] == $value['id_outlet'] ) {
+		    						$outlet[$key2]['is_promo'] = 1;
+		    						break;
+		    					}
+		        			}
+			        	}
+	        		}
+		        }
+	        }
             foreach ($outlet as $key => $value) {
                 $jaraknya =   number_format((float)$this->distance($latitude, $longitude, $value['outlet_latitude'], $value['outlet_longitude'], "K"), 2, '.', '');
                 settype($jaraknya, "float");
