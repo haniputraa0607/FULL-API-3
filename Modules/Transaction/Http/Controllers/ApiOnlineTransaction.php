@@ -1557,11 +1557,12 @@ class ApiOnlineTransaction extends Controller
         $subtotal = 0;
         $missing_product = 0;
         // return [$discount_promo['item'],$errors];
+        $is_advance = 0;
         foreach ($discount_promo['item']??$post['item'] as &$item) {
             // get detail product
             $product = Product::select([
-                'products.id_product','products.product_name','products.product_description',
-                'product_prices.product_price','product_prices.product_stock_status',
+                'products.id_product','products.product_name','products.product_code','products.product_description',
+                'product_prices.product_price','product_prices.max_order','product_prices.product_stock_status',
                 'brand_product.id_product_category','brand_product.id_brand'
             ])
             ->join('brand_product','brand_product.id_product','=','products.id_product')
@@ -1590,7 +1591,9 @@ class ApiOnlineTransaction extends Controller
             ->groupBy('products.id_product')
             ->orderBy('products.position')
             ->find($item['id_product']);
-
+            if($product['max_order']&&($item['qty']>$product['max_order'])){
+                $is_advance = 1;
+            }
             if(!$product){
                 $missing_product++;
                 continue;
@@ -1752,6 +1755,7 @@ class ApiOnlineTransaction extends Controller
             'outlet_address' => $outlet['outlet_address']
         ];
         $result['item'] = array_values($tree);
+        $result['is_advance_order'] = $is_advance;
         $result['subtotal'] = $subtotal;
         $result['shipping'] = $post['shipping'];
         $result['discount'] = $post['discount'];
