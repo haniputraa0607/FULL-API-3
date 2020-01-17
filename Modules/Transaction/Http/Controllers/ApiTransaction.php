@@ -1615,7 +1615,7 @@ class ApiTransaction extends Controller
         ->join('products','products.id_product','=','transaction_products.id_product')
         ->join('product_prices','product_prices.id_product','=','products.id_product')
         ->whereRaw('product_prices.id_outlet = transaction_products.id_outlet')
-        ->where(['id_transaction'=>$id_transaction,'id_user'=>$request->user()->id])
+        ->where(['id_transaction'=>$id_transaction])
         ->with(['modifiers'=>function($query){
                     $query->select('id_transaction_product','id_product_modifier','qty','text');
                 }])->get()->toArray();
