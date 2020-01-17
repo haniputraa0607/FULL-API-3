@@ -55,11 +55,8 @@ class ApiUserFeedbackController extends Controller
     {
         $post = $request->json()->all();
         $user = $request->user();
-        $id_trx = explode(',',$post['id']);
-        $id_transaction = $id_trx[1]??'';
-        $rn = $id_trx[0]??'';
-        $transaction = Transaction::select('id_transaction','id_outlet')
-        ->where('transaction_receipt_number',$id_trx[0])
+        $id_transaction = $post['id'];
+        $transaction = Transaction::select('id_transaction','id_outlet')->where('id_user',$user->id)
         ->find($id_transaction);
         if(!$transaction){
             return [
@@ -155,14 +152,13 @@ class ApiUserFeedbackController extends Controller
     public function getDetail(Request $request) {
         $post = $request->json()->all();
         // rating item
+        $user = $request->user();
         if($post['id']??false){
-            $id_trx = explode(',',$post['id']);
-            $id_transaction = $id_trx[1]??'';
-            $rn = $id_trx[0]??'';
+            $id_transaction = $post['id'];
             $transaction = Transaction::select('id_transaction','transaction_receipt_number','id_outlet')->with(['outlet'=>function($query){
                 $query->select('outlet_name','id_outlet');
             }])
-            ->where(['transaction_receipt_number'=>$rn,'id_transaction'=>$id_transaction])
+            ->where('id_user',$user->id)
             ->find($id_transaction);
             if(!$transaction){
                 return [
@@ -171,7 +167,6 @@ class ApiUserFeedbackController extends Controller
                 ];
             }
         }else{
-            $user = $request->user();
             $user->load('log_popup');
             $log_popup = $user->log_popup;
             if($log_popup){
@@ -201,9 +196,10 @@ class ApiUserFeedbackController extends Controller
                 return MyHelper::checkGet([]);
             }
         }
-        $result['id_transaction'] = $transaction->id_transaction;
-        $result['id'] = $transaction->transaction_receipt_number.','.$transaction->id_transaction;
-        $result['outlet'] = $transaction['outlet'];
+        $result['id'] = $transaction->id_transaction;
+        $result['outlet'] = [
+            'outlet_name'=>$transaction->outlet->outlet_name
+        ];
         $result['ratings'] = RatingItem::select('id_rating_item','image','image_selected','text')->orderBy('order')->get();
         return MyHelper::checkGet($result);
     }

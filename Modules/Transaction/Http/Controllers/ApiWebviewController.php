@@ -31,7 +31,7 @@ class ApiWebviewController extends Controller
 {
     public function webview(TransactionDetail $request, $mode = 'group')
     {
-        $id = $request->json('transaction_receipt_number');
+        $id = $request->json('id_transaction');
         $type = $request->json('type');
         $check = $request->json('check');
         $button = '';
@@ -42,11 +42,10 @@ class ApiWebviewController extends Controller
 
         if (empty($check)) {
             if ($type == 'trx') {
-                $arrId = explode(',',$id);
                 // if(count($arrId) != 2){
                 //     $list = Transaction::where('transaction_receipt_number', $id)->first();
                 // }else{
-                $list = Transaction::where([['transaction_receipt_number', $arrId[0]],['id_transaction', $arrId[1]],['id_user', $user->id]])->first();
+                $list = Transaction::where([['id_transaction', $id],['id_user', $user->id]])->first();
                 // }
 
                 if (empty($list)) {
@@ -565,7 +564,7 @@ class ApiWebviewController extends Controller
                 if ($list) {
 
                     $dataEncode = [
-                        'transaction_receipt_number'   => $data['id_reference'],
+                        'id_transaction'   => $data['id_reference'],
                         'type' => $type
                     ];
 
@@ -580,7 +579,7 @@ class ApiWebviewController extends Controller
                         'status'         => 'success',
                         'result'         => [
                             'payment_status'             => $list['paid_status'],
-                            'transaction_receipt_number' => $list['id_deals_user'],
+                            'id_transaction' => $list['id_deals_user'],
                             'transaction_grandtotal'     => $list['voucher_price_cash'],
                             'type'                       => $type,
                             'url'                        => env('API_URL').'api/transaction/web/view/detail?data='.$base
@@ -593,7 +592,7 @@ class ApiWebviewController extends Controller
                 return response()->json(['status' => 'fail', 'messages' => ['Data not valid']]);
             }
             $dataEncode2 = [
-                'transaction_receipt_number'   => $receipt.','.$select['id_transaction'],
+                'id_transaction'   => $select['id_transaction'],
                 'type' => $type
             ];
 
@@ -612,7 +611,7 @@ class ApiWebviewController extends Controller
                 'status'                     => 'success',
                 'result' => [
                     'type'                       => $type,
-                    'transaction_receipt_number' => $receipt.','.$select['id_transaction'],
+                    'id_transaction' => $select['id_transaction'],
                     'button'                     => 'LIHAT DETAIL',
                     'url'                        => env('API_URL').'api/transaction/web/view/detail/balance?data='.$base,
                     'trx_url'                    => env('API_URL').'api/transaction/web/view/detail?data='.$base2
