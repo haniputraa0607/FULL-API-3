@@ -17,7 +17,8 @@ class ApiRatingItemController extends Controller
      */
     public function index()
     {
-        return MyHelper::checkGet(RatingItem::get());
+        $rating = RatingItem::all()->toArray();
+        return MyHelper::checkGet($rating);
     }
 
     /**
@@ -56,34 +57,48 @@ class ApiRatingItemController extends Controller
      */
     public function update(Request $request)
     {
-        $id_rating_item = $request->json('id_rating_item');
-        $post = $request->json()->all();
-        if($post['image']??false){
-            $upload = MyHelper::uploadFile($post['image'],'img/rating_item/');
-            if($upload['status']!='success'){
-                return [
-                    'status' => 'fail',
-                    'messages' => ['Fail upload file']
-                ];
-            }
-            $post['image'] = $upload['path'];
-        }else{
-            unset($post['image']);
+        $rating_item = $request->json('rating_item')?:[];
+        \DB::beginTransaction();
+        if(count($rating_item)==2){
+            RatingItem::where('rating_value',0)->delete();
         }
-        if($post['image_selected']){
-            $upload2 = MyHelper::uploadFile($post['image_selected'],'img/rating_item/');
-            if($upload['status']!='success'){
-                return [
-                    'status' => 'fail',
-                    'messages' => ['Fail upload file']
-                ];
+        foreach ($rating_item as $item) {
+            $data_update = [
+                'text' => $item['text'],
+                'order' => $item['order']
+            ];
+            if($item['image']??false){
+                $upload = MyHelper::uploadPhotoStrict($item['image'],'img/rating_item/',100,100);
+                if($upload['status']!='success'){
+                    \DB::rollback();
+                    return [
+                        'status' => 'fail',
+                        'messages' => ['Fail upload file']
+                    ];
+                }
+                $data_update['image'] = $upload['path'];
             }
-            $post['image_selected'] = $upload2['path'];
-        }else{
-            unset($post['image_selected']);
+            if($item['image_selected']??false){
+                $upload = MyHelper::uploadPhotoStrict($item['image_selected'],'img/rating_item/',100,100);
+                if($upload['status']!='success'){
+                    \DB::rollback();
+                    return [
+                        'status' => 'fail',
+                        'messages' => ['Fail upload file']
+                    ];
+                }
+                $data_update['image_selected'] = $upload['path'];
+            }
+            $update = RatingItem::updateOrCreate([
+                'rating_value'=>$item['rating_value']
+            ],$data_update);
+            if(!$update){
+                \DB::rollback();
+                return MyHelper::checkUpdate($update);
+            }
         }
-        $update = RatingItem::where('id_rating_item',$id_rating_item)->update($post);
-        return MyHelper::checkUpdate($update);
+        \DB::commit();
+        return ['status'=>'success'];
     }
 
     /**

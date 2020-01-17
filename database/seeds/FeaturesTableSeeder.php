@@ -1684,13 +1684,37 @@ class FeaturesTableSeeder extends Seeder
                 'updated_at' => date('Y-m-d H:00:00'),
             ),
             209 =>
-                array(
-                    'id_feature' => 210,
-                    'feature_type' => 'Update',
-                    'feature_module' => 'Setting Phone',
-                    'created_at' => date('Y-m-d H:00:00'),
-                    'updated_at' => date('Y-m-d H:00:00'),
-                )
+            array(
+                'id_feature' => 210,
+                'feature_type' => 'Update',
+                'feature_module' => 'Setting Phone',
+                'created_at' => date('Y-m-d H:00:00'),
+                'updated_at' => date('Y-m-d H:00:00'),
+            ),
+            210 =>
+            array(
+                'id_feature' => 211,
+                'feature_type' => 'Detail',
+                'feature_module' => 'User Feedback',
+                'created_at' => date('Y-m-d H:00:00'),
+                'updated_at' => date('Y-m-d H:00:00'),
+            ),
+            211 =>
+            array(
+                'id_feature' => 212,
+                'feature_type' => 'List',
+                'feature_module' => 'Feedback Rating Item',
+                'created_at' => date('Y-m-d H:00:00'),
+                'updated_at' => date('Y-m-d H:00:00'),
+            ),
+            212 =>
+            array(
+                'id_feature' => 213,
+                'feature_type' => 'Update',
+                'feature_module' => 'Feedback Rating Item',
+                'created_at' => date('Y-m-d H:00:00'),
+                'updated_at' => date('Y-m-d H:00:00'),
+            )
         ));
     }
 }
