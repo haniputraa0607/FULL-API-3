@@ -1,6 +1,6 @@
 <?php
 
-Route::group(['middleware' => ['auth:api-be','log_activities', 'user_agent'], 'prefix' => 'api/setting-fraud', 'namespace' => 'Modules\SettingFraud\Http\Controllers'], function()
+Route::group(['middleware' => ['auth:api-be','log_activities', 'user_agent', 'scopes:ap'], 'prefix' => 'api/setting-fraud', 'namespace' => 'Modules\SettingFraud\Http\Controllers'], function()
 {
     Route::any('/', ['middleware' => 'feature_control:193', 'uses' => 'ApiSettingFraud@listSettingFraud']);
     Route::post('/update', ['middleware' => 'feature_control:192', 'uses' => 'ApiSettingFraud@updateSettingFraud']);
@@ -15,7 +15,7 @@ Route::group(['middleware' => ['auth:api-be','log_activities', 'user_agent'], 'p
     Route::any('device-login/update-status', ['middleware' => 'feature_control:192', 'uses' => 'ApiSettingFraud@updateDeviceLoginStatus']);
 });
 
-Route::group(['middleware' => ['auth:api-be','log_activities', 'user_agent'], 'prefix' => 'api/fraud', 'namespace' => 'Modules\SettingFraud\Http\Controllers'], function()
+Route::group(['middleware' => ['auth:api-be','log_activities', 'user_agent', 'scopes:ap'], 'prefix' => 'api/fraud', 'namespace' => 'Modules\SettingFraud\Http\Controllers'], function()
 {
     Route::any('list/user', ['middleware' => 'feature_control:196', 'uses' => 'ApiSettingFraud@listUserFraud']);
     Route::any('detail/log/user', ['middleware' => 'feature_control:196', 'uses' => 'ApiSettingFraud@detailLogUser']);

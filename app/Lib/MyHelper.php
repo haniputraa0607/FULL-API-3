@@ -335,6 +335,14 @@ class MyHelper{
 			return $pin;
 	}
 
+	public static function encPIN ($pin)
+	{
+		$firstRand 	= self::createrandom(env('ENC_FIRST_PIN', 4), null, '12356789');
+		$lastRand 	= self::createrandom(env('ENC_LAST_PIN', 3), null, '12356789');
+
+		return implode('', [$firstRand, $pin, $lastRand]);
+	}
+
 	public static function  getIPAddress() {
 			$ipAddress = $_SERVER['REMOTE_ADDR'];
 			if (array_key_exists('HTTP_X_FORWARDED_FOR', $_SERVER)) {
@@ -2166,7 +2174,7 @@ class MyHelper{
     public static function phoneCheckFormat($phone) {
         $phoneSetting = Setting::where('key', 'phone_setting')->first()->value_text;
         $phoneSetting = json_decode($phoneSetting);
-        $codePhone = $phoneSetting->code_number;
+        $codePhone = config('countrycode.country_code.'.env('COUNTRY_CODE').'.code');
         $min = $phoneSetting->min_length_number;
         $max = $phoneSetting->max_length_number;
 
