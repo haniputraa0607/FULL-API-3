@@ -1,6 +1,6 @@
 <?php
 
-Route::group(['middleware' => ['auth:api-be', 'log_activities', 'user_agent'], 'prefix' => 'api/promotion', 'namespace' => 'Modules\Promotion\Http\Controllers'], function()
+Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scopes:ap'], 'prefix' => 'api/promotion', 'namespace' => 'Modules\Promotion\Http\Controllers'], function()
 {
     Route::post('create', ['middleware' => 'feature_control:111', 'uses' => 'ApiPromotion@CreatePromotion']);
     Route::post('step1', ['middleware' => 'feature_control:111', 'uses' => 'ApiPromotion@ShowPromotionStep1']);

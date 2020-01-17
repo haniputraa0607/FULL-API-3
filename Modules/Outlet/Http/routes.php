@@ -1,5 +1,5 @@
 <?php
-Route::group(['prefix' => 'api/outlet', 'middleware' => ['log_activities', 'auth:api', 'user_agent'], 'namespace' => 'Modules\Outlet\Http\Controllers'], function()
+Route::group(['prefix' => 'api/outlet', 'middleware' => ['log_activities', 'auth:api', 'user_agent', 'scopes:*'], 'namespace' => 'Modules\Outlet\Http\Controllers'], function()
 {
     Route::any('list', 'ApiOutletController@listOutlet');
     Route::any('list/ordernow', 'ApiOutletController@listOutletOrderNow');
@@ -28,7 +28,7 @@ Route::group(['prefix' => 'api/outlet', 'middleware' => ['log_activities', 'auth
     Route::any('nearme', 'ApiOutletController@nearMe');
 });
 
-Route::group(['prefix' => 'api/outlet', 'middleware' => ['log_activities', 'auth:api-be','user_agent'], 'namespace' => 'Modules\Outlet\Http\Controllers'], function()
+Route::group(['prefix' => 'api/outlet', 'middleware' => ['log_activities', 'auth:api','user_agent', 'scopes:ap'], 'namespace' => 'Modules\Outlet\Http\Controllers'], function()
 {
     Route::any('be/list', ['middleware' => 'feature_control:24', 'uses' =>'ApiOutletController@listOutlet']);
     Route::any('be/filter', ['middleware' => 'feature_control:24', 'uses' =>'ApiOutletController@filter']);
