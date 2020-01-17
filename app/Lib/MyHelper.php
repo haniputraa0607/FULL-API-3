@@ -2166,7 +2166,7 @@ class MyHelper{
     public static function phoneCheckFormat($phone) {
         $phoneSetting = Setting::where('key', 'phone_setting')->first()->value_text;
         $phoneSetting = json_decode($phoneSetting);
-        $codePhone = $phoneSetting->code_number;
+        $codePhone = config('countrycode.country_code.'.env('COUNTRY_CODE').'.code');
         $min = $phoneSetting->min_length_number;
         $max = $phoneSetting->max_length_number;
 
