@@ -25,6 +25,8 @@ Route::group(['prefix' => 'api/product','middleware' => ['log_activities','auth:
 Route::group(['prefix' => 'api/product','middleware' => ['log_activities','auth:api-be'], 'namespace' => 'Modules\Product\Http\Controllers'], function()
 {
     Route::any('be/list', 'ApiProductController@listProduct');
+    Route::any('be/list/image', 'ApiProductController@listProductImage');
+    Route::any('be/imageOverride', 'ApiProductController@imageOverride');
     Route::post('category/assign', 'ApiProductController@categoryAssign');
     Route::post('price/update', 'ApiProductController@priceUpdate');
     Route::post('create', 'ApiProductController@create');
@@ -42,6 +44,7 @@ Route::group(['prefix' => 'api/product','middleware' => ['log_activities','auth:
         Route::post('create', 'ApiProductController@uploadPhotoProduct');
         Route::post('update', 'ApiProductController@updatePhotoProduct');
         Route::post('createAjax', 'ApiProductController@uploadPhotoProductAjax');
+        Route::post('overrideAjax', 'ApiProductController@overrideAjax');
         Route::post('delete', 'ApiProductController@deletePhotoProduct');
         Route::post('default', 'ApiProductController@photoDefault');
     });
