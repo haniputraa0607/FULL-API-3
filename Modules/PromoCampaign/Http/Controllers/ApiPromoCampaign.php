@@ -1414,7 +1414,7 @@ class ApiPromoCampaign extends Controller
         $errors=[];
         $trx=$request->item;
 
-        return $pct->getRequiredProduct($code->id_promo_campaign);
+        // return $pct->getRequiredProduct($code->id_promo_campaign);
         return [$pct->validatePromo($code->id_promo_campaign, $id_outlet, $trx, $errors), $errors];
         if($result=$pct->validatePromo($code->id_promo_campaign, $id_outlet, $trx, $errors)){
             $code->load('promo_campaign');
@@ -1567,16 +1567,6 @@ class ApiPromoCampaign extends Controller
     		$desc = 'no description';
     	}
 
-        // add available outlet
-		if ($code['promo_campaign']['is_all_outlet'] == 1) {
-			$applied_outlet = '*';
-		}elseif ( !empty($code['promo_campaign']['promo_campaign_outlets']) ) {
-			$applied_outlet = $code['promo_campaign']['promo_campaign_outlets'];
-		}else{
-			$applied_outlet = [];
-		}
-
-
         $errors=[];
         // check user
         $pct=new PromoCampaignTools();
@@ -1599,9 +1589,8 @@ class ApiPromoCampaign extends Controller
 
 		$result['title'] 		= $code['promo_title'];
         $result['description']	= $desc;
-        $result['product'] 		= $applied_product;
-        $result['outlet']		= $applied_outlet;
 		$result['errors'] 		= $errors;
+		$result['promo_code'] 	= $request->promo_code;
 
 		$result = MyHelper::checkGet($result);
 		// return $result;

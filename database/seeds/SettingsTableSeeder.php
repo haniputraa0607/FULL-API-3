@@ -691,7 +691,7 @@ class SettingsTableSeeder extends Seeder
                    'id_setting' => 77,
                     'key' => 'phone_setting',
                     'value' => NULL,
-                    'value_text' => '{"code_number":"62","min_length_number":"9","max_length_number":"14","message_failed":"Invalid number format","message_success":"Valid number format"}',
+                    'value_text' => '{"min_length_number":"9","max_length_number":"14","message_failed":"Invalid number format","message_success":"Valid number format"}',
                     'created_at' => date('Y-m-d H:i:s'),
                     'updated_at' => date('Y-m-d H:i:s'),
                 ),

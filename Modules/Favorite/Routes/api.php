@@ -13,7 +13,7 @@ use Illuminate\Http\Request;
 |
 */
 
-Route::middleware('auth:api')->prefix('/favorite')->group(function () {
+Route::middleware(['auth:api', 'scopes:*'])->prefix('/favorite')->group(function () {
     Route::any('/', 'ApiFavoriteController@index');
     Route::any('list', 'ApiFavoriteController@list');
     Route::post('create', 'ApiFavoriteController@store');

@@ -58,6 +58,8 @@ use Modules\Outlet\Http\Requests\Holiday\HolidayEdit;
 use Modules\Outlet\Http\Requests\Holiday\HolidayUpdate;
 use Modules\Outlet\Http\Requests\Holiday\HolidayDelete;
 
+use Modules\PromoCampaign\Entities\PromoCampaignPromoCode;
+
 use App\Http\Models\Transaction;
 
 class ApiOutletController extends Controller
@@ -162,8 +164,6 @@ class ApiOutletController extends Controller
         }
 
         DB::beginTransaction();
-        $post['outlet_address_detail'] = $post['outlet_address'];
-        $post['outlet_address'] = strip_tags($post['outlet_address']);
         $save = Outlet::create($post);
         if (!$save) {
             DB::rollBack();
@@ -225,8 +225,6 @@ class ApiOutletController extends Controller
         }
 
         unset($post['outlet_brands']);
-        $post['outlet_address_detail'] = $post['outlet_address'];
-        $post['outlet_address'] = strip_tags($post['outlet_address']);
         $save = Outlet::where('id_outlet', $request->json('id_outlet'))->update($post);
         // return Outlet::where('id_outlet', $request->json('id_outlet'))->first();
         if($save){
@@ -557,6 +555,47 @@ class ApiOutletController extends Controller
             }
             return $var;
         }, $loopdata);
+
+        // promo code
+		foreach ($outlet as $key => $value) {
+			$outlet[$key]['is_promo'] = 0;
+		}
+        if (isset($post['promo_code'])) {
+        	$code=PromoCampaignPromoCode::where('promo_code',$request->promo_code)
+	                ->join('promo_campaigns', 'promo_campaigns.id_promo_campaign', '=', 'promo_campaign_promo_codes.id_promo_campaign')
+	                ->where('step_complete', '=', 1)
+	                ->where( function($q){
+	                	$q->whereColumn('usage','<','limitation_usage')
+	                		->orWhere('code_type','Single');
+	                } )
+	                ->with(['promo_campaign.promo_campaign_outlets'])
+	                ->first();
+
+	        if(!$code){
+	            return [
+	                'status'=>'fail',
+	                'messages'=>['Promo code not valid']
+	            ];
+	        }else{
+
+	        	$code = $code->toArray();
+        		if ($code['promo_campaign']['is_all_outlet']) {
+        			foreach ($outlet as $key => $value) {
+    					$outlet[$key]['is_promo'] = 1;
+    				}
+        		}else{
+		        	foreach ($code['promo_campaign']['promo_campaign_outlets'] as $key => $value) {
+	        			foreach ($outlet as $key2 => $value2) {
+	        				if ( $value2['id_outlet'] == $value['id_outlet'] ) {
+	    						$outlet[$key2]['is_promo'] = 1;
+	    						break;
+	    					}
+	        			}
+		        	}
+        		}
+	        }
+        }
+
         if (isset($post['webview'])) {
             if(isset($outlet[0])){
                 $latitude  = $post['latitude'];
@@ -883,6 +922,47 @@ class ApiOutletController extends Controller
                 $processing = $settingTime->value;
             }
 
+            // give all product flag is_promo = 0
+            foreach ($outlet as $key => $value) {
+				$outlet[$key]['is_promo'] = 0;
+			}
+			// check if isset promo_code
+            if (isset($post['promo_code'])) {
+	        	$code=PromoCampaignPromoCode::where('promo_code',$request->promo_code)
+		                ->join('promo_campaigns', 'promo_campaigns.id_promo_campaign', '=', 'promo_campaign_promo_codes.id_promo_campaign')
+		                ->where('step_complete', '=', 1)
+		                ->where( function($q){
+		                	$q->whereColumn('usage','<','limitation_usage')
+		                		->orWhere('code_type','Single');
+		                } )
+		                ->with(['promo_campaign.promo_campaign_outlets'])
+		                ->first();
+
+		        if(!$code){
+		            return [
+		                'status'=>'fail',
+		                'messages'=>['Promo code not valid']
+		            ];
+		        }else{
+
+		        	// if valid give flag is_promo = 1
+		        	$code = $code->toArray();
+	        		if ($code['promo_campaign']['is_all_outlet']) {
+	        			foreach ($outlet as $key => $value) {
+	    					$outlet[$key]['is_promo'] = 1;
+	    				}
+	        		}else{
+			        	foreach ($code['promo_campaign']['promo_campaign_outlets'] as $key => $value) {
+		        			foreach ($outlet as $key2 => $value2) {
+		        				if ( $value2['id_outlet'] == $value['id_outlet'] ) {
+		    						$outlet[$key2]['is_promo'] = 1;
+		    						break;
+		    					}
+		        			}
+			        	}
+	        		}
+		        }
+	        }
             foreach ($outlet as $key => $value) {
                 $jaraknya =   number_format((float)$this->distance($latitude, $longitude, $value['outlet_latitude'], $value['outlet_longitude'], "K"), 2, '.', '');
                 settype($jaraknya, "float");
@@ -1409,6 +1489,11 @@ class ApiOutletController extends Controller
         return response()->json(MyHelper::checkUpdate($update));
     }
 
+    function exportCity(Request $request) {
+        $cities = City::select('city_name as City')->groupBy('city_name')->get()->toArray();
+        return response()->json(MyHelper::checkGet($cities));
+    }
+
     function export(Request $request) {
         $brands=$request->json('brands');
         $combo=$request->json('outlet_type')=='combo';
@@ -1462,6 +1547,7 @@ class ApiOutletController extends Controller
                 unset($outlet_array['call']);
                 unset($outlet_array['url']);
                 unset($outlet_array['brands']);
+                unset($outlet_array['id_outlet']);
                 $return[$name][]=$outlet_array;
                 $count++;
             }
@@ -1499,6 +1585,7 @@ class ApiOutletController extends Controller
 
             DB::beginTransaction();
             $countImport = 0;
+            $failedImport = [];
 
             foreach ($dataimport as $key => $value) {
                 if(
@@ -1575,15 +1662,19 @@ class ApiOutletController extends Controller
                                 }
                                 $countImport++;
                             }
+                        }else{
+                            $failedImport[] = $value['code'];
                         }
+                    }else{
+                        $failedImport[] = $value['code'];
                     }
                 }
             }
 
             DB::commit();
 
-            if($save??false) return ['status' => 'success', 'message' => $countImport.' data successfully imported.'];
-            else return ['status' => 'fail','messages' => ['failed to update data']];
+            if($save??false) return ['status' => 'success', 'message' => $countImport.' data successfully imported. Failed save outlet : '.implode(",",$failedImport)];
+            else return ['status' => 'fail','messages' => ['failed to update data' , 'Failed save outlet : '.implode(",",$failedImport)]];
         }else{
             return response()->json([
                 'status'    => 'fail',

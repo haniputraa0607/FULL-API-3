@@ -14,7 +14,7 @@ Route::group(['prefix' => 'api', 'middleware' => ['log_activities', 'user_agent'
         Route::post('profile/update', 'ApiUser@profileUpdate');
 	});
 
-    Route::group(['middleware' => ['auth:api', 'user_agent'], 'prefix' => 'home', 'namespace' => 'Modules\Users\Http\Controllers'], function()
+    Route::group(['middleware' => ['auth:api', 'user_agent', 'scopes:*'], 'prefix' => 'home', 'namespace' => 'Modules\Users\Http\Controllers'], function()
     {
         Route::post('/membership','ApiHome@membership');
         Route::any('/banner','ApiHome@banner');
@@ -30,7 +30,7 @@ Route::group(['prefix' => 'api', 'middleware' => ['log_activities', 'user_agent'
     });
 });
 
-Route::group(['middleware' => ['auth:api-be', 'user_agent'], 'namespace' => 'Modules\Users\Http\Controllers'], function()
+Route::group(['middleware' => ['auth:api', 'user_agent', 'scopes:ap'], 'namespace' => 'Modules\Users\Http\Controllers'], function()
 {
 	Route::get('user-delete/{phone}', ['middleware' => 'feature_control:6', 'uses' => 'ApiUser@deleteUser']);
 	Route::post('user-delete/{phone}', ['middleware' => 'feature_control:6', 'uses' => 'ApiUser@deleteUserAction']);
@@ -41,7 +41,7 @@ Route::group(['prefix' => 'api/cron', 'namespace' => 'Modules\Users\Http\Control
 	Route::any('/reset-trx-day', 'ApiUser@resetCountTransaction');
 });
 
-Route::group(['middleware' => ['auth:api-be','log_activities', 'user_agent'], 'prefix' => 'api/users', 'namespace' => 'Modules\Users\Http\Controllers'], function(){
+Route::group(['middleware' => ['auth:api','log_activities', 'user_agent', 'scopes:ap'], 'prefix' => 'api/users', 'namespace' => 'Modules\Users\Http\Controllers'], function(){
     Route::post('pin/check/be', 'ApiUser@checkPin');
     Route::get('list/{var}', 'ApiUser@listVar');
     Route::post('new', ['middleware' => 'feature_control:4', 'uses' => 'ApiUser@newUser']);
