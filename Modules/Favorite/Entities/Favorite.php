@@ -47,7 +47,7 @@ class Favorite extends Model
 		$id_outlet = $this->id_outlet;
 		$id_product = $this->id_product;
 		$product_qty = $this->product_qty;
-		$product = Product::select('id_product','product_name')->where([
+		$product = Product::select('id_product','product_name','product_code','product_description')->where([
 			'id_product'=>$id_product
 		])->with([
 			'photos' => function($query){
@@ -56,6 +56,8 @@ class Favorite extends Model
 		])->first();
 		return [
 			'product_name' => $product->product_name,
+			'product_code' => $product->product_code,
+			'product_description' => $product->product_description,
 			'url_product_photo' => optional($product->photos[0]??null)->url_product_photo?:env('S3_URL_API').'img/product/item/default.png',
 			'price' => $this->getProductPrice($id_outlet,$id_product,$product_qty)
 		];
