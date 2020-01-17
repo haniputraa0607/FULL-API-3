@@ -975,12 +975,20 @@ class ApiUser extends Controller
 
             }
 
-            $result = ['status'	=> 'success',
-                'result'	=> ['phone'	=>	$create->phone,
-                    'autocrm'	=>	$autocrm,
-                    'pin'	=>	$pin
-                ]
-            ];
+            if(env('APP_ENV') == 'production'){
+                $result = ['status'	=> 'success',
+                    'result'	=> ['phone'	=>	$create->phone,
+                        'autocrm'	=>	$autocrm
+                    ]
+                ];
+            }else{
+                $result = ['status'	=> 'success',
+                    'result'	=> ['phone'	=>	$create->phone,
+                        'autocrm'	=>	$autocrm,
+                        'pin'	=>	MyHelper::encPIN($pin)
+                    ]
+                ];
+            }
             return response()->json($result);
 
         } else {
@@ -1294,12 +1302,20 @@ class ApiUser extends Controller
                         'now' => date('Y-m-d H:i:s')], $useragent);
             }
 
-            $result = [
-                'status'	=> 'success',
-                'result'	=> ['phone'	=>	$data[0]['phone'],
-                    'pin'	=>	$pinnya
-                ]
-            ];
+            if(env('APP_ENV') == 'production'){
+                $result = [
+                    'status'	=> 'success',
+                    'result'	=> ['phone'	=>	$data[0]['phone'],
+                    ]
+                ];
+            }else{
+                $result = [
+                    'status'	=> 'success',
+                    'result'	=> ['phone'	=>	$data[0]['phone'],
+                    'pin'	=>	MyHelper::encPIN($pinnya)
+                    ]
+                ];
+            }
             /*} else {
                 $result = [
                         'status'	=> 'fail',
@@ -1374,12 +1390,20 @@ class ApiUser extends Controller
                     'useragent' => $useragent,
                     'now' => date('Y-m-d H:i:s')], $useragent);
 
-            $result = [
-                'status'	=> 'success',
-                'result'	=> ['phone'	=>	$phone,
-                    'pin'	=>	$pin
-                ]
-            ];
+            if(env('APP_ENV') == 'production'){
+                $result = [
+                    'status'	=> 'success',
+                    'result'	=> ['phone'	=>	$phone
+                    ]
+                ];
+            }else{
+                $result = [
+                    'status'	=> 'success',
+                    'result'	=> ['phone'	=>	$phone,
+                    'pin'	    =>	MyHelper::encPIN($pin)
+                    ]
+                ];
+            }
             return response()->json($result);
 
         } else {
@@ -1470,7 +1494,6 @@ class ApiUser extends Controller
                         $result = [
                             'status'	=> 'success',
                             'result'	=> ['phone'	=>	$data[0]['phone'],
-                                'pin'	=>	$request->json('pin'),
                                 'profile'=> $profile
                             ]
                         ];
@@ -1535,8 +1558,7 @@ class ApiUser extends Controller
                 }
                 $result = [
                     'status'	=> 'success',
-                    'result'	=> ['phone'	=>	$data[0]['phone'],
-                        'pin'	=>	$request->json('pin_new')
+                    'result'	=> ['phone'	=>	$data[0]['phone']
                     ]
                 ];
             } else {
@@ -1768,7 +1790,6 @@ class ApiUser extends Controller
                 $result = [
                     'status'	=> 'success',
                     'result'	=> ['phone'	=>	$data[0]['phone'],
-                        // 'pin'	=>	$request->json('pin'),
                         'name' => $datauser[0]['name'],
                         'email' => $datauser[0]['email'],
                         'gender' => $datauser[0]['gender'],
