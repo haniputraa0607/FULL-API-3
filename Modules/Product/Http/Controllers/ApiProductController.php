@@ -877,7 +877,7 @@ class ApiProductController extends Controller
             $post['id_outlet'] = Setting::where('key','default_outlet')->pluck('value')->first();
         }
         //get product
-        $product = Product::select('id_product','product_name','product_code','product_visibility')
+        $product = Product::select('id_product','product_code','product_name','product_description','product_code','product_visibility')
         ->where('id_product',$post['id_product'])
         ->whereHas('brand_category')
         ->whereHas('product_prices',function($query) use ($post){
@@ -920,7 +920,7 @@ class ApiProductController extends Controller
             return MyHelper::checkGet([]);
         }
         //get modifiers
-        $product['modifiers'] = ProductModifier::select('product_modifiers.id_product_modifier','text','product_modifier_stock_status','product_modifier_price as price')
+        $product['modifiers'] = ProductModifier::select('product_modifiers.id_product_modifier','code','text','product_modifier_stock_status','product_modifier_price as price')
             ->where(function($query) use($post){
                 $query->where('modifier_type','Global')
                 ->orWhere(function($query) use ($post){

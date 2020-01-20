@@ -1615,6 +1615,7 @@ class ApiTransaction extends Controller
             transaction_product_qty as qty,
             product_prices.product_price,
             products.product_name,
+            products.product_code,
             transaction_products.transaction_product_note as note
             '))
         ->join('products','products.id_product','=','transaction_products.id_product')

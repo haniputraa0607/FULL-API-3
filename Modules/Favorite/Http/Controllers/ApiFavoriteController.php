@@ -53,7 +53,7 @@ class ApiFavoriteController extends Controller
         $longitude = $request->json('longitude');
         $nf = $request->json('number_format')?:'float';
         $favorite = Favorite::where('id_user',$user->id);
-        $select = ['id_favorite','id_outlet','id_product','id_brand','id_user','product_qty','notes'];
+        $select = ['id_favorite','id_outlet','favorites.id_product','id_brand','id_user','product_qty','notes'];
         $with = [
             'modifiers'=>function($query){
                 $query->select('product_modifiers.id_product_modifier','type','code','text','favorite_modifiers.qty');
@@ -83,7 +83,7 @@ class ApiFavoriteController extends Controller
                     $val['product_price_total'] = $total_price;
                     return $key;
                 },function($key,&$val) use ($latitude,$longitude){
-                    $outlet = Outlet::select('id_outlet','outlet_name','outlet_address','outlet_latitude','outlet_longitude')->with('today')->find($key)->toArray();
+                    $outlet = Outlet::select('id_outlet','outlet_code','outlet_name','outlet_address','outlet_latitude','outlet_longitude')->with('today')->find($key)->toArray();
                     $status = app('Modules\Outlet\Http\Controllers\ApiOutletController')->checkOutletStatus($outlet);
                     $outlet['outlet_address']=$outlet['outlet_address']??'';
                     $outlet['status']=$status;
