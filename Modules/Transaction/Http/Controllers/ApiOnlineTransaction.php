@@ -2,6 +2,7 @@
 
 namespace Modules\Transaction\Http\Controllers;
 
+use App\Http\Models\DailyTransactions;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
@@ -29,7 +30,7 @@ use App\Http\Models\LogBalance;
 use App\Http\Models\ManualPaymentMethod;
 use App\Http\Models\UserOutlet;
 use App\Http\Models\TransactionSetting;
-use App\Http\Models\FraudSetting;
+use Modules\SettingFraud\Entities\FraudSetting;
 use App\Http\Models\Configs;
 use App\Http\Models\Holiday;
 use App\Http\Models\OutletToken;
@@ -72,7 +73,7 @@ class ApiOnlineTransaction extends Controller
         $this->autocrm       = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
         $this->transaction   = "Modules\Transaction\Http\Controllers\ApiTransaction";
         $this->notif         = "Modules\Transaction\Http\Controllers\ApiNotification";
-        $this->setting_fraud = "Modules\SettingFraud\Http\Controllers\ApiSettingFraud";
+        $this->setting_fraud = "Modules\SettingFraud\Http\Controllers\ApiFraud";
         $this->setting_trx   = "Modules\Transaction\Http\Controllers\ApiSettingTransactionV2";
     }
 
@@ -1370,6 +1371,15 @@ class ApiOnlineTransaction extends Controller
         // if($post['latitude'] && $post['longitude']){
         //    $savelocation = $this->saveLocation($post['latitude'], $post['longitude'], $insertTransaction['id_user'], $insertTransaction['id_transaction']);
         // }
+
+        /* Add to daily trasaction*/
+        $dataDailyTrx = [
+            'id_transaction'    => $insertTransaction['id_transaction'],
+            'id_outlet'         => $outlet['id_outlet'],
+            'transaction_date'  => date('Y-m-d H:i:s', strtotime($insertTransaction['transaction_date'])),
+            'id_user'           => $user['id']
+        ];
+        $createDailyTrx = DailyTransactions::create($dataDailyTrx);
 
         DB::commit();
         return response()->json([

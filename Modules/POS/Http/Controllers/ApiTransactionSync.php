@@ -35,7 +35,7 @@ use App\Http\Models\LogBalance;
 use App\Http\Models\SpecialMembership;
 use App\Http\Models\DealsVoucher;
 use App\Http\Models\Configs;
-use App\Http\Models\FraudSetting;
+use Modules\SettingFraud\Entities\FraudSetting;
 use App\Http\Models\LogBackendError;
 use App\Http\Models\SyncTransactionFaileds;
 use App\Http\Models\SyncTransactionQueues;
@@ -69,7 +69,7 @@ class ApiTransactionSync extends Controller
         $this->balance    = "Modules\Balance\Http\Controllers\BalanceController";
         $this->membership = "Modules\Membership\Http\Controllers\ApiMembership";
         $this->autocrm  = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
-        $this->setting_fraud = "Modules\SettingFraud\Http\Controllers\ApiSettingFraud";
+        $this->setting_fraud = "Modules\SettingFraud\Http\Controllers\ApiFraud";
         
         $this->pos = "Modules\POS\Http\Controllers\ApiPos";
     }

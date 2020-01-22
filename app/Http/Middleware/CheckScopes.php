@@ -20,13 +20,11 @@ class CheckScopes extends AddCustomProvider
       {
             $dataToken = json_decode($request->user()->token());
             if($scope == 'ap' && $dataToken->scopes[0] == 'ap'){
-                $request->merge(['provider' => 'users-be']);
+                return $next($request);
             }elseif($scope == '*' && $dataToken->scopes[0] == '*'){
-                $request->merge(['provider' => 'users']);
+                return $next($request);
             }else{
                 return response('Unauthenticated.', 403);
             }
-
-            return parent::handle($request, $next);
       }
 }

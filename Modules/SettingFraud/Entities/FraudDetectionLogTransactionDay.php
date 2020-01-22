@@ -1,19 +1,18 @@
 <?php
 
-namespace App\Http\Models;
+namespace Modules\SettingFraud\Entities;
 
 use Illuminate\Database\Eloquent\Model;
 
-class FraudDetectionLogTransactionWeek extends Model
+class FraudDetectionLogTransactionDay extends Model
 {
-	protected $primaryKey = 'id_fraud_detection_log_transaction_week';
-	protected $table = 'fraud_detection_log_transaction_week';
+	protected $primaryKey = 'id_fraud_detection_log_transaction_day';
+	protected $table = 'fraud_detection_log_transaction_day';
 
 	protected $fillable = [
 		'id_user',
-        'fraud_detection_year',
-        'fraud_detection_week',
-		'count_transaction_week',
+		'fraud_detection_date',
+		'count_transaction_day',
 		'status',
 		'fraud_setting_parameter_detail',
 		'fraud_setting_forward_admin_status',
