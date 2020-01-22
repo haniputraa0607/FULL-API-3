@@ -5,7 +5,7 @@ Route::group(['middleware' => ['api', 'log_activities', 'user_agent'], 'prefix' 
     Route::get('/courier', 'ApiSetting@settingCourier');
 });
 
-Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scopes:*'], 'prefix' => 'api/setting', 'namespace' => 'Modules\Setting\Http\Controllers'], function()
+Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scopes:apps'], 'prefix' => 'api/setting', 'namespace' => 'Modules\Setting\Http\Controllers'], function()
 {
     Route::any('/intro/home', 'ApiTutorial@introHomeFrontend');
     Route::any('/faq', 'ApiSetting@faqList');
@@ -62,7 +62,7 @@ Route::group([ 'prefix' => 'api/setting', 'namespace' => 'Modules\Setting\Http\C
     Route::any('/text_menu_list', 'ApiSetting@textMenuList');
 });
 
-Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scopes:ap'], 'prefix' => 'api/setting', 'namespace' => 'Modules\Setting\Http\Controllers'], function()
+Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scopes:be'], 'prefix' => 'api/setting', 'namespace' => 'Modules\Setting\Http\Controllers'], function()
 {
     Route::any('whatsapp', 'ApiSetting@settingWhatsApp');
     Route::any('be/celebrate_list', 'ApiSetting@celebrateList');
@@ -115,7 +115,7 @@ Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scop
     Route::any('/phone/update', ['middleware' => 'feature_control:210', 'uses' => 'ApiSetting@updatePhoneSetting']);
     Route::get('/phone', ['middleware' => 'feature_control:210', 'uses' => 'ApiSetting@phoneSetting']);
 
-    Route::group(['middleware' => ['auth:api', 'scopes:ap'], 'prefix' => 'dashboard'], function()
+    Route::group(['middleware' => ['auth:api', 'scopes:be'], 'prefix' => 'dashboard'], function()
     {
         Route::any('', 'ApiDashboardSetting@getDashboard');
         Route::get('list', 'ApiDashboardSetting@getListDashboard');
@@ -128,7 +128,7 @@ Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scop
     });
 
     // banner
-    Route::group(['middleware' => ['auth:api', 'scopes:*'], 'prefix' => 'banner'], function()
+    Route::group(['middleware' => ['auth:api', 'scopes:apps'], 'prefix' => 'banner'], function()
     {
         Route::get('list', ['middleware' => 'feature_control:144', 'uses' => 'ApiBanner@index']);
         Route::post('create', ['middleware' => 'feature_control:145', 'uses' => 'ApiBanner@create']);
@@ -138,7 +138,7 @@ Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scop
     });
 
     // featured_deal
-    Route::group(['middleware' => ['auth:api', 'scopes:ap'], 'prefix' => 'featured_deal'], function()
+    Route::group(['middleware' => ['auth:api', 'scopes:be'], 'prefix' => 'featured_deal'], function()
     {
         Route::get('list', 'ApiFeaturedDeal@index');
         Route::post('create', 'ApiFeaturedDeal@create');

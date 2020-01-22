@@ -1,6 +1,6 @@
 <?php
 
-Route::group(['middleware' => ['auth:api', 'user_agent', 'scopes:ap'], 'prefix' => 'api/brand', 'namespace' => 'Modules\Brand\Http\Controllers'], function () {
+Route::group(['middleware' => ['auth:api', 'user_agent', 'scopes:be'], 'prefix' => 'api/brand', 'namespace' => 'Modules\Brand\Http\Controllers'], function () {
     Route::any('/', ['middleware' => 'feature_control:155', 'uses' => 'ApiBrandController@index']);
     Route::any('be/list', ['middleware' => 'feature_control:155', 'uses' => 'ApiBrandController@listBrand']);
     Route::post('store', ['middleware' => 'feature_control:156', 'uses' => 'ApiBrandController@store']);
@@ -26,6 +26,6 @@ Route::group(['middleware' => ['auth:api', 'user_agent', 'scopes:ap'], 'prefix' 
     Route::post('sync', 'ApiSyncBrandController@syncBrand');
 });
 
-Route::group(['middleware' => ['auth:api', 'user_agent', 'scopes:*'], 'prefix' => 'api/brand', 'namespace' => 'Modules\Brand\Http\Controllers'], function () {
+Route::group(['middleware' => ['auth:api', 'user_agent', 'scopes:apps'], 'prefix' => 'api/brand', 'namespace' => 'Modules\Brand\Http\Controllers'], function () {
     Route::any('list', ['uses' => 'ApiBrandController@listBrand']);
 });
