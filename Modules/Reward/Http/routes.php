@@ -1,6 +1,6 @@
 <?php
 
-Route::group(['middleware' => ['auth:api', 'user_agent', 'scopes:ap'], 'prefix' => 'api/reward', 'namespace' => 'Modules\Reward\Http\Controllers'], function()
+Route::group(['middleware' => ['auth:api', 'user_agent', 'scopes:be'], 'prefix' => 'api/reward', 'namespace' => 'Modules\Reward\Http\Controllers'], function()
 {
     Route::any('/list', ['middleware' => 'feature_control:130', 'uses' => 'ApiReward@list']);
     Route::post('/create', ['middleware' => 'feature_control:132', 'uses' => 'ApiReward@create']);

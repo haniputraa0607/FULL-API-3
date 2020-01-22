@@ -12,7 +12,7 @@ use Illuminate\Http\Request;
 | is assigned the "api" middleware group. Enjoy building your API!
 |
 */
-Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scopes:*'], 'prefix' => 'subscription'], function () {
+Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scopes:apps'], 'prefix' => 'subscription'], function () {
 
     /* MASTER SUBSCRIPTION */
     Route::any('list', 'ApiSubscription@listSubscription');
@@ -39,7 +39,7 @@ Route::group(['middleware' => ['web', 'user_agent'], 'prefix' => 'webview'], fun
     Route::any('subscription/success/{id_subscription_user}', 'ApiSubscriptionWebview@subscriptionSuccess');
 });
 
-Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scopes:ap'], 'prefix' => 'subscription'], function () {
+Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scopes:be'], 'prefix' => 'subscription'], function () {
     Route::any('be/list', ['middleware' => 'feature_control:173', 'uses' => 'ApiSubscription@listSubscription']);
     Route::post('step1', ['middleware' => 'feature_control:172', 'uses' => 'ApiSubscription@create']);
     Route::post('step2', ['middleware' => 'feature_control:172', 'uses' => 'ApiSubscription@updateRule']);
