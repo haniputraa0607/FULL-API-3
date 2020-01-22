@@ -1,6 +1,6 @@
 <?php
 
-Route::group(['middleware' => ['auth:api','log_activities', 'user_agent', 'scopes:ap'], 'prefix' => 'api/campaign', 'namespace' => 'Modules\Campaign\Http\Controllers'], function()
+Route::group(['middleware' => ['auth:api','log_activities', 'user_agent', 'scopes:be'], 'prefix' => 'api/campaign', 'namespace' => 'Modules\Campaign\Http\Controllers'], function()
 {
     Route::post('create', ['middleware' => 'feature_control:100', 'uses' =>'ApiCampaign@CreateCampaign']);
     Route::post('step1', ['middleware' => 'feature_control:99', 'uses' =>'ApiCampaign@ShowCampaignStep1']);

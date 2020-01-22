@@ -1,5 +1,5 @@
 <?php
-Route::group(['middleware' => ['auth:api','log_activities','user_agent', 'scopes:ap'], 'prefix' => 'api/inboxglobal', 'namespace' => 'Modules\InboxGlobal\Http\Controllers'], function()
+Route::group(['middleware' => ['auth:api','log_activities','user_agent', 'scopes:be'], 'prefix' => 'api/inboxglobal', 'namespace' => 'Modules\InboxGlobal\Http\Controllers'], function()
 {
     Route::post('list', ['middleware' => 'feature_control:114', 'uses' =>'ApiInboxGlobal@listInboxGlobal']);
     Route::post('detail', ['middleware' => 'feature_control:115', 'uses' =>'ApiInboxGlobal@detailInboxGlobal']);
@@ -9,14 +9,14 @@ Route::group(['middleware' => ['auth:api','log_activities','user_agent', 'scopes
 });
 
 
-Route::group(['middleware' => ['auth:api','log_activities','user_agent', 'scopes:*'], 'prefix' => 'api/inbox', 'namespace' => 'Modules\InboxGlobal\Http\Controllers'], function()
+Route::group(['middleware' => ['auth:api','log_activities','user_agent', 'scopes:apps'], 'prefix' => 'api/inbox', 'namespace' => 'Modules\InboxGlobal\Http\Controllers'], function()
 {
     Route::any('user/{mode?}', 'ApiInbox@listInboxUser');
     Route::post('marked', 'ApiInbox@markedInbox');
     Route::post('unread', 'ApiInbox@unread');
 });
 
-Route::group(['middleware' => ['auth:api','log_activities','user_agent', 'scopes:ap'], 'prefix' => 'api/inbox', 'namespace' => 'Modules\InboxGlobal\Http\Controllers'], function() {
+Route::group(['middleware' => ['auth:api','log_activities','user_agent', 'scopes:be'], 'prefix' => 'api/inbox', 'namespace' => 'Modules\InboxGlobal\Http\Controllers'], function() {
     Route::any('be/user/{mode?}', ['middleware' => 'feature_control:114', 'uses' =>'ApiInbox@listInboxUser']);
     Route::any('delete', ['middleware' => 'feature_control:118', 'uses' =>'ApiInbox@deleteInboxUser']);
 });

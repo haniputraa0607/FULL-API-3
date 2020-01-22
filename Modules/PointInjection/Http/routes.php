@@ -1,6 +1,6 @@
 <?php
 
-Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scopes:ap'], 'prefix' => 'api/point-injection', 'namespace' => 'Modules\PointInjection\Http\Controllers'], function () {
+Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scopes:be'], 'prefix' => 'api/point-injection', 'namespace' => 'Modules\PointInjection\Http\Controllers'], function () {
     Route::post('list', ['middleware' => 'feature_control:205', 'uses' => 'ApiPointInjectionController@index']);
     Route::post('create', ['middleware' => 'feature_control:207', 'uses' => 'ApiPointInjectionController@store']);
     Route::post('update', ['middleware' => 'feature_control:208', 'uses' => 'ApiPointInjectionController@update']);

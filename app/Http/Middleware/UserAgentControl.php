@@ -21,7 +21,7 @@ class UserAgentControl
         if (stristr($_SERVER['HTTP_USER_AGENT'], 'iOS') || stristr($_SERVER['HTTP_USER_AGENT'], 'okhttp')) {
           return $next($request);
         } else {
-            return response('Unauthorized action.', 403);
+            return response()->json(['error' => 'Unauthenticated action'], 403);
         }
       } else {
         return $next($request);

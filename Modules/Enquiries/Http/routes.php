@@ -1,6 +1,6 @@
 <?php
 
-Route::group(['middleware' => ['auth:api','user_agent','log_activities', 'scopes:ap'], 'prefix' => 'api/enquiries', 'namespace' => 'Modules\Enquiries\Http\Controllers'], function()
+Route::group(['middleware' => ['auth:api','user_agent','log_activities', 'scopes:be'], 'prefix' => 'api/enquiries', 'namespace' => 'Modules\Enquiries\Http\Controllers'], function()
 {
 
     Route::any('list', ['middleware' => 'feature_control:160', 'uses' =>'ApiEnquiries@index']);
@@ -11,7 +11,7 @@ Route::group(['middleware' => ['auth:api','user_agent','log_activities', 'scopes
 
 });
 
-Route::group(['middleware' => ['auth:api','user_agent','log_activities', 'scopes:*'], 'prefix' => 'api/enquiries', 'namespace' => 'Modules\Enquiries\Http\Controllers'], function()
+Route::group(['middleware' => ['auth:api','user_agent','log_activities', 'scopes:apps'], 'prefix' => 'api/enquiries', 'namespace' => 'Modules\Enquiries\Http\Controllers'], function()
 {
     Route::post('create', 'ApiEnquiries@create');
     Route::any('listEnquiries', 'ApiEnquiries@listEnquirySubject');
