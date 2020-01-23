@@ -2,8 +2,8 @@
 
 namespace Modules\OutletApp\Http\Controllers;
 
-use App\Http\Models\FraudDetectionLogTransactionDay;
-use App\Http\Models\FraudDetectionLogTransactionWeek;
+use Modules\SettingFraud\Entities\FraudDetectionLogTransactionDay;
+use Modules\SettingFraud\Entities\FraudDetectionLogTransactionWeek;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;

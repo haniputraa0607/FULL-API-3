@@ -1714,7 +1714,23 @@ class FeaturesTableSeeder extends Seeder
                 'feature_module' => 'Feedback Rating Item',
                 'created_at' => date('Y-m-d H:00:00'),
                 'updated_at' => date('Y-m-d H:00:00'),
-            )
+            ),
+            213 =>
+                array(
+                    'id_feature' => 214,
+                    'feature_type' => 'Report',
+                    'feature_module' => 'Report Fraud Transaction Point',
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00'),
+                ),
+            214 =>
+                array(
+                    'id_feature' => 215,
+                    'feature_type' => 'Report',
+                    'feature_module' => 'Report Fraud In Between Transaction',
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00'),
+                ),
         ));
     }
 }
