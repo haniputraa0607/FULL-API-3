@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Models;
+namespace Modules\SettingFraud\Entities;
 
 use Illuminate\Database\Eloquent\Model;
 

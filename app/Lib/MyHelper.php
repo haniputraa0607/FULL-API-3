@@ -1096,6 +1096,79 @@ class MyHelper{
 
 	}
 
+    public static function createFile($content, $ext="json", $path, $name=null) {
+        // kalo ada file
+        $decoded = json_encode($content);
+
+        // set picture name
+        if($name != null)
+            $pictName = $name.'.'.$ext;
+        else
+            $pictName = mt_rand(0, 1000).''.time().'.'.$ext;
+
+        // path
+        $upload = $path.$pictName;
+
+        if(env('STORAGE') &&  env('STORAGE') == 's3'){
+            $save = Storage::disk('s3')->put($upload, $decoded, 'public');
+            if ($save) {
+                $result = [
+                    'status' => 'success',
+                    'path'  => $upload
+                ];
+            }
+            else {
+                $result = [
+                    'status' => 'fail'
+                ];
+            }
+        }else{
+            $save = Storage::disk(env('STORAGE'))->put($upload, $decoded);
+            if ($save) {
+                $result = [
+                    'status' => 'success',
+                    'path'  => $upload
+                ];
+            }
+            else {
+                $result = [
+                    'status' => 'fail'
+                ];
+            }
+        }
+
+        return $result;
+    }
+
+    public static function deleteFile($path) {
+        if(env('STORAGE') &&  env('STORAGE') == 's3'){
+            if(Storage::disk('s3')->exists($path)) {
+                if(Storage::disk('s3')->delete($path)){
+                    return true;
+                }
+                else {
+                    return false;
+                }
+            }
+            else {
+                return true;
+            }
+        }else{
+            if (Storage::disk(env('STORAGE'))->exists($path)) {
+                if (Storage::disk(env('STORAGE'))->delete($path)) {
+                    return true;
+                }
+                else {
+                    return false;
+                }
+            }
+            else {
+                return true;
+            }
+        }
+
+    }
+
 	public static function sendNotification($id, $type){
 			return true;
 	}

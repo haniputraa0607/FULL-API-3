@@ -10,7 +10,6 @@ Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scop
     Route::any('/intro/home', 'ApiTutorial@introHomeFrontend');
     Route::any('/faq', 'ApiSetting@faqList');
     Route::get('/webview/faq', 'ApiSetting@faqWebview');
-    Route::any('whatsapp', 'ApiSetting@settingWhatsApp');
     Route::any('jobs_list', 'ApiSetting@jobsList');
     Route::any('celebrate_list', 'ApiSetting@celebrateList');
     Route::post('webview', 'ApiSetting@settingWebview');
@@ -65,6 +64,7 @@ Route::group([ 'prefix' => 'api/setting', 'namespace' => 'Modules\Setting\Http\C
 
 Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scopes:be'], 'prefix' => 'api/setting', 'namespace' => 'Modules\Setting\Http\Controllers'], function()
 {
+    Route::any('whatsapp', 'ApiSetting@settingWhatsApp');
     Route::any('be/celebrate_list', 'ApiSetting@celebrateList');
     Route::any('be/jobs_list', 'ApiSetting@jobsList');
     Route::get('be/complete-profile', 'ApiSetting@getCompleteProfile');

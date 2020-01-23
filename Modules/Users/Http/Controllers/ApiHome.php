@@ -18,7 +18,7 @@ use App\Http\Models\HomeBackground;
 use App\Http\Models\UsersMembership;
 use App\Http\Models\Transaction;
 use App\Http\Models\Banner;
-use App\Http\Models\FraudSetting;
+use Modules\SettingFraud\Entities\FraudSetting;
 use App\Http\Models\OauthAccessToken;
 use App\Http\Models\FeaturedDeal;
 use Modules\Subscription\Entities\FeaturedSubscription;
@@ -39,7 +39,7 @@ class ApiHome extends Controller
 		$this->balance  = "Modules\Balance\Http\Controllers\BalanceController";
 		$this->point  = "Modules\Deals\Http\Controllers\ApiDealsClaim";
 		$this->autocrm  = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
-        $this->setting_fraud = "Modules\SettingFraud\Http\Controllers\ApiSettingFraud";
+        $this->setting_fraud = "Modules\SettingFraud\Http\Controllers\ApiFraud";
 		$this->endPoint  = env('S3_URL_API');
         $this->deals = "Modules\Deals\Http\Controllers\ApiDeals";
     }
