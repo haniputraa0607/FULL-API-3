@@ -36,6 +36,8 @@ use App\Lib\MyHelper;
 use App\Jobs\GeneratePromoCode;
 use DB;
 use Hash;
+use Modules\SettingFraud\Entities\DailyCheckPromoCode;
+use Modules\SettingFraud\Entities\LogCheckPromoCode;
 
 class ApiPromoCampaign extends Controller
 {
@@ -44,6 +46,7 @@ class ApiPromoCampaign extends Controller
         date_default_timezone_set('Asia/Jakarta');
 
         $this->online_transaction   = "Modules\Transaction\Http\Controllers\ApiOnlineTransaction";
+        $this->fraud   = "Modules\SettingFraud\Http\Controllers\ApiFraud";
     }
 
     public function index(Request $request)
@@ -1437,6 +1440,20 @@ class ApiPromoCampaign extends Controller
         $device_id		= $request->device_id;
         $device_type	= $request->device_type;
         $id_outlet		= $request->id_outlet;
+        $ip = $request->ip();
+
+        /* Check promo code*/
+        $dataCheckPromoCode = [
+            'id_user'    => $id_user,
+            'device_id'  => $device_id,
+            'promo_code' => $request->promo_code,
+            'ip'         => $ip
+        ];
+        $checkFraud = app($this->fraud)->fraudCheckPromoCode($dataCheckPromoCode);
+        if($checkFraud['status'] == 'fail'){
+            return $checkFraud;
+        }
+        /* End check promo code */
 
         // get data promo code, promo campaign, outlet, rule, and product
         $code=PromoCampaignPromoCode::where('promo_code',$request->promo_code)

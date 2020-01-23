@@ -864,6 +864,8 @@ class ApiOnlineTransaction extends Controller
                 'id_admin_outlet_send'     => $post['id_admin_outlet_send'],
                 'short_link'               => $link
             ];
+            //sum balance
+            $sumBalance = LogBalance::where('id_user', $id)->sum('balance');
 
             $insertShipment = TransactionShipment::create($dataShipment);
             if (!$insertShipment) {
@@ -1248,6 +1250,10 @@ class ApiOnlineTransaction extends Controller
                 if ($save['status'] == 'fail') {
                     DB::rollback();
                     return response()->json($save);
+                }
+
+                if($save['status'] == 'success'){
+                    $checkFraudPoint = app($this->setting_fraud)->checkFraud($sumBalance, $user, ['id_outlet' => $insertTransaction['id_outlet']]);
                 }
 
                 // Fraud Detection

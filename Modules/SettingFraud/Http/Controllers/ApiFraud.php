@@ -4,7 +4,9 @@ namespace Modules\SettingFraud\Http\Controllers;
 
 use App\Http\Models\Configs;
 use App\Http\Models\DailyTransactions;
+use Modules\SettingFraud\Entities\DailyCheckPromoCode;
 use Modules\SettingFraud\Entities\FraudBetweenTransaction;
+use Modules\SettingFraud\Entities\FraudDetectionLogCheckPromoCode;
 use Modules\SettingFraud\Entities\FraudDetectionLogTransactionInBetween;
 use Modules\SettingFraud\Entities\FraudDetectionLogTransactionPoint;
 use App\Http\Models\OauthAccessToken;
@@ -29,7 +31,10 @@ use App\Lib\classMaskingJson;
 use App\Lib\apiwha;
 use DateTime;
 use Mailgun;
+use Modules\SettingFraud\Entities\LogCheckPromoCode;
 use function GuzzleHttp\Psr7\str;
+use File;
+use Storage;
 
 class ApiFraud extends Controller
 {
@@ -409,7 +414,7 @@ class ApiFraud extends Controller
             if($fraudSetting['forward_admin_status'] == '1'){
                 $forwardAdmin = 1;
             }
-        }elseif(strpos($fraudSetting['parameter'], 'between') !== false){
+        }elseif(strpos($fraudSetting['parameter'], 'Transaction between') !== false){
             $id_user = $user->id;
             $parameterDetailTime = $fraudSetting->parameter_detail_time;
             $parameterDetail = $fraudSetting->parameter_detail;
@@ -450,6 +455,18 @@ class ApiFraud extends Controller
             $countLog = count($getLog);
 
             if($countLog > (int)$fraudSetting['auto_suspend_value']){
+                $autoSuspend = 1;
+            }
+        }elseif(strpos($fraudSetting['parameter'], 'promo code') !== false){
+            $id_user = $user->id;
+            $forwardAdmin = 0;
+            $autoSuspend = 0;
+
+            if($fraudSetting['forward_admin_status'] == '1'){
+                $forwardAdmin = 1;
+            }
+
+            if($fraudSetting['auto_suspend_status'] == '1'){
                 $autoSuspend = 1;
             }
         }
@@ -587,6 +604,104 @@ class ApiFraud extends Controller
             return false;
         }
 	}
+
+    function fraudTrxPoint($sumBalance, $user, $data){
+        $fraudTrxPoint = FraudSetting::where('parameter', 'LIKE', '%point%')->where('fraud_settings_status','Active')->first();
+        if($fraudTrxPoint){
+            if($sumBalance > $fraudTrxPoint['parameter_detail']){
+                $countOutlet = Transaction::where('transaction_payment_status','Completed')->where('id_user', $user['id_user'])
+                    ->groupBy('id_outlet')->selectRaw('count(id_outlet) as "total_oultet", id_outlet')->orderBy('total_oultet', 'desc')->get()->toArray();
+
+                if(!empty($countOutlet)){
+                    if($countOutlet[0]['id_outlet'] != $data['id_outlet']){
+                        DB::rollback();
+                        $checkFraud = app($this->setting_fraud)->SendFraudDetection($fraudTrxPoint['id_fraud_setting'], $user, null, null, 0, date('Y-m-d H:i:s'), 0, 0,null,
+                            $sumBalance, $countOutlet[0]['id_outlet'], $data['id_outlet']);
+                        return response()->json(['status' => 'fail', 'messages' => ['Transaction failed. Point can not use in this outlet.']]);
+                    }
+                }
+            }
+        }
+
+        return true;
+    }
+
+	function fraudCheckPromoCode($data){
+        $fraudCheckPromo = FraudSetting::where('parameter', 'LIKE', '%promo code%')->where('fraud_settings_status','Active')->first();
+
+        if(!$fraudCheckPromo){
+            return [
+                'status'=>'success'
+            ];
+        }
+
+        $getFileAccess = 'fraud/checkPromoCode/'.$data['id_user'].'.json';
+
+        if(Storage::disk(env('STORAGE'))->exists($getFileAccess)){
+            $readContent = Storage::disk('local')->get($getFileAccess);
+            $content = json_decode($readContent);
+            $currentTime = date('Y-m-d H:i:s');
+
+            if(strtotime($currentTime) < strtotime($content->available_access)){
+                return [
+                    'status'=>'fail',
+                    'messages'=>[$fraudCheckPromo['result_text']]
+                ];
+            }else{
+                MyHelper::deleteFile($getFileAccess);
+            }
+        }
+
+        $createLogCheckPromoCode  = LogCheckPromoCode::create($data);
+        $createDailyCheckPromoCode  = DailyCheckPromoCode::create($data);
+
+        $time = $fraudCheckPromo->parameter_detail_time;
+        $numberOfViolation = $fraudCheckPromo->parameter_detail;
+        $end = date('Y-m-d H:i:s');
+        $start = date('Y-m-d H:i:s',strtotime('-'.(int)$time.' minutes',strtotime($end)));
+
+        $getDailyLog = DailyCheckPromoCode::where('id_user', $data['id_user'])
+                        ->where('created_at','>=',$start)
+                        ->where('created_at','<=',$end)
+                        ->count();
+
+        if($getDailyLog > $numberOfViolation){
+            $userData = User::where('id', $data['id_user'])->first();
+            $createLog = FraudDetectionLogCheckPromoCode::create([
+                'id_user' => $data['id_user'],
+                'count' => $getDailyLog,
+                'fraud_setting_parameter_detail' => $fraudCheckPromo['parameter_detail'],
+                'fraud_parameter_detail_time' => $fraudCheckPromo['parameter_detail_time'],
+                'fraud_hold_time' => $fraudCheckPromo['hold_time'],
+                'fraud_setting_forward_admin_status' => $fraudCheckPromo['forward_admin_status'],
+                'fraud_setting_auto_suspend_status' => $fraudCheckPromo['auto_suspend_status'],
+                'fraud_setting_auto_suspend_value' => $fraudCheckPromo['auto_suspend_value'],
+                'fraud_setting_auto_suspend_time_period' => $fraudCheckPromo['suspend_time_period']
+            ]);
+
+            if($createLog){
+                $availebleTime = date('Y-m-d H:i:s',strtotime('+'.(int)$fraudCheckPromo['hold_time'].' minutes',strtotime(date('Y-m-d H:i:s'))));
+                $contentFile = [
+                    'available_access' => $availebleTime
+                ];
+                $createFile = MyHelper::createFile($contentFile, 'json', 'fraud/checkPromoCode/', $data['id_user']);
+                $sendFraud = $this->SendFraudDetection($fraudCheckPromo['id_fraud_setting'], $userData, null, null, 0, null, 0, 0, null);
+                return [
+                    'status'=>'fail',
+                    'messages'=>[$fraudCheckPromo['result_text']]
+                ];
+            }else{
+                return [
+                    'status'=>'fail',
+                    'messages'=>['Failed to add log promo code']
+                ];
+            }
+        }else{
+            return [
+                'status'=>'success'
+            ];
+        }
+    }
 
     function logFraud(Request $request, $type){
         $post = $request->json()->all();
@@ -1089,6 +1204,16 @@ class ApiFraud extends Controller
 
         return 'success';
 
+    }
+
+    public function deleteDailyLog(){
+        $currentDate = date('Y-m-d');
+        $bellowDate = date('Y-m-d',strtotime($currentDate." -1 Months"));
+
+        //Delete data bellow 3 months from current date
+        $deleteDailyTrx = DailyCheckPromoCode::whereDate('created_at', '<', $bellowDate)->delete();
+
+        return 'success';
     }
     /*=============== End Cron ===============*/
 }

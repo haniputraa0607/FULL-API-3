@@ -33,6 +33,6 @@ class CreateDailyCheckPromoCodeTables extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('daily_check_promo_code');
+        Schema::connection('mysql2')->dropIfExists('daily_check_promo_code');
     }
 }
