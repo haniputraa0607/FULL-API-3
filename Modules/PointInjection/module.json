@@ -1,0 +1,16 @@
+{
+    "name": "PointInjection",
+    "alias": "pointinjection",
+    "description": "",
+    "keywords": [],
+    "active": 1,
+    "order": 0,
+    "providers": [
+        "Modules\\PointInjection\\Providers\\PointInjectionServiceProvider"
+    ],
+    "aliases": {},
+    "files": [
+        "start.php"
+    ],
+    "requires": []
+}

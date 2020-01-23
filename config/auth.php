@@ -77,6 +77,10 @@ return [
             'driver' => 'eloquent',
             'model' => App\Http\Models\User::class,
         ],
+        'users-be' => [
+            'driver' => 'eloquent',
+            'model' => App\Http\Models\UserBE::class,
+        ],
 
         // 'users' => [
         //     'driver' => 'database',

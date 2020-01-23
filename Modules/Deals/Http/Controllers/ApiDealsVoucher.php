@@ -15,6 +15,7 @@ use App\Http\Models\DealsPaymentMidtran;
 use App\Http\Models\DealsUser;
 use App\Http\Models\DealsVoucher;
 use App\Http\Models\Outlet;
+use App\Http\Models\Setting;
 
 use Modules\Deals\Http\Requests\Deals\Voucher;
 use DB;
@@ -24,6 +25,7 @@ class ApiDealsVoucher extends Controller
     function __construct() {
         date_default_timezone_set('Asia/Jakarta');
         $this->deals        = "Modules\Deals\Http\Controllers\ApiDeals";
+        $this->subscription        = "Modules\Subscription\Http\Controllers\ApiSubscription";
     }
 
     /* CREATE VOUCHER */
@@ -323,6 +325,13 @@ class ApiDealsVoucher extends Controller
                 $vcr->save();
             }
             $voucher = $voucher->get()->toArray();
+
+            if (!$voucher) {
+                return response()->json([
+                    'status'   => 'fail',
+                    'messages' => ['Voucher not found']
+                ]);
+            }
         }
         else {
             if (isset($post['used']) && ($post['used'] == 1 || $post['used'] == '1'))  {
@@ -449,7 +458,7 @@ class ApiDealsVoucher extends Controller
                 foreach($voucher as $index => $dataVou){
                     $voucher[$index]['webview_url'] = env('API_URL') ."api/webview/voucher/". $dataVou['id_deals_user'];
                     $voucher[$index]['webview_url_v2'] = env('API_URL') ."api/webview/voucher/v2/". $dataVou['id_deals_user'];
-                    $voucher[$index]['button_text'] = 'Redeem';
+                    $voucher[$index]['button_text'] = 'Gunakan';
                 }
 
         }
@@ -488,19 +497,33 @@ class ApiDealsVoucher extends Controller
             }
         }
 
-        if(
-            $request->json('id_outlet') ||
-            $request->json('id_brand') ||
-            $request->json('expired_start') ||
-            $request->json('expired_end') ||
-            $request->json('key_free')
-        ){
-            $resultMessage = 'Voucher yang kamu cari tidak tersedia';
-        }else{
-            $resultMessage = 'Kamu belum memiliki voucher saat ini';
-        }
+    	if (empty($voucher)) {
+            $empty_text = Setting::where('key','=','message_myvoucher_empty_header')
+                            ->orWhere('key','=','message_myvoucher_empty_content')
+                            ->orderBy('id_setting')
+                            ->get();
+            $resultMessage['header'] =  $empty_text[0]['value']??'Anda belum memiliki Kupon.';
+            $resultMessage['content'] =  $empty_text[1]['value']??'Potongan menarik untuk setiap pembelian.';
+            return  response()->json([
+                    'status'   => 'fail',
+                    'messages' => ['My voucher is empty'],
+                    'empty'    => $resultMessage
+                ]);
+    	}
+    	
+        // if(
+        //     $request->json('id_outlet') ||
+        //     $request->json('id_brand') ||
+        //     $request->json('expired_start') ||
+        //     $request->json('expired_end') ||
+        //     $request->json('key_free')
+        // ){
+        //     $resultMessage = 'Voucher yang kamu cari tidak tersedia';
+        // }else{
+        // }
 
-        return response()->json(MyHelper::checkGet($result, $resultMessage));
+        return response()->json(app($this->subscription)->checkGet($result, $resultMessage??''));
+
     }
 
     function kotacuks($deals)

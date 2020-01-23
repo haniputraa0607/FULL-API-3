@@ -346,18 +346,18 @@ class SettingsTableSeeder extends Seeder
             ),37 =>
             array (
                 'id_setting' => 38,
-                'key' => 'text_menu_home',
+                'key' => 'text_menu_main',
                 'value' => NULL,
-                'value_text' => '{"home":{"text_menu":"Home","text_header":"Home"},"deals":{"text_menu":"Deals","text_header":"Deals"},"voucher":{"text_menu":"My Voucher","text_header":"My Voucher"},"history":{"text_menu":"History","text_header":"History"},"account":{"text_menu":"Account","text_header":"Account"}}',
+                'value_text' => '{"menu1":{"text_menu":"Home","text_header":"Home","icon1":"","icon2":""},"menu2":{"text_menu":"Promo","text_header":"Promo","icon1":"","icon2":""},"menu3":{"text_menu":"Order","text_header":"Order","icon1":"","icon2":""},"menu4":{"text_menu":"Riwayat","text_header":"Riwayat","icon1":"","icon2":""},"menu5":{"text_menu":"Other","text_header":"Other","icon1":"","icon2":""}}',
                 'created_at' => '2019-10-08 09:03:16',
                 'updated_at' => '2019-10-08 09:03:19',
             ),
             38 =>
             array (
                 'id_setting' => 39,
-                'key' => 'text_menu_account',
+                'key' => 'text_menu_other',
                 'value' => NULL,
-                'value_text' => '{"my_profile":{"text_menu":"My Profile","text_header":"My Profile","icon":""},"outlet":{"text_menu":"Lokasi Outlet","text_header":"Lokasi Outlet","icon":""},"benefit":{"text_menu":"Benefit","text_header":"Benefit","icon":""},"news":{"text_menu":"Berita","text_header":"Berita","icon":""},"delivery_service":{"text_menu":"Delivery Service","text_header":"Delivery Service","icon":""},"faq":{"text_menu":"FAQ","text_header":"FAQ","icon":""},"terms_service":{"text_menu":"Ketentuan Layanan","text_header":"Ketentuan Layanan","icon":""},"contact":{"text_menu":"Kontak Kami","text_header":"Kontak Kami","icon":""}}',
+                'value_text' => '{"menu1":{"text_menu":"Profile","text_header":"Profile","icon":""},"menu2":{"text_menu":"Membership","text_header":"Membership","icon":""},"menu3":{"text_menu":"Outlet","text_header":"Outlet","icon":""},"menu4":{"text_menu":"Kabar","text_header":"Kabar","icon":""},"menu5":{"text_menu":"Tentang","text_header":"Tentang","icon":""},"menu6":{"text_menu":"FAQ","text_header":"FAQ","icon":""},"menu7":{"text_menu":"Ketentuan","text_header":"Ketentuan","icon":""},"menu8":{"text_menu":"Kontak","text_header":"Kontak","icon":""}}',
                 'created_at' => '2019-10-08 09:04:01',
                 'updated_at' => '2019-10-08 09:04:02',
             ),
@@ -397,6 +397,305 @@ class SettingsTableSeeder extends Seeder
                 'created_at' => date('Y-m-d H:i:s'),
                 'updated_at' => date('Y-m-d H:i:s'),
             ),
+            43 =>
+            array(
+                'id_setting' => 44,
+                'key' => 'home_subscription_title',
+                'value' => 'Subscription',
+                'value_text' => NULL,
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ),
+            44 =>
+            array(
+                'id_setting' => 45,
+                'key' => 'home_subscription_sub_title',
+                'value' => 'Banyak untungnya kalo berlangganan',
+                'value_text' => NULL,
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ),
+            45 =>
+                array(
+                    'id_setting' => 46,
+                    'key' => 'order_now_title',
+                    'value' => 'Pesan Sekarang',
+                    'value_text' => NULL,
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
+            47 =>
+                array(
+                    'id_setting' => 48,
+                    'key' => 'order_now_sub_title_success',
+                    'value' => 'Cek outlet terdekatmu',
+                    'value_text' => NULL,
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
+            48 =>
+                array(
+                    'id_setting' => 49,
+                    'key' => 'order_now_sub_title_fail',
+                    'value' => 'Tidak ada outlet yang tersedia',
+                    'value_text' => NULL,
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
+            49 =>
+            array(
+                'id_setting' => 50,
+                'key' => 'payment_messages_cash',
+                'value' => 'Anda akan membeli Voucher %deals_title% dengan harga %cash% ?',
+                'value_text' => NULL,
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ),
+            50 =>
+                array(
+                    'id_setting' => 51,
+                    'key' => 'welcome_voucher_setting',
+                    'value' => '1',
+                    'value_text' => NULL,
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
+            51 =>
+            array(
+                'id_setting' => 52,
+                'key' => 'message_mysubscription_empty_header',
+                'value' => 'Anda belum memiliki Paket',
+                'value_text' => NULL,
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ),
+            52 =>
+            array(
+                'id_setting' => 53,
+                'key' => 'message_mysubscription_empty_content',
+                'value' => 'Banyak keuntungan dengan berlangganan',
+                'value_text' => NULL,
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ),
+            53 =>
+            array(
+                'id_setting' => 54,
+                'key' => 'message_myvoucher_empty_header',
+                'value' => 'Anda belum memiliki Kupon',
+                'value_text' => NULL,
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ),
+            54 =>
+            array(
+                'id_setting' => 55,
+                'key' => 'message_myvoucher_empty_content',
+                'value' => 'Potongan menarik untuk setiap pembelian',
+                'value_text' => NULL,
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ),
+            55 =>
+            array(
+                'id_setting' => 56,
+                'key' => 'home_deals_title',
+                'value' => 'Penawaran Spesial',
+                'value_text' => NULL,
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ),
+            56 =>
+            array(
+                'id_setting' => 57,
+                'key' => 'home_deals_sub_title',
+                'value' => 'Potongan menarik untuk setiap pembelian',
+                'value_text' => NULL,
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ),
+           57 =>
+           array(
+                'id_setting' => 58,
+                'key' => 'subscription_payment_messages',
+                'value' => 'Kamu yakin ingin membeli subscription ini',
+                'value_text' => NULL,
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ),
+            58 =>
+            array(
+                'id_setting' => 59,
+                'key' => 'subscription_payment_messages_point',
+                'value' => 'Anda akan menukarkan %point% points anda dengan subscription %subscription_title%?',
+                'value_text' => NULL,
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ),
+            59 =>
+            array(
+                'id_setting' => 60,
+                'key' => 'subscription_payment_messages_cash',
+                'value' => 'Kamu yakin ingin membeli subscription %subscription_title% dengan harga %cash% ?',
+                'value_text' => NULL,
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ),
+            60 =>
+            array(
+                'id_setting' => 61,
+                'key' => 'subscription_payment_success_messages',
+                'value' => 'Anda telah membeli subscription %subscription_title%',
+                'value_text' => NULL,
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ),
+            61 =>
+            array(
+                'id_setting' => 62,
+                'key' => 'max_order',
+                'value' => '50',
+                'value_text' => NULL,
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ),
+            62 =>
+                array(
+                    'id_setting' => 63,
+                    'key' => 'processing_time_text',
+                    'value' => null,
+                    'value_text' => 'Set pickup time minimum %processing_time% minutes from now',
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
+            63 =>
+                array(
+                    'id_setting' => 64,
+                    'key' => 'favorite_already_exists_message',
+                    'value' => null,
+                    'value_text' => 'Favorite already exists',
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
+            64 =>
+                array(
+                    'id_setting' => 65,
+                    'key' => 'favorite_add_success_message',
+                    'value' => null,
+                    'value_text' => 'Success add favorite',
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
+            65 =>
+                array(
+                    'id_setting' => 66,
+                    'key' => 'popup_max_refuse',
+                    'value' => 3,
+                    'value_text' => null,
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
+            66 =>
+                array(
+                    'id_setting' => 67,
+                    'key' => 'popup_min_interval',
+                    'value' => 15,
+                    'value_text' => null,
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
+            67 =>
+                array(
+                    'id_setting' => 68,
+                    'key' => 'description_product_discount',
+                    'value' => 'Anda berhak mendapatkan potongan %discount% untuk pembelian %product%. Maksimal %qty% buah untuk setiap produk',
+                    'value_text' => null,
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
+            68 =>
+                array(
+                    'id_setting' => 69,
+                    'key' => 'description_tier_discount',
+                    'value' => 'Anda berhak mendapatkan potongan setelah melakukan pembelian %product% sebanyak %minmax%',
+                    'value_text' => null,
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
+            69 =>
+                array(
+                    'id_setting' => 70,
+                    'key' => 'description_buyxgety_discount',
+                    'value' => 'Anda berhak mendapatkan potongan setelah melakukan pembelian %product% sebanyak %minmax%',
+                    'value_text' => null,
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
+            70 =>
+                array(
+                    'id_setting' => 71,
+                    'key' => 'error_product_discount',
+                    'value' => null,
+                    'value_text' => 'Promo hanya akan berlaku jika anda membeli <b>%product%</b>.',
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
+            71 =>
+                array(
+                    'id_setting' => 72,
+                    'key' => 'error_tier_discount',
+                    'value' => null,
+                    'value_text' => 'Promo hanya akan berlaku jika anda membeli <b>%product%</b> sebanyak <b>%minmax%</b>.',
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
+            72 =>
+                array(
+                    'id_setting' => 73,
+                    'key' => 'error_buyxgety_discount',
+                    'value' => null,
+                    'value_text' => 'Promo hanya akan berlaku jika anda membeli <b>%product%</b> sebanyak <b>%minmax%</b>.',
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
+            73 =>
+                array(
+                    'id_setting' => 74,
+                    'key' => 'promo_error_title',
+                    'value' => 'promo tidak berlaku',
+                    'value_text' => null,
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
+            74 =>
+                array(
+                    'id_setting' => 75,
+                    'key' => 'promo_error_ok_button',
+                    'value' => 'tambah item',
+                    'value_text' => null,
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
+            75 =>
+                array(
+                    'id_setting' => 76,
+                    'key' => 'promo_error_cancel_button',
+                    'value' => 'cancel',
+                    'value_text' => null,
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
+            
+            76 =>
+                array(
+                   'id_setting' => 77,
+                    'key' => 'phone_setting',
+                    'value' => NULL,
+                    'value_text' => '{"min_length_number":"9","max_length_number":"14","message_failed":"Invalid number format","message_success":"Valid number format"}',
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
+
         ));
     }
 }

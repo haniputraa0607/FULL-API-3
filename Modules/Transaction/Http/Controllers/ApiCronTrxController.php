@@ -49,7 +49,7 @@ class ApiCronTrxController extends Controller
         $dateLine  = date('Y-m-d H:i:s', strtotime('- 1days'));
         $now       = date('Y-m-d H:i:s');
 
-        $getTrx = Transaction::where('transaction_payment_status', 'Pending')->where('created_at', '<=', $now)->get();
+        $getTrx = Transaction::where('transaction_payment_status', 'Pending')->where('transaction_date', '<=', $now)->get();
 
         if (empty($getTrx)) {
             return response()->json(['empty']);
@@ -142,8 +142,8 @@ class ApiCronTrxController extends Controller
 
 
             $encodeCheck = json_encode($dataHash);
-            // if (MyHelper::decryptkhususnew($val['enc']) != $encodeCheck) {
-            if (base64_decode($val['enc']) != $encodeCheck) {
+
+            if (MyHelper::decrypt2019($val['enc']) != $encodeCheck) {
                 $result[] = $val;
             }
         }
@@ -226,7 +226,7 @@ class ApiCronTrxController extends Controller
         $label = '';
         foreach ($data as $key => $value) {
             // $real = json_decode(MyHelper::decryptkhususnew($value['enc']));
-            $real = json_decode(base64_decode($value['enc']));
+            $real = json_decode(MyHelper::decrypt2019($value['enc']));
             // dd($real->source);
             $user = User::where('id', $value['id_user'])->first();
             if ($value['source'] == 'Transaction' || $value['source'] == 'Rejected Order' || $value['source'] == 'Reverse Point from Rejected Order') {

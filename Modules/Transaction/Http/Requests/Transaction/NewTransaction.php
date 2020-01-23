@@ -12,8 +12,8 @@ class NewTransaction extends FormRequest
     {
         return [
             'item'                     => 'required|array',
-            'id_outlet'                => 'required|integer',
-            'type'                     => 'required|in:Delivery,Pickup Order,GO-SEND',
+            'id_outlet'                => 'required_unless:type,Advance Order|integer',
+            'type'                     => 'required|in:Delivery,Pickup Order,GO-SEND,Advance Order',
             'notes'                    => 'nullable|string',
             'pickup_type'              => 'required_if:type,Pickup Order|in:set time,right now,at arrival',
             'pickup_at'                => 'required_if:pickup_type,set time|date_format:Y-m-d H:i:s',

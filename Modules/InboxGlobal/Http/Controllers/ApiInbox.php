@@ -36,7 +36,7 @@ class ApiInbox extends Controller
     	return MyHelper::checkDelete($delete);
     }
 
-    public function listInboxUser(Request $request){
+    public function listInboxUser(Request $request, $mode = false){
     	if(is_numeric($phone=$request->json('phone'))){
     		$user=User::where('phone',$phone)->first();
     	}else{
@@ -109,16 +109,19 @@ class ApiInbox extends Controller
 					$countUnread++;
 				}
 
-				if(!in_array(date('Y-m-d', strtotime($content['created_at'])), $arrDate)){
-					$arrDate[] = date('Y-m-d', strtotime($content['created_at']));
-					$temp['created'] =  date('Y-m-d', strtotime($content['created_at']));
-					$temp['list'][0] =  $content;
-					$arrInbox[] = $temp;
+				if($mode == 'simple'){
+					$arrInbox[] = $content;
 				}else{
-					$position = array_search(date('Y-m-d', strtotime($content['created_at'])), $arrDate);
-					$arrInbox[$position]['list'][] = $content;
+					if(!in_array(date('Y-m-d', strtotime($content['created_at'])), $arrDate)){
+						$arrDate[] = date('Y-m-d', strtotime($content['created_at']));
+						$temp['created'] =  date('Y-m-d', strtotime($content['created_at']));
+						$temp['list'][0] =  $content;
+						$arrInbox[] = $temp;
+					}else{
+						$position = array_search(date('Y-m-d', strtotime($content['created_at'])), $arrDate);
+						$arrInbox[$position]['list'][] = $content;
+					}
 				}
-
 				$countInbox++;
 			}
 		}
@@ -136,6 +139,10 @@ class ApiInbox extends Controller
 				$content['id_reference'] = $private['inboxes_id_reference'];
 			}else{
 				$content['id_reference'] = 0;
+			}
+
+			if($content['clickto']=='Deals Detail'){
+				$content['id_brand'] = $private['id_brand'];
 			}
 
 			if($content['clickto'] == 'News'){
@@ -167,34 +174,47 @@ class ApiInbox extends Controller
 			}else{
 				$content['status'] = 'read';
 			}
-
-			if(!in_array(date('Y-m-d', strtotime($content['created_at'])), $arrDate)){
-				$arrDate[] = date('Y-m-d', strtotime($content['created_at']));
-				$temp['created'] =  date('Y-m-d', strtotime($content['created_at']));
-				$temp['list'][0] =  $content;
-				$arrInbox[] = $temp;
+			if($mode == 'simple'){
+				$content['date_indo'] = MyHelper::dateFormatInd($content['created_at'],true,false,true);
+				$content['time'] = date('H:i',strtotime($content['created_at']));
+				$arrInbox[] = $content;
 			}else{
-				$position = array_search(date('Y-m-d', strtotime($content['created_at'])), $arrDate);
-				$arrInbox[$position]['list'][] = $content;
+				if(!in_array(date('Y-m-d', strtotime($content['created_at'])), $arrDate)){
+					$arrDate[] = date('Y-m-d', strtotime($content['created_at']));
+					$temp['created'] =  date('Y-m-d', strtotime($content['created_at']));
+					$temp['list'][0] =  $content;
+					$arrInbox[] = $temp;
+				}else{
+					$position = array_search(date('Y-m-d', strtotime($content['created_at'])), $arrDate);
+					$arrInbox[$position]['list'][] = $content;
+				}
 			}
 
 			$countInbox++;
 		}
 
 		if(isset($arrInbox) && !empty($arrInbox)) {
-			foreach ($arrInbox as $key => $value) {
-				usort($arrInbox[$key]['list'], function($a, $b){
+			if($mode == 'simple'){
+				usort($arrInbox, function($a, $b){
 					$t1 = strtotime($a['created_at']);
 					$t2 = strtotime($b['created_at']);
 					return $t2 - $t1;
 				});
-			}
+			}else{
+				foreach ($arrInbox as $key => $value) {
+					usort($arrInbox[$key]['list'], function($a, $b){
+						$t1 = strtotime($a['created_at']);
+						$t2 = strtotime($b['created_at']);
+						return $t2 - $t1;
+					});
+				}
 
-			usort($arrInbox, function($a, $b){
-				$t1 = strtotime($a['created']);
-				$t2 = strtotime($b['created']);
-				return $t2 - $t1;
-			});
+				usort($arrInbox, function($a, $b){
+					$t1 = strtotime($a['created']);
+					$t2 = strtotime($b['created']);
+					return $t2 - $t1;
+				});
+			}
 
 			$result = [
 					'status'  => 'success',
@@ -218,18 +238,18 @@ class ApiInbox extends Controller
 			$userInbox = UserInbox::where('id_user_inboxes', $post['id_inbox'])->first();
 			if(!empty($userInbox)){
 				$update = UserInbox::where('id_user_inboxes', $post['id_inbox'])->update(['read' => '1']);
-				if(!$update){
-					$result = [
-						'status'  => 'fail',
-						'messages'  => ['Failed marked inbox']
-					];
-				}else{
+				// if(!$update){
+				// 	$result = [
+				// 		'status'  => 'fail',
+				// 		'messages'  => ['Failed marked inbox']
+				// 	];
+				// }else{
 					$countUnread = $this->listInboxUnread( $user['id']);
 					$result = [
 						'status'  => 'success',
 						'result'  => ['count_unread' => $countUnread]
 					];
-				}
+				// }
 			}else{
 				$result = [
 					'status'  => 'fail',

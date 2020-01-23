@@ -81,7 +81,7 @@ return [
             /*
              * The filename prefix used for the backup zip file.
              */
-            'filename_prefix' => '',
+            'filename_prefix' => 'API-',
             /*
              * The disk names on which the backups will be stored.
              */
@@ -103,9 +103,9 @@ return [
      */
     'notifications' => [
         'notifications' => [
-            \Spatie\Backup\Notifications\Notifications\BackupHasFailed::class => ['slack'],
+            \Spatie\Backup\Notifications\Notifications\BackupHasFailed::class => [App\Backup\NotificationBackupHasFailed::class, 'slack'],
             \Spatie\Backup\Notifications\Notifications\UnhealthyBackupWasFound::class => [],
-            \Spatie\Backup\Notifications\Notifications\CleanupHasFailed::class => ['slack'],
+            \Spatie\Backup\Notifications\Notifications\CleanupHasFailed::class => [App\Backup\NotificationCleanupHasFailed::class, 'slack'],
             \Spatie\Backup\Notifications\Notifications\BackupWasSuccessful::class => [],
             \Spatie\Backup\Notifications\Notifications\HealthyBackupWasFound::class => [],
             \Spatie\Backup\Notifications\Notifications\CleanupWasSuccessful::class => [],

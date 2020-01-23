@@ -1,34 +1,23 @@
 <?php
 
-Route::group(['middleware' => ['auth:api','log_activities'], 'prefix' => 'api/campaign', 'namespace' => 'Modules\Campaign\Http\Controllers'], function()
+Route::group(['middleware' => ['auth:api','log_activities', 'user_agent', 'scopes:be'], 'prefix' => 'api/campaign', 'namespace' => 'Modules\Campaign\Http\Controllers'], function()
 {
-    Route::post('create', 'ApiCampaign@CreateCampaign');
-    Route::post('step1', 'ApiCampaign@ShowCampaignStep1');
-    Route::post('step3', 'ApiCampaign@ShowCampaignStep2');
-    Route::post('recipient', 'ApiCampaign@showRecipient');
-    Route::post('send', 'ApiCampaign@SendCampaign');
-    Route::post('update', 'ApiCampaign@update');
+    Route::post('create', ['middleware' => 'feature_control:100', 'uses' =>'ApiCampaign@CreateCampaign']);
+    Route::post('step1', ['middleware' => 'feature_control:99', 'uses' =>'ApiCampaign@ShowCampaignStep1']);
+    Route::post('step3', ['middleware' => 'feature_control:99', 'uses' =>'ApiCampaign@ShowCampaignStep2']);
+    Route::post('recipient', ['middleware' => 'feature_control:99', 'uses' =>'ApiCampaign@showRecipient']);
+    Route::post('send', ['middleware' => 'feature_control:101', 'uses' =>'ApiCampaign@SendCampaign']);
+    Route::post('update', ['middleware' => 'feature_control:101', 'uses' =>'ApiCampaign@update']);
     Route::post('list', 'ApiCampaign@campaignList');
-    Route::post('email/outbox/list', 'ApiCampaign@campaignEmailOutboxList');
-    Route::post('email/outbox/detail', 'ApiCampaign@campaignEmailOutboxDetail');
-    Route::post('email/queue/list', 'ApiCampaign@campaignEmailQueueList');
-    Route::post('email/queue/detail', 'ApiCampaign@campaignEmailQueueDetail');
-	Route::post('sms/outbox/list', 'ApiCampaign@campaignSmsOutboxList');
-	Route::post('sms/outbox/detail', 'ApiCampaign@campaignSmsOutboxDetail');
-    Route::post('sms/queue/list', 'ApiCampaign@campaignSmsQueueList');
-    Route::post('sms/queue/detail', 'ApiCampaign@campaignSmsQueueDetail');
-	Route::post('push/outbox/list', 'ApiCampaign@campaignPushOutboxList');
-	Route::post('push/outbox/detail', 'ApiCampaign@campaignPushOutboxDetail');
-    Route::post('push/queue/list', 'ApiCampaign@campaignPushQueueList');
-    Route::post('push/queue/detail', 'ApiCampaign@campaignPushQueueDetail');
+    Route::post('email/outbox/list', ['middleware' => 'feature_control:103', 'uses' =>'ApiCampaign@campaignEmailOutboxList']);
+    Route::post('email/outbox/detail', ['middleware' => 'feature_control:103', 'uses' =>'ApiCampaign@campaignEmailOutboxDetail']);
+	Route::post('sms/outbox/list', ['middleware' => 'feature_control:105', 'uses' =>'ApiCampaign@campaignSmsOutboxList']);
+	Route::post('sms/outbox/detail', ['middleware' => 'feature_control:105', 'uses' =>'ApiCampaign@campaignSmsOutboxDetail']);
+	Route::post('push/outbox/list', ['middleware' => 'feature_control:107', 'uses' =>'ApiCampaign@campaignPushOutboxList']);
+	Route::post('push/outbox/detail', ['middleware' => 'feature_control:107', 'uses' =>'ApiCampaign@campaignPushOutboxDetail']);
     Route::post('whatsapp/outbox/list', 'ApiCampaign@campaignWhatsappOutboxList');
-    Route::post('whatsapp/queue/list', 'ApiCampaign@campaignWhatsappQueueList');
+    Route::post('step2', ['middleware' => 'feature_control:99', 'uses' =>'ApiCampaign@ShowCampaignStep2']);
 
-});
-
-Route::group(['middleware' => ['auth:api'], 'prefix' => 'api/campaign', 'namespace' => 'Modules\Campaign\Http\Controllers'], function()
-{
-    Route::post('step2', 'ApiCampaign@ShowCampaignStep2');
 });
 
 Route::group(['prefix' => 'api/campaign/cron', 'namespace' => 'Modules\Campaign\Http\Controllers'], function()

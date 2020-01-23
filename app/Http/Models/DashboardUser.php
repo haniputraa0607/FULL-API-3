@@ -12,6 +12,7 @@ class DashboardUser extends Model
 		'id_user',
 		'section_title',
 		'section_order',
+		'section_visibility',
 		'created_at',
 		'updated_at'
 	];

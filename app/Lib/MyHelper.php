@@ -1,6 +1,7 @@
 <?php
 namespace App\Lib;
 
+use App\Http\Models\Setting;
 use Image;
 use File;
 use DB;
@@ -23,6 +24,8 @@ use App\Http\Models\PromotionRuleParent;
 use App\Http\Models\InboxGlobalRule;
 use App\Http\Models\InboxGlobalRuleParent;
 use App\Http\Models\LogTopupManual;
+use Modules\PointInjection\Entities\PointInjectionRule;
+use Modules\PointInjection\Entities\PointInjectionRuleParent;
 
 use App\Http\Requests;
 use Illuminate\Http\JsonResponse;
@@ -40,19 +43,11 @@ use LaravelFCM\Message\PayloadNotificationBuilder;
 use FCM;
 
 class MyHelper{
-	private static $config = array(
-		'digitdepan' => 7,
-		'digitbelakang' => 5,
-		'keyutama' => 'JSncajiopw32jk',
-		'secret_iv' => 'kkopIEnan5698gAN',
-		'ciphermode' => 'AES-256-CBC'
-	);
-
 	public static function  checkGet($data, $message = null){
 			if($data && !empty($data)) return ['status' => 'success', 'result' => $data];
 			else if(empty($data)) {
 				if($message == null){
-					$message = 'Maaf, halaman ini tidak tersedia';
+					$message = 'empty';
 				}
 				return ['status' => 'fail', 'messages' => [$message]];
 			}
@@ -213,11 +208,10 @@ class MyHelper{
 	}
 
 	public static function encryptkhusus($value) {
-		$config = static::$config;
 		if(!$value){return false;}
 		$skey = self::getkey();
-		$depan = substr($skey, 0, $config['digitdepan']);
-		$belakang = substr($skey, -$config['digitbelakang'], $config['digitbelakang']);
+		$depan = substr($skey, 0, env('ENC_DD'));
+		$belakang = substr($skey, -env('ENC_DB'), env('ENC_DB'));
 		$text = serialize($value);
 		$iv_size = mcrypt_get_iv_size(MCRYPT_RIJNDAEL_256, MCRYPT_MODE_ECB);
 		$iv = mcrypt_create_iv($iv_size, MCRYPT_RAND);
@@ -226,11 +220,10 @@ class MyHelper{
 	}
 
 	public static function decryptkhusus($value) {
-		$config = static::$config;
 		if(!$value){return false;}
 		$skey = self::parsekey($value);
 		$jumlah = strlen($value);
-		$value = substr($value, $config['digitdepan'], $jumlah-$config['digitdepan']-$config['digitbelakang']);
+		$value = substr($value, env('ENC_DD'), $jumlah-env('ENC_DD')-env('ENC_DB'));
 		$crypttext = self::safe_b64decode($value);
 		$iv_size = mcrypt_get_iv_size(MCRYPT_RIJNDAEL_256, MCRYPT_MODE_ECB);
 		$iv = mcrypt_create_iv($iv_size, MCRYPT_RAND);
@@ -261,55 +254,51 @@ class MyHelper{
 	}
 
 	public static function encryptkhususnew($value) {
-		$config = static::$config;
 		if(!$value){return false;}
 		$skey = self::getkey();
-		$depan = substr($skey, 0, $config['digitdepan']);
-		$belakang = substr($skey, -$config['digitbelakang'], $config['digitbelakang']);
-		$ivlen = openssl_cipher_iv_length($config['ciphermode']);
-		$iv = substr(hash('sha256', $config['secret_iv']), 0, $ivlen);
-		$crypttext = openssl_encrypt($value, $config['ciphermode'], $skey, 0, $iv);
+		$depan = substr($skey, 0, env('ENC_DD'));
+		$belakang = substr($skey, -env('ENC_DB'), env('ENC_DB'));
+		$ivlen = openssl_cipher_iv_length(env('ENC_CM'));
+		$iv = substr(hash('sha256', env('ENC_SI')), 0, $ivlen);
+		$crypttext = openssl_encrypt($value, env('ENC_CM'), $skey, 0, $iv);
 		return trim($depan . self::safe_b64encode($crypttext) . $belakang);
 	}
 
 	public static function decryptkhususnew($value) {
-		$config = static::$config;
 		if(!$value){return false;}
 		$skey = self::parsekey($value);
 		$jumlah = strlen($value);
-		$value = substr($value, $config['digitdepan'], $jumlah-$config['digitdepan']-$config['digitbelakang']);
+		$value = substr($value, env('ENC_DD'), $jumlah-env('ENC_DD')-env('ENC_DB'));
 		$crypttext = self::safe_b64decode($value);
-		$ivlen = openssl_cipher_iv_length($config['ciphermode']);
-		$iv = substr(hash('sha256', $config['secret_iv']), 0, $ivlen);
-		$decrypttext = openssl_decrypt($crypttext, $config['ciphermode'], $skey, 0, $iv);
+		$ivlen = openssl_cipher_iv_length(env('ENC_CM'));
+		$iv = substr(hash('sha256', env('ENC_SI')), 0, $ivlen);
+		$decrypttext = openssl_decrypt($crypttext, env('ENC_CM'), $skey, 0, $iv);
 		return trim($decrypttext);
 	}
 
 	// terbaru, cuma nambah serialize + unserialize sih biar support array
 	public static function encrypt2019($value) {
-		$config = static::$config;
 		if(!$value){return false;}
 		// biar support array
 		$text = serialize($value);
 		$skey = self::getkey();
-		$depan = substr($skey, 0, $config['digitdepan']);
-		$belakang = substr($skey, -$config['digitbelakang'], $config['digitbelakang']);
-		$ivlen = openssl_cipher_iv_length($config['ciphermode']);
-		$iv = substr(hash('sha256', $config['secret_iv']), 0, $ivlen);
-		$crypttext = openssl_encrypt($text, $config['ciphermode'], $skey, 0, $iv);
+		$depan = substr($skey, 0, env('ENC_DD'));
+		$belakang = substr($skey, -env('ENC_DB'), env('ENC_DB'));
+		$ivlen = openssl_cipher_iv_length(env('ENC_CM'));
+		$iv = substr(hash('sha256', env('ENC_SI')), 0, $ivlen);
+		$crypttext = openssl_encrypt($text, env('ENC_CM'), $skey, 0, $iv);
 		return trim($depan . self::safe_b64encode($crypttext) . $belakang);
 	}
 
 	public static function decrypt2019($value) {
-		$config = static::$config;
 		if(!$value){return false;}
 		$skey = self::parsekey($value);
 		$jumlah = strlen($value);
-		$value = substr($value, $config['digitdepan'], $jumlah-$config['digitdepan']-$config['digitbelakang']);
+		$value = substr($value, env('ENC_DD'), $jumlah-env('ENC_DD')-env('ENC_DB'));
 		$crypttext = self::safe_b64decode($value);
-		$ivlen = openssl_cipher_iv_length($config['ciphermode']);
-		$iv = substr(hash('sha256', $config['secret_iv']), 0, $ivlen);
-		$decrypttext = openssl_decrypt($crypttext, $config['ciphermode'], $skey, 0, $iv);
+		$ivlen = openssl_cipher_iv_length(env('ENC_CM'));
+		$iv = substr(hash('sha256', env('ENC_SI')), 0, $ivlen);
+		$decrypttext = openssl_decrypt($crypttext, env('ENC_CM'), $skey, 0, $iv);
 		// dikembalikan ke format array sewaktu return
 		return unserialize(trim($decrypttext));
 	}
@@ -346,6 +335,14 @@ class MyHelper{
 			return $pin;
 	}
 
+	public static function encPIN ($pin)
+	{
+		$firstRand 	= self::createrandom(env('ENC_FIRST_PIN', 4), null, '12356789');
+		$lastRand 	= self::createrandom(env('ENC_LAST_PIN', 3), null, '12356789');
+
+		return implode('', [$firstRand, $pin, $lastRand]);
+	}
+
 	public static function  getIPAddress() {
 			$ipAddress = $_SERVER['REMOTE_ADDR'];
 			if (array_key_exists('HTTP_X_FORWARDED_FOR', $_SERVER)) {
@@ -359,8 +356,10 @@ class MyHelper{
 			return $_SERVER['HTTP_USER_AGENT'];
 	}
 
-	public static function createrandom($digit, $custom = null) {
-		$chars = "abcdefghjkmnpqrstuvwxyzBCDEFGHJKLMNPQRSTUVWXYZ12356789";
+	public static function createrandom($digit, $custom = null, $chars = null) {
+		if ($chars == null) {
+			$chars = "abcdefghjkmnpqrstuvwxyzBCDEFGHJKLMNPQRSTUVWXYZ12356789";
+		}
 		if($custom != null){
 			if($custom == 'Angka')
 				$chars = "0123456789";
@@ -372,35 +371,51 @@ class MyHelper{
 				$chars = "abcdefghjkmnpqrstuvwxyz";
 			if($custom == 'Besar')
 				$chars = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+			if ($custom == 'PromoCode')
+                $chars = "ABCDEFGHJKLMNPQRTUVWXY23456789";
 		}
 		$i = 0;
 		$generatedstring = '';
+		$tmp = '';
 
 		while ($i < $digit) {
-			$num = rand() % strlen($chars);
-			$tmp = substr($chars, $num, 1);
+			$charsbaru = str_replace($tmp, "", $chars);
+			$num = rand() % strlen($charsbaru);
+			$tmp = substr($charsbaru, $num, 1);
 			$generatedstring = $generatedstring . $tmp;
 			$i++;
-			// supaya char yg sudah tergenerate tidak akan dipakai lagi
-			$chars = str_replace($tmp, "", $chars);
 		}
 
 		return $generatedstring;
 	}
 
+	public static function encSlug ($id)
+	{
+		$firstRand 	= self::createrandom(env('ENC_FIRST_SLUG', 4), null, '12356789');
+		$lastRand 	= self::createrandom(env('ENC_LAST_SLUG', 3), null, '12356789');
+
+		return implode('', [$firstRand, $id, $lastRand]);
+	}
+
+	public static function decSlug ($id)
+	{
+		$firstString = substr($id, env('ENC_FIRST_SLUG', 4));
+		$string = substr($firstString, 0, -env('ENC_LAST_SLUG', 3));
+
+		return $string;
+	}
+
 	public static function getkey() {
-		global $config;
-		$depan = self::createrandom($config['digitdepan']);
-		$belakang = self::createrandom($config['digitbelakang']);
-		$skey = $depan . $config['keyutama'] . $belakang;
+		$depan = self::createrandom(env('ENC_DD'));
+		$belakang = self::createrandom(env('ENC_DB'));
+		$skey = $depan . env('ENC_FK') . $belakang;
 		return $skey;
 	}
 
 	public static function parsekey($value) {
-		global $config;
-		$depan = substr($value, 0, $config['digitdepan']);
-		$belakang = substr($value, -$config['digitbelakang'], $config['digitbelakang']);
-		$skey = $depan . $config['keyutama'] . $belakang;
+		$depan = substr($value, 0, env('ENC_DD'));
+		$belakang = substr($value, -env('ENC_DB'), env('ENC_DB'));
+		$skey = $depan . env('ENC_FK') . $belakang;
 		return $skey;
 	}
 
@@ -860,6 +875,10 @@ class MyHelper{
 
 	public static function uploadPhotoStrict($foto, $path, $width=800, $height=800, $name=null, $forceextension=null) {
 		// kalo ada foto1
+		if (!file_exists($path)) {
+			mkdir($path, 666, true);
+		}
+		
 		$decoded = base64_decode($foto);
 		if($forceextension != null)
 			$ext = $forceextension;
@@ -1707,6 +1726,15 @@ class MyHelper{
 				$deleteRuleParent = InboxGlobalRuleParent::where('id_'.$type, $id)->delete();
 			}
 		}
+		elseif ($type == 'point_injection') {
+			$deleteRuleParent = PointInjectionRuleParent::where('id_' . $type, $id)->get();
+			if (count($deleteRuleParent) > 0) {
+				foreach ($deleteRuleParent as $key => $value) {
+					$delete = PointInjectionRule::where('id_' . $type . '_rule_parent', $value['id_' . $type . '_rule_parent'])->delete();
+				}
+				$deleteRuleParent = PointInjectionRuleParent::where('id_' . $type, $id)->delete();
+			}
+		}
 
 		$operatorexception = ['gender',
 							'birthday_month',
@@ -1756,6 +1784,9 @@ class MyHelper{
 			}
 			elseif($type == 'inbox_global'){
 				$createRuleParent = InboxGlobalRuleParent::create($dataRuleParent);
+			} 
+			elseif ($type == 'point_injection') {
+				$createRuleParent = PointInjectionRuleParent::create($dataRuleParent);
 			}
 
 			if(!$createRuleParent){
@@ -1776,6 +1807,7 @@ class MyHelper{
 					$condition[$type.'_rule_operator'] = $row['operator'];
 				}
 
+                $condition[$type.'_rule_param_id'] = NULL;
 				if($row['subject'] == 'all_user'){
 					$condition[$type.'_rule_param'] = "";
 				}elseif($row['subject'] == 'trx_product' || $row['subject'] == 'trx_outlet'){
@@ -1805,6 +1837,9 @@ class MyHelper{
 		}
 		elseif($type == 'inbox_global'){
 			$insert = InboxGlobalRule::insert($data_rule);
+		}
+		elseif ($type == 'point_injection') {
+			$insert = PointInjectionRule::insert($data_rule);
 		}
 
 		if($insert){
@@ -1932,14 +1967,17 @@ class MyHelper{
 		return $result;
 	}
 
-	public static function dateFormatInd($date,$jam=true){
-		if($jam){
+	public static function dateFormatInd($date,$full=true,$clock=true,$hari=false){
+		if($hari){
+			$days = ['Minggu','Senin','Selasa','Rabu','Kamis','Jum\'at','Sabtu'];
+		}
+		if($full){
 			$bulan = ['','Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
 		}else{
 			$bulan = ['','Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
 		}
 
-		return date('d', strtotime($date)).' '.$bulan[date('n', strtotime($date))].' '.date('Y', strtotime($date)).' '.($jam?date('H:i', strtotime($date)):'');
+		return trim(($hari?$days[date('w', strtotime($date))].', ':'').date('d', strtotime($date)).' '.$bulan[date('n', strtotime($date))].' '.date('Y', strtotime($date)).($clock?date(' H:i', strtotime($date)):''));
 	}
 	public static function isJoined($query, $table){
         $joins = $query->getQuery()->joins;
@@ -2000,4 +2038,169 @@ class MyHelper{
 			$ipaddress = 'UNKNOWN';
 		return $ipaddress;
 	}
+
+    public static function count_distance($lat1, $lon1, $lat2, $lon2, $unit = 'K', $convert = false) {
+        $theta = $lon1 - $lon2;
+        $lat1=floatval($lat1);
+        $lat2=floatval($lat2);
+        $lon1=floatval($lon1);
+        $lon2=floatval($lon2);
+        $dist  = sin(deg2rad($lat1)) * sin(deg2rad($lat2)) +  cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * cos(deg2rad($theta));
+        $dist  = acos($dist);
+        $dist  = rad2deg($dist);
+        $miles = $dist * 60 * 1.1515;
+        $unit  = strtoupper($unit);
+
+        if ($unit == "K") {
+            $hasil = ($miles * 1.609344);
+        } else if ($unit == "N") {
+            $hasil = ($miles * 0.8684);
+        } else {
+            $hasil = $miles;
+        }
+
+        if($convert){
+        	return number_format((float)$hasil, 2, '.', '').' km';
+        }else{
+        	return $hasil;
+        }
+    }
+    /**
+     * Group some array based on a column
+     * @param  array        $array        data
+     * @param  string       $col          column as key for grouping
+     * @param  function     $modifier     function to modify key value
+     * @return array                      grouped array
+     */
+    public static function groupIt($array,$col,$col_modifier=null,$key_modifier=null) {
+        $newArray=[];
+        foreach ($array as $old => $value) {
+            if($col_modifier!==null){
+                $key = $col_modifier($value[$col],$value,$old);
+            }else{
+                $key = $value[$col];
+            }
+            $newArray[$key][]=$value;
+        }
+        if($key_modifier!==null){
+        	$arrNew=[];
+            foreach ($newArray as $key => $value) {
+                $new_key=$key_modifier($key,$value);
+                $arrNew[$new_key]=$value;
+            }
+            $newArray = $arrNew;
+        }
+        return $newArray;
+    }
+
+	/**
+	* Convert csv string or file to PHP array
+	* @param  String  $string    String of csv content or path to csv file
+	* @param  boolean $isPath    Set to true if $string is csv's path, leave it false otherwise
+	* @param  String  $delimiter Set the delimiter of csv column
+	* @return Array          php array of the csv
+	*/
+	public static function csvToArray($string,$isPath=false,$delimiter=','){
+		if($isPath){
+			try{
+				$string=file_get_contents($string);
+			}catch(Exception $e){
+				return array();
+			}
+		}
+		$first=explode(PHP_EOL, $string);
+		$second=array_map(function($x) use ($delimiter){
+			return explode($delimiter,str_replace("\r", '', $x));
+		},$first);
+		return $second;
+	}
+
+	/**
+	 * Return int/float based on requested type
+	 * @param  numeric 		$number Number to convert, can be numeric string, integer or anything
+	 * @param  string 		$type   'int' , 'float' , 'double' or 'custom' for custom number format
+	 * @param  $custom 		parameter suplied for customize number
+	 * @return float/int    converted number
+	 */
+	public static function requestNumber($number,$type='int',$custom=[]) {
+		switch ($type) {
+			case 'int':
+				return (int) $number;
+				break;
+			
+			case 'float':
+				return (float) $number;
+				break;
+			
+			case 'double':
+				return (double) $number;
+				break;
+			
+			case 'custom':
+				return number_format($number,...$custom);
+
+			default:
+				return $number;
+				break;
+		}
+	}
+
+	/**
+	 * Create slug for resource based on id and created_at parameter
+	 * @param  String $id         id of resource
+	 * @param  String $created_at created_at value of item
+	 * @return String             slug result
+	 */
+	public static function createSlug($id,$created_at){
+		$combined = $id.'.'.$created_at;
+		$result = self::encrypt2019($combined);
+		return $result;
+	}
+
+	/**
+	 * get id and created at from slug
+	 * @param  String $slug given slug
+	 * @return Array       id and created at or empty array if invalid slug
+	 */
+	public static function explodeSlug($slug) {
+		$decripted = self::decrypt2019($slug);
+		$result = explode('.',$decripted);
+		if(!$result || (count($result) == 1 && empty($result[0]))){
+			return [];
+		}
+		return $result;
+	}
+
+    public static function phoneCheckFormat($phone) {
+        $phoneSetting = Setting::where('key', 'phone_setting')->first()->value_text;
+        $phoneSetting = json_decode($phoneSetting);
+        $codePhone = config('countrycode.country_code.'.env('COUNTRY_CODE').'.code');
+        $min = $phoneSetting->min_length_number;
+        $max = $phoneSetting->max_length_number;
+
+        if(substr($phone, 0, 1) == '0'){
+            $phone = $codePhone.substr($phone,1);
+        }elseif(substr($phone, 0, 2) == $codePhone){
+            $phone = $codePhone.substr($phone,2);
+        }elseif(substr($phone, 0, 3) == '+'.$codePhone){
+            $phone = $codePhone.substr($phone,3);
+        }else{
+            return [
+                'status' => 'fail',
+                'messages' => [$phoneSetting->message_failed]
+            ];
+        }
+
+        if(strlen($phone) >= $min && strlen($phone) <= $max){
+            return [
+                'status' => 'success',
+                'phone' => $phone
+            ];
+        }else{
+            return [
+                'status' => 'fail',
+                'messages' => [$phoneSetting->message_failed]
+            ];
+        }
+    }
 }

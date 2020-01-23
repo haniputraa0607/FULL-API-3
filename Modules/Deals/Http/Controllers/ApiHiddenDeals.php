@@ -156,7 +156,11 @@ class ApiHiddenDeals extends Controller
                    $amount = $post['amount'];    
                 }
 
-                $user = $this->cekUser($datauser['phone'], $request->json('id_deals'));
+                if($datauser['phone']??false){
+                    $user = $this->cekUser($datauser['phone'], $request->json('id_deals'));
+                }else{
+                    $user = '';
+                }
                 if (!empty($user)) {
                     $first_deal=null;
                     for($i = 1; $i<= $amount; $i++){
@@ -243,10 +247,12 @@ class ApiHiddenDeals extends Controller
                     //     ]);
                     // }
                     
-                    $autocrm = app($this->autocrm)->SendAutoCRM('Receive Hidden Deals', $datauser['phone'],
+                    $autocrm = app($this->autocrm)->SendAutoCRM('Receive Inject Voucher', $datauser['phone'],
                         [
                             'deals_title'      => $deals->deals_title,
-                            'id_deals_user'    => $first_deal->id_deals_user
+                            'id_deals_user'    => $first_deal['id_deals_user'],
+                            'id_deals'         => $deals->id_deals,
+                            'id_brand'         => $deals->id_brand
                         ]
                     );
                     $countUser++;

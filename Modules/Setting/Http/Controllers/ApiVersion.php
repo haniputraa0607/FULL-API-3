@@ -112,13 +112,16 @@ class ApiVersion extends Controller
         $android = Version::select('app_type', 'app_version', 'rules')->orderBy('app_version', 'desc')->where('app_type', 'Android')->get()->toArray();
         $ios = Version::select('app_type', 'app_version', 'rules')->orderBy('app_version', 'desc')->where('app_type', 'IOS')->get()->toArray();
         $outlet = Version::select('app_type', 'app_version', 'rules')->orderBy('app_version', 'desc')->where('app_type', 'OutletApp')->get()->toArray();
+
         $result = [];
         foreach ($display as $data) {
             $result[$data['key']] = $data['value'];
         }
+
         $result['Android'] = $android;
         $result['IOS'] = $ios;
         $result['OutletApp'] = $outlet;
+
         return response()->json(MyHelper::checkGet($result));
     }
 

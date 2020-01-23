@@ -756,6 +756,105 @@ class ConfigsTableSeeder extends Seeder
                 'created_at' => date('Y-m-d H:i:s'),
                 'updated_at' => date('Y-m-d H:i:s'),
             ),
+            83 => 
+            array (
+                'id_config' => 84,
+                'config_name' => 'subscription voucher',
+                'description' => '',
+                'is_active' => 1,
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ),
+            84 => 
+            array (
+                'id_config' => 85,
+                'config_name' => 'subscription voucher by money',
+                'description' => '',
+                'is_active' => 1,
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ),
+            85 => 
+            array (
+                'id_config' => 86,
+                'config_name' => 'subscription voucher by point',
+                'description' => '',
+                'is_active' => 1,
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ),
+            86 => 
+            array (
+                'id_config' => 87,
+                'config_name' => 'subscription voucher free',
+                'description' => '',
+                'is_active' => 1,
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ),
+            87 =>
+                array (
+                    'id_config' => 88,
+                    'config_name' => 'icon main menu',
+                    'description' => '',
+                    'is_active' => 1,
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
+            88 =>
+                array (
+                    'id_config' => 89,
+                    'config_name' => 'icon other menu',
+                    'description' => '',
+                    'is_active' => 0,
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
+            89 =>
+                array (
+                    'id_config' => 90,
+                    'config_name' => 'user feedback',
+                    'description' => '',
+                    'is_active' => 1,
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
+            90 =>
+                array (
+                    'id_config' => 91,
+                    'config_name' => 'product modifier',
+                    'description' => '',
+                    'is_active' => 1,
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
+            91 => 
+            array (
+                'id_config' => 92,
+                'config_name' => 'advance order',
+                'description' => '',
+                'is_active' => 1,
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ),
+            92 => 
+                array (
+                    'id_config' => 93,
+                    'config_name' => 'promo campaign',
+                    'description' => '',
+                    'is_active' => 1,
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
+            93 =>
+                array (
+                    'id_config' => 94,
+                    'config_name' => 'phone format setting',
+                    'description' => '',
+                    'is_active' => 0,
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                )
         ));
     }
 }

@@ -11,6 +11,8 @@ use Laravel\Passport\HasApiTokens;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 
+use Modules\UserFeedback\Entities\UserFeedbackLog;
+
 class User extends Authenticatable
 {
 	protected $connection = 'mysql';
@@ -189,5 +191,14 @@ class User extends Authenticatable
 	
     public function promotionSents() {
     	return $this->hasMany(PromotionSent::class, 'id_user', 'id')->orderBy('series_no', 'ASC');
+    }
+
+    public function favorites() {
+    	return $this->hasMany(\Modules\Favorite\Entities\Favorite::class, 'id_user');
+    }
+
+    public function log_popup()
+    {
+    	return $this->hasOne(UserFeedbackLog::class,'id_user');
     }
 }

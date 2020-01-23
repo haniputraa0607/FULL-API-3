@@ -111,7 +111,7 @@ class ApiBrandController extends Controller
                 return response()->json($result);
             }
             DB::commit();
-            return response()->json(['status'  => 'success', 'result' => ['id_brand' => $save->id_brand]]);
+            return response()->json(['status'  => 'success', 'result' => ['id_brand' => $save->id_brand, 'created_at' => $save->created_at]]);
         }
     }
 

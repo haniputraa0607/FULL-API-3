@@ -1,6 +1,8 @@
 <?php
 
 use Illuminate\Http\Request;
+use App\Http\Models\Setting;
+use App\Lib\MyHelper;
 
 /*
 |--------------------------------------------------------------------------
@@ -13,11 +15,11 @@ use Illuminate\Http\Request;
 |
 */
 
-Route::middleware('auth:api')->get('/user', function (Request $request) {
+Route::middleware(['auth:api', 'scopes:be'])->get('/user', function (Request $request) {
     return json_decode($request->user(), true);
 });
 
-Route::group(['middleware' => ['auth:api', 'log_activities'] ], function(){
+Route::group(['middleware' => ['auth:api', 'log_activities', 'scopes:be'] ], function(){
 	Route::get('granted-feature', 'Controller@getFeatureControl');
 	Route::get('feature', 'Controller@getFeature');
 	Route::get('feature-module', 'Controller@getFeatureModule');
@@ -36,5 +38,12 @@ Route::get('courier/list', 'Controller@listCourier');
 Route::get('time', function() {
 	date_default_timezone_set('Asia/Jakarta');
 	$am = App\Http\Models\Setting::where('key', 'processing_time')->first();
-	return response()->json(['time' => date('Y-m-d H:i:s'), 'processing' => $am['value'], 'new_format' => date('Y-m-d H:i:s+0000'), 'time_add' => date('Y-m-d H:i:s+0000', strtotime('+ '.$am['value'].' minutes'))]);
+	$ptt = Setting::select('value_text')->where('key','processing_time_text')->pluck('value_text')->first()?:'Set pickup time minimum %processing_time% minutes from now';
+	return response()->json([
+		'time' => date('Y-m-d H:i:s'), 
+		'processing' => $am['value'], 
+		'new_format' => date('Y-m-d H:i:s+0000'), 
+		'time_add' => date('Y-m-d H:i:s+0000', strtotime('+ '.$am['value'].' minutes')),
+		'message' => MyHelper::simpleReplace($ptt,['processing_time'=>$am['value']])
+	]);
 });

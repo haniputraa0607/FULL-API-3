@@ -131,7 +131,8 @@ class Campaign extends Model
 		'campaign_inbox_link',
 		'campaign_inbox_id_reference',
 		'campaign_whatsapp_content',
-		'campaign_is_sent'
+		'campaign_is_sent',
+		'campaign_description'
 	];
 
 	public function user()
@@ -139,19 +140,9 @@ class Campaign extends Model
 		return $this->belongsTo(\App\Http\Models\User::class, 'id_user');
 	}
 
-	public function campaign_email_queues()
-	{
-		return $this->hasMany(\App\Http\Models\CampaignEmailQueue::class, 'id_campaign');
-	}
-
 	public function campaign_email_sents()
 	{
 		return $this->hasMany(\App\Http\Models\CampaignEmailSent::class, 'id_campaign');
-	}
-
-	public function campaign_push_queues()
-	{
-		return $this->hasMany(\App\Http\Models\CampaignPushQueue::class, 'id_campaign');
 	}
 
 	public function campaign_push_sents()
@@ -163,11 +154,6 @@ class Campaign extends Model
 	{
 		return $this->hasMany(\App\Http\Models\CampaignRuleParent::class, 'id_campaign')
 					->select('id_campaign_rule_parent', 'id_campaign', 'campaign_rule as rule', 'campaign_rule_next as rule_next');
-	}
-
-	public function campaign_sms_queues()
-	{
-		return $this->hasMany(\App\Http\Models\CampaignSmsQueue::class, 'id_campaign');
 	}
 
 	public function campaign_sms_sents()

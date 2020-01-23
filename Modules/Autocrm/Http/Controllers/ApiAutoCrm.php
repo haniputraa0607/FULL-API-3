@@ -366,6 +366,7 @@ class ApiAutoCrm extends Controller
 								// $dataOptional['id_reference'] = $variables['id_reference'];
 								$dataOptional['id_reference'] = 0;
 							}elseif ($dataOptional['type'] == 'Transaction Detail') {
+								$dataOptional['type'] == 'Transaction';
 								if (isset($variables['id_transaction'])) {
 									$dataOptional['id_reference'] = $variables['id_transaction'];
 								} else {
@@ -379,6 +380,11 @@ class ApiAutoCrm extends Controller
 								} else {
 									$dataOptional['id_reference'] = 0;
 								}
+							}elseif ($dataOptional['type'] == 'Deals') {
+								$dataOptional['id_reference'] = $variables['id_brand'];
+							}elseif ($dataOptional['type'] == 'Deals Detail') {
+								$dataOptional['id_reference'] = $variables['id_deals'];
+								$dataOptional['id_brand'] = $variables['id_brand'];
 							}
 							else {
 								$dataOptional['id_reference'] = 0;
@@ -447,6 +453,7 @@ class ApiAutoCrm extends Controller
 								// $inbox['inboxes_id_reference'] = $variables['id_reference'];
 								$inbox['inboxes_id_reference'] = 0;
 						}elseif ($crm['autocrm_inbox_clickto'] == 'Transaction Detail') {
+							$inbox['inboxes_clickto'] == 'Transaction';
 							if (isset($variables['id_transaction'])) {
 								$inbox['inboxes_id_reference'] = $variables['id_transaction'];
 							} else {
@@ -461,8 +468,12 @@ class ApiAutoCrm extends Controller
 							} else {
 								$inbox['inboxes_id_reference'] = 0;
 							}
-						}
-						else {
+						}elseif ($crm['autocrm_inbox_clickto'] == 'Deals') {
+							$inbox['inboxes_id_reference'] = $variables['id_brand'];
+						}elseif ($crm['autocrm_inbox_clickto'] == 'Deals Detail') {
+							$inbox['inboxes_id_reference'] = $variables['id_deals'];
+							$inbox['id_brand'] = $variables['id_brand'];
+						}else {
 							$inbox['inboxes_id_reference'] = 0;
 						}
 					}
@@ -470,6 +481,7 @@ class ApiAutoCrm extends Controller
 					$inbox['inboxes_send_at'] = date("Y-m-d H:i:s");
 					$inbox['created_at'] = date("Y-m-d H:i:s");
 					$inbox['updated_at'] = date("Y-m-d H:i:s");
+
 					$inboxQuery = UserInbox::insert($inbox);
 				}
 			}
@@ -739,7 +751,7 @@ class ApiAutoCrm extends Controller
 
 	public function listPushNotif(){
 		$query = Setting::where('key', 'push_notification_list')->get()->first();
-		
+
 		if (!$query) {
 			$data = [
 				'key' 			=> 'push_notification_list',

@@ -50,6 +50,10 @@ class Handler extends ExceptionHandler
      */
     public function render($request, Exception $exception)
     {
+        if ($exception instanceof \Laravel\Passport\Exceptions\MissingScopeException)
+        {
+            return response()->json(['error' => 'Unauthenticated'], 403);
+        }
         return parent::render($request, $exception);
     }
 

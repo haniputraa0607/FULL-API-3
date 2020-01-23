@@ -21,6 +21,7 @@ use App\Http\Models\Banner;
 use App\Http\Models\FraudSetting;
 use App\Http\Models\OauthAccessToken;
 use App\Http\Models\FeaturedDeal;
+use Modules\Subscription\Entities\FeaturedSubscription;
 
 use DB;
 use App\Lib\MyHelper;
@@ -40,6 +41,7 @@ class ApiHome extends Controller
 		$this->autocrm  = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
         $this->setting_fraud = "Modules\SettingFraud\Http\Controllers\ApiSettingFraud";
 		$this->endPoint  = env('S3_URL_API');
+        $this->deals = "Modules\Deals\Http\Controllers\ApiDeals";
     }
 
 	public function homeNotLoggedIn(Request $request) {
@@ -569,6 +571,20 @@ class ApiHome extends Controller
 
     public function membership(Request $request){
         $user = $request->user();
+        if($user->first_login===0){
+            $send = app($this->autocrm)->SendAutoCRM('Login First Time', $user['phone']);
+            if (!$send) {
+                DB::rollback();
+                return response()->json(['status' => 'fail', 'messages' => ['Send notification failed']]);
+            }
+
+            $setting = Setting::where('key','welcome_voucher_setting')->first()->value;
+            if($setting == 1){
+                $injectVoucher = app($this->deals)->injectWelcomeVoucher(['id' => $user['id']], $user['phone']);
+            }
+            $user->first_login=1;
+            $user->save();
+        }
         $user->load(['city','city.province']);
         $birthday = "";
         if ($user->birthday != "") {
@@ -686,6 +702,12 @@ class ApiHome extends Controller
             unset($retUser[$hide]);
         }
 
+        // chek vote transaksi
+        $trx = Transaction::where([
+            ['id_user',$user->id],
+            ['show_rate_popup',1]
+        ])->orderBy('transaction_date')->first();
+        $rate_popup = $trx?$trx->transaction_receipt_number.','.$trx->id_transaction:null;
         $retUser['membership']=$membership;
         $result = [
             'status' => 'success',
@@ -694,7 +716,8 @@ class ApiHome extends Controller
                 'user_info'     => $retUser,
                 'qr_code'       => $qrCode??'',
                 'greeting'      => $greetingss??'',
-                'expired_qr'    => $expired??''
+                'expired_qr'    => $expired??'',
+                'rate_popup'    => $rate_popup
             ]
         ];
 
@@ -733,6 +756,10 @@ class ApiHome extends Controller
 
     public function featuredDeals(Request $request){
         $now=date('Y-m-d H-i-s');
+        $home_text = Setting::where('key','=','home_deals_title')->orWhere('key','=','home_deals_sub_title')->orderBy('id_setting')->get();
+        $text['title'] = $home_text[0]['value']??'Penawaran Spesial.';
+        $text['sub_title'] = $home_text[1]['value']??'Potongan menarik untuk setiap pembelian.';
+
         $deals=FeaturedDeal::select('id_featured_deals','id_deals')->with(['deals'=>function($query){
             $query->select('deals_title','deals_image','deals_total_voucher','deals_total_claimed','deals_publish_end','deals_start','deals_end','id_deals','deals_voucher_price_point','deals_voucher_price_cash','deals_voucher_type');
         }])
@@ -760,17 +787,93 @@ class ApiHome extends Controller
                 }else{
                     $value['deals']['percent_voucher'] = 100;
                 }
+                $value['deals']['show'] = 1;
                 $value['deals']['time_to_end']=strtotime($value['deals']['deals_end'])-time();
                 return $value;
             },$deals->toArray());
             foreach ($deals as $key => $value) {
-                if ($value['deals']['available_voucher'] == "0") {
+                if ($value['deals']['available_voucher'] == "0" && $value['deals']['deals_status'] != 'soon') {
                     unset($deals[$key]);
                 }
             }
+
+            $data_home['text'] = $text;
+            $data_home['featured_list'] = $deals;
             return [
                 'status'=>'success',
-                'result'=>$deals
+                'result'=>$data_home
+            ];
+        }else{
+            return [
+                'status' => 'fail',
+                'messages' => ['Something went wrong']
+            ];
+        }
+    }
+
+    public function featuredSubscription(Request $request){
+
+        $now=date('Y-m-d H-i-s');
+        $home_text = Setting::where('key','=','home_subscription_title')->orWhere('key','=','home_subscription_sub_title')->orderBy('id_setting')->get();
+        $text['title'] = $home_text[0]['value']??'Subscription';
+        $text['sub_title'] = $home_text[1]['value']??'Banyak untungnya kalo berlangganan';
+
+        $subs=featuredSubscription::select('id_featured_subscription','id_subscription')->with(['subscription'=>function($query){
+            $query->select('subscription_title','subscription_sub_title','subscription_image','subscription_total', 'subscription_voucher_total','subscription_bought','subscription_publish_start','subscription_publish_end','subscription_start','subscription_end','id_subscription','subscription_price_point','subscription_price_cash');
+        }])
+            ->whereHas('subscription',function($query){
+                $query->where('subscription_publish_end','>=',DB::raw('CURRENT_TIMESTAMP()'));
+                $query->where('subscription_publish_start','<=',DB::raw('CURRENT_TIMESTAMP()'));
+            })
+            ->orderBy('order')
+            ->where('date_start','<=',$now)
+            ->where('date_end','>=',$now)
+            ->get();
+
+        if($subs){
+            $subs=array_map(function($value){
+                if ( (empty($value['subscription']['subscription_price_point']) && empty($value['subscription']['subscription_price_cash'])) || empty($value['subscription']['subscription_total']) ) {
+                    $calc = '*';
+                }else{
+                    $calc = $value['subscription']['subscription_total'] - $value['subscription']['subscription_bought'];
+                }
+                $value['subscription']['available_subscription'] = (string) $calc;
+                if($calc&&is_numeric($calc)){
+                    $value['subscription']['percent_subscription'] = $calc*100/$value['subscription']['subscription_total'];
+                }else{
+                    $value['subscription']['percent_subscription'] = 100;
+                }
+                $value['subscription']['time_to_end']=strtotime($value['subscription']['subscription_end'])-time();
+                return $value;
+            },$subs->toArray());
+
+            $featuredList = [];
+            $tempList = [];
+            $i = 0;
+
+            foreach ($subs as $key => $value) {
+                if ($value['subscription']['available_subscription'] == "0" && isset($value['subscription']['total'])) {
+                    unset($subs[$key]);
+                }else{
+
+                    $featuredList[$i]['id_featured_subscription'] = $value['id_featured_subscription'];
+                    $featuredList[$i]['id_subscription'] = $value['id_subscription'];
+                    $featuredList[$i]['subscription_title'] = $value['subscription']['subscription_title'];
+                    $featuredList[$i]['subscription_sub_title'] = $value['subscription']['subscription_sub_title'];
+                    $featuredList[$i]['url_subscription_image'] = $value['subscription']['url_subscription_image'];
+                    $featuredList[$i]['time_to_end'] = $value['subscription']['time_to_end'];
+                    $featuredList[$i]['subscription_end'] = $value['subscription']['subscription_end'];
+                    $featuredList[$i]['subscription_publish_end'] = $value['subscription']['subscription_publish_end'];
+                    $featuredList[$i]['time_server'] = date('Y-m-d H:i:s');
+                    $i++;
+                }
+
+            }
+            $data_home['text'] = $text;
+            $data_home['featured_list'] = $featuredList;
+            return [
+                'status'=>'success',
+                'result'=> $data_home
             ];
         }else{
             return [

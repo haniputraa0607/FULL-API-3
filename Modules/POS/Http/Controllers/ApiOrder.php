@@ -2,6 +2,8 @@
 
 namespace Modules\POS\Http\Controllers;
 
+use App\Http\Models\FraudDetectionLogTransactionDay;
+use App\Http\Models\FraudDetectionLogTransactionWeek;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
@@ -569,6 +571,8 @@ class ApiOrder extends Controller
         DB::beginTransaction();
 
         $pickup = TransactionPickup::where('id_transaction', $order->id_transaction)->update(['taken_at' => date('Y-m-d H:i:s')]);
+        $order->show_rate_popup = 1;
+        $order->save();
         if($pickup){
             //send notif to customer
             $user = User::find($order->id_user);
@@ -791,6 +795,41 @@ class ApiOrder extends Controller
         $user = User::where('id', $order['id_user'])->first()->toArray();
         
         if($pickup){
+            $getLogFraudDay = FraudDetectionLogTransactionDay::whereRaw('Date(fraud_detection_date) ="'.date('Y-m-d', strtotime($order->transaction_date)).'"')
+                ->where('id_user',$order->id_user)
+                ->first();
+
+            if($getLogFraudDay){
+                $checkCount = $getLogFraudDay['count_transaction_day'] - 1;
+                if($checkCount <= 0){
+                    $delLogTransactionDay = FraudDetectionLogTransactionDay::where('id_fraud_detection_log_transaction_day',$getLogFraudDay['id_fraud_detection_log_transaction_day'])
+                        ->delete();
+                }else{
+                    $updateLogTransactionDay = FraudDetectionLogTransactionDay::where('id_fraud_detection_log_transaction_day',$getLogFraudDay['id_fraud_detection_log_transaction_day'])->update([
+                        'count_transaction_day' =>$checkCount,
+                        'updated_at' => date('Y-m-d H:i:s')
+                    ]);
+                }
+
+            }
+
+            $getLogFraudWeek= FraudDetectionLogTransactionWeek::where('fraud_detection_week', date('W', strtotime($order->transaction_date)))
+                ->where('fraud_detection_week', date('Y', strtotime($order->transaction_date)))
+                ->where('id_user',$order->id_user)
+                ->first();
+            if($getLogFraudWeek){
+                $checkCount = $getLogFraudWeek['count_transaction_week'] - 1;
+                if($checkCount <= 0){
+                    $delLogTransactionWeek = FraudDetectionLogTransactionWeek::where('id_fraud_detection_log_transaction_week',$getLogFraudWeek['id_fraud_detection_log_transaction_week'])
+                        ->delete();
+                }else{
+                    $updateLogTransactionWeek = FraudDetectionLogTransactionWeek::where('id_fraud_detection_log_transaction_week',$getLogFraudWeek['id_fraud_detection_log_transaction_week'])->update([
+                        'count_transaction_week' => $checkCount,
+                        'updated_at' => date('Y-m-d H:i:s')
+                    ]);
+                }
+            }
+
               //refund ke balance
             // if($order['trasaction_payment_type'] == "Midtrans"){
                 $multiple = TransactionMultiplePayment::where('id_transaction', $order->id_transaction)->get()->toArray();
