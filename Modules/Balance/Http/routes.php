@@ -1,6 +1,6 @@
 <?php
 
-Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scopes:*'], 'prefix' => 'api/balance', 'namespace' => 'Modules\Balance\Http\Controllers'], function()
+Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scopes:apps'], 'prefix' => 'api/balance', 'namespace' => 'Modules\Balance\Http\Controllers'], function()
 {
     Route::post('topup', 'BalanceController@requestTopUpBalance');
     Route::post('balance', 'BalanceController@requestCashBackBalance');
@@ -30,7 +30,7 @@ Route::group(['prefix' => 'api/v1/pos/saldo', 'middleware' => 'log_activities', 
     Route::post('use/void', 'UseSaldoController@useVoid');
 });
 
-Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scopes:*'], 'prefix' => 'api/v1/pos/saldo', 'namespace' => 'Modules\Balance\Http\Controllers'], function()
+Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scopes:apps'], 'prefix' => 'api/v1/pos/saldo', 'namespace' => 'Modules\Balance\Http\Controllers'], function()
 {
     Route::post('topup/generate', 'NewTopupController@generateCode');
 });

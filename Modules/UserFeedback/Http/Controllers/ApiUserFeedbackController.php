@@ -38,12 +38,85 @@ class ApiUserFeedbackController extends Controller
         if($outlet_code = $request->json('outlet_code')){
             $list->where('outlet_code',$outlet_code);
         }
+        if(is_array($request->json('rule'))){
+            $this->filterList($list,$request->json('rule'),$request->json('operator'));
+        }
         if($request->page){
             $list = $list->paginate(10);
         }else{
             $list = $list->get();
         }
         return MyHelper::checkGet($list);
+    }
+
+    public function filterList($model,$rule,$operator='and') {
+        $where = $operator=='and'?'where':'orWhere';        $where=$operator=='and'?'where':'orWhere';
+        foreach ($rule as $var) {
+            $var1=['operator'=>$var['operator']??'=','parameter'=>$var['parameter']??null];
+            if($var1['operator']=='like'){
+                $var1['parameter']='%'.$var1['parameter'].'%';
+            }
+            $newRule[$var['subject']][]=$var1;
+        }
+        if($rules=$newRule['review_date']??false){
+            foreach ($rules as $rul) {
+                $model->{$where.'Date'}('user_feedbacks.created_at',$rul['operator'],$rul['parameter']);
+            }
+        }
+        if($rules=$newRule['rating_value']??false){
+            foreach ($rules as $rul) {
+                $model->$where('rating_value',$rul['operator'],$rul['parameter']);
+            }
+        }
+        if($rules=$newRule['transaction_date']??false){
+            foreach ($rules as $rul) {
+                $model->{$where.'Has'}('transaction',function($query) use ($rul){
+                    $query->whereDate('transaction_date',$rul['operator'],$rul['parameter']);
+                });
+            }
+        }
+        if($rules=$newRule['transaction_type']??false){
+            foreach ($rules as $rul) {
+                $model->{$where.'Has'}('transaction',function($query) use ($rul){
+                    $query->where('transaction_type',$rul['operator'],$rul['parameter']);
+                });
+            }
+        }
+        if($rules=$newRule['transaction_receipt_number']??false){
+            foreach ($rules as $rul) {
+                $model->{$where.'Has'}('transaction',function($query) use ($rul){
+                    $query->where('transaction_receipt_number',$rul['operator'],$rul['parameter']);
+                });
+            }
+        }
+        if($rules=$newRule['user_name']??false){
+            foreach ($rules as $rul) {
+                $model->{$where.'Has'}('user',function($query) use ($rul){
+                    $query->where('name',$rul['operator'],$rul['parameter']);
+                });
+            }
+        }
+        if($rules=$newRule['user_phone']??false){
+            foreach ($rules as $rul) {
+                $model->{$where.'Has'}('user',function($query) use ($rul){
+                    $query->where('phone',$rul['operator'],$rul['parameter']);
+                });
+            }
+        }
+        if($rules=$newRule['user_email']??false){
+            foreach ($rules as $rul) {
+                $model->{$where.'Has'}('user',function($query) use ($rul){
+                    $query->where('email',$rul['operator'],$rul['parameter']);
+                });
+            }
+        }
+        if($rules=$newRule['outlet']??false){
+            foreach ($rules as $rul) {
+                $model->{$where.'Has'}('transaction.outlet',function($query) use ($rul){
+                    $query->where('id_outlet',$rul['operator'],$rul['parameter']);
+                });
+            }
+        }
     }
 
     /**
@@ -64,7 +137,7 @@ class ApiUserFeedbackController extends Controller
                 'messages' => ['Transaction not found']
             ];
         }
-        $rating = RatingItem::select('text')->find($post['id_rating_item']);
+        $rating = RatingItem::select('rating_value')->find($post['id_rating_item']);
         if(!$rating){
             return [
                 'status' => 'fail',
@@ -83,8 +156,7 @@ class ApiUserFeedbackController extends Controller
         $insert = [
             'id_outlet' => $transaction->id_outlet,
             'id_user' => $user->id,
-            'id_rating_item'=> $post['id_rating_item'],
-            'rating_item_text'=> $rating->text,
+            'rating_value'=> $rating->rating_value,
             'id_transaction'=> $id_transaction,
             'notes'=> $post['notes'],
             'image'=> $upload['path']??null
@@ -170,7 +242,7 @@ class ApiUserFeedbackController extends Controller
             $user->load('log_popup');
             $log_popup = $user->log_popup;
             if($log_popup){
-                $interval =(Setting::where('key','popup_min_interval')->pluck('value')->first()?:15)*60;
+                $interval =(Setting::where('key','popup_min_interval')->pluck('value')->first()?:900);
                 if(
                     $log_popup->refuse_count>=(Setting::where('key','popup_max_refuse')->pluck('value')->first()?:3) ||
                     strtotime($log_popup->last_popup)+$interval>time()
@@ -190,7 +262,7 @@ class ApiUserFeedbackController extends Controller
             $transaction = Transaction::select('id_transaction','transaction_receipt_number','id_outlet')->with(['outlet'=>function($query){
                 $query->select('outlet_name','id_outlet');
             }])
-            ->where('show_rate_popup',1)
+            ->where(['show_rate_popup'=>1,'id_user'=>$user->id])
             ->first();
             if(!$transaction){
                 return MyHelper::checkGet([]);

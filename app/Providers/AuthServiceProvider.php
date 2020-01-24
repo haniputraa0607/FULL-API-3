@@ -31,7 +31,8 @@ class AuthServiceProvider extends ServiceProvider
         
         Route::group(['middleware' => 'custom_auth'], function () {
             Passport::tokensCan([
-                'ap' => 'Manage admin panel scope'
+                'be' => 'Manage admin panel scope',
+                'apps' => 'Manage mobile scope',
             ]);
             Passport::routes(function ($router) {
                 return $router->forAccessTokens();

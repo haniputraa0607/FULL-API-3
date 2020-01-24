@@ -1,12 +1,12 @@
 <?php
 
-Route::group(['middleware' => ['auth:api','user_agent', 'scopes:*', 'log_activities'], 'prefix' => 'api/news', 'namespace' => 'Modules\News\Http\Controllers'], function()
+Route::group(['middleware' => ['auth:api','user_agent', 'scopes:apps', 'log_activities'], 'prefix' => 'api/news', 'namespace' => 'Modules\News\Http\Controllers'], function()
 {
     Route::any('list', 'ApiNews@listNews');
     Route::any('category', 'ApiNewsCategoryController@index');
 });
 
-Route::group(['prefix' => 'api/news', 'middleware' => ['log_activities', 'auth:api','user_agent', 'scopes:*'], 'namespace' => 'Modules\News\Http\Controllers'], function()
+Route::group(['prefix' => 'api/news', 'middleware' => ['log_activities', 'auth:api','user_agent', 'scopes:apps'], 'namespace' => 'Modules\News\Http\Controllers'], function()
 {
         Route::any('list/test', 'ApiNews@listNews');
         // Route::any('list/web', 'ApiNews@listNews');
@@ -15,12 +15,12 @@ Route::group(['prefix' => 'api/news', 'middleware' => ['log_activities', 'auth:a
 });
 
 
-Route::group(['prefix' => 'news', 'namespace' => 'Modules\News\Http\Controllers','middleware' => ['auth:api', 'scopes:*']], function()
+Route::group(['prefix' => 'news', 'namespace' => 'Modules\News\Http\Controllers','middleware' => ['auth:api', 'scopes:apps']], function()
 {
     Route::any('/webview/{id}', 'ApiNewsWebview@detail');
 });
 
-Route::group(['middleware' => ['auth:api','user_agent','log_activities', 'scopes:ap'], 'prefix' => 'api/news', 'namespace' => 'Modules\News\Http\Controllers'], function()
+Route::group(['middleware' => ['auth:api','user_agent','log_activities', 'scopes:be'], 'prefix' => 'api/news', 'namespace' => 'Modules\News\Http\Controllers'], function()
 {
     Route::any('be/list', ['middleware' => 'feature_control:19', 'uses' => 'ApiNews@listNews']);
     Route::any('be/category', ['middleware' => 'feature_control:164', 'uses' => 'ApiNews@listCategory']);
