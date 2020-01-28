@@ -128,7 +128,7 @@ Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scop
     });
 
     // banner
-    Route::group(['middleware' => ['auth:api', 'scopes:apps'], 'prefix' => 'banner'], function()
+    Route::group(['middleware' => ['auth:api', 'scopes:be'], 'prefix' => 'banner'], function()
     {
         Route::get('list', ['middleware' => 'feature_control:144', 'uses' => 'ApiBanner@index']);
         Route::post('create', ['middleware' => 'feature_control:145', 'uses' => 'ApiBanner@create']);
