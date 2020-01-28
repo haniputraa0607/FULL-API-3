@@ -87,8 +87,13 @@ class ApiFavoriteController extends Controller
                     $status = app('Modules\Outlet\Http\Controllers\ApiOutletController')->checkOutletStatus($outlet);
                     $outlet['outlet_address']=$outlet['outlet_address']??'';
                     $outlet['status']=$status;
-                    $outlet['distance_raw'] = MyHelper::count_distance($latitude,$longitude,$outlet['outlet_latitude'],$outlet['outlet_longitude']);
-                    $outlet['distance'] = MyHelper::count_distance($latitude,$longitude,$outlet['outlet_latitude'],$outlet['outlet_longitude'],'K',true);
+                    if(!empty($latitude)&&!empty($longitude)){
+                        $outlet['distance_raw'] = MyHelper::count_distance($latitude,$longitude,$outlet['outlet_latitude'],$outlet['outlet_longitude']);
+                        $outlet['distance'] = MyHelper::count_distance($latitude,$longitude,$outlet['outlet_latitude'],$outlet['outlet_longitude'],'K',true);
+                    }else{
+                        $outlet['distance_raw'] = null;
+                        $outlet['distance'] = '';
+                    }
                     $val=[
                         'outlet'=>$outlet,
                         'favorites'=>$val
@@ -96,9 +101,11 @@ class ApiFavoriteController extends Controller
                     return $key;
                 });
                 $datax = array_values($datax);
-                usort($datax, function(&$a,&$b){
-                    return $a['outlet']['distance_raw'] <=> $b['outlet']['distance_raw'];
-                });
+                if(!empty($latitude)&&!empty($longitude)){
+                    usort($datax, function(&$a,&$b){
+                        return $a['outlet']['distance_raw'] <=> $b['outlet']['distance_raw'];
+                    });
+                }
             }else{
                 $data = [];
             }
