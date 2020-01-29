@@ -319,7 +319,7 @@ class ApiConfirm extends Controller
                 $phone = '0'.$phone;
             }
 
-            $pay = $this->paymentOvo($check, $countGrandTotal, $phone, 'staging');
+            $pay = $this->paymentOvo($check, $countGrandTotal, $phone, env('OVO_ENV')?:'staging');
 
             return $pay;
         }
@@ -606,7 +606,7 @@ class ApiConfirm extends Controller
                                         $savelocation = app($this->trx)->saveLocation($dataTrx['latitude'], $dataTrx['longitude'], $dataTrx['id_user'], $dataTrx['id_transaction'], $dataTrx['id_outlet']);
                                     }
 
-                                    $fraud = app($this->notif)->checkFraud($dataTrx);
+                                    //$fraud = app($this->notif)->checkFraud($dataTrx);
 
                                 }
                                 else{
