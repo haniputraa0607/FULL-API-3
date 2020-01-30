@@ -19,7 +19,14 @@ class Ovo {
     }
 
     static function hmac_value($time) {
-        return hash_hmac('sha256', env('OVO_APP_ID').$time, env('OVO_APP_KEY'));
+        if(env('OVO_ENV')=='production'){
+            $app_id = env('OVO_PROD_APP_ID');
+            $app_key = env('OVO_PROD_APP_KEY');
+        }else{
+            $app_id = env('OVO_STAGING_APP_ID');
+            $app_key = env('OVO_STAGING_APP_KEY');
+        }
+        return hash_hmac('sha256', $app_id.$time, $app_key);
     }
     
     static function PayTransaction($dataTrx, $dataPay, $amount, $type) {
@@ -29,12 +36,14 @@ class Ovo {
             $mid = env('OVO_PROD_MID');
             $merchantId = env('OVO_PROD_MERCHANT_ID');
             $storeCode = env('OVO_PROD_STORE_CODE');
+            $app_id = env('OVO_PROD_APP_ID');
         }else{
             $url    = env('OVO_STAGING_URL');
             $tid = env('OVO_STAGING_TID');
             $mid = env('OVO_STAGING_MID');
             $merchantId = env('OVO_STAGING_MERCHANT_ID');
             $storeCode = env('OVO_STAGING_STORE_CODE');
+            $app_id = env('OVO_STAGING_APP_ID');
         }
 
         $now = time();
@@ -58,7 +67,7 @@ class Ovo {
 
         $header = [
             'hmac' => Self::hmac_value($now),
-            'app_id' => env('OVO_APP_ID').$now,
+            'app_id' => $app_id.$now,
             'random' => $now
         ];
 
@@ -113,12 +122,14 @@ class Ovo {
             $mid = env('OVO_PROD_MID');
             $merchantId = env('OVO_PROD_MERCHANT_ID');
             $storeCode = env('OVO_PROD_STORE_CODE');
+            $app_id = env('OVO_PROD_APP_ID');
         }else{
             $url    = env('OVO_STAGING_URL');
             $tid = env('OVO_STAGING_TID');
             $mid = env('OVO_STAGING_MID');
             $merchantId = env('OVO_STAGING_MERCHANT_ID');
             $storeCode = env('OVO_STAGING_STORE_CODE');
+            $app_id = env('OVO_STAGING_APP_ID');
         }
 
         $data['type'] = "0400"; 
@@ -139,7 +150,7 @@ class Ovo {
 
         $header = [
             'hmac' => Self::hmac_value($now),
-            'app_id' => env('OVO_APP_ID').$now,
+            'app_id' => $app_id.$now,
             'random' => $now
         ];
 
@@ -264,7 +275,13 @@ class Ovo {
     }
 
     static function checkPaymentStatus($dataTrx, $dataPay) {
-        $url    = env('OVO_BASE_URL');
+        if($type == 'production'){
+            $url = env('OVO_PROD_URL');
+            $app_id = env('OVO_PROD_APP_ID');
+        }else{
+            $url    = env('OVO_STAGING_URL');
+            $app_id = env('OVO_STAGING_APP_ID');
+        }
 
         $data['type'] = "0100"; 
         $data['processingCode'] = "040000";
@@ -286,7 +303,7 @@ class Ovo {
 
         $header = [
             'hmac' => Self::hmac_value($now),
-            'app_id' => env('OVO_APP_ID').$now,
+            'app_id' => $app_id.$now,
             'random' => $now
         ];
 
