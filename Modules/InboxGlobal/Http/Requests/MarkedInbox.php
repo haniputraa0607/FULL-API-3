@@ -16,8 +16,9 @@ class MarkedInbox extends FormRequest
     public function rules()
     {
         return [
-        'id_inbox'  => 'required|integer',
-        'type'      => 'required|in:private,global',
+        'id_inbox'  => 'required_without:inboxes|integer',
+        'inboxes'  => 'required_without:id_inbox|array',
+        'type'      => 'required|in:private,global,multiple',
         ];
     }
 
