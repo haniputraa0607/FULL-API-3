@@ -256,7 +256,7 @@ class ApiInbox extends Controller
 					'messages'  => ['Inbox not found']
 				];
 			}
-		}else{
+		}elseif($post['type'] == 'global'){
 			$inboxGlobal = InboxGlobal::where('id_inbox_global', $post['id_inbox'])->first();
 			if(!empty($inboxGlobal)){
 
@@ -284,6 +284,26 @@ class ApiInbox extends Controller
 				];
 			}
 
+		}elseif($post['type'] == 'multiple'){
+			if($post['inboxes']['global']??false){
+				foreach ($post['inboxes']['global'] as $id_inbox) {
+					$inboxGlobal = InboxGlobal::where('id_inbox_global', $id_inbox)->first();
+					if($inboxGlobal){
+						$inboxGlobalRead = InboxGlobalRead::where('id_inbox_global', $id_inbox)->where('id_user', $user['id'])->first();
+						if(empty($inboxGlobalRead)){
+							$create = InboxGlobalRead::create(['id_inbox_global' => $id_inbox, 'id_user' => $user['id']]);
+						}
+					}
+				}
+			}
+			if($post['inboxes']['private']){
+				$update = UserInbox::whereIn('id_user_inboxes', $post['inboxes']['private'])->where('id_user', $user['id'])->update(['read' => '1']);
+			}
+			$countUnread = $this->listInboxUnread( $user['id']);
+			$result = [
+				'status'  => 'success',
+				'result'  => ['count_unread' => $countUnread]
+			];
 		}
 		return response()->json($result);
 	}
