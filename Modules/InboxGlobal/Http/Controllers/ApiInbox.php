@@ -110,6 +110,8 @@ class ApiInbox extends Controller
 				}
 
 				if($mode == 'simple'){
+					$content['date_indo'] = MyHelper::dateFormatInd($content['created_at'],true,false,true);
+					$content['time'] = date('H:i',strtotime($content['created_at']));
 					$arrInbox[] = $content;
 				}else{
 					if(!in_array(date('Y-m-d', strtotime($content['created_at'])), $arrDate)){
