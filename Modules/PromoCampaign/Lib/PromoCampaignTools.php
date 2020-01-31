@@ -3,7 +3,9 @@
 namespace Modules\PromoCampaign\Lib;
 
 use Modules\PromoCampaign\Entities\PromoCampaign;
+use Modules\PromoCampaign\Entities\PromoCampaignPromoCode;
 use Modules\PromoCampaign\Entities\PromoCampaignReport;
+use Modules\PromoCampaign\Entities\UserReferralCode;
 use App\Http\Models\Product;
 use App\Http\Models\UserDevice;
 use App\Http\Models\User;
@@ -655,8 +657,21 @@ class PromoCampaignTools{
 	 * @param  int 		$id_user  id user
 	 * @return boolean	true/false
 	 */
-	public function validateUser($id_promo, $id_user, $phone, $device_type, $device_id, &$errors=[]){
+	public function validateUser($id_promo, $id_user, $phone, $device_type, $device_id, &$errors=[],$id_code=null){
 		$promo=PromoCampaign::find($id_promo);
+		if($promo->promo_type == 'Referral'){
+			if(User::find($id_user)->transaction_online){
+	        	$errors[]='Voucher code not found';
+				return false;
+			}
+			if(UserReferralCode::where([
+				'id_promo_campaign_promo_code'=>$id_code,
+				'id_user'=>$id_user
+			])->exists()){
+	        	$errors[]='Voucher code not found';
+	    		return false;
+			}
+		}
 
 		if(!$promo){
         	$errors[]='Promo campaign not found';
@@ -846,6 +861,38 @@ class PromoCampaignTools{
         	return 'empty';
         }
     }
-
+    /**
+     * Create referal promo code 
+     * @param  Integer $id_user user id of user
+     * @return boolean       true if success
+     */
+    public static function createReferralCode($id_user) {
+    	//check user have referral code
+    	$check = UserReferralCode::where('id_user',$id_user);
+    	$max_iterate = 1000;
+    	$iterate = 0;
+    	$exist = true;
+    	do{
+    		$promo_code = MyHelper::createrandom(6, 'PromoCode');
+    		$exist = PromoCampaignPromoCode::where('promo_code',$promo_code)->exists();
+    		if($exist){$promo_code=false;};
+    		$iterate++;
+    	}while($exist&&$iterate<=$max_iterate);
+    	if(!$promo_code){
+    		return false;
+    	}
+    	$create = PromoCampaignPromoCode::create([
+    		'id_promo_campaign' => 1,
+    		'promo_code' => $promo_code
+    	]);
+    	if(!$create){
+    		return false;
+    	}
+    	$create2 = UserReferralCode::create([
+    		'id_promo_campaign_promo_code' => $create->id_promo_campaign_promo_code,
+    		'id_user' => $id_user
+    	]);
+    	return $create2;
+    }
 }
 ?>
