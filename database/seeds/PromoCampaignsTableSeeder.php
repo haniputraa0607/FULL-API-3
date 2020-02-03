@@ -32,7 +32,7 @@ class PromoCampaignsTableSeeder extends Seeder
                 'date_end' => '2020-12-31 23:59:59',
                 'is_all_outlet' => '1',
                 'promo_type' => 'Referral',
-                'user_type' => 'New user',
+                'user_type' => 'All user',
                 'specific_user' => NULL,
                 'step_complete' => 1,
                 'created_at' => NULL,

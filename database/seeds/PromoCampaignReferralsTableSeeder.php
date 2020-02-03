@@ -23,6 +23,7 @@ class PromoCampaignReferralsTableSeeder extends Seeder
                 'referred_promo_type' => 'Cashback',
                 'referred_promo_unit' => 'Percent',
                 'referred_promo_value' => 10,
+                'referred_min_value' => 20000,
                 'referred_promo_value_max' => 10000,
                 'referrer_promo_unit' => 'Percent',
                 'referrer_promo_value' => 20,

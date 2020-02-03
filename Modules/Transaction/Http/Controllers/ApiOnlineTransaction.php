@@ -1222,7 +1222,12 @@ class ApiOnlineTransaction extends Controller
                 // apply cashback to referrer
                 if ($use_referral){
                     $referral_rule = PromoCampaignReferral::where('id_promo_campaign',$code->id_promo_campaign)->first();
-                    if(!$referral_rule){
+                    $addPromoCounter = PromoCampaignReferralTransaction::create([
+                        'id_promo_campaign_promo_code' =>$code->id_promo_campaign_promo_code,
+                        'id_user' => $insertTransaction['id_user'],
+                        'id_transaction' => $insertTransaction['id_transaction']
+                    ]);
+                    if(!$referral_rule || !$addPromoCounter){
                         DB::rollback();
                         return response()->json([
                             'status'    => 'fail',
