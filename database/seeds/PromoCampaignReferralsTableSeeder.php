@@ -20,6 +20,7 @@ class PromoCampaignReferralsTableSeeder extends Seeder
             0 => 
             array (
                 'id_promo_campaign_referrals' => 1,
+                'id_promo_campaign' => 1,
                 'referred_promo_type' => 'Cashback',
                 'referred_promo_unit' => 'Percent',
                 'referred_promo_value' => 10,

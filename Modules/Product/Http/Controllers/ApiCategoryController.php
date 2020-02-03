@@ -389,7 +389,8 @@ class ApiCategoryController extends Controller
 	                ->where('step_complete', '=', 1)
 	                ->where( function($q){
 	                	$q->whereColumn('usage','<','limitation_usage')
-	                		->orWhere('code_type','Single');
+	                		->orWhere('code_type','Single')
+                            ->orWhere('limitation_usage',0);
 	                } )
 	                ->with([
 						'promo_campaign.promo_campaign_product_discount.product' => function($q) {
