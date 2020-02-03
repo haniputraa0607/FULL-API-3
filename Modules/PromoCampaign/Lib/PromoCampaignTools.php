@@ -686,26 +686,6 @@ class PromoCampaignTools{
 	 */
 	public function validateUser($id_promo, $id_user, $phone, $device_type, $device_id, &$errors=[],$id_code=null){
 		$promo=PromoCampaign::find($id_promo);
-		if($promo->promo_type == 'Referral'){
-			if(User::find($id_user)->transaction_online){
-	        	$errors[]='Promo code not found 1';
-				return false;
-			}
-			if(UserReferralCode::where([
-				'id_promo_campaign_promo_code'=>$id_code,
-				'id_user'=>$id_user
-			])->exists()){
-	        	$errors[]='Promo code not found 2';
-	    		return false;
-			}
-	        $referer = UserReferralCode::where('id_promo_campaign_promo_code',$id_code)
-	            ->join('users','users.id','=','user_referral_codes.id_user')
-	            ->where('users.is_suspended','=',0)
-	            ->first();
-	        if(!$referer){
-	        	$errors[] = 'Promo code not found 3';
-	        }
-		}
 
 		if(!$promo){
         	$errors[]='Promo campaign not found';
@@ -714,6 +694,27 @@ class PromoCampaignTools{
 		if(!$promo->step_complete || !$promo->user_type){
         	$errors[]='Promo campaign not finished';
     		return false;
+		}
+
+		if($promo->promo_type == 'Referral'){
+			if(User::find($id_user)->transaction_online){
+	        	$errors[]='Kode promo tidak ditemukan';
+				return false;
+			}
+			if(UserReferralCode::where([
+				'id_promo_campaign_promo_code'=>$id_code,
+				'id_user'=>$id_user
+			])->exists()){
+	        	$errors[]='Kode promo tidak ditemukan';
+	    		return false;
+			}
+	        $referer = UserReferralCode::where('id_promo_campaign_promo_code',$id_code)
+	            ->join('users','users.id','=','user_referral_codes.id_user')
+	            ->where('users.is_suspended','=',0)
+	            ->first();
+	        if(!$referer){
+	        	$errors[] = 'Kode promo tidak ditemukan';
+	        }
 		}
 
 		//check user 

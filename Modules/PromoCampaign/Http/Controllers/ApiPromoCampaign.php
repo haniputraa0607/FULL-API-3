@@ -1497,7 +1497,7 @@ class ApiPromoCampaign extends Controller
             if(!$referer){
                 return [
                     'status'=>'fail',
-                    'messages'=>['Promo code not valid']
+                    'messages'=>['Kode promo tidak ditemukan']
                 ];
             }
         }
