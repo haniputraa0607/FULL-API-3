@@ -243,6 +243,54 @@ class ApiOnlineTransaction extends Controller
         }
 
         // return $totalDiscount;
+        // check promo code 
+        $promo_error=[];
+        $use_referral = false;
+        if($request->json('promo_code')){
+            $code=PromoCampaignPromoCode::where('promo_code',$request->promo_code)
+                ->join('promo_campaigns', 'promo_campaigns.id_promo_campaign', '=', 'promo_campaign_promo_codes.id_promo_campaign')
+                ->where( function($q){
+                    $q->whereColumn('usage','<','limitation_usage')
+                        ->orWhere('code_type','Single');
+                } )
+                ->first();
+
+            if ($code) 
+            {
+                if($code->promo_type = "Referral"){
+                    $use_referral = true;
+                }
+                $pct=new PromoCampaignTools();
+                $validate_user=$pct->validateUser($code->id_promo_campaign, $request->user()->id, $request->user()->phone, $request->device_type, $request->device_id, $errore);
+
+                $discount_promo=$pct->validatePromo($code->id_promo_campaign, $request->id_outlet, $post['item'], $errors);
+
+                if ( !empty($errore) || !empty($errors)) {
+                    $promo_error['title'] = Setting::where('key','=','promo_error_title')->first()['value']??'Promo tidak berlaku';
+                    $promo_error['button_ok'] = Setting::where('key','=','promo_error_ok_button')->first()['value']??'Tambah item';
+                    $promo_error['button_cancel'] = Setting::where('key','=','promo_error_cancel_button')->first()['value']??'Tidak';
+                    $promo_error['product'] = $pct->getRequiredProduct($code->id_promo_campaign)??null;
+                    $promo_error['message']=[];
+                    if(isset($errore)){
+                        foreach ($errore as $key => $value) {
+                            array_push($promo_error['message'], $value);
+                        }
+                    }
+                    if(isset($errors)){
+                        foreach ($errors as $key => $value) {
+                            array_push($promo_error['message'], $value);
+                        }
+                    }
+                }
+                $promo_discount=$discount_promo['discount'];
+            }
+            else
+            {
+                $promo_error[] = 'Promo code invalid';
+            }
+        }
+
+        $error_msg=[];
 
         foreach ($grandTotal as $keyTotal => $valueTotal) {
             if ($valueTotal == 'subtotal') {
@@ -1309,6 +1357,38 @@ class ApiOnlineTransaction extends Controller
                     if($post['latitude'] && $post['longitude']){
                         $savelocation = $this->saveLocation($post['latitude'], $post['longitude'], $insertTransaction['id_user'], $insertTransaction['id_transaction'], $insertTransaction['id_outlet']);
                      }
+
+                    // apply cashback to referrer
+                    if ($use_referral){
+                        $referral_rule = PromoCampaignReferral::where('id_promo_campaign',$code->id_promo_campaign)->first();
+                        $referrer = UserReferralCode::where('id_promo_campaign_promo_code',$code->id_promo_campaign_promo_code)->pluck('id_user')->first();
+                        if(!$referrer || !$referral_rule){
+                            DB::rollback();
+                            return response()->json([
+                                'status'    => 'fail',
+                                'messages'  => ['Insert Referrer Cashback Failed']
+                            ]);
+                        }
+                        $referrer_cashback = 0;
+                        if($referral_rule->referrer_promo_unit == 'Percent'){
+                            $referrer_discount_percent = $referral_rule->referrer_promo_value<=100?$referral_rule->referrer_promo_value:100;
+                            $referrer_cashback = $insertTransaction['transaction_grandtotal']*$referrer_discount_percent/100;
+                        }else{
+                            if($insertTransaction['transaction_grandtotal'] >= $referral_rule->referred_min_value){
+                                $referrer_cashback = $referral_rule->referrer_promo_value<=$insertTransaction['transaction_grandtotal']?$referral_rule->referrer_promo_value:$insertTransaction['transaction_grandtotal'];
+                            }
+                        }
+                        if($referrer_cashback){
+                            $insertDataLogCash = app($this->balance)->addLogBalance( $referrer, $referrer_cashback, $insertTransaction['id_transaction'], 'Referral Bonus', $insertTransaction['transaction_grandtotal']);
+                            if (!$insertDataLogCash) {
+                                DB::rollback();
+                                return response()->json([
+                                    'status'    => 'fail',
+                                    'messages'  => ['Insert Referrer Cashback Failed']
+                                ]);
+                            }
+                        }
+                    }
 
                     DB::commit();
                     return response()->json([
