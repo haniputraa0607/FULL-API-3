@@ -7,6 +7,7 @@ use Modules\PromoCampaign\Entities\PromoCampaignPromoCode;
 use Modules\PromoCampaign\Entities\PromoCampaignReport;
 use Modules\PromoCampaign\Entities\UserReferralCode;
 use App\Http\Models\Product;
+use App\Http\Models\ProductModifier;
 use App\Http\Models\UserDevice;
 use App\Http\Models\User;
 use App\Http\Models\Transaction;
@@ -86,6 +87,26 @@ class PromoCampaignTools{
 				// $trx['discount']=$product_discount;
 				$trx['new_price']=($product_price*$trx['qty'])-$product_discount;
 			}
+		}
+
+		//get all modifier in array
+		$mod = [];
+		foreach ($trxs as $key => $value) {
+			foreach ($value['modifiers'] as $key2 => $value2) {
+				$mod[] = $value2;
+			}
+		}
+		// remove duplicate modifiers
+		$mod = array_flip($mod);
+		$mod = array_flip($mod);
+
+		// get all modifier data
+		$mod = $this->getAllModifier($mod, $id_outlet);
+
+		// get mod price 
+		$mod_price =[];
+		foreach ($mod as $key => $value) {
+			$mod_price[$value['id_product_modifier']] = $value['product_modifier_price'];
 		}
 
 		switch ($promo->promo_type) {
@@ -468,7 +489,8 @@ class PromoCampaignTools{
 					$rule=(object) [
 						'max_qty'=>false,
 						'discount_type'=>$promo_rules->referred_promo_unit,
-						'discount_value'=>$promo_rules->referred_promo_value
+						'discount_value'=>$promo_rules->referred_promo_value,
+						'max_percent_discount'=>$promo_rules->referred_promo_value_max
 					];
 					foreach ($trxs as  $id_trx => &$trx) {
 						// get product data
@@ -478,6 +500,12 @@ class PromoCampaignTools{
 							  ->where('product_stock_status', '=', 'Available')
 							  ->where('product_visibility', '=', 'Visible');
 						} ])->find($trx['id_product']);
+						$cur_mod_price = 0;
+						foreach ($trx['modifiers'] as $modifier) {
+			                $id_product_modifier = is_numeric($modifier)?$modifier:$modifier['id_product_modifier'];
+			                $qty_product_modifier = is_numeric($modifier)?1:$modifier['qty'];
+			                $cur_mod_price += ($mod_price[$id_product_modifier]??0)*$qty_product_modifier;
+						}
 						//is product available
 						if(!$product){
 							// product not available
@@ -485,7 +513,7 @@ class PromoCampaignTools{
 							continue;
 						}
 						// add discount
-						$discount += $this->discount_product($product,$rule,$trx);
+						$discount += $this->discount_product($product,$rule,$trx,$cur_mod_price);
 					}
 				}
 		}
@@ -632,7 +660,7 @@ class PromoCampaignTools{
 	 * @param  Array 								$trx 			transaction data
 	 * @return int discount
 	 */
-	protected function discount_product($product,$promo_rules,&$trx){
+	protected function discount_product($product,$promo_rules,&$trx, $modifier=null){
 		// check discount type
 		$discount=0;
 		// set quantity of product to apply discount
@@ -653,7 +681,7 @@ class PromoCampaignTools{
 			$discount_qty = $trx['promo_qty'];
 			unset($trx['promo_qty']);
 		}
-		$product_price=$product->product_prices[0]->product_price??[];
+		$product_price = ($product->product_prices[0]->product_price??null)+$modifier;
 		if(isset($trx['new_price'])&&$trx['new_price']){
 			$product_price=$trx['new_price']/$trx['qty'];
 		}
@@ -664,7 +692,11 @@ class PromoCampaignTools{
 			$trx['is_promo']=1;
 		}else{
 			// percent
-			$discount=(int)((($promo_rules->discount_value/100)*$product_price)*$discount_qty);
+			$discount_per_product = ($promo_rules->discount_value/100)*$product_price;
+			if ($discount_per_product > $promo_rules->max_percent_discount) {
+				$discount_per_product = $promo_rules->max_percent_discount;
+			}
+			$discount=(int)($discount_per_product*$discount_qty);
 			$trx['discount']=($trx['discount']??0)+$discount;
 			$trx['new_price']=($product_price*$trx['qty'])-$trx['discount'];
 			$trx['is_promo']=1;
@@ -896,6 +928,35 @@ class PromoCampaignTools{
         	return 'empty';
         }
     }
+
+    function getAllModifier($array_modifier, $id_outlet)
+    {
+    	$mod = ProductModifier::select('product_modifiers.id_product_modifier','text','product_modifier_stock_status','product_modifier_price')
+                // produk modifier yang tersedia di outlet
+                ->join('product_modifier_prices','product_modifiers.id_product_modifier','=','product_modifier_prices.id_product_modifier')
+                ->where('product_modifier_prices.id_outlet',$id_outlet)
+                // produk aktif
+                ->where('product_modifier_status','Active')
+                // product visible
+                ->where(function($query){
+                    $query->where('product_modifier_prices.product_modifier_visibility','=','Visible')
+                    ->orWhere(function($q){
+                        $q->whereNull('product_modifier_prices.product_modifier_visibility')
+                        ->where('product_modifiers.product_modifier_visibility', 'Visible');
+                    });
+                })
+                ->whereIn('product_modifiers.id_product_modifier',$array_modifier)
+                ->groupBy('product_modifiers.id_product_modifier')
+                // product modifier dengan id
+                ->get();
+        if ($mod) {
+        	return $mod;
+        }else{
+        	return [];
+        }
+
+    }
+
     /**
      * Create referal promo code 
      * @param  Integer $id_user user id of user
