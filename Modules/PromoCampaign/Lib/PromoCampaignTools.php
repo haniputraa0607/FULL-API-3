@@ -461,6 +461,33 @@ class PromoCampaignTools{
 					break;
 				}
 				break;
+			case 'Referral':
+				$promo->load('promo_campaign_referral');
+				$promo_rules=$promo->promo_campaign_referral;
+				if($promo_rules->referred_promo_type == 'Product Discount'){
+					$rule=(object) [
+						'max_qty'=>false,
+						'discount_type'=>$promo_rules->referred_promo_unit,
+						'discount_value'=>$promo_rules->referred_promo_value
+					];
+					foreach ($trxs as  $id_trx => &$trx) {
+						// get product data
+						$product=Product::with(['product_prices' => function($q) use ($id_outlet){ 
+							$q->where('id_outlet', '=', $id_outlet)
+							  ->where('product_status', '=', 'Active')
+							  ->where('product_stock_status', '=', 'Available')
+							  ->where('product_visibility', '=', 'Visible');
+						} ])->find($trx['id_product']);
+						//is product available
+						if(!$product){
+							// product not available
+							$errors[]='Product with id '.$trx['id_product'].' could not be found';
+							continue;
+						}
+						// add discount
+						$discount+=$this->discount_product($product,$promo_rules,$trx);
+					}
+				}
 		}
 		// discount?
 		if($discount<=0){

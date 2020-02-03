@@ -1219,6 +1219,28 @@ class ApiOnlineTransaction extends Controller
                     $updateUserPoint = User::where('id', $insertTransaction['id_user'])->update(['points' => $totalPoint]);
                 }
 
+                // apply cashback to referrer
+                if ($use_referral){
+                    $referral_rule = PromoCampaignReferral::where('id_promo_campaign',$code->id_promo_campaign)->first();
+                    if(!$referral_rule){
+                        DB::rollback();
+                        return response()->json([
+                            'status'    => 'fail',
+                            'messages'  => ['Insert Referrer Cashback Failed']
+                        ]);
+                    }
+                    $referred_cashback = 0;
+                    if($referral_rule->referred_promo_unit == 'Percent'){
+                        $referred_discount_percent = $referral_rule->referred_promo_value<=100?$referral_rule->referred_promo_value:100;
+                        $referred_cashback = $insertTransaction['transaction_grandtotal']*$referred_discount_percent/100;
+                    }else{
+                        if($insertTransaction['transaction_grandtotal'] >= $referral_rule->referred_min_value){
+                            $referred_cashback = $referral_rule->referred_promo_value<=$insertTransaction['transaction_grandtotal']?$referral_rule->referred_promo_value:$insertTransaction['transaction_grandtotal'];
+                        }
+                    }
+                    $insertTransaction['transaction_cashback_earned'] = $referrer_cashback;
+                }
+
                 if ($insertTransaction['transaction_cashback_earned'] != 0) {
 
                     $insertDataLogCash = app($this->balance)->addLogBalance( $insertTransaction['id_user'], $insertTransaction['transaction_cashback_earned'], $insertTransaction['id_transaction'], 'Transaction', $insertTransaction['transaction_grandtotal']);
