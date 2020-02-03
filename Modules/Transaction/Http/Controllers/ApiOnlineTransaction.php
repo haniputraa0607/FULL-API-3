@@ -246,47 +246,42 @@ class ApiOnlineTransaction extends Controller
         // check promo code 
         $promo_error=[];
         $use_referral = false;
+        $discount_promo = [];
+        $promo_discount = 0;
         if($request->json('promo_code')){
             $code=PromoCampaignPromoCode::where('promo_code',$request->promo_code)
                 ->join('promo_campaigns', 'promo_campaigns.id_promo_campaign', '=', 'promo_campaign_promo_codes.id_promo_campaign')
                 ->where( function($q){
                     $q->whereColumn('usage','<','limitation_usage')
-                        ->orWhere('code_type','Single');
+                        ->orWhere('code_type','Single')
+                        ->orWhere('limitation_usage',0);
                 } )
                 ->first();
-
             if ($code) 
             {
                 if($code->promo_type = "Referral"){
                     $use_referral = true;
                 }
                 $pct=new PromoCampaignTools();
-                $validate_user=$pct->validateUser($code->id_promo_campaign, $request->user()->id, $request->user()->phone, $request->device_type, $request->device_id, $errore);
+                $validate_user=$pct->validateUser($code->id_promo_campaign, $request->user()->id, $request->user()->phone, $request->device_type, $request->device_id, $errore,$code->id_promo_campaign_promo_code);
 
                 $discount_promo=$pct->validatePromo($code->id_promo_campaign, $request->id_outlet, $post['item'], $errors);
 
                 if ( !empty($errore) || !empty($errors)) {
-                    $promo_error['title'] = Setting::where('key','=','promo_error_title')->first()['value']??'Promo tidak berlaku';
-                    $promo_error['button_ok'] = Setting::where('key','=','promo_error_ok_button')->first()['value']??'Tambah item';
-                    $promo_error['button_cancel'] = Setting::where('key','=','promo_error_cancel_button')->first()['value']??'Tidak';
-                    $promo_error['product'] = $pct->getRequiredProduct($code->id_promo_campaign)??null;
-                    $promo_error['message']=[];
-                    if(isset($errore)){
-                        foreach ($errore as $key => $value) {
-                            array_push($promo_error['message'], $value);
-                        }
-                    }
-                    if(isset($errors)){
-                        foreach ($errors as $key => $value) {
-                            array_push($promo_error['message'], $value);
-                        }
-                    }
+                    DB::rollback();
+                    return [
+                        'status'=>'fail',
+                        'messages'=>['Promo code not valid']
+                    ];
                 }
                 $promo_discount=$discount_promo['discount'];
             }
             else
             {
-                $promo_error[] = 'Promo code invalid';
+                return [
+                    'status'=>'fail',
+                    'messages'=>['Promo code not valid']
+                ];
             }
         }
 
@@ -617,6 +612,14 @@ class ApiOnlineTransaction extends Controller
         $insertTransaction['transaction_receipt_number'] = $receipt;
 
         foreach ($post['item'] as $keyProduct => $valueProduct) {
+            $this_discount=0;
+            if($discount_promo){
+                foreach ($discount_promo['item']??[] as $disc) {
+                    if($disc['id_product']==$item['id_product']){
+                        $this_discount=$disc['discount']??0;
+                    }
+                }
+            }
             $checkProduct = Product::where('id_product', $valueProduct['id_product'])->first();
             if (empty($checkProduct)) {
                 DB::rollback();

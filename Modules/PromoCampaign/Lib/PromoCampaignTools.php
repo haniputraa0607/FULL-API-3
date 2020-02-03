@@ -485,7 +485,7 @@ class PromoCampaignTools{
 							continue;
 						}
 						// add discount
-						$discount+=$this->discount_product($product,$promo_rules,$trx);
+						$discount += $this->discount_product($product,$rule,$trx);
 					}
 				}
 		}
@@ -688,16 +688,23 @@ class PromoCampaignTools{
 		$promo=PromoCampaign::find($id_promo);
 		if($promo->promo_type == 'Referral'){
 			if(User::find($id_user)->transaction_online){
-	        	$errors[]='Voucher code not found';
+	        	$errors[]='Promo code not found 1';
 				return false;
 			}
 			if(UserReferralCode::where([
 				'id_promo_campaign_promo_code'=>$id_code,
 				'id_user'=>$id_user
 			])->exists()){
-	        	$errors[]='Voucher code not found';
+	        	$errors[]='Promo code not found 2';
 	    		return false;
 			}
+	        $referer = UserReferralCode::where('id_promo_campaign_promo_code',$id_code)
+	            ->join('users','users.id','=','user_referral_codes.id_user')
+	            ->where('users.is_suspended','=',0)
+	            ->first();
+	        if(!$referer){
+	        	$errors[] = 'Promo code not found 3';
+	        }
 		}
 
 		if(!$promo){

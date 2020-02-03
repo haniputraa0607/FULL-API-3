@@ -154,6 +154,6 @@ class PromoCampaign extends Eloquent
 
     public function promo_campaign_referral()
     {
-        return $this->hasMany(\Modules\PromoCampaign\Entities\PromoCampaignReferral::class, 'id_promo_campaign', 'id_promo_campaign');
+        return $this->hasOne(\Modules\PromoCampaign\Entities\PromoCampaignReferral::class, 'id_promo_campaign', 'id_promo_campaign');
     }
 }
