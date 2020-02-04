@@ -15,6 +15,7 @@ use App\Http\Models\TransactionMultiplePayment;
 use App\Http\Models\TransactionPaymentMidtran;
 use App\Http\Models\TransactionPaymentBalance;
 use Modules\UserFeedback\Entities\UserFeedback;
+use Modules\Subscription\Entities\SubscriptionUser;
 
 use App\Lib\MyHelper;
 
@@ -985,6 +986,17 @@ class ApiHistoryController extends Controller
                 // $dataList['online'] = 1;
 
                 $listBalance[$key] = $dataList;
+            } elseif ($value['source'] == 'Subscription Balance') {
+                $dataSubscription = SubscriptionUser::where('id_subscription_user', $value['id_reference'])->first();
+                if($dataSubscription){
+                    $dataList['type']   = 'subscription';
+                    $dataList['id']      = $value['id_log_balance'];
+                    $dataList['date']   = date('Y-m-d H:i:s', strtotime($dataSubscription['bought_at']));
+                    $dataList['outlet'] = 'Buy a Subscription';
+                    $dataList['amount'] = '- ' . ltrim(number_format($value['balance'], 0, ',', '.'), '-');
+
+                    $listBalance[$key] = $dataList;
+                }
             } else {
                 // return 'a';
                 $dataList['type']   = 'profile';
