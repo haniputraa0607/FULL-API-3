@@ -1540,26 +1540,29 @@ class ApiOnlineTransaction extends Controller
 	            $pct=new PromoCampaignTools();
 	            $validate_user=$pct->validateUser($code->id_promo_campaign, $request->user()->id, $request->user()->phone, $request->device_type, $request->device_id, $errore);
 
-	            $discount_promo=$pct->validatePromo($code->id_promo_campaign, $request->id_outlet, $post['item'], $errors);
-
-	            if ( !empty($errore) || !empty($errors)) {
-	            	$promo_error['title'] = Setting::where('key','=','promo_error_title')->first()['value']??'Promo tidak berlaku';
-			        $promo_error['button_ok'] = Setting::where('key','=','promo_error_ok_button')->first()['value']??'Tambah item';
-			        $promo_error['button_cancel'] = Setting::where('key','=','promo_error_cancel_button')->first()['value']??'Tidak';
-			        $promo_error['product'] = $pct->getRequiredProduct($code->id_promo_campaign)??null;
-	            	$promo_error['message']=[];
+	            if ($validate_user) {
+		            $discount_promo=$pct->validatePromo($code->id_promo_campaign, $request->id_outlet, $post['item'], $errors);
+	// return [$discount_promo, $errors];
+		            if ( !empty($errore) || !empty($errors)) {
+		            	$promo_error['title'] = Setting::where('key','=','promo_error_title')->first()['value']??'Promo tidak berlaku';
+				        $promo_error['button_ok'] = Setting::where('key','=','promo_error_ok_button')->first()['value']??'Tambah item';
+				        $promo_error['button_cancel'] = Setting::where('key','=','promo_error_cancel_button')->first()['value']??'Tidak';
+				        $promo_error['product'] = $pct->getRequiredProduct($code->id_promo_campaign)??null;
+		            	$promo_error['message']=[];
+		            	if(isset($errors)){
+		            		foreach ($errors as $key => $value) {
+		            			array_push($promo_error['message'], $value);
+		            		}
+		            	}
+		            }
+		            $promo_discount=$discount_promo['discount'];
+	            }else{
 	                if(isset($errore)){
 	            		foreach ($errore as $key => $value) {
 	            			array_push($promo_error['message'], $value);
 	            		}
 	            	}
-	            	if(isset($errors)){
-	            		foreach ($errors as $key => $value) {
-	            			array_push($promo_error['message'], $value);
-	            		}
-	            	}
 	            }
-	            $promo_discount=$discount_promo['discount'];
             }
             else
             {

@@ -37,7 +37,7 @@ class PromoCampaignBuyxgetyRule extends Eloquent
 		'max_qty_requirement' => 'int',
 		'benefit_id_product' => 'int',
 		'benefit_qty' => 'int',
-		'discount_percent' => 'int'
+		'max_percent_discount' => 'int'
 	];
 
 	protected $fillable = [
@@ -46,7 +46,9 @@ class PromoCampaignBuyxgetyRule extends Eloquent
 		'max_qty_requirement',
 		'benefit_id_product',
 		'benefit_qty',
-		'discount_percent'
+		'discount_type',
+		'discount_value',
+		'max_percent_discount'
 	];
 
 	public function product()

@@ -42,7 +42,7 @@ class GeneratePromoCode implements ShouldQueue
     {
         for ($i = 0; $i < $this->total_coupon; $i++) {
             $generateCode[$i]['id_promo_campaign']  = $this->id;
-            $generateCode[$i]['promo_code']         = implode('-', [$this->prefix_code, MyHelper::createrandom($this->number_last_code, 'PromoCode')]);
+            $generateCode[$i]['promo_code']         = implode('', [$this->prefix_code, MyHelper::createrandom($this->number_last_code, 'PromoCode')]);
             $generateCode[$i]['created_at']         = date('Y-m-d H:i:s');
             $generateCode[$i]['updated_at']         = date('Y-m-d H:i:s');
         }
