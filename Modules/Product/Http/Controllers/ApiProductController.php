@@ -951,7 +951,7 @@ class ApiProductController extends Controller
             $modifier['price'] = (int) $modifier['price'];
             unset($modifier['product_modifier_prices']);
         }
-        $product['max_order'] = $max_order;
+        $product['max_order'] = (int) $max_order;
         $product['outlet'] = Outlet::select('id_outlet','outlet_address','outlet_name')->find($post['id_outlet']);
         return MyHelper::checkGet($product);
     }
