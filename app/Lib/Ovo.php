@@ -67,7 +67,7 @@ class Ovo {
 
         $header = [
             'hmac' => Self::hmac_value($now),
-            'app_id' => $app_id.$now,
+            'app-id' => $app_id,
             'random' => $now
         ];
 
@@ -150,7 +150,7 @@ class Ovo {
 
         $header = [
             'hmac' => Self::hmac_value($now),
-            'app_id' => $app_id.$now,
+            'app-id' => $app_id.$now,
             'random' => $now
         ];
 
@@ -160,6 +160,90 @@ class Ovo {
             $createLog = LogOvo::create([
                 'id_transaction_payment_ovo' => $dataPay['id_transaction_payment_ovo'],
                 'transaction_receipt_number' => $dataTrx['transaction_receipt_number'],
+                'url' => $url,
+                'header' => json_encode($header),
+                'request' => json_encode($data)
+            ]);
+
+            $reversal = MyHelper::postWithTimeout($url, null, $data, 0, $header);
+
+            if(isset($reversal['status_code'])){
+
+                $updateLog = LogOvo::where('id_log_ovo', $createLog['id'])->update([
+                    'response_status' => 'success',
+                    'response_code' => $reversal['status_code'],
+                    'response' => json_encode($reversal['response'])
+                ]);
+
+                if($reversal['status_code'] != 404){
+                    break;
+                    return $reversal;
+            
+                }
+
+            }else{
+                $updateLog = LogOvo::where('id_log_ovo', $createLog['id_log'])->update([
+                    'response_status' => 'fail',
+                    'response' => json_encode($pay)
+                ]);
+                break;
+                return $reversal; 
+            }
+        }
+
+        return $reversal; 
+    }
+
+    /**
+     * Void ovo transaction
+     * @param Transaction $transaction Object of transaction join transaction payment ovo
+     * @return Array ovo response
+     */
+    static function Void($transaction) {
+        if($type == 'production'){
+            $url = env('OVO_PROD_URL');
+            $tid = env('OVO_PROD_TID');
+            $mid = env('OVO_PROD_MID');
+            $merchantId = env('OVO_PROD_MERCHANT_ID');
+            $storeCode = env('OVO_PROD_STORE_CODE');
+            $app_id = env('OVO_PROD_APP_ID');
+        }else{
+            $url    = env('OVO_STAGING_URL');
+            $tid = env('OVO_STAGING_TID');
+            $mid = env('OVO_STAGING_MID');
+            $merchantId = env('OVO_STAGING_MERCHANT_ID');
+            $storeCode = env('OVO_STAGING_STORE_CODE');
+            $app_id = env('OVO_STAGING_APP_ID');
+        }
+
+        $data['type'] = "0200"; 
+        $data['processingCode'] = "020040";
+        $data['amount'] = $amount;
+        $data['date'] = date('Y-m-d H:i:s.v');
+        $data['referenceNumber'] = $transaction['reference_number'];
+        $data['tid']        = $tid;
+        $data['mid']        = $mid;
+        $data['merchantId'] = $merchantId;
+        $data['storeCode']  = $storeCode;
+        $data['appSource']  = 'POS';
+        $data['transactionRequestData'] =[
+            'batchNo' => $transaction['batch_no'],
+            'merchantInvoice' => $transaction['transaction_receipt_number'],
+        ];
+        $now = time();
+
+        $header = [
+            'hmac' => Self::hmac_value($now),
+            'app-id' => $app_id.$now,
+            'random' => $now
+        ];
+
+        for($i = 1; $i<=3; $i++){
+
+        //create log request
+            $createLog = LogOvo::create([
+                'id_transaction_payment_ovo' => $transaction['id_transaction_payment_ovo'],
+                'transaction_receipt_number' => $transaction['transaction_receipt_number'],
                 'url' => $url,
                 'header' => json_encode($header),
                 'request' => json_encode($data)

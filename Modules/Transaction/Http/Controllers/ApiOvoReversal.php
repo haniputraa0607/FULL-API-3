@@ -108,4 +108,25 @@ class ApiOvoReversal extends Controller
         return 'success';
 
     }
+
+    //process reversal
+    public function void(Request $request){
+        $post = $request->json()->all();
+        $transaction = TransactionPaymentOvo::where('transaction_payment_ovos.id_transaction', $post['id_transaction'])
+            ->join('transactions','transactions.id_transaction','=','id_transaction_payment_ovo')
+            ->first();
+        if(!$transaction){
+            return [
+                'status' => 'fail',
+                'messages' => [
+                    'Transaction not found'
+                ]
+            ];
+        }
+
+        $void = Ovo::Void($transaction);
+
+        return $void;
+
+    }
 }
