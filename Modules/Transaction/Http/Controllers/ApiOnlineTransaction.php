@@ -472,7 +472,7 @@ class ApiOnlineTransaction extends Controller
             $post['cashback'] = $referred_cashback;
         }
 
-        if (isset($post['payment_type']) && $post['payment_type'] == 'Balance' && !$use_referral) {
+        if (isset($post['payment_type']) && $post['payment_type'] == 'Balance') {
             $post['cashback'] = 0;
             $post['point']    = 0;
         }
