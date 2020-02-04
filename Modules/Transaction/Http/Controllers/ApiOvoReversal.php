@@ -113,7 +113,7 @@ class ApiOvoReversal extends Controller
     public function void(Request $request){
         $post = $request->json()->all();
         $transaction = TransactionPaymentOvo::where('transaction_payment_ovos.id_transaction', $post['id_transaction'])
-            ->join('transactions','transactions.id_transaction','=','id_transaction_payment_ovo')
+            ->join('transactions','transactions.id_transaction','=','transaction_payment_ovos.id_transaction')
             ->first();
         if(!$transaction){
             return [

@@ -150,7 +150,7 @@ class Ovo {
 
         $header = [
             'hmac' => Self::hmac_value($now),
-            'app-id' => $app_id.$now,
+            'app-id' => $app_id,
             'random' => $now
         ];
 
@@ -200,6 +200,7 @@ class Ovo {
      * @return Array ovo response
      */
     static function Void($transaction) {
+        $type = env('OVO_ENV');
         if($type == 'production'){
             $url = env('OVO_PROD_URL');
             $tid = env('OVO_PROD_TID');
@@ -218,7 +219,7 @@ class Ovo {
 
         $data['type'] = "0200"; 
         $data['processingCode'] = "020040";
-        $data['amount'] = $amount;
+        $data['amount'] = $transaction['transaction_grandtotal'];
         $data['date'] = date('Y-m-d H:i:s.v');
         $data['referenceNumber'] = $transaction['reference_number'];
         $data['tid']        = $tid;
@@ -229,12 +230,13 @@ class Ovo {
         $data['transactionRequestData'] =[
             'batchNo' => $transaction['batch_no'],
             'merchantInvoice' => $transaction['transaction_receipt_number'],
+            'phone' => $transaction['phone']
         ];
         $now = time();
 
         $header = [
             'hmac' => Self::hmac_value($now),
-            'app-id' => $app_id.$now,
+            'app-id' => $app_id,
             'random' => $now
         ];
 
