@@ -1253,7 +1253,7 @@ class ApiOnlineTransaction extends Controller
                 }
 
                 if($save['status'] == 'success'){
-                    $checkFraudPoint = app($this->setting_fraud)->checkFraud($sumBalance, $user, ['id_outlet' => $insertTransaction['id_outlet']]);
+                    $checkFraudPoint = app($this->setting_fraud)->fraudTrxPoint($sumBalance, $user, ['id_outlet' => $insertTransaction['id_outlet']]);
                 }
 
                 // Fraud Detection
