@@ -1574,6 +1574,13 @@ class ApiOnlineTransaction extends Controller
         $missing_product = 0;
         // return [$discount_promo['item'],$errors];
         $is_advance = 0;
+        $global_max_order = Outlet::select('max_order')->where('id_outlet',$post['id_outlet'])->pluck('max_order')->first();
+        if($global_max_order == null){
+            $global_max_order = Setting::select('value')->where('key','max_order')->pluck('value')->first();
+            if($global_max_order == null){
+                $global_max_order = 100;
+            }
+        }
         foreach ($discount_promo['item']??$post['item'] as &$item) {
             // get detail product
             $product = Product::select([
@@ -1607,7 +1614,11 @@ class ApiOnlineTransaction extends Controller
             ->groupBy('products.id_product')
             ->orderBy('products.position')
             ->find($item['id_product']);
-            if($product['max_order']&&($item['qty']>$product['max_order'])){
+            $max_order = $product['max_order'];
+            if($max_order==null){
+                $max_order = $global_max_order;
+            }
+            if($max_order&&($item['qty']>$max_order)){
                 $is_advance = 1;
             }
             if(!$product){
