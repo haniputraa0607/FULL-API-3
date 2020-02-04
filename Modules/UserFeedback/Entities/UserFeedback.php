@@ -13,6 +13,7 @@ class UserFeedback extends Model
     	'id_user',
     	'id_transaction',
     	'rating_value',
+        'rating_item_text',
     	'notes',
     	'image'
     ];
