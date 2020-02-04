@@ -61,6 +61,7 @@ class Transaction extends Model
 	protected $fillable = [
 		'id_user',
 		'id_outlet',
+		'id_promo_campaign_promo_code',
 		'transaction_receipt_number',
 		'transaction_notes',
 		'transaction_subtotal',

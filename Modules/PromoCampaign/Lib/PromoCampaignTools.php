@@ -515,6 +515,11 @@ class PromoCampaignTools{
 						// add discount
 						$discount += $this->discount_product($product,$rule,$trx,$cur_mod_price);
 					}
+				}else{
+					return [
+						'item'=>$trxs,
+						'discount'=>0
+					];
 				}
 		}
 		// discount?
