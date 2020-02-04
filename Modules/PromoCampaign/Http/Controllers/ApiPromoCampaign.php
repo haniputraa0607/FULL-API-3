@@ -1634,7 +1634,7 @@ class ApiPromoCampaign extends Controller
 		$result = MyHelper::checkGet($result);
 		// return $result;
 		// check item
-		if (isset($request->item)) {
+		if (!empty($request->item)) {
         	$bearer = $request->header('Authorization');
         
 	        if ($bearer == "") {
