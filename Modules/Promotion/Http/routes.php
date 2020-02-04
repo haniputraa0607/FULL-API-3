@@ -19,13 +19,11 @@ Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scop
     {
         Route::any('', ['middleware' => 'feature_control:109', 'uses' => 'ApiPromotionDeals@list']);
         Route::post('save', ['middleware' => 'feature_control:112', 'uses' => 'ApiPromotionDeals@save']);
-    
+
     });
 });
 
-Route::group(['prefix' => 'api/promotion', 'middleware' => ['log_activities', 'user_agent'], 'namespace' => 'Modules\Promotion\Http\Controllers'], function()
+Route::group(['prefix' => 'api/promotion', 'middleware' => ['log_activities'], 'namespace' => 'Modules\Promotion\Http\Controllers'], function()
 {
     Route::get('display_logo/{hash}', 'ApiPromotion@displayLogo');
-    Route::any('queue', 'ApiPromotion@addPromotionQueue');
-    Route::any('send', 'ApiPromotion@sendPromotion');
 });

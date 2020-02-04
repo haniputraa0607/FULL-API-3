@@ -13,7 +13,6 @@ Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scop
     Route::any('jobs_list', 'ApiSetting@jobsList');
     Route::any('celebrate_list', 'ApiSetting@celebrateList');
     Route::post('webview', 'ApiSetting@settingWebview');
-    Route::get('/cron/point-reset', 'ApiSetting@cronPointReset');
 
     // complete profile
     Route::group(['prefix' => 'complete-profile'], function()

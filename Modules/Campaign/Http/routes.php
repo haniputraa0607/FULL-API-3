@@ -19,9 +19,3 @@ Route::group(['middleware' => ['auth:api','log_activities', 'user_agent', 'scope
     Route::post('step2', ['middleware' => 'feature_control:99', 'uses' =>'ApiCampaign@ShowCampaignStep2']);
 
 });
-
-Route::group(['prefix' => 'api/campaign/cron', 'namespace' => 'Modules\Campaign\Http\Controllers'], function()
-{
-    Route::any('queue', 'ApiCampaign@insertQueue');
-    Route::any('send', 'ApiCampaign@sendCampaignCron');
-});

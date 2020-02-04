@@ -15,7 +15,7 @@ Route::group(['middleware' => ['api','log_activities', 'auth:api', 'user_agent',
     Route::post('trx/transaction/user', ['middleware' => 'feature_control:127', 'uses' => 'ApiReportDua@transactionUser']);
     Route::post('trx/transaction/point', ['middleware' => 'feature_control:127', 'uses' => 'ApiReportDua@transactionPoint']);
     Route::post('trx/transaction/treatment', ['middleware' => 'feature_control:127', 'uses' => 'ApiReportDua@reservationTreatment']);
-    
+
     /* OUTLET */
     Route::post('trx/outlet', ['middleware' => 'feature_control:128', 'uses' => 'ApiReportDua@transactionOutlet']);
     Route::post('trx/outlet/detail', ['middleware' => 'feature_control:128', 'uses' => 'ApiReportDua@transactionOutletDetail']);
@@ -52,9 +52,3 @@ Route::group(['middleware' => ['api','log_activities', 'auth:api', 'user_agent',
     // Route::post('/compare/reg', 'ApiCompareReport@getRegReport');
 
 });
-
-Route::group(['prefix' => 'api/cron', 'namespace' => 'Modules\Report\Http\Controllers'], function()
-{
-    Route::any('daily-transaction', 'ApiCronReport@transactionCron');
-});
-

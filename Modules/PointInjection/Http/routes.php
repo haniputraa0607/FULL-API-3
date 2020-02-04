@@ -8,6 +8,3 @@ Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scop
     Route::post('review', ['middleware' => 'feature_control:206', 'uses' => 'ApiPointInjectionController@review']);
     Route::post('getUserList', ['middleware' => 'feature_control:206', 'uses' => 'ApiPointInjectionController@getUserList']);
 });
-Route::group(['prefix' => 'api/point-injection', 'namespace' => 'Modules\PointInjection\Http\Controllers'], function () {
-    Route::get('getPointInjection', 'ApiPointInjectionController@getPointInjection');
-});
