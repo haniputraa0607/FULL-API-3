@@ -6,6 +6,7 @@ use Modules\PromoCampaign\Entities\PromoCampaign;
 use Modules\PromoCampaign\Entities\PromoCampaignPromoCode;
 use Modules\PromoCampaign\Entities\PromoCampaignReport;
 use Modules\PromoCampaign\Entities\UserReferralCode;
+use Modules\PromoCampaign\Entities\PromoCampaignReferral;
 use App\Http\Models\Product;
 use App\Http\Models\ProductModifier;
 use App\Http\Models\UserDevice;
@@ -71,8 +72,7 @@ class PromoCampaignTools{
 			$product=Product::with(['product_prices' => function($q) use ($id_outlet){ 
 							$q->where('id_outlet', '=', $id_outlet)
 							  ->where('product_status', '=', 'Active')
-							  ->where('product_stock_status', '=', 'Available')
-							  ->where('product_visibility', '=', 'Visible');
+							  ->where('product_stock_status', '=', 'Available');
 						} ])->find($trx['id_product']);
 			//is product available
 			if(!$product){
@@ -497,8 +497,7 @@ class PromoCampaignTools{
 						$product=Product::with(['product_prices' => function($q) use ($id_outlet){ 
 							$q->where('id_outlet', '=', $id_outlet)
 							  ->where('product_status', '=', 'Active')
-							  ->where('product_stock_status', '=', 'Available')
-							  ->where('product_visibility', '=', 'Visible');
+							  ->where('product_stock_status', '=', 'Available');
 						} ])->find($trx['id_product']);
 						$cur_mod_price = 0;
 						foreach ($trx['modifiers'] as $modifier) {
@@ -1000,12 +999,12 @@ class PromoCampaignTools{
      * @param  Transaction $transaction Transaction model
      * @return boolean 
      */
-    public function applyReferrerCashback($transaction)
+    public static function applyReferrerCashback($transaction)
     {
     	if(!$transaction['id_promo_campaign_promo_code']){
     		return true;
     	}
-    	$transaction->load('promo_campaign_product_code','promo_campaign_promo_code.promo_campaign');
+    	$transaction->load('promo_campaign_promo_code','promo_campaign_promo_code.promo_campaign');
     	$use_referral = ($transaction['promo_campaign_promo_code']['promo_campaign']['promo_type']??false) === 'Referral';
         // apply cashback to referrer
         if ($use_referral){
@@ -1017,14 +1016,14 @@ class PromoCampaignTools{
             $referrer_cashback = 0;
             if($referral_rule->referrer_promo_unit == 'Percent'){
                 $referrer_discount_percent = $referral_rule->referrer_promo_value<=100?$referral_rule->referrer_promo_value:100;
-                $referrer_cashback = $insertTransaction['transaction_grandtotal']*$referrer_discount_percent/100;
+                $referrer_cashback = $transaction['transaction_grandtotal']*$referrer_discount_percent/100;
             }else{
                 if($transaction['transaction_grandtotal'] >= $referral_rule->referred_min_value){
                     $referrer_cashback = $referral_rule->referrer_promo_value<=$transaction['transaction_grandtotal']?$referral_rule->referrer_promo_value:$transaction['transaction_grandtotal'];
                 }
             }
             if($referrer_cashback){
-                $insertDataLogCash = app($this->balance)->addLogBalance( $referrer, $referrer_cashback, $transaction['id_transaction'], 'Referral Bonus', $transaction['transaction_grandtotal']);
+                $insertDataLogCash = app("Modules\Balance\Http\Controllers\BalanceController")->addLogBalance( $referrer, $referrer_cashback, $transaction['id_transaction'], 'Referral Bonus', $transaction['transaction_grandtotal']);
                 if (!$insertDataLogCash) {
                     return false;
                 }
