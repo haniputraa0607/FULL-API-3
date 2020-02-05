@@ -171,4 +171,9 @@ class Transaction extends Model
 	{
 		return $this->hasMany(\App\Http\Models\TransactionVoucher::class, 'id_transaction', 'id_transaction');
 	}
+
+	public function promo_campaign_promo_code()
+	{
+		return $this->belongsTo(Modules\PromoCampaign\Entities\PromoCampaignPromoCode::class, 'id_promo_campaign_promo_code', 'id_promo_campaign_promo_code');
+	}
 }

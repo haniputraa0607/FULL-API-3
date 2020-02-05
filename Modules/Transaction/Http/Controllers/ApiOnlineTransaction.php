@@ -246,7 +246,7 @@ class ApiOnlineTransaction extends Controller
         }
 
         // return $totalDiscount;
-        // check promo code 
+        // check promo code and referral
         $promo_error=[];
         $use_referral = false;
         $discount_promo = [];
@@ -623,6 +623,7 @@ class ApiOnlineTransaction extends Controller
                 'messages'  => ['Insert Transaction Failed']
             ]);
         }
+        // add report referral
         if($use_referral){
             $addPromoCounter = PromoCampaignReferralTransaction::create([
                 'id_promo_campaign_promo_code' =>$code->id_promo_campaign_promo_code,
@@ -1407,37 +1408,7 @@ class ApiOnlineTransaction extends Controller
                         $savelocation = $this->saveLocation($post['latitude'], $post['longitude'], $insertTransaction['id_user'], $insertTransaction['id_transaction'], $insertTransaction['id_outlet']);
                      }
 
-                    // apply cashback to referrer
-                    if ($use_referral){
-                        $referral_rule = PromoCampaignReferral::where('id_promo_campaign',$code->id_promo_campaign)->first();
-                        $referrer = UserReferralCode::where('id_promo_campaign_promo_code',$code->id_promo_campaign_promo_code)->pluck('id_user')->first();
-                        if(!$referrer || !$referral_rule){
-                            DB::rollback();
-                            return response()->json([
-                                'status'    => 'fail',
-                                'messages'  => ['Insert Referrer Cashback Failed']
-                            ]);
-                        }
-                        $referrer_cashback = 0;
-                        if($referral_rule->referrer_promo_unit == 'Percent'){
-                            $referrer_discount_percent = $referral_rule->referrer_promo_value<=100?$referral_rule->referrer_promo_value:100;
-                            $referrer_cashback = $insertTransaction['transaction_grandtotal']*$referrer_discount_percent/100;
-                        }else{
-                            if($insertTransaction['transaction_grandtotal'] >= $referral_rule->referred_min_value){
-                                $referrer_cashback = $referral_rule->referrer_promo_value<=$insertTransaction['transaction_grandtotal']?$referral_rule->referrer_promo_value:$insertTransaction['transaction_grandtotal'];
-                            }
-                        }
-                        if($referrer_cashback){
-                            $insertDataLogCash = app($this->balance)->addLogBalance( $referrer, $referrer_cashback, $insertTransaction['id_transaction'], 'Referral Bonus', $insertTransaction['transaction_grandtotal']);
-                            if (!$insertDataLogCash) {
-                                DB::rollback();
-                                return response()->json([
-                                    'status'    => 'fail',
-                                    'messages'  => ['Insert Referrer Cashback Failed']
-                                ]);
-                            }
-                        }
-                    }
+                    PromoCampaignTools::applyReferrerCashback($insertTransaction);
 
                     DB::commit();
                     return response()->json([

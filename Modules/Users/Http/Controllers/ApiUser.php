@@ -953,7 +953,6 @@ class ApiUser extends Controller
 
 
             if(\Module::collections()->has('Autocrm')) {
-                file_put_contents('pin.txt', $pin);
                 $autocrm = app($this->autocrm)->SendAutoCRM('Pin Sent', $phone,
                     ['pin' => $pin,
                         'useragent' => $useragent,

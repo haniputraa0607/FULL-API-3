@@ -995,5 +995,42 @@ class PromoCampaignTools{
     	]);
     	return $create2;
     }
+    /**
+     * Apply cashback to referrer
+     * @param  Transaction $transaction Transaction model
+     * @return boolean 
+     */
+    public function applyReferrerCashback($transaction)
+    {
+    	if(!$transaction['id_promo_campaign_promo_code']){
+    		return true;
+    	}
+    	$transaction->load('promo_campaign_product_code','promo_campaign_promo_code.promo_campaign');
+    	$use_referral = ($transaction['promo_campaign_promo_code']['promo_campaign']['promo_type']??false) === 'Referral';
+        // apply cashback to referrer
+        if ($use_referral){
+            $referral_rule = PromoCampaignReferral::where('id_promo_campaign',$transaction['promo_campaign_promo_code']['id_promo_campaign'])->first();
+            $referrer = UserReferralCode::where('id_promo_campaign_promo_code',$transaction['id_promo_campaign_promo_code'])->pluck('id_user')->first();
+            if(!$referrer || !$referral_rule){
+            	return false;
+            }
+            $referrer_cashback = 0;
+            if($referral_rule->referrer_promo_unit == 'Percent'){
+                $referrer_discount_percent = $referral_rule->referrer_promo_value<=100?$referral_rule->referrer_promo_value:100;
+                $referrer_cashback = $insertTransaction['transaction_grandtotal']*$referrer_discount_percent/100;
+            }else{
+                if($transaction['transaction_grandtotal'] >= $referral_rule->referred_min_value){
+                    $referrer_cashback = $referral_rule->referrer_promo_value<=$transaction['transaction_grandtotal']?$referral_rule->referrer_promo_value:$transaction['transaction_grandtotal'];
+                }
+            }
+            if($referrer_cashback){
+                $insertDataLogCash = app($this->balance)->addLogBalance( $referrer, $referrer_cashback, $transaction['id_transaction'], 'Referral Bonus', $transaction['transaction_grandtotal']);
+                if (!$insertDataLogCash) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
 }
 ?>
