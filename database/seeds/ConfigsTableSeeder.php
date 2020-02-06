@@ -854,7 +854,25 @@ class ConfigsTableSeeder extends Seeder
                     'is_active' => 0,
                     'created_at' => date('Y-m-d H:i:s'),
                     'updated_at' => date('Y-m-d H:i:s'),
-                )
+                ),
+            94 =>
+                array (
+                    'id_config' => 95,
+                    'config_name' => 'use brand',
+                    'description' => '',
+                    'is_active' => 1,
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
+            95 =>
+                array (
+                    'id_config' => 96,
+                    'config_name' => 'delivery services',
+                    'description' => '',
+                    'is_active' => 0,
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
         ));
     }
 }
