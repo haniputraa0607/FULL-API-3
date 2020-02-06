@@ -19,12 +19,20 @@ use App\Http\Models\DealsVoucher;
 use App\Http\Models\SpinTheWheel;
 use App\Http\Models\Setting;
 
+use Modules\Deals\Entities\DealsProductDiscount;
+use Modules\Deals\Entities\DealsProductDiscountRule;
+use Modules\Deals\Entities\DealsTierDiscountProduct;
+use Modules\Deals\Entities\DealsTierDiscountRule;
+use Modules\Deals\Entities\DealsBuyxgetyProductRequirement;
+use Modules\Deals\Entities\DealsBuyxgetyRule;
+
 use DB;
 
 use Modules\Deals\Http\Requests\Deals\Create;
 use Modules\Deals\Http\Requests\Deals\Update;
 use Modules\Deals\Http\Requests\Deals\Delete;
 use Modules\Deals\Http\Requests\Deals\ListDeal;
+use Modules\Deals\Http\Requests\Deals\DetailDealsRequest;
 
 use Illuminate\Support\Facades\Schema;
 
@@ -78,6 +86,9 @@ class ApiDeals extends Controller
         }
         if (isset($post['deals_voucher_type'])) {
             $data['deals_voucher_type'] = $post['deals_voucher_type'];
+            if ($data['deals_voucher_type'] == 'Unlimited') {
+            	$data['deals_total_voucher'] = 0;
+            }
         }
         if (isset($post['deals_promo_id'])) {
             $data['deals_promo_id'] = $post['deals_promo_id'];
@@ -192,6 +203,18 @@ class ApiDeals extends Controller
             $data['user_limit'] = $post['user_limit'];
         } else {
             $data['user_limit'] = 0;
+        }
+
+        if (isset($post['is_online'])) {
+            $data['is_online'] = 1;
+        } else {
+            $data['is_online'] = 0;
+        }
+
+        if (isset($post['is_offline'])) {
+            $data['is_offline'] = 1;
+        } else {
+            $data['is_offline'] = 0;
         }
 
         return $data;
@@ -794,6 +817,7 @@ class ApiDeals extends Controller
     function update($id, $data)
     {
         $data = $this->checkInputan($data);
+    	// return $data;
 
         // error
         if (isset($data['error'])) {
@@ -838,8 +862,10 @@ class ApiDeals extends Controller
     /* UPDATE REQUEST */
     function updateReq(Update $request)
     {
+
         DB::beginTransaction();
         $save = $this->update($request->json('id_deals'), $request->json()->all());
+        // return $save;
 
         if ($save) {
             DB::commit();
@@ -1064,5 +1090,44 @@ class ApiDeals extends Controller
             ]
         );
         return true;
+    }
+
+    public function detail(DetailDealsRequest $request)
+    {
+        $post = $request->json()->all();
+        $user = $request->user();
+
+        $deals = Deal::
+        				with([  
+                            'deals_product_discount', 
+                            'deals_product_discount_rules', 
+                            'deals_tier_discount_product', 
+                            'deals_tier_discount_rules', 
+                            'deals_buyxgety_product_requirement', 
+                            'deals_buyxgety_rules'
+                        ])
+                        ->where('id_deals', '=', $post['id_deals'])
+                        ->first();
+        // return $deals;
+
+        if (isset($deals)) {
+            $deals = $deals->toArray();
+        }else{
+            $deals = false;
+        }
+
+        if ($deals) {
+            $result = [
+                'status'  => 'success',
+                'result'  => $deals
+            ];
+        } else {
+            $result = [
+                'status'  => 'fail',
+                'messages'  => ['Promo Campaign Not Found']
+            ];
+        }
+
+        return response()->json($result);
     }
 }

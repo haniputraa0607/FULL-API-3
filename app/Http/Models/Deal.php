@@ -77,8 +77,8 @@ class Deal extends Model
 		'deals_promo_id',
 		'deals_title',
 		'deals_second_title',
-		'deals_description',
-		'deals_tos',
+		// 'deals_description',
+		// 'deals_tos',
 		// 'deals_short_description',
 		'deals_image',
 		// 'deals_video',
@@ -99,7 +99,10 @@ class Deal extends Model
 		'deals_total_redeemed',
 		'deals_total_used',
 		'claim_allowed',
-		'user_limit'
+		'user_limit',
+		'is_online',
+		'is_offline',
+		'promo_type'
 	];
 
 	protected $appends  = ['url_deals_image', 'deals_status', 'deals_voucher_price_type', 'url_webview'];
@@ -187,4 +190,34 @@ class Deal extends Model
 	{
 		return $this->hasOne(FeaturedDeal::class, 'id_deals','id_deals');
 	}
+
+	public function deals_buyxgety_rules()
+	{
+		return $this->hasMany(\Modules\Deals\Entities\DealsBuyxgetyRule::class, 'id_deals');
+	}
+
+	public function deals_product_discount_rules()
+	{
+		return $this->hasOne(\Modules\Deals\Entities\DealsProductDiscountRule::class, 'id_deals');
+	}
+
+	public function deals_tier_discount_rules()
+	{
+		return $this->hasMany(\Modules\Deals\Entities\DealsTierDiscountRule::class, 'id_deals');
+	}
+
+	public function deals_buyxgety_product_requirement()
+    {
+        return $this->hasOne(\Modules\Deals\Entities\DealsBuyxgetyProductRequirement::class, 'id_deals', 'id_deals');
+    }
+
+    public function deals_tier_discount_product()
+    {
+        return $this->belongsTo(\Modules\Deals\Entities\DealsTierDiscountProduct::class, 'id_deals', 'id_deals');
+    }
+
+    public function deals_product_discount()
+    {
+        return $this->hasMany(\Modules\Deals\Entities\DealsProductDiscount::class, 'id_deals', 'id_deals');
+    }
 }

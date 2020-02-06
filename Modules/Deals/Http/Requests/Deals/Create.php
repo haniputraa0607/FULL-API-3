@@ -16,6 +16,8 @@ class Create extends FormRequest
     public function rules()
     {
         return [
+            'is_online'        			=> 'nullable',
+            'is_offline'       			=> 'nullable',
             'deals_type'                => 'required|in:Deals,Hidden,Point,Spin,Subscription,WelcomeVoucher',
             'deals_voucher_type'        => 'nullable|required|in:Auto generated,List Vouchers,Unlimited',
             'deals_promo_id'            => 'nullable',

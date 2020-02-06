@@ -65,7 +65,8 @@ class DealsUser extends Model
 		'voucher_price_cash',
 		'paid_status',
 		'voucher_active_at',
-		'voucher_expired_at'
+		'voucher_expired_at',
+		'is_used'
 	];
 
 	function user() {
