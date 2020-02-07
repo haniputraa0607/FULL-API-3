@@ -20,7 +20,7 @@ class NotificationBackupHasFailed extends Notifiable
             'html_message' => "Hello Team, <br> Date : ".date('l').",".date('d')." ".date('F')." ".date('Y')." <br> A failure occurred in backup process, please check this process.",
             'setting' => $setting
         );
-        $mailMessage = Mailgun::send('emails.test', $data, function ($message) use ($setting){
+        $mailMessage = Mail::send('emails.test', $data, function ($message) use ($setting){
             $message->subject('Backup up File API');
             if(!empty($setting['email_from']) && !empty($setting['email_sender'])){
                 $message->from($setting['email_from'], $setting['email_sender']);
