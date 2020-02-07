@@ -326,9 +326,9 @@ class ApiEnquiries extends Controller
 								->trackOpens(true);
 					}
 					if(!empty($setting['email_from']) && !empty($setting['email_sender'])){
-						$message->from($setting['email_from'], $setting['email_sender']);
-					}else if(!empty($setting['email_from'])){
-						$message->from($setting['email_from']);
+						$message->from($setting['email_sender'], $setting['email_from']);
+					}else if(!empty($setting['email_sender'])){
+						$message->from($setting['email_sender']);
 					}
 
 					if(!empty($setting['email_reply_to'])){

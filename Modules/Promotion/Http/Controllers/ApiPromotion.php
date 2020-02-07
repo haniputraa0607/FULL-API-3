@@ -1680,10 +1680,10 @@ class ApiPromotion extends Controller
 					$message->trackClicks(true)
 							->trackOpens(true);
 				}
-				if(isset($setting['email_from']) && isset($setting['email_sender'])){
-					$message->from($setting['email_from'], $setting['email_sender']);
-				}else if(isset($setting['email_from'])){
-					$message->from($setting['email_from']);
+				if(!empty($setting['email_from']) && !empty($setting['email_sender'])){
+					$message->from($setting['email_sender'], $setting['email_from']);
+				}else if(!empty($setting['email_sender'])){
+					$message->from($setting['email_sender']);
 				}
 
 				if(isset($setting['email_reply_to'])){
