@@ -94,10 +94,10 @@ class ApiAutoCrm extends Controller
 							}
 
 							if(!empty($setting['email_from']) && !empty($setting['email_sender'])){
-								$message->from($setting['email_from'], $setting['email_sender']);
-							}else if(!empty($setting['email_from'])){
-								$message->from($setting['email_from']);
-							}
+                                $message->from($setting['email_sender'], $setting['email_from']);
+                            }else if(!empty($setting['email_sender'])){
+                                $message->from($setting['email_sender']);
+                            }
 
 							if(!empty($setting['email_reply_to'])){
 								$message->replyTo($setting['email_reply_to'], $setting['email_reply_to_name']);
@@ -131,10 +131,10 @@ class ApiAutoCrm extends Controller
 										->trackOpens(true);
 							}
 							if(!empty($setting['email_from']) && !empty($setting['email_sender'])){
-								$message->from($setting['email_from'], $setting['email_sender']);
-							}else if(!empty($setting['email_from'])){
-								$message->from($setting['email_from']);
-							}
+                                $message->from($setting['email_sender'], $setting['email_from']);
+                            }else if(!empty($setting['email_sender'])){
+                                $message->from($setting['email_sender']);
+                            }
 
 							if(!empty($setting['email_reply_to'])){
 								$message->replyTo($setting['email_reply_to'], $setting['email_reply_to_name']);
@@ -205,10 +205,10 @@ class ApiAutoCrm extends Controller
 										->trackOpens(true);
 							}
 							if(!empty($setting['email_from']) && !empty($setting['email_sender'])){
-								$message->from($setting['email_from'], $setting['email_sender']);
-							}else if(!empty($setting['email_from'])){
-								$message->from($setting['email_from']);
-							}
+                                $message->from($setting['email_sender'], $setting['email_from']);
+                            }else if(!empty($setting['email_sender'])){
+                                $message->from($setting['email_sender']);
+                            }
 
 							if(!empty($setting['email_reply_to'])){
 								$message->replyTo($setting['email_reply_to'], $setting['email_reply_to_name']);

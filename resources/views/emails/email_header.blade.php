@@ -42,7 +42,7 @@
                              <td valign="top">
                               <table style="border-collapse:collapse" border="0" cellpadding="0" cellspacing="0" width="100%" border="3px">
                             <tbody>
-                               <tr>
+                               <tr style="height: 120px">
                                    @if(isset($setting) && $setting['email_logo'] != null)
                                        <td id="logoheader_center" style="border-collapse:collapse;border-spacing:0;color:#000;font-family:'Arial',sans-serif;line-height:1.5;margin:0;padding:0;text-align:center" width="33%">
                                            @if($setting['email_logo_position'] == 'left')
