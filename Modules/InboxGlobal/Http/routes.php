@@ -13,6 +13,7 @@ Route::group(['middleware' => ['auth:api','log_activities','user_agent', 'scopes
 {
     Route::any('user/{mode?}', 'ApiInbox@listInboxUser');
     Route::post('marked', 'ApiInbox@markedInbox');
+    Route::post('unmark', 'ApiInbox@unmarkInbox');
     Route::post('unread', 'ApiInbox@unread');
 });
 
