@@ -33,7 +33,8 @@ class PromoCampaignTierDiscountRule extends Eloquent
 		'id_promo_campaign' => 'int',
 		'min_qty' => 'int',
 		'max_qty' => 'int',
-		'discount_value' => 'int'
+		'discount_value' => 'int',
+		'max_percent_discount' => 'int'
 	];
 
 	protected $fillable = [
@@ -41,7 +42,8 @@ class PromoCampaignTierDiscountRule extends Eloquent
 		'min_qty',
 		'max_qty',
 		'discount_type',
-		'discount_value'
+		'discount_value',
+		'max_percent_discount'
 	];
 
 	public function promo_campaign()

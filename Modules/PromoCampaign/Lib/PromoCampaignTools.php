@@ -13,6 +13,7 @@ use App\Http\Models\UserDevice;
 use App\Http\Models\User;
 use App\Http\Models\Transaction;
 use App\Http\Models\Setting;
+use App\Http\Models\ProductModifier;
 
 use App\Lib\MyHelper;
 
@@ -124,6 +125,10 @@ class PromoCampaignTools{
 				}
 
 				// sum total quantity of same product, if greater than max product assign value to max product
+				// get all modifier price total, index array of item, and qty for each modifier
+				$item_get_promo = [];
+				$mod_price_per_item = [];
+				$mod_price_qty_per_item = [];
 				foreach ($trxs as $key => $value) 
 				{
 					if (isset($item_get_promo[$value['id_product']])) 
@@ -142,16 +147,66 @@ class PromoCampaignTools{
 							$item_get_promo[$value['id_product']] = $value['qty'];
 						}
 					}
+
+					$mod_price_qty_per_item[$value['id_product']][$key] = [];
+					$mod_price_qty_per_item[$value['id_product']][$key]['qty'] = $value['qty'];
+					$mod_price_qty_per_item[$value['id_product']][$key]['price'] = 0;
+					$mod_price_per_item[$value['id_product']][$key] = 0;
+
+					foreach ($value['modifiers'] as $key2 => $value2) 
+					{
+						$mod_price_qty_per_item[$value['id_product']][$key]['price'] += $mod_price[$value2];
+						$mod_price_per_item[$value['id_product']][$key] += $mod_price[$value2];
+					}
+
 				}
 
-				// check qty item get promo
-				foreach ($trxs as $key => $value) {
-					if (($item_get_promo[$value['id_product']] - $value['qty']) > 0) {
-						$trxs[$key]['promo_qty'] = $value['qty'];
-						$item_get_promo[$value['id_product']] -= $value['qty'];
-					}else{
-						$trxs[$key]['promo_qty'] = $item_get_promo[$value['id_product']];
-						$item_get_promo[$value['id_product']] = 0;
+				// sort mod price qty ascending
+				foreach ($mod_price_qty_per_item as $key => $value) {
+
+					//sort price only to get index key
+					asort($mod_price_per_item[$key]);
+					
+					// sort mod by price
+					$keyPositions = [];
+					foreach ($mod_price_per_item[$key] as $key2 => $row) {
+						$keyPositions[] = $key2;
+					}
+
+					foreach ($value as $key2 => $row) {
+					    $price[$key][$key2]  = $row['price'];
+					}
+
+					array_multisort($price[$key], SORT_ASC, $value);
+
+
+					$sortedArray = [];
+					foreach ($value as $key2 => $row) {
+					    $sortedArray[$keyPositions[$key2]] = $row;
+					}
+
+					// assign sorted value to current mod key
+					$mod_price_qty_per_item[$key] = $sortedArray;
+				}
+
+
+				// check promo qty for each item
+				foreach ($mod_price_qty_per_item as $key => $value) 
+				{
+					foreach ($value as $key2 => &$value2) 
+					{
+						if ($value2['qty'] > 0) {
+							if (($item_get_promo[$key] - $value2['qty']) > 0) 
+							{
+								$trxs[$key2]['promo_qty'] = $value2['qty'];
+								$item_get_promo[$key] -= $value2['qty'];
+							}
+							else
+							{
+								$trxs[$key2]['promo_qty'] = $item_get_promo[$key];
+								$item_get_promo[$key] = 0;
+							}
+						}
 					}
 				}
 
@@ -161,6 +216,13 @@ class PromoCampaignTools{
 					if ($trx['promo_qty'] == 0) {
 						continue;
 					}
+
+					$modifier = 0;
+					foreach ($trx['modifiers'] as $key2 => $value2) 
+					{
+						$modifier += $mod_price[$value2];
+					}
+
 					// is all product get promo
 					if($promo_rules->is_all_product){
 						// get product data
@@ -177,7 +239,7 @@ class PromoCampaignTools{
 							continue;
 						}
 						// add discount
-						$discount+=$this->discount_product($product,$promo_rules,$trx);
+						$discount+=$this->discount_product($product,$promo_rules,$trx, $modifier);
 					}else{
 						// is product available in promo
 						if(is_array($promo_product)&&in_array($trx['id_product'],array_column($promo_product,'id_product'))){
@@ -195,7 +257,7 @@ class PromoCampaignTools{
 								continue;
 							}
 							// add discount
-							$discount+=$this->discount_product($product,$promo_rules,$trx);
+							$discount+=$this->discount_product($product,$promo_rules,$trx, $modifier);
 						}
 					}
 				}
@@ -303,9 +365,16 @@ class PromoCampaignTools{
 				}
 				// count discount
 				foreach ($trxs as $key => &$trx) {
+
+					$modifier = 0;
+					foreach ($trx['modifiers'] as $key2 => $value2) 
+					{
+						$modifier += $mod_price[$value2];
+					}
+
 					if($trx['id_product']==$promo_product->id_product){
 						$trx['promo_qty'] = $trx['qty'];
-						$discount+=$this->discount_product($promo_product->product,$promo_rule,$trx);
+						$discount+=$this->discount_product($promo_product->product,$promo_rule,$trx, $modifier);
 					}
 				}
 
@@ -420,9 +489,10 @@ class PromoCampaignTools{
 							  ->where('product_visibility', '=', 'Visible');
 						} ])->find($promo_rule->benefit_id_product);
 				$benefit_qty=$promo_rule->benefit_qty;
-				$benefit_value=$promo_rule->discount_nominal??$promo_rule->discount_percent;
-				$benefit_type = $promo_rule->discount_nominal?'Nominal':'Percent';
-				
+				$benefit_value=$promo_rule->discount_value;
+				$benefit_type = $promo_rule->discount_type;
+				$benefit_max_value = $promo_rule->max_percent_discount;
+
 				if(!$benefit_product){
 					$errors[]="Product benefit not found.";
 					return false;
@@ -432,7 +502,8 @@ class PromoCampaignTools{
 				$rule=(object) [
 					'max_qty'=>$benefit_qty,
 					'discount_type'=>$benefit_type,
-					'discount_value'=>$benefit_value
+					'discount_value'=>$benefit_value,
+					'max_percent_discount'=>$benefit_max_value
 				];
 
 				// add product benefit
@@ -448,11 +519,12 @@ class PromoCampaignTools{
 				// $benefit_item['id_product']	= $benefit_product->id_product;
 				// $benefit_item['id_brand'] 	= $benefit_product->brands[0]->id_brand??'';
 				// $benefit_item['qty'] 		= $promo_rule->benefit_qty;
-				
+
 				$discount+=$this->discount_product($benefit_product,$rule,$benefit_item);
 
 				// return $benefit_item;
 				array_push($trxs, $benefit_item);
+				// return $trxs;
 				break;
 
 			case 'Discount global':
@@ -522,10 +594,10 @@ class PromoCampaignTools{
 				}
 		}
 		// discount?
-		if($discount<=0){
-			$errors[]='Does not get any discount';
-			return false;
-		}
+		// if($discount<=0){
+		// 	$errors[]='Does not get any discount';
+		// 	return false;
+		// }
 		return [
 			'item'=>$trxs,
 			'discount'=>$discount
@@ -1031,5 +1103,6 @@ class PromoCampaignTools{
         }
         return true;
     }
+
 }
 ?>

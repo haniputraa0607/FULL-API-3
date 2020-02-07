@@ -485,20 +485,24 @@ class ApiCategoryController extends Controller
         // get detail of every key
         foreach ($result as $id_brand => $categories) {
             foreach ($categories as $id_category => $products) {
-                $category = ProductCategory::select('id_product_category','product_category_name')->find($id_category);
+                $category = ProductCategory::select('id_product_category','product_category_name','product_category_order')->find($id_category);
                 $categories[$id_category] = [
                     'category' => $category,
                     'list' =>$products
                 ];
             }
-            $brand = Brand::select('id_brand','name_brand')->find($id_brand);
+            usort($categories,function($a,$b){
+                return $a['category']['product_category_order']<=>$b['category']['product_category_order'];
+            });
+            $brand = Brand::select('id_brand','name_brand','order_brand')->find($id_brand);
             $result[$id_brand] = [
                 'brand' => $brand,
-                'list' => array_values($categories)
+                'list' => $categories
             ];
         }
-        $result = array_values($result);
-
+        usort($result,function($a,$b){
+            return $a['brand']['order_brand']<=>$b['brand']['order_brand'];
+        });
         return response()->json(MyHelper::checkGet($result));
     }
 

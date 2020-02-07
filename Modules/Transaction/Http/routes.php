@@ -96,14 +96,6 @@ Route::group(['prefix' => 'api/transaction', 'middleware' => ['log_activities', 
 
 Route::group(['prefix' => 'api/transaction', 'middleware' => ['log_activities', 'auth:api', 'user_agent', 'scopes:be'], 'namespace' => 'Modules\Transaction\Http\Controllers'], function () {
     Route::post('be/detail/webview/{mode?}', 'ApiWebviewController@webview');
-
-Route::group(['prefix' => 'api/transaction', 'middleware' => ['log_activities', 'auth:api', 'user_agent', 'scopes:apps'], 'namespace' => 'Modules\Transaction\Http\Controllers'], function () {
-
-    Route::post('/detail/webview/point', 'ApiWebviewController@webviewPoint');
-    Route::post('/detail/webview/balance', 'ApiWebviewController@webviewBalance');
-    Route::post('/detail/webview/{mode?}', 'ApiWebviewController@webview');
-
-    Route::post('/detail/webview/success', 'ApiWebviewController@trxSuccess');
 });
 
 Route::group(['middleware' => ['auth:api', 'user_agent', 'scopes:apps'], 'prefix' => 'api/transaction', 'namespace' => 'Modules\Transaction\Http\Controllers'], function () {
@@ -114,12 +106,6 @@ Route::group(['middleware' => ['auth_client', 'user_agent'], 'prefix' => 'api/ma
     Route::get('/', 'ApiTransactionPaymentManual@listPaymentMethod');
     Route::get('/list', 'ApiTransactionPaymentManual@list');
     Route::post('/method', 'ApiTransactionPaymentManual@paymentMethod');
-});
-
-Route::group(['prefix' => 'api/cron/transaction', 'namespace' => 'Modules\Transaction\Http\Controllers'], function () {
-    Route::any('/pickup/completed', 'ApiCronTrxController@completeTransactionPickup');
-    Route::any('/expire', 'ApiCronTrxController@cron');
-    Route::any('/schedule', 'ApiCronTrxController@checkSchedule');
 });
 
 Route::group(['prefix' => 'api/transaction', 'namespace' => 'Modules\Transaction\Http\Controllers'], function () {
@@ -133,7 +119,7 @@ Route::group(['prefix' => 'api/transaction', 'namespace' => 'Modules\Transaction
     });
 });
 
-Route::group(['prefix' => 'api/transaction', 'namespace' => 'Modules\Transaction\Http\Controllers'], function() {
+Route::group(['prefix' => 'api/transaction', 'namespace' => 'Modules\Transaction\Http\Controllers'], function () {
     Route::any('/web/view/detail', 'ApiWebviewController@detail');
     Route::any('/web/view/detail/check', 'ApiWebviewController@check');
     Route::any('/web/view/detail/point', 'ApiWebviewController@detailPoint');
@@ -142,4 +128,11 @@ Route::group(['prefix' => 'api/transaction', 'namespace' => 'Modules\Transaction
     Route::any('/web/view/outletapp', 'ApiWebviewController@receiptOutletapp');
 });
 
+Route::group(['prefix' => 'api/transaction', 'middleware' => ['log_activities', 'auth:api', 'user_agent', 'scopes:apps'], 'namespace' => 'Modules\Transaction\Http\Controllers'], function () {
+
+    Route::post('/detail/webview/point', 'ApiWebviewController@webviewPoint');
+    Route::post('/detail/webview/balance', 'ApiWebviewController@webviewBalance');
+    Route::post('/detail/webview/{mode?}', 'ApiWebviewController@webview');
+
+    Route::post('/detail/webview/success', 'ApiWebviewController@trxSuccess');
 });

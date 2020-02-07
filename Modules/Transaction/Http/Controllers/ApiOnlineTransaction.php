@@ -213,7 +213,7 @@ class ApiOnlineTransaction extends Controller
             DB::rollback();
             return response()->json([
                 'status'    => 'fail',
-                'messages'  => ['Akun Anda telah diblokir karena menunjukkan aktivitas mencurigakan. Untuk informasi lebih lanjut harap hubungi customer service kami di hello@champresto.id']
+                'messages'  => ['Akun Anda telah diblokir karena menunjukkan aktivitas mencurigakan. Untuk informasi lebih lanjut harap hubungi customer service kami di hello@example.id']
             ]);
         }
 
@@ -1640,26 +1640,29 @@ class ApiOnlineTransaction extends Controller
 	            $pct=new PromoCampaignTools();
 	            $validate_user=$pct->validateUser($code->id_promo_campaign, $request->user()->id, $request->user()->phone, $request->device_type, $request->device_id, $errore,$code->id_promo_campaign_promo_code);
 
-	            $discount_promo=$pct->validatePromo($code->id_promo_campaign, $request->id_outlet, $post['item'], $errors);
-
-	            if ( !empty($errore) || !empty($errors)) {
-	            	$promo_error['title'] = Setting::where('key','=','promo_error_title')->first()['value']??'Promo tidak berlaku';
-			        $promo_error['button_ok'] = Setting::where('key','=','promo_error_ok_button')->first()['value']??'Tambah item';
-			        $promo_error['button_cancel'] = Setting::where('key','=','promo_error_cancel_button')->first()['value']??'Tidak';
-			        $promo_error['product'] = $pct->getRequiredProduct($code->id_promo_campaign)??null;
-	            	$promo_error['message']=[];
+	            if ($validate_user) {
+		            $discount_promo=$pct->validatePromo($code->id_promo_campaign, $request->id_outlet, $post['item'], $errors);
+	// return [$discount_promo, $errors];
+		            if ( !empty($errore) || !empty($errors)) {
+		            	$promo_error['title'] = Setting::where('key','=','promo_error_title')->first()['value']??'Promo tidak berlaku';
+				        $promo_error['button_ok'] = Setting::where('key','=','promo_error_ok_button')->first()['value']??'Tambah item';
+				        $promo_error['button_cancel'] = Setting::where('key','=','promo_error_cancel_button')->first()['value']??'Tidak';
+				        $promo_error['product'] = $pct->getRequiredProduct($code->id_promo_campaign)??null;
+		            	$promo_error['message']=[];
+		            	if(isset($errors)){
+		            		foreach ($errors as $key => $value) {
+		            			array_push($promo_error['message'], $value);
+		            		}
+		            	}
+		            }
+		            $promo_discount=$discount_promo['discount'];
+	            }else{
 	                if(isset($errore)){
 	            		foreach ($errore as $key => $value) {
 	            			array_push($promo_error['message'], $value);
 	            		}
 	            	}
-	            	if(isset($errors)){
-	            		foreach ($errors as $key => $value) {
-	            			array_push($promo_error['message'], $value);
-	            		}
-	            	}
 	            }
-	            $promo_discount=$discount_promo['discount'];
             }
             else
             {
@@ -1674,6 +1677,13 @@ class ApiOnlineTransaction extends Controller
         $missing_product = 0;
         // return [$discount_promo['item'],$errors];
         $is_advance = 0;
+        $global_max_order = Outlet::select('max_order')->where('id_outlet',$post['id_outlet'])->pluck('max_order')->first();
+        if($global_max_order == null){
+            $global_max_order = Setting::select('value')->where('key','max_order')->pluck('value')->first();
+            if($global_max_order == null){
+                $global_max_order = 100;
+            }
+        }
         foreach ($discount_promo['item']??$post['item'] as &$item) {
             // get detail product
             $product = Product::select([
@@ -1707,7 +1717,11 @@ class ApiOnlineTransaction extends Controller
             ->groupBy('products.id_product')
             ->orderBy('products.position')
             ->find($item['id_product']);
-            if($product['max_order']&&($item['qty']>$product['max_order'])){
+            $max_order = $product['max_order'];
+            if($max_order==null){
+                $max_order = $global_max_order;
+            }
+            if($max_order&&($item['qty']>$max_order)){
                 $is_advance = 1;
             }
             if(!$product){

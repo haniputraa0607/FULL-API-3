@@ -867,7 +867,7 @@ class ApiUser extends Controller
             return response()->json([
                 'status' => 'success',
                 'result' => $data,
-                'messages' => ['Akun Anda telah diblokir karena menunjukkan aktivitas mencurigakan. Untuk informasi lebih lanjut harap hubungi customer service kami di hello@champresto.id']
+                'messages' => ['Akun Anda telah diblokir karena menunjukkan aktivitas mencurigakan. Untuk informasi lebih lanjut harap hubungi customer service kami di hello@example.id']
             ]);
         }
 
