@@ -44,3 +44,8 @@ Route::group(['middleware' => ['auth:api', 'scopes:apps'], 'prefix' => 'promo-ca
 Route::group(['middleware' => ['auth:api', 'scopes:apps'], 'prefix' => 'promo-campaign'], function () {
     Route::post('validate', 'ApiPromoCampaign@validateCode');
 });
+
+// Referral
+Route::group(['middleware' => ['auth:api', 'scopes:be'], 'prefix' => 'referral'], function () {
+    Route::get('setting', 'ApiReferralController@setting');
+});
