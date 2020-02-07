@@ -18,8 +18,7 @@ class Favorite extends Model
 		'id_brand',
 		'id_product',
 		'id_user',
-		'notes',
-		'product_qty'
+		'notes'
 	];
 
 	protected $appends = ['product'];
@@ -36,11 +35,11 @@ class Favorite extends Model
 		return $this->belongsTo(Product::class,'id_product','id_product');
 	}
 
-	protected function getProductPrice($id_outlet,$id_product,$product_qty){
+	protected function getProductPrice($id_outlet,$id_product){
 		return ProductPrice::where([
 			'id_outlet'=>$id_outlet,
 			'id_product'=>$id_product
-		])->pluck('product_price')->first()*$product_qty;
+		])->pluck('product_price')->first();
 	}
 
 	public function getProductAttribute(){
@@ -59,7 +58,7 @@ class Favorite extends Model
 			'product_code' => $product->product_code,
 			'product_description' => $product->product_description,
 			'url_product_photo' => optional($product->photos[0]??null)->url_product_photo?:env('S3_URL_API').'img/product/item/default.png',
-			'price' => $this->getProductPrice($id_outlet,$id_product,$product_qty)
+			'price' => $this->getProductPrice($id_outlet,$id_product)
 		];
 	}
 

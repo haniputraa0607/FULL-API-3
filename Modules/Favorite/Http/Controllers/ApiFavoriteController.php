@@ -53,7 +53,7 @@ class ApiFavoriteController extends Controller
         $longitude = $request->json('longitude');
         $nf = $request->json('number_format')?:'float';
         $favorite = Favorite::where('id_user',$user->id);
-        $select = ['id_favorite','id_outlet','favorites.id_product','id_brand','id_user','product_qty','notes'];
+        $select = ['id_favorite','id_outlet','favorites.id_product','id_brand','id_user','notes'];
         $with = [
             'modifiers'=>function($query){
                 $query->select('product_modifiers.id_product_modifier','type','code','text','favorite_modifiers.qty');
@@ -152,8 +152,7 @@ class ApiFavoriteController extends Controller
             ['id_product',$request->json('id_product')],
             ['id_brand',$request->json('id_brand')],
             ['id_user',$id_user],
-            ['notes',$request->json('notes')??''],
-            ['product_qty',$request->json('product_qty')]
+            ['notes',$request->json('notes')??'']
         ])->where(function($query) use ($modifiers){
             foreach ($modifiers as $modifier) {
                 if(is_array($modifier)){
@@ -180,7 +179,6 @@ class ApiFavoriteController extends Controller
                 'id_outlet' => $request->json('id_outlet'),
                 'id_brand' => $request->json('id_brand'),
                 'id_product' => $request->json('id_product'),
-                'product_qty' => $request->json('product_qty'),
                 'id_user' => $id_user,
                 'notes' => $request->json('notes')?:''];
 
