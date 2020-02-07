@@ -3,8 +3,12 @@
 namespace Modules\PromoCampaign\Lib;
 
 use Modules\PromoCampaign\Entities\PromoCampaign;
+use Modules\PromoCampaign\Entities\PromoCampaignPromoCode;
 use Modules\PromoCampaign\Entities\PromoCampaignReport;
+use Modules\PromoCampaign\Entities\UserReferralCode;
+use Modules\PromoCampaign\Entities\PromoCampaignReferral;
 use App\Http\Models\Product;
+use App\Http\Models\ProductModifier;
 use App\Http\Models\UserDevice;
 use App\Http\Models\User;
 use App\Http\Models\Transaction;
@@ -69,8 +73,7 @@ class PromoCampaignTools{
 			$product=Product::with(['product_prices' => function($q) use ($id_outlet){ 
 							$q->where('id_outlet', '=', $id_outlet)
 							  ->where('product_status', '=', 'Active')
-							  ->where('product_stock_status', '=', 'Available')
-							  ->where('product_visibility', '=', 'Visible');
+							  ->where('product_stock_status', '=', 'Available');
 						} ])->find($trx['id_product']);
 			//is product available
 			if(!$product){
@@ -551,6 +554,44 @@ class PromoCampaignTools{
 					break;
 				}
 				break;
+			case 'Referral':
+				$promo->load('promo_campaign_referral');
+				$promo_rules=$promo->promo_campaign_referral;
+				if($promo_rules->referred_promo_type == 'Product Discount'){
+					$rule=(object) [
+						'max_qty'=>false,
+						'discount_type'=>$promo_rules->referred_promo_unit,
+						'discount_value'=>$promo_rules->referred_promo_value,
+						'max_percent_discount'=>$promo_rules->referred_promo_value_max
+					];
+					foreach ($trxs as  $id_trx => &$trx) {
+						// get product data
+						$product=Product::with(['product_prices' => function($q) use ($id_outlet){ 
+							$q->where('id_outlet', '=', $id_outlet)
+							  ->where('product_status', '=', 'Active')
+							  ->where('product_stock_status', '=', 'Available');
+						} ])->find($trx['id_product']);
+						$cur_mod_price = 0;
+						foreach ($trx['modifiers'] as $modifier) {
+			                $id_product_modifier = is_numeric($modifier)?$modifier:$modifier['id_product_modifier'];
+			                $qty_product_modifier = is_numeric($modifier)?1:$modifier['qty'];
+			                $cur_mod_price += ($mod_price[$id_product_modifier]??0)*$qty_product_modifier;
+						}
+						//is product available
+						if(!$product){
+							// product not available
+							$errors[]='Product with id '.$trx['id_product'].' could not be found';
+							continue;
+						}
+						// add discount
+						$discount += $this->discount_product($product,$rule,$trx,$cur_mod_price);
+					}
+				}else{
+					return [
+						'item'=>$trxs,
+						'discount'=>0
+					];
+				}
 		}
 		// discount?
 		// if($discount<=0){
@@ -751,7 +792,7 @@ class PromoCampaignTools{
 	 * @param  int 		$id_user  id user
 	 * @return boolean	true/false
 	 */
-	public function validateUser($id_promo, $id_user, $phone, $device_type, $device_id, &$errors=[]){
+	public function validateUser($id_promo, $id_user, $phone, $device_type, $device_id, &$errors=[],$id_code=null){
 		$promo=PromoCampaign::find($id_promo);
 
 		if(!$promo){
@@ -761,6 +802,27 @@ class PromoCampaignTools{
 		if(!$promo->step_complete || !$promo->user_type){
         	$errors[]='Promo campaign not finished';
     		return false;
+		}
+
+		if($promo->promo_type == 'Referral'){
+			if(User::find($id_user)->transaction_online){
+	        	$errors[]='Kode promo tidak ditemukan';
+				return false;
+			}
+			if(UserReferralCode::where([
+				'id_promo_campaign_promo_code'=>$id_code,
+				'id_user'=>$id_user
+			])->exists()){
+	        	$errors[]='Kode promo tidak ditemukan';
+	    		return false;
+			}
+	        $referer = UserReferralCode::where('id_promo_campaign_promo_code',$id_code)
+	            ->join('users','users.id','=','user_referral_codes.id_user')
+	            ->where('users.is_suspended','=',0)
+	            ->first();
+	        if(!$referer){
+	        	$errors[] = 'Kode promo tidak ditemukan';
+	        }
 		}
 
 		//check user 
@@ -970,5 +1032,77 @@ class PromoCampaignTools{
         }
 
     }
+
+    /**
+     * Create referal promo code 
+     * @param  Integer $id_user user id of user
+     * @return boolean       true if success
+     */
+    public static function createReferralCode($id_user) {
+    	//check user have referral code
+    	$check = UserReferralCode::where('id_user',$id_user);
+    	$max_iterate = 1000;
+    	$iterate = 0;
+    	$exist = true;
+    	do{
+    		$promo_code = MyHelper::createrandom(6, 'PromoCode');
+    		$exist = PromoCampaignPromoCode::where('promo_code',$promo_code)->exists();
+    		if($exist){$promo_code=false;};
+    		$iterate++;
+    	}while($exist&&$iterate<=$max_iterate);
+    	if(!$promo_code){
+    		return false;
+    	}
+    	$create = PromoCampaignPromoCode::create([
+    		'id_promo_campaign' => 1,
+    		'promo_code' => $promo_code
+    	]);
+    	if(!$create){
+    		return false;
+    	}
+    	$create2 = UserReferralCode::create([
+    		'id_promo_campaign_promo_code' => $create->id_promo_campaign_promo_code,
+    		'id_user' => $id_user
+    	]);
+    	return $create2;
+    }
+    /**
+     * Apply cashback to referrer
+     * @param  Transaction $transaction Transaction model
+     * @return boolean 
+     */
+    public static function applyReferrerCashback($transaction)
+    {
+    	if(!$transaction['id_promo_campaign_promo_code']){
+    		return true;
+    	}
+    	$transaction->load('promo_campaign_promo_code','promo_campaign_promo_code.promo_campaign');
+    	$use_referral = ($transaction['promo_campaign_promo_code']['promo_campaign']['promo_type']??false) === 'Referral';
+        // apply cashback to referrer
+        if ($use_referral){
+            $referral_rule = PromoCampaignReferral::where('id_promo_campaign',$transaction['promo_campaign_promo_code']['id_promo_campaign'])->first();
+            $referrer = UserReferralCode::where('id_promo_campaign_promo_code',$transaction['id_promo_campaign_promo_code'])->pluck('id_user')->first();
+            if(!$referrer || !$referral_rule){
+            	return false;
+            }
+            $referrer_cashback = 0;
+            if($referral_rule->referrer_promo_unit == 'Percent'){
+                $referrer_discount_percent = $referral_rule->referrer_promo_value<=100?$referral_rule->referrer_promo_value:100;
+                $referrer_cashback = $transaction['transaction_grandtotal']*$referrer_discount_percent/100;
+            }else{
+                if($transaction['transaction_grandtotal'] >= $referral_rule->referred_min_value){
+                    $referrer_cashback = $referral_rule->referrer_promo_value<=$transaction['transaction_grandtotal']?$referral_rule->referrer_promo_value:$transaction['transaction_grandtotal'];
+                }
+            }
+            if($referrer_cashback){
+                $insertDataLogCash = app("Modules\Balance\Http\Controllers\BalanceController")->addLogBalance( $referrer, $referrer_cashback, $transaction['id_transaction'], 'Referral Bonus', $transaction['transaction_grandtotal']);
+                if (!$insertDataLogCash) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
 }
 ?>

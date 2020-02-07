@@ -113,7 +113,7 @@ class ApiSettingTransactionV2 extends Controller
         return $convert;
     }
 
-    public function countTransaction($value, $data) {
+    public function countTransaction($value, $data,$discount_promo=[]) {
         $subtotal = isset($data['subtotal']) ? $data['subtotal'] : 0;
         $service  = isset($data['service']) ? $data['service'] : 0;
         $tax      = isset($data['tax']) ? $data['tax'] : 0;
@@ -123,6 +123,14 @@ class ApiSettingTransactionV2 extends Controller
         if ($value == 'subtotal') {
             $dataSubtotal = [];
             foreach ($data['item'] as $keyData => $valueData) {
+                $this_discount=0;
+                if($discount_promo){
+                    foreach ($discount_promo['item']??[] as $disc) {
+                        if($disc['id_product']==$valueData['id_product']){
+                            $this_discount=$disc['discount']??0;
+                        }
+                    }
+                }
                 $product = Product::with('product_discounts', 'product_prices')->where('id_product', $valueData['id_product'])->first();
                 if (empty($product)) {
                     DB::rollback();
@@ -173,7 +181,7 @@ class ApiSettingTransactionV2 extends Controller
                     $mod_subtotal += $mod['product_modifier_prices'][0]['product_modifier_price']*$qty_product_modifier;
                 }
                 // $price = $productPrice['product_price_base'] * $valueData['qty'];
-                $price = ($productPrice['product_price']+$mod_subtotal) * $valueData['qty'];
+                $price = (($productPrice['product_price']+$mod_subtotal) * $valueData['qty'])-$this_discount;
                 array_push($dataSubtotal, $price);
             }
 

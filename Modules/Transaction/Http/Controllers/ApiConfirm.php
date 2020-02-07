@@ -575,6 +575,9 @@ class ApiConfirm extends Controller
                                     $dataTrx = Transaction::with('user.memberships', 'outlet', 'productTransaction')
                                     ->where('id_transaction', $payment['id_transaction'])->first();
 
+                                    // apply cashback to referrer
+                                    \Modules\PromoCampaign\Lib\PromoCampaignTools::applyReferrerCashback($dataTrx);
+
                                     $mid = [
                                         'order_id' => $dataTrx['transaction_receipt_number'],
                                         'gross_amount' => $amount

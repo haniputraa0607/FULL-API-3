@@ -17,6 +17,7 @@ use Modules\PromoCampaign\Entities\PromoCampaignBuyxgetyRule;
 use Modules\PromoCampaign\Entities\PromoCampaignHaveTag;
 use Modules\PromoCampaign\Entities\PromoCampaignTag;
 use Modules\PromoCampaign\Entities\PromoCampaignReport;
+use Modules\PromoCampaign\Entities\UserReferralCode;
 use App\Http\Models\User;
 use App\Http\Models\Campaign;
 use App\Http\Models\Outlet;
@@ -1447,7 +1448,7 @@ class ApiPromoCampaign extends Controller
             ];
         }
         $pct=new PromoCampaignTools();
-        if(!$pct->validateUser($code->id_promo_campaign, $id_user, $phone, $device_type, $device_id, $errore)){
+        if(!$pct->validateUser($code->id_promo_campaign, $id_user, $phone, $device_type, $device_id, $errore,$code->id_promo_campaign_promo_code)){
             return [
                 'status'=>'fail',
                 'messages'=>$errore??['Promo code not valid']
@@ -1500,7 +1501,8 @@ class ApiPromoCampaign extends Controller
                 ->where('step_complete', '=', 1)
                 ->where( function($q){
                 	$q->whereColumn('usage','<','limitation_usage')
-                		->orWhere('code_type','Single');
+                		->orWhere('code_type','Single')
+                        ->orWhere('limitation_usage',0);
                 } )
                 ->with([
 					'promo_campaign.promo_campaign_outlets',
@@ -1524,9 +1526,22 @@ class ApiPromoCampaign extends Controller
                 'status'=>'fail',
                 'messages'=>['Promo code not valid']
             ];
-        }else{
-        	$code = $code->toArray();
         }
+
+        if($code->promo_campaign->promo_type == 'Referral'){
+            $referer = UserReferralCode::where('id_promo_campaign_promo_code',$code->id_promo_campaign_promo_code)
+                ->join('users','users.id','=','user_referral_codes.id_user')
+                ->where('users.is_suspended','=',0)
+                ->first();
+            if(!$referer){
+                return [
+                    'status'=>'fail',
+                    'messages'=>['Kode promo tidak ditemukan']
+                ];
+            }
+        }
+
+    	$code = $code->toArray();
         
         // add available product
         if ( ($code['promo_campaign']['promo_campaign_product_discount_rules']['is_all_product']??false) == 1) 
@@ -1626,10 +1641,10 @@ class ApiPromoCampaign extends Controller
         $errors=[];
         // check user
         $pct=new PromoCampaignTools();
-        if(!$pct->validateUser($code['id_promo_campaign'], $id_user, $phone, $device_type, $device_id, $errors)){
+        if(!$pct->validateUser($code['id_promo_campaign'], $id_user, $phone, $device_type, $device_id, $errors,$code['id_promo_campaign_promo_code'])){
             return [
                 'status'=>'fail',
-                'messages'=>$errore??['Promo code not valid']
+                'messages'=>$errors??['Promo code not valid']
             ];
         }
 
