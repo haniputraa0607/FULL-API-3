@@ -26,5 +26,7 @@ class DatabaseSeeder extends Seeder
 
         $this->call(AutocrmsTableAddClaimDeals::class);
         $this->call(SettingJobsCelebrateSeeder::class);
+        $this->call(PromoCampaignsTableSeeder::class);
+        $this->call(PromoCampaignReferralsTableSeeder::class);
     }
 }

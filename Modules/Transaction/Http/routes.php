@@ -108,12 +108,6 @@ Route::group(['middleware' => ['auth_client', 'user_agent'], 'prefix' => 'api/ma
     Route::post('/method', 'ApiTransactionPaymentManual@paymentMethod');
 });
 
-Route::group(['prefix' => 'api/cron/transaction', 'namespace' => 'Modules\Transaction\Http\Controllers'], function () {
-    Route::any('/pickup/completed', 'ApiCronTrxController@completeTransactionPickup');
-    Route::any('/expire', 'ApiCronTrxController@cron');
-    Route::any('/schedule', 'ApiCronTrxController@checkSchedule');
-});
-
 Route::group(['prefix' => 'api/transaction', 'namespace' => 'Modules\Transaction\Http\Controllers'], function () {
     Route::get('/data/decript/{data}', function ($data) {
         return response()->json(App\Lib\MyHelper::decrypt2019($data));

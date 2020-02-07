@@ -24,8 +24,72 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule)
     {
-        // $schedule->command('inspire')
-        //          ->hourly();
+        /**
+         * sending the campaign schedule
+         * run every 5 minute
+         */
+        $schedule->call('Modules\Campaign\Http\Controllers\ApiCampaign@insertQueue')->everyFiveMinutes();
+
+        /**
+         * insert the promotion data that must be sent to the promotion_queue table
+         * run every 5 minute
+         */
+        $schedule->call('Modules\Promotion\Http\Controllers\ApiPromotion@addPromotionQueue')->everyFiveMinutes();
+
+        /**
+         * send 100 data from the promotion_queue table
+         * run every 6 minute
+         */
+        $schedule->call('Modules\Promotion\Http\Controllers\ApiPromotion@sendPromotion')->cron('*/6 * * * *');
+
+        /**
+         * reset all member points / balance
+         * run every day at 01:00
+         */
+        $schedule->call('Modules\Setting\Http\Controllers\ApiSetting@cronPointReset')->dailyAt('01:00');
+
+        /**
+         * detect transaction fraud and member balance by comparing the encryption of each data in the log_balances table
+         * run every day at 02:00
+         */
+        $schedule->call('Modules\Transaction\Http\Controllers\ApiCronTrxController@checkSchedule')->dailyAt('02:00');
+
+        /**
+         * cancel all pending transaction that have been more than 1 x 24 hours
+         * run every hour
+         */
+        $schedule->call('Modules\Transaction\Http\Controllers\ApiCronTrxController@cron')->hourly();
+
+        /**
+         * update all pickup transaction that have been more than 1 x 24 hours
+         * run every day at 04:00
+         */
+        $schedule->call('Modules\Transaction\Http\Controllers\ApiCronTrxController@completeTransactionPickup')->dailyAt('05:00');
+
+        /**
+         * To process injection point
+         * run every hour
+         */
+        $schedule->call('Modules\PointInjection\Http\Controllers\ApiPointInjectionController@getPointInjection')->hourly();
+
+        /**
+         * To process transaction sync from POS
+         * Run every 2 minutes
+         */
+        $schedule->call('Modules\POS\Http\Controllers\ApiTransactionSync@transaction')->cron('*/2 * * * *');
+
+        /**
+         * To process sync menu outlets from the POS
+         * Run every 3 minutes
+         */
+        $schedule->call('Modules\POS\Http\Controllers\ApiPOS@syncOutletMenuCron')->cron('*/3 * * * *');
+
+        /**
+         * To make daily transaction reports (offline and online transactions)
+         * Run every day at 03:00
+         */
+        $schedule->call('Modules\Report\Http\Controllers\ApiCronReport@transactionCron')->dailyAt('03:00');
+
     }
 
     /**

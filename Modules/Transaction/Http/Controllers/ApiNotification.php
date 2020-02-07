@@ -155,6 +155,10 @@ class ApiNotification extends Controller {
 
                     $kirim = $this->kirimOutlet($newTrx['transaction_receipt_number']);
                     if (isset($kirim['status']) && $kirim['status'] == 1) {
+
+                        // apply cashback to referrer
+                        \Modules\PromoCampaign\Lib\PromoCampaignTools::applyReferrerCashback($newTrx);
+
                         DB::commit();
                         // langsung
                         return response()->json(['status' => 'success']);

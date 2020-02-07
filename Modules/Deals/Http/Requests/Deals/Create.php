@@ -41,8 +41,7 @@ class Create extends FormRequest
             'deals_total_claimed'       => '',
             'deals_total_redeemed'      => '',
             'deals_total_used'          => '',
-            'id_outlet'                 => 'sometimes|array',
-            'id_brand'                 => 'required|exists:brands,id_brand',
+            'id_outlet'                 => 'sometimes|array'
         ];
     }
 

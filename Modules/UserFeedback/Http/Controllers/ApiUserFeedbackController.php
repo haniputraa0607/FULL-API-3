@@ -137,7 +137,7 @@ class ApiUserFeedbackController extends Controller
                 'messages' => ['Transaction not found']
             ];
         }
-        $rating = RatingItem::select('rating_value')->find($post['id_rating_item']);
+        $rating = RatingItem::select('rating_value','text')->find($post['id_rating_item']);
         if(!$rating){
             return [
                 'status' => 'fail',
@@ -157,6 +157,7 @@ class ApiUserFeedbackController extends Controller
             'id_outlet' => $transaction->id_outlet,
             'id_user' => $user->id,
             'rating_value'=> $rating->rating_value,
+            'rating_item_text'=> $rating->text,
             'id_transaction'=> $id_transaction,
             'notes'=> $post['notes'],
             'image'=> $upload['path']??null

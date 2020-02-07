@@ -867,7 +867,7 @@ class ApiUser extends Controller
             return response()->json([
                 'status' => 'success',
                 'result' => $data,
-                'messages' => ['Akun Anda telah diblokir karena menunjukkan aktivitas mencurigakan. Untuk informasi lebih lanjut harap hubungi customer service kami di hello@champresto.id']
+                'messages' => ['Akun Anda telah diblokir karena menunjukkan aktivitas mencurigakan. Untuk informasi lebih lanjut harap hubungi customer service kami di hello@example.id']
             ]);
         }
 
@@ -1713,6 +1713,16 @@ class ApiUser extends Controller
                 }
 
                 DB::beginTransaction();
+
+                $referral = \Modules\PromoCampaign\Lib\PromoCampaignTools::createReferralCode($data[0]['id']);
+
+                if(!$referral){
+                    DB::rollback();
+                    return [
+                        'status'=>'fail',
+                        'messages' => ['failed create referral code']
+                    ];
+                }
 
                 $update = User::where('id','=',$data[0]['id'])->update($dataupdate);
 

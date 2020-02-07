@@ -309,6 +309,76 @@ class ApiInbox extends Controller
 		}
 		return response()->json($result);
 	}
+	/**
+	 * update status requested inbox to unread
+	 * @param  MarkedInbox $request [description]
+	 * @return Response               [description]
+	 */
+	public function unmarkInbox(MarkedInbox $request){
+		$user = $request->user();
+		$post = $request->json()->all();
+		if($post['type'] == 'private'){
+			$userInbox = UserInbox::where('id_user_inboxes', $post['id_inbox'])->first();
+			if(!empty($userInbox)){
+				$update = UserInbox::where('id_user_inboxes', $post['id_inbox'])->update(['read' => '0']);
+				// if(!$update){
+				// 	$result = [
+				// 		'status'  => 'fail',
+				// 		'messages'  => ['Failed marked inbox']
+				// 	];
+				// }else{
+					$countUnread = $this->listInboxUnread( $user['id']);
+					$result = [
+						'status'  => 'success',
+						'result'  => ['count_unread' => $countUnread]
+					];
+				// }
+			}else{
+				$result = [
+					'status'  => 'fail',
+					'messages'  => ['Inbox not found']
+				];
+			}
+		}elseif($post['type'] == 'global'){
+			$inboxGlobal = InboxGlobal::where('id_inbox_global', $post['id_inbox'])->first();
+			if(!empty($inboxGlobal)){
+
+				$delete = InboxGlobalRead::where('id_inbox_global', $post['id_inbox'])->where('id_user', $user['id'])->delete();
+				if($delete){
+					$countUnread = $this->listInboxUnread( $user['id']);
+					$result = [
+						'status'  => 'success',
+						'result'  => ['count_unread' => $countUnread]
+					];
+				}else{
+					$result = [
+						'status'  => 'fail',
+						'messages'  => ['Failed unread inbox']
+					];
+				}
+
+			}else{
+				$result = [
+					'status'  => 'fail',
+					'messages'  => ['Inbox not found']
+				];
+			}
+
+		}elseif($post['type'] == 'multiple'){
+			if($post['inboxes']['global']??false){
+				$delete = InboxGlobalRead::where('id_user',$user['id'])->whereIn('id_inbox_global',$post['inboxes']['global']);
+			}
+			if($post['inboxes']['private']){
+				$update = UserInbox::whereIn('id_user_inboxes', $post['inboxes']['private'])->where('id_user', $user['id'])->update(['read' => '0']);
+			}
+			$countUnread = $this->listInboxUnread( $user['id']);
+			$result = [
+				'status'  => 'success',
+				'result'  => ['count_unread' => $countUnread]
+			];
+		}
+		return response()->json($result);
+	}
 
 	public function listInboxUnread($id_user){
 		$user = User::find($id_user);
