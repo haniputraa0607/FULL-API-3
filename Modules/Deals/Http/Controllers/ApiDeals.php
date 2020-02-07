@@ -310,6 +310,7 @@ class ApiDeals extends Controller
         }
         if ($request->json('publish')) {
             $deals->where('deals_publish_end', '>=', date('Y-m-d H:i:s'));
+            $deals->where('step_complete', '=', 1);
         }
 
         if ($request->json('deals_type')) {
@@ -1124,7 +1125,7 @@ class ApiDeals extends Controller
         } else {
             $result = [
                 'status'  => 'fail',
-                'messages'  => ['Promo Campaign Not Found']
+                'messages'  => ['Deals Not Found']
             ];
         }
 

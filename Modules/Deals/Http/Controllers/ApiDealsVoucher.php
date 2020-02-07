@@ -26,7 +26,8 @@ class ApiDealsVoucher extends Controller
     function __construct() {
         date_default_timezone_set('Asia/Jakarta');
         $this->deals        = "Modules\Deals\Http\Controllers\ApiDeals";
-        $this->subscription        = "Modules\Subscription\Http\Controllers\ApiSubscription";
+        $this->subscription        	= "Modules\Subscription\Http\Controllers\ApiSubscription";
+        $this->promo_campaign       = "Modules\PromoCampaign\Http\Controllers\ApiPromoCampaign";
     }
 
     /* CREATE VOUCHER */
@@ -469,6 +470,34 @@ class ApiDealsVoucher extends Controller
             $voucher[0]['deals_title'] = $voucher[0]['deal_voucher']['deal']['deals_title'];
             $voucher[0]['is_offline'] = $voucher[0]['deal_voucher']['deal']['is_offline'];
             $voucher[0]['is_online'] = $voucher[0]['deal_voucher']['deal']['is_online'];
+
+            if (!empty($voucher[0]['is_online'])) {
+            	// get pop up confirmation message
+            	$deals_rule = Deal::where('id_deals','=',$voucher[0]['deal_voucher']['id_deals'])
+            					->with([  
+		                            'deals_product_discount.product' => function($q) {
+										$q->select('id_product', 'id_product_category', 'product_code', 'product_name');
+									}, 
+		                            'deals_tier_discount_product.product' => function($q) {
+										$q->select('id_product', 'id_product_category', 'product_code', 'product_name');
+									}, 
+		                            'deals_buyxgety_product_requirement.product' => function($q) {
+										$q->select('id_product', 'id_product_category', 'product_code', 'product_name');
+									}, 
+		                            'deals_product_discount_rules', 
+		                            'deals_tier_discount_rules', 
+		                            'deals_buyxgety_rules'
+		                        ])
+		                        ->first();
+            	$product_name = app($this->promo_campaign)->getProduct('deals', $deals_rule)['product']??'';
+            	// $desc = app($this->promo_campaign)->getPromoDescription('deals', $deals_rule, $product_name)??'';
+            	$deals_title = $deals_rule['deals_title']??'';
+
+	            $popup_message = Setting::where('key','=','coupon_confirmation_pop_up')->first()['value_text']??'';
+	            $popup_message = MyHelper::simpleReplace($popup_message,['title'=>$deals_title, 'product' => $product_name]);
+	            $voucher[0]['confirm_message'] = $popup_message;
+            }
+
             $result['data'] = $voucher;
         }
         else {

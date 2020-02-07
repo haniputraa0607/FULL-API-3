@@ -43,16 +43,16 @@ class DealsProductDiscount extends Eloquent
 
 	public function deal()
 	{
-		return $this->belongsTo(\App\Models\Deal::class, 'id_deals');
+		return $this->belongsTo(\App\Http\Models\Deal::class, 'id_deals');
 	}
 
 	public function product()
 	{
-		return $this->belongsTo(\App\Models\Product::class, 'id_product');
+		return $this->belongsTo(\App\Http\Models\Product::class, 'id_product');
 	}
 
 	public function product_category()
 	{
-		return $this->belongsTo(\App\Models\ProductCategory::class, 'id_product_category');
+		return $this->belongsTo(\App\Http\Models\ProductCategory::class, 'id_product_category');
 	}
 }

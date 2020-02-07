@@ -1755,4 +1755,113 @@ class ApiPromoCampaign extends Controller
 
 		return $result;
     }
+
+    public function getProduct($source, $query)
+    {
+    	// return $source;
+    	if ( ($query[$source.'_product_discount_rules']['is_all_product']??false) == 1) 
+        {
+        	$applied_product = '*';
+        	$product = 'semua product';
+        }
+        elseif ( !empty($query[$source.'_product_discount']) )
+        {
+        	$applied_product = $query[$source.'_product_discount'];
+        	$product = $applied_product[0]['product']['product_name']??'product tertentu';
+        }
+        elseif ( !empty($query[$source.'_tier_discount_product']) )
+        {
+        	$applied_product = $query[$source.'_tier_discount_product'];
+        	$product = $applied_product['product']['product_name']??'product tertentu';
+        }
+        elseif ( !empty($query[$source.'_buyxgety_product_requirement']) )
+        {
+        	$applied_product = $query[$source.'_buyxgety_product_requirement'];
+        	$product = $applied_product['product']['product_name']??'product tertentu';
+        }
+        else
+        {
+        	$applied_product = [];
+        	$product = [];
+        }
+
+        $result = [
+        	'applied_product' => $applied_product,
+        	'product' => $product
+        ];
+        return $result;
+    }
+
+    public function getPromoDescription($source, $query, $product)
+    {
+    	// add description
+        if ($query['promo_type'] == 'Product discount') 
+        {
+        	$discount = $query[$source.'_product_discount_rules']['discount_type']??'Nominal';
+        	$qty = $query[$source.'_product_discount_rules']['max_product']??0;
+
+        	if ($discount == 'Percent') {
+        		$discount = ($query[$source.'_product_discount_rules']['discount_value']??0).' %';
+        	}else{
+        		$discount = 'Rp '.number_format($query[$source.'_product_discount_rules']['discount_value']??0);
+        	}
+
+    		$key_null = 'Anda berhak mendapatkan potongan %discount% untuk pembelian %product%. Maksimal %qty% buah untuk setiap produk.';
+    		$desc = Setting::where('key', '=', 'description_product_discount')->first()['value']??$key_null;
+
+    		$desc = MyHelper::simpleReplace($desc,['discount'=>$discount, 'product'=>$product, 'qty'=>$qty,]);
+    	}
+    	elseif ($query['promo_type'] == 'Tier discount') 
+    	{
+    		$min_qty = 1;
+    		$max_qty = 1;
+
+    		foreach ($query[$source.'_tier_discount_rules'] as $key => $rule) {
+				$min_req=$rule['min_qty'];
+				$max_req=$rule['max_qty'];
+
+				if($min_qty===null||$rule['min_qty']<$min_qty){
+					$min_qty=$min_req;
+				}
+				if($max_qty===null||$rule['max_qty']>$max_qty){
+					$max_qty=$max_req;
+				}
+    		}
+    		$key = 'description_tier_discount';
+    		$key_null = 'Anda berhak mendapatkan potongan setelah melakukan pembelian %product% sebanyak %minmax%';
+    		$minmax=$min_qty!=$max_qty?"$min_qty - $max_qty":$min_qty;
+    		$desc = Setting::where('key', '=', 'description_tier_discount')->first()['value']??$key_null;
+
+    		$desc = MyHelper::simpleReplace($desc,['product'=>$product, 'minmax'=>$minmax]);
+    	}
+    	elseif ($query['promo_type'] == 'Buy X Get Y') 
+    	{
+    		$min_qty = 1;
+    		$max_qty = 1;
+    		foreach ($query[$source.'_buyxgety_rules'] as $key => $rule) {
+				$min_req=$rule['min_qty_requirement'];
+				$max_req=$rule['max_qty_requirement'];
+
+				if($min_qty===null||$rule['min_qty_requirement']<$min_qty){
+					$min_qty=$min_req;
+				}
+				if($max_qty===null||$rule['max_qty_requirement']>$max_qty){
+					$max_qty=$max_req;
+				}
+    		}
+    		$key = 'description_buyxgety_discount';
+    		$key_null = 'Anda berhak mendapatkan potongan setelah melakukan pembelian %product% sebanyak %min% - %max%';
+    		$minmax=$min_qty!=$max_qty?"$min_qty - $max_qty":$min_qty;
+    		$desc = Setting::where('key', '=', 'description_buyxgety_discount')->first()['value']??$key_null;
+
+    		$desc = MyHelper::simpleReplace($desc,['product'=>$product, 'minmax'=>$minmax]);
+    	}
+    	else
+    	{
+    		$key = null;
+    		$desc = 'no description';
+    	}
+
+    	return $desc;
+    }
 }
