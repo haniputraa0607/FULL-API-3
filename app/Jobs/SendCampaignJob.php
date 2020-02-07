@@ -150,16 +150,18 @@ class SendCampaignJob implements ShouldQueue
                     );
 
                     try{
-                        Mailgun::send('emails.test', $data, function($message) use ($to,$subject,$name,$setting)
+                        Mail::send('emails.test', $data, function($message) use ($to,$subject,$name,$setting)
                         {
 
                             if(stristr($to, 'gmail.con')){
                                 $to = str_replace('gmail.con', 'gmail.com', $to);
                             }
+                            $message->to($to, $name)->subject($subject);
+							if(env('MAIL_DRIVER') == 'mailgun'){
+								$message->trackClicks(true)
+										->trackOpens(true);
+                            }
 
-                            $message->to($to, $name)->subject($subject)
-                                            ->trackClicks(true)
-                                            ->trackOpens(true);
                             if(!empty($setting['email_from']) && !empty($setting['email_sender'])){
                                 $message->from($setting['email_from'], $setting['email_sender']);
                             }else if(!empty($setting['email_from'])){
@@ -197,15 +199,15 @@ class SendCampaignJob implements ShouldQueue
 
                 }
                 break;
-            
+
             case 'sms':
                 $senddata = array(
                     'apikey' => env('SMS_KEY'),
                     'callbackurl' => env('APP_URL'),
                     'datapacket'=>array()
                 );
-    
-            
+
+
                 foreach($recipient as $key => $receipient){
                     $content    = app($autocrm)->TextReplace($campaign['campaign_sms_content'], $receipient);
 

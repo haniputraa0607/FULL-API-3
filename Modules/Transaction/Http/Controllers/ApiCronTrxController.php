@@ -97,11 +97,11 @@ class ApiCronTrxController extends Controller
             foreach($logBalance as $logB){
                 $reversal = app($this->balance)->addLogBalance( $singleTrx->id_user, abs($logB['balance']), $singleTrx->id_transaction, 'Reversal', $singleTrx->transaction_grandtotal);
                 $usere= User::where('id',$singleTrx->id_user)->first();
-                $send = app($this->autocrm)->SendAutoCRM('Transaction Failed Point Refund', $usere->phone, 
+                $send = app($this->autocrm)->SendAutoCRM('Transaction Failed Point Refund', $usere->phone,
                     [
-                        "outlet_name"       => $singleTrx->outlet_name->outlet_name, 
+                        "outlet_name"       => $singleTrx->outlet_name->outlet_name,
                         "transaction_date"  => $singleTrx->transaction_date,
-                        'id_transaction'    => $singleTrx->id_transaction, 
+                        'id_transaction'    => $singleTrx->id_transaction,
                         'receipt_number'    => $singleTrx->transaction_receipt_number,
                         'received_point'    => (string) abs($logB['balance'])
                     ]
@@ -178,11 +178,13 @@ class ApiCronTrxController extends Controller
                             'setting'      => $setting
                         );
 
-                        Mailgun::send('emails.test', $data, function($message) use ($to,$subject,$name,$setting)
+                        Mail::send('emails.test', $data, function($message) use ($to,$subject,$name,$setting)
                         {
-                            $message->to($to, $name)->subject($subject)
-                                            ->trackClicks(true)
-                                            ->trackOpens(true);
+                            $message->to($to, $name)->subject($subject);
+							if(env('MAIL_DRIVER') == 'mailgun'){
+								$message->trackClicks(true)
+										->trackOpens(true);
+							}
                             if(!empty($setting['email_from']) && !empty($setting['email_sender'])){
                                 $message->from($setting['email_from'], $setting['email_sender']);
                             }else if(!empty($setting['email_from'])){
