@@ -13,6 +13,8 @@ use App\Http\Models\UserDevice;
 use App\Http\Models\User;
 use App\Http\Models\Transaction;
 use App\Http\Models\Setting;
+use App\Http\Models\Deal;
+use App\Http\Models\DealsUser;
 
 use App\Lib\MyHelper;
 
@@ -29,7 +31,7 @@ class PromoCampaignTools{
 	 * @param  	array 		$error     	error message
 	 * @return 	array/boolean     modified array of trxs if can, otherwise false
 	 */
-	public function validatePromo($id_promo, $id_outlet, $trxs, &$errors){
+	public function validatePromo($id_promo, $id_outlet, $trxs, &$errors, $source='promo_campaign'){
 		/**
 		 $trxs=[
 			{
@@ -46,23 +48,36 @@ class PromoCampaignTools{
 			$errors[]='Transaction data not valid';
 			return false;
 		}
-		$promo=PromoCampaign::with('promo_campaign_outlets')->find($id_promo);
-		
+
+		if ($source == 'promo_campaign') 
+		{
+			$promo=PromoCampaign::with('promo_campaign_outlets')->find($id_promo);
+			$promo_outlet = $promo->promo_campaign_outlets;
+		}
+		elseif($source == 'deals')
+		{
+			$promo=Deal::with('outlets_active')->find($id_promo);
+			$promo_outlet = $promo->outlets_active;
+		}
+		else
+		{
+			$errors[]='Promo not found';
+			return false;
+		}
 
 		if(!$promo){
-			$errors[]='Promo Campaign not found';
+			$errors[]='Promo not found';
 			return false;
 		}
 
-		$outlet = $this->checkOutletRule($id_outlet, $promo->is_all_outlet, $promo->promo_campaign_outlets);
+		$outlet = $this->checkOutletRule($id_outlet, $promo->is_all_outlet??0, $promo_outlet);
 
 		if(!$outlet){
-			$errors[]='Promo Campaign cannot be used at this outlet';
+			$errors[]='Promo cannot be used at this outlet';
 			return false;
 		}
-
-		if(strtotime($promo->date_start)>time()||strtotime($promo->date_end)<time()){
-			$errors[]='Promo campaign not valid';
+		if(strtotime($promo->date_start??$promo->deals_start)>time()||strtotime($promo->date_end??$promo->deals_end)<time()){
+			$errors[]='Promo is not valid';
 			return false;
 		}
 		
@@ -99,26 +114,25 @@ class PromoCampaignTools{
 		// remove duplicate modifiers
 		$mod = array_flip($mod);
 		$mod = array_flip($mod);
-
 		// get all modifier data
 		$mod = $this->getAllModifier($mod, $id_outlet);
 
 		// get mod price 
 		$mod_price =[];
 		foreach ($mod as $key => $value) {
-			$mod_price[$value['id_product_modifier']] = $value['product_modifier_price'];
+			$mod_price[$value['id_product_modifier']] = $value['product_modifier_price']??0;
 		}
 
 		switch ($promo->promo_type) {
 			case 'Product discount':
 				// load required relationship
-				$promo->load('promo_campaign_product_discount','promo_campaign_product_discount_rules');
-				$promo_rules=$promo->promo_campaign_product_discount_rules;
+				$promo->load($source.'_product_discount',$source.'_product_discount_rules');
+				$promo_rules=$promo[$source.'_product_discount_rules'];
 				$max_product = $promo_rules->max_product;
 				$qty_promo_available = [];
 
 				if(!$promo_rules->is_all_product){
-					$promo_product=$promo->promo_campaign_product_discount->toArray();
+					$promo_product=$promo[$source.'_product_discount']->toArray();
 				}else{
 					$promo_product="*";
 				}
@@ -154,8 +168,8 @@ class PromoCampaignTools{
 
 					foreach ($value['modifiers'] as $key2 => $value2) 
 					{
-						$mod_price_qty_per_item[$value['id_product']][$key]['price'] += $mod_price[$value2];
-						$mod_price_per_item[$value['id_product']][$key] += $mod_price[$value2];
+						$mod_price_qty_per_item[$value['id_product']][$key]['price'] += $mod_price[$value2]??0;
+						$mod_price_per_item[$value['id_product']][$key] += $mod_price[$value2]??0;
 					}
 
 				}
@@ -188,7 +202,6 @@ class PromoCampaignTools{
 					$mod_price_qty_per_item[$key] = $sortedArray;
 				}
 
-
 				// check promo qty for each item
 				foreach ($mod_price_qty_per_item as $key => $value) 
 				{
@@ -219,7 +232,7 @@ class PromoCampaignTools{
 					$modifier = 0;
 					foreach ($trx['modifiers'] as $key2 => $value2) 
 					{
-						$modifier += $mod_price[$value2];
+						$modifier += $mod_price[$value2]??0;
 					}
 
 					// is all product get promo
@@ -272,8 +285,8 @@ class PromoCampaignTools{
 
 			case 'Tier discount':
 				// load requirement relationship
-				$promo->load('promo_campaign_tier_discount_rules','promo_campaign_tier_discount_product');
-				$promo_product=$promo->promo_campaign_tier_discount_product;
+				$promo->load($source.'_tier_discount_rules',$source.'_tier_discount_product');
+				$promo_product=$promo[$source.'_tier_discount_product'];
 				$promo_product->load('product');
 				if(!$promo_product){
 					$errors[]='Tier discount promo product is not set correctly';
@@ -294,7 +307,7 @@ class PromoCampaignTools{
 				}
 
 				// get min max required for error message
-				$promo_rules=$promo->promo_campaign_tier_discount_rules;
+				$promo_rules=$promo[$source.'_tier_discount_rules'];
 				$min_qty = 1;
 				$max_qty = 1;
 				foreach ($promo_rules as $rule) {
@@ -368,7 +381,7 @@ class PromoCampaignTools{
 					$modifier = 0;
 					foreach ($trx['modifiers'] as $key2 => $value2) 
 					{
-						$modifier += $mod_price[$value2];
+						$modifier += $mod_price[$value2]??0;
 					}
 
 					if($trx['id_product']==$promo_product->id_product){
@@ -381,8 +394,8 @@ class PromoCampaignTools{
 
 			case 'Buy X Get Y':
 				// load requirement relationship
-				$promo->load('promo_campaign_buyxgety_rules','promo_campaign_buyxgety_product_requirement');
-				$promo_product=$promo->promo_campaign_buyxgety_product_requirement;
+				$promo->load($source.'_buyxgety_rules',$source.'_buyxgety_product_requirement');
+				$promo_product=$promo[$source.'_buyxgety_product_requirement'];
 				$promo_product->load('product');
 
 				if(!$promo_product){
@@ -403,7 +416,7 @@ class PromoCampaignTools{
 					}
 				}
 
-				$promo_rules=$promo->promo_campaign_buyxgety_rules;
+				$promo_rules=$promo[$source.'_buyxgety_rules'];
 				$min_qty=1;
 				$max_qty=1;
 				// get min max for error message
@@ -447,7 +460,7 @@ class PromoCampaignTools{
 					return false;
 				}
 				//find promo
-				$promo_rules=$promo->promo_campaign_buyxgety_rules;
+				$promo_rules=$promo[$source.'_buyxgety_rules'];
 				$promo_rule=false;
 				$min_qty=null;
 				$max_qty=null;
@@ -512,7 +525,7 @@ class PromoCampaignTools{
 					'id_brand'		=> $benefit_product->brands[0]->id_brand??'',
 					'qty'			=> $promo_rule->benefit_qty,
 					'is_promo'		=> 1,
-					'is_free'		=> ($promo_rule->discount_percent == 100) ? 1 : 0,
+					'is_free'		=> ($promo_rule->discount_type == "percent" && $promo_rule->discount_value == 100) ? 1 : 0,
 					'modifiers'		=> []
 				];
 				// $benefit_item['id_product']	= $benefit_product->id_product;
@@ -760,7 +773,7 @@ class PromoCampaignTools{
 		if(isset($trx['new_price'])&&$trx['new_price']){
 			$product_price=$trx['new_price']/$trx['qty'];
 		}
-		if($promo_rules->discount_type=='Nominal'){
+		if($promo_rules->discount_type=='Nominal' || $promo_rules->discount_type=='nominal'){
 			$discount=$promo_rules->discount_value*$discount_qty;
 			$trx['discount']=($trx['discount']??0)+$discount;
 			$trx['new_price']=($product_price*$trx['qty'])-$trx['discount'];
@@ -959,40 +972,60 @@ class PromoCampaignTools{
     	return $message;
     }
 
-    function getRequiredProduct($id_promo_campaign){
-    	$promo = PromoCampaign::where('id_promo_campaign','=',$id_promo_campaign)
-    			->with([
-					'promo_campaign_product_discount.product' => function($q) {
-						$q->select('id_product', 'id_product_category', 'product_code', 'product_name');
-					},
-					'promo_campaign_buyxgety_product_requirement.product' => function($q) {
-						$q->select('id_product', 'id_product_category', 'product_code', 'product_name');
-					},
-					'promo_campaign_tier_discount_product.product' => function($q) {
-						$q->select('id_product', 'id_product_category', 'product_code', 'product_name');
-					},
-					'promo_campaign_product_discount_rules',
-					'promo_campaign_tier_discount_rules',
-					'promo_campaign_buyxgety_rules'
-				])
-                ->first();
+    function getRequiredProduct($id_promo, $source='promo_campaign'){
+    	if ($source == 'deals') {
+    		$promo = Deal::where('id_deals','=',$id_promo)
+	    			->with([
+						'deals_product_discount.product' => function($q) {
+							$q->select('id_product', 'id_product_category', 'product_code', 'product_name');
+						},
+						'deals_buyxgety_product_requirement.product' => function($q) {
+							$q->select('id_product', 'id_product_category', 'product_code', 'product_name');
+						},
+						'deals_tier_discount_product.product' => function($q) {
+							$q->select('id_product', 'id_product_category', 'product_code', 'product_name');
+						},
+						'deals_product_discount_rules',
+						'deals_tier_discount_rules',
+						'deals_buyxgety_rules'
+					])
+	                ->first();
+    	}elseif($source == 'promo_campaign'){
+	    	$promo = PromoCampaign::where('id_promo_campaign','=',$id_promo)
+	    			->with([
+						'promo_campaign_product_discount.product' => function($q) {
+							$q->select('id_product', 'id_product_category', 'product_code', 'product_name');
+						},
+						'promo_campaign_buyxgety_product_requirement.product' => function($q) {
+							$q->select('id_product', 'id_product_category', 'product_code', 'product_name');
+						},
+						'promo_campaign_tier_discount_product.product' => function($q) {
+							$q->select('id_product', 'id_product_category', 'product_code', 'product_name');
+						},
+						'promo_campaign_product_discount_rules',
+						'promo_campaign_tier_discount_rules',
+						'promo_campaign_buyxgety_rules'
+					])
+	                ->first();
+    	}
+
         if ($promo) {
         	$promo = $promo->toArray();
-        	if ( ($promo['promo_campaign_product_discount_rules']['is_all_product']??false) == 1) 
+        	if ( ($promo[$source.'_product_discount_rules']['is_all_product']??false) == 1) 
 	        {
 	        	$product = '*';
 	        }
-	        elseif ( !empty($promo['promo_campaign_product_discount']) )
+	        elseif ( !empty($promo[$source.'_product_discount']) )
 	        {
-	        	$product = $promo['promo_campaign_product_discount'][0]['product']??'';
+	        	$product = $promo[$source.'_product_discount'][0]['product']??'';
 	        }
-	        elseif ( !empty($promo['promo_campaign_tier_discount_product']) )
+	        elseif ( !empty($promo[$source.'_tier_discount_product']) )
 	        {
-	        	$product = $promo['promo_campaign_tier_discount_product']['product']??'';
+	        	$product = $promo[$source.'_tier_discount_product']['product']??'';
 	        }
-	        elseif ( !empty($promo['promo_campaign_buyxgety_product_requirement']) )
+	        elseif ( !empty($promo[$source.'_buyxgety_product_requirement']) )
 	        {
-	        	$product = $promo['promo_campaign_buyxgety_product_requirement']['product']??'';
+	        	$product = $promo[$source.'_buyxgety_product_requirement']['product']??'';
 	        }
 	        else
 	        {
