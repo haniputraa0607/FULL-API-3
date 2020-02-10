@@ -16,7 +16,8 @@ class ValidateCode extends FormRequest
     public function rules()
     {
         return [
-            'promo_code'    => 'required|string',
+            'promo_code'    => 'nullable|string',
+            'id_deals_user' => 'nullable|integer',
             'item'          => 'array|nullable',
             'id_outlet'     => 'nullable',
             'device_id'     => 'required',

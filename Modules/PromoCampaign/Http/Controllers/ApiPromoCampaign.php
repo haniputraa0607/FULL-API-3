@@ -35,6 +35,7 @@ use App\Http\Models\Setting;
 use App\Http\Models\Voucher;
 use App\Http\Models\Treatment;
 use App\Http\Models\Deal;
+use App\Http\Models\DealsUser;
 
 use Modules\PromoCampaign\Http\Requests\Step1PromoCampaignRequest;
 use Modules\PromoCampaign\Http\Requests\Step2PromoCampaignRequest;
@@ -1588,177 +1589,155 @@ class ApiPromoCampaign extends Controller
         $device_id		= $request->device_id;
         $device_type	= $request->device_type;
         $id_outlet		= $request->id_outlet;
-        $ip = $request->ip();
+        $ip 			= $request->ip();
+    	$pct 			= new PromoCampaignTools();
 
-        /* Check promo code*/
-        $dataCheckPromoCode = [
-            'id_user'    => $id_user,
-            'device_id'  => $device_id,
-            'promo_code' => $request->promo_code,
-            'ip'         => $ip
-        ];
-        $checkFraud = app($this->fraud)->fraudCheckPromoCode($dataCheckPromoCode);
-        if($checkFraud['status'] == 'fail'){
-            return $checkFraud;
-        }
-        /* End check promo code */
-
-        // get data promo code, promo campaign, outlet, rule, and product
-        $code=PromoCampaignPromoCode::where('promo_code',$request->promo_code)
-                ->join('promo_campaigns', 'promo_campaigns.id_promo_campaign', '=', 'promo_campaign_promo_codes.id_promo_campaign')
-                ->where('step_complete', '=', 1)
-                ->where( function($q){
-                	$q->whereColumn('usage','<','limitation_usage')
-                		->orWhere('code_type','Single')
-                        ->orWhere('limitation_usage',0);
-                } )
-                ->with([
-					'promo_campaign.promo_campaign_outlets',
-					'promo_campaign.promo_campaign_product_discount.product' => function($q) {
-						$q->select('id_product', 'id_product_category', 'product_code', 'product_name');
-					},
-					'promo_campaign.promo_campaign_buyxgety_product_requirement.product' => function($q) {
-						$q->select('id_product', 'id_product_category', 'product_code', 'product_name');
-					},
-					'promo_campaign.promo_campaign_tier_discount_product.product' => function($q) {
-						$q->select('id_product', 'id_product_category', 'product_code', 'product_name');
-					},
-					'promo_campaign.promo_campaign_product_discount_rules',
-					'promo_campaign.promo_campaign_tier_discount_rules',
-					'promo_campaign.promo_campaign_buyxgety_rules'
-				])
-                ->first();
-
-        if(!$code){
-            return [
-                'status'=>'fail',
-                'messages'=>['Promo code not valid']
-            ];
-        }
-
-        if($code->promo_campaign->promo_type == 'Referral'){
-            $referer = UserReferralCode::where('id_promo_campaign_promo_code',$code->id_promo_campaign_promo_code)
-                ->join('users','users.id','=','user_referral_codes.id_user')
-                ->where('users.is_suspended','=',0)
-                ->first();
-            if(!$referer){
-                return [
-                    'status'=>'fail',
-                    'messages'=>['Kode promo tidak ditemukan']
-                ];
-            }
-        }
-
-    	$code = $code->toArray();
-        
-        // add available product
-        if ( ($code['promo_campaign']['promo_campaign_product_discount_rules']['is_all_product']??false) == 1) 
+        if ($request->promo_code && !$request->id_deals_user) 
         {
-        	$applied_product = '*';
-        	$product = 'semua product';
+	        /* Check promo code*/
+	        $dataCheckPromoCode = [
+	            'id_user'    => $id_user,
+	            'device_id'  => $device_id,
+	            'promo_code' => $request->promo_code,
+	            'ip'         => $ip
+	        ];
+	        $checkFraud = app($this->fraud)->fraudCheckPromoCode($dataCheckPromoCode);
+	        if($checkFraud['status'] == 'fail'){
+	            return $checkFraud;
+	        }
+	        /* End check promo code */
+
+	        // get data promo code, promo campaign, outlet, rule, and product
+	        $code=PromoCampaignPromoCode::where('promo_code',$request->promo_code)
+	                ->join('promo_campaigns', 'promo_campaigns.id_promo_campaign', '=', 'promo_campaign_promo_codes.id_promo_campaign')
+	                ->where('step_complete', '=', 1)
+	                ->where( function($q){
+	                	$q->whereColumn('usage','<','limitation_usage')
+	                		->orWhere('code_type','Single')
+	                        ->orWhere('limitation_usage',0);
+	                } )
+	                ->with([
+						'promo_campaign.promo_campaign_outlets',
+						'promo_campaign.promo_campaign_product_discount.product' => function($q) {
+							$q->select('id_product', 'id_product_category', 'product_code', 'product_name');
+						},
+						'promo_campaign.promo_campaign_buyxgety_product_requirement.product' => function($q) {
+							$q->select('id_product', 'id_product_category', 'product_code', 'product_name');
+						},
+						'promo_campaign.promo_campaign_tier_discount_product.product' => function($q) {
+							$q->select('id_product', 'id_product_category', 'product_code', 'product_name');
+						},
+						'promo_campaign.promo_campaign_product_discount_rules',
+						'promo_campaign.promo_campaign_tier_discount_rules',
+						'promo_campaign.promo_campaign_buyxgety_rules'
+					])
+	                ->first();
+
+	        if(!$code){
+	            return [
+	                'status'=>'fail',
+	                'messages'=>['Promo code not valid']
+	            ];
+	        }
+
+	        if ($code['promo_campaign']['date_end'] < date('Y-m-d H:i:s')) {
+        		return [
+	                'status'=>'fail',
+	                'messages'=>['Promo campaign is ended']
+	            ];
+        	}
+
+	        if($code->promo_campaign->promo_type == 'Referral'){
+	            $referer = UserReferralCode::where('id_promo_campaign_promo_code',$code->id_promo_campaign_promo_code)
+	                ->join('users','users.id','=','user_referral_codes.id_user')
+	                ->where('users.is_suspended','=',0)
+	                ->first();
+	            if(!$referer){
+	                return [
+	                    'status'=>'fail',
+	                    'messages'=>['Kode promo tidak ditemukan']
+	                ];
+	            }
+	        }
+
+	    	$code = $code->toArray();
+
+        	// check user
+	        if(!$pct->validateUser($code['id_promo_campaign'], $id_user, $phone, $device_type, $device_id, $errors,$code['id_promo_campaign_promo_code'])){
+	            return [
+	                'status'=>'fail',
+	                'messages'=>$errors??['Promo code not valid']
+	            ];
+	        }
+
+	    	$query = $code;
+	    	$source = 'promo_campaign';
         }
-        elseif ( !empty($code['promo_campaign']['promo_campaign_product_discount']) )
+        elseif (!$request->promo_code && $request->id_deals_user) 
         {
-        	$applied_product = $code['promo_campaign']['promo_campaign_product_discount'];
-        	$product = $applied_product[0]['product']['product_name']??'product tertentu';
-        }
-        elseif ( !empty($code['promo_campaign']['promo_campaign_tier_discount_product']) )
-        {
-        	$applied_product = $code['promo_campaign']['promo_campaign_tier_discount_product'];
-        	$product = $applied_product['product']['product_name']??'product tertentu';
-        }
-        elseif ( !empty($code['promo_campaign']['promo_campaign_buyxgety_product_requirement']) )
-        {
-        	$applied_product = $code['promo_campaign']['promo_campaign_buyxgety_product_requirement'];
-        	$product = $applied_product['product']['product_name']??'product tertentu';
+        	$deals = DealsUser::where('id_deals_user', '=', $request->id_deals_user)
+        			->whereIn('paid_status', ['Free', 'Completed'])
+        			->whereNull('used_at')
+        			->with([  
+                        'dealVoucher.deals.outlets_active',
+                        'dealVoucher.deals.deals_product_discount.product' => function($q) {
+							$q->select('id_product', 'id_product_category', 'product_code', 'product_name');
+						}, 
+                        'dealVoucher.deals.deals_tier_discount_product.product' => function($q) {
+							$q->select('id_product', 'id_product_category', 'product_code', 'product_name');
+						}, 
+                        'dealVoucher.deals.deals_buyxgety_product_requirement.product' => function($q) {
+							$q->select('id_product', 'id_product_category', 'product_code', 'product_name');
+						}, 
+                        'dealVoucher.deals.deals_product_discount_rules', 
+                        'dealVoucher.deals.deals_tier_discount_rules', 
+                        'dealVoucher.deals.deals_buyxgety_rules'
+                    ])
+        			->first();
+			
+			if(!$deals){
+	            return [
+	                'status'=>'fail',
+	                'messages'=>['Voucher not valid']
+	            ];
+	        }
+
+	        if ($deals['voucher_expired_at'] < date('Y-m-d H:i:s')) {
+        		return [
+	                'status'=>'fail',
+	                'messages'=>['Voucher is expired']
+	            ];
+        	}
+
+        	if ($deals['voucher_active_at'] > date('Y-m-d H:i:s') && !empty($deals['voucher_active_at']) ) {
+        		return [
+	                'status'=>'fail',
+	                'messages'=>['Voucher is not active yet']
+	            ];
+        	}
+
+        	$deals = $deals->toArray();
+	    	$query = $deals['deal_voucher'];
+	    	$source = 'deals';
         }
         else
         {
-        	$applied_product = [];
-        	$product = [];
-        }
-
-        // add description
-        if ($code['promo_type'] == 'Product discount') 
-        {
-        	$discount = $code['promo_campaign']['promo_campaign_product_discount_rules']['discount_type']??'Nominal';
-        	$qty = $code['promo_campaign']['promo_campaign_product_discount_rules']['max_product']??0;
-
-        	if ($discount == 'Percent') {
-        		$discount = ($code['promo_campaign']['promo_campaign_product_discount_rules']['discount_value']??0).' %';
-        	}else{
-        		$discount = 'Rp '.number_format($code['promo_campaign']['promo_campaign_product_discount_rules']['discount_value']??0);
-        	}
-
-    		$key_null = 'Anda berhak mendapatkan potongan %discount% untuk pembelian %product%. Maksimal %qty% buah untuk setiap produk.';
-    		$desc = Setting::where('key', '=', 'description_product_discount')->first()['value']??$key_null;
-
-    		$desc = MyHelper::simpleReplace($desc,['discount'=>$discount, 'product'=>$product, 'qty'=>$qty,]);
-    	}
-    	elseif ($code['promo_type'] == 'Tier discount') 
-    	{
-    		$min_qty = 1;
-    		$max_qty = 1;
-
-    		foreach ($code['promo_campaign']['promo_campaign_tier_discount_rules'] as $key => $rule) {
-				$min_req=$rule['min_qty'];
-				$max_req=$rule['max_qty'];
-
-				if($min_qty===null||$rule['min_qty']<$min_qty){
-					$min_qty=$min_req;
-				}
-				if($max_qty===null||$rule['max_qty']>$max_qty){
-					$max_qty=$max_req;
-				}
-    		}
-    		$key = 'description_tier_discount';
-    		$key_null = 'Anda berhak mendapatkan potongan setelah melakukan pembelian %product% sebanyak %minmax%';
-    		$minmax=$min_qty!=$max_qty?"$min_qty - $max_qty":$min_qty;
-    		$desc = Setting::where('key', '=', 'description_tier_discount')->first()['value']??$key_null;
-
-    		$desc = MyHelper::simpleReplace($desc,['product'=>$product, 'minmax'=>$minmax]);
-    	}
-    	elseif ($code['promo_type'] == 'Buy X Get Y') 
-    	{
-    		$min_qty = 1;
-    		$max_qty = 1;
-    		foreach ($code['promo_campaign']['promo_campaign_buyxgety_rules'] as $key => $rule) {
-				$min_req=$rule['min_qty_requirement'];
-				$max_req=$rule['max_qty_requirement'];
-
-				if($min_qty===null||$rule['min_qty_requirement']<$min_qty){
-					$min_qty=$min_req;
-				}
-				if($max_qty===null||$rule['max_qty_requirement']>$max_qty){
-					$max_qty=$max_req;
-				}
-    		}
-    		$key = 'description_buyxgety_discount';
-    		$key_null = 'Anda berhak mendapatkan potongan setelah melakukan pembelian %product% sebanyak %min% - %max%';
-    		$minmax=$min_qty!=$max_qty?"$min_qty - $max_qty":$min_qty;
-    		$desc = Setting::where('key', '=', 'description_buyxgety_discount')->first()['value']??$key_null;
-
-    		$desc = MyHelper::simpleReplace($desc,['product'=>$product, 'minmax'=>$minmax]);
-    	}
-    	else
-    	{
-    		$key = null;
-    		$desc = 'no description';
-    	}
-
-        $errors=[];
-        // check user
-        $pct=new PromoCampaignTools();
-        if(!$pct->validateUser($code['id_promo_campaign'], $id_user, $phone, $device_type, $device_id, $errors,$code['id_promo_campaign_promo_code'])){
-            return [
+        	return [
                 'status'=>'fail',
-                'messages'=>$errors??['Promo code not valid']
+                'messages'=>['Can only use either Promo Code or Voucher']
             ];
         }
+        
+    	$getProduct = $this->getProduct($source,$query[$source]);
 
+    	$desc = $this->getPromoDescription($source, $query[$source], $getProduct['product']??'');
+
+        $errors=[];
+
+        // return $query;
         // check outlet
 		if (isset($id_outlet)) {
-			if (!$pct->checkOutletRule($id_outlet, $code['promo_campaign']['is_all_outlet'],$code['promo_campaign']['promo_campaign_outlets'])) {
+			if (!$pct->checkOutletRule($id_outlet, $query[$source]['is_all_outlet']??0,$query[$source][$source.'_outlets']??$query[$source]['outlets_active'])) {
 					return [
 	                'status'=>'fail',
 	                'messages'=>['Promo tidak berlaku di outlet ini']
@@ -1766,13 +1745,13 @@ class ApiPromoCampaign extends Controller
 			}
 		}
 
-		$result['title'] 		= $code['promo_title'];
-        $result['description']	= $desc;
-		$result['errors'] 		= $errors;
-		$result['promo_code'] 	= $request->promo_code;
+		$result['title'] 			= $query[$source]['promo_title']??$query[$source]['deals_title'];
+        $result['description']		= $desc;
+		$result['errors'] 			= $errors;
+		$result['promo_code'] 		= $request->promo_code;
+		$result['id_deals_user'] 	= $request->id_deals_user;
 
 		$result = MyHelper::checkGet($result);
-		// return $result;
 		// check item
 		if (!empty($request->item)) {
         	$bearer = $request->header('Authorization');
@@ -1809,7 +1788,8 @@ class ApiPromoCampaign extends Controller
         elseif ( !empty($query[$source.'_product_discount']) )
         {
         	$applied_product = $query[$source.'_product_discount'];
-        	$product = $applied_product[0]['product']['product_name']??'product tertentu';
+        	// $product = $applied_product[0]['product']['product_name']??'product tertentu';
+        	$product = 'product tertentu';
         }
         elseif ( !empty($query[$source.'_tier_discount_product']) )
         {

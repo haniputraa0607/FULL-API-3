@@ -1132,7 +1132,8 @@ class ApiDeals extends Controller
                             'deals_tier_discount_product', 
                             'deals_tier_discount_rules', 
                             'deals_buyxgety_product_requirement', 
-                            'deals_buyxgety_rules'
+                            'deals_buyxgety_rules',
+                            'outlets'
                         ])
                         ->where('id_deals', '=', $post['id_deals'])
                         ->first();
