@@ -350,7 +350,7 @@ class ApiCategoryController extends Controller
             $post['id_outlet'] = Setting::where('key','default_outlet')->pluck('value')->first();
         }
         $products = Product::select([
-                'products.id_product','products.product_name','products.product_description',
+                'products.id_product','products.product_name','products.product_code','products.product_description',
                 'product_prices.product_price','product_prices.product_stock_status'
             ])
             ->join('brand_product','brand_product.id_product','=','products.id_product')
@@ -478,6 +478,7 @@ class ApiCategoryController extends Controller
             unset($product['product_prices']);
             foreach ($pivots as $pivot) {
                 if($pivot['id_product_category']){
+                    $product['id_brand'] = $pivot['id_brand'];
                     $result[$pivot['id_brand']][$pivot['id_product_category']][] = $product;
                 }
             }
@@ -494,7 +495,7 @@ class ApiCategoryController extends Controller
             usort($categories,function($a,$b){
                 return $a['category']['product_category_order']<=>$b['category']['product_category_order'];
             });
-            $brand = Brand::select('id_brand','name_brand','order_brand')->find($id_brand);
+            $brand = Brand::select('id_brand','name_brand','code_brand','order_brand')->find($id_brand);
             $result[$id_brand] = [
                 'brand' => $brand,
                 'list' => $categories
