@@ -47,7 +47,7 @@ class DealsVoucher extends Model
 	
 	public function deals()
 	{
-		return $this->belongsTo(\App\Http\Models\Deal::class, 'id_deals')->select('id_deals', 'deals_title', 'deals_second_title', 'deals_promo_id', 'deals_promo_id_type');
+		return $this->belongsTo(\App\Http\Models\Deal::class, 'id_deals')->select('id_deals', 'deals_title', 'deals_second_title', 'deals_promo_id', 'deals_promo_id_type', 'promo_type');
 	}
 
 	public function deals_user() {

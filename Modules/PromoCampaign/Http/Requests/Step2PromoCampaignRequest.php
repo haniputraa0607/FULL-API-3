@@ -17,8 +17,6 @@ class Step2PromoCampaignRequest extends FormRequest
     {
         if($this->json('promo_type')=='Product Discount'){
             $rules=[
-                'filter_user'       => 'required',
-                'filter_outlet'     => 'required',
                 'filter_product'    => 'required',
                 'max_product'       => 'required',
                 'discount_type'     => 'required',
@@ -26,8 +24,6 @@ class Step2PromoCampaignRequest extends FormRequest
             ];
         }elseif ($this->json('promo_type')=='Tier discount') {
             $rules=[
-                'filter_user'           => 'required',
-                'filter_outlet'         => 'required',
                 'product'               => 'required',
                 'discount_type'         => 'required',
                 'promo_rule'                  => 'required',
@@ -40,8 +36,6 @@ class Step2PromoCampaignRequest extends FormRequest
             }
         }elseif ($this->json('promo_type')=='Buy X Get Y') {
             $rules=[
-                'filter_user'                       => 'required',
-                'filter_outlet'                     => 'required',
                 'product'                           => 'required',
                 'promo_rule'                              => 'required',
                 'promo_rule.*.min_qty_requirement'        => 'required|numeric|min:1',
@@ -52,6 +46,12 @@ class Step2PromoCampaignRequest extends FormRequest
                 'promo_rule.*.discount_nominal'           => 'nullable|numeric'
             ];
         }
+
+        if (!$this->json('id_deals')){
+        	$rules['filter_user'] = 'required';
+        	$rules['filter_outlet'] = 'required';
+        }
+
         return $rules;
     }
 

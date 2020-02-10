@@ -35,6 +35,7 @@ use App\Http\Models\Configs;
 use App\Http\Models\Holiday;
 use App\Http\Models\OutletToken;
 use App\Http\Models\UserLocationDetail;
+use App\Http\Models\DealsUser;
 use Modules\PromoCampaign\Entities\PromoCampaign;
 use Modules\PromoCampaign\Entities\PromoCampaignPromoCode;
 use Modules\PromoCampaign\Entities\PromoCampaignReferral;
@@ -1623,7 +1624,7 @@ class ApiOnlineTransaction extends Controller
             return $productDis;
         }
 
-        // check promo code 
+        // check promo code & voucher 
         $promo_error=[];
         if($request->json('promo_code')){
         	$code=PromoCampaignPromoCode::where('promo_code',$request->promo_code)
@@ -1641,8 +1642,8 @@ class ApiOnlineTransaction extends Controller
 	            $validate_user=$pct->validateUser($code->id_promo_campaign, $request->user()->id, $request->user()->phone, $request->device_type, $request->device_id, $errore,$code->id_promo_campaign_promo_code);
 
 	            if ($validate_user) {
-		            $discount_promo=$pct->validatePromo($code->id_promo_campaign, $request->id_outlet, $post['item'], $errors);
-	// return [$discount_promo, $errors];
+		            $discount_promo=$pct->validatePromo($code->id_promo_campaign, $request->id_outlet, $post['item'], $errors, 'promo_campaign');
+		            
 		            if ( !empty($errore) || !empty($errors)) {
 		            	$promo_error['title'] = Setting::where('key','=','promo_error_title')->first()['value']??'Promo tidak berlaku';
 				        $promo_error['button_ok'] = Setting::where('key','=','promo_error_ok_button')->first()['value']??'Tambah item';
@@ -1669,6 +1670,45 @@ class ApiOnlineTransaction extends Controller
             	$promo_error[] = 'Promo code invalid';
             }
         }
+        elseif($request->json('id_deals_user'))
+        {
+        	$deals = DealsUser::where('id_deals_user', '=', $request->id_deals_user)
+        			->whereIn('paid_status', ['Free', 'Completed'])
+        			->whereNull('used_at')
+        			->where('voucher_expired_at','>=',date('Y-m-d H:i:s'))
+        			->where(function($q) {
+        				$q->where('voucher_active_at','<=',date('Y-m-d H:i:s'))	
+        					->orWhereNull('voucher_active_at');
+        			})
+        			->with(['dealVoucher'])
+        			->first();
+			
+			if($deals)
+			{
+				$pct=new PromoCampaignTools();
+				$discount_promo=$pct->validatePromo($deals->dealVoucher->id_deals, $request->id_outlet, $post['item'], $errors, 'deals');
+	// return [$discount_promo, $errors];
+	            if ( !empty($errore) || !empty($errors)) {
+	            	$promo_error['title'] = Setting::where('key','=','promo_error_title')->first()['value']??'Promo tidak berlaku';
+			        $promo_error['button_ok'] = Setting::where('key','=','promo_error_ok_button')->first()['value']??'Tambah item';
+			        $promo_error['button_cancel'] = Setting::where('key','=','promo_error_cancel_button')->first()['value']??'Tidak';
+			        $promo_error['product'] = $pct->getRequiredProduct($deals->dealVoucher->id_deals, 'deals')??null;
+	            	$promo_error['message']=[];
+	            	if(isset($errors)){
+	            		foreach ($errors as $key => $value) {
+	            			array_push($promo_error['message'], $value);
+	            		}
+	            	}
+	            }
+	            $promo_discount=$discount_promo['discount'];
+	        }
+	        else
+	        {
+	        	$promo_error[] = 'Voucher is not valid';
+	        }
+        }
+
+        // end check promo code & voucher 
 
         $error_msg=[];
         $tree = [];
