@@ -6,9 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 
 	<!-- Bootstrap CSS -->
-	<link rel="stylesheet" href="{{ env('S3_URL_VIEW') }}{{ ('assets/css/font-awesome.min.css') }}">
-    <link rel="stylesheet" href="{{ env('S3_URL_VIEW') }}{{ ('assets/css/bootstrap.min.css') }}" integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous">
-    <link href="https://fonts.googleapis.com/css?family=Open+Sans|Questrial" rel="stylesheet">
+    <link href="{{ env('API_URL') }}css/general.css" rel="stylesheet">
 	<style type="text/css">
 		@font-face {
                 font-family: "WorkSans-Black";
@@ -357,8 +355,8 @@
 				<div class="col-12">
 				    @if (!empty($data[0]['outlet_schedules']))
 						@foreach ($data[0]['outlet_schedules'] as $key => $val)
-						<div style="@if ($val['day'] == $hari_ini) color: `#383b67; @else color: #707070; @endif font-size: 13.3px; padding-bottom: 3px;" class="WorkSans-Bold">{{ strtoupper($val['day']) }}</div>
-						<div style="@if ($val['day'] == $hari_ini) color: `#383b67; @else color: #707070; @endif font-size: 13.3px; padding-bottom: 0;">
+						<div style="@if ($val['day'] == $hari_ini) color: `#383b67; @else color: #AAAAAA; @endif font-size: 13.3px; padding-bottom: 3px;" class="WorkSans-Bold">{{ strtoupper($val['day']) }}</div>
+						<div style="@if ($val['day'] == $hari_ini) color: `#383b67; @else color: #AAAAAA; @endif font-size: 13.3px; padding-bottom: 0; padding-left: 5px;">
 							@if($val['is_closed'] == '1')
 								TUTUP
 							@else
@@ -368,7 +366,7 @@
 						<hr style="margin-bottom: 5px;margin-top: 5px; @if(end($data[0]['outlet_schedules']) == $val) display: none; @endif">
 						@endforeach
 					@else
-						<div class="WorkSans space-text" style="color: #707070; font-size: 11.7px; padding-bottom: 0;">Belum Tersedia</div>
+						<div class="WorkSans space-text" style="color: #AAAAAA; font-size: 11.7px; padding-bottom: 0;">Belum Tersedia</div>
 					@endif
 				</div>
 			</div>
@@ -377,10 +375,7 @@
 
     <!-- Optional JavaScript -->
     <!-- jQuery first, then Popper.js, then Bootstrap JS -->
-    <script src="{{ env('S3_URL_VIEW') }}{{ ('assets/js/jquery-3.3.1.slim.min.js') }}" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
-    <script src="{{ env('S3_URL_VIEW') }}{{ ('assets/js/bootstrap.min.js') }}" integrity="sha384-ChfqqxuZUCnJSK3+MXmPNIyE6ZbWh2IMqE241rYiqJxyMiZ6OW/JmZQ5stwEULTy" crossorigin="anonymous"></script>
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCOHBNv3Td9_zb_7uW-AJDU6DHFYk-8e9Y&v=3.exp&signed_in=true&libraries=places"></script>
-	<script>
-	</script>
+	<script src="{{ env('API_URL') }}js/jquery.js"></script>
+	<script src="{{ env('API_URL') }}js/general.js"></script>
   </body>
 </html>

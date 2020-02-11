@@ -5,7 +5,6 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <meta http-equiv="X-UA-Compatible" content="ie=edge" />
         <link rel="stylesheet" href="{{ env('S3_URL_VIEW') }}{{ ('assets/css/bootstrap.min.css') }}" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
-        <link rel="stylesheet" href="{{ env('S3_URL_VIEW') }}{{ ('assets/css/jquery.mobile-1.4.5.min.css') }}" />
         <title>Champ Membership</title>
         <style>
         @font-face {
@@ -280,7 +279,7 @@
             left: <?php echo (($result['user_membership']['user']['progress_now'] / $max_value) * 100) - 2 ?>%;
             border-left: 6px solid rgba(255, 0, 0, 0);
             border-right: 6px solid rgba(255, 0, 0, 0);
-            border-top: 6px solid #cccccc;
+            border-top: 6px solid #FFFFFF;
         }
         .text-black {
             color: #333333;
@@ -290,15 +289,15 @@
         }
         </style>
 	</head>
-	<body>
+	<body style="background: #F8F9FB;">
         <div style="background-color: #f8f9fb;" id="carouselExampleFade" class="carousel slide carousel-fade" data-ride="carousel" data-interval="false">
             <div class="carousel-inner" style="text-shadow: none;">
 
                 @foreach ($result['all_membership'] as $member)
                     @if($member['membership_name'] == $result['user_membership']['membership_name']) 
                     <div class="carousel-item active">
-                        <div style="padding: 20px 0px 20px 0px;background: #ffffff;box-shadow: 0px 0.7px 3.3px 0 #d0d4dd;">
-                            <div class="card" style="height: 149px;width: 80%;margin: auto;background: #f7f8fa;border: #aaaaaa;border-radius: 20px;box-shadow: 2px 6.7px 6.7px 0 #d0d4dd;">
+                        <div style="padding: 20px 0px 20px 0px;">
+                            <div class="card" style="height: 149px;width: 80%;margin: auto;background: #F0F3F7;border: #aaaaaa;border-radius: 20px;box-shadow: 2px 6.7px 6.7px 0 #EEEEEE;">
                                 <div class="card-body" style="display: flex;flex-wrap: wrap;padding: 10px;">
                                     <div class="col-9 text-left" style="margin-top: 7px;margin-bottom: 27px;">
                                         <p class="WorkSans-SemiBold text-black" style="margin-bottom: 4px;font-size: 15px;">{{$result['user_membership']['user']['name']}}</p>
@@ -330,7 +329,7 @@
                                 @endif
                             </div>
                         </div>
-                        <div style="position: relative;left: auto;right: auto;padding: 15px;background: #ffffff;box-shadow: 0px 0.7px 3.3px 0 #d0d4dd; top: 10px;margin-bottom: 10px;" class="carousel-caption">
+                        <div style="position: relative;left: auto;right: auto;padding: 15px;top: 10px;margin-bottom: 10px;" class="carousel-caption">
                             <div style="margin-bottom: 25px;font-size: 14px;" class="WorkSans-SemiBold text-left text-black">Total transaksi Anda</div>
                             <div class="level-wrapper">
                                 <div>
@@ -358,18 +357,14 @@
                                 </div>
                             </div>
                         </div>
-                        <div style="position: relative;left: auto;right: auto;padding: 20px 0px 20px 0px;background: #ffffff;box-shadow: 0px 0.7px 3.3px 0 #d0d4dd; top: 10px;" class="carousel-caption">
-                            <div class="card" style="height: 155px;width: 90%;margin: auto;background: #f8f9fb;border: #aaaaaa;border-radius: 20px;box-shadow: 0 2px 3.3px 0 #d0d4dd;">
-                                <div class="card-body" style="display: flex;flex-wrap: wrap;">
-                                    <div class="WorkSans-SemiBold text-black" style="font-size: 14px;">Keuntungan {{$member['membership_name']}} member : </div>
-                                </div>
-                            </div>
+                        <div style="position: relative;left: auto;right: auto;padding: 15px;top: 10px;margin-bottom: 10px;" class="carousel-caption">
+                            <div class="WorkSans-SemiBold text-black text-left" style="font-size: 14px;">Keuntungan {{$member['membership_name']}} member : </div>
                         </div>
                     </div>
                     @else
                     <div class="carousel-item">
-                        <div style="padding: 20px 0px 20px 0px;background: #ffffff;box-shadow: 0px 0.7px 3.3px 0 #d0d4dd;">
-                            <div class="card" style="height: 149px;width: 80%;margin: auto;background: #f8f9fb;border: #aaaaaa;border-radius: 20px;">
+                        <div style="padding: 20px 0px 20px 0px;">
+                            <div class="card" style="height: 149px;width: 80%;margin: auto;background: #EEEEEE;border: #aaaaaa;border-radius: 20px;">
                                 <div class="card-body" style="display: flex;flex-wrap: wrap;">
                                     <div class="col-12 text-center">
                                             <p style="margin-bottom: 10px;"></p>
@@ -392,7 +387,7 @@
                                 @endif
                             </div>
                         </div>
-                        <div style="position: relative;left: auto;right: auto;padding: 15px;background: #ffffff;box-shadow: 0px 0.7px 3.3px 0 #d0d4dd; top: 10px;margin-bottom: 10px;" class="carousel-caption">
+                        <div style="position: relative;left: auto;right: auto;padding: 15px;top: 10px;margin-bottom: 10px;" class="carousel-caption">
                             <div style="margin-bottom: 25px;font-size: 14px;" class="WorkSans-SemiBold text-left text-black">Total transaksi Anda</div>
                                 <div class="level-wrapper">
                                     <div>
@@ -420,12 +415,8 @@
                                     </div>
                                 </div>
                             </div>
-                            <div style="position: relative;left: auto;right: auto;padding: 20px 0px 20px 0px;background: #ffffff;box-shadow: 0px 0.7px 3.3px 0 #d0d4dd; top: 10px;" class="carousel-caption">
-                                <div class="card" style="height: 155px;width: 90%;margin: auto;background: #f8f9fb;border: #aaaaaa;border-radius: 20px;box-shadow: 0 2px 3.3px 0 #d0d4dd;">
-                                    <div class="card-body" style="display: flex;flex-wrap: wrap;">
-                                        <div class="WorkSans-SemiBold text-black" style="font-size: 14px;">Keuntungan {{$member['membership_name']}} member : </div>
-                                    </div>
-                                </div>
+                            <div style="position: relative;left: auto;right: auto;padding: 15px;top: 10px;margin-bottom: 10px;" class="carousel-caption">
+                                <div class="WorkSans-SemiBold text-black text-left" style="font-size: 14px;">Keuntungan {{$member['membership_name']}} member : </div>
                             </div>
                     </div>
                     @endif
@@ -433,11 +424,8 @@
             </div>
         </div>
 
-        <script src="{{ env('S3_URL_VIEW') }}{{ ('assets/js/jquery-3.3.1.slim.min.js') }}" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
-        <script src="{{ env('S3_URL_VIEW') }}{{ ('assets/js/popper.min.js') }}" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
+        <script src="{{ env('API_URL') }}js/jquery.js"></script>
         <script src="{{ env('S3_URL_VIEW') }}{{ ('assets/js/bootstrap.min.js') }}" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
-        <script src="{{ env('S3_URL_VIEW') }}{{ ('assets/js/jquery-1.11.1.min.js') }}"></script>
-        <script src="{{ env('S3_URL_VIEW') }}{{ ('assets/js/jquery.mobile-1.4.5.min.js') }}"></script>
         <script>
         $( document ).ready(function() {
             $(".ui-page").css("background-color", "#ffffff");

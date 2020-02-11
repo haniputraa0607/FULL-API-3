@@ -6,87 +6,6 @@
 
 @section('css')
 	<style type="text/css">
-		@font-face {
-                font-family: "WorkSans-Black";
-                font-style: normal;
-                font-weight: 400;
-                src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/Work_Sans/WorkSans-Black.ttf') }}');
-        }
-        @font-face {
-                font-family: "WorkSans-Bold";
-                font-style: normal;
-                font-weight: 400;
-                src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/Work_Sans/WorkSans-Bold.ttf') }}');
-        }
-        @font-face {
-                font-family: "WorkSans-ExtraBold";
-                font-style: normal;
-                font-weight: 400;
-                src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/Work_Sans/WorkSans-ExtraBold.ttf') }}');
-        }
-        @font-face {
-                font-family: "WorkSans-ExtraLight";
-                font-style: normal;
-                font-weight: 400;
-                src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/Work_Sans/WorkSans-ExtraLight.ttf') }}');
-        }
-        @font-face {
-                font-family: "WorkSans-Light";
-                font-style: normal;
-                font-weight: 400;
-                src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/Work_Sans/WorkSans-Light.ttf') }}');
-        }
-        @font-face {
-                font-family: "WorkSans-Medium";
-                font-style: normal;
-                font-weight: 400;
-                src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/Work_Sans/WorkSans-Medium.ttf') }}');
-        }
-        @font-face {
-                font-family: "WorkSans-Regular";
-                font-style: normal;
-                font-weight: 400;
-                src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/Work_Sans/WorkSans-Regular.ttf') }}');
-        }
-        @font-face {
-                font-family: "WorkSans-SemiBold";
-                font-style: normal;
-                font-weight: 400;
-                src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/Work_Sans/WorkSans-SemiBold.ttf') }}');
-        }
-        @font-face {
-                font-family: "WorkSans-Thin";
-                font-style: normal;
-                font-weight: 400;
-                src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/Work_Sans/WorkSans-Thin.ttf') }}');
-        }
-        .WorkSans-Black{
-            font-family: "WorkSans-Black";
-        }
-        .WorkSans-Bold{
-            font-family: "WorkSans-Bold";
-        }
-        .WorkSans-ExtraBold{
-            font-family: "WorkSans-ExtraBold";
-        }
-        .WorkSans-ExtraLight{
-            font-family: "WorkSans-ExtraLight";
-        }
-        .WorkSans-Medium{
-            font-family: "WorkSans-Medium";
-        }
-        .WorkSans-Regular{
-            font-family: "WorkSans-Regular";
-        }
-        .WorkSans{
-            font-family: "WorkSans-Regular";
-        }
-        .WorkSans-SemiBold{
-            font-family: "WorkSans-SemiBold";
-        }
-        .WorkSans-Thin{
-            font-family: "WorkSans-Thin";
-        }
     	p{
     		margin-top: 0px !important;
     		margin-bottom: 0px !important;
@@ -210,10 +129,10 @@
 			<div class="col-md-4 col-md-offset-4" style="background-color: #f0f3f7;">
 				<div style="background-color: #f8f9fb;padding: 10px;box-shadow: 0 0.7px 3.3px #eeeeee;" class="col-md-12 clearfix WorkSans">
 					<div class="text-center title WorkSans-SemiBold" style="color: #a6ba35;font-size: 20px;">
-						Horayy!
+						KLAIM BERHASIL
 					</div>
-					<div class="text-center WorkSans-SemiBold" style="color: #333333;margin-top: 13.3px;">
-						Terima kasih telah membeli
+					<div class="text-center WorkSans-Medium" style="color: #333333;margin-top: 13.3px;">
+						Terima kasih telah mengklaim
 					</div>
 					<div style="position: relative;margin-top: 26.7px;">
 						<hr style="position:absolute;z-index: 1;border: none;border-left: 1px dashed #eeeeee;height: 98px;left: 36%;top: -5%;">
@@ -221,7 +140,7 @@
 							<div class="cotainer">
 								<div class="pull-left" style="margin-top: 10px;">
 									@php $bulan = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', "Juli", 'Agustus', 'September', 'Oktober', 'November', 'Desember']; @endphp
-									<p style="font-size: 15px;color: #333333;">{{$deals['deals_voucher']['deal']['deals_title']}}</p>
+									<p style="font-size: 15px;color: #333333;" class="WorkSans-SemiBold">{{$deals['deals_voucher']['deal']['deals_title']}}</p>
 									<p style="font-size: 13.3px;color: #333333;">{{$deals['deals_voucher']['deal']['deals_second_title']}}</p>
 									<div style="@if (isset($deals['deals_voucher']['deal']['deals_second_title'])) margin-top: 20px; @else margin-top: 38px; @endif"></div>
 									<p style="font-size: 10.7px;color: #707070;padding: 5px 10px;background-color: #f0f3f7;border-radius: 100px;">Kedaluwarsa {{date('d', strtotime($deals['deals_voucher']['deal']['deals_end']))}} {{$bulan[date('m', strtotime($deals['deals_voucher']['deal']['deals_end']))-1]}} {{ date('Y', strtotime($deals['deals_voucher']['deal']['deals_end'])) }}</p>
@@ -242,9 +161,9 @@
 					<div style="color: #707070;" class="description pull-right">{{date('d', strtotime($deals['claimed_at']))}} {{$bulan[date('m', strtotime($deals['claimed_at']))-1]}} {{ date('Y', strtotime($deals['claimed_at'])) }} {{date('H:i', strtotime($deals['claimed_at']))}}</div>
 				</div>
 
-				<div style="background-color: #f8f9fb;padding-top: 0px; color: #333333; height: 60px;" class="description-wrapper WorkSans">
+				<div style="background-color: #f8f9fb;padding-top: 0px; color: #333333; height: 40px;" class="description-wrapper WorkSans">
 					<div class="description pull-left WorkSans-SemiBold">ID Transaksi</div>
-					<div style="color: #707070;" class="description pull-right">{{strtotime($deals['claimed_at'])}}</div>
+					<div style="color: #333333;" class="description pull-right">{{strtotime($deals['claimed_at'])}}</div>
 				</div>
 
 				@php
@@ -255,16 +174,15 @@
 					} else {
 						$payment = 'Gratis';
 					}
-				@endphp
-				<div style="background-color: #f8f9fb;">
-					<div style="background-color: #f0f3f7;padding-top: 0px;color: #333333;height: 45px;border-radius: 5px;margin: 0px 15px;" class="description-wrapper WorkSans">
-						<div class="description pull-left WorkSans-SemiBold">Total Pembayaran</div>
-						<div class="description pull-right WorkSans-SemiBold">{{$payment}}</div>
-					</div>
-				</div>
+                @endphp
+                <div style="background-color: #f8f9fb;padding-top: 0px; color: #333333; height: 40px;" class="description-wrapper WorkSans">
+                    <hr style="margin: 0px;">
+                    <div class="description pull-left WorkSans-SemiBold">Total Pembayaran</div>
+                    <div class="description pull-right WorkSans-SemiBold" style="@if ($payment == 'Gratis') color: #a6ba35; @else color: #333333; @endif">{{$payment}}</div>
+                </div>
 
 				<div style="background-color: #f8f9fb;padding-top: 0px; color: rgb(0, 0, 0); height: 70px; position: fixed; bottom: 10px; width: 100%;" class="description-wrapper WorkSans">
-					<a style="width:100%; background-color: #383b67; color: #ffffff;" class="btn btn-lg WorkSans-Bold" href="#yes">Lihat Voucher</a>
+					<a style="width:100%; background-color: #383b67; color: #ffffff;" class="btn btn-lg WorkSans-Bold" href="#yes">Lihat Kupon</a>
 				</div>
 			</div>
 		@else
