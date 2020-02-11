@@ -3,9 +3,7 @@
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-
-        <link rel="stylesheet" href="{{ env('S3_URL_VIEW') }}{{ ('assets/css/bootstrap.min.css') }}" integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous">
-        <link href="https://fonts.googleapis.com/css?family=Open+Sans|Questrial" rel="stylesheet">
+        <link href="{{ env('API_URL') }}css/general.css" rel="stylesheet">
         <style type="text/css">
         @font-face {
                 font-family: "WorkSans-Black";
@@ -323,8 +321,8 @@
         }
         </style>
 
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/OwlCarousel2/2.3.4/assets/owl.carousel.min.css">
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/OwlCarousel2/2.3.4/assets/owl.theme.default.min.css">
+<link rel="stylesheet" href="{{ env('API_URL') }}css/owl.carousel.css">
+<link rel="stylesheet" href="{{ env('API_URL') }}css/owl.theme.default.css">
     </head>
     {{-- <body> --}}
         @php
@@ -496,13 +494,13 @@
         @endif
 
         {{ csrf_field() }}
-        <script src="{{ env('S3_URL_VIEW') }}{{ ('assets/js/jquery-3.3.1.slim.min.js') }}" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
-        <script src="{{ env('S3_URL_VIEW') }}{{ ('assets/js/popper.min.js') }}" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
-        <script src="{{ env('S3_URL_VIEW') }}{{ ('assets/js/bootstrap.min.js') }}" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
+        <script src="{{ env('API_URL') }}js/jquery.js"></script>
+        <script src="{{ env('API_URL') }}js/popper.js"></script>
+        <script src="{{ env('API_URL') }}js/general.js"></script>
         <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCOHBNv3Td9_zb_7uW-AJDU6DHFYk-8e9Y&v=3.exp&signed_in=true&libraries=places"></script>
-        <script src="{{ env('S3_URL_VIEW') }}{{ ('assets/js/pace.js') }}"></script>
+        <script src="{{ env('API_URL') }}js/pace.js"></script>
 
-        <script src="{{ env('S3_URL_VIEW') }}{{ ('assets/js/owl.carousel.min.js') }}"></script>
+        <script src="{{ env('API_URL') }}js/owl.carousel.js"></script>
         <script>
             $(document).ready(function(){
                 $("#frame1").contents().find(".ytp-chrome-top-buttons").attr("style","display:none");

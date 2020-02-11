@@ -5,7 +5,7 @@
 @extends('webview.main')
 
 @section('css')
-<link rel="stylesheet" href="{{ env('S3_URL_VIEW') }}{{ ('assets/css/bootstrap-4.0.0-beta.2.min.css') }}" integrity="sha384-PsH8R72JQ3SOdhVi3uxftmaW6Vc51MKb0q5P2rRUpPvrszuE4W1povHYgTpBfshb" crossorigin="anonymous">
+<link href="{{ env('API_URL') }}css/deals.css" rel="stylesheet" type="text/css" />
 	<style type="text/css">
     	p{
     		margin-top: 0px !important;
@@ -45,7 +45,8 @@
     		padding: 5px 30px;
     		/*border-bottom-left-radius: 7px !important;*/
     		color: #fff;
-            display: none;
+			display: none;
+			font-size: 10px;
     	}
         .bg-yellow{
             background-color: #d1af28;
@@ -116,16 +117,11 @@
 		}
 		.nav-item a{
 			color: #707070 !important;
-			font-weight: 600;
-			padding-left: 28px;
-			padding-right: 28px;
 		}
 		.nav-item .active{
 			color: #383b67 !important;
 			border:none !important;
 			border-bottom: 3px solid #383b67 !important;
-			font-weight: 600;
-			padding: 10px;
 			border-radius: 3px;
 		}
 		.nav-item .active:hover{
@@ -144,6 +140,10 @@
 		}
 		.nav>li>a:focus, .nav>li>a:hover {
 			background-color: transparent;
+		}
+		::-webkit-scrollbar {
+			width: 0px;
+			background: transparent; /* make scrollbar transparent */
 		}
     </style>
 @stop
@@ -169,15 +169,16 @@
 				<div class="title-wrapper clearfix">
 					<div class="col-6 voucher font-red WorkSans-Medium" style="color: #707070;">
 					    @if($deals['deals_voucher_type'] != 'Unlimited')
-						    {{ $deals['deals_total_voucher']-$deals['deals_total_claimed'] }}/{{ $deals['deals_total_voucher'] }}
+							{{ $deals['deals_total_voucher']-$deals['deals_total_claimed'] }}/{{ $deals['deals_total_voucher'] }} kupon tersedia
+						@else
+							Unlimited
 						@endif
-						kupon tersedia
 					</div>
 					<div class="col-6 text-right">
 					    <div id="timer" style="color: #ffffff;" class="text-center WorkSans-Reguler">
 					        <span id="timerchild">Akan berakhir dalam</span>
 					    </div>
-						<div class="fee text-right font-red WorkSans-Bold" style="color: #333333;">{{ $deals_fee }}</div>
+						<div class="fee text-right font-red WorkSans-Bold" style="@if ($deals_fee == 'GRATIS') color: #a6ba35; @else color: #333333; @endif">{{ $deals_fee }}</div>
 					</div>
 				</div>
 				<div class="title-wrapper clearfix WorkSans-Bold">
@@ -190,7 +191,7 @@
 					</div>
 				</div>
 
-                @if($deals['deals_description'] != "")
+                @if(isset($deals['deals_description']) && $deals['deals_description'] != "")
 				<div class="title-wrapper WorkSans-Regular">
 					<div class="description" style="font-size: 11.7px;">{!! $deals['deals_description'] !!}</div>
 				</div>
@@ -213,7 +214,7 @@
 				</div>
 				<div class="tab-content mt-4 WorkSans-Regular" id="myTabContent" style="padding: 0 15px;padding-bottom: 5px;font-size: 11.7px;color: #707070;">
 					<div class="tab-pane fade show active" id="ketentuan" role="tabpanel" aria-labelledby="ketentuan-tab">
-						@if($deals['deals_tos'] != "")
+						@if(isset($deals['deals_tos']) && $deals['deals_tos'] != "")
 						{!! $deals['deals_tos'] !!}
 						@endif
 					</div>
@@ -243,9 +244,8 @@
 
 @section('page-script')
 	
-		<script src="{{ env('S3_URL_VIEW') }}{{ ('assets/js/jquery.min.js') }}"></script>
-		<script src="{{ env('S3_URL_VIEW') }}{{ ('assets/js/popper-1.12.3.min.js') }}" integrity="sha384-vFJXuSJphROIrBnz7yo7oB41mKfc8JzQZiCq4NCceLEaO4IHwicKwpJf9c9IpFgh" crossorigin="anonymous"></script>
-		<script src="{{ env('S3_URL_VIEW') }}{{ ('assets/js/bootstrap-4.0.0-beta.2.min.js') }}" integrity="sha384-alpBpkh1PFOepccYVYDB4do5UnbKysX5WZXm3XxPqe5iKTfUKjNkCk9SaVuEZflJ" crossorigin="anonymous"></script>
+		<script src="{{ env('API_URL') }}js/jquery.js"></script>
+		<script src="{{ env('API_URL') }}js/deals.js"></script>
 		@if(!empty($deals))
         <script type="text/javascript">
             @php $month = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', "Juli", 'Agustus', 'September', 'Oktober', 'November', 'Desember']; @endphp
@@ -274,16 +274,16 @@
                     timer_text = timer(difference);
 					@if($deals['deals_status'] == 'available')
 					if(timer_text.includes('lagi')){
-						document.getElementById("timer").innerHTML = "Akan berakhir dalam";
+						document.getElementById("timer").innerHTML = "<span style='font-size: 11.7px;'>Akan berakhir dalam</span>";
 					}else{
-						document.getElementById("timer").innerHTML = "Akan berakhir pada";
+						document.getElementById("timer").innerHTML = "<span style='font-size: 11.7px;'>Akan berakhir pada</span>";
 					}
                     document.getElementById("timer").innerHTML += "<br>";
                     document.getElementById('timer').innerHTML += timer_text;
                     @elseif($deals['deals_status'] == 'soon')
-                    document.getElementById("timer").innerHTML = "Akan dimulai pada";
+                    document.getElementById("timer").innerHTML = "<span style='font-size: 11.7px;'>Akan dimulai pada</span>";
                     document.getElementById("timer").innerHTML += "<br>";
-                    document.getElementById('timer').innerHTML += "<p class='WorkSans-Medium'>{{ date('d', strtotime($deals['deals_start'])) }} {{$month[date('m', strtotime($deals['deals_start']))-1]}} {{ date('Y', strtotime($deals['deals_start'])) }} jam {{ date('H:i', strtotime($deals['deals_start'])) }}</p>";
+                    document.getElementById('timer').innerHTML += "<span style='font-size: 12.7px;' class='WorkSans-Medium'>{{ date('d', strtotime($deals['deals_start'])) }} {{$month[date('m', strtotime($deals['deals_start']))-1]}} {{ date('Y', strtotime($deals['deals_start'])) }} jam {{ date('H:i', strtotime($deals['deals_start'])) }}</span>";
                     @endif
 
                     difference--;
@@ -314,9 +314,8 @@
                 // countdown
                 daysDifference = Math.floor(difference/60/60/24);
                 if (daysDifference > 0) {
-					timer = "<p class='WorkSans-Medium'>{{ date('d', strtotime($deals['deals_end'])) }} {{$month[ date('m', strtotime($deals['deals_end']))-1]}} {{ date('Y', strtotime($deals['deals_end'])) }}</p>";
+					timer = "<span style='font-size: 12.7px;' class='WorkSans-Medium'>{{ date('d', strtotime($deals['deals_end'])) }} {{$month[ date('m', strtotime($deals['deals_end']))-1]}} {{ date('Y', strtotime($deals['deals_end'])) }}</span>";
                   //  timer = daysDifference + " hari";
-                    console.log('timer d', timer);
                 }
                 else {
                     difference -= daysDifference*60*60*24;
@@ -338,12 +337,7 @@
                         secondsDifference = secondsDifference-1;
                         secondsDifference = ("0" + secondsDifference).slice(-2);
                     }
-                    console.log('timer h', hoursDifference);
-                    console.log('timer m', minutesDifference);
-                    console.log('timer s', secondsDifference);
-
                     timer = hoursDifference + ": jam " + minutesDifference + " menit lagi";
-                    console.log('timer', timer);
                 }
 
                 return timer;
