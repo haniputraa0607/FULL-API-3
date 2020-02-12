@@ -31,6 +31,8 @@ use Modules\Deals\Http\Requests\Deals\Voucher;
 use Modules\Deals\Http\Requests\Claim\Paid;
 use Modules\Deals\Http\Requests\Claim\PayNow;
 
+use Modules\Deals\Http\Requests\Ovo\Confirm;
+
 use Illuminate\Support\Facades\Schema;
 
 use DB;
@@ -451,7 +453,7 @@ class ApiDealsClaimPay extends Controller
     }
 
     /* CONFIRM OVO */
-    function confirm(Request $request) {
+    function confirm(Confirm $request) {
         if(DealsPaymentOvo::where('id_deals_user',$request->json('id_deals_user'))->exists()){
             return [
                 'status'=>'fail',
@@ -698,7 +700,10 @@ class ApiDealsClaimPay extends Controller
     public function status(Request $request) {
         $voucher = DealsUser::select('id_deals_user','paid_status')->where('id_deals_user',$request->json('id_deals_user'))->first()->toArray();
         if($voucher['paid_status'] == 'Completed'){
+            $voucher['message'] = Setting::where('key', 'payment_success_messages')->pluck('value_text')->first()??'Apakah kamu ingin menggunakan Voucher sekarang?';
             $voucher['url_webview'] = env('API_URL').'api/webview/mydeals/'.$voucher['id_deals_user'];
+        }elseif($voucher['paid_status'] == 'Cancelled'){
+            $voucher['message'] = Setting::where('key', 'payment_ovo_fail_messages')->pluck('value_text')->first()??'Transaksi Gagal';
         }
 
         return MyHelper::checkGet($voucher);
