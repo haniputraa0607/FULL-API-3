@@ -22,7 +22,7 @@ class LogActivitiesMiddleware
 	$response = $next($request);
 
         $arrReq = $request->except('_token');
-        if(!isset($arrReq['log_save'])){
+        if(!isset($arrReq['log_save']) || $arrReq['log_save'] || $arrReq['log_save'] == 1){
 
             if(!isset($arrReq['page']) || (int)$arrReq['page'] <= 1){
 
