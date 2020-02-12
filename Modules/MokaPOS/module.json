@@ -1,0 +1,14 @@
+{
+    "name": "MokaPOS",
+    "alias": "mokapos",
+    "description": "",
+    "keywords": [],
+    "active": 1,
+    "order": 0,
+    "providers": [
+        "Modules\\MokaPOS\\Providers\\MokaPOSServiceProvider"
+    ],
+    "aliases": {},
+    "files": [],
+    "requires": []
+}
