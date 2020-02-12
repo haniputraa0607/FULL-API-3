@@ -6,6 +6,7 @@ use Illuminate\Database\Migrations\Migration;
 
 class CreateLogOvoDealsTable extends Migration
 {
+    public $set_schema_table = 'log_ovo_deals';
     /**
      * Run the migrations.
      *
@@ -13,9 +14,19 @@ class CreateLogOvoDealsTable extends Migration
      */
     public function up()
     {
-        Schema::create('log_ovo_deals', function (Blueprint $table) {
-            $table->bigIncrements('id');
-            $table->timestamps();
+        if (Schema::connection('mysql2')->hasTable($this->set_schema_table)) return;
+        Schema::connection('mysql2')->create($this->set_schema_table, function (Blueprint $table) {
+            $table->engine = 'InnoDB';
+            $table->increments('id_log_ovo_deals');
+            $table->unsignedInteger('id_deals_payment_ovo')->nullable();
+            $table->string('order_id')->nullable();
+            $table->string('url');
+            $table->string('header')->nullable();
+            $table->text('request')->nullable();
+            $table->string('response_status', 7)->nullable();
+            $table->string('response_code', 7)->nullable();
+            $table->text('response')->nullable();
+            $table->nullableTimestamps();
         });
     }
 
@@ -26,6 +37,6 @@ class CreateLogOvoDealsTable extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('log_ovo_deals');
+        Schema::connection('mysql2')->dropIfExists($this->set_schema_table);
     }
 }

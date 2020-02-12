@@ -20,6 +20,8 @@ class LogOvoDeals extends Model
      */
     protected $table = 'log_ovo_deals';
 
+    public $primaryKey = 'id_log_ovo_deals';
+
     /**
      * @var array
      */
