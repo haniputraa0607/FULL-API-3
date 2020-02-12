@@ -38,14 +38,18 @@ Route::group(['middleware' => ['auth_client', 'log_activities', 'user_agent'], '
     Route::get('/navigation-navbar', 'ApiSetting@NavigationNavbar');
 });
 
-Route::group(['middleware' => ['auth_client', 'log_activities', 'user_agent'], 'prefix' => 'api/version', 'namespace' => 'Modules\Setting\Http\Controllers'], function()
+Route::group(['middleware' => ['auth_client', 'log_activities'], 'prefix' => 'api/version', 'namespace' => 'Modules\Setting\Http\Controllers'], function()
 {
     Route::get('/list', 'ApiVersion@getVersion');
+    Route::post('/add', 'ApiVersion@addVersion');
     Route::post('/update', 'ApiVersion@updateVersion');
+    Route::post('/release', 'ApiVersion@releaseVersion');
 });
 
 Route::group(['prefix' => 'api/version', 'namespace' => 'Modules\Setting\Http\Controllers'], function () {
     Route::post('/', 'ApiVersion@index');
+    Route::post('/version_switch', 'ApiVersion@versionSwitch');
+    Route::post('/version_delete', 'ApiVersion@versionDelete');
 });
 
 Route::group(['namespace' => 'Modules\Setting\Http\Controllers'], function()
