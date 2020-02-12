@@ -451,7 +451,37 @@ class ApiDealsClaimPay extends Controller
             'deals'    => $deals
         ];
     }
+    //process void
+    public function void(Request $request){
+        $post = $request->json()->all();
+        $transaction = DealsUser::where('deals_users.id_deals_user', $post['id_deals_user'])
+            ->join('deals_payment_ovos','deals_users.id_deals_user','=','deals_payment_ovos.id_deals_user')
+            ->where('paid_status','Completed')
+            ->whereDate('deals_payment_ovos.created_at','=',date('Y-m-d'))
+            ->first();
+        if(!$transaction){
+            return [
+                'status' => 'fail',
+                'messages' => [
+                    'Deals User not found'
+                ]
+            ];
+        }
 
+        $void = Ovo::Void($transaction);
+        if($void['status_code'] == "200"){
+            $transaction->update(['paid_status'=>'Cancelled']);
+            return [
+                'status' => 'success',
+                'result' => $void
+            ];
+        }else{
+            return [
+                'status' => 'fail',
+                'result' => $void
+            ];
+        }
+    }
     /* CONFIRM OVO */
     function confirm(Confirm $request) {
         if(DealsPaymentOvo::where('id_deals_user',$request->json('id_deals_user'))->exists()){
