@@ -8,16 +8,19 @@ use Illuminate\Routing\Controller;
 
 use App\Lib\MyHelper;
 use App\Lib\Midtrans;
+use App\Lib\Ovo;
 
 use App\Http\Models\Deal;
 use App\Http\Models\DealsOutlet;
 use App\Http\Models\DealsPaymentManual;
 use App\Http\Models\DealsPaymentMidtran;
+use App\Http\Models\DealsPaymentOvo;
 use App\Http\Models\DealsUser;
 use App\Http\Models\DealsVoucher;
 use App\Http\Models\User;
 use App\Http\Models\LogBalance;
 use App\Http\Models\Setting;
+use App\Http\Models\OvoReference;
 
 use Modules\Deals\Http\Controllers\ApiDealsVoucher;
 use Modules\Deals\Http\Controllers\ApiDealsClaim;
@@ -329,6 +332,9 @@ class ApiDealsClaimPay extends Controller
                     if(isset($return['result']['midtrans'])){
                         $result['redirect'] = true;
                         $result['midtrans'] = $return['result']['midtrans'];
+                    }elseif(isset($return['result']['ovo'])){
+                        $result['redirect'] = true;
+                        $result['ovo'] = $return['result']['ovo'];
                     }else{
                         $result['redirect'] = false;
                     }
@@ -371,6 +377,11 @@ class ApiDealsClaimPay extends Controller
            /* MIDTRANS */
             if ($request->get('payment_deals') && $request->get('payment_deals') == "midtrans") {
                 $pay = $this->midtrans($dataDeals, $voucher);
+            }
+
+           /* OVO */
+            if ($request->json('payment_deals') && $request->json('payment_deals') == "ovo") {
+                $pay = $this->ovo($dataDeals, $voucher, null,$request->json('phone'));
             }
 
             /* MANUAL */
@@ -428,6 +439,270 @@ class ApiDealsClaimPay extends Controller
         return false;
     }
 
+    /* OVO */
+    function ovo($deals, $voucher, $grossAmount=null, $phone)
+    {
+        return [
+            'ovo' => true,
+            'voucher'  => DealsUser::with(['userMid', 'dealVoucher'])->where('id_deals_user', $voucher->id_deals_user)->first(),
+            'data'     => [],
+            'deals'    => $deals
+        ];
+    }
+
+    /* CONFIRM OVO */
+    function confirm(Request $request) {
+        if(DealsPaymentOvo::where('id_deals_user',$request->json('id_deals_user'))->exists()){
+            return [
+                'status'=>'fail',
+                'messages'=>'Deals Invalid'
+            ];
+        }
+        $voucher = DealsUser::where('id_deals_user',$request->json('id_deals_user'))->with('deals_voucher.deals')->first();
+        $deals = $voucher->deals_voucher->deals;
+        if(!$voucher){
+            return [
+                'status' => 'fail',
+                'messages' => ['Deals User not found']
+            ];
+        }
+        //get last ref number
+        $lastRef = OvoReference::orderBy('id_ovo_reference', 'DESC')->first();
+        if($lastRef){
+            //cek jika beda tanggal, bacth_no + 1, ref_number reset ke 1
+            if($lastRef['date'] != date('Y-m-d')){
+                $batchNo = $lastRef['batch_no'] + 1;
+                $refnumber = 1;
+            }
+            //tanggal sama, batch_no tetap, ref_number +1
+            else{
+                $batchNo = $lastRef['batch_no'];
+
+                //cek jika ref_number sudah lebih dari 999.999
+                if($lastRef['reference_number'] >= 999999){
+                    //reset ref_number ke 1 dan batch_no +1
+                    $refnumber = 1;
+                    $batchNo = $lastRef['batch_no'] + 1;
+                }else{
+                    $refnumber = $lastRef['reference_number'] + 1;
+                }
+            }
+        }else{
+            $batch_no = 1;
+            $refnumber = 1;
+        }
+        $type = env('OVO_ENV');
+        if($type == 'production'){
+            $is_prod = '1';
+        }else{
+            $is_prod = '0';
+        }
+        \DB::beginTransaction();
+        //update ovo_references
+        $updateOvoRef = OvoReference::updateOrCreate(['id_ovo_reference'=> 1], [
+            'date' => date('Y-m-d'),
+            'batch_no' => $batchNo,
+            'reference_number' => $refnumber
+        ]);
+        $payData = DealsPaymentOvo::where('id_deals_user',$request->json('id_deals_user'))->first();
+
+        $data = [
+            'id_deals'      => $deals->id_deals,
+            'id_deals_user' => $voucher->id_deals_user,
+            'amount' => $voucher->voucher_price_cash,
+            'batch_no' => $batchNo,
+            'reference_number' => $refnumber,
+            'phone' => $request->json('phone'),
+            'reversal' => 'not yet',
+            'is_production' => $is_prod,
+            'order_id' => time().sprintf("%05d", $voucher->id_deals_user)
+        ];
+
+        $payData = DealsPaymentOvo::create($data);
+        $payOvo = Ovo::PayTransaction($voucher, $payData, $voucher->voucher_price_cash, $type,'deals');
+        //jika response code 200
+        if(isset($payOvo['status_code']) && $payOvo['status_code'] == '200'){
+            $response = $payOvo['response'];
+
+            if($response['responseCode'] == '00'){
+
+                //update payment
+                if(isset($response['referenceNumber'])){
+
+                    $payment = DealsPaymentOvo::where('id_deals_user', $voucher['id_deals_user'])->first();
+                    if($payment){
+                        $dataUpdate['reversal'] = 'no';
+                        $dataUpdate['trace_number'] = $response['traceNumber'];
+                        $dataUpdate['approval_code'] = $response['approvalCode'];
+                        $dataUpdate['response_code'] = $response['responseCode'];
+                        $dataUpdate['response_detail'] = 'Success / Approved';
+                        $dataUpdate['response_description'] = 'Success / Approved Transaction';
+                        $dataUpdate['ovoid'] = $response['transactionResponseData']['ovoid'];
+                        $dataUpdate['cash_used'] = $response['transactionResponseData']['cashUsed'];
+                        $dataUpdate['ovo_points_earned'] = $response['transactionResponseData']['ovoPointsEarned'];
+                        $dataUpdate['cash_balance'] = $response['transactionResponseData']['cashBalance'];
+                        $dataUpdate['full_name'] = $response['transactionResponseData']['fullName'];
+                        $dataUpdate['ovo_points_used'] = $response['transactionResponseData']['ovoPointsUsed'];
+                        $dataUpdate['ovo_points_balance'] = $response['transactionResponseData']['ovoPointsBalance'];
+                        $dataUpdate['payment_type'] = $response['transactionResponseData']['paymentType'];
+
+                        $update = $payment->update($dataUpdate);
+                        if($update){
+                            $updatePaymentStatus = DealsUser::where('id_deals_user', $voucher['id_deals_user'])->update(['paid_status' => 'Completed']);
+                            if($updatePaymentStatus){
+                                $phone=User::where('id', $voucher->id_user)->pluck('phone')->first();
+                                $voucher->load('dealVoucher.deals');
+                                $autocrm = app($this->autocrm)->SendAutoCRM('Claim Paid Deals Success', $phone,
+                                    [
+                                        'claimed_at'                => $voucher->claimed_at, 
+                                        'deals_title'               => $voucher->dealVoucher->deals->deals_title,
+                                        'id_deals_user'             => $voucher->id_deals_user,
+                                        'deals_voucher_price_point' => (string) $voucher->voucher_price_point,
+                                        'id_deals'                  => $voucher->dealVoucher->deals->id_deals,
+                                        'id_brand'                  => $voucher->dealVoucher->deals->id_brand
+                                    ]
+                                );
+                            }
+                            else{
+                                DB::rollBack();
+                                return response()->json([
+                                    'status'   => 'fail',
+                                    'messages' => [' Update Deals Payment Status Failed']
+                                ]);
+                            }
+                        }
+                        else{
+                            DB::rollBack();
+                            return response()->json([
+                                'status'   => 'fail',
+                                'messages' => [' Update Deals Payment Failed']
+                            ]);
+                        }
+                    }
+
+                    DB::commit();
+                }
+
+                //
+            }
+
+        }
+        else{
+            //response failed
+
+            $response = [];
+
+            if(isset($payOvo['response'])){
+                $response = $payOvo['response'];
+            }
+
+            $payment = DealsPaymentOvo::where('id_deals_user', $voucher['id_deals_user'])->first();
+            if($payment){
+                $dataUpdate = [];
+
+                if(isset($payOvo['status_code']) && $payOvo['status_code'] != '404'){
+                    $dataUpdate['reversal'] = 'no';
+                }
+
+                if(isset($response['traceNumber'])){
+                    $dataUpdate['trace_number'] = $response['traceNumber'];
+                }
+                if(isset($response['type']) && $response['type'] == '0210'){
+                    $dataUpdate['payment_type'] = 'PUSH TO PAY';
+                }
+                if(isset($response['responseCode'])){
+                    $dataUpdate['response_code'] = $response['responseCode'];
+                    $dataUpdate = Ovo::detailResponse($dataUpdate);
+                }
+
+                $update = DealsPaymentOvo::where('id_deals_user', $voucher['id_deals_user'])->update($dataUpdate);
+
+                $updatePaymentStatus = DealsUser::where('id_deals_user', $voucher['id_deals_user'])->update(['paid_status' => 'Cancelled']);
+
+                //return balance\
+                
+                if ($voucher->balance_nominal) {
+                    $insertDataLogCash = app($this->balance)->addLogBalance($voucher['id_user'], $voucher['balance_nominal'], $voucher['id_deals_user'], 'Claim Deals Failed');
+                    if (!$insertDataLogCash) {
+                        DB::rollback();
+                        return response()->json([
+                            'status'    => 'fail',
+                            'messages'  => ['Insert Cashback Failed']
+                        ]);
+                    }
+                }
+
+                DB::commit();
+                //request reversal
+                if(!isset($payOvo['status_code']) || $payOvo['status_code'] == '404'){
+                    $reversal = Ovo::Reversal($voucher, $payData, $voucher->voucher_price_cash, $type,'deals');
+
+                    if(isset($reversal['response'])){
+                        $response = $reversal['response'];
+                        $dataUpdate = [];
+
+                        $dataUpdate['reversal'] = 'yes';
+
+                        if(isset($response['traceNumber'])){
+                            $dataUpdate['trace_number'] = $response['traceNumber'];
+                        }
+                        if(isset($response['type']) && $response['type'] == '0410'){
+                            $dataUpdate['payment_type'] = 'REVERSAL';
+                        }
+                        if(isset($response['responseCode'])){
+                            $dataUpdate['response_code'] = $response['responseCode'];
+                            $dataUpdate = Ovo::detailResponse($dataUpdate);
+                        }
+
+                        $update = DealsPaymentOvo::where('id_deals_user', $voucher['id_deals_user'])->update($dataUpdate);
+                    }
+                }
+            }
+        }
+        $voucher = DealsUser::where('id_deals_user',$request->json('id_deals_user'))->with('deals_voucher.deals')->first();
+        switch ($voucher->paid_status) {
+            case 'Pending':
+                $title = 'Pending';
+                break;
+            
+            case 'Paid':
+                $title = 'Terbayar';
+                break;
+            
+            case 'Completed':
+                    $title = 'Sukses';
+                    break;
+
+            case 'Cancelled':
+                    $title = 'Gagal';
+                    break;
+            
+            default:
+                $title = 'Sukses';
+                break;
+        }
+        $send = [
+            'status' => 'success',
+            'result' => [
+                'title'                      => $title,
+                'payment_status'             => $voucher->paid_status,
+                'order_id' => $payData['order_id'],
+                'transaction_grandtotal'     => $voucher->voucher_price_cash,
+                'type'                       => 'deals'
+            ],
+        ];
+        DB::commit();
+        return response()->json($send);
+    }
+    /* CEK STATUS */
+    public function status(Request $request) {
+        $voucher = DealsUser::select('id_deals_user','paid_status')->where('id_deals_user',$request->json('id_deals_user'))->first()->toArray();
+        if($voucher['paid_status'] == 'Completed'){
+            $voucher['url_webview'] = env('API_URL').'api/webview/mydeals/'.$voucher['id_deals_user'];
+        }
+
+        return MyHelper::checkGet($voucher);
+    }
     /* MANUAL */
     function manual($voucher, $post)
     {

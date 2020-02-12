@@ -725,10 +725,7 @@ class ApiConfirm extends Controller
                             $update = TransactionPaymentOvo::where('id_transaction', $trx['id_transaction'])->update($dataUpdate);
                         }
                     }
-
                 }
-
-
             }
 
             $trx = Transaction::where('id_transaction', $trx['id_transaction'])->first();

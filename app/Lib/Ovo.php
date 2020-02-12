@@ -11,6 +11,7 @@ use App\Lib\MyHelper;
 
 use App\Http\Models\LogOvo;
 use App\Http\Models\TransactionPaymentOvo;
+use App\Http\Models\DealsPaymentOvo;
 
 class Ovo {
 
@@ -29,8 +30,8 @@ class Ovo {
         return hash_hmac('sha256', $app_id.$time, $app_key);
     }
     
-    static function PayTransaction($dataTrx, $dataPay, $amount, $type) {
-        if($type == 'production'){
+    static function PayTransaction($dataTrx, $dataPay, $amount, $env, $type="trx") {
+        if($env == 'production'){
             $url = env('OVO_PROD_URL');
             $tid = env('OVO_PROD_TID');
             $mid = env('OVO_PROD_MID');
@@ -61,7 +62,7 @@ class Ovo {
         $data['appSource']  = 'POS';
         $data['transactionRequestData'] =[
             'batchNo' => $dataPay['batch_no'],
-            'merchantInvoice' => $dataTrx['transaction_receipt_number'],
+            'merchantInvoice' => $dataTrx['transaction_receipt_number']??$dataPay['order_id'],
             'phone' => $dataPay['phone'],
         ];
 
@@ -71,52 +72,94 @@ class Ovo {
             'random' => $now
         ];
 
-        //create log request
-        $createLog = LogOvo::create([
-            'id_transaction_payment_ovo' => $dataPay['id_transaction_payment_ovo'],
-            'transaction_receipt_number' => $dataTrx['transaction_receipt_number'],
-            'url' => $url,
-            'header' => json_encode($header),
-            'request' => json_encode($data)
-        ]);
-        
-        //update push_time
-        $updateTime = TransactionPaymentOvo::where('id_transaction', $dataTrx['id_transaction'])->update(['push_to_pay_at' => date('Y-m-d H:i:s')]);
-        $pay = MyHelper::postWithTimeout($url, null, $data, 0, $header);
+        if($type == "deals"){
+            //create log request
+            $createLog = LogOvo::create([
+                'id_transaction_payment_ovo' => $dataPay['id_transaction_payment_ovo']??$dataPay['id_deals_payment_ovo'],
+                'transaction_receipt_number' => $dataTrx['transaction_receipt_number']??$dataTrx['id_deals'],
+                'url' => $url,
+                'header' => json_encode($header),
+                'request' => json_encode($data)
+            ]);
+            //update push_time
+            $updateTime = DealsPaymentOvo::where('id_deals_user', $dataTrx['id_deals_user'])->update(['push_to_pay_at' => date('Y-m-d H:i:s')]);
+            $pay = MyHelper::postWithTimeout($url, null, $data, 0, $header);
 
-        // dd($pay->getStatusCode());
-        if(isset($pay['status_code'])){
-            $updateLog = LogOvo::where('id_log_ovo', $createLog['id'])->update([
-                'response_status' => 'success',
-                'response_code' => $pay['status_code'],
-                'response' => json_encode($pay['response'])
+            // dd($pay->getStatusCode());
+            if(isset($pay['status_code'])){
+                $updateLog = LogOvo::where('id_log_ovo', $createLog['id'])->update([
+                    'response_status' => 'success',
+                    'response_code' => $pay['status_code'],
+                    'response' => json_encode($pay['response'])
+                ]);
+
+                // if($pay->getStatusCode() == 200){
+                //     $response = json_decode($pay->getBody(), true);
+                //     dd($pay->getBody());
+                // }
+
+                // $response = json_decode($pay->getBody()->getContents(), true);
+                // return [
+                //     'status_code' => $pay->getStatusCode(),
+                //     'response' => $response
+                // ];
+                return $pay;
+        
+            }
+
+            $updateLog = LogOvo::where('id_log_ovo', $createLog['id_log'])->update([
+                'response_status' => 'fail',
+                'response' => json_encode($pay)
             ]);
 
-            // if($pay->getStatusCode() == 200){
-            //     $response = json_decode($pay->getBody(), true);
-            //     dd($pay->getBody());
-            // }
-
-            // $response = json_decode($pay->getBody()->getContents(), true);
-            // return [
-            //     'status_code' => $pay->getStatusCode(),
-            //     'response' => $response
-            // ];
             return $pay;
-    
+        }else{
+            //create log request
+            $createLog = LogOvo::create([
+                'id_transaction_payment_ovo' => $dataPay['id_transaction_payment_ovo']??$dataPay['id_deals_payment_ovo'],
+                'transaction_receipt_number' => $dataTrx['transaction_receipt_number']??$dataTrx['id_deals'],
+                'url' => $url,
+                'header' => json_encode($header),
+                'request' => json_encode($data)
+            ]);
+            //update push_time
+            $updateTime = TransactionPaymentOvo::where('id_transaction', $dataTrx['id_transaction'])->update(['push_to_pay_at' => date('Y-m-d H:i:s')]);
+            $pay = MyHelper::postWithTimeout($url, null, $data, 0, $header);
+
+            // dd($pay->getStatusCode());
+            if(isset($pay['status_code'])){
+                $updateLog = LogOvo::where('id_log_ovo', $createLog['id'])->update([
+                    'response_status' => 'success',
+                    'response_code' => $pay['status_code'],
+                    'response' => json_encode($pay['response'])
+                ]);
+
+                // if($pay->getStatusCode() == 200){
+                //     $response = json_decode($pay->getBody(), true);
+                //     dd($pay->getBody());
+                // }
+
+                // $response = json_decode($pay->getBody()->getContents(), true);
+                // return [
+                //     'status_code' => $pay->getStatusCode(),
+                //     'response' => $response
+                // ];
+                return $pay;
+        
+            }
+
+            $updateLog = LogOvo::where('id_log_ovo', $createLog['id_log'])->update([
+                'response_status' => 'fail',
+                'response' => json_encode($pay)
+            ]);
+
+            return $pay;
         }
-
-        $updateLog = LogOvo::where('id_log_ovo', $createLog['id_log'])->update([
-            'response_status' => 'fail',
-            'response' => json_encode($pay)
-        ]);
-
-        return $pay;
 
     }
 
-    static function Reversal($dataTrx, $dataPay, $amount, $type) {
-        if($type == 'production'){
+    static function Reversal($dataTrx, $dataPay, $amount, $env,$type='trx') {
+        if($env == 'production'){
             $url = env('OVO_PROD_URL');
             $tid = env('OVO_PROD_TID');
             $mid = env('OVO_PROD_MID');
@@ -144,7 +187,7 @@ class Ovo {
         $data['appSource']  = 'POS';
         $data['transactionRequestData'] =[
             'batchNo' => $dataPay['batch_no'],
-            'merchantInvoice' => $dataTrx['transaction_receipt_number'],
+            'merchantInvoice' => $dataTrx['transaction_receipt_number']??$dataPay['order_id'],
         ];
         $now = time();
 
