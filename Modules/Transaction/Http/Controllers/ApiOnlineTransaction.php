@@ -261,7 +261,7 @@ class ApiOnlineTransaction extends Controller
                         ->orWhere('limitation_usage',0);
                 } )
                 ->first();
-            if ($code) 
+            if ($code)
             {
                 $post['id_promo_campaign_promo_code'] = $code->id_promo_campaign_promo_code;
                 if($code->promo_type = "Referral"){
@@ -1196,9 +1196,6 @@ class ApiOnlineTransaction extends Controller
 		$fraudTrxWeek = FraudSetting::where('parameter', 'LIKE', '%transactions in 1 week%')->where('fraud_settings_status','Active')->first();
 
         if ($post['transaction_payment_status'] == 'Completed') {
-            $updateReview = Transaction::where('id_transaction', $insertTransaction['id_transaction'])->update([
-                'show_rate_popup' => '1'
-            ]);
 
             //========= This process to check if user have fraud ============//
             $geCountTrxDay = Transaction::leftJoin('transaction_pickups', 'transaction_pickups.id_transaction', '=', 'transactions.id_transaction')
@@ -1355,8 +1352,14 @@ class ApiOnlineTransaction extends Controller
                     $checkFraudPoint = app($this->setting_fraud)->fraudTrxPoint($sumBalance, $user, ['id_outlet' => $insertTransaction['id_outlet']]);
                 }
 
-                // Fraud Detection
                 if ($post['transaction_payment_status'] == 'Completed' || $save['type'] == 'no_topup') {
+
+                    //inset pickup_at when pickup_type = right now
+                    if($insertPickup['pickup_type'] == 'right now'){
+                        $updatePickup = TransactionPickup::where('id_transaction', $insertTransaction['id_transaction'])->update(['pickup_at', date('Y-m-d H:i:s')]);
+                    }
+
+                    // Fraud Detection
                     $userData = User::find($user['id']);
 
                     if($fraudTrxDay){
@@ -1624,7 +1627,7 @@ class ApiOnlineTransaction extends Controller
             return $productDis;
         }
 
-        // check promo code & voucher 
+        // check promo code & voucher
         $promo_error=[];
         if($request->json('promo_code')){
         	$code=PromoCampaignPromoCode::where('promo_code',$request->promo_code)
@@ -1636,14 +1639,14 @@ class ApiOnlineTransaction extends Controller
                 } )
                 ->first();
 
-            if ($code) 
+            if ($code)
             {
 	            $pct=new PromoCampaignTools();
 	            $validate_user=$pct->validateUser($code->id_promo_campaign, $request->user()->id, $request->user()->phone, $request->device_type, $request->device_id, $errore,$code->id_promo_campaign_promo_code);
 
 	            if ($validate_user) {
 		            $discount_promo=$pct->validatePromo($code->id_promo_campaign, $request->id_outlet, $post['item'], $errors, 'promo_campaign');
-		            
+
 		            if ( !empty($errore) || !empty($errors)) {
 		            	$promo_error['title'] = Setting::where('key','=','promo_error_title')->first()['value']??'Promo tidak berlaku';
 				        $promo_error['button_ok'] = Setting::where('key','=','promo_error_ok_button')->first()['value']??'Tambah item';
@@ -1677,12 +1680,12 @@ class ApiOnlineTransaction extends Controller
         			->whereNull('used_at')
         			->where('voucher_expired_at','>=',date('Y-m-d H:i:s'))
         			->where(function($q) {
-        				$q->where('voucher_active_at','<=',date('Y-m-d H:i:s'))	
+        				$q->where('voucher_active_at','<=',date('Y-m-d H:i:s'))
         					->orWhereNull('voucher_active_at');
         			})
         			->with(['dealVoucher'])
         			->first();
-			
+
 			if($deals)
 			{
 				$pct=new PromoCampaignTools();
@@ -1708,7 +1711,7 @@ class ApiOnlineTransaction extends Controller
 	        }
         }
 
-        // end check promo code & voucher 
+        // end check promo code & voucher
 
         $error_msg=[];
         $tree = [];

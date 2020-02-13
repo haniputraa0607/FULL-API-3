@@ -20,7 +20,7 @@ use App\Http\Models\TransactionPaymentOvo;
 use App\Http\Models\LogRequest;
 use App\Http\Models\OvoReversal;
 use App\Http\Models\OvoReference;
-
+use App\Http\Models\TransactionPickup;
 use DB;
 use App\Lib\MyHelper;
 use App\Lib\Midtrans;
@@ -575,6 +575,14 @@ class ApiConfirm extends Controller
                                     $dataTrx = Transaction::with('user.memberships', 'outlet', 'productTransaction')
                                     ->where('id_transaction', $payment['id_transaction'])->first();
 
+                                    //inset pickup_at when pickup_type = right now
+                                    if($dataTrx['trasaction_type'] == 'Pickup Order'){
+                                        $dataPickup = TransactionPickup::where('id_transaction', $dataTrx['id_transaction'])->first();
+                                        if(isset($dataPickup['pickup_type']) && $dataPickup['pickup_type'] == 'right now'){
+                                            $updatePickup = TransactionPickup::where('id_transaction', $dataTrx['id_transaction'])->update(['pickup_at', date('Y-m-d H:i:s')]);
+                                        }
+                                    }
+
                                     // apply cashback to referrer
                                     \Modules\PromoCampaign\Lib\PromoCampaignTools::applyReferrerCashback($dataTrx);
 
@@ -678,7 +686,7 @@ class ApiConfirm extends Controller
                                     "outlet_name"       => $trx['outlet_name']['outlet_name']??'',
                                     "transaction_date"  => $trx['transaction_date'],
                                     'receipt_number'    => $trx['transaction_receipt_number'],
-                                    'id_transaction'    => $trx['id_transaction'], 
+                                    'id_transaction'    => $trx['id_transaction'],
                                     'received_point'    => (string) $checkBalance['balance_nominal']
                                 ]
                             );
@@ -790,7 +798,7 @@ class ApiConfirm extends Controller
                     [
                         "outlet_name"       => $trx['outlet_name']['outlet_name']??'',
                         "transaction_date"  => $trx['transaction_date'],
-                        'id_transaction'    => $trx['id_transaction'], 
+                        'id_transaction'    => $trx['id_transaction'],
                         'receipt_number'    => $trx['transaction_receipt_number'],
                         'received_point'    => (string) $checkBalance['balance_nominal']
                     ]
