@@ -996,6 +996,7 @@ class ApiHistoryController extends Controller
                     $dataList['amount'] = '- ' . ltrim(number_format($value['balance'], 0, ',', '.'), '-');
 
                     $listBalance[$key] = $dataList;
+                }
             } elseif ($value['source'] == 'Reversal Duplicate') {
                 continue;
             } elseif ($value['source'] == 'Point Injection') {
@@ -1076,6 +1077,7 @@ class ApiHistoryController extends Controller
 
         }
 
+        }
         return array_values($listBalance);
     }
     /**
