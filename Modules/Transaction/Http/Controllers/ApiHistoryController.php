@@ -1077,7 +1077,6 @@ class ApiHistoryController extends Controller
 
         }
 
-        }
         return array_values($listBalance);
     }
     /**
