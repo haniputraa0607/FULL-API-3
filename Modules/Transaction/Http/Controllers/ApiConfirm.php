@@ -579,7 +579,7 @@ class ApiConfirm extends Controller
                                     if($dataTrx['trasaction_type'] == 'Pickup Order'){
                                         $dataPickup = TransactionPickup::where('id_transaction', $dataTrx['id_transaction'])->first();
                                         if(isset($dataPickup['pickup_type']) && $dataPickup['pickup_type'] == 'right now'){
-                                            $updatePickup = TransactionPickup::where('id_transaction', $dataTrx['id_transaction'])->update(['pickup_at', date('Y-m-d H:i:s')]);
+                                            $updatePickup = TransactionPickup::where('id_transaction', $dataTrx['id_transaction'])->update(['pickup_at' => date('Y-m-d H:i:s')]);
                                         }
                                     }
 

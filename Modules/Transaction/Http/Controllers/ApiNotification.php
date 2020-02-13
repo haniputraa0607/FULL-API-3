@@ -118,7 +118,7 @@ class ApiNotification extends Controller {
                 if ($newTrx['detail']) {
                     //inset pickup_at when pickup_type = right now
                     if($newTrx['detail']['pickup_type'] == 'right now'){
-                        $updatePickup = TransactionPickup::where('id_transaction', $newTrx['id_transaction'])->update(['pickup_at', date('Y-m-d H:i:s')]);
+                        $updatePickup = TransactionPickup::where('id_transaction', $newTrx['id_transaction'])->update(['pickup_at' => date('Y-m-d H:i:s')]);
                     }
 
                     if ($newTrx['detail']['pickup_by'] == 'GO-SEND') {

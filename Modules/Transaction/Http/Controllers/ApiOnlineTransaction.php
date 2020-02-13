@@ -1356,7 +1356,7 @@ class ApiOnlineTransaction extends Controller
 
                     //inset pickup_at when pickup_type = right now
                     if($insertPickup['pickup_type'] == 'right now'){
-                        $updatePickup = TransactionPickup::where('id_transaction', $insertTransaction['id_transaction'])->update(['pickup_at', date('Y-m-d H:i:s')]);
+                        $updatePickup = TransactionPickup::where('id_transaction', $insertTransaction['id_transaction'])->update(['pickup_at' => date('Y-m-d H:i:s')]);
                     }
 
                     // Fraud Detection
