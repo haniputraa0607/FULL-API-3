@@ -89,6 +89,7 @@ class ApiOutletApp extends Controller
                             ->where('trasaction_type', 'Pickup Order')
                             ->whereNull('void_date')
                             ->groupBy('transaction_products.id_transaction')
+                            ->orderBy('pickup_at', 'ASC')
                             ->orderBy('transaction_date', 'ASC')
                             ->orderBy('transactions.id_transaction', 'ASC');
 
@@ -120,6 +121,7 @@ class ApiOutletApp extends Controller
 
         //dikelompokkan sesuai status
         $listPending = [];
+        $listOnGoing = [];
         $listOnGoingSet = [];
         $listOnGoingNow = [];
         $listOnGoingArrival = [];
@@ -146,6 +148,7 @@ class ApiOutletApp extends Controller
                 $listPending[] = $dataList;
             }elseif($dataList['receive_at'] != null && $dataList['ready_at'] == null){
                 $dataList['status']  = 'Accepted';
+                $listOnGoing[] = $dataList;
                 if($dataList['pickup_type'] == 'set time'){
                     $listOnGoingSet[] = $dataList;
                 }elseif($dataList['pickup_type'] == 'right now'){
@@ -172,10 +175,11 @@ class ApiOutletApp extends Controller
         $result['pending']['data'] = $listPending;
 
         $result['on_going']['count'] = count($listOnGoingNow) + count($listOnGoingSet) + count($listOnGoingArrival);
-        $result['on_going']['data']['right_now']['count'] = count($listOnGoingNow);
-        $result['on_going']['data']['right_now']['data'] = $listOnGoingNow;
-        $result['on_going']['data']['pickup_time']['count'] = count($listOnGoingSet);
-        $result['on_going']['data']['pickup_time']['data'] = $listOnGoingSet;
+        $result['on_going']['data'] = $listOnGoing;
+        // $result['on_going']['data']['right_now']['count'] = count($listOnGoingNow);
+        // $result['on_going']['data']['right_now']['data'] = $listOnGoingNow;
+        // $result['on_going']['data']['pickup_time']['count'] = count($listOnGoingSet);
+        // $result['on_going']['data']['pickup_time']['data'] = $listOnGoingSet;
         // $result['on_going']['data']['at_arrival']['count'] = count($listOnGoingArrival);
         // $result['on_going']['data']['at_arrival']['data'] = $listOnGoingArrival;
 
