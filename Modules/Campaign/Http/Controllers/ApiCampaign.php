@@ -40,7 +40,7 @@ use App\Lib\apiwha;
 use Validator;
 use Hash;
 use DB;
-use Mailgun;
+use Mail;
 
 class ApiCampaign extends Controller
 {
@@ -186,7 +186,7 @@ class ApiCampaign extends Controller
 
 		if($queryCampaign){
 			$data = [];
-			
+
 			if(isset($post['id_campaign'])&&!empty($post['conditions'])){
 				$deleteRuleParent = CampaignRuleParent::where('id_campaign','=',$post['id_campaign'])->get();
 				foreach ($deleteRuleParent as $key => $value) {

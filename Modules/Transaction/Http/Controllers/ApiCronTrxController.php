@@ -18,7 +18,6 @@ use Validator;
 use Hash;
 use DB;
 use Mail;
-use Mailgun;
 
 use App\Jobs\CronBalance;
 

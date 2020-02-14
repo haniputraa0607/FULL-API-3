@@ -36,7 +36,7 @@ use App\Lib\apiwha;
 use Validator;
 use Hash;
 use DB;
-use Mailgun;
+use Mail;
 use Image;
 
 class ApiPromotion extends Controller
