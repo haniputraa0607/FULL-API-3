@@ -30,7 +30,7 @@ use App\Lib\MyHelper;
 use App\Lib\classMaskingJson;
 use App\Lib\apiwha;
 use DateTime;
-use Mailgun;
+use Mail;
 use Modules\SettingFraud\Entities\LogCheckPromoCode;
 use function GuzzleHttp\Psr7\str;
 use File;
