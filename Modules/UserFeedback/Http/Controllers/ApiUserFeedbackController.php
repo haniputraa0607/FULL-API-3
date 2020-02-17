@@ -117,6 +117,32 @@ class ApiUserFeedbackController extends Controller
                 });
             }
         }
+        if($rules=$newRule['photos_only']??false){
+            foreach ($rules as $rul) {
+                $parameter = $rul['parameter'];
+                switch ($parameter) {
+                    case '1':
+                        $model->whereNotNull('image');
+                        break;
+                    case '-1':
+                        $model->whereNull('image');
+                        break;
+                }
+            }
+        }
+        if($rules=$newRule['notes_only']??false){
+            foreach ($rules as $rul) {
+                $parameter = $rul['parameter'];
+                switch ($parameter) {
+                    case '1':
+                        $model->whereNotNull('notes');
+                        break;
+                    case '-1':
+                        $model->whereNull('notes');
+                        break;
+                }
+            }
+        }
     }
 
     /**
@@ -280,6 +306,7 @@ class ApiUserFeedbackController extends Controller
         $post = $request->json()->all();
         $showOutlet = 10;
         $counter = RatingItem::with(['feedbacks'=>function($query) use ($post){
+            $query->take(50)->orderBy('created_at','desc');
             $this->applyFilter($query,$post);
         },'feedbacks.transaction'=>function($query){
             $query->select('id_transaction','transaction_receipt_number','trasaction_type','transaction_grandtotal');
@@ -354,6 +381,7 @@ class ApiUserFeedbackController extends Controller
             $data['outlet_data'] = $outlet;
             $post['id_outlet'] = $outlet->id_outlet;
             $data['rating_item'] = RatingItem::with(['feedbacks'=>function($query) use ($post){
+                $query->take(50)->orderBy('created_at','desc');
                 $query->whereHas('transaction',function($query) use ($post){
                     $query->where('id_outlet',$post['id_outlet']);
                 });
@@ -371,25 +399,37 @@ class ApiUserFeedbackController extends Controller
             $data['rating_item_count'] = count($data['rating_item']);
             return MyHelper::checkGet($data);
         }else{
-            $outlet = Outlet::select(\DB::raw('outlets.id_outlet,outlets.outlet_code,outlets.outlet_name,count(f1.id_user_feedback) as positive_feedback,count(f2.id_user_feedback) as neutral_feedback,count(f3.id_user_feedback) as negative_feedback'))
+            $count = RatingItem::select('id_rating_item')->count();
+            $dasc = ($post['order']??'outlet_name')=='outlet_name'?'asc':'desc';
+            $outlet = Outlet::select(\DB::raw('outlets.id_outlet,outlets.outlet_code,outlets.outlet_name,count(f1.id_user_feedback) as positive_feedback,count(f3.id_user_feedback) as negative_feedback'))
             ->join('transactions','outlets.id_outlet','=','transactions.id_outlet')
             ->leftJoin('user_feedbacks as f1',function($join) use ($post){
                 $join->on('f1.id_transaction','=','transactions.id_transaction')
                 ->where('f1.rating_value','=','1');
                 $this->applyFilter($join,$post,'f1');
             })
-            ->leftJoin('user_feedbacks as f2',function($join) use ($post){
-                $join->on('f2.id_transaction','=','transactions.id_transaction')
-                ->where('f2.rating_value','=','0');
-                $this->applyFilter($join,$post,'f2');
-            })
             ->leftJoin('user_feedbacks as f3',function($join) use ($post){
                 $join->on('f3.id_transaction','=','transactions.id_transaction')
                 ->where('f3.rating_value','=','-1');
                 $this->applyFilter($join,$post,'f3');
             })
+            ->orderBy($post['order']??'outlet_name',$dasc)
             ->groupBy('outlets.id_outlet');
-            return MyHelper::checkGet($outlet->get()->toArray());
+            if($post['search']??false){
+                $outlet->where(function($query) use($post){
+                    $param = '%'.$post['search'].'%';
+                    $query->where('outlet_name','like',$param)
+                    ->orWhere('outlet_code','like',$param);
+                });
+            }
+            if($count == 3){
+                $outlet->leftJoin('user_feedbacks as f2',function($join) use ($post){
+                    $join->on('f2.id_transaction','=','transactions.id_transaction')
+                    ->where('f2.rating_value','=','0');
+                    $this->applyFilter($join,$post,'f2');
+                })->addSelect(\DB::raw('count(f2.id_user_feedback) as neutral_feedback'));
+            }
+            return MyHelper::checkGet($outlet->paginate(15)->toArray());
         }
     }
 }
