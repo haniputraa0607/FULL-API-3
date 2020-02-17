@@ -28,4 +28,7 @@ class RatingItem extends Model
         }
         return '';
     }
+    public function feedbacks() {
+        return $this->hasMany(UserFeedback::class,'rating_value','rating_value');
+    }
 }
