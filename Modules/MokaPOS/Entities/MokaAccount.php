@@ -18,4 +18,14 @@ class MokaAccount extends Model
         'token',
         'refresh_token'
     ];
+
+    public function moka_account_business()
+    {
+        return $this->hasMany(MokaAccountBusiness::class, 'id_moka_account', 'id_moka_account');
+    }
+
+    public function moka_outlet()
+    {
+        return $this->hasMany(MokaPOSOutlet::class, 'id_moka_account', 'id_moka_account');
+    }
 }

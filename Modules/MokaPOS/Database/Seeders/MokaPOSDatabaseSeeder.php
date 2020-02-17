@@ -16,6 +16,7 @@ class MokaPOSDatabaseSeeder extends Seeder
     {
         Model::unguard();
 
-        // $this->call("OthersTableSeeder");
+        $this->call(SeedProvinceMokaPOSTableSeeder::class);
+        $this->call(SeedCitiesMokaPOSTableSeeder::class);
     }
 }

@@ -14,11 +14,12 @@ use Illuminate\Http\Request;
 */
 
 // MOKA POS
-Route::group(['middleware' => ['auth_client','log_activities_pos'], 'prefix' => 'moka'], function()
-{
+Route::group(['middleware' => ['auth_client', 'log_activities_pos'], 'prefix' => 'moka'], function () {
     Route::any('account', 'ApiMokaPOS@indexAccount');
-    
-    Route::group(['prefix' => 'sync',], function() {
-        Route::any('business', 'ApiMokaPOS@syncBusiness');
+
+    Route::group(['prefix' => 'sync',], function () {
+        Route::get('business', 'ApiMokaPOS@syncBusiness');
+        Route::get('outlet', 'ApiMokaPOS@syncOutlet');
+        Route::get('product', 'ApiMokaPOS@syncProduct');
     });
 });

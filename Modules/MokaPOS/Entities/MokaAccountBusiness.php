@@ -10,7 +10,7 @@ class MokaAccountBusiness extends Model
 
     protected $fillable   = [
         'id_moka_account',
-        'ib_moka_business',
+        'id_moka_business',
         'name',
         'email',
         'phone'
