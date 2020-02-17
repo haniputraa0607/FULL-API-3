@@ -353,7 +353,7 @@ class ApiUserFeedbackController extends Controller
         if($rule['photos_only']??false){
             $model->whereNotNull($col.'.image');
         }
-        $model->where($col.'.created_at','>=',$rule['date_start'])->where($col.'.created_at','<=',$rule['date_end']);
+        $model->whereDate($col.'.created_at','>=',$rule['date_start'])->whereDate($col.'.created_at','<=',$rule['date_end']);
     }
     public function reportOutlet(Request $request) {
         $post = $request->json()->all();
