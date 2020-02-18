@@ -6,6 +6,7 @@ use Modules\PromoCampaign\Entities\PromoCampaign;
 use Modules\PromoCampaign\Entities\PromoCampaignPromoCode;
 use Modules\PromoCampaign\Entities\PromoCampaignReport;
 use Modules\PromoCampaign\Entities\UserReferralCode;
+use Modules\PromoCampaign\Entities\UserReferralCashback;
 use Modules\PromoCampaign\Entities\PromoCampaignReferral;
 use App\Http\Models\Product;
 use App\Http\Models\ProductModifier;
@@ -1134,6 +1135,18 @@ class PromoCampaignTools{
                 if (!$insertDataLogCash) {
                     return false;
                 }
+	            $referrer_total_cashback = UserReferralCashback::where('id_user',$referrer)->first();
+	            if($referrer_total_cashback){
+	            	$up = $referrer_total_cashback->update(['cashback_earned'=>$referrer_total_cashback->cashback_earned+$referrer_cashback]);
+	            }else{
+	            	$up = UserReferralCashback::create([
+	            		'id_user' => $referrer,
+	            		'cashback_earned' => $referrer_cashback
+	            	]);
+	            }
+	            if(!$up){
+	            	return false;
+	            }
             }
         }
         return true;
