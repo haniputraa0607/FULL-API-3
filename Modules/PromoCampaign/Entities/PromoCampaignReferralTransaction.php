@@ -9,6 +9,7 @@ class PromoCampaignReferralTransaction extends Model
     protected $fillable = [
     	'id_promo_campaign_promo_code',
     	'id_user',
+    	'id_referrer',
     	'id_transaction'
     ];
 }
