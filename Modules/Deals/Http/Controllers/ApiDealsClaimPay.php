@@ -424,6 +424,8 @@ class ApiDealsClaimPay extends Controller
         }
 
         $tembakMitrans = Midtrans::token($data['order_id'], $data['gross_amount']);
+        $tembakMitrans['order_id'] = $data['order_id'];
+        $tembakMitrans['gross_amount'] = $data['gross_amount'];
 
         // print_r($tembakMitrans); exit();
 
