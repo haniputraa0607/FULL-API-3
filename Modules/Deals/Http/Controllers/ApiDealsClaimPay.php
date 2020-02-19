@@ -366,7 +366,7 @@ class ApiDealsClaimPay extends Controller
     function paymentMethod($dataDeals, $voucher, $request)
     {
         //IF USING BALANCE
-        if ($request->get('balance') && $request->get('balance') == true){
+        if ($request->json('balance') == true){
             /* BALANCE */
             $pay = $this->balance($dataDeals, $voucher,$request->get('payment_deals') );
         }else{
