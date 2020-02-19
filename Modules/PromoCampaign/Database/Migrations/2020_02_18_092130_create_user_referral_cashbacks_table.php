@@ -16,6 +16,8 @@ class CreateUserReferralCashbacksTable extends Migration
         Schema::create('user_referral_cashbacks', function (Blueprint $table) {
             $table->increments('id_user_referral_cashback');
             $table->unsignedInteger('id_user');
+            $table->string('referral_code');
+            $table->unsignedInteger('number_transaction');
             $table->unsignedInteger('cashback_earned');
             $table->timestamps();
             $table->foreign('id_user', 'fk_id_user_user_referral_cashbacks_users')->references('id')->on('users')->onUpdate('CASCADE')->onDelete('CASCADE');

@@ -1137,10 +1137,19 @@ class PromoCampaignTools{
                 }
 	            $referrer_total_cashback = UserReferralCashback::where('id_user',$referrer)->first();
 	            if($referrer_total_cashback){
-	            	$up = $referrer_total_cashback->update(['cashback_earned'=>$referrer_total_cashback->cashback_earned+$referrer_cashback]);
+	            	$upData = [
+	            		'cashback_earned'=>$referrer_total_cashback->cashback_earned+$referrer_cashback,
+	            		'number_transaction'=>$referrer_total_cashback->number_transaction+1
+	            	];
+	            	if(!$referrer_total_cashback->referral_code){
+	            		$upData['referral_code'] = PromoCampaignPromoCode::select('promo_code')->where('id_promo_campaign_promo_code',$transaction['id_promo_campaign_promo_code'])->pluck('promo_code')->first();
+	            	}
+	            	$up = $referrer_total_cashback->update($upData);
 	            }else{
 	            	$up = UserReferralCashback::create([
 	            		'id_user' => $referrer,
+	            		'referral_code' => PromoCampaignPromoCode::select('promo_code')->where('id_promo_campaign_promo_code',$transaction['id_promo_campaign_promo_code'])->pluck('promo_code')->first(),
+	            		'number_transaction' => 1,
 	            		'cashback_earned' => $referrer_cashback
 	            	]);
 	            }

@@ -8,8 +8,10 @@ use Illuminate\Routing\Controller;
 
 use \App\Lib\MyHelper;
 
+use \App\Http\Models\User;
 use \Modules\PromoCampaign\Entities\PromoCampaignReferral;
 use \Modules\PromoCampaign\Entities\PromoCampaign;
+use \Modules\PromoCampaign\Entities\UserReferralCashback;
 
 class ApiReferralController extends Controller
 {
@@ -62,15 +64,32 @@ class ApiReferralController extends Controller
     }
 
     /**
-     * Update the specified resource in storage.
+     * Provide report data
      * @param Request $request
      * @param int $id
      * @return Response
      */
-    public function update(Request $request, $id)
+    public function report(Request $request)
     {
-        //
+        $data = UserReferralCashback::select('users.name','users.phone','user_referral_cashbacks.*')->join('users','user_referral_cashbacks.id_user','=','users.id')->paginate(10);
+        return MyHelper::checkGet($data);
     }
+    public function reportUser(Request $request)
+    {
+        $post = $request->json()->all();
+        $data = User::select('id','name','phone','user_referral_cashbacks.referral_code','number_transaction','cashback_earned')
+            ->join('user_referral_cashbacks','users.id','=','user_referral_cashbacks.id_user')
+            ->where('phone',$post['phone'])
+            ->with(['referred_transaction'=>function($query){
+                $query->paginate(20);
+            },'referred_transaction.user'=>function($query){
+                $query->select('id','name','phone');
+            },'referred_transaction.transaction'=>function($query){
+                $query->select('id_transaction','transaction_receipt_number','trasaction_type');
+            }])->first();
+        return MyHelper::checkGet($data);
+    }
+
 
     /**
      * Remove the specified resource from storage.

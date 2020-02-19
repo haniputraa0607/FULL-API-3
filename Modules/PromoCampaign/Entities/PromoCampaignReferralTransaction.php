@@ -12,4 +12,16 @@ class PromoCampaignReferralTransaction extends Model
     	'id_referrer',
     	'id_transaction'
     ];
+    public function user()
+    {
+    	return $this->belongsTo(\App\Http\Models\User::class,'id_user');
+    }
+    public function referrer()
+    {
+    	return $this->belongsTo(\App\Http\Models\User::class,'id_user');
+    }
+    public function transaction()
+    {
+    	return $this->belongsTo(\App\Http\Models\Transaction::class,'id_transaction');
+    }
 }
