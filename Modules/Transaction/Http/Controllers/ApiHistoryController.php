@@ -717,7 +717,7 @@ class ApiHistoryController extends Controller
             $dataVoucher[$key]['id'] = $value['id_deals_user'];
             $dataVoucher[$key]['date'] = $value['claimed_at'];
             $dataVoucher[$key]['outlet'] = 'Tukar Voucher';
-            $dataVoucher[$key]['amount'] = $value['voucher_price_cash'] - $value['balance_nominal'];
+            $dataVoucher[$key]['amount'] = number_format($value['voucher_price_cash'] - $value['balance_nominal'], 0, ',', '.');
         }
 
         return $dataVoucher;
