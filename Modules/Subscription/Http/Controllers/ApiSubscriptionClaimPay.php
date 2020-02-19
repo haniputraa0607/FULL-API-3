@@ -288,7 +288,7 @@ class ApiSubscriptionClaimPay extends Controller
                         $voucher->load('subscription');
                         $autocrm = app($this->autocrm)->SendAutoCRM('Buy Paid Subscription Success', $phone,
                             [
-                                'bought_at'                        => $voucher->bought_at, 
+                                'bought_at'                        => $voucher->bought_at,
                                 'subscription_title'               => $voucher->subscription->subscription_title,
                                 'id_subscription_user'             => $return['result']['voucher']['id_subscription_user'],
                                 'subscription_price_point'         => (string) $voucher->subscription_price_point,
@@ -384,6 +384,8 @@ class ApiSubscriptionClaimPay extends Controller
             $data['gross_amount'] = $grossAmount;
         }
         $tembakMitrans = Midtrans::token($data['order_id'], $data['gross_amount']);
+        $tembakMitrans['order_id'] = $data['order_id'];
+        $tembakMitrans['gross_amount'] = $data['gross_amount'];
 
         if (isset($tembakMitrans['token'])) {
             if (SubscriptionPaymentMidtran::create($data)) {
