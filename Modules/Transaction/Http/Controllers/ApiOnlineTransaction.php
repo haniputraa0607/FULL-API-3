@@ -734,7 +734,7 @@ class ApiOnlineTransaction extends Controller
             foreach ($valueProduct['modifiers'] as $modifier) {
                 $id_product_modifier = is_numeric($modifier)?$modifier:$modifier['id_product_modifier'];
                 $qty_product_modifier = is_numeric($modifier)?1:$modifier['qty'];
-                $mod = ProductModifier::select('product_modifiers.id_product_modifier','text','product_modifier_stock_status','product_modifier_price')
+                $mod = ProductModifier::select('product_modifiers.id_product_modifier','code','type','text','product_modifier_stock_status','product_modifier_price')
                     // produk modifier yang tersedia di outlet
                     ->join('product_modifier_prices','product_modifiers.id_product_modifier','=','product_modifier_prices.id_product_modifier')
                     ->where('product_modifier_prices.id_outlet',$post['id_outlet'])
