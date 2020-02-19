@@ -1606,6 +1606,7 @@ class ApiTransaction extends Controller
             id_transaction_product,
             id_brand,
             transaction_products.id_outlet,
+            outlets.outlet_code,
             transaction_product_qty as qty,
             product_prices.product_price,
             products.product_name,
@@ -1614,10 +1615,11 @@ class ApiTransaction extends Controller
             '))
         ->join('products','products.id_product','=','transaction_products.id_product')
         ->join('product_prices','product_prices.id_product','=','products.id_product')
+        ->join('outlets','outlets.id_outlet','=','transaction_products.id_outlet')
         ->whereRaw('product_prices.id_outlet = transaction_products.id_outlet')
         ->where(['id_transaction'=>$id_transaction])
         ->with(['modifiers'=>function($query){
-                    $query->select('id_transaction_product','id_product_modifier','qty','text');
+                    $query->select('id_transaction_product','product_modifiers.code','transaction_product_modifiers.id_product_modifier','qty','product_modifiers.text')->join('product_modifiers','product_modifiers.id_product_modifier','=','transaction_product_modifiers.id_product_modifier');
                 }])->get()->toArray();
         if(!$pts){
             return MyHelper::checkGet($pts);
