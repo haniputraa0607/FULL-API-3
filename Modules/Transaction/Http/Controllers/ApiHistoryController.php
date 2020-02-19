@@ -610,6 +610,7 @@ class ApiHistoryController extends Controller
                     $dataList['id'] = $value['id_transaction'];
                     $dataList['date']    = date('Y-m-d H:i', strtotime($value['transaction_date']));
                     $dataList['id_outlet'] = $value['outlet']['id_outlet'];
+                    $dataList['outlet_code'] = $value['outlet']['outlet_code'];
                     $dataList['outlet'] = $value['outlet']['outlet_name'];
                     $dataList['amount'] = number_format($value['transaction_grandtotal'], 0, ',', '.');
                     $dataList['cashback'] = number_format($value['transaction_cashback_earned'], 0, ',', '.');
@@ -651,6 +652,7 @@ class ApiHistoryController extends Controller
             $dataList['id'] = $value['id_transaction'] ;
             $dataList['date']    = date('Y-m-d H:i:s', strtotime($value['transaction_date']));
             $dataList['outlet'] = $value['outlet']['outlet_name'];
+            $dataList['outlet_code'] = $value['outlet']['outlet_code'];
             $dataList['amount'] = number_format($value['transaction_grandtotal'], 0, ',', '.');
 
             if ($value['ready_at'] != null) {
