@@ -807,7 +807,9 @@ class ApiDealsClaimPay extends Controller
             if ($this->updateLogPoint(- $myBalance, $voucher)) {
                 if ($this->updateInfoDealUsers($voucher->id_deals_user, $dataDealsUserUpdate)) {
                     if($paymentMethod == 'midtrans'){
-                        return $this->midtrans($deals, $voucher, $dataDealsUserUpdate['balance_nominal']);
+                        return $this->midtrans($deals, $voucher, -$kurangBayar);
+                    }elseif($paymentMethod == 'ovo'){
+                        return $this->ovo($deals, $voucher, -$kurangBayar);
                     }
                 }
             }
