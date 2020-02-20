@@ -12,6 +12,7 @@ use \App\Http\Models\User;
 use \Modules\PromoCampaign\Entities\PromoCampaignReferral;
 use \Modules\PromoCampaign\Entities\PromoCampaign;
 use \Modules\PromoCampaign\Entities\UserReferralCashback;
+use Modules\PromoCampaign\Entities\PromoCampaignReferralTransaction;
 
 class ApiReferralController extends Controller
 {
@@ -71,22 +72,40 @@ class ApiReferralController extends Controller
      */
     public function report(Request $request)
     {
-        $data = UserReferralCashback::select('users.name','users.phone','user_referral_cashbacks.*')->join('users','user_referral_cashbacks.id_user','=','users.id')->paginate(10);
+        $perpage = 20;
+        $data['user'] = UserReferralCashback::select('users.name','users.phone','user_referral_cashbacks.*')
+            ->join('users','user_referral_cashbacks.id_user','=','users.id')
+            ->paginate(20);
+        $data['transaction'] = PromoCampaignReferralTransaction::join('transactions','promo_campaign_referral_transactions.id_transaction','=','transactions.id_transaction')
+            ->join('users','users.id','=','transactions.id_user')
+            ->paginate(20);
         return MyHelper::checkGet($data);
     }
     public function reportUser(Request $request)
     {
+        $perpage = 20;
         $post = $request->json()->all();
-        $data = User::select('id','name','phone','user_referral_cashbacks.referral_code','number_transaction','cashback_earned')
-            ->join('user_referral_cashbacks','users.id','=','user_referral_cashbacks.id_user')
-            ->where('phone',$post['phone'])
-            ->with(['referred_transaction'=>function($query){
-                $query->paginate(20);
-            },'referred_transaction.user'=>function($query){
-                $query->select('id','name','phone');
-            },'referred_transaction.transaction'=>function($query){
-                $query->select('id_transaction','transaction_receipt_number','trasaction_type');
-            }])->first();
+        $select_user = ['id','name','phone'];
+        $select_trx = ['id_transaction','transaction_receipt_number','trasaction_type','transaction_grandtotal'];
+        if($post['ajax']??false){
+            $id_user = User::select('id')->where('phone',$post['phone'])->pluck('id')->first();
+            $data = PromoCampaignReferralTransaction::with(['user'=>function($query) use ($select_user){
+                    $query->select($select_user);
+                },'transaction'=>function($query) use ($select_trx){
+                    $query->select($select_trx);
+                }])->where('id_referrer',$id_user)->paginate($perpage);
+        }else{
+            $data = User::select('id','name','phone','user_referral_cashbacks.referral_code','number_transaction','cashback_earned')
+                ->join('user_referral_cashbacks','users.id','=','user_referral_cashbacks.id_user')
+                ->where('phone',$post['phone'])
+                ->with(['referred_transaction'=>function($query) use ($perpage){
+                    $query->paginate($perpage);
+                },'referred_transaction.user'=>function($query) use ($select_user){
+                    $query->select($select_user);
+                },'referred_transaction.transaction'=>function($query) use ($select_trx){
+                    $query->select($select_trx);
+                }])->first();
+        }
         return MyHelper::checkGet($data);
     }
 
