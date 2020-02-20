@@ -10,7 +10,10 @@ class PromoCampaignReferralTransaction extends Model
     	'id_promo_campaign_promo_code',
     	'id_user',
     	'id_referrer',
-    	'id_transaction'
+    	'id_transaction',
+        'referred_bonus_type',
+        'referred_bonus',
+        'referrer_bonus'
     ];
     public function user()
     {

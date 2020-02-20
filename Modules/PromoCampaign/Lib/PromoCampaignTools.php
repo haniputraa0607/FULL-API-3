@@ -6,7 +6,7 @@ use Modules\PromoCampaign\Entities\PromoCampaign;
 use Modules\PromoCampaign\Entities\PromoCampaignPromoCode;
 use Modules\PromoCampaign\Entities\PromoCampaignReport;
 use Modules\PromoCampaign\Entities\UserReferralCode;
-use Modules\PromoCampaign\Entities\UserReferralCashback;
+use Modules\PromoCampaign\Entities\PromoCampaignReferralTransaction;
 use Modules\PromoCampaign\Entities\PromoCampaignReferral;
 use App\Http\Models\Product;
 use App\Http\Models\ProductModifier;
@@ -1135,7 +1135,8 @@ class PromoCampaignTools{
                 if (!$insertDataLogCash) {
                     return false;
                 }
-	            $referrer_total_cashback = UserReferralCashback::where('id_user',$referrer)->first();
+                PromoCampaignReferralTransaction::where('id_transaction',$transaction['id_transaction'])->update(['referrer_bonus'=>$referrer_cashback]);
+	            $referrer_total_cashback = UserReferralCode::where('id_user',$referrer)->first();
 	            if($referrer_total_cashback){
 	            	$upData = [
 	            		'cashback_earned'=>$referrer_total_cashback->cashback_earned+$referrer_cashback,
@@ -1146,7 +1147,7 @@ class PromoCampaignTools{
 	            	}
 	            	$up = $referrer_total_cashback->update($upData);
 	            }else{
-	            	$up = UserReferralCashback::create([
+	            	$up = UserReferralCode::create([
 	            		'id_user' => $referrer,
 	            		'referral_code' => PromoCampaignPromoCode::select('promo_code')->where('id_promo_campaign_promo_code',$transaction['id_promo_campaign_promo_code'])->pluck('promo_code')->first(),
 	            		'number_transaction' => 1,
