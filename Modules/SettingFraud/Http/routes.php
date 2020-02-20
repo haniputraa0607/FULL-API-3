@@ -21,10 +21,3 @@ Route::group(['middleware' => ['auth:api','log_activities', 'user_agent', 'scope
     Route::any('device-login/update-status', ['middleware' => 'feature_control:192', 'uses' => 'ApiFraud@updateDeviceLoginStatus']);
 
 });
-
-/* Cron */
-Route::group(['prefix' => 'api/fraud', 'namespace' => 'Modules\SettingFraud\Http\Controllers'], function()
-{
-    Route::any('cron/transaction-between', 'ApiFraud@cronFraudInBetween');
-    Route::any('cron/delete-daily-log', 'ApiFraud@deleteDailyLog');
-});

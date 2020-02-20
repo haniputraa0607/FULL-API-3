@@ -4,9 +4,11 @@ namespace Modules\SettingFraud\Http\Controllers;
 
 use App\Http\Models\Configs;
 use App\Http\Models\DailyTransactions;
+use Modules\PromoCampaign\Entities\PromoCampaignReferralTransaction;
 use Modules\SettingFraud\Entities\DailyCheckPromoCode;
 use Modules\SettingFraud\Entities\FraudBetweenTransaction;
 use Modules\SettingFraud\Entities\FraudDetectionLogCheckPromoCode;
+use Modules\SettingFraud\Entities\FraudDetectionLogReferralUsers;
 use Modules\SettingFraud\Entities\FraudDetectionLogTransactionInBetween;
 use Modules\SettingFraud\Entities\FraudDetectionLogTransactionPoint;
 use App\Http\Models\OauthAccessToken;
@@ -1165,6 +1167,22 @@ class ApiFraud extends Controller
     }
 
     /*=============== All Cron ===============*/
+    public function fraudCron(){
+        //cron fraud in between
+        $fraudBetween = $this->cronFraudInBetween();
+        if (!$fraudBetween) {
+            return false;
+        }
+
+        //delete data from table daily check promo code
+        $deleteDailyPromoCode = $this->deleteDailyLogCheckPromo();
+        if (!$deleteDailyPromoCode) {
+            return false;
+        }
+
+        return true;
+    }
+
     public function cronFraudInBetween(){
         $fraudSetting = $fraudTrxWeek = FraudSetting::where('parameter', 'LIKE', '%between%')->where('fraud_settings_status','Active')->first();
 
@@ -1206,6 +1224,28 @@ class ApiFraud extends Controller
 
         return 'success';
 
+    }
+
+    function cronFraudReferralUsers($data){
+        $getDataFromReportReferral = PromoCampaignReferralTransaction::join('promo_campaign_promo_codes as pcpc','pcpc.id_promo_campaign_promo_code','promo_campaign_referral_transactions.id_promo_campaign_promo_code')
+                                    ->where('promo_campaign_referral_transactions.id_user', $data['id_user'])
+                                    ->select('promo_campaign_referral_transactions.*', 'promo_campaign_promo_codes.promo_code')->get()->toArray();
+        if(count($getDataFromReportReferral) > 0){
+            foreach ($getDataFromReportReferral as $dt){
+                $getLogFraudReferralUser = FraudDetectionLogReferralUsers::where('id_user')->where('referral_code', $dt['promo_code'])->first();
+
+                $dtToInsert = [
+                    'id_user' => $dt['id_user'],
+                    'referral_code' => $dt['promo_code'],
+                    'referral_code_use_date' => $dt['created_at'],
+                    'referral_code_use_date_count' => 1
+                ];
+                if($getLogFraudReferralUser){
+
+                }
+            }
+            FraudDetectionLogReferralUsers::create();
+        }
     }
 
     public function deleteDailyLog(){
