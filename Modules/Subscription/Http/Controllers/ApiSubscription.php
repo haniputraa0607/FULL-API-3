@@ -15,6 +15,8 @@ use Modules\Subscription\Entities\SubscriptionContent;
 use Modules\Subscription\Entities\SubscriptionContentDetail;
 use Modules\Subscription\Entities\SubscriptionUser;
 use Modules\Subscription\Entities\SubscriptionUserVoucher;
+use Modules\Deals\Entities\DealsContent;
+use Modules\Deals\Entities\DealsContentDetail;
 use App\Http\Models\Setting;
 
 use Modules\Subscription\Http\Requests\ListSubscription;
@@ -463,16 +465,24 @@ class ApiSubscription extends Controller
         return response()->json(MyHelper::checkUpdate($save));
     }
 
-    public function createOrUpdateContent($data)
+    public function createOrUpdateContent($data, $source='subscription')
     {
         $post = $data;
         $data_content = [];
         $data_content_detail = [];
         $content_order = 1;
+
+        if ($source == 'deals') {
+        	$contentTable = new DealsContent;
+        	$contentTableDetail = new DealsContentDetail;
+        }else{
+        	$contentTable = new SubscriptionContent;
+        	$contentTableDetail = new SubscriptionContentDetail;
+        }
         //Rapiin data yg masuk
-        foreach ($post['id_subscription_content'] as $key => $value) {
-            $data_content[$key]['id_subscription'] = $post['id_subscription'];
-            $data_content[$key]['id_subscription_content'] = $value;
+        foreach ($post['id_'.$source.'_content'] as $key => $value) {
+            $data_content[$key]['id_'.$source] = $post['id_'.$source];
+            $data_content[$key]['id_'.$source.'_content'] = $value;
             $data_content[$key]['title'] = $post['content_title'][$key];
             $data_content[$key]['is_active'] = ($post['visible'][$key+1]??0) ? 1 : null;
             $data_content[$key]['order'] = ($content_order++);
@@ -482,8 +492,8 @@ class ApiSubscription extends Controller
             $detail_order = 1;
             if ( ($post['id_content_detail'][$key+1]??0) ) {
                 foreach ($post['id_content_detail'][$key+1] as $key2 => $value2) {
-                    $data_content_detail[$key][$key2]['id_subscription_content'] = $value;
-                    $data_content_detail[$key][$key2]['id_subscription_content_detail'] = $value2;
+                    $data_content_detail[$key][$key2]['id_'.$source.'_content'] = $value;
+                    $data_content_detail[$key][$key2]['id_'.$source.'_content_detail'] = $value2;
                     $data_content_detail[$key][$key2]['content'] = $post['content_detail'][$key+1][$key2];
                     $data_content_detail[$key][$key2]['order'] = $detail_order++;
                     $data_content_detail[$key][$key2]['created_at'] = date('Y-m-d H:i:s');
@@ -493,22 +503,22 @@ class ApiSubscription extends Controller
         }
 
         // hapus content & detail
-        $del_content = SubscriptionContent::where('id_subscription','=',$post['id_subscription'])->delete();
+        $del_content = $contentTable->where('id_'.$source,'=',$post['id_'.$source])->delete();
 
         // create content & detail
-        foreach ($post['id_subscription_content'] as $key => $value) 
+        foreach ($post['id_'.$source.'_content'] as $key => $value) 
         {
-            $save = SubscriptionContent::create($data_content[$key]);
+            $save = $contentTable->create($data_content[$key]);
 
-            $id_subscription_content = $save['id_subscription_content'];
+            $id_content = $save['id_'.$source.'_content'];
 
             if ( ($post['id_content_detail'][$key+1]??0) ) {
 
                 foreach ($post['id_content_detail'][$key+1] as $key2 => $value2) {
 
-                    $data_content_detail[$key][$key2]['id_subscription_content'] = $id_subscription_content;
+                    $data_content_detail[$key][$key2]['id_'.$source.'_content'] = $id_content;
 
-                    $save = SubscriptionContentDetail::create($data_content_detail[$key][$key2]);
+                    $save = $contentTableDetail->create($data_content_detail[$key][$key2]);
                 }
             }
         }
