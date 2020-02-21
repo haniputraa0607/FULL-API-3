@@ -220,4 +220,9 @@ class Deal extends Model
     {
         return $this->hasMany(\Modules\Deals\Entities\DealsProductDiscount::class, 'id_deals', 'id_deals');
     }
+
+    public function deals_content()
+    {
+        return $this->hasMany(\Modules\Deals\Entities\DealsContent::class, 'id_deals', 'id_deals');
+    }
 }

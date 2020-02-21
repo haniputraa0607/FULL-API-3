@@ -34,6 +34,7 @@ use Modules\Deals\Http\Requests\Deals\Update;
 use Modules\Deals\Http\Requests\Deals\Delete;
 use Modules\Deals\Http\Requests\Deals\ListDeal;
 use Modules\Deals\Http\Requests\Deals\DetailDealsRequest;
+use Modules\Deals\Http\Requests\Deals\UpdateContentRequest;
 
 use Illuminate\Support\Facades\Schema;
 
@@ -46,6 +47,7 @@ class ApiDeals extends Controller
         $this->user     = "Modules\Users\Http\Controllers\ApiUser";
         $this->hidden_deals     = "Modules\Deals\Http\Controllers\ApiHiddenDeals";
         $this->autocrm = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
+        $this->subscription = "Modules\Subscription\Http\Controllers\ApiSubscription";
     }
 
     public $saveImage = "img/deals/";
@@ -102,6 +104,9 @@ class ApiDeals extends Controller
         }
         if (isset($post['deals_description'])) {
             $data['deals_description'] = $post['deals_description'];
+        }
+        if (isset($post['product_type'])) {
+            $data['product_type'] = $post['product_type'];
         }
         if (isset($post['deals_tos'])) {
             $data['deals_tos'] = $post['deals_tos'];
@@ -300,7 +305,7 @@ class ApiDeals extends Controller
                 // 'deals_vouchers.deals_user.user'
             ])->where('id_deals', $request->json('id_deals'))->with(['outlets', 'outlets.city', 'product','brand']);
         }else{
-            $deals->addSelect('id_deals','deals_title','deals_second_title','deals_voucher_price_point','deals_voucher_price_cash','deals_total_voucher','deals_total_claimed','deals_voucher_type','deals_image','deals_start','deals_end','deals_type');
+            $deals->addSelect('id_deals','deals_title','deals_second_title','deals_voucher_price_point','deals_voucher_price_cash','deals_total_voucher','deals_total_claimed','deals_voucher_type','deals_image','deals_start','deals_end','deals_type','is_offline','is_online');
             if(strpos($request->user()->level,'Admin')>=0){
                 $deals->addSelect('deals_promo_id','deals_publish_start','deals_publish_end','created_at');
             }
@@ -1125,19 +1130,27 @@ class ApiDeals extends Controller
         $post = $request->json()->all();
         $user = $request->user();
 
-        $deals = Deal::
-        				with([  
-                            'deals_product_discount', 
-                            'deals_product_discount_rules', 
-                            'deals_tier_discount_product', 
-                            'deals_tier_discount_rules', 
-                            'deals_buyxgety_product_requirement', 
-                            'deals_buyxgety_rules',
-                            'outlets'
-                        ])
-                        ->where('id_deals', '=', $post['id_deals'])
-                        ->first();
-        // return $deals;
+        $deals = Deal::where('id_deals', '=', $post['id_deals']);
+        if ($post['step'] == 1 || $post['step'] == 'all') {
+			$deals = $deals->with(['outlets']);
+        }
+
+        if ($post['step'] == 2 || $post['step'] == 'all') {
+			$deals = $deals->where('is_online', '=', 1)->with([  
+                'deals_product_discount', 
+                'deals_product_discount_rules', 
+                'deals_tier_discount_product', 
+                'deals_tier_discount_rules', 
+                'deals_buyxgety_product_requirement', 
+                'deals_buyxgety_rules'
+            ]);
+        }
+
+        if ($post['step'] == 3 || $post['step'] == 'all') {
+			$deals = $deals->with(['deals_content.deals_content_details']);
+        }
+        
+        $deals = $deals->first();
 
         if (isset($deals)) {
             $deals = $deals->toArray();
@@ -1158,5 +1171,40 @@ class ApiDeals extends Controller
         }
 
         return response()->json($result);
+    }
+
+    public function updateContent(UpdateContentRequest $request)
+    {
+    	$post = $request->json()->all();
+// return $post;    	
+    	db::beginTransaction();
+    	$update = app($this->subscription)->createOrUpdateContent($post, 'deals');
+// return [$update];
+    	if ($update) 
+    	{
+			$update = Deal::where('id_deals','=',$post['id_deals'])->update(['deals_description' => $post['deals_description'], 'step_complete' => 1]);
+            if ($update) 
+			{
+		        DB::commit();
+		    } 
+		    else 
+		    {
+		        DB::rollback();
+		        return  response()->json([
+		            'status'   => 'fail',
+		            'messages' => 'Update Deals failed'
+		        ]);
+		    }
+        } 
+        else 
+        {
+            DB::rollback();
+            return  response()->json([
+                'status'   => 'fail',
+                'messages' => 'Update Deals failed'
+            ]);
+        }
+
+         return response()->json(MyHelper::checkUpdate($update));
     }
 }

@@ -1925,7 +1925,8 @@ class ApiOnlineTransaction extends Controller
             'id_outlet' => $outlet['id_outlet'],
             'outlet_code' => $outlet['outlet_code'],
             'outlet_name' => $outlet['outlet_name'],
-            'outlet_address' => $outlet['outlet_address']
+            'outlet_address' => $outlet['outlet_address'],
+            'today' => $outlet['today']
         ];
         $result['item'] = array_values($tree);
         $result['is_advance_order'] = $is_advance;

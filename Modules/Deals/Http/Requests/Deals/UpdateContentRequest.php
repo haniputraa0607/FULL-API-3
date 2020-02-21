@@ -6,7 +6,7 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Http\Exceptions\HttpResponseException;
 
-class DetailDealsRequest extends FormRequest
+class UpdateContentRequest extends FormRequest
 {
     /**
      * Get the validation rules that apply to the request.
@@ -16,8 +16,14 @@ class DetailDealsRequest extends FormRequest
     public function rules()
     {
         return [
-            'id_deals' => 'nullable|integer',
-            'step' => 'nullable',
+            'id_deals'           	=> 'required',
+            'content_title'      	=> 'required',
+            'id_deals_content'   	=> '',
+            'id_content_detail'  	=> '',
+            'visible'            	=> '',
+            'content_detail'     	=> '',
+            'content_detail_order'  => '',
+            'deals_description'  	=> ''
         ];
     }
 
