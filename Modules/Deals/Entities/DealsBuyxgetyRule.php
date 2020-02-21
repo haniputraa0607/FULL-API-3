@@ -56,11 +56,11 @@ class DealsBuyxgetyRule extends Eloquent
 
 	public function product()
 	{
-		return $this->belongsTo(\App\Models\Product::class, 'benefit_id_product');
+		return $this->belongsTo(\App\Http\Models\Product::class, 'benefit_id_product');
 	}
 
 	public function deal()
 	{
-		return $this->belongsTo(\App\Models\Deal::class, 'id_deals');
+		return $this->belongsTo(\App\Http\Models\Deal::class, 'id_deals');
 	}
 }
