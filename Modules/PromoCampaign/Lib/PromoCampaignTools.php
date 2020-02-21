@@ -108,7 +108,7 @@ class PromoCampaignTools{
 		$mod = [];
 		foreach ($trxs as $key => $value) {
 			foreach ($value['modifiers'] as $key2 => $value2) {
-				$mod[] = $value2;
+				$mod[] = $value2['id_product_modifier']??$value2;
 			}
 		}
 		// remove duplicate modifiers
