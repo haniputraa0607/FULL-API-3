@@ -65,9 +65,10 @@ class ApiReferralController extends Controller
                 ->get();
                 break;
             case 'trx':
-                $data = PromoCampaignReferralTransaction::select('promo_campaign_referral_transactions.*','transactions.id_transaction','transactions.transaction_receipt_number','transactions.trasaction_type','transactions.transaction_grandtotal','users.name','users.phone')
+                $data = PromoCampaignReferralTransaction::select('promo_campaign_referral_transactions.*','transactions.id_transaction','transactions.transaction_receipt_number','transactions.trasaction_type','transactions.transaction_grandtotal','users.name','users.phone','referrer.name as referrer_name')
                 ->join('transactions','promo_campaign_referral_transactions.id_transaction','=','transactions.id_transaction')
                 ->join('users','users.id','=','transactions.id_user')
+                ->join('users as referrer','referrer.id','=','promo_campaign_referral_transactions.id_referrer')
                 ->orderBy(...$order);
                 $this->applyFilter($data,$post);
                 $data = $data->paginate($perpage);
