@@ -16,6 +16,7 @@ use App\Http\Models\DealsUser;
 use App\Http\Models\DealsVoucher;
 use App\Http\Models\Outlet;
 use App\Http\Models\Setting;
+use App\Http\Models\TransactionVoucher;
 
 use Modules\Deals\Http\Requests\Deals\Voucher;
 use Modules\Deals\Http\Requests\Deals\UseVoucher;
@@ -681,5 +682,43 @@ class ApiDealsVoucher extends Controller
     			'messages' => 'Failed to update voucher'
     		]);
     	}
+    }
+
+    public function returnVoucher($id_transaction)
+    {
+    	$getVoucher = TransactionVoucher::where('id_transaction','=',$id_transaction)->with('deals_voucher.deals')->first();
+
+    	if ($getVoucher) 
+    	{
+	    	$update = DealsUser::where('id_deals_voucher', '=', $getVoucher['id_deals_voucher'])->update(['used_at' => null]);
+
+	    	if ($update) 
+	    	{
+	    		$update = TransactionVoucher::where('id_deals_voucher', '=', $getVoucher['id_deals_voucher'])->update(['status' => 'failed']);
+
+	    		if ($update) 
+	    		{
+	    			$update = Deal::where('id_deals','=',$getVoucher['deals_voucher']['deals']['id_deals'])->update(['deals_total_used' => $getVoucher['deals_voucher']['deals']['deals_total_used']-1]);
+
+	    			if ($update) 
+		    		{
+		    			return true;		
+		    		}
+		    		else
+		    		{
+		    			return false;
+		    		}
+	    		}
+	    		else
+	    		{
+	    			return false;
+	    		}
+	    	}
+	    	else
+	    	{
+	    		return false;
+	    	}
+    	}
+
     }
 }

@@ -1806,7 +1806,7 @@ class ApiPromoCampaign extends Controller
     public function getProduct($source, $query)
     {
     	// return $source;
-    	if ( ($query[$source.'_product_discount_rules']['is_all_product']??false) == 1) 
+    	if ( ($query[$source.'_product_discount_rules']['is_all_product']??false) == 1 || ($query['promo_type']??false) == 'Referral') 
         {
         	$applied_product = '*';
         	$product = 'semua product';
@@ -1976,5 +1976,41 @@ class ApiPromoCampaign extends Controller
 	    $deals = $deals->first();
 
         return $deals;
+    }
+
+    public function promoError($source, $errore=null, $errors=null)
+    {
+    	if ($source == 'transaction') 
+    	{
+    		$setting = ['promo_error_title', 'promo_error_ok_button', 'promo_error_cancel_button'];
+	    	$getData = Setting::whereIn('key',$setting)->get()->toArray();
+	    	$data = [];
+	    	foreach ($getData as $key => $value) {
+	    		$data[$key] = $value;
+	    	}
+
+	    	$result['title'] = $data['promo_error_title']??'Promo tidak berlaku';
+	        $result['button_ok'] = $data['promo_error_ok_button']??'Tambah item';
+	        $result['button_cancel'] = $data['promo_error_cancel_button']??'Tidak';
+
+    	}
+    	else
+    	{
+    		return null;
+    	}
+
+    	$result['message'] = [];
+    	if(isset($errore)){
+			foreach ($errore as $key => $value) {
+				array_push($result['message'], $value);
+			}
+		}
+		if(isset($errors)){
+			foreach ($errors as $key => $value) {
+				array_push($result['message'], $value);
+			}
+		}
+
+	    return $result;	
     }
 }
