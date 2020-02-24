@@ -59,6 +59,7 @@ class ApiPromoCampaign extends Controller
         $this->online_transaction   = "Modules\Transaction\Http\Controllers\ApiOnlineTransaction";
         $this->fraud   = "Modules\SettingFraud\Http\Controllers\ApiFraud";
         $this->deals   = "Modules\Deals\Http\Controllers\ApiDeals";
+        $this->voucher   = "Modules\Deals\Http\Controllers\ApiDealsVoucher";
     }
 
     public function index(Request $request)
@@ -1777,8 +1778,27 @@ class ApiPromoCampaign extends Controller
 	        $result['messages'] = $trx['messages'];
 	        $result['promo_error'] = $trx['promo_error'];
         }
+        if ($source == 'deals') {
+        	$change_used_voucher = app($this->voucher)->useVoucher($request->id_deals_user);
+        	if (($change_used_voucher['status']??false) == 'success') {
+	        	$result['result']['webview_url'] = $change_used_voucher['webview_url'];
+	        	$result['result']['webview_url_v2'] = $change_used_voucher['webview_url_v2'];
 
-
+        	}else{
+        		return [
+	                'status'=>'fail',
+	                'messages'=>['Something went wrong']
+	            ]; 
+        	}
+        }else{
+        	$change_used_voucher = app($this->voucher)->useVoucher($request->id_deals_user, 1);
+        	if (!$change_used_voucher) {
+        		return [
+	                'status'=>'fail',
+	                'messages'=>['Something went wrong']
+	            ];
+        	}
+        }
 		return $result;
     }
 

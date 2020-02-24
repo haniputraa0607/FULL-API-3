@@ -25,7 +25,7 @@ Route::group(['prefix' => 'api/deals', 'namespace' => 'Modules\Deals\Http\Contro
 
 Route::group(['middleware' => ['auth:api', 'log_activities', 'scopes:apps'], 'prefix' => 'api/voucher', 'namespace' => 'Modules\Deals\Http\Controllers'], function () {
     Route::any('me', 'ApiDealsVoucher@myVoucher');
-    Route::any('use', 'ApiDealsVoucher@useVoucher');
+    Route::any('cancel', 'ApiDealsVoucher@unuseVoucher');
 });
 
 /* Webview */
