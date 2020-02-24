@@ -8,69 +8,133 @@ use Illuminate\Routing\Controller;
 
 use \App\Lib\MyHelper;
 
+use \App\Http\Models\User;
 use \Modules\PromoCampaign\Entities\PromoCampaignReferral;
 use \Modules\PromoCampaign\Entities\PromoCampaign;
+use \Modules\PromoCampaign\Entities\UserReferralCode;
+use Modules\PromoCampaign\Entities\PromoCampaignReferralTransaction;
 
 class ApiReferralController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     * @return Response
-     */
-    public function index()
-    {
-        return view('promocampaign::index');
+    public function applyFilter($model,$rule,$table='promo_campaign_referral_transactions') {
+        if($rule['date_start']??false){
+            $model->whereDate($table.'.created_at','>=',date('Y-m-d',strtotime($rule['date_start'])));
+        }
+        if($rule['date_end']??false){
+            $model->whereDate($table.'.created_at','<=',date('Y-m-d',strtotime($rule['date_end'])));
+        }
     }
-
     /**
-     * Show the form for creating a new resource.
-     * @return Response
-     */
-    public function create()
-    {
-        return view('promocampaign::create');
-    }
-
-    /**
-     * Store a newly created resource in storage.
-     * @param Request $request
-     * @return Response
-     */
-    public function store(Request $request)
-    {
-        //
-    }
-
-    /**
-     * Show the specified resource.
-     * @param int $id
-     * @return Response
-     */
-    public function show($id)
-    {
-        return view('promocampaign::show');
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     * @param int $id
-     * @return Response
-     */
-    public function edit($id)
-    {
-        return view('promocampaign::edit');
-    }
-
-    /**
-     * Update the specified resource in storage.
+     * Provide report data
      * @param Request $request
      * @param int $id
      * @return Response
      */
-    public function update(Request $request, $id)
+    public function report(Request $request)
     {
-        //
+        $perpage = 20;
+        $order = ['promo_campaign_referral_transactions.created_at','desc'];
+        $data['user'] = UserReferralCode::select('users.name','users.phone','user_referral_codes.*','promo_campaign_promo_codes.promo_code as referral_code')
+            ->join('promo_campaign_promo_codes','promo_campaign_promo_codes.id_promo_campaign_promo_code','=','user_referral_codes.id_promo_campaign_promo_code')
+            ->join('users','user_referral_codes.id_user','=','users.id')
+            ->paginate($perpage);
+        $data['transaction'] = PromoCampaignReferralTransaction::join('transactions','promo_campaign_referral_transactions.id_transaction','=','transactions.id_transaction')
+            ->join('users','users.id','=','transactions.id_user')
+            ->orderBy('promo_campaign_referral_transactions.created_at','desc')
+            ->orderBy(...$order)
+            ->paginate($perpage);
+        return MyHelper::checkGet($data);
     }
+    public function reportAjax(Request $request, $key)
+    {
+        $post = $request->json()->all();
+        $perpage = 20;
+        $order = ['promo_campaign_referral_transactions.created_at','desc'];
+        switch ($key) {
+            case 'code':
+                $data = UserReferralCode::select('users.name','users.phone','user_referral_codes.*','promo_campaign_promo_codes.promo_code as referral_code')
+                ->join('promo_campaign_promo_codes','promo_campaign_promo_codes.id_promo_campaign_promo_code','=','user_referral_codes.id_promo_campaign_promo_code')
+                ->join('users','user_referral_codes.id_user','=','users.id')
+                ->paginate($perpage);
+                break;
+            case 'code-summary':
+                $data['data'] = UserReferralCode::select('users.name','users.phone','user_referral_codes.number_transaction')
+                ->join('users','user_referral_codes.id_user','=','users.id')
+                ->orderBy('number_transaction','desc')
+                ->take(30)
+                ->get();
+                break;
+            case 'trx':
+                $data = PromoCampaignReferralTransaction::select('promo_campaign_referral_transactions.*','transactions.id_transaction','transactions.transaction_receipt_number','transactions.trasaction_type','transactions.transaction_grandtotal','users.name','users.phone','referrer.name as referrer_name')
+                ->join('transactions','promo_campaign_referral_transactions.id_transaction','=','transactions.id_transaction')
+                ->join('users','users.id','=','transactions.id_user')
+                ->join('users as referrer','referrer.id','=','promo_campaign_referral_transactions.id_referrer')
+                ->orderBy(...$order);
+                $this->applyFilter($data,$post);
+                $data = $data->paginate($perpage);
+                break;
+            case 'trx-summary':
+                $data['data'] = PromoCampaignReferralTransaction::select(\DB::raw('count(*) as total,Date(created_at) as trx_date'))
+                ->groupBy(\DB::raw('trx_date'))
+                ->orderBy('trx_date');
+                $this->applyFilter($data['data'],$post);
+                $data['data']=$data['data']->get();
+                break;
+            case 'user':
+                $id_user = User::select('id')->where('phone',$post['phone'])->pluck('id')->first();
+                $data = PromoCampaignReferralTransaction::with(['user'=>function($query){
+                        $query->select(['id','name','phone']);
+                    },'transaction'=>function($query){
+                        $query->select(['id_transaction','transaction_receipt_number','trasaction_type','transaction_grandtotal']);
+                    }])->orderBy(...$order)->where('id_referrer',$id_user);
+                $this->applyFilter($data,$post);
+                $data = $data->paginate($perpage);
+                break;
+            case 'user-summary':
+                $id_user = User::select('id')->where('phone',$post['phone'])->pluck('id')->first();
+                $data['data'] = PromoCampaignReferralTransaction::select(\DB::raw('count(*) as total,Date(promo_campaign_referral_transactions.created_at) as trx_date'))
+                    ->join('transactions','promo_campaign_referral_transactions.id_transaction','=','transactions.id_transaction')
+                    ->join('users','users.id','=','transactions.id_user')
+                    ->where('id_referrer',$id_user)
+                    ->groupBy('trx_date');
+                $this->applyFilter($data['data'],$post);
+                $data['data'] = $data['data']->get();
+                break;
+            case 'user-total':
+                $data = User::select('id','name','phone','promo_campaign_promo_codes.promo_code as referral_code','number_transaction','cashback_earned')
+                    ->join('user_referral_codes','users.id','=','user_referral_codes.id_user')
+                    ->join('promo_campaign_promo_codes','promo_campaign_promo_codes.id_promo_campaign_promo_code','=','user_referral_codes.id_promo_campaign_promo_code')
+                    ->where('phone',$post['phone'])->first();
+                break;
+            default:
+                $data = [];
+                break;
+        }
+        return MyHelper::checkGet($data);
+    }
+    public function reportUser(Request $request)
+    {
+        $perpage = 20;
+        $post = $request->json()->all();
+        $order = ['promo_campaign_referral_transactions.created_at','desc'];
+        if($post['ajax']??false){
+            $id_user = User::select('id')->where('phone',$post['phone'])->pluck('id')->first();
+            $data = PromoCampaignReferralTransaction::with(['user'=>function($query) use ($select_user){
+                    $query->select($select_user);
+                },'transaction'=>function($query) use ($select_trx){
+                    $query->select($select_trx);
+                }])->orderBy(...$order)->where('id_referrer',$id_user);
+            $this->applyFilter($data,$post);
+            $data = $data->paginate($perpage);
+        }else{
+            $data = User::select('id','name','phone','promo_campaign_promo_codes.promo_code as referral_code','number_transaction','cashback_earned')
+                ->join('user_referral_codes','users.id','=','user_referral_codes.id_user')
+                ->join('promo_campaign_promo_codes','promo_campaign_promo_codes.id_promo_campaign_promo_code','=','user_referral_codes.id_promo_campaign_promo_code')
+                ->where('phone',$post['phone'])->first();
+        }
+        return MyHelper::checkGet($data);
+    }
+
 
     /**
      * Remove the specified resource from storage.

@@ -629,7 +629,10 @@ class ApiOnlineTransaction extends Controller
             $addPromoCounter = PromoCampaignReferralTransaction::create([
                 'id_promo_campaign_promo_code' =>$code->id_promo_campaign_promo_code,
                 'id_user' => $insertTransaction['id_user'],
-                'id_transaction' => $insertTransaction['id_transaction']
+                'id_referrer' => UserReferralCode::select('id_user')->where('id_promo_campaign_promo_code',$code->id_promo_campaign_promo_code)->pluck('id_user')->first(),
+                'id_transaction' => $insertTransaction['id_transaction'],
+                'referred_bonus_type' => $promo_discount?'Product Discount':'Cashback',
+                'referred_bonus' => $promo_discount?:$insertTransaction['transaction_cashback_earned']
             ]);
             if(!$addPromoCounter){
                 DB::rollback();
