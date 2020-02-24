@@ -852,6 +852,8 @@ class ApiOutletApp extends Controller
         $outlet = $request->user();
         $profile['outlet_name'] = $outlet['outlet_name'];
         $profile['outlet_code'] = $outlet['outlet_code'];
+        $profile['outlet_address'] = $outlet['outlet_address'];
+        $profile['outlet_phone'] = $outlet['outlet_phone'];
         $profile['status'] = 'success';
 
         return response()->json($profile);
@@ -964,14 +966,14 @@ class ApiOutletApp extends Controller
 
         }
 
-        $uncategorized = ProductPrice::join('products', 'product_prices.id_product', 'products.id_product')
-                                        ->whereIn('products.id_product', function($query){
-                                            $query->select('id_product')->from('products')->whereNull('id_product_category');
-                                        })->where('id_outlet', $outlet['id_outlet'])
-                                        ->select('products.id_product', 'product_code', 'product_name', 'product_stock_status')->get();
+        // $uncategorized = ProductPrice::join('products', 'product_prices.id_product', 'products.id_product')
+        //                                 ->whereIn('products.id_product', function($query){
+        //                                     $query->select('id_product')->from('products')->whereNull('id_product_category');
+        //                                 })->where('id_outlet', $outlet['id_outlet'])
+        //                                 ->select('products.id_product', 'product_code', 'product_name', 'product_stock_status')->get();
 
         $result['categorized'] = $categorized;
-        $result['uncategorized'] = $uncategorized;
+        // $result['uncategorized'] = $uncategorized;
         return response()->json(MyHelper::checkGet($result));
     }
 
