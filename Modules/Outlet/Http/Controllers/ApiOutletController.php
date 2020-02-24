@@ -1975,7 +1975,8 @@ class ApiOutletController extends Controller
                 $subTitleSuccess = Setting::where('key', 'order_now_sub_title_success')->first()->value;
                 $subTitleFail = Setting::where('key', 'order_now_sub_title_fail')->first()->value;
 
-                $outlet = Outlet::selectRaw('outlets.id_outlet, outlets.outlet_name, outlets.outlet_code,outlets.outlet_status,outlets.outlet_address,outlets.id_city, outlets.outlet_latitude, outlets.outlet_longitude,
+                $outlet = Outlet::join('cities', 'cities.id_city', 'outlets.id_city')
+                    ->selectRaw('outlets.id_outlet, outlets.outlet_name, outlets.outlet_code,outlets.outlet_status,outlets.outlet_address,outlets.id_city, outlets.outlet_latitude, outlets.outlet_longitude,
                         (111.111 * DEGREES(ACOS(LEAST(1.0, COS(RADIANS(outlets.outlet_latitude))
                              * COS(RADIANS('.$post['latitude'].'))
                              * COS(RADIANS(outlets.outlet_longitude - '.$post['longitude'].'))
