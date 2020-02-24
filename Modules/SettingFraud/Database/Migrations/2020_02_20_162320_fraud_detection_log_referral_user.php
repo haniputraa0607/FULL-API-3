@@ -16,10 +16,10 @@ class FraudDetectionLogReferralUser extends Migration
         Schema::create('fraud_detection_log_referral_users', function (Blueprint $table) {
             $table->increments('id_fraud_detection_log_referral_users');
             $table->unsignedInteger('id_user');
-            $table->enum('status', ['Active', 'Inactive'])->default('Active');
+            $table->unsignedInteger('id_promo_campaign_referral_transaction');
             $table->text('referral_code')->nullable();
             $table->dateTime('referral_code_use_date')->nullable();
-            $table->integer('referral_code_use_date_count')->nullable();
+            $table->enum('status', ['Active', 'Inactive'])->default('Active');
             $table->timestamps();
         });
     }

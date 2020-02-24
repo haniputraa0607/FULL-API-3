@@ -1226,26 +1226,34 @@ class ApiFraud extends Controller
 
     }
 
-    function cronFraudReferralUsers($data){
+    function cronFraudReferralUsers(){
+        // run this cron every 59 minutes
+        $currentDate = date('Y-m-d');
         $getDataFromReportReferral = PromoCampaignReferralTransaction::join('promo_campaign_promo_codes as pcpc','pcpc.id_promo_campaign_promo_code','promo_campaign_referral_transactions.id_promo_campaign_promo_code')
-                                    ->where('promo_campaign_referral_transactions.id_user', $data['id_user'])
-                                    ->select('promo_campaign_referral_transactions.*', 'promo_campaign_promo_codes.promo_code')->get()->toArray();
+                                    ->leftJoin('fraud_detection_log_referral_users as fd','fd.id_promo_campaign_referral_transaction','promo_campaign_referral_transactions.id_promo_campaign_referral_transaction')
+                                    ->whereDate('promo_campaign_referral_transactions.created_at', $currentDate)
+                                    ->whereNull('fd.id_promo_campaign_referral_transaction')
+                                    ->select('promo_campaign_referral_transactions.*', 'pcpc.promo_code')
+                                    ->get()->toArray();
+
         if(count($getDataFromReportReferral) > 0){
             foreach ($getDataFromReportReferral as $dt){
-                $getLogFraudReferralUser = FraudDetectionLogReferralUsers::where('id_user')->where('referral_code', $dt['promo_code'])->first();
+                $getLogFraudReferralUser = FraudDetectionLogReferralUsers::where('id_user')->where('id_promo_campaign_referral_transaction', $dt['id_promo_campaign_referral_transaction'])->first();
 
-                $dtToInsert = [
-                    'id_user' => $dt['id_user'],
-                    'referral_code' => $dt['promo_code'],
-                    'referral_code_use_date' => $dt['created_at'],
-                    'referral_code_use_date_count' => 1
-                ];
-                if($getLogFraudReferralUser){
+                if(empty($getLogFraudReferralUser)){
+                    $dtToInsert = [
+                        'id_user' => $dt['id_user'],
+                        'id_promo_campaign_referral_transaction' => $dt['id_promo_campaign_referral_transaction'],
+                        'referral_code' => $dt['promo_code'],
+                        'referral_code_use_date' => $dt['created_at']
+                    ];
 
+                    FraudDetectionLogReferralUsers::create($dtToInsert);
                 }
             }
-            FraudDetectionLogReferralUsers::create();
         }
+
+        return 'true';
     }
 
     public function deleteDailyLog(){

@@ -11,10 +11,10 @@ class FraudDetectionLogReferralUsers extends Model
 
 	protected $fillable = [
 		'id_user',
-		'status',
+        'id_promo_campaign_referral_transaction',
 		'referral_code',
 		'referral_code_use_date',
-        'referral_code_use_date_count'
+		'status'
 	];
 
 

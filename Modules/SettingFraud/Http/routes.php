@@ -21,3 +21,8 @@ Route::group(['middleware' => ['auth:api','log_activities', 'user_agent', 'scope
     Route::any('device-login/update-status', ['middleware' => 'feature_control:192', 'uses' => 'ApiFraud@updateDeviceLoginStatus']);
 
 });
+
+Route::group(['prefix' => 'api/setting-fraud/cron', 'namespace' => 'Modules\SettingFraud\Http\Controllers'], function()
+{
+    Route::any('referral', 'ApiFraud@cronFraudReferralUsers');
+});
