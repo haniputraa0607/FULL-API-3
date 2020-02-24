@@ -49,12 +49,14 @@ class ApiReferralController extends Controller
     {
         $post = $request->json()->all();
         $perpage = 20;
-        $order = ['promo_campaign_referral_transactions.created_at','desc'];
+        $order = [$post['order_by']??'promo_campaign_referral_transactions.created_at',$post['order_sorting']??'desc'];
         switch ($key) {
             case 'code':
+                $order = [$post['order_by']??'number_transaction',$post['order_sorting']??'desc'];
                 $data = UserReferralCode::select('users.name','users.phone','user_referral_codes.*','promo_campaign_promo_codes.promo_code as referral_code')
                 ->join('promo_campaign_promo_codes','promo_campaign_promo_codes.id_promo_campaign_promo_code','=','user_referral_codes.id_promo_campaign_promo_code')
                 ->join('users','user_referral_codes.id_user','=','users.id')
+                ->orderBy(...$order)
                 ->paginate($perpage);
                 break;
             case 'code-summary':
@@ -65,7 +67,7 @@ class ApiReferralController extends Controller
                 ->get();
                 break;
             case 'trx':
-                $data = PromoCampaignReferralTransaction::select('promo_campaign_referral_transactions.*','transactions.id_transaction','transactions.transaction_receipt_number','transactions.trasaction_type','transactions.transaction_grandtotal','users.name','users.phone','referrer.name as referrer_name')
+                $data = PromoCampaignReferralTransaction::select('promo_campaign_referral_transactions.*','transactions.id_transaction','transactions.transaction_receipt_number','transactions.trasaction_type','transactions.transaction_grandtotal','users.name','users.phone','referrer.name as referrer_name','referrer.phone as referrer_phone')
                 ->join('transactions','promo_campaign_referral_transactions.id_transaction','=','transactions.id_transaction')
                 ->join('users','users.id','=','transactions.id_user')
                 ->join('users as referrer','referrer.id','=','promo_campaign_referral_transactions.id_referrer')
