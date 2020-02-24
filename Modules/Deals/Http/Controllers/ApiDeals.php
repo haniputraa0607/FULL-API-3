@@ -1137,12 +1137,12 @@ class ApiDeals extends Controller
 
         if ($post['step'] == 2 || $post['step'] == 'all') {
 			$deals = $deals->where('is_online', '=', 1)->with([  
-                'deals_product_discount', 
+                'deals_product_discount.product', 
                 'deals_product_discount_rules', 
-                'deals_tier_discount_product', 
+                'deals_tier_discount_product.product', 
                 'deals_tier_discount_rules', 
-                'deals_buyxgety_product_requirement', 
-                'deals_buyxgety_rules'
+                'deals_buyxgety_product_requirement.product', 
+                'deals_buyxgety_rules.product'
             ]);
         }
 

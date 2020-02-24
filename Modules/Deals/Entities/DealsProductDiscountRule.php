@@ -48,6 +48,6 @@ class DealsProductDiscountRule extends Eloquent
 
 	public function deal()
 	{
-		return $this->belongsTo(\App\Models\Deal::class, 'id_deals');
+		return $this->belongsTo(\App\Http\Models\Deal::class, 'id_deals');
 	}
 }
