@@ -671,6 +671,16 @@ class ApiOnlineTransaction extends Controller
                     'messages'  => ['Insert Transaction Failed']
                 ]);
             }
+
+            //======= Start Check Fraud Referral =======//
+            $data = [
+                'id_user' => $insertTransaction['id_user'],
+                'referral_code' => $request->promo_code,
+                'referral_code_use_date' => $insertTransaction['transaction_date'],
+                'id_transaction' => $insertTransaction['id_transaction']
+            ];
+            app($this->setting_fraud)->fraudCheckReferral($data);
+            //======= End Check Fraud Referral =======//
         }
 
         // add transaction voucher

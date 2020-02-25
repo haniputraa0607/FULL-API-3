@@ -25,14 +25,14 @@ class FraudDetectionLogTransactionPoint extends Model
 	];
 
 	function user() {
-		return $this->belongsTo(User::class, 'id_user', 'id');
+		return $this->belongsTo(\App\Http\Models\User::class, 'id_user', 'id');
 	}
 
     function mostOutlet() {
-        return $this->belongsTo(Outlet::class, 'most_outlet', 'id_outlet');
+        return $this->belongsTo(\App\Http\Models\Outlet::class, 'most_outlet', 'id_outlet');
     }
 
     function atOutlet() {
-        return $this->belongsTo(Outlet::class, 'at_outlet', 'id_outlet');
+        return $this->belongsTo(\App\Http\Models\Outlet::class, 'at_outlet', 'id_outlet');
     }
 }

@@ -19,15 +19,15 @@ class FraudDetectionLog extends Model
 	];
 
 	function user() {
-		return $this->belongsTo(User::class, 'id_user', 'id');
+		return $this->belongsTo(\App\Http\Models\User::class, 'id_user', 'id');
 	}
 
 	function transaction() {
-		return $this->belongsTo(Transaction::class, 'id_transaction', 'id_transaction');
+		return $this->belongsTo(\App\Http\Models\Transaction::class, 'id_transaction', 'id_transaction');
 	}
 
 	function userDevice() {
-		return $this->belongsTo(UserDevice::class, 'id_device_user', 'id_device_user');
+		return $this->belongsTo(\App\Http\Models\UserDevice::class, 'id_device_user', 'id_device_user');
 	}
 
 }

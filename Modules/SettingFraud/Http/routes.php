@@ -1,6 +1,6 @@
 <?php
 
-Route::group(['middleware' => ['auth:api','log_activities', 'user_agent', 'scopes:ap'], 'prefix' => 'api/setting-fraud', 'namespace' => 'Modules\SettingFraud\Http\Controllers'], function()
+Route::group(['middleware' => ['auth:api','log_activities', 'user_agent', 'scopes:be'], 'prefix' => 'api/setting-fraud', 'namespace' => 'Modules\SettingFraud\Http\Controllers'], function()
 {
     Route::any('/', ['middleware' => 'feature_control:193', 'uses' => 'ApiSettingFraud@listSettingFraud']);
     Route::post('/update', ['middleware' => 'feature_control:192', 'uses' => 'ApiSettingFraud@updateSettingFraud']);
@@ -8,7 +8,7 @@ Route::group(['middleware' => ['auth:api','log_activities', 'user_agent', 'scope
     Route::any('config', ['uses' => 'ApiSettingFraud@fraudConfig']);
 });
 
-Route::group(['middleware' => ['auth:api','log_activities', 'user_agent', 'scopes:ap'], 'prefix' => 'api/fraud', 'namespace' => 'Modules\SettingFraud\Http\Controllers'], function()
+Route::group(['middleware' => ['auth:api','log_activities', 'user_agent', 'scopes:be'], 'prefix' => 'api/fraud', 'namespace' => 'Modules\SettingFraud\Http\Controllers'], function()
 {
     Route::any('list/user', ['middleware' => 'feature_control:196', 'uses' => 'ApiFraud@listUserFraud']);
     Route::any('detail/log/user', ['middleware' => 'feature_control:196', 'uses' => 'ApiFraud@detailLogUser']);
@@ -20,9 +20,4 @@ Route::group(['middleware' => ['auth:api','log_activities', 'user_agent', 'scope
     Route::any('detail/log/update', ['middleware' => 'feature_control:192', 'uses' => 'ApiFraud@updateLog']);
     Route::any('device-login/update-status', ['middleware' => 'feature_control:192', 'uses' => 'ApiFraud@updateDeviceLoginStatus']);
 
-});
-
-Route::group(['prefix' => 'api/setting-fraud/cron', 'namespace' => 'Modules\SettingFraud\Http\Controllers'], function()
-{
-    Route::any('referral', 'ApiFraud@cronFraudReferralUsers');
 });
