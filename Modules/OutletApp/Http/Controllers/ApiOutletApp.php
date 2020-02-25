@@ -10,6 +10,7 @@ use Illuminate\Routing\Controller;
 
 use App\Http\Models\Outlet;
 use App\Http\Models\OutletToken;
+use App\Http\Models\OutletSchedule;
 use App\Http\Models\Transaction;
 use App\Http\Models\TransactionPickup;
 use App\Http\Models\TransactionPickupGoSend;
@@ -24,7 +25,10 @@ use App\Http\Models\Product;
 use App\Http\Models\ProductCategory;
 use App\Http\Models\ProductPrice;
 use App\Http\Models\LogBalance;
+use Modules\Brand\Entities\BrandProduct;
+use Modules\Brand\Entities\Brand;
 
+use Modules\OutletApp\Http\Requests\ListProduct;
 use Modules\OutletApp\Http\Requests\UpdateToken;
 use Modules\OutletApp\Http\Requests\DeleteToken;
 use Modules\OutletApp\Http\Requests\DetailOrder;
@@ -863,13 +867,114 @@ class ApiOutletApp extends Controller
         $post = $request->json()->all();
         $outlet = $request->user();
 
-        $product = ProductPrice::where('id_outlet', $outlet['id_outlet'])
-                                ->where('id_product', $post['id_product'])
-                                ->update(['product_stock_status' => $post['product_stock_status']]);
+        if(!is_array($post['id_product'])){
+            $post['id_product'] = [$post['id_product']];
+        }
 
-        return response()->json(MyHelper::checkUpdate($product));
+        $product = ProductPrice::where('id_outlet', $outlet['id_outlet'])
+                                ->whereIn('id_product', $post['id_product'])
+                                ->where('product_stock_status','<>', $post['product_stock_status'])
+                                ->update(['product_stock_status' => $post['product_stock_status']]);
+        return [
+            'status'=>'success',
+            'result'=>['updated'=>$product]
+        ];
+    }
+    /**
+     * return list category group by brand
+     * @param  Request $request [description]
+     * @return [type]           [description]
+     */
+    public function listCategory(Request $request) {
+        $outlet = $request->user();
+        $sub = BrandProduct::select('id_brand','id_product','id_product_category')->distinct();
+        $data = DB::query()->fromSub($sub, 'brand_product')->select(\DB::raw('brand_product.id_brand,brand_product.id_product_category,count(*) as total_product,sum(case product_stock_status when "Sold Out" then 1 else 0 end) total_sold_out,product_category_name'))
+            ->join('product_categories','product_categories.id_product_category','=','brand_product.id_product_category')
+            ->join('products',function($query){
+                $query->on('brand_product.id_product','=','products.id_product')
+                ->groupBy('products.id_product');
+            })
+            // product availbale in outlet
+            ->join('product_prices','product_prices.id_product','=','products.id_product')
+            ->where('product_prices.id_outlet','=',$outlet['id_outlet'])
+            // brand produk ada di outlet
+            ->whereColumn('brand_outlet.id_outlet','=','product_prices.id_outlet')
+            ->join('brand_outlet','brand_outlet.id_brand','=','brand_product.id_brand')
+            ->where(function($query){
+                $query->where('product_prices.product_visibility','=','Visible')
+                        ->orWhere(function($q){
+                            $q->whereNull('product_prices.product_visibility')
+                            ->where('products.product_visibility', 'Visible');
+                        });
+            })
+            ->where('product_prices.product_status','=','Active')
+            ->whereNotNull('product_prices.product_price')
+            ->groupBy('brand_product.id_brand','brand_product.id_product_category')
+            ->orderBy('product_category_order')
+            ->get()->toArray();
+        $result = MyHelper::groupIt($data,'id_brand',null,function($key,&$val){
+            $brand = Brand::select('id_brand','name_brand','order_brand')
+            ->where([
+                'id_brand'=>$key,
+                'brand_active'=>1,
+                'brand_visibility'=>1
+            ])->first();
+            $brand['categories'] = $val;
+            $val = $brand;
+            return $key;
+        });
+        usort($result, function($a,$b){
+            return $a['order_brand'] <=> $b['order_brand'];
+        });
+        return MyHelper::checkGet(array_values($result));
+    }
+    /**
+     * Return only list product based on selected brand and category
+     * @param string $value [description]
+     */
+    public function productList(ListProduct $request) {
+        $outlet = $request->user();
+        $post = $request->json()->all();
+        $post['id_outlet'] = $outlet['id_outlet'];
+        $products = Product::select([
+                'products.id_product','products.product_name','product_prices.product_stock_status'
+            ])
+            ->join('brand_product','brand_product.id_product','=','products.id_product')
+            ->where('brand_product.id_brand','=',$post['id_brand'])
+            ->where('brand_product.id_product_category','=',$post['id_product_category'])
+            // produk tersedia di outlet
+            ->join('product_prices','product_prices.id_product','=','products.id_product')
+            ->where('product_prices.id_outlet','=',$post['id_outlet'])
+            // brand produk ada di outlet
+            ->where('brand_outlet.id_outlet','=',$post['id_outlet'])
+            ->join('brand_outlet','brand_outlet.id_brand','=','brand_product.id_brand')
+            ->where(function($query){
+                $query->where('product_prices.product_visibility','=','Visible')
+                        ->orWhere(function($q){
+                            $q->whereNull('product_prices.product_visibility')
+                            ->where('products.product_visibility', 'Visible');
+                        });
+            })
+            ->where('product_prices.product_status','=','Active')
+            ->whereNotNull('product_prices.product_price')
+            ->groupBy('products.id_product')
+            ->orderBy('products.position');
+        if($request->page){
+            $data = $products->paginate()->toArray();
+            if(empty($data['data'])){
+                return MyHelper::checkGet($data['data']);
+            }
+            return MyHelper::checkGet($data);
+        }else{
+            return MyHelper::checkGet($products->get()->toArray());
+        }
     }
 
+    /**
+     * Return list product and groub by its category
+     * @param  Request $request [description]
+     * @return [type]           [description]
+     */
     public function listProduct(Request $request){
         $outlet = $request->user();
         $listCategory = ProductCategory::join('products', 'product_categories.id_product_category', 'products.id_product_category')
@@ -1210,5 +1315,25 @@ class ApiOutletApp extends Controller
 
 
         return response()->json(MyHelper::checkUpdate($pickup));
+    }
+
+    public function listSchedule(Request $request) {
+        $schedules = $request->user()->outlet_schedules()->get();
+        return MyHelper::checkGet($schedules);
+    }
+
+    public function updateSchedule(Request $request) {
+        $post = $request->json()->all();
+        DB::beginTransaction();
+        $id_outlet = $request->user()->id_outlet;
+        foreach ($post['schedule'] as $value) {
+            $save = OutletSchedule::updateOrCreate(['id_outlet' => $id_outlet, 'day' => $value['day']], $value);
+            if (!$save) {
+                DB::rollBack();
+                return response()->json(['status' => 'fail']);
+            }
+        }
+        DB::commit();
+        return response()->json(['status' => 'success']);
     }
 }

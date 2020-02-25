@@ -11,8 +11,12 @@ Route::group(['middleware' => ['auth:outlet-app', 'log_activities_outlet_apps'],
     Route::post('order/taken', 'ApiOutletApp@takenOrder');
     Route::post('order/reject', 'ApiOutletApp@rejectOrder');
     Route::get('profile', 'ApiOutletApp@profile');
+    Route::get('category', 'ApiOutletApp@listCategory');
     Route::get('product', 'ApiOutletApp@listProduct');
+    Route::post('product', 'ApiOutletApp@productList');
     Route::post('product/sold-out', 'ApiOutletApp@productSoldOut');
+    Route::get('schedule', 'ApiOutletApp@listSchedule');
+    Route::post('schedule/update', 'ApiOutletApp@updateSchedule');
 });
 
 Route::group(['prefix' => 'api/outletapp', 'middleware' => 'log_activities_outlet_apps', 'namespace' => 'Modules\OutletApp\Http\Controllers'], function()

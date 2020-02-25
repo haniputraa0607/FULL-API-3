@@ -2152,7 +2152,11 @@ class MyHelper{
             if($col_modifier!==null){
                 $key = $col_modifier($value[$col],$value,$old);
             }else{
-                $key = $value[$col];
+            	if(is_array($value)){
+	                $key = $value[$col];
+            	}else{
+	                $key = $value->$col;
+            	}
             }
             $newArray[$key][]=$value;
         }
