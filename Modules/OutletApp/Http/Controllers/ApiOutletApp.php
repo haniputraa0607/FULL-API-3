@@ -937,7 +937,7 @@ class ApiOutletApp extends Controller
         $post = $request->json()->all();
         $post['id_outlet'] = $outlet['id_outlet'];
         $products = Product::select([
-                'products.id_product','products.product_name','product_prices.product_stock_status'
+                'products.id_product','products.product_code','products.product_name','product_prices.product_stock_status'
             ])
             ->join('brand_product','brand_product.id_product','=','products.id_product')
             ->where('brand_product.id_brand','=',$post['id_brand'])
