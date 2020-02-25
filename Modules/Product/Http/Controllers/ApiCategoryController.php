@@ -648,7 +648,7 @@ class ApiCategoryController extends Controller
         			}
         		}
 	        }
-        }else{
+        }elseif ((!empty($post['promo_code']) && !empty($post['id_deals_user']))) {
         	$promo_error = 'Can only use either promo code or voucher';
         }
         return $products;
