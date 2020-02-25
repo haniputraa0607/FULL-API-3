@@ -40,6 +40,7 @@ class ApiCronTrxController extends Controller
         ini_set('max_execution_time', 0);
         $this->autocrm = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
         $this->balance  = "Modules\Balance\Http\Controllers\BalanceController";
+        $this->voucher  = "Modules\Deals\Http\Controllers\ApiDealsVoucher";
     }
 
     public function cron(Request $request)
@@ -55,6 +56,8 @@ class ApiCronTrxController extends Controller
         }
 
         foreach ($getTrx as $key => $value) {
+
+        	db::begintransaction();
             $singleTrx = Transaction::where('id_transaction', $value->id_transaction)->with('outlet_name')->first();
             if (empty($singleTrx)) {
                 continue;
@@ -87,6 +90,7 @@ class ApiCronTrxController extends Controller
             $singleTrx->transaction_payment_status = 'Cancelled';
             $singleTrx->void_date = $now;
             $singleTrx->save();
+
             if (!$singleTrx) {
                 continue;
             }
@@ -95,6 +99,10 @@ class ApiCronTrxController extends Controller
             $logBalance = LogBalance::where('id_reference', $singleTrx->id_transaction)->where('source', 'Transaction')->where('balance', '<', 0)->get();
             foreach($logBalance as $logB){
                 $reversal = app($this->balance)->addLogBalance( $singleTrx->id_user, abs($logB['balance']), $singleTrx->id_transaction, 'Reversal', $singleTrx->transaction_grandtotal);
+	            if (!$reversal) {
+	            	db::rollback();
+	            	continue;
+	            }
                 $usere= User::where('id',$singleTrx->id_user)->first();
                 $send = app($this->autocrm)->SendAutoCRM('Transaction Failed Point Refund', $usere->phone,
                     [
@@ -105,14 +113,17 @@ class ApiCronTrxController extends Controller
                         'received_point'    => (string) abs($logB['balance'])
                     ]
                 );
-                if($send != true){
-                    DB::rollback();
-                    return response()->json([
-                            'status' => 'fail',
-                            'messages' => ['Failed Send notification to customer']
-                        ]);
-                }
             }
+
+            // return voucher
+            $update_voucher = app($this->voucher)->returnVoucher($value->id_transaction);
+
+            if (!$update_voucher) {
+            	db::rollback();
+            	continue;
+            }
+            db::commit();
+
         }
 
         return response()->json(['success']);

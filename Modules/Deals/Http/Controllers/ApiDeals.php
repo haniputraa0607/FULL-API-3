@@ -1129,14 +1129,13 @@ class ApiDeals extends Controller
     {
         $post = $request->json()->all();
         $user = $request->user();
-
         $deals = Deal::where('id_deals', '=', $post['id_deals']);
         if ($post['step'] == 1 || $post['step'] == 'all') {
 			$deals = $deals->with(['outlets']);
         }
 
         if ($post['step'] == 2 || $post['step'] == 'all') {
-			$deals = $deals->where('is_online', '=', 1)->with([  
+			$deals = $deals->with([  
                 'deals_product_discount.product', 
                 'deals_product_discount_rules', 
                 'deals_tier_discount_product.product', 
