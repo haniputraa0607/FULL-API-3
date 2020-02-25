@@ -10,6 +10,7 @@ use Illuminate\Routing\Controller;
 
 use App\Http\Models\Outlet;
 use App\Http\Models\OutletToken;
+use App\Http\Models\OutletSchedule;
 use App\Http\Models\Transaction;
 use App\Http\Models\TransactionPickup;
 use App\Http\Models\TransactionPickupGoSend;
@@ -1314,5 +1315,25 @@ class ApiOutletApp extends Controller
 
 
         return response()->json(MyHelper::checkUpdate($pickup));
+    }
+
+    public function listSchedule(Request $request) {
+        $schedules = $request->user()->outlet_schedules()->get();
+        return MyHelper::checkGet($schedules);
+    }
+
+    public function updateSchedule(Request $request) {
+        $post = $request->json()->all();
+        DB::beginTransaction();
+        $id_outlet = $request->user()->id_outlet;
+        foreach ($post['schedule'] as $value) {
+            $save = OutletSchedule::updateOrCreate(['id_outlet' => $id_outlet, 'day' => $value['day']], $value);
+            if (!$save) {
+                DB::rollBack();
+                return response()->json(['status' => 'fail']);
+            }
+        }
+        DB::commit();
+        return response()->json(['status' => 'success']);
     }
 }
