@@ -866,18 +866,22 @@ class ApiOutletApp extends Controller
     public function productSoldOut(ProductSoldOut $request){
         $post = $request->json()->all();
         $outlet = $request->user();
-
-        if(!is_array($post['id_product'])){
-            $post['id_product'] = [$post['id_product']];
+        $updated = 0;
+        if($post['sold_out']){
+            $updated += ProductPrice::where('id_outlet', $outlet['id_outlet'])
+                ->whereIn('id_product', $post['sold_out'])
+                ->where('product_stock_status','<>', 'Sold Out')
+                ->update(['product_stock_status' => 'Sold Out']);
         }
-
-        $product = ProductPrice::where('id_outlet', $outlet['id_outlet'])
-                                ->whereIn('id_product', $post['id_product'])
-                                ->where('product_stock_status','<>', $post['product_stock_status'])
-                                ->update(['product_stock_status' => $post['product_stock_status']]);
+        if($post['available']){
+            $updated += ProductPrice::where('id_outlet', $outlet['id_outlet'])
+                ->whereIn('id_product', $post['available'])
+                ->where('product_stock_status','<>', 'Available')
+                ->update(['product_stock_status' => 'Available']);
+        }
         return [
             'status'=>'success',
-            'result'=>['updated'=>$product]
+            'result'=>['updated'=>$updated]
         ];
     }
     /**
