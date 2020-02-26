@@ -2,6 +2,7 @@
 
 namespace Modules\Product\Http\Controllers;
 
+use Modules\Brand\Entities\BrandProduct;
 use App\Http\Models\Product;
 use App\Http\Models\ProductCategory;
 use App\Http\Models\ProductDiscount;
@@ -371,12 +372,14 @@ class ApiCategoryController extends Controller
             ->where('product_prices.product_status','=','Active')
             ->whereNotNull('product_prices.product_price')
             ->with([
-                'brand_category',
+                'brand_category'=>function($query){
+                    $query->groupBy('id_product','id_brand');
+                },
                 'photos'=>function($query){
                     $query->select('id_product','product_photo');
                 }
             ])
-            ->groupBy('products.id_product')
+            ->groupBy('products.id_product', 'product_price', 'product_stock_status')
             ->orderBy('products.position')
             ->get();
 
@@ -648,7 +651,7 @@ class ApiCategoryController extends Controller
         			}
         		}
 	        }
-        }else{
+        }elseif ((!empty($post['promo_code']) && !empty($post['id_deals_user']))) {
         	$promo_error = 'Can only use either promo code or voucher';
         }
         return $products;
