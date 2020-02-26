@@ -17,7 +17,13 @@ Route::group(['middleware' => ['auth:api','log_activities', 'user_agent', 'scope
     Route::any('detail/log/transaction-day', ['middleware' => 'feature_control:194', 'uses' => 'ApiFraud@detailFraudTransactionDay']);
     Route::any('detail/log/transaction-week', ['middleware' => 'feature_control:195', 'uses' => 'ApiFraud@detailFraudTransactionWeek']);
     Route::any('detail/log/transaction-between', ['middleware' => 'feature_control:195', 'uses' => 'ApiFraud@detailFraudTransactionBetween']);
+    Route::any('detail/log/promo-code','ApiFraud@detailFraudPromoCode');
     Route::any('detail/log/update', ['middleware' => 'feature_control:192', 'uses' => 'ApiFraud@updateLog']);
     Route::any('device-login/update-status', ['middleware' => 'feature_control:192', 'uses' => 'ApiFraud@updateDeviceLoginStatus']);
 
+});
+
+Route::group(['prefix' => 'api/fraud/cron', 'namespace' => 'Modules\SettingFraud\Http\Controllers'], function()
+{
+    Route::any('referral', ['uses' => 'ApiFraud@fraudCheckReferral']);
 });
