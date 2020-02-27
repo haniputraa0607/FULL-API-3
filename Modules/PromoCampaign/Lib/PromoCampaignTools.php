@@ -238,12 +238,8 @@ class PromoCampaignTools{
 					// is all product get promo
 					if($promo_rules->is_all_product){
 						// get product data
-						$product=Product::with(['product_prices' => function($q) use ($id_outlet){ 
-							$q->where('id_outlet', '=', $id_outlet)
-							  ->where('product_status', '=', 'Active')
-							  ->where('product_stock_status', '=', 'Available')
-							  ->where('product_visibility', '=', 'Visible');
-						} ])->find($trx['id_product']);
+						$product = $this->getOneProduct($id_outlet, $trx['id_product']);
+						
 						//is product available
 						if(!$product){
 							// product not available
@@ -256,12 +252,8 @@ class PromoCampaignTools{
 						// is product available in promo
 						if(is_array($promo_product)&&in_array($trx['id_product'],array_column($promo_product,'id_product'))){
 							// get product data
-							$product=Product::with(['product_prices' => function($q) use ($id_outlet){ 
-								$q->where('id_outlet', '=', $id_outlet)
-								  ->where('product_status', '=', 'Active')
-								  ->where('product_stock_status', '=', 'Available')
-								  ->where('product_visibility', '=', 'Visible');
-							} ])->find($trx['id_product']);
+							$product = $this->getOneProduct($id_outlet, $trx['id_product']);
+
 							//is product available
 							if(!$product){
 								// product not available
@@ -494,12 +486,8 @@ class PromoCampaignTools{
 					$errors[]= $message;
 					return false;
 				}
-				$benefit_product=Product::with(['brands','product_prices' => function($q) use ($id_outlet){ 
-							$q->where('id_outlet', '=', $id_outlet)
-							  ->where('product_status', '=', 'Active')
-							  ->where('product_stock_status', '=', 'Available')
-							  ->where('product_visibility', '=', 'Visible');
-						} ])->find($promo_rule->benefit_id_product);
+				$benefit_product = $this->getOneProduct($id_outlet, $promo_rule->benefit_id_product,1);
+
 				$benefit_qty=$promo_rule->benefit_qty;
 				$benefit_value=$promo_rule->discount_value;
 				$benefit_type = $promo_rule->discount_type;
@@ -769,7 +757,8 @@ class PromoCampaignTools{
 			$discount_qty = $trx['promo_qty'];
 			unset($trx['promo_qty']);
 		}
-		$product_price = ($product->product_prices[0]->product_price??null)+$modifier;
+
+		$product_price = ($product->product_price??$product->product_prices[0]->product_price??null) + $modifier;
 		if(isset($trx['new_price'])&&$trx['new_price']){
 			$product_price=$trx['new_price']/$trx['qty'];
 		}
@@ -781,7 +770,7 @@ class PromoCampaignTools{
 		}else{
 			// percent
 			$discount_per_product = ($promo_rules->discount_value/100)*$product_price;
-			if ($discount_per_product > $promo_rules->max_percent_discount) {
+			if ($discount_per_product > $promo_rules->max_percent_discount && !empty($promo_rules->max_percent_discount)) {
 				$discount_per_product = $promo_rules->max_percent_discount;
 			}
 			$discount=(int)($discount_per_product*$discount_qty);
@@ -1062,7 +1051,31 @@ class PromoCampaignTools{
         }else{
         	return [];
         }
+    }
 
+    public function getOneProduct($id_outlet, $id_product, $brand=null)
+    {
+    	$product = Product::join('product_prices','product_prices.id_product','=','products.id_product')
+	                ->where('product_prices.id_outlet','=',$id_outlet)
+	                ->where('products.id_product','=',$id_product)
+	                ->where(function($query){
+	                    $query->where('product_prices.product_visibility','=','Visible')
+	                            ->orWhere(function($q){
+	                                $q->whereNull('product_prices.product_visibility')
+	                                ->where('products.product_visibility', 'Visible');
+	                            });
+	                })
+	                ->where('product_prices.product_status','=','Active')
+	                ->whereNotNull('product_prices.product_price');
+
+		if (!empty($brand)) {
+
+			$product = $product->with('brands');
+		}
+
+		$product = $product->first();
+
+		return $product;
     }
 
     /**
