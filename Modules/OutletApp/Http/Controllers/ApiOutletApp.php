@@ -572,6 +572,7 @@ class ApiOutletApp extends Controller
         if (empty($check)) {
             $list = Transaction::join('transaction_pickups', 'transactions.id_transaction', 'transaction_pickups.id_transaction')
                                 ->where('order_id', $post['order_id'])
+                                ->whereIn('transaction_payment_status',['Pending','Completed'])
                                 ->whereDate('transaction_date', date('Y-m-d'))->first();
 
             if(!$list){
@@ -1339,5 +1340,39 @@ class ApiOutletApp extends Controller
         }
         DB::commit();
         return response()->json(['status' => 'success']);
+    }
+
+    public function history(Request $request) {
+        $trx_date = $request->json('trx_date');
+        $trx_status = $request->json('trx_status');
+        $trx_type = $request->json('trx_type');
+        $data = Transaction::select(\DB::raw('transactions.id_transaction,order_id,DATE_FORMAT(transaction_date, "%H:%i") as trx_time,transaction_receipt_number,count(*) as total_products'))
+            ->where('trasaction_type','Pickup Order')
+            ->join('transaction_pickups','transactions.id_transaction','=','transaction_pickups.id_transaction')
+            ->whereDate('transaction_date',$trx_date)
+            ->join('transaction_products','transaction_products.id_transaction','=','transactions.id_transaction')
+            ->groupBy('transactions.id_transaction');
+
+        if ($trx_status == 'taken') {
+            $data->whereNotNull('taken_at');
+        }elseif($trx_status == 'rejected'){
+            $data->whereNotNull('reject_at');
+        }
+
+        if($trx_type == 'Delivery'){
+            $data->where('pickup_by','GO-SEND');
+        }elseif($trx_type == 'Pickup Order'){
+            $data->where('pickup_by','Customer');
+        }
+
+        if($request->page){
+            $return = $data->paginate(15)->toArray();
+            if(!$return['data']){
+                $return = [];
+            }
+        }else{
+            $return = $data->get();
+        }
+        return MyHelper::checkGet($return);
     }
 }
