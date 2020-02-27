@@ -55,7 +55,7 @@ class FraudSettingsTableSeeder extends Seeder
                 ),
             6 =>
                 array (
-                    'parameter' => 'Check referral',
+                    'parameter' => 'Check referral global',
                     'parameter_detail' => null,
                     'created_at' => date('Y-m-d H:i:s'),
                     'updated_at' => date('Y-m-d H:i:s'),
@@ -64,13 +64,6 @@ class FraudSettingsTableSeeder extends Seeder
                 array (
                     'parameter' => 'Check referral user',
                     'parameter_detail' => 1,
-                    'created_at' => date('Y-m-d H:i:s'),
-                    'updated_at' => date('Y-m-d H:i:s'),
-                ),
-            8 =>
-                array (
-                    'parameter' => 'Check referral global',
-                    'parameter_detail' => null,
                     'created_at' => date('Y-m-d H:i:s'),
                     'updated_at' => date('Y-m-d H:i:s'),
                 )
