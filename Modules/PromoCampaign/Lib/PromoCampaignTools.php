@@ -915,8 +915,8 @@ class PromoCampaignTools{
                 $count = 0;
             }
         }
-        if($countSemen>$productItem['product_prices'][0]['product_price']??[]){
-        	$countSemen=$productItem['product_prices'][0]['product_price']??[];
+        if( $countSemen > ($productItem['product_prices'][0]['product_price']??[]) ){
+        	$countSemen = $productItem['product_prices'][0]['product_price']??[];
         }
         return $countSemen;
     }
