@@ -1438,7 +1438,7 @@ class ApiFraud extends Controller
         return 'true';
     }
 
-    public function deleteDailyLog(){
+    public function deleteDailyLogCheckPromo(){
         $currentDate = date('Y-m-d');
         $bellowDate = date('Y-m-d',strtotime($currentDate." -1 Months"));
 
