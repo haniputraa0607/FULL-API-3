@@ -68,6 +68,7 @@ class ApiOutletController extends Controller
 
     function __construct() {
         date_default_timezone_set('Asia/Jakarta');
+        $this->promo_campaign       = "Modules\PromoCampaign\Http\Controllers\ApiPromoCampaign";
     }
 
     function checkInputOutlet($post=[]) {
@@ -923,46 +924,16 @@ class ApiOutletController extends Controller
             }
 
             // give all product flag is_promo = 0
-            foreach ($outlet as $key => $value) {
+	        foreach ($outlet as $key => $value) {
 				$outlet[$key]['is_promo'] = 0;
 			}
-			// check if isset promo_code
-            if (isset($post['promo_code'])) {
-	        	$code=PromoCampaignPromoCode::where('promo_code',$request->promo_code)
-		                ->join('promo_campaigns', 'promo_campaigns.id_promo_campaign', '=', 'promo_campaign_promo_codes.id_promo_campaign')
-		                ->where('step_complete', '=', 1)
-		                ->where( function($q){
-		                	$q->whereColumn('usage','<','limitation_usage')
-		                		->orWhere('code_type','Single');
-		                } )
-		                ->with(['promo_campaign.promo_campaign_outlets'])
-		                ->first();
+			
+			$promo_data = $this->applyPromo($post, $outlet, $promo_error);
 
-		        if(!$code){
-		            return [
-		                'status'=>'fail',
-		                'messages'=>['Promo code not valid']
-		            ];
-		        }else{
-
-		        	// if valid give flag is_promo = 1
-		        	$code = $code->toArray();
-	        		if ($code['promo_campaign']['is_all_outlet']) {
-	        			foreach ($outlet as $key => $value) {
-	    					$outlet[$key]['is_promo'] = 1;
-	    				}
-	        		}else{
-			        	foreach ($code['promo_campaign']['promo_campaign_outlets'] as $key => $value) {
-		        			foreach ($outlet as $key2 => $value2) {
-		        				if ( $value2['id_outlet'] == $value['id_outlet'] ) {
-		    						$outlet[$key2]['is_promo'] = 1;
-		    						break;
-		    					}
-		        			}
-			        	}
-	        		}
-		        }
+	        if ($promo_data) {
+	        	$outlet = $promo_data;
 	        }
+			
             foreach ($outlet as $key => $value) {
                 $jaraknya =   number_format((float)$this->distance($latitude, $longitude, $value['outlet_latitude'], $value['outlet_longitude'], "K"), 2, '.', '');
                 settype($jaraknya, "float");
@@ -1038,6 +1009,7 @@ class ApiOutletController extends Controller
                 if ($pagingOutlet['status'] == true) {
                     $urutan['next_page_url'] = ENV('APP_API_URL').'api/outlet/filter?page='.$next_page;
                 }
+                $urutan['promo_error']   = $promo_error;
             } else {
                 if($countAll){
                     return response()->json(['status' => 'fail', 'messages' => ['empty']]);
@@ -1975,7 +1947,8 @@ class ApiOutletController extends Controller
                 $subTitleSuccess = Setting::where('key', 'order_now_sub_title_success')->first()->value;
                 $subTitleFail = Setting::where('key', 'order_now_sub_title_fail')->first()->value;
 
-                $outlet = Outlet::selectRaw('outlets.id_outlet, outlets.outlet_name, outlets.outlet_code,outlets.outlet_status,outlets.outlet_address,outlets.id_city, outlets.outlet_latitude, outlets.outlet_longitude,
+                $outlet = Outlet::join('cities', 'cities.id_city', 'outlets.id_city')
+                    ->selectRaw('outlets.id_outlet, outlets.outlet_name, outlets.outlet_code,outlets.outlet_status,outlets.outlet_address,outlets.id_city, outlets.outlet_latitude, outlets.outlet_longitude,
                         (111.111 * DEGREES(ACOS(LEAST(1.0, COS(RADIANS(outlets.outlet_latitude))
                              * COS(RADIANS('.$post['latitude'].'))
                              * COS(RADIANS(outlets.outlet_longitude - '.$post['longitude'].'))
@@ -2136,5 +2109,63 @@ class ApiOutletController extends Controller
         }else{
             return response()->json(['status' => 'fail', 'message' => 'empty']);
         }
+    }
+
+    public function applyPromo($promo_post, $data_outlet, &$promo_error)
+    {
+    	// check promo
+    	$post = $promo_post;
+    	$outlet = $data_outlet;
+
+    	// give all product flag is_promo = 0
+        foreach ($outlet as $key => $value) {
+			$outlet[$key]['is_promo'] = 0;
+		}
+
+		$promo_error = null;
+		if ( (!empty($post['promo_code']) && empty($post['id_deals_user'])) || (empty($post['promo_code']) && !empty($post['id_deals_user'])) ) {
+        // if (isset($post['promo_code'])) {
+        	if (!empty($post['promo_code'])) 
+        	{
+        		$code = app($this->promo_campaign)->checkPromoCode($post['promo_code'], 1);
+        		$source = 'promo_campaign';
+        	}else{
+        		$code = app($this->promo_campaign)->checkVoucher($post['id_deals_user'], 1);
+        		$source = 'deals';
+        	}
+
+	        if(!$code){
+	        	$promo_error = 'Promo not valid';
+	        	return false;
+	        }else{
+	        	
+	        	if ( ($code['promo_campaign']['date_end']??$code['voucher_expired_at']) < date('Y-m-d H:i:s') ) {
+	        		$promo_error = 'Promo is ended';
+	        		return false;
+	        	}
+
+	        	// if valid give flag is_promo = 1
+	        	$code = $code->toArray();
+        		if ($code['promo_campaign']['is_all_outlet']??false) {
+        			foreach ($outlet as $key => $value) {
+    					$outlet[$key]['is_promo'] = 1;
+    				}
+        		}else{
+		        	foreach ( ($code['promo_campaign']['promo_campaign_outlets']??$code['deal_voucher']['deals']['outlets_active']) as $key => $value) {
+	        			foreach ($outlet as $key2 => $value2) {
+	        				if ( $value2['id_outlet'] == $value['id_outlet'] ) {
+	    						$outlet[$key2]['is_promo'] = 1;
+	    						break;
+	    					}
+	        			}
+		        	}
+        		}
+	        }
+        }elseif( !empty($post['promo_code']) && !empty($post['id_deals_user']) ){
+        	$promo_error = 'Can only use either promo code or voucher';
+        }
+
+        return $outlet;
+        // end check promo
     }
 }

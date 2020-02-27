@@ -30,7 +30,6 @@ use Validator;
 use Hash;
 use DB;
 use Mail;
-use Mailgun;
 
 class ApiAutoCrm extends Controller
 {

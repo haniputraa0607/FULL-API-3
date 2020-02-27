@@ -17,7 +17,7 @@ class DetailDealsRequest extends FormRequest
     {
         return [
             'id_deals' => 'nullable|integer',
-            'step' => 'nullable|integer',
+            'step' => 'nullable',
         ];
     }
 

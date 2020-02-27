@@ -17,7 +17,6 @@ use Hash;
 use App\Lib\PushNotificationHelper;
 use DB;
 use Mail;
-use Mailgun;
 use File;
 
 use Modules\Enquiries\Http\Requests\Create;

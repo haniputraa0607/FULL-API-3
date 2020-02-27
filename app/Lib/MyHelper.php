@@ -1349,7 +1349,7 @@ class MyHelper{
 		}
 	}
 
-	public static function post2($url, $bearer=null, $post, $form_type=0, $header=null){
+	public static function postWithTimeout($url, $bearer=null, $post, $form_type=0, $header=null, $timeout = 65){
 		$client = new Client;
 
 		$content = array(
@@ -1379,7 +1379,8 @@ class MyHelper{
 				}
 			}
 		}
-		$content['timeout']=65;
+		$content['timeout']=$timeout;
+
 		try {
 			$response = $client->post($url, $content);
 			$return = json_decode($response->getBody(), true);
@@ -2151,7 +2152,11 @@ class MyHelper{
             if($col_modifier!==null){
                 $key = $col_modifier($value[$col],$value,$old);
             }else{
-                $key = $value[$col];
+            	if(is_array($value)){
+	                $key = $value[$col];
+            	}else{
+	                $key = $value->$col;
+            	}
             }
             $newArray[$key][]=$value;
         }

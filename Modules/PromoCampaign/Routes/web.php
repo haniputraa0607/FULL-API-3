@@ -11,6 +11,6 @@
 |
 */
 
-Route::prefix('promocampaign')->group(function() {
-    Route::get('/', 'PromoCampaignController@index');
-});
+// Route::prefix('promocampaign')->group(function() {
+//     Route::get('/', 'PromoCampaignController@index');
+// });

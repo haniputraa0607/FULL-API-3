@@ -57,6 +57,7 @@ class ApiNotification extends Controller {
         $this->url_oauth  = env('URL_OUTLET_OAUTH');
         $this->oauth_id  = env('OUTLET_OAUTH_ID');
         $this->oauth_secret  = env('OUTLET_OAUTH_SECRET');
+        $this->voucher  = "Modules\Deals\Http\Controllers\ApiDealsVoucher";
     }
 
     /* RECEIVE NOTIFICATION */
@@ -116,6 +117,11 @@ class ApiNotification extends Controller {
 
                 $newTrx['detail'] = TransactionPickup::with('transaction_pickup_go_send')->where('id_transaction', $newTrx['id_transaction'])->first();
                 if ($newTrx['detail']) {
+                    //inset pickup_at when pickup_type = right now
+                    if($newTrx['detail']['pickup_type'] == 'right now'){
+                        $updatePickup = TransactionPickup::where('id_transaction', $newTrx['id_transaction'])->update(['pickup_at' => date('Y-m-d H:i:s')]);
+                    }
+
                     if ($newTrx['detail']['pickup_by'] == 'GO-SEND') {
                         $booking = $this->bookGoSend($newTrx);
                         if (isset($booking['status'])) {
@@ -220,7 +226,7 @@ class ApiNotification extends Controller {
                                 }
                             }
                         }
-                        $usere = User::where('id', $order['id_user'])->first();
+                        $usere = User::where('id', $newTrx['id_user'])->first();
                         $send = app($this->autocrm)->SendAutoCRM('Rejected Order Point Refund', $usere->phone,
                             [
                                 "outlet_name"       => $newTrx['outlet']['outlet_name'],
@@ -859,6 +865,11 @@ Detail: ".$link['short'],
 
             if (!$check) {
                 return false;
+            }
+
+            $update_voucher = app($this->voucher)->returnVoucher($trx->id_transaction);
+            if (!$update_voucher) {
+            	return false;
             }
         }
 

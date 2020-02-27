@@ -26,7 +26,7 @@ use App\Http\Models\OauthAccessToken;
 use App\Lib\PushNotificationHelper;
 use App\Lib\classMaskingJson;
 use DB;
-use Mailgun;
+use Mail;
 
 class SendCampaignJob implements ShouldQueue
 {
