@@ -1382,8 +1382,7 @@ class ApiOutletApp extends Controller
             $return = $data->paginate($perpage?:15)->toArray();
             if(!$return['data']){
                 $return = [];
-            }
-            if($request_number){
+            }elseif($request_number){
                 $return['data'] = array_map(function($var) use ($request_number){
                     $var['transaction_grandtotal'] = MyHelper::requestNumber($var['transaction_grandtotal'],$request_number);
                     return $var;
