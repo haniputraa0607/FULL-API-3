@@ -11,8 +11,8 @@ class ProductSoldOut extends FormRequest
     public function rules()
     {
         return [
-            'sold_out'        => 'required|array',
-            'available'        => 'required|array'
+            'sold_out'        => 'present|array',
+            'available'        => 'present|array'
         ];
     }
 

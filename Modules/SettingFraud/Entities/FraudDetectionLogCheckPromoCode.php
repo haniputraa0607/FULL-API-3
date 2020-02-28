@@ -14,6 +14,8 @@ class FraudDetectionLogCheckPromoCode extends Model
 		'count',
         'status',
 		'fraud_setting_parameter_detail',
+        'fraud_hold_time',
+        'fraud_parameter_detail_time',
 		'fraud_setting_forward_admin_status',
         'fraud_setting_auto_suspend_status',
         'fraud_setting_auto_suspend_value',
@@ -23,6 +25,6 @@ class FraudDetectionLogCheckPromoCode extends Model
 	];
 
 	function user() {
-		return $this->belongsTo(User::class, 'id_user', 'id');
+		return $this->belongsTo(\App\Http\Models\User::class, 'id_user', 'id');
 	}
 }
