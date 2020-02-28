@@ -90,6 +90,10 @@ class Kernel extends ConsoleKernel
          */
         $schedule->call('Modules\Report\Http\Controllers\ApiCronReport@transactionCron')->dailyAt('03:00');
 
+        /**
+         * To process fraud
+         */
+        $schedule->call('Modules\SettingFraud\Http\Controllers\ApiFraud@fraudCron')->cron('*/59 * * * *');
     }
 
     /**

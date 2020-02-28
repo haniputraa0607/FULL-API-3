@@ -1739,6 +1739,30 @@ class FeaturesTableSeeder extends Seeder
                     'created_at' => date('Y-m-d H:00:00'),
                     'updated_at' => date('Y-m-d H:00:00'),
                 ),
+            216 =>
+                array(
+                    'id_feature' => 217,
+                    'feature_type' => 'Report',
+                    'feature_module' => 'Report Fraud Referral User',
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00'),
+                ),
+            217 =>
+                array(
+                    'id_feature' => 218,
+                    'feature_type' => 'Report',
+                    'feature_module' => 'Report Fraud Referral',
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00'),
+                ),
+            218 =>
+                array(
+                    'id_feature' => 219,
+                    'feature_type' => 'Report',
+                    'feature_module' => 'Report Fraud Promo Code',
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00'),
+                )
         ));
     }
 }

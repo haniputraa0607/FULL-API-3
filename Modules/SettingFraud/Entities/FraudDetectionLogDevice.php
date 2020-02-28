@@ -25,25 +25,26 @@ class FraudDetectionLogDevice extends Model
 	];
 
 	function user() {
-		return $this->belongsTo(User::class, 'id_user', 'id');
+		return $this->belongsTo(\App\Http\Models\User::class, 'id_user', 'id');
 	}
 
-	function usersFraud(){
-        return $this->hasMany(UsersDeviceLogin::class, 'device_id', 'device_id')
+    function usersFraud(){
+        return $this->hasMany(\App\Http\Models\UsersDeviceLogin::class, 'device_id', 'device_id')
             ->join('users', 'users_device_login.id_user', '=', 'users.id')
-            ->whereRaw('users_device_login.id_user in (Select id_user from fraud_detection_log_device where users_device_login.device_id = fraud_detection_log_device.device_id)')
+            ->join('fraud_detection_log_device', 'users.id', '=', 'fraud_detection_log_device.id_user')
+            ->addSelect('users_device_login.*', 'users.*', 'fraud_detection_log_device.created_at as log_date')
             ->orderBy('users_device_login.last_login','desc');
     }
 
     function usersNoFraud(){
-        return $this->hasMany(UsersDeviceLogin::class, 'device_id', 'device_id')
+        return $this->hasMany(\App\Http\Models\UsersDeviceLogin::class, 'device_id', 'device_id')
             ->join('users', 'users_device_login.id_user', '=', 'users.id')
             ->whereRaw('users_device_login.id_user not in (Select id_user from fraud_detection_log_device where users_device_login.device_id = fraud_detection_log_device.device_id)')
             ->orderBy('users_device_login.last_login','desc');
     }
 
     function allUsersdevice(){
-        return $this->hasMany(UsersDeviceLogin::class, 'device_id', 'device_id')
+        return $this->hasMany(\App\Http\Models\UsersDeviceLogin::class, 'device_id', 'device_id')
             ->join('users', 'users_device_login.id_user', '=', 'users.id')
             ->orderBy('users_device_login.last_login','desc');
     }

@@ -25,7 +25,7 @@ class FraudDetectionLogTransactionWeek extends Model
 	];
 
 	function user() {
-		return $this->belongsTo(User::class, 'id_user', 'id');
+		return $this->belongsTo(\App\Http\Models\User::class, 'id_user', 'id');
 	}
 
 }

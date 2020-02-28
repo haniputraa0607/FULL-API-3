@@ -93,6 +93,7 @@ class ApiOnlineTransaction extends Controller
         $grandTotal = app($this->setting_trx)->grandTotal();
         $order_id = null;
         $id_pickup_go_send = null;
+        $promo_code_ref = null;
 
         if (isset($post['headers'])) {
             unset($post['headers']);
@@ -268,6 +269,7 @@ class ApiOnlineTransaction extends Controller
             {
                 $post['id_promo_campaign_promo_code'] = $code->id_promo_campaign_promo_code;
                 if($code->promo_type = "Referral"){
+                    $promo_code_ref = $request->json('promo_code');
                     $use_referral = true;
                 }
                 $pct=new PromoCampaignTools();
@@ -671,6 +673,16 @@ class ApiOnlineTransaction extends Controller
                     'messages'  => ['Insert Transaction Failed']
                 ]);
             }
+
+            //======= Start Check Fraud Referral User =======//
+            $data = [
+                'id_user' => $insertTransaction['id_user'],
+                'referral_code' => $request->promo_code,
+                'referral_code_use_date' => $insertTransaction['transaction_date'],
+                'id_transaction' => $insertTransaction['id_transaction']
+            ];
+            app($this->setting_fraud)->fraudCheckReferralUser($data);
+            //======= End Check Fraud Referral User =======//
         }
 
         // add transaction voucher
@@ -1538,9 +1550,23 @@ class ApiOnlineTransaction extends Controller
             'id_transaction'    => $insertTransaction['id_transaction'],
             'id_outlet'         => $outlet['id_outlet'],
             'transaction_date'  => date('Y-m-d H:i:s', strtotime($insertTransaction['transaction_date'])),
-            'id_user'           => $user['id']
+            'id_user'           => $user['id'],
+            'referral_code'     => $promo_code_ref
         ];
         $createDailyTrx = DailyTransactions::create($dataDailyTrx);
+
+        if($promo_code_ref){
+            //======= Start Check Fraud Referral User =======//
+            $data = [
+                'id_user' => $insertTransaction['id_user'],
+                'referral_code' => $promo_code_ref,
+                'referral_code_use_date' => $insertTransaction['transaction_date'],
+                'id_transaction' => $insertTransaction['id_transaction']
+            ];
+            app($this->setting_fraud)->fraudCheckReferralUser($data);
+            //======= End Check Fraud Referral User =======//
+        }
+
         DB::commit();
         return response()->json([
             'status'   => 'success',
