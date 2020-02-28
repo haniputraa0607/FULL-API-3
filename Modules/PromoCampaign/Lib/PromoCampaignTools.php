@@ -1073,6 +1073,10 @@ class PromoCampaignTools{
      */
     public static function createReferralCode($id_user) {
     	//check user have referral code
+    	$referral_campaign = PromoCampaign::select('id_promo_campaign')->where('promo_type','referral')->first();
+    	if(!$referral_campaign){
+    		return false;
+    	}
     	$check = UserReferralCode::where('id_user',$id_user)->first();
     	if($check){
     		return $check;
@@ -1090,7 +1094,7 @@ class PromoCampaignTools{
     		return false;
     	}
     	$create = PromoCampaignPromoCode::create([
-    		'id_promo_campaign' => 1,
+    		'id_promo_campaign' => $referral_campaign->id_promo_campaign,
     		'promo_code' => $promo_code
     	]);
     	if(!$create){
