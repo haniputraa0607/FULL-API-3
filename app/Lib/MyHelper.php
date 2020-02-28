@@ -2214,6 +2214,10 @@ class MyHelper{
 				return (double) $number;
 				break;
 			
+			case 'thousand':
+				return number_format($number,0,',','.');
+				break;
+			
 			case 'custom':
 				return number_format($number,...$custom);
 
