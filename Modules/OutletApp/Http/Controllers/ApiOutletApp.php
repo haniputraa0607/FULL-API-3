@@ -1346,7 +1346,10 @@ class ApiOutletApp extends Controller
         $trx_date = $request->json('trx_date');
         $trx_status = $request->json('trx_status');
         $trx_type = $request->json('trx_type');
-        $data = Transaction::select(\DB::raw('transactions.id_transaction,order_id,DATE_FORMAT(transaction_date, "%H:%i") as trx_time,transaction_receipt_number,count(*) as total_products'))
+        $keyword = $request->json('search_order_id');
+        $perpage = $request->json('perpage');
+        $request_number = $request->json('request_number')?:'thousand';
+        $data = Transaction::select(\DB::raw('transactions.id_transaction,order_id,DATE_FORMAT(transaction_date, "%H:%i") as trx_time,transaction_receipt_number,count(*) as total_products,transaction_grandtotal'))
             ->where('trasaction_type','Pickup Order')
             ->join('transaction_pickups','transactions.id_transaction','=','transaction_pickups.id_transaction')
             ->whereDate('transaction_date',$trx_date)
@@ -1354,9 +1357,15 @@ class ApiOutletApp extends Controller
             ->groupBy('transactions.id_transaction');
 
         if ($trx_status == 'taken') {
-            $data->whereNotNull('taken_at');
+            $data->whereNotNull('taken_at')
+            ->orWhereNotNull('taken_by_system_at');
         }elseif($trx_status == 'rejected'){
             $data->whereNotNull('reject_at');
+        }elseif($trx_status == 'unpaid'){
+            $data->where('transaction_payment_status','Pending')
+            ->whereNull('taken_at')
+            ->whereNull('taken_by_system_at')
+            ->whereNull('reject_at');
         }
 
         if($trx_type == 'Delivery'){
@@ -1365,13 +1374,27 @@ class ApiOutletApp extends Controller
             $data->where('pickup_by','Customer');
         }
 
+        if($keyword){
+            $data->where('order_id','like',"%$keyword%");
+        }
+
         if($request->page){
-            $return = $data->paginate(15)->toArray();
+            $return = $data->paginate($perpage?:15)->toArray();
             if(!$return['data']){
                 $return = [];
             }
+            if($request_number){
+                $return['data'] = array_map(function($var) use ($request_number){
+                    $var['transaction_grandtotal'] = MyHelper::requestNumber($var['transaction_grandtotal'],$request_number);
+                    return $var;
+                },$return['data']);
+            }
         }else{
-            $return = $data->get();
+            $return = $data->get()->toArray();
+            $return = array_map(function($var) use ($request_number){
+                $var['transaction_grandtotal'] = MyHelper::requestNumber($var['transaction_grandtotal'],$request_number);
+                return $var;
+            },$return);
         }
         return MyHelper::checkGet($return);
     }
