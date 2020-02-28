@@ -1901,7 +1901,7 @@ class ApiOnlineTransaction extends Controller
             if(!isset($tree[$product['id_brand']]['name_brand'])){
                 $tree[$product['id_brand']] = Brand::select('name_brand','id_brand')->find($product['id_brand'])->toArray();
             }
-            $product['product_price_total'] = ($product['qty'] * ($product['product_price']+$mod_price)) - $product['promo_discount'];
+            $product['product_price_total'] = ($product['qty'] * ($product['product_price']+$mod_price));
             $tree[$product['id_brand']]['products'][]=$product;
             $subtotal += $product['product_price_total'];
             // return $product;
@@ -1972,6 +1972,7 @@ class ApiOnlineTransaction extends Controller
             }
         }
 
+        $post['discount'] = $post['discount'] + ($promo_discount??0);
         $result['outlet'] = [
             'id_outlet' => $outlet['id_outlet'],
             'outlet_code' => $outlet['outlet_code'],
