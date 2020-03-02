@@ -964,7 +964,8 @@ class ApiOutletApp extends Controller
             ->where('product_prices.product_status','=','Active')
             ->whereNotNull('product_prices.product_price')
             ->groupBy('products.id_product')
-            ->orderBy('products.position');
+            ->orderBy('products.position')
+            ->orderBy('products.id_product');
         if($request->page){
             $data = $products->paginate()->toArray();
             if(empty($data['data'])){

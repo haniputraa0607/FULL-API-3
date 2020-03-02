@@ -381,6 +381,7 @@ class ApiCategoryController extends Controller
             ])
             ->groupBy('products.id_product', 'product_price', 'product_stock_status')
             ->orderBy('products.position')
+            ->orderBy('products.id_product')
             ->get();
 
         $promo_data = $this->applyPromo($post, $products, $promo_error);
