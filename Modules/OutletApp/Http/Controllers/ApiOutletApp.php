@@ -573,7 +573,8 @@ class ApiOutletApp extends Controller
             $list = Transaction::join('transaction_pickups', 'transactions.id_transaction', 'transaction_pickups.id_transaction')
                                 ->where('order_id', $post['order_id'])
                                 ->whereIn('transaction_payment_status',['Pending','Completed'])
-                                ->whereDate('transaction_date', date('Y-m-d'))->first();
+                                ->whereDate('transaction_date', date('Y-m-d',strtotime($post['transaction_date'])))
+                                ->first();
 
             if(!$list){
                 return response()->json([
@@ -613,7 +614,7 @@ class ApiOutletApp extends Controller
                     'status'    => $statusPickup,
                     'date'      => $list->transaction_date,
                     'reject_at' => $list->reject_at,
-                    'url'       => env('VIEW_URL').'/transaction/web/view/outletapp?data='.$base
+                    'url'       => env('API_URL').'/transaction/web/view/outletapp?data='.$base
                 ],
             ];
 
