@@ -1352,6 +1352,7 @@ class ApiOutletApp extends Controller
         $perpage = $request->json('perpage');
         $request_number = $request->json('request_number')?:'thousand';
         $data = Transaction::select(\DB::raw('transactions.id_transaction,order_id,DATE_FORMAT(transaction_date, "%Y-%m-%d") as trx_date,DATE_FORMAT(transaction_date, "%H:%i") as trx_time,transaction_receipt_number,count(*) as total_products,transaction_grandtotal'))
+            ->where('transactions.id_outlet',$request->user()->id_outlet)
             ->where('trasaction_type','Pickup Order')
             ->join('transaction_pickups','transactions.id_transaction','=','transaction_pickups.id_transaction')
             ->whereDate('transaction_date',$trx_date)
