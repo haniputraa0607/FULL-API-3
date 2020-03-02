@@ -1370,6 +1370,12 @@ class ApiOutletApp extends Controller
             ->whereNull('taken_at')
             ->whereNull('taken_by_system_at')
             ->whereNull('reject_at');
+        }else{
+            $data->where(function($query){
+                $query->whereNotNull('taken_at')
+                    ->orWhereNotNull('taken_by_system_at')
+                    ->orWhereNotNull('reject_at');
+            });
         }
 
         if($trx_type == 'Delivery'){
