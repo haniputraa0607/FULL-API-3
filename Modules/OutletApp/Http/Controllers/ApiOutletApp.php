@@ -1357,8 +1357,10 @@ class ApiOutletApp extends Controller
             ->groupBy('transactions.id_transaction');
 
         if ($trx_status == 'taken') {
-            $data->whereNotNull('taken_at')
-            ->orWhereNotNull('taken_by_system_at');
+            $data->where(function($query){
+                $query->whereNotNull('taken_at')
+                    ->orWhereNotNull('taken_by_system_at');
+            });
         }elseif($trx_status == 'rejected'){
             $data->whereNotNull('reject_at');
         }elseif($trx_status == 'unpaid'){
