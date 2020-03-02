@@ -569,11 +569,15 @@ class ApiOutletApp extends Controller
     public function detailWebview(DetailOrder $request){
         $post = $request->json()->all();
 
+        if(!isset($post['transaction_date'])){
+            $post['transaction_date'] = date('Y-m-d');
+        }
+
         if (empty($check)) {
             $list = Transaction::join('transaction_pickups', 'transactions.id_transaction', 'transaction_pickups.id_transaction')
                                 ->where('order_id', $post['order_id'])
                                 ->whereIn('transaction_payment_status',['Pending','Completed'])
-                                ->whereDate('transaction_date', date('Y-m-d'))->first();
+                                ->whereDate('transaction_date', date('Y-m-d', strtotime($post['transaction_date'])))->first();
 
             if(!$list){
                 return response()->json([
@@ -1349,7 +1353,7 @@ class ApiOutletApp extends Controller
         $keyword = $request->json('search_order_id');
         $perpage = $request->json('perpage');
         $request_number = $request->json('request_number')?:'thousand';
-        $data = Transaction::select(\DB::raw('transactions.id_transaction,order_id,DATE_FORMAT(transaction_date, "%H:%i") as trx_time,transaction_receipt_number,count(*) as total_products,transaction_grandtotal'))
+        $data = Transaction::select(\DB::raw('transactions.id_transaction,order_id,DATE_FORMAT(transaction_date, "%Y-%m-%d") as trx_date,DATE_FORMAT(transaction_date, "%H:%i") as trx_time,transaction_receipt_number,count(*) as total_products,transaction_grandtotal'))
             ->where('trasaction_type','Pickup Order')
             ->join('transaction_pickups','transactions.id_transaction','=','transaction_pickups.id_transaction')
             ->whereDate('transaction_date',$trx_date)
