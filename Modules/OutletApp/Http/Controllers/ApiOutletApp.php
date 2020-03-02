@@ -569,11 +569,15 @@ class ApiOutletApp extends Controller
     public function detailWebview(DetailOrder $request){
         $post = $request->json()->all();
 
+        if(!isset($post['transaction_date'])){
+            $post['transaction_date'] = date('Y-m-d');
+        }
+
         if (empty($check)) {
             $list = Transaction::join('transaction_pickups', 'transactions.id_transaction', 'transaction_pickups.id_transaction')
                                 ->where('order_id', $post['order_id'])
                                 ->whereIn('transaction_payment_status',['Pending','Completed'])
-                                ->whereDate('transaction_date', date('Y-m-d'))->first();
+                                ->whereDate('transaction_date', date('Y-m-d', strtotime($post['transaction_date'])))->first();
 
             if(!$list){
                 return response()->json([
