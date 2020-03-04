@@ -704,6 +704,15 @@ class SettingsTableSeeder extends Seeder
                     'created_at' => date('Y-m-d H:i:s'),
                     'updated_at' => date('Y-m-d H:i:s'),
                 ),
+            78 =>
+                array(
+                    'id_setting' => 79,
+                    'key' => 'maintenance_mode',
+                    'value' => '0',
+                    'value_text' => '{"message":"there is maintenance","image":""}',
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
 
         ));
     }

@@ -1487,4 +1487,58 @@ class ApiSetting extends Controller
         }
     }
     /* ============== End Phone Setting ============== */
+
+    /* ============== Start Maintenance Mode Setting ============== */
+    function maintenanceMode(){
+        $data = Setting::where('key', 'maintenance_mode')->first();
+        if($data){
+            $dt = (array)json_decode($data['value_text']);
+            $newDt['status'] = $data['value'];
+            $newDt['message'] = $dt['message'];
+            if($dt['image'] != ""){
+                $newDt['image'] = env('S3_URL_API').$dt['image'];
+            }else{
+                $newDt['image'] = "";
+            }
+            $data = $newDt;
+        }
+        return response()->json(MyHelper::checkGet($data));
+    }
+    function updateMaintenanceMode(Request $request){
+        $post = $request->json()->all();
+        if(isset($post['status']) && $post['status'] == 'on'){
+            $status = 1;
+        }else{
+            $status = 0;
+        }
+        $getData = Setting::where('key', 'maintenance_mode')->first();
+        $decode = (array)json_decode($getData['value_text']);
+        $valueText = ['message' => $post['message'], 'image' => $decode['image']];
+        $imageToUpload = "";
+        if(isset($post['image']) && !empty($post['image'])){
+            if($decode['image'] != ''){
+                //Delete old icon
+                MyHelper::deletePhoto($decode['image']);
+            }
+            $decoded = base64_decode($post['image']);
+            $img    = Image::make($decoded);
+            $width  = $img->width();
+            $height = $img->height();
+            if($width == $height){
+                $upload = MyHelper::uploadPhoto($post['image'], $path = 'img/maintenance/');
+                if ($upload['status'] == "success") {
+                    $valueText['image'] = $upload['path'];
+                }
+            }else{
+                return response()->json(['status' => 'fail', 'messages' => ['Dimensions not allowed']]);
+            }
+        }
+        $dataToUpdate = [
+            'value' => $status,
+            'value_text' => json_encode($valueText)
+        ];
+        $update = Setting::where('key', 'maintenance_mode')->update($dataToUpdate);
+        return response()->json(MyHelper::checkUpdate($update));
+    }
+    /* ============== End Maintenance Mode Setting ============== */
 }
