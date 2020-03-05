@@ -5,6 +5,7 @@
 @extends('webview.main')
 
 @section('css')
+<link href="{{ env('API_URL') }}css/deals.css" rel="stylesheet" type="text/css" />
 	<style type="text/css">
     	p{
     		margin-top: 0px !important;
@@ -129,10 +130,10 @@
 			<div class="col-md-4 col-md-offset-4" style="background-color: #f0f3f7;">
 				<div style="background-color: #f8f9fb;padding: 10px;box-shadow: 0 0.7px 3.3px #eeeeee;" class="col-md-12 clearfix WorkSans">
 					<div class="text-center title WorkSans-SemiBold" style="color: #a6ba35;font-size: 20px;">
-						KLAIM BERHASIL
+						@if ($deals['paid_status'] == 'Free') PEMBELIAN @else KLAIM @endif BERHASIL
 					</div>
 					<div class="text-center WorkSans-Medium" style="color: #333333;margin-top: 13.3px;">
-						Terima kasih telah mengklaim
+						Terima kasih telah @if ($deals['paid_status'] == 'Free') membeli @else mengklaim @endif
 					</div>
 					<div style="position: relative;margin-top: 26.7px;">
 						<hr style="position:absolute;z-index: 1;border: none;border-left: 1px dashed #eeeeee;height: 98px;left: 36%;top: -5%;">
@@ -152,18 +153,26 @@
 					</div>
 				</div>
 
-				<div style="background-color: #f8f9fb;;margin-top: 10px;" class="title-wrapper col-md-12 clearfix WorkSans-Bold">
+				<div style="background-color: #f8f9fb;margin-top: 10px;" class="title-wrapper col-md-12 clearfix WorkSans-Bold">
 					<div class="title" style="font-size: 15px; color: #333333;">Transaksi</div>
 				</div>
 
-				<div style="background-color: #f8f9fb;padding-top: 0px; color: #333333; height: 40px;" class="description-wrapper WorkSans">
-					<div class="description pull-left WorkSans-SemiBold">Tanggal</div>
-					<div style="color: #707070;" class="description pull-right">{{date('d', strtotime($deals['claimed_at']))}} {{$bulan[date('m', strtotime($deals['claimed_at']))-1]}} {{ date('Y', strtotime($deals['claimed_at'])) }} {{date('H:i', strtotime($deals['claimed_at']))}}</div>
+				<div style="background-color: #f8f9fb;color: #333333;padding: 20px;padding-top: 10px;" class="row WorkSans">
+					<div class="col-4">
+						<p class="text-left WorkSans-SemiBold" style="font-size: 14px;">Tanggal</p>
+					</div>
+					<div class="col-8">
+						<p class="text-right WorkSans" style="font-size: 14px;color: #919292;">{{date('d', strtotime($deals['claimed_at']))}} {{$bulan[date('m', strtotime($deals['claimed_at']))-1]}} {{ date('Y', strtotime($deals['claimed_at'])) }} {{date('H:i', strtotime($deals['claimed_at']))}}</p>
+					</div>
 				</div>
 
-				<div style="background-color: #f8f9fb;padding-top: 0px; color: #333333; height: 40px;" class="description-wrapper WorkSans">
-					<div class="description pull-left WorkSans-SemiBold">ID Transaksi</div>
-					<div style="color: #333333;" class="description pull-right">{{strtotime($deals['claimed_at'])}}</div>
+				<div style="background-color: #f8f9fb;color: #333333;padding: 20px;padding-top: 0px;margin-top: -10px;" class="row WorkSans">
+					<div class="col-4">
+						<p class="text-left WorkSans-SemiBold" style="font-size: 14px;">ID Transaksi</p>
+					</div>
+					<div class="col-8">
+						<p class="text-right WorkSans" style="font-size: 14px;">{{strtotime($deals['claimed_at'])}}</p>
+					</div>
 				</div>
 
 				@php
@@ -174,14 +183,21 @@
 					} else {
 						$payment = 'Gratis';
 					}
-                @endphp
-                <div style="background-color: #f8f9fb;padding-top: 0px; color: #333333; height: 40px;" class="description-wrapper WorkSans">
-                    <hr style="margin: 0px;">
-                    <div class="description pull-left WorkSans-SemiBold">Total Pembayaran</div>
-                    <div class="description pull-right WorkSans-SemiBold" style="@if ($payment == 'Gratis') color: #a6ba35; @else color: #333333; @endif">{{$payment}}</div>
-                </div>
-
-				<div style="background-color: #f8f9fb;padding-top: 0px; color: rgb(0, 0, 0); height: 70px; position: fixed; bottom: 10px; width: 100%;" class="description-wrapper WorkSans">
+				@endphp
+				<div style="background-color: #f8f9fb;color: #333333;padding: 20px;padding-top: 0px;margin-top: -5px;" class="row WorkSans">
+					<div class="col-12">
+						<hr style="margin: 0px;">
+					</div>
+					<div class="col-6" style="padding-top: 15px;">
+						<p class="text-left WorkSans-SemiBold" style="font-size: 14px;">Total Pembayaran</p>
+					</div>
+					<div class="col-6" style="padding-top: 15px;">
+						<p class="text-right WorkSans-SemiBold" style="font-size: 14px;@if ($payment == 'Gratis') color: #a6ba35; @else color: #333333; @endif">{{$payment}}</p>
+					</div>
+				</div>
+			</div>
+			<div style="background-color: #f8f9fb;color: #333333;padding: 20px;position: fixed; bottom: 30px;width: 104%;" class="row">
+				<div class="col-12">
 					<a style="width:100%; background-color: #383b67; color: #ffffff;" class="btn btn-lg WorkSans-Bold" href="#yes">Lihat Kupon</a>
 				</div>
 			</div>
