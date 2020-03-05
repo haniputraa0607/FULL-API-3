@@ -68,7 +68,6 @@ class Kernel extends HttpKernel
         'custom_auth'    => \App\Http\Middleware\CustomAuth::class,
         'feature_control'   => \App\Http\Middleware\FeatureControl::class,
         'user_agent'   => \App\Http\Middleware\UserAgentControl::class,
-        'scopes' => \Laravel\Passport\Http\Middleware\CheckScopes::class,
-        'scope' => \Laravel\Passport\Http\Middleware\CheckForAnyScope::class,
+        'scopes' => \App\Http\Middleware\CheckScopes::class,
     ];
 }

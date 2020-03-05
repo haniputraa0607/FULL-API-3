@@ -577,7 +577,8 @@ class ApiOutletApp extends Controller
             $list = Transaction::join('transaction_pickups', 'transactions.id_transaction', 'transaction_pickups.id_transaction')
                                 ->where('order_id', $post['order_id'])
                                 ->whereIn('transaction_payment_status',['Pending','Completed'])
-                                ->whereDate('transaction_date', date('Y-m-d', strtotime($post['transaction_date'])))->first();
+                                ->whereDate('transaction_date', date('Y-m-d',strtotime($post['transaction_date'])))
+                                ->first();
 
             if(!$list){
                 return response()->json([
@@ -617,7 +618,7 @@ class ApiOutletApp extends Controller
                     'status'    => $statusPickup,
                     'date'      => $list->transaction_date,
                     'reject_at' => $list->reject_at,
-                    'url'       => env('VIEW_URL').'/transaction/web/view/outletapp?data='.$base
+                    'url'       => env('API_URL').'/transaction/web/view/outletapp?data='.$base
                 ],
             ];
 
@@ -967,7 +968,8 @@ class ApiOutletApp extends Controller
             ->where('product_prices.product_status','=','Active')
             ->whereNotNull('product_prices.product_price')
             ->groupBy('products.id_product')
-            ->orderBy('products.position');
+            ->orderBy('products.position')
+            ->orderBy('products.id_product');
         if($request->page){
             $data = $products->paginate()->toArray();
             if(empty($data['data'])){
@@ -1354,6 +1356,7 @@ class ApiOutletApp extends Controller
         $perpage = $request->json('perpage');
         $request_number = $request->json('request_number')?:'thousand';
         $data = Transaction::select(\DB::raw('transactions.id_transaction,order_id,DATE_FORMAT(transaction_date, "%Y-%m-%d") as trx_date,DATE_FORMAT(transaction_date, "%H:%i") as trx_time,transaction_receipt_number,count(*) as total_products,transaction_grandtotal'))
+            ->where('transactions.id_outlet',$request->user()->id_outlet)
             ->where('trasaction_type','Pickup Order')
             ->join('transaction_pickups','transactions.id_transaction','=','transaction_pickups.id_transaction')
             ->whereDate('transaction_date',$trx_date)
@@ -1361,8 +1364,10 @@ class ApiOutletApp extends Controller
             ->groupBy('transactions.id_transaction');
 
         if ($trx_status == 'taken') {
-            $data->whereNotNull('taken_at')
-            ->orWhereNotNull('taken_by_system_at');
+            $data->where(function($query){
+                $query->whereNotNull('taken_at')
+                    ->orWhereNotNull('taken_by_system_at');
+            });
         }elseif($trx_status == 'rejected'){
             $data->whereNotNull('reject_at');
         }elseif($trx_status == 'unpaid'){
@@ -1370,6 +1375,12 @@ class ApiOutletApp extends Controller
             ->whereNull('taken_at')
             ->whereNull('taken_by_system_at')
             ->whereNull('reject_at');
+        }else{
+            $data->where(function($query){
+                $query->whereNotNull('taken_at')
+                    ->orWhereNotNull('taken_by_system_at')
+                    ->orWhereNotNull('reject_at');
+            });
         }
 
         if($trx_type == 'Delivery'){
