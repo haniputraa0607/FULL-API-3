@@ -1762,7 +1762,15 @@ class FeaturesTableSeeder extends Seeder
                     'feature_module' => 'Report Fraud Promo Code',
                     'created_at' => date('Y-m-d H:00:00'),
                     'updated_at' => date('Y-m-d H:00:00'),
-                )
+                ),
+            219 =>
+                array(
+                    'id_feature' => 220,
+                    'feature_type' => 'Update',
+                    'feature_module' => 'Maintenance Mode Setting',
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00'),
+                ),
         ));
     }
 }
