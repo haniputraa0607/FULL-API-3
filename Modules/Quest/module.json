@@ -1,0 +1,14 @@
+{
+    "name": "Quest",
+    "alias": "quest",
+    "description": "",
+    "keywords": [],
+    "active": 1,
+    "order": 0,
+    "providers": [
+        "Modules\\Quest\\Providers\\QuestServiceProvider"
+    ],
+    "aliases": {},
+    "files": [],
+    "requires": []
+}
