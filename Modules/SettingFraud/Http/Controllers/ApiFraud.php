@@ -1293,7 +1293,13 @@ class ApiFraud extends Controller
             return false;
         }
 
-        $sendNotificationReferralUser = $this->cronFraudReferralUsers();
+        //delete data daily trx
+        $deleteDailyTrx = $this->deleteDailyTransactions();
+        if (!$deleteDailyTrx) {
+            return false;
+        }
+
+        $sendNotificationReferralUser = $this->cronFraudReferral();
         if (!$sendNotificationReferralUser) {
             return false;
         }
