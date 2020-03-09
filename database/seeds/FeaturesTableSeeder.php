@@ -1771,6 +1771,102 @@ class FeaturesTableSeeder extends Seeder
                     'created_at' => date('Y-m-d H:00:00'),
                     'updated_at' => date('Y-m-d H:00:00'),
                 ),
+            220 =>
+            array(
+                'id_feature' => 221,
+                'feature_type' => 'List',
+                'feature_module' => 'Achievement',
+                'created_at' => date('Y-m-d H:00:00'),
+                'updated_at' => date('Y-m-d H:00:00'),
+            ),
+            221 =>
+            array(
+                'id_feature' => 222,
+                'feature_type' => 'Detail',
+                'feature_module' => 'Achievement',
+                'created_at' => date('Y-m-d H:00:00'),
+                'updated_at' => date('Y-m-d H:00:00'),
+            ),
+            222 =>
+            array(
+                'id_feature' => 223,
+                'feature_type' => 'Create',
+                'feature_module' => 'Achievement',
+                'created_at' => date('Y-m-d H:00:00'),
+                'updated_at' => date('Y-m-d H:00:00'),
+            ),
+            223 =>
+            array(
+                'id_feature' => 224,
+                'feature_type' => 'Update',
+                'feature_module' => 'Achievement',
+                'created_at' => date('Y-m-d H:00:00'),
+                'updated_at' => date('Y-m-d H:00:00'),
+            ),
+            224 =>
+            array(
+                'id_feature' => 225,
+                'feature_type' => 'Delete',
+                'feature_module' => 'Achievement',
+                'created_at' => date('Y-m-d H:00:00'),
+                'updated_at' => date('Y-m-d H:00:00'),
+            ),
+            225 =>
+            array(
+                'id_feature' => 226,
+                'feature_type' => 'Report',
+                'feature_module' => 'Achievement',
+                'created_at' => date('Y-m-d H:00:00'),
+                'updated_at' => date('Y-m-d H:00:00'),
+            ),
+            226 =>
+            array(
+                'id_feature' => 227,
+                'feature_type' => 'List',
+                'feature_module' => 'Quest',
+                'created_at' => date('Y-m-d H:00:00'),
+                'updated_at' => date('Y-m-d H:00:00'),
+            ),
+            227 =>
+            array(
+                'id_feature' => 228,
+                'feature_type' => 'Detail',
+                'feature_module' => 'Quest',
+                'created_at' => date('Y-m-d H:00:00'),
+                'updated_at' => date('Y-m-d H:00:00'),
+            ),
+            228 =>
+            array(
+                'id_feature' => 229,
+                'feature_type' => 'Create',
+                'feature_module' => 'Quest',
+                'created_at' => date('Y-m-d H:00:00'),
+                'updated_at' => date('Y-m-d H:00:00'),
+            ),
+            229 =>
+            array(
+                'id_feature' => 230,
+                'feature_type' => 'Update',
+                'feature_module' => 'Quest',
+                'created_at' => date('Y-m-d H:00:00'),
+                'updated_at' => date('Y-m-d H:00:00'),
+            ),
+            230 =>
+            array(
+                'id_feature' => 231,
+                'feature_type' => 'Delete',
+                'feature_module' => 'Quest',
+                'created_at' => date('Y-m-d H:00:00'),
+                'updated_at' => date('Y-m-d H:00:00'),
+            ),
+            231 =>
+            array(
+                'id_feature' => 232,
+                'feature_type' => 'Report',
+                'feature_module' => 'Quest',
+                'created_at' => date('Y-m-d H:00:00'),
+                'updated_at' => date('Y-m-d H:00:00'),
+            ),
         ));
     }
 }
