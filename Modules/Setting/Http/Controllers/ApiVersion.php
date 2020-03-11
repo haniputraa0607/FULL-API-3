@@ -17,6 +17,16 @@ class ApiVersion extends Controller
 {
     public function index(VersionList $request)
     {
+        /*Start check status maintenance mode for apps*/
+        $getMaintenance = Setting::where('key', 'maintenance_mode')->first();
+        if($getMaintenance && $getMaintenance['value'] == 1){
+            return response()->json([
+                'status' => 'fail',
+                'messages' => ['maintenance'],
+                'url_maintenance' =>  env('API_URL') ."api/maintenance-mode"
+            ], 200);
+        }
+        /*=======================End====================*/
         $post = $request->json()->all();
         $dbSetting = Setting::where('key', 'like', 'version_%')->get()->toArray();
         $dbDevice = Version::select('app_type', 'app_version')->orderBy('app_version', 'desc')->where('rules', '1')->get()->toArray();
