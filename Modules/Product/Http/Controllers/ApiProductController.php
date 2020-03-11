@@ -175,43 +175,91 @@ class ApiProductController extends Controller
 		return response()->json(MyHelper::checkUpdate($update));
 	}
 
-    public function import(Import $request) {
+    /**
+     * Export data product
+     * @param Request $request Laravel Request Object
+     */
+    public function import(Request $request) {
         $post = $request->json()->all();
-        // return $post;
-        $dataProduct = [];
-        foreach ($post['data'] as $key => $value) {
-            if ($key < 1) {
-                foreach ($value as $row => $product) {
-                    // return $product;
-                    $data = [
-                        'product_code'        => $value[$row]['product_code'],
-                        'product_name'        => $value[$row]['product_name'],
-                        'product_name_pos'    => $value[$row]['product_name_pos'],
-                        'product_description' => $value[$row]['product_description'],
-                        'product_video'       => $value[$row]['product_video'],
-                        'product_weight'      => $value[$row]['product_weight'],
+        $result = [
+            'invalid' => 0,
+            'updated' => 0
+        ];
+        switch ($post['type']) {
+            case 'global':
+                $data = $post['data']??[];
+                $check_brand = Brand::where(['id_brand'=>$post['id_brand'],'code_brand'=>$data['code_brand']??''])->exists();
+                if($check_brand){
+                    foreach ($data['products'] as $key => $value) {
+                        if($key<2){
+                            continue;
+                        }
+                        if(empty($value['product_code'])){
+                            $result['invalid']++;
+                            continue;
+                        }
+                        $result['updated']++;
+                        if(empty($value['product_name'])){
+                            unset($value['product_name']);
+                        }
+                        if(empty($value['product_description'])){
+                            unset($value['product_description']);
+                        }
+                        $product = Product::updateOrCreate([
+                            'product_code'=>$value['product_code']
+                        ],$value);
+                        $update = BrandProduct::updateOrCreate([
+                            'id_brand'=>$post['id_brand'],
+                            'id_product'=>$product['id_product']
+                        ]);
+                    }
+                }else{
+                    return [
+                        'status' => 'fail',
+                        'messages' => ['Imported product\'s brand does not match with selected brand']
                     ];
-
-                    $insert = Product::updateOrCreate(['product_code' => $product['product_code']], $data);
                 }
-
-            } else {
-                foreach ($value as $row => $price) {
-                    $id_product = Product::where('product_code', $price['product_code'])->first();
-                    $id_outlet = Outlet::where('outlet_code', $price['outlet_code'])->first();
-                    $data = [
-                        'id_product'         => $id_product['id_product'],
-                        'id_outlet'          => $id_outlet['id_outlet'],
-                        'product_price'      => $price['product_price'],
-                        'product_visibility' => $price['product_visibility'],
-                    ];
-
-                    $insert = ProductPrice::updateOrCreate(['id_product' => $id_product['id_product'], 'id_outlet' => $id_outlet['id_outlet']], $data);
-                }
-            }
+                break;
+            
+            default:
+                # code...
+                break;
         }
+        $response = [];
+        if($result['invalid']+$result['updated']<=0){
+            return MyHelper::checkGet([],'File empty');
+        }else{
+            $response[] = $result['invalid']+$result['updated'].' row data processed';
+        }
+        if($result['updated']){
+            $response[] = 'Update '.$result['updated'].' product';
+        }
+        if($result['invalid']){
+            $response[] = $result['invalid'].' row data invalid';
+        }
+        return MyHelper::checkGet($response);
+    }
 
-        return response()->json(MyHelper::checkCreate($insert));
+    /**
+     * Export data product
+     * @param Request $request Laravel Request Object
+     */
+    public function export(Request $request) {
+        $post = $request->json()->all();
+        switch ($post['type']) {
+            case 'global':
+                $data['brand'] = Brand::where('id_brand',$post['id_brand'])->first();
+                $data['products'] = Product::select('product_code','product_name','product_description')
+                    ->join('brand_product','brand_product.id_product','=','products.id_product')
+                    ->where('id_brand',$post['id_brand'])
+                    ->get();
+                break;
+            
+            default:
+                # code...
+                break;
+        }
+        return MyHelper::checkGet($data);
     }
 
     /* Pengecekan code unique */
