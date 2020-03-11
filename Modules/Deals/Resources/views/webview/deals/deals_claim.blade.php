@@ -129,12 +129,48 @@
 		@if(!empty($deals))
 			<div class="col-md-4 col-md-offset-4" style="background-color: #f0f3f7;">
 				<div style="background-color: #f8f9fb;padding: 10px;box-shadow: 0 0.7px 3.3px #eeeeee;" class="col-md-12 clearfix WorkSans">
-					<div class="text-center title WorkSans-SemiBold" style="color: #a6ba35;font-size: 20px;">
-						@if ($deals['paid_status'] == 'Free') PEMBELIAN @else KLAIM @endif BERHASIL
-					</div>
-					<div class="text-center WorkSans-Medium" style="color: #333333;margin-top: 13.3px;">
-						Terima kasih telah @if ($deals['paid_status'] == 'Free') membeli @else mengklaim @endif
-					</div>
+					@switch($deals['paid_status'])
+						@case('Free')
+							<div class="text-center title WorkSans-SemiBold" style="color: #a6ba35;font-size: 20px;">
+								KLAIM BERHASIL
+							</div>
+							<div class="text-center WorkSans-Medium" style="color: #333333;margin-top: 13.3px;">
+								Terima kasih telah mengklaim
+							</div>
+							@break
+						@case('Pending')
+							<div class="text-center title WorkSans-SemiBold" style="color: #E03A2C;font-size: 20px;">
+								MENUNGGU KONFIRMASI
+							</div>
+							<div class="text-center WorkSans-Medium" style="color: #333333;margin-top: 13.3px;">
+								Mohon tunggu pembayaran anda sedang dikonfirmasi
+							</div>
+							@break
+						@case('Paid')
+							<div class="text-center title WorkSans-SemiBold" style="color: #E03A2C;font-size: 20px;">
+								MENUNGGU KONFIRMASI
+							</div>
+							<div class="text-center WorkSans-Medium" style="color: #333333;margin-top: 13.3px;">
+								Mohon tunggu pembayaran anda sedang dikonfirmasi
+							</div>
+							@break
+						@case('Completed')
+							<div class="text-center title WorkSans-SemiBold" style="color: #a6ba35;font-size: 20px;">
+								PEMBELIAN BERHASIL
+							</div>
+							<div class="text-center WorkSans-Medium" style="color: #333333;margin-top: 13.3px;">
+								Terima kasih telah membeli
+							</div>
+							@break
+						@case('Cancelled')
+							<div class="text-center title WorkSans-SemiBold" style="color: #E03A2C;font-size: 20px;">
+								PEMBELIAN GAGAL
+							</div>
+							<div class="text-center WorkSans-Medium" style="color: #333333;margin-top: 13.3px;">
+								Pembelian dibatalkan
+							</div>
+							@break
+					@endswitch
 					<div style="position: relative;margin-top: 26.7px;">
 						<hr style="position:absolute;z-index: 1;border: none;border-left: 1px dashed #eeeeee;height: 98px;left: 36%;top: -5%;">
 						<div style="width: 56%;height: 100px;position: absolute;top: 10%;left: 40%;">
@@ -196,11 +232,13 @@
 					</div>
 				</div>
 			</div>
-			<div style="background-color: #f8f9fb;color: #333333;padding: 20px;position: fixed; bottom: 30px;width: 104%;" class="row">
-				<div class="col-12">
-					<a style="width:100%; background-color: #383b67; color: #ffffff;" class="btn btn-lg WorkSans-Bold" href="#yes">Lihat Kupon</a>
+			@if ($deals['paid_status'] == 'Free' || $deals['paid_status'] == 'Completed')
+				<div style="background-color: #f8f9fb;color: #333333;padding: 20px;position: fixed; bottom: 30px;width: 104%;" class="row">
+					<div class="col-12">
+						<a style="width:100%; background-color: #383b67; color: #ffffff;" class="btn btn-lg WorkSans-Bold" href="#yes">Lihat Kupon</a>
+					</div>
 				</div>
-			</div>
+			@endif
 		@else
 			<div class="col-md-4 col-md-offset-4">
 				<h4 class="text-center" style="margin-top: 30px;">Deals is not found</h4>
