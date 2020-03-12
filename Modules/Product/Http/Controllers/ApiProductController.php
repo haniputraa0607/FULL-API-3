@@ -182,36 +182,120 @@ class ApiProductController extends Controller
     public function import(Request $request) {
         $post = $request->json()->all();
         $result = [
+            'processed' => 0,
             'invalid' => 0,
-            'updated' => 0
+            'updated' => 0,
+            'create' => 0,
+            'create_category' => 0,
+            'no_update' => 0,
+            'failed' => 0,
+            'not_found' => 0,
+            'more_msg' => [],
+            'more_msg_extended' => []
         ];
         switch ($post['type']) {
             case 'global':
+                // update or create if not exist 
                 $data = $post['data']??[];
                 $check_brand = Brand::where(['id_brand'=>$post['id_brand'],'code_brand'=>$data['code_brand']??''])->exists();
                 if($check_brand){
                     foreach ($data['products'] as $key => $value) {
-                        if($key<2){
-                            continue;
-                        }
                         if(empty($value['product_code'])){
                             $result['invalid']++;
                             continue;
                         }
-                        $result['updated']++;
+                        $result['processed']++;
                         if(empty($value['product_name'])){
                             unset($value['product_name']);
                         }
                         if(empty($value['product_description'])){
                             unset($value['product_description']);
                         }
-                        $product = Product::updateOrCreate([
-                            'product_code'=>$value['product_code']
-                        ],$value);
+                        $product = Product::where('product_code',$value['product_code'])->first();
+                        if($product){
+                            if($product->update($value)){
+                                $result['updated']++;
+                            }else{
+                                $result['no_update']++;
+                            }
+                        }else{
+                            $product = Product::create($value);
+                            if($product){
+                                $result['create']++;
+                            }else{
+                                $result['failed']++;
+                                $result['more_msg_extended'][] = "Product with product code {$value['product_code']} failed to be created";
+                                continue;
+                            }
+                        }
                         $update = BrandProduct::updateOrCreate([
                             'id_brand'=>$post['id_brand'],
-                            'id_product'=>$product['id_product']
+                            'id_product'=>$product->id_product
                         ]);
+                    }
+                }else{
+                    return [
+                        'status' => 'fail',
+                        'messages' => ['Imported product\'s brand does not match with selected brand']
+                    ];
+                }
+                break;
+            
+            case 'detail':
+                // update only, never create
+                $data = $post['data']??[];
+                $check_brand = Brand::where(['id_brand'=>$post['id_brand'],'code_brand'=>$data['code_brand']??''])->first();
+                if($check_brand){
+                    foreach ($data['products'] as $key => $value) {
+                        if(empty($value['product_code'])){
+                            $result['invalid']++;
+                            continue;
+                        }
+                        $result['processed']++;
+                        if(empty($value['product_name'])){
+                            unset($value['product_name']);
+                        }
+                        if(empty($value['product_description'])){
+                            unset($value['product_description']);
+                        }
+                        if(empty($value['position'])){
+                            unset($value['position']);
+                        }
+                        if(empty($value['product_visibility'])){
+                            unset($value['product_visibility']);
+                        }
+                        $product = Product::join('brand_product','products.id_product','=','brand_product.id_product')
+                            ->where([
+                                'id_brand' => $check_brand->id_brand,
+                                'product_code' => $value['product_code']
+                            ])->first();
+                        if(!$product){
+                            $result['not_found']++;
+                            $result['more_msg_extended'][] = "Product with product code {$value['product_code']} in selected brand not found";
+                            continue;
+                        }
+                        if(empty($value['product_category_name'])){
+                            unset($value['product_category_name']);
+                        }else{
+                            $pc = ProductCategory::where('product_category_name',$value['product_category_name'])->first();
+                            if(!$pc){
+                                $result['create_category']++;
+                                $pc = ProductCategory::create([
+                                    'product_category_name' => $value['product_category_name']
+                                ]);
+                            }
+                            $value['id_product_category'] = $pc->id_product_category;
+                            unset($value['product_category_name']);
+                        }
+                        $update1 = $product->update($value);
+                        if($value['id_product_category']??false){
+                            $update2 = BrandProduct::where('id_product')->update(['id_product_category'=>$value['id_product_category']]);
+                        }
+                        if($update1 || $update2){
+                            $result['updated']++;
+                        }else{
+                            $result['no_update']++;
+                        }
                     }
                 }else{
                     return [
@@ -226,17 +310,36 @@ class ApiProductController extends Controller
                 break;
         }
         $response = [];
-        if($result['invalid']+$result['updated']<=0){
+        if($result['invalid']+$result['processed']<=0){
             return MyHelper::checkGet([],'File empty');
         }else{
-            $response[] = $result['invalid']+$result['updated'].' row data processed';
+            $response[] = $result['invalid']+$result['processed'].' total data found';
+        }
+        if($result['processed']){
+            $response[] = $result['processed'].' data processed';
         }
         if($result['updated']){
             $response[] = 'Update '.$result['updated'].' product';
         }
+        if($result['create']){
+            $response[] = 'Create '.$result['create'].' new product';
+        }
+        if($result['create_category']){
+            $response[] = 'Create '.$result['create_category'].' new category';
+        }
+        if($result['no_update']){
+            $response[] = $result['no_update'].' product not updated';
+        }
         if($result['invalid']){
             $response[] = $result['invalid'].' row data invalid';
         }
+        if($result['failed']){
+            $response[] = 'Failed create '.$result['failed'].' product';
+        }
+        if($result['not_found']){
+            $response[] = $result['not_found'].' product not found';
+        }
+        $response = array_merge($response,$result['more_msg_extended']);
         return MyHelper::checkGet($response);
     }
 
@@ -248,6 +351,27 @@ class ApiProductController extends Controller
         $post = $request->json()->all();
         switch ($post['type']) {
             case 'global':
+                $data['brand'] = Brand::where('id_brand',$post['id_brand'])->first();
+                $data['products'] = Product::select('product_code','product_name','product_description')
+                    ->join('brand_product','brand_product.id_product','=','products.id_product')
+                    ->where('id_brand',$post['id_brand'])
+                    ->groupBy('products.id_product')
+                    ->get();
+                break;
+
+            case 'detail':
+                $data['brand'] = Brand::where('id_brand',$post['id_brand'])->first();
+                $data['products'] = Product::select('product_categories.product_category_name','products.position','product_code','product_name','product_description','products.product_visibility')
+                    ->join('brand_product','brand_product.id_product','=','products.id_product')
+                    ->where('id_brand',$post['id_brand'])
+                    ->leftJoin('product_categories','product_categories.id_product_category','=','brand_product.id_product_category')
+                    ->groupBy('products.id_product')
+                    ->groupBy('product_category_name')
+                    ->orderBy('product_category_name')
+                    ->get();
+                break;
+
+            case 'price':
                 $data['brand'] = Brand::where('id_brand',$post['id_brand'])->first();
                 $data['products'] = Product::select('product_code','product_name','product_description')
                     ->join('brand_product','brand_product.id_product','=','products.id_product')
