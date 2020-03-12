@@ -437,6 +437,8 @@ class ApiProductController extends Controller
                     ->join('brand_product','brand_product.id_product','=','products.id_product')
                     ->where('id_brand',$post['id_brand'])
                     ->groupBy('products.id_product')
+                    ->orderBy('position')
+                    ->orderBy('products.id_product')
                     ->get();
                 break;
 
@@ -449,6 +451,8 @@ class ApiProductController extends Controller
                     ->groupBy('products.id_product')
                     ->groupBy('product_category_name')
                     ->orderBy('product_category_name')
+                    ->orderBy('position')
+                    ->orderBy('products.id_product')
                     ->get();
                 break;
 
@@ -469,6 +473,8 @@ class ApiProductController extends Controller
                     ->join('brand_product','brand_product.id_product','=','products.id_product')
                     ->join(DB::raw('('.$subquery.') as global_prices'),'products.id_product','=','global_prices.id_product')
                     ->where('id_brand',$post['id_brand'])
+                    ->orderBy('position')
+                    ->orderBy('products.id_product')
                     ->get();
                 foreach ($data['products'] as $key => &$product) {
                     $inc = 0;
