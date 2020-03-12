@@ -312,6 +312,9 @@ class ApiProductController extends Controller
                 $data = $post['data']??[];
                 $check_brand = Brand::where(['id_brand'=>$post['id_brand'],'code_brand'=>$data['code_brand']??''])->first();
                 if($check_brand){
+                    $global_outlets = Outlet::select('id_outlet','outlet_code')->where([
+                        'outlet_different_price' => 0
+                    ])->get();
                     foreach ($data['products'] as $key => $value) {
                         if(empty($value['product_code'])){
                             $result['invalid']++;
@@ -343,6 +346,31 @@ class ApiProductController extends Controller
                         }else{
                             $result['no_update']++;
                         }
+                        if($value['global_price']??false){
+                            foreach ($global_outlets as $outlet) {
+                                $pp = ProductPrice::where([
+                                    'id_outlet' => $outlet->id_outlet,
+                                    'id_product' => $product->id_product
+                                ]);
+                                if($pp){
+                                    $update = $pp->update(['product_price'=>$value['global_price']]);
+                                }else{
+                                    $update = ProductPrice::create([
+                                        'id_outlet' => $outlet->id_outlet,
+                                        'id_product' => $product->id_product,
+                                        'product_price'=>$value['global_price']
+                                    ]);
+                                }
+                                if($update){
+                                    $result['updated_price']++;
+                                }else{
+                                    if($update !== 0){
+                                        $result['updated_price_fail']++;
+                                        $result['more_msg_extended'][] = "Failed set price for product {$value['product_code']} at outlet {$outlet->outlet_code} failed";
+                                    }
+                                }
+                            }
+                        }
                         foreach ($value as $col_name => $col_value) {
                             if(!$col_value){
                                 continue;
@@ -357,8 +385,14 @@ class ApiProductController extends Controller
                                 if($pp){
                                     $update = $pp->update(['product_price'=>$col_value]);
                                 }else{
+                                    $id_outlet = Outlet::select('id_outlet')->where('outlet_code',$outlet_code)->pluck('id_outlet');
+                                    if(!$id_outlet){
+                                        $result['updated_price_fail']++;
+                                        $result['more_msg_extended'][] = "Failed create new price for product {$value['product_code']} at outlet $outlet_code failed";
+                                        continue;
+                                    }
                                     $update = ProductPrice::create([
-                                        'outlet_code' => $outlet_code,
+                                        'id_outlet' => $id_outlet,
                                         'id_product' => $product->id_product,
                                         'product_price'=>$col_value
                                     ]);
