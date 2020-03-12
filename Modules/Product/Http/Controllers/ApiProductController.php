@@ -291,7 +291,7 @@ class ApiProductController extends Controller
                         }
                         $update1 = $product->update($value);
                         if($value['id_product_category']??false){
-                            $update2 = BrandProduct::where('id_product')->update(['id_product_category'=>$value['id_product_category']]);
+                            $update2 = BrandProduct::where('id_product',$product->id_product)->update(['id_product_category'=>$value['id_product_category']]);
                         }
                         if($update1 || $update2){
                             $result['updated']++;
@@ -439,6 +439,7 @@ class ApiProductController extends Controller
                     ->groupBy('products.id_product')
                     ->orderBy('position')
                     ->orderBy('products.id_product')
+                    ->distinct()
                     ->get();
                 break;
 
@@ -453,6 +454,7 @@ class ApiProductController extends Controller
                     ->orderBy('product_category_name')
                     ->orderBy('position')
                     ->orderBy('products.id_product')
+                    ->distinct()
                     ->get();
                 break;
 
@@ -475,6 +477,7 @@ class ApiProductController extends Controller
                     ->where('id_brand',$post['id_brand'])
                     ->orderBy('position')
                     ->orderBy('products.id_product')
+                    ->distinct()
                     ->get();
                 foreach ($data['products'] as $key => &$product) {
                     $inc = 0;
