@@ -34,6 +34,8 @@ Route::group(['prefix' => 'api/outlet', 'middleware' => ['log_activities', 'auth
     Route::any('be/filter', ['middleware' => 'feature_control:24', 'uses' =>'ApiOutletController@filter']);
     Route::any('list/code', ['middleware' => 'feature_control:24', 'uses' =>'ApiOutletController@getAllCodeOutlet']);
     Route::any('ajax_handler','ApiOutletController@ajaxHandler');
+    Route::post('price_different','ApiOutletController@priceDifferent');
+    Route::post('price_different/update','ApiOutletController@updatePriceDifferent');
 
     /* photo */
     Route::group(['prefix' => 'photo'], function() {
