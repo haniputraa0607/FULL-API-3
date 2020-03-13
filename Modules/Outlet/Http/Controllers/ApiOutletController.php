@@ -2177,4 +2177,28 @@ class ApiOutletController extends Controller
         return $outlet;
         // end check promo
     }
+    /**
+     * Get list different outlet
+     * @param  Request $request [description]
+     * @return [type]           [description]
+     */
+    public function differentPrice(Request $request) {
+        $data = Outlet::select('id_outlet','outlet_code','outlet_name','outlet_different_price');
+        if($keyword = $request->json('keyword')){
+            $data->where('outlet_code','like',"%$keyword%")
+                ->orWhere('outlet_name','like',"%$keyword%");
+        }
+        return MyHelper::checkGet($data->paginate(20));
+    }
+    public function updateDifferentPrice(Request $request) {
+        $post = $request->json()->all();
+        $update = Outlet::where('id_outlet',$post['id_outlet']??'')->update(['outlet_different_price'=>$post['status']??0]);
+        if($update){
+            return [
+                'status'=>'success',
+                'result'=>$post['status']??0
+            ];
+        }
+        return ['status'=>'fail'];
+    }
 }

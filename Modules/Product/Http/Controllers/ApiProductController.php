@@ -175,43 +175,361 @@ class ApiProductController extends Controller
 		return response()->json(MyHelper::checkUpdate($update));
 	}
 
-    public function import(Import $request) {
+    /**
+     * Export data product
+     * @param Request $request Laravel Request Object
+     */
+    public function import(Request $request) {
         $post = $request->json()->all();
-        // return $post;
-        $dataProduct = [];
-        foreach ($post['data'] as $key => $value) {
-            if ($key < 1) {
-                foreach ($value as $row => $product) {
-                    // return $product;
-                    $data = [
-                        'product_code'        => $value[$row]['product_code'],
-                        'product_name'        => $value[$row]['product_name'],
-                        'product_name_pos'    => $value[$row]['product_name_pos'],
-                        'product_description' => $value[$row]['product_description'],
-                        'product_video'       => $value[$row]['product_video'],
-                        'product_weight'      => $value[$row]['product_weight'],
+        $result = [
+            'processed' => 0,
+            'invalid' => 0,
+            'updated' => 0,
+            'updated_price' => 0,
+            'updated_price_fail' => 0,
+            'create' => 0,
+            'create_category' => 0,
+            'no_update' => 0,
+            'failed' => 0,
+            'not_found' => 0,
+            'more_msg' => [],
+            'more_msg_extended' => []
+        ];
+        switch ($post['type']) {
+            case 'global':
+                // update or create if not exist 
+                $data = $post['data']??[];
+                $check_brand = Brand::where(['id_brand'=>$post['id_brand'],'code_brand'=>$data['code_brand']??''])->exists();
+                if($check_brand){
+                    foreach ($data['products'] as $key => $value) {
+                        if(empty($value['product_code'])){
+                            $result['invalid']++;
+                            continue;
+                        }
+                        $result['processed']++;
+                        if(empty($value['product_name'])){
+                            unset($value['product_name']);
+                        }
+                        if(empty($value['product_description'])){
+                            unset($value['product_description']);
+                        }
+                        $product = Product::where('product_code',$value['product_code'])->first();
+                        if($product){
+                            if($product->update($value)){
+                                $result['updated']++;
+                            }else{
+                                $result['no_update']++;
+                            }
+                        }else{
+                            $product = Product::create($value);
+                            if($product){
+                                $result['create']++;
+                            }else{
+                                $result['failed']++;
+                                $result['more_msg_extended'][] = "Product with product code {$value['product_code']} failed to be created";
+                                continue;
+                            }
+                        }
+                        $update = BrandProduct::updateOrCreate([
+                            'id_brand'=>$post['id_brand'],
+                            'id_product'=>$product->id_product
+                        ]);
+                    }
+                }else{
+                    return [
+                        'status' => 'fail',
+                        'messages' => ['Imported product\'s brand does not match with selected brand']
                     ];
-
-                    $insert = Product::updateOrCreate(['product_code' => $product['product_code']], $data);
                 }
-
-            } else {
-                foreach ($value as $row => $price) {
-                    $id_product = Product::where('product_code', $price['product_code'])->first();
-                    $id_outlet = Outlet::where('outlet_code', $price['outlet_code'])->first();
-                    $data = [
-                        'id_product'         => $id_product['id_product'],
-                        'id_outlet'          => $id_outlet['id_outlet'],
-                        'product_price'      => $price['product_price'],
-                        'product_visibility' => $price['product_visibility'],
+                break;
+            
+            case 'detail':
+                // update only, never create
+                $data = $post['data']??[];
+                $check_brand = Brand::where(['id_brand'=>$post['id_brand'],'code_brand'=>$data['code_brand']??''])->first();
+                if($check_brand){
+                    foreach ($data['products'] as $key => $value) {
+                        if(empty($value['product_code'])){
+                            $result['invalid']++;
+                            continue;
+                        }
+                        $result['processed']++;
+                        if(empty($value['product_name'])){
+                            unset($value['product_name']);
+                        }
+                        if(empty($value['product_description'])){
+                            unset($value['product_description']);
+                        }
+                        if(empty($value['position'])){
+                            unset($value['position']);
+                        }
+                        if(empty($value['product_visibility'])){
+                            unset($value['product_visibility']);
+                        }
+                        $product = Product::join('brand_product','products.id_product','=','brand_product.id_product')
+                            ->where([
+                                'id_brand' => $check_brand->id_brand,
+                                'product_code' => $value['product_code']
+                            ])->first();
+                        if(!$product){
+                            $result['not_found']++;
+                            $result['more_msg_extended'][] = "Product with product code {$value['product_code']} in selected brand not found";
+                            continue;
+                        }
+                        if(empty($value['product_category_name'])){
+                            unset($value['product_category_name']);
+                        }else{
+                            $pc = ProductCategory::where('product_category_name',$value['product_category_name'])->first();
+                            if(!$pc){
+                                $result['create_category']++;
+                                $pc = ProductCategory::create([
+                                    'product_category_name' => $value['product_category_name']
+                                ]);
+                            }
+                            $value['id_product_category'] = $pc->id_product_category;
+                            unset($value['product_category_name']);
+                        }
+                        $update1 = $product->update($value);
+                        if($value['id_product_category']??false){
+                            $update2 = BrandProduct::where('id_product',$product->id_product)->update(['id_product_category'=>$value['id_product_category']]);
+                        }
+                        if($update1 || $update2){
+                            $result['updated']++;
+                        }else{
+                            $result['no_update']++;
+                        }
+                    }
+                }else{
+                    return [
+                        'status' => 'fail',
+                        'messages' => ['Imported product\'s brand does not match with selected brand']
                     ];
-
-                    $insert = ProductPrice::updateOrCreate(['id_product' => $id_product['id_product'], 'id_outlet' => $id_outlet['id_outlet']], $data);
                 }
-            }
+                break;
+            
+            case 'price':
+                // update only, never create
+                $data = $post['data']??[];
+                $check_brand = Brand::where(['id_brand'=>$post['id_brand'],'code_brand'=>$data['code_brand']??''])->first();
+                if($check_brand){
+                    $global_outlets = Outlet::select('id_outlet','outlet_code')->where([
+                        'outlet_different_price' => 0
+                    ])->get();
+                    foreach ($data['products'] as $key => $value) {
+                        if(empty($value['product_code'])){
+                            $result['invalid']++;
+                            continue;
+                        }
+                        $result['processed']++;
+                        if(empty($value['product_name'])){
+                            unset($value['product_name']);
+                        }
+                        if(empty($value['product_description'])){
+                            unset($value['product_description']);
+                        }
+                        if(empty($value['global_price'])){
+                            unset($value['global_price']);
+                        }
+                        $product = Product::join('brand_product','products.id_product','=','brand_product.id_product')
+                            ->where([
+                                'id_brand' => $check_brand->id_brand,
+                                'product_code' => $value['product_code']
+                            ])->first();
+                        if(!$product){
+                            $result['not_found']++;
+                            $result['more_msg_extended'][] = "Product with product code {$value['product_code']} in selected brand not found";
+                            continue;
+                        }
+                        $update1 = $product->update($value);
+                        if($update1){
+                            $result['updated']++;
+                        }else{
+                            $result['no_update']++;
+                        }
+                        if($value['global_price']??false){
+                            foreach ($global_outlets as $outlet) {
+                                $pp = ProductPrice::where([
+                                    'id_outlet' => $outlet->id_outlet,
+                                    'id_product' => $product->id_product
+                                ]);
+                                if($pp){
+                                    $update = $pp->update(['product_price'=>$value['global_price']]);
+                                }else{
+                                    $update = ProductPrice::create([
+                                        'id_outlet' => $outlet->id_outlet,
+                                        'id_product' => $product->id_product,
+                                        'product_price'=>$value['global_price']
+                                    ]);
+                                }
+                                if($update){
+                                    $result['updated_price']++;
+                                }else{
+                                    if($update !== 0){
+                                        $result['updated_price_fail']++;
+                                        $result['more_msg_extended'][] = "Failed set price for product {$value['product_code']} at outlet {$outlet->outlet_code} failed";
+                                    }
+                                }
+                            }
+                        }
+                        foreach ($value as $col_name => $col_value) {
+                            if(!$col_value){
+                                continue;
+                            }
+                            if(strpos($col_name, 'price_') !== false){
+                                $outlet_code = str_replace('price_', '', $col_name);
+                                $pp = ProductPrice::join('outlets','outlets.id_outlet','=','product_prices.id_outlet')
+                                ->where([
+                                    'outlet_code' => $outlet_code,
+                                    'id_product' => $product->id_product
+                                ]);
+                                if($pp){
+                                    $update = $pp->update(['product_price'=>$col_value]);
+                                }else{
+                                    $id_outlet = Outlet::select('id_outlet')->where('outlet_code',$outlet_code)->pluck('id_outlet');
+                                    if(!$id_outlet){
+                                        $result['updated_price_fail']++;
+                                        $result['more_msg_extended'][] = "Failed create new price for product {$value['product_code']} at outlet $outlet_code failed";
+                                        continue;
+                                    }
+                                    $update = ProductPrice::create([
+                                        'id_outlet' => $id_outlet,
+                                        'id_product' => $product->id_product,
+                                        'product_price'=>$col_value
+                                    ]);
+                                }
+                                if($update){
+                                    $result['updated_price']++;
+                                }else{
+                                    $result['updated_price_fail']++;
+                                    $result['more_msg_extended'][] = "Failed set price for product {$value['product_code']} at outlet $outlet_code failed";
+                                }
+                            }
+                        }
+                    }
+                }else{
+                    return [
+                        'status' => 'fail',
+                        'messages' => ['Imported product\'s brand does not match with selected brand']
+                    ];
+                }
+                break;
+            
+            default:
+                # code...
+                break;
         }
+        $response = [];
+        if($result['invalid']+$result['processed']<=0){
+            return MyHelper::checkGet([],'File empty');
+        }else{
+            $response[] = $result['invalid']+$result['processed'].' total data found';
+        }
+        if($result['processed']){
+            $response[] = $result['processed'].' data processed';
+        }
+        if($result['updated']){
+            $response[] = 'Update '.$result['updated'].' product';
+        }
+        if($result['create']){
+            $response[] = 'Create '.$result['create'].' new product';
+        }
+        if($result['create_category']){
+            $response[] = 'Create '.$result['create_category'].' new category';
+        }
+        if($result['no_update']){
+            $response[] = $result['no_update'].' product not updated';
+        }
+        if($result['invalid']){
+            $response[] = $result['invalid'].' row data invalid';
+        }
+        if($result['failed']){
+            $response[] = 'Failed create '.$result['failed'].' product';
+        }
+        if($result['not_found']){
+            $response[] = $result['not_found'].' product not found';
+        }
+        if($result['updated_price']){
+            $response[] = 'Update '.$result['updated_price'].' product price';
+        }
+        if($result['updated_price_fail']){
+            $response[] = 'Update '.$result['updated_price_fail'].' product price fail';
+        }
+        $response = array_merge($response,$result['more_msg_extended']);
+        return MyHelper::checkGet($response);
+    }
 
-        return response()->json(MyHelper::checkCreate($insert));
+    /**
+     * Export data product
+     * @param Request $request Laravel Request Object
+     */
+    public function export(Request $request) {
+        $post = $request->json()->all();
+        switch ($post['type']) {
+            case 'global':
+                $data['brand'] = Brand::where('id_brand',$post['id_brand'])->first();
+                $data['products'] = Product::select('product_code','product_name','product_description')
+                    ->join('brand_product','brand_product.id_product','=','products.id_product')
+                    ->where('id_brand',$post['id_brand'])
+                    ->groupBy('products.id_product')
+                    ->orderBy('position')
+                    ->orderBy('products.id_product')
+                    ->distinct()
+                    ->get();
+                break;
+
+            case 'detail':
+                $data['brand'] = Brand::where('id_brand',$post['id_brand'])->first();
+                $data['products'] = Product::select('product_categories.product_category_name','products.position','product_code','product_name','product_description','products.product_visibility')
+                    ->join('brand_product','brand_product.id_product','=','products.id_product')
+                    ->where('id_brand',$post['id_brand'])
+                    ->leftJoin('product_categories','product_categories.id_product_category','=','brand_product.id_product_category')
+                    ->groupBy('products.id_product')
+                    ->groupBy('product_category_name')
+                    ->orderBy('product_category_name')
+                    ->orderBy('position')
+                    ->orderBy('products.id_product')
+                    ->distinct()
+                    ->get();
+                break;
+
+            case 'price':
+                $subquery = str_replace('?','0',ProductPrice::select(\DB::raw('id_product,MAX(product_price) as global_price'))->leftJoin('outlets','outlets.id_outlet','=','product_prices.id_outlet')
+                    ->where('outlets.outlet_different_price','=',0)
+                    ->groupBy('id_product')
+                    ->toSql());
+                $different_outlet = Outlet::select('outlet_code','id_product','product_price')
+                    ->leftJoin('product_prices','outlets.id_outlet','=','product_prices.id_outlet')
+                    ->where('outlet_different_price',1)->get();
+                $do = MyHelper::groupIt($different_outlet,'outlet_code',null,function($key,&$val){
+                    $val = MyHelper::groupIt($val,'id_product');
+                    return $key;
+                });
+                $data['brand'] = Brand::where('id_brand',$post['id_brand'])->first();
+                $data['products'] = Product::select('products.id_product','product_code','product_name','product_description','global_prices.global_price')
+                    ->join('brand_product','brand_product.id_product','=','products.id_product')
+                    ->join(DB::raw('('.$subquery.') as global_prices'),'products.id_product','=','global_prices.id_product')
+                    ->where('id_brand',$post['id_brand'])
+                    ->orderBy('position')
+                    ->orderBy('products.id_product')
+                    ->distinct()
+                    ->get();
+                foreach ($data['products'] as $key => &$product) {
+                    $inc = 0;
+                    foreach ($do as $outlet_code => $x) {
+                        $inc++;
+                        $product['price_'.$outlet_code] = $x[$product['id_product']][0]['product_price']??'';
+                        if($inc === count($do)){
+                            unset($product['id_product']);
+                        }
+                    }
+                }
+                break;
+            
+            default:
+                # code...
+                break;
+        }
+        return MyHelper::checkGet($data);
     }
 
     /* Pengecekan code unique */

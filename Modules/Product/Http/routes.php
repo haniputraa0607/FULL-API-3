@@ -38,6 +38,8 @@ Route::group(['prefix' => 'api/product','middleware' => ['log_activities','auth:
     Route::post('delete', 'ApiProductController@delete');
     Route::post('import', 'ApiProductController@import');
     Route::get('list/price/{id_outlet}', 'ApiProductController@listProductPriceByOutlet');
+    Route::post('export', 'ApiProductController@export');
+    Route::post('import', 'ApiProductController@import');
 
     /* photo */
     Route::group(['prefix' => 'photo'], function() {
