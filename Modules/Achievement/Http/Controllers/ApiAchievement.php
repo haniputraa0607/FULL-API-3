@@ -222,9 +222,39 @@ class ApiAchievement extends Controller
      * @param int $id
      * @return Response
      */
-    public function update(Request $request, $id)
+    public function update(Request $request)
     {
-        //
+        $post = $request->json()->all();
+
+        if (isset($post['logo_badge'])) {
+            $uploadDetail = MyHelper::uploadPhotoStrict($post['logo_badge'], $this->saveImageDetail, 500, 500);
+
+            if (isset($uploadDetail['status']) && $uploadDetail['status'] == "success") {
+                $post['logo_badge'] = $uploadDetail['path'];
+            } else {
+                return response()->json([
+                    'status'   => 'fail',
+                    'messages' => ['Failed to upload image']
+                ]);
+            }
+        }
+
+        DB::beginTransaction();
+        try {
+            AchievementDetail::where('id_achievement_detail', $post['id_achievement_detail'])->update($post);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'status'    => 'fail',
+                'message'   => 'Update Achievement Detail Failed',
+                'error'     => $e->getMessage()
+            ]);
+        }
+        DB::commit();
+
+        return response()->json([
+            'status'    => 'success'
+        ]);
     }
 
     /**
