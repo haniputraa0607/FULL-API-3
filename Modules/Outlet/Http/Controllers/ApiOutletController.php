@@ -1925,46 +1925,55 @@ class ApiOutletController extends Controller
         $user = $request->user();
 
         try{
-//            $outlet = Outlet::join('transactions','outlets.id_outlet', '=', 'transactions.id_outlet')
-//                ->join('users', 'users.id', '=', 'transactions.id_user')
-//                ->selectRaw('outlets.*,
-//                        (111.111 * DEGREES(ACOS(LEAST(1.0, COS(RADIANS(outlet_latitude))
-//                             * COS(RADIANS('.$post['latitude'].'))
-//                             * COS(RADIANS(outlet_longitude - '.$post['longitude'].'))
-//                             + SIN(RADIANS(outlet_latitude))
-//                             * SIN(RADIANS('.$post['latitude'].')))))) AS distance_in_km' )
-//                ->with(['user_outlets','city','today', 'outlet_schedules', 'brands'])
-//                ->where('users.phone',$user['phone'])
-//                ->where('outlets.outlet_status', 'Active')
-//                ->whereHas('brands',function($query){
-//                    $query->where('brand_active','1');
-//                })
-//                ->orderBy('distance_in_km')
-//                ->get()->toArray();
-//
-//            if(empty($outlet)){
-                $title = Setting::where('key', 'order_now_title')->first()->value;
-                $subTitleSuccess = Setting::where('key', 'order_now_sub_title_success')->first()->value;
-                $subTitleFail = Setting::where('key', 'order_now_sub_title_fail')->first()->value;
+            $title = Setting::where('key', 'order_now_title')->first()->value;
+            $subTitleSuccess = Setting::where('key', 'order_now_sub_title_success')->first()->value;
+            $subTitleFail = Setting::where('key', 'order_now_sub_title_fail')->first()->value;
 
-                $outlet = Outlet::join('cities', 'cities.id_city', 'outlets.id_city')
-                    ->selectRaw('outlets.id_outlet, outlets.outlet_name, outlets.outlet_code,outlets.outlet_status,outlets.outlet_address,outlets.id_city, outlets.outlet_latitude, outlets.outlet_longitude,
-                        (111.111 * DEGREES(ACOS(LEAST(1.0, COS(RADIANS(outlets.outlet_latitude))
-                             * COS(RADIANS('.$post['latitude'].'))
-                             * COS(RADIANS(outlets.outlet_longitude - '.$post['longitude'].'))
-                             + SIN(RADIANS(outlets.outlet_latitude))
-                             * SIN(RADIANS('.$post['latitude'].')))))) AS distance_in_km' )
-                    ->with(['user_outlets','city','today', 'outlet_schedules', 'brands'])
-                    ->where('outlets.outlet_status', 'Active')
-                    ->whereNotNull('outlets.outlet_latitude')
-                    ->whereNotNull('outlets.outlet_longitude')
-                    ->whereHas('brands',function($query){
-                        $query->where('brand_active','1');
-                    })
-                    ->orderBy('distance_in_km', 'asc')
-                    ->limit(5)
-                    ->get()->toArray();
-//            }
+            $day = [
+                'Mon' => 'Senin',
+                'Tue' => 'Selasa',
+                'Wed' => 'Rabu',
+                'Thu' => 'Kamis',
+                'Fri' => 'Jumat',
+                'Sat' => 'Sabtu',
+                'Sun' => 'Minggu'
+            ];
+
+            $data = [
+                'current_date' => date('Y-m-d'),
+                'current_day' => $day[date('D')],
+                'current_hour' => date('H:i:s')
+            ];
+
+            $outlet = Outlet::join('cities', 'cities.id_city', 'outlets.id_city')
+                ->selectRaw('outlets.id_outlet, outlets.outlet_name, outlets.outlet_code,outlets.outlet_status,outlets.outlet_address,outlets.id_city, outlets.outlet_latitude, outlets.outlet_longitude,
+                    (111.111 * DEGREES(ACOS(LEAST(1.0, COS(RADIANS(outlets.outlet_latitude))
+                         * COS(RADIANS('.$post['latitude'].'))
+                         * COS(RADIANS(outlets.outlet_longitude - '.$post['longitude'].'))
+                         + SIN(RADIANS(outlets.outlet_latitude))
+                         * SIN(RADIANS('.$post['latitude'].')))))) AS distance_in_km' )
+                ->with(['user_outlets','city','today', 'outlet_schedules', 'brands'])
+                ->where('outlets.outlet_status', 'Active')
+                ->whereNotNull('outlets.outlet_latitude')
+                ->whereNotNull('outlets.outlet_longitude')
+                ->whereHas('brands',function($query){
+                    $query->where('brand_active','1');
+                })
+                ->whereIn('id_outlet',function($query) use ($data){
+                    $query->select('id_outlet')
+                        ->from('outlet_schedules')
+                        ->where('day', $data['current_day'])
+                        ->where('is_closed', 0)
+                        ->whereRaw('TIME_TO_SEC("'.$data['current_hour'].'") >= TIME_TO_SEC(open) AND TIME_TO_SEC("'.$data['current_hour'].'") <= TIME_TO_SEC(close)');
+                })->whereNotIn('id_outlet',function($query) use ($data){
+                    $query->select('id_outlet')
+                        ->from('outlet_holidays')
+                        ->join('date_holidays', 'date_holidays.id_holiday', 'outlet_holidays.id_holiday')
+                        ->where('date', $data['current_date']);
+                })
+                ->orderBy('distance_in_km', 'asc')
+                ->limit(5)
+                ->get()->toArray();
 
             if(count($outlet) > 0){
                 $loopdata=&$outlet;
@@ -2167,5 +2176,29 @@ class ApiOutletController extends Controller
 
         return $outlet;
         // end check promo
+    }
+    /**
+     * Get list different outlet
+     * @param  Request $request [description]
+     * @return [type]           [description]
+     */
+    public function differentPrice(Request $request) {
+        $data = Outlet::select('id_outlet','outlet_code','outlet_name','outlet_different_price');
+        if($keyword = $request->json('keyword')){
+            $data->where('outlet_code','like',"%$keyword%")
+                ->orWhere('outlet_name','like',"%$keyword%");
+        }
+        return MyHelper::checkGet($data->paginate(20));
+    }
+    public function updateDifferentPrice(Request $request) {
+        $post = $request->json()->all();
+        $update = Outlet::where('id_outlet',$post['id_outlet']??'')->update(['outlet_different_price'=>$post['status']??0]);
+        if($update){
+            return [
+                'status'=>'success',
+                'result'=>$post['status']??0
+            ];
+        }
+        return ['status'=>'fail'];
     }
 }
