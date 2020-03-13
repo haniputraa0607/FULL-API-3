@@ -21,4 +21,8 @@ class AchievementGroup extends Model
         'description',
         'order_by'
     ];
+
+    public function getIdAchievementGroupAttribute($value) {
+        return \App\Lib\MyHelper::encSlug($value);
+    }
 }

@@ -20,9 +20,12 @@ class ApiAchievement extends Controller
      * Display a listing of the resource.
      * @return Response
      */
-    public function index()
-    {
-        return view('achievement::index');
+    public function index(Request $request) {
+        $data = AchievementGroup::select('achievement_groups.id_achievement_group','achievement_categories.name as category_name','achievement_groups.name','date_start','date_end','publish_start','publish_end')->leftJoin('achievement_categories','achievement_groups.id_achievement_category','=','achievement_categories.id_achievement_category');
+        if($request->post('keyword')){
+            $data->where('achievement_groups.name','like',"%{$request->post('keyword')}%");
+        }
+        return MyHelper::checkGet($data->paginate());
     }
     public function category(Request $request)
     {
