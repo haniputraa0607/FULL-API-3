@@ -2188,11 +2188,15 @@ class ApiOutletController extends Controller
             $data->where('outlet_code','like',"%$keyword%")
                 ->orWhere('outlet_name','like',"%$keyword%");
         }
-        return MyHelper::checkGet($data->paginate(20));
+        if($request->page){
+            return MyHelper::checkGet($data->paginate(20));
+        }else{
+            return MyHelper::checkGet($data->get());
+        }
     }
     public function updateDifferentPrice(Request $request) {
         $post = $request->json()->all();
-        $update = Outlet::where('id_outlet',$post['id_outlet']??'')->update(['outlet_different_price'=>$post['status']??0]);
+        $update = Outlet::whereIn('id_outlet',$post['id_outlet']??'')->update(['outlet_different_price'=>$post['status']??0]);
         if($update){
             return [
                 'status'=>'success',
