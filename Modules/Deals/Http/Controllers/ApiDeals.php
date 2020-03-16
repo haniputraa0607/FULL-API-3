@@ -1206,4 +1206,134 @@ class ApiDeals extends Controller
 
          return response()->json(MyHelper::checkUpdate($update));
     }
+
+    /*============================= Start Filter & Sort V2 ================================*/
+    function listDealV2(Request $request) {
+        $deals = (new Deal)->newQuery();
+        $deals->where('deals_type', '!=','WelcomeVoucher');
+        $deals->where('deals_publish_end', '>=', date('Y-m-d H:i:s'));
+
+        if ($request->json('id_outlet') && is_integer($request->json('id_outlet'))) {
+            $deals->join('deals_outlets', 'deals.id_deals', 'deals_outlets.id_deals')
+                ->where('id_outlet', $request->json('id_outlet'))
+                ->addSelect('deals.*')->distinct();
+        }
+
+        // brand
+        if ($request->json('id_brand')) {
+            $deals->where('id_brand',$request->json('id_brand'));
+        }
+
+        $deals->addSelect('id_deals','deals_title','deals_second_title','deals_voucher_price_point','deals_voucher_price_cash','deals_total_voucher','deals_total_claimed','deals_voucher_type','deals_image','deals_start','deals_end','deals_type','is_offline','is_online');
+
+        if ($request->json('key_free')) {
+            $deals->where(function($query) use ($request){
+                $query->where('deals_title', 'LIKE', '%' . $request->json('key_free') . '%')
+                    ->orWhere('deals_second_title', 'LIKE', '%' . $request->json('key_free') . '%');
+            });
+        }
+
+        if($request->json('voucher_type_cash') &&  !$request->json('voucher_type_point') &&  !$request->json('voucher_type_free')){
+            if ($request->json('min_price')) {
+                $deals->where('deals_voucher_price_cash', '>=', $request->json('min_price'));
+            }
+
+            if ($request->json('max_price')) {
+                $deals->where('deals_voucher_price_cash', '>=', $request->json('max_price'));
+            }
+        }else{
+            if($request->json('voucher_type_point')){
+                if ($request->json('min_inverval_point')) {
+                    $deals->where('deals_voucher_price_point', '>=', $request->json('min_inverval_point'));
+                }
+
+                if ($request->json('max_inverval_point')) {
+                    $deals->where('deals_voucher_price_point', '<=', $request->json('max_inverval_point'));
+                }
+            }
+
+            if($request->json('voucher_type_free')){
+                $deals->where(function ($query) use ($request) {
+                    $query->whereNull('deals_voucher_price_point');
+                    $query->whereNull('deals_voucher_price_cash');
+                });
+            }
+
+            if ($request->json('min_price') || $request->json('max_price')) {
+                $deals->orWhere(function ($query) use ($request) {
+                    if ($request->json('min_price')) {
+                        $query->where('deals_voucher_price_cash', '>=', $request->json('min_price'));
+                    }
+
+                    if ($request->json('max_price')) {
+                        $query->where('deals_voucher_price_cash', '<=', $request->json('max_price'));
+                    }
+                });
+            }
+
+        }
+
+        if($request->json('sort')){
+            if($request->json('sort') == 'best'){
+                $deals->orderBy('deals_total_claimed', 'desc');
+            }elseif($request->json('sort') == 'new'){
+                $deals->orderBy('deals_publish_start', 'desc');
+            }elseif($request->json('sort') == 'asc'){
+                $deals->orderBy('deals_title', 'asc');
+            }elseif($request->json('sort') == 'desc'){
+                $deals->orderBy('deals_title', 'desc');
+            }
+        }
+        $deals = $deals->get()->toArray();
+
+        if ($request->get('page')) {
+            $page = $request->get('page');
+        } else {
+            $page = 1;
+        }
+
+        $resultData = [];
+        $paginate   = 10;
+        $start      = $paginate * ($page - 1);
+        $all        = $paginate * $page;
+        $end        = $all;
+        $next       = true;
+
+        if ($all > count($deals)) {
+            $end = count($deals);
+            $next = false;
+        }
+
+
+        for ($i=$start; $i < $end; $i++) {
+            $deals[$i]['time_to_end']=strtotime($deals[$i]['deals_end'])-time();
+            array_push($resultData, $deals[$i]);
+        }
+
+        $result['current_page']  = $page;
+        $result['data']          = $resultData;
+        $result['total']         = count($resultData);
+        $result['next_page_url'] = null;
+        if ($next == true) {
+            $next_page = (int) $page + 1;
+            $result['next_page_url'] = ENV('APP_API_URL') . 'api/deals/list?page=' . $next_page;
+        }
+
+        if(!$result['total']){
+            $result=[];
+        }
+
+        if(
+            $request->json('voucher_type_point') ||
+            $request->json('voucher_type_cash') ||
+            $request->json('voucher_type_free') ||
+            $request->json('key_free')
+        ){
+            $resultMessage = 'Maaf, voucher yang kamu cari belum tersedia';
+        }else{
+            $resultMessage = 'Nantikan penawaran menarik dari kami';
+        }
+        return response()->json(MyHelper::checkGet($result, $resultMessage));
+    }
+    /*============================= End Filter & Sort V2 ================================*/
 }
