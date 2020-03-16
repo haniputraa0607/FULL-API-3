@@ -674,6 +674,10 @@ class ApiHome extends Controller
         if($retUser['birthday']??false){
             $retUser['birthday']=date("d F Y", strtotime($retUser['birthday']));
         }
+
+        if($retUser['id_card_image']??false){
+            $retUser['id_card_image'] = env('S3_URL_API').$retUser['id_card_image'];
+        }
         array_walk_recursive($retUser, function(&$it,$ix){
             if($it==null&&!in_array($ix, ['city','membership'])){
                 $it="";

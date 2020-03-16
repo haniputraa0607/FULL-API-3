@@ -1609,6 +1609,16 @@ class ApiUser extends Controller
         unset($post['sent_pin']);
 
 
+        if(isset($post['id_card_image']) && !empty($post['id_card_image'])){
+            $idCardImage = $request->json('id_card_image');
+            $path = 'img/customer/idcard/';
+            $upload = MyHelper::uploadPhoto($idCardImage, $path, null, $post['phone']);
+
+            if ($upload['status'] == "success") {
+                $post['id_card_image'] = $upload['path'];
+            }
+        }
+
         $result = MyHelper::checkGet(User::create($post));
 
         if($result['status'] == "success"){
@@ -1711,6 +1721,17 @@ class ApiUser extends Controller
                 if($request->json('address')){
                     $dataupdate['address'] = $request->json('address');
                 }
+                if($request->json('id_card_image') && !empty($request->json('id_card_image'))){
+                    if(is_null($data[0]['id_card_image']) || empty($data[0]['id_card_image'])){
+                        $idCardImage = $request->json('id_card_image');
+                        $path = 'img/customer/idcard/';
+                        $upload = MyHelper::uploadPhoto($idCardImage, $path, null, $phone);
+
+                        if ($upload['status'] == "success") {
+                            $dataupdate['id_card_image'] = $upload['path'];
+                        }
+                    }
+                }
 
                 DB::beginTransaction();
 
@@ -1796,6 +1817,10 @@ class ApiUser extends Controller
                     }
                 }
 
+                $urlIdCard = "";
+                if(!empty($datauser[0]['id_card_image']) && !is_null($datauser[0]['id_card_image'])){
+                    $urlIdCard = env('S3_URL_API').$datauser[0]['id_card_image'];
+                }
                 DB::commit();
                 $result = [
                     'status'	=> 'success',
@@ -1808,7 +1833,8 @@ class ApiUser extends Controller
                         'relationship' => $datauser[0]['relationship'],
                         'celebrate' => $datauser[0]['celebrate'],
                         'job' => $datauser[0]['job'],
-                        'address' => $datauser[0]['address']
+                        'address' => $datauser[0]['address'],
+                        'id_card_image' => $urlIdCard
                     ],
                     'message'	=> 'Data telah berhasil diubah'
                 ];
@@ -2334,6 +2360,20 @@ class ApiUser extends Controller
             if(stristr($post['update']['birthday'], '/')){
                 $explode = explode('/', $post['update']['birthday']);
                 $post['update']['birthday'] = $explode[2].'-'.$explode[1].'-'.$explode[0];
+            }
+        }
+
+        if(isset($post['update']['id_card_image']) && !empty($post['update']['id_card_image'])){
+            if(is_null($user[0]['id_card_image']) || empty($user[0]['id_card_image'])){
+                $idCardImage = $post['update']['id_card_image'];
+                $path = 'img/customer/idcard/';
+                $upload = MyHelper::uploadPhoto($idCardImage, $path, null, $user[0]['phone']);
+
+                if ($upload['status'] == "success") {
+                    $post['update']['id_card_image'] = $upload['path'];
+                }
+            }else{
+                unset($post['update']['id_card_image']);
             }
         }
 

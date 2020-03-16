@@ -14,8 +14,12 @@ use Illuminate\Http\Request;
 */
 
 Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scopes:be'], 'prefix' => 'achievement'], function () {
+    Route::any('/', 'ApiAchievement@index');
     Route::any('category', 'ApiAchievement@category');
     Route::any('create', 'ApiAchievement@create');
+    Route::any('detail', 'ApiAchievement@show');
+    Route::any('detail/update', 'ApiAchievement@update');
+    Route::any('destroy', 'ApiAchievement@destroy');
 });
 
 Route::middleware('auth:api')->get('/achievement', function (Request $request) {
