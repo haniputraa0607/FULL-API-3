@@ -55,6 +55,7 @@ class User extends Authenticatable
 		'id_membership',
 		'email',
 		'password',
+        'id_card_image',
 		'id_city',
 		'gender',
 		'provider',
