@@ -55,6 +55,9 @@ Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scop
     Route::post('/point/detail', 'ApiTransaction@transactionPointDetail');
     Route::post('/balance/detail', 'ApiTransaction@transactionBalanceDetail');
 
+    /*History V2*/
+    Route::post('history-balance/v2', 'ApiHistoryController@historyBalanceV2');
+
     // Route::post('history', 'ApiHistoryController@historyAll');
     Route::post('history-trx/{mode?}', 'ApiHistoryController@historyTrx');
     Route::post('history-ongoing/{mode?}', 'ApiHistoryController@historyTrxOnGoing');

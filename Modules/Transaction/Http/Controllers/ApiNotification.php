@@ -563,7 +563,7 @@ class ApiNotification extends Controller {
         if ($data['trasaction_payment_type'] != 'Balance') {
             if ($data['transaction_cashback_earned'] != 0) {
 
-                $insertDataLogCash = app($this->balance)->addLogBalance( $data['id_user'], $data['transaction_cashback_earned'], $data['id_transaction'], 'Transaction', $data['transaction_grandtotal']);
+                $insertDataLogCash = app($this->balance)->addLogBalance( $data['id_user'], $data['transaction_cashback_earned'], $data['id_transaction'], 'Online Transaction', $data['transaction_grandtotal']);
                 if (!$insertDataLogCash) {
                     DB::rollback();
                     return false;
@@ -1026,10 +1026,10 @@ Detail: ".$link['short'],
         $balanceNow = app($this->balance)->balanceNow($data['id_user']);
 
         if (empty($trxBalance)) {
-            $insertDataLogCash = app($this->balance)->addLogBalance( $data['id_user'], -$data['transaction_grandtotal'], $data['id_transaction'], 'Transaction', $data['transaction_grandtotal']);
+            $insertDataLogCash = app($this->balance)->addLogBalance( $data['id_user'], -$data['transaction_grandtotal'], $data['id_transaction'], 'Online Transaction', $data['transaction_grandtotal']);
         } else {
             $paymentBalanceTrx = TransactionPaymentBalance::where('id_transaction', $data['id_transaction'])->first();
-            $insertDataLogCash = app($this->balance)->addLogBalance( $data['id_user'], -$paymentBalanceTrx['balance_nominal'], $data['id_transaction'], 'Transaction', $data['transaction_grandtotal']);
+            $insertDataLogCash = app($this->balance)->addLogBalance( $data['id_user'], -$paymentBalanceTrx['balance_nominal'], $data['id_transaction'], 'Online Transaction', $data['transaction_grandtotal']);
         }
         $usere= User::where('id',$data['id_user'])->first();
         $send = app($this->autocrm)->SendAutoCRM('Transaction Point Achievement', $usere->phone,

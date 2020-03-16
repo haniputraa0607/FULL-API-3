@@ -1567,7 +1567,7 @@ class ApiPOS extends Controller
 
                         if ($createTrx['transaction_cashback_earned']) {
 
-                            $insertDataLogCash = app($this->balance)->addLogBalance($createTrx['id_user'], $createTrx['transaction_cashback_earned'], $createTrx['id_transaction'], 'Transaction', $createTrx['transaction_grandtotal']);
+                            $insertDataLogCash = app($this->balance)->addLogBalance($createTrx['id_user'], $createTrx['transaction_cashback_earned'], $createTrx['id_transaction'], 'Offline Transaction', $createTrx['transaction_grandtotal']);
                             if (!$insertDataLogCash) {
                                 DB::rollback();
                                 return [
