@@ -105,7 +105,6 @@ class ApiSubscription extends Controller
         if ( ($post['prices_by']??false) == 'money' ) {
             $data['subscription_price_cash'] = $post['subscription_price_cash'];
             $data['subscription_price_point'] = null;
-            $data['is_free'] = 1;
         } 
         elseif ( ($post['prices_by']??false) == 'point' ) 
         {
@@ -116,6 +115,7 @@ class ApiSubscription extends Controller
         {
             $data['subscription_price_cash'] = null;
             $data['subscription_price_point'] = null;   
+            $data['is_free'] = 1;
         }
 
         if (isset($post['id_outlet'])) {
