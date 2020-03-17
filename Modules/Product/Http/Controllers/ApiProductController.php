@@ -507,7 +507,7 @@ class ApiProductController extends Controller
                 $data['brand'] = Brand::where('id_brand',$post['id_brand'])->first();
                 $data['products'] = Product::select('products.id_product','product_code','product_name','product_description','global_prices.global_price')
                     ->join('brand_product','brand_product.id_product','=','products.id_product')
-                    ->join(DB::raw('('.$subquery.') as global_prices'),'products.id_product','=','global_prices.id_product')
+                    ->leftJoin(DB::raw('('.$subquery.') as global_prices'),'products.id_product','=','global_prices.id_product')
                     ->where('id_brand',$post['id_brand'])
                     ->orderBy('position')
                     ->orderBy('products.id_product')
