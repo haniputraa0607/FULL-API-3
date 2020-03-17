@@ -516,6 +516,8 @@ class ApiCronReport extends Controller
                     FROM transactions 
                     LEFT JOIN users ON users.id = transactions.id_user 
                     LEFT JOIN transaction_products ON transaction_products.id_transaction = transactions.id_transaction 
+                    WHERE transaction_date BETWEEN "'. date('Y-m-d', strtotime($date)) .' 00:00:00" 
+                    AND "'. date('Y-m-d', strtotime($date)) .' 23:59:59"
                     AND transaction_payment_status = "Completed"
                     GROUP BY transactions.id_outlet,trx_type
                 '));
@@ -634,6 +636,8 @@ class ApiCronReport extends Controller
                         INNER JOIN transactions ON transaction_products.id_transaction = transactions.id_transaction 
 						LEFT JOIN users ON users.id = transactions.id_user
 						LEFT JOIN products ON transaction_products.id_product = products.id_product
+						WHERE transactions.transaction_date BETWEEN "'. date('Y-m-d', strtotime($date)) .' 00:00:00" 
+                        AND "'. date('Y-m-d', strtotime($date)) .' 23:59:59"
                         AND transactions.id_outlet = "'. $outlet .'"
                         AND transaction_payment_status = "Completed"
                         GROUP BY id_product
