@@ -1332,7 +1332,7 @@ class ApiOnlineTransaction extends Controller
                 }
 
                 if ($insertTransaction['transaction_cashback_earned'] != 0) {
-                    $insertDataLogCash = app($this->balance)->addLogBalance( $insertTransaction['id_user'], $insertTransaction['transaction_cashback_earned'], $insertTransaction['id_transaction'], 'Transaction', $insertTransaction['transaction_grandtotal']);
+                    $insertDataLogCash = app($this->balance)->addLogBalance( $insertTransaction['id_user'], $insertTransaction['transaction_cashback_earned'], $insertTransaction['id_transaction'], 'Online Transaction', $insertTransaction['transaction_grandtotal']);
                     if (!$insertDataLogCash) {
                         DB::rollback();
                         return response()->json([

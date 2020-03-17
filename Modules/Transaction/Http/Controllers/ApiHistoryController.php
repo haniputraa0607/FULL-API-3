@@ -1108,4 +1108,228 @@ class ApiHistoryController extends Controller
         }
         return $newArray;
     }
+
+    /*============================= Start Filter & Sort V2 ================================*/
+    public function balanceV2($post, $id)
+    {
+        $log = LogBalance::where('log_balances.id_user', $id);
+
+        $log->where(function ($query) use ($post) {
+            if (!is_null($post['use_point'])) {
+                $query->orWhere(function ($queryLog) {
+                    $queryLog->where('balance', '<', 0);
+                });
+            }
+            if (!is_null($post['earn_point'])) {
+                $query->orWhere(function ($queryLog) {
+                    $queryLog->where('balance', '>', 0);
+                });
+            }
+        });
+
+
+        if (is_null($post['online_order']) || is_null($post['offline_order']) || is_null($post['voucher'])) {
+            if($post['online_order']){
+                $log->where('source', 'Online Transaction');
+            }
+
+            if(isset($post['offline_order']) && $post['offline_order']){
+                $log->where('source', 'Offline Transaction');
+            }
+
+            if(isset($post['voucher']) && $post['voucher'] && $post['online_order']){
+                $log->where('source', '!=', 'Offline Transaction');
+            }elseif(isset($post['voucher']) && $post['voucher'] && $post['offline_order']){
+                $log->where('source', '!=', 'Online Transaction');
+            }
+        }
+
+        $log = $log->get();
+
+        $listBalance = [];
+
+        foreach ($log as $key => $value) {
+            if ($value['source'] == 'Offline Transaction' || $value['source'] == 'Online Transaction' || $value['source'] == 'Rejected Order'  || $value['source'] == 'Rejected Order Point' || $value['source'] == 'Rejected Order Midtrans' || $value['source'] == 'Rejected Order Ovo' || $value['source'] == 'Reversal' || $value['source'] == 'Transaction Failed') {
+                $trx = Transaction::with('outlet')->where('id_transaction', $value['id_reference'])->first();
+
+                if (empty($trx)) {
+                    continue;
+                }
+
+                if ($trx['transaction_payment_status'] != 'Cancelled') {
+                    $dataList['type']    = 'balance';
+                    $dataList['id']      = $value['id_log_balance'];
+                    $dataList['date']    = date('Y-m-d H:i:s', strtotime($value['created_at']));
+                    $dataList['outlet']  = $trx['outlet']['outlet_name'];
+                    if ($value['balance'] < 0) {
+                        $dataList['amount'] = '- ' . ltrim(number_format($value['balance'], 0, ',', '.'), '-');
+                    } else {
+                        $dataList['amount'] = '+ ' . number_format($value['balance'], 0, ',', '.');
+                    }
+
+                    $listBalance[$key] = $dataList;
+                } else {
+                    if ($value['balance'] < 0) {
+                        $dataList['type']    = 'balance';
+                        $dataList['id']      = $value['id_log_balance'];
+                        $dataList['date']    = date('Y-m-d H:i:s', strtotime($value['created_at']));
+                        $dataList['outlet']  = $trx['outlet']['outlet_name'];
+                        if ($value['balance'] < 0) {
+                            $dataList['amount'] = '- ' . ltrim(number_format($value['balance'], 0, ',', '.'), '-');
+                        } else {
+                            $dataList['amount'] = '+ ' . number_format($value['balance'], 0, ',', '.');
+                        }
+
+                        $listBalance[$key] = $dataList;
+                    } else {
+                        $dataList['type']    = 'profile';
+                        $dataList['id']      = $value['id_log_balance'];
+                        $dataList['date']    = date('Y-m-d H:i:s', strtotime($value['created_at']));
+                        $dataList['outlet']  = 'Reversal';
+                        if ($value['balance'] < 0) {
+                            $dataList['amount'] = '- ' . ltrim(number_format($value['balance'], 0, ',', '.'), '-');
+                        } else {
+                            $dataList['amount'] = '+ ' . number_format($value['balance'], 0, ',', '.');
+                        }
+
+                        $listBalance[$key] = $dataList;
+                    }
+                }
+            } elseif ($value['source'] == 'Voucher' || $value['source'] == 'Deals Balance') {
+                $vou = DealsUser::with('dealVoucher.deal')->where('id_deals_user', $value['id_reference'])->first();
+                $dataList['type']   = 'voucher';
+                $dataList['id']      = $value['id_log_balance'];
+                $dataList['date']   = date('Y-m-d H:i:s', strtotime($vou['claimed_at']));
+                $dataList['outlet'] = 'Tukar Voucher';
+                $dataList['amount'] = '- ' . ltrim(number_format($value['balance'], 0, ',', '.'), '-');
+
+                $listBalance[$key] = $dataList;
+            } elseif ($value['source'] == 'Subscription Balance') {
+                $dataSubscription = SubscriptionUser::where('id_subscription_user', $value['id_reference'])->first();
+                if($dataSubscription){
+                    $dataList['type']   = 'subscription';
+                    $dataList['id']      = $value['id_log_balance'];
+                    $dataList['date']   = date('Y-m-d H:i:s', strtotime($dataSubscription['bought_at']));
+                    $dataList['outlet'] = 'Buy a Subscription';
+                    $dataList['amount'] = '- ' . ltrim(number_format($value['balance'], 0, ',', '.'), '-');
+
+                    $listBalance[$key] = $dataList;
+                }
+            } elseif ($value['source'] == 'Reversal Duplicate') {
+                continue;
+            } elseif ($value['source'] == 'Point Injection') {
+                $getPointInjection = PointInjection::find($value['id_reference']);
+                if ($getPointInjection) {
+                    $dataList['outlet'] = $getPointInjection->title;
+                } else {
+                    $dataList['outlet'] = 'Free Point';
+                }
+
+                $dataList['type']   = 'profile';
+                $dataList['id']      = $value['id_log_balance'];
+                $dataList['date']    = date('Y-m-d H:i:s', strtotime($value['created_at']));
+                $dataList['amount'] = '+ ' . number_format($value['balance'], 0, ',', '.');
+
+                $listBalance[$key] = $dataList;
+            } elseif($value['source'] == 'Balance Reset') {
+                $dataList['type']   = 'profile';
+                $dataList['id']      = $value['id_log_balance'];
+                $dataList['date']    = date('Y-m-d H:i:s', strtotime($value['created_at']));
+                $dataList['outlet'] = 'Point Expired';
+                $dataList['amount'] = number_format($value['balance'], 0, ',', '.');
+
+                $listBalance[$key] = $dataList;
+            } else {
+                $dataList['type']   = 'profile';
+                $dataList['id']      = $value['id_log_balance'];
+                $dataList['date']    = date('Y-m-d H:i:s', strtotime($value['created_at']));
+                $dataList['outlet'] = 'Welcome Point';
+                $dataList['amount'] = '+ ' . number_format($value['balance'], 0, ',', '.');
+
+                $listBalance[$key] = $dataList;
+            }
+
+            if (isset($post['date_start']) && !is_null($post['date_start']) && isset($post['date_end']) && !is_null($post['date_end'])) {
+                $date_start = date('Y-m-d', strtotime($post['date_start'])) . " 00.00.00";
+                $date_end = date('Y-m-d', strtotime($post['date_end'])) . " 23.59.59";
+
+                if ($listBalance[$key]['date'] < $date_start || $listBalance[$key]['date'] > $date_end) {
+                    unset($listBalance[$key]);
+                    continue;
+                }
+            }
+        }
+        return array_values($listBalance);
+    }
+
+    public function historyBalanceV2(Request $request)
+    {
+        $post = $request->json()->all();
+        $id = $request->user()->id;
+        $order = 'new';
+        $page = 0;
+
+        if (!isset($post['use_point'])) {
+            $post['use_point'] = null;
+        }
+        if (!isset($post['earn_point'])) {
+            $post['earn_point'] = null;
+        }
+        if (!isset($post['offline_order'])) {
+            $post['offline_order'] = null;
+        }
+        if (!isset($post['online_order'])) {
+            $post['online_order'] = null;
+        }
+        if (!isset($post['voucher'])) {
+            $post['voucher'] = null;
+        }
+
+        if (!is_null($request->get('page'))) {
+            $page = $request->get('page');
+        }
+
+        if($request->get('sort')){
+            if($request->get('sort') == 'new'){
+                $order = 'new';
+            }elseif($request->get('sort') == 'old'){
+                $order = 'old';
+            }
+        }
+        $next_page = $page + 1;
+        $balance = $this->balanceV2($post, $id);
+
+        if (count($balance) > 0) {
+            $sortBalance = $this->sorting($balance, $order, $page);
+            $check = MyHelper::checkGet($sortBalance);
+            $result['current_page']  = $page;
+            $result['data']          = $sortBalance['data'];
+            $result['total']         = count($balance);
+            $result['next_page_url'] = null;
+
+            if ($sortBalance['status'] == true) {
+                $result['next_page_url'] = ENV('APP_API_URL') . '/api/transaction/history-balance?page=' . $next_page;
+            }
+            $result = MyHelper::checkGet($result);
+        } else {
+            if(
+                $request->json('date_start') ||
+                $request->json('date_end') ||
+                $request->json('outlet') ||
+                $request->json('brand') ||
+                $request->json('use_point') ||
+                $request->json('earn_point')
+            ){
+                $resultMessage = 'Data tidak ditemukan';
+            }else{
+                $resultMessage = 'Kamu belum memiliki point saat ini';
+            }
+
+            $result['status'] = 'fail';
+            $result['messages'] = [$resultMessage];
+        }
+
+        return response()->json($result);
+    }
+    /*============================= End Filter & Sort V2 ================================*/
 }
