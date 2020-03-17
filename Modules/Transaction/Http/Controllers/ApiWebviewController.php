@@ -523,7 +523,7 @@ class ApiWebviewController extends Controller
         $receipt = null;
 
         $data   = LogBalance::where('id_log_balance', $id)->first();
-        if ($data['source'] == 'Transaction' || $data['source'] == 'Rejected Order' || $data['source'] == 'Rejected Order Point' || $data['source'] == 'Rejected Order Midtrans' || $data['source'] == 'Reversal') {
+        if ($data['source'] == 'Online Transaction' || $data['source'] == 'Offline Transaction' || $data['source'] == 'Transaction' || $data['source'] == 'Rejected Order' || $data['source'] == 'Rejected Order Point' || $data['source'] == 'Rejected Order Midtrans' || $data['source'] == 'Reversal') {
             $select = Transaction::with(['outlet', 'productTransaction'])->where('id_transaction', $data['id_reference'])->first()->toArray();
 
             $product_count=0;
