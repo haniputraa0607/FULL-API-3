@@ -920,7 +920,7 @@ class ApiHistoryController extends Controller
         $listBalance = [];
 
         foreach ($log as $key => $value) {
-            if ($value['source'] == 'Transaction' || $value['source'] == 'Rejected Order'  || $value['source'] == 'Rejected Order Point' || $value['source'] == 'Rejected Order Midtrans' || $value['source'] == 'Rejected Order Ovo' || $value['source'] == 'Reversal' || $value['source'] == 'Transaction Failed') {
+            if ($value['source'] == 'Transaction' || $value['source'] == 'Online Transaction' || $value['source'] == 'Offline Transaction' || $value['source'] == 'Rejected Order'  || $value['source'] == 'Rejected Order Point' || $value['source'] == 'Rejected Order Midtrans' || $value['source'] == 'Rejected Order Ovo' || $value['source'] == 'Reversal' || $value['source'] == 'Transaction Failed') {
                 $trx = Transaction::with('outlet')->where('id_transaction', $value['id_reference'])->first();
 
                 // return $trx;
@@ -1149,7 +1149,7 @@ class ApiHistoryController extends Controller
         $listBalance = [];
 
         foreach ($log as $key => $value) {
-            if ($value['source'] == 'Offline Transaction' || $value['source'] == 'Online Transaction' || $value['source'] == 'Rejected Order'  || $value['source'] == 'Rejected Order Point' || $value['source'] == 'Rejected Order Midtrans' || $value['source'] == 'Rejected Order Ovo' || $value['source'] == 'Reversal' || $value['source'] == 'Transaction Failed') {
+            if ($value['source'] == 'Transaction' || $value['source'] == 'Online Transaction' || $value['source'] == 'Offline Transaction' || $value['source'] == 'Rejected Order'  || $value['source'] == 'Rejected Order Point' || $value['source'] == 'Rejected Order Midtrans' || $value['source'] == 'Rejected Order Ovo' || $value['source'] == 'Reversal' || $value['source'] == 'Transaction Failed') {
                 $trx = Transaction::with('outlet')->where('id_transaction', $value['id_reference'])->first();
 
                 if (empty($trx)) {
