@@ -1243,12 +1243,12 @@ class ApiDeals extends Controller
             }
         }else{
             if($request->json('voucher_type_point')){
-                if ($request->json('min_inverval_point')) {
-                    $deals->where('deals_voucher_price_point', '>=', $request->json('min_inverval_point'));
+                if ($request->json('min_interval_point')) {
+                    $deals->where('deals_voucher_price_point', '>=', $request->json('min_interval_point'));
                 }
 
-                if ($request->json('max_inverval_point')) {
-                    $deals->where('deals_voucher_price_point', '<=', $request->json('max_inverval_point'));
+                if ($request->json('max_interval_point')) {
+                    $deals->where('deals_voucher_price_point', '<=', $request->json('max_interval_point'));
                 }
             }
 
