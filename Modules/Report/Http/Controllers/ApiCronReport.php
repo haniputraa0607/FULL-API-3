@@ -640,8 +640,8 @@ class ApiCronReport extends Controller
                         AND "'. date('Y-m-d', strtotime($date)) .' 23:59:59"
                         AND transactions.id_outlet = "'. $outlet .'"
                         AND transaction_payment_status = "Completed"
-                        GROUP BY id_product
-                        ORDER BY id_product ASC
+                        GROUP BY transaction_products.id_product
+                        ORDER BY transaction_products.id_product ASC
                     '));
 			// print_r($product);exit;
             if (!empty($product)) {
