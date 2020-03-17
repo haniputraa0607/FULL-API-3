@@ -1224,7 +1224,7 @@ class ApiDeals extends Controller
             $deals->where('id_brand',$request->json('id_brand'));
         }
 
-        $deals->addSelect('id_deals','deals_title','deals_second_title','deals_voucher_price_point','deals_voucher_price_cash','deals_total_voucher','deals_total_claimed','deals_voucher_type','deals_image','deals_start','deals_end','deals_type','is_offline','is_online');
+        $deals->addSelect('id_brand', 'id_deals','deals_title','deals_second_title','deals_voucher_price_point','deals_voucher_price_cash','deals_total_voucher','deals_total_claimed','deals_voucher_type','deals_image','deals_start','deals_end','deals_type','is_offline','is_online');
 
         if ($request->json('key_free')) {
             $deals->where(function($query) use ($request){
@@ -1233,22 +1233,30 @@ class ApiDeals extends Controller
             });
         }
 
-        if($request->json('voucher_type_cash') &&  !$request->json('voucher_type_point') &&  !$request->json('voucher_type_free')){
+        if(!$request->json('voucher_type_cash') &&  !$request->json('voucher_type_point') &&  !$request->json('voucher_type_free')){
             if ($request->json('min_price')) {
                 $deals->where('deals_voucher_price_cash', '>=', $request->json('min_price'));
             }
 
             if ($request->json('max_price')) {
-                $deals->where('deals_voucher_price_cash', '>=', $request->json('max_price'));
+                $deals->where('deals_voucher_price_cash', '<=', $request->json('max_price'));
+            }
+        }elseif($request->json('voucher_type_cash') &&  !$request->json('voucher_type_point') &&  !$request->json('voucher_type_free')){
+            if ($request->json('min_price')) {
+                $deals->where('deals_voucher_price_cash', '>=', $request->json('min_price'));
+            }
+
+            if ($request->json('max_price')) {
+                $deals->where('deals_voucher_price_cash', '<=', $request->json('max_price'));
             }
         }else{
             if($request->json('voucher_type_point')){
-                if ($request->json('min_inverval_point')) {
-                    $deals->where('deals_voucher_price_point', '>=', $request->json('min_inverval_point'));
+                if ($request->json('min_interval_point')) {
+                    $deals->where('deals_voucher_price_point', '>=', $request->json('min_interval_point'));
                 }
 
-                if ($request->json('max_inverval_point')) {
-                    $deals->where('deals_voucher_price_point', '<=', $request->json('max_inverval_point'));
+                if ($request->json('max_interval_point')) {
+                    $deals->where('deals_voucher_price_point', '<=', $request->json('max_interval_point'));
                 }
             }
 
@@ -1284,7 +1292,18 @@ class ApiDeals extends Controller
                 $deals->orderBy('deals_title', 'desc');
             }
         }
-        $deals = $deals->get()->toArray();
+        $deals = $deals->with('brand')->get()->toArray();
+
+        if (!empty($deals)) {
+            $city = "";
+
+            // jika ada id city yg faq
+            if ($request->json('id_city')) {
+                $city = $request->json('id_city');
+            }
+
+            $deals = $this->kotacuks($deals, $city,$request->json('admin'));
+        }
 
         if ($request->get('page')) {
             $page = $request->get('page');

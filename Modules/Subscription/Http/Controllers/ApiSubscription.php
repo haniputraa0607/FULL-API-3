@@ -1609,44 +1609,6 @@ class ApiSubscription extends Controller
                     $data[$key]['time_server']                  = date('Y-m-d H:i:s');
                 }
             }
-
-            if ($request->get('page')) {
-                $page = $request->get('page');
-            } else {
-                $page = 1;
-            }
-
-            $resultData = [];
-            $listData   = [];
-            $paginate   = 10;
-            $start      = $paginate * ($page - 1);
-            $all        = $paginate * $page;
-            $end        = $all;
-            $next       = true;
-
-            if ($all > count($subs)) {
-                $end = count($subs);
-                $next = false;
-            }
-
-            for ($i=$start; $i < $end; $i++) {
-                array_push($resultData, $data[$i]);
-            }
-
-            $result['current_page']  = $page;
-            $result['data']          = $resultData;
-            $result['total']         = count($resultData);
-            $result['next_page_url'] = null;
-            if ($next == true) {
-                $next_page = (int) $page + 1;
-                $result['next_page_url'] = ENV('APP_API_URL') . 'api/subscription/me?page=' . $next_page;
-            }
-
-            // print_r($deals); exit();
-            if(!$result['total']){
-                $result=[];
-            }
-            $data = $result;
         }
         else
         {
