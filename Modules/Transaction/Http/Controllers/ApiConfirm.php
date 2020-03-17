@@ -672,7 +672,7 @@ class ApiConfirm extends Controller
                     if (!empty($payBalance)) {
                         $checkBalance = TransactionPaymentBalance::where('id_transaction_payment_balance', $value['id_payment'])->first();
                         if (!empty($checkBalance)) {
-                            $insertDataLogCash = app($this->balance)->addLogBalance($trx['id_user'], $checkBalance['balance_nominal'], $trx['id_transaction'], 'Transaction Failed', $trx['transaction_grandtotal']);
+                            $insertDataLogCash = app($this->balance)->addLogBalance($trx['id_user'], $checkBalance['balance_nominal'], $trx['id_transaction'], 'Online Transaction Failed', $trx['transaction_grandtotal']);
                             if (!$insertDataLogCash) {
                                 DB::rollback();
                                 return response()->json([
@@ -782,7 +782,7 @@ class ApiConfirm extends Controller
         if (!empty($payBalance)) {
             $checkBalance = TransactionPaymentBalance::where('id_transaction_payment_balance', $value['id_payment'])->first();
             if (!empty($checkBalance)) {
-                $insertDataLogCash = app($this->balance)->addLogBalance($trx['id_user'], $checkBalance['balance_nominal'], $trx['id_transaction'], 'Transaction Failed', $trx['transaction_grandtotal']);
+                $insertDataLogCash = app($this->balance)->addLogBalance($trx['id_user'], $checkBalance['balance_nominal'], $trx['id_transaction'], 'Online Transaction Failed', $trx['transaction_grandtotal']);
                 if (!$insertDataLogCash) {
                     DB::rollback();
                     return response()->json([
