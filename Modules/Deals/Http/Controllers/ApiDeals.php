@@ -1224,7 +1224,7 @@ class ApiDeals extends Controller
             $deals->where('id_brand',$request->json('id_brand'));
         }
 
-        $deals->addSelect('id_deals','deals_title','deals_second_title','deals_voucher_price_point','deals_voucher_price_cash','deals_total_voucher','deals_total_claimed','deals_voucher_type','deals_image','deals_start','deals_end','deals_type','is_offline','is_online');
+        $deals->addSelect('id_brand', 'id_deals','deals_title','deals_second_title','deals_voucher_price_point','deals_voucher_price_cash','deals_total_voucher','deals_total_claimed','deals_voucher_type','deals_image','deals_start','deals_end','deals_type','is_offline','is_online');
 
         if ($request->json('key_free')) {
             $deals->where(function($query) use ($request){
@@ -1284,7 +1284,18 @@ class ApiDeals extends Controller
                 $deals->orderBy('deals_title', 'desc');
             }
         }
-        $deals = $deals->get()->toArray();
+        $deals = $deals->with('brand')->get()->toArray();
+
+        if (!empty($deals)) {
+            $city = "";
+
+            // jika ada id city yg faq
+            if ($request->json('id_city')) {
+                $city = $request->json('id_city');
+            }
+
+            $deals = $this->kotacuks($deals, $city,$request->json('admin'));
+        }
 
         if ($request->get('page')) {
             $page = $request->get('page');
