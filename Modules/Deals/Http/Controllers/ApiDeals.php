@@ -1233,13 +1233,21 @@ class ApiDeals extends Controller
             });
         }
 
-        if($request->json('voucher_type_cash') &&  !$request->json('voucher_type_point') &&  !$request->json('voucher_type_free')){
+        if(!$request->json('voucher_type_cash') &&  !$request->json('voucher_type_point') &&  !$request->json('voucher_type_free')){
             if ($request->json('min_price')) {
                 $deals->where('deals_voucher_price_cash', '>=', $request->json('min_price'));
             }
 
             if ($request->json('max_price')) {
-                $deals->where('deals_voucher_price_cash', '>=', $request->json('max_price'));
+                $deals->where('deals_voucher_price_cash', '<=', $request->json('max_price'));
+            }
+        }elseif($request->json('voucher_type_cash') &&  !$request->json('voucher_type_point') &&  !$request->json('voucher_type_free')){
+            if ($request->json('min_price')) {
+                $deals->where('deals_voucher_price_cash', '>=', $request->json('min_price'));
+            }
+
+            if ($request->json('max_price')) {
+                $deals->where('deals_voucher_price_cash', '<=', $request->json('max_price'));
             }
         }else{
             if($request->json('voucher_type_point')){
