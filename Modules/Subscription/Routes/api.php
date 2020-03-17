@@ -16,8 +16,10 @@ Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scop
 
     /* MASTER SUBSCRIPTION */
     Route::any('list', 'ApiSubscription@listSubscription');
+    Route::any('list/v2', 'ApiSubscription@listSubscriptionV2');
     Route::any('detail', 'ApiSubscriptionWebview@subscriptionDetail');
     Route::any('me', 'ApiSubscription@mySubscription');
+    Route::any('me/v2', 'ApiSubscription@mySubscriptionV2');
 
     /* CLAIM */
     Route::group(['prefix' => 'claim'], function () {

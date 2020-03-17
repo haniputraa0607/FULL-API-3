@@ -65,6 +65,7 @@ class Subscription extends Eloquent
 	];
 
 	protected $fillable = [
+	    'id_brand',
 		'subscription_title',
 		'subscription_sub_title',
 		'subscription_image',

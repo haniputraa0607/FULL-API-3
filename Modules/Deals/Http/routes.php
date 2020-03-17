@@ -3,6 +3,7 @@
 Route::group(['middleware' => ['auth:api', 'log_activities', 'scopes:apps'], 'prefix' => 'api/deals', 'namespace' => 'Modules\Deals\Http\Controllers'], function () {
     /* MASTER DEALS */
     Route::any('list', 'ApiDeals@listDeal');
+    Route::any('list/v2', 'ApiDeals@listDealV2');
     Route::any('me', 'ApiDeals@myDeal');
     Route::any('detail', 'ApiDealsWebview@dealsDetail');
 
@@ -27,6 +28,7 @@ Route::group(['prefix' => 'api/deals', 'namespace' => 'Modules\Deals\Http\Contro
 
 Route::group(['middleware' => ['auth:api', 'log_activities', 'scopes:apps'], 'prefix' => 'api/voucher', 'namespace' => 'Modules\Deals\Http\Controllers'], function () {
     Route::any('me', 'ApiDealsVoucher@myVoucher');
+    Route::any('me/v2', 'ApiDealsVoucher@myVoucherV2');
     Route::any('cancel', 'ApiDealsVoucher@unuseVoucher');
     Route::any('status', 'ApiDealsVoucher@checkStatus');
 });
