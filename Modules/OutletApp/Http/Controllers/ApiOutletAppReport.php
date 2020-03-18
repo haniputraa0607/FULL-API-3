@@ -58,7 +58,7 @@ class ApiOutletAppReport extends Controller
 	    	}
 	    	$daily_payment 	= $daily_payment->toArray();
     	}
-    	else
+    	elseif( $post['date'] == date("Y-m-d") )
     	{
     		$post['date'] = date("Y-m-d");
     		$outlet = Outlet::where('id_outlet','=',$post['id_outlet'])->first();
@@ -206,6 +206,10 @@ class ApiOutletAppReport extends Controller
     			$daily_trx = $daily_trx[0];
     		}
     	}
+    	else
+    	{
+    		return response()->json(MyHelper::checkGet(null));
+    	}
 
     	$data_payment = [];
     	foreach ($daily_payment??$global as $key => $value) 
@@ -315,7 +319,7 @@ class ApiOutletAppReport extends Controller
 				->select('id_report_trx_menu','product_name','total_qty')
 				->orderBy('total_qty','Desc');
 	    }
-	    else
+	    elseif ($post['date'] == date("Y-m-d")) 
 	    {
 	    	$post['date'] = date("Y-m-d");
 	    	$date = date("Y-m-d");
@@ -335,6 +339,10 @@ class ApiOutletAppReport extends Controller
 	    				->groupBy('transaction_products.id_product')
 	    				->orderBy('total_qty', 'Desc');
 	    }
+	    else
+    	{
+    		return response()->json(MyHelper::checkGet(null));
+    	}
 
 	    if ( !empty($post['is_all']) ) 
     	{
