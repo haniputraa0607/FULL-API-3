@@ -245,6 +245,7 @@ class ApiOutletAppReport extends Controller
     public function transactionList(ReportSummary $request)
     {
     	$post = $request->json()->all();
+    	$outlet = Outlet::where('id_outlet','=',$post['id_outlet'])->first();
 
     	$trx = Transaction::whereDate('transaction_date', '=', $post['date'])
     				->where('id_outlet', '=', $post['id_outlet'])
@@ -275,6 +276,11 @@ class ApiOutletAppReport extends Controller
     				->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
     				->orderBy('transactions.transaction_date');
 
+    	if ( empty($outlet) ) {
+			return response()->json(MyHelper::checkGet(null));
+		}
+		$outlet = $outlet->toArray();
+
     	if ( empty($post['is_all']) ) {
     		$trx = $trx->paginate(10)->toArray();
     	}else{
@@ -295,15 +301,16 @@ class ApiOutletAppReport extends Controller
     		$data_trx[$key]['total_item'] = number_format($value['product_transaction'][0]['total_qty'],0,",",".");
     	}
 
+    	$data['outlet_name'] = $outlet['outlet_name'];
+    	$data['time_server'] 	= date("H:i");
     	if ( empty($post['is_all']) ) {
     		$trx['data'] = $data_trx;
-    		$data = $trx;
+    		$data['transaction'] = $trx;
     	}else{
-			$data = $data_trx;
+			$data['transaction'] = $data_trx;
     	}
 
     	$result = MyHelper::checkGet($data);
-    	$result['time_server'] 	= date("H:i");
     	return response()->json($result);
 
     }
