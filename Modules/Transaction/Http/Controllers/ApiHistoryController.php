@@ -196,12 +196,8 @@ class ApiHistoryController extends Controller
         $transaction = $this->transaction($post, $id);
         $voucher = $this->voucher($post, $id);
 
-        if (!is_null($post['oldest'])) {
-            $order = 'old';
-        }
-
-        if (!is_null($post['newest'])) {
-            $order = 'new';
+        if (!is_null($post['sort'])) {
+            $order = $post['sort'];
         }
 
         if (!is_null($request->get('page'))) {
