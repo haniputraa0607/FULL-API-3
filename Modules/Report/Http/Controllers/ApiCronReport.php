@@ -485,20 +485,20 @@ class ApiCronReport extends Controller
         $trans = DB::select(DB::raw('
                     SELECT transactions.id_outlet,
 				    (CASE WHEN trasaction_type = \'Offline\' THEN CASE WHEN transactions.id_user IS NOT NULL THEN \'Offline Member\' ELSE \'Offline Non Member\' END ELSE \'Online\' END) AS trx_type,
-					(select SUM(DISTINCT Case When users.gender = \'Male\' Then 1 Else 0 End)) as cust_male, 
-					(select SUM(DISTINCT Case When users.gender = \'Female\' Then 1 Else 0 End)) as cust_female, 
-					(select SUM(DISTINCT Case When users.android_device is not null Then 1 Else 0 End)) as cust_android, 
-					(select SUM(DISTINCT Case When users.ios_device is not null Then 1 Else 0 End)) as cust_ios, 
-					(select SUM(DISTINCT Case When users.provider = \'Telkomsel\' Then 1 Else 0 End)) as cust_telkomsel, 
-					(select SUM(DISTINCT Case When users.provider = \'XL\' Then 1 Else 0 End)) as cust_xl, 
-					(select SUM(DISTINCT Case When users.provider = \'Indosat\' Then 1 Else 0 End)) as cust_indosat, 
-					(select SUM(DISTINCT Case When users.provider = \'Tri\' Then 1 Else 0 End)) as cust_tri, 
-					(select SUM(DISTINCT Case When users.provider = \'Axis\' Then 1 Else 0 End)) as cust_axis, 
-					(select SUM(DISTINCT Case When users.provider = \'Smart\' Then 1 Else 0 End)) as cust_smart, 
-					(select SUM(DISTINCT Case When floor(datediff (now(), users.birthday)/365) >= 11 && floor(datediff (now(), users.birthday)/365) <= 17 Then 1 Else 0 End)) as cust_teens, 
-					(select SUM(DISTINCT Case When floor(datediff (now(), users.birthday)/365) >= 18 && floor(datediff (now(), users.birthday)/365) <= 24 Then 1 Else 0 End)) as cust_young_adult, 
-					(select SUM(DISTINCT Case When floor(datediff (now(), users.birthday)/365) >= 25 && floor(datediff (now(), users.birthday)/365) <= 34 Then 1 Else 0 End)) as cust_adult,
-					(select SUM(DISTINCT Case When floor(datediff (now(), users.birthday)/365) >= 35 && floor(datediff (now(), users.birthday)/365) <= 100 Then 1 Else 0 End)) as cust_old,
+					(select SUM(Case When users.gender = \'Male\' Then 1 Else 0 End)) as cust_male, 
+					(select SUM(Case When users.gender = \'Female\' Then 1 Else 0 End)) as cust_female, 
+					(select SUM(Case When users.android_device is not null Then 1 Else 0 End)) as cust_android, 
+					(select SUM(Case When users.ios_device is not null Then 1 Else 0 End)) as cust_ios, 
+					(select SUM(Case When users.provider = \'Telkomsel\' Then 1 Else 0 End)) as cust_telkomsel, 
+					(select SUM(Case When users.provider = \'XL\' Then 1 Else 0 End)) as cust_xl, 
+					(select SUM(Case When users.provider = \'Indosat\' Then 1 Else 0 End)) as cust_indosat, 
+					(select SUM(Case When users.provider = \'Tri\' Then 1 Else 0 End)) as cust_tri, 
+					(select SUM(Case When users.provider = \'Axis\' Then 1 Else 0 End)) as cust_axis, 
+					(select SUM(Case When users.provider = \'Smart\' Then 1 Else 0 End)) as cust_smart, 
+					(select SUM(Case When floor(datediff (now(), users.birthday)/365) >= 11 && floor(datediff (now(), users.birthday)/365) <= 17 Then 1 Else 0 End)) as cust_teens, 
+					(select SUM( Case When floor(datediff (now(), users.birthday)/365) >= 18 && floor(datediff (now(), users.birthday)/365) <= 24 Then 1 Else 0 End)) as cust_young_adult, 
+					(select SUM( Case When floor(datediff (now(), users.birthday)/365) >= 25 && floor(datediff (now(), users.birthday)/365) <= 34 Then 1 Else 0 End)) as cust_adult,
+					(select SUM( Case When floor(datediff (now(), users.birthday)/365) >= 35 && floor(datediff (now(), users.birthday)/365) <= 100 Then 1 Else 0 End)) as cust_old,
                     (select SUM(transaction_subtotal)) as trx_subtotal, 
                     (select SUM(transaction_tax)) as trx_tax, 
                     (select SUM(transaction_shipment)) as trx_shipment, 
@@ -509,18 +509,24 @@ class ApiCronReport extends Controller
                     (select SUM(transaction_cashback_earned)) as trx_cashback_earned, 
                     (select TIME(MIN(transaction_date))) as first_trx_time, 
                     (select TIME(MAX(transaction_date))) as last_trx_time, 
-                    (select count(DISTINCT transactions.id_transaction)) as trx_count, 
+                    (select count(transactions.id_transaction)) as trx_count, 
                     (select AVG(transaction_grandtotal)) as trx_average, 
-                    (select SUM(transaction_products.transaction_product_qty)) as trx_total_item, 
+                    (select 
+                    	SUM(transaction_products.transaction_product_qty) 
+                    	FROM transaction_products 
+                    	WHERE transaction_products.id_outlet = transactions.id_outlet 
+                    ) as trx_total_item, 
                     (select DATE(transaction_date)) as trx_date
                     FROM transactions 
                     LEFT JOIN users ON users.id = transactions.id_user 
-                    LEFT JOIN transaction_products ON transaction_products.id_transaction = transactions.id_transaction 
+                    LEFT JOIN transaction_pickups ON transaction_pickups.id_transaction = transactions.id_transaction 
                     WHERE transaction_date BETWEEN "'. date('Y-m-d', strtotime($date)) .' 00:00:00" 
                     AND "'. date('Y-m-d', strtotime($date)) .' 23:59:59"
                     AND transaction_payment_status = "Completed"
+                    AND transaction_pickups.reject_at IS NULL
                     GROUP BY transactions.id_outlet,trx_type
                 '));
+    	
         if ($trans) {
             $trans = json_decode(json_encode($trans), true);
 			$sum = array();
@@ -627,7 +633,7 @@ class ApiCronReport extends Controller
 						(select SUM(Case When users.provider = \'Tri\' Then 1 Else 0 End)) as cust_tri, 
 						(select SUM(Case When users.provider = \'Axis\' Then 1 Else 0 End)) as cust_axis, 
 						(select SUM(Case When users.provider = \'Smart\' Then 1 Else 0 End)) as cust_smart, 
-						(select products.product_name) as product_name, 
+						(select products.product_name) as product_name,
 						(select SUM(Case When floor(datediff (now(), users.birthday)/365) >= 11 && floor(datediff (now(), users.birthday)/365) <= 17 Then 1 Else 0 End)) as cust_teens, 
 						(select SUM(Case When floor(datediff (now(), users.birthday)/365) >= 18 && floor(datediff (now(), users.birthday)/365) <= 24 Then 1 Else 0 End)) as cust_young_adult, 
 						(select SUM(Case When floor(datediff (now(), users.birthday)/365) >= 25 && floor(datediff (now(), users.birthday)/365) <= 34 Then 1 Else 0 End)) as cust_adult,
@@ -636,14 +642,15 @@ class ApiCronReport extends Controller
                         INNER JOIN transactions ON transaction_products.id_transaction = transactions.id_transaction 
 						LEFT JOIN users ON users.id = transactions.id_user
 						LEFT JOIN products ON transaction_products.id_product = products.id_product
+						LEFT JOIN transaction_pickups ON transaction_pickups.id_transaction = transactions.id_transaction
 						WHERE transactions.transaction_date BETWEEN "'. date('Y-m-d', strtotime($date)) .' 00:00:00" 
                         AND "'. date('Y-m-d', strtotime($date)) .' 23:59:59"
                         AND transactions.id_outlet = "'. $outlet .'"
                         AND transaction_payment_status = "Completed"
+                        AND transaction_pickups.reject_at IS NULL
                         GROUP BY transaction_products.id_product
                         ORDER BY transaction_products.id_product ASC
                     '));
-			// print_r($product);exit;
             if (!empty($product)) {
                 $product = json_decode(json_encode($product), true);
                 foreach ($product as $key => $value) {
@@ -696,7 +703,7 @@ class ApiCronReport extends Controller
     {
         $date = date('Y-m-d', strtotime($date));
 
-        $getTransactions = Transaction::whereDate('transactions.created_at', $date)
+        $getTransactions = Transaction::whereDate('transactions.transaction_date', $date)
             ->whereNotNull('transactions.id_user')
             ->where('transactions.transaction_payment_status', 'Completed')
             ->whereNull('transaction_pickups.reject_at')
@@ -715,6 +722,7 @@ class ApiCronReport extends Controller
         foreach ($getTransactions as $dtTrx){
             $total = 0;
             $count = 0;
+            $is_offline = "";
             $getTransactionPayment = [];
             $trx_payment = $dtTrx['trasaction_payment_type'];
 
@@ -748,6 +756,8 @@ class ApiCronReport extends Controller
                     	'transaction_payment_offlines.payment_bank as payment',
                     	'transaction_payment_offlines.payment_amount as trx_payment_nominal'
                     )->get()->toArray();
+
+                $is_offline = ' (Offline)';
             }
             elseif($dtTrx['trasaction_payment_type'] == 'Balance')
             {
@@ -772,11 +782,11 @@ class ApiCronReport extends Controller
 
             	if ( !empty($dtPayment['payment_type']) && !empty($dtPayment['payment'])) 
             	{
-            		$trx_payment = $dtPayment['payment_type'].' '.$dtPayment['payment'];
+            		$trx_payment = $dtPayment['payment_type'].' '.$dtPayment['payment'].($is_offline??'');
             	}
             	else
             	{
-            		$trx_payment = $dtPayment['payment_type']??$dtPayment['payment']??$trx_payment;
+            		$trx_payment = ($dtPayment['payment_type']??$dtPayment['payment']??$trx_payment).($is_offline??'');
             	}
 
                 $getDaily = DailyReportPayment::where('id_outlet', $dtTrx['id_outlet'])
@@ -821,9 +831,7 @@ class ApiCronReport extends Controller
 		            'trx_date'  => date('Y-m-d', strtotime($date)),
 		            'trx_payment' => $trx_payment
 		        ], $global[$global_key]);
-                
             }
-
         }
 
         return true;
@@ -870,17 +878,23 @@ class ApiCronReport extends Controller
 						(select SUM(transaction_grandtotal)) as trx_grand, 
 						(select SUM(transaction_point_earned)) as trx_point_earned, 
 						(select SUM(transaction_cashback_earned)) as trx_cashback_earned, 
-						(select count(DISTINCT transactions.id_transaction)) as trx_count, 
+						(select count(transactions.id_transaction)) as trx_count, 
 						(select AVG(transaction_grandtotal)) as trx_average,
-						(select SUM(transaction_products.transaction_product_qty)) as trx_total_item
+						(select 
+	                    	SUM(transaction_products.transaction_product_qty) 
+	                    	FROM transaction_products 
+	                    	WHERE transaction_products.id_outlet = transactions.id_outlet 
+	                    ) as trx_total_item 
 						FROM transactions 
-						LEFT JOIN users ON users.id = transactions.id_user 
-						LEFT JOIN transaction_products ON transactions.id_transaction = transaction_products.id_transaction
+						LEFT JOIN users ON users.id = transactions.id_user
+						LEFT JOIN transaction_pickups ON transaction_pickups.id_transaction = transactions.id_transaction 
 						WHERE transaction_date BETWEEN "'. $start .' 00:00:00" 
 						AND "'. $end .' 23:59:59"
 						AND transaction_payment_status = "Completed"
+						AND transaction_pickups.reject_at IS NULL
 						GROUP BY transactions.id_outlet
 					'));
+
 			// print_r($trans);exit;
 			if ($trans) {
 				$trans = json_decode(json_encode($trans), true);
@@ -993,10 +1007,12 @@ class ApiCronReport extends Controller
                         INNER JOIN transactions ON transaction_products.id_transaction = transactions.id_transaction 
 						LEFT JOIN users ON users.id = transactions.id_user
 						LEFT JOIN products ON transaction_products.id_product = products.id_product
+						LEFT JOIN transaction_pickups ON transaction_pickups.id_transaction = transactions.id_transaction
                         WHERE transactions.transaction_date BETWEEN "'. date('1-m-d') .' 00:00:00" 
                         AND "'. date('Y-m-d', strtotime($date)) .' 23:59:59"
                         AND transactions.id_outlet = "'. $outlet .'"
                         AND transaction_payment_status = "Completed"
+                        AND transaction_pickups.reject_at IS NULL
                         GROUP BY id_product
                         ORDER BY id_product ASC
                     '));
@@ -1054,7 +1070,7 @@ class ApiCronReport extends Controller
     {
         $date = date('Y-m-d', strtotime($date));
 
-        $getTransactions = Transaction::whereDate('transactions.created_at', $date)
+        $getTransactions = Transaction::whereDate('transactions.transaction_date', $date)
             ->whereNotNull('transactions.id_user')
             ->where('transactions.transaction_payment_status', 'Completed')
             ->whereNull('transaction_pickups.reject_at')
@@ -1073,6 +1089,7 @@ class ApiCronReport extends Controller
         foreach ($getTransactions as $dtTrx){
             $total = 0;
             $count = 0;
+            $is_offline = "";
             $getTransactionPayment = [];
             $trx_payment = $dtTrx['trasaction_payment_type'];
 
@@ -1106,6 +1123,7 @@ class ApiCronReport extends Controller
                     	'transaction_payment_offlines.payment_bank as payment',
                     	'transaction_payment_offlines.payment_amount as trx_payment_nominal'
                     )->get()->toArray();
+                $is_offline = ' (Offline)';
             }
             elseif($dtTrx['trasaction_payment_type'] == 'Balance')
             {
@@ -1133,11 +1151,11 @@ class ApiCronReport extends Controller
 
             	if ( !empty($dtPayment['payment_type']) && !empty($dtPayment['payment'])) 
             	{
-            		$trx_payment = $dtPayment['payment_type'].' '.$dtPayment['payment'];
+            		$trx_payment = $dtPayment['payment_type'].' '.$dtPayment['payment'].($is_offline??'');
             	}
             	else
             	{
-            		$trx_payment = $dtPayment['payment_type']??$dtPayment['payment']??$trx_payment;
+            		$trx_payment = ($dtPayment['payment_type']??$dtPayment['payment']??$trx_payment).($is_offline??'');
             	}
 
                 $getMonthly = MonthlyReportPayment::where('id_outlet', $dtTrx['id_outlet'])
@@ -1187,7 +1205,7 @@ class ApiCronReport extends Controller
 		        ], $global[$global_key]);
             }
         }
-        // dd($global);
+        
         return true;
     }
     
