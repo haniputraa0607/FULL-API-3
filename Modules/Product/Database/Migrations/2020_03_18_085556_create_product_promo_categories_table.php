@@ -15,10 +15,10 @@ class CreateProductPromoCategoriesTable extends Migration
     {
         Schema::create('product_promo_categories', function (Blueprint $table) {
             $table->increments('id_product_promo_category');
-            $table->unsignedInteger('id_product_promo_order');
-            $table->string('id_product_promo_name');
-            $table->text('id_product_promo_description');
-            $table->string('id_product_promo_photo');
+            $table->unsignedInteger('product_promo_category_order')->default(0);
+            $table->string('product_promo_category_name');
+            $table->text('product_promo_category_description')->nullable();
+            $table->string('product_promo_category_photo')->nullable();
             $table->timestamps();
         });
     }

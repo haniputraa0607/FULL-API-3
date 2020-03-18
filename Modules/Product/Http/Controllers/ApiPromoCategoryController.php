@@ -17,7 +17,13 @@ class ApiPromoCategoryController extends Controller
      */
     public function index(Request $request)
     {
-        $data = ProductPromoCategory::orderBy('product_promo_category_order')->orderBy('id_product_promo_category');
+        $data = ProductPromoCategory::select('id_product_promo_category','product_promo_category_name')
+            ->withCount('products')
+            ->orderBy('product_promo_category_order')
+            ->orderBy('id_product_promo_category');
+        if($request->keyword){
+            $data->where('product_promo_category_name','like',"%{$request->keyword}%");
+        }
         if($request->page){
             return $data->paginate();
         }else{
@@ -61,7 +67,7 @@ class ApiPromoCategoryController extends Controller
         if(!$ppc){
             return MyHelper::checkGet([]);
         }
-        $update = ProductPromoCategory::update($post);
+        $update = $ppc->update($post);
         return MyHelper::checkUpdate($update);
     }
 
@@ -72,7 +78,7 @@ class ApiPromoCategoryController extends Controller
      */
     public function destroy(Request $request)
     {
-        $delete = ProductPromoCategory::delete($request->json('id_product_promo_category'));
+        $delete = ProductPromoCategory::find($request->json('id_product_promo_category'))->delete();
         return MyHelper::checkDelete($delete);
     }
 }
