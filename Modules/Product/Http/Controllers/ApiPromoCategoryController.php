@@ -5,8 +5,11 @@ namespace Modules\Product\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
-use Modules\Product\Entities\ProductPromoCategory;
+use App\Http\Models\Product;
 
+use Modules\Product\Entities\ProductPromoCategory;
+use Modules\ProductVariant\Entities\ProductGroup;
+use Modules\ProductVariant\Entities\ProductGroupProductPromoCategory;
 use App\Lib\MyHelper;
 
 class ApiPromoCategoryController extends Controller
@@ -25,9 +28,9 @@ class ApiPromoCategoryController extends Controller
             $data->where('product_promo_category_name','like',"%{$request->keyword}%");
         }
         if($request->page){
-            return $data->paginate();
+            return MyHelper::checkGet($data->paginate());
         }else{
-            return $data->get();
+            return MyHelper::checkGet($data->get());
         }
     }
 
@@ -50,8 +53,24 @@ class ApiPromoCategoryController extends Controller
      */
     public function show(Request $request)
     {
-        $data = ProductPromoCategory::find($request->json('id_product_promo_category'));
-        return MyHelper::checkGet($data);
+        $use_product_variant = \App\Http\Models\Configs::where('id_config',94)->pluck('is_active')->first();
+        $data = ProductPromoCategory::with(['products'=>function($query) use ($use_product_variant){
+                if($use_product_variant){
+                    $query->select('product_group_product_promo_categories.id_product_group','product_group_code');
+                }else{
+                    $query->select('product_product_promo_categories.id_product,product','product_code');
+                }
+            }])->find($request->json('id_product_promo_category'));
+        if(!$data){
+            return MyHelper::checkGet($data);
+        }
+        $result['info'] = $data;
+        if($use_product_variant){
+            $result['products'] = ProductGroup::select('id_product_group','product_group_code','product_group_name')->get();
+        }else{
+            $result['products'] = Product::select('id_product','product_code','product_name')->get();
+        }
+        return MyHelper::checkGet($result);
     }
 
     /**
@@ -80,5 +99,16 @@ class ApiPromoCategoryController extends Controller
     {
         $delete = ProductPromoCategory::find($request->json('id_product_promo_category'))->delete();
         return MyHelper::checkDelete($delete);
+    }
+
+    public function assign(Request $request) {
+        $post = $request->json()->all();
+        $id_product_promo_category = $post['id_product_promo_category'];
+        $up = 0;
+        ProductGroupProductPromoCategory::where('id_product_promo_category',$id_product_promo_category)->delete();
+        foreach ($post['id_product_group'] as $id_product_group) {
+            $update = ProductGroupProductPromoCategory::updateOrCreate(['id_product_group'=>$id_product_group,'id_product_promo_category'=>$id_product_promo_category]);
+        }
+        return MyHelper::checkUpdate(true);
     }
 }

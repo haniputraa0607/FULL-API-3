@@ -75,6 +75,7 @@ Route::group(['prefix' => 'api/product','middleware' => ['log_activities','auth:
 
     Route::group(['prefix' => 'promo-category'], function() {
         Route::any('/', 'ApiPromoCategoryController@index')->middleware(['feature_control:238']);
+        Route::post('assign', 'ApiPromoCategoryController@assign')->middleware(['feature_control:241']);
         Route::post('reorder', 'ApiPromoCategoryController@reorder')->middleware(['feature_control:241']);
         Route::post('create', 'ApiPromoCategoryController@store')->middleware(['feature_control:240']);
         Route::post('show', 'ApiPromoCategoryController@show')->middleware(['feature_control:239']);
