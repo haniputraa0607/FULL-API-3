@@ -12,7 +12,6 @@ class ReportSummary extends FormRequest
     {
         return [
             'date'		=> 'required|date',
-            'id_outlet' => 'required',
             'is_all'    => 'nullable'
         ];
     }

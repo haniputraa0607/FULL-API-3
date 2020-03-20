@@ -37,6 +37,7 @@ class ApiOutletAppReport extends Controller
     public function summary(ReportSummary $request)
     {
     	$post = $request->json()->all();
+    	$post['id_outlet'] = auth()->user()->id_outlet;
 
     	if ($post['date'] < date("Y-m-d")) 
     	{
@@ -245,6 +246,7 @@ class ApiOutletAppReport extends Controller
     public function transactionList(ReportSummary $request)
     {
     	$post = $request->json()->all();
+    	$post['id_outlet'] = auth()->user()->id_outlet;
     	$outlet = Outlet::where('id_outlet','=',$post['id_outlet'])->first();
 
     	$trx = Transaction::whereDate('transaction_date', '=', $post['date'])
@@ -318,7 +320,8 @@ class ApiOutletAppReport extends Controller
     public function itemList(ReportSummary $request)
     {
     	$post = $request->json()->all();
-
+    	$post['id_outlet'] = auth()->user()->id_outlet;
+    	
     	if ($post['date'] < date("Y-m-d")) 
     	{
 	    	$daily_trx_menu = DailyReportTrxMenu::whereDate('trx_date', '=', $post['date'])
