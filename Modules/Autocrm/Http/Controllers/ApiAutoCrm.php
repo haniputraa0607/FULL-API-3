@@ -43,7 +43,7 @@ class ApiAutoCrm extends Controller
 		$this->apiwha = new apiwha();
     }
 
-	function SendAutoCRM($autocrm_title, $receipient, $variables = null, $useragent = null){
+	function SendAutoCRM($autocrm_title, $receipient, $variables = null, $useragent = null, $forward= false){
 		$query = Autocrm::where('autocrm_title','=',$autocrm_title)->with('whatsapp_content')->get()->toArray();
 		$users = User::where('phone','=',$receipient)->get()->toArray();
 		if(empty($users)){
@@ -52,7 +52,7 @@ class ApiAutoCrm extends Controller
 		if($query){
 			$crm 	= $query[0];
 			$user 	= $users[0];
-			if($crm['autocrm_email_toogle'] == 1){
+			if($crm['autocrm_email_toogle'] == 1 && !$forward){
 				if(!empty($user['email'])){
 					if($user['name'] != "")
 						$name	 = "";
@@ -196,7 +196,7 @@ class ApiAutoCrm extends Controller
 							'setting' => $setting
 						);
 
-						Mail::send('emails.test', $data, function($message) use ($to,$subject,$name,$setting)
+						Mail::send('emails.test', $data, function($message) use ($to,$subject,$name,$setting,$variables)
 						{
 							$message->to($to, $name)->subject($subject);
 							if(env('MAIL_DRIVER') == 'mailgun'){
@@ -220,6 +220,17 @@ class ApiAutoCrm extends Controller
 							if(!empty($setting['email_bcc']) && !empty($setting['email_bcc_name'])){
 								$message->bcc($setting['email_bcc'], $setting['email_bcc_name']);
 							}
+
+							// attachment
+							if(isset($variables['attachment'])){
+								if(is_array($variables['attachment'])){
+									foreach($variables['attachment'] as $attach){
+										$message->attach($attach);
+									}
+								}else{
+									$message->attach($variables['attachment']);
+								}
+							}
 						});
 
 						$logData = [];
@@ -233,7 +244,7 @@ class ApiAutoCrm extends Controller
 				}
 			}
 
-			if($crm['autocrm_sms_toogle'] == 1){
+			if($crm['autocrm_sms_toogle'] == 1 && !$forward){
 				if(!empty($user['phone'])){
 					$senddata = array(
 						'apikey' => env('SMS_KEY'),
@@ -266,7 +277,7 @@ class ApiAutoCrm extends Controller
 				}
 			}
 
-			if($crm['autocrm_whatsapp_toogle'] == 1){
+			if($crm['autocrm_whatsapp_toogle'] == 1 && !$forward){
 				if(!empty($user['phone'])){
 					//cek api key whatsapp
 					$api_key = Setting::where('key', 'api_key_whatsapp')->first();
@@ -320,7 +331,7 @@ class ApiAutoCrm extends Controller
 				}
 			}
 
-			if($crm['autocrm_push_toogle'] == 1){
+			if($crm['autocrm_push_toogle'] == 1 && !$forward){
 				if(!empty($user['phone'])){
 					try {
 						$dataOptional          = [];
@@ -437,7 +448,7 @@ class ApiAutoCrm extends Controller
 				}
 			}
 
-			if($crm['autocrm_inbox_toogle'] == 1){
+			if($crm['autocrm_inbox_toogle'] == 1 && !$forward){
 				if(!empty($user['id'])){
 
 					$inbox['id_user'] 	  	  = $user['id'];
@@ -800,8 +811,13 @@ class ApiAutoCrm extends Controller
 		return response()->json(MyHelper::checkGet($result));
 	}
 
-	public function listAutoCrm(){
-		$query = Autocrm::with('whatsapp_content')->get()->toArray();
+	public function listAutoCrm(Request $request){
+		$query = Autocrm::with('whatsapp_content');
+		if($request->autocrm_title){
+			$query = $query->where('autocrm_title',$request->autocrm_title)->first();
+		}else{
+			$query = $query->get()->toArray();			
+		}
 		return response()->json(MyHelper::checkGet($query));
 	}
 

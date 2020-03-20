@@ -155,7 +155,7 @@ class ApiUserFeedbackController extends Controller
         $post = $request->json()->all();
         $user = $request->user();
         $id_transaction = $post['id'];
-        $transaction = Transaction::select('id_transaction','id_outlet')->where('id_user',$user->id)
+        $transaction = Transaction::select('id_transaction','transaction_receipt_number','id_outlet')->where('id_user',$user->id)
         ->find($id_transaction);
         if(!$transaction){
             return [
@@ -178,6 +178,20 @@ class ApiUserFeedbackController extends Controller
                     'messages' => ['Fail upload file']
                 ];
             }
+        }
+        $max_rating_value = Setting::select('value')->where('key','response_feedback_max_rating_value')->pluck('value')->first()?:0;
+        if($rating->rating_value <= $max_rating_value){
+            $transaction->load('outlet_name');
+            $variables = [
+                'receipt_number' => $transaction->transaction_receipt_number,
+                'outlet_name' => $transaction->outlet_name->outlet_name,
+                'transaction_date' => date('d-m-Y H:i',strtotime($transaction->transaction_date)),
+                'rating_value' => (string) $rating->rating_value,
+                'rating_text' => $rating->text,
+                'notes' => $post['notes']??'',
+                'attachment' => $upload['path']??null
+            ];
+            $send = app("Modules\Autocrm\Http\Controllers\ApiAutoCrm")->SendAutoCRM('User Feedback', $user->phone, $variables,null,true);
         }
         $insert = [
             'id_outlet' => $transaction->id_outlet,
