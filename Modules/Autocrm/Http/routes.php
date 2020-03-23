@@ -16,7 +16,7 @@ Route::group(['prefix' => 'api/autocrm/cron', 'namespace' => 'Modules\Autocrm\Ht
 
 Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scopes:be'], 'prefix' => 'api/autocrm', 'namespace' => 'Modules\Autocrm\Http\Controllers'], function()
 {
-    Route::get('list', ['middleware' => 'feature_control:199', 'uses' => 'ApiAutoCrm@listAutoCrm']);
+    Route::any('list', ['middleware' => 'feature_control:199', 'uses' => 'ApiAutoCrm@listAutoCrm']);
     Route::post('update', ['middleware' => 'feature_control:122', 'uses' =>'ApiAutoCrm@updateAutoCrm']);
     Route::get('textreplace', 'ApiAutoCrm@listTextReplace');
     Route::post('textreplace/update', 'ApiAutoCrm@listTextReplace');
