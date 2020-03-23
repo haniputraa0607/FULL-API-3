@@ -304,6 +304,7 @@ class ApiOutletAppReport extends Controller
     	}
 
     	$data['outlet_name'] = $outlet['outlet_name'];
+    	$data['outlet_address'] = $outlet['outlet_address'];
     	$data['time_server'] 	= date("H:i");
     	if ( empty($post['is_all']) ) {
     		$trx['data'] = $data_trx;
