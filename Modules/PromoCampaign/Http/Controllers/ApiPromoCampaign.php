@@ -60,6 +60,7 @@ class ApiPromoCampaign extends Controller
         $this->fraud   = "Modules\SettingFraud\Http\Controllers\ApiFraud";
         $this->deals   = "Modules\Deals\Http\Controllers\ApiDeals";
         $this->voucher   = "Modules\Deals\Http\Controllers\ApiDealsVoucher";
+        $this->subscription   = "Modules\Subscription\Http\Controllers\ApiSubscriptionUse";
     }
 
     public function index(Request $request)
@@ -1600,7 +1601,7 @@ class ApiPromoCampaign extends Controller
         $ip 			= $request->ip();
     	$pct 			= new PromoCampaignTools();
 
-        if ($request->promo_code && !$request->id_deals_user) 
+        if ($request->promo_code && !$request->id_deals_user && !$request->id_subscription_user) 
         {
 	        /* Check promo code*/
 	        $dataCheckPromoCode = [
@@ -1681,7 +1682,7 @@ class ApiPromoCampaign extends Controller
 	    	$query = $code;
 	    	$source = 'promo_campaign';
         }
-        elseif (!$request->promo_code && $request->id_deals_user) 
+        elseif (!$request->promo_code && $request->id_deals_user && !$request->id_subscription_user) 
         {
         	$deals = DealsUser::where('id_deals_user', '=', $request->id_deals_user)
         			->whereIn('paid_status', ['Free', 'Completed'])
@@ -1728,11 +1729,40 @@ class ApiPromoCampaign extends Controller
 	    	$query = $deals['deal_voucher'];
 	    	$source = 'deals';
         }
+        elseif (!$request->promo_code && !$request->id_deals_user && $request->id_subscription_user) 
+        {
+        	$subs = app($this->subscription)->checkSubscription($request->id_subscription_user, 1, 1);
+
+        	if(!$subs){
+	            return [
+	                'status'=>'fail',
+	                'messages'=>['Subscription not valid']
+	            ];
+	        }
+
+	        if ($subs['subscription_expired_at'] < date('Y-m-d H:i:s')) {
+        		return [
+	                'status'=>'fail',
+	                'messages'=>['Subscription is expired']
+	            ];
+        	}
+
+        	if ($subs['subscription_active_at'] > date('Y-m-d H:i:s') && !empty($subs['subscription_active_at']) ) {
+        		return [
+	                'status'=>'fail',
+	                'messages'=>['Subscription is not active yet']
+	            ];
+        	}
+
+        	$subs = $subs->toArray();
+	    	$query = $subs['subscription_user'];
+	    	$source = 'subscription';
+        }
         else
         {
         	return [
                 'status'=>'fail',
-                'messages'=>['Can only use either Promo Code or Voucher']
+                'messages'=>['Can only use Subscription, Promo Code, or Voucher']
             ];
         }
         
@@ -1742,7 +1772,6 @@ class ApiPromoCampaign extends Controller
 
         $errors=[];
 
-        // return $query;
         // check outlet
 		if (isset($id_outlet)) {
 			if (!$pct->checkOutletRule($id_outlet, $query[$source]['is_all_outlet']??0,$query[$source][$source.'_outlets']??$query[$source]['outlets_active'])) {
@@ -1753,10 +1782,11 @@ class ApiPromoCampaign extends Controller
 			}
 		}
 
-		$result['title'] 			= $query[$source]['promo_title']??$query[$source]['deals_title'];
-        $result['description']		= $desc;
-		$result['promo_code'] 		= $request->promo_code;
-		$result['id_deals_user'] 	= $request->id_deals_user;
+		$result['title'] 				= $query[$source]['promo_title']??$query[$source]['deals_title']??$query[$source]['subscription_title']??'';
+        $result['description']			= $desc;
+		$result['promo_code'] 			= $request->promo_code;
+		$result['id_deals_user'] 		= $request->id_deals_user;
+		$result['id_subscription_user']	= $request->id_subscription_user;
 
 		$result = MyHelper::checkGet($result);
 		// check item
@@ -1779,6 +1809,7 @@ class ApiPromoCampaign extends Controller
 	        $result['messages'] = $trx['messages'];
 	        $result['promo_error'] = $trx['promo_error'];
         }
+
         if ($source == 'deals') {
         	$change_used_voucher = app($this->voucher)->useVoucher($request->id_deals_user);
         	if (($change_used_voucher['status']??false) == 'success') {
@@ -1800,38 +1831,60 @@ class ApiPromoCampaign extends Controller
 	            ];
         	}
         }
+
 		return $result;
     }
 
     public function getProduct($source, $query)
     {
-    	// return $source;
-    	if ( ($query[$source.'_product_discount_rules']['is_all_product']??false) == 1 || ($query['promo_type']??false) == 'Referral') 
-        {
-        	$applied_product = '*';
-        	$product = 'semua product';
-        }
-        elseif ( !empty($query[$source.'_product_discount']) )
-        {
-        	$applied_product = $query[$source.'_product_discount'];
-        	// $product = $applied_product[0]['product']['product_name']??'product tertentu';
-        	$product = 'product tertentu';
-        }
-        elseif ( !empty($query[$source.'_tier_discount_product']) )
-        {
-        	$applied_product = $query[$source.'_tier_discount_product'];
-        	$product = $applied_product['product']['product_name']??'product tertentu';
-        }
-        elseif ( !empty($query[$source.'_buyxgety_product_requirement']) )
-        {
-        	$applied_product = $query[$source.'_buyxgety_product_requirement'];
-        	$product = $applied_product['product']['product_name']??'product tertentu';
-        }
-        else
-        {
-        	$applied_product = [];
-        	$product = [];
-        }
+    	// return $query;
+    	if ($source == 'subscription') 
+    	{
+    		if ( !empty($query['is_all_product']) || empty($query['subscription_products']) ) {
+    			$applied_product = '*';
+	        	$product = 'semua product';
+    		}
+    		elseif( !empty($query['subscription_products']) )
+    		{
+    			$applied_product = $query['subscription_products'];
+	        	$product = 'product tertentu';
+    		}
+    		else
+    		{
+    			$applied_product = [];
+	        	$product = [];
+    		}
+    	}
+    	else
+    	{
+	    	if ( ($query[$source.'_product_discount_rules']['is_all_product']??false) == 1 || ($query['promo_type']??false) == 'Referral') 
+	        {
+	        	$applied_product = '*';
+	        	$product = 'semua product';
+	        }
+	        elseif ( !empty($query[$source.'_product_discount']) )
+	        {
+	        	$applied_product = $query[$source.'_product_discount'];
+	        	// $product = $applied_product[0]['product']['product_name']??'product tertentu';
+	        	$product = 'product tertentu';
+	        }
+	        elseif ( !empty($query[$source.'_tier_discount_product']) )
+	        {
+	        	$applied_product = $query[$source.'_tier_discount_product'];
+	        	$product = $applied_product['product']['product_name']??'product tertentu';
+	        }
+	        elseif ( !empty($query[$source.'_buyxgety_product_requirement']) )
+	        {
+	        	$applied_product = $query[$source.'_buyxgety_product_requirement'];
+	        	$product = $applied_product['product']['product_name']??'product tertentu';
+	        }
+	        else
+	        {
+	        	$applied_product = [];
+	        	$product = [];
+	        }
+
+    	}
 
         $result = [
         	'applied_product' => $applied_product,
@@ -1842,72 +1895,104 @@ class ApiPromoCampaign extends Controller
 
     public function getPromoDescription($source, $query, $product)
     {
-    	// add description
-        if ($query['promo_type'] == 'Product discount') 
-        {
-        	$discount = $query[$source.'_product_discount_rules']['discount_type']??'Nominal';
-        	$qty = $query[$source.'_product_discount_rules']['max_product']??0;
+    	if ($source == 'subscription') 
+    	{
+    		if ( !empty($query['subscription_voucher_percent']) ) 
+    		{
+    			$discount = 'Percent';
+    		}
+    		else
+    		{
+    			$discount = 'Nominal';
+    		}
 
-        	if ($discount == 'Percent') {
-        		$discount = ($query[$source.'_product_discount_rules']['discount_value']??0).' %';
+        	if ( !empty($query['subscription_voucher_percent']) ) {
+        		$discount = ($query['subscription_voucher_percent']??0).' %';
         	}else{
-        		$discount = 'Rp '.number_format($query[$source.'_product_discount_rules']['discount_value']??0);
+        		$discount = 'Rp '.number_format($query['subscription_voucher_nominal']??0);
         	}
 
-    		$key_null = 'Anda berhak mendapatkan potongan %discount% untuk pembelian %product%. Maksimal %qty% buah untuk setiap produk.';
-    		$desc = Setting::where('key', '=', 'description_product_discount')->first()['value']??$key_null;
+        	$key = 'description_product_discount_no_qty';
+    		$key_null = 'Anda berhak mendapatkan potongan %discount% untuk pembelian %product%.';
+    		$desc = Setting::where('key', '=', $key)->first()['value']??$key_null;
 
-    		$desc = MyHelper::simpleReplace($desc,['discount'=>$discount, 'product'=>$product, 'qty'=>$qty,]);
-    	}
-    	elseif ($query['promo_type'] == 'Tier discount') 
-    	{
-    		$min_qty = 1;
-    		$max_qty = 1;
-
-    		foreach ($query[$source.'_tier_discount_rules'] as $key => $rule) {
-				$min_req=$rule['min_qty'];
-				$max_req=$rule['max_qty'];
-
-				if($min_qty===null||$rule['min_qty']<$min_qty){
-					$min_qty=$min_req;
-				}
-				if($max_qty===null||$rule['max_qty']>$max_qty){
-					$max_qty=$max_req;
-				}
-    		}
-    		$key = 'description_tier_discount';
-    		$key_null = 'Anda berhak mendapatkan potongan setelah melakukan pembelian %product% sebanyak %minmax%';
-    		$minmax=$min_qty!=$max_qty?"$min_qty - $max_qty":$min_qty;
-    		$desc = Setting::where('key', '=', 'description_tier_discount')->first()['value']??$key_null;
-
-    		$desc = MyHelper::simpleReplace($desc,['product'=>$product, 'minmax'=>$minmax]);
-    	}
-    	elseif ($query['promo_type'] == 'Buy X Get Y') 
-    	{
-    		$min_qty = 1;
-    		$max_qty = 1;
-    		foreach ($query[$source.'_buyxgety_rules'] as $key => $rule) {
-				$min_req=$rule['min_qty_requirement'];
-				$max_req=$rule['max_qty_requirement'];
-
-				if($min_qty===null||$rule['min_qty_requirement']<$min_qty){
-					$min_qty=$min_req;
-				}
-				if($max_qty===null||$rule['max_qty_requirement']>$max_qty){
-					$max_qty=$max_req;
-				}
-    		}
-    		$key = 'description_buyxgety_discount';
-    		$key_null = 'Anda berhak mendapatkan potongan setelah melakukan pembelian %product% sebanyak %min% - %max%';
-    		$minmax=$min_qty!=$max_qty?"$min_qty - $max_qty":$min_qty;
-    		$desc = Setting::where('key', '=', 'description_buyxgety_discount')->first()['value']??$key_null;
-
-    		$desc = MyHelper::simpleReplace($desc,['product'=>$product, 'minmax'=>$minmax]);
+    		$desc = MyHelper::simpleReplace($desc,['discount'=>$discount, 'product'=>$product]);
     	}
     	else
     	{
-    		$key = null;
-    		$desc = 'no description';
+	        if ($query['promo_type'] == 'Product discount') 
+	        {
+	        	$discount = $query[$source.'_product_discount_rules']['discount_type']??'Nominal';
+	        	$qty = $query[$source.'_product_discount_rules']['max_product']??0;
+
+	        	if ($discount == 'Percent') {
+	        		$discount = ($query[$source.'_product_discount_rules']['discount_value']??0).' %';
+	        	}else{
+	        		$discount = 'Rp '.number_format($query[$source.'_product_discount_rules']['discount_value']??0);
+	        	}
+
+	        	if ( empty($qty) ) {
+        			$key = 'description_product_discount_no_qty';
+    				$key_null = 'Anda berhak mendapatkan potongan %discount% untuk pembelian %product%.';
+	        	}else{
+	        		$key = 'description_product_discount';
+	    			$key_null = 'Anda berhak mendapatkan potongan %discount% untuk pembelian %product%. Maksimal %qty% buah untuk setiap produk.';
+	        	}
+
+	    		$desc = Setting::where('key', '=', $key)->first()['value']??$key_null;
+
+	    		$desc = MyHelper::simpleReplace($desc,['discount'=>$discount, 'product'=>$product, 'qty'=>$qty,]);
+	    	}
+	    	elseif ($query['promo_type'] == 'Tier discount') 
+	    	{
+	    		$min_qty = 1;
+	    		$max_qty = 1;
+
+	    		foreach ($query[$source.'_tier_discount_rules'] as $key => $rule) {
+					$min_req=$rule['min_qty'];
+					$max_req=$rule['max_qty'];
+
+					if($min_qty===null||$rule['min_qty']<$min_qty){
+						$min_qty=$min_req;
+					}
+					if($max_qty===null||$rule['max_qty']>$max_qty){
+						$max_qty=$max_req;
+					}
+	    		}
+	    		$key = 'description_tier_discount';
+	    		$key_null = 'Anda berhak mendapatkan potongan setelah melakukan pembelian %product% sebanyak %minmax%';
+	    		$minmax=$min_qty!=$max_qty?"$min_qty - $max_qty":$min_qty;
+	    		$desc = Setting::where('key', '=', 'description_tier_discount')->first()['value']??$key_null;
+
+	    		$desc = MyHelper::simpleReplace($desc,['product'=>$product, 'minmax'=>$minmax]);
+	    	}
+	    	elseif ($query['promo_type'] == 'Buy X Get Y') 
+	    	{
+	    		$min_qty = 1;
+	    		$max_qty = 1;
+	    		foreach ($query[$source.'_buyxgety_rules'] as $key => $rule) {
+					$min_req=$rule['min_qty_requirement'];
+					$max_req=$rule['max_qty_requirement'];
+
+					if($min_qty===null||$rule['min_qty_requirement']<$min_qty){
+						$min_qty=$min_req;
+					}
+					if($max_qty===null||$rule['max_qty_requirement']>$max_qty){
+						$max_qty=$max_req;
+					}
+	    		}
+	    		$key = 'description_buyxgety_discount';
+	    		$key_null = 'Anda berhak mendapatkan potongan setelah melakukan pembelian %product% sebanyak %min% - %max%';
+	    		$minmax=$min_qty!=$max_qty?"$min_qty - $max_qty":$min_qty;
+	    		$desc = Setting::where('key', '=', 'description_buyxgety_discount')->first()['value']??$key_null;
+
+	    		$desc = MyHelper::simpleReplace($desc,['product'=>$product, 'minmax'=>$minmax]);
+	    	}
+	    	else
+	    	{
+	    		$key = null;
+	    		$desc = 'no description';
+	    	}
     	}
 
     	return $desc;
@@ -1978,20 +2063,29 @@ class ApiPromoCampaign extends Controller
         return $deals;
     }
 
-    public function promoError($source, $errore=null, $errors=null)
+    public function promoError($source, $errore=null, $errors=null, $errorProduct=0)
     {
     	if ($source == 'transaction') 
     	{
-    		$setting = ['promo_error_title', 'promo_error_ok_button', 'promo_error_cancel_button'];
+    		$setting = ['promo_error_title', 'promo_error_ok_button', 'promo_error_ok_button_v2', 'promo_error_cancel_button'];
 	    	$getData = Setting::whereIn('key',$setting)->get()->toArray();
 	    	$data = [];
 	    	foreach ($getData as $key => $value) {
 	    		$data[$key] = $value;
 	    	}
 
+	    	if ($errorProduct == 1) 
+	    	{
+	        	$result['button_ok'] = $data['promo_error_ok_button']??'Tambah item';
+	    	}
+	    	else
+	    	{
+	        	$result['button_ok'] = $data['promo_error_ok_button_v2']??'Ok';
+	    	}
 	    	$result['title'] = $data['promo_error_title']??'Promo tidak berlaku';
-	        $result['button_ok'] = $data['promo_error_ok_button']??'Tambah item';
 	        $result['button_cancel'] = $data['promo_error_cancel_button']??'Tidak';
+	        $result['product_label'] = "";
+	        $result['product'] = null;
 
     	}
     	else

@@ -34,6 +34,7 @@ class ApiCategoryController extends Controller
     function __construct() {
         date_default_timezone_set('Asia/Jakarta');
         $this->promo_campaign       = "Modules\PromoCampaign\Http\Controllers\ApiPromoCampaign";
+        $this->subscription_use     = "Modules\Subscription\Http\Controllers\ApiSubscriptionUse";
     }
 
     public $saveImage = "img/product/category/";
@@ -603,36 +604,54 @@ class ApiCategoryController extends Controller
 		foreach ($products as $key => $value) {
 			$products[$key]['is_promo'] = 0;
 		}
+
 		$promo_error = null;
-        if ( (!empty($post['promo_code']) && empty($post['id_deals_user'])) || (empty($post['promo_code']) && !empty($post['id_deals_user'])) ) {
+        if ( 
+        		(!empty($post['promo_code']) && empty($post['id_deals_user']) && empty($post['id_subscription_user']) ) || 
+        		(empty($post['promo_code']) && !empty($post['id_deals_user']) && empty($post['id_subscription_user']) ) ||
+        		(empty($post['promo_code']) && empty($post['id_deals_user']) && !empty($post['id_subscription_user']) ) 
+        	) {
 
         	if (!empty($post['promo_code'])) 
         	{
         		$code = app($this->promo_campaign)->checkPromoCode($post['promo_code'], null, 1);
         		$source = 'promo_campaign';
-        	}else{
+        	}
+        	elseif (!empty($post['id_deals_user']))
+        	{
         		$code = app($this->promo_campaign)->checkVoucher($post['id_deals_user'], null, 1);
         		$source = 'deals';
         	}
+        	elseif (!empty($post['id_subscription_user'])) 
+        	{
+        		$code = app($this->subscription_use)->checkSubscription($post['id_subscription_user'], null, 1);
+        		$source = 'subscription';
+        	}
 
-	        if(!$code){
+	        if(!$code)
+	        {
 	        	$promo_error = 'Promo not valid';
 	        	return false;
-	        }else{
+	        }
+	        else
+	        {
 
-	        	if ( ($code['promo_campaign']['date_end']??$code['voucher_expired_at']) < date('Y-m-d H:i:s') ) {
+	        	if ( ($code['promo_campaign']['date_end']??$code['voucher_expired_at']??$code['subscription_expired_at']) < date('Y-m-d H:i:s') ) {
 	        		$promo_error = 'Promo is ended';
 	        		return false;
 	        	}
 	        	$code = $code->toArray();
 
-	        	$applied_product = app($this->promo_campaign)->getProduct($source,($code['promo_campaign']??$code['deal_voucher']['deals']))['applied_product']??[];
+	        	$applied_product = app($this->promo_campaign)->getProduct($source,($code['promo_campaign']??$code['deal_voucher']['deals']??$code['subscription_user']['subscription']))['applied_product']??[];
 
-	        	if ($applied_product == '*') {
+	        	if ($applied_product == '*') 
+	        	{
         			foreach ($products as $key => $value) {
 	        			$products[$key]['is_promo'] = 1;
     				}
-        		}else{
+        		}
+        		else
+        		{
         			if (isset($applied_product[0])) {
 			        	foreach ($applied_product as $key => $value) {
 		        			foreach ($products as $key2 => $value2) {
@@ -652,8 +671,12 @@ class ApiCategoryController extends Controller
         			}
         		}
 	        }
-        }elseif ((!empty($post['promo_code']) && !empty($post['id_deals_user']))) {
-        	$promo_error = 'Can only use either promo code or voucher';
+        }elseif ( 
+        	(!empty($post['promo_code']) && !empty($post['id_deals_user'])) || 
+        	(!empty($post['id_subscription_user']) && !empty($post['id_deals_user'])) ||
+        	(!empty($post['promo_code']) && !empty($post['id_subscription_user'])) 
+        ) {
+        	$promo_error = 'Can only use Subscription, Promo Code, or Voucher';
         }
         return $products;
         // end promo code

@@ -82,6 +82,7 @@ class ApiOnlineTransaction extends Controller
         $this->setting_fraud = "Modules\SettingFraud\Http\Controllers\ApiFraud";
         $this->setting_trx   = "Modules\Transaction\Http\Controllers\ApiSettingTransactionV2";
         $this->promo_campaign       = "Modules\PromoCampaign\Http\Controllers\ApiPromoCampaign";
+        $this->subscription_use     = "Modules\Subscription\Http\Controllers\ApiSubscriptionUse";
     }
 
     public function newTransaction(NewTransaction $request) {
@@ -1712,7 +1713,7 @@ class ApiOnlineTransaction extends Controller
 
         // check promo code & voucher
         $promo_error=null;
-        if($request->json('promo_code')){
+        if($request->promo_code && !$request->id_subscription_user && !$request->id_deals_user){
         	$code = app($this->promo_campaign)->checkPromoCode($request->promo_code, 1, 1);
 
             if ($code)
@@ -1721,13 +1722,14 @@ class ApiOnlineTransaction extends Controller
 	            $validate_user=$pct->validateUser($code->id_promo_campaign, $request->user()->id, $request->user()->phone, $request->device_type, $request->device_id, $errore,$code->id_promo_campaign_promo_code);
 
 	            if ($validate_user) {
-		            $discount_promo=$pct->validatePromo($code->id_promo_campaign, $request->id_outlet, $post['item'], $errors, 'promo_campaign');
+		            $discount_promo=$pct->validatePromo($code->id_promo_campaign, $request->id_outlet, $post['item'], $errors, 'promo_campaign', $errorProduct);
 
-		            if ( !empty($errore) || !empty($errors)) {
-		            	$promo_error = app($this->promo_campaign)->promoError('transaction', $errore, $errors);
-		            	$promo_error['product_label'] = app($this->promo_campaign)->getProduct('promo_campaign', $code['promo_campaign'])['product']??'';
-				        $promo_error['product'] = $pct->getRequiredProduct($code->id_promo_campaign)??null;
-
+		            if ( !empty($errore) || !empty($errors) ) {
+		            	$promo_error = app($this->promo_campaign)->promoError('transaction', $errore, $errors, $errorProduct);
+		            	if ($errorProduct==1) {
+			            	$promo_error['product_label'] = app($this->promo_campaign)->getProduct('promo_campaign', $code['promo_campaign'])['product']??'';
+					        $promo_error['product'] = $pct->getRequiredProduct($code->id_promo_campaign)??null;
+					    }
 		            }
 		            $promo_discount=$discount_promo['discount'];
 	            }
@@ -1742,32 +1744,35 @@ class ApiOnlineTransaction extends Controller
             }
             else
             {
-            	$promo_error[] = 'Promo code invalid';
+            	$error = ['Promo code invalid'];
+            	$promo_error = app($this->promo_campaign)->promoError('transaction', $error);
             }
         }
-        elseif($request->json('id_deals_user'))
+        elseif(!$request->promo_code && !$request->id_subscription_user && $request->id_deals_user)
         {
         	$deals = app($this->promo_campaign)->checkVoucher($request->id_deals_user, 1, 1);
 
 			if($deals)
 			{
 				$pct=new PromoCampaignTools();
-				$discount_promo=$pct->validatePromo($deals->dealVoucher->id_deals, $request->id_outlet, $post['item'], $errors, 'deals');
+				$discount_promo=$pct->validatePromo($deals->dealVoucher->id_deals, $request->id_outlet, $post['item'], $errors, 'deals', $errorProduct);
 
 				if ( !empty($errors) ) {
 					$code = $deals->toArray();
-	            	$promo_error = app($this->promo_campaign)->promoError('transaction', null, $errors);
-	            	$promo_error['product_label'] = app($this->promo_campaign)->getProduct('deals', $code['deal_voucher']['deals'])['product']??'';
-		        	$promo_error['product'] = $pct->getRequiredProduct($deals->dealVoucher->id_deals, 'deals')??null;
+	            	$promo_error = app($this->promo_campaign)->promoError('transaction', null, $errors, $errorProduct);
+	            	if ($errorProduct==1) {
+		            	$promo_error['product_label'] = app($this->promo_campaign)->getProduct('deals', $code['deal_voucher']['deals'])['product']??'';
+			        	$promo_error['product'] = $pct->getRequiredProduct($deals->dealVoucher->id_deals, 'deals')??null;
+	            	}
 	            }
 	            $promo_discount=$discount_promo['discount'];
 	        }
 	        else
 	        {
-	        	$promo_error[] = 'Voucher is not valid';
+	        	$error = ['Voucher is not valid'];
+	        	$promo_error = app($this->promo_campaign)->promoError('transaction', $error);
 	        }
         }
-
         // end check promo code & voucher
 
         $error_msg=[];
@@ -1996,6 +2001,7 @@ class ApiOnlineTransaction extends Controller
         $result['service'] = $post['service'];
         $result['tax'] = (int) $post['tax'];
         $result['grandtotal'] = (int)$post['subtotal'] + (int)(-$post['discount']) + (int)$post['service'] + (int)$post['tax'] + (int)$post['shipping'];
+        $result['subscription'] = 0;
         $result['used_point'] = 0;
         $balance = app($this->balance)->balanceNow($user->id);
         $result['points'] = (int) $balance;
@@ -2008,6 +2014,16 @@ class ApiOnlineTransaction extends Controller
                 $result['grandtotal'] -= $balance;
             }
             $result['points'] -= $result['used_point'];
+        }
+        if ($request->id_subscription_user && !$request->promo_code && !$request->id_deals_user) 
+        {
+	        $result['subscription'] = app($this->subscription_use)->calculate($request->id_subscription_user, $result['grandtotal'], $result['subtotal'], $post['item'], $subs_error, $errorProduct, $subs_product, $subs_applied_product);
+	        if (!empty($subs_error)) {
+	        	$error = $subs_error;
+	        	$promo_error = app($this->promo_campaign)->promoError('transaction', $error, null, $errorProduct);
+	        	$promo_error['product'] = $subs_applied_product??null;
+	        	$promo_error['product_label'] = $subs_product??'';
+	        }
         }
         return MyHelper::checkGet($result)+['messages'=>$error_msg,'promo_error'=>$promo_error];
     }
