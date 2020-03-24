@@ -874,10 +874,14 @@ class ApiOutletApp extends Controller
         $outlet = $request->user();
         $updated = 0;
         if($post['sold_out']){
-            $updated += ProductPrice::where('id_outlet', $outlet['id_outlet'])
+            $found = ProductPrice::where('id_outlet', $outlet['id_outlet'])
                 ->whereIn('id_product', $post['sold_out'])
-                ->where('product_stock_status','<>', 'Sold Out')
-                ->update(['product_stock_status' => 'Sold Out']);
+                ->where('product_stock_status','<>', 'Sold Out');
+            $x = $found->get()->toArray();
+            foreach ($x as $k) {
+                MyHelper::logStockStatusUpdate($outlet->id_outlet,);
+            }
+            $updated += $found->update(['product_stock_status' => 'Sold Out']);
         }
         if($post['available']){
             $updated += ProductPrice::where('id_outlet', $outlet['id_outlet'])

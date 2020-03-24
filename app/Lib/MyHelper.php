@@ -24,6 +24,7 @@ use App\Http\Models\PromotionRuleParent;
 use App\Http\Models\InboxGlobalRule;
 use App\Http\Models\InboxGlobalRuleParent;
 use App\Http\Models\LogTopupManual;
+use Modules\Product\Entities\ProductStockStatusUpdate;
 use Modules\PointInjection\Entities\PointInjectionRule;
 use Modules\PointInjection\Entities\PointInjectionRuleParent;
 
@@ -2283,5 +2284,18 @@ class MyHelper{
                 'messages' => [$phoneSetting->message_failed]
             ];
         }
+    }
+    public static function logStockStatusUpdate($id_user,$id_product,$stock_status_new,$stock_status_old = null) {
+    	if(!$stock_status_old || $stock_status_new !== $stock_status_old){
+    		$create = ProductStockStatusUpdate::create([
+    			'id_product' => $id_product,
+    			'id_user' => $id_user,
+    			'new_status' => $stock_status_new
+    		]);
+    		if($create){
+    			return $create;
+    		}
+    	}
+    	return false;
     }
 }
