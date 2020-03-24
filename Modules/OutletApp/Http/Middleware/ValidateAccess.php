@@ -19,11 +19,11 @@ class ValidateAccess
      */
     public function handle(Request $request, Closure $next, $feature)
     {
-        if($user = $this->getUserOutlet($feature,$request->pin,$request->user())){
+        if($user = $this->getUserOutlet($feature,$request->otp,$request->user())){
             $request->merge(['user_outlet'=>$user]);
             return $next($request);
         }
-        return MyHelper::checkGet([],'PIN tidak sesuai');
+        return MyHelper::checkGet([],'OTP tidak sesuai');
     }
     public function getUserOutlet($feature,$pin,$outlet) {
         $otps = OutletAppOtp::where(['id_outlet'=>$outlet->id_outlet,'feature'=>$feature,'used'=>0])

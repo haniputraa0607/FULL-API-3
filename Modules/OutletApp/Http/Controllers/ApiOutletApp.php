@@ -1439,7 +1439,7 @@ class ApiOutletApp extends Controller
         }
         return MyHelper::checkGet($return);
     }
-    public function requestPIN(Request $request){
+    public function requestOTP(Request $request){
         if(!in_array($request->feature, ['Update Stock Status','Update Schedule'])){
             return [
                 'status'=>'fail',
