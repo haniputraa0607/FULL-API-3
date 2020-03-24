@@ -147,7 +147,10 @@ class ApiReferralController extends Controller
     public function setting(Request $request) {
         $referral = PromoCampaignReferral::with('promo_campaign')->first()->toArray();
         if($referral){
-            $referral['referral_messages'] = Setting::select('value_text')->where('key','referral_messages')->pluck('value_text')->first()?:'Get %value% discount on your first purchase. By using the %code% promo code';
+            $settings = Setting::select('key','value_text')->where('key','like','%referral%')->get()->toArray();
+            foreach ($settings as $value) {
+                $referral[$value['key']] = $value['value_text'];
+            }
         }
         return MyHelper::checkGet($referral);
     }
@@ -178,10 +181,44 @@ class ApiReferralController extends Controller
         \DB::beginTransaction();
         $update = $referral->update($dataPromoCampaignReferral);
         $update2 = PromoCampaign::where('id_promo_campaign',$referral->id_promo_campaign)->update($dataPromoCampaign);
-        $update3 = Setting::updateOrCreate(['key'=>'referral_messages'],['value_text'=>$post['referral_messages']]);
-        if(!$update || !$update2 || !$update3){
+        if(!$update || !$update2){
             \DB::rollback();
             return MyHelper::checkUpdate([]);
+        }
+        if($post['referral_content_title']??false){
+            $update3 = Setting::updateOrCreate(['key'=>'referral_content_title'],['value_text'=>$post['referral_content_title']]);            
+            if(!$update3){
+                \DB::rollback();
+                return MyHelper::checkUpdate([]);
+            }
+        }
+        if($post['referral_content_description']??false){
+            $update3 = Setting::updateOrCreate(['key'=>'referral_content_description'],['value_text'=>json_encode($post['referral_content_description'])]);            
+            if(!$update3){
+                \DB::rollback();
+                return MyHelper::checkUpdate([]);
+            }
+        }
+        if($post['referral_text_header']??false){
+            $update3 = Setting::updateOrCreate(['key'=>'referral_text_header'],['value_text'=>$post['referral_text_header']]);            
+            if(!$update3){
+                \DB::rollback();
+                return MyHelper::checkUpdate([]);
+            }
+        }
+        if($post['referral_text_button']??false){
+            $update3 = Setting::updateOrCreate(['key'=>'referral_text_button'],['value_text'=>$post['referral_text_button']]);            
+            if(!$update3){
+                \DB::rollback();
+                return MyHelper::checkUpdate([]);
+            }
+        }
+        if($post['referral_messages']??false){
+            $update3 = Setting::updateOrCreate(['key'=>'referral_messages'],['value_text'=>$post['referral_messages']]);            
+            if(!$update3){
+                \DB::rollback();
+                return MyHelper::checkUpdate([]);
+            }
         }
         \DB::commit();
         return MyHelper::checkUpdate($update);

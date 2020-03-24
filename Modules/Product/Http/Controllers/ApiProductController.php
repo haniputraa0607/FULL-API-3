@@ -1270,6 +1270,12 @@ class ApiProductController extends Controller
             unset($modifier['product_modifier_prices']);
         }
         $product['max_order'] = (int) $max_order;
+        $product['max_order_alert'] = MyHelper::simpleReplace(Setting::select('value_text')->where('key','transaction_exceeds_limit_text')->pluck('value_text')->first()?:'Transaksi anda melebihi batas! Maksimal transaksi untuk %product_name% : %max_order%',
+                    [
+                        'product_name' => $product['product_name'],
+                        'max_order' => $max_order
+                    ]
+                );
         $product['outlet'] = Outlet::select('id_outlet','outlet_code','outlet_address','outlet_name')->find($post['id_outlet']);
         return MyHelper::checkGet($product);
     }
