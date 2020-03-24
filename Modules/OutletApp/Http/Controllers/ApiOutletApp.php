@@ -1452,7 +1452,8 @@ class ApiOutletApp extends Controller
             return MyHelper::checkGet($users,'User Outlet Apps empty');
         }
         $status = false;
-        $pin = password_hash(rand(1000,9999), PASSWORD_BCRYPT);
+        $pinnya = rand(1000,9999);
+        $pin = password_hash($pinnya, PASSWORD_BCRYPT);
         foreach ($users as $user) {
             $create = OutletAppOtp::create([
                 'id_user_outlet' => $user->id_user_outlet,
@@ -1460,7 +1461,13 @@ class ApiOutletApp extends Controller
                 'feature' => $post['feature'],
                 'pin' => $pin
             ]);
-            if(!$status && $create){
+            $send = app($this->autocrm)->SendAutoCRM('Outlet App Request PIN', $user->phone, [
+                'outlet_name' => $outlet->outlet_name,
+                'feature' => $post['feature'],
+                'admin_name' => $user->name,
+                'pin' => $pinnya
+            ]);
+            if(!$status && ($create && $send)){
                 $status = true;
             }
         }

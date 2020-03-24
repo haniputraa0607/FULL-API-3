@@ -1223,7 +1223,36 @@ Message :
                 'created_at' => '2018-03-12 13:53:17',
                 'updated_at' => '2018-05-03 15:02:20',
             ),
-           
+            34 =>
+            array (
+                'id_autocrm' => 35,
+                'autocrm_type' => 'Response',
+                'autocrm_trigger' => 'Daily',
+                'autocrm_cron_reference' => NULL,
+                'autocrm_title' => 'Outlet App Request PIN',
+                'autocrm_email_toogle' => '0',
+                'autocrm_sms_toogle' => '1',
+                'autocrm_push_toogle' => '0',
+                'autocrm_inbox_toogle' => '0',
+                'autocrm_forward_toogle' => '0',
+                'autocrm_email_subject' => NULL,
+                'autocrm_email_content' => NULL,
+                'autocrm_sms_content' => NULL,
+                'autocrm_push_subject' => NULL,
+                'autocrm_push_content' => NULL,
+                'autocrm_push_image' => NULL,
+                'autocrm_push_clickto' => NULL,
+                'autocrm_push_link' => NULL,
+                'autocrm_push_id_reference' => NULL,
+                'autocrm_inbox_subject' => NULL,
+                'autocrm_inbox_content' => NULL,
+                'autocrm_forward_email' => NULL,
+                'autocrm_forward_email_subject' => NULL,
+                'autocrm_forward_email_content' => NULL,
+                'custom_text_replace'=>'%receipt_number%;%outlet_name%;%transaction_date%;%rating_value%;%rating_text%;%notes%',
+                'created_at' => '2018-03-12 13:53:17',
+                'updated_at' => '2018-05-03 15:02:20',
+            ),
         ));
     }
 }

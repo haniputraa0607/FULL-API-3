@@ -41,6 +41,7 @@ class UserOutlet extends Model
 		'enquiry',
 		'pickup_order',
 		'delivery',
+		'outlet_apps',
 		'payment'
 	];
 
