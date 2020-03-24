@@ -15,6 +15,7 @@ class CreateOutletAppOtpsTable extends Migration
     {
         Schema::create('outlet_app_otps', function (Blueprint $table) {
             $table->increments('id_outlet_app_otp');
+            $table->boolean('used')->default(0);
             $table->string('feature');
             $table->string('pin');
             $table->unsignedInteger('id_user_outlet');

@@ -26,11 +26,14 @@ class ValidateAccess
         return MyHelper::checkGet([],'PIN tidak sesuai');
     }
     public function getUserOutlet($feature,$pin,$outlet) {
-        $otps = OutletAppOtp::where(['id_outlet'=>$outlet->id,'feature'=>$feature])->get();
+        $otps = OutletAppOtp::where(['id_outlet'=>$outlet->id_outlet,'feature'=>$feature,'used'=>0])
+        ->whereRaw('UNIX_TIMESTAMP(created_at) >= ?',[time()-(60*5)])
+        ->get();
         $user =null;
         foreach ($otps as $otp) {
             $verify = password_verify($pin, $otp->pin);
             if($verify){
+                $otp->update(['used'=>1]);
                 $user = UserOutlet::where('id_user_outlet',$otp->id_user_outlet)->first();
             }
         }
