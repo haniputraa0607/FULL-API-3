@@ -27,6 +27,8 @@ use App\Http\Models\ProductPrice;
 use App\Http\Models\LogBalance;
 use Modules\Brand\Entities\BrandProduct;
 use Modules\Brand\Entities\Brand;
+use Modules\OutletApp\Entities\UserOutlet;
+use Modules\OutletApp\Entities\OutletAppOtp;
 
 use Modules\OutletApp\Http\Requests\ListProduct;
 use Modules\OutletApp\Http\Requests\UpdateToken;
@@ -872,6 +874,7 @@ class ApiOutletApp extends Controller
     public function productSoldOut(ProductSoldOut $request){
         $post = $request->json()->all();
         $outlet = $request->user();
+        $user_outlet = $request->user_outlet;
         $updated = 0;
         if($post['sold_out']){
             $found = ProductPrice::where('id_outlet', $outlet['id_outlet'])
@@ -879,7 +882,7 @@ class ApiOutletApp extends Controller
                 ->where('product_stock_status','<>', 'Sold Out');
             $x = $found->get()->toArray();
             foreach ($x as $k) {
-                MyHelper::logStockStatusUpdate($outlet->id_outlet,);
+                MyHelper::logStockStatusUpdate($outlet->id_outlet);
             }
             $updated += $found->update(['product_stock_status' => 'Sold Out']);
         }
@@ -1415,5 +1418,30 @@ class ApiOutletApp extends Controller
             },$return);
         }
         return MyHelper::checkGet($return);
+    }
+    public function requestPIN(Request $request){
+        $outlet = $request->user();
+        $post = $request->json()->all();
+        $users = UserOutlet::where(['id_outlet'=>$outlet->id,'outlet_apps'=>'1'])->get();
+        if(!$users){
+            return MyHelper::checkGet($users,'User Outlet Apps empty');
+        }
+        $status = false;
+        $pin = password_hash(rand(1000,9999), PASSWORD_BCRYPT);
+        foreach ($users as $user) {
+            $create = OutletAppOtp::create([
+                'id_user_outlet' => $user->id_user_outlet,
+                'id_outlet' => $outlet->id_outlet,
+                'feature' => $post['feature'],
+                'pin' => $pin
+            ]);
+            if(!$status && $create){
+                $status = true;
+            }
+        }
+        if(!$status){
+            return MyHelper::checkGet([],'Failed send PIN');
+        }
+        return ['status'=>'success'];
     }
 }
