@@ -61,6 +61,7 @@ class ApiPromoCampaign extends Controller
         $this->deals   = "Modules\Deals\Http\Controllers\ApiDeals";
         $this->voucher   = "Modules\Deals\Http\Controllers\ApiDealsVoucher";
         $this->subscription   = "Modules\Subscription\Http\Controllers\ApiSubscriptionUse";
+        $this->promo       	= "Modules\PromoCampaign\Http\Controllers\ApiPromo";
     }
 
     public function index(Request $request)
@@ -1810,20 +1811,22 @@ class ApiPromoCampaign extends Controller
 	        $result['promo_error'] = $trx['promo_error'];
         }
 
-        if ($source == 'deals') {
-        	$change_used_voucher = app($this->voucher)->useVoucher($request->id_deals_user);
+        if ($source == 'deals') 
+        {
+        	$change_used_voucher = app($this->promo)->usePromo($source, $request->id_deals_user);
         	if (($change_used_voucher['status']??false) == 'success') {
 	        	$result['result']['webview_url'] = $change_used_voucher['webview_url'];
 	        	$result['result']['webview_url_v2'] = $change_used_voucher['webview_url_v2'];
-
         	}else{
         		return [
 	                'status'=>'fail',
 	                'messages'=>['Something went wrong']
-	            ]; 
+	            ];
         	}
-        }else{
-        	$change_used_voucher = app($this->voucher)->useVoucher($request->id_deals_user, 1);
+        }
+        else
+        {
+        	$change_used_voucher = app($this->promo)->usePromo( $source, ($query['id_promo_campaign_promo_code']??$subs['id_subscription_user_voucher']) );
         	if (!$change_used_voucher) {
         		return [
 	                'status'=>'fail',
@@ -1998,16 +2001,24 @@ class ApiPromoCampaign extends Controller
     	return $desc;
     }
 
-    public function checkPromoCode($promo_code, $outlet=null, $product=null)
+    public function checkPromoCode($promo_code, $outlet=null, $product=null, $id_promo_campaign_promo_code=null)
     {
-    	$code = PromoCampaignPromoCode::where('promo_code',$promo_code)
-	            ->join('promo_campaigns', 'promo_campaigns.id_promo_campaign', '=', 'promo_campaign_promo_codes.id_promo_campaign')
-	            ->where('step_complete', '=', 1)
-	            ->where( function($q){
-	            	$q->whereColumn('usage','<','limitation_usage')
-	            		->orWhere('code_type','Single')
-	            		->orWhere('limitation_usage',0);
-	            } );
+    	if (!empty($id_promo_campaign_promo_code))
+    	{
+    		$code = PromoCampaignPromoCode::where('id_promo_campaign_promo_code',$id_promo_campaign_promo_code);
+    	}
+    	else
+    	{
+    		$code = PromoCampaignPromoCode::where('promo_code',$promo_code);
+    	}
+
+    	$code = $code->join('promo_campaigns', 'promo_campaigns.id_promo_campaign', '=', 'promo_campaign_promo_codes.id_promo_campaign')
+		            ->where('step_complete', '=', 1)
+		            ->where( function($q){
+		            	$q->whereColumn('usage','<','limitation_usage')
+		            		->orWhere('code_type','Single')
+		            		->orWhere('limitation_usage',0);
+		            } );
 
 	    if (!empty($outlet)) {
 	    	$code = $code->with(['promo_campaign.promo_campaign_outlets']);
@@ -2029,17 +2040,26 @@ class ApiPromoCampaign extends Controller
         return $code;
     }
 
-	public function checkVoucher($id_deals_user, $outlet=null, $product=null)
+	public function checkVoucher($id_deals_user=null, $outlet=null, $product=null)
     {
-        $deals = DealsUser::where('id_deals_user', '=', $id_deals_user)
-        			->whereIn('paid_status', ['Free', 'Completed'])
+    	$deals = new DealsUser;
+
+    	if (!empty($id_deals_user))
+    	{
+    		$deals = $deals->where('id_deals_user', '=', $id_deals_user)->where('id_user', '=', auth()->user()->id);
+    	}
+    	else
+    	{
+    		$deals = $deals->where('id_user', '=', auth()->user()->id)->where('is_used','=',1);
+    	}
+
+    	$deals = $deals->whereIn('paid_status', ['Free', 'Completed'])
         			->whereNull('used_at')
         			->where('voucher_expired_at','>=',date('Y-m-d H:i:s'))
         			->where(function($q) {
-        				$q->where('voucher_active_at','<=',date('Y-m-d H:i:s'))	
+        				$q->where('voucher_active_at','<=',date('Y-m-d H:i:s'))
         					->orWhereNull('voucher_active_at');
         			});
-
 
 
 	    if (!empty($outlet)) {

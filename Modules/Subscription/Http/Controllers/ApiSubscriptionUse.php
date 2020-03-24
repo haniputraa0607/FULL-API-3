@@ -36,10 +36,18 @@ class ApiSubscriptionUse extends Controller
         $this->promo_campaign       = "Modules\PromoCampaign\Http\Controllers\ApiPromoCampaign";
     }
 
-    public function checkSubscription($id_subscription_user, $outlet=null, $product=null, $product_detail=null, $active=null)
+    public function checkSubscription($id_subscription_user=null, $outlet=null, $product=null, $product_detail=null, $active=null, $id_subscription_user_voucher=null)
     {
-    	$subs = SubscriptionUserVoucher::where('subscription_users.id_subscription_user', '=', $id_subscription_user)
-    			->join( 'subscription_users', 'subscription_users.id_subscription_user', '=', 'subscription_user_vouchers.id_subscription_user' )
+    	if (!empty($id_subscription_user_voucher)) 
+    	{
+    		$subs = SubscriptionUserVoucher::where('id_subscription_user_voucher', '=', $id_subscription_user_voucher);
+    	}
+    	else
+    	{
+    		$subs = SubscriptionUserVoucher::where('subscription_users.id_subscription_user', '=', $id_subscription_user);
+    	}
+
+    	$subs = $subs->join( 'subscription_users', 'subscription_users.id_subscription_user', '=', 'subscription_user_vouchers.id_subscription_user' )
     			->whereIn('subscription_users.paid_status', ['Free', 'Completed'])
     			->whereNull('subscription_user_vouchers.used_at');
 
