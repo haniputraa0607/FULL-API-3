@@ -1186,10 +1186,5 @@ class PromoCampaignTools{
         return true;
     }
 
-    public function validateSubscription($id_subscription_user, $id_outlet, $trxs, &$errors)
-    {
-    	# code...
-    }
-
 }
 ?>

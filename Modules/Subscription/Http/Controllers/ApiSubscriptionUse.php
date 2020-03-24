@@ -84,11 +84,12 @@ class ApiSubscriptionUse extends Controller
     	return $subs;
     }
 
-    public function calculate($id_subscription_user, $grandtotal, $subtotal, $item, &$errors, &$errorProduct=0, &$product="", &$applied_product="")
+    public function calculate($id_subscription_user, $grandtotal, $subtotal, $item, $id_outlet, &$errors, &$errorProduct=0, &$product="", &$applied_product="")
     {
     	if (empty($id_subscription_user)) {
     		return 0;
     	}
+
 
     	$subs = $this->checkSubscription($id_subscription_user, 1, 1, 1);
 
@@ -123,11 +124,21 @@ class ApiSubscriptionUse extends Controller
 			$subs_voucher_today = SubscriptionUserVoucher::where('id_subscription_user', '=', $id_subscription_user)
 							->whereDate('used_at', date('Y-m-d'))
 							->count();
-
 			if ( $subs_voucher_today >= $subs['subscription_user']['subscription']['daily_usage_limit'] ) {
 				$errors[] = 'Subscription daily usage limit has been exceeded.';
     			return 0;
 			}
+    	}
+
+    	// check outlet
+    	if ( empty($subs['subscription_user']['subscription']['is_all_outlet']) ) {
+    		$pct = new PromoCampaignTools;
+    		$check_outlet = $pct->checkOutletRule($id_outlet, 0, $subs['subscription_user']['subscription']['outlets_active']);
+			
+			if ( !$check_outlet ) {
+	    		$errors[] = 'Cannot use subscription at this outlet';
+	    		return 0;
+	    	}
     	}
 
     	// check product

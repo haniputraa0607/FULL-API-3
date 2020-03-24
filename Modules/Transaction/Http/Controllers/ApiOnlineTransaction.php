@@ -43,6 +43,8 @@ use Modules\PromoCampaign\Entities\PromoCampaignPromoCode;
 use Modules\PromoCampaign\Entities\PromoCampaignReferral;
 use Modules\PromoCampaign\Entities\PromoCampaignReferralTransaction;
 use Modules\PromoCampaign\Entities\UserReferralCode;
+use Modules\Subscription\Entities\TransactionPaymentSubscription;
+use Modules\Subscription\Entities\SubscriptionUserVoucher;
 
 use Modules\Balance\Http\Controllers\NewTopupController;
 use Modules\PromoCampaign\Lib\PromoCampaignTools;
@@ -702,6 +704,38 @@ class ApiOnlineTransaction extends Controller
                     'messages'  => ['Insert Transaction Failed']
                 ]);
             }
+        }
+
+        if ( $request->json('id_subscription_user') ) 
+        {
+        	$subscription_total = app($this->subscription_use)->calculate($request->id_subscription_user, $insertTransaction['transaction_grandtotal'], $insertTransaction['transaction_subtotal'], $post['item'], $post['id_outlet'], $subs_error, $errorProduct, $subs_product, $subs_applied_product);
+
+	        if (!empty($subs_error)) {
+	        	DB::rollback();
+                return response()->json([
+                    'status'    => 'fail',
+                    'messages'  => ['Insert Transaction Failed']
+                ]);
+	        }
+
+	        $data_subs = app($this->subscription_use)->checkSubscription( $request->json('id_subscription_user') );
+	        $insert_subs_data['id_transaction'] = $insertTransaction['id_transaction'];
+	        $insert_subs_data['id_subscription_user_voucher'] = $data_subs->id_subscription_user_voucher;
+	        $insert_subs_data['subscription_nominal'] = $subscription_total;
+	        
+	        $insert_subs_trx = TransactionPaymentSubscription::create($insert_subs_data);
+	        $update_subs_voucher = SubscriptionUserVoucher::where('id_subscription_user_voucher','=',$data_subs->id_subscription_user_voucher)
+	        						->update([
+	        							'used_at' => date('Y-m-d H:i:s'),
+	        							'id_transaction' => $insertTransaction['id_transaction']
+	        						]);
+			if (!$insert_subs_trx || !$update_subs_voucher) {
+	        	DB::rollback();
+                return response()->json([
+                    'status'    => 'fail',
+                    'messages'  => ['Insert Transaction Failed']
+                ]);
+	        }
         }
 
         //update receipt
@@ -2017,7 +2051,7 @@ class ApiOnlineTransaction extends Controller
         }
         if ($request->id_subscription_user && !$request->promo_code && !$request->id_deals_user) 
         {
-	        $result['subscription'] = app($this->subscription_use)->calculate($request->id_subscription_user, $result['grandtotal'], $result['subtotal'], $post['item'], $subs_error, $errorProduct, $subs_product, $subs_applied_product);
+	        $result['subscription'] = app($this->subscription_use)->calculate($request->id_subscription_user, $result['grandtotal'], $result['subtotal'], $post['item'], $post['id_outlet'], $subs_error, $errorProduct, $subs_product, $subs_applied_product);
 	        if (!empty($subs_error)) {
 	        	$error = $subs_error;
 	        	$promo_error = app($this->promo_campaign)->promoError('transaction', $error, null, $errorProduct);
