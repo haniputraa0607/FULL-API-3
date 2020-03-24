@@ -185,7 +185,7 @@ class ApiUserFeedbackController extends Controller
             $variables = [
                 'receipt_number' => $transaction->transaction_receipt_number,
                 'outlet_name' => $transaction->outlet_name->outlet_name,
-                'transaction_date' => date('d-m-Y H:i',strtotime($transaction->transaction_date)),
+                'transaction_date' => date('d F Y H:i',strtotime($transaction->transaction_date)),
                 'rating_value' => (string) $rating->rating_value,
                 'rating_text' => $rating->text,
                 'notes' => $post['notes']??'',
