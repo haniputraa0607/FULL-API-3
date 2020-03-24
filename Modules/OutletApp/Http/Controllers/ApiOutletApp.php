@@ -876,21 +876,46 @@ class ApiOutletApp extends Controller
         $outlet = $request->user();
         $user_outlet = $request->user_outlet;
         $updated = 0;
+        $date_time = date('Y-m-d H:i:s');
         if($post['sold_out']){
             $found = ProductPrice::where('id_outlet', $outlet['id_outlet'])
                 ->whereIn('id_product', $post['sold_out'])
                 ->where('product_stock_status','<>', 'Sold Out');
             $x = $found->get()->toArray();
-            foreach ($x as $k) {
-                MyHelper::logStockStatusUpdate($outlet->id_outlet);
+            foreach ($x as $product) {
+                $create = ProductStockStatusUpdate::create([
+                    'id_product' => $product['id_product'],
+                    'id_user' => $user_outlet['id_user_outlet'],
+                    'user_type' => 'user_outlets',
+                    'id_outlet' => $outlet->id_outlet,
+                    'date_time' => $date_time,
+                    'new_status' => 'Sold Out'
+                ]);
+                if($create){
+                    return $create;
+                }
             }
             $updated += $found->update(['product_stock_status' => 'Sold Out']);
         }
         if($post['available']){
-            $updated += ProductPrice::where('id_outlet', $outlet['id_outlet'])
+            $found = ProductPrice::where('id_outlet', $outlet['id_outlet'])
                 ->whereIn('id_product', $post['available'])
-                ->where('product_stock_status','<>', 'Available')
-                ->update(['product_stock_status' => 'Available']);
+                ->where('product_stock_status','<>', 'Available');
+            $x = $found->get()->toArray();
+            foreach ($x as $product) {
+                $create = ProductStockStatusUpdate::create([
+                    'id_product' => $product['id_product'],
+                    'id_user' => $user_outlet['id_user_outlet'],
+                    'user_type' => 'user_outlets',
+                    'id_outlet' => $outlet->id_outlet,
+                    'date_time' => $date_time,
+                    'new_status' => 'Available'
+                ]);
+                if($create){
+                    return $create;
+                }
+            }
+            $updated += $found->update(['product_stock_status' => 'Sold Out']);
         }
         return [
             'status'=>'success',
