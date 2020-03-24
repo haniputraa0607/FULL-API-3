@@ -1823,6 +1823,14 @@ class ApiOnlineTransaction extends Controller
             }
             if($max_order&&($item['qty']>$max_order)){
                 $is_advance = 1;
+                $error_msg[] = MyHelper::simpleReplace(
+                    Setting::select('value_text')->where('key','transaction_exceeds_limit_text')->pluck('value_text')->first()?:'Transaksi anda melebihi batas! Maksimal transaksi untuk %product_name% : %max_order%',
+                    [
+                        'product_name' => $product['product_name'],
+                        'max_order' => $max_order
+                    ]
+                );
+                continue;
             }
             if(!$product){
                 $missing_product++;
