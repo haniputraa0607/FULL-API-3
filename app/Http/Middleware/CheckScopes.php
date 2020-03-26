@@ -25,10 +25,21 @@ class CheckScopes extends AddCustomProvider
         if($scope == 'apps'){
             $getMaintenance = Setting::where('key', 'maintenance_mode')->first();
             if($getMaintenance && $getMaintenance['value'] == 1){
+                $dt = (array)json_decode($getMaintenance['value_text']);
+                $message = $dt['message'];
+                if($dt['image'] != ""){
+                    $url_image = env('S3_URL_API').$dt['image'];
+                }else{
+                    $url_image = env('S3_URL_API').'img/maintenance/default.png';
+                }
                 return response()->json([
                     'status' => 'fail',
-                    'messages' => ['maintenance'],
-                    'url_maintenance' =>  env('API_URL') ."api/maintenance-mode"
+                    'messages' => [$message],
+                    'maintenance' => env('API_URL') ."api/maintenance-mode",
+                    'data_maintenance' => [
+                        'url_image' => $url_image,
+                        'text' => $message
+                    ]
                 ], 200);
             }
         }

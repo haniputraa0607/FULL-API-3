@@ -53,7 +53,7 @@ class ApiFavoriteController extends Controller
         $longitude = $request->json('longitude');
         $nf = $request->json('number_format')?:'float';
         $favorite = Favorite::where('id_user',$user->id);
-        $select = ['id_favorite','id_outlet','favorites.id_product','id_brand','id_user','notes'];
+        $select = ['id_favorite','favorites.id_outlet','favorites.id_product','id_brand','id_user','notes'];
         $with = [
             'modifiers'=>function($query){
                 $query->select('product_modifiers.id_product_modifier','type','code','text','favorite_modifiers.qty');
@@ -61,11 +61,70 @@ class ApiFavoriteController extends Controller
         ];
         // detail or list
         if(!$id_favorite){
+            if ($request->json('max_price') || $request->json('min_price')) {
+                $favorite->whereIn('favorites.id_product', function($query) use($request){
+                    $query->select('product_prices.id_product')
+                        ->from('product_prices')
+                        ->where('product_prices.id_product', 'favorites.id_product')
+                        ->where('product_prices.id_outlet', 'favorites.id_outlet');
+
+                    if ($request->json('max_price')){
+                        $query->where('product_prices.product_price', '>=', $request->json('max_price'));
+                    }
+
+                    if ($request->json('min_price')){
+                        $query->where('product_prices.product_price', '<=', $request->json('min_price'));
+                    }
+                });
+            }
+
+            if ($request->json('id_brand')) {
+                $favorite->where('favorites.id_brand',$request->json('id_brand'));
+            }
+
+            if ($request->json('id_outlet')) {
+                $favorite->where('favorites.id_outlet',$request->json('id_outlet'));
+            }
+
+
+            if ($request->json('modifier') == 'used') {
+                $favorite->whereRaw('favorites.id_favorite in (select fm.id_favorite from favorite_modifiers fm where fm.id_favorite = favorites.id_favorite)');
+            }
+
+            if ($request->json('key_free')) {
+                $favorite->whereIn('favorites.id_favorite', function($query) use($request){
+                    $query->select('f.id_favorite')
+                        ->from('favorites as f')
+                        ->join('products', 'products.id_product', 'f.id_product')
+                        ->join('outlets', 'outlets.id_outlet', 'f.id_outlet')
+                        ->join('brands', 'brands.id_brand', 'f.id_brand')
+                        ->where('products.product_name', 'LIKE', '%' . $request->json('key_free') . '%')
+                        ->orWhere('outlets.outlet_name', 'LIKE', '%' . $request->json('key_free') . '%')
+                        ->orWhere('brands.name_brand', 'LIKE', '%' . $request->json('key_free') . '%');
+                });
+            }
+
+            if($request->json('sort')){
+                if($request->json('sort') == 'product-asc'){
+                    $favorite->join('products', 'products.id_product', 'favorites.id_product')
+                    ->orderBy('products.product_name', 'asc');
+                }elseif($request->json('sort') == 'product-desc'){
+                    $favorite->join('products', 'products.id_product', 'favorites.id_product')
+                        ->orderBy('products.product_name', 'desc');
+                }elseif($request->json('sort') == 'outlet-asc'){
+                    $favorite->join('outlets', 'outlets.id_outlet', 'favorites.id_outlet')
+                        ->orderBy('outlets.outlet_name', 'asc');
+                }elseif($request->json('sort') == 'outlet-desc'){
+                    $favorite->join('outlets', 'outlets.id_outlet', 'favorites.id_outlet')
+                        ->orderBy('outlets.outlet_name', 'desc');
+                }
+            }
+
             if($request->page){
-                $data = Favorite::where('id_user',$user->id)->select($select)->with($with)->paginate(10)->toArray();
+                $data = $favorite->select($select)->with($with)->paginate(10)->toArray();
                 $datax = &$data['data'];
             }else{
-                $data = Favorite::where('id_user',$user->id)->select($select)->with($with)->get()->toArray();
+                $data = $favorite->select($select)->with($with)->get()->toArray();
                 $datax = &$data;
             }
             if(count($datax)>=1){
@@ -101,10 +160,13 @@ class ApiFavoriteController extends Controller
                     return $key;
                 });
                 $datax = array_values($datax);
-                if(!empty($latitude)&&!empty($longitude)){
-                    usort($datax, function(&$a,&$b){
-                        return $a['outlet']['distance_raw'] <=> $b['outlet']['distance_raw'];
-                    });
+
+                if(!$request->json('sort') || $request->json('sort') == 'nearme'){
+                    if(!empty($latitude)&&!empty($longitude)){
+                        usort($datax, function(&$a,&$b){
+                            return $a['outlet']['distance_raw'] <=> $b['outlet']['distance_raw'];
+                        });
+                    }
                 }
             }else{
                 $data = [];
