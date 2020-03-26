@@ -1475,6 +1475,38 @@ class ApiOutletApp extends Controller
         }
         return MyHelper::checkGet($return);
     }
+
+    public function stockSummary(Request $request)
+    {
+        $outlet = $request->user();
+        $date = $request->json('date')?:date('Y-m-d');
+        $data = ProductStockStatusUpdate::select(\DB::raw('id_product_stock_status_update,CONCAT(user_type,",",id_user) as user,DATE_FORMAT(date_time, "%H:%i") as time,product_name,new_status as old_status,new_status,new_status as from_sold_out'))
+            ->join('products','products.id_product','=','product_stock_status_updates.id_product')
+            ->where('id_outlet',$outlet->id_outlet)
+            ->whereDate('date_time',$date)
+            ->orderBy('date_time','desc')
+            ->get();
+        $grouped = [];
+        foreach ($data as $value) {
+            $grouped[$value->user.'#'.$value->time][] = $value;
+        }
+        $result = [];
+        foreach ($grouped as $key => $var) {
+            [$name,$time] = explode('#',$key);
+            $result[] = [
+                'name' => $name,
+                'time' => $time,
+                'summary' => array_map(function($vrb){return [
+                    'product_name' => $vrb['product_name'],
+                    'old_status' => $vrb['old_status'],
+                    'new_status' => $vrb['new_status'],
+                    'from_sold_out' => $vrb['from_sold_out']
+                ];},$var)
+            ];
+        }
+        return MyHelper::checkGet($result);
+    }
+
     public function requestOTP(Request $request){
         if(!in_array($request->feature, ['Update Stock Status','Update Schedule'])){
             return [
