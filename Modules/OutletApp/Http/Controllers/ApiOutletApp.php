@@ -30,6 +30,7 @@ use Modules\Brand\Entities\Brand;
 use App\Http\Models\UserOutlet;
 use Modules\OutletApp\Entities\OutletAppOtp;
 use Modules\Product\Entities\ProductStockStatusUpdate;
+use Modules\Outlet\Entities\OutletScheduleUpdate;
 
 use Modules\OutletApp\Http\Requests\ListProduct;
 use Modules\OutletApp\Http\Requests\UpdateToken;
@@ -1367,11 +1368,43 @@ class ApiOutletApp extends Controller
         $post = $request->json()->all();
         DB::beginTransaction();
         $id_outlet = $request->user()->id_outlet;
+        $user_outlet = $request->user_outlet;
+        $otp = $request->outlet_app_otps;
+        $date_time = date('Y-m-d H:i:s');
         foreach ($post['schedule'] as $value) {
-            $save = OutletSchedule::updateOrCreate(['id_outlet' => $id_outlet, 'day' => $value['day']], $value);
-            if (!$save) {
-                DB::rollBack();
-                return response()->json(['status' => 'fail']);
+            $old = OutletSchedule::select('id_outlet_schedule','id_outlet','day','open','close','is_closed')->where(['id_outlet' => $id_outlet, 'day' => $value['day']])->first();
+            $old_data = $old?$old->toArray():[];
+            if($old){
+                $save = $old->update($value);
+                $new = $old;
+                if (!$save) {
+                    DB::rollBack();
+                    return response()->json(['status' => 'fail']);
+                }
+            }else{
+                $new = OutletSchedule::create([
+                    'id_outlet' => $id_outlet, 
+                    'day' => $value['day']
+                ]+$value);
+                if (!$new) {
+                    DB::rollBack();
+                    return response()->json(['status' => 'fail']);
+                }
+            }
+            $new_data = $new->toArray();
+            unset($new_data['created_at']);
+            unset($new_data['updated_at']);
+            if(array_diff($new_data,$old_data)){
+                $create = OutletScheduleUpdate::create([
+                    'id_outlet' => $id_outlet,
+                    'id_outlet_schedule' => $new_data['id_outlet_schedule'],
+                    'id_user' => $user_outlet->id_user_outlet,
+                    'id_outlet_app_otp' => $otp->id_outlet_app_otp,
+                    'user_type' => 'user_outlets',
+                    'date_time' => $date_time,
+                    'old_data' => $old_data?json_encode($old_data):null,
+                    'new_data' => json_encode($new_data)
+                ]);
             }
         }
         DB::commit();

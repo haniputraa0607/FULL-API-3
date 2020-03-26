@@ -21,8 +21,8 @@ class CreateOutletScheduleUpdatesTable extends Migration
             $table->enum('user_type',['users','user_outlets'])->nullable();
             $table->unsignedInteger('id_outlet');
             $table->unsignedInteger('id_outlet_schedule');
-            $table->text('old_data');
-            $table->text('new_data');
+            $table->text('old_data')->nullable();
+            $table->text('new_data')->nullable();
             $table->timestamps();
 
             $table->foreign('id_outlet_app_otp')->references('id_outlet_app_otp')->on('outlet_app_otps')->onDelete('set null');
