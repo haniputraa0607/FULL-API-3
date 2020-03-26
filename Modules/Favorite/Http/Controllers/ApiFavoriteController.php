@@ -87,8 +87,10 @@ class ApiFavoriteController extends Controller
             }
 
 
-            if ($request->json('modifier') == 'used') {
+            if ($request->json('topping') == 'used') {
                 $favorite->whereRaw('favorites.id_favorite in (select fm.id_favorite from favorite_modifiers fm where fm.id_favorite = favorites.id_favorite)');
+            }elseif($request->json('topping') == 'unused'){
+                $favorite->whereRaw('favorites.id_favorite not in (select fm.id_favorite from favorite_modifiers fm where fm.id_favorite = favorites.id_favorite)');
             }
 
             if ($request->json('key_free')) {
@@ -105,18 +107,10 @@ class ApiFavoriteController extends Controller
             }
 
             if($request->json('sort')){
-                if($request->json('sort') == 'product-asc'){
-                    $favorite->join('products', 'products.id_product', 'favorites.id_product')
-                    ->orderBy('products.product_name', 'asc');
-                }elseif($request->json('sort') == 'product-desc'){
-                    $favorite->join('products', 'products.id_product', 'favorites.id_product')
-                        ->orderBy('products.product_name', 'desc');
-                }elseif($request->json('sort') == 'outlet-asc'){
-                    $favorite->join('outlets', 'outlets.id_outlet', 'favorites.id_outlet')
-                        ->orderBy('outlets.outlet_name', 'asc');
-                }elseif($request->json('sort') == 'outlet-desc'){
-                    $favorite->join('outlets', 'outlets.id_outlet', 'favorites.id_outlet')
-                        ->orderBy('outlets.outlet_name', 'desc');
+                if($request->json('sort') == 'new'){
+                    $favorite->orderBy('favorites.created_at', 'desc');
+                }elseif($request->json('sort') == 'old'){
+                    $favorite->orderBy('favorites.created_at', 'asc');
                 }
             }
 
@@ -167,6 +161,14 @@ class ApiFavoriteController extends Controller
                             return $a['outlet']['distance_raw'] <=> $b['outlet']['distance_raw'];
                         });
                     }
+                }elseif($request->json('sort') == 'price-asc'){
+                    usort($datax, function(&$a,&$b){
+                        return $a['favorites'][0]['product_price_total'] <=> $b['favorites'][0]['product_price_total'];
+                    });
+                }elseif($request->json('sort') == 'price-desc'){
+                    usort($datax, function(&$a,&$b){
+                        return $a['favorites'][0]['product_price_total'] < $b['favorites'][0]['product_price_total']?1:-1;
+                    });
                 }
             }else{
                 $data = [];
