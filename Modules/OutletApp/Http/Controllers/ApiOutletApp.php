@@ -876,6 +876,7 @@ class ApiOutletApp extends Controller
         $post = $request->json()->all();
         $outlet = $request->user();
         $user_outlet = $request->user_outlet;
+        $otp = $request->outlet_app_otps;
         $updated = 0;
         $date_time = date('Y-m-d H:i:s');
         if($post['sold_out']){
@@ -890,7 +891,8 @@ class ApiOutletApp extends Controller
                     'user_type' => 'user_outlets',
                     'id_outlet' => $outlet->id_outlet,
                     'date_time' => $date_time,
-                    'new_status' => 'Sold Out'
+                    'new_status' => 'Sold Out',
+                    'id_outlet_app_otp' => $otp->id_outlet_app_otp
                 ]);
             }
             $updated += $found->update(['product_stock_status' => 'Sold Out']);
@@ -907,10 +909,11 @@ class ApiOutletApp extends Controller
                     'user_type' => 'user_outlets',
                     'id_outlet' => $outlet->id_outlet,
                     'date_time' => $date_time,
-                    'new_status' => 'Available'
+                    'new_status' => 'Available',
+                    'id_outlet_app_otp' => $otp->id_outlet_app_otp
                 ]);
             }
-            $updated += $found->update(['product_stock_status' => 'Sold Out']);
+            $updated += $found->update(['product_stock_status' => 'Available']);
         }
         return [
             'status'=>'success',

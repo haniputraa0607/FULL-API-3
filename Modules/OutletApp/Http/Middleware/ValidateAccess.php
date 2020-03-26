@@ -19,8 +19,8 @@ class ValidateAccess
      */
     public function handle(Request $request, Closure $next, $feature)
     {
-        if($user = $this->getUserOutlet($feature,$request->otp,$request->user())){
-            $request->merge(['user_outlet'=>$user]);
+        if($validate = $this->getUserOutlet($feature,$request->otp,$request->user())){
+            $request->merge(['user_outlet'=>$validate['user'],'outlet_app_otps'=>$validate['otp']]);
             return $next($request);
         }
         return MyHelper::checkGet([],'OTP tidak sesuai');
@@ -35,8 +35,9 @@ class ValidateAccess
             if($verify){
                 $otp->update(['used'=>1]);
                 $user = UserOutlet::where('id_user_outlet',$otp->id_user_outlet)->first();
+                break;
             }
         }
-        return $user;
+        return $user?['user'=>$user,'otp'=>$otp]:$user;
     }
 }
