@@ -27,6 +27,9 @@ use App\Http\Models\ProductPrice;
 use App\Http\Models\LogBalance;
 use Modules\Brand\Entities\BrandProduct;
 use Modules\Brand\Entities\Brand;
+use App\Http\Models\UserOutlet;
+use Modules\OutletApp\Entities\OutletAppOtp;
+use Modules\Product\Entities\ProductStockStatusUpdate;
 
 use Modules\OutletApp\Http\Requests\ListProduct;
 use Modules\OutletApp\Http\Requests\UpdateToken;
@@ -872,18 +875,42 @@ class ApiOutletApp extends Controller
     public function productSoldOut(ProductSoldOut $request){
         $post = $request->json()->all();
         $outlet = $request->user();
+        $user_outlet = $request->user_outlet;
         $updated = 0;
+        $date_time = date('Y-m-d H:i:s');
         if($post['sold_out']){
-            $updated += ProductPrice::where('id_outlet', $outlet['id_outlet'])
+            $found = ProductPrice::where('id_outlet', $outlet['id_outlet'])
                 ->whereIn('id_product', $post['sold_out'])
-                ->where('product_stock_status','<>', 'Sold Out')
-                ->update(['product_stock_status' => 'Sold Out']);
+                ->where('product_stock_status','<>', 'Sold Out');
+            $x = $found->get()->toArray();
+            foreach ($x as $product) {
+                $create = ProductStockStatusUpdate::create([
+                    'id_product' => $product['id_product'],
+                    'id_user' => $user_outlet['id_user_outlet'],
+                    'user_type' => 'user_outlets',
+                    'id_outlet' => $outlet->id_outlet,
+                    'date_time' => $date_time,
+                    'new_status' => 'Sold Out'
+                ]);
+            }
+            $updated += $found->update(['product_stock_status' => 'Sold Out']);
         }
         if($post['available']){
-            $updated += ProductPrice::where('id_outlet', $outlet['id_outlet'])
+            $found = ProductPrice::where('id_outlet', $outlet['id_outlet'])
                 ->whereIn('id_product', $post['available'])
-                ->where('product_stock_status','<>', 'Available')
-                ->update(['product_stock_status' => 'Available']);
+                ->where('product_stock_status','<>', 'Available');
+            $x = $found->get()->toArray();
+            foreach ($x as $product) {
+                $create = ProductStockStatusUpdate::create([
+                    'id_product' => $product['id_product'],
+                    'id_user' => $user_outlet['id_user_outlet'],
+                    'user_type' => 'user_outlets',
+                    'id_outlet' => $outlet->id_outlet,
+                    'date_time' => $date_time,
+                    'new_status' => 'Available'
+                ]);
+            }
+            $updated += $found->update(['product_stock_status' => 'Sold Out']);
         }
         return [
             'status'=>'success',
@@ -1232,9 +1259,9 @@ class ApiOutletApp extends Controller
                         $user = User::where('id', $order['id_user'])->first()->toArray();
                         $send = app($this->autocrm)->SendAutoCRM('Rejected Order Point Refund', $user['phone'],
                             [
-                                "outlet_name"       => $outlet['outlet_name'],
+                                'outlet_name'       => $outlet['outlet_name'],
                                 'id_transaction'    => $order['id_transaction'],
-                                "transaction_date"  => $order['transaction_date'],
+                                'transaction_date'  => $order['transaction_date'],
                                 'receipt_number'    => $order['transaction_receipt_number'],
                                 'received_point'    => (string) $point
                             ]
@@ -1411,5 +1438,44 @@ class ApiOutletApp extends Controller
             },$return);
         }
         return MyHelper::checkGet($return);
+    }
+    public function requestOTP(Request $request){
+        if(!in_array($request->feature, ['Update Stock Status','Update Schedule'])){
+            return [
+                'status'=>'fail',
+                'messages'=>'Invalid requested feature'
+            ];
+        }
+        $outlet = $request->user();
+        $post = $request->json()->all();
+        $users = UserOutlet::where(['id_outlet'=>$outlet->id_outlet,'outlet_apps'=>'1'])->get();
+        if(count($users) === 0){
+            return MyHelper::checkGet([],'User Outlet Apps empty');
+        }
+        $status = false;
+        foreach ($users as $user) {
+            $pinnya = rand(1000,9999);
+            $pin = password_hash($pinnya, PASSWORD_BCRYPT);
+            $create = OutletAppOtp::create([
+                'id_user_outlet' => $user->id_user_outlet,
+                'id_outlet' => $outlet->id_outlet,
+                'feature' => $post['feature'],
+                'pin' => $pin
+            ]);
+            $send = app($this->autocrm)->SendAutoCRM('Outlet App Request PIN', $user->phone, [
+                'outlet_name' => $outlet->outlet_name,
+                'outlet_code' => $outlet->outlet_code,
+                'feature' => $post['feature'],
+                'admin_name' => $user->name,
+                'pin' => $pinnya
+            ]);
+            if(!$status && ($create && $send)){
+                $status = true;
+            }
+        }
+        if(!$status){
+            return MyHelper::checkGet([],'Failed send PIN');
+        }
+        return ['status'=>'success'];
     }
 }

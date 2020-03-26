@@ -20,6 +20,7 @@ use App\Http\Models\Setting;
 use App\Http\Models\News;
 use App\Http\Models\UsersMembership;
 use App\Http\Models\OauthAccessToken;
+use App\Http\Models\UserOutlet;
 
 use App\Lib\MyHelper;
 use App\Lib\PushNotificationHelper;
@@ -43,9 +44,13 @@ class ApiAutoCrm extends Controller
 		$this->apiwha = new apiwha();
     }
 
-	function SendAutoCRM($autocrm_title, $receipient, $variables = null, $useragent = null, $forward= false){
+	function SendAutoCRM($autocrm_title, $receipient, $variables = null, $useragent = null, $forward= false, $outlet = false){
 		$query = Autocrm::where('autocrm_title','=',$autocrm_title)->with('whatsapp_content')->get()->toArray();
-		$users = User::where('phone','=',$receipient)->get()->toArray();
+		if(!$outlet){
+			$users = User::where('phone','=',$receipient)->get()->toArray();
+		}else{
+			$users = UserOutlet::where('phone','=',$receipient)->get()->toArray();
+		}
 		if(empty($users)){
 			return true;
 		}

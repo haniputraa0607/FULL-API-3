@@ -1776,9 +1776,10 @@ class ApiOutletController extends Controller
 
     function updateAdminOutlet(UpdateUserOutlet $request){
         $post = $request->json()->all();
-
-            foreach($post['type'] as $value){
-                $post[$value] = 1;
+            // fix update type just add, not delete current position
+            $available_types = ['enquiry','pickup_order','delivery','payment','outlet_apps'];
+            foreach($available_types as $value){
+                $post[$value] = in_array($value,$post['type'])?1:null;
             }
             unset($post['type']);
             $userOutlet = UserOutlet::where('id_user_outlet', $post['id_user_outlet'])->first();
