@@ -1,18 +1,19 @@
 <?php
 
-namespace Modules\Product\Entities;
+namespace Modules\Outlet\Entities;
 
 use Illuminate\Database\Eloquent\Model;
 
-class ProductStockStatusUpdate extends Model
+class OutletScheduleUpdate extends Model
 {
     protected $fillable = [
-    	'id_product',
     	'id_outlet',
+    	'id_outlet_schedule',
     	'id_user',
     	'id_outlet_app_otp',
     	'user_type',
     	'date_time',
-    	'new_status'
+    	'old_data',
+    	'new_data'
     ];
 }
