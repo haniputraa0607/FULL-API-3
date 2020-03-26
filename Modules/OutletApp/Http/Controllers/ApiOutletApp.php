@@ -1480,7 +1480,7 @@ class ApiOutletApp extends Controller
     {
         $outlet = $request->user();
         $date = $request->json('date')?:date('Y-m-d');
-        $data = ProductStockStatusUpdate::select(\DB::raw('id_product_stock_status_update,CONCAT(user_type,",",id_user) as user,DATE_FORMAT(date_time, "%H:%i") as time,product_name,new_status as old_status,new_status,new_status as from_sold_out'))
+        $data = ProductStockStatusUpdate::select(\DB::raw('id_product_stock_status_update,CONCAT(user_type,",",id_user) as user,DATE_FORMAT(date_time, "%H:%i") as time,product_name,new_status as old_status,new_status,new_status as to_available'))
             ->join('products','products.id_product','=','product_stock_status_updates.id_product')
             ->where('id_outlet',$outlet->id_outlet)
             ->whereDate('date_time',$date)
@@ -1500,7 +1500,7 @@ class ApiOutletApp extends Controller
                     'product_name' => $vrb['product_name'],
                     'old_status' => $vrb['old_status'],
                     'new_status' => $vrb['new_status'],
-                    'from_sold_out' => $vrb['from_sold_out']
+                    'to_available' => $vrb['to_available']
                 ];},$var)
             ];
         }

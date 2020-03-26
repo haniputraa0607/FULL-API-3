@@ -40,7 +40,7 @@ class ProductStockStatusUpdate extends Model
             return 'Stock Tersedia';
         }
     }
-    public function getFromSoldOutAttribute($new_value)
+    public function getToAvailableAttribute($new_value)
     {
         return $new_value == 'Available'?1:0;
     }
