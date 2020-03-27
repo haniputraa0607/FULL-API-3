@@ -22,6 +22,7 @@ use App\Http\Models\Setting;
 use App\Http\Models\OauthAccessToken;
 use App\Http\Models\Product;
 use App\Http\Models\ProductPrice;
+use Modules\Outlet\Entities\OutletScheduleUpdate;
 
 use App\Imports\ExcelImport;
 use App\Imports\FirstSheetOnlyImport;
@@ -1811,6 +1812,7 @@ class ApiOutletController extends Controller
     {
         $post = $request->json()->all();
         DB::beginTransaction();
+        $date_time = date('Y-m-d H:i:s');
         foreach ($post['day'] as $key => $value) {
             $data = [
                 'day'       => $value,
@@ -1819,11 +1821,39 @@ class ApiOutletController extends Controller
                 'is_closed' => $post['is_closed'][$key],
                 'id_outlet' => $post['id_outlet']
             ];
-
-            $save = OutletSchedule::updateOrCreate(['id_outlet' => $post['id_outlet'], 'day' => $value], $data);
-            if (!$save) {
-                DB::rollBack();
-                return response()->json(['status' => 'fail']);
+            $old = OutletSchedule::select('id_outlet_schedule','id_outlet','day','open','close','is_closed')->where(['id_outlet' => $post['id_outlet'], 'day' => $value])->first();
+            $old_data = $old?$old->toArray():[];
+            if($old){
+                $save = $old->update($data);
+                $new = $old;
+                if (!$save) {
+                    DB::rollBack();
+                    return response()->json(['status' => 'fail']);
+                }
+            }else{
+                $new = OutletSchedule::create([
+                    'id_outlet' => $id_outlet, 
+                    'day' => $value['day']
+                ]+$value);
+                if (!$new) {
+                    DB::rollBack();
+                    return response()->json(['status' => 'fail']);
+                }
+            }
+            $new_data = $new->toArray();
+            unset($new_data['created_at']);
+            unset($new_data['updated_at']);
+            if(array_diff($new_data,$old_data)){
+                $create = OutletScheduleUpdate::create([
+                    'id_outlet' => $post['id_outlet'],
+                    'id_outlet_schedule' => $new_data['id_outlet_schedule'],
+                    'id_user' => $request->user()->id,
+                    'id_outlet_app_otp' => null,
+                    'user_type' => 'users',
+                    'date_time' => $date_time,
+                    'old_data' => $old_data?json_encode($old_data):null,
+                    'new_data' => json_encode($new_data)
+                ]);
             }
         }
 
