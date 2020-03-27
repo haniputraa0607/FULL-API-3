@@ -1480,20 +1480,24 @@ class ApiOutletApp extends Controller
     {
         $outlet = $request->user();
         $date = $request->json('date')?:date('Y-m-d');
-        $data = ProductStockStatusUpdate::select(\DB::raw('id_product_stock_status_update,CONCAT(user_type,",",id_user) as user,DATE_FORMAT(date_time, "%H:%i") as time,product_name,new_status as old_status,new_status,new_status as to_available'))
+        $data = ProductStockStatusUpdate::select(\DB::raw('id_product_stock_status_update,brand_product.id_brand,CONCAT(user_type,",",id_user) as user,DATE_FORMAT(date_time, "%H:%i") as time,product_name,new_status as old_status,new_status,new_status as to_available'))
             ->join('products','products.id_product','=','product_stock_status_updates.id_product')
+            ->join('brand_product','products.id_product','=','brand_product.id_product')
             ->where('id_outlet',$outlet->id_outlet)
             ->whereDate('date_time',$date)
             ->orderBy('date_time','desc')
             ->get();
         $grouped = [];
         foreach ($data as $value) {
-            $grouped[$value->user.'#'.$value->time][] = $value;
+            $grouped[$value->user.'#'.$value->time.'#'.$value->id_brand][] = $value;
         }
         $result = [];
         foreach ($grouped as $key => $var) {
-            [$name,$time] = explode('#',$key);
-            $result[] = [
+            [$name,$time,$id_brand] = explode('#',$key);
+            if(!isset($result[$id_brand]['name_brand'])){
+                $result[$id_brand]['name_brand'] = Brand::select('name_brand')->where('id_brand',$id_brand)->pluck('name_brand')->first();
+            }
+            $result[$id_brand]['updates'][] = [
                 'name' => $name,
                 'time' => $time,
                 'summary' => array_map(function($vrb){return [
