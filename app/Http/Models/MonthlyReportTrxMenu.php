@@ -27,6 +27,7 @@ class MonthlyReportTrxMenu extends Model
         'total_rec',
         'total_qty',
         'total_nominal',
+        'total_product_discount',
         'cust_male',
         'cust_female',
         'cust_android',

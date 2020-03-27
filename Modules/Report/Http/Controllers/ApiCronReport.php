@@ -69,7 +69,7 @@ class ApiCronReport extends Controller
         // else {
             // DATE START
             $dateStart = $this->firstTrx();
-            // $dateStart = "2019-01-01";
+            // $dateStart = "2020-02-24";
 
             if ($dateStart) {
                 // UP TO YESTERDAY
@@ -621,6 +621,7 @@ class ApiCronReport extends Controller
                         SELECT transaction_products.id_product, transactions.id_outlet, 
                         (select SUM(transaction_products.transaction_product_qty)) as total_qty, 
                         (select SUM(transaction_products.transaction_product_subtotal)) as total_nominal, 
+                        (select SUM(transaction_products.transaction_product_discount)) as total_product_discount, 
                         (select count(transaction_products.id_product)) as total_rec, 
                         (select DATE(transactions.transaction_date)) as trx_date,
 						(select SUM(Case When users.gender = \'Male\' Then 1 Else 0 End)) as cust_male, 
@@ -651,30 +652,32 @@ class ApiCronReport extends Controller
                         GROUP BY transaction_products.id_product
                         ORDER BY transaction_products.id_product ASC
                     '));
+
             if (!empty($product)) {
                 $product = json_decode(json_encode($product), true);
                 foreach ($product as $key => $value) {
-					$sum = array();
-					$sum['trx_date'] = $date;
-					$sum['id_product'] = $value['id_product'];
-					$sum['product_name'] = $value['product_name'];
-					$sum['total_qty'] = $value['total_qty'];
-					$sum['total_nominal'] = $value['total_nominal'];
-					$sum['total_rec'] = $value['total_rec'];
-					$sum['cust_male'] = $value['cust_male'];
-					$sum['cust_female'] = $value['cust_female'];
-					$sum['cust_android'] = $value['cust_android'];
-					$sum['cust_ios'] = $value['cust_ios'];
-					$sum['cust_telkomsel'] = $value['cust_telkomsel'];
-					$sum['cust_xl'] = $value['cust_xl'];
-					$sum['cust_indosat'] = $value['cust_indosat'];
-					$sum['cust_tri'] = $value['cust_tri'];
-					$sum['cust_axis'] = $value['cust_axis'];
-					$sum['cust_smart'] = $value['cust_smart'];
-					$sum['cust_teens'] = $value['cust_teens'];
-					$sum['cust_young_adult'] = $value['cust_young_adult'];
-					$sum['cust_adult'] = $value['cust_adult'];
-					$sum['cust_old'] = $value['cust_old'];
+					// $sum = array();
+					$sum[$value['id_product']]['trx_date'] = $date;
+					$sum[$value['id_product']]['id_product'] = $value['id_product'];
+					$sum[$value['id_product']]['product_name'] = $value['product_name'];
+					$sum[$value['id_product']]['total_qty'] = ($sum[$value['id_product']]['total_qty']??0) + $value['total_qty'];
+					$sum[$value['id_product']]['total_nominal'] = ($sum[$value['id_product']]['total_nominal']??0) + $value['total_nominal'];
+					$sum[$value['id_product']]['total_product_discount'] = ($sum[$value['id_product']]['total_product_discount']??0) + $value['total_product_discount'];
+					$sum[$value['id_product']]['total_rec'] = ($sum[$value['id_product']]['total_rec']??0) + $value['total_rec'];
+					$sum[$value['id_product']]['cust_male'] = $value['cust_male'];
+					$sum[$value['id_product']]['cust_female'] = $value['cust_female'];
+					$sum[$value['id_product']]['cust_android'] = $value['cust_android'];
+					$sum[$value['id_product']]['cust_ios'] = $value['cust_ios'];
+					$sum[$value['id_product']]['cust_telkomsel'] = $value['cust_telkomsel'];
+					$sum[$value['id_product']]['cust_xl'] = $value['cust_xl'];
+					$sum[$value['id_product']]['cust_indosat'] = $value['cust_indosat'];
+					$sum[$value['id_product']]['cust_tri'] = $value['cust_tri'];
+					$sum[$value['id_product']]['cust_axis'] = $value['cust_axis'];
+					$sum[$value['id_product']]['cust_smart'] = $value['cust_smart'];
+					$sum[$value['id_product']]['cust_teens'] = $value['cust_teens'];
+					$sum[$value['id_product']]['cust_young_adult'] = $value['cust_young_adult'];
+					$sum[$value['id_product']]['cust_adult'] = $value['cust_adult'];
+					$sum[$value['id_product']]['cust_old'] = $value['cust_old'];
 					
                     $save = DailyReportTrxMenu::updateOrCreate([
                         'trx_date'   => date('Y-m-d', strtotime($value['trx_date'])), 
@@ -685,13 +688,12 @@ class ApiCronReport extends Controller
 					$saveGlobal = GlobalDailyReportTrxMenu::updateOrCreate([
                         'trx_date'   => date('Y-m-d', strtotime($value['trx_date'])), 
                         'id_product' => $value['id_product']
-                    ], $sum);
+                    ], $sum[$value['id_product']]);
 					
                     if (!$save) {
                         return false;
                     }
                 }
-				
             }
         }
 
@@ -980,11 +982,16 @@ class ApiCronReport extends Controller
     /* REPORT PRODUCT */
     function monthlyReportProduct($outletAll, $date) 
     {
+        $month = date('n', strtotime($date));
+        $year = date('Y', strtotime($date));
+
+    	$sum = [];
         foreach ($outletAll as $outlet) {
             $product = DB::select(DB::raw('
                         SELECT transaction_products.id_product, transactions.id_outlet, 
                         (select SUM(transaction_products.transaction_product_qty)) as total_qty, 
                         (select SUM(transaction_products.transaction_product_subtotal)) as total_nominal, 
+                        (select SUM(transaction_products.transaction_product_discount)) as total_product_discount, 
                         (select count(transaction_products.id_product)) as total_rec, 
                         (select MONTH(transaction_date)) as trx_month,
 						(select YEAR(transaction_date)) as trx_year,
@@ -1008,8 +1015,8 @@ class ApiCronReport extends Controller
 						LEFT JOIN users ON users.id = transactions.id_user
 						LEFT JOIN products ON transaction_products.id_product = products.id_product
 						LEFT JOIN transaction_pickups ON transaction_pickups.id_transaction = transactions.id_transaction
-                        WHERE transactions.transaction_date BETWEEN "'. date('1-m-d') .' 00:00:00" 
-                        AND "'. date('Y-m-d', strtotime($date)) .' 23:59:59"
+                        WHERE MONTH(transactions.transaction_date) = "'. $month .'" 
+                    	AND YEAR(transactions.transaction_date) ="'. $year .'"
                         AND transactions.id_outlet = "'. $outlet .'"
                         AND transaction_payment_status = "Completed"
                         AND transaction_pickups.reject_at IS NULL
@@ -1019,45 +1026,102 @@ class ApiCronReport extends Controller
 
             if (!empty($product)) {
                 $product = json_decode(json_encode($product), true);
-
                 foreach ($product as $key => $value) {
-					$sum = array();
-					$sum['trx_month'] = date('n', strtotime($date));
-					$sum['trx_year'] = date('Y', strtotime($date));
-					$sum['id_product'] = $value['id_product'];
-					$sum['product_name'] = $value['product_name'];
-					$sum['total_qty'] = $value['total_qty'];
-					$sum['total_nominal'] = $value['total_nominal'];
-					$sum['total_rec'] = $value['total_rec'];
-					$sum['cust_male'] = $value['cust_male'];
-					$sum['cust_female'] = $value['cust_female'];
-					$sum['cust_android'] = $value['cust_android'];
-					$sum['cust_ios'] = $value['cust_ios'];
-					$sum['cust_telkomsel'] = $value['cust_telkomsel'];
-					$sum['cust_xl'] = $value['cust_xl'];
-					$sum['cust_indosat'] = $value['cust_indosat'];
-					$sum['cust_tri'] = $value['cust_tri'];
-					$sum['cust_axis'] = $value['cust_axis'];
-					$sum['cust_smart'] = $value['cust_smart'];
-					$sum['cust_teens'] = $value['cust_teens'];
-					$sum['cust_young_adult'] = $value['cust_young_adult'];
-					$sum['cust_adult'] = $value['cust_adult'];
-					$sum['cust_old'] = $value['cust_old'];
+					// $sum = array();
+					// $sum[$year][$month][$value['id_product']]['trx_month'] 		= $value['trx_month'];
+					// $sum[$year][$month][$value['id_product']]['trx_year'] 		= $value['trx_year'];
+					// $sum[$year][$month][$value['id_product']]['id_product'] 	= $value['id_product'];
+					// $sum[$year][$month][$value['id_product']]['product_name'] 	= $value['product_name'];
+					// $sum[$year][$month][$value['id_product']]['total_qty'] 		= ($sum[$year][$month][$value['id_product']]['total_qty']??0) + $value['total_qty'];
+					// $sum[$year][$month][$value['id_product']]['total_nominal'] 	= ($sum[$year][$month][$value['id_product']]['total_nominal']??0) + $value['total_nominal'];
+					// $sum[$year][$month][$value['id_product']]['total_product_discount'] = ($sum[$year][$month][$value['id_product']]['total_product_discount']??0) + $value['total_product_discount'];
+					// $sum[$year][$month][$value['id_product']]['total_rec'] 		= ($sum[$year][$month][$value['id_product']]['total_rec']??0) + $value['total_rec'];
+					// $sum[$year][$month][$value['id_product']]['cust_male'] 		= $value['cust_male'];
+					// $sum[$year][$month][$value['id_product']]['cust_female'] 	= $value['cust_female'];
+					// $sum[$year][$month][$value['id_product']]['cust_android'] 	= $value['cust_android'];
+					// $sum[$year][$month][$value['id_product']]['cust_ios'] 		= $value['cust_ios'];
+					// $sum[$year][$month][$value['id_product']]['cust_telkomsel'] = $value['cust_telkomsel'];
+					// $sum[$year][$month][$value['id_product']]['cust_xl'] 		= $value['cust_xl'];
+					// $sum[$year][$month][$value['id_product']]['cust_indosat'] 	= $value['cust_indosat'];
+					// $sum[$year][$month][$value['id_product']]['cust_tri'] 		= $value['cust_tri'];
+					// $sum[$year][$month][$value['id_product']]['cust_axis'] 		= $value['cust_axis'];
+					// $sum[$year][$month][$value['id_product']]['cust_smart'] 	= $value['cust_smart'];
+					// $sum[$year][$month][$value['id_product']]['cust_teens'] 	= $value['cust_teens'];
+					// $sum[$year][$month][$value['id_product']]['cust_young_adult'] = $value['cust_young_adult'];
+					// $sum[$year][$month][$value['id_product']]['cust_adult'] 	= $value['cust_adult'];
+					// $sum[$year][$month][$value['id_product']]['cust_old'] 		= $value['cust_old'];
 					
                     $save = MonthlyReportTrxMenu::updateOrCreate([
+                        'trx_month'  => $value['trx_month'], 
+                        'trx_year'   => $value['trx_year'], 
                         'id_product' => $value['id_product'],
                         'id_outlet'  => $value['id_outlet']
                     ], $value);
-					
-					$saveGlobal = GlobalMonthlyReportTrxMenu::updateOrCreate([
-                        'trx_month'   => date('n', strtotime($date)), 
-                        'trx_year'   => date('Y', strtotime($date)), 
-                        'id_product' => $value['id_product']
-                    ], $sum);
+
+					// $saveGlobal = GlobalMonthlyReportTrxMenu::updateOrCreate([
+     //                    'trx_month'  => $value['trx_month'], 
+     //                    'trx_year'   => $value['trx_year'], 
+     //                    'id_product' => $value['id_product']
+     //                ], $sum[$year][$month][$value['id_product']]);
 					
                     if (!$save) {
                         return false;
                     }
+                }
+            }
+        }
+
+        // update global trx menu
+        $product = DB::select(DB::raw('
+                    SELECT transaction_products.id_product, 
+                    (select SUM(transaction_products.transaction_product_qty)) as total_qty, 
+                    (select SUM(transaction_products.transaction_product_subtotal)) as total_nominal, 
+                    (select SUM(transaction_products.transaction_product_discount)) as total_product_discount, 
+                    (select count(transaction_products.id_product)) as total_rec, 
+                    (select MONTH(transaction_date)) as trx_month,
+					(select YEAR(transaction_date)) as trx_year,
+					(select SUM(Case When users.gender = \'Male\' Then 1 Else 0 End)) as cust_male, 
+					(select SUM(Case When users.gender = \'Female\' Then 1 Else 0 End)) as cust_female, 
+					(select SUM(Case When users.android_device is not null Then 1 Else 0 End)) as cust_android, 
+					(select SUM(Case When users.ios_device is not null Then 1 Else 0 End)) as cust_ios, 
+					(select SUM(Case When users.provider = \'Telkomsel\' Then 1 Else 0 End)) as cust_telkomsel, 
+					(select SUM(Case When users.provider = \'XL\' Then 1 Else 0 End)) as cust_xl, 
+					(select SUM(Case When users.provider = \'Indosat\' Then 1 Else 0 End)) as cust_indosat, 
+					(select SUM(Case When users.provider = \'Tri\' Then 1 Else 0 End)) as cust_tri, 
+					(select SUM(Case When users.provider = \'Axis\' Then 1 Else 0 End)) as cust_axis, 
+					(select SUM(Case When users.provider = \'Smart\' Then 1 Else 0 End)) as cust_smart, 
+					(select products.product_name) as product_name,
+					(select SUM(Case When floor(datediff (now(), users.birthday)/365) >= 11 && floor(datediff (now(), users.birthday)/365) <= 17 Then 1 Else 0 End)) as cust_teens, 
+					(select SUM(Case When floor(datediff (now(), users.birthday)/365) >= 18 && floor(datediff (now(), users.birthday)/365) <= 24 Then 1 Else 0 End)) as cust_young_adult, 
+					(select SUM(Case When floor(datediff (now(), users.birthday)/365) >= 25 && floor(datediff (now(), users.birthday)/365) <= 34 Then 1 Else 0 End)) as cust_adult,
+					(select SUM(Case When floor(datediff (now(), users.birthday)/365) >= 35 && floor(datediff (now(), users.birthday)/365) <= 100 Then 1 Else 0 End)) as cust_old
+                    FROM transaction_products 
+                    INNER JOIN transactions ON transaction_products.id_transaction = transactions.id_transaction 
+					LEFT JOIN users ON users.id = transactions.id_user
+					LEFT JOIN products ON transaction_products.id_product = products.id_product
+					LEFT JOIN transaction_pickups ON transaction_pickups.id_transaction = transactions.id_transaction
+                    WHERE MONTH(transactions.transaction_date) = "'. $month .'" 
+                    AND YEAR(transactions.transaction_date) ="'. $year .'"
+                    AND transaction_payment_status = "Completed"
+                    AND transaction_pickups.reject_at IS NULL
+                    GROUP BY id_product
+                    ORDER BY id_product ASC
+                '));
+
+        if (!empty($product)) {
+            $product = json_decode(json_encode($product), true);
+            $month = date('n', strtotime($date));
+            $year = date('Y', strtotime($date));
+            foreach ($product as $key => $value) {
+
+				$saveGlobal = GlobalMonthlyReportTrxMenu::updateOrCreate([
+                    'trx_month'  => $value['trx_month'], 
+                    'trx_year'   => $value['trx_year'], 
+                    'id_product' => $value['id_product']
+                ], $value);
+				
+                if (!$save) {
+                    return false;
                 }
             }
         }
