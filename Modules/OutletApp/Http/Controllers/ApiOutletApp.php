@@ -30,6 +30,7 @@ use Modules\Brand\Entities\Brand;
 use App\Http\Models\UserOutlet;
 use Modules\OutletApp\Entities\OutletAppOtp;
 use Modules\Product\Entities\ProductStockStatusUpdate;
+use Modules\Outlet\Entities\OutletScheduleUpdate;
 
 use Modules\OutletApp\Http\Requests\ListProduct;
 use Modules\OutletApp\Http\Requests\UpdateToken;
@@ -876,6 +877,7 @@ class ApiOutletApp extends Controller
         $post = $request->json()->all();
         $outlet = $request->user();
         $user_outlet = $request->user_outlet;
+        $otp = $request->outlet_app_otps;
         $updated = 0;
         $date_time = date('Y-m-d H:i:s');
         if($post['sold_out']){
@@ -890,7 +892,8 @@ class ApiOutletApp extends Controller
                     'user_type' => 'user_outlets',
                     'id_outlet' => $outlet->id_outlet,
                     'date_time' => $date_time,
-                    'new_status' => 'Sold Out'
+                    'new_status' => 'Sold Out',
+                    'id_outlet_app_otp' => $otp->id_outlet_app_otp
                 ]);
             }
             $updated += $found->update(['product_stock_status' => 'Sold Out']);
@@ -907,10 +910,11 @@ class ApiOutletApp extends Controller
                     'user_type' => 'user_outlets',
                     'id_outlet' => $outlet->id_outlet,
                     'date_time' => $date_time,
-                    'new_status' => 'Available'
+                    'new_status' => 'Available',
+                    'id_outlet_app_otp' => $otp->id_outlet_app_otp
                 ]);
             }
-            $updated += $found->update(['product_stock_status' => 'Sold Out']);
+            $updated += $found->update(['product_stock_status' => 'Available']);
         }
         return [
             'status'=>'success',
@@ -1364,11 +1368,43 @@ class ApiOutletApp extends Controller
         $post = $request->json()->all();
         DB::beginTransaction();
         $id_outlet = $request->user()->id_outlet;
+        $user_outlet = $request->user_outlet;
+        $otp = $request->outlet_app_otps;
+        $date_time = date('Y-m-d H:i:s');
         foreach ($post['schedule'] as $value) {
-            $save = OutletSchedule::updateOrCreate(['id_outlet' => $id_outlet, 'day' => $value['day']], $value);
-            if (!$save) {
-                DB::rollBack();
-                return response()->json(['status' => 'fail']);
+            $old = OutletSchedule::select('id_outlet_schedule','id_outlet','day','open','close','is_closed')->where(['id_outlet' => $id_outlet, 'day' => $value['day']])->first();
+            $old_data = $old?$old->toArray():[];
+            if($old){
+                $save = $old->update($value);
+                $new = $old;
+                if (!$save) {
+                    DB::rollBack();
+                    return response()->json(['status' => 'fail']);
+                }
+            }else{
+                $new = OutletSchedule::create([
+                    'id_outlet' => $id_outlet, 
+                    'day' => $value['day']
+                ]+$value);
+                if (!$new) {
+                    DB::rollBack();
+                    return response()->json(['status' => 'fail']);
+                }
+            }
+            $new_data = $new->toArray();
+            unset($new_data['created_at']);
+            unset($new_data['updated_at']);
+            if(array_diff($new_data,$old_data)){
+                $create = OutletScheduleUpdate::create([
+                    'id_outlet' => $id_outlet,
+                    'id_outlet_schedule' => $new_data['id_outlet_schedule'],
+                    'id_user' => $user_outlet->id_user_outlet,
+                    'id_outlet_app_otp' => $otp->id_outlet_app_otp,
+                    'user_type' => 'user_outlets',
+                    'date_time' => $date_time,
+                    'old_data' => $old_data?json_encode($old_data):null,
+                    'new_data' => json_encode($new_data)
+                ]);
             }
         }
         DB::commit();
@@ -1439,6 +1475,42 @@ class ApiOutletApp extends Controller
         }
         return MyHelper::checkGet($return);
     }
+
+    public function stockSummary(Request $request)
+    {
+        $outlet = $request->user();
+        $date = $request->json('date')?:date('Y-m-d');
+        $data = ProductStockStatusUpdate::select(\DB::raw('id_product_stock_status_update,brand_product.id_brand,CONCAT(user_type,",",id_user) as user,DATE_FORMAT(date_time, "%H:%i") as time,product_name,new_status as old_status,new_status,new_status as to_available'))
+            ->join('products','products.id_product','=','product_stock_status_updates.id_product')
+            ->join('brand_product','products.id_product','=','brand_product.id_product')
+            ->where('id_outlet',$outlet->id_outlet)
+            ->whereDate('date_time',$date)
+            ->orderBy('date_time','desc')
+            ->get();
+        $grouped = [];
+        foreach ($data as $value) {
+            $grouped[$value->user.'#'.$value->time.'#'.$value->id_brand][] = $value;
+        }
+        $result = [];
+        foreach ($grouped as $key => $var) {
+            [$name,$time,$id_brand] = explode('#',$key);
+            if(!isset($result[$id_brand]['name_brand'])){
+                $result[$id_brand]['name_brand'] = Brand::select('name_brand')->where('id_brand',$id_brand)->pluck('name_brand')->first();
+            }
+            $result[$id_brand]['updates'][] = [
+                'name' => $name,
+                'time' => $time,
+                'summary' => array_map(function($vrb){return [
+                    'product_name' => $vrb['product_name'],
+                    'old_status' => $vrb['old_status'],
+                    'new_status' => $vrb['new_status'],
+                    'to_available' => $vrb['to_available']
+                ];},$var)
+            ];
+        }
+        return MyHelper::checkGet($result);
+    }
+
     public function requestOTP(Request $request){
         if(!in_array($request->feature, ['Update Stock Status','Update Schedule'])){
             return [

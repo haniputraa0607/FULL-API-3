@@ -12,6 +12,7 @@ use App\Http\Models\ProductPrice;
 use App\Http\Models\ProductModifier;
 use App\Http\Models\Outlet;
 use App\Http\Models\Setting;
+use Modules\Product\Entities\ProductStockStatusUpdate;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -134,6 +135,7 @@ class ApiProductController extends Controller
 
     public function priceUpdate(Request $request) {
 		$post = $request->json()->all();
+        $date_time = date('Y-m-d H:i:s');
 		foreach ($post['id_product_price'] as $key => $id_product_price) {
 			if($id_product_price == 0){
 				$update = ProductPrice::create(['id_product' => $post['id_product'],
@@ -144,8 +146,31 @@ class ApiProductController extends Controller
 												'product_stock_status' => $post['product_stock_status'][$key],
 												'product_visibility' => $post['product_visibility'][$key]
 												]);
+                $create = ProductStockStatusUpdate::create([
+                    'id_product' => $post['id_product'],
+                    'id_user' => $request->user()->id,
+                    'user_type' => 'users',
+                    'id_outlet' => $post['id_outlet'][$key],
+                    'date_time' => $date_time,
+                    'new_status' => $post['product_stock_status'][$key],
+                    'id_outlet_app_otp' => null
+                ]);
 			}
 			else{
+                $pp = ProductPrice::where('id_product_price','=',$id_product_price)->first();
+                if(!$pp){continue;}
+                $old_status = $pp->product_stock_status;
+                if(strtolower($old_status) != strtolower($post['product_stock_status'][$key])){
+                    $create = ProductStockStatusUpdate::create([
+                        'id_product' => $post['id_product'],
+                        'id_user' => $request->user()->id,
+                        'user_type' => 'users',
+                        'id_outlet' => $post['id_outlet'][$key],
+                        'date_time' => $date_time,
+                        'new_status' => $post['product_stock_status'][$key],
+                        'id_outlet_app_otp' => null
+                    ]);
+                }
 				$update = ProductPrice::where('id_product_price','=',$id_product_price)->update(['product_price' => $post['product_price'][$key], 'product_price_base' => $post['product_price_base'][$key], 'product_price_tax' => $post['product_price_tax'][$key],'product_stock_status' => $post['product_stock_status'][$key],'product_visibility' => $post['product_visibility'][$key]]);
 			}
 		}
@@ -1076,6 +1101,25 @@ class ApiProductController extends Controller
 
         if (isset($post['product_stock_status'])) {
             $data['product_stock_status'] = $post['product_stock_status'];
+        }
+        $product = ProductPrice::where([
+            'id_product' => $data['id_product'],
+            'id_outlet'  => $data['id_outlet']
+        ])->first();
+        if(!$product){
+            return MyHelper::checkUpdate(0);
+        }
+        $old_status = $product->product_stock_status;
+        if(($data['product_stock_status']??false) && (($data['product_stock_status']??false) != $old_status)){
+            $create = ProductStockStatusUpdate::create([
+                'id_product' => $data['id_product'],
+                'id_user' => $request->user()->id,
+                'user_type' => 'users',
+                'id_outlet' => $data['id_outlet'],
+                'date_time' => date('Y-m-d H:i:s'),
+                'new_status' => $data['product_stock_status'],
+                'id_outlet_app_otp' => null
+            ]);
         }
         $save = ProductPrice::updateOrCreate([
             'id_product' => $data['id_product'],
