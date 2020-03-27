@@ -186,4 +186,11 @@ class Subscription extends Eloquent
 	{
 		return $this->belongsToMany(\App\Http\Models\Outlet::class, 'subscription_outlets', 'id_subscription', 'id_outlet')->where('outlet_status', 'Active');
 	}
+
+	public function products()
+	{
+		return $this->belongsToMany(\App\Http\Models\Product::class, 'subscription_products', 'id_subscription', 'id_product')
+					->withPivot('id_subscription_product')
+					->withTimestamps();
+	}
 }

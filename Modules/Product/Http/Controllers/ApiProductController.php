@@ -1273,4 +1273,38 @@ class ApiProductController extends Controller
         $product['outlet'] = Outlet::select('id_outlet','outlet_code','outlet_address','outlet_name')->find($post['id_outlet']);
         return MyHelper::checkGet($product);
     }
+
+    public function ajaxProductBrand(Request $request)
+    {
+    	$post=$request->except('_token');
+        $q= (new Product)->newQuery();
+        if($post['select']??false){
+            $q->select($post['select']);
+        }
+        
+        if($condition=$post['condition']??false){
+            $this->filterList($q,$condition['rules']??'',$condition['operator']??'and');
+        }
+        return MyHelper::checkGet($q->get());
+    }
+
+    public function filterList($model,$rule,$operator='and'){
+        $newRule=[];
+        $where=$operator=='and'?'where':'orWhere';
+        foreach ($rule as $var) {
+            $var1=['operator'=>$var['operator']??'=','parameter'=>$var['parameter']??null];
+            if($var1['operator']=='like'){
+                $var1['parameter']='%'.$var1['parameter'].'%';
+            }
+            $newRule[$var['subject']][]=$var1;
+        }
+        
+        if($rules=$newRule['id_brand']??false){
+            foreach ($rules as $rul) {
+                $model->{$where.'Has'}('brands',function($query) use ($rul){
+                    $query->where('brands.id_brand',$rul['operator'],$rul['parameter']);
+                });
+            }
+        }
+    }
 }
