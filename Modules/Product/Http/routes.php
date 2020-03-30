@@ -40,6 +40,7 @@ Route::group(['prefix' => 'api/product','middleware' => ['log_activities','auth:
     Route::get('list/price/{id_outlet}', 'ApiProductController@listProductPriceByOutlet');
     Route::post('export', 'ApiProductController@export');
     Route::post('import', 'ApiProductController@import');
+    Route::post('ajax-product-brand', 'ApiProductController@ajaxProductBrand');
 
     /* photo */
     Route::group(['prefix' => 'photo'], function() {
