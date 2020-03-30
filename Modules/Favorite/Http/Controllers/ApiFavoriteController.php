@@ -61,22 +61,6 @@ class ApiFavoriteController extends Controller
         ];
         // detail or list
         if(!$id_favorite){
-            if ($request->json('max_price') || $request->json('min_price')) {
-                $favorite->whereIn('favorites.id_product', function($query) use($request){
-                    $query->select('product_prices.id_product')
-                        ->from('product_prices')
-                        ->where('product_prices.id_product', 'favorites.id_product')
-                        ->where('product_prices.id_outlet', 'favorites.id_outlet');
-
-                    if ($request->json('max_price')){
-                        $query->where('product_prices.product_price', '>=', $request->json('max_price'));
-                    }
-
-                    if ($request->json('min_price')){
-                        $query->where('product_prices.product_price', '<=', $request->json('min_price'));
-                    }
-                });
-            }
 
             if ($request->json('id_brand')) {
                 $favorite->where('favorites.id_brand',$request->json('id_brand'));
@@ -122,7 +106,7 @@ class ApiFavoriteController extends Controller
                 $datax = &$data;
             }
             if(count($datax)>=1){
-                $datax = MyHelper::groupIt($datax,'id_outlet',function($key,&$val) use ($nf,$data){
+                $datax = MyHelper::groupIt($datax,'id_outlet',function($key,&$val) use ($nf,$data, $request){
                     $total_price = $val['product']['price'];
                     $val['product']['price']=MyHelper::requestNumber($val['product']['price'],$nf);
                     foreach ($val['modifiers'] as &$modifier) {
@@ -134,8 +118,28 @@ class ApiFavoriteController extends Controller
                         $total_price+=$price*$modifier['qty'];
                     }
                     $val['product_price_total'] = $total_price;
-                    return $key;
+
+                    if ($request->json('max_price') && $request->json('min_price')) {
+                        if ((int)$request->json('max_price') >= (int)$total_price &&
+                            (int)$request->json('min_price') <= (int)$total_price) {
+                            return $key;
+                        }else{
+                            return 'remove';
+                        }
+                    }else{
+                        if (!empty($request->json('max_price')) && (int)$request->json('max_price') < (int)$total_price){
+                            return 'remove';
+                        }elseif (!empty($request->json('min_price')) && (int)$request->json('min_price') > (int)$total_price){
+                            return 'remove';
+                        }else{
+                            return $key;
+                        }
+                    }
                 },function($key,&$val) use ($latitude,$longitude){
+                    if($key == "remove"){
+                        return $key;
+                    }
+
                     $outlet = Outlet::select('id_outlet','outlet_code','outlet_name','outlet_address','outlet_latitude','outlet_longitude')->with('today')->find($key)->toArray();
                     $status = app('Modules\Outlet\Http\Controllers\ApiOutletController')->checkOutletStatus($outlet);
                     $outlet['outlet_address']=$outlet['outlet_address']??'';
@@ -153,6 +157,7 @@ class ApiFavoriteController extends Controller
                     ];
                     return $key;
                 });
+                unset($datax['remove']);
                 $datax = array_values($datax);
 
                 if(!$request->json('sort') || $request->json('sort') == 'nearme'){
