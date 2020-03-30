@@ -2,9 +2,13 @@
 namespace Modules\IPay88\Lib;
 
 use Illuminate\Support\Facades\Log;
+use DB;
 
 use App\Http\Models\Transaction;
+use App\Http\Models\TransactionMultiplePayment;
 use App\Http\Models\DealsUser;
+use App\Http\Models\Deals;
+use App\Http\Models\User;
 use Modules\IPay88\Entities\LogIpay88;
 use Modules\IPay88\Entities\TransactionPaymentIpay88;
 
@@ -16,6 +20,8 @@ class IPay88
 {
 	public static $obj = null;
 	function __construct() {
+		$this->autocrm = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
+
 		$this->posting_url = ENV('IPAY88_POSTING_URL');
 		$this->requery_url = ENV('IPAY88_REQUERY_URL');
 		$this->merchant_code = ENV('IPAY88_MERCHANT_CODE');
@@ -200,22 +206,55 @@ class IPay88
 		if($response_only){
 			return $model->update(['requery_response'=>$data['requery_response']]);
 		}
+		DB::beginTransaction();
         switch ($data['type']) {
             case 'trx':
+            	$trx = Transaction::with('user')->where('id_transaction',$model->id_transaction)->first();
             	switch ($data['Status']) {
             		case '1':
-	                    $update = Transaction::where('id_transaction',$model->id_transaction)->update(['transaction_payment_status'=>'Completed','completed_at'=>date('Y-m-d H:i:s')]);
+	                    $update = $trx->update(['transaction_payment_status'=>'Completed','completed_at'=>date('Y-m-d H:i:s')]);
 	                    if(!$update){
+		                    DB::rollBack();
 	                        return [
 	                            'status'=>'fail',
 	                            'messages' => ['Failed update payment status']
 	                        ];
 	                    }
+
+				        if ($trx['transaction_payment_status'] == 'Pending') {
+				            $title = 'Pending';
+				        }
+
+				        if ($trx['transaction_payment_status'] == 'Paid') {
+				            $title = 'Terbayar';
+				        }
+
+				        if ($trx['transaction_payment_status'] == 'Completed') {
+				            $title = 'Sukses';
+				        }
+
+				        if ($trx['transaction_payment_status'] == 'Cancelled') {
+				            $title = 'Gagal';
+				        }
+				        $trx->load('outlet');
+				        $send = app($this->autocrm)->SendAutoCRM('Transaction Success', $trx->user->phone, [
+				            'notif_type' => 'trx',
+				            'header_label' => $title,
+				            'id_transaction' => $trx['id_transaction'],
+				            'date' => $trx['transaction_date'],
+				            'status' => $trx['transaction_payment_status'],
+				            'name'  => $trx->user->name,
+				            'order_id' => $trx['transaction_receipt_number'],
+				            'outlet_name' => $trx->outlet->outlet_name,
+				            'detail' => '',
+				            'id_reference' => $trx['transaction_receipt_number'].','.$trx['id_outlet']
+				        ]);
             			break;
 
             		case '6':
-	                    $update = Transaction::where('id_transaction',$model->id_transaction)->update(['transaction_payment_status'=>'Pending']);
+	                    $update = $trx->update(['transaction_payment_status'=>'Pending']);
 	                    if(!$update){
+		                    DB::rollBack();
 	                        return [
 	                            'status'=>'fail',
 	                            'messages' => ['Failed update payment status']
@@ -224,8 +263,43 @@ class IPay88
             			break;
 
             		case '0':
-	                    $update = Transaction::where('id_transaction',$model->id_transaction)->update(['transaction_payment_status'=>'Cancelled']);
+	                    $update = $trx->update(['transaction_payment_status'=>'Cancelled']);
+
+				        //return balance
+				        $payBalance = TransactionMultiplePayment::where('id_transaction', $trx->id_transaction)->where('type', 'Balance')->first();
+				        if (!empty($payBalance)) {
+				            $checkBalance = TransactionPaymentBalance::where('id_transaction_payment_balance', $payBalance['id_payment'])->first();
+				            if (!empty($checkBalance)) {
+				                $insertDataLogCash = app("Modules\Balance\Http\Controllers\BalanceController")->addLogBalance($trx['id_user'], $checkBalance['balance_nominal'], $trx['id_transaction'], 'Transaction Failed', $trx['transaction_grandtotal']);
+				                if (!$insertDataLogCash) {
+				                    DB::rollBack();
+				                    return response()->json([
+				                        'status'    => 'fail',
+				                        'messages'  => ['Insert Cashback Failed']
+				                    ]);
+				                }
+				                $usere= User::where('id',$trx['id_user'])->first();
+				                $trx->load('outlet_name');
+				                $send = app($this->autocrm)->SendAutoCRM('Transaction Failed Point Refund', $usere->phone,
+				                    [
+				                        "outlet_name"       => $trx['outlet_name']['outlet_name']??'',
+				                        "transaction_date"  => $trx['transaction_date'],
+				                        'id_transaction'    => $trx['id_transaction'],
+				                        'receipt_number'    => $trx['transaction_receipt_number'],
+				                        'received_point'    => (string) $checkBalance['balance_nominal']
+				                    ]
+				                );
+				                if($send != true){
+				                    DB::rollBack();
+				                    return response()->json([
+				                            'status' => 'fail',
+				                            'messages' => ['Failed Send notification to customer']
+				                        ]);
+				                }
+				            }
+				        }
 	                    if(!$update){
+		                    DB::rollBack();
 	                        return [
 	                            'status'=>'fail',
 	                            'messages' => ['Failed update payment status']
@@ -240,21 +314,32 @@ class IPay88
                 break;
 
             case 'deals':
-    			$deals_user = DealsUser::where('id_deals_user',$model->id_deals_user)->first();
+    			$deals_user = DealsUser::with('userMid')->where('id_deals_user',$model->id_deals_user)->first();
+    			$deals = Deals::where('id_deals',$model->id_deals)->first();
             	switch ($data['Status']) {
             		case '1':
 	                    $update = $deals_user->update(['paid_status'=>'Completed']);
 	                    if(!$update){
+		                    DB::rollBack();
 	                        return [
 	                            'status'=>'fail',
 	                            'messages' => ['Failed update payment status']
 	                        ];
 	                    }
+	                    $send = app($this->autocrm)->SendAutoCRM(
+	                        'Payment Deals Success',
+	                        $deals_user['userMid']['phone'],
+	                        [
+	                            'deals_title'       => $deals->title,
+	                            'id_deals_user'     => $model->id_deals_user
+	                        ]
+	                    );
             			break;
 
             		case '6':
 	                    $update = $deals_user->update(['paid_status'=>'Pending']);
 	                    if(!$update){
+		                    DB::rollBack();
 	                        return [
 	                            'status'=>'fail',
 	                            'messages' => ['Failed update payment status']
@@ -275,6 +360,7 @@ class IPay88
 			            }
 	                    $update = $deals_user->update(['paid_status'=>'Cancelled']);
 	                    if(!$update){
+		                    DB::rollBack();
 	                        return [
 	                            'status'=>'fail',
 	                            'messages' => ['Failed update payment status']
@@ -293,6 +379,7 @@ class IPay88
                 # code...
                 break;
         }
+        DB::commit();
 		$forUpdate = [
 	        'from_user' => $data['from_user']??0,
 	        'from_backend' => $data['from_backend']??0,

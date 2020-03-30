@@ -709,7 +709,7 @@ class ApiConfirm extends Controller
                     //return balance
                     $payBalance = TransactionMultiplePayment::where('id_transaction', $trx['id_transaction'])->where('type', 'Balance')->first();
                     if (!empty($payBalance)) {
-                        $checkBalance = TransactionPaymentBalance::where('id_transaction_payment_balance', $value['id_payment'])->first();
+                        $checkBalance = TransactionPaymentBalance::where('id_transaction_payment_balance', $payBalance['id_payment'])->first();
                         if (!empty($checkBalance)) {
                             $insertDataLogCash = app($this->balance)->addLogBalance($trx['id_user'], $checkBalance['balance_nominal'], $trx['id_transaction'], 'Online Transaction Failed', $trx['transaction_grandtotal']);
                             if (!$insertDataLogCash) {
@@ -819,7 +819,7 @@ class ApiConfirm extends Controller
         //return balance
         $payBalance = TransactionMultiplePayment::where('id_transaction', $trx['id_transaction'])->where('type', 'Balance')->first();
         if (!empty($payBalance)) {
-            $checkBalance = TransactionPaymentBalance::where('id_transaction_payment_balance', $value['id_payment'])->first();
+            $checkBalance = TransactionPaymentBalance::where('id_transaction_payment_balance', $payBalance['id_payment'])->first();
             if (!empty($checkBalance)) {
                 $insertDataLogCash = app($this->balance)->addLogBalance($trx['id_user'], $checkBalance['balance_nominal'], $trx['id_transaction'], 'Online Transaction Failed', $trx['transaction_grandtotal']);
                 if (!$insertDataLogCash) {
