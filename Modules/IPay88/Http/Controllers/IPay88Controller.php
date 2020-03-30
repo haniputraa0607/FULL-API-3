@@ -30,6 +30,7 @@ class IPay88Controller extends Controller
     public function notifUser(Ipay88Response $request,$type) {
         $post = $request->post();
         $post['type'] = $type;
+        $post['triggers'] = 'user';
         $trx_ipay88 = TransactionPaymentIpay88::join('transactions','transactions.id_transaction','=','transaction_payment_ipay88s.id_transaction')
             ->where('transaction_receipt_number',$post['RefNo'])->first();
         if(!$trx_ipay88){

@@ -12,13 +12,14 @@ class IPay88ServiceProvider extends ServiceProvider
      *
      * @return void
      */
-    public function boot()
+    public function boot(\Illuminate\Routing\Router $router)
     {
         $this->registerTranslations();
         $this->registerConfig();
         $this->registerViews();
         $this->registerFactories();
         $this->loadMigrationsFrom(__DIR__ . '/../Database/Migrations');
+        $router->aliasMiddleware('log_notif_ipay88', \Modules\IPay88\Http\Middleware\LogNotifIpay88::class);
     }
 
     /**

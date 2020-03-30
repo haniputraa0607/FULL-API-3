@@ -10,7 +10,3 @@
 | contains the "web" middleware group. Now create something great!
 |
 */
-
-Route::prefix('ipay88')->group(function() {
-    Route::get('/', 'IPay88Controller@index');
-});

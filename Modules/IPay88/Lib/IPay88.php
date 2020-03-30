@@ -1,8 +1,11 @@
 <?php 
 namespace Modules\IPay88\Lib;
 
+use Illuminate\Support\Facades\Log;
+
 use App\Http\Models\Transaction;
 use App\Http\Models\DealsUser;
+use Modules\IPay88\Entities\LogIpay88;
 use Modules\IPay88\Entities\TransactionPaymentIpay88;
 
 use App\Lib\MyHelper;
@@ -17,6 +20,7 @@ class IPay88
 		$this->requery_url = ENV('IPAY88_REQUERY_URL');
 		$this->merchant_code = ENV('IPAY88_MERCHANT_CODE');
 		$this->merchant_key = ENV('IPAY88_MERCHANT_KEY');
+		/**
 		$this->payment_id = [
 			'CREDIT_CARD_BCA' => 52,
 			'CREDIT_CARD_BRI' => 35,
@@ -40,6 +44,7 @@ class IPay88
 			'ALFAMART' => 60,
 			'INDOMARET' => 65
 		];
+		**/
 		$this->currency = ENV('IPAY88_CURRENCY','IDR');
 	}
 	/**
@@ -136,7 +141,23 @@ class IPay88
 			'RefNo' => $data['RefNo'],
 			'Amount' => $data['Amount']
 		];
-		$response = MyHelper::postWithTimeout($this->requery_url.'?'.http_build_query($submitted),null,$submitted,0);
+		$url = $this->requery_url.'?'.http_build_query($submitted);
+		$response = MyHelper::postWithTimeout($url,null,$submitted,0);
+        $toLog = [
+            'type' => $data['type'].'_requery',
+            'triggers' => $data['triggers'],
+            'id_reference' => $data['RefNo'],
+            'request' => json_encode($submitted),
+            'request_header' => '',
+            'request_url' => $url,
+            'response' => json_encode($response['response']),
+            'response_status_code' => json_encode($response['status_code'])
+        ];
+        try{
+            LogIpay88::create($toLog);
+        } catch (\Exception $e) {
+            Log::error($e->getMessage());
+        }
 		$is_valid = false;
 		if(
 			($status == '1' && $response['response'] == '00') ||
