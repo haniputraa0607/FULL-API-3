@@ -15,6 +15,7 @@ use App\Http\Models\DealsOutlet;
 use App\Http\Models\DealsPaymentManual;
 use App\Http\Models\DealsPaymentMidtran;
 use App\Http\Models\DealsPaymentOvo;
+use Modules\IPay88\Entities\DealsPaymentIpay88;
 use App\Http\Models\DealsUser;
 use App\Http\Models\DealsVoucher;
 use App\Http\Models\User;
@@ -287,6 +288,18 @@ class ApiDealsClaimPay extends Controller
 
             if ($voucher) {
                 $pay = $this->paymentMethod($dataDeals, $voucher, $request);
+                if (($pay['payment']??false) == 'ipay88'){
+                    DB::commit();
+                    return [
+                        'status'    => 'success',
+                        'result'    => [
+                            'url'  => env('API_URL').'api/ipay88/pay?'.http_build_query([
+                                'type' => 'deals',
+                                'id_reference' => $voucher->id_deals_user
+                            ])
+                        ]
+                    ];
+                }
             }
 
             // if deals subscription and pay completed, update paid_status another user vouchers
@@ -381,6 +394,17 @@ class ApiDealsClaimPay extends Controller
                 $pay = $this->midtrans($dataDeals, $voucher);
             }
 
+            /* IPay88 */
+            if ($request->json('payment_deals') && $request->json('payment_deals') == "ipay88") {
+                $pay = $this->ipay88($dataDeals, $voucher);
+                $ipay88 = [
+                    'MERCHANT_TRANID'   => $pay['order_id'],
+                    'AMOUNT'            => $pay['amount'],
+                    'payment'           => 'ipay88'
+                ];
+                return $ipay88;
+            }
+
            /* OVO */
             if ($request->json('payment_deals') && $request->json('payment_deals') == "ovo") {
                 $pay = $this->ovo($dataDeals, $voucher, null,$request->json('phone'));
@@ -441,6 +465,28 @@ class ApiDealsClaimPay extends Controller
         }
 
         return false;
+    }
+
+    /* IPay88 */
+    function ipay88($deals, $voucher, $grossAmount=null)
+    {
+        // simpan dulu di deals payment ipay88
+        $data = [
+            'id_deals'      => $deals->id_deals,
+            'id_deals_user' => $voucher->id_deals_user,
+            'amount'  => $voucher->voucher_price_cash,
+            'order_id'      => time().sprintf("%05d", $voucher->id_deals_user).'-'.$voucher->id_deals_user
+        ];
+        if (is_null($grossAmount)) {
+            if (!$this->updateInfoDealUsers($voucher->id_deals_user, ['payment_method' => 'Ipay88'])) {
+                 return false;
+            }
+        }
+        else {
+            $data['amount'] = $grossAmount;
+        }
+        $create = DealsPaymentIpay88::create($data);
+        return $create;
     }
 
     /* OVO */
@@ -810,6 +856,8 @@ class ApiDealsClaimPay extends Controller
                         return $this->midtrans($deals, $voucher, -$kurangBayar);
                     }elseif($paymentMethod == 'ovo'){
                         return $this->ovo($deals, $voucher, -$kurangBayar);
+                    }elseif($paymentMethod == 'ipay88'){
+                        return $this->ipay88($deals, $voucher, -$kurangBayar);
                     }
                 }
             }

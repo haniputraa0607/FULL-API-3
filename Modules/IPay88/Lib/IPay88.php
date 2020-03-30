@@ -105,17 +105,24 @@ class IPay88
 				'xfield1' => ''
 			];
 		}elseif($type == 'deals'){
-			$deals_user = DealsUser::where('id_deals_user',$reference)->first();
+			$deals_user = DealsUser::with('user')
+			->where([
+				'deals_users.id_deals_user' => $reference,
+				'payment_method' => 'Ipay88'
+			])
+			->join('deals_payment_ipay88s','deals_payment_ipay88s.id_deals_user','=','deals_users.id_deals_user')
+			->join('deals','deals.id_deals','=','deals_payment_ipay88s.id_deals')
+			->first();
 			if(!$deals_user) return false;
 			$data += [
-				'RefNo' => null,
-				'Amount' => null,
-				'ProdDesc' => null,
-				'UserName' => null,
-				'UserEmail' => null,
-				'UserContact' => null,
+				'RefNo' => $deals_user->order_id,
+				'Amount' => (int)($deals_user->amount*100),
+				'ProdDesc' => 'Voucher '.$deals_user->deals_title,
+				'UserName' => $deals_user->user->name,
+				'UserEmail' => $deals_user->user->email,
+				'UserContact' => $deals_user->user->phone,
 				'Remark' => '',
-				'ResponseURL' => url('api/ipay88/update/deals'),
+				'ResponseURL' => url('api/ipay88/detail/deals'),
 				'BackendURL' => url('api/ipay88/notif/deals'),
 				'xfield1' => ''
 			];
@@ -231,6 +238,56 @@ class IPay88
             			break;
             	}
                 break;
+
+            case 'deals':
+    			$deals_user = DealsUser::where('id_deals_user',$model->id_deals_user)->first();
+            	switch ($data['Status']) {
+            		case '1':
+	                    $update = $deals_user->update(['paid_status'=>'Completed']);
+	                    if(!$update){
+	                        return [
+	                            'status'=>'fail',
+	                            'messages' => ['Failed update payment status']
+	                        ];
+	                    }
+            			break;
+
+            		case '6':
+	                    $update = $deals_user->update(['paid_status'=>'Pending']);
+	                    if(!$update){
+	                        return [
+	                            'status'=>'fail',
+	                            'messages' => ['Failed update payment status']
+	                        ];
+	                    }
+            			break;
+
+            		case '0':
+			            if($deals_user->balance_nominal){
+			                $insertDataLogCash = app("Modules\Balance\Http\Controllers\BalanceController")->addLogBalance($deals_user->id_user, $deals_user->balance_nominal, $deals_user->id_deals_user, 'Claim Deals Failed');
+			                if (!$insertDataLogCash) {
+			                    DB::rollBack();
+			                    return response()->json([
+			                        'status'    => 'fail',
+			                        'messages'  => ['Insert Cashback Failed']
+			                    ]);
+			                }
+			            }
+	                    $update = $deals_user->update(['paid_status'=>'Cancelled']);
+	                    if(!$update){
+	                        return [
+	                            'status'=>'fail',
+	                            'messages' => ['Failed update payment status']
+	                        ];
+	                    }
+            			break;
+
+            		default:
+            			# code...
+            			break;
+            	}
+                break;
+            
             
             default:
                 # code...

@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class DealsPaymentIpay88 extends Model
 {
+    public $primaryKey = 'id_deals_payment_ipay88';
     protected $fillable = [
         'id_deals',
         'id_deals_user',
@@ -23,6 +24,7 @@ class DealsPaymentIpay88 extends Model
         'status',
         'err_desc',
         'signature',
-        'xfield1'
+        'xfield1',
+        'requery_response'
     ];
 }

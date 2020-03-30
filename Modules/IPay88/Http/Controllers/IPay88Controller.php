@@ -7,6 +7,7 @@ use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
 
 use Modules\IPay88\Entities\TransactionPaymentIpay88;
+use Modules\IPay88\Entities\DealsPaymentIpay88;
 use App\Http\Models\Transaction;
 
 use Modules\IPay88\Lib\IPay88;
@@ -24,6 +25,9 @@ class IPay88Controller extends Controller
         $id_reference = $request->id_reference;
         $type = $request->type;
         $data =  $this->lib->generateData($id_reference,$type);
+        if(!$data){
+            return 'Something went wrong';
+        }
         return view('ipay88::payment',$data);
     }
 
@@ -31,8 +35,20 @@ class IPay88Controller extends Controller
         $post = $request->post();
         $post['type'] = $type;
         $post['triggers'] = 'user';
-        $trx_ipay88 = TransactionPaymentIpay88::join('transactions','transactions.id_transaction','=','transaction_payment_ipay88s.id_transaction')
-            ->where('transaction_receipt_number',$post['RefNo'])->first();
+        switch ($type) {
+            case 'trx':
+                $trx_ipay88 = TransactionPaymentIpay88::join('transactions','transactions.id_transaction','=','transaction_payment_ipay88s.id_transaction')
+                    ->where('transaction_receipt_number',$post['RefNo'])->first();
+                break;
+
+            case 'deals':
+                $trx_ipay88 = DealsPaymentIpay88::where('order_id',$post['RefNo'])->first();
+                break;
+            
+            default:
+                # code...
+                break;
+        }
         if(!$trx_ipay88){
             return MyHelper::checkGet($trx_ipay88,'Transaction Not Found');
         }
