@@ -1028,6 +1028,10 @@ class PromoCampaignTools{
 	        {
 	        	$product = null;
 	        }
+
+	        if (!empty($product)) {
+	        	$product['id_brand'] = $promo['id_brand']??'';
+	        }
 	        return $product;
         }else{
         	return 'empty';
