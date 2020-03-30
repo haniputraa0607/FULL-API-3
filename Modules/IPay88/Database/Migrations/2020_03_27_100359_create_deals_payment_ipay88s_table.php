@@ -20,6 +20,7 @@ class CreateDealsPaymentIpay88sTable extends Migration
             $table->string('order_id');
             $table->boolean('from_user')->default(0);
             $table->boolean('from_backend')->default(0);
+            $table->text('requery_response');
             $table->string('merchant_code',20);
             $table->integer('payment_id')->nullable();
             $table->string('ref_no',20);

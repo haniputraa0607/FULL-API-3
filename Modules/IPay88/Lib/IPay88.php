@@ -1,0 +1,238 @@
+<?php 
+namespace Modules\IPay88\Lib;
+
+use App\Http\Models\Transaction;
+use App\Http\Models\DealsUser;
+use Modules\IPay88\Entities\TransactionPaymentIpay88;
+
+use App\Lib\MyHelper;
+/**
+ * IPay88 Payment Integration Class
+ */
+class IPay88
+{
+	public static $obj = null;
+	function __construct() {
+		$this->posting_url = ENV('IPAY88_POSTING_URL');
+		$this->requery_url = ENV('IPAY88_REQUERY_URL');
+		$this->merchant_code = ENV('IPAY88_MERCHANT_CODE');
+		$this->merchant_key = ENV('IPAY88_MERCHANT_KEY');
+		$this->payment_id = [
+			'CREDIT_CARD_BCA' => 52,
+			'CREDIT_CARD_BRI' => 35,
+			'CREDIT_CARD_CIMB' => 42,
+			'CREDIT_CARD_CIMB_AUTHORIZATION' => 56,
+			'CREDIT_CARD_CIMB IPG)' => 34,
+			'CREDIT_CARD_DANAMON' => 45,
+			'CREDIT_CARD_MANDIRI' => 53,
+			'CREDIT_CARD_MAYBANK' => 43,
+			'CREDIT_CARD_UNIONPAY' => 54,
+			'CREDIT_CARD_UOB' => 46,
+			'MAYBANK_VA' => 9,
+			'MANDIRI_ATM' => 17,
+			'BCA_VA' => 25,
+			'BNI_VA' => 26,
+			'PERMATA_VA' => 31,
+			'LinkAja' => 13,
+			'OVO' => 63,
+			'PAYPAL' => 6,
+			'KREDIVO' => 55,
+			'ALFAMART' => 60,
+			'INDOMARET' => 65
+		];
+		$this->currency = ENV('IPAY88_CURRENCY','IDR');
+	}
+	/**
+	 * Create object from static function
+	 * @return IPay88 IPay88 Instance
+	 */
+	public static function create() {
+		if(!self::$obj){
+			self::$obj = new self();
+		}
+		return self::$obj;
+	}
+
+	/**
+	 * Signing data (add signature parameter)
+	 * @param  array $data array of full unsigned data
+	 * @return array       array of signed data
+	 */
+	public function sign($data) {
+		$string = $this->merchant_key.$data['MerchantCode'].$data['RefNo'].$data['Amount'].$data['Currency'].$data['xfield1'];
+		$hex2bin = function($hexSource){
+			$bin = '';
+			for ($i=0;$i<strlen($hexSource);$i=$i+2){
+				$bin .= chr(hexdec(substr($hexSource,$i,2)));
+			}
+			return $bin;
+		};
+		$signature = base64_encode($hex2bin(sha1($string)));
+		$data['Signature'] = $signature;
+		return $data;
+	}
+	/**
+	 * generate formdata to be send to IPay88
+	 * @param  Integer $reference id_transaction/id_deals_user
+	 * @param  string $type type of transaction ('trx'/'deals')
+	 * @return Array       array formdata
+	 */
+	public function generateData($reference,$type = 'trx'){
+		$data = [
+			'MerchantCode' => $this->merchant_code,
+			'PaymentId' => null,
+			'Currency' => $this->currency,
+			'Lang' => 'UTF-8'
+		];
+		if($type == 'trx'){
+			$trx = Transaction::with('user')->where('id_transaction',$reference)->first();
+			if(!$trx) return false;
+			$data += [
+				'RefNo' => $trx->transaction_receipt_number,
+				'Amount' => ($trx->transaction_grandtotal - $trx->balance_nominal)*100,
+				'ProdDesc' => $trx->transaction_receipt_number,
+				'UserName' => $trx->user->name,
+				'UserEmail' => $trx->user->email,
+				'UserContact' => $trx->user->phone,
+				'Remark' => '',
+				'ResponseURL' => url('api/ipay88/detail/trx'),
+				'BackendURL' => url('api/ipay88/notif/trx'),
+				'xfield1' => ''
+			];
+		}elseif($type == 'deals'){
+			$deals_user = DealsUser::where('id_deals_user',$reference)->first();
+			if(!$deals_user) return false;
+			$data += [
+				'RefNo' => null,
+				'Amount' => null,
+				'ProdDesc' => null,
+				'UserName' => null,
+				'UserEmail' => null,
+				'UserContact' => null,
+				'Remark' => '',
+				'ResponseURL' => url('api/ipay88/update/deals'),
+				'BackendURL' => url('api/ipay88/notif/deals'),
+				'xfield1' => ''
+			];
+		}else{
+			return false;
+		}
+		$signed = $this->sign($data);
+		return [
+			'action_url' => $this->posting_url,
+			'data' => $signed
+		];
+	}
+	/**
+	 * function to Re-query received data (for security reason) and validate status
+	 * @param  Array $data received data
+	 * @param  String $status received payment status
+	 * @return String reply from IPay88
+	 */
+	public function reQuery($data,$status)
+	{
+		$submitted = [
+			'MerchantCode' => $data['MerchantCode'],
+			'RefNo' => $data['RefNo'],
+			'Amount' => $data['Amount']
+		];
+		$response = MyHelper::postWithTimeout($this->requery_url.'?'.http_build_query($submitted),null,$submitted,0);
+		$is_valid = false;
+		if(
+			($status == '1' && $response['response'] == '00') ||
+			($status == '0' && $response['response'] == 'Payment fail') ||
+			($status == '6' && $response['response'] == 'Payment Pending')			
+		){
+			$is_valid = true;
+		}
+		$response['valid'] = $is_valid;
+		return $response;
+	}
+	/**
+	 * Insert new transaction payment to database or return existing
+	 * @param  Array $data      Array version of Transaction / DealsUser Model
+	 * @param  String $type 	trx/deals
+	 * @return Object           TransactionPaymentIpay88 / DealsPaymentIpay88
+	 */
+	public function insertNewTransaction($data, $type='trx') {
+		$result = TransactionPaymentIpay88::where('id_transaction',$data['id_transaction'])->first();
+		if($result){
+			return $result;
+		}
+		if($type == 'trx'){
+			$toInsert = [
+				'id_transaction' => $data['id_transaction'],
+			];
+
+			$result = TransactionPaymentIpay88::create($toInsert);
+		}
+		return $result;
+	}
+	public function update($model,$data,$response_only = false) {
+		if($response_only){
+			return $model->update(['requery_response'=>$data['requery_response']]);
+		}
+        switch ($data['type']) {
+            case 'trx':
+            	switch ($data['Status']) {
+            		case '1':
+	                    $update = Transaction::where('id_transaction',$model->id_transaction)->update(['transaction_payment_status'=>'Completed','completed_at'=>date('Y-m-d H:i:s')]);
+	                    if(!$update){
+	                        return [
+	                            'status'=>'fail',
+	                            'messages' => ['Failed update payment status']
+	                        ];
+	                    }
+            			break;
+
+            		case '6':
+	                    $update = Transaction::where('id_transaction',$model->id_transaction)->update(['transaction_payment_status'=>'Pending']);
+	                    if(!$update){
+	                        return [
+	                            'status'=>'fail',
+	                            'messages' => ['Failed update payment status']
+	                        ];
+	                    }
+            			break;
+
+            		case '0':
+	                    $update = Transaction::where('id_transaction',$model->id_transaction)->update(['transaction_payment_status'=>'Cancelled']);
+	                    if(!$update){
+	                        return [
+	                            'status'=>'fail',
+	                            'messages' => ['Failed update payment status']
+	                        ];
+	                    }
+            			break;
+
+            		default:
+            			# code...
+            			break;
+            	}
+                break;
+            
+            default:
+                # code...
+                break;
+        }
+		$forUpdate = [
+	        'from_user' => $data['from_user']??0,
+	        'from_backend' => $data['from_backend']??0,
+	        'merchant_code' => $data['MerchantCode']??'',
+	        'payment_id' => $data['PaymentId']??null,
+	        'ref_no' => $data['RefNo'],
+	        'amount' => $data['Amount'],
+	        'currency' => $data['Currency'],
+	        'remark' => $data['Remark']??null,
+	        'trans_id' => $data['TransId']??null,
+	        'auth_code' => $data['AuthCode']??null,
+	        'status' => $data['Status']??'0',
+	        'err_desc' => $data['ErrDesc']??null,
+	        'signature' => $data['Signature']??'',
+	        'xfield1' => $data['xfield1']??null,
+	        'requery_response' => $data['requery_response']??''
+		];
+		return $model->update($forUpdate);
+	}
+}
+?>
