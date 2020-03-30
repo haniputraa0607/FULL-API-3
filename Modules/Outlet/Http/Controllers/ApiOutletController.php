@@ -70,6 +70,7 @@ class ApiOutletController extends Controller
     function __construct() {
         date_default_timezone_set('Asia/Jakarta');
         $this->promo_campaign       = "Modules\PromoCampaign\Http\Controllers\ApiPromoCampaign";
+        $this->subscription_use     = "Modules\Subscription\Http\Controllers\ApiSubscriptionUse";
     }
 
     function checkInputOutlet($post=[]) {
@@ -2163,15 +2164,26 @@ class ApiOutletController extends Controller
 		}
 
 		$promo_error = null;
-		if ( (!empty($post['promo_code']) && empty($post['id_deals_user'])) || (empty($post['promo_code']) && !empty($post['id_deals_user'])) ) {
+		if ( 
+				(!empty($post['promo_code']) && empty($post['id_deals_user']) && empty($post['id_subscription_user']) ) || 
+        		(empty($post['promo_code']) && !empty($post['id_deals_user']) && empty($post['id_subscription_user']) ) ||
+        		(empty($post['promo_code']) && empty($post['id_deals_user']) && !empty($post['id_subscription_user']) ) 
+			) {
         // if (isset($post['promo_code'])) {
         	if (!empty($post['promo_code'])) 
         	{
         		$code = app($this->promo_campaign)->checkPromoCode($post['promo_code'], 1);
         		$source = 'promo_campaign';
-        	}else{
+        	}
+        	elseif (!empty($post['id_deals_user']))
+        	{
         		$code = app($this->promo_campaign)->checkVoucher($post['id_deals_user'], 1);
         		$source = 'deals';
+        	}
+        	elseif (!empty($post['id_subscription_user'])) 
+        	{
+        		$code = app($this->subscription_use)->checkSubscription($post['id_subscription_user'], 1);
+        		$source = 'subscription';
         	}
 
 	        if(!$code){
@@ -2179,19 +2191,19 @@ class ApiOutletController extends Controller
 	        	return false;
 	        }else{
 	        	
-	        	if ( ($code['promo_campaign']['date_end']??$code['voucher_expired_at']) < date('Y-m-d H:i:s') ) {
+	        	if ( ($code['promo_campaign']['date_end']??$code['voucher_expired_at']??$code['subscription_expired_at']) < date('Y-m-d H:i:s') ) {
 	        		$promo_error = 'Promo is ended';
 	        		return false;
 	        	}
 
 	        	// if valid give flag is_promo = 1
 	        	$code = $code->toArray();
-        		if ($code['promo_campaign']['is_all_outlet']??false) {
+        		if ($code['promo_campaign']['is_all_outlet']??$code['subscription_user']['subscription']['is_all_outlet']??false) {
         			foreach ($outlet as $key => $value) {
     					$outlet[$key]['is_promo'] = 1;
     				}
         		}else{
-		        	foreach ( ($code['promo_campaign']['promo_campaign_outlets']??$code['deal_voucher']['deals']['outlets_active']) as $key => $value) {
+		        	foreach ( ($code['promo_campaign']['promo_campaign_outlets']??$code['deal_voucher']['deals']['outlets_active']??$code['subscription_user']['subscription']['outlets_active']) as $key => $value) {
 	        			foreach ($outlet as $key2 => $value2) {
 	        				if ( $value2['id_outlet'] == $value['id_outlet'] ) {
 	    						$outlet[$key2]['is_promo'] = 1;
@@ -2201,8 +2213,12 @@ class ApiOutletController extends Controller
 		        	}
         		}
 	        }
-        }elseif( !empty($post['promo_code']) && !empty($post['id_deals_user']) ){
-        	$promo_error = 'Can only use either promo code or voucher';
+	    }elseif ( 
+        	(!empty($post['promo_code']) && !empty($post['id_deals_user'])) || 
+        	(!empty($post['id_subscription_user']) && !empty($post['id_deals_user'])) ||
+        	(!empty($post['promo_code']) && !empty($post['id_subscription_user']))
+        ) {
+        	$promo_error = 'Can only use Subscription, Promo Code, or Voucher';
         }
 
         return $outlet;

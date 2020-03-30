@@ -327,7 +327,13 @@ class ApiOutletAppReport extends Controller
     	{
 	    	$daily_trx_menu = DailyReportTrxMenu::whereDate('trx_date', '=', $post['date'])
 				->where('id_outlet', '=', $post['id_outlet'])
-				->select('id_report_trx_menu','product_name','total_qty')
+				->select(
+					'id_report_trx_menu',
+					'product_name',
+					'total_qty',
+					'total_nominal',
+					'total_product_discount'
+				)
 				->orderBy('total_qty','Desc');
 	    }
 	    elseif ($post['date'] == date("Y-m-d")) 
@@ -377,6 +383,8 @@ class ApiOutletAppReport extends Controller
     	{
     		$data_item[$key]['product_name'] = $value['product_name'];
     		$data_item[$key]['total_qty'] = number_format($value['total_qty'],0,",",".");
+    		$data_item[$key]['total_nominal'] = number_format($value['total_nominal'],0,",",".");
+    		$data_item[$key]['total_product_discount'] = number_format($value['total_product_discount'],0,",",".");
     	}
 
     	if ( empty($post['is_all']) && empty($post['take']) ) {
