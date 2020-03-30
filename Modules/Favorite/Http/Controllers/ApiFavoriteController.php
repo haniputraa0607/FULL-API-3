@@ -70,7 +70,6 @@ class ApiFavoriteController extends Controller
                 $favorite->where('favorites.id_outlet',$request->json('id_outlet'));
             }
 
-
             if ($request->json('topping') == 'used') {
                 $favorite->whereRaw('favorites.id_favorite in (select fm.id_favorite from favorite_modifiers fm where fm.id_favorite = favorites.id_favorite)');
             }elseif($request->json('topping') == 'unused'){
@@ -88,14 +87,6 @@ class ApiFavoriteController extends Controller
                         ->orWhere('outlets.outlet_name', 'LIKE', '%' . $request->json('key_free') . '%')
                         ->orWhere('brands.name_brand', 'LIKE', '%' . $request->json('key_free') . '%');
                 });
-            }
-
-            if($request->json('sort')){
-                if($request->json('sort') == 'new'){
-                    $favorite->orderBy('favorites.created_at', 'desc');
-                }elseif($request->json('sort') == 'old'){
-                    $favorite->orderBy('favorites.created_at', 'asc');
-                }
             }
 
             if($request->page){
@@ -160,19 +151,9 @@ class ApiFavoriteController extends Controller
                 unset($datax['remove']);
                 $datax = array_values($datax);
 
-                if(!$request->json('sort') || $request->json('sort') == 'nearme'){
-                    if(!empty($latitude)&&!empty($longitude)){
-                        usort($datax, function(&$a,&$b){
-                            return $a['outlet']['distance_raw'] <=> $b['outlet']['distance_raw'];
-                        });
-                    }
-                }elseif($request->json('sort') == 'price-asc'){
+                if(!empty($latitude)&&!empty($longitude)){
                     usort($datax, function(&$a,&$b){
-                        return $a['favorites'][0]['product_price_total'] <=> $b['favorites'][0]['product_price_total'];
-                    });
-                }elseif($request->json('sort') == 'price-desc'){
-                    usort($datax, function(&$a,&$b){
-                        return $a['favorites'][0]['product_price_total'] < $b['favorites'][0]['product_price_total']?1:-1;
+                        return $a['outlet']['distance_raw'] <=> $b['outlet']['distance_raw'];
                     });
                 }
             }else{
