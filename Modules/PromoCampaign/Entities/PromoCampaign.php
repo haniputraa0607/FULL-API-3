@@ -61,6 +61,7 @@ class PromoCampaign extends Eloquent
 	];
 
 	protected $fillable = [
+		'id_brand',
 		'created_by',
 		'last_updated_by',
 		'campaign_name',
@@ -73,6 +74,8 @@ class PromoCampaign extends Eloquent
 		'date_end',
 		'is_all_outlet',
 		'promo_type',
+		'user_type',
+		'specific_user',
 		'used_code',
 		'limitation_usage',
 		'step_complete'
@@ -156,4 +159,9 @@ class PromoCampaign extends Eloquent
     {
         return $this->hasOne(\Modules\PromoCampaign\Entities\PromoCampaignReferral::class, 'id_promo_campaign', 'id_promo_campaign');
     }
+
+    public function brand()
+    {
+		return $this->belongsTo(\Modules\Brand\Entities\Brand::class,'id_brand');
+	}
 }
