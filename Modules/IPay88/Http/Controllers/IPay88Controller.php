@@ -66,4 +66,40 @@ class IPay88Controller extends Controller
         ];
         return view('ipay88::redirect',$data);
     }
+
+    public function notifIpay(Ipay88Response $request,$type) {
+        $post = $request->post();
+        $post['type'] = $type;
+        $post['triggers'] = 'backend';
+        switch ($type) {
+            case 'trx':
+                $trx_ipay88 = TransactionPaymentIpay88::join('transactions','transactions.id_transaction','=','transaction_payment_ipay88s.id_transaction')
+                    ->where('transaction_receipt_number',$post['RefNo'])->first();
+                break;
+
+            case 'deals':
+                $trx_ipay88 = DealsPaymentIpay88::where('order_id',$post['RefNo'])->first();
+                break;
+            
+            default:
+                # code...
+                break;
+        }
+        if(!$trx_ipay88){
+            return MyHelper::checkGet($trx_ipay88,'Transaction Not Found');
+        }
+
+        $requery = $this->lib->reQuery($post, $post['Status']);
+
+        if($requery['valid']){
+            $post['from_backend'] = 1;
+            $post['requery_response'] = $requery['response'];
+            $this->lib->update($trx_ipay88,$post);
+            return [
+                'status' => 'success'
+            ];
+        }else{
+            return MyHelper::checkGet([],$requery['response']);
+        }
+    }
 }
