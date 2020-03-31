@@ -101,7 +101,7 @@ class IPay88
 			$data += [
 				'RefNo' => $trx->transaction_receipt_number,
 				'Amount' => ($trx->transaction_grandtotal - $trx->balance_nominal)*100,
-				'ProdDesc' => $trx->transaction_receipt_number,
+				'ProdDesc' => Setting::select('value_text')->where('key','ipay88_product_desc')->pluck('value_text')->first()?:$trx->transaction_receipt_number,
 				'UserName' => $trx->user->name,
 				'UserEmail' => $trx->user->email,
 				'UserContact' => $trx->user->phone,

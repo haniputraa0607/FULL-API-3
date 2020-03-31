@@ -51,7 +51,15 @@
 <body>
 	<form action="{{$action_url}}" name="myForm" id="myForm" method="POST">
 		@foreach($data as $key => $field)
-		<input type="hidden" name="{{$key}}" value="{{$field}}">
+		@if(is_array($field))
+			@foreach($field as $i => $items)
+				@foreach($items as $j => $item)
+				<input type="hidden" name="{{$key}}[{{$i}}][{{$j}}]" value="{{$item}}">
+				@endforeach
+			@endforeach
+		@else
+			<input type="hidden" name="{{$key}}" value="{{$field}}">
+		@endif
 		@endforeach
 		<div class="loading-container">
 			<div>
