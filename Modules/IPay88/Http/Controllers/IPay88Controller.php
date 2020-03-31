@@ -59,11 +59,11 @@ class IPay88Controller extends Controller
             $post['from_user'] = 1;
             $post['requery_response'] = $requery['response'];
             $this->lib->update($trx_ipay88,$post);
-            return [
-                'status' => 'success'
-            ];
-        }else{
-            return MyHelper::checkGet([],$requery['response']);
         }
+        $data = [
+            'type' => $type,
+            'id_reference' => $trx_ipay88->id_transaction?:$trx_ipay88->id_deals_user
+        ];
+        return view('ipay88::redirect',$data);
     }
 }
