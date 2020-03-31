@@ -377,7 +377,6 @@ class IPay88
                 # code...
                 break;
         }
-        DB::commit();
         $payment_method = array_flip($this->payment_id)[$data['PaymentId']]??null;
         $payment_method = $payment_method?str_replace('_', ' ', $payment_method):null;
 		$forUpdate = [
@@ -398,7 +397,10 @@ class IPay88
 	        'xfield1' => $data['xfield1']??null,
 	        'requery_response' => $data['requery_response']??''
 		];
-		return $model->update($forUpdate);
+		$up = $model->update($forUpdate);
+        DB::commit();
+        $sendPOS = ($trx['id_transaction']??false)?\App\Lib\ConnectPOS::create()->sendTransaction([$trx['id_transaction']]):null;
+        return $up;
 	}
     function getHtml($trx, $item, $name, $phone, $date, $outlet, $receipt)
     {

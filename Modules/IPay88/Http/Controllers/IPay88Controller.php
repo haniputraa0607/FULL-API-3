@@ -38,7 +38,9 @@ class IPay88Controller extends Controller
         switch ($type) {
             case 'trx':
                 $trx_ipay88 = TransactionPaymentIpay88::join('transactions','transactions.id_transaction','=','transaction_payment_ipay88s.id_transaction')
-                    ->where('transaction_receipt_number',$post['RefNo'])->first();
+                    ->where('transaction_receipt_number',$post['RefNo'])
+                    ->where('transaction_payment_status','<>','Completed')
+                    ->first();
                 break;
 
             case 'deals':
@@ -50,7 +52,7 @@ class IPay88Controller extends Controller
                 break;
         }
         if(!$trx_ipay88){
-            return MyHelper::checkGet($trx_ipay88,'Transaction Not Found');
+            return 'Transaction Not Found';
         }
 
         $requery = $this->lib->reQuery($post, $post['Status']);
@@ -74,7 +76,9 @@ class IPay88Controller extends Controller
         switch ($type) {
             case 'trx':
                 $trx_ipay88 = TransactionPaymentIpay88::join('transactions','transactions.id_transaction','=','transaction_payment_ipay88s.id_transaction')
-                    ->where('transaction_receipt_number',$post['RefNo'])->first();
+                    ->where('transaction_receipt_number',$post['RefNo'])
+                    ->where('transaction_payment_status','<>','Completed')
+                    ->first();
                 break;
 
             case 'deals':
