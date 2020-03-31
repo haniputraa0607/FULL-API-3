@@ -21,6 +21,7 @@ class CreateTransactionPaymentIpay88sTable extends Migration
             $table->text('requery_response');
             $table->string('merchant_code',20);
             $table->integer('payment_id')->nullable();
+            $table->string('payment_method')->nullable();
             $table->string('ref_no',20);
             $table->decimal('amount',15,2);
             $table->string('currency',5);

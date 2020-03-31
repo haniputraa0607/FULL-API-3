@@ -9,6 +9,7 @@ use App\Http\Models\TransactionMultiplePayment;
 use App\Http\Models\DealsUser;
 use App\Http\Models\Deals;
 use App\Http\Models\User;
+use App\Http\Models\Setting;
 use Modules\IPay88\Entities\LogIpay88;
 use Modules\IPay88\Entities\TransactionPaymentIpay88;
 
@@ -26,8 +27,8 @@ class IPay88
 		$this->requery_url = ENV('IPAY88_REQUERY_URL');
 		$this->merchant_code = ENV('IPAY88_MERCHANT_CODE');
 		$this->merchant_key = ENV('IPAY88_MERCHANT_KEY');
-		/**
 		$this->payment_id = [
+			'CREDIT_CARD' => 1,
 			'CREDIT_CARD_BCA' => 52,
 			'CREDIT_CARD_BRI' => 35,
 			'CREDIT_CARD_CIMB' => 42,
@@ -50,7 +51,6 @@ class IPay88
 			'ALFAMART' => 60,
 			'INDOMARET' => 65
 		];
-		**/
 		$this->currency = ENV('IPAY88_CURRENCY','IDR');
 	}
 	/**
@@ -378,11 +378,14 @@ class IPay88
                 break;
         }
         DB::commit();
+        $payment_method = array_flip($this->payment_id)[$data['PaymentId']]??null;
+        $payment_method = $payment_method?str_replace('_', ' ', $payment_method):null;
 		$forUpdate = [
 	        'from_user' => $data['from_user']??0,
 	        'from_backend' => $data['from_backend']??0,
 	        'merchant_code' => $data['MerchantCode']??'',
 	        'payment_id' => $data['PaymentId']??null,
+	        'payment_method' => $payment_method,
 	        'ref_no' => $data['RefNo'],
 	        'amount' => $data['Amount'],
 	        'currency' => $data['Currency'],
@@ -443,20 +446,7 @@ class IPay88
     		'manna' => $manna
     	];
 
-        foreach ($manna as $row => $m) {
-            if ($m != 0) {
-                $dataOrder .= '<tr style="text-align:right">
-                        <td colspan="3" style="background:#ffffff;border-collapse:collapse;border-spacing:0;color:#555;font-family:\'Source Sans Pro\',sans-serif;line-height:1.5;margin:0;padding:15px 10px" valign="top" bgcolor="#FFFFFF" align="right">
-                           <span style="color:#555;font-family:\'Source Sans Pro\',sans-serif;font-size:14px;line-height:1.5;margin:0;padding:0">'.ucwords($row).'</span>
-                        </td>
-                        <td style="background:#ffffff;border-collapse:collapse;border-spacing:0;color:#555;font-family:\'Source Sans Pro\',sans-serif;line-height:1.5;margin:0;padding:15px 10px" valign="top" bgcolor="#FFFFFF" align="right">
-                           <span style="color:#555;font-family:\'Source Sans Pro\',sans-serif;font-size:14px;line-height:1.5;margin:0;padding:0">IDR</span> <span style="color:#555;font-family:\'Source Sans Pro\',sans-serif;font-size:14px;line-height:1.5;margin:0;padding:0">'.number_format($m).'</span>
-                        </td>
-                    </tr>';
-            }
-        }
-
-        return view('ipay88::components.deatil_transaction',$data)->render();
+        return view('ipay88::components.detail_transaction',$data)->render();
     }
 }
 ?>

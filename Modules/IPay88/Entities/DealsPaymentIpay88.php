@@ -15,6 +15,7 @@ class DealsPaymentIpay88 extends Model
         'from_backend',
         'merchant_code',
         'payment_id',
+        'payment_method',
         'ref_no',
         'amount',
         'currency',
