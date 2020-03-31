@@ -221,32 +221,18 @@ class IPay88
 	                        ];
 	                    }
 
-				        if ($trx['transaction_payment_status'] == 'Pending') {
-				            $title = 'Pending';
-				        }
-
-				        if ($trx['transaction_payment_status'] == 'Paid') {
-				            $title = 'Terbayar';
-				        }
-
-				        if ($trx['transaction_payment_status'] == 'Completed') {
-				            $title = 'Sukses';
-				        }
-
-				        if ($trx['transaction_payment_status'] == 'Cancelled') {
-				            $title = 'Gagal';
-				        }
 				        $trx->load('outlet');
+				        $trx->load('productTransaction');
 				        $send = app($this->autocrm)->SendAutoCRM('Transaction Success', $trx->user->phone, [
 				            'notif_type' => 'trx',
-				            'header_label' => $title,
+				            'header_label' => 'Sukses',
 				            'id_transaction' => $trx['id_transaction'],
 				            'date' => $trx['transaction_date'],
 				            'status' => $trx['transaction_payment_status'],
 				            'name'  => $trx->user->name,
 				            'order_id' => $trx['transaction_receipt_number'],
 				            'outlet_name' => $trx->outlet->outlet_name,
-				            'detail' => '',
+				            'detail' => $this->getHtml($trx, $trx['productTransaction'], $trx->user->name, $trx->user->phone, $trx['transaction_date'], $trx->outlet->outlet_name, $trx['transaction_receipt_number']),
 				            'id_reference' => $trx['transaction_receipt_number'].','.$trx['id_outlet']
 				        ]);
             			break;
@@ -264,6 +250,19 @@ class IPay88
 
             		case '0':
 	                    $update = $trx->update(['transaction_payment_status'=>'Cancelled']);
+		                $trx->load('outlet_name');
+				        $send = app($this->autocrm)->SendAutoCRM('Transaction Failed', $trx->user->phone, [
+				            'notif_type' => 'trx',
+				            'header_label' => 'Gagal',
+				            'date' => $trx['transaction_date'],
+				            'id_transaction' => $trx['id_transaction'],
+				            'status' => $trx['transaction_payment_status'],
+				            'name'  => $trx->user->name,
+				            'id' => $trx['transaction_receipt_number'],
+				            'outlet_name' => $trx->outlet->outlet_name,
+				            'detail' => $this->getHtml($trx, $trx['productTransaction'], $trx->user->name, $trx->user->phone, $trx['transaction_date'], $trx->outlet->outlet_name, $trx['transaction_receipt_number']),
+				            'id_reference' => $trx['transaction_receipt_number'].','.$trx['id_outlet']
+				        ]);
 
 				        //return balance
 				        $payBalance = TransactionMultiplePayment::where('id_transaction', $trx->id_transaction)->where('type', 'Balance')->first();
@@ -279,7 +278,6 @@ class IPay88
 				                    ]);
 				                }
 				                $usere= User::where('id',$trx['id_user'])->first();
-				                $trx->load('outlet_name');
 				                $send = app($this->autocrm)->SendAutoCRM('Transaction Failed Point Refund', $usere->phone,
 				                    [
 				                        "outlet_name"       => $trx['outlet_name']['outlet_name']??'',
@@ -399,5 +397,66 @@ class IPay88
 		];
 		return $model->update($forUpdate);
 	}
+    function getHtml($trx, $item, $name, $phone, $date, $outlet, $receipt)
+    {
+        $setting = Setting::where('key', 'transaction_grand_total_order')->first();
+        $order = $setting['value'];
+
+        $exp   = explode(',', $order);
+        $manna = [];
+
+        for ($i=0; $i < count($exp); $i++) {
+            if (substr($exp[$i], 0, 5) == 'empty') {
+                unset($exp[$i]);
+                continue;
+            }
+
+            if ($exp[$i] == 'subtotal') {
+                $manna[$exp[$i]] = $trx['transaction_subtotal'];
+            }
+
+            if ($exp[$i] == 'tax') {
+                $manna[$exp[$i]] = $trx['transaction_tax'];
+            }
+
+            if ($exp[$i] == 'discount') {
+                $manna[$exp[$i]] = $trx['transaction_discount'];
+            }
+
+            if ($exp[$i] == 'service') {
+                $manna[$exp[$i]] = $trx['transaction_service'];
+            }
+
+            if ($exp[$i] == 'shipping') {
+                $manna[$exp[$i]] = $trx['transaction_shipment'];
+            }
+        }
+
+    	$data = [
+    		'trx' => $trx,
+    		'item' => $item,
+    		'name' => $name,
+    		'phone' => $phone,
+    		'date' => $date,
+    		'outlet' => $outlet,
+    		'receipt' => $receipt,
+    		'manna' => $manna
+    	];
+
+        foreach ($manna as $row => $m) {
+            if ($m != 0) {
+                $dataOrder .= '<tr style="text-align:right">
+                        <td colspan="3" style="background:#ffffff;border-collapse:collapse;border-spacing:0;color:#555;font-family:\'Source Sans Pro\',sans-serif;line-height:1.5;margin:0;padding:15px 10px" valign="top" bgcolor="#FFFFFF" align="right">
+                           <span style="color:#555;font-family:\'Source Sans Pro\',sans-serif;font-size:14px;line-height:1.5;margin:0;padding:0">'.ucwords($row).'</span>
+                        </td>
+                        <td style="background:#ffffff;border-collapse:collapse;border-spacing:0;color:#555;font-family:\'Source Sans Pro\',sans-serif;line-height:1.5;margin:0;padding:15px 10px" valign="top" bgcolor="#FFFFFF" align="right">
+                           <span style="color:#555;font-family:\'Source Sans Pro\',sans-serif;font-size:14px;line-height:1.5;margin:0;padding:0">IDR</span> <span style="color:#555;font-family:\'Source Sans Pro\',sans-serif;font-size:14px;line-height:1.5;margin:0;padding:0">'.number_format($m).'</span>
+                        </td>
+                    </tr>';
+            }
+        }
+
+        return view('ipay88::components.deatil_transaction',$data)->render();
+    }
 }
 ?>
