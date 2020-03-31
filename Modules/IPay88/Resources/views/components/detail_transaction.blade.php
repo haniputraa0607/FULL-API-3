@@ -108,12 +108,12 @@
 			            	<td style="background:#ffffff;border-bottom-color:#cccccc;border-bottom-style:solid;border-bottom-width:1px;border-collapse:collapse;border-spacing:0;color:#555;font-family:\'Source Sans Pro\',sans-serif;line-height:1.5;margin:0;padding:10px 10px" width="25%" valign="middle" bgcolor="#FFFFFF" align="right">
 			            		<span style="color:#555;font-family:\'Source Sans Pro\',sans-serif;font-size:14px;line-height:1.5;margin:0;padding:0">IDR</span> <span style="color:#555;font-family:\'Source Sans Pro\',sans-serif;font-size:14px;line-height:1.5;margin:0;padding:0">{{number_format($value['transaction_product_subtotal'])}}</span>
 			            	</td>
-			            </tr>';
+			            </tr>
 			            @endforeach
 
 
 				        @foreach ($manna as $row => $m)
-				            @if ($m != 0) {
+				            @if ($m != 0)
 				                <tr style="text-align:right">
 			                        <td colspan="3" style="background:#ffffff;border-collapse:collapse;border-spacing:0;color:#555;font-family:\'Source Sans Pro\',sans-serif;line-height:1.5;margin:0;padding:15px 10px" valign="top" bgcolor="#FFFFFF" align="right">
 			                           <span style="color:#555;font-family:\'Source Sans Pro\',sans-serif;font-size:14px;line-height:1.5;margin:0;padding:0">{{ucwords($row)}}</span>
