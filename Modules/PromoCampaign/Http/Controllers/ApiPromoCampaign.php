@@ -738,7 +738,8 @@ class ApiPromoCampaign extends Controller
 
 			if ($checkData[0]['id_brand'] != $post['id_brand']) {
 				$delete_rule = $this->deleteAllProductRule('promo_campaign', $post['id_promo_campaign']);
-				if (!$delete_rule) {
+				$delete_outlet_rule = $this->deleteOutletRule('promo_campaign', $post['id_promo_campaign']);
+				if (!$delete_rule || !$delete_outlet_rule) {
 	           		return response()->json([
 	                    'status'  => 'fail',
 	                    'messages'  => ['Update Failed']
@@ -1077,6 +1078,25 @@ class ApiPromoCampaign extends Controller
 		        DealsTierDiscountProduct::where('id_deals', '=', $id_post)->delete();
 		        DealsProductDiscount::where('id_deals', '=', $id_post)->delete();
 		        DealsBuyxgetyProductRequirement::where('id_deals', '=', $id_post)->delete();
+
+	    	}
+
+	    	return true;
+    	} catch (Exception $e) {
+    		return false;
+    	}
+    }
+
+    public function deleteOutletRule($source, $id_post)
+    {
+    	try {
+    		
+	    	if ($source == 'promo_campaign') 
+	    	{
+		        PromoCampaignOutlet::where('id_promo_campaign', '=', $id_post)->delete();
+	    	}
+	    	elseif ($source == 'deals') 
+	    	{
 
 	    	}
 
