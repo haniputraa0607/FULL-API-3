@@ -1,0 +1,25 @@
+{
+    "name": "nwidart/ipay88",
+    "description": "",
+    "authors": [
+        {
+            "name": "Nicolas Widart",
+            "email": "n.widart@gmail.com"
+        }
+    ],
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Modules\\IPay88\\Providers\\IPay88ServiceProvider"
+            ],
+            "aliases": {
+                
+            }
+        }
+    },
+    "autoload": {
+        "psr-4": {
+            "Modules\\IPay88\\": ""
+        }
+    }
+}

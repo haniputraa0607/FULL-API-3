@@ -124,13 +124,13 @@ class ApiSettingTransactionV2 extends Controller
             $dataSubtotal = [];
             foreach ($data['item'] as $keyData => $valueData) {
                 $this_discount=0;
-                if($discount_promo){
-                    foreach ($discount_promo['item']??[] as $disc) {
-                        if($disc['id_product']==$valueData['id_product']){
-                            $this_discount=$disc['discount']??0;
-                        }
-                    }
-                }
+                // if($discount_promo){
+                //     foreach ($discount_promo['item']??[] as $disc) {
+                //         if($disc['id_product']==$valueData['id_product']){
+                //             $this_discount=$disc['discount']??0;
+                //         }
+                //     }
+                // }
                 $product = Product::with('product_discounts', 'product_prices')->where('id_product', $valueData['id_product'])->first();
                 if (empty($product)) {
                     DB::rollback();
@@ -190,26 +190,36 @@ class ApiSettingTransactionV2 extends Controller
 
         if ($value == 'discount') {
             $discountTotal = 0;
-            $discount = [];
-            $discountFormula = $this->convertFormula('discount');
+            // $discount = [];
+            // $discountFormula = $this->convertFormula('discount');
 
-            $checkSettingPercent = Setting::where('key', 'discount_percent')->first();
-            $checkSettingNominal = Setting::where('key', 'discount_nominal')->first();
-            $count = 0;
+            // $checkSettingPercent = Setting::where('key', 'discount_percent')->first();
+            // $checkSettingNominal = Setting::where('key', 'discount_nominal')->first();
+            // $count = 0;
 
-            if (!empty($checkSettingPercent)) {
-                if ($checkSettingPercent['value'] != '0' && $checkSettingPercent['value'] != '') {
-                    $count = (eval('return ' . preg_replace('/([a-zA-Z0-9]+)/', '\$$1', $discountFormula) . ';'));
-                }
-            } else {
-                if (!empty($checkSettingNominal)) {
-                    if ($checkSettingNominal['value'] != '0' && $checkSettingNominal['value'] != '') {
-                        $count = $checkSettingNominal;
+            // if (!empty($checkSettingPercent)) {
+            //     if ($checkSettingPercent['value'] != '0' && $checkSettingPercent['value'] != '') {
+            //         $count = (eval('return ' . preg_replace('/([a-zA-Z0-9]+)/', '\$$1', $discountFormula) . ';'));
+            //     }
+            // } else {
+            //     if (!empty($checkSettingNominal)) {
+            //         if ($checkSettingNominal['value'] != '0' && $checkSettingNominal['value'] != '') {
+            //             $count = $checkSettingNominal;
+            //         }
+            //     }
+            // }
+            foreach ($data['item'] as $keyData => $valueData) {
+                $this_discount=0;
+                if($discount_promo){
+                    foreach ($discount_promo['item']??[] as $disc) {
+                        if($disc['id_product']==$valueData['id_product']){
+                            $this_discount=$disc['discount']??0;
+                        }
                     }
                 }
+                $discountTotal += $this_discount;
             }
-
-            return $count;
+            return $discountTotal;
         }
 
         if ($value == 'service') {

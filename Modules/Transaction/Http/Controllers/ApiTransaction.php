@@ -2224,5 +2224,4 @@ class ApiTransaction extends Controller
         }
 
     }
-
 }
