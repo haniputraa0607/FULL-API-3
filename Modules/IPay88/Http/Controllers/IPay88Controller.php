@@ -24,7 +24,8 @@ class IPay88Controller extends Controller
     public function requestView(Request $request) {
         $id_reference = $request->id_reference;
         $type = $request->type;
-        $data =  $this->lib->generateData($id_reference,$type);
+        $payment_id = $request->payment_id;
+        $data =  $this->lib->generateData($id_reference,$type,$payment_id);
         if(!$data){
             return 'Something went wrong';
         }

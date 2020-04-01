@@ -295,7 +295,8 @@ class ApiDealsClaimPay extends Controller
                         'result'    => [
                             'url'  => env('API_URL').'api/ipay88/pay?'.http_build_query([
                                 'type' => 'deals',
-                                'id_reference' => $voucher->id_deals_user
+                                'id_reference' => $voucher->id_deals_user,
+                                'payment_id' => $request->json('payment_id')?:''
                             ])
                         ]
                     ];

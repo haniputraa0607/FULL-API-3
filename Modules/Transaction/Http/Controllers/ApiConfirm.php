@@ -357,7 +357,8 @@ class ApiConfirm extends Controller
                 'result'    => [
                     'url'  => env('API_URL').'api/ipay88/pay?'.http_build_query([
                         'type' => 'trx',
-                        'id_reference' => $check['id_transaction']
+                        'id_reference' => $check['id_transaction'],
+                        'payment_id' => $request->payment_id?:''
                     ])
                 ]
             ];
