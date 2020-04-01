@@ -1286,10 +1286,8 @@ class ApiDeals extends Controller
                 $deals->orderBy('deals_total_claimed', 'desc');
             }elseif($request->json('sort') == 'new'){
                 $deals->orderBy('deals_publish_start', 'desc');
-            }elseif($request->json('sort') == 'asc'){
-                $deals->orderBy('deals_title', 'asc');
-            }elseif($request->json('sort') == 'desc'){
-                $deals->orderBy('deals_title', 'desc');
+            }elseif($request->json('sort') == 'periode'){
+                $deals->orderBy('deals_end', 'asc');
             }
         }
         $deals = $deals->with('brand')->get()->toArray();
