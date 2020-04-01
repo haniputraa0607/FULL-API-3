@@ -475,7 +475,7 @@ class ApiDealsClaimPay extends Controller
         $data = [
             'id_deals'      => $deals->id_deals,
             'id_deals_user' => $voucher->id_deals_user,
-            'amount'  => $voucher->voucher_price_cash,
+            'amount'  => $voucher->voucher_price_cash*100,
             'order_id'      => time().sprintf("%05d", $voucher->id_deals_user).'-'.$voucher->id_deals_user
         ];
         if (is_null($grossAmount)) {
@@ -484,7 +484,7 @@ class ApiDealsClaimPay extends Controller
             }
         }
         else {
-            $data['amount'] = $grossAmount;
+            $data['amount'] = $grossAmount*100;
         }
         $create = DealsPaymentIpay88::create($data);
         return $create;

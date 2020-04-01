@@ -7,11 +7,12 @@ use DB;
 use App\Http\Models\Transaction;
 use App\Http\Models\TransactionMultiplePayment;
 use App\Http\Models\DealsUser;
-use App\Http\Models\Deals;
+use App\Http\Models\Deal;
 use App\Http\Models\User;
 use App\Http\Models\Setting;
 use Modules\IPay88\Entities\LogIpay88;
 use Modules\IPay88\Entities\TransactionPaymentIpay88;
+use Modules\IPay88\Entities\DealsPaymentIpay88;
 
 use App\Lib\MyHelper;
 /**
@@ -96,11 +97,13 @@ class IPay88
 			'Lang' => 'UTF-8'
 		];
 		if($type == 'trx'){
-			$trx = Transaction::with('user')->where('id_transaction',$reference)->first();
+			$trx = Transaction::with('user')
+			->join('transaction_payment_ipay88s','transaction_payment_ipay88s.id_transaction','=','transactions.id_transaction')
+			->where('transactions.id_transaction',$reference)->first();
 			if(!$trx) return false;
 			$data += [
 				'RefNo' => $trx->transaction_receipt_number,
-				'Amount' => ($trx->transaction_grandtotal - $trx->balance_nominal)*100,
+				'Amount' => $trx->amount,
 				'ProdDesc' => Setting::select('value_text')->where('key','ipay88_product_desc')->pluck('value_text')->first()?:$trx->transaction_receipt_number,
 				'UserName' => $trx->user->name,
 				'UserEmail' => $trx->user->email,
@@ -122,7 +125,7 @@ class IPay88
 			if(!$deals_user) return false;
 			$data += [
 				'RefNo' => $deals_user->order_id,
-				'Amount' => (int)($deals_user->amount*100),
+				'Amount' => $deals_user->amount,
 				'ProdDesc' => 'Voucher '.$deals_user->deals_title,
 				'UserName' => $deals_user->user->name,
 				'UserEmail' => $deals_user->user->email,
@@ -188,7 +191,7 @@ class IPay88
 	 * @param  String $type 	trx/deals
 	 * @return Object           TransactionPaymentIpay88 / DealsPaymentIpay88
 	 */
-	public function insertNewTransaction($data, $type='trx') {
+	public function insertNewTransaction($data, $type='trx',$grandtotal) {
 		$result = TransactionPaymentIpay88::where('id_transaction',$data['id_transaction'])->first();
 		if($result){
 			return $result;
@@ -196,9 +199,17 @@ class IPay88
 		if($type == 'trx'){
 			$toInsert = [
 				'id_transaction' => $data['id_transaction'],
+				'amount' => $grandtotal*100
 			];
 
 			$result = TransactionPaymentIpay88::create($toInsert);
+		}elseif($type == 'deals'){
+			$toInsert = [
+				'id_transaction' => $data['id_transaction'],
+				'amount' => $grandtotal*100
+			];
+
+			$result = DealsPaymentIpay88::create($toInsert);
 		}
 		return $result;
 	}
@@ -313,7 +324,7 @@ class IPay88
 
             case 'deals':
     			$deals_user = DealsUser::with('userMid')->where('id_deals_user',$model->id_deals_user)->first();
-    			$deals = Deals::where('id_deals',$model->id_deals)->first();
+    			$deals = Deal::where('id_deals',$model->id_deals)->first();
             	switch ($data['Status']) {
             		case '1':
 	                    $update = $deals_user->update(['paid_status'=>'Completed']);
