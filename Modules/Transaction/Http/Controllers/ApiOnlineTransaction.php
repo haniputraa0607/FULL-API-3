@@ -1894,6 +1894,7 @@ class ApiOnlineTransaction extends Controller
             isset($item['new_price']) ? $product['new_price']=$item['new_price'] : '';
             $product['is_promo'] = $item['is_promo']??0;
             $product['is_free'] = $item['is_free']??0;
+            $product['bonus'] = $item['bonus']??0;
             // get modifier
             $mod_price = 0;
             $product['modifiers'] = [];

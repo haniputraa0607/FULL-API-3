@@ -403,6 +403,10 @@ class PromoCampaignTools{
 				// sum total quantity of same product
 				foreach ($trxs as $key => $value) 
 				{
+					if (!empty($value['bonus'])) {
+						unset($trxs[$key]);
+						continue;
+					}
 					if (isset($item_get_promo[$value['id_product']])) 
 					{
 						$item_get_promo[$value['id_product']] += $value['qty'];
@@ -518,11 +522,12 @@ class PromoCampaignTools{
 				$benefit_item = [
 					'id_custom' 	=> isset(end($trxs)['id_custom']) ? end($trxs)['id_custom']+1 : '',
 					'id_product'	=> $benefit_product->id_product,
-					'id_brand'		=> $benefit_product->brands[0]->id_brand??'',
+					'id_brand'		=> $promo->id_brand??'',
 					'qty'			=> $promo_rule->benefit_qty,
 					'is_promo'		=> 1,
 					'is_free'		=> ($promo_rule->discount_type == "percent" && $promo_rule->discount_value == 100) ? 1 : 0,
-					'modifiers'		=> []
+					'modifiers'		=> [],
+					'bonus'			=> 1
 				];
 				// $benefit_item['id_product']	= $benefit_product->id_product;
 				// $benefit_item['id_brand'] 	= $benefit_product->brands[0]->id_brand??'';
