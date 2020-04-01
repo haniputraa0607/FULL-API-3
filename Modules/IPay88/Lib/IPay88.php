@@ -8,11 +8,14 @@ use App\Http\Models\Transaction;
 use App\Http\Models\TransactionMultiplePayment;
 use App\Http\Models\DealsUser;
 use App\Http\Models\Deal;
+use Modules\Subscription\Entities\SubscriptionUser;
+use Modules\Subscription\Entities\Subscription;
 use App\Http\Models\User;
 use App\Http\Models\Setting;
 use Modules\IPay88\Entities\LogIpay88;
 use Modules\IPay88\Entities\TransactionPaymentIpay88;
 use Modules\IPay88\Entities\DealsPaymentIpay88;
+use Modules\IPay88\Entities\SubscriptionPaymentIpay88;
 
 use App\Lib\MyHelper;
 /**
@@ -135,6 +138,28 @@ class IPay88
 				'BackendURL' => url('api/ipay88/notif/deals'),
 				'xfield1' => ''
 			];
+		}elseif($type == 'subscription'){
+			$deals_user = SubscriptionUser::with('user')
+			->where([
+				'subscription_users.id_subscription_user' => $reference,
+				'subscription_users.payment_method' => 'Ipay88'
+			])
+			->join('subscription_payment_ipay88s','subscription_payment_ipay88s.id_subscription_user','=','subscription_users.id_subscription_user')
+			->join('subscriptions','subscriptions.id_subscription','=','subscription_payment_ipay88s.id_subscription')
+			->first();
+			if(!$deals_user) return false;
+			$data += [
+				'RefNo' => $deals_user->order_id,
+				'Amount' => $deals_user->amount,
+				'ProdDesc' => 'Voucher '.$deals_user->deals_title,
+				'UserName' => $deals_user->user->name,
+				'UserEmail' => $deals_user->user->email,
+				'UserContact' => $deals_user->user->phone,
+				'Remark' => '',
+				'ResponseURL' => url('api/ipay88/detail/subscription'),
+				'BackendURL' => url('api/ipay88/notif/subscription'),
+				'xfield1' => ''
+			];
 		}else{
 			return false;
 		}
@@ -205,11 +230,18 @@ class IPay88
 			$result = TransactionPaymentIpay88::create($toInsert);
 		}elseif($type == 'deals'){
 			$toInsert = [
-				'id_transaction' => $data['id_transaction'],
+				'id_deal_users' => $data['id_deal_users'],
 				'amount' => $grandtotal*100
 			];
 
 			$result = DealsPaymentIpay88::create($toInsert);
+		}elseif($type == 'subscription'){
+			$toInsert = [
+				'id_subscription_user' => $data['id_subscription_user'],
+				'amount' => $grandtotal*100
+			];
+
+			$result = SubscriptionPaymentIpay88::create($toInsert);
 		}
 		return $result;
 	}
@@ -383,6 +415,74 @@ class IPay88
             	}
                 break;
             
+            case 'subscription':
+    			$subscription_user = SubscriptionUser::with('user')->where('id_subscription_user',$model->id_subscription_user)->first();
+    			$subscription = Subscription::where('id_subscription',$model->id_subscription)->first();
+            	switch ($data['Status']) {
+            		case '1':
+	                    $update = $subscription_user->update(['paid_status'=>'Completed']);
+	                    if(!$update){
+		                    DB::rollBack();
+	                        return [
+	                            'status'=>'fail',
+	                            'messages' => ['Failed update payment status']
+	                        ];
+	                    }
+	                    $send = app($this->autocrm)->SendAutoCRM(
+	                        'Buy Paid Subscription Success',
+	                        $subscription_user['user']['phone'],
+	                        [
+	                            'subscription_title'       => $subscription->title,
+	                            'id_subscription_users'     => $model->id_subscription_user
+	                        ]
+	                    );
+            			break;
+
+            		case '6':
+	                    $update = $subscription_user->update(['paid_status'=>'Pending']);
+	                    if(!$update){
+		                    DB::rollBack();
+	                        return [
+	                            'status'=>'fail',
+	                            'messages' => ['Failed update payment status']
+	                        ];
+	                    }
+            			break;
+
+            		case '0':
+			            if($subscription_user->balance_nominal){
+			                $insertDataLogCash = app("Modules\Balance\Http\Controllers\BalanceController")->addLogBalance($subscription_user->id_user, $subscription_user->balance_nominal, $subscription_user->id_subscription_user, 'Claim Subscription Failed');
+			                if (!$insertDataLogCash) {
+			                    DB::rollBack();
+			                    return response()->json([
+			                        'status'    => 'fail',
+			                        'messages'  => ['Insert Cashback Failed']
+			                    ]);
+			                }
+		                    $send = app($this->autocrm)->SendAutoCRM(
+		                        'Buy Subscription Failed Point Refund',
+		                        $subscription_user['user']['phone'],
+		                        [
+		                            'subscription_title'       => $subscription->title,
+		                            'id_subscription_users'     => $model->id_subscription_user
+		                        ]
+		                    );
+			            }
+	                    $update = $subscription_user->update(['paid_status'=>'Cancelled']);
+	                    if(!$update){
+		                    DB::rollBack();
+	                        return [
+	                            'status'=>'fail',
+	                            'messages' => ['Failed update payment status']
+	                        ];
+	                    }
+            			break;
+
+            		default:
+            			# code...
+            			break;
+            	}
+                break;
             
             default:
                 # code...

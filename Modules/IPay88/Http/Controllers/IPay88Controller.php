@@ -8,6 +8,7 @@ use Illuminate\Routing\Controller;
 
 use Modules\IPay88\Entities\TransactionPaymentIpay88;
 use Modules\IPay88\Entities\DealsPaymentIpay88;
+use Modules\IPay88\Entities\SubscriptionPaymentIpay88;
 use App\Http\Models\Transaction;
 
 use Modules\IPay88\Lib\IPay88;
@@ -48,6 +49,10 @@ class IPay88Controller extends Controller
                 $trx_ipay88 = DealsPaymentIpay88::where('order_id',$post['RefNo'])->first();
                 break;
             
+            case 'subscription':
+                $trx_ipay88 = SubscriptionPaymentIpay88::where('order_id',$post['RefNo'])->first();
+                break;
+            
             default:
                 # code...
                 break;
@@ -84,6 +89,10 @@ class IPay88Controller extends Controller
 
             case 'deals':
                 $trx_ipay88 = DealsPaymentIpay88::where('order_id',$post['RefNo'])->first();
+                break;
+            
+            case 'subscription':
+                $trx_ipay88 = SubscriptionPaymentIpay88::where('order_id',$post['RefNo'])->first();
                 break;
             
             default:
