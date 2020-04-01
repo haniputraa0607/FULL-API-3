@@ -409,7 +409,6 @@ class IPay88
 		];
 		$up = $model->update($forUpdate);
         DB::commit();
-        $sendPOS = ($trx['id_transaction']??false)?\App\Lib\ConnectPOS::create()->sendTransaction([$trx['id_transaction']]):null;
         return $up;
 	}
     function getHtml($trx, $item, $name, $phone, $date, $outlet, $receipt)

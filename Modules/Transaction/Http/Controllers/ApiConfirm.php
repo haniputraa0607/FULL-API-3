@@ -48,7 +48,7 @@ class ApiConfirm extends Controller
         $productMidtrans = [];
         $dataDetailProduct = [];
 
-        $check = Transaction::with('transaction_shipments', 'productTransaction.product','outlet_name')->where('transaction_receipt_number', $post['id'])->first();
+        $check = Transaction::with('transaction_shipments', 'productTransaction.product','outlet_name')->where('id_transaction', $post['id'])->first();
 
         if (empty($check)) {
             DB::rollback();
