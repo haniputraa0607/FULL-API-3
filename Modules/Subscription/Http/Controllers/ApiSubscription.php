@@ -1502,10 +1502,10 @@ class ApiSubscription extends Controller
                 $subs->orderBy('subscription_publish_start', 'asc');
             }elseif($request->json('sort') == 'new'){
                 $subs->orderBy('subscription_publish_start', 'desc');
-            }elseif($request->json('sort') == 'sales-asc'){
-                $subs->orderBy('subscription_bought', 'asc');
             }elseif($request->json('sort') == 'sales-desc'){
                 $subs->orderBy('subscription_bought', 'desc');
+            }elseif($request->json('sort') == 'periode'){
+                $subs->orderBy('subscription_end', 'asc');
             }
         }
 
