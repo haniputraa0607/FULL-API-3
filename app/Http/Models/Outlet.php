@@ -79,9 +79,12 @@ class Outlet extends Authenticatable
 		'outlet_status',
 		'deep_link_gojek',
 		'deep_link_grab',
-		'big_order'
+		'big_order',
 		// 'outlet_open_hours',
 		// 'outlet_close_hours'
+        'id_bank_name',
+        'account_number',
+        'recipient_name'
 	];
 
 	protected $appends  = ['call', 'url'];

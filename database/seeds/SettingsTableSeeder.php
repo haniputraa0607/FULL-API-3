@@ -731,6 +731,24 @@ class SettingsTableSeeder extends Seeder
                     'created_at' => date('Y-m-d H:i:s'),
                     'updated_at' => date('Y-m-d H:i:s'),
                 ),
+            81 =>
+                array(
+                    'id_setting' => 82,
+                    'key' => 'global_setting_fee',
+                    'value' => '0',
+                    'value_text' => null,
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
+            82 =>
+                array(
+                    'id_setting' => 83,
+                    'key' => 'global_setting_point_charged',
+                    'value' => null,
+                    'value_text' => '{"outlet":"","central":""}',
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
         ));
     }
 }
