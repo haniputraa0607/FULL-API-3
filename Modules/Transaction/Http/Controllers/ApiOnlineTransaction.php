@@ -254,6 +254,11 @@ class ApiOnlineTransaction extends Controller
         }
 
         // return $totalDiscount;
+
+        // remove bonus item
+        $pct = new PromoCampaignTools();
+        $post['item'] = $pct->removeBonusItem($post['item']);
+
         // check promo code and referral
         $promo_error=[];
         $use_referral = false;
@@ -275,7 +280,7 @@ class ApiOnlineTransaction extends Controller
                     $promo_code_ref = $request->json('promo_code');
                     $use_referral = true;
                 }
-                $pct=new PromoCampaignTools();
+
                 $validate_user=$pct->validateUser($code->id_promo_campaign, $request->user()->id, $request->user()->phone, $request->device_type, $request->device_id, $errore,$code->id_promo_campaign_promo_code);
 
                 $discount_promo=$pct->validatePromo($code->id_promo_campaign, $request->id_outlet, $post['item'], $errors);
@@ -303,7 +308,6 @@ class ApiOnlineTransaction extends Controller
 
 			if($deals)
 			{
-				$pct=new PromoCampaignTools();
 				$discount_promo=$pct->validatePromo($deals->dealVoucher->id_deals, $request->id_outlet, $post['item'], $errors, 'deals');
 
 				if ( !empty($errors) ) {
@@ -757,15 +761,10 @@ class ApiOnlineTransaction extends Controller
 
         $insertTransaction['transaction_receipt_number'] = $receipt;
 
-        foreach ($post['item'] as $keyProduct => $valueProduct) {
-            $this_discount=0;
-            if($discount_promo){
-                foreach ($discount_promo['item']??[] as $disc) {
-                    if($disc['id_product']==$valueProduct['id_product']){
-                        $this_discount=$disc['discount']??0;
-                    }
-                }
-            }
+        foreach (($discount_promo['item']??$post['item']) as $keyProduct => $valueProduct) {
+
+            $this_discount=$valueProduct['discount']??0;
+            
             $checkProduct = Product::where('id_product', $valueProduct['id_product'])->first();
             if (empty($checkProduct)) {
                 DB::rollback();
@@ -1745,6 +1744,10 @@ class ApiOnlineTransaction extends Controller
             return $productDis;
         }
 
+        // remove bonus item
+        $pct = new PromoCampaignTools();
+        $post['item'] = $pct->removeBonusItem($post['item']);
+
         // check promo code & voucher
         $promo_error=null;
         if($request->promo_code && !$request->id_subscription_user && !$request->id_deals_user){
@@ -1752,7 +1755,6 @@ class ApiOnlineTransaction extends Controller
 
             if ($code)
             {
-	            $pct=new PromoCampaignTools();
 	            $validate_user=$pct->validateUser($code->id_promo_campaign, $request->user()->id, $request->user()->phone, $request->device_type, $request->device_id, $errore,$code->id_promo_campaign_promo_code);
 
 	            if ($validate_user) {
@@ -1788,7 +1790,6 @@ class ApiOnlineTransaction extends Controller
 
 			if($deals)
 			{
-				$pct=new PromoCampaignTools();
 				$discount_promo=$pct->validatePromo($deals->dealVoucher->id_deals, $request->id_outlet, $post['item'], $errors, 'deals', $errorProduct);
 
 				if ( !empty($errors) ) {

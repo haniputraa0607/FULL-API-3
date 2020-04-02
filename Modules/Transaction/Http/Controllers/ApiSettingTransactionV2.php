@@ -122,15 +122,10 @@ class ApiSettingTransactionV2 extends Controller
         // return $data;
         if ($value == 'subtotal') {
             $dataSubtotal = [];
-            foreach ($data['item'] as $keyData => $valueData) {
+            foreach (($discount_promo['item']??$data['item']) as $keyData => $valueData) {
                 $this_discount=0;
-                if($discount_promo){
-                    foreach ($discount_promo['item']??[] as $disc) {
-                        if($disc['id_product']==$valueData['id_product']){
-                            $this_discount=$disc['discount']??0;
-                        }
-                    }
-                }
+                $this_discount=$valueData['discount']??0;
+                
                 $product = Product::with('product_discounts', 'product_prices')->where('id_product', $valueData['id_product'])->first();
                 if (empty($product)) {
                     DB::rollback();
