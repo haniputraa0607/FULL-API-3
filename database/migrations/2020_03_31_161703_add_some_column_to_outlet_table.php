@@ -16,7 +16,7 @@ class AddSomeColumnToOutletTable extends Migration
         Schema::table('outlets', function (Blueprint $table) {
             $table->string('recipient_name', 191)->nullable()->after('outlet_different_price');
             $table->string('account_number', 191)->nullable()->after('outlet_different_price');
-            $table->string('bank_name', 191)->nullable()->after('outlet_different_price');
+            $table->integer('id_bank_name')->nullable()->after('outlet_different_price');
         });
     }
 

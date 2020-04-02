@@ -82,7 +82,7 @@ class Outlet extends Authenticatable
 		'big_order',
 		// 'outlet_open_hours',
 		// 'outlet_close_hours'
-        'bank_name',
+        'id_bank_name',
         'account_number',
         'recipient_name'
 	];
