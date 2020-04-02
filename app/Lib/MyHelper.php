@@ -1383,7 +1383,8 @@ class MyHelper{
 
 		try {
 			$response = $client->post($url, $content);
-			$return = json_decode($response->getBody(), true);
+			// return plain response if json_decode fail because response is plain text
+			$return = json_decode($response->getBody()->getContents(), true)?:$response->getBody()->__toString();
 			return [
 				'status_code' => $response->getStatusCode(),
 				'response' => $return

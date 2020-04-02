@@ -1,0 +1,14 @@
+{
+    "name": "IPay88",
+    "alias": "ipay88",
+    "description": "",
+    "keywords": [],
+    "active": 1,
+    "order": 0,
+    "providers": [
+        "Modules\\IPay88\\Providers\\IPay88ServiceProvider"
+    ],
+    "aliases": {},
+    "files": [],
+    "requires": []
+}

@@ -15,6 +15,7 @@ use Modules\Subscription\Entities\FeaturedSubscription;
 use Modules\Subscription\Entities\SubscriptionOutlet;
 use Modules\Subscription\Entities\SubscriptionUser;
 use Modules\Subscription\Entities\SubscriptionUserVoucher;
+use Modules\IPay88\Entities\SubscriptionPaymentIpay88;
 use App\Http\Models\Outlet;
 use App\Http\Models\LogPoint;
 use App\Http\Models\LogBalance;
@@ -281,6 +282,18 @@ class ApiSubscriptionClaimPay extends Controller
 
             if ($pay) {
                 DB::commit();
+                if(strtolower($request->payment_method) == 'ipay88'){
+                    return [
+                        'status'    => 'success',
+                        'result'    => [
+                            'url'  => env('API_URL').'api/ipay88/pay?'.http_build_query([
+                                'type' => 'subscription',
+                                'id_reference' => $voucher->id_subscription_user,
+                                'payment_id' => $request->json('payment_id')?:''
+                            ])
+                        ]
+                    ];
+                }
                 $return = MyHelper::checkCreate($pay);
                 if(isset($return['status']) && $return['status'] == 'success'){
                     if(\Module::collections()->has('Autocrm')) {
@@ -353,6 +366,10 @@ class ApiSubscriptionClaimPay extends Controller
             if ($request->get('payment_method') && $request->get('payment_method') == "midtrans") {
                 $pay = $this->midtrans($dataSubs, $voucher);
             }
+           /* IPay88 */
+            if ($request->get('payment_method') && strtolower($request->get('payment_method')) == "ipay88") {
+                $pay = $this->ipay88($dataSubs, $voucher);
+            }
 
         }
 
@@ -401,6 +418,27 @@ class ApiSubscriptionClaimPay extends Controller
         return false;
     }
 
+    /* IPay88 */
+    function ipay88($subs, $voucher, $grossAmount=null)
+    {
+        // simpan dulu di deals payment ipay88
+        $data = [
+            'id_subscription'      => $subs->id_subscription,
+            'id_subscription_user' => $voucher->id_subscription_user,
+            'amount'  => $voucher->subscription_price_cash*100,
+            'order_id'      => $voucher->subscription_user_receipt_number
+        ];
+        if (is_null($grossAmount)) {
+            if (!$this->updateInfoDealUsers($voucher->id_subscription_user, ['payment_method' => 'Ipay88'])) {
+                 return false;
+            }
+        }
+        else {
+            $data['amount'] = $grossAmount*100;
+        }
+        $create = SubscriptionPaymentIpay88::create($data);
+        return $create;
+    }
 
     /* BALANCE */
     function balance($subs, $voucher, $paymentMethod = null)
@@ -423,6 +461,9 @@ class ApiSubscriptionClaimPay extends Controller
                 if ($this->updateInfoDealUsers($voucher->id_subscription_user, $dataSubsUserUpdate)) {
                     if($paymentMethod == 'midtrans'){
                         return $this->midtrans($subs, $voucher, $dataSubsUserUpdate['balance_nominal']);
+                    }
+                    if(strtolower($paymentMethod) == 'ipay88'){
+                        return $this->ipay88($subs, $voucher, $dataSubsUserUpdate['balance_nominal']);
                     }
                 }
             }
