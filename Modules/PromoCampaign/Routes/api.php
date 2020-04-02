@@ -34,6 +34,10 @@ Route::group(['middleware' => ['auth:api', 'log_activities', 'scopes:be'], 'pref
     Route::post('show-step2', 'ApiPromoCampaign@showStep2');
 });
 
+Route::group(['middleware' => ['auth:api', 'log_activities', 'scopes:be'], 'prefix' => 'promo-setting'], function () {
+    Route::get('cashback', 'ApiPromo@getDataCashback');
+    Route::post('cashback', 'ApiPromo@updateDataCashback');
+});
 
 // APPS
 Route::group(['middleware' => ['auth:api', 'scopes:apps'], 'prefix' => 'promo-campaign'], function () {
