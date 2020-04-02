@@ -403,10 +403,6 @@ class PromoCampaignTools{
 				// sum total quantity of same product
 				foreach ($trxs as $key => $value) 
 				{
-					if (!empty($value['bonus'])) {
-						unset($trxs[$key]);
-						continue;
-					}
 					if (isset($item_get_promo[$value['id_product']])) 
 					{
 						$item_get_promo[$value['id_product']] += $value['qty'];
@@ -1195,5 +1191,17 @@ class PromoCampaignTools{
         return true;
     }
 
+    public function removeBonusItem($item)
+    {
+    	foreach ($item as $key => $value) 
+		{
+			if (!empty($value['bonus'])) {
+				unset($item[$key]);
+				break;
+			}
+		}
+
+		return $item;
+    }
 }
 ?>
