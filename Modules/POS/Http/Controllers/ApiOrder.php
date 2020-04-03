@@ -275,7 +275,7 @@ class ApiOrder extends Controller
             $balance = TransactionPaymentBalance::where('id_transaction', $list['id_transaction'])->get();
             if($balance){
                 foreach($balance as $payBalance){
-                    $pay['payment_type'] = 'Kenangan Points';
+                    $pay['payment_type'] = 'Points';
                     $pay['payment_nominal'] = (int)$payBalance['balance_nominal'];
                     $transactions['payments'][] = $pay;
                 }
@@ -294,7 +294,7 @@ class ApiOrder extends Controller
                 if($payMulti['type'] == 'Balance'){
                     $balance = TransactionPaymentBalance::find($payMulti['id_payment']);
                     if($balance){
-                        $pay['payment_type'] = 'Kenangan Points';
+                        $pay['payment_type'] = 'Points';
                         $pay['payment_nominal'] = (int)$balance['balance_nominal'];
                         $transactions['payments'][] = $pay;
                     }

@@ -475,7 +475,7 @@
                 @endif
 
                 @if(isset($data['balance']))
-                <div class="col-6 text-13-3px space-text GoogleSans">Kenangan Points</div>
+                <div class="col-6 text-13-3px space-text GoogleSans">Points</div>
                 <div class="col-6 text-13-3px text-right GoogleSans text-red">- {{ str_replace(',', '.', number_format(abs($data['balance']))) }}</div>
                 @endif
 
@@ -526,7 +526,7 @@
                         @else
                         <div class="col-6 text-13-3px GoogleSans text-black">
                             @if ($data['trasaction_payment_type'] == 'Balance')
-                                Kenangan Points
+                                Points
                             @elseif ($data['trasaction_payment_type'] == 'Midtrans')
                                 @if(isset($data['data_payment'][0]['payment_type']))
                                     {{ ucwords(str_replace('_', ' ', $data['data_payment'][0]['payment_type'])) }}
