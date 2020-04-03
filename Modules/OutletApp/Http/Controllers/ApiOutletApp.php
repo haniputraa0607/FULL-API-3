@@ -1508,7 +1508,7 @@ class ApiOutletApp extends Controller
                 ];},$var)
             ];
         }
-        return MyHelper::checkGet($result);
+        return MyHelper::checkGet(array_values($result));
     }
 
     public function requestOTP(Request $request){
