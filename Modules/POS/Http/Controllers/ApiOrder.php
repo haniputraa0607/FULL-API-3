@@ -41,6 +41,7 @@ class ApiOrder extends Controller
         $this->getNotif = "Modules\Transaction\Http\Controllers\ApiNotification";
         $this->membership    = "Modules\Membership\Http\Controllers\ApiMembership";
         $this->pos    = "Modules\POS\Http\Controllers\ApiPOS";
+        $this->trx    = "Modules\Transaction\Http\Controllers\ApiOnlineTransaction";
     }
     
     public function listOrder(listOrder $request){
@@ -482,21 +483,36 @@ class ApiOrder extends Controller
                     ]);
             }
 
-            $newTrx = Transaction::with('user.memberships', 'outlet', 'productTransaction')->where('id_transaction', $order->id_transaction)->first();
-
+            $newTrx = Transaction::with('user.memberships', 'outlet', 'productTransaction', 'transaction_vouchers')->where('id_transaction', $order->id_transaction)->first();
             $checkType = TransactionMultiplePayment::where('id_transaction', $order->id_transaction)->get()->toArray();
             $column = array_column($checkType, 'type');
 
             if (!in_array('Balance', $column)) {
-                $savePoint = app($this->getNotif)->savePoint($newTrx);
-                // return $savePoint;
-                if (!$savePoint) {
-                    // DB::rollback();
-                    return response()->json([
-                        'status'   => 'fail',
-                        'messages' => ['Transaction failed']
-                    ]);
-                }
+
+            	$promo_source = null;
+            	if ( $newTrx->id_promo_campaign_promo_code || $newTrx->transaction_vouchers ) 
+            	{
+            		if ( $newTrx->id_promo_campaign_promo_code ) {
+            			$promo_source = 'promo_code';
+            		}
+            		elseif ( ($newTrx->transaction_vouchers[0]->status??false) == 'success' )
+            		{
+        				$promo_source = 'voucher_online';
+            		}
+            	}
+
+				if( app($this->trx)->checkPromoGetPoint($promo_source) )
+				{
+	                $savePoint = app($this->getNotif)->savePoint($newTrx);
+	                // return $savePoint;
+	                if (!$savePoint) {
+	                    // DB::rollback();
+	                    return response()->json([
+	                        'status'   => 'fail',
+	                        'messages' => ['Transaction failed']
+	                    ]);
+	                }
+	            }
             }
         
             $checkMembership = app($this->membership)->calculateMembership($user['phone']);
