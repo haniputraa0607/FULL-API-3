@@ -6,15 +6,13 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Http\Exceptions\HttpResponseException;
 
-class UpdateAddress extends FormRequest
+class GetNearbyAddress extends FormRequest
 {
     public function rules()
     {
         return [
-            'id_user_address' => 'required|integer',
-            'name'            => 'required|string',
-            'short_address'   => 'required|string',
-            'address'         => 'required|string',
+            'latitude'   => 'required',
+            'longitude'   => 'required'
         ];
     }
 

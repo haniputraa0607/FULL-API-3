@@ -12,10 +12,11 @@ class AddAddress extends FormRequest
     {
         return [
             'name'  => 'required|string',
-            'phone' => 'required|numeric',
-            'id_city'   => 'required|integer',
+            // 'phone' => 'required|numeric',
+            // 'id_city'   => 'required|integer',
+            'short_address'   => 'required|string',
             'address'   => 'required|string',
-            'postal_code'   => 'required|string',
+            // 'postal_code'   => 'required|string',
         ];
     }
 

@@ -50,6 +50,7 @@ use Modules\Transaction\Http\Requests\GetProvince;
 use Modules\Transaction\Http\Requests\GetCity;
 use Modules\Transaction\Http\Requests\GetSub;
 use Modules\Transaction\Http\Requests\GetAddress;
+use Modules\Transaction\Http\Requests\GetNearbyAddress;
 use Modules\Transaction\Http\Requests\AddAddress;
 use Modules\Transaction\Http\Requests\UpdateAddress;
 use Modules\Transaction\Http\Requests\DeleteAddress;
@@ -1776,7 +1777,115 @@ class ApiTransaction extends Controller
             ]);
         }
 
-        $address = UserAddress::where('id_user', $id)->with('user', 'city.province', 'user.city.province')->orderBy('primary', 'DESC')->get()->toArray();
+        $address = UserAddress::select('id_user_address','name','short_address','address','type')->where('id_user', $id)->orderBy('id_user_address', 'DESC');
+        if(is_numeric($request->json('favorite'))){
+            $address->where('favorite',$request->json('favorite'));
+            if(!$request->json('favorite')){
+                $address->whereNull('type');
+            }
+        }
+        $address = $address->get()->toArray();
+        $result = [
+        ];
+        $misc = [];
+        foreach ($address as $key => $adr) {
+            switch (strtolower($adr['type'])) {
+                case 'home':
+                    $adr['position'] = 1;
+                    $result[] = $adr;
+                    break;
+                
+                case 'work':
+                    $adr['position'] = 2;
+                    $result[] = $adr;
+                    break;
+                
+                case 'other':
+                    $adr['position'] = 3;
+                    $result[] = $adr;
+                    break;
+                
+                default:
+                    $adr['position'] = $key+3;
+                    $result[] = $adr;
+                    break;
+            }
+        }
+        usort($result, function ($a, $b){
+            return $a['position'] <=> $b['position'];
+        });
+        return response()->json(MyHelper::checkGet($result));
+    }
+
+    public function getNearbyAddress(GetNearbyAddress $request) {
+        $id = $request->user()->id;
+        $distance = Setting::select('value')->where('key','history_address_max_distance')->pluck('value')->first()?:50;
+        $maxmin = MyHelper::getRadius($request->json('latitude'),$request->json('longitude'),$distance);
+        $latitude = $request->json('latitude');
+        $longitude = $request->json('longitude');
+
+        // get place from google maps . max 20
+        $gmaps = MyHelper::get('https://maps.googleapis.com/maps/api/place/nearbysearch/json?'.http_build_query([
+            'key'=>'AIzaSyCsZlXzeGalI4j-yxpqYvX_H4mzBUsWgtI',
+            'location'=>sprintf('%s,%s',$request->json('latitude'),$request->json('longitude')),
+            'rankby'=>'distance'
+        ]));
+
+        if($gmaps['status'] === 'OK'){
+            $gmaps = $gmaps['results'];
+        }else{
+            $gmaps = [];
+        };
+
+        foreach ($gmaps as &$gmap){
+            $gmap = [
+                'id_user_address' => null,
+                'short_address' => $gmap['name'],
+                'address' => $gmap['vicinity'],
+                'type' => null,
+                'latitude' => $gmap['geometry']['location']['lat'],
+                'longitude' => $gmap['geometry']['location']['lng'],
+                'description' => ''
+            ];
+        }
+
+        $maxmin = MyHelper::getRadius($latitude,$longitude,$distance);
+        $user_address = UserAddress::select('id_user_address','short_address','address','type','latitude','longitude','description')->where('id_user',$id)
+            ->whereBetween('latitude',[$maxmin['latitude']['min'],$maxmin['latitude']['max']])
+            ->whereBetween('longitude',[$maxmin['longitude']['min'],$maxmin['longitude']['max']])
+            ->take(10)
+            ->get()->toArray();
+
+        $selected_address = $user_address[0]??null;
+
+        // mix history and gmaps
+        $user_address = array_merge($user_address,$gmaps);
+
+        // reorder based on distance
+        usort($user_address,function(&$a,&$b) use ($latitude,$longitude){
+            return MyHelper::count_distance($latitude,$longitude,$a['latitude'],$a['longitude']) <=> MyHelper::count_distance($latitude,$longitude,$b['latitude'],$b['longitude']);
+        });
+
+        if(!$selected_address){
+            $selected_address = $user_address[0]??null;
+        }
+        // apply limit;
+        // $max_item = Setting::select('value')->where('key','history_address_max_item')->pluck('value')->first()?:10;
+        // $user_address = array_splice($user_address,0,$max_item); 
+        $result = [];
+        if($user_address){
+            $result = [
+                'default' => $selected_address,
+                'nearby' => $user_address
+            ];
+        }
+        return response()->json(MyHelper::checkGet($result));
+    }
+
+    public function detailAddress(GetAddress $request) {
+        $id = $request->user()->id;
+
+        $address = UserAddress::where(['id_user'=> $id,'id_user_address'=>$request->id_user_address])->orderBy('id_user_address', 'DESC')->get()->toArray();
         return response()->json(MyHelper::checkGet($address));
     }
 
@@ -1792,7 +1901,7 @@ class ApiTransaction extends Controller
             ]);
         }
 
-        if ($post['primary'] == 1) {
+        if (($post['primary']??false) == 1) {
             $data['primary'] = '1';
             $select = UserAddress::where('id_user', $data['id_user'])->where('primary', '1')->first();
             if (!empty($select)) {
@@ -1811,11 +1920,13 @@ class ApiTransaction extends Controller
         }
 
         $data['name']        = isset($post['name']) ? $post['name'] : null;
-        $data['phone']       = isset($post['phone']) ? $post['phone'] : null;
+        $data['short_address'] = $post['short_address'] ?? null;
         $data['address']     = isset($post['address']) ? $post['address'] : null;
-        $data['id_city']     = isset($post['id_city']) ? $post['id_city'] : null;
-        $data['postal_code'] = isset($post['postal_code']) ? $post['postal_code'] : null;
         $data['description'] = isset($post['description']) ? $post['description'] : null;
+        $data['latitude'] = $post['latitude']??null;
+        $data['longitude'] = $post['longitude']??null;
+        $data['type'] = $post['type']??null;
+        $data['favorite'] = $post['favorite']??0;
 
         $insert = UserAddress::create($data);
         return response()->json(MyHelper::checkCreate($insert));
@@ -1832,30 +1943,14 @@ class ApiTransaction extends Controller
             ]);
         }
 
-        if ($post['primary'] == 1) {
-            $data['primary'] = '1';
-            $select = UserAddress::where('id_user', $data['id_user'])->where('primary', '1')->first();
-            if (!empty($select)) {
-                $select->primary = '0';
-                $select->save();
-
-                if (!$select) {
-                    return response()->json([
-                        'status' => 'fail',
-                        'messages'  => ['Failed']
-                    ]);
-                }
-            }
-        } else {
-            $data['primary'] = '0';
-        }
-
         $data['name']        = isset($post['name']) ? $post['name'] : null;
-        $data['phone']       = isset($post['phone']) ? $post['phone'] : null;
         $data['address']     = isset($post['address']) ? $post['address'] : null;
-        $data['id_city']     = isset($post['id_city']) ? $post['id_city'] : null;
-        $data['postal_code'] = isset($post['postal_code']) ? $post['postal_code'] : null;
+        $data['short_address'] = $post['short_address'] ?? null;
         $data['description'] = isset($post['description']) ? $post['description'] : null;
+        $data['latitude'] = $post['latitude']??null;
+        $data['longitude'] = $post['longitude']??null;
+        $data['type'] = $post['type']??null;
+        $data['favorite'] = $post['favorite']??0;
 
         $update = UserAddress::where('id_user_address', $post['id_user_address'])->update($data);
         return response()->json(MyHelper::checkUpdate($update));
