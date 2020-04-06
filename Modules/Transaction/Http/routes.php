@@ -65,7 +65,9 @@ Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scop
     Route::post('history-balance/{mode?}', 'ApiHistoryController@historyBalance');
 
     Route::post('/shipping', 'ApiTransaction@getShippingFee');
-    Route::get('/address', 'ApiTransaction@getAddress');
+    Route::any('/address', 'ApiTransaction@getAddress');
+    Route::post('/address/nearby', 'ApiTransaction@getNearbyAddress');
+    Route::post('/address/detail', 'ApiTransaction@detailAddress');
     Route::post('/address/add', 'ApiTransaction@addAddress');
     Route::post('/address/update', 'ApiTransaction@updateAddress');
     Route::post('/address/delete', 'ApiTransaction@deleteAddress');

@@ -33,20 +33,16 @@ class UserAddress extends Model
 {
 	protected $primaryKey = 'id_user_address';
 
-	protected $casts = [
-		'id_user' => 'int',
-		'id_city' => 'int'
-	];
-
 	protected $fillable = [
 		'name',
-		'phone',
 		'id_user',
-		'id_city',
+		'short_address',
 		'address',
-		'postal_code',
 		'description',
-		'primary'
+		'latitude',
+		'longitude',
+		'favorite',
+		'type'
 	];
 
 	public function city()
