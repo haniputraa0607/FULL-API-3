@@ -468,7 +468,9 @@ class ApiPOS extends Controller
                 }
             }
         }
-        return $outlet;
+        return [
+            'stuatus'   => 'success'
+        ];
     }
 
     public function syncOutlet(reqOutlet $request)
