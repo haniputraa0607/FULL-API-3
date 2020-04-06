@@ -730,7 +730,7 @@ class ApiOnlineTransaction extends Controller
             }
         }
 
-        if ( $request->json('id_subscription_user') ) 
+        if ( $request->json('id_subscription_user') )
         {
         	$subscription_total = app($this->subscription_use)->calculate($request->id_subscription_user, $insertTransaction['transaction_grandtotal'], $insertTransaction['transaction_subtotal'], $post['item'], $post['id_outlet'], $subs_error, $errorProduct, $subs_product, $subs_applied_product);
 
@@ -746,7 +746,7 @@ class ApiOnlineTransaction extends Controller
 	        $insert_subs_data['id_transaction'] = $insertTransaction['id_transaction'];
 	        $insert_subs_data['id_subscription_user_voucher'] = $data_subs->id_subscription_user_voucher;
 	        $insert_subs_data['subscription_nominal'] = $subscription_total;
-	        
+
 	        $insert_subs_trx = TransactionPaymentSubscription::create($insert_subs_data);
 	        $update_subs_voucher = SubscriptionUserVoucher::where('id_subscription_user_voucher','=',$data_subs->id_subscription_user_voucher)
 	        						->update([
@@ -784,7 +784,7 @@ class ApiOnlineTransaction extends Controller
         foreach (($discount_promo['item']??$post['item']) as $keyProduct => $valueProduct) {
 
             $this_discount=$valueProduct['discount']??0;
-            
+
             $checkProduct = Product::where('id_product', $valueProduct['id_product'])->first();
             if (empty($checkProduct)) {
                 DB::rollback();
@@ -1345,75 +1345,6 @@ class ApiOnlineTransaction extends Controller
 
             if((($fraudTrxDay && $countTrxDay <= $fraudTrxDay['parameter_detail']) && ($fraudTrxWeek && $countTrxWeek <= $fraudTrxWeek['parameter_detail']))
                 || (!$fraudTrxDay && !$fraudTrxWeek)){
-
-                if ($insertTransaction['transaction_point_earned'] != 0) {
-                    $settingPoint = Setting::where('key', 'point_conversion_value')->first();
-
-                    //check membership
-                    if (!empty($user['memberships'][0]['membership_name'])) {
-                        $level = $user['memberships'][0]['membership_name'];
-                        $percentageP = $user['memberships'][0]['benefit_point_multiplier'] / 100;
-                        $percentageB = $user['memberships'][0]['benefit_cashback_multiplier'] / 100;
-                    } else {
-                        $level = null;
-                        $percentageP = 0;
-                        $percentageB = 0;
-                    }
-
-                    $dataLog = [
-                        'id_user'                     => $insertTransaction['id_user'],
-                        'point'                       => $insertTransaction['transaction_point_earned'],
-                        'id_reference'                => $insertTransaction['id_transaction'],
-                        'source'                      => 'Transaction',
-                        'grand_total'                 => $insertTransaction['transaction_grandtotal'],
-                        'point_conversion'            => $settingPoint['value'],
-                        'membership_level'            => $level,
-                        'membership_point_percentage' => $percentageP * 100
-                    ];
-
-                    $insertDataLog = LogPoint::create($dataLog);
-                    if (!$insertDataLog) {
-                        DB::rollback();
-                        return response()->json([
-                            'status'    => 'fail',
-                            'messages'  => ['Insert Point Failed']
-                        ]);
-                    }
-
-                    //update point user
-                    $totalPoint = LogPoint::where('id_user',$insertTransaction['id_user'])->sum('point');
-                    $updateUserPoint = User::where('id', $insertTransaction['id_user'])->update(['points' => $totalPoint]);
-                }
-
-                if ($insertTransaction['transaction_cashback_earned'] != 0) {
-                    $insertDataLogCash = app($this->balance)->addLogBalance( $insertTransaction['id_user'], $insertTransaction['transaction_cashback_earned'], $insertTransaction['id_transaction'], 'Online Transaction', $insertTransaction['transaction_grandtotal']);
-                    if (!$insertDataLogCash) {
-                        DB::rollback();
-                        return response()->json([
-                            'status'    => 'fail',
-                            'messages'  => ['Insert Cashback Failed']
-                        ]);
-                    }
-                    $usere  = User::where('id',$insertTransaction['id_user'])->first();
-                    $outlet = Outlet::where('id_outlet',$insertTransaction['id_outlet'])->first();
-                    $send   = app($this->autocrm)->SendAutoCRM('Transaction Point Achievement', $usere->phone,
-                        [
-                            "outlet_name"       => $outlet->outlet_name,
-                            "transaction_date"  => $insertTransaction['transaction_date'],
-                            'id_transaction'    => $insertTransaction['id_transaction'],
-                            'receipt_number'    => $insertTransaction['transaction_receipt_number'],
-                            'received_point'    => (string) $insertTransaction['transaction_cashback_earned']
-                        ]
-                    );
-                    if($send != true){
-                        DB::rollback();
-                        return response()->json([
-                            'status' => 'fail',
-                            'messages' => ['Failed Send notification to customer']
-                        ]);
-                    }
-
-                }
 
             }else{
                 if($countTrxDay > $fraudTrxDay['parameter_detail'] && $fraudTrxDay){
@@ -2091,7 +2022,7 @@ class ApiOnlineTransaction extends Controller
             }
             $result['points'] -= $result['used_point'];
         }
-        if ($request->id_subscription_user && !$request->promo_code && !$request->id_deals_user) 
+        if ($request->id_subscription_user && !$request->promo_code && !$request->id_deals_user)
         {
 	        $result['subscription'] = app($this->subscription_use)->calculate($request->id_subscription_user, $result['grandtotal'], $result['subtotal'], $post['item'], $post['id_outlet'], $subs_error, $errorProduct, $subs_product, $subs_applied_product);
 	        if (!empty($subs_error)) {
