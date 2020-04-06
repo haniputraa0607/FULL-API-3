@@ -67,6 +67,7 @@ use DateTime;
 use GuzzleHttp\Client;
 use Modules\Disburse\Entities\UserFranchisee;
 use Modules\Disburse\Entities\UserFranchiseeOultet;
+use Modules\POS\Jobs\SyncOutletSeed;
 
 class ApiPOS extends Controller
 {
@@ -455,73 +456,19 @@ class ApiPOS extends Controller
     public function syncOutletSeed() {
         $auth = $this->getAuthSeed();
 
-        $page = 0;
-        DB::beginTransaction();
         if ($auth['success'] == true) {
             $outlet = $this->getPerPageOutlet('Bearer ' . $auth['result']['access_token']);
             if ($outlet['status'] == 'success') {
-                foreach ($outlet['result']['data'] as $key => $value) {
-                    $id_outlet = Outlet::updateOrCreate([
-                        'id_outlet_seed'            => $value['id']
-                    ], [
-                        'id_outlet_seed'            => $value['id'],
-                        'outlet_code'               => 'JJ' . $value['id'],
-                        'outlet_name'               => $value['name'],
-                        'outlet_address'            => $value['address'],
-                        'outlet_longitude'          => $value['long'],
-                        'outlet_latitude'           => $value['lang'],
-                        'outlet_status'             => $value['status'],
-                        'id_city'                   => $value['id_city']
-                    ]);
-                    $id_user_franchise = UserFranchisee::updateOrCreate([
-                        'id_user_franchisee_seed'   => $value['user_franchisee']['id']
-                    ], [
-                        'id_user_franchisee_seed'   => $value['user_franchisee']['id'],
-                        'phone'                     => $value['user_franchisee']['phone'],
-                        'email'                     => $value['user_franchisee']['email']
-                    ]);
-                    UserFranchiseeOultet::updateOrCreate([
-                        'id_outlet'                 => $id_outlet->id_outlet,
-                        'id_user_franchisee'        => $id_user_franchise->id_user_franchisee
-                    ],[
-                        'id_outlet'                 => $id_outlet->id_outlet,
-                        'id_user_franchisee'        => $id_user_franchise->id_user_franchisee
-                    ]);
-                }
+                SyncOutletSeed::dispatch($outlet['result']['data']);
                 if (!is_null($outlet['result']['next_page_url'])) {
                     for ($i = 2; $i <= $outlet['result']['last_page']; $i++) {
                         $outlet = $this->getPerPageOutlet('Bearer ' . $auth['result']['access_token'], '?page='.$i);
-                        foreach ($outlet['result']['data'] as $key => $value) {
-                            $id_outlet = Outlet::updateOrCreate([
-                                'id_outlet_seed'        => $value['id']
-                            ], [
-                                'id_outlet_seed'        => $value['id'],
-                                'outlet_code'           => 'JJ' . $value['id'],
-                                'outlet_name'           => $value['name'],
-                                'outlet_address'        => $value['address'],
-                                'outlet_longitude'      => $value['long'],
-                                'outlet_latitude'       => $value['lang'],
-                                'outlet_status'         => $value['status'],
-                                'id_city'               => $value['id_city']
-                            ]);
-                            $id_user_franchise = UserFranchisee::updateOrCreate([
-                                'id_user_franchisee_seed'   => $value['user_franchisee']['id']
-                            ], [
-                                'id_user_franchisee_seed'   => $value['user_franchisee']['id'],
-                                'phone'                     => $value['user_franchisee']['phone'],
-                                'email'                     => $value['user_franchisee']['email']
-                            ]);
-                            UserFranchiseeOultet::updateOrCreate([
-                                'id_outlet'             => $id_outlet->id_outlet,
-                                'id_user_franchisee'    => $id_user_franchise->id_user_franchisee
-                            ]);
-                        }
+                        SyncOutletSeed::dispatch($outlet['result']['data']);
                     }
                 }
             }
-            DB::commit();
-            return $outlet;
         }
+        return $outlet;
     }
 
     public function syncOutlet(reqOutlet $request)
