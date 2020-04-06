@@ -1,6 +1,11 @@
 <?php
 
 Route::group(['prefix' => 'api', 'middleware' => ['log_activities', 'user_agent']], function(){
+    Route::group(['middleware' => ['auth_client','log_activities', 'user_agent', 'scopes:apps'], 'namespace' => 'Modules\Users\Http\Controllers'], function()
+    {
+        Route::post('validation-phone', 'ApiUser@validationPhone');
+    });
+
 	Route::group(['middleware' => ['auth_client','log_activities', 'user_agent', 'scopes:apps'], 'prefix' => 'users', 'namespace' => 'Modules\Users\Http\Controllers'], function()
 	{
         Route::post('phone/check', 'ApiUser@check');
