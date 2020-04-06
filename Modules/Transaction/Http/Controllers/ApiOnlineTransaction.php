@@ -2015,13 +2015,12 @@ class ApiOnlineTransaction extends Controller
         if (isset($post['payment_type'])&&$post['payment_type'] == 'Balance') {
             if($balance>=$result['grandtotal']){
                 $result['used_point'] = $result['grandtotal'];
-                $result['grandtotal'] = 0;
             }else{
                 $result['used_point'] = $balance;
-                $result['grandtotal'] -= $balance;
             }
             $result['points'] -= $result['used_point'];
         }
+        $result['total_payment'] = $result['grandtotal'] - $result['used_point'];
         if ($request->id_subscription_user && !$request->promo_code && !$request->id_deals_user)
         {
 	        $result['subscription'] = app($this->subscription_use)->calculate($request->id_subscription_user, $result['grandtotal'], $result['subtotal'], $post['item'], $post['id_outlet'], $subs_error, $errorProduct, $subs_product, $subs_applied_product);
