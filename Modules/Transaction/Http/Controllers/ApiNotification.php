@@ -1023,27 +1023,11 @@ Detail: ".$link['short'],
 
         $trxBalance = TransactionMultiplePayment::where('id_transaction', $data['id_transaction'])->first();
 
-        $balanceNow = app($this->balance)->balanceNow($data['id_user']);
-
         if (empty($trxBalance)) {
             $insertDataLogCash = app($this->balance)->addLogBalance( $data['id_user'], -$data['transaction_grandtotal'], $data['id_transaction'], 'Online Transaction', $data['transaction_grandtotal']);
         } else {
             $paymentBalanceTrx = TransactionPaymentBalance::where('id_transaction', $data['id_transaction'])->first();
             $insertDataLogCash = app($this->balance)->addLogBalance( $data['id_user'], -$paymentBalanceTrx['balance_nominal'], $data['id_transaction'], 'Online Transaction', $data['transaction_grandtotal']);
-        }
-        $usere= User::where('id',$data['id_user'])->first();
-        $send = app($this->autocrm)->SendAutoCRM('Transaction Point Achievement', $usere->phone,
-            [
-                "outlet_name"       => $data['outlet']['outlet_name'],
-                "transaction_date"  => $data['transaction_date'],
-                'id_transaction'    => $data['id_transaction'],
-                'receipt_number'    => $data['transaction_receipt_number'],
-                'received_point'    => (string) $data['transaction_cashback_earned']
-            ]
-        );
-        if($send != true){
-            DB::rollback();
-            return false;
         }
 
         if ($insertDataLogCash == false) {
