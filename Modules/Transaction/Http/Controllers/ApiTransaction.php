@@ -1826,7 +1826,7 @@ class ApiTransaction extends Controller
 
         // get place from google maps . max 20
         $gmaps = MyHelper::get('https://maps.googleapis.com/maps/api/place/nearbysearch/json?'.http_build_query([
-            'key'=>'AIzaSyCsZlXzeGalI4j-yxpqYvX_H4mzBUsWgtI',
+            'key'=>env('GMAPS_PLACE_KEY'),
             'location'=>sprintf('%s,%s',$request->json('latitude'),$request->json('longitude')),
             'rankby'=>'distance'
         ]));
