@@ -2889,4 +2889,31 @@ class ApiUser extends Controller
             return MyHelper::checkGet($encUser);
         }
     }
+
+    public function validationPhone(Request $request){
+        $post = $request->json()->all();
+        if(isset($post['phone']) && !empty($post['phone'])){
+            $phone = $post['phone'];
+
+            $phone = preg_replace("/[^0-9]/", "", $phone);
+
+            $checkPhoneFormat = MyHelper::phoneCheckFormat($phone);
+
+            if(isset($checkPhoneFormat['status']) && $checkPhoneFormat['status'] == 'fail'){
+                return response()->json([
+                    'status' => 'fail',
+                    'messages' => [$checkPhoneFormat['messages']]
+                ]);
+            }elseif(isset($checkPhoneFormat['status']) && $checkPhoneFormat['status'] == 'success'){
+                return response()->json([
+                    'status' => 'success'
+                ]);
+            }
+        }else{
+            return response()->json([
+                'status' => 'fail',
+                'messages' => ['Data incompleted']
+            ]);
+        }
+    }
 }
