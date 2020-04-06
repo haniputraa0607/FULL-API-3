@@ -2141,6 +2141,27 @@ class MyHelper{
         }
     }
     /**
+     * Get max min latitude based on radius. Hanya perhitngan kasar,
+     * @param  Float  $lat    user latitude
+     * @param  Float  $lon    user longitude
+     * @param  Float  $radius    radius in meter
+     * @return Array    ['latitude'=>['max'=>xxx,'min'=>xxx],'longitude'=>['max'=>xxx,'min'=>xxx]]
+     */
+    public static function getRadius($lat, $lon, $radius) {
+        $distance = (float) $radius / 111319.5;
+        $result = [
+        	'latitude' => [
+        		'min' => $lat - $distance,
+        		'max' => $lat + $distance
+        	],
+        	'longitude' => [
+        		'min' => $lon - $distance,
+        		'max' => $lon + $distance
+        	],
+        ];
+        return $result;
+    }
+    /**
      * Group some array based on a column
      * @param  array        $array        data
      * @param  string       $col          column as key for grouping
