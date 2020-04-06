@@ -1893,43 +1893,30 @@ class ApiTransaction extends Controller
         $post = $request->json()->all();
 
         $data['id_user'] = $request->user()->id;
-
-        if (empty($data['id_user'])) {
-            return response()->json([
-                'status'    => 'fail',
-                'messages'  => ['User not found']
-            ]);
-        }
-
-        if (($post['primary']??false) == 1) {
-            $data['primary'] = '1';
-            $select = UserAddress::where('id_user', $data['id_user'])->where('primary', '1')->first();
-            if (!empty($select)) {
-                $select->primary = '0';
-                $select->save();
-
-                if (!$select) {
-                    return response()->json([
-                        'status' => 'fail',
-                        'messages'  => ['Failed']
-                    ]);
-                }
-            }
-        } else {
-            $data['primary'] = '0';
-        }
-
-        $data['name']        = isset($post['name']) ? $post['name'] : null;
+        $data['name']        = isset($post['name']) ? $post['name'] : $post['short_address'];
         $data['short_address'] = $post['short_address'] ?? null;
         $data['address']     = isset($post['address']) ? $post['address'] : null;
         $data['description'] = isset($post['description']) ? $post['description'] : null;
-        $data['latitude'] = $post['latitude']??null;
-        $data['longitude'] = $post['longitude']??null;
-        $data['type'] = $post['type']??null;
-        $data['favorite'] = $post['favorite']??0;
+        $data['latitude'] = number_format($post['latitude'],8);
+        $data['longitude'] = number_format($post['longitude'],8);
 
-        $insert = UserAddress::create($data);
-        return response()->json(MyHelper::checkCreate($insert));
+        $type = ($post['type']??null)?ucfirst($post['type']):null;
+        if($type){
+            UserAddress::where('type',$type)->update(['type'=>null]);
+        }
+        $found = UserAddress::where($data)->first();
+        if($found){
+            $found->update([
+                'type' => $type?:$found->type,
+                'favorite' => 1,
+            ]);
+        }else{
+            $data['type'] = $type;
+            $data['favorite'] = 1;
+            $found = UserAddress::create($data);
+        }
+
+        return response()->json(MyHelper::checkCreate($found));
     }
 
     public function updateAddress (UpdateAddress $request) {
@@ -1949,8 +1936,12 @@ class ApiTransaction extends Controller
         $data['description'] = isset($post['description']) ? $post['description'] : null;
         $data['latitude'] = $post['latitude']??null;
         $data['longitude'] = $post['longitude']??null;
-        $data['type'] = $post['type']??null;
-        $data['favorite'] = $post['favorite']??0;
+        $type = ($post['type']??null)?ucfirst($post['type']):null;
+        if($type){
+            UserAddress::where('type',$type)->update(['type'=>null]);
+        }
+        $data['type'] = $type;
+        $data['favorite'] = 1;
 
         $update = UserAddress::where('id_user_address', $post['id_user_address'])->update($data);
         return response()->json(MyHelper::checkUpdate($update));
