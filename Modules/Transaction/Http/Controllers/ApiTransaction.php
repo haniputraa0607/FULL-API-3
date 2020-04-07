@@ -1839,10 +1839,9 @@ class ApiTransaction extends Controller
 
         foreach ($gmaps as &$gmap){
             $gmap = [
-                'id_user_address' => null,
+                'id_user_address' => 0,
                 'short_address' => $gmap['name'],
                 'address' => $gmap['vicinity'],
-                'type' => null,
                 'latitude' => $gmap['geometry']['location']['lat'],
                 'longitude' => $gmap['geometry']['location']['lng'],
                 'description' => ''
@@ -1850,7 +1849,7 @@ class ApiTransaction extends Controller
         }
 
         $maxmin = MyHelper::getRadius($latitude,$longitude,$distance);
-        $user_address = UserAddress::select('id_user_address','short_address','address','type','latitude','longitude','description')->where('id_user',$id)
+        $user_address = UserAddress::select('id_user_address','short_address','address','latitude','longitude','description')->where('id_user',$id)
             ->whereBetween('latitude',[$maxmin['latitude']['min'],$maxmin['latitude']['max']])
             ->whereBetween('longitude',[$maxmin['longitude']['min'],$maxmin['longitude']['max']])
             ->take(10)
