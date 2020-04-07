@@ -169,8 +169,8 @@ class PromoCampaignTools{
 
 					foreach ($value['modifiers'] as $key2 => $value2) 
 					{
-						$mod_price_qty_per_item[$value['id_product']][$key]['price'] += $mod_price[$value2]??0;
-						$mod_price_per_item[$value['id_product']][$key] += $mod_price[$value2]??0;
+						$mod_price_qty_per_item[$value['id_product']][$key]['price'] += ($mod_price[$value2['id_product_modifier']??$value2]??0);
+						$mod_price_per_item[$value['id_product']][$key] += ($mod_price[$value2['id_product_modifier']??$value2]??0);
 					}
 
 				}
@@ -233,7 +233,7 @@ class PromoCampaignTools{
 					$modifier = 0;
 					foreach ($trx['modifiers'] as $key2 => $value2) 
 					{
-						$modifier += $mod_price[$value2]??0;
+						$modifier += $mod_price[$value2['id_product_modifier']??$value2]??0;
 					}
 
 					// is all product get promo
@@ -378,7 +378,7 @@ class PromoCampaignTools{
 					$modifier = 0;
 					foreach ($trx['modifiers'] as $key2 => $value2) 
 					{
-						$modifier += $mod_price[$value2]??0;
+						$modifier += $mod_price[$value2['id_product_modifier']??$value2]??0;
 					}
 
 					if($trx['id_product']==$promo_product->id_product){
