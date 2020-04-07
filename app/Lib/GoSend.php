@@ -2,12 +2,17 @@
 
 namespace App\Lib;
 
+use App\Http\Models\Setting;
+
 class GoSend {
 
 	public function __construct() {
 		date_default_timezone_set('Asia/Jakarta');
 	}
 	
+	public static function getShipmentMethod() {
+		return Setting::select('value')->where('key','gosend_use_sameday')->pluck('value')->first()?'Instant':'SameDay';
+	}
 	
 	static function booking($origin, $destination, $item, $storeOrderId="", $insurance=null) {
 		if(env('GO_SEND_URL') == '' || env('GO_SEND_CLIENT_ID') == '' || env('GO_SEND_PASS_KEY') == ''){
@@ -27,7 +32,7 @@ class GoSend {
 		$post['paymentType']	= 3;
 		$post['deviceToken']	= "";
 		$post['collection_location'] = "pickup";
-		$post['shipment_method'] = "Instant";
+		$post['shipment_method'] = self::getShipmentMethod();
 
 		$post['routes'][0]['originName'] = ""; 
 		$post['routes'][0]['originNote'] = $origin['note'];
@@ -84,7 +89,7 @@ class GoSend {
 
 		$url = env('GO_SEND_URL').'/gokilat/v10/calculate/price?origin='.$origin['latitude'].','.$origin['longitude'].'8&destination='.$destination['latitude'].','.$destination['longitude'].'&paymentType=3';
 		$token = MyHelper::get($url, null, $header);
-		
+
         return $token;
 	}
 

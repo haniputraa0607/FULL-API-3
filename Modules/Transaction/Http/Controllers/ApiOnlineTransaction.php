@@ -608,8 +608,8 @@ class ApiOnlineTransaction extends Controller
                 ],
             ];
             $dataShipping = [
-                'name'        => $post['destination']['name'],
-                'phone'       => $user['destination']['phone'],
+                'name'        => $user['name'],
+                'phone'       => $user['phone'],
                 'address'     => $post['destination']['address']
             ];
         }
@@ -631,12 +631,33 @@ class ApiOnlineTransaction extends Controller
         $shippingGoSend = null;
 
         if($post['type'] == 'GO-SEND'){
-            $type = 'Pickup Order';
-            $shippingGoSend = $post['shipping_go_send'];
-            //cek free delivery
-            if($post['is_free'] == 'yes'){
-                $isFree = '1';
+            if(!($outlet['outlet_latitude']&&$outlet['outlet_longitude']&&$outlet['outlet_phone']&&$outlet['outlet_address'])){
+                return [
+                    'status' => 'fail',
+                    'messages' => ['Tidak dapat melakukan pengiriman dari outlet ini']
+                ];
             }
+            $coor_origin = [
+                'latitude' => $outlet['outlet_latitude'],
+                'longitude' => $outlet['outlet_longitude']
+            ];
+            $coor_destination = [
+                'latitude' => $outlet['outlet_latitude'],
+                'longitude' => $outlet['outlet_longitude']
+            ];
+            $type = 'Pickup Order';
+            $shippingGoSend = GoSend::getPrice($coor_origin,$coor_destination)[GoSend::getShipmentMethod()]['price']['total_price']??null;
+            if($shippingGoSend === null){
+                return [
+                    'status' => 'fail',
+                    'messagse' => ['Gagal menghitung ongkos kirim']
+                ];
+            }
+            //cek free delivery
+            // if($post['is_free'] == 'yes'){
+            //     $isFree = '1';
+            // }
+            $isFree = 0;
         }
 
         DB::beginTransaction();
@@ -1225,35 +1246,33 @@ class ApiOnlineTransaction extends Controller
                 Transaction::where('id_transaction',$dataPickup['id_transaction'])->update(['show_rate_popup'=>1]);
             }
             //insert pickup go-send
-            if($post['type'] == 'GO-SEND'){
-                $dataGoSend['id_transaction_pickup'] = $insertPickup['id_transaction_pickup'];
-                $dataGoSend['origin_name']           = $outlet['outlet_name'];
-                $dataGoSend['origin_phone']          = $outlet['outlet_phone'];
-                $dataGoSend['origin_address']        = $outlet['outlet_address'];
-                $dataGoSend['origin_latitude']       = $outlet['outlet_latitude'];
-                $dataGoSend['origin_longitude']      = $outlet['outlet_longitude'];
-                $dataGoSend['origin_note']           = '';
-                $dataGoSend['destination_name']      = $post['destination']['name'];
-                $dataGoSend['destination_phone']     = $post['destination']['phone'];
-                $dataGoSend['destination_address']   = $post['destination']['address'];
-                $dataGoSend['destination_latitude']  = $post['destination']['latitude'];
-                $dataGoSend['destination_longitude'] = $post['destination']['longitude'];
+            $dataGoSend['id_transaction_pickup'] = $insertPickup['id_transaction_pickup'];
+            $dataGoSend['origin_name']           = $outlet['outlet_name'];
+            $dataGoSend['origin_phone']          = $outlet['outlet_phone'];
+            $dataGoSend['origin_address']        = $outlet['outlet_address'];
+            $dataGoSend['origin_latitude']       = $outlet['outlet_latitude'];
+            $dataGoSend['origin_longitude']      = $outlet['outlet_longitude'];
+            $dataGoSend['origin_note']           = '';
+            $dataGoSend['destination_name']      = $user['name'];
+            $dataGoSend['destination_phone']     = $user['phone'];
+            $dataGoSend['destination_address']   = $post['destination']['address'];
+            $dataGoSend['destination_latitude']  = $post['destination']['latitude'];
+            $dataGoSend['destination_longitude'] = $post['destination']['longitude'];
 
-                if(isset($post['destination_note'])){
-                    $dataGoSend['destination_note'] = $post['destination']['note'];
-                }
-
-                $gosend = TransactionPickupGoSend::create($dataGoSend);
-                if (!$gosend) {
-                    DB::rollback();
-                    return response()->json([
-                        'status'    => 'fail',
-                        'messages'  => ['Insert Transaction GO-SEND Failed']
-                    ]);
-                }
-
-                $id_pickup_go_send = $gosend->id_transaction_pickup_go_send;
+            if(isset($post['destination_note'])){
+                $dataGoSend['destination_note'] = $post['destination']['description'];
             }
+
+            $gosend = TransactionPickupGoSend::create($dataGoSend);
+            if (!$gosend) {
+                DB::rollback();
+                return response()->json([
+                    'status'    => 'fail',
+                    'messages'  => ['Insert Transaction GO-SEND Failed']
+                ]);
+            }
+
+            $id_pickup_go_send = $gosend->id_transaction_pickup_go_send;
         } elseif ($post['type'] == 'Advance Order') {
             $order_id = MyHelper::createrandom(4, 'Besar Angka');
             //cek unique order id today
@@ -1289,37 +1308,6 @@ class ApiOnlineTransaction extends Controller
                     'messages'  => ['Insert Advance Order Failed']
                 ]);
             }
-        }
-
-        //insert pickup go-send
-        if($post['type'] == 'GO-SEND'){
-            $dataGoSend['id_transaction_pickup'] = $insertPickup['id_transaction_pickup'];
-            $dataGoSend['origin_name']           = $outlet['outlet_name'];
-            $dataGoSend['origin_phone']          = $outlet['outlet_phone'];
-            $dataGoSend['origin_address']        = $outlet['outlet_address'];
-            $dataGoSend['origin_latitude']       = $outlet['outlet_latitude'];
-            $dataGoSend['origin_longitude']      = $outlet['outlet_longitude'];
-            $dataGoSend['origin_note']           = '';
-            $dataGoSend['destination_name']      = $post['destination']['name'];
-            $dataGoSend['destination_phone']     = $post['destination']['phone'];
-            $dataGoSend['destination_address']   = $post['destination']['address'];
-            $dataGoSend['destination_latitude']  = $post['destination']['latitude'];
-            $dataGoSend['destination_longitude'] = $post['destination']['longitude'];
-
-            if(isset($post['destination_note'])){
-                $dataGoSend['destination_note'] = $post['destination']['note'];
-            }
-
-            $gosend = TransactionPickupGoSend::create($dataGoSend);
-            if (!$gosend) {
-                DB::rollback();
-                return response()->json([
-                    'status'    => 'fail',
-                    'messages'  => ['Insert Transaction GO-SEND Failed']
-                ]);
-            }
-
-            $id_pickup_go_send = $gosend->id_transaction_pickup_go_send;
         }
 
 		$fraudTrxDay = FraudSetting::where('parameter', 'LIKE', '%transactions in 1 day%')->where('fraud_settings_status','Active')->first();
