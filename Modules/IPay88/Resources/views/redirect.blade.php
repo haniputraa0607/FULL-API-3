@@ -75,9 +75,9 @@
 	<script type="text/javascript">
 		function submitForm(){
 			document.getElementById('link-to-apps').click();
-			document.getElementById('text-muted').classList.add('clicked');
 		}
 		document.addEventListener("click", submitForm);
+		setTimeout(function(){ document.getElementById('text-muted').classList.add('clicked'); }, 3000);
 		window.onload = submitForm;
 	</script>
 </body>
