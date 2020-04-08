@@ -41,7 +41,6 @@ class IPay88Controller extends Controller
             case 'trx':
                 $trx_ipay88 = TransactionPaymentIpay88::join('transactions','transactions.id_transaction','=','transaction_payment_ipay88s.id_transaction')
                     ->where('transaction_receipt_number',$post['RefNo'])
-                    ->where('transaction_payment_status','<>','Completed')
                     ->first();
                 break;
 
