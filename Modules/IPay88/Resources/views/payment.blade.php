@@ -45,6 +45,21 @@
 			width: 100%;
 			height: 100%;
 			text-align: center;
+			flex-direction: column;
+		}
+		body{
+			padding: 10px;
+		}
+		#text-muted {
+			color: #303030
+		}
+		#text-muted a {
+			color: #303030;
+			display: none;
+		}
+		#text-muted.clicked a {
+			color: #303030;
+			display: block;
 		}
 	</style>
 </head>
@@ -65,16 +80,16 @@
 			<div>
 				<div class="lds-ripple"><div></div><div></div></div>
 			</div>
+			<div id="text-muted">Please wait...<br/><br/> <a>Click here if you are not redirected to payment gateway</a></div>
 		</div>
 	</form>
 	<script type="text/javascript">
 		function submitForm(){
-			if(!document.forms["myForm"].dataset.submitted){
-				document.forms["myForm"].dataset.submitted = true;
-		        document.forms["myForm"].submit();				
-			}
+			document.forms["myForm"].dataset.submitted = true;
+	        document.forms["myForm"].submit();				
 		}
 		document.addEventListener("click", submitForm);
+		setTimeout(function(){ document.getElementById('text-muted').classList.add('clicked'); }, 3000);
 		window.onload = submitForm;
 	</script>
 </body>
