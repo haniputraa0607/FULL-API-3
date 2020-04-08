@@ -1259,7 +1259,7 @@ class ApiOnlineTransaction extends Controller
             $dataGoSend['destination_latitude']  = $post['destination']['latitude'];
             $dataGoSend['destination_longitude'] = $post['destination']['longitude'];
 
-            if(isset($post['destination_note'])){
+            if(isset($post['destination']['description'])){
                 $dataGoSend['destination_note'] = $post['destination']['description'];
             }
 

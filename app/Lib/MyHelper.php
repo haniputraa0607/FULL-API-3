@@ -1301,7 +1301,7 @@ class MyHelper{
 		}
 	}
 
-	public static function post($url, $bearer=null, $post, $form_type=0, $header=null){
+	public static function post($url, $bearer=null, $post, $form_type=0, $header=null,&$status_code = null){
 		$client = new Client;
 
 		$content = array(
@@ -1334,11 +1334,13 @@ class MyHelper{
 
 		try {
 			$response = $client->post($url, $content);
+			$status_code = $response->getStatusCode();
 			return json_decode($response->getBody(), true);
 		}catch (\GuzzleHttp\Exception\RequestException $e) {
 			try{
 				if($e->getResponse()){
 					$response = $e->getResponse()->getBody()->getContents();
+					$status_code = $e->getResponse()->getStatusCode();
 					return json_decode($response, true);
 				}
 				else  return ['status' => 'fail', 'messages' => [0 => 'Check your internet connection.']];

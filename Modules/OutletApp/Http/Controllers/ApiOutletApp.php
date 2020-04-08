@@ -759,6 +759,16 @@ class ApiOutletApp extends Controller
                         'messages' => ['Failed Send notification to customer']
                     ]);
             }
+            DB::beginTransaction();
+            $trx = $order->toArray();
+            $trx['detail'] = TransactionPickup::with('transaction_pickup_go_send')->where('id_transaction', $order->id_transaction)->first();
+            if ($trx['detail']['pickup_by'] == 'GO-SEND') {
+                $booking = (new \Modules\Transaction\Http\Controllers\ApiNotification())->bookGoSend($trx);
+                if (isset($booking['status'])) {
+                    DB::rollback();
+                    return response()->json($booking);
+                }
+            }
 
             $newTrx = Transaction::with('user.memberships', 'outlet', 'productTransaction', 'transaction_vouchers')->where('id_transaction', $order->id_transaction)->first();
             $checkType = TransactionMultiplePayment::where('id_transaction', $order->id_transaction)->get()->toArray();
@@ -783,7 +793,7 @@ class ApiOutletApp extends Controller
 	                $savePoint = app($this->getNotif)->savePoint($newTrx);
 	                // return $savePoint;
 	                if (!$savePoint) {
-	                    // DB::rollback();
+	                    DB::rollback();
 	                    return response()->json([
 	                        'status'   => 'fail',
 	                        'messages' => ['Transaction failed']

@@ -121,13 +121,13 @@ class ApiNotification extends Controller {
                     if($newTrx['detail']['pickup_type'] == 'right now'){
                         $updatePickup = TransactionPickup::where('id_transaction', $newTrx['id_transaction'])->update(['pickup_at' => date('Y-m-d H:i:s')]);
                     }
-
-                    if ($newTrx['detail']['pickup_by'] == 'GO-SEND') {
-                        $booking = $this->bookGoSend($newTrx);
-                        if (isset($booking['status'])) {
-                            return response()->json($booking);
-                        }
-                    }
+                    // book gosend after outlet receive order only
+                    // if ($newTrx['detail']['pickup_by'] == 'GO-SEND') {
+                    //     $booking = $this->bookGoSend($newTrx);
+                    //     if (isset($booking['status'])) {
+                    //         return response()->json($booking);
+                    //     }
+                    // }
                 } else {
                     DB::rollback();
                     return response()->json([
