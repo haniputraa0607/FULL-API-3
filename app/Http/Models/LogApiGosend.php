@@ -13,8 +13,10 @@ class LogApiGosend extends Model
     	'id_reference',
     	'request_url',
     	'request_method',
+        'request_header',
         'request_parameter',
     	'response_body',
+        'response_header',
     	'response_code'
     ];
 }

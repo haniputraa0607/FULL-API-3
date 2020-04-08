@@ -1113,7 +1113,7 @@ Detail: ".$link['short'],
         if($packageDetail){
             $packageDetail = str_replace('%order_id%', $trx['detail']['order_id'], $packageDetail['value']);
         }else{
-            $packageDetail = "";
+            $packageDetail = "Order ".$trx['detail']['order_id'];
         }
 
         $booking = GoSend::booking($origin, $destination, $packageDetail, $trx['transaction_receipt_number']);
@@ -1122,7 +1122,7 @@ Detail: ".$link['short'],
         }
 
         if(!isset($booking['id'])){
-            return ['status' => 'fail', 'messages' => ['failed booking GO-SEND']];
+            return ['status' => 'fail', 'messages' => $booking['messages']??['failed booking GO-SEND']];
         }
         //update id from go-send
         $updateGoSend = TransactionPickupGoSend::find($trx['detail']['transaction_pickup_go_send']['id_transaction_pickup_go_send']);

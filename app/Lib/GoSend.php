@@ -23,7 +23,7 @@ class GoSend {
 			];
 		}
 		
-		$url = env('GO_SEND_URL').'/gokilat/v10/booking';
+		$url = env('GO_SEND_URL').'gokilat/v10/booking';
 
 		$header = [
 			'Client-ID' => env('GO_SEND_CLIENT_ID'),
@@ -53,7 +53,7 @@ class GoSend {
 
 		$post['routes'][0]['storeOrderId'] = $storeOrderId;
 		$post['routes'][0]['insuranceDetails'] = $insurance;
-        $token = MyHelper::post($url, null, $post, 0, $header,$status_code);
+        $token = MyHelper::post($url, null, $post, 0, $header,$status_code,$response_header);
         try {
         	LogApiGosend::create([
         		'type' => 'booking',
@@ -61,13 +61,17 @@ class GoSend {
 		    	'request_url' => $url,
 		    	'request_method' => 'POST',
 		        'request_parameter' => json_encode($post),
+		        'request_header' => json_encode($header),
 		    	'response_body' => json_encode($token),
+		        'response_header' => json_encode($response_header),
 		    	'response_code' => $status_code
         	]);
         } catch (\Exception $e) {
         	\Illuminate\Support\Facades\Log::error('Failed write log to LogApiGosend: '.$e->getMessage());
         }
-
+        if(!($token['id']??false)){
+        	$token['messages'] = array_merge(($response_header['Error-Message']??[]),['Failed booking GO-SEND']);
+        }
         return $token;
 	}
 	
@@ -84,9 +88,23 @@ class GoSend {
 			'Pass-Key'  => env('GO_SEND_PASS_KEY')
 		];
 
-		$url = env('GO_SEND_URL').'/gokilat/v10/booking/storeOrderId/'.$storeOrderId;
-		$token = MyHelper::get($url, null, $header);
-
+		$url = env('GO_SEND_URL').'gokilat/v10/booking/storeOrderId/'.$storeOrderId;
+		$token = MyHelper::get($url, null, $header,$status_code,$response_header);
+        try {
+        	LogApiGosend::create([
+        		'type' => 'get_status',
+		    	'id_reference' => $storeOrderId,
+		    	'request_url' => $url,
+		    	'request_method' => 'GET',
+		    	'request_header' => json_encode($header),
+		        'request_parameter' => null,
+		    	'response_header' => json_encode($response_header),
+		    	'response_body' => json_encode($token),
+		    	'response_code' => $status_code
+        	]);
+        } catch (\Exception $e) {
+        	\Illuminate\Support\Facades\Log::error('Failed write log to LogApiGosend: '.$e->getMessage());
+        }
         return $token;
 	}
 
@@ -103,8 +121,24 @@ class GoSend {
 			'Pass-Key'  => env('GO_SEND_PASS_KEY')
 		];
 
-		$url = env('GO_SEND_URL').'/gokilat/v10/calculate/price?origin='.$origin['latitude'].','.$origin['longitude'].'8&destination='.$destination['latitude'].','.$destination['longitude'].'&paymentType=3';
-		$token = MyHelper::get($url, null, $header);
+		$url = env('GO_SEND_URL').'gokilat/v10/calculate/price?origin='.$origin['latitude'].','.$origin['longitude'].'8&destination='.$destination['latitude'].','.$destination['longitude'].'&paymentType=3';
+		$token = MyHelper::get($url, null, $header,$status_code,$response_header);
+
+        try {
+        	LogApiGosend::create([
+        		'type' => 'get_status',
+		    	'id_reference' => null,
+		    	'request_url' => $url,
+		    	'request_method' => 'GET',
+		    	'request_header' => json_encode($header),
+		        'request_parameter' => null,
+		    	'response_header' => json_encode($response_header),
+		    	'response_body' => json_encode($token),
+		    	'response_code' => $status_code
+        	]);
+        } catch (\Exception $e) {
+        	\Illuminate\Support\Facades\Log::error('Failed write log to LogApiGosend: '.$e->getMessage());
+        }
 
         return $token;
 	}

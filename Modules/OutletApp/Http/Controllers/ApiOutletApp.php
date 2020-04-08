@@ -740,26 +740,12 @@ class ApiOutletApp extends Controller
             ]);
         }
 
-        // DB::beginTransaction();
+        DB::beginTransaction();
         $pickup = TransactionPickup::where('id_transaction', $order->id_transaction)->update(['ready_at' => date('Y-m-d H:i:s')]);
         
         if($pickup){
             //send notif to customer
             $user = User::find($order->id_user);
-            $send = app($this->autocrm)->SendAutoCRM('Order Ready', $user['phone'], [
-                "outlet_name" => $outlet['outlet_name'],
-                'id_transaction' => $order->id_transaction,
-                "id_reference" => $order->transaction_receipt_number.','.$order->id_outlet,
-                "transaction_date" => $order->transaction_date
-            ]);
-            if($send != true){
-                // DB::rollback();
-                return response()->json([
-                        'status' => 'fail',
-                        'messages' => ['Failed Send notification to customer']
-                    ]);
-            }
-            DB::beginTransaction();
             $trx = $order->toArray();
             $trx['detail'] = TransactionPickup::with('transaction_pickup_go_send')->where('id_transaction', $order->id_transaction)->first();
             if ($trx['detail']['pickup_by'] == 'GO-SEND') {
@@ -804,7 +790,20 @@ class ApiOutletApp extends Controller
             }
 
             $checkMembership = app($this->membership)->calculateMembership($user['phone']);
-
+            DB::commit();
+            $send = app($this->autocrm)->SendAutoCRM('Order Ready', $user['phone'], [
+                "outlet_name" => $outlet['outlet_name'],
+                'id_transaction' => $order->id_transaction,
+                "id_reference" => $order->transaction_receipt_number.','.$order->id_outlet,
+                "transaction_date" => $order->transaction_date
+            ]);
+            if($send != true){
+                // DB::rollback();
+                return response()->json([
+                        'status' => 'fail',
+                        'messages' => ['Failed Send notification to customer']
+                    ]);
+            }
         }
         DB::commit();
         // return  $pickup = TransactionPickup::where('id_transaction', $order->id_transaction)->first();

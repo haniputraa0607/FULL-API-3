@@ -1261,7 +1261,7 @@ class MyHelper{
 			}
 	}
 
-	public static function get($url, $bearer=null, $header=null){
+	public static function get($url, $bearer=null, $header=null,&$status_code=null,&$response_header=null){
 		$client = new Client;
 
 		$content = array(
@@ -1285,12 +1285,16 @@ class MyHelper{
 
 		try {
 			$response =  $client->request('GET', $url, $content);
+			$status_code = $response->getStatusCode();
+			$response_header = $response->getHeaders();
 			return json_decode($response->getBody(), true);
 		}
 		catch (\GuzzleHttp\Exception\RequestException $e) {
 			try{
 				if($e->getResponse()){
 						$response = $e->getResponse()->getBody()->getContents();
+						$response_header = $e->getResponse()->getHeaders();
+						$status_code = $response->getStatusCode()->getStatusCode();
 						return json_decode($response, true);
 				}
 				else return ['status' => 'fail', 'messages' => [0 => 'Check your internet connection.']];
@@ -1301,7 +1305,7 @@ class MyHelper{
 		}
 	}
 
-	public static function post($url, $bearer=null, $post, $form_type=0, $header=null,&$status_code = null){
+	public static function post($url, $bearer=null, $post, $form_type=0, $header=null,&$status_code = null,&$response_header = null){
 		$client = new Client;
 
 		$content = array(
@@ -1335,12 +1339,14 @@ class MyHelper{
 		try {
 			$response = $client->post($url, $content);
 			$status_code = $response->getStatusCode();
+			$response_header = $response->getHeaders();
 			return json_decode($response->getBody(), true);
 		}catch (\GuzzleHttp\Exception\RequestException $e) {
 			try{
 				if($e->getResponse()){
 					$response = $e->getResponse()->getBody()->getContents();
 					$status_code = $e->getResponse()->getStatusCode();
+					$response_header = $e->getResponse()->getHeaders();
 					return json_decode($response, true);
 				}
 				else  return ['status' => 'fail', 'messages' => [0 => 'Check your internet connection.']];

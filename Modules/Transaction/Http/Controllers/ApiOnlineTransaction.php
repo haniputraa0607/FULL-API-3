@@ -628,7 +628,7 @@ class ApiOnlineTransaction extends Controller
 
         $type = $post['type'];
         $isFree = '0';
-        $shippingGoSend = null;
+        $shippingGoSend = 0;
 
         if($post['type'] == 'GO-SEND'){
             if(!($outlet['outlet_latitude']&&$outlet['outlet_longitude']&&$outlet['outlet_phone']&&$outlet['outlet_address'])){
@@ -638,19 +638,20 @@ class ApiOnlineTransaction extends Controller
                 ];
             }
             $coor_origin = [
-                'latitude' => $outlet['outlet_latitude'],
-                'longitude' => $outlet['outlet_longitude']
+                'latitude' => number_format($outlet['outlet_latitude'],8),
+                'longitude' => number_format($outlet['outlet_longitude'],8)
             ];
             $coor_destination = [
-                'latitude' => $outlet['outlet_latitude'],
-                'longitude' => $outlet['outlet_longitude']
+                'latitude' => number_format($post['destination']['latitude'],8),
+                'longitude' => number_format($post['destination']['longitude'],8)
             ];
             $type = 'Pickup Order';
-            $shippingGoSend = GoSend::getPrice($coor_origin,$coor_destination)[GoSend::getShipmentMethod()]['price']['total_price']??null;
+            $shippingGoSendx = GoSend::getPrice($coor_origin,$coor_destination);
+            $shippingGoSend = $shippingGoSendx[GoSend::getShipmentMethod()]['price']['total_price']??null;
             if($shippingGoSend === null){
                 return [
                     'status' => 'fail',
-                    'messagse' => ['Gagal menghitung ongkos kirim']
+                    'messagse' => array_column($shippingGoSendx[GoSend::getShipmentMethod()]['errors']??[],'message')?:['Gagal menghitung ongkos kirim']
                 ];
             }
             //cek free delivery
@@ -677,7 +678,7 @@ class ApiOnlineTransaction extends Controller
             'transaction_service'         => $post['service'],
             'transaction_discount'        => $post['discount'],
             'transaction_tax'             => $post['tax'],
-            'transaction_grandtotal'      => $post['grandTotal'],
+            'transaction_grandtotal'      => $post['grandTotal'] + $shippingGoSend,
             'transaction_point_earned'    => $post['point'],
             'transaction_cashback_earned' => $post['cashback'],
             'trasaction_payment_type'     => $post['payment_type'],
@@ -1246,33 +1247,35 @@ class ApiOnlineTransaction extends Controller
                 Transaction::where('id_transaction',$dataPickup['id_transaction'])->update(['show_rate_popup'=>1]);
             }
             //insert pickup go-send
-            $dataGoSend['id_transaction_pickup'] = $insertPickup['id_transaction_pickup'];
-            $dataGoSend['origin_name']           = $outlet['outlet_name'];
-            $dataGoSend['origin_phone']          = $outlet['outlet_phone'];
-            $dataGoSend['origin_address']        = $outlet['outlet_address'];
-            $dataGoSend['origin_latitude']       = $outlet['outlet_latitude'];
-            $dataGoSend['origin_longitude']      = $outlet['outlet_longitude'];
-            $dataGoSend['origin_note']           = '';
-            $dataGoSend['destination_name']      = $user['name'];
-            $dataGoSend['destination_phone']     = $user['phone'];
-            $dataGoSend['destination_address']   = $post['destination']['address'];
-            $dataGoSend['destination_latitude']  = $post['destination']['latitude'];
-            $dataGoSend['destination_longitude'] = $post['destination']['longitude'];
+            if($post['type'] == 'GO-SEND'){
+                $dataGoSend['id_transaction_pickup'] = $insertPickup['id_transaction_pickup'];
+                $dataGoSend['origin_name']           = $outlet['outlet_name'];
+                $dataGoSend['origin_phone']          = $outlet['outlet_phone'];
+                $dataGoSend['origin_address']        = $outlet['outlet_address'];
+                $dataGoSend['origin_latitude']       = $outlet['outlet_latitude'];
+                $dataGoSend['origin_longitude']      = $outlet['outlet_longitude'];
+                $dataGoSend['origin_note']           = '';
+                $dataGoSend['destination_name']      = $user['name'];
+                $dataGoSend['destination_phone']     = $user['phone'];
+                $dataGoSend['destination_address']   = $post['destination']['address'];
+                $dataGoSend['destination_latitude']  = $post['destination']['latitude'];
+                $dataGoSend['destination_longitude'] = $post['destination']['longitude'];
 
-            if(isset($post['destination']['description'])){
-                $dataGoSend['destination_note'] = $post['destination']['description'];
+                if(isset($post['destination']['description'])){
+                    $dataGoSend['destination_note'] = $post['destination']['description'];
+                }
+
+                $gosend = TransactionPickupGoSend::create($dataGoSend);
+                if (!$gosend) {
+                    DB::rollback();
+                    return response()->json([
+                        'status'    => 'fail',
+                        'messages'  => ['Insert Transaction GO-SEND Failed']
+                    ]);
+                }
+
+                $id_pickup_go_send = $gosend->id_transaction_pickup_go_send;
             }
-
-            $gosend = TransactionPickupGoSend::create($dataGoSend);
-            if (!$gosend) {
-                DB::rollback();
-                return response()->json([
-                    'status'    => 'fail',
-                    'messages'  => ['Insert Transaction GO-SEND Failed']
-                ]);
-            }
-
-            $id_pickup_go_send = $gosend->id_transaction_pickup_go_send;
         } elseif ($post['type'] == 'Advance Order') {
             $order_id = MyHelper::createrandom(4, 'Besar Angka');
             //cek unique order id today
@@ -1669,6 +1672,39 @@ class ApiOnlineTransaction extends Controller
             $post['shipping'] = 0;
         }
 
+        $shippingGoSend = 0;
+
+        if(($post['type']??null) == 'GO-SEND'){
+            if(!($outlet['outlet_latitude']&&$outlet['outlet_longitude']&&$outlet['outlet_phone']&&$outlet['outlet_address'])){
+                return [
+                    'status' => 'fail',
+                    'messages' => ['Tidak dapat melakukan pengiriman dari outlet ini']
+                ];
+            }
+            $coor_origin = [
+                'latitude' => number_format($outlet['outlet_latitude'],8),
+                'longitude' => number_format($outlet['outlet_longitude'],8)
+            ];
+            $coor_destination = [
+                'latitude' => number_format($post['destination']['latitude'],8),
+                'longitude' => number_format($post['destination']['longitude'],8)
+            ];
+            $type = 'Pickup Order';
+            $shippingGoSendx = GoSend::getPrice($coor_origin,$coor_destination);
+            $shippingGoSend = $shippingGoSendx[GoSend::getShipmentMethod()]['price']['total_price']??null;
+            if($shippingGoSend === null){
+                return [
+                    'status' => 'fail',
+                    'messagse' => array_column($shippingGoSendx[GoSend::getShipmentMethod()]['errors']??[],'message')?:['Gagal menghitung ongkos kirim']
+                ];
+            }
+            //cek free delivery
+            // if($post['is_free'] == 'yes'){
+            //     $isFree = '1';
+            // }
+            $isFree = 0;
+        }
+
         if (!isset($post['subtotal'])) {
             $post['subtotal'] = 0;
         }
@@ -2003,11 +2039,11 @@ class ApiOnlineTransaction extends Controller
         $result['item'] = array_values($tree);
         $result['is_advance_order'] = $is_advance;
         $result['subtotal'] = $subtotal;
-        $result['shipping'] = $post['shipping'];
+        $result['shipping'] = $post['shipping']+$shippingGoSend;
         $result['discount'] = $post['discount'];
         $result['service'] = $post['service'];
         $result['tax'] = (int) $post['tax'];
-        $result['grandtotal'] = (int)$post['subtotal'] + (int)(-$post['discount']) + (int)$post['service'] + (int)$post['tax'] + (int)$post['shipping'];
+        $result['grandtotal'] = (int)$post['subtotal'] + (int)(-$post['discount']) + (int)$post['service'] + (int)$post['tax'] + (int)$post['shipping'] + $shippingGoSend;
         $result['subscription'] = 0;
         $result['used_point'] = 0;
         $balance = app($this->balance)->balanceNow($user->id);

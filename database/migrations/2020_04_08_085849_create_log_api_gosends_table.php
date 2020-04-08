@@ -19,8 +19,10 @@ class CreateLogApiGosendsTable extends Migration
             $table->string('id_reference')->nullable();
             $table->string('request_url')->nullable();
             $table->string('request_method')->nullable();
+            $table->text('request_header')->nullable();
             $table->text('request_parameter')->nullable();
             $table->string('response_code')->nullable();
+            $table->text('response_header')->nullable();
             $table->text('response_body')->nullable();
             $table->timestamps();
         });
