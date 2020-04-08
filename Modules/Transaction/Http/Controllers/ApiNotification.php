@@ -1126,9 +1126,11 @@ Detail: ".$link['short'],
         }
         //update id from go-send
         $updateGoSend = TransactionPickupGoSend::find($trx['detail']['transaction_pickup_go_send']['id_transaction_pickup_go_send']);
+        $status = GoSend::getStatus($trx['transaction_receipt_number']);
         if($updateGoSend){
             $updateGoSend->go_send_id = $booking['id'];
             $updateGoSend->go_send_order_no = $booking['orderNo'];
+            $updateGoSend->latest_status = $status['status']??null;
             $updateGoSend->save();
 
             if(!$updateGoSend){
