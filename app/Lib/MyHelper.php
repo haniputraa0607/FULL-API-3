@@ -1357,6 +1357,58 @@ class MyHelper{
 		}
 	}
 
+	public static function put($url, $bearer=null, $post, $form_type=0, $header=null,&$status_code = null,&$response_header = null){
+		$client = new Client;
+
+		$content = array(
+			'headers' => [
+				'Accept'        => 'application/json',
+				'Content-Type'  => 'application/json',
+			]
+		);
+
+		// if form_type = 0
+		if ($form_type == 0) {
+			$content['json'] = (array)$post;
+		}
+		else {
+			$content['form_params'] = $post;
+		}
+
+		// if null bearer
+		if (!is_null($bearer)) {
+			$content['headers']['Authorization'] = $bearer;
+		}
+
+		if(!is_null($header)){
+			if(is_array($header)){
+				foreach($header as $key => $dataHeader){
+					$content['headers'][$key] = $dataHeader;
+				}
+			}
+		}
+
+		try {
+			$response = $client->put($url, $content);
+			$status_code = $response->getStatusCode();
+			$response_header = $response->getHeaders();
+			return json_decode($response->getBody(), true);
+		}catch (\GuzzleHttp\Exception\RequestException $e) {
+			try{
+				if($e->getResponse()){
+					$response = $e->getResponse()->getBody()->getContents();
+					$status_code = $e->getResponse()->getStatusCode();
+					$response_header = $e->getResponse()->getHeaders();
+					return json_decode($response, true);
+				}
+				else  return ['status' => 'fail', 'messages' => [0 => 'Check your internet connection.']];
+			}
+			catch(Exception $e){
+				return ['status' => 'fail', 'messages' => [0 => 'Check your internet connection.']];
+			}
+		}
+	}
+
 	public static function postWithTimeout($url, $bearer=null, $post, $form_type=0, $header=null, $timeout = 65){
 		$client = new Client;
 

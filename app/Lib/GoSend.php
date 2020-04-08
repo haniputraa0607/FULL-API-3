@@ -108,6 +108,42 @@ class GoSend {
         return $token;
 	}
 
+	static function cancelOrder($orderNo){
+		if(env('GO_SEND_URL') == '' || env('GO_SEND_CLIENT_ID') == '' || env('GO_SEND_PASS_KEY') == ''){
+			return [
+				'status'=> 'fail',
+				'messages' => ['GO-SEND key has not been set']
+			];
+		}
+
+		$header = [
+			'Client-ID' => env('GO_SEND_CLIENT_ID'),
+			'Pass-Key'  => env('GO_SEND_PASS_KEY')
+		];
+
+		$url = env('GO_SEND_URL').'/gokilat/v10/booking/cancel';
+		$post = [
+			'orderNo' => $orderNo
+		];
+		$token = MyHelper::put($url, null,$post, 0, $header,$status_code,$response_header);
+        try {
+        	LogApiGosend::create([
+        		'type' => 'get_status',
+		    	'id_reference' => $storeOrderId,
+		    	'request_url' => $url,
+		    	'request_method' => 'PUT',
+		    	'request_header' => json_encode($header),
+		        'request_parameter' => json_encode($post),
+		    	'response_header' => json_encode($response_header),
+		    	'response_body' => json_encode($token),
+		    	'response_code' => $status_code
+        	]);
+        } catch (\Exception $e) {
+        	\Illuminate\Support\Facades\Log::error('Failed write log to LogApiGosend: '.$e->getMessage());
+        }
+        return $token;
+	}
+
 	static function getPrice($origin, $destination){
 		if(env('GO_SEND_URL') == '' || env('GO_SEND_CLIENT_ID') == '' || env('GO_SEND_PASS_KEY') == ''){
 			return [
