@@ -76,7 +76,7 @@ class ApiPromo extends Controller
     	if (!$user_promo) {
     		return response()->json(['status' => 'fail']);
     	}
-    	if ($user_promo->promo_type == 'deals') 
+    	if ($user_promo->promo_type == 'deals')
     	{
     		$promo = app($this->promo_campaign)->checkVoucher(null, null, 1);
     	}
@@ -96,7 +96,7 @@ class ApiPromo extends Controller
     	if (!$promo) {
     		return response()->json(['status' => 'fail']);
     	}
-    	
+
     	$promo = $promo->toArray();
 
     	$getProduct = app($this->promo_campaign)->getProduct($user_promo->promo_type,$promo['deal_voucher']['deals']??$promo['promo_campaign']??$promo['subscription_user']['subscription']);
@@ -120,10 +120,10 @@ class ApiPromo extends Controller
 		// change is used flag to 0
 		$update = DealsUser::where('id_user','=',$user->id)->where('is_used','=',1)->update(['is_used' => 0]);
 
-		if ($status == 'use') 
+		if ($status == 'use')
 		{
 
-			if ($source == 'deals') 
+			if ($source == 'deals')
 			{
 				// change specific deals user is used to 1
 				$update = DealsUser::where('id_deals_user','=',$id_promo)->update(['is_used' => 1]);
@@ -145,7 +145,7 @@ class ApiPromo extends Controller
 		$update = MyHelper::checkUpdate($update);
 		$update['webview_url'] = "";
 		$update['webview_url_v2'] = "";
-		if ($source == 'deals') 
+		if ($source == 'deals')
 		{
 			$update['webview_url'] = env('API_URL') ."api/webview/voucher/". $id_promo;
 			$update['webview_url_v2'] = env('API_URL') ."api/webview/voucher/v2/". $id_promo;
@@ -163,7 +163,7 @@ class ApiPromo extends Controller
     {
     	$post = $request->json()->all();
 
-    	if (!empty($post['id_deals_user'])) 
+    	if (!empty($post['id_deals_user']))
     	{
     		$source = 'deals';
     	}
@@ -192,10 +192,10 @@ class ApiPromo extends Controller
     	$getData = Configs::whereIn('config_name',['promo code get point','voucher offline get point','voucher online get point'])->get()->toArray();
 
     	foreach ($getData as $key => $value) {
-    		$config[$value['config_name']] = $value['is_active'];	
+    		$config[$value['config_name']] = $value['is_active'];
     	}
 
-    	return $config;
+    	return $getData;
     }
 
     public function getDataCashback(Request $request)
@@ -219,7 +219,7 @@ class ApiPromo extends Controller
     	}else{
     		db::rollback();
     	}
-    	
+
     	return response()->json(myHelper::checkUpdate($update));
     }
 }

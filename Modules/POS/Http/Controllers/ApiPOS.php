@@ -64,6 +64,10 @@ use Exception;
 
 use DB;
 use DateTime;
+use GuzzleHttp\Client;
+use Modules\Disburse\Entities\UserFranchisee;
+use Modules\Disburse\Entities\UserFranchiseeOultet;
+use Modules\POS\Jobs\SyncOutletSeed;
 
 class ApiPOS extends Controller
 {
@@ -142,7 +146,7 @@ class ApiPOS extends Controller
                 $balance = TransactionPaymentBalance::where('id_transaction', $check['id_transaction'])->get();
                 if ($balance) {
                     foreach ($balance as $payBalance) {
-                        $pay['payment_type'] = 'Kenangan Points';
+                        $pay['payment_type'] = 'Points';
                         $pay['payment_nominal'] = (int) $payBalance['balance_nominal'];
                         $transactions['payments'][] = $pay;
                     }
@@ -161,7 +165,7 @@ class ApiPOS extends Controller
                     if ($payMulti['type'] == 'Balance') {
                         $balance = TransactionPaymentBalance::find($payMulti['id_payment']);
                         if ($balance) {
-                            $pay['payment_type'] = 'Kenangan Points';
+                            $pay['payment_type'] = 'Points';
                             $pay['payment_nominal'] = (int) $balance['balance_nominal'];
                             $transactions['payments'][] = $pay;
                         }
@@ -415,6 +419,58 @@ class ApiPOS extends Controller
             return response()->json(['status' => 'fail', 'messages' => 'Input is incomplete']);
         }
 
+    }
+
+    function getAuthSeed() {
+        $accurateAuth = new Client([
+            'base_uri'  => env('POS_URL'),
+        ]);
+        $getToken = $accurateAuth->post('auth', [
+            'headers'   => [
+                'Content-Type'  => 'application/x-www-form-urlencoded',
+                'Accept'        => 'application/json',
+            ],
+            'body' => http_build_query([
+                'key'       => env('POS_KEY'),
+                'secret'    => env('POS_SECRET'),
+            ])
+        ]);
+        $accurateToken = json_decode($getToken->getBody(), true);
+        return $accurateToken;
+    }
+
+    function getPerPageOutlet($bearer, $url = null) {
+        $accurateAuth = new Client([
+            'base_uri'  => env('POS_URL'),
+        ]);
+        $getToken = $accurateAuth->get('outlet' . $url, [
+            'headers'   => [
+                'Content-Type'  => 'application/json',
+                'Authorization' => $bearer,
+            ]
+        ]);
+        $outlet = json_decode($getToken->getBody(), true);
+        return $outlet;
+    }
+
+    public function syncOutletSeed() {
+        $auth = $this->getAuthSeed();
+
+        if ($auth['success'] == true) {
+            $outlet = $this->getPerPageOutlet('Bearer ' . $auth['result']['access_token']);
+            if ($outlet['status'] == 'success') {
+                SyncOutletSeed::dispatch($outlet['result']['data']);
+                if (!is_null($outlet['result']['next_page_url'])) {
+                    for ($i = 2; $i <= $outlet['result']['last_page']; $i++) {
+                        $outlet = $this->getPerPageOutlet('Bearer ' . $auth['result']['access_token'], '?page='.$i);
+                        SyncOutletSeed::dispatch($outlet['result']['data']);
+                    }
+                }
+            }
+        }
+        return [
+            'stuatus'   => 'success'
+        ];
     }
 
     public function syncOutlet(reqOutlet $request)

@@ -85,6 +85,7 @@ class ApiOnlineTransaction extends Controller
         $this->setting_trx   = "Modules\Transaction\Http\Controllers\ApiSettingTransactionV2";
         $this->promo_campaign       = "Modules\PromoCampaign\Http\Controllers\ApiPromoCampaign";
         $this->subscription_use     = "Modules\Subscription\Http\Controllers\ApiSubscriptionUse";
+        $this->promo       = "Modules\PromoCampaign\Http\Controllers\ApiPromo";
     }
 
     public function newTransaction(NewTransaction $request) {
@@ -264,7 +265,8 @@ class ApiOnlineTransaction extends Controller
         $use_referral = false;
         $discount_promo = [];
         $promo_discount = 0;
-        if($request->json('promo_code')){
+        $promo_source = null;
+        if($request->json('promo_code') && !$request->json('id_deals_user')){
             $code=PromoCampaignPromoCode::where('promo_code',$request->promo_code)
                 ->join('promo_campaigns', 'promo_campaigns.id_promo_campaign', '=', 'promo_campaign_promo_codes.id_promo_campaign')
                 ->where( function($q){
@@ -276,7 +278,7 @@ class ApiOnlineTransaction extends Controller
             if ($code)
             {
                 $post['id_promo_campaign_promo_code'] = $code->id_promo_campaign_promo_code;
-                if($code->promo_type = "Referral"){
+                if($code->promo_type == "Referral"){
                     $promo_code_ref = $request->json('promo_code');
                     $use_referral = true;
                 }
@@ -292,6 +294,8 @@ class ApiOnlineTransaction extends Controller
                         'messages'=>['Promo code not valid']
                     ];
                 }
+
+                $promo_source = 'promo_code';
                 $promo_discount=$discount_promo['discount'];
             }
             else
@@ -302,7 +306,7 @@ class ApiOnlineTransaction extends Controller
                 ];
             }
         }
-        elseif($request->json('id_deals_user'))
+        elseif($request->json('id_deals_user') && !$request->json('promo_code'))
         {
         	$deals = app($this->promo_campaign)->checkVoucher($request->id_deals_user, 1);
 
@@ -317,7 +321,8 @@ class ApiOnlineTransaction extends Controller
                         'messages'=>['Voucher is not valid']
                     ];
 	            }
-	            
+
+	            $promo_source = 'voucher_online';
 	            $promo_discount=$discount_promo['discount'];
 	        }
 	        else
@@ -327,6 +332,13 @@ class ApiOnlineTransaction extends Controller
                     'messages'=>['Voucher is not valid']
                 ];
 	        }
+        }
+        elseif($request->json('id_deals_user') && $request->json('promo_code'))
+        {
+        	return [
+                'status'=>'fail',
+                'messages'=>['Promo is not valid']
+            ];
         }
 
         $error_msg=[];
@@ -515,6 +527,14 @@ class ApiOnlineTransaction extends Controller
         if (isset($post['payment_type']) && $post['payment_type'] == 'Balance') {
             $post['cashback'] = 0;
             $post['point']    = 0;
+        }
+
+        if ($request->json('promo_code') || $request->json('id_deals_user')) {
+        	$check = $this->checkPromoGetPoint($promo_source);
+        	if ( $check == 0 ) {
+        		$post['cashback'] = 0;
+            	$post['point']    = 0;
+        	}
         }
 
         $detailPayment = [
@@ -710,7 +730,7 @@ class ApiOnlineTransaction extends Controller
             }
         }
 
-        if ( $request->json('id_subscription_user') ) 
+        if ( $request->json('id_subscription_user') )
         {
         	$subscription_total = app($this->subscription_use)->calculate($request->id_subscription_user, $insertTransaction['transaction_grandtotal'], $insertTransaction['transaction_subtotal'], $post['item'], $post['id_outlet'], $subs_error, $errorProduct, $subs_product, $subs_applied_product);
 
@@ -726,7 +746,7 @@ class ApiOnlineTransaction extends Controller
 	        $insert_subs_data['id_transaction'] = $insertTransaction['id_transaction'];
 	        $insert_subs_data['id_subscription_user_voucher'] = $data_subs->id_subscription_user_voucher;
 	        $insert_subs_data['subscription_nominal'] = $subscription_total;
-	        
+
 	        $insert_subs_trx = TransactionPaymentSubscription::create($insert_subs_data);
 	        $update_subs_voucher = SubscriptionUserVoucher::where('id_subscription_user_voucher','=',$data_subs->id_subscription_user_voucher)
 	        						->update([
@@ -764,7 +784,7 @@ class ApiOnlineTransaction extends Controller
         foreach (($discount_promo['item']??$post['item']) as $keyProduct => $valueProduct) {
 
             $this_discount=$valueProduct['discount']??0;
-            
+
             $checkProduct = Product::where('id_product', $valueProduct['id_product'])->first();
             if (empty($checkProduct)) {
                 DB::rollback();
@@ -1326,75 +1346,6 @@ class ApiOnlineTransaction extends Controller
             if((($fraudTrxDay && $countTrxDay <= $fraudTrxDay['parameter_detail']) && ($fraudTrxWeek && $countTrxWeek <= $fraudTrxWeek['parameter_detail']))
                 || (!$fraudTrxDay && !$fraudTrxWeek)){
 
-                if ($insertTransaction['transaction_point_earned'] != 0) {
-                    $settingPoint = Setting::where('key', 'point_conversion_value')->first();
-
-                    //check membership
-                    if (!empty($user['memberships'][0]['membership_name'])) {
-                        $level = $user['memberships'][0]['membership_name'];
-                        $percentageP = $user['memberships'][0]['benefit_point_multiplier'] / 100;
-                        $percentageB = $user['memberships'][0]['benefit_cashback_multiplier'] / 100;
-                    } else {
-                        $level = null;
-                        $percentageP = 0;
-                        $percentageB = 0;
-                    }
-
-                    $dataLog = [
-                        'id_user'                     => $insertTransaction['id_user'],
-                        'point'                       => $insertTransaction['transaction_point_earned'],
-                        'id_reference'                => $insertTransaction['id_transaction'],
-                        'source'                      => 'Transaction',
-                        'grand_total'                 => $insertTransaction['transaction_grandtotal'],
-                        'point_conversion'            => $settingPoint['value'],
-                        'membership_level'            => $level,
-                        'membership_point_percentage' => $percentageP * 100
-                    ];
-
-                    $insertDataLog = LogPoint::create($dataLog);
-                    if (!$insertDataLog) {
-                        DB::rollback();
-                        return response()->json([
-                            'status'    => 'fail',
-                            'messages'  => ['Insert Point Failed']
-                        ]);
-                    }
-
-                    //update point user
-                    $totalPoint = LogPoint::where('id_user',$insertTransaction['id_user'])->sum('point');
-                    $updateUserPoint = User::where('id', $insertTransaction['id_user'])->update(['points' => $totalPoint]);
-                }
-
-                if ($insertTransaction['transaction_cashback_earned'] != 0) {
-                    $insertDataLogCash = app($this->balance)->addLogBalance( $insertTransaction['id_user'], $insertTransaction['transaction_cashback_earned'], $insertTransaction['id_transaction'], 'Online Transaction', $insertTransaction['transaction_grandtotal']);
-                    if (!$insertDataLogCash) {
-                        DB::rollback();
-                        return response()->json([
-                            'status'    => 'fail',
-                            'messages'  => ['Insert Cashback Failed']
-                        ]);
-                    }
-                    $usere  = User::where('id',$insertTransaction['id_user'])->first();
-                    $outlet = Outlet::where('id_outlet',$insertTransaction['id_outlet'])->first();
-                    $send   = app($this->autocrm)->SendAutoCRM('Transaction Point Achievement', $usere->phone,
-                        [
-                            "outlet_name"       => $outlet->outlet_name,
-                            "transaction_date"  => $insertTransaction['transaction_date'],
-                            'id_transaction'    => $insertTransaction['id_transaction'],
-                            'receipt_number'    => $insertTransaction['transaction_receipt_number'],
-                            'received_point'    => (string) $insertTransaction['transaction_cashback_earned']
-                        ]
-                    );
-                    if($send != true){
-                        DB::rollback();
-                        return response()->json([
-                            'status' => 'fail',
-                            'messages' => ['Failed Send notification to customer']
-                        ]);
-                    }
-
-                }
-
             }else{
                 if($countTrxDay > $fraudTrxDay['parameter_detail'] && $fraudTrxDay){
                     $fraudFlag = 'transaction day';
@@ -1750,33 +1701,42 @@ class ApiOnlineTransaction extends Controller
 
         // check promo code & voucher
         $promo_error=null;
+        $promo_source = null;
         if($request->promo_code && !$request->id_subscription_user && !$request->id_deals_user){
         	$code = app($this->promo_campaign)->checkPromoCode($request->promo_code, 1, 1);
 
             if ($code)
             {
-	            $validate_user=$pct->validateUser($code->id_promo_campaign, $request->user()->id, $request->user()->phone, $request->device_type, $request->device_id, $errore,$code->id_promo_campaign_promo_code);
+            	if ($code['promo_campaign']['date_end'] < date('Y-m-d H:i:s')) {
+	        		$promo_error='Promo campaign is ended';
+	        	}
+	        	else
+	        	{
+		            $validate_user=$pct->validateUser($code->id_promo_campaign, $request->user()->id, $request->user()->phone, $request->device_type, $request->device_id, $errore,$code->id_promo_campaign_promo_code);
 
-	            if ($validate_user) {
-		            $discount_promo=$pct->validatePromo($code->id_promo_campaign, $request->id_outlet, $post['item'], $errors, 'promo_campaign', $errorProduct);
+		            if ($validate_user) {
+			            $discount_promo=$pct->validatePromo($code->id_promo_campaign, $request->id_outlet, $post['item'], $errors, 'promo_campaign', $errorProduct);
 
-		            if ( !empty($errore) || !empty($errors) ) {
-		            	$promo_error = app($this->promo_campaign)->promoError('transaction', $errore, $errors, $errorProduct);
-		            	if ($errorProduct==1) {
-			            	$promo_error['product_label'] = app($this->promo_campaign)->getProduct('promo_campaign', $code['promo_campaign'])['product']??'';
-					        $promo_error['product'] = $pct->getRequiredProduct($code->id_promo_campaign)??null;
-					    }
+			            $promo_source = 'promo_code';
+			            if ( !empty($errore) || !empty($errors) ) {
+			            	$promo_error = app($this->promo_campaign)->promoError('transaction', $errore, $errors, $errorProduct);
+			            	if ($errorProduct==1) {
+				            	$promo_error['product_label'] = app($this->promo_campaign)->getProduct('promo_campaign', $code['promo_campaign'])['product']??'';
+						        $promo_error['product'] = $pct->getRequiredProduct($code->id_promo_campaign)??null;
+						    }
+						    $promo_source = null;
+			            }
+			            $promo_discount=$discount_promo['discount'];
 		            }
-		            $promo_discount=$discount_promo['discount'];
-	            }
-	            else
-	            {
-	                if(isset($errore)){
-	            		foreach ($errore as $key => $value) {
-	            			array_push($promo_error['message'], $value);
-	            		}
-	            	}
-	            }
+		            else
+		            {
+		                if(isset($errore)){
+		            		foreach ($errore as $key => $value) {
+		            			array_push($promo_error['message'], $value);
+		            		}
+		            	}
+		            }
+	        	}
             }
             else
             {
@@ -1792,6 +1752,7 @@ class ApiOnlineTransaction extends Controller
 			{
 				$discount_promo=$pct->validatePromo($deals->dealVoucher->id_deals, $request->id_outlet, $post['item'], $errors, 'deals', $errorProduct);
 
+				$promo_source = 'voucher_online';
 				if ( !empty($errors) ) {
 					$code = $deals->toArray();
 	            	$promo_error = app($this->promo_campaign)->promoError('transaction', null, $errors, $errorProduct);
@@ -1799,6 +1760,7 @@ class ApiOnlineTransaction extends Controller
 		            	$promo_error['product_label'] = app($this->promo_campaign)->getProduct('deals', $code['deal_voucher']['deals'])['product']??'';
 			        	$promo_error['product'] = $pct->getRequiredProduct($deals->dealVoucher->id_deals, 'deals')??null;
 	            	}
+	            	$promo_source = null;
 	            }
 	            $promo_discount=$discount_promo['discount'];
 	        }
@@ -2049,17 +2011,17 @@ class ApiOnlineTransaction extends Controller
         $result['used_point'] = 0;
         $balance = app($this->balance)->balanceNow($user->id);
         $result['points'] = (int) $balance;
+        $result['get_point'] = ($post['payment_type'] != 'Balance') ? $this->checkPromoGetPoint($promo_source) : 0;
         if (isset($post['payment_type'])&&$post['payment_type'] == 'Balance') {
             if($balance>=$result['grandtotal']){
                 $result['used_point'] = $result['grandtotal'];
-                $result['grandtotal'] = 0;
             }else{
                 $result['used_point'] = $balance;
-                $result['grandtotal'] -= $balance;
             }
             $result['points'] -= $result['used_point'];
         }
-        if ($request->id_subscription_user && !$request->promo_code && !$request->id_deals_user) 
+        $result['total_payment'] = $result['grandtotal'] - $result['used_point'];
+        if ($request->id_subscription_user && !$request->promo_code && !$request->id_deals_user)
         {
 	        $result['subscription'] = app($this->subscription_use)->calculate($request->id_subscription_user, $result['grandtotal'], $result['subtotal'], $post['item'], $post['id_outlet'], $subs_error, $errorProduct, $subs_product, $subs_applied_product);
 	        if (!empty($subs_error)) {
@@ -2363,5 +2325,49 @@ class ApiOnlineTransaction extends Controller
        }
 
        return $rndstring;
+    }
+
+    public function checkPromoGetPoint($promo_source)
+    {
+    	if (empty($promo_source)) {
+    		return 1;
+    	}
+
+    	if ($promo_source != 'promo_code' && $promo_source != 'voucher_online' && $promo_source != 'voucher_offline') {
+    		return 0;
+    	}
+
+    	$config = app($this->promo)->promoGetCashbackRule();
+    	$getData = Configs::whereIn('config_name',['promo code get point','voucher offline get point','voucher online get point'])->get()->toArray();
+
+    	foreach ($getData as $key => $value) {
+    		$config[$value['config_name']] = $value['is_active'];
+    	}
+
+    	if ($promo_source == 'promo_code') {
+    		if ($config['promo code get point'] == 1) {
+    			return 1;
+    		}else{
+    			return 0;
+    		}
+    	}
+
+    	if ($promo_source == 'voucher_online') {
+    		if ($config['voucher online get point'] == 1) {
+    			return 1;
+    		}else{
+    			return 0;
+    		}
+    	}
+
+    	if ($promo_source == 'voucher_offline') {
+    		if ($config['voucher offline get point'] == 1) {
+    			return 1;
+    		}else{
+    			return 0;
+    		}
+    	}
+
+    	return 0;
     }
 }

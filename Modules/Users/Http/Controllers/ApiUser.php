@@ -17,6 +17,7 @@ use App\Http\Models\UserOutlet;
 use App\Http\Models\LogActivitiesApps;
 use App\Http\Models\LogActivitiesBE;
 use App\Http\Models\UserInbox;
+use App\Http\Models\UserAddress;
 use App\Http\Models\LogPoint;
 use App\Http\Models\UserNotification;
 use App\Http\Models\Transaction;
@@ -1915,6 +1916,32 @@ class ApiUser extends Controller
         return response()->json(MyHelper::checkGet($check));
     }
 
+    function listAddress(Request $request){
+        $user_id = User::select('id')->where('phone',$request->json('phone'))->pluck('id')->first();
+        $pg = UserAddress::where('id_user',$user_id);
+        if($request->favorite){
+            $pg->select('name','type','short_address','address','description')->where('favorite',1)->orderBy('type','desc');
+        }else{
+            $pg->select('name','favorite','short_address','address','description','updated_at');
+        }
+        $pg->orderBy('updated_at','desc');
+        if($request->json('keyword')){
+            $pg->where(function($query) use ($request){
+                $query->where('name','like',"%{$request->json('keyword')}%");
+                $query->orWhere('type','like',"%{$request->json('keyword')}%");
+                $query->orWhere('short_address','like',"%{$request->json('keyword')}%");
+                $query->orWhere('address','like',"%{$request->json('keyword')}%");
+                $query->orWhere('description','like',"%{$request->json('keyword')}%");
+            });
+        }
+        if($request->page){
+            $pg = $pg->paginate(20);
+        }else{
+            $pg = $pg->get();
+        }
+        return MyHelper::checkGet($pg->toArray());
+    }
+
     function listVar($var){
         if($var == 'phone') $query = User::select('phone')->get()->toArray();
         if($var == 'email') $query = User::select('email')->get()->toArray();
@@ -2887,6 +2914,33 @@ class ApiUser extends Controller
         } else {
             $encUser = MyHelper::encrypt2019(['id_user' => $user['id']]);
             return MyHelper::checkGet($encUser);
+        }
+    }
+
+    public function validationPhone(Request $request){
+        $post = $request->json()->all();
+        if(isset($post['phone']) && !empty($post['phone'])){
+            $phone = $post['phone'];
+
+            $phone = preg_replace("/[^0-9]/", "", $phone);
+
+            $checkPhoneFormat = MyHelper::phoneCheckFormat($phone);
+
+            if(isset($checkPhoneFormat['status']) && $checkPhoneFormat['status'] == 'fail'){
+                return response()->json([
+                    'status' => 'fail',
+                    'messages' => [$checkPhoneFormat['messages']]
+                ]);
+            }elseif(isset($checkPhoneFormat['status']) && $checkPhoneFormat['status'] == 'success'){
+                return response()->json([
+                    'status' => 'success'
+                ]);
+            }
+        }else{
+            return response()->json([
+                'status' => 'fail',
+                'messages' => ['Data incompleted']
+            ]);
         }
     }
 }

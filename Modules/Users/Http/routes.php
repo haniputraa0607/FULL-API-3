@@ -1,6 +1,11 @@
 <?php
 
 Route::group(['prefix' => 'api', 'middleware' => ['log_activities', 'user_agent']], function(){
+    Route::group(['middleware' => ['auth_client','log_activities', 'user_agent', 'scopes:apps'], 'namespace' => 'Modules\Users\Http\Controllers'], function()
+    {
+        Route::post('validation-phone', 'ApiUser@validationPhone');
+    });
+
 	Route::group(['middleware' => ['auth_client','log_activities', 'user_agent', 'scopes:apps'], 'prefix' => 'users', 'namespace' => 'Modules\Users\Http\Controllers'], function()
 	{
         Route::post('phone/check', 'ApiUser@check');
@@ -46,6 +51,7 @@ Route::group(['prefix' => 'api/cron', 'namespace' => 'Modules\Users\Http\Control
 
 Route::group(['middleware' => ['auth:api','log_activities', 'user_agent', 'scopes:be'], 'prefix' => 'api/users', 'namespace' => 'Modules\Users\Http\Controllers'], function(){
     Route::post('pin/check/be', 'ApiUser@checkPinBackend');
+    Route::post('list/address', 'ApiUser@listAddress');
     Route::get('list/{var}', 'ApiUser@listVar');
     Route::post('new', ['middleware' => 'feature_control:4', 'uses' => 'ApiUser@newUser']);
     Route::post('update/profile', ['middleware' => 'feature_control:5', 'uses' => 'ApiUser@updateProfile']);
