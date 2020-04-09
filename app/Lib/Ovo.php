@@ -237,7 +237,7 @@ class Ovo {
             }else{
                 $updateLog = $createLog->update([
                     'response_status' => 'fail',
-                    'response' => json_encode($reversal['response'])
+                    'response' => json_encode($reversal['response']??'')
                 ]);
                 break;
                 return $reversal; 
