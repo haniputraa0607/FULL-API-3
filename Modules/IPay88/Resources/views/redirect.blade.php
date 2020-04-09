@@ -70,7 +70,7 @@
 		<div>
 			<div class="lds-ripple"><div></div><div></div></div>
 		</div>
-		<div id="text-muted">Please wait...<br/><br/><a href="#{{$type}}Paid*{{$id_reference}}" id="link-to-apps">Click here if you are not redirected immediately</a></div>
+		<div id="text-muted">Please wait...<br/><br/><a href="#{{$type}}Paid*{{$id_reference}}*{{$payment_status}}" id="link-to-apps">Click here if you are not redirected immediately</a></div>
 	</div>
 	<script type="text/javascript">
 		function submitForm(){
