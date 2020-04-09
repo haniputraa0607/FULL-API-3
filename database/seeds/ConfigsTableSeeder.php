@@ -918,6 +918,42 @@ class ConfigsTableSeeder extends Seeder
                 'created_at' => date('Y-m-d H:i:s'),
                 'updated_at' => date('Y-m-d H:i:s'),
             ),
+            101 =>
+            array (
+                'id_config' => 102,
+                'config_name' => 'voucher online get point',
+                'description' => '',
+                'is_active' => 0,
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ),
+            102 =>
+            array (
+                'id_config' => 103,
+                'config_name' => 'voucher offline get point',
+                'description' => '',
+                'is_active' => 0,
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ),
+            103 =>
+            array (
+                'id_config' => 104,
+                'config_name' => 'promo code get point',
+                'description' => '',
+                'is_active' => 0,
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ),
+            104 =>
+            array (
+                'id_config' => 105,
+                'config_name' => 'deals second title',
+                'description' => '',
+                'is_active' => 0,
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ),
         ));
     }
 }

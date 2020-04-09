@@ -47,7 +47,7 @@ class DealsVoucher extends Model
 	
 	public function deals()
 	{
-		return $this->belongsTo(\App\Http\Models\Deal::class, 'id_deals')->select('id_deals', 'deals_title', 'deals_second_title', 'deals_promo_id', 'deals_promo_id_type', 'promo_type','deals_total_used');
+		return $this->belongsTo(\App\Http\Models\Deal::class, 'id_deals')->select('id_deals', 'deals_title', 'deals_second_title', 'deals_promo_id', 'deals_promo_id_type', 'promo_type','deals_total_used','is_offline','is_online');
 	}
 
 	public function deals_user() {
@@ -57,5 +57,10 @@ class DealsVoucher extends Model
 	public function deals_voucher_user() {
 		return $this->belongsToMany(\App\Http\Models\User::class, 'deals_users', 'id_deals_voucher', 'id_user');
 	}
+
+	public function transaction_voucher()
+    {
+        return $this->belongsTo(TransactionVoucher::class, 'id_deals_voucher', 'id_deals_voucher');
+    }
 
 }

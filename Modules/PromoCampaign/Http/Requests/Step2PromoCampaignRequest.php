@@ -18,7 +18,7 @@ class Step2PromoCampaignRequest extends FormRequest
         if($this->json('promo_type')=='Product Discount'){
             $rules=[
                 'filter_product'    => 'required',
-                'max_product'       => 'required',
+                'max_product'       => 'nullable',
                 'discount_type'     => 'required',
                 'discount_value'    => 'required'
             ];
