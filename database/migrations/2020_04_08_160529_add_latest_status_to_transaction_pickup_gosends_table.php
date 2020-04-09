@@ -15,6 +15,8 @@ class AddLatestStatusToTransactionPickupGosendsTable extends Migration
     {
         Schema::table('transaction_pickup_go_sends', function (Blueprint $table) {
             $table->string('latest_status')->nullable()->after('go_send_order_no');
+            $table->string('driver_name')->nullable()->after('latest_status');
+            $table->string('driver_phone')->nullable()->after('driver_name');
         });
     }
 
@@ -27,6 +29,8 @@ class AddLatestStatusToTransactionPickupGosendsTable extends Migration
     {
         Schema::table('transaction_pickup_go_sends', function (Blueprint $table) {
             $table->dropColumn('latest_status');
+            $table->dropColumn('driver_name');
+            $table->dropColumn('driver_phone');
         });
     }
 }

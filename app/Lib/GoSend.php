@@ -4,6 +4,7 @@ namespace App\Lib;
 
 use App\Http\Models\Setting;
 use App\Http\Models\LogApiGosend;
+use App\Http\Models\TransactionPickupGoSendUpdate;
 
 class GoSend {
 
@@ -22,7 +23,7 @@ class GoSend {
 				'messages' => ['GO-SEND key has not been set']
 			];
 		}
-		
+
 		$url = env('GO_SEND_URL').'gokilat/v10/booking';
 
 		$header = [
@@ -187,5 +188,23 @@ class GoSend {
 			];
 		}
 		return true;
+	}
+	/**
+	 * save shipment update to database
+	 * @param  Array $dataUpdate 
+	 * [
+	 * 		'id_transaction' => 21,
+	 * 		'id_transaction_pickup_go_send' => 23,
+	 * 		'status' => 'on_hold',
+	 * 		'description' => 'Hujan deras'
+	 * ]
+	 * @return void
+	 */
+	public static function saveUpdate($dataUpdate)
+	{
+		$found = TransactionPickupGoSendUpdate::where(['id_transaction_pickup_go_send'=>$dataUpdate['id_transaction_pickup_go_send'],'status'=>$dataUpdate['status']])->first();
+		if(!$found){
+			TransactionPickupGoSendUpdate::create($dataUpdate);
+		}
 	}
 }

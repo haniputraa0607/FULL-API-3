@@ -39,6 +39,7 @@ use Modules\OutletApp\Http\Requests\DetailOrder;
 use Modules\OutletApp\Http\Requests\ProductSoldOut;
 
 use App\Lib\MyHelper;
+use App\Lib\GoSend;
 use DB;
 
 class ApiOutletApp extends Controller
@@ -746,15 +747,6 @@ class ApiOutletApp extends Controller
         if($pickup){
             //send notif to customer
             $user = User::find($order->id_user);
-            $trx = $order->toArray();
-            $trx['detail'] = TransactionPickup::with('transaction_pickup_go_send')->where('id_transaction', $order->id_transaction)->first();
-            if ($trx['detail']['pickup_by'] == 'GO-SEND') {
-                $booking = (new \Modules\Transaction\Http\Controllers\ApiNotification())->bookGoSend($trx);
-                if (isset($booking['status'])) {
-                    DB::rollback();
-                    return response()->json($booking);
-                }
-            }
 
             $newTrx = Transaction::with('user.memberships', 'outlet', 'productTransaction', 'transaction_vouchers')->where('id_transaction', $order->id_transaction)->first();
             $checkType = TransactionMultiplePayment::where('id_transaction', $order->id_transaction)->get()->toArray();
@@ -1575,5 +1567,129 @@ class ApiOutletApp extends Controller
             return MyHelper::checkGet([],'Failed send PIN');
         }
         return ['status'=>'success'];
+    }
+
+    public function bookDelivery(Request $request) {
+        $post = $request->json()->all();
+        $trx = Transaction::where(['transaction_payment_status'=>'Completed'])->find($request->id_transaction);
+        if(!$trx){
+            return MyHelper::checkGet($trx,'Transaction Not Found');
+        }
+        switch(strtolower($request->type)){
+            case 'gosend':
+                $result = $this->bookGoSend($trx);
+                break;
+
+            default:
+                $result = ['status' => 'fail', 'messages' => ['Invalid booking type']];
+                break;
+        }
+        return response()->json($result);
+    }
+
+    public function bookGoSend($trx){
+        $trx->load('transaction_pickup','transaction_pickup.transaction_pickup_go_send');
+        if(!($trx['transaction_pickup']['transaction_pickup_go_send']['id_transaction_pickup_go_send']??false)){
+            return [
+                'status' => 'fail',
+                'messages' => 'Transaksi tidak menggunakan GO-SEND'
+            ];
+        }
+        if($trx['transaction_pickup']['transaction_pickup_go_send']['go_send_id']){
+            return [
+                'status' => 'fail',
+                'messages' => 'Pengiriman sudah dipesan'
+            ];
+        }
+        //create booking GO-SEND
+        $origin['name']             = $trx['transaction_pickup']['transaction_pickup_go_send']['origin_name'];
+        $origin['phone']            = $trx['transaction_pickup']['transaction_pickup_go_send']['origin_phone'];
+        $origin['latitude']         = $trx['transaction_pickup']['transaction_pickup_go_send']['origin_latitude'];
+        $origin['longitude']        = $trx['transaction_pickup']['transaction_pickup_go_send']['origin_longitude'];
+        $origin['address']          = $trx['transaction_pickup']['transaction_pickup_go_send']['origin_address'];
+        $origin['note']             = $trx['transaction_pickup']['transaction_pickup_go_send']['origin_note'];
+
+        $destination['name']        = $trx['transaction_pickup']['transaction_pickup_go_send']['destination_name'];
+        $destination['phone']       = $trx['transaction_pickup']['transaction_pickup_go_send']['destination_phone'];
+        $destination['latitude']    = $trx['transaction_pickup']['transaction_pickup_go_send']['destination_latitude'];
+        $destination['longitude']   = $trx['transaction_pickup']['transaction_pickup_go_send']['destination_longitude'];
+        $destination['address']     = $trx['transaction_pickup']['transaction_pickup_go_send']['destination_address'];
+        $destination['note']        = $trx['transaction_pickup']['transaction_pickup_go_send']['destination_note'];
+
+        $packageDetail = Setting::where('key', 'go_send_package_detail')->first();
+        if($packageDetail){
+            $packageDetail = str_replace('%order_id%', $trx['transaction_pickup']['order_id'], $packageDetail['value']);
+        }else{
+            $packageDetail = "Order ".$trx['transaction_pickup']['order_id'];
+        }
+
+        $booking = GoSend::booking($origin, $destination, $packageDetail, $trx['transaction_receipt_number']);
+        if(isset($booking['status']) && $booking['status'] == 'fail'){
+            return $booking;
+        }
+
+        if(!isset($booking['id'])){
+            return ['status' => 'fail', 'messages' => $booking['messages']??['failed booking GO-SEND']];
+        }
+        $status = GoSend::getStatus($trx['transaction_receipt_number']);
+        //update id from go-send
+        $updateGoSend = TransactionPickupGoSend::find($trx['transaction_pickup']['transaction_pickup_go_send']['id_transaction_pickup_go_send']);
+        $dataSave = [
+            'id_transaction' => $trx['id_transaction'],
+            'id_transaction_pickup_go_send' => $trx['transaction_pickup']['transaction_pickup_go_send']['id_transaction_pickup_go_send'],
+            'status' => $status['status']??'on_going',
+        ];
+        GoSend::saveUpdate($dataSave);
+        if($updateGoSend){
+            $updateGoSend->go_send_id = $booking['id'];
+            $updateGoSend->go_send_order_no = $booking['orderNo'];
+            $updateGoSend->latest_status = $status['status']??null;
+            $updateGoSend->driver_name = $status['driverName']??null;
+            $updateGoSend->driver_phone = $status['driverPhone']??null;
+            $updateGoSend->save();
+
+            if(!$updateGoSend){
+                return ['status' => 'fail', 'messages' => ['failed update Transaction GO-SEND']];
+            }
+        }
+        return ['status' => 'success'];
+    }
+
+    public function refreshDeliveryStatus(Request $request)
+    {
+        $trx = Transaction::where('transactions.id_transaction',$request->id_transaction)->join('transaction_pickups','transaction_pickups.id_transaction', '=', 'transactions.id_transaction')->where('pickup_by','GO-SEND')->first();
+        if(!$trx){
+            return MyHelper::checkGet($trx,'Transaction Not Found');
+        }
+        switch (strtolower($request->type)){
+            case 'gosend':
+                $trxGoSend = TransactionPickupGoSend::where('id_transaction_pickup',$trx['id_transaction_pickup'])->first();
+                if(!$trxGoSend){
+                    return MyHelper::checkGet($trx,'Transaction GoSend Not Found');
+                }
+                $status = GoSend::getStatus($trx['transaction_receipt_number']);
+                if($status['status']??false){
+                    $toUpdate = ['latest_status' => $status['status']];
+                    if($status['driverName']??false){
+                        $toUpdate['driver_name'] = $status['driverName'];
+                    }
+                    if($status['driverPhone']??false){
+                        $toUpdate['driver_phone'] = $status['driverPhone'];
+                    }
+                    $trxGoSend->update($toUpdate);
+                }
+                $dataSave = [
+                    'id_transaction' => $trx['id_transaction'],
+                    'id_transaction_pickup_go_send' => $trxGoSend['id_transaction_pickup_go_send'],
+                    'status' => $status['status']??'on_going',
+                ];
+                GoSend::saveUpdate($dataSave);
+                return MyHelper::checkGet($trxGoSend);
+                break;
+
+            default: 
+                return ['status'=>'fail','messages'=>['Invalid delivery type']];
+                break;
+        }
     }
 }

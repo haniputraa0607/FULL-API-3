@@ -6,7 +6,10 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
 use App\Http\Models\LogApiGosend;
+use App\Http\Models\TransactionPickup;
 use App\Http\Models\TransactionPickupGoSend;
+
+use App\Lib\GoSend;
 
 class ApiGosendController extends Controller
 {
@@ -53,7 +56,20 @@ class ApiGosendController extends Controller
         }else{
             if($post['booking_id']??false){
                 $response_code = 200;
-                $tpg->update(['latest_status' => $post['status']]);
+                $toUpdate = ['latest_status' => $post['status']];
+                if($post['driver_name']){
+                  $toUpdate['driver_name'] = $post['driver_name'];
+                }
+                if($post['driver_phone']){
+                  $toUpdate['driver_phone'] = $post['driver_phone'];
+                }
+                $tpg->update($toUpdate);
+                $dataSave = [
+                    'id_transaction' => TransactionPickup::select('id_transaction')->where('id_transaction_pickup',$tpg->id_transaction_pickup)->pluck('id_transaction')->first()?:'',
+                    'id_transaction_pickup_go_send' => $tpg['id_transaction_pickup_go_send'],
+                    'status' => $post['status']??'on_going',
+                ];
+                GoSend::saveUpdate($dataSave);
                 $response_body = ['status'=>'success','messages'=>['Success update']];
             }else{
                 $response_code = 400;
