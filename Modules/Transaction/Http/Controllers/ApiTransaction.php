@@ -1268,7 +1268,9 @@ class ApiTransaction extends Controller
             $key = 'pickup order';
             $delivery = true;
         }
-        $list = Transaction::join('transaction_pickups','transaction_pickups.id_transaction','=','transactions.id_transaction')->orderBy('transactions.id_transaction', 'DESC')->with('user', 'productTransaction.product.product_category')->where('trasaction_type', ucwords($key))->where('transactions.transaction_date', '>=', $start)->where('transactions.transaction_date', '<=', $end);
+        $list = Transaction::join('transaction_pickups','transaction_pickups.id_transaction','=','transactions.id_transaction')
+            ->leftJoin('transaction_pickup_go_sends','transaction_pickups.id_transaction_pickup','=','transaction_pickup_go_sends.id_transaction_pickup')
+            ->orderBy('transactions.id_transaction', 'DESC')->with('user', 'productTransaction.product.product_category')->where('trasaction_type', ucwords($key))->where('transactions.transaction_date', '>=', $start)->where('transactions.transaction_date', '<=', $end);
         if($delivery){
             $list->where('pickup_by','<>','Customer');
         }else{
