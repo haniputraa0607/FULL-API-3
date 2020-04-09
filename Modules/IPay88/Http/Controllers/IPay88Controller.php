@@ -68,9 +68,20 @@ class IPay88Controller extends Controller
             $post['requery_response'] = $requery['response'];
             $this->lib->update($trx_ipay88,$post);
         }
+        $payment_status = 'pending';
+        switch($post['Status']){
+            case '1':
+                $payment_status = 'success';
+                break;
+            case '0':
+                $payment_status = 'fail';
+                break;
+            default:
+        }
         $data = [
             'type' => $type,
-            'id_reference' => $trx_ipay88->id_transaction?:$trx_ipay88->id_deals_user
+            'id_reference' => $trx_ipay88->id_transaction?:$trx_ipay88->id_deals_user,
+            'payment_status' => $payment_status
         ];
         return view('ipay88::redirect',$data);
     }
