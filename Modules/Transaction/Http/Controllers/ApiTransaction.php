@@ -1263,7 +1263,18 @@ class ApiTransaction extends Controller
     public function transactionList($key){
         $start = date('Y-m-01 00:00:00');
         $end = date('Y-m-d 23:59:59');
-        $list = Transaction::orderBy('id_transaction', 'DESC')->with('user', 'productTransaction.product.product_category')->where('trasaction_type', ucwords($key))->where('created_at', '>=', $start)->where('created_at', '<=', $end)->paginate(10);
+        $delivery = false;
+        if(strtolower($key) == 'delivery'){
+            $key = 'pickup order';
+            $delivery = true;
+        }
+        $list = Transaction::join('transaction_pickups','transaction_pickups.id_transaction','=','transactions.id_transaction')->orderBy('transactions.id_transaction', 'DESC')->with('user', 'productTransaction.product.product_category')->where('trasaction_type', ucwords($key))->where('transactions.transaction_date', '>=', $start)->where('transactions.transaction_date', '<=', $end);
+        if($delivery){
+            $list->where('pickup_by','<>','Customer');
+        }else{
+            $list->where('pickup_by','Customer');
+        }
+        $list = $list->paginate(10);
 
         return response()->json(MyHelper::checkGet($list));
     }
@@ -1277,7 +1288,12 @@ class ApiTransaction extends Controller
         // return $post;
         $start = date('Y-m-d', strtotime($post['date_start']));
         $end = date('Y-m-d', strtotime($post['date_end']));
-        $query = Transaction::select('transactions.*',
+        $delivery = false;
+        if(strtolower($post['key']) == 'delivery'){
+            $post['key'] = 'pickup order';
+            $delivery = true;
+        }
+        $query = Transaction::join('transaction_pickups','transaction_pickups.id_transaction','=','transactions.id_transaction')->select('transactions.*',
                               'transaction_products.*',
                               'users.*',
                               'products.*',
@@ -1293,7 +1309,11 @@ class ApiTransaction extends Controller
                     ->orderBy('transactions.id_transaction', 'DESC')
                     ->groupBy('transactions.id_transaction');
                     // ->orderBy('transactions.id_transaction', 'DESC');
-
+        if($delivery){
+            // $query->where('pickup_by','<>','Customer');
+        }else{
+            $query->where('pickup_by','Customer');
+        }
         // return response()->json($query->get());
         if (isset($post['conditions'])) {
             foreach ($post['conditions'] as $key => $con) {
