@@ -1296,10 +1296,12 @@ class ApiTransaction extends Controller
             $delivery = true;
         }
         $query = Transaction::join('transaction_pickups','transaction_pickups.id_transaction','=','transactions.id_transaction')->select('transactions.*',
+                              'transaction_pickup_go_sends.*',
                               'transaction_products.*',
                               'users.*',
                               'products.*',
                               'product_categories.*')
+                    ->leftJoin('transaction_pickup_go_sends','transaction_pickups.id_transaction_pickup','=','transaction_pickup_go_sends.id_transaction_pickup')
                     ->leftJoin('transaction_products','transactions.id_transaction','=','transaction_products.id_transaction')
                     ->leftJoin('users','transactions.id_user','=','users.id')
                     ->leftJoin('products','products.id_product','=','transaction_products.id_product')
