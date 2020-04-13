@@ -147,7 +147,7 @@ class PromoCampaignTools{
 				{
 					if (isset($item_get_promo[$value['id_product']])) 
 					{
-						if ( ($item_get_promo[$value['id_product']] + $value['qty']) >= $max_product) {
+						if ( ($item_get_promo[$value['id_product']] + $value['qty']) >= $max_product && !empty($max_product)) {
 							$item_get_promo[$value['id_product']] = $max_product;
 						}else{
 							$item_get_promo[$value['id_product']] += $value['qty'];
@@ -155,7 +155,7 @@ class PromoCampaignTools{
 					}
 					else
 					{
-						if ($value['qty'] >= $max_product) {
+						if ($value['qty'] >= $max_product && !empty($max_product)) {
 							$item_get_promo[$value['id_product']] = $max_product;
 						}else{
 							$item_get_promo[$value['id_product']] = $value['qty'];
@@ -1011,7 +1011,7 @@ class PromoCampaignTools{
         	$promo = $promo->toArray();
         	if ( ($promo[$source.'_product_discount_rules']['is_all_product']??false) == 1) 
 	        {
-	        	$product = '*';
+	        	$product = ['*'];
 	        }
 	        elseif ( !empty($promo[$source.'_product_discount']) )
 	        {

@@ -18,7 +18,7 @@ class Create extends FormRequest
         return [
             'is_online'        			=> 'nullable',
             'is_offline'       			=> 'nullable',
-            'deals_type'                => 'required|in:Deals,Hidden,Point,Spin,Subscription,WelcomeVoucher',
+            'deals_type'                => 'required|in:Deals,Hidden,Point,Spin,Subscription,WelcomeVoucher,Promotion',
             'deals_voucher_type'        => 'nullable|required|in:Auto generated,List Vouchers,Unlimited',
             'deals_promo_id'            => 'nullable',
             'deals_title'               => 'required',
@@ -33,7 +33,7 @@ class Create extends FormRequest
             'deals_publish_start'       => 'sometimes|nullable|date|date_format:"Y-m-d H:i:s"',
             'deals_publish_end'         => 'sometimes|nullable|date|date_format:"Y-m-d H:i:s"|after_or_equal:deals_publish_start',
             'deals_voucher_duration'    => '',
-            'deals_voucher_start'     => 'nullable|date|date_format:"Y-m-d H:i:s"|after:deals_start',
+            'deals_voucher_start'     	=> 'nullable|date|date_format:"Y-m-d H:i:s"|after:deals_start',
             'deals_voucher_expired'     => 'nullable|date|date_format:"Y-m-d H:i:s"|after:deals_voucher_start',
             'deals_voucher_price_point' => '',
             'deals_voucher_price_cash'  => '',

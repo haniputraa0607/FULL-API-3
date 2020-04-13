@@ -4,7 +4,7 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Migrations\Migration;
 
-class AddDealsDescriptionToDealsTable extends Migration
+class AddCreatedByAndLastUpdatedByToDealsTable extends Migration
 {
     /**
      * Run the migrations.
@@ -13,12 +13,10 @@ class AddDealsDescriptionToDealsTable extends Migration
      */
     public function up()
     {
-    	if (!Schema::hasColumn('deals', 'deals_description'))
-        {
-	        Schema::table('deals', function (Blueprint $table) {
-	        	$table->text('deals_description')->nullable()->default(NULL)->after('deals_image');
-	        });
-        }
+        Schema::table('deals', function (Blueprint $table) {
+        	$table->integer('created_by')->after('id_deals')->nullable();
+            $table->integer('last_updated_by')->after('created_by')->nullable();
+        });
     }
 
     /**
@@ -29,7 +27,8 @@ class AddDealsDescriptionToDealsTable extends Migration
     public function down()
     {
         Schema::table('deals', function (Blueprint $table) {
-        	$table->dropColumn('deals_description');
+        	$table->dropColumn('created_by');
+        	$table->dropColumn('last_updated_by');
         });
     }
 }

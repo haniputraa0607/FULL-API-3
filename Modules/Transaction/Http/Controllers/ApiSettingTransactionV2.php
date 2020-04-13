@@ -184,7 +184,9 @@ class ApiSettingTransactionV2 extends Controller
                     $mod_subtotal += $mod['product_modifier_prices'][0]['product_modifier_price']*$qty_product_modifier;
                 }
                 // $price = $productPrice['product_price_base'] * $valueData['qty'];
-                $price = (($productPrice['product_price']+$mod_subtotal) * $valueData['qty'])-$this_discount;
+                // remove discount from substotal
+                // $price = (($productPrice['product_price']+$mod_subtotal) * $valueData['qty'])-$this_discount;
+                $price = (($productPrice['product_price']+$mod_subtotal) * $valueData['qty']);
                 array_push($dataSubtotal, $price);
             }
 

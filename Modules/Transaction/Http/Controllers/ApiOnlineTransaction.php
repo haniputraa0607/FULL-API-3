@@ -861,7 +861,9 @@ class ApiOnlineTransaction extends Controller
                 'transaction_product_price_base'    => $checkPriceProduct['product_price_base'],
                 'transaction_product_price_tax'    => $checkPriceProduct['product_price_tax'],
                 'transaction_product_discount'   => $this_discount,
-                'transaction_product_subtotal' => ($valueProduct['qty'] * $checkPriceProduct['product_price'])-$this_discount,
+                // remove discount from subtotal
+                // 'transaction_product_subtotal' => ($valueProduct['qty'] * $checkPriceProduct['product_price'])-$this_discount,
+                'transaction_product_subtotal' => ($valueProduct['qty'] * $checkPriceProduct['product_price']),
                 'transaction_product_note'     => $valueProduct['note'],
                 'created_at'                   => date('Y-m-d', strtotime($insertTransaction['transaction_date'])).' '.date('H:i:s'),
                 'updated_at'                   => date('Y-m-d H:i:s')
