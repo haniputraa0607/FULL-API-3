@@ -28,6 +28,9 @@ class TransactionPickupGoSend extends Model
 		'destination_longitude',
 		'go_send_id',
 		'go_order_no',
+		'latest_status',
+		'driver_name',
+		'driver_phone',
 		'created_at',
 		'updated_at'
 	];
