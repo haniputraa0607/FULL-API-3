@@ -57,6 +57,8 @@ Route::group([ 'prefix' => 'api/setting', 'namespace' => 'Modules\Setting\Http\C
 {
     Route::any('webview/{key}', 'ApiSettingWebview@aboutWebview');
     Route::any('/faq/webview', 'ApiSettingWebview@faqWebviewView');
+    Route::any('detail/{key}', 'ApiSettingWebview@aboutDetail');
+    Route::any('/faq/detail', 'ApiSettingWebview@faqDetailView');
     Route::any('/intro/list', 'ApiTutorial@introListFrontend');
     Route::any('/text_menu_list', 'ApiSetting@textMenuList');
 });
