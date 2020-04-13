@@ -54,6 +54,7 @@ Route::group(['middleware' => ['auth:api', 'log_activities','user_agent', 'scope
     Route::post('create', ['middleware' => 'feature_control:74', 'uses' => 'ApiDeals@createReq']);
     Route::post('update', ['middleware' => 'feature_control:75', 'uses' => 'ApiDeals@updateReq']);
     Route::post('update-content', ['middleware' => 'feature_control:75', 'uses' => 'ApiDeals@updateContent']);
+    Route::post('update-complete', ['middleware' => 'feature_control:75', 'uses' => 'ApiDeals@updateComplete']);
     Route::post('delete', ['middleware' => 'feature_control:76', 'uses' => 'ApiDeals@deleteReq']);
     Route::post('user', ['middleware' => 'feature_control:72', 'uses' => 'ApiDeals@listUserVoucher']);
     Route::post('voucher', ['middleware' => 'feature_control:72', 'uses' => 'ApiDeals@listVoucher']);

@@ -7,6 +7,7 @@
 
 namespace App\Http\Models;
 
+use \App\Lib\MyHelper;
 use Illuminate\Database\Eloquent\Model;
 
 /**
@@ -72,6 +73,8 @@ class Deal extends Model
 
 	protected $fillable = [
 		'deals_type',
+		'created_by',
+		'last_updated_by',
 		'deals_voucher_type',
 		'deals_promo_id_type',
 		'deals_promo_id',
@@ -102,10 +105,11 @@ class Deal extends Model
 		'user_limit',
 		'is_online',
 		'is_offline',
-		'promo_type'
+		'promo_type',
+		'product_type'
 	];
 
-	protected $appends  = ['url_deals_image', 'deals_status', 'deals_voucher_price_type', 'url_webview'];
+	protected $appends  = ['url_deals_image', 'deals_status', 'deals_voucher_price_type', 'deals_voucher_price_pretty', 'url_webview'];
 
 	public function getUrlWebviewAttribute() {
 		return env('API_URL') ."api/webview/deals/". $this->id_deals ."/". $this->deals_type;
@@ -120,6 +124,17 @@ class Deal extends Model
             $type = "nominal";
         }
         return $type;
+	}
+
+	public function getDealsVoucherPricePrettyAttribute() {
+	    $pretty = "Free";
+		if ($this->dealsVoucherPriceType == 'point') {
+            $pretty = MyHelper::requestNumber($this->deals_voucher_price_point,'_POINT');
+        }
+        elseif ($this->dealsVoucherPriceType == 'nominal') {
+            $pretty = MyHelper::requestNumber($this->deals_voucher_price_cash,'_CURRENCY');
+        }
+        return $pretty;
 	}
 
 	public function getDealsStatusAttribute() {
@@ -224,5 +239,10 @@ class Deal extends Model
     public function deals_content()
     {
         return $this->hasMany(\Modules\Deals\Entities\DealsContent::class, 'id_deals', 'id_deals');
+    }
+
+    public function created_by_user()
+    {
+        return $this->belongsTo(\App\Http\Models\User::class, 'created_by');
     }
 }
