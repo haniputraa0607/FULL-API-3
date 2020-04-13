@@ -153,3 +153,5 @@ Route::group(['prefix' => 'api/transaction', 'middleware' => ['log_activities', 
 
     Route::post('/detail/webview/success', 'ApiWebviewController@trxSuccess');
 });
+
+Route::any('api/transaction/update-gosend', 'Modules\Transaction\Http\Controllers\ApiGosendController@updateStatus');

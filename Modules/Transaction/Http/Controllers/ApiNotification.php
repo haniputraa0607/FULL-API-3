@@ -121,13 +121,13 @@ class ApiNotification extends Controller {
                     if($newTrx['detail']['pickup_type'] == 'right now'){
                         $updatePickup = TransactionPickup::where('id_transaction', $newTrx['id_transaction'])->update(['pickup_at' => date('Y-m-d H:i:s')]);
                     }
-
-                    if ($newTrx['detail']['pickup_by'] == 'GO-SEND') {
-                        $booking = $this->bookGoSend($newTrx);
-                        if (isset($booking['status'])) {
-                            return response()->json($booking);
-                        }
-                    }
+                    // book gosend after outlet receive order only
+                    // if ($newTrx['detail']['pickup_by'] == 'GO-SEND') {
+                    //     $booking = $this->bookGoSend($newTrx);
+                    //     if (isset($booking['status'])) {
+                    //         return response()->json($booking);
+                    //     }
+                    // }
                 } else {
                     DB::rollback();
                     return response()->json([
@@ -1113,7 +1113,7 @@ Detail: ".$link['short'],
         if($packageDetail){
             $packageDetail = str_replace('%order_id%', $trx['detail']['order_id'], $packageDetail['value']);
         }else{
-            $packageDetail = "";
+            $packageDetail = "Order ".$trx['detail']['order_id'];
         }
 
         $booking = GoSend::booking($origin, $destination, $packageDetail, $trx['transaction_receipt_number']);
@@ -1122,13 +1122,15 @@ Detail: ".$link['short'],
         }
 
         if(!isset($booking['id'])){
-            return ['status' => 'fail', 'messages' => ['failed booking GO-SEND']];
+            return ['status' => 'fail', 'messages' => $booking['messages']??['failed booking GO-SEND']];
         }
         //update id from go-send
         $updateGoSend = TransactionPickupGoSend::find($trx['detail']['transaction_pickup_go_send']['id_transaction_pickup_go_send']);
+        $status = GoSend::getStatus($trx['transaction_receipt_number']);
         if($updateGoSend){
             $updateGoSend->go_send_id = $booking['id'];
             $updateGoSend->go_send_order_no = $booking['orderNo'];
+            $updateGoSend->latest_status = $status['status']??null;
             $updateGoSend->save();
 
             if(!$updateGoSend){
