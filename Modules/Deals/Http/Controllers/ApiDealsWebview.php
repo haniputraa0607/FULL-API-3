@@ -18,7 +18,7 @@ class ApiDealsWebview extends Controller
     // deals detail webview
     public function dealsDetail(Request $request)
     {
-        $deals = Deal::with('outlets.city', 'deals_content.deals_content_details')->where('id_deals', $request->id_deals)->get()->toArray()[0];
+        $deals = Deal::with('brand', 'outlets.city', 'deals_content.deals_content_details')->where('id_deals', $request->id_deals)->get()->toArray()[0];
         
         $deals['outlet_by_city'] = [];
 
@@ -106,7 +106,7 @@ class ApiDealsWebview extends Controller
             if (isset($valueCity['city_name'])) {
                 foreach ($valueCity['outlet'] as $keyOutlet => $valueOutlet) {
                     // $result['deals_content'][$i]['detail'][$keyOutlet] = $valueOutlet['outlet_name'];
-                    $valTheOutlet[$keyOutlet] = '<li style="line-height: 12px;">' . $valueOutlet['outlet_name'] . '</li>';
+                    $valTheOutlet[$keyOutlet] = '<li style="line-height: 12px;">' .$deals['brand']['name_brand']. ' - ' . $valueOutlet['outlet_name'] . '</li>';
                 }
                 $city[$keyCity] = strtoupper($valueCity['city_name']) . '<br>' . implode('', $valTheOutlet);
                 $result['deals_content'][$i]['detail'] = '<ol>'.implode('', $city).'</ol>';

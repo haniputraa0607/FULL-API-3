@@ -1814,24 +1814,54 @@ class ApiTransaction extends Controller
 
             return response()->json(MyHelper::checkGet($result));
         } else {
-            $list = $voucher = DealsUser::with('outlet', 'dealVoucher.deal')->where('id_deals_user', $id)->orderBy('claimed_at', 'DESC')->first();
+            $list = DealsUser::with('outlet', 'dealVoucher.deal')->where('id_deals_user', $id)->orderBy('claimed_at', 'DESC')->first();
 
             if (empty($list)) {
                 return response()->json(MyHelper::checkGet($list));
             }
+            
+            $result = [
+                'trasaction_type'               => 'voucher',
+                'id_deals_user'                 => $list['id_deals_user'],
+                'deals_receipt_number'          => implode('', [strtotime($list['claimed_at']), $list['id_deals_user']]),
+                'date'                          => date('d M Y H:i', strtotime($list['claimed_at'])),
+                'voucher_price_cash'            => MyHelper::requestNumber($list['voucher_price_cash'],'_CURRENCY'),
+                'deals_voucher'                 => $list['dealVoucher']['deal']['deals_title'],
+                'payment_methods'               => $list['payment_method']
+            ];
 
-            if ($list['payment_method'] == 'Midtrans') {
-                $payment = DealsPaymentMidtran::where('id_deals_user', $id)->first();
-            } else {
-                $payment = DealsPaymentManual::where('id_deals_user', $id)->first();
+            if (!is_null($list['balance_nominal'])) {
+                $result['payment'][] = [
+                    'name'      => (env('POINT_NAME')) ? env('POINT_NAME') : 'Balance',
+                    'is_balance'=> 1,
+                    'amount'    => MyHelper::requestNumber($list['balance_nominal'],'_POINT'),
+                ];
+            }
+            switch ($list['payment_method']) {
+                case 'Manual':
+                    $payment = DealsPaymentManual::where('id_deals_user', $id)->first();
+                    $result['payment'][] = [
+                        'name'      => 'Manual',
+                        'amount'    =>  MyHelper::requestNumber($payment->payment_nominal,'_CURRENCY')
+                    ];
+                    break;
+                case 'Midtrans':
+                    $payment = DealsPaymentMidtran::where('id_deals_user', $id)->first();
+                    $result['payment'][] = [
+                        'name'      => 'Midtrans',
+                        'amount'    =>  MyHelper::requestNumber($payment->gross_amount,'_CURRENCY')
+                    ];
+                    break;
+                case 'OVO':
+                    $payment = DealsPaymentOvo::where('id_deals_user', $id)->first();
+                    $result['payment'][] = [
+                        'name'      => 'OVO',
+                        'amount'    =>  MyHelper::requestNumber($payment->amount,'_CURRENCY')
+                    ];
+                    break;
             }
 
-            $list['payment'] = $payment;
-
-            $list['date'] = $list['claimed_at'];
-            $list['type'] = 'voucher';
-
-            return response()->json(MyHelper::checkGet($list));
+            return response()->json(MyHelper::checkGet($result));
         }
 
 
@@ -1927,7 +1957,7 @@ class ApiTransaction extends Controller
         $select = [];
         $data   = LogBalance::where('id_log_balance', $id)->first();
 
-        if ($data['source'] == 'Transaction' || $data['source'] == 'Rejected Order') {
+        if ($data['source'] == 'Transaction' || $data['source'] == 'Rejected Order Point' || $data['source'] == 'Rejected Order') {
             $select = Transaction::select(DB::raw('transactions.*,sum(transaction_products.transaction_product_qty) item_total'))->leftJoin('transaction_products','transactions.id_transaction','=','transaction_products.id_transaction')->with('outlet')->where('transactions.id_transaction', $data['id_reference'])->groupBy('transactions.id_transaction')->first();
 
             $data['date'] = $select['transaction_date'];
@@ -1939,17 +1969,43 @@ class ApiTransaction extends Controller
             } else {
                 $data['online'] = 1;
             }
+            $data['detail'] = $select;
 
+            $result = [
+                'type'                          => $data['type'],
+                'id_log_balance'                => $data['id_log_balance'],
+                'id_transaction'                => $data['detail']['id_transaction'],
+                'transaction_receipt_number'    => $data['detail']['transaction_receipt_number'],
+                'transaction_date'              => date('d M Y H:i', strtotime($data['detail']['transaction_date'])),
+                'balance'                       => MyHelper::requestNumber($data['balance'], '_POINT'),
+                'transaction_grandtotal'        => MyHelper::requestNumber($data['detail']['transaction_grandtotal'], '_CURRENCY'),
+                'transaction_cashback_earned'   => MyHelper::requestNumber($data['detail']['transaction_cashback_earned'], '_POINT'),
+                'name'                          => $data['detail']['outlet']['outlet_name'],
+                'title'                         => 'Total Payment'
+            ];
         } else {
             $select = DealsUser::with('dealVoucher.deal')->where('id_deals_user', $data['id_reference'])->first();
             $data['type']   = 'voucher';
             $data['date']   = date('Y-m-d H:i:s', strtotime($select['claimed_at']));
             $data['outlet'] = $select['outlet']['outlet_name'];
             $data['online'] = 1;
+            $data['detail'] = $select;
+            
+            $result = [
+                'type'                          => $data['type'],
+                'id_log_balance'                => $data['id_log_balance'],
+                'id_deals_user'                 => $data['detail']['id_deals_user'],
+                'used_at'                       => date('d M Y H:i', strtotime($data['detail']['used_at'])),
+                'transaction_receipt_number'    => implode('', [strtotime($data['date']), $data['detail']['id_deals_user']]),
+                'transaction_date'              => date('d M Y H:i', strtotime($data['date'])),
+                'balance'                       => MyHelper::requestNumber($data['balance'], '_POINT'),
+                'transaction_grandtotal'        => MyHelper::requestNumber($data['detail']['voucher_price_cash'], '_CURRENCY'),
+                'transaction_cashback_earned'   => null,
+                'name'                          => 'Buy Voucher',
+                'title'                         => $data['detail']['dealVoucher']['deal']['deals_title']
+            ];
         }
-
-        $data['detail'] = $select;
-        return response()->json(MyHelper::checkGet($data));
+        return response()->json(MyHelper::checkGet($result));
     }
 
     public function setting($value) {
