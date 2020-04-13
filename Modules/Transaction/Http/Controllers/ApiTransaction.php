@@ -2083,7 +2083,7 @@ class ApiTransaction extends Controller
             ]);
         }
 
-        $address = UserAddress::select('id_user_address','name','short_address','address','type')->where('id_user', $id)->orderBy('id_user_address', 'DESC');
+        $address = UserAddress::select('id_user_address','name','short_address','address','type','latitude','longitude','description')->where('id_user', $id)->orderBy('id_user_address', 'DESC');
         if(is_numeric($request->json('favorite'))){
             $address->where('favorite',$request->json('favorite'));
             if(!$request->json('favorite')){
