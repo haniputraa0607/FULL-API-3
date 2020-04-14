@@ -1677,6 +1677,10 @@ class ApiOutletApp extends Controller
                         $toUpdate['driver_phone'] = $status['driverPhone'];
                     }
                     $trxGoSend->update($toUpdate);
+                    if(in_array(strtolower($status['status']), ['completed','delivered'])){
+                        $arrived_at = date('Y-m-d H:i:s',strtotime($status['orderArrivalTime']??time()));
+                        TransactionPickup::where('id_transaction',$trx->id_transaction)->update(['arrived_at'=>$arrived_at]);
+                    }
                 }
                 $dataSave = [
                     'id_transaction' => $trx['id_transaction'],
