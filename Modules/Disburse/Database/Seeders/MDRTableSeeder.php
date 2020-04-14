@@ -19,6 +19,7 @@ class MDRTableSeeder extends Seeder
                 'id_mdr' => 1,
                 'payment_name' => NULL,
                 'mdr' => NULL,
+                'mdr_central' => NULL,
                 'percent_type' => 'Percent',
                 'charged' => 'Outlet',
                 'created_at' => date('Y-m-d H:i:s'),

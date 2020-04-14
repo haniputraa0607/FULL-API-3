@@ -2399,4 +2399,37 @@ class MyHelper{
             ];
         }
     }
+
+    public static function connectIris($method, $url, $body){
+        $baseUrl = env('URL_IRIS');
+        $apiKey = MyHelper::decrypt2019(env('API_KEY_IRIS'));
+        $urlApi = $baseUrl.$url;
+        $base64 = base64_encode($apiKey.':');
+        $jsonBody = json_encode($body);
+
+        try {
+            $client = new Client([
+                'headers' => [
+                    'Content-Type'  => 'application/json',
+                    'Accept' => 'application/json',
+                    'Authorization' => 'Basic '.$base64
+                ]
+            ]);
+            $output = $client->request($method, $urlApi, ['body' => $jsonBody]);
+            $output = json_decode($output->getBody(), true);
+            return ['status' => 'success', 'response' => $output];
+        }catch (\GuzzleHttp\Exception\RequestException $e) {
+
+            try{
+                if($e->getResponse()){
+                    $response = $e->getResponse()->getBody()->getContents();
+                    return ['status' => 'fail', 'response' => json_decode($response, true)];
+                }
+                return ['status' => 'fail', 'response' => ['Check your internet connection.']];
+            }
+            catch(Exception $e){
+                return ['status' => 'fail', 'response' => ['Check your internet connection.']];
+            }
+        }
+    }
 }

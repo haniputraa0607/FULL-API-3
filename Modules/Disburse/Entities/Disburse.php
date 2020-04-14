@@ -10,12 +10,17 @@ class Disburse extends Model
 	protected $primaryKey = 'id_disburse';
 
 	protected $fillable = [
+	    'id_outlet',
 	    'disburse_nominal',
 		'disburse_status',
-        'beneficiary_bank_name',
+        'id_bank_name',
         'beneficiary_account_number',
-        'recipient_name',
+        'beneficiary_name',
+        'beneficiary_alias',
+        'beneficiary_email',
         'request',
-        'response'
+        'response',
+        'notes',
+        'reference_no'
 	];
 }

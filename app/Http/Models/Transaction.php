@@ -88,9 +88,7 @@ class Transaction extends Model
 		'latitude',
 		'longitude',
 		'membership_promo_id',
-        'fraud_flag',
-        'id_disburse',
-        'mdr_value'
+        'fraud_flag'
 	];
 
 	public function user()
@@ -179,4 +177,15 @@ class Transaction extends Model
 	{
 		return $this->belongsTo(\Modules\PromoCampaign\Entities\PromoCampaignPromoCode::class, 'id_promo_campaign_promo_code', 'id_promo_campaign_promo_code');
 	}
+
+    public function transaction_multiple_payment()
+    {
+        return $this->hasMany(\App\Http\Models\TransactionMultiplePayment::class, 'id_transaction');
+    }
+
+    public function promo_campaign()
+    {
+        return $this->belongsTo(\Modules\PromoCampaign\Entities\PromoCampaignPromoCode::class, 'id_promo_campaign_promo_code', 'id_promo_campaign_promo_code')
+            ->join('promo_campaigns', 'promo_campaigns.id_promo_campaign', 'promo_campaign_promo_codes.id_promo_campaign');
+    }
 }

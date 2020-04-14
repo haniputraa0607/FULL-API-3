@@ -12,8 +12,15 @@ use Illuminate\Http\Request;
 | is assigned the "api" middleware group. Enjoy building your API!
 |
 *///'scopes:disburse'============
-Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent'], 'prefix' => 'disburse'], function () {
+Route::group(['middleware' => ['auth:api', 'user_agent'], 'prefix' => 'disburse'], function () {
+    Route::any('dashboard', 'ApiDisburseController@dashboard');
     Route::any('outlets', 'ApiDisburseController@getOutlets');
+    Route::any('user-franchise', 'ApiDisburseController@userFranchise');
+
+    //setting bank name
+    Route::any('setting/bank-name', 'ApiDisburseSettingController@bankNameList');
+    Route::any('setting/bank-name/create', 'ApiDisburseSettingController@bankNameCreate');
+    Route::any('setting/bank-name/edit/{id}', 'ApiDisburseSettingController@bankNameEdit');
 
     //settings bank
     Route::any('setting/bank-account', 'ApiDisburseSettingController@updateBankAccount');
@@ -31,5 +38,13 @@ Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent'], 'pre
     //disburse
     Route::post('list/trx', 'ApiDisburseController@listTrx');
     Route::post('list/{status}', 'ApiDisburseController@listDisburse');
+    Route::post('list-datatable/{status}', 'ApiDisburseController@listDisburseDataTable');
     Route::post('detail/{id}', 'ApiDisburseController@detailDisburse');
+
+    //sync list bank
+    Route::any('sync-bank', 'ApiDisburseController@syncListBank');
+});
+
+Route::group(['prefix' => 'disburse'], function () {
+    Route::any('iris/notification', 'ApiIrisController@notification');
 });
