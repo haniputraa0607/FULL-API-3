@@ -1852,7 +1852,8 @@ class ApiTransaction extends Controller
         $gmaps = MyHelper::get('https://maps.googleapis.com/maps/api/place/nearbysearch/json?'.http_build_query([
             'key'=>env('GMAPS_PLACE_KEY'),
             'location'=>sprintf('%s,%s',$request->json('latitude'),$request->json('longitude')),
-            'rankby'=>'distance'
+            'rankby'=>'distance',
+            'keyword' => $request->json('keyword')
         ]));
 
         if($gmaps['status'] === 'OK'){
@@ -1876,8 +1877,16 @@ class ApiTransaction extends Controller
         $user_address = UserAddress::select('id_user_address','short_address','address','latitude','longitude','description')->where('id_user',$id)
             ->whereBetween('latitude',[$maxmin['latitude']['min'],$maxmin['latitude']['max']])
             ->whereBetween('longitude',[$maxmin['longitude']['min'],$maxmin['longitude']['max']])
-            ->take(10)
-            ->get()->toArray();
+            ->take(10);
+        if($keyword = $request->json('keyword')){
+            $user_address->where(function($query) use ($keyword) {
+                $query->where('name',$keyword);
+                $query->orWhere('address',$keyword);
+                $query->orWhere('short_address',$keyword);
+            });
+        }
+
+        $user_address = $user_address->get()->toArray();
 
         $selected_address = $user_address[0]??null;
 
@@ -1922,7 +1931,10 @@ class ApiTransaction extends Controller
         $data['description'] = isset($post['description']) ? $post['description'] : null;
         $data['latitude'] = number_format($post['latitude'],8);
         $data['longitude'] = number_format($post['longitude'],8);
-
+        $exists = UserAddress::where('id_user',$request->user()->id)->where('name',$data['name'])->exists();
+        if($exists){
+            return ['status'=>'fail','messages'=>['Address with same name already exists']];
+        }
         $type = ($post['type']??null)?ucfirst($post['type']):null;
         if($type){
             UserAddress::where('type',$type)->update(['type'=>null]);
