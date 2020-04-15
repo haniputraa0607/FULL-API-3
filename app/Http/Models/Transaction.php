@@ -188,4 +188,9 @@ class Transaction extends Model
         return $this->belongsTo(\Modules\PromoCampaign\Entities\PromoCampaignPromoCode::class, 'id_promo_campaign_promo_code', 'id_promo_campaign_promo_code')
             ->join('promo_campaigns', 'promo_campaigns.id_promo_campaign', 'promo_campaign_promo_codes.id_promo_campaign');
     }
+
+	public function pickup_gosend_update()
+	{
+		return $this->hasMany(\App\Http\Models\TransactionPickupGoSendUpdate::class, 'id_transaction', 'id_transaction')->orderBy('created_at','desc');
+	}
 }
