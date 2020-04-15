@@ -5,6 +5,9 @@ namespace App\Lib;
 use App\Http\Models\Setting;
 use App\Http\Models\LogApiGosend;
 use App\Http\Models\TransactionPickupGoSendUpdate;
+use App\Http\Models\Outlet;
+use App\Http\Models\User;
+use App\Http\Models\Transaction;
 
 class GoSend {
 
@@ -204,6 +207,18 @@ class GoSend {
 	{
 		$found = TransactionPickupGoSendUpdate::where(['id_transaction_pickup_go_send'=>$dataUpdate['id_transaction_pickup_go_send'],'status'=>$dataUpdate['status']])->first();
 		if(!$found){
+            $trx = Transaction::where('id_transaction', $dataUpdate['id_transaction'])->first();
+            $outlet = Outlet::where('id_outlet',$trx->id_outlet)->first();
+            $phone = User::select('phone')->where('id',$trx->id_user)->pluck('phone')->first();
+            $autocrm = app("Modules\Autocrm\Http\Controllers\ApiAutoCrm")->SendAutoCRM('Delivery Status Update', $phone,
+                [
+                    'id_reference' 		=> $dataUpdate['id_transaction'],
+                    'receipt_number'    => $trx->receipt_number,
+                    'outlet_code'       => $outlet->outlet_code,
+                    'outlet_name'       => $outlet->outlet_name,
+                    'delivery_status'   => $dataUpdate['status']??'Finding Driver'
+                ]
+            );
 			TransactionPickupGoSendUpdate::create($dataUpdate);
 		}
 	}

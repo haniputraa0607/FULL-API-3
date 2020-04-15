@@ -1223,15 +1223,15 @@ Message :
                 'created_at' => '2018-03-12 13:53:17',
                 'updated_at' => '2018-05-03 15:02:20',
             ),
-            34 =>
+            35 =>
             array (
-                'id_autocrm' => 35,
+                'id_autocrm' => 36,
                 'autocrm_type' => 'Response',
                 'autocrm_trigger' => 'Daily',
                 'autocrm_cron_reference' => NULL,
-                'autocrm_title' => 'Outlet App Request PIN',
+                'autocrm_title' => 'Delivery Status Update',
                 'autocrm_email_toogle' => '0',
-                'autocrm_sms_toogle' => '1',
+                'autocrm_sms_toogle' => '0',
                 'autocrm_push_toogle' => '0',
                 'autocrm_inbox_toogle' => '0',
                 'autocrm_forward_toogle' => '0',
@@ -1249,9 +1249,9 @@ Message :
                 'autocrm_forward_email' => NULL,
                 'autocrm_forward_email_subject' => NULL,
                 'autocrm_forward_email_content' => NULL,
-                'custom_text_replace'=>'%outlet_name%;%outlet_code%;%feature%;%admin_name%;%pin%',
-                'created_at' => '2018-03-12 13:53:17',
-                'updated_at' => '2018-05-03 15:02:20',
+                'custom_text_replace'=>'%receipt_number%;%outlet_code%;%outlet_name%;%delivery_status%;',
+                'created_at' => '2020-04-13 13:53:17',
+                'updated_at' => '2020-04-13 15:02:20',
             ),
         ));
     }
