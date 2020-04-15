@@ -4,6 +4,7 @@ namespace Modules\Disburse\Http\Controllers;
 
 use App\Http\Models\Outlet;
 use App\Http\Models\Setting;
+use GuzzleHttp\Client;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
@@ -53,17 +54,26 @@ class ApiDisburseSettingController extends Controller
             'beneficiary_account' => $post['beneficiary_account'],
             'beneficiary_email' => $post['beneficiary_email']
         ];
-        if(isset($post['outlets']) && $post['outlets'] == 'all'){
-            if(!empty($post['id_user_franchise'])){
-                $update = Outlet::join('user_franchise_outlet', 'outlets.id_outlet', 'user_franchise_outlet.id_outlet')
-                    ->where('user_franchise_outlet.id_user_franchise', $post['id_user_franchise'])
+        $bankCode = BankName::where('id_bank_name', $post['id_bank_name'])->first()->bank_code;
+
+        $validationAccount = MyHelper::connectIris('GET','api/v1/account_validation?bank='.$bankCode.'&account='.$post['beneficiary_account'], [], []);
+
+        if(isset($validationAccount['status']) && $validationAccount['status'] == 'success' && isset($validationAccount['response']['account_name'])){
+            if(isset($post['outlets']) && $post['outlets'] == 'all'){
+                if(!empty($post['id_user_franchise'])){
+                    $update = Outlet::join('user_franchise_outlet', 'outlets.id_outlet', 'user_franchise_outlet.id_outlet')
+                        ->where('user_franchise_outlet.id_user_franchise', $post['id_user_franchise'])
+                        ->update($dt);
+                }
+            }elseif(isset($post['outlets'])){
+                $update = Outlet::whereIn('id_outlet', $post['id_outlet'])
                     ->update($dt);
             }
-        }elseif(isset($post['outlets'])){
-            $update = Outlet::whereIn('id_outlet', $post['id_outlet'])
-                ->update($dt);
+            return response()->json(MyHelper::checkUpdate($update));
+        }else{
+            return response()->json(['status' => 'fail', 'message' => 'validation account failed']);
         }
-        return response()->json(MyHelper::checkUpdate($update));
+
     }
 
     public function getMdr(Request $request){

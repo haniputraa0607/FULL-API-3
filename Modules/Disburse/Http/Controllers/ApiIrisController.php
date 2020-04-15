@@ -88,7 +88,7 @@ class ApiIrisController extends Controller
                         $balanceNominal = 0;
                         $nominalBalance = 0;
                         $amount = 0;
-                        $charged = '';
+                        $charged = NULL;
 
                         foreach ($data['transaction_multiple_payment'] as $payments){
 
@@ -156,12 +156,13 @@ class ApiIrisController extends Controller
                         $amount = $subTotal - ((floatval($settingGlobalFee) / 100) * $subTotal) - $totalFee - $nominalBalance - $totalChargedPromo;
 
                         $checkOultet = array_search($data['id_outlet'], array_column($arrTmp, 'id_outlet'));
+
                         if($checkOultet === false){
                             $arrTmp[] = [
                                 'id_outlet' => $data['id_outlet'],
                                 'beneficiary_name' => $data['beneficiary_name'],
                                 'beneficiary_account' => $data['beneficiary_account'],
-                                'beneficiary_bank' => $data['bank_code'],
+                                'beneficiary_bank_name' => $data['bank_code'],
                                 'beneficiary_email' => $data['beneficiary_email'],
                                 'beneficiary_alias' => $data['beneficiary_alias'],
                                 'bank_code' => $data['bank_code'],
@@ -172,6 +173,8 @@ class ApiIrisController extends Controller
                                         'fee' => $settingGlobalFee,
                                         'mdr' => $feePG,
                                         'mdr_central' => $feePGCentral,
+                                        'mdr_charged' => $charged,
+                                        'mdr_type' => $feePGType,
                                         'charged_point_central' => $feePointCentral,
                                         'charged_point_outlet' => $feePointOutlet,
                                         'charged_promo_central' => $feePromoCentral,
@@ -186,6 +189,8 @@ class ApiIrisController extends Controller
                                 'fee' => $settingGlobalFee,
                                 'mdr' => $feePG,
                                 'mdr_central' => $feePGCentral,
+                                'mdr_charged' => $charged,
+                                'mdr_type' => $feePGType,
                                 'charged_point_central' => $feePointCentral,
                                 'charged_point_outlet' => $feePointOutlet,
                                 'charged_promo_central' => $feePromoCentral,
@@ -213,7 +218,7 @@ class ApiIrisController extends Controller
                     $dataToSend[] = $toSend;
 
                     $dataToInsert[] = [
-                        'id_outlet' => $data['id_outlet'],
+                        'id_outlet' => $val['id_outlet'],
                         'disburse_nominal' => $val['total_amount'],
                         'beneficiary_bank_name' => $val['beneficiary_name'],
                         'beneficiary_account_number' => $val['beneficiary_account'],
@@ -244,7 +249,9 @@ class ApiIrisController extends Controller
 
                             $insertToDisburseTransaction = $dataToInsert[$j]['transactions'];
                             unset($dataToInsert[$j]['transactions']);
-                            $insert = Disburse::insert($dataToInsert[$j]);
+
+                            $insert = Disburse::create($dataToInsert[$j]);
+
                             if($insert){
                                 $count = count($insertToDisburseTransaction);
                                 for($k=0;$k<$count;$k++){
