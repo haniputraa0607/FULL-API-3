@@ -246,6 +246,11 @@ class ApiDeals extends Controller
             $data['deals_promo_id'] = null;
         }
 
+        if (isset($post['charged_central']) || isset($post['charged_outlet'])) {
+            $data['charged_central'] = $post['charged_central'];
+            $data['charged_outlet'] = $post['charged_outlet'];
+        }
+
         return $data;
     }
 

@@ -14,7 +14,7 @@ class CreateUserFranchisesTable extends Migration
     public function up()
     {
         Schema::create('user_franchises', function (Blueprint $table) {
-            $table->bigIncrements('id_user_franchisee');
+            $table->bigIncrements('id_user_franchise');
             $table->string('phone', 15)->unique();
             $table->string('email', 191)->nullable()->unique();
             $table->timestamps();

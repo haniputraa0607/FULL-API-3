@@ -12,6 +12,7 @@ class MDR extends Model
 	protected $fillable = [
 	    'payment_name',
 		'mdr',
+        'mdr_central',
         'percent_type',
         'charged'
 	];

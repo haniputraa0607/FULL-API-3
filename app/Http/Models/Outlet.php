@@ -84,8 +84,10 @@ class Outlet extends Authenticatable
 		// 'outlet_open_hours',
 		// 'outlet_close_hours'
         'id_bank_name',
-        'account_number',
-        'recipient_name'
+        'beneficiary_name',
+        'beneficiary_alias',
+        'beneficiary_account',
+        'beneficiary_email'
 	];
 
 	protected $appends  = ['call', 'url'];

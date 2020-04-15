@@ -222,7 +222,7 @@ class ApiProductController extends Controller
         ];
         switch ($post['type']) {
             case 'global':
-                // update or create if not exist 
+                // update or create if not exist
                 $data = $post['data']??[];
                 $check_brand = Brand::where(['id_brand'=>$post['id_brand'],'code_brand'=>$data['code_brand']??''])->exists();
                 if($check_brand){
@@ -267,7 +267,7 @@ class ApiProductController extends Controller
                     ];
                 }
                 break;
-            
+
             case 'detail':
                 // update only, never create
                 $data = $post['data']??[];
@@ -331,7 +331,7 @@ class ApiProductController extends Controller
                     ];
                 }
                 break;
-            
+
             case 'price':
                 // update only, never create
                 $data = $post['data']??[];
@@ -438,7 +438,7 @@ class ApiProductController extends Controller
                     ];
                 }
                 break;
-            
+
             default:
                 # code...
                 break;
@@ -549,7 +549,7 @@ class ApiProductController extends Controller
                     }
                 }
                 break;
-            
+
             default:
                 # code...
                 break;
@@ -651,7 +651,7 @@ class ApiProductController extends Controller
 
     function listProductImage(Request $request) {
         $post = $request->json()->all();
-        
+
         if (isset($post['image']) && $post['image'] == 'null') {
             $product = Product::leftJoin('product_photos','product_photos.id_product','=','products.id_product')
                             ->whereNull('product_photos.product_photo')->get();
@@ -682,7 +682,7 @@ class ApiProductController extends Controller
                 return response()->json(MyHelper::checkGet($e));
             }
         }
-        
+
         $setting = Setting::where('key', 'image_override')->first();
 
         if (!$setting) {
@@ -699,7 +699,7 @@ class ApiProductController extends Controller
                 $setting = 'true';
             }
         }
-        
+
         return response()->json(MyHelper::checkGet($setting));
     }
 
@@ -993,6 +993,7 @@ class ApiProductController extends Controller
     	$data = [];
         $checkCode = Product::where('product_code', $post['name'])->first();
     	if ($checkCode) {
+            $checkSetting = Setting::where('key', 'image_override')->first();
             if ($checkSetting['value'] == 1) {
                 $productPhoto = ProductPhoto::where('id_product', $checkCode->id_product)->first();
                 if (file_exists($productPhoto->product_photo)) {
@@ -1000,7 +1001,7 @@ class ApiProductController extends Controller
                 }
             }
             $upload = MyHelper::uploadPhotoStrict($post['photo'], $this->saveImage, 300, 300, $post['name'].'-'.strtotime("now"));
-            
+
     	    if (isset($upload['status']) && $upload['status'] == "success") {
     	        $data['product_photo'] = $upload['path'];
     	    }
@@ -1331,7 +1332,7 @@ class ApiProductController extends Controller
         if($post['select']??false){
             $q->select($post['select']);
         }
-        
+
         if($condition=$post['condition']??false){
             $this->filterList($q,$condition['rules']??'',$condition['operator']??'and');
         }
@@ -1348,7 +1349,7 @@ class ApiProductController extends Controller
             }
             $newRule[$var['subject']][]=$var1;
         }
-        
+
         if($rules=$newRule['id_brand']??false){
             foreach ($rules as $rul) {
                 $model->{$where.'Has'}('brands',function($query) use ($rul){

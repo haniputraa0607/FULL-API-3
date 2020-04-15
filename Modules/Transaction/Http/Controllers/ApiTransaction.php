@@ -2133,12 +2133,15 @@ class ApiTransaction extends Controller
         $longitude = $request->json('longitude');
 
         // get place from google maps . max 20
-        $gmaps = MyHelper::get('https://maps.googleapis.com/maps/api/place/nearbysearch/json?'.http_build_query([
+        $param = [
             'key'=>env('GMAPS_PLACE_KEY'),
             'location'=>sprintf('%s,%s',$request->json('latitude'),$request->json('longitude')),
-            'rankby'=>'distance',
-            'keyword' => $request->json('keyword')
-        ]));
+            'rankby'=>'distance'
+        ];
+        if($request->json('keyword')){
+            $param['keyword'] = $request->json('keyword');
+        }
+        $gmaps = MyHelper::get('https://maps.googleapis.com/maps/api/place/nearbysearch/json?'.http_build_query($param));
 
         if($gmaps['status'] === 'OK'){
             $gmaps = $gmaps['results'];

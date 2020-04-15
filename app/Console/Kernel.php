@@ -94,6 +94,11 @@ class Kernel extends ConsoleKernel
          * To process fraud
          */
         $schedule->call('Modules\SettingFraud\Http\Controllers\ApiFraud@fraudCron')->cron('*/59 * * * *');
+
+        /**
+         * To process diburse
+         */
+        //$schedule->call('Modules\Disburse\Http\Controllers\ApiIrisController@disburse')->dailyAt('01:00');
     }
 
     /**
