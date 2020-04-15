@@ -376,7 +376,7 @@ class ApiProductController extends Controller
                                 $pp = ProductPrice::where([
                                     'id_outlet' => $outlet->id_outlet,
                                     'id_product' => $product->id_product
-                                ]);
+                                ])->first();
                                 if($pp){
                                     $update = $pp->update(['product_price'=>$value['global_price']]);
                                 }else{
@@ -406,11 +406,11 @@ class ApiProductController extends Controller
                                 ->where([
                                     'outlet_code' => $outlet_code,
                                     'id_product' => $product->id_product
-                                ]);
+                                ])->first();
                                 if($pp){
                                     $update = $pp->update(['product_price'=>$col_value]);
                                 }else{
-                                    $id_outlet = Outlet::select('id_outlet')->where('outlet_code',$outlet_code)->pluck('id_outlet');
+                                    $id_outlet = Outlet::select('id_outlet')->where('outlet_code',$outlet_code)->pluck('id_outlet')->first();
                                     if(!$id_outlet){
                                         $result['updated_price_fail']++;
                                         $result['more_msg_extended'][] = "Failed create new price for product {$value['product_code']} at outlet $outlet_code failed";
