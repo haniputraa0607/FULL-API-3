@@ -13,9 +13,9 @@ class CreateUserFranchiseeOutletTable extends Migration
      */
     public function up()
     {
-        Schema::create('user_franchisee_outlet', function (Blueprint $table) {
-            $table->bigIncrements('id_user_franchisee_outlet');
-            $table->integer('id_user_franchisee');
+        Schema::create('user_franchise_outlet', function (Blueprint $table) {
+            $table->bigIncrements('id_user_franchise_outlet');
+            $table->integer('id_user_franchise');
             $table->integer('id_outlet');
             $table->timestamps();
         });
@@ -28,6 +28,6 @@ class CreateUserFranchiseeOutletTable extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('user_franchisee_outlet');
+        Schema::dropIfExists('user_franchise_outlet');
     }
 }
