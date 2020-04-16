@@ -1958,8 +1958,8 @@ class ApiTransaction extends Controller
         $id     = $request->json('id');
         $select = [];
         $data   = LogBalance::where('id_log_balance', $id)->first();
-
-        if ($data['source'] == 'Transaction' || $data['source'] == 'Rejected Order Point' || $data['source'] == 'Rejected Order') {
+        // dd($data);
+        if ($data['source'] == 'Transaction' || $data['source'] == 'Online Transaction' || $data['source'] == 'Rejected Order Point' || $data['source'] == 'Rejected Order') {
             $select = Transaction::select(DB::raw('transactions.*,sum(transaction_products.transaction_product_qty) item_total'))->leftJoin('transaction_products','transactions.id_transaction','=','transaction_products.id_transaction')->with('outlet')->where('transactions.id_transaction', $data['id_reference'])->groupBy('transactions.id_transaction')->first();
 
             $data['date'] = $select['transaction_date'];
@@ -1992,12 +1992,20 @@ class ApiTransaction extends Controller
             $data['outlet'] = $select['outlet']['outlet_name'];
             $data['online'] = 1;
             $data['detail'] = $select;
-            
+
+            $usedAt = '';
+            $status = 'UNUSED';
+            if($data['detail']['used_at'] != null){
+                $usedAt = date('d M Y H:i', strtotime($data['detail']['used_at']));
+                $status = 'USED';
+            }
+
             $result = [
                 'type'                          => $data['type'],
                 'id_log_balance'                => $data['id_log_balance'],
                 'id_deals_user'                 => $data['detail']['id_deals_user'],
-                'used_at'                       => date('d M Y H:i', strtotime($data['detail']['used_at'])),
+                'status'                        => $status,
+                'used_at'                       => $usedAt,
                 'transaction_receipt_number'    => implode('', [strtotime($data['date']), $data['detail']['id_deals_user']]),
                 'transaction_date'              => date('d M Y H:i', strtotime($data['date'])),
                 'balance'                       => MyHelper::requestNumber($data['balance'], '_POINT'),
@@ -2007,6 +2015,7 @@ class ApiTransaction extends Controller
                 'title'                         => $data['detail']['dealVoucher']['deal']['deals_title']
             ];
         }
+
         return response()->json(MyHelper::checkGet($result));
     }
 
