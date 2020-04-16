@@ -12,37 +12,55 @@ use Illuminate\Http\Request;
 | is assigned the "api" middleware group. Enjoy building your API!
 |
 *///'scopes:disburse'============
-Route::group(['middleware' => ['auth:api', 'user_agent'], 'prefix' => 'disburse'], function () {
-    Route::any('dashboard', 'ApiDisburseController@dashboard');
-    Route::any('outlets', 'ApiDisburseController@getOutlets');
-    Route::any('user-franchise', 'ApiDisburseController@userFranchise');
+Route::group(['prefix' => 'disburse'], function () {
 
-    //setting bank name
-    Route::any('setting/bank-name', 'ApiDisburseSettingController@bankNameList');
-    Route::any('setting/bank-name/create', 'ApiDisburseSettingController@bankNameCreate');
-    Route::any('setting/bank-name/edit/{id}', 'ApiDisburseSettingController@bankNameEdit');
+    Route::group(['middleware' => ['auth:api', 'user_agent', 'scopes:be']], function () {
+        Route::any('dashboard', 'ApiDisburseController@dashboard');
+        Route::any('outlets', 'ApiDisburseController@getOutlets');
+        Route::any('user-franchise', 'ApiDisburseController@userFranchise');
 
-    //settings bank
-    Route::any('setting/bank-account', 'ApiDisburseSettingController@updateBankAccount');
-    Route::any('bank', 'ApiDisburseSettingController@getBank');
+        //setting bank name
+        Route::any('setting/bank-name', 'ApiDisburseSettingController@bankNameList');
+        Route::any('setting/bank-name/create', 'ApiDisburseSettingController@bankNameCreate');
+        Route::any('setting/bank-name/edit/{id}', 'ApiDisburseSettingController@bankNameEdit');
 
-    //settings mdr
-    Route::get('setting/mdr', 'ApiDisburseSettingController@getMdr');
-    Route::post('setting/mdr', 'ApiDisburseSettingController@updateMdr');
-    Route::post('setting/mdr-global', 'ApiDisburseSettingController@updateMdrGlobal');
+        //settings bank
+        Route::any('setting/bank-account', 'ApiDisburseSettingController@updateBankAccount');
+        Route::any('bank', 'ApiDisburseSettingController@getBank');
 
-    //settings global
-    Route::any('setting/fee-global', 'ApiDisburseSettingController@globalSettingFee');
-    Route::any('setting/point-charged-global', 'ApiDisburseSettingController@globalSettingPointCharged');
+        //settings mdr
+        Route::get('setting/mdr', 'ApiDisburseSettingController@getMdr');
+        Route::post('setting/mdr', 'ApiDisburseSettingController@updateMdr');
+        Route::post('setting/mdr-global', 'ApiDisburseSettingController@updateMdrGlobal');
 
-    //disburse
-    Route::post('list/trx', 'ApiDisburseController@listTrx');
-    Route::post('list/{status}', 'ApiDisburseController@listDisburse');
-    Route::post('list-datatable/{status}', 'ApiDisburseController@listDisburseDataTable');
-    Route::post('detail/{id}', 'ApiDisburseController@detailDisburse');
+        //settings global
+        Route::any('setting/fee-global', 'ApiDisburseSettingController@globalSettingFee');
+        Route::any('setting/point-charged-global', 'ApiDisburseSettingController@globalSettingPointCharged');
 
-    //sync list bank
-    Route::any('sync-bank', 'ApiDisburseController@syncListBank');
+        //disburse
+        Route::post('list/trx', 'ApiDisburseController@listTrx');
+        Route::post('list/{status}', 'ApiDisburseController@listDisburse');
+        Route::post('list-datatable/{status}', 'ApiDisburseController@listDisburseDataTable');
+        Route::post('detail/{id}', 'ApiDisburseController@detailDisburse');
+
+        //sync list bank
+        Route::any('sync-bank', 'ApiDisburseController@syncListBank');
+    });
+
+    Route::group(['middleware' => ['auth:user-franchise', 'scopes:be']], function () {
+        Route::any('user-franchise/detail', 'ApiDisburseController@userFranchise');
+        Route::any('user-franchise/dashboard', 'ApiDisburseController@dashboard');
+        Route::any('user-franchise/outlets', 'ApiDisburseController@getOutlets');
+        Route::any('user-franchise/user-franchise', 'ApiDisburseController@userFranchise');
+        Route::any('user-franchise/bank', 'ApiDisburseSettingController@getBank');
+        Route::post('user-franchise/reset-password', 'ApiDisburseController@userFranchiseResetPassword');
+
+        //disburse
+        Route::post('user-franchise/list/trx', 'ApiDisburseController@listTrx');
+        Route::post('user-franchise/list/{status}', 'ApiDisburseController@listDisburse');
+        Route::post('user-franchise/list-datatable/{status}', 'ApiDisburseController@listDisburseDataTable');
+        Route::post('user-franchise/detail/{id}', 'ApiDisburseController@detailDisburse');
+    });
 });
 
 Route::group(['prefix' => 'disburse'], function () {

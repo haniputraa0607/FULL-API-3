@@ -2402,9 +2402,9 @@ class MyHelper{
 
     public static function connectIris($method, $url, $body){
         $baseUrl = env('URL_IRIS');
-        $apiKey = MyHelper::decrypt2019(env('API_KEY_IRIS'));
+        //$apiKey = MyHelper::decrypt2019(env('API_KEY_IRIS'));
         $urlApi = $baseUrl.$url;
-        $base64 = base64_encode($apiKey.':');
+        $base64 = base64_encode(env('API_KEY_IRIS').':');
         $jsonBody = json_encode($body);
 
         try {

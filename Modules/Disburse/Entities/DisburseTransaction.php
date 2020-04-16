@@ -16,6 +16,7 @@ class DisburseTransaction extends Model
         'mdr_charged',
         'mdr',
         'mdr_central',
+        'mdr_type',
         'charged_point_central',
         'charged_point_outlet',
         'charged_promo_central',
