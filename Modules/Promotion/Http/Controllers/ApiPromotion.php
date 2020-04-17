@@ -1676,10 +1676,6 @@ class ApiPromotion extends Controller
 			Mail::send('emails.test', $data, function($message) use ($to,$subject,$name,$setting)
 			{
 				$message->to($to, $name)->subject($subject);
-				if(env('MAIL_DRIVER') == 'mailgun'){
-					$message->trackClicks(true)
-							->trackOpens(true);
-				}
 				if(!empty($setting['email_from']) && !empty($setting['email_sender'])){
 					$message->from($setting['email_sender'], $setting['email_from']);
 				}else if(!empty($setting['email_sender'])){
