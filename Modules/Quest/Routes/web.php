@@ -11,6 +11,6 @@
 |
 */
 
-Route::prefix('quest')->group(function() {
-    Route::get('/', 'QuestController@index');
-});
+// Route::prefix('quest')->group(function() {
+//     Route::get('/', 'QuestController@index');
+// });
