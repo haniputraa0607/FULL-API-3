@@ -19,7 +19,7 @@ class Ipay88Response extends FormRequest
         return [
           "MerchantCode" => 'string',
           "PaymentId" => 'sometimes',
-          "RefNo" => 'string',
+          "RefNo" => 'string|required',
           "Amount" => 'integer',
           "Currency" => 'string',
           "Remark" => 'sometimes',
