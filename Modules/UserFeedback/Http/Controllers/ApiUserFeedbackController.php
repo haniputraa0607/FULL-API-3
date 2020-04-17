@@ -12,6 +12,7 @@ use Modules\UserFeedback\Entities\RatingItem;
 use Modules\UserFeedback\Http\Requests\CreateRequest;
 use Modules\UserFeedback\Http\Requests\DeleteRequest;
 use Modules\UserFeedback\Http\Requests\DetailRequest;
+use Modules\UserFeedback\Http\Requests\DetailFERequest;
 use Modules\UserFeedback\Http\Requests\GetFormRequest;
 
 use App\Http\Models\Transaction;
@@ -227,7 +228,37 @@ class ApiUserFeedbackController extends Controller
      * @param int $id
      * @return Response
      */
-    public function show(DetailRequest $request)
+    public function show(DetailFERequest $request)
+    {
+        $user = $request->user();
+        $feedback = Transaction::select('transaction_date','transaction_receipt_number','rating_item_text','user_feedbacks.rating_value','notes','user_feedbacks.image as uploaded_image','rating_items.image as rating_item_image','text')->where(['transactions.id_transaction'=>$request->post('id_transaction'),'transactions.id_user'=>$user->id])
+            ->join('user_feedbacks','user_feedbacks.id_transaction','=','transactions.id_transaction')
+            ->leftJoin('rating_items','rating_items.rating_value', '=','user_feedbacks.rating_value')
+            ->first();
+        if(!$feedback){
+            return [
+                'status'=>'fail',
+                'messages'=>['User feedback not found']
+            ];
+        }
+        $response = [
+            'transaction_date' => MyHelper::dateFormatInd($feedback->transaction_date,true,false),
+            'transaction_time' => date('H:i',strtotime($feedback->transaction_date)),
+            'transaction_receipt_number' => $feedback->transaction_receipt_number,
+            'rating_item_image' => $feedback->rating_item_image?(env('S3_URL_API').$feedback->rating_item_image):null,
+            'rating_item_text' => $feedback->text?:$feedback->rating_item_text,
+            'notes' => $feedback->notes,
+            'uploaded_image' => $feedback->uploaded_image?(env('S3_URL_API').$feedback->uploaded_image):null
+        ];
+        return MyHelper::checkGet($response);
+    }
+
+    /**
+     * Show the specified resource.
+     * @param int $id
+     * @return Response
+     */
+    public function detail(DetailRequest $request)
     {
         $feedback = UserFeedback::where(['id_transaction'=>$request->post('id_transaction')])->find($request->post('id_user_feedback'));
         if(!$feedback){

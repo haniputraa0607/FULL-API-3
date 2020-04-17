@@ -617,7 +617,12 @@ class ApiHistoryController extends Controller
                     } else {
                         $dataList['status_point'] = 0;
                     }
-                    $dataList['rate_status'] = UserFeedback::where('id_transaction',$value['id_transaction'])->exists()?1:0;
+                    $feedback = UserFeedback::select('rating_items.image','text','rating_item_text')->where('id_transaction',$value['id_transaction'])->leftJoin('rating_items','rating_items.rating_value','=','user_feedbacks.rating_value')->first();
+                    $dataList['rate_status'] = $feedback?1:0;
+                    $dataList['feedback_detail'] = $feedback?[
+                        'rating_item_image' => $feedback->image?(env('S3_URL_API').$feedback->image):null,
+                        'rating_item_text' => $feedback->text?:$feedback->rating_item_text,
+                    ]:null;
 
                     $listTransaction[] = $dataList;
                 }

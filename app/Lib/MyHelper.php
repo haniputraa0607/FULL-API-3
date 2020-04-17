@@ -1294,7 +1294,7 @@ class MyHelper{
 				if($e->getResponse()){
 						$response = $e->getResponse()->getBody()->getContents();
 						$response_header = $e->getResponse()->getHeaders();
-						$status_code = $response->getStatusCode()->getStatusCode();
+						$status_code = $e->getResponse()->getStatusCode();
 						return json_decode($response, true);
 				}
 				else return ['status' => 'fail', 'messages' => [0 => 'Check your internet connection.']];
