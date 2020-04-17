@@ -1003,12 +1003,6 @@ Detail: ".$link['short'],
     }
 
     function balanceNotif($data) {
-        $sendAdmin = $this->sendNotif($data);
-
-        if (!$sendAdmin) {
-            return false;
-        }
-
         $user = User::with('memberships')->where('id', $data['id_user'])->first();
 
         if (!empty($user['memberships'][0]['membership_name'])) {
