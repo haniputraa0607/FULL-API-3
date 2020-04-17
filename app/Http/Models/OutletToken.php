@@ -8,6 +8,7 @@ class OutletToken extends Model
 	protected $primaryKey = 'id_outlet_token';
 	protected $fillable = [
 		'id_outlet',
-		'token'
+		'token',
+		'device_id'
 	];
 }
