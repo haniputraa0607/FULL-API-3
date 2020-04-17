@@ -743,7 +743,7 @@ class ApiOutletApp extends Controller
 
         DB::beginTransaction();
         $pickup = TransactionPickup::where('id_transaction', $order->id_transaction)->update(['ready_at' => date('Y-m-d H:i:s')]);
-        
+
         if($pickup){
             //send notif to customer
             $user = User::find($order->id_user);
@@ -755,7 +755,7 @@ class ApiOutletApp extends Controller
             if (!in_array('Balance', $column)) {
 
             	$promo_source = null;
-            	if ( $newTrx->id_promo_campaign_promo_code || $newTrx->transaction_vouchers ) 
+            	if ( $newTrx->id_promo_campaign_promo_code || $newTrx->transaction_vouchers )
             	{
             		if ( $newTrx->id_promo_campaign_promo_code ) {
             			$promo_source = 'promo_code';
@@ -887,6 +887,17 @@ class ApiOutletApp extends Controller
         $profile['outlet_address'] = $outlet['outlet_address'];
         $profile['outlet_phone'] = $outlet['outlet_phone'];
         $profile['status'] = 'success';
+
+        //save token outlet
+        $post = $request->json()->all();
+        if(isset($post['device_id']) && isset($post['device_token'])){
+            $cek = OutletToken::where('device_id', $post['device_id'])->first();
+            if($cek){
+                $saveToken = OutletToken::where('device_id', $post['device_id'])->update(['token' => $post['device_token'], 'id_outlet' => $outlet['id_outlet']]);
+            }else{
+                $saveToken = OutletToken::create(['device_id' => $post['device_id'], 'token' => $post['device_token'], 'id_outlet' => $outlet['id_outlet']]);
+            }
+        }
 
         return response()->json($profile);
     }
@@ -1401,7 +1412,7 @@ class ApiOutletApp extends Controller
                 }
             }else{
                 $new = OutletSchedule::create([
-                    'id_outlet' => $id_outlet, 
+                    'id_outlet' => $id_outlet,
                     'day' => $value['day']
                 ]+$value);
                 if (!$new) {
@@ -1691,7 +1702,7 @@ class ApiOutletApp extends Controller
                 return MyHelper::checkGet($trxGoSend);
                 break;
 
-            default: 
+            default:
                 return ['status'=>'fail','messages'=>['Invalid delivery type']];
                 break;
         }
