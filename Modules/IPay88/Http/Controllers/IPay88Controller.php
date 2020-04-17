@@ -120,9 +120,7 @@ class IPay88Controller extends Controller
             $post['from_backend'] = 1;
             $post['requery_response'] = $requery['response'];
             $this->lib->update($trx_ipay88,$post);
-            return [
-                'status' => 'success'
-            ];
+            return 'RECEIVEOK';
         }else{
             return MyHelper::checkGet([],$requery['response']);
         }
