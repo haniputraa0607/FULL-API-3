@@ -11,6 +11,6 @@
 |
 */
 
-Route::prefix('disburse')->group(function() {
-    Route::get('/', 'DisburseController@index');
-});
+// Route::prefix('disburse')->group(function() {
+//     Route::get('/', 'DisburseController@index');
+// });
