@@ -63,6 +63,7 @@ use DateTime;
 use App\Lib\MyHelper;
 use App\Lib\Midtrans;
 use App\Lib\GoSend;
+use App\Lib\PushNotificationHelper;
 
 use Modules\Transaction\Http\Requests\Transaction\NewTransaction;
 use Modules\Transaction\Http\Requests\Transaction\ConfirmPayment;
@@ -2261,27 +2262,33 @@ class ApiOnlineTransaction extends Controller
         $user = User::where('id', $trx['id_user'])->first();
 
         if (!empty($outletToken)) {
-            $dataArraySend = [];
+            if(env('PUSH_NOTIF_OUTLET') == 'fcm'){
+                $tokens = array_column($outletToken, 'token');
+                $subject = $type.' - Rp. '.number_format($trx['transaction_grandtotal'], 0, ',', '.').' - '.$totalSemua.' pcs - '.$detail['order_id'].' - '.$user['name'];
+                $push = PushNotificationHelper::sendPush($tokens, $subject, $stringBody, []);
+            }else{
+                $dataArraySend = [];
 
-            foreach ($outletToken as $key => $value) {
-                $dataOutletSend = [
-                    'to'    => $value['token'],
-                    'title' => $type.' - Rp. '.number_format($trx['transaction_grandtotal'], 0, ',', '.').' - '.$totalSemua.' pcs - '.$detail['order_id'].' - '.$user['name'].'',
-                    'body'  => $stringBody,
-                    'data'  => ['order_id' => $detail['order_id']]
-                ];
+                foreach ($outletToken as $key => $value) {
+                    $dataOutletSend = [
+                        'to'    => $value['token'],
+                        'title' => $type.' - Rp. '.number_format($trx['transaction_grandtotal'], 0, ',', '.').' - '.$totalSemua.' pcs - '.$detail['order_id'].' - '.$user['name'].'',
+                        'body'  => $stringBody,
+                        'data'  => ['order_id' => $detail['order_id']]
+                    ];
 
-                array_push($dataArraySend, $dataOutletSend);
+                    array_push($dataArraySend, $dataOutletSend);
 
-            }
+                }
 
-            $curl = $this->sendStatus('https://exp.host/--/api/v2/push/send', 'POST', $dataArraySend);
-            if (!$curl) {
-                DB::rollback();
-                return response()->json([
-                    'status'    => 'fail',
-                    'messages'  => ['Transaction failed']
-                ]);
+                $curl = $this->sendStatus('https://exp.host/--/api/v2/push/send', 'POST', $dataArraySend);
+                if (!$curl) {
+                    DB::rollback();
+                    return response()->json([
+                        'status'    => 'fail',
+                        'messages'  => ['Transaction failed']
+                    ]);
+                }
             }
         }
 
