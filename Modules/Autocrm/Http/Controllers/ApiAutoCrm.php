@@ -92,10 +92,6 @@ class ApiAutoCrm extends Controller
 
 
 							$message->to($to, $name)->subject($subject);
-							if(env('MAIL_DRIVER') == 'mailgun'){
-								$message->trackClicks(true)
-										->trackOpens(true);
-							}
 
 							if(!empty($setting['email_from']) && !empty($setting['email_sender'])){
                                 $message->from($setting['email_sender'], $setting['email_from']);
@@ -130,10 +126,6 @@ class ApiAutoCrm extends Controller
 						Mail::send('emails.test', $data, function($message) use ($to,$subject,$name,$setting,$variables)
 						{
 							$message->to($to, $name)->subject($subject);
-							if(env('MAIL_DRIVER') == 'mailgun'){
-								$message->trackClicks(true)
-										->trackOpens(true);
-							}
 							if(!empty($setting['email_from']) && !empty($setting['email_sender'])){
                                 $message->from($setting['email_sender'], $setting['email_from']);
                             }else if(!empty($setting['email_sender'])){
@@ -204,10 +196,6 @@ class ApiAutoCrm extends Controller
 						Mail::send('emails.test', $data, function($message) use ($to,$subject,$name,$setting,$variables)
 						{
 							$message->to($to, $name)->subject($subject);
-							if(env('MAIL_DRIVER') == 'mailgun'){
-								$message->trackClicks(true)
-										->trackOpens(true);
-							}
 							if(!empty($setting['email_from']) && !empty($setting['email_sender'])){
                                 $message->from($setting['email_sender'], $setting['email_from']);
                             }else if(!empty($setting['email_sender'])){
@@ -821,7 +809,7 @@ class ApiAutoCrm extends Controller
 		if($request->autocrm_title){
 			$query = $query->where('autocrm_title',$request->autocrm_title)->first();
 		}else{
-			$query = $query->get()->toArray();			
+			$query = $query->get()->toArray();
 		}
 		return response()->json(MyHelper::checkGet($query));
 	}
