@@ -1025,10 +1025,6 @@ class ApiPOS extends Controller
                 );
                 Mail::send('pos::email_sync_menu', $data, function ($message) use ($to, $subject, $setting) {
                     $message->to($to)->subject($subject);
-                    if(env('MAIL_DRIVER') == 'mailgun'){
-                        $message->trackClicks(true)
-                                ->trackOpens(true);
-                    }
                     if(!empty($setting['email_from']) && !empty($setting['email_sender'])){
                         $message->from($setting['email_sender'], $setting['email_from']);
                     }else if(!empty($setting['email_sender'])){

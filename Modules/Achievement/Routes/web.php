@@ -11,6 +11,6 @@
 |
 */
 
-Route::prefix('achievement')->group(function() {
-    Route::get('/', 'AchievementController@index');
-});
+// Route::prefix('achievement')->group(function() {
+//     Route::get('/', 'AchievementController@index');
+// });
