@@ -48,7 +48,8 @@ class ApiBrandController extends Controller
         $post = $request->json()->all();
 
         if (isset($post['logo_brand'])) {
-            $upload = MyHelper::uploadPhoto($post['logo_brand'], $path = 'img/brand/logo/');
+            $upload = MyHelper::uploadPhotoStrict($post['logo_brand'], $path = 'img/brand/logo/', 200, 200);
+
             if ($upload['status'] == "success") {
                 $post['logo_brand'] = $upload['path'];
             } else {
