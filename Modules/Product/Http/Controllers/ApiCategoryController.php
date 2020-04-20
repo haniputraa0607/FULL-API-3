@@ -373,12 +373,15 @@ class ApiCategoryController extends Controller
             ->where('product_prices.product_status','=','Active')
             ->whereNotNull('product_prices.product_price')
             ->with([
-                'brand_category'=>function($query){
+                'brand_category' => function($query){
                     $query->groupBy('id_product','id_brand');
                 },
-                'photos'=>function($query){
+                'photos' => function($query){
                     $query->select('id_product','product_photo');
-                }
+                },
+                'product_promo_categories' => function($query){
+                    $query->select('product_promo_categories.id_product_promo_category','product_promo_category_name as product_category_name','product_promo_category_order as product_category_order');
+                },
             ])
             ->groupBy('products.id_product', 'product_price', 'product_stock_status')
             ->orderBy('products.position')
@@ -400,16 +403,40 @@ class ApiCategoryController extends Controller
             unset($product['brand_category']);
             unset($product['photos']);
             unset($product['product_prices']);
+            $ppc = $product['product_promo_categories'];
+            unset($product['product_promo_categories']);
             foreach ($pivots as $pivot) {
+                $id_category = 0;
                 if($pivot['id_product_category']){
                     $product['id_brand'] = $pivot['id_brand'];
                     $result[$pivot['id_brand']][$pivot['id_product_category']][] = $product;
+                    $id_category = $pivot['id_product_category'];
+                }
+                if(!$id_category){
+                    continue;
+                }
+                //promo category
+                if($ppc){
+                    foreach($ppc as $promo_category){
+                        $promo_category['id_product_category'] = $id_category;
+                        $promo_category['url_product_category_photo'] = '';
+                        $id_product_promo_category = $promo_category['id_product_promo_category'];
+                        unset($promo_category['id_product_promo_category']);
+                        unset($promo_category['pivot']);
+                        if(!($result[$pivot['id_brand']]['promo'.$id_product_promo_category]??false)){
+                            $result[$pivot['id_brand']]['promo'.$id_product_promo_category]['category'] = $promo_category;
+                        }
+                        $result[$pivot['id_brand']]['promo'.$id_product_promo_category]['list'][] = $product;
+                    }
                 }
             }
         }
         // get detail of every key
         foreach ($result as $id_brand => $categories) {
             foreach ($categories as $id_category => $products) {
+                if(!is_numeric($id_category)){
+                    continue;
+                }
                 $category = ProductCategory::select('id_product_category','product_category_name','product_category_order')->find($id_category);
                 $categories[$id_category] = [
                     'category' => $category,

@@ -8,6 +8,7 @@ use Illuminate\Routing\Controller;
 use App\Http\Models\Product;
 
 use Modules\Product\Entities\ProductPromoCategory;
+use Modules\Product\Entities\ProductProductPromoCategory;
 use App\Lib\MyHelper;
 
 class ApiPromoCategoryController extends Controller
@@ -53,11 +54,7 @@ class ApiPromoCategoryController extends Controller
     {
         $use_product_variant = \App\Http\Models\Configs::where('id_config',94)->pluck('is_active')->first();
         $data = ProductPromoCategory::with(['products'=>function($query) use ($use_product_variant){
-                if($use_product_variant){
-                    $query->select('product_group_product_promo_categories.id_product_group','product_group_code');
-                }else{
-                    $query->select('product_product_promo_categories.id_product,product','product_code');
-                }
+                $query->select('product_product_promo_categories.id_product','product_code');
             }])->find($request->json('id_product_promo_category'));
         if(!$data){
             return MyHelper::checkGet($data);
@@ -100,8 +97,8 @@ class ApiPromoCategoryController extends Controller
         $id_product_promo_category = $post['id_product_promo_category'];
         $up = 0;
         ProductProductPromoCategory::where('id_product_promo_category',$id_product_promo_category)->delete();
-        foreach ($post['id_product_group'] as $id_product_group) {
-            $update = ProductProductPromoCategory::updateOrCreate(['id_product_group'=>$id_product_group,'id_product_promo_category'=>$id_product_promo_category]);
+        foreach ($post['id_product'] as $id_product) {
+            $update = ProductProductPromoCategory::updateOrCreate(['id_product'=>$id_product,'id_product_promo_category'=>$id_product_promo_category]);
         }
         return MyHelper::checkUpdate(true);
     }
