@@ -74,13 +74,13 @@ Route::group(['prefix' => 'api/product','middleware' => ['log_activities','auth:
     });
 
     Route::group(['prefix' => 'promo-category'], function() {
-        Route::any('/', 'ApiPromoCategoryController@index')->middleware(['feature_control:238']);
-        Route::post('assign', 'ApiPromoCategoryController@assign')->middleware(['feature_control:241']);
-        Route::post('reorder', 'ApiPromoCategoryController@reorder')->middleware(['feature_control:241']);
-        Route::post('create', 'ApiPromoCategoryController@store')->middleware(['feature_control:240']);
-        Route::post('show', 'ApiPromoCategoryController@show')->middleware(['feature_control:239']);
-        Route::post('update', 'ApiPromoCategoryController@update')->middleware(['feature_control:241']);
-        Route::post('delete', 'ApiPromoCategoryController@destroy')->middleware(['feature_control:242']);
+        Route::any('/', 'ApiPromoCategoryController@index')->middleware(['feature_control:236']);
+        Route::post('assign', 'ApiPromoCategoryController@assign')->middleware(['feature_control:239']);
+        Route::post('reorder', 'ApiPromoCategoryController@reorder')->middleware(['feature_control:239']);
+        Route::post('create', 'ApiPromoCategoryController@store')->middleware(['feature_control:238']);
+        Route::post('show', 'ApiPromoCategoryController@show')->middleware(['feature_control:237']);
+        Route::post('update', 'ApiPromoCategoryController@update')->middleware(['feature_control:239']);
+        Route::post('delete', 'ApiPromoCategoryController@destroy')->middleware(['feature_control:240']);
     });
 
     /* PRICES */
