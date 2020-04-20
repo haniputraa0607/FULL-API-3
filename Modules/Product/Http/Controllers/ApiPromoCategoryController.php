@@ -92,6 +92,22 @@ class ApiPromoCategoryController extends Controller
         return MyHelper::checkDelete($delete);
     }
 
+    /**
+     * Remove the specified resource from storage.
+     * @param int $id
+     * @return Response
+     */
+    public function reorder(Request $request)
+    {
+        $id_product_promo_category = $request->id_product_promo_category?:[];
+        foreach ($id_product_promo_category as $key => $id){
+            ProductPromoCategory::where('id_product_promo_category',$id)->update(['product_promo_category_order' => $key]);
+        }
+        return [
+            'status' => 'success'
+        ];
+    }
+
     public function assign(Request $request) {
         $post = $request->json()->all();
         $id_product_promo_category = $post['id_product_promo_category'];
