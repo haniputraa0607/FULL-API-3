@@ -424,6 +424,7 @@ class ApiCategoryController extends Controller
                         unset($promo_category['id_product_promo_category']);
                         unset($promo_category['pivot']);
                         if(!($result[$pivot['id_brand']]['promo'.$id_product_promo_category]??false)){
+                            $promo_category['product_category_order'] -= 1000000;
                             $result[$pivot['id_brand']]['promo'.$id_product_promo_category]['category'] = $promo_category;
                         }
                         $result[$pivot['id_brand']]['promo'.$id_product_promo_category]['list'][] = $product;
