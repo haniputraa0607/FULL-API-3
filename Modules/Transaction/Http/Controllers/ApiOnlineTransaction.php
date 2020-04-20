@@ -45,6 +45,7 @@ use Modules\PromoCampaign\Entities\PromoCampaignReferralTransaction;
 use Modules\PromoCampaign\Entities\UserReferralCode;
 use Modules\Subscription\Entities\TransactionPaymentSubscription;
 use Modules\Subscription\Entities\SubscriptionUserVoucher;
+use Modules\PromoCampaign\Entities\PromoCampaignReport;
 
 use Modules\Balance\Http\Controllers\NewTopupController;
 use Modules\PromoCampaign\Lib\PromoCampaignTools;
@@ -766,6 +767,7 @@ class ApiOnlineTransaction extends Controller
             }
         }
 
+        // add payment subscription
         if ( $request->json('id_subscription_user') )
         {
         	$subscription_total = app($this->subscription_use)->calculate($request->id_subscription_user, $insertTransaction['transaction_grandtotal'], $insertTransaction['transaction_subtotal'], $post['item'], $post['id_outlet'], $subs_error, $errorProduct, $subs_product, $subs_applied_product);
@@ -796,6 +798,27 @@ class ApiOnlineTransaction extends Controller
                     'messages'  => ['Insert Transaction Failed']
                 ]);
 	        }
+        }
+
+        // add promo campaign report
+        if($request->json('promo_code'))
+        {
+        	$promo_campaign_report = app($this->promo_campaign)->addReport(
+				$code->id_promo_campaign, 
+				$code->id_promo_campaign_promo_code,
+				$insertTransaction['id_transaction'],
+				$insertTransaction['id_outlet'],
+				$request->device_id,
+				$request->device_type
+			);
+
+        	if (!$promo_campaign_report) {
+        		DB::rollBack();
+                return response()->json([
+                    'status'    => 'fail',
+                    'messages'  => ['Insert Transaction Failed']
+                ]);
+        	}
         }
 
         //update receipt

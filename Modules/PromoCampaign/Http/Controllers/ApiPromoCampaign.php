@@ -2234,4 +2234,41 @@ class ApiPromoCampaign extends Controller
 
 	    return $result;	
     }
+
+
+    public function addReport($id_promo_campaign, $id_promo_campaign_promo_code, $id_transaction, $id_outlet, $device_id, $device_type)
+    {
+    	$data = [
+    		'id_promo_campaign_promo_code' 	=> $id_promo_campaign_promo_code,
+    		'id_promo_campaign' => $id_promo_campaign,
+    		'id_transaction' 	=> $id_transaction,
+    		'id_outlet' 		=> $id_outlet,
+    		'device_id' 		=> $device_id,
+    		'device_type' 		=> $device_type,
+    		'user_name'			=> Auth()->user()->name,
+    		'user_phone'		=> Auth()->user()->phone,
+    		'id_user' 			=> Auth()->user()->id
+    	];
+
+    	$insert = PromoCampaignReport::create($data);
+
+    	if (!$insert) {
+    		return false;
+    	}
+
+    	$used_code = PromoCampaignReport::where('id_promo_campaign',$id_promo_campaign)->count();
+    	$update = PromoCampaign::where('id_promo_campaign', $id_promo_campaign)->update(['used_code' => $used_code]);
+
+		if (!$update) {
+    		return false;
+    	}
+
+    	$update = PromoCampaignPromoCode::where('id_promo_campaign_promo_code', $id_promo_campaign_promo_code)->update(['usage' => 1]);
+
+		if (!$update) {
+    		return false;
+    	}
+
+    	return true;
+    }
 }
