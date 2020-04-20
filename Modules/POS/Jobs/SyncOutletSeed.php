@@ -9,6 +9,7 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Support\Facades\DB;
+use App\Http\Models\OutletSchedule;
 use Modules\Disburse\Entities\UserFranchise;
 use Modules\Disburse\Entities\UserFranchiseOultet;
 
@@ -35,10 +36,10 @@ class SyncOutletSeed implements ShouldQueue
     public function handle()
     {
         DB::beginTransaction();
-        
+
         foreach ($this->data as $key => $value) {
             $franchise = ($value['status_franchise'] == 0) ? 'Non Franchise' : 'Franchise' ;
-            
+
             $id_outlet = Outlet::updateOrCreate([
                 'id_outlet_seed'            => $value['id']
             ], [
@@ -68,8 +69,27 @@ class SyncOutletSeed implements ShouldQueue
                 'id_user_franchise'         => $id_user_franchise->id_user_franchise,
                 'status_franchise'          => $value['status_franchise']
             ]);
+
+            //create schedule for new outlet
+            $schedule = OutletSchedule::where('id_outlet', $id_outlet->id_outlet)->first();
+            if(empty($schedule)){
+                $dataSchedule = [];
+                $now = date('Y-m-d H:i:s');
+                $days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+                foreach($days as $day){
+                    $dataSchedule[] = [
+                        'id_outlet'     => $id_outlet->id_outlet,
+                        'day'           => $day,
+                        'open'          => '07:00',
+                        'close'         => '22:00',
+                        'created_at'    => $now,
+                        'updated_at'    => $now
+                    ];
+                }
+            }
+            OutletSchedule::insert($dataSchedule);
         }
-        
+
         DB::commit();
     }
 }
