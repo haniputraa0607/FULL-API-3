@@ -1676,9 +1676,15 @@ class ApiTransaction extends Controller
                         'pickup_time'       => ($list['detail']['pickup_type'] == 'right now') ? 'RIGHT NOW' : date('H : i', strtotime($list['detail']['pickup_at'])),
                 ];
                 if (isset($list['transaction_payment_status']) && $list['transaction_payment_status'] == 'Cancelled') {
+                    unset($result['detail']['order_id_qrcode']);
+                    unset($result['detail']['order_id']);
+                    unset($result['detail']['pickup_time']);
                     $result['transaction_status'] = 0;
                     $result['transaction_status_text'] = 'ORDER ANDA DIBATALKAN';
                 } elseif($list['detail']['reject_at'] != null) {
+                    unset($result['detail']['order_id_qrcode']);
+                    unset($result['detail']['order_id']);
+                    unset($result['detail']['pickup_time']);
                     $result['transaction_status'] = 0;
                     $result['transaction_status_text'] = 'ORDER ANDA DITOLAK';
                 } elseif($list['detail']['taken_by_system_at'] != null) {
