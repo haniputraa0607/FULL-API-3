@@ -1426,12 +1426,12 @@ class ApiTransaction extends Controller
         if ($type == 'trx') {
             $list = Transaction::where([['id_transaction', $id],
             ['id_user',$request->user()->id]])->with(
-                // 'user.city.province', 
-                'productTransaction.product.product_category', 
-                'productTransaction.modifiers', 
-                'productTransaction.product.product_photos', 
-                'productTransaction.product.product_discounts', 
-                'transaction_payment_offlines', 
+                // 'user.city.province',
+                'productTransaction.product.product_category',
+                'productTransaction.modifiers',
+                'productTransaction.product.product_photos',
+                'productTransaction.product.product_discounts',
+                'transaction_payment_offlines',
                 'transaction_vouchers.deals_voucher.deal',
                 'promo_campaign_promo_code.promo_campaign',
                 'outlet.city')->first();
@@ -1597,7 +1597,7 @@ class ApiTransaction extends Controller
                     ];
                     break;
             }
-            
+
             array_splice($exp, 0, 0, 'transaction_subtotal');
             array_splice($label, 0, 0, 'Cart Total');
 
@@ -1676,9 +1676,15 @@ class ApiTransaction extends Controller
                         'pickup_time'       => ($list['detail']['pickup_type'] == 'right now') ? 'RIGHT NOW' : date('H : i', strtotime($list['detail']['pickup_at'])),
                 ];
                 if (isset($list['transaction_payment_status']) && $list['transaction_payment_status'] == 'Cancelled') {
+                    unset($result['detail']['order_id_qrcode']);
+                    unset($result['detail']['order_id']);
+                    unset($result['detail']['pickup_time']);
                     $result['transaction_status'] = 0;
                     $result['transaction_status_text'] = 'ORDER ANDA DIBATALKAN';
                 } elseif($list['detail']['reject_at'] != null) {
+                    unset($result['detail']['order_id_qrcode']);
+                    unset($result['detail']['order_id']);
+                    unset($result['detail']['pickup_time']);
                     $result['transaction_status'] = 0;
                     $result['transaction_status_text'] = 'ORDER ANDA DITOLAK';
                 } elseif($list['detail']['taken_by_system_at'] != null) {
@@ -1728,7 +1734,7 @@ class ApiTransaction extends Controller
                 'desc'      => $quantity . ' items',
                 'amount'    => MyHelper::requestNumber($list['transaction_subtotal'],'_CURRENCY')
             ];
-            
+
             $p = 0;
             if (!empty($list['transaction_vouchers'])) {
                 foreach ($list['transaction_vouchers'] as $valueVoc) {
@@ -1741,7 +1747,7 @@ class ApiTransaction extends Controller
                     ];
                 }
             }
-            
+
             if (!empty($list['promo_campaign_promo_code'])) {
                 $result['promo']['code'][$p++]   = $list['promo_campaign_promo_code']['promo_code'];
                 $result['payment_detail'][] = [
@@ -1766,7 +1772,7 @@ class ApiTransaction extends Controller
                     $result['detail']['detail_status'][] = [
                     'text'  => 'Order rejected',
                     'date'  => date('d F Y H:i', strtotime($list['detail']['reject_at'])),
-                    'reason'=> $result['detail']['reject_reason']
+                    'reason'=> $list['detail']['reject_reason']
                 ];
                 }
                 if ($list['detail']['taken_by_system_at'] != null) {
@@ -1798,7 +1804,7 @@ class ApiTransaction extends Controller
                     'date'  => date('d F Y H:i', strtotime($list['transaction_date']))
                 ];
             }
-            
+
             foreach ($list['payment'] as $key => $value) {
                 if ($value['name'] == 'Balance') {
                     $result['transaction_payment'][$key] = [
@@ -1821,7 +1827,7 @@ class ApiTransaction extends Controller
             if (empty($list)) {
                 return response()->json(MyHelper::checkGet($list));
             }
-            
+
             $result = [
                 'trasaction_type'               => 'voucher',
                 'id_deals_user'                 => $list['id_deals_user'],
@@ -2111,17 +2117,17 @@ class ApiTransaction extends Controller
                     $adr['position'] = 1;
                     $result[] = $adr;
                     break;
-                
+
                 case 'work':
                     $adr['position'] = 2;
                     $result[] = $adr;
                     break;
-                
+
                 case 'other':
                     $adr['position'] = 3;
                     $result[] = $adr;
                     break;
-                
+
                 default:
                     $adr['position'] = $key+3;
                     $result[] = $adr;
@@ -2199,7 +2205,7 @@ class ApiTransaction extends Controller
         }
         // apply limit;
         // $max_item = Setting::select('value')->where('key','history_address_max_item')->pluck('value')->first()?:10;
-        // $user_address = array_splice($user_address,0,$max_item); 
+        // $user_address = array_splice($user_address,0,$max_item);
         $result = [];
         if($user_address){
             $result = [

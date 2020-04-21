@@ -2263,7 +2263,7 @@ class ApiOnlineTransaction extends Controller
 
         if (!empty($outletToken)) {
             if(env('PUSH_NOTIF_OUTLET') == 'fcm'){
-                $tokens = array_column($outletToken, 'token');
+                $tokens = $outletToken->pluck('token');
                 $subject = $type.' - Rp. '.number_format($trx['transaction_grandtotal'], 0, ',', '.').' - '.$totalSemua.' pcs - '.$detail['order_id'].' - '.$user['name'];
                 $push = PushNotificationHelper::sendPush($tokens, $subject, $stringBody, []);
             }else{

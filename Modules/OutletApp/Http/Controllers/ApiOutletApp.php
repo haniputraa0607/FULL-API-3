@@ -625,6 +625,7 @@ class ApiOutletApp extends Controller
                     'status'    => $statusPickup,
                     'date'      => $list->transaction_date,
                     'reject_at' => $list->reject_at,
+                    'id_transaction' => $list->id_transaction,
                     'url'       => env('API_URL').'/transaction/web/view/outletapp?data='.$base
                 ],
             ];
@@ -1708,19 +1709,19 @@ class ApiOutletApp extends Controller
                 break;
         }
     }
-    
+
     public function transactionDetail(TransactionDetail $request)
     {
         $id = $request->json('id_transaction');
 
         $list = Transaction::where([['id_transaction', $id]])->with(
-            // 'user.city.province', 
+            // 'user.city.province',
             'user',
-            'productTransaction.product.product_category', 
-            'productTransaction.modifiers', 
-            'productTransaction.product.product_photos', 
-            'productTransaction.product.product_discounts', 
-            'transaction_payment_offlines', 
+            'productTransaction.product.product_category',
+            'productTransaction.modifiers',
+            'productTransaction.product.product_photos',
+            'productTransaction.product.product_discounts',
+            'transaction_payment_offlines',
             'transaction_vouchers.deals_voucher.deal',
             'promo_campaign_promo_code.promo_campaign',
             'outlet.city')->first();
@@ -1886,7 +1887,7 @@ class ApiOutletApp extends Controller
                 ];
                 break;
         }
-        
+
         array_splice($exp, 0, 0, 'transaction_subtotal');
         array_splice($label, 0, 0, 'Cart Total');
 
@@ -2019,7 +2020,7 @@ class ApiOutletApp extends Controller
             'desc'      => $quantity . ' items',
             'amount'    => MyHelper::requestNumber($list['transaction_subtotal'],'_CURRENCY')
         ];
-        
+
         $p = 0;
         if (!empty($list['transaction_vouchers'])) {
             foreach ($list['transaction_vouchers'] as $valueVoc) {
@@ -2032,7 +2033,7 @@ class ApiOutletApp extends Controller
                 ];
             }
         }
-        
+
         if (!empty($list['promo_campaign_promo_code'])) {
             $result['promo']['code'][$p++]   = $list['promo_campaign_promo_code']['promo_code'];
             $result['payment_detail'][] = [
@@ -2089,7 +2090,7 @@ class ApiOutletApp extends Controller
                 'date'  => date('d F Y H:i', strtotime($list['transaction_date']))
             ];
         }
-        
+
         foreach ($list['payment'] as $key => $value) {
             if ($value['name'] == 'Balance') {
                 $result['transaction_payment'][$key] = [

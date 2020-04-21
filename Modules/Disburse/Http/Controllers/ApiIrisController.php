@@ -59,11 +59,12 @@ class ApiIrisController extends Controller
             ->whereNull('disburse_transactions.id_disburse')
             ->select('transactions.id_outlet', 'transactions.id_transaction', 'transactions.transaction_subtotal',
                 'transactions.transaction_grandtotal', 'transactions.transaction_discount', 'transactions.id_promo_campaign_promo_code',
-                'bank_name.bank_code',
+                'bank_name.bank_code', 'outlets.status_franchise',
                 'outlets.beneficiary_name', 'outlets.beneficiary_account', 'outlets.beneficiary_email', 'outlets.beneficiary_alias')
             ->with(['transaction_multiple_payment', 'vouchers', 'promo_campaign'])
-            ->orderBy('transactions.created_at', 'desc')->take(20)->get()->toArray();
-        $settingGlobalFee = Setting::where('key', 'global_setting_fee')->first()->value;
+            ->orderBy('transactions.created_at', 'desc')->get()->toArray();
+        $settingGlobalFee = Setting::where('key', 'global_setting_fee')->first()->value_text;
+        $settingGlobalFee = json_decode($settingGlobalFee);
         $settingGlobalFeePoint = Setting::where('key', 'global_setting_point_charged')->first()->value_text;
         $settingGlobalFeePoint = json_decode($settingGlobalFeePoint);
         $settingMDRAll = MDR::get()->toArray();
@@ -104,8 +105,8 @@ class ApiIrisController extends Controller
 
                             }elseif (strtolower($payments['type']) == 'balance'){
                                 $balanceNominal = TransactionPaymentBalance::where('id_transaction', $data['id_transaction'])->first()->balance_nominal;
-                                $feePointCentral = $settingGlobalFeePoint->central;
-                                $feePointOutlet = $settingGlobalFeePoint->outlet;
+                                $feePointCentral = ($settingGlobalFeePoint->central == '' ? 0 : $settingGlobalFeePoint->central);
+                                $feePointOutlet = ($settingGlobalFeePoint->outlet == '' ? 0 : $settingGlobalFeePoint->outlet);
 
                                 if((int)$feePointCentral !== 100){
                                     $nominalBalance = $balanceNominal * (floatval($feePointOutlet) / 100);
@@ -153,7 +154,14 @@ class ApiIrisController extends Controller
                             $totalFee = $feePGCentral + $feePG;
                         }
 
-                        $amount = $subTotal - ((floatval($settingGlobalFee) / 100) * $subTotal) - $totalFee - $nominalBalance - $totalChargedPromo;
+                        $percentFee = 0;
+                        if($data['status_franchise'] == 1){
+                            $percentFee = ($settingGlobalFee->fee_outlet == '' ? 0 : $settingGlobalFee->fee_outlet);
+                        }else{
+                            $percentFee = ($settingGlobalFee->fee_central == '' ? 0 : $settingGlobalFee->fee_central);
+                        }
+
+                        $amount = $subTotal - ((floatval($percentFee) / 100) * $subTotal) - $totalFee - $nominalBalance - $totalChargedPromo;
 
                         $checkOultet = array_search($data['id_outlet'], array_column($arrTmp, 'id_outlet'));
 
@@ -170,7 +178,7 @@ class ApiIrisController extends Controller
                                 'transactions' => [
                                     [
                                         'id_transaction' => $data['id_transaction'],
-                                        'fee' => $settingGlobalFee,
+                                        'fee' => $percentFee,
                                         'mdr' => $feePG,
                                         'mdr_central' => $feePGCentral,
                                         'mdr_charged' => $charged,
@@ -186,7 +194,7 @@ class ApiIrisController extends Controller
                             $arrTmp[$checkOultet]['total_amount'] = $arrTmp[$checkOultet]['total_amount'] + $amount;
                             $arrTmp[$checkOultet]['transactions'][] = [
                                 'id_transaction' => $data['id_transaction'],
-                                'fee' => $settingGlobalFee,
+                                'fee' => $percentFee,
                                 'mdr' => $feePG,
                                 'mdr_central' => $feePGCentral,
                                 'mdr_charged' => $charged,
@@ -256,6 +264,8 @@ class ApiIrisController extends Controller
                                 $count = count($insertToDisburseTransaction);
                                 for($k=0;$k<$count;$k++){
                                     $insertToDisburseTransaction[$k]['id_disburse'] = $insert['id_disburse'];
+                                    $insertToDisburseTransaction[$k]['created_at'] = date('Y-m-d H:i:s');
+                                    $insertToDisburseTransaction[$k]['updated_at'] = date('Y-m-d H:i:s');
                                 }
                                 DisburseTransaction::insert($insertToDisburseTransaction);
                             }
