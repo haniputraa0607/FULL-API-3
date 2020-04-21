@@ -1657,8 +1657,11 @@ class ApiOutletApp extends Controller
             $updateGoSend->go_send_id = $booking['id'];
             $updateGoSend->go_send_order_no = $booking['orderNo'];
             $updateGoSend->latest_status = $status['status']??null;
+            $updateGoSend->driver_id = $status['driverId']??null;
             $updateGoSend->driver_name = $status['driverName']??null;
             $updateGoSend->driver_phone = $status['driverPhone']??null;
+            $updateGoSend->driver_photo = $status['driverPhoto']??null;
+            $updateGoSend->vehicle_number = $status['vehicleNumber']??null;
             $updateGoSend->save();
 
             if(!$updateGoSend){
@@ -1683,11 +1686,20 @@ class ApiOutletApp extends Controller
                 $status = GoSend::getStatus($trx['transaction_receipt_number']);
                 if($status['status']??false){
                     $toUpdate = ['latest_status' => $status['status']];
+                    if($status['driverId']??false){
+                        $toUpdate['driver_id'] = $status['driverId'];
+                    }
                     if($status['driverName']??false){
                         $toUpdate['driver_name'] = $status['driverName'];
                     }
                     if($status['driverPhone']??false){
                         $toUpdate['driver_phone'] = $status['driverPhone'];
+                    }
+                    if($status['driverPhoto']??false){
+                        $toUpdate['driver_photo'] = $status['driverPhoto'];
+                    }
+                    if($status['vehicleNumber']??false){
+                        $toUpdate['vehicle_number'] = $status['vehicleNumber'];
                     }
                     $trxGoSend->update($toUpdate);
                     if(in_array(strtolower($status['status']), ['completed','delivered'])){
