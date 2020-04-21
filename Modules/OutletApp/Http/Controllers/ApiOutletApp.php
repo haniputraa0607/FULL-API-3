@@ -1710,6 +1710,29 @@ class ApiOutletApp extends Controller
         }
     }
 
+    public function cancelDelivery(Request $request)
+    {
+        $trx = Transaction::where('transactions.id_transaction',$request->id_transaction)->join('transaction_pickups','transaction_pickups.id_transaction', '=', 'transactions.id_transaction')->where('pickup_by','GO-SEND')->first();
+        if(!$trx){
+            return MyHelper::checkGet($trx,'Transaction Not Found');
+        }
+        $trx->load('transaction_pickup_go_send');
+        $orderNo = $trx->transaction_pickup_go_send->go_send_order_no;
+        if(!$orderNo){
+            return [
+                'status' => 'fail',
+                'messages' => ['Go-Send Pickup not found']
+            ];
+        }
+        $cancel = GoSend::cancelOrder($orderNo,$trx->transaction_receipt_number);
+        if(($cancel['status']??false) == 'fail'){
+            return $cancel;
+        }
+        if(($cancel['statusCode']??false) == '200'){
+            return ['status' => 'success'];
+        }
+    }
+
     public function transactionDetail(TransactionDetail $request)
     {
         $id = $request->json('id_transaction');

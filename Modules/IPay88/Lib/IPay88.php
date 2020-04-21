@@ -270,7 +270,6 @@ class IPay88
 
 						//send notif to outlet
 						$sendNotifOutlet = app($this->trx)->outletNotif($trx['id_transaction']);
-						dd($sendNotifOutlet);
 				        $send = app($this->autocrm)->SendAutoCRM('Transaction Success', $trx->user->phone, [
 				            'notif_type' => 'trx',
 				            'header_label' => 'Sukses',
