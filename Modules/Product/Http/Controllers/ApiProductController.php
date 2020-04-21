@@ -13,6 +13,7 @@ use App\Http\Models\ProductModifier;
 use App\Http\Models\Outlet;
 use App\Http\Models\Setting;
 use Modules\Product\Entities\ProductStockStatusUpdate;
+use Modules\Product\Entities\ProductProductPromoCategory;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -612,7 +613,7 @@ class ApiProductController extends Controller
         }
 
         if (isset($post['product_code'])) {
-            $product->with(['product_tags','brands'])->where('products.product_code', $post['product_code']);
+            $product->with(['product_tags','brands','product_promo_categories'=>function($q){$q->select('product_promo_categories.id_product_promo_category');}])->where('products.product_code', $post['product_code']);
         }
 
         if (isset($post['product_name'])) {
@@ -785,6 +786,16 @@ class ApiProductController extends Controller
             }
         }
         unset($post['product_brands']);
+        // promo_category
+        ProductProductPromoCategory::where('id_product',$post['id_product'])->delete();
+        ProductProductPromoCategory::insert(array_map(function($id_product_promo_category) use ($post) {
+            return [
+                'id_product' =>$post['id_product'],
+                'id_product_promo_category' => $id_product_promo_category
+            ];
+        },$post['id_product_promo_category']??[]));
+        unset($post['id_product_promo_category']);
+
     	$data = $this->checkInputProduct($post);
 
         if (isset($post['product_code'])) {
