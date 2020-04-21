@@ -58,6 +58,7 @@ class ApiNotification extends Controller {
         $this->oauth_id  = env('OUTLET_OAUTH_ID');
         $this->oauth_secret  = env('OUTLET_OAUTH_SECRET');
         $this->voucher  = "Modules\Deals\Http\Controllers\ApiDealsVoucher";
+        $this->promo_campaign	= "Modules\PromoCampaign\Http\Controllers\ApiPromoCampaign";
     }
 
     /* RECEIVE NOTIFICATION */
@@ -865,6 +866,13 @@ Detail: ".$link['short'],
 
             if (!$check) {
                 return false;
+            }
+
+            if ($trx->id_promo_campaign_promo_code) {
+            	$update_promo_report = app($this->promo_campaign)->deleteReport($trx->id_transaction, $trx->id_promo_campaign_promo_code);
+            	if (!$update_promo_report) {
+            		return false;
+	            }	
             }
 
             $update_voucher = app($this->voucher)->returnVoucher($trx->id_transaction);

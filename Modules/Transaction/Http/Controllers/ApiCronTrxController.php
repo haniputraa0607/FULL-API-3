@@ -41,6 +41,7 @@ class ApiCronTrxController extends Controller
         $this->autocrm = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
         $this->balance  = "Modules\Balance\Http\Controllers\BalanceController";
         $this->voucher  = "Modules\Deals\Http\Controllers\ApiDealsVoucher";
+        $this->promo_campaign = "Modules\PromoCampaign\Http\Controllers\ApiPromoCampaign";
     }
 
     public function cron(Request $request)
@@ -113,6 +114,15 @@ class ApiCronTrxController extends Controller
                         'received_point'    => (string) abs($logB['balance'])
                     ]
                 );
+            }
+
+            // delete promo campaign report
+            if ($value->id_promo_campaign_promo_code) {
+            	$update_promo_report = app($this->promo_campaign)->deleteReport($value->id_transaction, $value->id_promo_campaign_promo_code);
+            	if (!$update_promo_report) {
+	            	db::rollBack();
+	            	continue;
+	            }	
             }
 
             // return voucher
