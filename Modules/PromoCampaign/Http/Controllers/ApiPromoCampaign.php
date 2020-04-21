@@ -2271,4 +2271,39 @@ class ApiPromoCampaign extends Controller
 
     	return true;
     }
+
+    public function deleteReport($id_transaction, $id_promo_campaign_promo_code)
+    {
+    	$getReport = PromoCampaignReport::with('promo_campaign')
+						->where('id_promo_campaign_promo_code', $id_promo_campaign_promo_code)
+						->where('id_transaction','=',$id_transaction)
+						->first();
+
+    	if ($getReport)
+    	{
+	    	$delete = PromoCampaignReport::where('id_transaction', '=', $id_transaction)
+	    				->where('id_promo_campaign_promo_code', $id_promo_campaign_promo_code)
+	    				->delete();
+
+	    	if ($delete)
+	    	{
+	    		$update = PromoCampaign::where('id_promo_campaign', '=', $getReport['id_promo_campaign'])->update(['used_code' => $getReport->promo_campaign->used_code-1]);
+
+	    		if ($update)
+	    		{
+		    		return true;
+	    		}
+	    		else
+	    		{
+	    			return false;
+	    		}
+	    	}
+	    	else
+	    	{
+	    		return false;
+	    	}
+        }
+
+        return true;
+    }
 }
