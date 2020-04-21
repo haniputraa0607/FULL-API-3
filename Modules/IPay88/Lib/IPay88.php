@@ -1,4 +1,4 @@
-<?php 
+<?php
 namespace Modules\IPay88\Lib;
 
 use Illuminate\Support\Facades\Log;
@@ -28,6 +28,7 @@ class IPay88
 		$this->autocrm = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
 		$this->promo_campaign = "Modules\PromoCampaign\Http\Controllers\ApiPromoCampaign";
 		$this->voucher  = "Modules\Deals\Http\Controllers\ApiDealsVoucher";
+        $this->trx = "Modules\Transaction\Http\Controllers\ApiOnlineTransaction";
 
 		$this->posting_url = ENV('IPAY88_POSTING_URL');
 		$this->requery_url = ENV('IPAY88_REQUERY_URL');
@@ -205,7 +206,7 @@ class IPay88
 		if(
 			($status == '1' && $response['response'] == '00') ||
 			($status == '0' && $response['response'] == 'Payment fail') ||
-			($status == '6' && $response['response'] == 'Payment Pending')			
+			($status == '6' && $response['response'] == 'Payment Pending')
 		){
 			$is_valid = true;
 		}
@@ -267,7 +268,11 @@ class IPay88
 	                    }
 
 				        $trx->load('outlet');
-				        $trx->load('productTransaction');
+						$trx->load('productTransaction');
+
+						//send notif to outlet
+						$sendNotifOutlet = app($this->trx)->outletNotif($trx['id_transaction']);
+						dd($sendNotifOutlet);
 				        $send = app($this->autocrm)->SendAutoCRM('Transaction Success', $trx->user->phone, [
 				            'notif_type' => 'trx',
 				            'header_label' => 'Sukses',
@@ -425,7 +430,7 @@ class IPay88
             			break;
             	}
                 break;
-            
+
             case 'subscription':
     			$subscription_user = SubscriptionUser::with('user')->where('id_subscription_user',$model->id_subscription_user)->first();
     			$subscription = Subscription::where('id_subscription',$model->id_subscription)->first();
@@ -494,7 +499,7 @@ class IPay88
             			break;
             	}
                 break;
-            
+
             default:
                 # code...
                 break;
