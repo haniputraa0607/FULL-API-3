@@ -2060,7 +2060,6 @@ class ApiOnlineTransaction extends Controller
             }
             $result['points'] -= $result['used_point'];
         }
-        $result['total_payment'] = $result['grandtotal'] - $result['used_point'];
         if ($request->id_subscription_user && !$request->promo_code && !$request->id_deals_user)
         {
 	        $result['subscription'] = app($this->subscription_use)->calculate($request->id_subscription_user, $result['grandtotal'], $result['subtotal'], $post['item'], $post['id_outlet'], $subs_error, $errorProduct, $subs_product, $subs_applied_product);
@@ -2071,6 +2070,7 @@ class ApiOnlineTransaction extends Controller
 	        	$promo_error['product_label'] = $subs_product??'';
 	        }
         }
+        $result['total_payment'] = $result['grandtotal'] - $result['used_point'] - $result['subscription'];
         return MyHelper::checkGet($result)+['messages'=>$error_msg,'promo_error'=>$promo_error];
     }
 
