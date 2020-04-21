@@ -735,8 +735,8 @@ class SettingsTableSeeder extends Seeder
                 array(
                     'id_setting' => 82,
                     'key' => 'global_setting_fee',
-                    'value' => '0',
-                    'value_text' => null,
+                    'value' => null,
+                    'value_text' => '{"fee_outlet":"","fee_central":""}',
                     'created_at' => date('Y-m-d H:i:s'),
                     'updated_at' => date('Y-m-d H:i:s'),
                 ),
