@@ -2259,25 +2259,23 @@ class ApiOnlineTransaction extends Controller
 
         foreach ($dataProduct as $key => $value) {
             $totalSemua += $value['transaction_product_qty'];
-            $stringBody .= $value['product']['product_name']." - ".$value['transaction_product_qty']." pcs \r\n";
+            $stringBody .= $value['product']['product_name']." - ".$value['transaction_product_qty']." pcs \n";
         }
 
         // return $stringBody;
 
         $outletToken = OutletToken::where('id_outlet', $trx['id_outlet'])->get();
 
-        if (isset($detail['pickup_type'])) {
-            if ($detail['pickup_type'] == 'at arrival') {
-                $type = 'Saat Kedatangan';
-            }
-
-            if ($detail['pickup_type'] == 'right now') {
-                $type = 'Saat Ini';
-            }
-
-            if ($detail['pickup_type'] == 'set time') {
+        if (isset($detail['pickup_by'])) {
+            if ($detail['pickup_by'] == 'Customer') {
                 $type = 'Pickup';
+                if(isset($detail['pickup_at'])){
+                    $type = $type.' ('.date('H:i', strtotime($detail['pickup_at'])).' )';
+                }
+            }else{
+                $type = 'Delivery';
             }
+
         } else {
             $type = 'Delivery';
         }

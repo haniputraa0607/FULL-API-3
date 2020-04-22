@@ -23,6 +23,7 @@ use App\Http\Models\LogPoint;
 use Modules\SettingFraud\Entities\FraudSetting;
 use App\Http\Models\TransactionMultiplePayment;
 use App\Http\Models\TransactionPaymentBalance;
+use App\Http\Models\TransactionProduct;
 
 use GuzzleHttp\Exception\GuzzleException;
 use GuzzleHttp\Client;
@@ -149,7 +150,8 @@ class ApiNotification extends Controller {
                 //         ]);
                 //     }
                 // }
-                if($midtrans['transaction_status'] != 'settlement' && $midtrans['payment_type'] != 'credit_card'){
+                if($midtrans['transaction_status'] == 'settlement' && $midtrans['payment_type'] == 'credit_card'){}
+                else{
 
                     $notif = $this->notification($midtrans, $newTrx);
                     if (!$notif) {
@@ -158,31 +160,39 @@ class ApiNotification extends Controller {
                             'messages' => ['Transaction failed']
                         ]);
                     }
+
                     $sendNotifOutlet = app($this->trx)->outletNotif($newTrx['id_transaction']);
 
-                    $kirim = $this->kirimOutlet($newTrx['transaction_receipt_number']);
-                    if (isset($kirim['status']) && $kirim['status'] == 1) {
+                    if($this->url_oauth != ''){
+                        $kirim = $this->kirimOutlet($newTrx['transaction_receipt_number']);
+                        if (isset($kirim['status']) && $kirim['status'] == 1) {
 
-                        // apply cashback to referrer
-                        \Modules\PromoCampaign\Lib\PromoCampaignTools::applyReferrerCashback($newTrx);
+                            // apply cashback to referrer
+                            \Modules\PromoCampaign\Lib\PromoCampaignTools::applyReferrerCashback($newTrx);
 
-                        DB::commit();
-                        // langsung
-                        return response()->json(['status' => 'success']);
-                    } elseif (isset($kirim['status']) && $kirim['status'] == 'fail') {
-                        if (isset($kirim['messages'])) {
+                            DB::commit();
+                            // langsung
+                            return response()->json(['status' => 'success']);
+                        } elseif (isset($kirim['status']) && $kirim['status'] == 'fail') {
+                            if (isset($kirim['messages'])) {
+                                DB::rollback();
+                                return response()->json([
+                                    'status'   => 'fail',
+                                    'messages' => $kirim['messages']
+                                ]);
+                            }
+                        } else {
                             DB::rollback();
                             return response()->json([
                                 'status'   => 'fail',
-                                'messages' => $kirim['messages']
+                                'messages' => ['failed']
                             ]);
                         }
-                    } else {
-                        DB::rollback();
-                        return response()->json([
-                            'status'   => 'fail',
-                            'messages' => ['failed']
-                        ]);
+                    }else{
+                         // apply cashback to referrer
+                        \Modules\PromoCampaign\Lib\PromoCampaignTools::applyReferrerCashback($newTrx);
+
+                        DB::commit();
                     }
                 }
 
@@ -873,6 +883,7 @@ Detail: ".$link['short'],
             	if (!$update_promo_report) {
             		return false;
 	            }	
+
             }
 
             $update_voucher = app($this->voucher)->returnVoucher($trx->id_transaction);
