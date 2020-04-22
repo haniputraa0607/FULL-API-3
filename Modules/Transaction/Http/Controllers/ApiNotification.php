@@ -882,7 +882,8 @@ Detail: ".$link['short'],
             	$update_promo_report = app($this->promo_campaign)->deleteReport($trx->id_transaction, $trx->id_promo_campaign_promo_code);
             	if (!$update_promo_report) {
             		return false;
-	            }
+	            }	
+
             }
 
             $update_voucher = app($this->voucher)->returnVoucher($trx->id_transaction);

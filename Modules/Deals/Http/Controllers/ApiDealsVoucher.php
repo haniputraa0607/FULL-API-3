@@ -730,6 +730,8 @@ class ApiDealsVoucher extends Controller
 	    		return false;
 	    	}
     	}
+    	
+    	return true;
 
     }
 

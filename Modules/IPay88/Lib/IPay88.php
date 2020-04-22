@@ -26,6 +26,8 @@ class IPay88
 	public static $obj = null;
 	function __construct() {
 		$this->autocrm = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
+		$this->promo_campaign = "Modules\PromoCampaign\Http\Controllers\ApiPromoCampaign";
+		$this->voucher  = "Modules\Deals\Http\Controllers\ApiDealsVoucher";
         $this->trx = "Modules\Transaction\Http\Controllers\ApiOnlineTransaction";
 
 		$this->posting_url = ENV('IPAY88_POSTING_URL');
@@ -343,6 +345,15 @@ class IPay88
 				                }
 				            }
 				        }
+				        // delete promo campaign report
+			            if ($trx->id_promo_campaign_promo_code) 
+			            {
+			            	$update_promo_report = app($this->promo_campaign)->deleteReport($trx->id_transaction, $trx->id_promo_campaign_promo_code);
+			            }
+
+			            // return voucher
+			            $update_voucher = app($this->voucher)->returnVoucher($trx->id_transaction);
+
 	                    if(!$update){
 		                    DB::rollBack();
 	                        return [

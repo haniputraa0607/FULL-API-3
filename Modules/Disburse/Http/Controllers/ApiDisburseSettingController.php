@@ -133,10 +133,18 @@ class ApiDisburseSettingController extends Controller
         $post = $request->json()->all();
 
         if($post){
-            $update = Setting::where('key', 'global_setting_fee')->update(['value' => $post['fee']]);
+            $data = [
+                'fee_outlet' => $post['fee_outlet'],
+                'fee_central' => $post['fee_central']
+            ];
+            $data = json_encode($data);
+            $update = Setting::where('key', 'global_setting_fee')->update(['value_text' => $data]);
             return response()->json(MyHelper::checkUpdate($update));
         }else{
             $setting = Setting::where('key', 'global_setting_fee')->first();
+            if($setting){
+                $setting = json_decode($setting['value_text']);
+            }
             return response()->json(MyHelper::checkGet($setting));
         }
     }
