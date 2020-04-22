@@ -398,7 +398,7 @@
   <?php
     use App\Lib\MyHelper;
  ?>
-  <body style="@if(isset($data['admin'])) background:#fff; @endif background:#F7F8FA;">
+  <body style="background:#ffffff;max-width: 480px; margin: auto">
   <div class="@if(isset($data['admin'])) body-admin @endif">
     @if(isset($data['detail']['pickup_by']) && $data['detail']['pickup_by'] == 'GO-SEND')
         <div class="kotak-biasa">
@@ -425,31 +425,25 @@
         </div>
     @else
         <div class="kotak-biasa" style="background-color: #FFFFFF;box-shadow: 0 0.7px 3.3px #eeeeee;">
-            <div class="container" style="padding: 0px;">
-                <div class="kotak-biasa" style="background-color: #FFFFFF;padding: 15px;margin-top: 10px;box-shadow: 0 0.7px 3.3px #eeeeee;">
-                    <div class="container">
-                        <div class="text-center">
-                            <div class="col-12 text-15px text-black-grey-light space-text WorkSans-Bold">{{ $data['outlet']['outlet_name'] }}</div>
-                            <div class="kotak-inside col-12">
-                                <div class="col-12 text-11-7px text-grey-white space-nice text-center WorkSans">{{ $data['outlet']['outlet_address'] }}</div>
-                            </div>
-                            @if ($data['trasaction_type'] != 'Offline')
-                            <div class="col-12 WorkSans-Bold text-14px space-text text-black-grey-light">Kode Pickup Anda</div>
+            <div class="container" style="padding: 10px;margin-top: 10px;">
+                <div class="text-center">
+                    <div class="col-12 text-15px text-black-grey-light space-text WorkSans-Bold">{{ $data['outlet']['outlet_name'] }}</div>
+                    <div class="col-12 text-11-7px text-grey-white space-nice text-center WorkSans">{{ $data['outlet']['outlet_address'] }}</div>
+                    @if ($data['trasaction_type'] != 'Offline')
+                        <div class="col-12 WorkSans-Bold text-14px space-text text-black-grey-light">Kode Pickup Anda</div>
 
-                            <div style="width: 135px;height: 135px;margin: 0 auto;" data-toggle="modal" data-target="#exampleModal">
-                                <div class="col-12 text-14-3px space-top"><img class="img-responsive" style="display: block; max-width: 100%; padding-top: 10px" src="{{ $data['qr'] }}"></div>
-                            </div>
-                            <div class="col-12 text-black-grey-light text-20px WorkSans-SemiBold">{{ $data['detail']['order_id'] }}</div>
-                            @endif
+                        <div style="width: 135px;height: 135px;margin: 0 auto;" data-toggle="modal" data-target="#exampleModal">
+                            <div class="col-12 text-14-3px space-top"><img class="img-responsive" style="display: block; max-width: 100%; padding-top: 10px" src="{{ $data['detail']['order_id_qrcode'] }}"></div>
                         </div>
-                    </div>
+                        <div class="col-12 text-black-grey-light text-20px WorkSans-SemiBold" style="margin-top: 8%;">{{ $data['detail']['order_id'] }}</div>
+                    @endif
                 </div>
             </div>
         </div>
     @endif
     @if ($data['trasaction_type'] != 'Offline')
-        <div class="kotak-biasa" style="background-color: #FFFFFF;padding: 15px;margin-top: 10px;box-shadow: 0 0.7px 3.3px #eeeeee;">
-            <div class="container">
+        <div class="kotak-biasa" style="background-color: #FFFFFF;box-shadow: 0 0.7px 3.3px #eeeeee;">
+            <div class="container" style="padding: 10px;margin-top: 10px;">
                 <div class="text-center">
                     @if(isset($data['admin']))
                         <div class="col-12 text-16-7px text-black space-text WorkSans">{{ strtoupper($data['user']['name']) }}</div>
@@ -478,190 +472,136 @@
         </div>
     @endif
 
-    <div class="kotak-biasa" style="background-color: #FFFFFF;padding: 15px;margin-top: 10px;box-shadow: 0 0.7px 3.3px #eeeeee;">
-        <div class="row space-bottom">
-            <div class="col-4 text-black-grey-light text-14px WorkSans-Bold">Transaksi</div>
-            <div class="col-8 text-grey-white text-right text-medium-grey text-11-7px WorkSans">{{ date('d', strtotime($data['transaction_date'])) }} {{ $bulan[date('n', strtotime($data['transaction_date']))] }} {{ date('Y H:i', strtotime($data['transaction_date'])) }}</div>
-        </div>
-        <div class="row space-text">
-            <div class="col-4"></div>
-            <div class="col-8 text-right text-black-grey-light text-13-3px WorkSans-SemiBold">#{{ $data['transaction_receipt_number'] }}</div>
-        </div>
-        <div class="kotak" style="margin: 0px;border-radius: 10px;">
-
-            @foreach ($data['productTransaction'] as $keyProduct => $itemProduct)
-                <div class="row">
-                    <div class="col-2 text-14px WorkSans text-black">
-                        <div class="round-grey bg-grey" style="background: #aaaaaa;"></div>
+    <div class="kotak-biasa" style="background-color: #FFFFFF;box-shadow: 0 0.7px 3.3px #eeeeee;">
+        <div class="container" style="padding: 10px;margin-top: 10px;">
+            <div class="row space-bottom">
+                <div class="col-4 text-black-grey-light text-14px WorkSans-Bold">Transaksi</div>
+                <div class="col-8 text-grey-white text-right text-medium-grey text-11-7px WorkSans">{{ date('d', strtotime($data['transaction_date'])) }} {{ $bulan[date('n', strtotime($data['transaction_date']))] }} {{ date('Y H:i', strtotime($data['transaction_date'])) }}</div>
+            </div>
+            <div class="row space-text">
+                <div class="col-4"></div>
+                <div class="col-8 text-right text-black-grey-light text-13-3px WorkSans-SemiBold">#{{ $data['transaction_receipt_number'] }}</div>
+            </div>
+            <div class="kotak" style="margin: 0px;border-radius: 10px;">
+                @foreach ($data['product_transaction'] as $trx)
+                    <div class="row" style="margin-bottom: 5%;">
+                        <div class="col-12 text-13-3px WorkSans-Medium text-black">
+                            <div class="round-grey bg-grey" style="border: 1px solid #aaaaaa;border-radius: 50%;width: 5px;height: 5px;display: inline-block;margin-right:3px;background-color: #aaaaaa"></div>
+                            {{$trx['brand']}}
+                        </div>
                     </div>
-                    <div class="col-10 text-14px WorkSans-SemiBold text-black" style="margin-left: -40px;margin-bottom: 10px;">{{$keyProduct}}</div>
-                </div>
-                @foreach ($itemProduct as $item)
+                    @foreach ($trx['product'] as $prod)
+                        <div class="row">
+                            <div class="col-2 text-13-3px WorkSans-SemiBold text-black">{{$prod['transaction_product_qty']}}x</div>
+                            <div class="col-6 text-14px WorkSans-SemiBold text-black" style="margin-left:-100px;margin-right: 50px;">{{$prod['product']['product_name']}}</div>
+                            <div class="col-4 text-13-3px text-right WorkSans-SemiBold text-black">{{ str_replace(',', '.', number_format(explode('.',$prod['transaction_product_subtotal'])[0])) }}</div>
+                        </div>
+                        @if(isset($prod['product']['product_modifiers']))
+                            @foreach($prod['product']['product_modifiers'] as $mod)
+                                <div class="row">
+                                    <div class="col-2 text-13-3px WorkSans-SemiBold text-black"></div>
+                                    <div class="col-6 text-14px WorkSans-SemiBold text-black" style="margin-left:-100px;margin-right: 50px;color: darkgrey;font-size: 11px;">{{$mod['product_modifier_name']}}</div>
+                                    <div class="col-4 text-13-3px text-right WorkSans-SemiBold text-black"></div>
+                                </div>
+                            @endforeach
+                        @endif
+                    @endforeach
+                    @if ($trx != end($data['product_transaction']))
+                        <div class="col-12">
+                            <hr style="border-top: 1px solid #eeeeee;">
+                        </div>
+                    @endif
+                @endforeach
+            </div>
+        </div>
+    </div>
+
+    <div class="kotak-biasa" style="background-color: #FFFFFF;box-shadow: 0 0.7px 3.3px #eeeeee;">
+        <div class="container" style="padding: 10px;margin-top: 10px;">
+            <div class="row space-bottom">
+                <div class="col-12 text-14px WorkSans-Bold text-black">Detail Pembayaran</div>
+            </div>
+            <div class="kotak" style="margin: 0px;margin-top: 10px;border-radius: 10px;">
+                @foreach($data['payment_detail'] as $dt)
                     <div class="row">
-                        <div class="col-2 text-13-3px WorkSans-SemiBold text-black">{{$item['transaction_product_qty']}}x</div>
-                        <div class="col-6 text-14px WorkSans-SemiBold text-black" style="margin-left: -30px;margin-right: 20px;">{{$item['product']['product_name']}}</div>
-                        <div class="col-4 text-13-3px text-right WorkSans-SemiBold text-black">{{ MyHelper::requestNumber($item['transaction_product_price'], '_CURRENCY') }}</div>
+                        <div class="col-6 text-13-3px WorkSans-SemiBold text-black ">{{$dt['name']}} ({{$dt['desc']}})</div>
+                        @if(is_numeric(strpos(strtolower($dt['name']), 'discount')))
+                            <div class="col-6 text-13-3px text-right WorkSans-SemiBold text-black" style="color:#a6ba35;">{{ str_replace(',', '.', number_format($dt['amount'])) }}</div>
+                        @else
+                            <div class="col-6 text-13-3px text-right WorkSans-SemiBold text-black">{{ str_replace(',', '.', number_format($dt['amount'])) }}</div>
+                        @endif
+
                     </div>
                 @endforeach
-                @if ($itemProduct != end($data['productTransaction']))
-                    <div class="row col-12">
-                        <hr style="border-top: 1px solid #eeeeee;">
-                    </div>
-                @endif
-                @if ($item['product']['product_discounts'] != [])
-                    <div class="row">
-                        <div class="col-2 text-13-3px WorkSans text-black">{{$item['transaction_product_qty']}}x</div>
-                        <div class="col-6 text-13-3px WorkSans text-black" style="margin-left: -20px;margin-right: 20px;">{{$item['product']['product_name']}}</div>
-                        <div class="col-4 text-13-3px text-right WorkSans text-black">{{ MyHelper::requestNumber($data['transaction_subtotal'], '_CURRENCY') }}</div>
-                    </div>
-                @endif
-            @endforeach
-        </div>
-    </div>
-
-    <div class="kotak-biasa" style="background-color: #FFFFFF;padding: 15px;margin-top: 10px;box-shadow: 0 0.7px 3.3px #eeeeee;">
-        <div class="row space-bottom">
-            <div class="col-12 text-14px WorkSans-Bold text-black">Detail Pembayaran</div>
-        </div>
-        <div class="kotak" style="margin: 0px;margin-top: 10px;border-radius: 10px;">
-            <div class="row">
-                <div class="col-6 text-13-3px WorkSans-SemiBold text-black ">Subtotal ({{$data['transaction_item_total']}} item)</div>
-                <div class="col-6 text-13-3px text-right WorkSans-SemiBold text-black">{{ MyHelper::requestNumber($data['transaction_subtotal'], '_CURRENCY') }}</div>
             </div>
-        </div>
-        <div style="margin: 0px;margin-top: 10px;padding: 10px;background: #f0f3f7;">
-            <div class="row">
-                <div class="col-6 text-13-3px WorkSans-SemiBold text-black ">Grand Total</div>
-                @if(isset($data['balance']))
-                <div class="col-6 text-13-3px text-right WorkSans-SemiBold text-black">{{ str_replace(',', '.', number_format($data['transaction_grandtotal'] - $data['balance'])) }}</div>
-                <div class="col-6 text-13-3px text-right WorkSans-SemiBold text-black">{{ MyHelper::requestNumber(($data['transaction_grandtotal'] - $data['balance']), '_CURRENCY') }}</div>
-                @else
-                <div class="col-6 text-13-3px text-right WorkSans-SemiBold text-black">{{ str_replace(',', '.', number_format($data['transaction_grandtotal'])) }}</div>
-                <div class="col-6 text-13-3px text-right WorkSans-SemiBold text-black">{{ MyHelper::requestNumber($data['transaction_grandtotal'], '_CURRENCY') }}</div>
-                @endif
+            <div style="margin: 0px;margin-top: 10px;padding: 10px;background: #f0f3f7;">
+                <div class="row">
+                    <div class="col-6 text-13-3px WorkSans-SemiBold text-black ">Grand Total</div>
+                    @if(isset($data['balance']))
+                    <div class="col-6 text-13-3px text-right WorkSans-SemiBold text-black">{{ str_replace(',', '.', number_format($data['transaction_grandtotal'] - $data['balance'])) }}</div>
+                    @else
+                    <div class="col-6 text-13-3px text-right WorkSans-SemiBold text-black">{{ str_replace(',', '.', number_format($data['transaction_grandtotal'])) }}</div>
+                    @endif
+                </div>
             </div>
         </div>
     </div>
 
-    <div class="kotak-biasa" style="background-color: #FFFFFF;padding: 15px;margin-top: 10px;box-shadow: 0 0.7px 3.3px #eeeeee;">
-        <div class="row space-bottom">
-            <div class="col-12 text-14px WorkSans-SemiBold text-black">Metode Pembayaran</div>
-        </div>
-        <div class="kotak" style="margin: 0px;margin-top: 10px;border-radius: 10px;">
-            <div class="row">
-                <div class="col-6 text-13-3px WorkSans-SemiBold text-black ">{{$data['trasaction_payment_type']}}</div>
-                @if(isset($data['balance']))
-                <div class="col-6 text-13-3px text-right WorkSans-SemiBold text-black">{{ MyHelper::requestNumber(($data['transaction_grandtotal'] - $data['balance']), '_CURRENCY') }}</div>
-                @else
-                <div class="col-6 text-13-3px text-right WorkSans-SemiBold text-black">{{ MyHelper::requestNumber($data['transaction_grandtotal'], '_CURRENCY') }}</div>
-                @endif
+    <div class="kotak-biasa" style="background-color: #FFFFFF;box-shadow: 0 0.7px 3.3px #eeeeee;">
+        <div class="container" style="padding: 10px;margin-top: 10px;">
+            <div class="row space-bottom">
+                <div class="col-12 text-14px WorkSans-SemiBold text-black">Metode Pembayaran</div>
+            </div>
+            <div class="kotak" style="margin: 0px;margin-top: 10px;border-radius: 10px;">
+                <div class="row">
+                    @foreach($data['transaction_payment'] as $dt)
+                        <div class="col-6 text-13-3px WorkSans-SemiBold text-black ">{{$dt['name']}}</div>
+                        <div class="col-6 text-13-3px text-right WorkSans-SemiBold text-black">{{ str_replace(',', '.', number_format(explode('.',$dt['amount'])[0])) }}</div>
+                    @endforeach
+                </div>
             </div>
         </div>
     </div>
 
     @if ($data['trasaction_type'] != 'Offline')
-    <div class="kotak-biasa" style="background-color: #FFFFFF;padding: 15px;margin-top: 10px;">
-        <div class="row space-bottom">
-            <div class="col-12 text-14px WorkSans-Bold text-black">Status Pesanan</div>
-        </div>
-        <div class="kotak" style="margin: 0px;margin-top: 10px;border-radius: 10px;">
-            <div class="row">
-                @php $top = 5; $bg = true; @endphp
-                @if($data['detail']['reject_at'] != null)
-                    <div class="col-12 text-13-3px WorkSans-Medium text-black">
-                        <div class="round-grey bg-grey"></div>
-                        Pesanan Anda ditolak
-                    </div>
-                    <div class="col-12 top-5px">
-                        <div class="inline text-center">
-                            <div class="line-vertical text-grey-medium-light">|</div>
-                            <div class="line-vertical text-grey-medium-light">|</div>
-                            <div class="line-vertical text-grey-medium-light">|</div>
-                            <div class="line-vertical text-grey-medium-light">|</div>
-                            <div class="line-vertical text-grey-medium-light">|</div>
-                        </div>
-                        <div class="inline vertical-top">
-                            <div class="text-11-7px WorkSans text-black space-bottom">
-                                {{date('d', strtotime($data['detail']['reject_at']))}} {{$bulan[date('n', strtotime($data['detail']['reject_at']))]}} {{date('Y H:i', strtotime($data['detail']['reject_at']))}}
-                            </div>
-                        </div>
-                    </div>
-                    @php $top += 5; $bg = false; @endphp
-                @endif
-                @if($data['detail']['taken_at'] != null)
-                    <div class="col-12 text-13-3px WorkSans-Medium text-black top-{{$top}}px">
-                        <div class="round-grey @if($bg) bg-grey @endif"></div>
-                        Pesanan Anda sudah diambil
-                    </div>
-                    @php $top += 5; $bg = false; @endphp
-                    <div class="col-12 top-{{$top}}px">
-                        <div class="inline text-center">
-                            <div class="line-vertical text-grey-medium-light">|</div>
-                            <div class="line-vertical text-grey-medium-light">|</div>
-                            <div class="line-vertical text-grey-medium-light">|</div>
-                            <div class="line-vertical text-grey-medium-light">|</div>
-                            <div class="line-vertical text-grey-medium-light">|</div>
-                        </div>
-                        <div class="inline vertical-top">
-                            <div class="text-11-7px WorkSans text-black space-bottom">
-                                {{date('d F Y H:i', strtotime($data['detail']['taken_at']))}}
-                            </div>
-                        </div>
-                    </div>
-                    @php $top += 5; @endphp
-                @endif
-                @if($data['detail']['ready_at'] != null)
-                    <div class="col-12 text-13-3px WorkSans-Medium text-black top-{{$top}}px">
-                        <div class="round-grey @if($bg) bg-grey @endif"></div>
-                        Pesanan Anda sudah siap
-                    </div>
-                    @php $top += 5; $bg = false; @endphp
-                    <div class="col-12 top-{{$top}}px">
-                        <div class="inline text-center">
-                            <div class="line-vertical text-grey-medium-light">|</div>
-                            <div class="line-vertical text-grey-medium-light">|</div>
-                            <div class="line-vertical text-grey-medium-light">|</div>
-                            <div class="line-vertical text-grey-medium-light">|</div>
-                            <div class="line-vertical text-grey-medium-light">|</div>
-                        </div>
-                        <div class="inline vertical-top">
-                            <div class="text-11-7px WorkSans text-black space-bottom">
-                                {{date('d', strtotime($data['detail']['ready_at']))}} {{$bulan[date('n', strtotime($data['detail']['ready_at']))]}} {{date('Y H:i', strtotime($data['detail']['ready_at']))}}
-                            </div>
-                        </div>
-                    </div>
-                    @php $top += 5; @endphp
-                @endif
-                @if($data['detail']['receive_at'] != null)
-                    <div class="col-12 text-13-3px WorkSans-Medium text-black top-{{$top}}px">
-                        <div class="round-grey @if($bg) bg-grey @endif"></div>
-                            Pesanan Anda sudah diterima
-                    </div>
-                    @php $top += 5; $bg = false; @endphp
-                    <div class="col-12 top-{{$top}}px">
-                        <div class="inline text-center">
-                            <div class="line-vertical text-grey-medium-light">|</div>
-                            <div class="line-vertical text-grey-medium-light">|</div>
-                            <div class="line-vertical text-grey-medium-light">|</div>
-                            <div class="line-vertical text-grey-medium-light">|</div>
-                            <div class="line-vertical text-grey-medium-light">|</div>
-                        </div>
-                        <div class="inline vertical-top">
-                            <div class="text-11-7px WorkSans text-black space-bottom">
-                                {{date('d', strtotime($data['detail']['receive_at']))}} {{$bulan[date('n', strtotime($data['detail']['receive_at']))]}} {{date('Y H:i', strtotime($data['detail']['receive_at']))}}
-                            </div>
-                        </div>
-                    </div>
-                    @php $top += 5; @endphp
-                @endif
-                <div class="col-12 text-13-3px WorkSans-Medium text-black top-{{$top}}px">
-                    <div class="round-grey @if($bg) bg-grey @endif"></div>
-                    Pesanan Anda Menunggu Konfirmasi
-                </div>
-                <div class="col-12 text-11-7px WorkSans text-black space-bottom top-{{$top}}px">
-                    <div class="round-white"></div>
-                    {{date('d', strtotime($data['transaction_date']))}} {{$bulan[date('n', strtotime($data['transaction_date']))]}} {{date('Y H:i', strtotime($data['transaction_date']))}}
-                </div>
+    <div class="kotak-biasa" style="background-color: #FFFFFF;box-shadow: 0 0.7px 3.3px #eeeeee;">
+        <div class="container" style="padding: 10px;margin-top: 10px;">
+            <div class="row space-bottom">
+                <div class="col-12 text-14px WorkSans-Bold text-black">Status Pesanan</div>
+            </div>
+            <div class="kotak" style="margin: 0px;margin-top: 10px;border-radius: 10px;">
+                <?php
+                $i = 1;
+                $count = count($data['detail']['detail_status']);
+                foreach ($data['detail']['detail_status'] as $status){
+                    if($i == 1 ){
+                        $html = '<div class="col-12 text-13-3px WorkSans-Medium text-black">';
+                        $html .= '<div class="round-grey bg-grey" style="border: 1px solid #aaaaaa;border-radius: 50%;width: 5px;height: 5px;display: inline-block;margin-right:3px;background-color: #aaaaaa"></div>';
+                        $html .= $status['text'];
+                        $html .= '</div>';
+                        $html .= '<div class="inline vertical-top">';
+                        $html .= '<div class="col-12 text-11-7px WorkSans text-black space-bottom" style="margin-left: 10%">';
+                        $html .= $status['date'];
+                        $html .= '</div>';
+                        $html .= '</div>';
+
+                        echo $html;
+                    }else{
+                        $html = '<div class="col-12 text-13-3px WorkSans-Medium text-black">';
+                        $html .= '<div class="round-green bg-green2" style="border: 1px solid #aaaaaa;border-radius: 50%;width: 5px;height: 5px;display: inline-block;margin-right:3px;background-color: #a6ba35"></div>';
+                        $html .= $status['text'];
+                        $html .= '</div>';
+                        $html .= '<div class="inline vertical-top">';
+                        $html .= '<div class="col-12 text-11-7px WorkSans text-black space-bottom" style="margin-left: 10%">';
+                        $html .= $status['date'];
+                        $html .= '</div>';
+                        $html .= '</div>';
+
+                        echo $html;
+                    }
+                    $i++;
+                }
+                ?>
             </div>
         </div>
     </div>
