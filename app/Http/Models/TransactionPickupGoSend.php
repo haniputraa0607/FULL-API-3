@@ -29,6 +29,7 @@ class TransactionPickupGoSend extends Model
 		'go_send_id',
 		'go_order_no',
 		'latest_status',
+		'cancel_reason',
 		'driver_id',
 		'driver_name',
 		'driver_phone',

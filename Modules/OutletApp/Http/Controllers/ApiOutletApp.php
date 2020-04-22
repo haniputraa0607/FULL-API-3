@@ -1608,7 +1608,7 @@ class ApiOutletApp extends Controller
                 'messages' => 'Transaksi tidak menggunakan GO-SEND'
             ];
         }
-        if($trx['transaction_pickup']['transaction_pickup_go_send']['go_send_id']){
+        if($trx['transaction_pickup']['transaction_pickup_go_send']['go_send_id'] && strtolower($trx['transaction_pickup']['transaction_pickup_go_send']['latest_status']) != 'cancelled'){
             return [
                 'status' => 'fail',
                 'messages' => 'Pengiriman sudah dipesan'
@@ -1741,6 +1741,9 @@ class ApiOutletApp extends Controller
             return $cancel;
         }
         if(($cancel['statusCode']??false) == '200'){
+            $trx->transaction_pickup_go_send->latest_status = 'Cancelled';
+            $trx->transaction_pickup_go_send->cancel_reason = $request->reason;
+            $trx->transaction_pickup_go_send->save();
             return ['status' => 'success'];
         }
     }
