@@ -86,8 +86,8 @@ class SyncOutletSeed implements ShouldQueue
                         'updated_at'    => $now
                     ];
                 }
+                OutletSchedule::insert($dataSchedule);
             }
-            OutletSchedule::insert($dataSchedule);
         }
 
         DB::commit();
