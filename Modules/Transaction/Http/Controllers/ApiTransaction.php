@@ -1424,8 +1424,13 @@ class ApiTransaction extends Controller
         $type = $request->json('type');
 
         if ($type == 'trx') {
-            $list = Transaction::where([['id_transaction', $id],
-            ['id_user',$request->user()->id]])->with(
+            if($request->json('admin')){
+                $list = Transaction::where('id_transaction', $id);
+            }else{
+                $list = Transaction::where([['id_transaction', $id],
+                    ['id_user',$request->user()->id]]);
+            }
+                $list = $list->with(
                 // 'user.city.province',
                 'productTransaction.product.product_category',
                 'productTransaction.modifiers',
