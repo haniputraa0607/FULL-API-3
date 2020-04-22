@@ -1257,7 +1257,7 @@ class ApiOnlineTransaction extends Controller
                 $dataGoSend['origin_address']        = $outlet['outlet_address'];
                 $dataGoSend['origin_latitude']       = $outlet['outlet_latitude'];
                 $dataGoSend['origin_longitude']      = $outlet['outlet_longitude'];
-                $dataGoSend['origin_note']           = '';
+                $dataGoSend['origin_note']           = 'Pickup Code: '.$order_id;
                 $dataGoSend['destination_name']      = $user['name'];
                 $dataGoSend['destination_phone']     = $user['phone'];
                 $dataGoSend['destination_address']   = $post['destination']['address'];
