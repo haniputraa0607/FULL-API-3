@@ -1930,7 +1930,39 @@ class FeaturesTableSeeder extends Seeder
                     'feature_module' => 'Product Promo Category',
                     'created_at' => date('Y-m-d H:00:00'),
                     'updated_at' => date('Y-m-d H:00:00'),
-                )
+                ),
+            240 =>
+	            array (
+	                'id_feature' => 241,
+	                'feature_type' => 'List',
+	                'feature_module' => 'Featured Subscription',
+	                'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00'),
+	            ),
+            241 =>
+            	array (
+	                'id_feature' => 242,
+	                'feature_type' => 'Create',
+	                'feature_module' => 'Featured Subscription',
+	                'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00'),
+	            ),
+            242 =>
+	            array (
+	                'id_feature' => 243,
+	                'feature_type' => 'Update',
+	                'feature_module' => 'Featured Subscription',
+	                'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00'),
+	            ),
+            243 =>
+	            array (
+	                'id_feature' => 244,
+	                'feature_type' => 'Delete',
+	                'feature_module' => 'Featured Subscription',
+	                'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00'),
+	            )
         ));
     }
 }

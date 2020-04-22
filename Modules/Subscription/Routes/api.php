@@ -43,6 +43,7 @@ Route::group(['middleware' => ['web', 'user_agent'], 'prefix' => 'webview'], fun
 
 Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scopes:be'], 'prefix' => 'subscription'], function () {
     Route::any('be/list', ['middleware' => 'feature_control:173', 'uses' => 'ApiSubscription@listSubscription']);
+    Route::any('be/list-complete', ['middleware' => 'feature_control:173', 'uses' => 'ApiSubscription@listCompleteSubscription']);
     Route::post('step1', ['middleware' => 'feature_control:172', 'uses' => 'ApiSubscription@create']);
     Route::post('step2', ['middleware' => 'feature_control:172', 'uses' => 'ApiSubscription@updateRule']);
     Route::post('step3', ['middleware' => 'feature_control:172', 'uses' => 'ApiSubscription@updateContent']);

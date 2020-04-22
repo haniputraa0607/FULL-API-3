@@ -1733,4 +1733,9 @@ class ApiSubscription extends Controller
     }
     /*============================= End Filter & Sort V2 ================================*/
 
+    public function listCompleteSubscription(Request $request)
+    {
+    	$post = $request->json()->all();
+    	return MyHelper::checkGet(Subscription::whereDoesntHave('featured_subscriptions')->where('subscription_step_complete','1')->select($post['select']??'*')->get());
+    }
 }
