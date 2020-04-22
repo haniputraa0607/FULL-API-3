@@ -57,11 +57,20 @@ class ApiGosendController extends Controller
                     if($post['booking_id']??false){
                         $response_code = 200;
                         $toUpdate = ['latest_status' => $post['status']];
-                        if($post['driver_name']){
+                        if($post['driver_id']??false){
+                            $toUpdate['driver_id'] = $post['driver_id'];
+                        }
+                        if($post['driver_name']??false){
                             $toUpdate['driver_name'] = $post['driver_name'];
                         }
-                        if($post['driver_phone']){
+                        if($post['driver_phone']??false){
                             $toUpdate['driver_phone'] = $post['driver_phone'];
+                        }
+                        if($post['driver_photo']??false){
+                            $toUpdate['driver_photo'] = $post['driver_photo'];
+                        }
+                        if($post['vehicle_number']??false){
+                            $toUpdate['vehicle_number'] = $post['vehicle_number'];
                         }
                         $tpg->update($toUpdate);
                         $status = [
