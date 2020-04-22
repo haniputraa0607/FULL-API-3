@@ -1657,8 +1657,11 @@ class ApiOutletApp extends Controller
             $updateGoSend->go_send_id = $booking['id'];
             $updateGoSend->go_send_order_no = $booking['orderNo'];
             $updateGoSend->latest_status = $status['status']??null;
+            $updateGoSend->driver_id = $status['driverId']??null;
             $updateGoSend->driver_name = $status['driverName']??null;
             $updateGoSend->driver_phone = $status['driverPhone']??null;
+            $updateGoSend->driver_photo = $status['driverPhoto']??null;
+            $updateGoSend->vehicle_number = $status['vehicleNumber']??null;
             $updateGoSend->save();
 
             if(!$updateGoSend){
@@ -1683,11 +1686,20 @@ class ApiOutletApp extends Controller
                 $status = GoSend::getStatus($trx['transaction_receipt_number']);
                 if($status['status']??false){
                     $toUpdate = ['latest_status' => $status['status']];
+                    if($status['driverId']??false){
+                        $toUpdate['driver_id'] = $status['driverId'];
+                    }
                     if($status['driverName']??false){
                         $toUpdate['driver_name'] = $status['driverName'];
                     }
                     if($status['driverPhone']??false){
                         $toUpdate['driver_phone'] = $status['driverPhone'];
+                    }
+                    if($status['driverPhoto']??false){
+                        $toUpdate['driver_photo'] = $status['driverPhoto'];
+                    }
+                    if($status['vehicleNumber']??false){
+                        $toUpdate['vehicle_number'] = $status['vehicleNumber'];
                     }
                     $trxGoSend->update($toUpdate);
                     if(in_array(strtolower($status['status']), ['completed','delivered'])){
@@ -1707,6 +1719,29 @@ class ApiOutletApp extends Controller
             default:
                 return ['status'=>'fail','messages'=>['Invalid delivery type']];
                 break;
+        }
+    }
+
+    public function cancelDelivery(Request $request)
+    {
+        $trx = Transaction::where('transactions.id_transaction',$request->id_transaction)->join('transaction_pickups','transaction_pickups.id_transaction', '=', 'transactions.id_transaction')->where('pickup_by','GO-SEND')->first();
+        if(!$trx){
+            return MyHelper::checkGet($trx,'Transaction Not Found');
+        }
+        $trx->load('transaction_pickup_go_send');
+        $orderNo = $trx->transaction_pickup_go_send->go_send_order_no;
+        if(!$orderNo){
+            return [
+                'status' => 'fail',
+                'messages' => ['Go-Send Pickup not found']
+            ];
+        }
+        $cancel = GoSend::cancelOrder($orderNo,$trx->transaction_receipt_number);
+        if(($cancel['status']??false) == 'fail'){
+            return $cancel;
+        }
+        if(($cancel['statusCode']??false) == '200'){
+            return ['status' => 'success'];
         }
     }
 

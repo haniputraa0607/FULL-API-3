@@ -804,7 +804,7 @@ class ApiOnlineTransaction extends Controller
         if($request->json('promo_code'))
         {
         	$promo_campaign_report = app($this->promo_campaign)->addReport(
-				$code->id_promo_campaign, 
+				$code->id_promo_campaign,
 				$code->id_promo_campaign_promo_code,
 				$insertTransaction['id_transaction'],
 				$insertTransaction['id_outlet'],
@@ -2286,7 +2286,7 @@ class ApiOnlineTransaction extends Controller
             if(env('PUSH_NOTIF_OUTLET') == 'fcm'){
                 $tokens = $outletToken->pluck('token')->toArray();
                 $subject = $type.' - Rp. '.number_format($trx['transaction_grandtotal'], 0, ',', '.').' - '.$totalSemua.' pcs - '.$detail['order_id'].' - '.$user['name'];
-                $push = PushNotificationHelper::sendPush($tokens, $subject, $stringBody, []);
+                $push = PushNotificationHelper::sendPush($tokens, $subject, $stringBody, null, ['type' => 'trx', 'id_reference'=> $id_trx]);
             }else{
                 $dataArraySend = [];
 
