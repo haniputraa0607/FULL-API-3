@@ -3,6 +3,7 @@
 namespace Modules\Transaction\Http\Controllers;
 
 use App\Http\Models\Transaction;
+use Modules\IPay88\Entities\TransactionPaymentIpay88;
 use App\Http\Models\TransactionPaymentMidtran;
 use App\Http\Models\LogTopupMidtrans;
 use App\Http\Models\DealsPaymentMidtran;
@@ -24,6 +25,8 @@ use Modules\SettingFraud\Entities\FraudSetting;
 use App\Http\Models\TransactionMultiplePayment;
 use App\Http\Models\TransactionPaymentBalance;
 use App\Http\Models\TransactionProduct;
+use App\Http\Models\TransactionPayment;
+use Modules\Brand\Entities\Brand;
 
 use GuzzleHttp\Exception\GuzzleException;
 use GuzzleHttp\Client;
@@ -368,7 +371,8 @@ class ApiNotification extends Controller {
         $date    = $trx['transaction_date'];
         $outlet  = $trx['outlet']['outlet_name'];
         $receipt = $trx['transaction_receipt_number'];
-        $detail = $this->getHtml($trx, $trx['productTransaction'], $name, $phone, $date, $outlet, $receipt);
+        //$detail = $this->getHtml($trx, $trx['productTransaction'], $name, $phone, $date, $outlet, $receipt);
+        $detail = $this->htmlDetail($trx['id_transaction']);
 
         if ($trx['transaction_payment_status'] == 'Pending') {
             $title = 'Pending';
@@ -412,7 +416,8 @@ class ApiNotification extends Controller {
         $date    = $trx['transaction_date'];
         $outlet  = $trx['outlet']['outlet_name'];
         $receipt = $trx['transaction_receipt_number'];
-        $detail = $this->getHtml($trx, $trx['productTransaction'], $name, $phone, $date, $outlet, $receipt);
+        //$detail = $this->getHtml($trx, $trx['productTransaction'], $name, $phone, $date, $outlet, $receipt);
+        $detail = $this->htmlDetail($trx['id_transaction']);
 
         if ($trx['transaction_payment_status'] == 'Pending') {
             $title = 'Pending';
@@ -453,7 +458,8 @@ class ApiNotification extends Controller {
         $date    = $trx['transaction_date'];
         $outlet  = $trx['outlet']['outlet_name'];
         $receipt = $trx['transaction_receipt_number'];
-        $detail = $this->getHtml($trx, $trx['productTransaction'], $name, $phone, $date, $outlet, $receipt);
+        //$detail = $this->getHtml($trx, $trx['productTransaction'], $name, $phone, $date, $outlet, $receipt);
+        $detail = $this->htmlDetail($trx['id_transaction']);
 
         if ($trx['transaction_payment_status'] == 'Pending') {
             $title = 'Pending';
@@ -1598,80 +1604,403 @@ Detail: ".$link['short'],
     }
 
     public function htmlDetail($id){
-        $list = Transaction::where('id_transaction', $id)->with('user.city.province', 'productTransaction.product.product_category', 'productTransaction.product.product_photos', 'productTransaction.product.product_discounts', 'outlet.city')->first();
+        $list = Transaction::where('id_transaction', $id);
+        $list = $list->with(
+        // 'user.city.province',
+            'productTransaction.product.product_category',
+            'productTransaction.modifiers',
+            'productTransaction.product.product_photos',
+            'productTransaction.product.product_discounts',
+            'transaction_payment_offlines',
+            'transaction_vouchers.deals_voucher.deal',
+            'promo_campaign_promo_code.promo_campaign',
+            'outlet.city')->first();
+        if(!$list){
+            return MyHelper::checkGet([],'empty');
+        }
+        $list = $list->toArray();
+        $label = [];
+        $label2 = [];
+        $product_count=0;
+        $list['product_transaction'] = MyHelper::groupIt($list['product_transaction'],'id_brand',null,function($key,&$val) use (&$product_count){
+            $product_count += array_sum(array_column($val,'transaction_product_qty'));
+            $brand = Brand::select('name_brand')->find($key);
+            if(!$brand){
+                return 'No Brand';
+            }
+            return $brand->name_brand;
+        });
+        $cart = $list['transaction_subtotal'] + $list['transaction_shipment'] + $list['transaction_service'] + $list['transaction_tax'] - $list['transaction_discount'];
 
+        $list['transaction_carttotal'] = $cart;
+        $list['transaction_item_total'] = $product_count;
 
-            $dataPayment = [];
+        $order = Setting::where('key', 'transaction_grand_total_order')->value('value');
+        $exp   = explode(',', $order);
+        $exp2   = explode(',', $order);
 
-            $multiPayment = TransactionMultiplePayment::where('id_transaction', $list['id_transaction'])->get();
-            // return $multiPayment;
-            if (isset($multiPayment)) {
-                foreach ($multiPayment as $key => $value) {
-                    if ($value->type == 'Midtrans') {
-                        $getPayment = TransactionPaymentMidtran::where('id_transaction_payment', $value->id_payment)->first();
-                        if (!empty($getPayment)) {
-                            $getPayment['type'] = 'Midtrans';
-                            array_push($dataPayment, $getPayment);
-                        }
-                    } elseif ($value->type == 'Balance') {
-                        $getPayment = TransactionPaymentBalance::where('id_transaction_payment_balance', $value->id_payment)->first();
-                        if (!empty($getPayment)) {
-                            $getPayment['type'] = 'Balance';
-                            array_push($dataPayment, $getPayment);
-                            $list['balance'] = $getPayment['balance_nominal'];
-                        }
-                    }
-                }
-            }else{
-                if($list['trasaction_payment_type'] == 'Midtrans') {
-                    $getPayment = TransactionPaymentMidtran::where('id_transaction', $list['id_transaction'])->first();
-                    if (!empty($getPayment)) {
-                        $getPayment['type'] = 'Midtrans';
-                        array_push($dataPayment, $getPayment);
-                    }
-                }
-
+        foreach ($exp as $i => $value) {
+            if ($exp[$i] == 'subtotal') {
+                unset($exp[$i]);
+                unset($exp2[$i]);
+                continue;
             }
 
-            $detail = [];
-
-            $qrTest= '';
-
-            if ($list['trasaction_type'] == 'Pickup Order') {
-                $detail = TransactionPickup::where('id_transaction', $list['id_transaction'])->first();
-                $qrTest = $detail['order_id'];
-            } elseif ($list['trasaction_type'] == 'Delivery') {
-                $detail = TransactionShipment::with('city.province')->where('id_transaction', $list['id_transaction'])->first();
+            if ($exp[$i] == 'tax') {
+                $exp[$i] = 'transaction_tax';
+                $exp2[$i] = 'transaction_tax';
+                array_push($label, 'Tax');
+                array_push($label2, 'Tax');
             }
 
-            $list['data_payment'] = $dataPayment;
+            if ($exp[$i] == 'service') {
+                $exp[$i] = 'transaction_service';
+                $exp2[$i] = 'transaction_service';
+                array_push($label, 'Service Fee');
+                array_push($label2, 'Service Fee');
+            }
 
-            $list['detail'] = $detail;
+            if ($exp[$i] == 'shipping') {
+                if ($list['trasaction_type'] == 'Pickup Order') {
+                    unset($exp[$i]);
+                    unset($exp2[$i]);
+                    continue;
+                } else {
+                    $exp[$i] = 'transaction_shipment';
+                    $exp2[$i] = 'transaction_shipment';
+                    array_push($label, 'Delivery Cost');
+                    array_push($label2, 'Delivery Cost');
+                }
+            }
 
-            $list['date'] = $list['transaction_date'];
+            if ($exp[$i] == 'discount') {
+                $exp2[$i] = 'transaction_discount';
+                array_push($label2, 'Discount');
+                unset($exp[$i]);
+                continue;
+            }
 
-            $qrCode = 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data='.$qrTest;
-            // $qrCode = 'https://chart.googleapis.com/chart?chl='.$qrTest.'&chs=250x250&cht=qr&chld=H%7C0';
-            $qrCode = html_entity_decode($qrCode);
-            $list['qr'] = $qrCode;
-
-            $data = $list;
-
-        if ($data['detail']['pickup_type'] == 'set time'){
-            $data['text_siap'] = 'Pesanan Anda akan siap pada';
+            if (stristr($exp[$i], 'empty')) {
+                unset($exp[$i]);
+                unset($exp2[$i]);
+                continue;
+            }
         }
-        else{
-            $data['text_siap'] = 'Pesanan Anda akan diproses pada';
+
+        switch ($list['trasaction_payment_type']) {
+            case 'Balance':
+                $log = LogBalance::where('id_reference', $list['id_transaction'])->first();
+                if ($log['balance'] < 0) {
+                    $list['balance'] = $log['balance'];
+                    $list['check'] = 'tidak topup';
+                } else {
+                    $list['balance'] = $list['transaction_grandtotal'] - $log['balance'];
+                    $list['check'] = 'topup';
+                }
+                $list['payment'][] = [
+                    'name'      => 'Balance',
+                    'amount'    => $list['balance']
+                ];
+                break;
+            case 'Manual':
+                $payment = TransactionPaymentManual::with('manual_payment_method.manual_payment')->where('id_transaction', $list['id_transaction'])->first();
+                $list['payment'] = $payment;
+                $list['payment'][] = [
+                    'name'      => 'Cash',
+                    'amount'    => $payment['payment_nominal']
+                ];
+                break;
+            case 'Midtrans':
+                $multiPayment = TransactionMultiplePayment::where('id_transaction', $list['id_transaction'])->get();
+                $payment = [];
+                foreach($multiPayment as $dataKey => $dataPay){
+                    if($dataPay['type'] == 'Midtrans'){
+                        $payment[$dataKey]['name']      = 'Midtrans';
+                        $payment[$dataKey]['amount']    = TransactionPaymentMidtran::find($dataPay['id_payment'])->gross_amount;
+                    }else{
+                        $dataPay = TransactionPaymentBalance::find($dataPay['id_payment']);
+                        $payment[$dataKey] = $dataPay;
+                        $list['balance'] = $dataPay['balance_nominal'];
+                        $payment[$dataKey]['name']          = 'Balance';
+                        $payment[$dataKey]['amount']        = $dataPay['balance_nominal'];
+                    }
+                }
+                $list['payment'] = $payment;
+                break;
+            case 'Ovo':
+                $multiPayment = TransactionMultiplePayment::where('id_transaction', $list['id_transaction'])->get();
+                $payment = [];
+                foreach($multiPayment as $dataKey => $dataPay){
+                    if($dataPay['type'] == 'Ovo'){
+                        $payment[$dataKey] = TransactionPaymentOvo::find($dataPay['id_payment']);
+                        $payment[$dataKey]['name']    = 'OVO';
+                    }else{
+                        $dataPay = TransactionPaymentBalance::find($dataPay['id_payment']);
+                        $payment[$dataKey] = $dataPay;
+                        $list['balance'] = $dataPay['balance_nominal'];
+                        $payment[$dataKey]['name']          = 'Balance';
+                        $payment[$dataKey]['amount']        = $dataPay['balance_nominal'];
+                    }
+                }
+                $list['payment'] = $payment;
+                break;
+            case 'Ipay88':
+                $multiPayment = TransactionMultiplePayment::where('id_transaction', $list['id_transaction'])->get();
+                $payment = [];
+                foreach($multiPayment as $dataKey => $dataPay){
+                    if($dataPay['type'] == 'IPay88'){
+                        $payment[$dataKey]['name']    = 'Ipay88';
+                        $payment[$dataKey]['amount']    = TransactionPaymentIpay88::find($dataPay['id_payment'])->amount / 100;
+                    }else{
+                        $dataPay = TransactionPaymentBalance::find($dataPay['id_payment']);
+                        $payment[$dataKey] = $dataPay;
+                        $list['balance'] = $dataPay['balance_nominal'];
+                        $payment[$dataKey]['name']          = 'Balance';
+                        $payment[$dataKey]['amount']        = $dataPay['balance_nominal'];
+                    }
+                }
+                $list['payment'] = $payment;
+                break;
+            case 'Offline':
+                $payment = TransactionPaymentOffline::where('id_transaction', $list['id_transaction'])->get();
+                foreach ($payment as $key => $value) {
+                    $list['payment'][$key] = [
+                        'name'      => $value['payment_bank'],
+                        'amount'    => $value['payment_amount']
+                    ];
+                }
+                break;
+            default:
+                $list['payment'][] = [
+                    'name'      => null,
+                    'amount'    => null
+                ];
+                break;
         }
 
-        if ($data['detail']['pickup_type'] == 'set time'){
-            $textPick = date('H:i', strtotime($data['detail']['pickup_at']));
-        }elseif($data['detail']['pickup_type'] == 'at arrival'){
-            $textPick = 'Saat Kedatangan';
-        }else{
-            $textPick = 'Saat Ini';
+        array_splice($exp, 0, 0, 'transaction_subtotal');
+        array_splice($label, 0, 0, 'Cart Total');
+
+        array_splice($exp2, 0, 0, 'transaction_subtotal');
+        array_splice($label2, 0, 0, 'Cart Total');
+
+        array_values($exp);
+        array_values($label);
+
+        array_values($exp2);
+        array_values($label2);
+
+        $imp = implode(',', $exp);
+        $order_label = implode(',', $label);
+
+        $imp2 = implode(',', $exp2);
+        $order_label2 = implode(',', $label2);
+
+        $detail = [];
+
+        if ($list['trasaction_type'] == 'Pickup Order') {
+            $detail = TransactionPickup::where('id_transaction', $list['id_transaction'])->first()->toArray();
+            if($detail){
+                $qr      = $detail['order_id'].strtotime($list['transaction_date']);
+
+                $qrCode = 'https://chart.googleapis.com/chart?chl='.$qr.'&chs=250x250&cht=qr&chld=H%7C0';
+                $qrCode =   html_entity_decode($qrCode);
+
+                $newDetail = [];
+                foreach($detail as $key => $value){
+                    $newDetail[$key] = $value;
+                    if($key == 'order_id'){
+                        $newDetail['order_id_qrcode'] = $qrCode;
+                    }
+                }
+
+                $detail = $newDetail;
+            }
+        } elseif ($list['trasaction_type'] == 'Delivery') {
+            $detail = TransactionShipment::with('city.province')->where('id_transaction', $list['id_transaction'])->first();
         }
 
+        $list['detail'] = $detail;
+        $list['order'] = $imp;
+        $list['order_label'] = $order_label;
+
+        $list['order_v2'] = $imp2;
+        $list['order_label_v2'] = $order_label2;
+
+        $list['date'] = $list['transaction_date'];
+        $list['type'] = 'trx';
+
+        $result = [
+            'id_transaction'                => $list['id_transaction'],
+            'transaction_receipt_number'    => $list['transaction_receipt_number'],
+            'transaction_date'              => date('d M Y H:i', strtotime($list['transaction_date'])),
+            'trasaction_type'               => $list['trasaction_type'],
+            'transaction_grandtotal'        => MyHelper::requestNumber($list['transaction_grandtotal'],'_CURRENCY'),
+            'transaction_subtotal'          => MyHelper::requestNumber($list['transaction_subtotal'],'_CURRENCY'),
+            'transaction_discount'          => MyHelper::requestNumber($list['transaction_discount'],'_CURRENCY'),
+            'transaction_cashback_earned'   => MyHelper::requestNumber($list['transaction_cashback_earned'],'_POINT'),
+            'trasaction_payment_type'       => $list['trasaction_payment_type'],
+            'transaction_payment_status'    => $list['transaction_payment_status'],
+            'outlet'                        => [
+                'outlet_name'       => $list['outlet']['outlet_name'],
+                'outlet_address'    => $list['outlet']['outlet_address']
+            ]
+        ];
+
+        if ($list['trasaction_payment_type'] != 'Offline') {
+            $result['detail'] = [
+                'order_id_qrcode'   => $list['detail']['order_id_qrcode'],
+                'order_id'          => $list['detail']['order_id'],
+                'pickup_type'       => $list['detail']['pickup_type'],
+                'pickup_date'       => date('d F Y', strtotime($list['detail']['pickup_at'])),
+                'pickup_time'       => ($list['detail']['pickup_type'] == 'right now') ? 'RIGHT NOW' : date('H : i', strtotime($list['detail']['pickup_at'])),
+            ];
+            if (isset($list['transaction_payment_status']) && $list['transaction_payment_status'] == 'Cancelled') {
+                unset($result['detail']['order_id_qrcode']);
+                unset($result['detail']['order_id']);
+                unset($result['detail']['pickup_time']);
+                $result['transaction_status'] = 0;
+                $result['transaction_status_text'] = 'ORDER ANDA DIBATALKAN';
+            } elseif($list['detail']['reject_at'] != null) {
+                unset($result['detail']['order_id_qrcode']);
+                unset($result['detail']['order_id']);
+                unset($result['detail']['pickup_time']);
+                $result['transaction_status'] = 0;
+                $result['transaction_status_text'] = 'ORDER ANDA DITOLAK';
+            } elseif($list['detail']['taken_by_system_at'] != null) {
+                $result['transaction_status'] = 1;
+                $result['transaction_status_text'] = 'ORDER SELESAI';
+            } elseif($list['detail']['taken_at'] != null) {
+                $result['transaction_status'] = 2;
+                $result['transaction_status_text'] = 'ORDER SUDAH DITERIMA';
+            } elseif($list['detail']['ready_at'] != null) {
+                $result['transaction_status'] = 3;
+                $result['transaction_status_text'] = 'ORDER SUDAH SIAP';
+            } elseif($list['detail']['receive_at'] != null) {
+                $result['transaction_status'] = 4;
+                $result['transaction_status_text'] = 'ORDER SEDANG DIPROSES';
+            } else {
+                $result['transaction_status'] = 5;
+                $result['transaction_status_text'] = 'ORDER PENDING';
+            }
+        }
+
+        $discount = 0;
+        $quantity = 0;
+        $keynya = 0;
+        foreach ($list['product_transaction'] as $keyTrx => $valueTrx) {
+            $result['product_transaction'][$keynya]['brand'] = $keyTrx;
+            foreach ($valueTrx as $keyProduct => $valueProduct) {
+                $quantity = $quantity + $valueProduct['transaction_product_qty'];
+                $result['product_transaction'][$keynya]['product'][$keyProduct]['transaction_product_qty']              = $valueProduct['transaction_product_qty'];
+                $result['product_transaction'][$keynya]['product'][$keyProduct]['transaction_product_subtotal']         = MyHelper::requestNumber($valueProduct['transaction_product_subtotal'],'_CURRENCY');
+                $result['product_transaction'][$keynya]['product'][$keyProduct]['transaction_product_sub_item']         = '@'.MyHelper::requestNumber($valueProduct['transaction_product_subtotal'] / $valueProduct['transaction_product_qty'],'_CURRENCY');
+                $result['product_transaction'][$keynya]['product'][$keyProduct]['transaction_modifier_subtotal']        = MyHelper::requestNumber($valueProduct['transaction_modifier_subtotal'],'_CURRENCY');
+                $result['product_transaction'][$keynya]['product'][$keyProduct]['transaction_product_note']             = $valueProduct['transaction_product_note'];
+                $result['product_transaction'][$keynya]['product'][$keyProduct]['transaction_product_discount']         = $valueProduct['transaction_product_discount'];
+                $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_name']              = $valueProduct['product']['product_name'];
+                $discount = $discount + $valueProduct['transaction_product_discount'];
+                foreach ($valueProduct['modifiers'] as $keyMod => $valueMod) {
+                    $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_modifiers'][$keyMod]['product_modifier_name']   = $valueMod['text'];
+                    $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_modifiers'][$keyMod]['product_modifier_qty']    = $valueMod['qty'];
+                    $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_modifiers'][$keyMod]['product_modifier_price']  = MyHelper::requestNumber($valueMod['transaction_product_modifier_price'],'_CURRENCY');
+                }
+            }
+            $keynya++;
+        }
+
+        $result['payment_detail'][] = [
+            'name'      => 'Subtotal',
+            'desc'      => $quantity . ' items',
+            'amount'    => MyHelper::requestNumber($list['transaction_subtotal'],'_CURRENCY')
+        ];
+
+        $p = 0;
+        if (!empty($list['transaction_vouchers'])) {
+            foreach ($list['transaction_vouchers'] as $valueVoc) {
+                $result['promo']['code'][$p++]   = $valueVoc['deals_voucher']['voucher_code'];
+                $result['payment_detail'][] = [
+                    'name'          => 'Discount',
+                    'desc'          => $valueVoc['deals_voucher']['voucher_code'],
+                    "is_discount"   => 1,
+                    'amount'        => MyHelper::requestNumber($discount,'_CURRENCY')
+                ];
+            }
+        }
+
+        if (!empty($list['promo_campaign_promo_code'])) {
+            $result['promo']['code'][$p++]   = $list['promo_campaign_promo_code']['promo_code'];
+            $result['payment_detail'][] = [
+                'name'          => 'Discount',
+                'desc'          => $list['promo_campaign_promo_code']['promo_code'],
+                "is_discount"   => 1,
+                'amount'        => MyHelper::requestNumber($discount,'_CURRENCY')
+            ];
+        }
+
+        $result['promo']['discount'] = $discount;
+        $result['promo']['discount'] = MyHelper::requestNumber($discount,'_CURRENCY');
+
+        if ($list['trasaction_payment_type'] != 'Offline') {
+            if ($list['transaction_payment_status'] == 'Cancelled') {
+                $result['detail']['detail_status'][] = [
+                    'text'  => 'Your order has been canceled',
+                    'date'  => date('d F Y H:i', strtotime($list['void_date']))
+                ];
+            }
+            if ($list['detail']['reject_at'] != null) {
+                $result['detail']['detail_status'][] = [
+                    'text'  => 'Order rejected',
+                    'date'  => date('d F Y H:i', strtotime($list['detail']['reject_at'])),
+                    'reason'=> $list['detail']['reject_reason']
+                ];
+            }
+            if ($list['detail']['taken_by_system_at'] != null) {
+                $result['detail']['detail_status'][] = [
+                    'text'  => 'Your order has been done by system',
+                    'date'  => date('d F Y H:i', strtotime($list['detail']['taken_by_system_at']))
+                ];
+            }
+            if ($list['detail']['taken_at'] != null) {
+                $result['detail']['detail_status'][] = [
+                    'text'  => 'Your order has been taken',
+                    'date'  => date('d F Y H:i', strtotime($list['detail']['taken_at']))
+                ];
+            }
+            if ($list['detail']['ready_at'] != null) {
+                $result['detail']['detail_status'][] = [
+                    'text'  => 'Your order is ready ',
+                    'date'  => date('d F Y H:i', strtotime($list['detail']['ready_at']))
+                ];
+            }
+            if ($list['detail']['receive_at'] != null) {
+                $result['detail']['detail_status'][] = [
+                    'text'  => 'Your order has been received',
+                    'date'  => date('d F Y H:i', strtotime($list['detail']['receive_at']))
+                ];
+            }
+            $result['detail']['detail_status'][] = [
+                'text'  => 'Your order awaits confirmation ',
+                'date'  => date('d F Y H:i', strtotime($list['transaction_date']))
+            ];
+        }
+
+        foreach ($list['payment'] as $key => $value) {
+            if ($value['name'] == 'Balance') {
+                $result['transaction_payment'][$key] = [
+                    'name'      => (env('POINT_NAME')) ? env('POINT_NAME') : $value['name'],
+                    'is_balance'=> 1,
+                    'amount'    => MyHelper::requestNumber($value['amount'],'_POINT')
+                ];
+            } else {
+                $result['transaction_payment'][$key] = [
+                    'name'      => $value['name'],
+                    'amount'    => MyHelper::requestNumber($value['amount'],'_CURRENCY')
+                ];
+            }
+        }
+
+        $data = $result;
         $html = view('transaction::email.detail_transaction')->with(compact('data'))->render();
         return $html;
     }

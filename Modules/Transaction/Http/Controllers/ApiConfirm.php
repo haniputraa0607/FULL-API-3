@@ -105,6 +105,16 @@ class ApiConfirm extends Controller
             array_push($dataDetailProduct, $dataShip);
         }
 
+        if ($check['transaction_shipment_go_send'] > 0) {
+            $dataShip = [
+                'id'       => null,
+                'price'    => abs($check['transaction_shipment_go_send']),
+                'name'     => 'Shipping',
+                'quantity' => 1,
+            ];
+            array_push($dataDetailProduct, $dataShip);
+        }
+
         if ($check['transaction_service'] > 0) {
             $dataService = [
                 'id'       => null,
@@ -327,7 +337,7 @@ class ApiConfirm extends Controller
             return $pay;
         }
         elseif ($post['payment_type'] == 'Ipay88') {
-            
+
             // save multiple payment
             $trx_ipay88 = \Modules\IPay88\Lib\IPay88::create()->insertNewTransaction($check,'trx',$countGrandTotal);
             if(!$trx_ipay88){
@@ -712,7 +722,7 @@ class ApiConfirm extends Controller
                     if ($trx->id_promo_campaign_promo_code) {
 		            	$update_promo_report = app($this->promo_campaign)->deleteReport($trx->id_transaction, $trx->id_promo_campaign_promo_code);
 		            }
-                    
+
                     $updateVoucher = app($this->voucher)->returnVoucher($trx['id_transaction']);
 
                     //return balance
