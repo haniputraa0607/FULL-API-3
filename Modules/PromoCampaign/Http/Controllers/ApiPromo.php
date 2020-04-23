@@ -27,6 +27,8 @@ use Modules\Deals\Entities\DealsTierDiscountRule;
 use Modules\Deals\Entities\DealsBuyxgetyProductRequirement;
 use Modules\Deals\Entities\DealsBuyxgetyRule;
 
+use Modules\Subscription\Entities\SubscriptionUser;
+
 use Modules\ProductVariant\Entities\ProductGroup;
 
 use App\Http\Models\User;
@@ -221,5 +223,24 @@ class ApiPromo extends Controller
     	}
 
     	return response()->json(myHelper::checkUpdate($update));
+    }
+
+    public function availablePromo()
+    {
+    	$available_deals = DealsUser::where('id_user', auth()->user()->id)
+			            ->whereIn('paid_status', ['Free', 'Completed'])
+			            ->whereNull('used_at')
+			            ->where('voucher_expired_at', '>', date('Y-m-d H:i:s'))
+			            ->count();
+
+        $available_subs = SubscriptionUser::where('id_user', auth()->user()->id)
+		                ->where('subscription_expired_at', '>=',date('Y-m-d H:i:s'))
+		                ->whereIn('paid_status', ['Completed','Free'])
+		                ->whereHas('subscription_user_vouchers', function($q){
+		                	$q->whereNull('used_at');
+		                })
+			            ->count();
+
+		return ($available_deals+$available_subs);
     }
 }

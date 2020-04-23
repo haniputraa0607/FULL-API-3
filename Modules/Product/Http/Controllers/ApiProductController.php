@@ -10,6 +10,7 @@ use App\Http\Models\NewsProduct;
 use App\Http\Models\TransactionProduct;
 use App\Http\Models\ProductPrice;
 use App\Http\Models\ProductModifier;
+use App\Http\Models\ProductModifierPrice;
 use App\Http\Models\Outlet;
 use App\Http\Models\Setting;
 use Modules\Product\Entities\ProductStockStatusUpdate;
@@ -440,6 +441,112 @@ class ApiProductController extends Controller
                 }
                 break;
 
+            case 'modifier-price':
+                // update only, never create
+                $data = $post['data']??[];
+                $check_brand = Brand::where(['id_brand'=>$post['id_brand'],'code_brand'=>$data['code_brand']??''])->first();
+                if($check_brand){
+                    $global_outlets = Outlet::select('id_outlet','outlet_code')->where([
+                        'outlet_different_price' => 0
+                    ])->get();
+                    foreach ($data['products'] as $key => $value) {
+                        if(empty($value['code'])){
+                            $result['invalid']++;
+                            continue;
+                        }
+                        $result['processed']++;
+                        if(empty($value['name'])){
+                            unset($value['name']);
+                        }
+                        if(empty($value['type'])){
+                            unset($value['type']);
+                        }
+                        if(empty($value['global_price'])){
+                            unset($value['global_price']);
+                        }
+                        $product = ProductModifier::select('product_modifiers.*')->leftJoin('product_modifier_brands','product_modifiers.id_product_modifier','=','product_modifier_brands.id_product_modifier')
+                            ->where('code',$value['code'])->where(function($q) use ($post) {
+                                $q->where('id_brand',$post['id_brand'])->orWhere('modifier_type','<>','Global Brand');
+                            })->first();
+                        if(!$product){
+                            $result['not_found']++;
+                            $result['more_msg_extended'][] = "Product modifier with code {$value['code']} in selected brand not found";
+                            continue;
+                        }
+                        $update1 = $product->update($value);
+                        if($update1){
+                            $result['updated']++;
+                        }else{
+                            $result['no_update']++;
+                        }
+                        if($value['global_price']??false){
+                            foreach ($global_outlets as $outlet) {
+                                $pp = ProductModifierPrice::where([
+                                    'id_outlet' => $outlet->id_outlet,
+                                    'id_product_modifier' => $product->id_product_modifier
+                                ])->first();
+                                if($pp){
+                                    $update = $pp->update(['product_modifier_price'=>$value['global_price']]);
+                                }else{
+                                    $update = ProductModifierPrice::create([
+                                        'id_outlet' => $outlet->id_outlet,
+                                        'id_product_modifier' => $product->id_product_modifier,
+                                        'product_modifier_price'=>$value['global_price']
+                                    ]);
+                                }
+                                if($update){
+                                    $result['updated_price']++;
+                                }else{
+                                    if($update !== 0){
+                                        $result['updated_price_fail']++;
+                                        $result['more_msg_extended'][] = "Failed set price for product modifier {$value['code']} at outlet {$outlet->outlet_code} failed";
+                                    }
+                                }
+                            }
+                        }
+                        foreach ($value as $col_name => $col_value) {
+                            if(!$col_value){
+                                continue;
+                            }
+                            if(strpos($col_name, 'price_') !== false){
+                                $outlet_code = str_replace('price_', '', $col_name);
+                                $pp = ProductModifierPrice::join('outlets','outlets.id_outlet','=','product_modifier_prices.id_outlet')
+                                ->where([
+                                    'outlet_code' => $outlet_code,
+                                    'id_product_modifier' => $product->id_product_modifier
+                                ])->first();
+                                if($pp){
+                                    $update = $pp->update(['product_modifier_price'=>$col_value]);
+                                }else{
+                                    $id_outlet = Outlet::select('id_outlet')->where('outlet_code',$outlet_code)->pluck('id_outlet')->first();
+                                    if(!$id_outlet){
+                                        $result['updated_price_fail']++;
+                                        $result['more_msg_extended'][] = "Failed create new price for product modifier {$value['code']} at outlet $outlet_code failed";
+                                        continue;
+                                    }
+                                    $update = ProductModifierPrice::create([
+                                        'id_outlet' => $id_outlet,
+                                        'id_product_modifier' => $product->id_product_modifier,
+                                        'product_modifier_price'=>$col_value
+                                    ]);
+                                }
+                                if($update){
+                                    $result['updated_price']++;
+                                }else{
+                                    $result['updated_price_fail']++;
+                                    $result['more_msg_extended'][] = "Failed set price for product modifier {$value['code']} at outlet $outlet_code failed";
+                                }
+                            }
+                        }
+                    }
+                }else{
+                    return [
+                        'status' => 'fail',
+                        'messages' => ['Imported product modifier\'s brand does not match with selected brand']
+                    ];
+                }
+                break;
+
             default:
                 # code...
                 break;
@@ -546,6 +653,43 @@ class ApiProductController extends Controller
                         $product['price_'.$outlet_code] = $x[$product['id_product']][0]['product_price']??'';
                         if($inc === count($do)){
                             unset($product['id_product']);
+                        }
+                    }
+                }
+                break;
+
+            case 'modifier-price':
+                $subquery = str_replace('?','0',ProductModifierPrice::select(\DB::raw('id_product_modifier,MAX(product_modifier_price) as global_price'))->leftJoin('outlets','outlets.id_outlet','=','product_modifier_prices.id_outlet')
+                    ->where('outlets.outlet_different_price','=',0)
+                    ->groupBy('id_product_modifier')
+                    ->toSql());
+                $different_outlet = Outlet::select('outlet_code','id_product_modifier','product_modifier_price')
+                    ->leftJoin('product_modifier_prices','outlets.id_outlet','=','product_modifier_prices.id_outlet')
+                    ->where('outlet_different_price',1)->get();
+                $do = MyHelper::groupIt($different_outlet,'outlet_code',null,function($key,&$val){
+                    $val = MyHelper::groupIt($val,'id_product_modifier');
+                    return $key;
+                });
+                $data['brand'] = Brand::where('id_brand',$post['id_brand'])->first();
+                $data['products'] = ProductModifier::select('product_modifiers.id_product_modifier','type','code','text as name','global_prices.global_price')
+                    ->leftJoin('product_modifier_brands','product_modifier_brands.id_product_modifier','=','product_modifiers.id_product_modifier')
+                    ->leftJoin(DB::raw('('.$subquery.') as global_prices'),'product_modifiers.id_product_modifier','=','global_prices.id_product_modifier')
+                    ->where(function($q) use ($post){
+                        $q->where('id_brand',$post['id_brand'])
+                            ->orWhere('modifier_type','<>','Global Brand');
+                    })
+                    ->orderBy('type')
+                    ->orderBy('text')
+                    ->orderBy('product_modifiers.id_product_modifier')
+                    ->distinct()
+                    ->get();
+                foreach ($data['products'] as $key => &$product) {
+                    $inc = 0;
+                    foreach ($do as $outlet_code => $x) {
+                        $inc++;
+                        $product['price_'.$outlet_code] = $x[$product['id_product_modifier']][0]['product_modifier_price']??'';
+                        if($inc === count($do)){
+                            unset($product['id_product_modifier']);
                         }
                     }
                 }
