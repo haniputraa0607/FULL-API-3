@@ -1772,42 +1772,43 @@ class ApiTransaction extends Controller
                     'text'  => 'Your order has been canceled',
                     'date'  => date('d F Y H:i', strtotime($list['void_date']))
                 ];
-                }
-                if ($list['detail']['reject_at'] != null) {
+                } else {
+                    if ($list['detail']['reject_at'] != null) {
+                        $result['detail']['detail_status'][] = [
+                        'text'  => 'Order rejected',
+                        'date'  => date('d F Y H:i', strtotime($list['detail']['reject_at'])),
+                        'reason'=> $result['detail']['reject_reason']
+                    ];
+                    }
+                    if ($list['detail']['taken_by_system_at'] != null) {
+                        $result['detail']['detail_status'][] = [
+                        'text'  => 'Your order has been done by system',
+                        'date'  => date('d F Y H:i', strtotime($list['detail']['taken_by_system_at']))
+                    ];
+                    }
+                    if ($list['detail']['taken_at'] != null) {
+                        $result['detail']['detail_status'][] = [
+                        'text'  => 'Your order has been taken',
+                        'date'  => date('d F Y H:i', strtotime($list['detail']['taken_at']))
+                    ];
+                    }
+                    if ($list['detail']['ready_at'] != null) {
+                        $result['detail']['detail_status'][] = [
+                        'text'  => 'Your order is ready ',
+                        'date'  => date('d F Y H:i', strtotime($list['detail']['ready_at']))
+                    ];
+                    }
+                    if ($list['detail']['receive_at'] != null) {
+                        $result['detail']['detail_status'][] = [
+                        'text'  => 'Your order has been received',
+                        'date'  => date('d F Y H:i', strtotime($list['detail']['receive_at']))
+                    ];
+                    }
                     $result['detail']['detail_status'][] = [
-                    'text'  => 'Order rejected',
-                    'date'  => date('d F Y H:i', strtotime($list['detail']['reject_at'])),
-                    'reason'=> $list['detail']['reject_reason']
-                ];
+                        'text'  => 'Your order awaits confirmation ',
+                        'date'  => date('d F Y H:i', strtotime($list['transaction_date']))
+                    ];
                 }
-                if ($list['detail']['taken_by_system_at'] != null) {
-                    $result['detail']['detail_status'][] = [
-                    'text'  => 'Your order has been done by system',
-                    'date'  => date('d F Y H:i', strtotime($list['detail']['taken_by_system_at']))
-                ];
-                }
-                if ($list['detail']['taken_at'] != null) {
-                    $result['detail']['detail_status'][] = [
-                    'text'  => 'Your order has been taken',
-                    'date'  => date('d F Y H:i', strtotime($list['detail']['taken_at']))
-                ];
-                }
-                if ($list['detail']['ready_at'] != null) {
-                    $result['detail']['detail_status'][] = [
-                    'text'  => 'Your order is ready ',
-                    'date'  => date('d F Y H:i', strtotime($list['detail']['ready_at']))
-                ];
-                }
-                if ($list['detail']['receive_at'] != null) {
-                    $result['detail']['detail_status'][] = [
-                    'text'  => 'Your order has been received',
-                    'date'  => date('d F Y H:i', strtotime($list['detail']['receive_at']))
-                ];
-                }
-                $result['detail']['detail_status'][] = [
-                    'text'  => 'Your order awaits confirmation ',
-                    'date'  => date('d F Y H:i', strtotime($list['transaction_date']))
-                ];
             }
 
             foreach ($list['payment'] as $key => $value) {
