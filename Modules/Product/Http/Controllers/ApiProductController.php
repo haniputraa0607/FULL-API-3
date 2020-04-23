@@ -678,6 +678,7 @@ class ApiProductController extends Controller
                         $q->where('id_brand',$post['id_brand'])
                             ->orWhere('modifier_type','<>','Global Brand');
                     })
+                    ->orderBy('type')
                     ->orderBy('text')
                     ->orderBy('product_modifiers.id_product_modifier')
                     ->distinct()
