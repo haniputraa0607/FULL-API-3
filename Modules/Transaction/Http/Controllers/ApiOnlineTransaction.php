@@ -1476,7 +1476,7 @@ class ApiOnlineTransaction extends Controller
                         ]);
                     }
 
-                    if ($post['type'] == 'Pickup Order' || $post['type'] == 'Pickup Order') {
+                    if ($post['type'] == 'Pickup Order' || $post['type'] == 'GO-SEND') {
                         $orderIdSend = $insertPickup['order_id'];
                     } else {
                         $orderIdSend = $insertShipment['order_id'];
