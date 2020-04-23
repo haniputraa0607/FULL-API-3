@@ -71,6 +71,7 @@ class ApiOutletController extends Controller
         date_default_timezone_set('Asia/Jakarta');
         $this->promo_campaign       = "Modules\PromoCampaign\Http\Controllers\ApiPromoCampaign";
         $this->subscription_use     = "Modules\Subscription\Http\Controllers\ApiSubscriptionUse";
+        $this->promo       			= "Modules\PromoCampaign\Http\Controllers\ApiPromo";
     }
 
     function checkInputOutlet($post=[]) {
@@ -1006,6 +1007,7 @@ class ApiOutletController extends Controller
                 $urutan['current_page']  = $page;
                 $urutan['data']          = $pagingOutlet['data'];
                 $urutan['total']         = count($dataOutlet);
+                $urutan['total_promo']	 = app($this->promo)->availablePromo();
                 $urutan['next_page_url'] = null;
 
                 if ($pagingOutlet['status'] == true) {

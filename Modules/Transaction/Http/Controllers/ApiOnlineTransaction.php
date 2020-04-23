@@ -2075,6 +2075,7 @@ class ApiOnlineTransaction extends Controller
         $balance = app($this->balance)->balanceNow($user->id);
         $result['points'] = (int) $balance;
         $result['get_point'] = ($post['payment_type'] != 'Balance') ? $this->checkPromoGetPoint($promo_source) : 0;
+        $result['total_promo'] = app($this->promo)->availablePromo();
         if (isset($post['payment_type'])&&$post['payment_type'] == 'Balance') {
             if($balance>=$result['grandtotal']){
                 $result['used_point'] = $result['grandtotal'];
