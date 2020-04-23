@@ -151,6 +151,16 @@ Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scop
         Route::post('reorder', 'ApiFeaturedDeal@reorder');
         Route::post('delete', 'ApiFeaturedDeal@destroy');
     });
+
+    // featured subscription
+    Route::group(['middleware' => ['auth:api', 'scopes:be'], 'prefix' => 'featured_subscription'], function()
+    {
+        Route::get('list', 'ApiFeaturedSubscription@index');
+        Route::post('create', 'ApiFeaturedSubscription@create');
+        Route::post('update', 'ApiFeaturedSubscription@update');
+        Route::post('reorder', 'ApiFeaturedSubscription@reorder');
+        Route::post('delete', 'ApiFeaturedSubscription@destroy');
+    });
 });
 
 Route::group(['prefix' => 'api/timesetting', 'namespace' => 'Modules\Setting\Http\Controllers'], function()
