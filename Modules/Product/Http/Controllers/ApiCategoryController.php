@@ -35,6 +35,7 @@ class ApiCategoryController extends Controller
         date_default_timezone_set('Asia/Jakarta');
         $this->promo_campaign       = "Modules\PromoCampaign\Http\Controllers\ApiPromoCampaign";
         $this->subscription_use     = "Modules\Subscription\Http\Controllers\ApiSubscriptionUse";
+        $this->promo       			= "Modules\PromoCampaign\Http\Controllers\ApiPromo";
     }
 
     public $saveImage = "img/product/category/";
@@ -459,6 +460,7 @@ class ApiCategoryController extends Controller
 
         $result = MyHelper::checkGet($result);
         $result['promo_error'] = $promo_error;
+        $result['total_promo'] = app($this->promo)->availablePromo();
         return response()->json($result);
     }
 
