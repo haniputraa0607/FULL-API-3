@@ -2440,4 +2440,21 @@ class ApiOnlineTransaction extends Controller
 
     	return 0;
     }
+    public function cancelTransaction(Request $request)
+    {
+        $id_transaction = $request->id;
+        $trx = Transaction::where('id_transaction', $id_transaction)->first();
+        if(!$trx || $trx->transaction_payment_status != 'Pending'){
+            return MyHelper::checkGet([],'Transaction cannot be canceled');
+        }
+        $errors = '';
+        $cancel = \Modules\IPay88\Lib\IPay88::create()->cancel('trx',$trx,$errors);
+        if($cancel){
+            return ['status'=>'success'];
+        }
+        return [
+            'status'=>'fail', 
+            'messages' => $errors?:['Something went wrong']
+        ];
+    }
 }
