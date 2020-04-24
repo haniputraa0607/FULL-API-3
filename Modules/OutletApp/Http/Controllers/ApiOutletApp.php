@@ -1458,19 +1458,22 @@ class ApiOutletApp extends Controller
             ->groupBy('transactions.id_transaction');
 
         if ($trx_status == 'taken') {
-            $data->where(function($query){
+            $data->where('transaction_payment_status','Completed')
+                ->where(function($query){
                 $query->whereNotNull('taken_at')
                     ->orWhereNotNull('taken_by_system_at');
             });
         }elseif($trx_status == 'rejected'){
-            $data->whereNotNull('reject_at');
+            $data->where('transaction_payment_status','Completed')
+                ->whereNotNull('reject_at');
         }elseif($trx_status == 'unpaid'){
             $data->where('transaction_payment_status','Pending')
             ->whereNull('taken_at')
             ->whereNull('taken_by_system_at')
             ->whereNull('reject_at');
         }else{
-            $data->where(function($query){
+            $data->where('transaction_payment_status','Completed')
+                ->where(function($query){
                 $query->whereNotNull('taken_at')
                     ->orWhereNotNull('taken_by_system_at')
                     ->orWhereNotNull('reject_at');
@@ -2096,7 +2099,7 @@ class ApiOutletApp extends Controller
                 $result['detail']['detail_status'][] = [
                 'text'  => 'Order rejected',
                 'date'  => date('d F Y H:i', strtotime($list['detail']['reject_at'])),
-                'reason'=> $list['detail']['reject_reason']
+                'reason'=> $result['detail']['reject_reason']
             ];
             }
             if ($list['detail']['taken_by_system_at'] != null) {
