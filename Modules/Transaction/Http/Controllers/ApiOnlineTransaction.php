@@ -1583,6 +1583,7 @@ class ApiOnlineTransaction extends Controller
         }
 
         DB::commit();
+        $insertTransaction['cancel_message'] = 'Are you sure you want to cancel this transaction?';
         return response()->json([
             'status'   => 'success',
             'redirect' => true,
