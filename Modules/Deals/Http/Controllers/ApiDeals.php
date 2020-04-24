@@ -311,7 +311,7 @@ class ApiDeals extends Controller
                     $dt = 'Welcome Voucher';
                     break;
             }
-            $send = app($this->autocrm)->SendAutoCRM('Create '.$dt, $request->user()->phone, $request->json()->all());
+            $send = app($this->autocrm)->SendAutoCRM('Create '.$dt, $request->user()->phone, $request->json()->all(),null,true);
         } else {
             DB::rollback();
         }
@@ -1041,7 +1041,7 @@ class ApiDeals extends Controller
                     $dt = 'Welcome Voucher';
                     break;
             }
-            $send = app($this->autocrm)->SendAutoCRM('Update '.$dt, $request->user()->phone, $request->json()->all());
+            $send = app($this->autocrm)->SendAutoCRM('Update '.$dt, $request->user()->phone, $request->json()->all(),null,true);
 	        return response()->json(MyHelper::checkUpdate($save));
         } else {
             DB::rollback();

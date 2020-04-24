@@ -62,7 +62,7 @@ class ApiHiddenDeals extends Controller
                     DB::rollback();
                     return response()->json(MyHelper::checkCreate($claim));
                 }
-                $send = app($this->autocrm)->SendAutoCRM('Create Inject Voucher', $request->user()->phone, $post);
+                $send = app($this->autocrm)->SendAutoCRM('Create Inject Voucher', $request->user()->phone, $post,null,true);
             }
             else {
                 DB::rollback();

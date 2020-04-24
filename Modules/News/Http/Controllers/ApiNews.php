@@ -313,7 +313,7 @@ class ApiNews extends Controller
                         'publish_date' => $data['news_publish_date']??'',
                         'expired_date' => $data['news_expired_date']??'',
                         'detail' => view('news::webview.news',['news'=>[$data]])->render()
-                    ]);
+                    ],null,true);
                 }
                 return response()->json(MyHelper::checkCreate($save));
             }
@@ -407,7 +407,7 @@ class ApiNews extends Controller
                         'publish_date' => $data['news_publish_date']??'',
                         'expired_date' => $data['news_expired_date']??'',
                         'detail' => view('news::webview.news',['news'=>[$data]])->render()
-                    ]);
+                    ],null,true);
                 }
                 return response()->json(MyHelper::checkUpdate($save));
             }
