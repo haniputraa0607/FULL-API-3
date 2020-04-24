@@ -2068,7 +2068,7 @@ class ApiOnlineTransaction extends Controller
         $result['subtotal'] = $subtotal;
         $result['shipping'] = $post['shipping']+$shippingGoSend;
         $result['discount'] = $post['discount'];
-        $result['service'] = $post['service'];
+        $result['service'] = (int) $post['service'];
         $result['tax'] = (int) $post['tax'];
         $result['grandtotal'] = (int)$post['subtotal'] + (int)(-$post['discount']) + (int)$post['service'] + (int)$post['tax'] + (int)$post['shipping'] + $shippingGoSend;
         $result['subscription'] = 0;

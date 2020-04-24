@@ -307,10 +307,13 @@ class ApiSubscriptionClaimPay extends Controller
                                 'type' => 'subscription',
                                 'id_reference' => $voucher->id_subscription_user,
                                 'payment_id' => $request->json('payment_id')?:''
-                            ])
+                            ]),
+                            'id_subscription_user' => $voucher->id_subscription_user,
+                            'cancel_message' => 'Are you sure you want to cancel this transaction?'
                         ]
                     ];
                 }
+                $pay['cancel_message'] = 'Are you sure you want to cancel this transaction?';
                 $return = MyHelper::checkCreate($pay);
                 if(isset($return['status']) && $return['status'] == 'success'){
                     if(\Module::collections()->has('Autocrm')) {
@@ -346,6 +349,7 @@ class ApiSubscriptionClaimPay extends Controller
                     }
                     $result['webview_success'] = env('API_URL').'api/webview/subscription/success/'.$return['result']['voucher']['id_subscription_user'];
                     unset($return['result']);
+                    $result['cancel_message'] = 'Are you sure you want to cancel this transaction?';
                     $return['result'] = $result;
                 }
                 return response()->json($return);
