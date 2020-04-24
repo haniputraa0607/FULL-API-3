@@ -48,6 +48,23 @@ class ApiSubscriptionClaimPay extends Controller
 
     public $saveImage = "img/receipt_deals/";
 
+    public function cancel(Request $request) {
+        $id_subscription_user = $request->id_subscription_user;
+        $subscription_user = SubscriptionUser::where('id_subscription_user', $id_subscription_user)->first();
+        if(!$subscription_user || $subscription_user->paid_status != 'Pending'){
+            return MyHelper::checkGet([],'Paid subscription cannot be canceled');
+        }
+        $errors = '';
+        $cancel = \Modules\IPay88\Lib\IPay88::create()->cancel('subscription',$subscription_user,$errors);
+        if($cancel){
+            return ['status'=>'success'];
+        }
+        return [
+            'status'=>'fail', 
+            'messages' => $errors?:['Something went wrong']
+        ];
+    }
+
     /* CLAIM SUBSCRIPTION */
     function claim(Paid $request) {
 

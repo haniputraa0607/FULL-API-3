@@ -652,6 +652,33 @@ class IPay88
 	    			return true;
     			}
     			break;
+    		case 'subscription':
+    			$model->load('subscription_payment_ipay88');
+    			if(!$model->subscription_payment_ipay88){
+					return false;
+    			}
+				$submitted = [
+					'MerchantCode' => $model->subscription_payment_ipay88->merchant_code?:$this->merchant_code,
+					'RefNo' => $model->subscription_payment_ipay88->order_id,
+					'Amount' => $model->subscription_payment_ipay88->amount,
+					'type' => 'cancel',
+					'triggers' => 'user'
+				];
+			
+    			$requery = $this->reQuery($submitted,'0');
+    			if(in_array($requery['response'],['Record not found','Payment fail'])){
+	    			$update = $this->update($model->subscription_payment_ipay88,[
+	    				'type' =>'subscription',
+	    				'Status' => '0',
+	    				'requery_response' => $requery['response']
+	    			],false,false);
+	    			if(!$update){
+	    				$errors = ['Failed update subscription'];
+	    				return false;
+	    			}
+	    			return true;
+    			}
+    			break;
     	}
     	return false;
     }
