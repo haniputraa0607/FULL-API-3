@@ -632,21 +632,21 @@ class IPay88
     			}
 				$submitted = [
 					'MerchantCode' => $model->deals_payment_ipay88->merchant_code?:$this->merchant_code,
-					'RefNo' => $model->transaction_receipt_number,
-					'Amount' => $model->transaction_payment_ipay88->amount,
+					'RefNo' => $model->deals_payment_ipay88->order_id,
+					'Amount' => $model->deals_payment_ipay88->amount,
 					'type' => 'cancel',
 					'triggers' => 'user'
 				];
 			
     			$requery = $this->reQuery($submitted,'0');
     			if(in_array($requery['response'],['Record not found','Payment fail'])){
-	    			$update = $this->update($model->transaction_payment_ipay88,[
-	    				'type' =>'trx',
+	    			$update = $this->update($model->deals_payment_ipay88,[
+	    				'type' =>'deals',
 	    				'Status' => '0',
 	    				'requery_response' => $requery['response']
 	    			],false,false);
 	    			if(!$update){
-	    				$errors = ['Failed update transaction'];
+	    				$errors = ['Failed update voucher'];
 	    				return false;
 	    			}
 	    			return true;

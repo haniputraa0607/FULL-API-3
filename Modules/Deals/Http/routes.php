@@ -10,6 +10,7 @@ Route::group(['middleware' => ['auth:api', 'log_activities', 'scopes:apps'], 'pr
     /* CLAIM */
     Route::group(['prefix' => 'claim'], function () {
         Route::post('/', 'ApiDealsClaim@claim');
+        Route::post('cancel', 'ApiDealsClaimPay@cancel');
         Route::post('paid', 'ApiDealsClaimPay@claim');
         Route::post('paid/confirm', 'ApiDealsClaimPay@confirm');
         Route::post('paid/status', 'ApiDealsClaimPay@status');
