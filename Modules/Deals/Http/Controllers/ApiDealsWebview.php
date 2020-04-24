@@ -7,6 +7,7 @@ use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
 
 use App\Http\Models\Deal;
+use App\Http\Models\DealsUser;
 use App\Lib\MyHelper;
 use Illuminate\Support\Facades\Auth;
 use Route;
@@ -93,24 +94,32 @@ class ApiDealsWebview extends Controller
             if (!empty($valueContent['deals_content_details'])) {
                 $result['deals_content'][$keyContent]['title'] = $valueContent['title'];
                 foreach ($valueContent['deals_content_details'] as $key => $value) {
-                    // $result['deals_content'][$keyContent]['detail'][$key] = $value['content'];
-                    $content[$key] = $value['content'];
+                    $result['deals_content'][$keyContent]['detail'][$key] = $value['content'];
+                    // $content[$key] = '<li>'.$value['content'].'</li>';
                 }
-                $result['deals_content'][$keyContent]['detail'] = implode('', $content);
+                // $result['deals_content'][$keyContent]['detail'] = '<ul style="color:#707070;">'.implode('', $content).'</ul>';
                 $i++;
             }
         }
 
         $result['deals_content'][$i]['title'] = 'Available at';
         $result['deals_content'][$i]['is_outlet'] = 1;
-        foreach ($deals['outlet_by_city'] as $keyCity => $valueCity) {
-            if (isset($valueCity['city_name'])) {
-                foreach ($valueCity['outlet'] as $keyOutlet => $valueOutlet) {
-                    // $result['deals_content'][$i]['detail'][$keyOutlet] = $valueOutlet['outlet_name'];
-                    $valTheOutlet[$keyOutlet] = '<li style="line-height: 12px;">' .$deals['brand']['name_brand']. ' - ' . $valueOutlet['outlet_name'] . '</li>';
+        $result['deals_content'][$i]['brand'] = $deals['brand']['name_brand'];
+        $result['deals_content'][$i]['brand_logo'] = $deals['brand']['logo_brand'];
+
+        if($deals['custom_outlet_text'] != null){
+            $result['deals_content'][$i]['detail_available'] = $deals['custom_outlet_text'];
+        }else{
+            foreach ($deals['outlet_by_city'] as $keyCity => $valueCity) {
+                if (isset($valueCity['city_name'])) {
+                    $result['deals_content'][$i]['detail_available'][$keyCity]['city'] = $valueCity['city_name'];
+                    foreach ($valueCity['outlet'] as $keyOutlet => $valueOutlet) {
+                        $result['deals_content'][$i]['detail_available'][$keyCity]['outlet'][$keyOutlet] = $valueOutlet['outlet_name'];
+                        // $valTheOutlet[$keyOutlet] = '<li style="line-height: 12px;">' . $valueOutlet['outlet_name'] . '</li>';
+                    }
+                    // $city[$keyCity] = strtoupper($valueCity['city_name']) . '<br><ul style="color:#707070;">' .implode('', $valTheOutlet).'</ul>';
+                    // $result['deals_content'][$i]['detail'] = implode('', $city);
                 }
-                $city[$keyCity] = strtoupper($valueCity['city_name']) . '<br>' . implode('', $valTheOutlet);
-                $result['deals_content'][$i]['detail'] = '<ol>'.implode('', $city).'</ol>';
             }
         }
 
@@ -179,6 +188,43 @@ class ApiDealsWebview extends Controller
         return view('deals::webview.deals.deals_claim', $data);
     }
 
+    public function dealsDetailLater(Request $request)
+    {
+        $bearer = $request->header('Authorization');
+
+        if ($bearer == "") {
+            return abort(404);
+        }
+
+        $post['id_deals_user'] = $request->id_deals_user;
+
+        $dealsUser = DealsUser::with('dealVoucher.deals')->where('id_deals_user', $request->id_deals_user)->get()->toArray()[0];
+
+        $result = [
+            'id_deals_user'             => $dealsUser['id_deals_user'],
+            'header_title'              => 'Horayy!',
+            'header_sub_title'          => 'Thank you for claiming',
+            'deals_title'               => $dealsUser['deal_voucher']['deals']['deals_title'],
+            'deals_image'               => $dealsUser['deal_voucher']['deals']['url_deals_image'],
+            'voucher_expired_at'        => 'Valid until ' . date('d F Y', strtotime($dealsUser['voucher_expired_at'])),
+            'claimed_at'                => date('d M Y H:i', strtotime($dealsUser['claimed_at'])),
+            'transaction_id'            => strtotime($dealsUser['claimed_at']).$dealsUser['id_deals_user'],
+            'balance'                   => number_format($dealsUser['balance_nominal'],0,",",".").' points',
+            'use_point'                 => (!is_null($dealsUser['balance_nominal'])) ? 1 : 0
+        ];
+
+        if ($dealsUser['voucher_price_point'] != null) {
+            $result['price']        = number_format($dealsUser['voucher_price_point'],0,",",".").' points';
+            $result['balance']      = number_format($dealsUser['voucher_price_point'],0,",",".").' points';
+            $result['use_point']    = 1;
+        } elseif ($dealsUser['voucher_price_cash'] != null) {
+            $result['price'] = number_format($dealsUser['voucher_price_cash'],0,",",".");
+        } else {
+            $result['price'] = 'Free';
+        }
+
+        return response()->json(MyHelper::checkGet($result));
+    }
     // voucher detail webview
     /*public function voucherDetail($id_deals_user)
     {
