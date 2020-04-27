@@ -1951,6 +1951,7 @@ class ApiOutletApp extends Controller
 
         $detail = [];
 
+        $pickupType = $list['trasaction_type'];
         if ($list['trasaction_type'] == 'Pickup Order') {
             $detail = TransactionPickup::where('id_transaction', $list['id_transaction'])->first()->toArray();
             if($detail){
@@ -1968,6 +1969,10 @@ class ApiOutletApp extends Controller
                 }
 
                 $detail = $newDetail;
+
+                if($detail['pickup_by'] == 'GO-SEND'){
+                    $pickupType = 'Delivery';
+                }
             }
         } elseif ($list['trasaction_type'] == 'Delivery') {
             $detail = TransactionShipment::with('city.province')->where('id_transaction', $list['id_transaction'])->first();
@@ -1989,7 +1994,7 @@ class ApiOutletApp extends Controller
             'user_phone'                    => $list['user']['phone'],
             'transaction_receipt_number'    => $list['transaction_receipt_number'],
             'transaction_date'              => date('d M Y H:i', strtotime($list['transaction_date'])),
-            'trasaction_type'               => $list['trasaction_type'],
+            'trasaction_type'               => $pickupType,
             'transaction_grandtotal'        => MyHelper::requestNumber($list['transaction_grandtotal'],'_CURRENCY'),
             'transaction_subtotal'          => MyHelper::requestNumber($list['transaction_subtotal'],'_CURRENCY'),
             'transaction_discount'          => MyHelper::requestNumber($list['transaction_discount'],'_CURRENCY'),
