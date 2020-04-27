@@ -93,4 +93,8 @@ class DealsUser extends Model
 	function deals_voucher() {
 		return $this->belongsTo(DealsVoucher::class, 'id_deals_voucher', 'id_deals_voucher')->select('id_deals_voucher', 'id_deals', 'voucher_code');
 	}
+	
+	function deals_payment_ipay88() {
+		return $this->hasOne(\Modules\IPay88\Entities\DealsPaymentIpay88::class, 'id_deals_user', 'id_deals_user');
+	}
 }

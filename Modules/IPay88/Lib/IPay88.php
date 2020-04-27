@@ -115,8 +115,8 @@ class IPay88
 				'UserEmail' => $trx->user->email,
 				'UserContact' => $trx->user->phone,
 				'Remark' => '',
-				'ResponseURL' => url('api/ipay88/detail/trx'),
-				'BackendURL' => url('api/ipay88/notif/trx'),
+				'ResponseURL' => env('API_URL').'api/ipay88/detail/trx',
+				'BackendURL' => env('API_URL').'api/ipay88/notif/trx',
 				'xfield1' => ''
 			];
 		}elseif($type == 'deals'){
@@ -137,8 +137,8 @@ class IPay88
 				'UserEmail' => $deals_user->user->email,
 				'UserContact' => $deals_user->user->phone,
 				'Remark' => '',
-				'ResponseURL' => url('api/ipay88/detail/deals'),
-				'BackendURL' => url('api/ipay88/notif/deals'),
+				'ResponseURL' => env('API_URL').'api/ipay88/detail/deals',
+				'BackendURL' => env('API_URL').'api/ipay88/notif/deals',
 				'xfield1' => ''
 			];
 		}elseif($type == 'subscription'){
@@ -248,7 +248,7 @@ class IPay88
 		}
 		return $result;
 	}
-	public function update($model,$data,$response_only = false) {
+	public function update($model,$data,$response_only = false,$saveToLog = true) {
 		if($response_only){
 			return $model->update(['requery_response'=>$data['requery_response']]);
 		}
@@ -503,6 +503,10 @@ class IPay88
                 # code...
                 break;
         }
+        if(!$saveToLog){
+        	DB::commit();
+        	return 1;
+        }
         $payment_method = $this->getPaymentMethod($data['PaymentId']);
 		$forUpdate = [
 	        'from_user' => $data['from_user']??0,
@@ -583,6 +587,100 @@ class IPay88
 	        $payment_method = $payment_method?str_replace('_', ' ', $payment_method):null;
     	}
     	return $payment_method;
+    }
+    /**
+     * Cancel trx or deals
+     * @param  String $type  'trx'/'deals'
+     * @param  Model $model Transaction/DealsUser Model
+     * @param  Array $errors Error message, if any
+     * @return [type]        [description]
+     */
+    public function cancel($type,$model,&$errors=null){
+		$errors = ['Payment in progress'];
+    	switch($type){
+    		case 'trx':
+    			$model->load('transaction_payment_ipay88');
+    			if(!$model->transaction_payment_ipay88){
+					return false;
+    			}
+				$submitted = [
+					'MerchantCode' => $model->transaction_payment_ipay88->merchant_code?:$this->merchant_code,
+					'RefNo' => $model->transaction_receipt_number,
+					'Amount' => $model->transaction_payment_ipay88->amount,
+					'type' => 'cancel',
+					'triggers' => 'user'
+				];
+			
+    			$requery = $this->reQuery($submitted,'0');
+    			if(in_array($requery['response'],['Record not found','Payment fail'])){
+	    			$update = $this->update($model->transaction_payment_ipay88,[
+	    				'type' =>'trx',
+	    				'Status' => '0',
+	    				'requery_response' => $requery['response']
+	    			],false,false);
+	    			if(!$update){
+	    				$errors = ['Failed update transaction'];
+	    				return false;
+	    			}
+	    			return true;
+    			}
+    			break;
+    		case 'deals':
+    			$model->load('deals_payment_ipay88');
+    			if(!$model->deals_payment_ipay88){
+					return false;
+    			}
+				$submitted = [
+					'MerchantCode' => $model->deals_payment_ipay88->merchant_code?:$this->merchant_code,
+					'RefNo' => $model->deals_payment_ipay88->order_id,
+					'Amount' => $model->deals_payment_ipay88->amount,
+					'type' => 'cancel',
+					'triggers' => 'user'
+				];
+			
+    			$requery = $this->reQuery($submitted,'0');
+    			if(in_array($requery['response'],['Record not found','Payment fail'])){
+	    			$update = $this->update($model->deals_payment_ipay88,[
+	    				'type' =>'deals',
+	    				'Status' => '0',
+	    				'requery_response' => $requery['response']
+	    			],false,false);
+	    			if(!$update){
+	    				$errors = ['Failed update voucher'];
+	    				return false;
+	    			}
+	    			return true;
+    			}
+    			break;
+    		case 'subscription':
+    			$model->load('subscription_payment_ipay88');
+    			if(!$model->subscription_payment_ipay88){
+					return false;
+    			}
+				$submitted = [
+					'MerchantCode' => $model->subscription_payment_ipay88->merchant_code?:$this->merchant_code,
+					'RefNo' => $model->subscription_payment_ipay88->order_id,
+					'Amount' => $model->subscription_payment_ipay88->amount,
+					'type' => 'cancel',
+					'triggers' => 'user'
+				];
+			
+    			$requery = $this->reQuery($submitted,'0');
+    			if(in_array($requery['response'],['Record not found','Payment fail'])){
+	    			$update = $this->update($model->subscription_payment_ipay88,[
+	    				'type' =>'subscription',
+	    				'Status' => '0',
+	    				'requery_response' => $requery['response']
+	    			],false,false);
+	    			if(!$update){
+	    				$errors = ['Failed update subscription'];
+	    				return false;
+	    			}
+	    			return true;
+    			}
+    			break;
+    	}
+    	return false;
     }
 }
 ?>

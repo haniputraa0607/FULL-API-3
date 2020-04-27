@@ -125,6 +125,11 @@ class Transaction extends Model
 		return $this->hasMany(\App\Http\Models\TransactionPaymentOvo::class, 'id_transaction');
 	}
 
+	public function transaction_payment_ipay88()
+	{
+		return $this->hasOne(\Modules\IPay88\Entities\TransactionPaymentIpay88::class, 'id_transaction');
+	}
+
 	public function products()
 	{
 		return $this->belongsToMany(\App\Http\Models\Product::class, 'transaction_products', 'id_transaction', 'id_product')
