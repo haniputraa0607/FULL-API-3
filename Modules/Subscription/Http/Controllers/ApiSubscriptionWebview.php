@@ -2,6 +2,7 @@
 
 namespace Modules\Subscription\Http\Controllers;
 
+use App\Http\Models\Outlet;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
@@ -13,6 +14,8 @@ use Modules\Subscription\Entities\SubscriptionUser;
 use Modules\Subscription\Entities\SubscriptionUserVoucher;
 use App\Http\Models\Setting;
 use App\Lib\MyHelper;
+use App\Http\Models\Transaction;
+use Illuminate\Support\Facades\DB;
 use Route;
 
 use Modules\Subscription\Http\Requests\ListSubscription;
@@ -183,7 +186,11 @@ class ApiSubscriptionWebview extends Controller
         $result['subscription_voucher_used'] = 0;
         foreach ($subs['subscription_user_vouchers'] as $key => $value) {
             if (!is_null($value['used_at'])) {
-                $result['subscription_voucher_used'] = $result['subscription_voucher_used'] + 1;
+                $getTrx = Transaction::select(DB::raw('transactions.*,sum(transaction_products.transaction_product_qty) item_total'))->leftJoin('transaction_products','transactions.id_transaction','=','transaction_products.id_transaction')->with('outlet')->where('transactions.id_transaction', $value['id_transaction'])->groupBy('transactions.id_transaction')->first();
+                $result['subscription_voucher'][$key]['used_at']    = $value['used_at'];
+                $result['subscription_voucher'][$key]['outlet']     = $getTrx->outlet->outlet_name;
+                $result['subscription_voucher'][$key]['item']       = $getTrx->item_total;
+                $result['subscription_voucher_used']    = $result['subscription_voucher_used'] + 1;
             }
         }
         $i = 0;
