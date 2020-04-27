@@ -198,14 +198,15 @@ class ApiDealsWebview extends Controller
 
         $post['id_deals_user'] = $request->id_deals_user;
 
-        $dealsUser = DealsUser::with('dealVoucher.deals')->where('id_deals_user', $request->id_deals_user)->get()->toArray()[0];
-
+        $dealsUser = DealsUser::with('dealVoucher.deal')->where('id_deals_user', $request->id_deals_user)->get()->toArray()[0];
+        
         $result = [
             'id_deals_user'             => $dealsUser['id_deals_user'],
             'header_title'              => 'Horayy!',
             'header_sub_title'          => 'Thank you for claiming',
-            'deals_title'               => $dealsUser['deal_voucher']['deals']['deals_title'],
-            'deals_image'               => $dealsUser['deal_voucher']['deals']['url_deals_image'],
+            'deals_title'               => $dealsUser['deal_voucher']['deal']['deals_title'],
+            'deals_second_title'        => $dealsUser['deal_voucher']['deal']['deals_second_title'],
+            'deals_image'               => $dealsUser['deal_voucher']['deal']['url_deals_image'],
             'voucher_expired_at'        => 'Valid until ' . date('d F Y', strtotime($dealsUser['voucher_expired_at'])),
             'claimed_at'                => date('d M Y H:i', strtotime($dealsUser['claimed_at'])),
             'transaction_id'            => strtotime($dealsUser['claimed_at']).$dealsUser['id_deals_user'],
@@ -225,6 +226,7 @@ class ApiDealsWebview extends Controller
 
         return response()->json(MyHelper::checkGet($result));
     }
+
     // voucher detail webview
     /*public function voucherDetail($id_deals_user)
     {
