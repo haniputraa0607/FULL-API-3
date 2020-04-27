@@ -2038,7 +2038,12 @@ class ApiOutletApp extends Controller
                     'driver' => null,
                     'delivery_status' => '',
                     'delivery_address' => $list['transaction_pickup_go_send']['destination_address'],
+                    'booking_status' => 0,
+                    'cancelable' => 1
                 ];
+                if($list['transaction_pickup_go_send']['go_send_id']){
+                    $result['delivery_info']['booking_status'] = 1;
+                }
                 switch (strtolower($list['transaction_pickup_go_send']['latest_status'])) {
                     case 'finding driver':
                         $result['delivery_info']['delivery_status'] = 'Driver belum ditemukan';
@@ -2051,6 +2056,7 @@ class ApiOutletApp extends Controller
                             'driver_photo' => $list['transaction_pickup_go_send']['driver_photo'],
                             'vehicle_number' => $list['transaction_pickup_go_send']['driver_number'],
                         ];
+                        $result['delivery_info']['cancelable'] = 0;
                         break;
                     case 'enroute drop':
                         $result['delivery_info']['delivery_status'] = 'Driver mengantarkan pesanan';
@@ -2061,6 +2067,7 @@ class ApiOutletApp extends Controller
                             'driver_photo' => $list['transaction_pickup_go_send']['driver_photo'],
                             'vehicle_number' => $list['transaction_pickup_go_send']['vehicle_number'],
                         ];
+                        $result['delivery_info']['cancelable'] = 0;
                         break;
                     case 'completed':
                         $result['transaction_status_text'] = 'ORDER SUDAH DIAMBIL';
@@ -2071,12 +2078,17 @@ class ApiOutletApp extends Controller
                             'driver_photo' => $list['transaction_pickup_go_send']['driver_photo'],
                             'vehicle_number' => $list['transaction_pickup_go_send']['driver_number'],
                         ];
+                        $result['delivery_info']['cancelable'] = 0;
                         break;
                     case 'cancelled':
+                        $result['delivery_info']['booking_status'] = 0;
                         $result['transaction_status_text'] = 'Pengantaran dibatalkan';
+                        $result['delivery_info']['cancelable'] = 0;
                         break;
                     case 'driver not found':
+                        $result['delivery_info']['booking_status'] = 0;
                         $result['delivery_info']['delivery_status'] = 'Driver tidak ditemukan';
+                        $result['delivery_info']['cancelable'] = 0;
                         break;
                 }
             }
