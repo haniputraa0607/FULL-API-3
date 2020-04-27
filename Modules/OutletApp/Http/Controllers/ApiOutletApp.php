@@ -32,6 +32,7 @@ use Modules\OutletApp\Entities\OutletAppOtp;
 use Modules\Product\Entities\ProductStockStatusUpdate;
 use Modules\Outlet\Entities\OutletScheduleUpdate;
 use Modules\Transaction\Http\Requests\TransactionDetail;
+use Modules\IPay88\Entities\TransactionPaymentIpay88;
 
 use Modules\OutletApp\Http\Requests\ListProduct;
 use Modules\OutletApp\Http\Requests\UpdateToken;
@@ -1611,7 +1612,7 @@ class ApiOutletApp extends Controller
                 'messages' => 'Transaksi tidak menggunakan GO-SEND'
             ];
         }
-        if($trx['transaction_pickup']['transaction_pickup_go_send']['go_send_id'] && strtolower($trx['transaction_pickup']['transaction_pickup_go_send']['latest_status']) != 'cancelled'){
+        if($trx['transaction_pickup']['transaction_pickup_go_send']['go_send_id'] && !in_array(strtolower($trx['transaction_pickup']['transaction_pickup_go_send']['latest_status']),['cancelled','driver not found'])){
             return [
                 'status' => 'fail',
                 'messages' => 'Pengiriman sudah dipesan'
@@ -1653,7 +1654,7 @@ class ApiOutletApp extends Controller
         $dataSave = [
             'id_transaction' => $trx['id_transaction'],
             'id_transaction_pickup_go_send' => $trx['transaction_pickup']['transaction_pickup_go_send']['id_transaction_pickup_go_send'],
-            'status' => $status['status']??'on_going',
+            'status' => $status['status']??'Finding Driver',
         ];
         GoSend::saveUpdate($dataSave);
         if($updateGoSend){
@@ -1755,7 +1756,7 @@ class ApiOutletApp extends Controller
     {
         $id = $request->json('id_transaction');
 
-        $list = Transaction::where([['id_transaction', $id]])->with(
+        $list = Transaction::where([['transactions.id_transaction', $id]])->leftJoin('transaction_pickups','transaction_pickups.id_transaction','=','transactions.id_transaction')->with(
             // 'user.city.province',
             'user',
             'productTransaction.product.product_category',
@@ -1765,6 +1766,7 @@ class ApiOutletApp extends Controller
             'transaction_payment_offlines',
             'transaction_vouchers.deals_voucher.deal',
             'promo_campaign_promo_code.promo_campaign',
+            'transaction_pickup_go_send',
             'outlet.city')->first();
         if(!$list){
             return MyHelper::checkGet([],'empty');
@@ -2029,6 +2031,54 @@ class ApiOutletApp extends Controller
             } else {
                 $result['transaction_status'] = 5;
                 $result['transaction_status_text'] = 'ORDER PENDING';
+            }
+
+            if ($list['transaction_pickup_go_send']) {
+                $result['delivery_info'] = [
+                    'driver' => null,
+                    'delivery_status' => '',
+                    'delivery_address' => $list['transaction_pickup_go_send']['destination_address'],
+                ];
+                switch (strtolower($list['transaction_pickup_go_send']['latest_status'])) {
+                    case 'finding driver':
+                        $result['delivery_info']['delivery_status'] = 'Driver belum ditemukan';
+                        break;
+                    case 'enroute pickup':
+                        $result['delivery_info']['delivery_status'] = 'Driver dalam perjalanan menuju Outlet';
+                        $result['delivery_info']['driver'] = [
+                            'driver_id' => $list['transaction_pickup_go_send']['driver_id'],
+                            'driver_phone' => $list['transaction_pickup_go_send']['driver_phone'],
+                            'driver_photo' => $list['transaction_pickup_go_send']['driver_photo'],
+                            'vehicle_number' => $list['transaction_pickup_go_send']['driver_number'],
+                        ];
+                        break;
+                    case 'enroute drop':
+                        $result['delivery_info']['delivery_status'] = 'Driver mengantarkan pesanan';
+                        $result['transaction_status_text'] = 'PROSES PENGANTARAN';
+                        $result['delivery_info']['driver'] = [
+                            'driver_id' => $list['transaction_pickup_go_send']['driver_id'],
+                            'driver_phone' => $list['transaction_pickup_go_send']['driver_phone'],
+                            'driver_photo' => $list['transaction_pickup_go_send']['driver_photo'],
+                            'vehicle_number' => $list['transaction_pickup_go_send']['vehicle_number'],
+                        ];
+                        break;
+                    case 'completed':
+                        $result['transaction_status_text'] = 'ORDER SUDAH DIAMBIL';
+                        $result['delivery_info']['delivery_status'] = 'Pesanan sudah diterima Customer';
+                        $result['delivery_info']['driver'] = [
+                            'driver_id' => $list['transaction_pickup_go_send']['driver_id'],
+                            'driver_phone' => $list['transaction_pickup_go_send']['driver_phone'],
+                            'driver_photo' => $list['transaction_pickup_go_send']['driver_photo'],
+                            'vehicle_number' => $list['transaction_pickup_go_send']['driver_number'],
+                        ];
+                        break;
+                    case 'cancelled':
+                        $result['transaction_status_text'] = 'Pengantaran dibatalkan';
+                        break;
+                    case 'driver not found':
+                        $result['delivery_info']['delivery_status'] = 'Driver tidak ditemukan';
+                        break;
+                }
             }
         }
 
