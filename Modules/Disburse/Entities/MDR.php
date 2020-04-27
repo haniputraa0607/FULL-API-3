@@ -14,6 +14,7 @@ class MDR extends Model
 		'mdr',
         'mdr_central',
         'percent_type',
-        'charged'
+        'charged',
+        'days_to_sent'
 	];
 }
