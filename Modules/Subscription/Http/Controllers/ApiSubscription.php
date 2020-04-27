@@ -514,27 +514,35 @@ class ApiSubscription extends Controller
         	$contentTable = new SubscriptionContent;
         	$contentTableDetail = new SubscriptionContentDetail;
         }
-        //Rapiin data yg masuk
-        foreach ($post['id_'.$source.'_content'] as $key => $value) {
-            $data_content[$key]['id_'.$source] = $post['id_'.$source];
-            $data_content[$key]['id_'.$source.'_content'] = $value;
-            $data_content[$key]['title'] = $post['content_title'][$key];
-            $data_content[$key]['is_active'] = ($post['visible'][$key+1]??0) ? 1 : null;
-            $data_content[$key]['order'] = ($content_order++);
-            $data_content[$key]['created_at'] = date('Y-m-d H:i:s');
-            $data_content[$key]['updated_at'] = date('Y-m-d H:i:s');
 
+        //Rapiin data yg masuk
+        $count = 0;
+        foreach ($post['id_'.$source.'_content'] as $key => $value) {
+            $data_content[$count]['id_'.$source] = $post['id_'.$source];
+            $data_content[$count]['id_'.$source.'_content'] = $value;
+            $data_content[$count]['title'] = $post['content_title'][$key];
+            $data_content[$count]['is_active'] = ($post['visible'][$key+1]??0) ? 1 : null;
+            $data_content[$count]['order'] = ($content_order++);
+            $data_content[$count]['created_at'] = date('Y-m-d H:i:s');
+            $data_content[$count]['updated_at'] = date('Y-m-d H:i:s');
+
+            $count++;
+        }
+
+        $count = 0;
+        foreach ($post['content_detail'] as $key => $value) {
             $detail_order = 1;
-            if ( ($post['id_content_detail'][$key+1]??0) ) {
-                foreach ($post['id_content_detail'][$key+1] as $key2 => $value2) {
-                    $data_content_detail[$key][$key2]['id_'.$source.'_content'] = $value;
-                    $data_content_detail[$key][$key2]['id_'.$source.'_content_detail'] = $value2;
-                    $data_content_detail[$key][$key2]['content'] = $post['content_detail'][$key+1][$key2];
-                    $data_content_detail[$key][$key2]['order'] = $detail_order++;
-                    $data_content_detail[$key][$key2]['created_at'] = date('Y-m-d H:i:s');
-                    $data_content_detail[$key][$key2]['updated_at'] = date('Y-m-d H:i:s');
+            if ( ($post['id_content_detail'][$key]??0) ) {
+                foreach ($post['id_content_detail'][$key] as $key2 => $value2) {
+                    $data_content_detail[$count][$key2]['id_'.$source.'_content'] = $value;
+                    $data_content_detail[$count][$key2]['id_'.$source.'_content_detail'] = $value2;
+                    $data_content_detail[$count][$key2]['content'] = $post['content_detail'][$key][$key2];
+                    $data_content_detail[$count][$key2]['order'] = $detail_order++;
+                    $data_content_detail[$count][$key2]['created_at'] = date('Y-m-d H:i:s');
+                    $data_content_detail[$count][$key2]['updated_at'] = date('Y-m-d H:i:s');
                 }
             }
+        	$count++;
         }
 
         // hapus content & detail
@@ -779,7 +787,10 @@ class ApiSubscription extends Controller
                             $q->select(
                                 'outlets.id_outlet',
                                 'outlet_code',
-                                'outlet_name'
+                                'outlet_name',
+                                'outlet_address',
+                                'outlet_phone',
+                                'outlet_email'
                             );
                         },
                         'products' => function($q){
@@ -788,7 +799,8 @@ class ApiSubscription extends Controller
 	                    		'product_code',
 	                    		'product_name'
 	                    	);
-	                    }
+	                    },
+	                    'brand'
                     ])
                     ->withCount('subscription_users')
                     // ->select(
