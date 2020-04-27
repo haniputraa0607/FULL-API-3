@@ -1583,6 +1583,7 @@ class ApiOnlineTransaction extends Controller
         }
 
         DB::commit();
+        $insertTransaction['cancel_message'] = 'Are you sure you want to cancel this transaction?';
         return response()->json([
             'status'   => 'success',
             'redirect' => true,
@@ -2067,7 +2068,7 @@ class ApiOnlineTransaction extends Controller
         $result['subtotal'] = $subtotal;
         $result['shipping'] = $post['shipping']+$shippingGoSend;
         $result['discount'] = $post['discount'];
-        $result['service'] = $post['service'];
+        $result['service'] = (int) $post['service'];
         $result['tax'] = (int) $post['tax'];
         $result['grandtotal'] = (int)$post['subtotal'] + (int)(-$post['discount']) + (int)$post['service'] + (int)$post['tax'] + (int)$post['shipping'] + $shippingGoSend;
         $result['subscription'] = 0;
@@ -2439,5 +2440,22 @@ class ApiOnlineTransaction extends Controller
     	}
 
     	return 0;
+    }
+    public function cancelTransaction(Request $request)
+    {
+        $id_transaction = $request->id;
+        $trx = Transaction::where('id_transaction', $id_transaction)->first();
+        if(!$trx || $trx->transaction_payment_status != 'Pending'){
+            return MyHelper::checkGet([],'Transaction cannot be canceled');
+        }
+        $errors = '';
+        $cancel = \Modules\IPay88\Lib\IPay88::create()->cancel('trx',$trx,$errors);
+        if($cancel){
+            return ['status'=>'success'];
+        }
+        return [
+            'status'=>'fail', 
+            'messages' => $errors?:['Something went wrong']
+        ];
     }
 }

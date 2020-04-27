@@ -61,6 +61,23 @@ class ApiDealsClaimPay extends Controller
 
     }
 
+    public function cancel(Request $request) {
+        $id_deals_user = $request->id_deals_user;
+        $deals_user = DealsUser::where('id_deals_user', $id_deals_user)->first();
+        if(!$deals_user || $deals_user->paid_status != 'Pending'){
+            return MyHelper::checkGet([],'Paid deals cannot be canceled');
+        }
+        $errors = '';
+        $cancel = \Modules\IPay88\Lib\IPay88::create()->cancel('deals',$deals_user,$errors);
+        if($cancel){
+            return ['status'=>'success'];
+        }
+        return [
+            'status'=>'fail', 
+            'messages' => $errors?:['Something went wrong']
+        ];
+    }
+
     /* CLAIM DEALS */
     function claim(Paid $request)
     {
@@ -297,7 +314,9 @@ class ApiDealsClaimPay extends Controller
                                 'type' => 'deals',
                                 'id_reference' => $voucher->id_deals_user,
                                 'payment_id' => $request->json('payment_id')?:''
-                            ])
+                            ]),
+                            'id_deals_user' => $voucher->id_deals_user,
+                            'cancel_message' => 'Are you sure you want to cancel this transaction?'
                         ]
                     ];
                 }
@@ -319,11 +338,13 @@ class ApiDealsClaimPay extends Controller
 
                 if ($pay && $update) {
                     DB::commit();
+                    $pay['cancel_message'] = 'Are you sure you want to cancel this transaction?';
                     return response()->json(MyHelper::checkCreate($pay));
                 }
             }
             elseif ($pay) {
                 DB::commit();
+                $pay['cancel_message'] = 'Are you sure you want to cancel this transaction?';
                 $return = MyHelper::checkCreate($pay);
                 if(isset($return['status']) && $return['status'] == 'success'){
                     if(\Module::collections()->has('Autocrm')) {
@@ -356,6 +377,7 @@ class ApiDealsClaimPay extends Controller
                     }
                     $result['webview_later'] = env('API_URL').'api/webview/mydeals/'.$return['result']['voucher']['id_deals_user'];
                     unset($return['result']);
+                    $result['cancel_message'] = 'Are you sure you want to cancel this transaction?';
                     $return['result'] = $result;
                 }
                 return response()->json($return);

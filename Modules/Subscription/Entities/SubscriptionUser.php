@@ -68,4 +68,10 @@ class SubscriptionUser extends Eloquent
 	{
 		return $this->hasMany(\Modules\Subscription\Entities\SubscriptionUserVoucher::class, 'id_subscription_user');
 	}
+
+	public function subscription_payment_ipay88()
+	{
+		return $this->hasOne(\Modules\IPay88\Entities\SubscriptionPaymentIpay88::class, 'id_subscription_user');
+	}
+
 }
