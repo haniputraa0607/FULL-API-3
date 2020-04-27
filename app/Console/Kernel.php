@@ -98,7 +98,7 @@ class Kernel extends ConsoleKernel
         /**
          * To process diburse
          */
-        $schedule->call('Modules\Disburse\Http\Controllers\ApiIrisController@disburse')->hourly();
+        $schedule->call('Modules\Disburse\Http\Controllers\ApiIrisController@disburse')->dailyAt('00:30');
     }
 
     /**
