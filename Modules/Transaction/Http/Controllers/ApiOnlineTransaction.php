@@ -751,7 +751,7 @@ class ApiOnlineTransaction extends Controller
 
         // add transaction voucher
         if($request->json('id_deals_user')){
-        	$update_voucher = DealsUser::where('id_deals_user','=',$request->id_deals_user)->update(['used_at' => date('Y-m-d H:i:s')]);
+        	$update_voucher = DealsUser::where('id_deals_user','=',$request->id_deals_user)->update(['used_at' => date('Y-m-d H:i:s'), 'is_used' => 0]);
         	$update_deals = Deal::where('id_deals','=',$deals->dealVoucher['deals']['id_deals'])->update(['deals_total_used' => $deals->dealVoucher['deals']['deals_total_used']+1]);
             $addTransactionVoucher = TransactionVoucher::create([
                 'id_deals_voucher' => $deals['id_deals_voucher'],
@@ -2454,7 +2454,7 @@ class ApiOnlineTransaction extends Controller
             return ['status'=>'success'];
         }
         return [
-            'status'=>'fail', 
+            'status'=>'fail',
             'messages' => $errors?:['Something went wrong']
         ];
     }
