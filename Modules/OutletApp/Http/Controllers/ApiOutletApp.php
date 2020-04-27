@@ -1654,7 +1654,7 @@ class ApiOutletApp extends Controller
         $dataSave = [
             'id_transaction' => $trx['id_transaction'],
             'id_transaction_pickup_go_send' => $trx['transaction_pickup']['transaction_pickup_go_send']['id_transaction_pickup_go_send'],
-            'status' => $status['status']??'on_going',
+            'status' => $status['status']??'Finding Driver',
         ];
         GoSend::saveUpdate($dataSave);
         if($updateGoSend){
