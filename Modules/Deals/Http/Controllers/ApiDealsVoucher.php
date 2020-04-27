@@ -51,7 +51,7 @@ class ApiDealsVoucher extends Controller
 
             if (!empty($data)) {
 
-            	if (($post['add_type']??false) != 'add') 
+            	if (($post['add_type']??false) != 'add')
             	{
                 	$save = DealsVoucher::where('id_deals',$post['id_deals'])->delete();
             	    $save = DealsVoucher::insert($data);
@@ -98,7 +98,7 @@ class ApiDealsVoucher extends Controller
 
         if ($jumlahVoucher) {
             // UPDATE DATA DEALS
-            
+
             $save = Deal::where('id_deals', $post['id_deals'])->update([
                 'deals_total_voucher' => $jumlahVoucher
             ]);
@@ -486,18 +486,18 @@ class ApiDealsVoucher extends Controller
             if (!empty($voucher[0]['is_online'])) {
             	// get pop up confirmation message
             	$deals_rule = Deal::where('id_deals','=',$voucher[0]['deal_voucher']['id_deals'])
-            					->with([  
+            					->with([
 		                            'deals_product_discount.product' => function($q) {
 										$q->select('id_product', 'id_product_category', 'product_code', 'product_name');
-									}, 
+									},
 		                            'deals_tier_discount_product.product' => function($q) {
 										$q->select('id_product', 'id_product_category', 'product_code', 'product_name');
-									}, 
+									},
 		                            'deals_buyxgety_product_requirement.product' => function($q) {
 										$q->select('id_product', 'id_product_category', 'product_code', 'product_name');
-									}, 
-		                            'deals_product_discount_rules', 
-		                            'deals_tier_discount_rules', 
+									},
+		                            'deals_product_discount_rules',
+		                            'deals_tier_discount_rules',
 		                            'deals_buyxgety_rules'
 		                        ])
 		                        ->first();
@@ -555,7 +555,7 @@ class ApiDealsVoucher extends Controller
                     'empty'    => $resultMessage
                 ]);
     	}
-    	
+
         // if(
         //     $request->json('id_outlet') ||
         //     $request->json('id_brand') ||
@@ -668,7 +668,7 @@ class ApiDealsVoucher extends Controller
 			// change specific deals user is used to 1
 			$deals_user = DealsUser::where('id_deals_user','=',$id_deals_user)->update(['is_used' => 1]);
 		}
-		
+
 		if ($deals_user) {
 			DB::commit();
 		}else{
@@ -699,21 +699,21 @@ class ApiDealsVoucher extends Controller
     {
     	$getVoucher = TransactionVoucher::where('id_transaction','=',$id_transaction)->with('deals_voucher.deals')->first();
 
-    	if ($getVoucher) 
+    	if ($getVoucher)
     	{
 	    	$update = DealsUser::where('id_deals_voucher', '=', $getVoucher['id_deals_voucher'])->update(['used_at' => null]);
 
-	    	if ($update) 
+	    	if ($update)
 	    	{
 	    		$update = TransactionVoucher::where('id_deals_voucher', '=', $getVoucher['id_deals_voucher'])->update(['status' => 'failed']);
 
-	    		if ($update) 
+	    		if ($update)
 	    		{
 	    			$update = Deal::where('id_deals','=',$getVoucher['deals_voucher']['deals']['id_deals'])->update(['deals_total_used' => $getVoucher['deals_voucher']['deals']['deals_total_used']-1]);
 
-	    			if ($update) 
+	    			if ($update)
 		    		{
-		    			return true;		
+		    			return true;
 		    		}
 		    		else
 		    		{
@@ -730,7 +730,7 @@ class ApiDealsVoucher extends Controller
 	    		return false;
 	    	}
     	}
-    	
+
     	return true;
 
     }
@@ -759,6 +759,7 @@ class ApiDealsVoucher extends Controller
 
         $voucher = DealsUser::where('id_user', $request->user()->id)
             ->whereIn('paid_status', ['Free', 'Completed'])
+            ->whereNull('used_at')
             ->with(['dealVoucher', 'dealVoucher.deal', 'dealVoucher.deal.outlets.city', 'dealVoucher.deal.outlets.city']);
         $voucher->select('deals_users.id_deals','voucher_expired_at','deals_users.id_deals_voucher','id_deals_user','id_outlet','voucher_hash','redeemed_at','used_at','is_used');
 
@@ -778,6 +779,8 @@ class ApiDealsVoucher extends Controller
 
         if(isset($post['voucher_expired']) && $post['voucher_expired'] != null){
             $voucher->whereDate('deals_users.voucher_expired_at', date('Y-m-d', strtotime($post['voucher_expired'])));
+        }else{
+            $voucher->where('deals_users.voucher_expired_at', '>', date('Y-m-d H:i:s'));
         }
 
         if(isset($post['key_free']) && $post['key_free'] != null){
