@@ -97,7 +97,11 @@ class ApiDisburseSettingController extends Controller
 
     function updateMdr(Request $request){
         $post = $request->json()->all();
-        $update = MDR::where('id_mdr', $post['id_mdr'])->update(['mdr' => $post['mdr'], 'mdr_central' => $post['mdr_central'],'percent_type' => $post['percent_type']]);
+        $update = MDR::where('id_mdr', $post['id_mdr'])->update([
+                                        'mdr' => $post['mdr'],
+                                        'mdr_central' => $post['mdr_central'],
+                                        'percent_type' => $post['percent_type'],
+                                        'days_to_sent' =>  $post['days_to_sent']]);
         return response()->json(MyHelper::checkUpdate($update));
     }
 

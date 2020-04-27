@@ -91,16 +91,28 @@ class ApiIrisController extends Controller
                         $amount = 0;
                         $charged = NULL;
 
+                        if(empty($data['transaction_multiple_payment'])){
+                            continue;
+                        }
                         foreach ($data['transaction_multiple_payment'] as $payments){
 
                             if(strtolower($payments['type']) == 'midtrans'){
                                 $midtrans = TransactionPaymentMidtran::where('id_transaction', $data['id_transaction'])->first()->bank;
                                 $keyMidtrans = array_search($midtrans, array_column($settingMDRAll, 'payment_name'));
                                 if($keyMidtrans !== false){
+                                    if(!is_null($settingMDRAll[$midtrans]['days_to_sent'])){
+                                        $explode = explode(',', $settingMDRAll[$midtrans]['days_to_sent']);
+                                        $checkDay = array_search(date('l'), $explode);
+                                        if($checkDay < 0 || $checkDay === false){
+                                            continue 2;
+                                        }
+                                    }
                                     $feePGCentral = $settingMDRAll[$keyMidtrans]['mdr_central'];
                                     $feePG = $settingMDRAll[$keyMidtrans]['mdr'];
                                     $feePGType = $settingMDRAll[$keyMidtrans]['percent_type'];
                                     $charged = $settingMDRAll[$keyMidtrans]['charged'];
+                                }else{
+                                    continue 2;
                                 }
 
                             }elseif (strtolower($payments['type']) == 'balance'){
@@ -115,18 +127,38 @@ class ApiIrisController extends Controller
                                 $ipay88 = TransactionPaymentIpay88::where('id_transaction', $data['id_transaction'])->first()->payment_method;
                                 $keyipay88 = array_search($ipay88, array_column($settingMDRAll, 'payment_name'));
                                 if($keyipay88 !== false){
+                                    if(!is_null($settingMDRAll[$keyipay88]['days_to_sent'])){
+                                        $explode = explode(',', $settingMDRAll[$keyipay88]['days_to_sent']);
+                                        $checkDay = array_search(date('l'), $explode);
+                                        if($checkDay < 0 || $checkDay === false){
+                                            continue 2;
+                                        }
+                                    }
+
                                     $feePGCentral = $settingMDRAll[$keyipay88]['mdr_central'];
                                     $feePG = $settingMDRAll[$keyipay88]['mdr'];
                                     $feePGType = $settingMDRAll[$keyipay88]['percent_type'];
                                     $charged = $settingMDRAll[$keyipay88]['charged'];
+                                }else{
+                                    continue 2;
                                 }
                             }elseif (strtolower($payments['type']) == 'ovo'){
                                 $keyipayOvo = array_search('Ovo', array_column($settingMDRAll, 'payment_name'));
                                 if($keyipayOvo !== false){
+                                    if(!is_null($settingMDRAll[$keyipayOvo]['days_to_sent'])){
+                                        $explode = explode(',', $settingMDRAll[$keyipayOvo]['days_to_sent']);
+                                        $checkDay = array_search(date('l'), $explode);
+                                        if($checkDay < 0 || $checkDay === false){
+                                            continue 2;
+                                        }
+                                    }
+
                                     $feePGCentral = $settingMDRAll[$keyipayOvo]['mdr_central'];
                                     $feePG = $settingMDRAll[$keyipayOvo]['mdr'];
                                     $feePGType = $settingMDRAll[$keyipayOvo]['percent_type'];
                                     $charged = $settingMDRAll[$keyipayOvo]['charged'];
+                                }else{
+                                    continue 2;
                                 }
                             }
                         }
