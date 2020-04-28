@@ -184,21 +184,25 @@ class ApiSubscriptionWebview extends Controller
         $result['time_server'] = date('Y-m-d H:i:s');
 
         $result['subscription_voucher_used'] = 0;
+        
+        $i = 0;
+        $result['subscription_content'][$i]['title']        = 'Voucher';
         foreach ($subs['subscription_user_vouchers'] as $key => $value) {
             if (!is_null($value['used_at'])) {
                 $getTrx = Transaction::select(DB::raw('transactions.*,sum(transaction_products.transaction_product_qty) item_total'))->leftJoin('transaction_products','transactions.id_transaction','=','transaction_products.id_transaction')->with('outlet')->where('transactions.id_transaction', $value['id_transaction'])->groupBy('transactions.id_transaction')->first();
-                $result['subscription_voucher'][$key]['used_at']    = $value['used_at'];
-                $result['subscription_voucher'][$key]['outlet']     = $getTrx->outlet->outlet_name;
-                $result['subscription_voucher'][$key]['item']       = $getTrx->item_total;
+                $result['subscription_content'][$i]['detail_voucher'][$key]['used_at']    = $value['used_at'];
+                $result['subscription_content'][$i]['detail_voucher'][$key]['outlet']     = $getTrx->outlet->outlet_name;
+                $result['subscription_content'][$i]['detail_voucher'][$key]['item']       = $getTrx->item_total;
                 $result['subscription_voucher_used']    = $result['subscription_voucher_used'] + 1;
+                $i++;
             }
         }
-        $i = 0;
+
         foreach ($subs['subscription']['subscription_content'] as $keyContent => $valueContent) {
             if (!empty($valueContent['subscription_content_details'])) {
-                $result['subscription_content'][$keyContent]['title'] = $valueContent['title'];
+                $result['subscription_content'][$i]['title'] = $valueContent['title'];
                 foreach ($valueContent['subscription_content_details'] as $key => $value) {
-                    $result['subscription_content'][$keyContent]['detail'][$key] = $value['content'];
+                    $result['subscription_content'][$i]['detail'][$key] = $value['content'];
                     // $content[$key] = '<li>'.$value['content'].'</li>';
                 }
                 // $result['deals_content'][$keyContent]['detail'] = '<ul style="color:#707070;">'.implode('', $content).'</ul>';
