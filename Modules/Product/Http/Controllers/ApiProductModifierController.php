@@ -176,7 +176,7 @@ class ApiProductModifierController extends Controller
             ProductModifierBrand::where('id_product_modifier',$id_product_modifier)->delete();
             ProductModifierProduct::where('id_product_modifier',$id_product_modifier)->delete();
             ProductModifierProductCategory::where('id_product_modifier',$id_product_modifier)->delete();
-            if($post['modifier_type']=='Specific'){
+            if($post['modifier_type']=='Specific' || $post['modifier_type']=='Global Brand'){
                 if($brands = ($post['id_brand']??false)){
                     foreach ($brands as $id_brand) {
                         $data = [
