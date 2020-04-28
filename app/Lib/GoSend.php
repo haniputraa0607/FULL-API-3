@@ -7,6 +7,7 @@ use App\Http\Models\Outlet;
 use App\Http\Models\Setting;
 use App\Http\Models\Transaction;
 use App\Http\Models\TransactionPickup;
+use App\Http\Models\TransactionPickupGoSend;
 use App\Http\Models\TransactionPickupGoSendUpdate;
 use App\Http\Models\User;
 
@@ -97,8 +98,10 @@ class GoSend
             'Client-ID' => env('GO_SEND_CLIENT_ID'),
             'Pass-Key'  => env('GO_SEND_PASS_KEY'),
         ];
-
-        $url   = env('GO_SEND_URL') . 'gokilat/v10/booking/storeOrderId/' . $storeOrderId;
+        // pakai orderno dulu soalnya kalau pakai storeOrderId sering internal server error
+        $orderno = TransactionPickupGoSend::select('go_send_order_no')->join('transaction_pickups','transaction_pickups.id_transaction_pickup','=','transaction_pickup_go_sends.id_transaction_pickup')->join('transactions','transactions.id_transaction','=','transaction_pickups.id_transaction')->where('transaction_receipt_number',$storeOrderId)->pluck('go_send_order_no')->first();
+        $url   = env('GO_SEND_URL') . 'gokilat/v10/booking/orderno/' . $orderno;
+        // $url   = env('GO_SEND_URL') . 'gokilat/v10/booking/storeOrderId/' . $storeOrderId;
         $token = MyHelper::get($url, null, $header, $status_code, $response_header);
         try {
             LogApiGosend::create([
@@ -222,16 +225,25 @@ class GoSend
     {
         $found = TransactionPickupGoSendUpdate::where(['id_transaction_pickup_go_send' => $dataUpdate['id_transaction_pickup_go_send'], 'status' => $dataUpdate['status']])->first();
         if (!$found) {
+            $trx_pickup = TransactionPickup::where('id_transaction', $dataUpdate['id_transaction'])->first();
             if ($dataUpdate['status'] == 'Completed') {
-                $trx = TransactionPickup::where('id_transaction', $dataUpdate['id_transaction'])->update(['show_confirm' => 1]);
+                $trx = $trx_pickup->update(['show_confirm' => 1]);
             }
             $trx = Transaction::where('id_transaction', $dataUpdate['id_transaction'])->first();
             $outlet  = Outlet::where('id_outlet', $trx->id_outlet)->first();
             $phone   = User::select('phone')->where('id', $trx->id_user)->pluck('phone')->first();
+            $dataPush = [
+                'subject' => 'Update Delivery',
+                'string_body' => $trx->transaction_receipt_number.' '.($dataUpdate['status'] ?? 'Finding Driver'),
+                'status' => ($dataUpdate['status'] ?? 'Finding Driver'),
+                'id_transaction' => $trx->id_transaction,
+                'order_id' => $trx_pickup->order_id
+            ];
+            app("Modules\OutletApp\Http\Controllers\ApiOutletApp")->outletNotif($dataPush,$outlet->id_outlet);
             $autocrm = app("Modules\Autocrm\Http\Controllers\ApiAutoCrm")->SendAutoCRM('Delivery Status Update', $phone,
                 [
                     'id_reference'    => $dataUpdate['id_transaction'],
-                    'receipt_number'  => $trx->receipt_number,
+                    'receipt_number'  => $trx->transaction_receipt_number,
                     'outlet_code'     => $outlet->outlet_code,
                     'outlet_name'     => $outlet->outlet_name,
                     'delivery_status' => $dataUpdate['status'] ?? 'Finding Driver',

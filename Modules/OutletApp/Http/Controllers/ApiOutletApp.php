@@ -1705,6 +1705,13 @@ class ApiOutletApp extends Controller
                     if($status['vehicleNumber']??false){
                         $toUpdate['vehicle_number'] = $status['vehicleNumber'];
                     }
+                    if(!in_array(strtolower($status['status']),['finding driver','driver not found','cancelled']) && strpos(env('GO_SEND_URL'), 'integration')){
+                        $toUpdate['driver_id'] = '00510001';
+                        $toUpdate['driver_phone'] = '08111251307';
+                        $toUpdate['driver_name'] = 'Anton Lucarus';
+                        $toUpdate['driver_photo'] = 'http://beritatrans.com/cms/wp-content/uploads/2020/02/images4-553x400.jpeg';
+                        $toUpdate['vehicle_number'] = 'AB 2641 XY';
+                    }
                     $trxGoSend->update($toUpdate);
                     if(in_array(strtolower($status['status']), ['completed','delivered'])){
                         $arrived_at = date('Y-m-d H:i:s',strtotime($status['orderArrivalTime']??time()));
@@ -2216,4 +2223,45 @@ class ApiOutletApp extends Controller
 
         return response()->json(MyHelper::checkGet($result));
     }
+    public function outletNotif($data,$id_outlet)
+    {
+        $outletToken = OutletToken::where('id_outlet', $id_outlet)->get();
+        $subject = $data['subject']??'Update Status';
+        $stringBody = $data['string_body']??'';
+        unset($data['subject']);
+        unset($data['string_body']);
+        if(env('PUSH_NOTIF_OUTLET') == 'fcm'){
+            $tokens = $outletToken->pluck('token')->toArray();
+            if(!empty($tokens)){
+                $subject = $subject;
+                $push = PushNotificationHelper::sendPush($tokens, $subject, $stringBody, null, $data);
+            }
+        }else{
+            $dataArraySend = [];
+
+            foreach ($outletToken as $key => $value) {
+                $dataOutletSend = [
+                    'to'    => $value['token'],
+                    'title' => $subject,
+                    'body'  => $stringBody,
+                    'data'  => $data
+                ];
+
+                array_push($dataArraySend, $dataOutletSend);
+
+            }
+
+            $curl = MyHelper::post('https://exp.host/--/api/v2/push/send', null, $dataArraySend);
+            if (!$curl) {
+                DB::rollback();
+                return response()->json([
+                    'status'    => 'fail',
+                    'messages'  => ['Send notif failed']
+                ]);
+            }
+        }
+
+        return true;
+    }
+
 }

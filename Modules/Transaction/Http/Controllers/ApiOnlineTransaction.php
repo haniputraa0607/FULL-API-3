@@ -595,7 +595,7 @@ class ApiOnlineTransaction extends Controller
             $dataAddressKeys['id_user'] = $user['id'];
             UserAddress::updateOrCreate($dataAddressKeys,$dataAddress);
             $checkKey = GoSend::checkKey();
-            if(isset($checkKey) && $checkKey['status'] == 'fail'){
+            if(is_array($checkKey) && $checkKey['status'] == 'fail'){
                 DB::rollback();
                 return response()->json($checkKey);
             }
