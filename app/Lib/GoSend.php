@@ -225,7 +225,7 @@ class GoSend
             if ($dataUpdate['status'] == 'Completed') {
                 $trx = TransactionPickup::where('id_transaction', $dataUpdate['id_transaction'])->update(['show_confirm' => 1]);
             }
-
+            $trx = Transaction::where('id_transaction', $dataUpdate['id_transaction'])->first();
             $outlet  = Outlet::where('id_outlet', $trx->id_outlet)->first();
             $phone   = User::select('phone')->where('id', $trx->id_user)->pluck('phone')->first();
             $autocrm = app("Modules\Autocrm\Http\Controllers\ApiAutoCrm")->SendAutoCRM('Delivery Status Update', $phone,
