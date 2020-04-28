@@ -7,6 +7,7 @@ use App\Http\Models\Outlet;
 use App\Http\Models\Setting;
 use App\Http\Models\Transaction;
 use App\Http\Models\TransactionPickup;
+use App\Http\Models\TransactionPickupGoSend;
 use App\Http\Models\TransactionPickupGoSendUpdate;
 use App\Http\Models\User;
 
@@ -97,8 +98,10 @@ class GoSend
             'Client-ID' => env('GO_SEND_CLIENT_ID'),
             'Pass-Key'  => env('GO_SEND_PASS_KEY'),
         ];
-
-        $url   = env('GO_SEND_URL') . 'gokilat/v10/booking/storeOrderId/' . $storeOrderId;
+        // pakai orderno dulu soalnya kalau pakai storeOrderId sering internal server error
+        $orderno = TransactionPickupGoSend::select('go_send_order_no')->join('transaction_pickups','transaction_pickups.id_transaction_pickup','=','transaction_pickup_go_sends.id_transaction_pickup')->join('transactions','transactions.id_transaction','=','transaction_pickups.id_transaction')->where('transaction_receipt_number',$storeOrderId)->pluck('go_send_order_no')->first();
+        $url   = env('GO_SEND_URL') . 'gokilat/v10/booking/orderno/' . $orderno;
+        // $url   = env('GO_SEND_URL') . 'gokilat/v10/booking/storeOrderId/' . $storeOrderId;
         $token = MyHelper::get($url, null, $header, $status_code, $response_header);
         try {
             LogApiGosend::create([

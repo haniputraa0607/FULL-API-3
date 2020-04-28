@@ -1705,6 +1705,13 @@ class ApiOutletApp extends Controller
                     if($status['vehicleNumber']??false){
                         $toUpdate['vehicle_number'] = $status['vehicleNumber'];
                     }
+                    if(!in_array(strtolower($status['status']),['finding driver','driver not found','cancelled']) && strpos(env('GO_SEND_URL'), 'integration')){
+                        $toUpdate['driver_id'] = '00510001';
+                        $toUpdate['driver_phone'] = '08111251307';
+                        $toUpdate['driver_name'] = 'http://beritatrans.com/cms/wp-content/uploads/2020/02/images4-553x400.jpeg';
+                        $toUpdate['driver_photo'] = 'ABC123';
+                        $toUpdate['vehicle_number'] = 'AB 2641 XY';
+                    }
                     $trxGoSend->update($toUpdate);
                     if(in_array(strtolower($status['status']), ['completed','delivered'])){
                         $arrived_at = date('Y-m-d H:i:s',strtotime($status['orderArrivalTime']??time()));
