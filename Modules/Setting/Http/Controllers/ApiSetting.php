@@ -43,6 +43,9 @@ use Modules\Setting\Http\Requests\SettingEdit;
 use Modules\Setting\Http\Requests\SettingUpdate;
 use Modules\Setting\Http\Requests\DatePost;
 
+use App\Exports\DefaultExport;
+use Maatwebsite\Excel\Facades\Excel;
+
 use App\Lib\MyHelper;
 use Validator;
 use Hash;
@@ -222,22 +225,27 @@ class ApiSetting extends Controller
     }
 
     public function cronPointReset(){
-        $user = User::get();
+        $user = User::select('id','name','phone')->orderBy('name');
 
         //point reset
         $setting = Setting::where('key', 'point_reset')->get();
-
+        $attachments = [];
         DB::beginTransaction();
         if($setting){
+            $userData = [];
             foreach($setting as $date){
                 if($date['value'] == date('d F')){
-                    foreach($user as $datauser){
+                    foreach($user->cursor() as $datauser){
                         $totalPoint = LogPoint::where('id_user', $datauser['id'])->sum('point');
                         if($totalPoint){
                             $dataLog = [
                                 'id_user'                     => $datauser['id'],
                                 'point'                       => -$totalPoint,
                                 'source'                      => 'Point Reset',
+                            ];
+                            $userData[] = [
+                                'User' => "{$datauser['name']} ({$datauser['phone']})",
+                                'Previous Point' => MyHelper::requestNumber($totalBalance,'_CURRENCY')
                             ];
 
                             $insertDataLog = LogPoint::create($dataLog);
@@ -263,6 +271,9 @@ class ApiSetting extends Controller
                     }
                 }
             }
+            if($userData){
+                $attachments[] = Excel::download(new DefaultExport($userData), 'point.xlsx')->getFile();
+            }
 
             DB::commit();
         }
@@ -272,9 +283,10 @@ class ApiSetting extends Controller
 
         DB::beginTransaction();
         if($setting){
+            $userData1 = [];
             foreach($setting as $date){
                 if($date['value'] == date('d F')){
-                    foreach($user as $datauser){
+                    foreach($user->cursor() as $datauser){
                         $totalBalance = LogBalance::where('id_user', $datauser['id'])->sum('balance');
                         if($totalBalance){
                             $dataLog = [
@@ -282,7 +294,10 @@ class ApiSetting extends Controller
                                 'balance'                       => -$totalBalance,
                                 'source'                      => 'Balance Reset',
                             ];
-
+                            $userData1[] = [
+                                'User' => "{$datauser['name']} ({$datauser['phone']})",
+                                'Previous Point' => MyHelper::requestNumber($totalBalance,'_CURRENCY')
+                            ];
                             $insertDataLog = LogBalance::create($dataLog);
                             if (!$insertDataLog) {
                                 DB::rollback();
@@ -307,12 +322,19 @@ class ApiSetting extends Controller
                 }
             }
 
+            if($userData){
+                $attachments[] = Excel::download(new DefaultExport($userData), 'point.xlsx')->getFile();
+            }
+            
             DB::commit();
 
-            return response()->json([
-                'status' => 'success'
-            ]);
         }
+
+        $send = app($this->autocrm)->SendAutoCRM('Report Point Reset', $user->first()->phone, ['datetime_reset' => date('d F Y H:i'), 'attachment' => $attachments],null,true);
+
+        return response()->json([
+            'status' => 'success'
+        ]);
 
     }
 
