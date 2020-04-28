@@ -930,13 +930,13 @@ class ApiOutletController extends Controller
 	        foreach ($outlet as $key => $value) {
 				$outlet[$key]['is_promo'] = 0;
 			}
-			
+
 			$promo_data = $this->applyPromo($post, $outlet, $promo_error);
 
 	        if ($promo_data) {
 	        	$outlet = $promo_data;
 	        }
-			
+
             foreach ($outlet as $key => $value) {
                 $jaraknya =   number_format((float)$this->distance($latitude, $longitude, $value['outlet_latitude'], $value['outlet_longitude'], "K"), 2, '.', '');
                 settype($jaraknya, "float");
@@ -1835,7 +1835,7 @@ class ApiOutletController extends Controller
                 }
             }else{
                 $new = OutletSchedule::create([
-                    'id_outlet' => $id_outlet, 
+                    'id_outlet' => $id_outlet,
                     'day' => $value['day']
                 ]+$value);
                 if (!$new) {
@@ -2166,13 +2166,13 @@ class ApiOutletController extends Controller
 		}
 
 		$promo_error = null;
-		if ( 
-				(!empty($post['promo_code']) && empty($post['id_deals_user']) && empty($post['id_subscription_user']) ) || 
+		if (
+				(!empty($post['promo_code']) && empty($post['id_deals_user']) && empty($post['id_subscription_user']) ) ||
         		(empty($post['promo_code']) && !empty($post['id_deals_user']) && empty($post['id_subscription_user']) ) ||
-        		(empty($post['promo_code']) && empty($post['id_deals_user']) && !empty($post['id_subscription_user']) ) 
+        		(empty($post['promo_code']) && empty($post['id_deals_user']) && !empty($post['id_subscription_user']) )
 			) {
         // if (isset($post['promo_code'])) {
-        	if (!empty($post['promo_code'])) 
+        	if (!empty($post['promo_code']))
         	{
         		$code = app($this->promo_campaign)->checkPromoCode($post['promo_code'], 1);
         		$source = 'promo_campaign';
@@ -2182,7 +2182,7 @@ class ApiOutletController extends Controller
         		$code = app($this->promo_campaign)->checkVoucher($post['id_deals_user'], 1);
         		$source = 'deals';
         	}
-        	elseif (!empty($post['id_subscription_user'])) 
+        	elseif (!empty($post['id_subscription_user']))
         	{
         		$code = app($this->subscription_use)->checkSubscription($post['id_subscription_user'], 1);
         		$source = 'subscription';
@@ -2192,7 +2192,7 @@ class ApiOutletController extends Controller
 	        	$promo_error = 'Promo not valid';
 	        	return false;
 	        }else{
-	        	
+
 	        	if ( ($code['promo_campaign']['date_end']??$code['voucher_expired_at']??$code['subscription_expired_at']) < date('Y-m-d H:i:s') ) {
 	        		$promo_error = 'Promo is ended';
 	        		return false;
@@ -2222,8 +2222,8 @@ class ApiOutletController extends Controller
 		        	}
         		}
 	        }
-	    }elseif ( 
-        	(!empty($post['promo_code']) && !empty($post['id_deals_user'])) || 
+	    }elseif (
+        	(!empty($post['promo_code']) && !empty($post['id_deals_user'])) ||
         	(!empty($post['id_subscription_user']) && !empty($post['id_deals_user'])) ||
         	(!empty($post['promo_code']) && !empty($post['id_subscription_user']))
         ) {
@@ -2260,5 +2260,22 @@ class ApiOutletController extends Controller
             ];
         }
         return ['status'=>'fail'];
+    }
+
+    function listOutletSimple(Request $request)
+    {
+        $outlet = Outlet::select('id_outlet', 'outlet_code', 'outlet_name')->where('outlet_status', 'Active')->orderBy('outlet_name')->get()->toArray();
+
+        foreach ($outlet as $key => $value) {
+            unset($outlet[$key]['call']);
+            unset($outlet[$key]['url']);
+            $brands = BrandOutlet::where('id_outlet', $value['id_outlet'])->select('id_brand')->get();
+            if($brands){
+                $brands = $brands->pluck('id_brand');
+            }
+            $outlet[$key]['id_brands'] = $brands;
+        }
+
+        return response()->json(MyHelper::checkGet($outlet));
     }
 }

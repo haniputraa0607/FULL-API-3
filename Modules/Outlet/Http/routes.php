@@ -2,6 +2,7 @@
 Route::group(['prefix' => 'api/outlet', 'middleware' => ['log_activities', 'auth:api', 'user_agent', 'scopes:apps'], 'namespace' => 'Modules\Outlet\Http\Controllers'], function()
 {
     Route::any('list', 'ApiOutletController@listOutlet');
+    Route::any('list/simple', 'ApiOutletController@listOutletSimple');
     Route::any('list/ordernow', 'ApiOutletController@listOutletOrderNow');
     Route::any('list/gofood', 'ApiOutletGofoodController@listOutletGofood');
     Route::any('filter', 'ApiOutletController@filter');
@@ -75,4 +76,3 @@ Route::group(['prefix' => 'api/outlet', 'middleware' => ['log_activities', 'auth
     Route::post('max-order/update', 'ApiOutletController@updateMaxOrder');
     Route::any('schedule/save', 'ApiOutletController@scheduleSave');
 });
-
