@@ -222,16 +222,25 @@ class GoSend
     {
         $found = TransactionPickupGoSendUpdate::where(['id_transaction_pickup_go_send' => $dataUpdate['id_transaction_pickup_go_send'], 'status' => $dataUpdate['status']])->first();
         if (!$found) {
+            $trx_pickup = TransactionPickup::where('id_transaction', $dataUpdate['id_transaction'])->first();
             if ($dataUpdate['status'] == 'Completed') {
-                $trx = TransactionPickup::where('id_transaction', $dataUpdate['id_transaction'])->update(['show_confirm' => 1]);
+                $trx = $trx_pickup->update(['show_confirm' => 1]);
             }
             $trx = Transaction::where('id_transaction', $dataUpdate['id_transaction'])->first();
             $outlet  = Outlet::where('id_outlet', $trx->id_outlet)->first();
             $phone   = User::select('phone')->where('id', $trx->id_user)->pluck('phone')->first();
+            $dataPush = [
+                'subject' => 'Update Delivery',
+                'string_body' => $trx->transaction_receipt_number.' '.($dataUpdate['status'] ?? 'Finding Driver'),
+                'status' => ($dataUpdate['status'] ?? 'Finding Driver'),
+                'id_transaction' => $trx->id_transaction,
+                'order_id' => $trx_pickup->order_id
+            ];
+            app("Modules\OutletApp\Http\Controllers\ApiOutletApp")->outletNotif($dataPush,$outlet->id_outlet);
             $autocrm = app("Modules\Autocrm\Http\Controllers\ApiAutoCrm")->SendAutoCRM('Delivery Status Update', $phone,
                 [
                     'id_reference'    => $dataUpdate['id_transaction'],
-                    'receipt_number'  => $trx->receipt_number,
+                    'receipt_number'  => $trx->transaction_receipt_number,
                     'outlet_code'     => $outlet->outlet_code,
                     'outlet_name'     => $outlet->outlet_name,
                     'delivery_status' => $dataUpdate['status'] ?? 'Finding Driver',

@@ -2211,4 +2211,45 @@ class ApiOutletApp extends Controller
 
         return response()->json(MyHelper::checkGet($result));
     }
+    public function outletNotif($data,$id_outlet)
+    {
+        $outletToken = OutletToken::where('id_outlet', $id_outlet)->get();
+        $subject = $data['subject']??'Update Status';
+        $stringBody = $data['string_body']??'';
+        unset($data['subject']);
+        unset($data['string_body']);
+        if(env('PUSH_NOTIF_OUTLET') == 'fcm'){
+            $tokens = $outletToken->pluck('token')->toArray();
+            if(!empty($tokens)){
+                $subject = $subject;
+                $push = PushNotificationHelper::sendPush($tokens, $subject, $stringBody, null, $data);
+            }
+        }else{
+            $dataArraySend = [];
+
+            foreach ($outletToken as $key => $value) {
+                $dataOutletSend = [
+                    'to'    => $value['token'],
+                    'title' => $subject,
+                    'body'  => $stringBody,
+                    'data'  => $data
+                ];
+
+                array_push($dataArraySend, $dataOutletSend);
+
+            }
+
+            $curl = MyHelper::post('https://exp.host/--/api/v2/push/send', null, $dataArraySend);
+            if (!$curl) {
+                DB::rollback();
+                return response()->json([
+                    'status'    => 'fail',
+                    'messages'  => ['Send notif failed']
+                ]);
+            }
+        }
+
+        return true;
+    }
+
 }
