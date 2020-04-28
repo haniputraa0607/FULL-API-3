@@ -248,9 +248,33 @@ class ApiSubscription extends Controller
                     }])
                     ->groupBy('id_subscription_user');
 
+        $count = SubscriptionUser::
+                    where('id_subscription', '=', $post['id_subscription'])
+                    ->select(
+                        'subscription_users.*',
+                        'users.*'
+                    )
+                    ->join('users', 'subscription_users.id_user','=','users.id')
+                    ->withCount(['subscription_user_vouchers as kuota'])
+                    ->withCount(['subscription_user_vouchers as used' => function($q){
+                        $q->whereNotNull('used_at');
+                    }])
+                    ->withCount(['subscription_user_vouchers as available' => function($q){
+                        $q->whereNull('used_at');
+                    }])
+                    ->groupBy('id_subscription_user');
+
+        $total = SubscriptionUser::where('id_subscription', '=', $post['id_subscription'])->paginate(1)->toArray();
+
+		$foreign = [];
+		$foreign2 = [];
+        if($post['rule']??false){
+            $this->filterParticipate($query,$request,$foreign);
+            $this->filterParticipate($count,$request,$foreign2);
+        }
+
         $column = ['subscription_receipt', 'user', 'bought_at', 'expired_at', 'payment_status', 'payment_price', 'available', 'history' ];
 
-        $count = $query->get()->count();
         if($post['start']){
             $query = $query->skip($post['start']);
         }
@@ -294,7 +318,17 @@ class ApiSubscription extends Controller
                 break;
             }
         }
+
+        foreach ($foreign as $value) {
+            $query->leftJoin(...$value);
+        }
+
+        foreach ($foreign2 as $value) {
+            $query->leftJoin(...$value);
+        }
+
         $query = $query->get();
+        $count = $count->paginate(1)->toArray();
 
         if (isset($query) && !empty($query)) {
             $query = $query->toArray();
@@ -302,7 +336,8 @@ class ApiSubscription extends Controller
                 'status'  => 'success',
                 'result'  => $query,
                 'rule'    => $post,
-                'count'   => $count
+                'count'   => $count['total']??0,
+                'total'   => $total['total']??0
             ];
         } else {
             $result = [
@@ -809,6 +844,33 @@ class ApiSubscription extends Controller
                     ->first()
                     ->toArray();
 
+        if ($data) {
+
+            $total = SubscriptionUser::
+                    where('id_subscription', '=', $post['id_subscription'])
+                    ->select(
+                        'subscription_users.*',
+                        'users.*'
+                    )
+                    ->join('users', 'subscription_users.id_user','=','users.id')
+                    ->withCount(['subscription_user_vouchers as kuota'])
+                    ->withCount(['subscription_user_vouchers as used' => function($q){
+                        $q->whereNotNull('used_at');
+                    }])
+                    ->withCount(['subscription_user_vouchers as available' => function($q){
+                        $q->whereNull('used_at');
+                    }])
+                    ->groupBy('id_subscription_user');
+            $foreign = [];
+            $this->filterParticipate($total,$request,$foreign);
+            foreach ($foreign as $value) {
+                $total->leftJoin(...$value);
+            }
+            $total = $total->paginate(1)->toArray();
+
+            $data['total'] = $total['total']??0;
+        }
+
         $data['total_used_voucher'] = SubscriptionUserVoucher::join('subscription_users', 'subscription_user_vouchers.id_subscription_user','=','subscription_users.id_subscription_user')->where('id_subscription','=',$post['id_subscription'])->whereNotNull('used_at')->count();
 
         return response()->json(MyHelper::checkGet($data));
@@ -933,6 +995,9 @@ class ApiSubscription extends Controller
         }
         if ($request->json('id_city')) {
             $subs->with('outlets','outlets.city');
+        }
+        if ($request->json('created_at')) {
+            $subs->orderBy('created_at', 'DESC');
         }
 
         $subs = $subs->get()->toArray();
@@ -1749,5 +1814,55 @@ class ApiSubscription extends Controller
     {
     	$post = $request->json()->all();
     	return MyHelper::checkGet(Subscription::whereDoesntHave('featured_subscriptions')->where('subscription_step_complete','1')->select($post['select']??'*')->get());
+    }
+
+    protected function filterParticipate($query, $request,&$foreign='')
+    {
+        $query->groupBy('subscription_users.id_subscription_user');
+        $allowed = array(
+            'operator' => ['=', 'like', '<', '>', '<=', '>='],
+            'subject' => ['user_phone','subscription_user_receipt_number','paid_status','bought_at'],
+            'mainSubject' => ['subscription_user_receipt_number','paid_status','bought_at']
+        );
+        $return = [];
+        $where = $request->json('operator') == 'or' ? 'orWhere' : 'where';
+        $whereDate = $request->json('operator') == 'or' ? 'orWhereDate' : 'whereDate';
+        $rule = $request->json('rule');
+        $query->where(function($queryx) use ($rule,$allowed,$where,$query,&$foreign,$request, $whereDate){
+            $foreign=array();
+            $outletCount=0;
+            $userCount=0;
+            foreach ($rule??[] as $value) {
+                if (!in_array($value['subject'], $allowed['subject'])) {
+                    continue;
+                }
+                if (!(isset($value['operator']) && $value['operator'] && in_array($value['operator'], $allowed['operator']))) {
+                    $value['operator'] = '=';
+                }
+                if ($value['operator'] == 'like') {
+                    $value['parameter'] = '%' . $value['parameter'] . '%';
+                }
+                if (in_array($value['subject'], $allowed['mainSubject'])) {
+                    if($value['subject']=='bought_at'){
+                        $queryx->$whereDate('subscription_users.'.$value['subject'], $value['operator'], strtotime($value['parameter']));
+                    }else{
+                        $queryx->$where('subscription_users.'.$value['subject'], $value['operator'], $value['parameter']);
+                    }
+                } else {
+                    switch ($value['subject']) {
+                        case 'user_phone':
+                        // $foreign['users']=['users','users.id','=','subscription_users.id_user'];
+                        $queryx->$where('users.phone', $value['operator'], $value['parameter']);
+                        break;
+
+                        default:
+                            # code...
+                        break;
+                    }
+                }
+                $return[] = $value;
+            }
+        });
+        return ['filter' => $return, 'filter_operator' => $request->json('operator')];
     }
 }
