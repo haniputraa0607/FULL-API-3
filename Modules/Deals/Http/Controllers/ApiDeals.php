@@ -225,6 +225,12 @@ class ApiDeals extends Controller
         	}else{
         	    $data['id_outlet'] = $post['id_outlet'];
         	}
+            if (in_array("all", $data['id_outlet'])){
+                $data['is_all_outlet'] = 1;
+                $data['id_outlet'] = [];
+            }else{
+                $data['is_all_outlet'] = 0;
+            }
         }
         if (isset($post['user_limit'])) {
             $data['user_limit'] = $post['user_limit'];
@@ -272,11 +278,13 @@ class ApiDeals extends Controller
         }
 
         if ($save) {
-            if (isset($data['id_outlet'])) {
-                $saveOutlet = $this->saveOutlet($save, $data['id_outlet']);
+            if (isset($data['id_outlet']) && $data['is_all_outlet'] == 0) {
+                if (isset($data['id_outlet'])) {
+                    $saveOutlet = $this->saveOutlet($save, $data['id_outlet']);
 
-                if (!$saveOutlet) {
-                    return false;
+                    if (!$saveOutlet) {
+                        return false;
+                    }
                 }
             }
         }
@@ -975,7 +983,9 @@ class ApiDeals extends Controller
             $this->deleteOutlet($id);
 
             // SAVE
-            $saveOutlet = $this->saveOutlet($deals, $data['id_outlet']);
+            if($data['is_all_outlet'] == 0){
+                $saveOutlet = $this->saveOutlet($deals, $data['id_outlet']);
+            }
             unset($data['id_outlet']);
         }
 
@@ -1098,27 +1108,7 @@ class ApiDeals extends Controller
         $id_brand=$deals->id_brand;
         $dataOutlet = [];
 
-        if (in_array("all", $id_outlet)) {
-            /* SELECT ALL OUTLET */
-            $id_outlet = Outlet::select('id_outlet')->whereHas('brands',function($query) use ($id_brand){
-                $query->where('brands.id_brand',$id_brand);
-            })->get()->toArray();
-            if($id_brand){
-                $id_outlet = Outlet::select('id_outlet')->whereHas('brands',function($query) use ($id_brand){
-                    $query->where('brands.id_brand',$id_brand);
-                })->get()->toArray();
-
-            }else{
-                $id_outlet = Outlet::select('id_outlet')->get()->toArray();
-            }
-
-            if (empty($id_outlet)) {
-                return false;
-            } else {
-                $id_outlet = array_pluck($id_outlet, 'id_outlet');
-            }
-        }
-
+        /*If select all outlet, not save to table deals outlet*/
         foreach ($id_outlet as $value) {
             array_push($dataOutlet, [
                 'id_outlet' => $value,
