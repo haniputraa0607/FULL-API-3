@@ -150,16 +150,40 @@ class ApiDealsInvalidate extends Controller
     /* CHECK OUTLET AVAILABLE */
     function outletAvailable($user, $id_deals_user, $outlet_code)
     {
-        $deals = DealsUser::join('deals_vouchers', 'deals_vouchers.id_deals_voucher', '=', 'deals_users.id_deals_voucher')
-        ->leftjoin('deals_outlets', 'deals_vouchers.id_deals', '=', 'deals_outlets.id_deals')
-        ->leftjoin('outlets as o2', 'o2.id_outlet', '=', 'deals_users.id_outlet')
-        ->leftjoin('outlets', 'outlets.id_outlet', '=', 'deals_outlets.id_outlet')
-        ->where('outlets.outlet_code', strtoupper($outlet_code))
-        ->where('id_user', $user->id)
-        ->where('id_deals_user', $id_deals_user)
-        ->addSelect(DB::raw('*,((deals_users.id_outlet is null) or deals_users.id_outlet = outlets.id_outlet) as status_outlet,o2.outlet_name as old_outlet_name,outlets.outlet_name as outlet_name,outlets.id_outlet as id_outlet'))
-        ->with('user', 'dealVoucher', 'dealVoucher.deal')
-        ->first();
+        $dataDeals = DealsUser::join('deals_vouchers', 'deals_vouchers.id_deals_voucher', '=', 'deals_users.id_deals_voucher')
+            ->join('deals', 'deals.id_deals', '=', 'deals_vouchers.id_deals')
+            ->where('id_deals_user', $id_deals_user)
+            ->select('deals.*')->first();
+
+        if(!empty($dataDeals)){
+            if($dataDeals['is_all_outlet'] == 1){
+                $deals = DealsUser::join('deals_vouchers', 'deals_vouchers.id_deals_voucher', '=', 'deals_users.id_deals_voucher')
+                    ->join('deals', 'deals.id_deals', '=', 'deals_vouchers.id_deals')
+                    ->join('brand_outlet', 'deals.id_brand', '=', 'brand_outlet.id_brand')
+                    ->join('outlets', 'outlets.id_outlet', '=', 'brand_outlet.id_outlet')
+                    ->where('outlets.outlet_code', strtoupper($outlet_code))
+                    ->where('outlets.outlet_status', 'Active')
+                    ->where('deals_users.id_user', $user->id)
+                    ->where('deals_users.id_deals_user', $id_deals_user)
+                    ->addSelect(DB::raw('*,deals_users.id_outlet as deals_user_outlet, deals_users.id_outlet as check_outlet_deals_user,((deals_users.id_outlet is null) or deals_users.id_outlet = outlets.id_outlet) as status_outlet,outlets.outlet_name as old_outlet_name,outlets.outlet_name as outlet_name,outlets.id_outlet as id_outlet'))
+                    ->with('user', 'dealVoucher', 'dealVoucher.deal')
+                    ->first();
+            }else{
+                $deals = DealsUser::join('deals_vouchers', 'deals_vouchers.id_deals_voucher', '=', 'deals_users.id_deals_voucher')
+                    ->leftjoin('deals_outlets', 'deals_vouchers.id_deals', '=', 'deals_outlets.id_deals')
+                    ->leftjoin('outlets as o2', 'o2.id_outlet', '=', 'deals_users.id_outlet')
+                    ->leftjoin('outlets', 'outlets.id_outlet', '=', 'deals_outlets.id_outlet')
+                    ->where('outlets.outlet_code', strtoupper($outlet_code))
+                    ->where('outlets.outlet_status', 'Active')
+                    ->where('id_user', $user->id)
+                    ->where('id_deals_user', $id_deals_user)
+                    ->addSelect(DB::raw('*,deals_users.id_outlet as deals_user_outlet, deals_users.id_outlet as check_outlet_deals_user,((deals_users.id_outlet is null) or deals_users.id_outlet = outlets.id_outlet) as status_outlet,o2.outlet_name as old_outlet_name,outlets.outlet_name as outlet_name,outlets.id_outlet as id_outlet'))
+                    ->with('user', 'dealVoucher', 'dealVoucher.deal')
+                    ->first();
+            }
+        }else{
+            $deals = [];
+        }
 
         return $deals;
     }

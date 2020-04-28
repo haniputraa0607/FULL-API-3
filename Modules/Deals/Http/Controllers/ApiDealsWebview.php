@@ -2,6 +2,8 @@
 
 namespace Modules\Deals\Http\Controllers;
 
+use App\Http\Models\DealsOutlet;
+use App\Http\Models\Outlet;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
@@ -10,6 +12,7 @@ use App\Http\Models\Deal;
 use App\Http\Models\DealsUser;
 use App\Lib\MyHelper;
 use Illuminate\Support\Facades\Auth;
+use Modules\Brand\Entities\BrandOutlet;
 use Route;
 
 use Modules\Deals\Http\Requests\Deals\ListDeal;
@@ -22,6 +25,14 @@ class ApiDealsWebview extends Controller
         $deals = Deal::with('brand', 'outlets.city', 'deals_content.deals_content_details')->where('id_deals', $request->id_deals)->get()->toArray()[0];
 
         $deals['outlet_by_city'] = [];
+
+        if($deals['is_all_outlet'] == 1){
+            $outlets = Outlet::join('brand_outlet', 'outlets.id_outlet', '=', 'brand_outlet.id_outlet')
+                        ->join('deals', 'deals.id_brand', '=', 'brand_outlet.id_brand')
+                        ->where('deals.id_deals', $deals['id_deals'])
+                        ->select('outlets.*')->with('city')->get()->toArray();
+            $deals['outlets'] = $outlets;
+        }
 
         if (!empty($deals['outlets'])) {
             $kota = array_column($deals['outlets'], 'city');
