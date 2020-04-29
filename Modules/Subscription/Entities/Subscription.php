@@ -193,4 +193,8 @@ class Subscription extends Eloquent
 					->withPivot('id_subscription_product')
 					->withTimestamps();
 	}
+
+    public function brand(){
+		return $this->belongsTo(\Modules\Brand\Entities\Brand::class,'id_brand');
+	}
 }
