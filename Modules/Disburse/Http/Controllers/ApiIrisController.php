@@ -59,7 +59,7 @@ class ApiIrisController extends Controller
             ->whereNull('disburse_transactions.id_disburse')
             ->select('transactions.id_outlet', 'transactions.id_transaction', 'transactions.transaction_subtotal',
                 'transactions.transaction_grandtotal', 'transactions.transaction_discount', 'transactions.id_promo_campaign_promo_code',
-                'bank_name.bank_code', 'outlets.status_franchise',
+                'bank_name.bank_code', 'outlets.status_franchise', 'outlets.outlet_special_status', 'outlets.outlet_special_fee',
                 'outlets.beneficiary_name', 'outlets.beneficiary_account', 'outlets.beneficiary_email', 'outlets.beneficiary_alias')
             ->with(['transaction_multiple_payment', 'vouchers', 'promo_campaign'])
             ->orderBy('transactions.created_at', 'desc')->get()->toArray();
@@ -187,10 +187,14 @@ class ApiIrisController extends Controller
                         }
 
                         $percentFee = 0;
-                        if($data['status_franchise'] == 1){
-                            $percentFee = ($settingGlobalFee->fee_outlet == '' ? 0 : $settingGlobalFee->fee_outlet);
+                        if($data['outlet_special_status'] == 1){
+                                $percentFee = $data['outlet_special_fee'];
                         }else{
-                            $percentFee = ($settingGlobalFee->fee_central == '' ? 0 : $settingGlobalFee->fee_central);
+                            if($data['status_franchise'] == 1){
+                                $percentFee = ($settingGlobalFee->fee_outlet == '' ? 0 : $settingGlobalFee->fee_outlet);
+                            }else{
+                                $percentFee = ($settingGlobalFee->fee_central == '' ? 0 : $settingGlobalFee->fee_central);
+                            }
                         }
 
                         $amount = $subTotal - ((floatval($percentFee) / 100) * $subTotal) - $totalFee - $nominalBalance - $totalChargedPromo;

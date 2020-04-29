@@ -80,7 +80,7 @@ class ApiDisburseController extends Controller
         $outlet = Outlet::leftJoin('bank_name', 'bank_name.id_bank_name', 'outlets.id_bank_name')
                 ->select('outlets.id_outlet', 'outlets.outlet_code', 'outlets.outlet_name', 'outlets.id_bank_name',
                     'outlets.beneficiary_name', 'outlets.beneficiary_alias', 'outlets.beneficiary_account', 'outlets.beneficiary_email',
-                    'bank_name.bank_name', 'bank_name.bank_code');
+                    'bank_name.bank_name', 'bank_name.bank_code', 'outlets.outlet_special_status', 'outlets.outlet_special_fee');
 
         if(isset($post['id_user_franchise']) && !empty($post['id_user_franchise'])){
             $outlet->join('user_franchisee_outlet', 'outlets.id_outlet', 'user_franchisee_outlet.id_outlet')
