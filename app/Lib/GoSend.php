@@ -85,7 +85,7 @@ class GoSend
         return $token;
     }
 
-    public static function getStatus($storeOrderId)
+    public static function getStatus($storeOrderId,$useOrderId=false)
     {
         if (env('GO_SEND_URL') == '' || env('GO_SEND_CLIENT_ID') == '' || env('GO_SEND_PASS_KEY') == '') {
             return [
@@ -98,10 +98,15 @@ class GoSend
             'Client-ID' => env('GO_SEND_CLIENT_ID'),
             'Pass-Key'  => env('GO_SEND_PASS_KEY'),
         ];
-        // pakai orderno dulu soalnya kalau pakai storeOrderId sering internal server error
-        $orderno = TransactionPickupGoSend::select('go_send_order_no')->join('transaction_pickups','transaction_pickups.id_transaction_pickup','=','transaction_pickup_go_sends.id_transaction_pickup')->join('transactions','transactions.id_transaction','=','transaction_pickups.id_transaction')->where('transaction_receipt_number',$storeOrderId)->pluck('go_send_order_no')->first();
-        $url   = env('GO_SEND_URL') . 'gokilat/v10/booking/orderno/' . $orderno;
-        // $url   = env('GO_SEND_URL') . 'gokilat/v10/booking/storeOrderId/' . $storeOrderId;
+        if(!$useOrderId){
+            // pakai orderno dulu soalnya kalau pakai storeOrderId sering internal server error
+            $orderno = TransactionPickupGoSend::select('go_send_order_no')->join('transaction_pickups','transaction_pickups.id_transaction_pickup','=','transaction_pickup_go_sends.id_transaction_pickup')->join('transactions','transactions.id_transaction','=','transaction_pickups.id_transaction')->where('transaction_receipt_number',$storeOrderId)->pluck('go_send_order_no')->first();
+            $url   = env('GO_SEND_URL') . 'gokilat/v10/booking/orderno/' . $orderno;
+            // $url   = env('GO_SEND_URL') . 'gokilat/v10/booking/storeOrderId/' . $storeOrderId;            
+        }else{
+            // storeOrderId is n=gosend order no
+            $url   = env('GO_SEND_URL') . 'gokilat/v10/booking/orderno/' . $storeOrderId;
+        }
         $token = MyHelper::get($url, null, $header, $status_code, $response_header);
         try {
             LogApiGosend::create([
