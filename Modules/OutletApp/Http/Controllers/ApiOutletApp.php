@@ -42,6 +42,7 @@ use Modules\OutletApp\Http\Requests\ProductSoldOut;
 
 use App\Lib\MyHelper;
 use App\Lib\GoSend;
+use App\Lib\PushNotificationHelper;
 use DB;
 
 class ApiOutletApp extends Controller
@@ -1605,7 +1606,7 @@ class ApiOutletApp extends Controller
     }
 
     public function bookGoSend($trx){
-        $trx->load('transaction_pickup','transaction_pickup.transaction_pickup_go_send');
+        $trx->load('transaction_pickup','transaction_pickup.transaction_pickup_go_send','outlet');
         if(!($trx['transaction_pickup']['transaction_pickup_go_send']['id_transaction_pickup_go_send']??false)){
             return [
                 'status' => 'fail',
@@ -1619,11 +1620,11 @@ class ApiOutletApp extends Controller
             ];
         }
         //create booking GO-SEND
-        $origin['name']             = $trx['transaction_pickup']['transaction_pickup_go_send']['origin_name'];
-        $origin['phone']            = $trx['transaction_pickup']['transaction_pickup_go_send']['origin_phone'];
-        $origin['latitude']         = $trx['transaction_pickup']['transaction_pickup_go_send']['origin_latitude'];
-        $origin['longitude']        = $trx['transaction_pickup']['transaction_pickup_go_send']['origin_longitude'];
-        $origin['address']          = $trx['transaction_pickup']['transaction_pickup_go_send']['origin_address'];
+        $origin['name']             = $trx['outlet']['outlet_name'];
+        $origin['phone']            = $trx['outlet']['outlet_phone'];
+        $origin['latitude']         = $trx['outlet']['outlet_latitude'];
+        $origin['longitude']        = $trx['outlet']['outlet_longitude'];
+        $origin['address']          = $trx['outlet']['outlet_address'].'. '.$trx['transaction_pickup']['transaction_pickup_go_send']['origin_note'];
         $origin['note']             = $trx['transaction_pickup']['transaction_pickup_go_send']['origin_note'];
 
         $destination['name']        = $trx['transaction_pickup']['transaction_pickup_go_send']['destination_name'];
@@ -1648,7 +1649,7 @@ class ApiOutletApp extends Controller
         if(!isset($booking['id'])){
             return ['status' => 'fail', 'messages' => $booking['messages']??['failed booking GO-SEND']];
         }
-        $status = GoSend::getStatus($trx['transaction_receipt_number']);
+        $status = GoSend::getStatus($booking['orderNo'],true);
         //update id from go-send
         $updateGoSend = TransactionPickupGoSend::find($trx['transaction_pickup']['transaction_pickup_go_send']['id_transaction_pickup_go_send']);
         $dataSave = [
@@ -2066,7 +2067,7 @@ class ApiOutletApp extends Controller
                             'driver_id' => $list['transaction_pickup_go_send']['driver_id'],
                             'driver_phone' => $list['transaction_pickup_go_send']['driver_phone'],
                             'driver_photo' => $list['transaction_pickup_go_send']['driver_photo'],
-                            'vehicle_number' => $list['transaction_pickup_go_send']['driver_number'],
+                            'vehicle_number' => $list['transaction_pickup_go_send']['vehicle_number'],
                         ];
                         $result['delivery_info']['cancelable'] = 0;
                         break;
@@ -2088,7 +2089,7 @@ class ApiOutletApp extends Controller
                             'driver_id' => $list['transaction_pickup_go_send']['driver_id'],
                             'driver_phone' => $list['transaction_pickup_go_send']['driver_phone'],
                             'driver_photo' => $list['transaction_pickup_go_send']['driver_photo'],
-                            'vehicle_number' => $list['transaction_pickup_go_send']['driver_number'],
+                            'vehicle_number' => $list['transaction_pickup_go_send']['vehicle_number'],
                         ];
                         $result['delivery_info']['cancelable'] = 0;
                         break;
