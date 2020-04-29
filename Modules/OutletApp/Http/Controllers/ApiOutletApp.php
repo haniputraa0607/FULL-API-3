@@ -2089,7 +2089,7 @@ class ApiOutletApp extends Controller
                             'driver_id' => $list['transaction_pickup_go_send']['driver_id'],
                             'driver_phone' => $list['transaction_pickup_go_send']['driver_phone'],
                             'driver_photo' => $list['transaction_pickup_go_send']['driver_photo'],
-                            'vehicle_number' => $list['transaction_pickup_go_send']['driver_number'],
+                            'vehicle_number' => $list['transaction_pickup_go_send']['vehicle_number'],
                         ];
                         $result['delivery_info']['cancelable'] = 0;
                         break;
