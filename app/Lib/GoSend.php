@@ -238,6 +238,7 @@ class GoSend
             $outlet  = Outlet::where('id_outlet', $trx->id_outlet)->first();
             $phone   = User::select('phone')->where('id', $trx->id_user)->pluck('phone')->first();
             $dataPush = [
+                'type' => 'update_delivery',
                 'subject' => 'Update Delivery',
                 'string_body' => $trx->transaction_receipt_number.' '.($dataUpdate['status'] ?? 'Finding Driver'),
                 'status' => ($dataUpdate['status'] ?? 'Finding Driver'),
