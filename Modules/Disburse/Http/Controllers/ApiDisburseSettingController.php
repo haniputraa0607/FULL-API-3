@@ -12,6 +12,7 @@ use Illuminate\Routing\Controller;
 use App\Lib\MyHelper;
 use Modules\Disburse\Entities\BankName;
 use Modules\Disburse\Entities\MDR;
+use DB;
 
 class ApiDisburseSettingController extends Controller
 {
@@ -150,6 +151,45 @@ class ApiDisburseSettingController extends Controller
                 $setting = json_decode($setting['value_text']);
             }
             return response()->json(MyHelper::checkGet($setting));
+        }
+    }
+
+    function getOutlets(Request $request){
+        $post = $request->json()->all();
+
+        if(isset($post['start'])){
+            $start = $post['start'];
+            $length = $post['length'];
+        }
+
+        $outlet = Outlet::select('id_outlet as 0', DB::raw('CONCAT(outlet_code," - ", outlet_name) as "1"'), 'status_franchise as 2',
+            'outlet_special_status as 3', DB::raw('CONCAT(outlet_special_fee," %") as "4"'));
+        $total = $outlet->count();
+        $data = $outlet->skip($start)->take($length)->get()->toArray();
+
+        $result = [
+            'status' => 'success',
+            'result' => $data,
+            'total' => $total
+        ];
+
+        return response()->json($result);
+    }
+
+    function settingFeeOutletSpecial(Request $request){
+        $post = $request->json()->all();
+
+        if(isset($post['outlet_special_fee']) && !empty($post['outlet_special_fee'])
+            && isset($post['id_outlet']) && count($post['id_outlet']) > 0){
+            $update = Outlet::whereIn('id_outlet', $post['id_outlet'])
+                ->update(['outlet_special_status' => 1, 'outlet_special_fee' => $post['outlet_special_fee']]);
+
+            return response()->json(MyHelper::checkUpdate($update));
+        }else{
+            return response()->json([
+                'status' => 'fail',
+                'message' => 'Incompleted input'
+            ]);
         }
     }
 
