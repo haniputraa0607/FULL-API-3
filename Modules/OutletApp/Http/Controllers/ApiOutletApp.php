@@ -42,6 +42,7 @@ use Modules\OutletApp\Http\Requests\ProductSoldOut;
 
 use App\Lib\MyHelper;
 use App\Lib\GoSend;
+use App\Lib\PushNotificationHelper;
 use DB;
 
 class ApiOutletApp extends Controller
