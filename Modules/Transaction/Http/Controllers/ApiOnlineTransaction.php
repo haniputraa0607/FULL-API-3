@@ -2077,14 +2077,6 @@ class ApiOnlineTransaction extends Controller
         $result['points'] = (int) $balance;
         $result['get_point'] = ($post['payment_type'] != 'Balance') ? $this->checkPromoGetPoint($promo_source) : 0;
         $result['total_promo'] = app($this->promo)->availablePromo();
-        if (isset($post['payment_type'])&&$post['payment_type'] == 'Balance') {
-            if($balance>=$result['grandtotal']){
-                $result['used_point'] = $result['grandtotal'];
-            }else{
-                $result['used_point'] = $balance;
-            }
-            $result['points'] -= $result['used_point'];
-        }
         if ($request->id_subscription_user && !$request->promo_code && !$request->id_deals_user)
         {
 	        $result['subscription'] = app($this->subscription_use)->calculate($request->id_subscription_user, $result['grandtotal'], $result['subtotal'], $post['item'], $post['id_outlet'], $subs_error, $errorProduct, $subs_product, $subs_applied_product);
@@ -2094,6 +2086,21 @@ class ApiOnlineTransaction extends Controller
 	        	$promo_error['product'] = $subs_applied_product??null;
 	        	$promo_error['product_label'] = $subs_product??'';
 	        }
+        }
+        if (isset($post['payment_type'])&&$post['payment_type'] == 'Balance') {
+            if($balance>=$result['grandtotal']){
+                $result['used_point'] = $result['grandtotal'];
+            }else{
+                $result['used_point'] = $balance;
+            }
+
+            if ($result['subscription'] >= $result['used_point']) {
+            	$result['used_point'] = 0;
+            }else{
+            	$result['used_point'] = $result['used_point'] - $result['subscription'];
+            }
+
+            $result['points'] -= $result['used_point'];
         }
         $result['total_payment'] = $result['grandtotal'] - $result['used_point'] - $result['subscription'];
         return MyHelper::checkGet($result)+['messages'=>$error_msg,'promo_error'=>$promo_error];
