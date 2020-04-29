@@ -40,7 +40,6 @@ use Modules\OutletApp\Http\Requests\DeleteToken;
 use Modules\OutletApp\Http\Requests\DetailOrder;
 use Modules\OutletApp\Http\Requests\ProductSoldOut;
 
-use App\Lib\PushNotificationHelper;
 use App\Lib\MyHelper;
 use App\Lib\GoSend;
 use App\Lib\PushNotificationHelper;
