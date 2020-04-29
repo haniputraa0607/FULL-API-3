@@ -2065,6 +2065,7 @@ class ApiOutletApp extends Controller
                         $result['delivery_info']['delivery_status'] = 'Driver dalam perjalanan menuju Outlet';
                         $result['delivery_info']['driver'] = [
                             'driver_id' => $list['transaction_pickup_go_send']['driver_id'],
+                            'driver_name' => $list['transaction_pickup_go_send']['driver_name'],
                             'driver_phone' => $list['transaction_pickup_go_send']['driver_phone'],
                             'driver_photo' => $list['transaction_pickup_go_send']['driver_photo'],
                             'vehicle_number' => $list['transaction_pickup_go_send']['vehicle_number'],
@@ -2076,6 +2077,7 @@ class ApiOutletApp extends Controller
                         $result['transaction_status_text'] = 'PROSES PENGANTARAN';
                         $result['delivery_info']['driver'] = [
                             'driver_id' => $list['transaction_pickup_go_send']['driver_id'],
+                            'driver_name' => $list['transaction_pickup_go_send']['driver_name'],
                             'driver_phone' => $list['transaction_pickup_go_send']['driver_phone'],
                             'driver_photo' => $list['transaction_pickup_go_send']['driver_photo'],
                             'vehicle_number' => $list['transaction_pickup_go_send']['vehicle_number'],
@@ -2087,6 +2089,7 @@ class ApiOutletApp extends Controller
                         $result['delivery_info']['delivery_status'] = 'Pesanan sudah diterima Customer';
                         $result['delivery_info']['driver'] = [
                             'driver_id' => $list['transaction_pickup_go_send']['driver_id'],
+                            'driver_name' => $list['transaction_pickup_go_send']['driver_name'],
                             'driver_phone' => $list['transaction_pickup_go_send']['driver_phone'],
                             'driver_photo' => $list['transaction_pickup_go_send']['driver_photo'],
                             'vehicle_number' => $list['transaction_pickup_go_send']['vehicle_number'],
