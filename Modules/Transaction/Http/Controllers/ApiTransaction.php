@@ -1540,8 +1540,9 @@ class ApiTransaction extends Controller
                     $payment = [];
                     foreach($multiPayment as $dataKey => $dataPay){
                         if($dataPay['type'] == 'Midtrans'){
-                            $payment[$dataKey]['name']      = 'Midtrans';
-                            $payment[$dataKey]['amount']    = TransactionPaymentMidtran::find($dataPay['id_payment'])->gross_amount;
+                            $payMidtrans = TransactionPaymentMidtran::find($dataPay['id_payment']);
+                            $payment[$dataKey]['name']      = strtoupper(str_replace('_', ' ', $payMidtrans->payment_type)).' '.strtoupper($payMidtrans->bank);
+                            $payment[$dataKey]['amount']    = $payMidtrans->gross_amount;
                         }else{
                             $dataPay = TransactionPaymentBalance::find($dataPay['id_payment']);
                             $payment[$dataKey] = $dataPay;
@@ -1574,8 +1575,9 @@ class ApiTransaction extends Controller
                     $payment = [];
                     foreach($multiPayment as $dataKey => $dataPay){
                         if($dataPay['type'] == 'IPay88'){
-                            $payment[$dataKey]['name']    = 'Ipay88';
-                            $payment[$dataKey]['amount']    = TransactionPaymentIpay88::find($dataPay['id_payment'])->amount / 100;
+                            $PayIpay = TransactionPaymentIpay88::find($dataPay['id_payment']);
+                            $payment[$dataKey]['name']    = $PayIpay->payment_method;
+                            $payment[$dataKey]['amount']    = $PayIpay->amount / 100;
                         }else{
                             $dataPay = TransactionPaymentBalance::find($dataPay['id_payment']);
                             $payment[$dataKey] = $dataPay;
