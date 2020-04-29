@@ -454,7 +454,7 @@ class ApiOutletController extends Controller
         }else{
             $outlet = Outlet::with(['city', 'outlet_photos', 'outlet_schedules', 'today', 'user_outlets','brands']);
             if(!($post['id_outlet']??false)||!($post['id_outlet']??false)){
-                $outlet->select('outlets.id_outlet','outlets.outlet_name','outlets.outlet_code','outlets.outlet_status','outlets.outlet_address','outlets.id_city','outlet_latitude','outlet_longitude');
+                $outlet->select('outlets.id_outlet','outlets.outlet_name','outlets.outlet_code','outlets.outlet_status','outlets.outlet_address','outlets.id_city','outlet_latitude','outlet_longitude', 'outlets.status_franchise');
             }
         }
         if($post['rule']??false){

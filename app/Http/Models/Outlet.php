@@ -88,7 +88,9 @@ class Outlet extends Authenticatable
         'beneficiary_alias',
         'beneficiary_account',
 		'beneficiary_email',
-		'status_franchise'
+		'status_franchise',
+        'outlet_special_status',
+        'outlet_special_fee'
 	];
 
 	protected $appends  = ['call', 'url'];

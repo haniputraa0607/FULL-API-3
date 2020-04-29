@@ -43,6 +43,10 @@ Route::group(['prefix' => 'disburse'], function () {
         Route::post('list-datatable/{status}', 'ApiDisburseController@listDisburseDataTable');
         Route::post('detail/{id}', 'ApiDisburseController@detailDisburse');
 
+        //setting fee special outlet
+        Route::any('setting/fee-outlet-special/outlets', 'ApiDisburseSettingController@getOutlets');
+        Route::post('setting/fee-outlet-special/update', 'ApiDisburseSettingController@settingFeeOutletSpecial');
+
         //sync list bank
         Route::any('sync-bank', 'ApiDisburseController@syncListBank');
     });
