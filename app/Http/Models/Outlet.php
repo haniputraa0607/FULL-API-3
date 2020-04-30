@@ -9,6 +9,7 @@ namespace App\Http\Models;
 
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Modules\Product\Entities\ProductDetail;
 use SMartins\PassportMultiauth\HasMultiAuthApiTokens;
 use Hash;
 
@@ -143,6 +144,16 @@ class Outlet extends Authenticatable
 	{
 		return $this->hasMany(\App\Http\Models\ProductPrice::class, 'id_outlet');
 	}
+
+    public function product_special_price()
+    {
+        return $this->hasMany(\Modules\Product\Entities\ProductSpecialPrice::class, 'id_outlet');
+    }
+
+    public function product_detail()
+    {
+        return $this->hasMany(\Modules\Product\Entities\ProductDetail::class, 'id_outlet');
+    }
 
 	public function user_outlets()
 	{

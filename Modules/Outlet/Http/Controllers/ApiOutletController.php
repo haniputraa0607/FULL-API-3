@@ -442,11 +442,13 @@ class ApiOutletController extends Controller
         }elseif(isset($post['admin'])){
             $outlet = Outlet::with(['user_outlets','city','today', 'outlet_schedules'])->select('*');
             if(isset($post['id_product'])){
-                $outlet = $outlet->with(['product_prices'=> function($q) use ($post){
+                $outlet = $outlet->with(['product_detail'=> function($q) use ($post){
+                    $q->where('id_product', $post['id_product']);
+                }, 'product_special_price'=> function($q) use ($post){
                     $q->where('id_product', $post['id_product']);
                 }]);
             }else{
-                $outlet = $outlet->with(['product_prices']);
+                $outlet = $outlet->with(['product_detail', 'product_special_price']);
             }
         }
         elseif($post['simple_result']??false) {

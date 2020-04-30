@@ -355,24 +355,29 @@ class ApiCategoryController extends Controller
         }
         $products = Product::select([
                 'products.id_product','products.product_name','products.product_code','products.product_description',
-                'product_prices.product_price','product_prices.product_stock_status'
+                DB::raw('(CASE
+                        WHEN (select product_special_price.product_special_price from product_special_price  where product_special_price.id_product = products.id_product AND product_special_price.id_outlet = '.$post['id_outlet'].' ) 
+                        is NULL THEN product_global_price.product_global_price
+                        ELSE (select product_special_price.product_special_price from product_special_price  where product_special_price.id_product = products.id_product AND product_special_price.id_outlet = '.$post['id_outlet'].' )
+                    END) as product_price'),
+                'product_detail.product_detail_stock_status as product_stock_status'
             ])
             ->join('brand_product','brand_product.id_product','=','products.id_product')
+            ->leftJoin('product_global_price','product_global_price.id_product','=','products.id_product')
             // produk tersedia di outlet
-            ->join('product_prices','product_prices.id_product','=','products.id_product')
-            ->where('product_prices.id_outlet','=',$post['id_outlet'])
+            ->join('product_detail','product_detail.id_product','=','products.id_product')
+            ->where('product_detail.id_outlet','=',$post['id_outlet'])
             // brand produk ada di outlet
             ->where('brand_outlet.id_outlet','=',$post['id_outlet'])
             ->join('brand_outlet','brand_outlet.id_brand','=','brand_product.id_brand')
             ->where(function($query){
-                $query->where('product_prices.product_visibility','=','Visible')
-                        ->orWhere(function($q){
-                            $q->whereNull('product_prices.product_visibility')
+                $query->where('product_detail.product_detail_visibility','=','Visible')
+                    ->orWhere(function($q){
+                        $q->whereNull('product_detail.product_detail_visibility')
                             ->where('products.product_visibility', 'Visible');
-                        });
+                    });
             })
-            ->where('product_prices.product_status','=','Active')
-            ->whereNotNull('product_prices.product_price')
+            ->where('product_detail.product_detail_status','=','Active')
             ->with([
                 'brand_category' => function($query){
                     $query->groupBy('id_product','id_brand');
@@ -384,7 +389,7 @@ class ApiCategoryController extends Controller
                     $query->select('product_promo_categories.id_product_promo_category','product_promo_category_name as product_category_name','product_promo_category_order as product_category_order');
                 },
             ])
-            ->groupBy('products.id_product', 'product_price', 'product_stock_status')
+            ->groupBy('products.id_product', 'product_stock_status')
             ->orderBy('products.position')
             ->orderBy('products.id_product')
             ->get();

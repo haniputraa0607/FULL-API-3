@@ -30,6 +30,9 @@ use App\Http\Models\LogBalance;
 use App\Http\Models\ManualPaymentMethod;
 use App\Http\Models\UserOutlet;
 use App\Http\Models\TransactionSetting;
+use Modules\Product\Entities\ProductDetail;
+use Modules\Product\Entities\ProductGlobalPrice;
+use Modules\Product\Entities\ProductSpecialPrice;
 use Modules\SettingFraud\Entities\FraudSetting;
 use App\Http\Models\Configs;
 use App\Http\Models\Holiday;
@@ -853,16 +856,16 @@ class ApiOnlineTransaction extends Controller
                 ]);
             }
 
-            $checkPriceProduct = ProductPrice::where(['id_product' => $checkProduct['id_product'], 'id_outlet' => $post['id_outlet']])->first();
-            if (empty($checkPriceProduct)) {
+            $checkDetailProduct = ProductDetail::where(['id_product' => $checkProduct['id_product'], 'id_outlet' => $post['id_outlet']])->first();
+            if (empty($checkDetailProduct)) {
                 DB::rollback();
                 return response()->json([
                     'status'    => 'fail',
-                    'messages'  => ['Product Price Not Valid']
+                    'messages'  => ['Product Detail Not Valid']
                 ]);
             }
 
-            if ($checkPriceProduct['product_stock_status'] == 'Sold Out') {
+            if ($checkDetailProduct['product_detail_stock_status'] == 'Sold Out') {
                 DB::rollback();
                 return response()->json([
                     'status'    => 'fail',
@@ -874,6 +877,25 @@ class ApiOnlineTransaction extends Controller
                 $valueProduct['note'] = null;
             }
 
+            $productPrice = 0;
+            $checkPriceProduct = ProductSpecialPrice::where(['id_product' => $checkProduct['id_product'], 'id_outlet' => $post['id_outlet']])->first();
+
+            if(isset($checkPriceProduct['product_special_price'])){
+                $productPrice = $checkPriceProduct['product_special_price'];
+            }else{
+                $checkPriceProduct = ProductGlobalPrice::where(['id_product' => $checkProduct['id_product']])->first();
+
+                if(isset($checkPriceProduct['product_global_price'])){
+                    $productPrice = $checkPriceProduct['product_global_price'];
+                }else{
+                    DB::rollback();
+                    return response()->json([
+                        'status'    => 'fail',
+                        'messages'  => ['Product Price Not Valid']
+                    ]);
+                }
+            }
+
             $dataProduct = [
                 'id_transaction'               => $insertTransaction['id_transaction'],
                 'id_product'                   => $checkProduct['id_product'],
@@ -881,13 +903,13 @@ class ApiOnlineTransaction extends Controller
                 'id_outlet'                    => $insertTransaction['id_outlet'],
                 'id_user'                      => $insertTransaction['id_user'],
                 'transaction_product_qty'      => $valueProduct['qty'],
-                'transaction_product_price'    => $checkPriceProduct['product_price'],
-                'transaction_product_price_base'    => $checkPriceProduct['product_price_base'],
-                'transaction_product_price_tax'    => $checkPriceProduct['product_price_tax'],
+                'transaction_product_price'    => $productPrice,
+                'transaction_product_price_base'    => NULL,
+                'transaction_product_price_tax'    => NULL,
                 'transaction_product_discount'   => $this_discount,
                 // remove discount from subtotal
                 // 'transaction_product_subtotal' => ($valueProduct['qty'] * $checkPriceProduct['product_price'])-$this_discount,
-                'transaction_product_subtotal' => ($valueProduct['qty'] * $checkPriceProduct['product_price']),
+                'transaction_product_subtotal' => ($valueProduct['qty'] * $productPrice),
                 'transaction_product_note'     => $valueProduct['note'],
                 'created_at'                   => date('Y-m-d', strtotime($insertTransaction['transaction_date'])).' '.date('H:i:s'),
                 'updated_at'                   => date('Y-m-d H:i:s')
@@ -980,7 +1002,7 @@ class ApiOnlineTransaction extends Controller
             $trx_product->save();
             $dataProductMidtrans = [
                 'id'       => $checkProduct['id_product'],
-                'price'    => $checkPriceProduct['product_price']+$mod_subtotal,
+                'price'    => $productPrice+$mod_subtotal,
                 'name'     => $checkProduct['product_name'].($more_mid_text?'('.trim($more_mid_text,',').')':''),
                 'quantity' => $valueProduct['qty'],
             ];
@@ -1854,27 +1876,32 @@ class ApiOnlineTransaction extends Controller
             // get detail product
             $product = Product::select([
                 'products.id_product','products.product_name','products.product_code','products.product_description',
-                'product_prices.product_price','product_prices.max_order','product_prices.product_stock_status',
+                DB::raw('(CASE
+                        WHEN (select product_special_price.product_special_price from product_special_price  where product_special_price.id_product = products.id_product AND product_special_price.id_outlet = '.$post['id_outlet'].' ) 
+                        is NULL THEN product_global_price.product_global_price
+                        ELSE (select product_special_price.product_special_price from product_special_price  where product_special_price.id_product = products.id_product AND product_special_price.id_outlet = '.$post['id_outlet'].' )
+                    END) as product_price'),
+                'product_detail.max_order','product_detail.product_detail_stock_status as product_stock_status',
                 'brand_product.id_product_category','brand_product.id_brand'
             ])
             ->join('brand_product','brand_product.id_product','=','products.id_product')
+            ->leftJoin('product_global_price','product_global_price.id_product','=','products.id_product')
             // produk tersedia di outlet
-            ->join('product_prices','product_prices.id_product','=','products.id_product')
-            ->where('product_prices.id_outlet','=',$outlet->id_outlet)
+            ->join('product_detail','product_detail.id_product','=','products.id_product')
+            ->where('product_detail.id_outlet','=',$post['id_outlet'])
             // brand produk ada di outlet
             ->where('brand_outlet.id_outlet','=',$outlet->id_outlet)
             ->join('brand_outlet','brand_outlet.id_brand','=','brand_product.id_brand')
             // produk ada di brand ini
             ->where('brand_product.id_brand',$item['id_brand'])
-            ->where(function($query){
-                $query->where('product_prices.product_visibility','=','Visible')
+                ->where(function($query){
+                    $query->where('product_detail.product_detail_visibility','=','Visible')
                         ->orWhere(function($q){
-                            $q->whereNull('product_prices.product_visibility')
-                            ->where('products.product_visibility', 'Visible');
+                            $q->whereNull('product_detail.product_detail_visibility')
+                                ->where('products.product_visibility', 'Visible');
                         });
-            })
-            ->where('product_prices.product_status','=','Active')
-            ->whereNotNull('product_prices.product_price')
+                })
+            ->where('product_detail.product_detail_status','=','Active')
             ->with([
                 'photos'=>function($query){
                     $query->select('id_product','product_photo');
