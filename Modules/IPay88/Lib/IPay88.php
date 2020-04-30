@@ -25,6 +25,7 @@ class IPay88
 {
 	public static $obj = null;
 	function __construct() {
+        $this->notif = "Modules\Transaction\Http\Controllers\ApiNotification";
 		$this->autocrm = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
 		$this->promo_campaign = "Modules\PromoCampaign\Http\Controllers\ApiPromoCampaign";
 		$this->voucher  = "Modules\Deals\Http\Controllers\ApiDealsVoucher";
@@ -248,6 +249,13 @@ class IPay88
 		}
 		return $result;
 	}
+	/**
+	 * Update transaction ipay table
+	 * @param  Model $model     [Transaction/Deals]Ipay88 Object
+	 * @param  Array $data 		update data (request data from ipay)
+	 * @param  Boolean $response_only  Save response requery only, ignore other
+	 * @param  Boolean $saveToLog  Save update data to log or not
+	 */
 	public function update($model,$data,$response_only = false,$saveToLog = true) {
 		if($response_only){
 			return $model->update(['requery_response'=>$data['requery_response']]);
@@ -255,7 +263,11 @@ class IPay88
 		DB::beginTransaction();
         switch ($data['type']) {
             case 'trx':
-            	$trx = Transaction::with('user')->where('id_transaction',$model->id_transaction)->first();
+            	$trx = Transaction::with('user','outlet')->where('id_transaction',$model->id_transaction)->first();
+                $mid = [
+                    'order_id' => $trx['transaction_receipt_number'],
+                    'gross_amount' => $amount
+                ];
             	switch ($data['Status']) {
             		case '1':
 	                    $update = $trx->update(['transaction_payment_status'=>'Completed','completed_at'=>date('Y-m-d H:i:s')]);
@@ -272,18 +284,7 @@ class IPay88
 
 						//send notif to outlet
 						$sendNotifOutlet = app($this->trx)->outletNotif($trx['id_transaction']);
-				        $send = app($this->autocrm)->SendAutoCRM('Transaction Success', $trx->user->phone, [
-				            'notif_type' => 'trx',
-				            'header_label' => 'Sukses',
-				            'id_transaction' => $trx['id_transaction'],
-				            'date' => $trx['transaction_date'],
-				            'status' => $trx['transaction_payment_status'],
-				            'name'  => $trx->user->name,
-				            'order_id' => $trx['transaction_receipt_number'],
-				            'outlet_name' => $trx->outlet->outlet_name,
-				            'detail' => $this->getHtml($trx, $trx['productTransaction'], $trx->user->name, $trx->user->phone, $trx['transaction_date'], $trx->outlet->outlet_name, $trx['transaction_receipt_number']),
-				            'id_reference' => $trx['transaction_receipt_number'].','.$trx['id_outlet']
-				        ]);
+				        $send = app($this->notif)->notification($mid, $trx);
             			break;
 
             		case '6':
@@ -300,18 +301,7 @@ class IPay88
             		case '0':
 	                    $update = $trx->update(['transaction_payment_status'=>'Cancelled']);
 		                $trx->load('outlet_name');
-				        $send = app($this->autocrm)->SendAutoCRM('Transaction Failed', $trx->user->phone, [
-				            'notif_type' => 'trx',
-				            'header_label' => 'Gagal',
-				            'date' => $trx['transaction_date'],
-				            'id_transaction' => $trx['id_transaction'],
-				            'status' => $trx['transaction_payment_status'],
-				            'name'  => $trx->user->name,
-				            'id' => $trx['transaction_receipt_number'],
-				            'outlet_name' => $trx->outlet->outlet_name,
-				            'detail' => $this->getHtml($trx, $trx['productTransaction'], $trx->user->name, $trx->user->phone, $trx['transaction_date'], $trx->outlet->outlet_name, $trx['transaction_receipt_number']),
-				            'id_reference' => $trx['transaction_receipt_number'].','.$trx['id_outlet']
-				        ]);
+		                $send = app($this->notif)->notificationDenied($mid, $trx);
 
 				        //return balance
 				        $payBalance = TransactionMultiplePayment::where('id_transaction', $trx->id_transaction)->where('type', 'Balance')->first();

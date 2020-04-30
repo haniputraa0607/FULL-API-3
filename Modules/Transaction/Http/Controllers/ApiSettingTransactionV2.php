@@ -7,9 +7,12 @@ use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
 
 use App\Http\Models\Setting;
+use App\Http\Models\Outlet;
 use App\Http\Models\Product;
 use App\Http\Models\ProductPrice;
 use App\Http\Models\ProductModifier;
+use App\Http\Models\ProductModifierPrice;
+use App\Http\Models\ProductModifierGlobalPrice;
 
 use DB;
 
@@ -121,6 +124,7 @@ class ApiSettingTransactionV2 extends Controller
         $discount = isset($data['discount']) ? $data['discount'] : 0;
         // return $data;
         if ($value == 'subtotal') {
+            $different_price = Outlet::select('outlet_different_price')->where('id_outlet',$data['id_outlet'])->pluck('outlet_different_price')->first();
             $dataSubtotal = [];
             foreach (($discount_promo['item']??$data['item']) as $keyData => $valueData) {
                 $this_discount=0;
@@ -164,24 +168,12 @@ class ApiSettingTransactionV2 extends Controller
                 foreach ($valueData['modifiers'] as $modifier) {
                     $id_product_modifier = is_numeric($modifier)?$modifier:$modifier['id_product_modifier'];
                     $qty_product_modifier = is_numeric($modifier)?1:$modifier['qty'];
-                    $mod = ProductModifier::with(['product_modifier_prices'=>function($query) use ($data){
-                            $query->select('id_product_modifier_price','id_product_modifier','product_modifier_price');
-                            $query->where('id_outlet',$data['id_outlet']);
-                        }])
-                        ->whereHas('product_modifier_prices',function($query) use ($data){
-                            $query->where('id_outlet',$data['id_outlet']);
-                            $query->whereNotNull('product_modifier_price');
-                        })
-                        ->find($id_product_modifier);
-                    if(!$mod||!isset($mod['product_modifier_prices'][0]['product_modifier_price'])){
-                        DB::rollBack();
-                        return [
-                            'status' => 'fail',
-                            'messages' => ['Modifier not found']
-                        ];
+                    if($different_price){
+                        $mod_price = ProductModifierPrice::select('product_modifier_price')->where('id_outlet',$data['id_outlet'])->where('id_product_modifier',$id_product_modifier)->pluck('product_modifier_price')->first()?:0;
+                    }else{
+                        $mod_price = ProductModifierGlobalPrice::select('product_modifier_price')->where('id_product_modifier',$id_product_modifier)->pluck('product_modifier_price')->first()?:0;
                     }
-                    $mod = $mod->toArray();
-                    $mod_subtotal += $mod['product_modifier_prices'][0]['product_modifier_price']*$qty_product_modifier;
+                    $mod_subtotal += $mod_price*$qty_product_modifier;
                 }
                 // $price = $productPrice['product_price_base'] * $valueData['qty'];
                 // remove discount from substotal

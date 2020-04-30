@@ -451,6 +451,8 @@ class ApiOutletController extends Controller
         }
         elseif($post['simple_result']??false) {
             $outlet = Outlet::select('outlets.id_outlet','outlets.outlet_name');
+        }elseif(($post['filter']??false) == 'different_price'){
+            $outlet = Outlet::where('outlet_different_price','1')->select('id_outlet','outlet_name','outlet_code');
         }else{
             $outlet = Outlet::with(['city', 'outlet_photos', 'outlet_schedules', 'today', 'user_outlets','brands']);
             if(!($post['id_outlet']??false)||!($post['id_outlet']??false)){
