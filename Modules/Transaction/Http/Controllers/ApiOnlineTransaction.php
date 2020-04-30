@@ -912,23 +912,36 @@ class ApiOnlineTransaction extends Controller
             foreach ($valueProduct['modifiers'] as $modifier) {
                 $id_product_modifier = is_numeric($modifier)?$modifier:$modifier['id_product_modifier'];
                 $qty_product_modifier = is_numeric($modifier)?1:$modifier['qty'];
-                $mod = ProductModifier::select('product_modifiers.id_product_modifier','code','type','text','product_modifier_stock_status','product_modifier_price')
-                    // produk modifier yang tersedia di outlet
-                    ->join('product_modifier_prices','product_modifiers.id_product_modifier','=','product_modifier_prices.id_product_modifier')
-                    ->where('product_modifier_prices.id_outlet',$post['id_outlet'])
+                $mod = ProductModifier::select('product_modifiers.id_product_modifier','code','text','product_modifier_stock_status','product_modifier_price')
                     // produk aktif
                     ->where('product_modifier_status','Active')
                     // product visible
+                    ->leftJoin('product_modifier_details', function($join) use ($post) {
+                        $join->on('product_modifier_details.id_product_modifier','=','product_modifiers.id_product_modifier')
+                            ->where('product_modifier_details.id_outlet',$post['id_outlet']);
+                    })
                     ->where(function($query){
-                        $query->where('product_modifier_prices.product_modifier_visibility','=','Visible')
+                        $query->where('product_modifier_details.product_modifier_visibility','=','Visible')
                         ->orWhere(function($q){
-                            $q->whereNull('product_modifier_prices.product_modifier_visibility')
+                            $q->whereNull('product_modifier_details.product_modifier_visibility')
                             ->where('product_modifiers.product_modifier_visibility', 'Visible');
                         });
                     })
-                    ->groupBy('product_modifiers.id_product_modifier')
-                    // product modifier dengan id
-                    ->find($id_product_modifier);
+                    ->where(function($q){
+                        $q->where('product_modifier_stock_status','Available')->orWhereNull('product_modifier_stock_status');
+                    })
+                    ->groupBy('product_modifiers.id_product_modifier');
+                if($outlet['outlet_different_price']){
+                    $mod->join('product_modifier_prices',function($join) use ($post){
+                        $join->on('product_modifier_prices.id_product_modifier','=','product_modifiers.id_product_modifier');
+                        $join->where('product_modifier_prices.id_outlet',$post['id_outlet']);
+                    });
+                }else{
+                    $mod->join('product_modifier_global_prices',function($join){
+                        $join->on('product_modifier_global_prices.id_product_modifier','=','product_modifiers.id_product_modifier');
+                    });
+                }
+                $mod = $mod->find($id_product_modifier);
                 if(!$mod){
                     return [
                         'status' => 'fail',
@@ -1931,22 +1944,35 @@ class ApiOnlineTransaction extends Controller
                 $id_product_modifier = is_numeric($modifier)?$modifier:$modifier['id_product_modifier'];
                 $qty_product_modifier = is_numeric($modifier)?1:$modifier['qty'];
                 $mod = ProductModifier::select('product_modifiers.id_product_modifier','code','text','product_modifier_stock_status','product_modifier_price')
-                    // produk modifier yang tersedia di outlet
-                    ->join('product_modifier_prices','product_modifiers.id_product_modifier','=','product_modifier_prices.id_product_modifier')
-                    ->where('product_modifier_prices.id_outlet',$id_outlet)
                     // produk aktif
                     ->where('product_modifier_status','Active')
                     // product visible
+                    ->leftJoin('product_modifier_details', function($join) use ($post) {
+                        $join->on('product_modifier_details.id_product_modifier','=','product_modifiers.id_product_modifier')
+                            ->where('product_modifier_details.id_outlet',$post['id_outlet']);
+                    })
                     ->where(function($query){
-                        $query->where('product_modifier_prices.product_modifier_visibility','=','Visible')
+                        $query->where('product_modifier_details.product_modifier_visibility','=','Visible')
                         ->orWhere(function($q){
-                            $q->whereNull('product_modifier_prices.product_modifier_visibility')
+                            $q->whereNull('product_modifier_details.product_modifier_visibility')
                             ->where('product_modifiers.product_modifier_visibility', 'Visible');
                         });
                     })
-                    ->groupBy('product_modifiers.id_product_modifier')
-                    // product modifier dengan id
-                    ->find($id_product_modifier);
+                    ->where(function($q){
+                        $q->where('product_modifier_stock_status','Available')->orWhereNull('product_modifier_stock_status');
+                    })
+                    ->groupBy('product_modifiers.id_product_modifier');
+                if($outlet['outlet_different_price']){
+                    $mod->join('product_modifier_prices',function($join) use ($post){
+                        $join->on('product_modifier_prices.id_product_modifier','=','product_modifiers.id_product_modifier');
+                        $join->where('product_modifier_prices.id_outlet',$post['id_outlet']);
+                    });
+                }else{
+                    $mod->join('product_modifier_global_prices',function($join) use ($post){
+                        $join->on('product_modifier_global_prices.id_product_modifier','=','product_modifiers.id_product_modifier');
+                    });
+                }
+                $mod = $mod->find($id_product_modifier);
                 if(!$mod){
                     $missing_modifier++;
                     continue;
