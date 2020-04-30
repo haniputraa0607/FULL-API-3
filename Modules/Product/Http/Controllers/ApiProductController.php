@@ -11,6 +11,7 @@ use App\Http\Models\TransactionProduct;
 use App\Http\Models\ProductPrice;
 use App\Http\Models\ProductModifier;
 use App\Http\Models\ProductModifierPrice;
+use App\Http\Models\ProductModifierGlobalPrice;
 use App\Http\Models\Outlet;
 use App\Http\Models\Setting;
 use Modules\Product\Entities\ProductStockStatusUpdate;
@@ -480,27 +481,16 @@ class ApiProductController extends Controller
                             $result['no_update']++;
                         }
                         if($value['global_price']??false){
-                            foreach ($global_outlets as $outlet) {
-                                $pp = ProductModifierPrice::where([
-                                    'id_outlet' => $outlet->id_outlet,
-                                    'id_product_modifier' => $product->id_product_modifier
-                                ])->first();
-                                if($pp){
-                                    $update = $pp->update(['product_modifier_price'=>$value['global_price']]);
-                                }else{
-                                    $update = ProductModifierPrice::create([
-                                        'id_outlet' => $outlet->id_outlet,
-                                        'id_product_modifier' => $product->id_product_modifier,
-                                        'product_modifier_price'=>$value['global_price']
-                                    ]);
-                                }
-                                if($update){
-                                    $result['updated_price']++;
-                                }else{
-                                    if($update !== 0){
-                                        $result['updated_price_fail']++;
-                                        $result['more_msg_extended'][] = "Failed set price for product modifier {$value['code']} at outlet {$outlet->outlet_code} failed";
-                                    }
+                            $update = ProductModifierGlobalPrice::create([
+                                'id_product_modifier' => $product->id_product_modifier,
+                                'product_modifier_price'=>$value['global_price']
+                            ]);
+                            if($update){
+                                $result['updated_price']++;
+                            }else{
+                                if($update !== 0){
+                                    $result['updated_price_fail']++;
+                                    $result['more_msg_extended'][] = "Failed set global price for product modifier {$value['code']}";
                                 }
                             }
                         }
