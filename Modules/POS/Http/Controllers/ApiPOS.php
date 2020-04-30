@@ -26,6 +26,8 @@ use App\Http\Models\Product;
 use App\Http\Models\ProductPrice;
 use App\Http\Models\ProductPhoto;
 use App\Http\Models\ProductModifier;
+use App\Http\Models\ProductModifierDetail;
+use App\Http\Models\ProductModifierGlobalPrice;
 use App\Http\Models\ProductModifierPrice;
 use App\Http\Models\ProductModifierProduct;
 use App\Http\Models\Outlet;
@@ -890,9 +892,13 @@ class ApiPOS extends Controller
                         $data_price['product_modifier_price'] = $modifier['price'];
                     }
                     if($modifier['status']??false){
-                        $data_price['product_modifier_status'] = $modifier['status'];
+                        ProductModifierDetail::updateOrCreate(['id_product_modifier' => $promod->id_product_modifier], ['product_modifier_status' => $modifier['status']]);
                     }
-                    ProductModifierPrice::updateOrCreate($data_key,$data_price);
+                    if($outlet->outlet_different_price){
+                        ProductModifierPrice::updateOrCreate($data_key,$data_price);
+                    }else{
+                        ProductModifierGlobalPrice::updateOrCreate(['id_product_modifier' => $promod->id_product_modifier],['product_modifier_price' => $modifier['price']]);
+                    }
                 }
             }
             if ($flag == 'partial') {
