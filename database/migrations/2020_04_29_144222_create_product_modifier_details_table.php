@@ -19,7 +19,7 @@ class CreateProductModifierDetailsTable extends Migration
             $table->unsignedInteger('id_product_modifier');
             $table->enum('product_modifier_visibility',['Visible','Hidden'])->nullable();
             $table->enum('product_modifier_status',['Active','Inactive'])->default('Active');
-            $table->enum('product_modifier_stock_status',['Availvable','Sold Out'])->default('Availvable');
+            $table->enum('product_modifier_stock_status',['Available','Sold Out'])->default('Available');
             $table->timestamps();
 
             $table->foreign('id_outlet')->references('id_outlet')->on('outlets')->onDelete('cascade');
@@ -42,7 +42,7 @@ class CreateProductModifierDetailsTable extends Migration
         Schema::table('product_modifier_prices', function (Blueprint $table) {
             $table->enum('product_modifier_visibility',['Visible','Hidden'])->nullable()->after('product_modifier_price');
             $table->enum('product_modifier_status',['Active','Inactive'])->default('Active')->after('product_modifier_visibility');
-            $table->enum('product_modifier_stock_status',['Availvable','Sold Out'])->default('Availvable')->after('product_modifier_status');
+            $table->enum('product_modifier_stock_status',['Available','Sold Out'])->default('Available')->after('product_modifier_status');
         });
         Schema::dropIfExists('product_modifier_details');
     }

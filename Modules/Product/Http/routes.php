@@ -62,6 +62,8 @@ Route::group(['prefix' => 'api/product','middleware' => ['log_activities','auth:
         Route::post('delete', 'ApiProductModifierController@destroy');
         Route::post('list-price', 'ApiProductModifierController@listPrice');
         Route::post('update-price', 'ApiProductModifierController@updatePrice');
+        Route::post('list-detail', 'ApiProductModifierController@listDetail');
+        Route::post('update-detail', 'ApiProductModifierController@updateDetail');
     });
 
     Route::group(['prefix' => 'category'], function() {

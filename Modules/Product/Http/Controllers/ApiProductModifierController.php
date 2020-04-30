@@ -6,6 +6,7 @@ use App\Http\Models\ProductModifier;
 use App\Http\Models\ProductModifierBrand;
 use App\Http\Models\ProductModifierGlobalPrice;
 use App\Http\Models\ProductModifierPrice;
+use App\Http\Models\ProductModifierDetail;
 use App\Http\Models\ProductModifierProduct;
 use App\Http\Models\ProductModifierProductCategory;
 use App\Lib\MyHelper;
@@ -308,7 +309,7 @@ class ApiProductModifierController extends Controller
                     continue;
                 }
                 $key = [
-                    'id_product_modifier' => $id_product_modifier
+                    'id_product_modifier' => $id_product_modifier,
                 ];
                 $insertData = $key + [
                     'product_modifier_price' => $price['product_modifier_price'],
@@ -359,12 +360,12 @@ class ApiProductModifierController extends Controller
                 $query->orWhereNull('id_brand');
                 $query->orWhereIn('id_brand', $brands);
             })
-            ->select('product_modifiers.id_product_modifier', 'product_modifiers.code', 'product_modifiers.text', 'product_modifier_prices.product_modifier_price', 'product_modifier_prices.product_modifier_visibility', 'product_modifier_prices.product_modifier_status', 'product_modifier_prices.product_modifier_stock_status')->leftJoin('product_modifier_prices', function ($join) use ($id_outlet) {
-            $join->on('product_modifiers.id_product_modifier', '=', 'product_modifier_prices.id_product_modifier');
-            $join->where('product_modifier_prices.id_outlet', '=', $id_outlet);
+            ->select('product_modifiers.id_product_modifier', 'product_modifiers.code', 'product_modifiers.text', 'product_modifier_details.product_modifier_visibility', 'product_modifier_details.product_modifier_status', 'product_modifier_details.product_modifier_stock_status')->leftJoin('product_modifier_details', function ($join) use ($id_outlet) {
+            $join->on('product_modifiers.id_product_modifier', '=', 'product_modifier_details.id_product_modifier');
+            $join->where('product_modifier_details.id_outlet', '=', $id_outlet);
         })->where(function ($query) use ($id_outlet) {
-            $query->where('product_modifier_prices.id_outlet', $id_outlet);
-            $query->orWhereNull('product_modifier_prices.id_outlet');
+            $query->where('product_modifier_details.id_outlet', $id_outlet);
+            $query->orWhereNull('product_modifier_details.id_outlet');
         })->groupBy('product_modifiers.id_product_modifier');
 
         if ($post['rule'] ?? false) {
@@ -392,7 +393,7 @@ class ApiProductModifierController extends Controller
         $insertData = [];
         DB::beginTransaction();
         foreach ($request->json('prices') as $id_product_modifier => $price) {
-            if (!($price['product_modifier_price'] ?? false)) {
+            if (!($price['product_modifier_visibility'] ?? false) && !($price['product_modifier_stock_status'] ?? false)) {
                 continue;
             }
             $key = [
@@ -400,16 +401,15 @@ class ApiProductModifierController extends Controller
                 'id_outlet'           => $id_outlet,
             ];
             $insertData = $key + [
-                'product_modifier_price'        => $price['product_modifier_price'],
                 'product_modifier_visibility'   => $price['product_modifier_visibility'],
                 'product_modifier_stock_status' => $price['product_modifier_stock_status'],
             ];
-            $insert = ProductModifierPrice::updateOrCreate($key, $insertData);
+            $insert = ProductModifierDetail::updateOrCreate($key, $insertData);
             if (!$insert) {
                 DB::rollback();
                 return [
                     'status'   => 'fail',
-                    'messages' => ['Update price fail'],
+                    'messages' => ['Update detail fail'],
                 ];
             }
         }
