@@ -1384,6 +1384,10 @@ class ApiProductController extends Controller
         if(!($post['id_outlet']??false)){
             $post['id_outlet'] = Setting::where('key','default_outlet')->pluck('value')->first();
         }
+        $outlet = Outlet::find($post['id_outlet']);
+        if(!$outlet){
+            return MyHelper::checkGet([],'Outlet not found');
+        }
         //get product
         $product = Product::select('id_product','product_code','product_name','product_description','product_code','product_visibility')
         ->where('id_product',$post['id_product'])
@@ -1428,7 +1432,7 @@ class ApiProductController extends Controller
             return MyHelper::checkGet([]);
         }
         //get modifiers
-        $product['modifiers'] = ProductModifier::select('product_modifiers.id_product_modifier','code','text','product_modifier_stock_status','product_modifier_price as price')
+        $product_modifiers = ProductModifier::select('product_modifiers.id_product_modifier','code','text','product_modifier_stock_status','product_modifier_price as price')
             ->where(function($query) use($post){
                 $query->where('modifier_type','Global')
                 ->orWhere(function($query) use ($post){
@@ -1443,18 +1447,32 @@ class ApiProductController extends Controller
                     });
                 });
             })
-            ->join('product_modifier_prices',function($join) use ($post){
-                $join->on('product_modifier_prices.id_product_modifier','=','product_modifiers.id_product_modifier');
-                $join->where('product_modifier_prices.id_outlet',$post['id_outlet']);
-            })->where('product_modifier_status','Active')
+            ->leftJoin('product_modifier_details', function($join) use ($post) {
+                $join->on('product_modifier_details.id_product_modifier','=','product_modifiers.id_product_modifier')
+                    ->where('product_modifier_details.id_outlet',$post['id_outlet']);
+            })
+            ->where('product_modifier_status','Active')
+            ->where(function($q){
+                $q->where('product_modifier_stock_status','Available')->orWhereNull('product_modifier_stock_status');
+            })
             ->where(function($query){
-                $query->where('product_modifier_prices.product_modifier_visibility','=','Visible')
+                $query->where('product_modifier_details.product_modifier_visibility','=','Visible')
                         ->orWhere(function($q){
-                            $q->whereNull('product_modifier_prices.product_modifier_visibility')
+                            $q->whereNull('product_modifier_details.product_modifier_visibility')
                             ->where('product_modifiers.product_modifier_visibility', 'Visible');
                         });
-            })
-            ->get()->toArray();
+            });
+        if($outlet->outlet_different_price){
+            $product_modifiers->join('product_modifier_prices',function($join) use ($post){
+                $join->on('product_modifier_prices.id_product_modifier','=','product_modifiers.id_product_modifier');
+                $join->where('product_modifier_prices.id_outlet',$post['id_outlet']);
+            });
+        }else{
+            $product_modifiers->join('product_modifier_global_prices',function($join) use ($post){
+                $join->on('product_modifier_global_prices.id_product_modifier','=','product_modifiers.id_product_modifier');
+            });
+        }
+        $product['modifiers'] = $product_modifiers->get()->toArray();
         foreach ($product['modifiers'] as $key => &$modifier) {
             $modifier['price'] = (int) $modifier['price'];
             unset($modifier['product_modifier_prices']);
