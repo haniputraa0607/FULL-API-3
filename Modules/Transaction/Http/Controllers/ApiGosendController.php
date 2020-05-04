@@ -3,9 +3,12 @@
 namespace Modules\Transaction\Http\Controllers;
 
 use App\Http\Models\LogApiGosend;
+use App\Http\Models\Outlet;
 use App\Http\Models\Setting;
+use App\Http\Models\Transaction;
 use App\Http\Models\TransactionPickup;
 use App\Http\Models\TransactionPickupGoSend;
+use App\Http\Models\User;
 use App\Lib\GoSend;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -13,6 +16,10 @@ use Illuminate\Routing\Controller;
 
 class ApiGosendController extends Controller
 {
+    public function __construct()
+    {
+        $this->autocrm  = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
+    }
     /**
      * Update latest status from gosend
      * @return Response
@@ -54,14 +61,26 @@ class ApiGosendController extends Controller
             return response()->json(['status'=>'fail','messages'=>'Invalid Token'],401);
         }
         $post = $request->json()->all();
-        $tpg  = TransactionPickupGoSend::where('go_send_id', $post['booking_id'] ?? '')->first();
+        $tpg  = TransactionPickupGoSend::where('go_send_order_no', $post['booking_id'] ?? '')->first();
         if (!$tpg) {
             $response_code = 404;
             $response_body = ['status' => 'fail', 'messages' => ['Transaction Not Found']];
         } else {
             if ($post['booking_id'] ?? false) {
+                $status = [
+                    'confirmed'        => 'Finding Driver', //
+                    'allocated'        => 'Driver Found',
+                    'out_for_pickup'   => 'Enroute Pickup', //
+                    'picked'           => 'Item Picked by Driver',
+                    'out_for_delivery' => 'Enroute Drop', //
+                    'cancelled'        => 'Cancelled', //
+                    'delivered'        => 'Completed', //
+                    'rejected'         => 'Rejected',
+                    'no_driver'        => 'Driver not found', //
+                    'on_hold'          => 'On Hold',
+                ];
                 $response_code = 200;
-                $toUpdate      = ['latest_status' => $post['status']];
+                $toUpdate      = ['latest_status' => $status[$post['status']]];
                 if ($post['driver_id'] ?? false) {
                     $toUpdate['driver_id'] = $post['driver_id'];
                 }
@@ -85,18 +104,6 @@ class ApiGosendController extends Controller
                     $toUpdate['vehicle_number'] = 'AB 2641 XY';
                 }
                 $tpg->update($toUpdate);
-                $status = [
-                    'confirmed'        => 'Finding Driver', //
-                    'allocated'        => 'Driver Found',
-                    'out_for_pickup'   => 'Enroute Pickup', //
-                    'picked'           => 'Item Picked by Driver',
-                    'out_for_delivery' => 'Enroute Drop', //
-                    'cancelled'        => 'Cancelled', //
-                    'delivered'        => 'Completed', //
-                    'rejected'         => 'Rejected',
-                    'no_driver'        => 'Driver not found', //
-                    'on_hold'          => 'On Hold',
-                ];
                 $id_transaction = TransactionPickup::select('id_transaction')->where('id_transaction_pickup', $tpg->id_transaction_pickup)->pluck('id_transaction')->first();
                 $dataSave       = [
                     'id_transaction'                => $id_transaction,
