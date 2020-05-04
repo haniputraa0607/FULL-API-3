@@ -1741,6 +1741,13 @@ class ApiTransaction extends Controller
                 'desc'      => $quantity . ' items',
                 'amount'    => MyHelper::requestNumber($list['transaction_subtotal'],'_CURRENCY')
             ];
+            if ($list['transaction_shipment_go_send'] > 0) {
+                $result['payment_detail'][] = [
+                    'name'      => 'Delivery',
+                    'desc'      => $list['detail']['pickup_by'],
+                    'amount'    => MyHelper::requestNumber($list['transaction_shipment_go_send'],'_CURRENCY')
+                ];
+            }
 
             $p = 0;
             if (!empty($list['transaction_vouchers'])) {
