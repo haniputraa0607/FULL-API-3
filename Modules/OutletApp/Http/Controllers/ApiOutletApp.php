@@ -8,7 +8,10 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
 
+use App\Http\Models\Holiday;
+use App\Http\Models\DateHoliday;
 use App\Http\Models\Outlet;
+use App\Http\Models\OutletHoliday;
 use App\Http\Models\OutletToken;
 use App\Http\Models\OutletSchedule;
 use App\Http\Models\Transaction;
@@ -2270,5 +2273,167 @@ class ApiOutletApp extends Controller
 
         return true;
     }
+    public function listHoliday(Request $request) {
+        $outlet = $request->user();
+        $holiday = OutletHoliday::distinct()->select('outlet_holidays.id_holiday','holiday_name','yearly','date')->where('id_outlet',$outlet->id_outlet)->join('holidays','holidays.id_holiday','=','outlet_holidays.id_holiday')->join('date_holidays','date_holidays.id_holiday','=','holidays.id_holiday')->where(function($q){
+                $q->where('yearly','1')->orWhereDate('date','>=',date('Y-m-d'));
+            })->orderByRaw('CONCAT(MONTH(`date`),DATE(`date`))');
+        if($request->page){
+            $result = $holiday->paginate()->toArray();
+            $toMod = &$result['data'];
+        }else{
+            $result = $holiday->get()->toArray();
+            $toMod = &$result;
+        }
+        foreach ($toMod as &$value) {
+            $value['date_pretty'] = MyHelper::indonesian_date_v2($value['date'],$value['yearly']?'d F':'d F Y');
+        }
+        return MyHelper::checkGet($result);
+    }
+    function createHoliday(Request $request) {
+        $post = $request->json('holiday');
+        $outlet = $request->user();
+        $holiday = [
+            'holiday_name'  => $post['holiday_name'],
+            'yearly'        => $post['yearly']
+        ];
 
+        DB::beginTransaction();
+        $insertHoliday = Holiday::create($holiday);
+
+        if ($insertHoliday) {
+            $dateHoliday = [];
+            if(!is_array($post['date_holiday'])){
+                $post['date_holiday'] = [$post['date_holiday']];
+            }
+            $date = $post['date_holiday'];
+
+            foreach ($date as $value) {
+                $dataDate = [
+                    'id_holiday'    => $insertHoliday['id_holiday'],
+                    'date'          => date('Y-m-d', strtotime($value)),
+                    'created_at'    => date('Y-m-d H:i:s'),
+                    'updated_at'    => date('Y-m-d H:i:s')
+                ];
+
+                array_push($dateHoliday, $dataDate);
+            }
+
+            $insertDateHoliday = DateHoliday::insert($dateHoliday);
+
+            if ($insertDateHoliday) {
+                $dataOutlet = [
+                    'id_holiday'    => $insertHoliday['id_holiday'],
+                    'id_outlet'     => $outlet->id_outlet,
+                    'created_at'    => date('Y-m-d H:i:s'),
+                    'updated_at'    => date('Y-m-d H:i:s')
+                ];
+
+                $insertOutletHoliday = OutletHoliday::create($dataOutlet);
+
+                if ($insertOutletHoliday) {
+                    DB::commit();
+                    return response()->json(MyHelper::checkCreate($insertOutletHoliday));
+
+                } else {
+                    DB::rollBack();
+                    return response()->json([
+                        'status'    => 'fail',
+                        'messages'      => [
+                            'Data is invalid !!!'
+                        ]
+                    ]);
+                }
+            } else {
+                DB::rollBack();
+                return response()->json([
+                    'status'    => 'fail',
+                    'messages'      => [
+                        'Data is invalid !!!'
+                    ]
+                ]);
+            }
+
+        } else {
+            DB::rollBack();
+            return response()->json([
+                'status'    => 'fail',
+                'messages'      => [
+                    'Data is invalid !!!'
+                ]
+            ]);
+        }
+    }
+    function updateHoliday(Request $request) {
+        $request->validate([
+            'holiday' => 'required|array',
+            'holiday.holiday_name' => 'required|string',
+            'holiday.date_holiday' => 'required|date',
+        ]);
+        $post = $request->json('holiday');
+        $outlet = $request->user();
+        $id_holiday = $post['id_holiday'];
+        $holiday = [
+            'holiday_name'  => $post['holiday_name'],
+            'yearly'        => $post['yearly']??0
+        ];
+
+        DB::beginTransaction();
+        $insertHoliday = Holiday::find($id_holiday);
+        if(!$insertHoliday){
+            return MyHelper::checkGet([],'Holiday not found');
+        }
+        $insertHoliday->update($holiday);
+        DateHoliday::where('id_holiday',$id_holiday)->delete();
+        if ($insertHoliday) {
+            $dateHoliday = [];
+            if(!is_array($post['date_holiday'])){
+                $post['date_holiday'] = [$post['date_holiday']];
+            }
+            $date = $post['date_holiday'];
+
+            foreach ($date as $value) {
+                $dataDate = [
+                    'id_holiday'    => $insertHoliday['id_holiday'],
+                    'date'          => date('Y-m-d', strtotime($value)),
+                    'created_at'    => date('Y-m-d H:i:s'),
+                    'updated_at'    => date('Y-m-d H:i:s')
+                ];
+
+                array_push($dateHoliday, $dataDate);
+            }
+
+            $insertDateHoliday = DateHoliday::insert($dateHoliday);
+
+            $dataOutlet = [
+                'id_holiday'    => $insertHoliday['id_holiday'],
+                'id_outlet'     => $outlet->id_outlet
+            ];
+
+            $insertOutletHoliday = OutletHoliday::updateOrCreate($dataOutlet);
+
+            if ($insertOutletHoliday) {
+                DB::commit();
+                return response()->json(MyHelper::checkCreate($insertOutletHoliday));
+
+            } else {
+                DB::rollBack();
+                return response()->json([
+                    'status'    => 'fail',
+                    'messages'      => [
+                        'Data is invalid !!!'
+                    ]
+                ]);
+            }
+
+        } else {
+            DB::rollBack();
+            return response()->json([
+                'status'    => 'fail',
+                'messages'      => [
+                    'Data is invalid !!!'
+                ]
+            ]);
+        }
+    }
 }
