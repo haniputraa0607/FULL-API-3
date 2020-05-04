@@ -124,7 +124,12 @@ class ApiNotification extends Controller {
                 if ($newTrx['detail']) {
                     //inset pickup_at when pickup_type = right now
                     if($newTrx['detail']['pickup_type'] == 'right now'){
-                        $updatePickup = TransactionPickup::where('id_transaction', $newTrx['id_transaction'])->update(['pickup_at' => date('Y-m-d H:i:s')]);
+                        $settingTime = Setting::where('key', 'processing_time')->first();
+                        if($settingTime && isset($settingTime['value'])){
+                            $updatePickup = TransactionPickup::where('id_transaction', $newTrx['id_transaction'])->update(['pickup_at' => date('Y-m-d H:i:s', strtotime('+ '.$settingTime['value'].'minutes'))]);
+                        }else{
+                            $updatePickup = TransactionPickup::where('id_transaction', $newTrx['id_transaction'])->update(['pickup_at' => date('Y-m-d H:i:s')]);
+                        }
                     }
                     // book gosend after outlet receive order only
                     // if ($newTrx['detail']['pickup_by'] == 'GO-SEND') {
@@ -888,7 +893,7 @@ Detail: ".$link['short'],
             	$update_promo_report = app($this->promo_campaign)->deleteReport($trx->id_transaction, $trx->id_promo_campaign_promo_code);
             	if (!$update_promo_report) {
             		return false;
-	            }	
+	            }
 
             }
 
