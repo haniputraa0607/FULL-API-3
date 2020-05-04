@@ -1551,7 +1551,7 @@ class ApiOutletApp extends Controller
     }
 
     public function requestOTP(Request $request){
-        if(!in_array($request->feature, ['Update Stock Status','Update Schedule'])){
+        if(!in_array($request->feature, ['Update Stock Status','Update Schedule','Create Holiday','Update Holiday'])){
             return [
                 'status'=>'fail',
                 'messages'=>'Invalid requested feature'
