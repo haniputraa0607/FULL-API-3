@@ -125,7 +125,7 @@ class ApiGosendController extends Controller
                         'request_method' => $request->method(),
                         'request_parameter' => json_encode($post),
                         'request_header' => json_encode($request->header()),
-                        'response_body' => $response_body,
+                        'response_body' => json_encode($response_body),
                         'response_header' => null,
                         'response_code' => $response_code
                     ]);
