@@ -1610,13 +1610,13 @@ class ApiOutletApp extends Controller
         if(!($trx['transaction_pickup']['transaction_pickup_go_send']['id_transaction_pickup_go_send']??false)){
             return [
                 'status' => 'fail',
-                'messages' => 'Transaksi tidak menggunakan GO-SEND'
+                'messages' => ['Transaksi tidak menggunakan GO-SEND']
             ];
         }
         if($trx['transaction_pickup']['transaction_pickup_go_send']['go_send_id'] && !in_array(strtolower($trx['transaction_pickup']['transaction_pickup_go_send']['latest_status']),['cancelled','driver not found'])){
             return [
                 'status' => 'fail',
-                'messages' => 'Pengiriman sudah dipesan'
+                'messages' => ['Pengiriman sudah dipesan']
             ];
         }
         //create booking GO-SEND

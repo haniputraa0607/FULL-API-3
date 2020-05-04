@@ -11,8 +11,5 @@ class ProductModifierPrice extends Model
     	'id_product_modifier',
     	'id_outlet',
     	'product_modifier_price',
-    	'product_modifier_visibility',
-    	'product_modifier_status',
-    	'product_modifier_stock_status',
     ];
 }
