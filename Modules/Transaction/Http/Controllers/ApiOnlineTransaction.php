@@ -653,7 +653,7 @@ class ApiOnlineTransaction extends Controller
             if($shippingGoSend === null){
                 return [
                     'status' => 'fail',
-                    'messagse' => array_column($shippingGoSendx[GoSend::getShipmentMethod()]['errors']??[],'message')?:['Gagal menghitung ongkos kirim']
+                    'messages' => array_column($shippingGoSendx[GoSend::getShipmentMethod()]['errors']??[],'message')?:['Gagal menghitung ongkos kirim']
                 ];
             }
             //cek free delivery
@@ -1735,7 +1735,7 @@ class ApiOnlineTransaction extends Controller
             if($shippingGoSend === null){
                 return [
                     'status' => 'fail',
-                    'messagse' => array_column($shippingGoSendx[GoSend::getShipmentMethod()]['errors']??[],'message')?:['Gagal menghitung ongkos kirim']
+                    'messages' => array_column($shippingGoSendx[GoSend::getShipmentMethod()]['errors']??[],'message')?:['Gagal menghitung ongkos kirim']
                 ];
             }
             //cek free delivery
