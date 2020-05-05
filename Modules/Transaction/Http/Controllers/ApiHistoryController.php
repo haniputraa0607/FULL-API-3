@@ -123,7 +123,7 @@ class ApiHistoryController extends Controller
             $result['status'] = 'success';
             $result['current_page']  = $page;
             $result['data']          = $sortTrx['data'];
-            $result['total']         = count($merge);
+            $result['total']         = count($sortTrx['data']);
             $result['next_page_url'] = null;
 
             if ($sortTrx['status'] == true) {
@@ -222,7 +222,7 @@ class ApiHistoryController extends Controller
 
             $result['current_page']  = $page;
             $result['data']          = $sortTrx['data'];
-            $result['total']         = count($merge);
+            $result['total']         = count($sortTrx['data']);
             $result['next_page_url'] = null;
 
             if ($sortTrx['status'] == true) {
@@ -288,7 +288,7 @@ class ApiHistoryController extends Controller
             $check = MyHelper::checkGet($sortTrx);
             $result['current_page']  = $page;
             $result['data']          = $sortTrx['data'];
-            $result['total']         = count($transaction);
+            $result['total']         = count($sortTrx['data']);
             $result['next_page_url'] = null;
 
             if ($sortTrx['status'] == true) {
@@ -350,7 +350,7 @@ class ApiHistoryController extends Controller
             $result['status'] = 'success';
             $result['current_page']  = $page;
             $result['data']          = $sortPoint['data'];
-            $result['total']         = count($point);
+            $result['total']         = count($sortPoint['data']);
             $result['next_page_url'] = null;
 
             if ($sortPoint['status'] == true) {
@@ -423,7 +423,7 @@ class ApiHistoryController extends Controller
             $check = MyHelper::checkGet($sortBalance);
             $result['current_page']  = $page;
             $result['data']          = $sortBalance['data'];
-            $result['total']         = count($balance);
+            $result['total']         = count($sortBalance['data']);
             $result['next_page_url'] = null;
 
             if ($sortBalance['status'] == true) {
@@ -454,16 +454,13 @@ class ApiHistoryController extends Controller
     public function sorting($data, $order, $page)
     {
         $date = [];
-        foreach ($data as $key => &$row) {
-            $row['date'] = date('Y-m-d H:i',strtotime($row['date']));
-            $date[$key] = $row['date'];
+        foreach ($data as $key => $row) {
+            $date[$key] = strtotime($row['date']);
         }
 
         if ($order == 'new') {
             array_multisort($date, SORT_DESC, $data);
-        }
-
-        if ($order == 'old') {
+        }elseif ($order == 'old') {
             array_multisort($date, SORT_ASC, $data);
         }
 
@@ -481,6 +478,7 @@ class ApiHistoryController extends Controller
                 $end = count($data);
                 $next = false;
             }
+            $data = array_slice($data, $start, $paginate);
 
             return ['data' => $data, 'status' => $next];
         }
@@ -495,7 +493,6 @@ class ApiHistoryController extends Controller
             ->join('outlets', 'transactions.id_outlet', '=', 'outlets.id_outlet')
             ->join('brand_outlet', 'outlets.id_outlet', '=', 'brand_outlet.id_outlet')
             ->leftJoin('transaction_products', 'transactions.id_transaction', '=', 'transaction_products.id_transaction')
-            ->where('transaction_payment_status', '!=', 'Cancelled')
             ->where('transactions.id_user', $id)
             ->with('outlet', 'logTopup')
             ->orderBy('transaction_date', 'DESC')
@@ -576,57 +573,30 @@ class ApiHistoryController extends Controller
         $listTransaction = [];
 
         foreach ($transaction as $key => $value) {
-            // $transaction[$key]['date'] = $value['transaction_date'];
-            // $transaction[$key]['type'] = 'trx';
-            // $transaction[$key]['outlet'] = $value['outlet']['outlet_name'];
 
-            //cek payment
-            if ($value['trasaction_payment_type']) {
-                $found = false;
-
-                if ($value['transaction_payment_status'] == 'Completed') {
-                    $found = true;
-                } else {
-                    $pay = TransactionMultiplePayment::where('id_transaction', $value['id_transaction'])->first();
-                    if ($pay) {
-                        $payMidtrans = TransactionPaymentMidtran::where('id_transaction', $value['id_transaction'])->first();
-                        if ($payMidtrans && $payMidtrans['transaction_status']) {
-                            $found = true;
-                        }
-                    } else {
-                        $payMidtrans = TransactionPaymentMidtran::where('id_transaction', $value['id_transaction'])->first();
-                        if ($payMidtrans && $payMidtrans['transaction_status']) {
-                            $found = true;
-                        }
-                    }
-                }
-
-                if ($found == true) {
-                    $dataList['type'] = 'trx';
-                    $dataList['id'] = $value['id_transaction'];
-                    $dataList['date']    = date('Y-m-d H:i', strtotime($value['transaction_date']));
-                    $dataList['id_outlet'] = $value['outlet']['id_outlet'];
-                    $dataList['outlet_code'] = $value['outlet']['outlet_code'];
-                    $dataList['outlet'] = $value['outlet']['outlet_name'];
-                    $dataList['amount'] = number_format($value['transaction_grandtotal'], 0, ',', '.');
-                    $dataList['cashback'] = number_format($value['transaction_cashback_earned'], 0, ',', '.');
-                    $dataList['subtitle'] = $value['sum_qty'].($value['sum_qty']>1?' items':' item');
-                    $dataList['item_total'] = (int) $value['sum_qty'];
-                    if ($dataList['cashback'] >= 0) {
-                        $dataList['status_point'] = 1;
-                    } else {
-                        $dataList['status_point'] = 0;
-                    }
-                    $feedback = UserFeedback::select('rating_items.image','text','rating_item_text')->where('id_transaction',$value['id_transaction'])->leftJoin('rating_items','rating_items.rating_value','=','user_feedbacks.rating_value')->first();
-                    $dataList['rate_status'] = $feedback?1:0;
-                    $dataList['feedback_detail'] = $feedback?[
-                        'rating_item_image' => $feedback->image?(env('S3_URL_API').$feedback->image):null,
-                        'rating_item_text' => $feedback->text?:$feedback->rating_item_text,
-                    ]:null;
-
-                    $listTransaction[] = $dataList;
-                }
+            $dataList['type'] = 'trx';
+            $dataList['id'] = $value['id_transaction'];
+            $dataList['date']    = date('Y-m-d H:i', strtotime($value['transaction_date']));
+            $dataList['id_outlet'] = $value['outlet']['id_outlet'];
+            $dataList['outlet_code'] = $value['outlet']['outlet_code'];
+            $dataList['outlet'] = $value['outlet']['outlet_name'];
+            $dataList['amount'] = MyHelper::requestNumber($value['transaction_grandtotal'], '_CURRENCY');
+            $dataList['cashback'] = MyHelper::requestNumber($value['transaction_cashback_earned'],'_POINT');
+            $dataList['subtitle'] = $value['sum_qty'].($value['sum_qty']>1?' items':' item');
+            $dataList['item_total'] = (int) $value['sum_qty'];
+            if ($dataList['cashback'] >= 0) {
+                $dataList['status_point'] = 1;
+            } else {
+                $dataList['status_point'] = 0;
             }
+            $feedback = UserFeedback::select('rating_items.image','text','rating_item_text')->where('id_transaction',$value['id_transaction'])->leftJoin('rating_items','rating_items.rating_value','=','user_feedbacks.rating_value')->first();
+            $dataList['rate_status'] = $feedback?1:0;
+            $dataList['feedback_detail'] = $feedback?[
+                'rating_item_image' => $feedback->image?(env('S3_URL_API').$feedback->image):null,
+                'rating_item_text' => $feedback->text?:$feedback->rating_item_text,
+            ]:null;
+
+            $listTransaction[] = $dataList;
         }
 
         return $listTransaction;
@@ -1305,7 +1275,7 @@ class ApiHistoryController extends Controller
             $check = MyHelper::checkGet($sortBalance);
             $result['current_page']  = $page;
             $result['data']          = $sortBalance['data'];
-            $result['total']         = count($balance);
+            $result['total']         = count($sortBalance['data']);
             $result['next_page_url'] = null;
 
             if ($sortBalance['status'] == true) {
