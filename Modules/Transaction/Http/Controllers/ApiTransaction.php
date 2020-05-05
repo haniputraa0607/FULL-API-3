@@ -1871,8 +1871,8 @@ class ApiTransaction extends Controller
                 case 'Midtrans':
                     $payment = DealsPaymentMidtran::where('id_deals_user', $id)->first();
                     $result['payment'][] = [
-                        'name'      => 'Midtrans',
-                        'amount'    =>  MyHelper::requestNumber($payment->gross_amount,'_CURRENCY')
+                        'name'      => strtoupper(str_replace('_', ' ', $payment->payment_type)).' '.strtoupper($payment->bank),
+                        'amount'    => MyHelper::requestNumber($payment->gross_amount,'_CURRENCY')
                     ];
                     break;
                 case 'OVO':
@@ -1880,6 +1880,13 @@ class ApiTransaction extends Controller
                     $result['payment'][] = [
                         'name'      => 'OVO',
                         'amount'    =>  MyHelper::requestNumber($payment->amount,'_CURRENCY')
+                    ];
+                    break;
+                case 'Ipay88':
+                    $payment = DealsPaymentIpay88::where('id_deals_user', $id)->first();
+                    $result['payment'][] = [
+                        'name'      => $payment->payment_method,
+                        'amount'    =>  MyHelper::requestNumber($payment->amount / 100,'_CURRENCY')
                     ];
                     break;
             }
@@ -2021,6 +2028,13 @@ class ApiTransaction extends Controller
                 $status = 'USED';
             }
 
+            $price = 0;
+            if($data['detail']['voucher_price_cash'] != NULL){
+                $price = MyHelper::requestNumber($data['detail']['voucher_price_cash'],'_CURRENCY');
+            }elseif($data['detail']['voucher_price_point'] != NULL){
+                $price = MyHelper::requestNumber($data['detail']['voucher_price_point'],'_POINT').' points';
+            }
+
             $result = [
                 'type'                          => $data['type'],
                 'id_log_balance'                => $data['id_log_balance'],
@@ -2030,7 +2044,7 @@ class ApiTransaction extends Controller
                 'transaction_receipt_number'    => implode('', [strtotime($data['date']), $data['detail']['id_deals_user']]),
                 'transaction_date'              => date('d M Y H:i', strtotime($data['date'])),
                 'balance'                       => MyHelper::requestNumber($data['balance'], '_POINT'),
-                'transaction_grandtotal'        => MyHelper::requestNumber($data['detail']['voucher_price_cash'], '_CURRENCY'),
+                'transaction_grandtotal'        => $price,
                 'transaction_cashback_earned'   => null,
                 'name'                          => 'Buy Voucher',
                 'title'                         => $data['detail']['dealVoucher']['deal']['deals_title']
