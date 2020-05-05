@@ -314,7 +314,7 @@
             ],
             "authors": [
                 {
-                    "name": "Christian LÃ¼ck",
+                    "name": "Christian Lück",
                     "email": "christian@lueck.tv"
                 }
             ],
@@ -1162,7 +1162,7 @@
             ],
             "authors": [
                 {
-                    "name": "FranÃ§ois Zaninotto"
+                    "name": "François Zaninotto"
                 }
             ],
             "description": "Faker is a PHP library that generates fake data for you.",
@@ -1903,7 +1903,7 @@
             ],
             "authors": [
                 {
-                    "name": "LuÃ­s OtÃ¡vio Cobucci Oblonczyk",
+                    "name": "Luís Otávio Cobucci Oblonczyk",
                     "email": "lcobucci@gmail.com",
                     "role": "Developer"
                 }
@@ -3281,7 +3281,7 @@
             ],
             "authors": [
                 {
-                    "name": "MÃ¡rk SÃ¡gi-KazÃ¡r",
+                    "name": "Márk Sági-Kazár",
                     "email": "mark.sagikazar@gmail.com"
                 }
             ],
@@ -3343,7 +3343,7 @@
             ],
             "authors": [
                 {
-                    "name": "MÃ¡rk SÃ¡gi-KazÃ¡r",
+                    "name": "Márk Sági-Kazár",
                     "email": "mark.sagikazar@gmail.com"
                 }
             ],
@@ -3404,7 +3404,7 @@
             ],
             "authors": [
                 {
-                    "name": "MÃ¡rk SÃ¡gi-KazÃ¡r",
+                    "name": "Márk Sági-Kazár",
                     "email": "mark.sagikazar@gmail.com"
                 },
                 {
@@ -3464,7 +3464,7 @@
                     "email": "geloen.eric@gmail.com"
                 },
                 {
-                    "name": "MÃ¡rk SÃ¡gi-KazÃ¡r",
+                    "name": "Márk Sági-Kazár",
                     "email": "mark.sagikazar@gmail.com"
                 }
             ],
@@ -3535,7 +3535,7 @@
             ],
             "authors": [
                 {
-                    "name": "MÃ¡rk SÃ¡gi-KazÃ¡r",
+                    "name": "Márk Sági-Kazár",
                     "email": "mark.sagikazar@gmail.com"
                 }
             ],
@@ -3583,7 +3583,7 @@
             ],
             "authors": [
                 {
-                    "name": "MÃ¡rk SÃ¡gi-KazÃ¡r",
+                    "name": "Márk Sági-Kazár",
                     "email": "mark.sagikazar@gmail.com"
                 }
             ],
@@ -3691,7 +3691,7 @@
             ],
             "authors": [
                 {
-                    "name": "MÃ¡rk SÃ¡gi-KazÃ¡r",
+                    "name": "Márk Sági-Kazár",
                     "email": "mark.sagikazar@gmail.com"
                 },
                 {
@@ -3908,7 +3908,7 @@
                     "role": "Developer"
                 },
                 {
-                    "name": "Hans-JÃ¼rgen Petrich",
+                    "name": "Hans-Jürgen Petrich",
                     "email": "petrich@tronic-media.com",
                     "role": "Developer"
                 },
@@ -4789,7 +4789,7 @@
                     "email": "fabien@symfony.com"
                 },
                 {
-                    "name": "Jean-FranÃ§ois Simon",
+                    "name": "Jean-François Simon",
                     "email": "jeanfrancois.simon@sensiolabs.com"
                 },
                 {
@@ -6762,7 +6762,7 @@
             ],
             "authors": [
                 {
-                    "name": "PÃ¡draic Brady",
+                    "name": "Pádraic Brady",
                     "email": "padraic.brady@gmail.com",
                     "homepage": "http://blog.astrumfutura.com"
                 },
