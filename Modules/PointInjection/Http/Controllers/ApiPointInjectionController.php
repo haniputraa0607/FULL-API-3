@@ -586,9 +586,24 @@ class ApiPointInjectionController extends Controller
             ];
             return response()->json($result);
         }
-        DB::beginTransaction();
+
         foreach ($pointInjection as $valueUser) {
-            $insertDataLogCash[] = app($this->balance)->addLogBalance($valueUser['id_user'], $valueUser['point'], $valueUser['id_point_injection'], 'Point Injection', 0);
+            //add to table report first
+            $createReport = [
+                'id_point_injection' => $valueUser['id_point_injection'],
+                'id_user' => $valueUser['id_user'],
+                'point' => $valueUser['point'],
+                'status' => 'Failed',
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s')
+            ];
+            PointInjectionReport::insert($createReport);
+
+            DB::beginTransaction();
+
+            $insertPoint = app($this->balance)->addLogBalance($valueUser['id_user'], $valueUser['point'], $valueUser['id_point_injection'], 'Point Injection', 0);
+
+            $insertDataLogCash[] = $insertPoint;
             $addTotalPoint[] = PointInjectionUser::where('id_user', $valueUser['id_user'])->where('id_point_injection', $valueUser['id_point_injection'])->increment('total_point', $valueUser['point']);
             if ($valueUser['point_injection_media_push'] == 1) {
                 $dataOptional          = [];
@@ -654,6 +669,12 @@ class ApiPointInjectionController extends Controller
                         $push = PushNotificationHelper::sendPush($deviceToken['token'], $subject, $content, $image, $dataOptional);
                     }
                 }
+            }
+
+            if($insertPoint != false){
+                //update status report to success
+                PointInjectionReport::where('id_user', $valueUser['id_user'])->where('id_point_injection', $valueUser['id_point_injection'])
+                    ->update(['status' => 'Success']);
             }
         }
 
