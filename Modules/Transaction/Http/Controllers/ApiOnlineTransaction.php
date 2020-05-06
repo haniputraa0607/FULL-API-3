@@ -808,8 +808,8 @@ class ApiOnlineTransaction extends Controller
 				$code->id_promo_campaign_promo_code,
 				$insertTransaction['id_transaction'],
 				$insertTransaction['id_outlet'],
-				$request->device_id,
-				$request->device_type
+				$request->device_id?:'',
+				$request->device_type?:''
 			);
 
         	if (!$promo_campaign_report) {
