@@ -340,7 +340,7 @@ class ApiConfirm extends Controller
         elseif ($post['payment_type'] == 'Ipay88') {
 
             // save multiple payment
-            $trx_ipay88 = \Modules\IPay88\Lib\IPay88::create()->insertNewTransaction($check,'trx',$countGrandTotal);
+            $trx_ipay88 = \Modules\IPay88\Lib\IPay88::create()->insertNewTransaction($check,'trx',$countGrandTotal,$post);
             if(!$trx_ipay88){
                 DB::rollBack();
                 return response()->json([
