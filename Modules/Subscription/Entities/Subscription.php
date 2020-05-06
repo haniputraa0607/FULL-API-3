@@ -8,6 +8,7 @@
 namespace Modules\Subscription\Entities;
 
 use Reliese\Database\Eloquent\Model as Eloquent;
+use App\Lib\MyHelper;
 
 /**
  * Class Subscription
@@ -97,11 +98,23 @@ class Subscription extends Eloquent
 		'url_subscription_image', 
 		'subscription_status', 
 		'subscription_price_type', 
+		'subscription_price_pretty',
 		'url_webview'
 	];
 
 	public function getUrlWebviewAttribute() {
 		return env('APP_API_URL') ."api/webview/subscription/". $this->id_subscription;
+	}
+
+	public function getSubscriptionPricePrettyAttribute() {
+	    $pretty = "Gratis";
+		if ($this->subscription_price_point) {
+            $pretty = MyHelper::requestNumber($this->subscription_price_point,'_POINT');
+        }
+        elseif ($this->subscription_price_cash) {
+            $pretty = MyHelper::requestNumber($this->subscription_price_cash,'_CURRENCY');
+        }
+        return $pretty;
 	}
 
 	public function getSubscriptionPriceTypeAttribute() {

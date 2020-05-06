@@ -2054,7 +2054,8 @@ class ApiOutletApp extends Controller
                     'delivery_status' => '',
                     'delivery_address' => $list['transaction_pickup_go_send']['destination_address'],
                     'booking_status' => 0,
-                    'cancelable' => 1
+                    'cancelable' => 1,
+                    'go_send_order_no' => $list['transaction_pickup_go_send']['go_send_order_no']
                 ];
                 if($list['transaction_pickup_go_send']['go_send_id']){
                     $result['delivery_info']['booking_status'] = 1;
@@ -2072,7 +2073,7 @@ class ApiOutletApp extends Controller
                             'driver_photo' => $list['transaction_pickup_go_send']['driver_photo'],
                             'vehicle_number' => $list['transaction_pickup_go_send']['vehicle_number'],
                         ];
-                        $result['delivery_info']['cancelable'] = 0;
+                        $result['delivery_info']['cancelable'] = 1;
                         break;
                     case 'enroute drop':
                         $result['delivery_info']['delivery_status'] = 'Driver mengantarkan pesanan';

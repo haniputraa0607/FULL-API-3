@@ -43,6 +43,7 @@ class ApiSubscriptionWebview extends Controller
             'subscription_price_type'       => $subs['subscription_price_type'],
             'subscription_price_point'      => $subs['subscription_price_point'],
             'subscription_price_cash'       => $subs['subscription_price_cash'],
+            'subscription_price_pretty'     => $subs['subscription_price_pretty'],
             'subscription_voucher_total'    => $subs['subscription_voucher_total'],
             'button_text'                   => 'BELI',
             'button_status'                 => 0

@@ -11,6 +11,7 @@ class PointInjectionReport extends Model
     protected $fillable = [
         'id_point_injection',
         'id_user',
-        'point'
+        'point',
+        'status'
     ];
 }
