@@ -221,7 +221,7 @@ class IPay88
 	 * @param  String $type 	trx/deals
 	 * @return Object           TransactionPaymentIpay88 / DealsPaymentIpay88
 	 */
-	public function insertNewTransaction($data, $type='trx',$grandtotal) {
+	public function insertNewTransaction($data, $type='trx',$grandtotal,$post=null) {
 		$result = TransactionPaymentIpay88::where('id_transaction',$data['id_transaction'])->first();
 		if($result){
 			return $result;
@@ -229,7 +229,9 @@ class IPay88
 		if($type == 'trx'){
 			$toInsert = [
 				'id_transaction' => $data['id_transaction'],
-				'amount' => $grandtotal*100
+				'amount' => $grandtotal*100,
+				'payment_id' => $this->payment_id[$post['payment_id']]??null,
+				'payment_method' => str_replace('_',' ',$post['payment_id']??'')
 			];
 
 			$result = TransactionPaymentIpay88::create($toInsert);
@@ -313,9 +315,9 @@ class IPay88
             			break;
 
             		case '0':
-	                    $update = $trx->update(['transaction_payment_status'=>'Cancelled']);
+	                    $update = $trx->update(['transaction_payment_status'=>'Cancelled','void_date'=>date('Y-m-d H:i:s')]);
 		                $trx->load('outlet_name');
-		                $send = app($this->notif)->notificationDenied($mid, $trx);
+		                // $send = app($this->notif)->notificationDenied($mid, $trx);
 
 				        //return balance
 				        $payBalance = TransactionMultiplePayment::where('id_transaction', $trx->id_transaction)->where('type', 'Balance')->first();
@@ -508,6 +510,10 @@ class IPay88
                 break;
         }
         if(!$saveToLog){
+			$up = $model->update([
+				'status' => $data['Status'],
+				'requery_response' => $data['requery_response']??''
+			]);
         	DB::commit();
         	return 1;
         }
