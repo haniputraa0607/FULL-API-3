@@ -78,6 +78,7 @@ class ApiDealsWebview extends Controller
             'deals_voucher_point_now'       => MyHelper::requestNumber($point,'_POINT'),
             'deals_voucher_avaliable_point' => (($point - $deals['deals_voucher_price_cash']) <= 0) ? MyHelper::requestNumber(0,'_POINT') : MyHelper::requestNumber($point - $deals['deals_voucher_price_cash'],'_POINT'),
             'deals_voucher_point_success'   => (($deals['deals_voucher_price_cash'] - $point) <= 0) ? 'enable' : 'disable',
+            'deals_voucher_price_pretty'    => $deals['deals_voucher_price_pretty'],
             'deals_image'                   => $deals['deals_image'],
             'deals_start'                   => $deals['deals_start'],
             'deals_end'                     => $deals['deals_end'],
