@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Log;
 use DB;
 
 use App\Http\Models\Transaction;
+use App\Http\Models\TransactionPickup;
 use App\Http\Models\TransactionMultiplePayment;
 use App\Http\Models\DealsUser;
 use App\Http\Models\Deal;
@@ -220,7 +221,7 @@ class IPay88
 	 * @param  String $type 	trx/deals
 	 * @return Object           TransactionPaymentIpay88 / DealsPaymentIpay88
 	 */
-	public function insertNewTransaction($data, $type='trx',$grandtotal) {
+	public function insertNewTransaction($data, $type='trx',$grandtotal,$post=null) {
 		$result = TransactionPaymentIpay88::where('id_transaction',$data['id_transaction'])->first();
 		if($result){
 			return $result;
@@ -228,7 +229,9 @@ class IPay88
 		if($type == 'trx'){
 			$toInsert = [
 				'id_transaction' => $data['id_transaction'],
-				'amount' => $grandtotal*100
+				'amount' => $grandtotal*100,
+				'payment_id' => $this->payment_id[$post['payment_id']]??null,
+				'payment_method' => str_replace('_',' ',$post['payment_id']??'')
 			];
 
 			$result = TransactionPaymentIpay88::create($toInsert);
@@ -266,7 +269,7 @@ class IPay88
             	$trx = Transaction::with('user','outlet')->where('id_transaction',$model->id_transaction)->first();
                 $mid = [
                     'order_id' => $trx['transaction_receipt_number'],
-                    'gross_amount' => $amount
+                    'gross_amount' => $model->amount
                 ];
             	switch ($data['Status']) {
             		case '1':
@@ -278,6 +281,19 @@ class IPay88
 	                            'messages' => ['Failed update payment status']
 	                        ];
 	                    }
+
+	                    //inset pickup_at when pickup_type = right now
+						if($trx['trasaction_type'] == 'Pickup Order'){
+							$detailTrx = TransactionPickup::where('id_transaction', $model->id_transaction)->first();
+							if($detailTrx['pickup_type'] == 'right now'){
+								$settingTime = Setting::where('key', 'processing_time')->first();
+								if($settingTime && isset($settingTime['value'])){
+									$updatePickup = TransactionPickup::where('id_transaction', $detailTrx['id_transaction'])->update(['pickup_at' => date('Y-m-d H:i:s', strtotime('+ '.$settingTime['value'].'minutes'))]);
+								}else{
+									$updatePickup = TransactionPickup::where('id_transaction', $detailTrx['id_transaction'])->update(['pickup_at' => date('Y-m-d H:i:s')]);
+								}
+							}
+						}
 
 				        $trx->load('outlet');
 						$trx->load('productTransaction');
@@ -299,9 +315,9 @@ class IPay88
             			break;
 
             		case '0':
-	                    $update = $trx->update(['transaction_payment_status'=>'Cancelled']);
+	                    $update = $trx->update(['transaction_payment_status'=>'Cancelled','void_date'=>date('Y-m-d H:i:s')]);
 		                $trx->load('outlet_name');
-		                $send = app($this->notif)->notificationDenied($mid, $trx);
+		                // $send = app($this->notif)->notificationDenied($mid, $trx);
 
 				        //return balance
 				        $payBalance = TransactionMultiplePayment::where('id_transaction', $trx->id_transaction)->where('type', 'Balance')->first();
@@ -336,7 +352,7 @@ class IPay88
 				            }
 				        }
 				        // delete promo campaign report
-			            if ($trx->id_promo_campaign_promo_code) 
+			            if ($trx->id_promo_campaign_promo_code)
 			            {
 			            	$update_promo_report = app($this->promo_campaign)->deleteReport($trx->id_transaction, $trx->id_promo_campaign_promo_code);
 			            }
@@ -494,6 +510,10 @@ class IPay88
                 break;
         }
         if(!$saveToLog){
+			$up = $model->update([
+				'status' => $data['Status'],
+				'requery_response' => $data['requery_response']??''
+			]);
         	DB::commit();
         	return 1;
         }
@@ -600,7 +620,7 @@ class IPay88
 					'type' => 'cancel',
 					'triggers' => 'user'
 				];
-			
+
     			$requery = $this->reQuery($submitted,'0');
     			if(in_array($requery['response'],['Record not found','Payment fail'])){
 	    			$update = $this->update($model->transaction_payment_ipay88,[
@@ -627,7 +647,7 @@ class IPay88
 					'type' => 'cancel',
 					'triggers' => 'user'
 				];
-			
+
     			$requery = $this->reQuery($submitted,'0');
     			if(in_array($requery['response'],['Record not found','Payment fail'])){
 	    			$update = $this->update($model->deals_payment_ipay88,[
@@ -654,7 +674,7 @@ class IPay88
 					'type' => 'cancel',
 					'triggers' => 'user'
 				];
-			
+
     			$requery = $this->reQuery($submitted,'0');
     			if(in_array($requery['response'],['Record not found','Payment fail'])){
 	    			$update = $this->update($model->subscription_payment_ipay88,[

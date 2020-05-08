@@ -376,7 +376,7 @@ class ApiSubscriptionClaimPay extends Controller
         //IF USING BALANCE
         if ($request->get('balance') && $request->get('balance') == true){
             /* BALANCE */
-            $pay = $this->balance($dataSubs, $voucher,$request->get('payment_method') );
+            $pay = $this->balance($dataSubs, $voucher,$request->get('payment_method'), $request->json()->all());
         }else{
 
             /* BALANCE */
@@ -389,7 +389,7 @@ class ApiSubscriptionClaimPay extends Controller
             }
            /* IPay88 */
             if ($request->get('payment_method') && strtolower($request->get('payment_method')) == "ipay88") {
-                $pay = $this->ipay88($dataSubs, $voucher);
+                $pay = $this->ipay88($dataSubs, $voucher, null, $request->json()->all());
             }
 
         }
@@ -440,14 +440,18 @@ class ApiSubscriptionClaimPay extends Controller
     }
 
     /* IPay88 */
-    function ipay88($subs, $voucher, $grossAmount=null)
+    function ipay88($subs, $voucher, $grossAmount=null, $post = null)
     {
+        $ipay = \Modules\IPay88\Lib\IPay88::create();
+        $payment_id = $post['payment_id']??''; // ex. CREDIT_CARD, OVO, MANDIRI_ATM
         // simpan dulu di deals payment ipay88
         $data = [
             'id_subscription'      => $subs->id_subscription,
             'id_subscription_user' => $voucher->id_subscription_user,
-            'amount'  => $voucher->subscription_price_cash*100,
-            'order_id'      => $voucher->subscription_user_receipt_number
+            'amount'               => $voucher->subscription_price_cash*100,
+            'order_id'             => $voucher->subscription_user_receipt_number,
+            'payment_id'           => $ipay->payment_id[$payment_id]??'', // ex. 1,2,3,7,19
+            'payment_method'       => str_replace('_', ' ', $payment_id) // ex CREDIT CARD, BRI VA, MANDIRI ATM
         ];
         if (is_null($grossAmount)) {
             if (!$this->updateInfoDealUsers($voucher->id_subscription_user, ['payment_method' => 'Ipay88'])) {
@@ -462,7 +466,7 @@ class ApiSubscriptionClaimPay extends Controller
     }
 
     /* BALANCE */
-    function balance($subs, $voucher, $paymentMethod = null)
+    function balance($subs, $voucher, $paymentMethod = null, $post = null)
     {
         $myBalance   = app($this->balance)->balanceNow($voucher->id_user);
         $kurangBayar = $myBalance - $voucher->subscription_price_cash;
@@ -484,7 +488,7 @@ class ApiSubscriptionClaimPay extends Controller
                         return $this->midtrans($subs, $voucher, $dataSubsUserUpdate['balance_nominal']);
                     }
                     if(strtolower($paymentMethod) == 'ipay88'){
-                        return $this->ipay88($subs, $voucher, $dataSubsUserUpdate['balance_nominal']);
+                        return $this->ipay88($subs, $voucher, $dataSubsUserUpdate['balance_nominal'], $post);
                     }
                 }
             }

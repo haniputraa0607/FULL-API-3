@@ -21,6 +21,7 @@ use App\Http\Models\LogRequest;
 use App\Http\Models\OvoReversal;
 use App\Http\Models\OvoReference;
 use App\Http\Models\TransactionPickup;
+use App\Http\Models\Setting;
 use DB;
 use Modules\IPay88\Lib\IPay88;
 use App\Lib\MyHelper;
@@ -339,7 +340,7 @@ class ApiConfirm extends Controller
         elseif ($post['payment_type'] == 'Ipay88') {
 
             // save multiple payment
-            $trx_ipay88 = \Modules\IPay88\Lib\IPay88::create()->insertNewTransaction($check,'trx',$countGrandTotal);
+            $trx_ipay88 = \Modules\IPay88\Lib\IPay88::create()->insertNewTransaction($check,'trx',$countGrandTotal,$post);
             if(!$trx_ipay88){
                 DB::rollBack();
                 return response()->json([
@@ -631,7 +632,12 @@ class ApiConfirm extends Controller
                                     if($dataTrx['trasaction_type'] == 'Pickup Order'){
                                         $dataPickup = TransactionPickup::where('id_transaction', $dataTrx['id_transaction'])->first();
                                         if(isset($dataPickup['pickup_type']) && $dataPickup['pickup_type'] == 'right now'){
-                                            $updatePickup = TransactionPickup::where('id_transaction', $dataTrx['id_transaction'])->update(['pickup_at' => date('Y-m-d H:i:s')]);
+                                            $settingTime = Setting::where('key', 'processing_time')->first();
+                                            if($settingTime && isset($settingTime['value'])){
+                                                $updatePickup = TransactionPickup::where('id_transaction', $dataTrx['id_transaction'])->update(['pickup_at' => date('Y-m-d H:i:s', strtotime('+ '.$settingTime['value'].'minutes'))]);
+                                            }else{
+                                                $updatePickup = TransactionPickup::where('id_transaction', $dataTrx['id_transaction'])->update(['pickup_at' => date('Y-m-d H:i:s')]);
+                                            }
                                         }
                                     }
 

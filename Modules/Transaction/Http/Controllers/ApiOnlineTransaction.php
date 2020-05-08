@@ -656,7 +656,7 @@ class ApiOnlineTransaction extends Controller
             if($shippingGoSend === null){
                 return [
                     'status' => 'fail',
-                    'messagse' => array_column($shippingGoSendx[GoSend::getShipmentMethod()]['errors']??[],'message')?:['Gagal menghitung ongkos kirim']
+                    'messages' => array_column($shippingGoSendx[GoSend::getShipmentMethod()]['errors']??[],'message')?:['Gagal menghitung ongkos kirim']
                 ];
             }
             //cek free delivery
@@ -811,8 +811,8 @@ class ApiOnlineTransaction extends Controller
 				$code->id_promo_campaign_promo_code,
 				$insertTransaction['id_transaction'],
 				$insertTransaction['id_outlet'],
-				$request->device_id,
-				$request->device_type
+				$request->device_id?:'',
+				$request->device_type?:''
 			);
 
         	if (!$promo_campaign_report) {
@@ -1469,7 +1469,7 @@ class ApiOnlineTransaction extends Controller
 
                     //inset pickup_at when pickup_type = right now
                     if($insertPickup['pickup_type'] == 'right now'){
-                        $updatePickup = TransactionPickup::where('id_transaction', $insertTransaction['id_transaction'])->update(['pickup_at' => date('Y-m-d H:i:s')]);
+                        $updatePickup = TransactionPickup::where('id_transaction', $insertTransaction['id_transaction'])->update(['pickup_at' => date('Y-m-d H:i:s', strtotime('+ '.$settingTime['value'].'minutes'))]);
                     }
 
                     // Fraud Detection
@@ -1757,7 +1757,7 @@ class ApiOnlineTransaction extends Controller
             if($shippingGoSend === null){
                 return [
                     'status' => 'fail',
-                    'messagse' => array_column($shippingGoSendx[GoSend::getShipmentMethod()]['errors']??[],'message')?:['Gagal menghitung ongkos kirim']
+                    'messages' => array_column($shippingGoSendx[GoSend::getShipmentMethod()]['errors']??[],'message')?:['Gagal menghitung ongkos kirim']
                 ];
             }
             //cek free delivery

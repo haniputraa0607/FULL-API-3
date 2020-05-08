@@ -392,17 +392,78 @@ class MyHelper{
 
 	public static function encSlug ($id)
 	{
-		$firstRand 	= self::createrandom(env('ENC_FIRST_SLUG', 4), null, '12356789');
-		$lastRand 	= self::createrandom(env('ENC_LAST_SLUG', 3), null, '12356789');
-
-		return implode('', [$firstRand, $id, $lastRand]);
+		// create random char awal 1-9
+		$randfirst = self::createrandom(1, null, '123456789');
+		// bikin switch case untuk char 1-9
+		switch($randfirst) {
+		  case 1: $firstRand  = self::createrandom(3, null, '123456789');
+		      $lastRand   = self::createrandom(4, null, '123456789');
+		      break;
+		  case 2: $firstRand  = self::createrandom(2, null, '123456789');
+		      $lastRand   = self::createrandom(3, null, '123456789');
+		      break;
+		  case 3: $firstRand  = self::createrandom(4, null, '123456789');
+		      $lastRand   = self::createrandom(4, null, '123456789');
+		      break;
+		  case 4: $firstRand  = self::createrandom(1, null, '123456789');
+		      $lastRand   = self::createrandom(4, null, '123456789');
+		      break;
+		  case 5: $firstRand  = self::createrandom(5, null, '123456789');
+		      $lastRand   = self::createrandom(1, null, '123456789');
+		      break;
+		  case 6: $firstRand  = self::createrandom(3, null, '123456789');
+		      $lastRand   = self::createrandom(3, null, '123456789');
+		      break;
+		  case 7: $firstRand  = self::createrandom(2, null, '123456789');
+		      $lastRand   = self::createrandom(4, null, '123456789');
+		      break;
+		  case 8: $firstRand  = self::createrandom(3, null, '123456789');
+		      $lastRand   = self::createrandom(2, null, '123456789');
+		      break;
+		  case 9: $firstRand  = self::createrandom(2, null, '123456789');
+		      $lastRand   = self::createrandom(2, null, '123456789');
+		      break;
+		}
+		// $firstRand   = self::createrandom(env('ENC_FIRST_SLUG', 4), null, '123456789');
+		// $lastRand  = self::createrandom(env('ENC_LAST_SLUG', 3), null, '123456789');
+		return $randfirst . implode('', [$firstRand, $id, $lastRand]);
 	}
-
 	public static function decSlug ($id)
 	{
-		$firstString = substr($id, env('ENC_FIRST_SLUG', 4));
-		$string = substr($firstString, 0, -env('ENC_LAST_SLUG', 3));
-
+		// ambil char pertama
+		$randfirst = substr($id, 0, 1);
+		// hilangkan char pertama
+		$id = substr($id, 1);
+		// bikin switch case untuk char 1-9
+		switch($randfirst) {
+		  case 1: $firstString = substr($id, 3);
+		      $string = substr($firstString, 0, -4);
+		      break;
+		  case 2: $firstString = substr($id, 2);
+		      $string = substr($firstString, 0, -3);
+		      break;
+		  case 3: $firstString = substr($id, 4);
+		      $string = substr($firstString, 0, -4);
+		      break;
+		  case 4: $firstString = substr($id, 1);
+		      $string = substr($firstString, 0, -4);
+		      break;
+		  case 5: $firstString = substr($id, 5);
+		      $string = substr($firstString, 0, -1);
+		      break;
+		  case 6: $firstString = substr($id, 3);
+		      $string = substr($firstString, 0, -3);
+		      break;
+		  case 7: $firstString = substr($id, 2);
+		      $string = substr($firstString, 0, -4);
+		      break;
+		  case 8: $firstString = substr($id, 3);
+		      $string = substr($firstString, 0, -2);
+		      break;
+		  case 9: $firstString = substr($id, 2);
+		      $string = substr($firstString, 0, -2);
+		      break;
+		}
 		return $string;
 	}
 

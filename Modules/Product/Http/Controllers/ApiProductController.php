@@ -10,6 +10,7 @@ use App\Http\Models\NewsProduct;
 use App\Http\Models\TransactionProduct;
 use App\Http\Models\ProductPrice;
 use App\Http\Models\ProductModifier;
+use App\Http\Models\ProductModifierBrand;
 use App\Http\Models\ProductModifierPrice;
 use App\Http\Models\ProductModifierGlobalPrice;
 use App\Http\Models\Outlet;
@@ -519,6 +520,9 @@ class ApiProductController extends Controller
                         $result['processed']++;
                         if(empty($value['name'])){
                             unset($value['name']);
+                        }else{
+                            $value['text'] = $value['name'];
+                            unset($value['name']);
                         }
                         if(empty($value['type'])){
                             unset($value['type']);
@@ -588,6 +592,60 @@ class ApiProductController extends Controller
                                     $result['more_msg_extended'][] = "Failed set price for product modifier {$value['code']} at outlet $outlet_code failed";
                                 }
                             }
+                        }
+                    }
+                }else{
+                    return [
+                        'status' => 'fail',
+                        'messages' => ['Imported product modifier\'s brand does not match with selected brand']
+                    ];
+                }
+                break;
+
+            case 'modifier':
+                // update only, never create
+                $data = $post['data']??[];
+                $check_brand = Brand::where(['id_brand'=>$post['id_brand'],'code_brand'=>$data['code_brand']??''])->first();
+                if($check_brand){
+                    foreach ($data['products'] as $key => $value) {
+                        if(empty($value['code'])){
+                            $result['invalid']++;
+                            continue;
+                        }
+                        $result['processed']++;
+                        if(empty($value['name'])){
+                            unset($value['name']);
+                        }else{
+                            $value['text'] = $value['name'];
+                            unset($value['name']);
+                        }
+                        if(empty($value['type'])){
+                            unset($value['type']);
+                        }
+                        $product = ProductModifier::select('product_modifiers.*')->leftJoin('product_modifier_brands','product_modifiers.id_product_modifier','=','product_modifier_brands.id_product_modifier')
+                            ->where('code',$value['code'])->where(function($q) use ($post) {
+                                $q->where('id_brand',$post['id_brand'])->orWhere('modifier_type','<>','Global Brand');
+                            })->first();
+                        if(!$product){
+                            $value['modifier_type'] = 'Global Brand';
+                            $product = ProductModifier::create($value);
+                            if($product){
+                                ProductModifierBrand::create(['id_product_modifier'=>$product->id_product_modifier,'id_brand'=>$post['id_brand']]);
+                                $result['create']++;
+                            }else{
+                                $result['failed']++;
+                                $result['more_msg_extended'][] = "Product modifier with code {$value['code']} failed to be created";
+                            }
+                            continue;
+                        }
+                        $update1 = $product->update($value);
+                        if($product->modifier_type == 'Global Brand'){
+                            ProductModifierBrand::updateOrCreate(['id_product_modifier'=>$product->id_product_modifier,'id_brand'=>$post['id_brand']]);
+                        }
+                        if($update1){
+                            $result['updated']++;
+                        }else{
+                            $result['no_update']++;
                         }
                     }
                 }else{
@@ -740,6 +798,21 @@ class ApiProductController extends Controller
                         }
                     }
                 }
+                break;
+
+            case 'modifier':
+                $data['brand'] = Brand::where('id_brand',$post['id_brand'])->first();
+                $data['products'] = ProductModifier::select('type','code','text as name')
+                    ->leftJoin('product_modifier_brands','product_modifier_brands.id_product_modifier','=','product_modifiers.id_product_modifier')
+                    ->where(function($q) use ($post){
+                        $q->where('id_brand',$post['id_brand'])
+                            ->orWhere('modifier_type','<>','Global Brand');
+                    })
+                    ->orderBy('type')
+                    ->orderBy('text')
+                    ->orderBy('product_modifiers.id_product_modifier')
+                    ->distinct()
+                    ->get();
                 break;
 
             default:

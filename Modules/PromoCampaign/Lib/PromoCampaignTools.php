@@ -1044,14 +1044,15 @@ class PromoCampaignTools{
     	$mod = ProductModifier::select('product_modifiers.id_product_modifier','text','product_modifier_stock_status','product_modifier_price')
                 // produk modifier yang tersedia di outlet
                 ->join('product_modifier_prices','product_modifiers.id_product_modifier','=','product_modifier_prices.id_product_modifier')
+                ->leftJoin('product_modifier_details','product_modifiers.id_product_modifier','=','product_modifier_details.id_product_modifier')
                 ->where('product_modifier_prices.id_outlet',$id_outlet)
                 // produk aktif
                 ->where('product_modifier_status','Active')
                 // product visible
                 ->where(function($query){
-                    $query->where('product_modifier_prices.product_modifier_visibility','=','Visible')
+                    $query->where('product_modifier_details.product_modifier_visibility','=','Visible')
                     ->orWhere(function($q){
-                        $q->whereNull('product_modifier_prices.product_modifier_visibility')
+                        $q->whereNull('product_modifier_details.product_modifier_visibility')
                         ->where('product_modifiers.product_modifier_visibility', 'Visible');
                     });
                 })

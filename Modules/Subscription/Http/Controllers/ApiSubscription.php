@@ -1626,6 +1626,7 @@ class ApiSubscription extends Controller
             $list[$i]['subscription_price_cash'] = $subs[$i]['subscription_price_cash'];
             $list[$i]['subscription_price_point'] = $subs[$i]['subscription_price_point'];
             $list[$i]['subscription_price_type'] = $subs[$i]['subscription_price_type'];
+            $list[$i]['subscription_price_pretty'] = $subs[$i]['subscription_price_pretty'];
             $list[$i]['time_server'] = date('Y-m-d H:i:s');
             array_push($resultData, $subs[$i]);
             array_push($listData, $list[$i]);

@@ -1425,12 +1425,12 @@ class ApiTransaction extends Controller
 
         if ($type == 'trx') {
             if($request->json('admin')){
-                $list = Transaction::where('id_transaction', $id);
+                $list = Transaction::where('transactions.id_transaction', $id);
             }else{
-                $list = Transaction::where([['id_transaction', $id],
+                $list = Transaction::where([['transactions.id_transaction', $id],
                     ['id_user',$request->user()->id]]);
             }
-                $list = $list->with(
+                $list = $list->leftJoin('transaction_pickups','transaction_pickups.id_transaction','=','transactions.id_transaction')->with(
                 // 'user.city.province',
                 'productTransaction.product.product_category',
                 'productTransaction.modifiers',
@@ -1439,6 +1439,7 @@ class ApiTransaction extends Controller
                 'transaction_payment_offlines',
                 'transaction_vouchers.deals_voucher.deal',
                 'promo_campaign_promo_code.promo_campaign',
+                'transaction_pickup_go_send',
                 'outlet.city')->first();
             if(!$list){
                 return MyHelper::checkGet([],'empty');
@@ -1710,6 +1711,69 @@ class ApiTransaction extends Controller
                     $result['transaction_status'] = 5;
                     $result['transaction_status_text'] = 'ORDER PENDING';
                 }
+                if ($list['transaction_pickup_go_send']) {
+                    $result['delivery_info'] = [
+                        'driver' => null,
+                        'delivery_status' => '',
+                        'delivery_address' => $list['transaction_pickup_go_send']['destination_address'],
+                        'booking_status' => 0,
+                        'cancelable' => 1,
+                        'go_send_order_no' => $list['transaction_pickup_go_send']['go_send_order_no']
+                    ];
+                    if($list['transaction_pickup_go_send']['go_send_id']){
+                        $result['delivery_info']['booking_status'] = 1;
+                    }
+                    switch (strtolower($list['transaction_pickup_go_send']['latest_status'])) {
+                        case 'finding driver':
+                            $result['delivery_info']['delivery_status'] = 'Driver belum ditemukan';
+                            break;
+                        case 'enroute pickup':
+                            $result['delivery_info']['delivery_status'] = 'Driver dalam perjalanan menuju Outlet';
+                            $result['delivery_info']['driver'] = [
+                                'driver_id' => $list['transaction_pickup_go_send']['driver_id'],
+                                'driver_name' => $list['transaction_pickup_go_send']['driver_name'],
+                                'driver_phone' => $list['transaction_pickup_go_send']['driver_phone'],
+                                'driver_photo' => $list['transaction_pickup_go_send']['driver_photo'],
+                                'vehicle_number' => $list['transaction_pickup_go_send']['vehicle_number'],
+                            ];
+                            $result['delivery_info']['cancelable'] = 1;
+                            break;
+                        case 'enroute drop':
+                            $result['delivery_info']['delivery_status'] = 'Driver mengantarkan pesanan';
+                            $result['transaction_status_text'] = 'PROSES PENGANTARAN';
+                            $result['delivery_info']['driver'] = [
+                                'driver_id' => $list['transaction_pickup_go_send']['driver_id'],
+                                'driver_name' => $list['transaction_pickup_go_send']['driver_name'],
+                                'driver_phone' => $list['transaction_pickup_go_send']['driver_phone'],
+                                'driver_photo' => $list['transaction_pickup_go_send']['driver_photo'],
+                                'vehicle_number' => $list['transaction_pickup_go_send']['vehicle_number'],
+                            ];
+                            $result['delivery_info']['cancelable'] = 0;
+                            break;
+                        case 'completed':
+                            $result['transaction_status_text'] = 'ORDER SUDAH DIAMBIL';
+                            $result['delivery_info']['delivery_status'] = 'Pesanan sudah diterima Customer';
+                            $result['delivery_info']['driver'] = [
+                                'driver_id' => $list['transaction_pickup_go_send']['driver_id'],
+                                'driver_name' => $list['transaction_pickup_go_send']['driver_name'],
+                                'driver_phone' => $list['transaction_pickup_go_send']['driver_phone'],
+                                'driver_photo' => $list['transaction_pickup_go_send']['driver_photo'],
+                                'vehicle_number' => $list['transaction_pickup_go_send']['vehicle_number'],
+                            ];
+                            $result['delivery_info']['cancelable'] = 0;
+                            break;
+                        case 'cancelled':
+                            $result['delivery_info']['booking_status'] = 0;
+                            $result['transaction_status_text'] = 'Pengantaran dibatalkan';
+                            $result['delivery_info']['cancelable'] = 0;
+                            break;
+                        case 'driver not found':
+                            $result['delivery_info']['booking_status'] = 0;
+                            $result['delivery_info']['delivery_status'] = 'Driver tidak ditemukan';
+                            $result['delivery_info']['cancelable'] = 0;
+                            break;
+                    }
+                }
             }
 
             $discount = 0;
@@ -1741,6 +1805,13 @@ class ApiTransaction extends Controller
                 'desc'      => $quantity . ' items',
                 'amount'    => MyHelper::requestNumber($list['transaction_subtotal'],'_CURRENCY')
             ];
+            if ($list['transaction_shipment_go_send'] > 0) {
+                $result['payment_detail'][] = [
+                    'name'      => 'Delivery',
+                    'desc'      => $list['detail']['pickup_by'],
+                    'amount'    => MyHelper::requestNumber($list['transaction_shipment_go_send'],'_CURRENCY')
+                ];
+            }
 
             $p = 0;
             if (!empty($list['transaction_vouchers'])) {
@@ -1864,8 +1935,8 @@ class ApiTransaction extends Controller
                 case 'Midtrans':
                     $payment = DealsPaymentMidtran::where('id_deals_user', $id)->first();
                     $result['payment'][] = [
-                        'name'      => 'Midtrans',
-                        'amount'    =>  MyHelper::requestNumber($payment->gross_amount,'_CURRENCY')
+                        'name'      => strtoupper(str_replace('_', ' ', $payment->payment_type)).' '.strtoupper($payment->bank),
+                        'amount'    => MyHelper::requestNumber($payment->gross_amount,'_CURRENCY')
                     ];
                     break;
                 case 'OVO':
@@ -1873,6 +1944,13 @@ class ApiTransaction extends Controller
                     $result['payment'][] = [
                         'name'      => 'OVO',
                         'amount'    =>  MyHelper::requestNumber($payment->amount,'_CURRENCY')
+                    ];
+                    break;
+                case 'Ipay88':
+                    $payment = DealsPaymentIpay88::where('id_deals_user', $id)->first();
+                    $result['payment'][] = [
+                        'name'      => $payment->payment_method,
+                        'amount'    =>  MyHelper::requestNumber($payment->amount / 100,'_CURRENCY')
                     ];
                     break;
             }
@@ -2014,6 +2092,13 @@ class ApiTransaction extends Controller
                 $status = 'USED';
             }
 
+            $price = 0;
+            if($data['detail']['voucher_price_cash'] != NULL){
+                $price = MyHelper::requestNumber($data['detail']['voucher_price_cash'],'_CURRENCY');
+            }elseif($data['detail']['voucher_price_point'] != NULL){
+                $price = MyHelper::requestNumber($data['detail']['voucher_price_point'],'_POINT').' points';
+            }
+
             $result = [
                 'type'                          => $data['type'],
                 'id_log_balance'                => $data['id_log_balance'],
@@ -2023,7 +2108,7 @@ class ApiTransaction extends Controller
                 'transaction_receipt_number'    => implode('', [strtotime($data['date']), $data['detail']['id_deals_user']]),
                 'transaction_date'              => date('d M Y H:i', strtotime($data['date'])),
                 'balance'                       => MyHelper::requestNumber($data['balance'], '_POINT'),
-                'transaction_grandtotal'        => MyHelper::requestNumber($data['detail']['voucher_price_cash'], '_CURRENCY'),
+                'transaction_grandtotal'        => $price,
                 'transaction_cashback_earned'   => null,
                 'name'                          => 'Buy Voucher',
                 'title'                         => $data['detail']['dealVoucher']['deal']['deals_title']
