@@ -2276,8 +2276,9 @@ class ApiOutletApp extends Controller
             ->where(function ($q) {
                 $q->where('yearly', '1')->orWhereDate('date_holidays.date', '>=', date('Y-m-d'));
             })
-            ->orderByRaw('CASE WHEN CONCAT(MONTH(date_holidays.`date`),DATE(date_holidays.`date`)) < CONCAT(MONTH(NOW()),DATE(NOW())) THEN 1 ELSE 0 END')
-            ->orderByRaw('CONCAT(MONTH(date_holidays.`date`),DATE(date_holidays.`date`))')
+            ->orderByRaw('CASE WHEN (DATE_FORMAT(date_holidays.`date`,"%m-%d") < DATE_FORMAT(NOW(),"%m-%d")) OR (holidays.yearly = "0" AND YEAR(date_holidays.`date`) > YEAR(NOW())) THEN 1 ELSE 0 END')
+            ->orderByRaw('DATE_FORMAT(date_holidays.`date`,"%m-%d")')
+            ->orderByRaw('YEAR(date_holidays.`date`)')
             ->groupBy('outlet_holidays.id_holiday', 'date_holidays.date');
         if ($request->page) {
             $result = $holiday->paginate()->toArray();
