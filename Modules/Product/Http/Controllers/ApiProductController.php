@@ -184,7 +184,7 @@ class ApiProductController extends Controller
 		return response()->json(MyHelper::checkUpdate($update));
 	}
 
-    public function updatePriceDetail(Request $request) {
+    public function updateProductDetail(Request $request) {
         $post = $request->json()->all();
         $date_time = date('Y-m-d H:i:s');
         foreach ($post['id_product_detail'] as $key => $id_product_detail) {
@@ -222,13 +222,18 @@ class ApiProductController extends Controller
                 $update = ProductDetail::where('id_product_detail','=',$id_product_detail)->update(['product_detail_stock_status' => $post['product_detail_stock_status'][$key],'product_detail_visibility' => $post['product_detail_visibility'][$key]]);
             }
         }
+        return response()->json(MyHelper::checkUpdate($update));
+    }
+
+    public function updatePriceDetail(Request $request) {
+        $post = $request->json()->all();
 
         foreach ($post['id_product_special_price'] as $key => $id_product_special_price) {
             if($id_product_special_price == 0){
                 if(!is_null($post['product_price'][$key])){
                     $update = ProductSpecialPrice::create(['id_product' => $post['id_product'],
                         'id_outlet' => $post['id_outlet'][$key],
-                        'product_special_price' => $post['product_price'][$key]
+                        'product_special_price' => str_replace(".","",$post['product_price'][$key])
                     ]);
                 }
             }
@@ -237,7 +242,7 @@ class ApiProductController extends Controller
                 if(!$pp){continue;}
                 if(!is_null($post['product_price'][$key])) {
                     $update = ProductSpecialPrice::where('id_product_special_price', '=', $id_product_special_price)
-                        ->update(['product_special_price' => $post['product_price'][$key]]);
+                        ->update(['product_special_price' => str_replace(".","",$post['product_price'][$key])]);
                 }
             }
         }
@@ -870,15 +875,41 @@ class ApiProductController extends Controller
                 unset($post['id_outlet']);
             }
 		} else {
-			$product = Product::with(['category', 'discount']);
+		    if(isset($post['product_setting_type']) && $post['product_setting_type'] == 'product_price'){
+                $product = Product::with(['category', 'discount', 'product_special_price', 'global_price']);
+            }elseif(isset($post['product_setting_type']) && $post['product_setting_type'] == 'outlet_product_detail'){
+                $product = Product::with(['category', 'discount', 'product_detail']);
+            }else{
+                $product = Product::with(['category', 'discount']);
+            }
 		}
+
+		if(isset($post['rule'])){
+            foreach ($post['rule'] as $rule){
+                if($rule[0] !== 'all_product'){
+                    if($post['operator'] == 'or'){
+                        if(isset($rule[2])){
+                            $product->orWhere('products.'.$rule[0], $rule[1],$rule[2]);
+                        }else{
+                            $product->orWhere('products.'.$rule[0], $rule[1]);
+                        }
+                    }else{
+                        if(isset($rule[2])){
+                            $product->where('products.'.$rule[0], $rule[1],$rule[2]);
+                        }else{
+                            $product->where('products.'.$rule[0], $rule[1]);
+                        }
+                    }
+                }
+            }
+        }
 
         if (isset($post['id_product'])) {
             $product->with('category')->where('products.id_product', $post['id_product'])->with(['brands']);
         }
 
         if (isset($post['product_code'])) {
-            $product->with(['product_tags','brands','product_promo_categories'=>function($q){$q->select('product_promo_categories.id_product_promo_category');}])->where('products.product_code', $post['product_code']);
+            $product->with(['global_price','product_special_price','product_tags','brands','product_promo_categories'=>function($q){$q->select('product_promo_categories.id_product_promo_category');}])->where('products.product_code', $post['product_code']);
         }
 
         if (isset($post['product_name'])) {
@@ -1098,6 +1129,11 @@ class ApiProductController extends Controller
                     $save                        = ProductPhoto::create($dataPhoto);
 
 
+            }
+
+            if(isset($post['product_global_price'])){
+                ProductGlobalPrice::updateOrCreate(['id_product' => $post['id_product']],
+                    ['product_global_price' => str_replace(".","",$post['product_global_price'])]);
             }
         }
         if($save){
@@ -1354,6 +1390,40 @@ class ApiProductController extends Controller
             $data['id_product'] = $post['id_product'];
         }
 
+        if (isset($post['id_outlet'])) {
+            $data['id_outlet'] = $post['id_outlet'];
+        }
+
+        if($post['id_outlet'] == 0){
+            if (isset($post['product_price'])) {
+                $dataGlobalPrice['product_global_price'] = $post['product_price'];
+            }
+            $save = ProductGlobalPrice::updateOrCreate([
+                'id_product' => $data['id_product']
+            ], $dataGlobalPrice);
+        }else{
+            if (isset($post['product_price'])) {
+                $dataSpecialPrice['product_special_price'] = $post['product_price'];
+            }
+            $save = ProductSpecialPrice::updateOrCreate([
+                'id_product' => $data['id_product'],
+                'id_outlet'  => $data['id_outlet']
+            ], $dataSpecialPrice);
+        }
+
+        return response()->json(MyHelper::checkUpdate($save));
+    }
+
+
+    function productDetail(Request $request)
+    {
+        $data = [];
+        $post = $request->json()->all();
+
+        if (isset($post['id_product'])) {
+            $data['id_product'] = $post['id_product'];
+        }
+
         if (isset($post['product_visibility']) || $post['product_visibility'] == null) {
             if($post['product_visibility'] == null){
                 $data['product_detail_visibility'] = 'Hidden';
@@ -1390,17 +1460,6 @@ class ApiProductController extends Controller
             'id_product' => $data['id_product'],
             'id_outlet'  => $data['id_outlet']
         ], $data);
-
-        if($save){
-            if (isset($post['product_price'])) {
-                $dataSpecialPrice['product_special_price'] = $post['product_price'];
-            }
-
-            $save = ProductSpecialPrice::updateOrCreate([
-                'id_product' => $data['id_product'],
-                'id_outlet'  => $data['id_outlet']
-            ], $dataSpecialPrice);
-        }
 
         return response()->json(MyHelper::checkUpdate($save));
     }

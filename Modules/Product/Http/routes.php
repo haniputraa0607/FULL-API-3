@@ -29,7 +29,8 @@ Route::group(['prefix' => 'api/product','middleware' => ['log_activities','auth:
     Route::any('be/imageOverride', 'ApiProductController@imageOverride');
     Route::post('category/assign', 'ApiProductController@categoryAssign');
     Route::post('price/update', 'ApiProductController@priceUpdate');
-    Route::post('detail/update', 'ApiProductController@updatePriceDetail');
+    Route::post('detail/update', 'ApiProductController@updateProductDetail');
+    Route::post('detail/update/price', 'ApiProductController@updatePriceDetail');
     Route::post('create', 'ApiProductController@create');
     Route::post('update', 'ApiProductController@update');
     Route::post('update/allow_sync', 'ApiProductController@updateAllowSync');
@@ -88,6 +89,7 @@ Route::group(['prefix' => 'api/product','middleware' => ['log_activities','auth:
 
     /* PRICES */
     Route::post('prices', 'ApiProductController@productPrices');
+    Route::post('outlet-detail', 'ApiProductController@productDetail');
 
     /* tag */
     Route::group(['prefix' => 'tag'], function() {

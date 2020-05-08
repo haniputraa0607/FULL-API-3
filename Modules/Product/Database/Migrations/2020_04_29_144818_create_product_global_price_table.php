@@ -16,7 +16,7 @@ class CreateProductGlobalPriceTable extends Migration
         Schema::create('product_global_price', function (Blueprint $table) {
             $table->bigIncrements('id_product_global_price');
             $table->integer('id_product')->unsigned()->index('fk_product_global_price_products');
-            $table->integer('product_global_price')->default(0);
+            $table->decimal('product_global_price',11,2)->unsigned();
             $table->timestamps();
         });
     }
