@@ -2275,9 +2275,18 @@ class ApiOutletApp extends Controller
     }
     public function listHoliday(Request $request) {
         $outlet = $request->user();
-        $holiday = OutletHoliday::distinct()->select('outlet_holidays.id_holiday','holiday_name','yearly','date')->where('id_outlet',$outlet->id_outlet)->join('holidays','holidays.id_holiday','=','outlet_holidays.id_holiday')->join('date_holidays','date_holidays.id_holiday','=','holidays.id_holiday')->where(function($q){
-                $q->where('yearly','1')->orWhereDate('date','>=',date('Y-m-d'));
-            })->orderByRaw('CONCAT(MONTH(`date`),DATE(`date`))');
+        $holiday = OutletHoliday::distinct()
+            ->select(DB::raw('outlet_holidays.id_holiday,date_holidays.id_date_holiday,holiday_name,yearly,date_holidays.date,GROUP_CONCAT(date_edit.date order by date_edit.date) as date_edit'))
+            ->where('id_outlet',$outlet->id_outlet)
+            ->join('holidays','holidays.id_holiday','=','outlet_holidays.id_holiday')
+            ->join('date_holidays','date_holidays.id_holiday','=','holidays.id_holiday')
+            ->join('date_holidays as date_edit','date_edit.id_holiday','=','holidays.id_holiday')
+            ->where(function($q){
+                $q->where('yearly','1')->orWhereDate('date_holidays.date','>=',date('Y-m-d'));
+            })
+            ->orderByRaw('CASE WHEN CONCAT(MONTH(date_holidays.`date`),DATE(date_holidays.`date`)) < CONCAT(MONTH(NOW()),DATE(NOW())) THEN 1 ELSE 0 END')
+            ->orderByRaw('CONCAT(MONTH(date_holidays.`date`),DATE(date_holidays.`date`))')
+            ->groupBy('outlet_holidays.id_holiday','date_holidays.date');
         if($request->page){
             $result = $holiday->paginate()->toArray();
             $toMod = &$result['data'];
@@ -2286,6 +2295,7 @@ class ApiOutletApp extends Controller
             $toMod = &$result;
         }
         foreach ($toMod as &$value) {
+            $value['date_edit'] = array_unique(explode(',',$value['date_edit']));
             $value['date_pretty'] = MyHelper::indonesian_date_v2($value['date'],$value['yearly']?'d F':'d F Y');
         }
         return MyHelper::checkGet($result);
@@ -2368,7 +2378,7 @@ class ApiOutletApp extends Controller
         $request->validate([
             'holiday' => 'required|array',
             'holiday.holiday_name' => 'required|string',
-            'holiday.date_holiday' => 'required|date',
+            'holiday.date_holiday' => 'required|array',
         ]);
         $post = $request->json('holiday');
         $outlet = $request->user();
