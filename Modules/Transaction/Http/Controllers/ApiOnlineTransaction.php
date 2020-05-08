@@ -1468,6 +1468,20 @@ class ApiOnlineTransaction extends Controller
 
                     $insertTransaction = Transaction::with('user.memberships', 'outlet', 'productTransaction')->where('transaction_receipt_number', $insertTransaction['transaction_receipt_number'])->first();
 
+                    if($request->json('id_deals_user') && !$request->json('promo_code'))
+			        {
+			        	$check_trx_voucher = TransactionVoucher::where('id_deals_voucher', $deals['id_deals_voucher'])->where('status','success')->count();
+
+						if(($check_trx_voucher??false) > 1)
+						{
+							DB::rollBack();
+				            return [
+				                'status'=>'fail',
+				                'messages'=>['Voucher is not valid']
+				            ];
+				        }
+			        }
+
                     if ($configAdminOutlet && $configAdminOutlet['is_active'] == '1') {
                         $sendAdmin = app($this->notif)->sendNotif($insertTransaction);
                         if (!$sendAdmin) {
@@ -1593,6 +1607,20 @@ class ApiOnlineTransaction extends Controller
             ];
             app($this->setting_fraud)->fraudCheckReferralUser($data);
             //======= End Check Fraud Referral User =======//
+        }
+
+        if($request->json('id_deals_user') && !$request->json('promo_code'))
+        {
+        	$check_trx_voucher = TransactionVoucher::where('id_deals_voucher', $deals['id_deals_voucher'])->where('status','success')->count();
+
+			if(($check_trx_voucher??false) > 1)
+			{
+				DB::rollBack();
+	            return [
+	                'status'=>'fail',
+	                'messages'=>['Voucher is not valid']
+	            ];
+	        }
         }
 
         DB::commit();

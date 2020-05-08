@@ -186,7 +186,9 @@ class ApiAchievement extends Controller
             $getTrxUser = Transaction::with('outlet.city.province', 'productTransaction')->where(['transactions.id_user' => $idUser, 'transactions.transaction_payment_status' => 'Completed'])->get()->toArray();
             
             if ($achievementPassed == $keyAch) {
-                $totalTrx = 0;
+                $totalTrx       = 0;
+                $totalOutlet    = [];
+                $totalProvince  = [];
                 foreach ($getTrxUser as $user) {
                     $trxNominalStatus = false;
                     if (!is_null($achievement['trx_nominal'])) {
@@ -257,6 +259,87 @@ class ApiAchievement extends Controller
 
                     if ($trxNominalStatus == true && $trxProductStatus == true && $trxTotalProductStatus == true && $trxOutletStatus == true && $trxProvinceStatus == true) {
                         $totalTrx = $totalTrx + 1;
+                    }
+
+                    $totalOutlet[]      = $user['id_outlet'];
+                    $totalProvince[]    = $user['outlet']['city']['province']['id_province'];
+                }
+                
+                if (!is_null($achievement['different_outlet'])) {
+                    if (count(array_unique($totalOutlet)) >= (int) $achievement['different_outlet']) {
+                        AchievementUserLog::create([
+                            'id_achievement_detail'     => $achievement['id_achievement_detail'],
+                            'id_user'                   => $idUser,
+                            'json_rule'                 => json_encode([
+                                'id_product'            => $achievement['id_product'],
+                                'product_total'         => $achievement['product_total'],
+                                'trx_nominal'           => $achievement['trx_nominal'],
+                                'trx_total'             => $achievement['trx_total'],
+                                'id_outlet'             => $achievement['id_outlet'],
+                                'different_outlet'      => $achievement['different_outlet'],
+                                'id_province'           => $achievement['id_province'],
+                                'different_province'    => $achievement['different_province']
+                            ]),
+                            'json_rule_enc'             => MyHelper::encrypt2019(json_encode([
+                                'id_product'            => $achievement['id_product'],
+                                'product_total'         => $achievement['product_total'],
+                                'trx_nominal'           => $achievement['trx_nominal'],
+                                'trx_total'             => $achievement['trx_total'],
+                                'id_outlet'             => $achievement['id_outlet'],
+                                'different_outlet'      => $achievement['different_outlet'],
+                                'id_province'           => $achievement['id_province'],
+                                'different_province'    => $achievement['different_province']
+                            ])),
+                            'date'                      => date('Y-m-d H:i:s')
+                        ]);
+                        $achievementPassed = $achievementPassed + 1;
+                        continue;
+                    } else {
+                        if ($achievementPassed - 1 < 0) {
+                            $achievement = null;
+                        } else {
+                            $achievement = $detailAchievement[$achievementPassed - 1];
+                        }
+                        break;
+                    }
+                }
+
+                if (!is_null($achievement['different_province'])) {
+                    if (count(array_unique($totalProvince)) >= (int) $achievement['different_province']) {
+                        AchievementUserLog::create([
+                            'id_achievement_detail'     => $achievement['id_achievement_detail'],
+                            'id_user'                   => $idUser,
+                            'json_rule'                 => json_encode([
+                                'id_product'            => $achievement['id_product'],
+                                'product_total'         => $achievement['product_total'],
+                                'trx_nominal'           => $achievement['trx_nominal'],
+                                'trx_total'             => $achievement['trx_total'],
+                                'id_outlet'             => $achievement['id_outlet'],
+                                'different_outlet'      => $achievement['different_outlet'],
+                                'id_province'           => $achievement['id_province'],
+                                'different_province'    => $achievement['different_province']
+                            ]),
+                            'json_rule_enc'             => MyHelper::encrypt2019(json_encode([
+                                'id_product'            => $achievement['id_product'],
+                                'product_total'         => $achievement['product_total'],
+                                'trx_nominal'           => $achievement['trx_nominal'],
+                                'trx_total'             => $achievement['trx_total'],
+                                'id_outlet'             => $achievement['id_outlet'],
+                                'different_outlet'      => $achievement['different_outlet'],
+                                'id_province'           => $achievement['id_province'],
+                                'different_province'    => $achievement['different_province']
+                            ])),
+                            'date'                      => date('Y-m-d H:i:s')
+                        ]);
+                        $achievementPassed = $achievementPassed + 1;
+                        continue;
+                    } else {
+                        if ($achievementPassed - 1 < 0) {
+                            $achievement = null;
+                        } else {
+                            $achievement = $detailAchievement[$achievementPassed - 1];
+                        }
+                        break;
                     }
                 }
                 
