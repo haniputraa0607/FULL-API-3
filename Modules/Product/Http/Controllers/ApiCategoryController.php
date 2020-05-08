@@ -385,6 +385,7 @@ class ApiCategoryController extends Controller
                 },
             ])
             ->groupBy('products.id_product', 'product_price', 'product_stock_status')
+            ->orderByRaw('CASE WHEN products.position = 0 THEN 1 ELSE 0 END')
             ->orderBy('products.position')
             ->orderBy('products.id_product')
             ->get();
@@ -423,6 +424,7 @@ class ApiCategoryController extends Controller
                         $promo_category['url_product_category_photo'] = '';
                         $id_product_promo_category = $promo_category['id_product_promo_category'];
                         unset($promo_category['id_product_promo_category']);
+                        $product['position'] = $promo_category['pivot']['position'];
                         unset($promo_category['pivot']);
                         if(!($result[$pivot['id_brand']]['promo'.$id_product_promo_category]??false)){
                             $promo_category['product_category_order'] -= 1000000;
@@ -437,6 +439,11 @@ class ApiCategoryController extends Controller
         foreach ($result as $id_brand => $categories) {
             foreach ($categories as $id_category => $products) {
                 if(!is_numeric($id_category)){
+                    // berarti ini promo category
+                    usort($products['list'],function($a,$b){
+                        return $a['position'] <=> $b['position'];
+                    });
+                    $categories[$id_category] = $products;
                     continue;
                 }
                 $category = ProductCategory::select('id_product_category','product_category_name','product_category_order')->find($id_category);
@@ -446,7 +453,15 @@ class ApiCategoryController extends Controller
                 ];
             }
             usort($categories,function($a,$b){
-                return $a['category']['product_category_order']<=>$b['category']['product_category_order'];
+                $pos_a = $a['category']['product_category_order'];
+                $pos_b = $b['category']['product_category_order'];
+                if(!$pos_a){
+                    $pos_a = 99999;
+                }
+                if(!$pos_b){
+                    $pos_b = 99999;
+                }
+                return $pos_a<=>$pos_b;
             });
             $brand = Brand::select('id_brand','name_brand','code_brand','order_brand')->find($id_brand);
             $result[$id_brand] = [
