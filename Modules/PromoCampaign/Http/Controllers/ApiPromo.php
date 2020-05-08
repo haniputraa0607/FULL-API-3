@@ -28,6 +28,7 @@ use Modules\Deals\Entities\DealsBuyxgetyProductRequirement;
 use Modules\Deals\Entities\DealsBuyxgetyRule;
 
 use Modules\Subscription\Entities\SubscriptionUser;
+use Modules\Subscription\Entities\SubscriptionUserVoucher;
 
 use Modules\ProductVariant\Entities\ProductGroup;
 
@@ -48,6 +49,7 @@ use Modules\PromoCampaign\Http\Requests\Step2PromoCampaignRequest;
 use Modules\PromoCampaign\Http\Requests\DeletePromoCampaignRequest;
 use Modules\PromoCampaign\Http\Requests\ValidateCode;
 use Modules\PromoCampaign\Http\Requests\UpdateCashBackRule;
+use Modules\PromoCampaign\Http\Requests\CheckUsed;
 
 use Modules\PromoCampaign\Lib\PromoCampaignTools;
 use App\Lib\MyHelper;
@@ -70,9 +72,11 @@ class ApiPromo extends Controller
         $this->subscription_use   = "Modules\Subscription\Http\Controllers\ApiSubscriptionUse";
     }
 
-    public function checkUsedPromo(Request $request)
+    public function checkUsedPromo(CheckUsed $request)
     {
     	$user = auth()->user();
+    	$datenow = date("Y-m-d H:i:s");
+    	$remove = 0;
 		DB::beginTransaction();
     	$user_promo = UserPromo::where('id_user','=',$user->id)->first();
     	if (!$user_promo) {
@@ -81,14 +85,48 @@ class ApiPromo extends Controller
     	if ($user_promo->promo_type == 'deals')
     	{
     		$promo = app($this->promo_campaign)->checkVoucher(null, null, 1);
+
+    		if ($promo) {
+    			if ($promo->used_at) {
+    				$remove = 1;
+    			}elseif($promo->voucher_expired_at < $datenow){
+    				$remove = 1;
+    			}
+    		}
+
     	}
     	elseif ( $user_promo->promo_type == 'promo_campaign' )
     	{
     		$promo = app($this->promo_campaign)->checkPromoCode(null, null, 1, $user_promo->id_reference);
+    		if ($promo) 
+			{
+				if ($promo->date_end < $datenow) {
+					$remove = 1;
+				}else{
+					$pct = new PromoCampaignTools;
+					$validate_user=$pct->validateUser($promo->id_promo_campaign, $user->id, $user->phone, null, $request->device_id, $error,$promo->id_promo_campaign_promo_code);
+					if (!$validate_user) {
+						$remove = 1;
+					}
+				}
+			}
     	}
     	elseif ( $user_promo->promo_type == 'subscription' )
     	{
-    		$promo = app($this->subscription_use)->checkSubscription(null, null, 1, 1, 1, $user_promo->id_reference);
+    		$promo = app($this->subscription_use)->checkSubscription(null, null, 1, 1, null, $user_promo->id_reference);
+
+    		if ($promo) {
+    			if ($promo->subscription_expired_at < $datenow) {
+    				$remove = 1;
+    			}elseif ( $promo->subscription_user->subscription->daily_usage_limit ) {
+					$subs_voucher_today = SubscriptionUserVoucher::where('id_subscription_user', '=', $promo->id_subscription_user)
+											->whereDate('used_at', date('Y-m-d'))
+											->count();
+					if ( $subs_voucher_today >= $promo->subscription_user->subscription->daily_usage_limit ) {
+						$remove = 1;
+					}
+		    	}
+    		}
     	}
     	else
     	{
@@ -109,7 +147,8 @@ class ApiPromo extends Controller
     		'description'		=> $desc,
     		'id_deals_user'		=> $promo['id_deals_user']??'',
     		'promo_code'		=> $promo['promo_code']??'',
-    		'id_subscription_user'		=> $promo['id_subscription_user']??''
+    		'id_subscription_user'		=> $promo['id_subscription_user']??'',
+    		'remove'			=> $remove
     	];
     	return response()->json(MyHelper::checkGet($result));
 
