@@ -2309,9 +2309,15 @@ class ApiOutletApp extends Controller
             if (!is_array($post['date_holiday'])) {
                 $post['date_holiday'] = [$post['date_holiday']];
             }
-            $date = $post['date_holiday'];
+            $date = array_unique($post['date_holiday']);
 
             foreach ($date as $value) {
+                if(!$holiday['yearly'] && $value < date('Y-m-d')){
+                    DB::rollBack();
+                    return [
+                        'status'=>'fail',
+                        'messages'=> ['Tanggal yang dimasukkan sudah terlewati']];
+                }
                 $dataDate = [
                     'id_holiday' => $insertHoliday['id_holiday'],
                     'date'       => date('Y-m-d', strtotime($value)),
@@ -2389,9 +2395,15 @@ class ApiOutletApp extends Controller
             if (!is_array($post['date_holiday'])) {
                 $post['date_holiday'] = [$post['date_holiday']];
             }
-            $date = $post['date_holiday'];
+            $date = array_unique($post['date_holiday']);
 
             foreach ($date as $value) {
+                if(!$holiday['yearly'] && $value < date('Y-m-d')){
+                    DB::rollBack();
+                    return [
+                        'status'=>'fail',
+                        'messages'=> ['Tanggal yang dimasukkan sudah terlewati']];
+                }
                 $dataDate = [
                     'id_holiday' => $insertHoliday['id_holiday'],
                     'date'       => date('Y-m-d', strtotime($value)),
