@@ -2295,7 +2295,7 @@ class ApiOutletApp extends Controller
             $toMod = &$result;
         }
         foreach ($toMod as &$value) {
-            $value['date_edit'] = array_unique(explode(',',$value['date_edit']));
+            $value['date_edit'] = array_values(array_unique(explode(',',$value['date_edit'])));
             $value['date_pretty'] = MyHelper::indonesian_date_v2($value['date'],$value['yearly']?'d F':'d F Y');
         }
         return MyHelper::checkGet($result);
