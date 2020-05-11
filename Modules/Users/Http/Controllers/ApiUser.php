@@ -2943,4 +2943,95 @@ class ApiUser extends Controller
             ]);
         }
     }
+
+    function sendVerifyEmail(Request $request){
+        $post = $request->json()->all();
+
+        if(isset($post['email']) && !empty($post['email']) && !empty($request->user())){
+            $id = $request->user()->id;
+            $user = User::where('id', $id)->first();
+            if (empty($user)) {
+                return response()->json([
+                    'status'    => 'fail',
+                    'messages'  => ['User Not Found']
+                ]);
+            }
+
+            if($post['email'] != $user['email']){
+                return response()->json([
+                    'status'    => 'fail',
+                    'messages'  => ['Email does not match']
+                ]);
+            }
+
+            $phone = $user['phone'];
+            $encrypt = MyHelper::encrypt2019($phone.'|'.$post['email']);
+            $autocrm = app($this->autocrm)->SendAutoCRM('Email Verify', $phone,
+                ['button_verify' => '<a href="'.env('URL_EMAIL_VERIFY').'/email/verify/'.$encrypt.'" style="background-color: #3598dc; border: none; color: white;padding: 15px 32px;text-align: center;text-decoration: none;display: inline-block;margin: 4px 2px;cursor: pointer;font-family: Ubuntu-Bold">Verify Email</a>'
+                ]);
+
+            if($autocrm){
+                return response()->json([
+                    'status'    => 'success',
+                    'messages'  => ['Verification sent to your email']
+                ]);
+            }else{
+                return response()->json([
+                    'status'    => 'fail',
+                    'messages'  => ['Failed to send']
+                ]);
+            }
+
+        }else{
+            return response()->json([
+                'status' => 'fail',
+                'messages' => ['Data incompleted']
+            ]);
+        }
+    }
+
+    function verifyEmail(Request $request, $slug){
+        $setting = Setting::where('key', 'LIKE', 'email_copyright')->first();
+
+        try{
+            $decrypt = MyHelper::decrypt2019($slug);
+
+            if(!empty($decrypt)){
+                $explode = explode("|",$decrypt);
+                if(!empty($explode)){
+                    $phone = $explode[0];
+                    $email = $explode[1];
+
+                    $user = User::where('phone', $phone)->where('email', $email)->first();
+                    if(!empty($user)){
+                        if($user['email_verified'] == 1){
+                            $data = ['status_verify' => 'already', 'message' => 'This page is expired, your email is already verified', 'settings' => $setting];
+                            return view('users::verify_email', $data);
+                        }else{
+                            $udpate = User::where('phone', $phone)->where('email', $email)->update(['email_verified' => 1]);
+                            if($udpate){
+                                $data = ['status_verify' => 'success', 'message' => 'Successfully verified your email ', 'settings' => $setting];
+                                return view('users::verify_email', $data);
+                            }else{
+                                $data = ['status_verify' => 'fail', 'message' => 'Failed verify your email, something went wrong', 'settings' => $setting];
+                                return view('users::verify_email', $data);
+                            }
+                        }
+                    }else{
+                        $data = ['status_verify' => 'fail', 'message' => 'Failed verify your email, user not found', 'settings' => $setting];
+                        return view('users::verify_email', $data);
+                    }
+                }else{
+                    $data = ['status_verify' => 'fail', 'message' => 'Failed to verify your email, something went wrong', 'settings' => $setting];
+                    return view('users::verify_email', $data);
+                }
+            }else{
+                $data = ['status_verify' => 'fail', 'message' => 'Failed to verify your email, something went wrong', 'settings' => $setting];
+                return view('users::verify_email', $data);
+            }
+        }catch (\Exception $e){
+            $data = ['status_verify' => 'fail', 'message' => 'Failed to verify your email, something went wrong', 'settings' => $setting];
+            return view('users::verify_email', $data);
+        }
+    }
 }

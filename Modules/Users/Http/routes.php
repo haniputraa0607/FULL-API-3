@@ -1,5 +1,10 @@
 <?php
 
+Route::group(['namespace' => 'Modules\Users\Http\Controllers'], function()
+{
+    Route::any('email/verify/{slug}', 'ApiUser@verifyEmail');
+});
+
 Route::group(['prefix' => 'api', 'middleware' => ['log_activities', 'user_agent']], function(){
     Route::group(['middleware' => ['auth_client','log_activities', 'user_agent', 'scopes:apps'], 'namespace' => 'Modules\Users\Http\Controllers'], function()
     {
@@ -29,6 +34,11 @@ Route::group(['prefix' => 'api', 'middleware' => ['log_activities', 'user_agent'
         Route::any('/featured-deals','ApiHome@featuredDeals');
         Route::any('/featured-subscription','ApiHome@featuredSubscription');
         Route::post('refresh-point-balance', 'ApiHome@refreshPointBalance');
+    });
+
+    Route::group(['middleware' => ['auth:api', 'scopes:apps'], 'prefix' => 'users', 'namespace' => 'Modules\Users\Http\Controllers'], function()
+    {
+        Route::any('send/email/verify', 'ApiUser@sendVerifyEmail');
     });
 
     Route::group(['prefix' => 'home', 'namespace' => 'Modules\Users\Http\Controllers'], function()
