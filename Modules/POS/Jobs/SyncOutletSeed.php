@@ -39,13 +39,15 @@ class SyncOutletSeed implements ShouldQueue
 
         foreach ($this->data as $key => $value) {
             $franchise = ($value['status_franchise'] == 0) ? 'Non Franchise' : 'Franchise' ;
+            $explodeName = explode(' - ', $value['name']);
 
             $id_outlet = Outlet::updateOrCreate([
                 'id_outlet_seed'            => $value['id']
             ], [
                 'id_outlet_seed'            => $value['id'],
-                'outlet_code'               => ($value['id'] == 0) ? 'JJ' . $value['id'] : explode(' - ', $value['name'])[0],
-                'outlet_name'               => ($value['id'] == 0) ? $value['name'] : str_replace(explode(' - ', $value['name'])[0].' - ', '', $value['name']),
+                'outlet_code'               => ($value['id'] == 0) ? 'JJ' . $value['id'] : $explodeName[0],
+                // 'outlet_name'               => ($value['id'] == 0) ? $value['name'] : str_replace($explodeName[0].' - ', '', $value['name']),
+                'outlet_name'               => ($value['id'] == 0) ? $value['name'] : 'Jilid '.ltrim(substr($explodeName[0],4), '0').' '.end($explodeName),
                 'outlet_address'            => $value['address'],
                 'outlet_longitude'          => $value['long'],
                 'outlet_latitude'           => $value['lang'],
