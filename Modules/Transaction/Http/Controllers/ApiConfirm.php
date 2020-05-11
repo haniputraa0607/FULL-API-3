@@ -641,8 +641,8 @@ class ApiConfirm extends Controller
                                         }
                                     }
 
-                                    // apply cashback to referrer
-                                    \Modules\PromoCampaign\Lib\PromoCampaignTools::applyReferrerCashback($dataTrx);
+                                    // // apply cashback to referrer
+                                    // \Modules\PromoCampaign\Lib\PromoCampaignTools::applyReferrerCashback($dataTrx);
 
                                     $mid = [
                                         'order_id' => $dataTrx['transaction_receipt_number'],
