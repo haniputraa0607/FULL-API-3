@@ -27,7 +27,7 @@ class ApiCustomPageController extends Controller
     public function index()
     {
         $customPage = CustomPage::orderBy('custom_page_order')->get()->toArray();
-
+        $nullOrZero = [];
         foreach ($customPage as $key => $value) {
             if ($value['custom_page_order'] == null || $value['custom_page_order'] == 0) {
                 $nullOrZero[] = $customPage[$key];
@@ -335,7 +335,7 @@ class ApiCustomPageController extends Controller
     public function listCustomPage()
     {
         $customPage = CustomPage::orderBy('custom_page_order')->get()->toArray();
-
+        $nullOrZero = [];
         foreach ($customPage as $key => $value) {
             if ($value['custom_page_order'] == null || $value['custom_page_order'] == 0) {
                 $nullOrZero[] = $customPage[$key];
@@ -374,13 +374,13 @@ class ApiCustomPageController extends Controller
         }
 
         $customPage = CustomPage::with(['custom_page_image_header', 'custom_page_outlet.outlet', 'custom_page_product.product'])->where('id_custom_page', $id_custom_page)->first();
-        
+
         if ($customPage) {
             $data['result'] = $customPage;
-            
+
             $data['result']['custom_page_button_form_text_button'] = json_decode($customPage['custom_page_button_form_text'], true)['button'];
             $data['result']['custom_page_button_form_text_value'] = json_decode($customPage['custom_page_button_form_text'], true)['value'];
-            
+
             return view('custompage::webview.information', $data);
         } else {
             return view('custompage::webview.information', ['result' => null]);
