@@ -466,7 +466,7 @@ class ApiCategoryController extends Controller
                 if(!$pos_b){
                     $pos_b = 99999;
                 }
-                return $pos_a<=>$pos_b;
+                return $pos_a<=>$pos_b?:$a['category']['id_product_category']<=>$b['category']['id_product_category'];
             });
             $brand = Brand::select('id_brand','name_brand','code_brand','order_brand')->find($id_brand);
             $result[$id_brand] = [
