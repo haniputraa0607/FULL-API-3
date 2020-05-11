@@ -2154,19 +2154,20 @@ class ApiPromoCampaign extends Controller
     	if (!empty($id_deals_user))
     	{
     		$deals = $deals->where('id_deals_user', '=', $id_deals_user)->where('id_user', '=', auth()->user()->id);
+	    	$deals = $deals->whereIn('paid_status', ['Free', 'Completed'])
+	        			->whereNull('used_at')
+	        			->where('voucher_expired_at','>=',date('Y-m-d H:i:s'))
+	        			->where(function($q) {
+	        				$q->where('voucher_active_at','<=',date('Y-m-d H:i:s'))
+	        					->orWhereNull('voucher_active_at');
+	        			});
     	}
     	else
     	{
     		$deals = $deals->where('id_user', '=', auth()->user()->id)->where('is_used','=',1);
+    		$deals = $deals->with(['dealVoucher.deal']);
     	}
 
-    	$deals = $deals->whereIn('paid_status', ['Free', 'Completed'])
-        			->whereNull('used_at')
-        			->where('voucher_expired_at','>=',date('Y-m-d H:i:s'))
-        			->where(function($q) {
-        				$q->where('voucher_active_at','<=',date('Y-m-d H:i:s'))
-        					->orWhereNull('voucher_active_at');
-        			});
 
 
 	    if (!empty($outlet)) {
