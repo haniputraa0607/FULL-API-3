@@ -1719,7 +1719,8 @@ class ApiTransaction extends Controller
                         'delivery_address' => $list['transaction_pickup_go_send']['destination_address'],
                         'booking_status' => 0,
                         'cancelable' => 1,
-                        'go_send_order_no' => $list['transaction_pickup_go_send']['go_send_order_no']
+                        'go_send_order_no' => $list['transaction_pickup_go_send']['go_send_order_no'],
+                        'live_tracking_url' => $list['transaction_pickup_go_send']['live_tracking_url']
                     ];
                     if($list['transaction_pickup_go_send']['go_send_id']){
                         $result['delivery_info']['booking_status'] = 1;

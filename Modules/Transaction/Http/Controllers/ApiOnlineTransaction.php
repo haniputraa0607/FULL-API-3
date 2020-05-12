@@ -505,6 +505,19 @@ class ApiOnlineTransaction extends Controller
 
         $post['discount'] = -$post['discount'];
 
+        if (isset($post['payment_type']) && $post['payment_type'] == 'Balance') {
+            $post['cashback'] = 0;
+            $post['point']    = 0;
+        }
+
+        if ($request->json('promo_code') || $request->json('id_deals_user')) {
+        	$check = $this->checkPromoGetPoint($promo_source);
+        	if ( $check == 0 ) {
+        		$post['cashback'] = 0;
+            	$post['point']    = 0;
+        	}
+        }
+
         // apply cashback
         if ($use_referral){
             $referral_rule = PromoCampaignReferral::where('id_promo_campaign',$code->id_promo_campaign)->first();
@@ -527,19 +540,6 @@ class ApiOnlineTransaction extends Controller
                 }
             }
             $post['cashback'] = $referred_cashback;
-        }
-
-        if (isset($post['payment_type']) && $post['payment_type'] == 'Balance') {
-            $post['cashback'] = 0;
-            $post['point']    = 0;
-        }
-
-        if ($request->json('promo_code') || $request->json('id_deals_user')) {
-        	$check = $this->checkPromoGetPoint($promo_source);
-        	if ( $check == 0 ) {
-        		$post['cashback'] = 0;
-            	$post['point']    = 0;
-        	}
         }
 
         $detailPayment = [
@@ -1539,7 +1539,7 @@ class ApiOnlineTransaction extends Controller
                         $savelocation = $this->saveLocation($post['latitude'], $post['longitude'], $insertTransaction['id_user'], $insertTransaction['id_transaction'], $insertTransaction['id_outlet']);
                      }
 
-                    PromoCampaignTools::applyReferrerCashback($insertTransaction);
+                    // PromoCampaignTools::applyReferrerCashback($insertTransaction);
 
                     DB::commit();
                     return response()->json([

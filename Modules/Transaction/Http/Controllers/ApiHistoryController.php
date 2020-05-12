@@ -995,6 +995,14 @@ class ApiHistoryController extends Controller
                 $dataList['amount'] = number_format($value['balance'], 0, ',', '.');
 
                 $listBalance[$key] = $dataList;
+            } elseif($value['source'] == 'Referral Bonus') {
+                $dataList['type']   = 'profile';
+                $dataList['id']      = $value['id_log_balance'];
+                $dataList['date']    = date('d M Y H:i', strtotime($value['created_at']));
+                $dataList['outlet'] = 'Referral Bonus';
+                $dataList['amount'] = MyHelper::requestNumber($value['balance'], '_POINT');
+
+                $listBalance[$key] = $dataList;
             } else {
                 $dataList['type']   = 'profile';
                 $dataList['id']      = $value['id_log_balance'];
