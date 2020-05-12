@@ -30,6 +30,7 @@ use App\Http\Models\AutocrmEmailLog;
 use App\Http\Models\Autocrm;
 use App\Http\Models\Setting;
 use App\Http\Models\LogPoint;
+use Modules\IPay88\Entities\TransactionPaymentIpay88;
 
 class ApiCronTrxController extends Controller
 {
@@ -341,5 +342,23 @@ class ApiCronTrxController extends Controller
 
         return response()->json(['status' => 'success']);
 
+    }
+
+    public function cancelTransactionIPay()
+    {
+        // 15 minutes before
+        $max_time = date('Y-m-d H:i:s',time()-900);
+        $trxs = Transaction::select('id_transaction')->where([
+            'trasaction_payment_type' => 'Ipay88',
+            'transaction_payment_status' => 'Pending'
+        ])->where('transaction_date','<',$max_time)->take(50)->pluck('id_transaction');
+        foreach ($trxs as $id_trx) {
+            $trx_ipay = TransactionPaymentIpay88::where('id_transaction',$id_trx)->first();
+            $update = \Modules\IPay88\Lib\IPay88::create()->update($trx_ipay?:$id_trx,[
+                'type' =>'trx',
+                'Status' => '0',
+                'requery_response' => 'Cancelled by cron'
+            ],false,false);
+        }
     }
 }

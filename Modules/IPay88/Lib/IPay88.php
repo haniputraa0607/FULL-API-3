@@ -254,7 +254,7 @@ class IPay88
 	}
 	/**
 	 * Update transaction ipay table
-	 * @param  Model $model     [Transaction/Deals]Ipay88 Object
+	 * @param  Model $model     [Transaction/Deals]Ipay88 Object or Integer => id_transaction
 	 * @param  Array $data 		update data (request data from ipay)
 	 * @param  Boolean $response_only  Save response requery only, ignore other
 	 * @param  Boolean $saveToLog  Save update data to log or not
@@ -266,10 +266,20 @@ class IPay88
 		DB::beginTransaction();
         switch ($data['type']) {
             case 'trx':
-            	$trx = Transaction::with('user','outlet')->where('id_transaction',$model->id_transaction)->first();
+            	$amount = 0;
+            	if(is_numeric($model)){
+	            	$id_transaction = $model;
+            	} else {
+            		$id_transaction = $model->id_transaction;
+            		$amount = $model->amount / 100;
+            	}
+            	$trx = Transaction::with('user','outlet')->where('id_transaction',$id_transaction)->first();
+            	if (!$amount) {
+            		$amount = $trx->transaction_grandtotal;
+            	}
                 $mid = [
                     'order_id' => $trx['transaction_receipt_number'],
-                    'gross_amount' => $model->amount
+                    'gross_amount' => $amount
                 ];
             	switch ($data['Status']) {
             		case '1':
@@ -284,7 +294,7 @@ class IPay88
 
 	                    //inset pickup_at when pickup_type = right now
 						if($trx['trasaction_type'] == 'Pickup Order'){
-							$detailTrx = TransactionPickup::where('id_transaction', $model->id_transaction)->first();
+							$detailTrx = TransactionPickup::where('id_transaction', $id_transaction)->first();
 							if($detailTrx['pickup_type'] == 'right now'){
 								$settingTime = Setting::where('key', 'processing_time')->first();
 								if($settingTime && isset($settingTime['value'])){
@@ -509,6 +519,10 @@ class IPay88
                 # code...
                 break;
         }
+    	if(is_numeric($model)){
+        	DB::commit();
+        	return 1;
+    	}
         if(!$saveToLog){
 			$up = $model->update([
 				'status' => $data['Status'],
