@@ -19,7 +19,9 @@ class AchievementGroup extends Model
         'publish_start',
         'publish_end',
         'description',
-        'order_by'
+        'order_by',
+        'status',
+        'is_calculate'
     ];
 
     public function getIdAchievementGroupAttribute($value) {
