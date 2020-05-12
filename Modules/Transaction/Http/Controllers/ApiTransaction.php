@@ -33,7 +33,7 @@ use App\Http\Models\TransactionPaymentMidtran;
 use App\Http\Models\DealsUser;
 use App\Http\Models\DealsPaymentMidtran;
 use App\Http\Models\DealsPaymentManual;
-use App\Http\Models\DealsPaymentIpay88;
+use Modules\IPay88\Entities\DealsPaymentIpay88;
 use App\Http\Models\UserTrxProduct;
 use Modules\Brand\Entities\Brand;
 
