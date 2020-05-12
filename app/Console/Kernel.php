@@ -99,6 +99,12 @@ class Kernel extends ConsoleKernel
          * To process diburse
          */
         $schedule->call('Modules\Disburse\Http\Controllers\ApiIrisController@disburse')->dailyAt('00:30');
+
+        /**
+         * To cancel payment ipay
+         * run every 15 minute
+         */
+        $schedule->call('Modules\Transaction\Http\Controllers\ApiCronTrxController@cancelTransactionIPay')->cron('*/15 * * * *');
     }
 
     /**
