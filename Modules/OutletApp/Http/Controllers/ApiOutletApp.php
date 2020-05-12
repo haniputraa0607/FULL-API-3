@@ -1653,14 +1653,15 @@ class ApiOutletApp extends Controller
         ];
         GoSend::saveUpdate($dataSave);
         if ($updateGoSend) {
-            $updateGoSend->go_send_id       = $booking['id'];
-            $updateGoSend->go_send_order_no = $booking['orderNo'];
-            $updateGoSend->latest_status    = $status['status'] ?? null;
-            $updateGoSend->driver_id        = $status['driverId'] ?? null;
-            $updateGoSend->driver_name      = $status['driverName'] ?? null;
-            $updateGoSend->driver_phone     = $status['driverPhone'] ?? null;
-            $updateGoSend->driver_photo     = $status['driverPhoto'] ?? null;
-            $updateGoSend->vehicle_number   = $status['vehicleNumber'] ?? null;
+            $updateGoSend->go_send_id        = $booking['id'];
+            $updateGoSend->go_send_order_no  = $booking['orderNo'];
+            $updateGoSend->latest_status     = $status['status'] ?? null;
+            $updateGoSend->driver_id         = $status['driverId'] ?? null;
+            $updateGoSend->driver_name       = $status['driverName'] ?? null;
+            $updateGoSend->driver_phone      = $status['driverPhone'] ?? null;
+            $updateGoSend->driver_photo      = $status['driverPhoto'] ?? null;
+            $updateGoSend->vehicle_number    = $status['vehicleNumber'] ?? null;
+            $updateGoSend->live_tracking_url = $status['liveTrackingUrl'] ?? null;
             $updateGoSend->save();
 
             if (!$updateGoSend) {
@@ -1685,6 +1686,9 @@ class ApiOutletApp extends Controller
                 $status = GoSend::getStatus($trx['transaction_receipt_number']);
                 if ($status['status'] ?? false) {
                     $toUpdate = ['latest_status' => $status['status']];
+                    if ($status['liveTrackingUrl'] ?? false) {
+                        $toUpdate['live_tracking_url'] = $status['liveTrackingUrl'];
+                    }
                     if ($status['driverId'] ?? false) {
                         $toUpdate['driver_id'] = $status['driverId'];
                     }
@@ -2049,7 +2053,7 @@ class ApiOutletApp extends Controller
                     'delivery_address' => $list['transaction_pickup_go_send']['destination_address'],
                     'booking_status'   => 0,
                     'cancelable'       => 1,
-                    'go_send_order_no' => $list['transaction_pickup_go_send']['go_send_order_no']
+                    'go_send_order_no' => $list['transaction_pickup_go_send']['go_send_order_no'],
                 ];
                 if ($list['transaction_pickup_go_send']['go_send_id']) {
                     $result['delivery_info']['booking_status'] = 1;
@@ -2313,11 +2317,11 @@ class ApiOutletApp extends Controller
             $date = array_unique($post['date_holiday']);
 
             foreach ($date as $value) {
-                if(!$holiday['yearly'] && $value < date('Y-m-d')){
+                if (!$holiday['yearly'] && $value < date('Y-m-d')) {
                     DB::rollBack();
                     return [
-                        'status'=>'fail',
-                        'messages'=> ['Tanggal yang dimasukkan sudah terlewati']];
+                        'status'   => 'fail',
+                        'messages' => ['Tanggal yang dimasukkan sudah terlewati']];
                 }
                 $dataDate = [
                     'id_holiday' => $insertHoliday['id_holiday'],
@@ -2399,11 +2403,11 @@ class ApiOutletApp extends Controller
             $date = array_unique($post['date_holiday']);
 
             foreach ($date as $value) {
-                if(!$holiday['yearly'] && $value < date('Y-m-d')){
+                if (!$holiday['yearly'] && $value < date('Y-m-d')) {
                     DB::rollBack();
                     return [
-                        'status'=>'fail',
-                        'messages'=> ['Tanggal yang dimasukkan sudah terlewati']];
+                        'status'   => 'fail',
+                        'messages' => ['Tanggal yang dimasukkan sudah terlewati']];
                 }
                 $dataDate = [
                     'id_holiday' => $insertHoliday['id_holiday'],
