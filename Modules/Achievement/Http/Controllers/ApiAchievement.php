@@ -267,7 +267,10 @@ class ApiAchievement extends Controller
 
                 if (!is_null($achievement['different_outlet'])) {
                     if (count(array_unique($totalOutlet)) >= (int) $achievement['different_outlet']) {
-                        AchievementUserLog::create([
+                        AchievementUserLog::updateOrCreate([
+                            'id_achievement_detail'     => $achievement['id_achievement_detail'],
+                            'id_user'                   => $idUser,
+                        ], [
                             'id_achievement_detail'     => $achievement['id_achievement_detail'],
                             'id_user'                   => $idUser,
                             'json_rule'                 => json_encode([
@@ -306,7 +309,10 @@ class ApiAchievement extends Controller
 
                 if (!is_null($achievement['different_province'])) {
                     if (count(array_unique($totalProvince)) >= (int) $achievement['different_province']) {
-                        AchievementUserLog::create([
+                        AchievementUserLog::updateOrCreate([
+                            'id_achievement_detail'     => $achievement['id_achievement_detail'],
+                            'id_user'                   => $idUser,
+                        ], [
                             'id_achievement_detail'     => $achievement['id_achievement_detail'],
                             'id_user'                   => $idUser,
                             'json_rule'                 => json_encode([
@@ -345,7 +351,10 @@ class ApiAchievement extends Controller
 
                 if (!is_null($achievement['trx_total'])) {
                     if ($totalTrx >= (int) $achievement['trx_total']) {
-                        AchievementUserLog::create([
+                        AchievementUserLog::updateOrCreate([
+                            'id_achievement_detail'     => $achievement['id_achievement_detail'],
+                            'id_user'                   => $idUser,
+                        ], [
                             'id_achievement_detail'     => $achievement['id_achievement_detail'],
                             'id_user'                   => $idUser,
                             'json_rule'                 => json_encode([
@@ -390,7 +399,10 @@ class ApiAchievement extends Controller
         }
 
         if ($achievement != null) {
-            AchievementUser::create([
+            AchievementUser::updateOrCreate([
+                'id_achievement_detail'     => $achievement['id_achievement_detail'],
+                'id_user'                   => $idUser,
+            ], [
                 'id_achievement_detail'     => $achievement['id_achievement_detail'],
                 'id_user'                   => $idUser,
                 'json_rule'                 => json_encode([
