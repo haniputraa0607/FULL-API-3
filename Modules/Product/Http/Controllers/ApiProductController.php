@@ -1612,7 +1612,7 @@ class ApiProductController extends Controller
             }
         }
 
-        if(!(empty($product['product_detail']['product_detail_visibility'])&&$product['product_detail_visibility']=='Visible') && ($product['product_detail'][0]['product_detail_visibility']??false)!='Visible'){
+        if(isset($product['product_detail']['product_detail_visibility']) && !(empty($product['product_detail']['product_detail_visibility'])&&$product['product_detail_visibility']=='Visible') && ($product['product_detail'][0]['product_detail_visibility']??false)!='Visible'){
             return MyHelper::checkGet([]);
         }
         unset($product['product_detail']);
@@ -1651,15 +1651,28 @@ class ApiProductController extends Controller
                             ->where('product_modifiers.product_modifier_visibility', 'Visible');
                         });
             });
+
+        $product['product_price'] = 0;
         if($outlet->outlet_different_price){
             $product_modifiers->join('product_modifier_prices',function($join) use ($post){
                 $join->on('product_modifier_prices.id_product_modifier','=','product_modifiers.id_product_modifier');
                 $join->where('product_modifier_prices.id_outlet',$post['id_outlet']);
             });
+
+            $productSpecialPrice = ProductSpecialPrice::where('id_product',$post['id_product'])
+                ->where('id_outlet',$post['id_outlet'])->first();
+            if($productSpecialPrice){
+                $product['product_price'] = $productSpecialPrice['product_special_price'];
+            }
         }else{
             $product_modifiers->join('product_modifier_global_prices',function($join) use ($post){
                 $join->on('product_modifier_global_prices.id_product_modifier','=','product_modifiers.id_product_modifier');
             });
+
+            $productGlobalPrice = ProductGlobalPrice::where('id_product',$post['id_product'])->first();
+            if($productGlobalPrice){
+                $product['product_price'] = $productGlobalPrice['product_global_price'];
+            }
         }
         $product['modifiers'] = $product_modifiers->get()->toArray();
         foreach ($product['modifiers'] as $key => &$modifier) {
@@ -1674,6 +1687,7 @@ class ApiProductController extends Controller
                     ]
                 );
         $product['outlet'] = Outlet::select('id_outlet','outlet_code','outlet_address','outlet_name')->find($post['id_outlet']);
+
         return MyHelper::checkGet($product);
     }
 
