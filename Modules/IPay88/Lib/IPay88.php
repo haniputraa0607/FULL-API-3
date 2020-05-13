@@ -154,14 +154,15 @@ class IPay88
 			->join('subscription_payment_ipay88s','subscription_payment_ipay88s.id_subscription_user','=','subscription_users.id_subscription_user')
 			->join('subscriptions','subscriptions.id_subscription','=','subscription_payment_ipay88s.id_subscription')
 			->first();
-			if(!$deals_user) return false;
+        	$payment_ipay = SubscriptionPaymentIpay88::where('id_subscription_user',$deals_user->id_subscription_user)->first();
+			if(!($deals_user && $payment_ipay)) return false;
 			$data += [
 				'RefNo' => $deals_user->order_id,
 				'Amount' => $deals_user->amount,
 				'ProdDesc' => 'Voucher '.$deals_user->deals_title,
 				'UserName' => $deals_user->user->name,
 				'UserEmail' => $deals_user->user->email,
-				'UserContact' => $deals_user->user->phone,
+				'UserContact' => $payment_ipay->user_contact?:$deals_user->user->phone,
 				'Remark' => '',
 				'ResponseURL' => url('api/ipay88/detail/subscription'),
 				'BackendURL' => url('api/ipay88/notif/subscription'),
