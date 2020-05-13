@@ -299,6 +299,19 @@ class ApiDeals extends Controller
 
         if ($save) {
             DB::commit();
+            $dt = '';
+            switch ($save->deals_type){
+                case 'Deals':
+                    $dt = 'Deals';
+                    break;
+                case 'Hidden':
+                    $dt = 'Inject Voucher';
+                    break;
+                case 'WelcomeVoucher':
+                    $dt = 'Welcome Voucher';
+                    break;
+            }
+            $send = app($this->autocrm)->SendAutoCRM('Create '.$dt, $request->user()->phone, $request->json()->all(),null,true);
         } else {
             DB::rollback();
         }
@@ -1016,6 +1029,19 @@ class ApiDeals extends Controller
 
         if ($save) {
             DB::commit();
+            $dt = '';
+            switch (strtolower($request->json('deals_type'))){
+                case 'deals':
+                    $dt = 'Deals';
+                    break;
+                case 'hidden':
+                    $dt = 'Inject Voucher';
+                    break;
+                case 'welcomevoucher':
+                    $dt = 'Welcome Voucher';
+                    break;
+            }
+            $send = app($this->autocrm)->SendAutoCRM('Update '.$dt, $request->user()->phone, $request->json()->all(),null,true);
 	        return response()->json(MyHelper::checkUpdate($save));
         } else {
             DB::rollback();
