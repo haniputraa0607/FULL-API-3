@@ -450,8 +450,9 @@ class ApiSubscriptionClaimPay extends Controller
             'id_subscription_user' => $voucher->id_subscription_user,
             'amount'               => $voucher->subscription_price_cash*100,
             'order_id'             => $voucher->subscription_user_receipt_number,
-            'payment_id'           => $ipay->payment_id[$payment_id]??'', // ex. 1,2,3,7,19
-            'payment_method'       => str_replace('_', ' ', $payment_id) // ex CREDIT CARD, BRI VA, MANDIRI ATM
+            'payment_id'           => $ipay->getPaymentId($payment_id??''), // ex. 1,2,3,7,19
+            'payment_method'       => $ipay->getPaymentMethod($payment_id), // ex CREDIT CARD, BRI VA, MANDIRI ATM
+            'user_contact'         => $post['phone']??null
         ];
         if (is_null($grossAmount)) {
             if (!$this->updateInfoDealUsers($voucher->id_subscription_user, ['payment_method' => 'Ipay88'])) {

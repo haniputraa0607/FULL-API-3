@@ -497,12 +497,13 @@ class ApiDealsClaimPay extends Controller
         $payment_id = $post['payment_id']??''; // ex. CREDIT_CARD, OVO, MANDIRI_ATM
         // simpan dulu di deals payment ipay88
         $data = [
-            'id_deals'      => $deals->id_deals,
-            'id_deals_user' => $voucher->id_deals_user,
-            'amount'        => $voucher->voucher_price_cash*100,
-            'order_id'      => time().sprintf("%05d", $voucher->id_deals_user).'-'.$voucher->id_deals_user,
-            'payment_id'    => $ipay->payment_id[$payment_id]??'', // ex. 1,2,3,7,19
-            'payment_method'=> str_replace('_', ' ', $payment_id) // ex CREDIT CARD, BRI VA, MANDIRI ATM
+            'id_deals'       => $deals->id_deals,
+            'id_deals_user'  => $voucher->id_deals_user,
+            'amount'         => $voucher->voucher_price_cash*100,
+            'order_id'       => time().sprintf("%05d", $voucher->id_deals_user).'-'.$voucher->id_deals_user,
+            'payment_id'     => $ipay->getPaymentId($payment_id??''), // ex. 1,2,3,7,19
+            'payment_method' => $ipay->getPaymentMethod($payment_id), // ex CREDIT CARD, BRI VA, MANDIRI ATM
+            'user_contact'   => $post['phone']??null
         ];
         if (is_null($grossAmount)) {
             if (!$this->updateInfoDealUsers($voucher->id_deals_user, ['payment_method' => 'Ipay88'])) {

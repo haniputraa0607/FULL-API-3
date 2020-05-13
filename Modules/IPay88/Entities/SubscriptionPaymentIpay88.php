@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class SubscriptionPaymentIpay88 extends Model
 {
-    public $primaryKey = 'id_subscription_payment_ipay88';
+    public $primaryKey  = 'id_subscription_payment_ipay88';
     protected $fillable = [
         'id_subscription',
         'id_subscription_user',
@@ -26,6 +26,7 @@ class SubscriptionPaymentIpay88 extends Model
         'err_desc',
         'signature',
         'xfield1',
-        'requery_response'
+        'requery_response',
+        'user_contact',
     ];
 }
