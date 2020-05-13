@@ -108,14 +108,15 @@ class IPay88
 			$trx = Transaction::with('user')
 			->join('transaction_payment_ipay88s','transaction_payment_ipay88s.id_transaction','=','transactions.id_transaction')
 			->where('transactions.id_transaction',$reference)->first();
-			if(!$trx) return false;
+        	$payment_ipay = TransactionPaymentIpay88::where('id_transaction',$trx->id_transaction)->first();
+			if(!($trx && $payment_ipay)) return false;
 			$data += [
 				'RefNo' => $trx->transaction_receipt_number,
 				'Amount' => $trx->amount,
 				'ProdDesc' => Setting::select('value_text')->where('key','ipay88_product_desc')->pluck('value_text')->first()?:$trx->transaction_receipt_number,
 				'UserName' => $trx->user->name,
 				'UserEmail' => $trx->user->email,
-				'UserContact' => $trx->user->phone,
+				'UserContact' => $payment_ipay->user_contact?:$trx->user->phone,
 				'Remark' => '',
 				'ResponseURL' => env('API_URL').'api/ipay88/detail/trx',
 				'BackendURL' => env('API_URL').'api/ipay88/notif/trx',
@@ -130,14 +131,15 @@ class IPay88
 			->join('deals_payment_ipay88s','deals_payment_ipay88s.id_deals_user','=','deals_users.id_deals_user')
 			->join('deals','deals.id_deals','=','deals_payment_ipay88s.id_deals')
 			->first();
-			if(!$deals_user) return false;
+        	$payment_ipay = DealsPaymentIpay88::where('id_deals_user',$deals_user->id_deals_user)->first();
+			if(!($deals_user && $payment_ipay)) return false;
 			$data += [
 				'RefNo' => $deals_user->order_id,
 				'Amount' => $deals_user->amount,
 				'ProdDesc' => 'Voucher '.$deals_user->deals_title,
 				'UserName' => $deals_user->user->name,
 				'UserEmail' => $deals_user->user->email,
-				'UserContact' => $deals_user->user->phone,
+				'UserContact' => $payment_ipay->user_contact?:$deals_user->user->phone,
 				'Remark' => '',
 				'ResponseURL' => env('API_URL').'api/ipay88/detail/deals',
 				'BackendURL' => env('API_URL').'api/ipay88/notif/deals',
@@ -152,14 +154,15 @@ class IPay88
 			->join('subscription_payment_ipay88s','subscription_payment_ipay88s.id_subscription_user','=','subscription_users.id_subscription_user')
 			->join('subscriptions','subscriptions.id_subscription','=','subscription_payment_ipay88s.id_subscription')
 			->first();
-			if(!$deals_user) return false;
+        	$payment_ipay = SubscriptionPaymentIpay88::where('id_subscription_user',$deals_user->id_subscription_user)->first();
+			if(!($deals_user && $payment_ipay)) return false;
 			$data += [
 				'RefNo' => $deals_user->order_id,
 				'Amount' => $deals_user->amount,
 				'ProdDesc' => 'Voucher '.$deals_user->deals_title,
 				'UserName' => $deals_user->user->name,
 				'UserEmail' => $deals_user->user->email,
-				'UserContact' => $deals_user->user->phone,
+				'UserContact' => $payment_ipay->user_contact?:$deals_user->user->phone,
 				'Remark' => '',
 				'ResponseURL' => url('api/ipay88/detail/subscription'),
 				'BackendURL' => url('api/ipay88/notif/subscription'),
@@ -230,8 +233,9 @@ class IPay88
 			$toInsert = [
 				'id_transaction' => $data['id_transaction'],
 				'amount' => $grandtotal*100,
-				'payment_id' => $this->payment_id[$post['payment_id']]??null,
-				'payment_method' => str_replace('_',' ',$post['payment_id']??'')
+				'payment_id' => $this->getPaymentId($post['payment_id']??''),
+				'payment_method' => $this->getPaymentMethod($post['payment_id']??''),
+				'user_contact' => $post['phone']??null
 			];
 
 			$result = TransactionPaymentIpay88::create($toInsert);
@@ -606,7 +610,11 @@ class IPay88
     	return $this->payment_id[$payment_method]??null;
     }
     public function getPaymentMethod($payment_id,$pretty=true){
-        $payment_method = array_flip($this->payment_id)[$payment_id]??null;
+    	if(is_numeric($payment_id)){
+	        $payment_method = array_flip($this->payment_id)[$payment_id]??null;
+    	}else{
+    		$payment_method = $payment_id;
+    	}
     	if($pretty){
 	        $payment_method = $payment_method?str_replace('_', ' ', $payment_method):null;
     	}
