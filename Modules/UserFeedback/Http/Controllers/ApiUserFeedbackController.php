@@ -35,7 +35,7 @@ class ApiUserFeedbackController extends Controller
             $query->select('id_transaction','transaction_receipt_number','trasaction_type','transaction_grandtotal');
         },'user'=>function($query){
             $query->select('id','name','phone');
-        }]);
+        }])->orderBy('id_user_feedback','desc');
         if($outlet_code = $request->json('outlet_code')){
             $list->where('outlet_code',$outlet_code);
         }
