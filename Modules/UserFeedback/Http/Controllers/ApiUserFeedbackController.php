@@ -123,11 +123,11 @@ class ApiUserFeedbackController extends Controller
                 $parameter = $rul['parameter'];
                 switch ($parameter) {
                     case '1':
-                        $model->whereNotNull('image');
-                        break;
+                    $model->whereNotNull('image');
+                    break;
                     case '-1':
-                        $model->whereNull('image');
-                        break;
+                    $model->whereNull('image');
+                    break;
                 }
             }
         }
@@ -136,11 +136,11 @@ class ApiUserFeedbackController extends Controller
                 $parameter = $rul['parameter'];
                 switch ($parameter) {
                     case '1':
-                        $model->whereNotNull('notes');
-                        break;
+                    $model->whereNotNull('notes');
+                    break;
                     case '-1':
-                        $model->whereNull('notes');
-                        break;
+                    $model->whereNull('notes');
+                    break;
                 }
             }
         }
@@ -232,9 +232,9 @@ class ApiUserFeedbackController extends Controller
     {
         $user = $request->user();
         $feedback = Transaction::select('transaction_date','transaction_receipt_number','rating_item_text','user_feedbacks.rating_value','notes','user_feedbacks.image as uploaded_image','rating_items.image as rating_item_image','text')->where(['transactions.id_transaction'=>$request->post('id_transaction'),'transactions.id_user'=>$user->id])
-            ->join('user_feedbacks','user_feedbacks.id_transaction','=','transactions.id_transaction')
-            ->leftJoin('rating_items','rating_items.rating_value', '=','user_feedbacks.rating_value')
-            ->first();
+        ->join('user_feedbacks','user_feedbacks.id_transaction','=','transactions.id_transaction')
+        ->leftJoin('rating_items','rating_items.rating_value', '=','user_feedbacks.rating_value')
+        ->first();
         if(!$feedback){
             return [
                 'status'=>'fail',
@@ -321,6 +321,19 @@ class ApiUserFeedbackController extends Controller
                 ){
                     return MyHelper::checkGet([]);
                 }
+            }
+            $max_date = date('Y-m-d',time() - ((Setting::select('value')->where('key','popup_max_days')->pluck('value')->first()?:3) * 86400));
+            $transaction = Transaction::select('id_transaction','transaction_receipt_number','id_outlet')->with(['outlet'=>function($query){
+                $query->select('outlet_name','id_outlet');
+            }])
+            ->where(['show_rate_popup'=>1,'id_user'=>$user->id])
+            ->whereDate('transaction_date','>=',$max_date)
+            ->orderBy('transaction_date','desc')
+            ->first();
+            if(!$transaction){
+                return MyHelper::checkGet([]);
+            }
+            if($log_popup){
                 $log_popup->refuse_count++;
                 $log_popup->last_popup = date('Y-m-d H:i:s');
                 $log_popup->save();
@@ -330,14 +343,7 @@ class ApiUserFeedbackController extends Controller
                     'refuse_count' => 1,
                     'last_popup' => date('Y-m-d H:i:s')
                 ]);
-            }
-            $transaction = Transaction::select('id_transaction','transaction_receipt_number','id_outlet')->with(['outlet'=>function($query){
-                $query->select('outlet_name','id_outlet');
-            }])
-            ->where(['show_rate_popup'=>1,'id_user'=>$user->id])
-            ->first();
-            if(!$transaction){
-                return MyHelper::checkGet([]);
+
             }
         }
         $result['id'] = $transaction->id_transaction;

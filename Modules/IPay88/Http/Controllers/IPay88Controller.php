@@ -78,10 +78,34 @@ class IPay88Controller extends Controller
                 break;
             default:
         }
+        $errMap = [
+            // 'Duplicate transaction reference number' => '',
+            // 'Merchant identifier is missing or unregistered' => '',
+            'Transaction exceeds maximum allowed amount' => 'Transaksi melebihi jumlah maksimum yang diperbolehkan',
+            // 'Unregistered merchant callback URL' => '',
+            // 'Transaction signature is not match' => '',
+            // 'Merchant account is suspended or inactive' => '',
+            'Invalid transaction amount format' => 'Format jumlah transaksi tidak valid',
+            'Invalid transaction currency format' => 'Format mata uang transaksi tidak valid',
+            // 'Invalid merchant identifier' => '',
+            // 'Invalid transaction channel identifier' => '',
+            'Invalid purchased item description format' => 'Format deskripsi item yang dibeli tidak valid',
+            'Invalid transaction reference number' => 'Nomor referensi transaksi tidak valid',
+            'Invalid customer email format' => 'Format email pelanggan tidak valid',
+            'Invalid customer name format' => 'Format nama pelanggan tidak valid',
+            'Transaction time has expired when receiving authorization response' => 'Waktu transaksi telah kedaluwarsa',
+            // 'Payment method or channel is not subscribed' => '',
+            // 'Transaction does not pass all fraud security check' => '',
+        ];
+        $error = '';
+        if($post['ErrDesc']) {
+            $error = $errMap[ $post['ErrDesc'] ?? '' ] ?? 'Order dibatalkan, terjadi kesalahan di sistem';
+        }
         $data = [
             'type' => $type,
             'id_reference' => $trx_ipay88->id_transaction?:$trx_ipay88->id_deals_user,
-            'payment_status' => $payment_status
+            'payment_status' => $payment_status,
+            'error' => $error
         ];
         return view('ipay88::redirect',$data);
     }
