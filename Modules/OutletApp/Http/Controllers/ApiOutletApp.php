@@ -2014,6 +2014,7 @@ class ApiOutletApp extends Controller
             'outlet'                      => [
                 'outlet_name'    => $list['outlet']['outlet_name'],
                 'outlet_address' => $list['outlet']['outlet_address'],
+                'call'           => $list['outlet']['call'],
             ],
         ];
 
