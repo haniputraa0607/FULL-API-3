@@ -935,8 +935,6 @@ class ApiOnlineTransaction extends Controller
                 $id_product_modifier = is_numeric($modifier)?$modifier:$modifier['id_product_modifier'];
                 $qty_product_modifier = is_numeric($modifier)?1:$modifier['qty'];
                 $mod = ProductModifier::select('product_modifiers.id_product_modifier','code','text','product_modifier_stock_status','product_modifier_price')
-                    // produk aktif
-                    ->where('product_modifier_status','Active')
                     // product visible
                     ->leftJoin('product_modifier_details', function($join) use ($post) {
                         $join->on('product_modifier_details.id_product_modifier','=','product_modifiers.id_product_modifier')
@@ -951,6 +949,9 @@ class ApiOnlineTransaction extends Controller
                     })
                     ->where(function($q){
                         $q->where('product_modifier_stock_status','Available')->orWhereNull('product_modifier_stock_status');
+                    })
+                    ->where(function($q){
+                        $q->where('product_modifier_status','Active')->orWhereNull('product_modifier_status');
                     })
                     ->groupBy('product_modifiers.id_product_modifier');
                 if($outlet['outlet_different_price']){
@@ -1999,8 +2000,6 @@ class ApiOnlineTransaction extends Controller
                 $id_product_modifier = is_numeric($modifier)?$modifier:$modifier['id_product_modifier'];
                 $qty_product_modifier = is_numeric($modifier)?1:$modifier['qty'];
                 $mod = ProductModifier::select('product_modifiers.id_product_modifier','code','text','product_modifier_stock_status','product_modifier_price')
-                    // produk aktif
-                    ->where('product_modifier_status','Active')
                     // product visible
                     ->leftJoin('product_modifier_details', function($join) use ($post) {
                         $join->on('product_modifier_details.id_product_modifier','=','product_modifiers.id_product_modifier')
@@ -2015,6 +2014,9 @@ class ApiOnlineTransaction extends Controller
                     })
                     ->where(function($q){
                         $q->where('product_modifier_stock_status','Available')->orWhereNull('product_modifier_stock_status');
+                    })
+                    ->where(function($q){
+                        $q->where('product_modifier_status','Active')->orWhereNull('product_modifier_status');
                     })
                     ->groupBy('product_modifiers.id_product_modifier');
                 if($outlet['outlet_different_price']){
