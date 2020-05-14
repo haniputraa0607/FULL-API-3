@@ -183,7 +183,8 @@ return [
 		Bogardo\Mailgun\MailgunServiceProvider::class,
         SMartins\PassportMultiauth\Providers\MultiauthServiceProvider::class,
         App\Providers\ValidatorServiceProvider::class,
-	Fruitcake\Cors\CorsServiceProvider::class,
+        Fruitcake\Cors\CorsServiceProvider::class,
+        Arcanedev\LogViewer\LogViewerServiceProvider::class,
     ],
 
     /*
