@@ -335,6 +335,7 @@ class ApiUserFeedbackController extends Controller
                 $query->select('outlet_name','id_outlet');
             }])
             ->where(['show_rate_popup'=>1,'id_user'=>$user->id])
+            ->orderBy('transaction_date','desc')
             ->first();
             if(!$transaction){
                 return MyHelper::checkGet([]);
