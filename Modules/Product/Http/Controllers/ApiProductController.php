@@ -1640,9 +1640,11 @@ class ApiProductController extends Controller
                 $join->on('product_modifier_details.id_product_modifier','=','product_modifiers.id_product_modifier')
                     ->where('product_modifier_details.id_outlet',$post['id_outlet']);
             })
-            ->where('product_modifier_status','Active')
             ->where(function($q){
                 $q->where('product_modifier_stock_status','Available')->orWhereNull('product_modifier_stock_status');
+            })
+            ->where(function($q){
+                $q->where('product_modifier_status','Active')->orWhereNull('product_modifier_status');
             })
             ->where(function($query){
                 $query->where('product_modifier_details.product_modifier_visibility','=','Visible')

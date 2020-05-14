@@ -252,7 +252,9 @@ class ApiProductModifierController extends Controller
     {
         $post      = $request->json()->all();
         $id_outlet = $request->json('id_outlet');
-        $brands    = BrandOutlet::select('id_brand')->where('id_outlet', $id_outlet)->get()->pluck('id_brand');
+        if($id_outlet){
+            $brands    = BrandOutlet::select('id_brand')->where('id_outlet', $id_outlet)->get()->pluck('id_brand');
+        }
         if ($id_outlet) {
             $data = ProductModifier::leftJoin('product_modifier_brands', 'product_modifier_brands.id_product_modifier', '=', 'product_modifiers.id_product_modifier')
                 ->where(function ($query) use ($brands) {
@@ -270,11 +272,6 @@ class ApiProductModifierController extends Controller
             })->groupBy('product_modifiers.id_product_modifier');
         } else {
             $data = ProductModifier::leftJoin('product_modifier_brands', 'product_modifier_brands.id_product_modifier', '=', 'product_modifiers.id_product_modifier')
-                ->where(function ($query) use ($brands) {
-                    $query->where('modifier_type', 'Global');
-                    $query->orWhereNull('id_brand');
-                    $query->orWhereIn('id_brand', $brands);
-                })
                 ->select('product_modifiers.id_product_modifier', 'product_modifiers.code', 'product_modifiers.text', 'product_modifier_global_prices.product_modifier_price')->leftJoin('product_modifier_global_prices', function ($join) use ($id_outlet) {
                 $join->on('product_modifiers.id_product_modifier', '=', 'product_modifier_global_prices.id_product_modifier');
             })->groupBy('product_modifiers.id_product_modifier');
