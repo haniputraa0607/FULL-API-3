@@ -53,7 +53,7 @@ class ApiInbox extends Controller
 		$globals = InboxGlobal::with('inbox_global_rule_parents', 'inbox_global_rule_parents.rules')
 								->where('inbox_global_start', '<=', $today)
 								->where('inbox_global_end', '>=', $today)
-								->whereDate('inbox_global_start','>=',$max_date)
+								->whereDate('inbox_global_start','>',$max_date)
 								->get()
 								->toArray();
 
@@ -130,7 +130,7 @@ class ApiInbox extends Controller
 			}
 		}
 
-		$privates = UserInbox::where('id_user','=',$user['id'])->whereDate('inboxes_send_at','>=',$max_date)->get()->toArray();
+		$privates = UserInbox::where('id_user','=',$user['id'])->whereDate('inboxes_send_at','>',$max_date)->get()->toArray();
 
 		foreach($privates as $private){
 			$content = [];
