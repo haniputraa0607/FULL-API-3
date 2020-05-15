@@ -154,12 +154,13 @@ class ApiPromo extends Controller
 
     }
 
-    public function usePromo($source, $id_promo, $status='use')
+    public function usePromo($source, $id_promo, $status='use', $query=null)
     {
     	$user = auth()->user();
 		DB::beginTransaction();
 		// change is used flag to 0
 		$update = DealsUser::where('id_user','=',$user->id)->where('is_used','=',1)->update(['is_used' => 0]);
+		$update = SubscriptionUser::where('id_user','=',$user->id)->where('is_used','=',1)->update(['is_used' => 0]);
 
 		if ($status == 'use')
 		{
@@ -168,6 +169,10 @@ class ApiPromo extends Controller
 			{
 				// change specific deals user is used to 1
 				$update = DealsUser::where('id_deals_user','=',$id_promo)->update(['is_used' => 1]);
+			}
+			elseif($source == 'subscription')
+			{
+				$update = SubscriptionUser::where('id_subscription_user','=',$query['id_subscription_user'])->update(['is_used' => 1]);
 			}
 
 			$update = UserPromo::updateOrCreate(['id_user' => $user->id], ['promo_type' => $source, 'id_reference' => $id_promo]);
@@ -193,7 +198,7 @@ class ApiPromo extends Controller
 		}
 		elseif($source == 'subscription')
 		{
-			$update['webview_url'] = env('API_URL') ."api/webview/mysubscription/". $id_promo;
+			$update['webview_url'] = env('API_URL') ."api/webview/mysubscription/". $query['id_subscription_user'];
 		}
 
 		return $update;
