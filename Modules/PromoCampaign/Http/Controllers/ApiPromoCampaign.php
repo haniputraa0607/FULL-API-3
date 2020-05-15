@@ -1934,9 +1934,22 @@ class ApiPromoCampaign extends Controller
 	            ];
         	}
         }
+        elseif ($source == 'subscription') 
+        {
+        	$change_used_voucher = app($this->promo)->usePromo( $source, $subs['id_subscription_user_voucher'], 'use', $subs );
+
+        	if (($change_used_voucher['status']??false) == 'success') {
+	        	$result['result']['webview_url'] = $change_used_voucher['webview_url'];
+        	}else{
+        		return [
+	                'status'=>'fail',
+	                'messages'=>['Something went wrong']
+	            ];
+        	}
+        }
         else
         {
-        	$change_used_voucher = app($this->promo)->usePromo( $source, ($query['id_promo_campaign_promo_code']??$subs['id_subscription_user_voucher']) );
+        	$change_used_voucher = app($this->promo)->usePromo( $source, $query['id_promo_campaign_promo_code'] );
         	if (!$change_used_voucher) {
         		return [
 	                'status'=>'fail',

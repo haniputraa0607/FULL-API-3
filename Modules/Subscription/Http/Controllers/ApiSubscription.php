@@ -1789,6 +1789,11 @@ class ApiSubscription extends Controller
                     $data[$key]['time_to_end']                  = strtotime($sub['subscription']['subscription_expired_at'])-time();
                     $data[$key]['url_webview']                  = env('APP_API_URL') ."api/webview/mysubscription/". $sub['id_subscription_user'];
                     $data[$key]['time_server']                  = date('Y-m-d H:i:s');
+
+                    if ($sub['subscription_expired_at'] < date('Y-m-d H:i:s') || $sub['available_voucher'] === 0) {
+	            		$sub['is_used'] = 0;
+	            	}
+                    $data[$key]['is_used']                  	= $sub['is_used'];
                 }
             }
         }
