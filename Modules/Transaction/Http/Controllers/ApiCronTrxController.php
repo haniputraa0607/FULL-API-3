@@ -22,6 +22,7 @@ use Mail;
 use App\Jobs\CronBalance;
 
 use App\Http\Models\Transaction;
+use App\Http\Models\TransactionMultiplePayment;
 use App\Http\Models\TransactionProduct;
 use App\Http\Models\TransactionPickup;
 use App\Http\Models\User;
@@ -43,6 +44,8 @@ class ApiCronTrxController extends Controller
         $this->balance  = "Modules\Balance\Http\Controllers\BalanceController";
         $this->voucher  = "Modules\Deals\Http\Controllers\ApiDealsVoucher";
         $this->promo_campaign = "Modules\PromoCampaign\Http\Controllers\ApiPromoCampaign";
+        $this->getNotif = "Modules\Transaction\Http\Controllers\ApiNotification";
+        $this->trx    = "Modules\Transaction\Http\Controllers\ApiOnlineTransaction";
     }
 
     public function cron(Request $request)
@@ -332,16 +335,52 @@ class ApiCronTrxController extends Controller
     }
 
     public function completeTransactionPickup(){
-        $idTrx = Transaction::whereDate('transaction_date', '<', date('Y-m-d'))->where('trasaction_type', 'Pickup Order')->pluck('id_transaction')->toArray();
+        $trxs = Transaction::whereDate('transaction_date', '<', date('Y-m-d'))
+            ->where('trasaction_type', 'Pickup Order')
+            ->join('transaction_pickups','transaction_pickups.id_transaction','=','transactions.id_transaction')
+            ->whereNull('taken_at')
+            ->whereNull('reject_at')
+            ->whereNull('taken_by_system_at')
+            ->get();
+        $idTrx = [];
+        // apply point if ready_at null
+        foreach ($trxs as $newTrx) {
+            $idTrx[] = $newTrx->id_transaction;
+            if(!empty($newTrx->ready_at) || $newTrx->transaction_payment_status != 'Completed'){
+                continue;
+            }
+            $newTrx->load('user.memberships', 'outlet', 'productTransaction', 'transaction_vouchers','promo_campaign_promo_code','promo_campaign_promo_code.promo_campaign');
+
+            $checkType = TransactionMultiplePayment::where('id_transaction', $newTrx->id_transaction)->get()->toArray();
+            $column = array_column($checkType, 'type');
+
+            $use_referral = optional(optional($newTrx->promo_campaign_promo_code)->promo_campaign)->promo_type == 'Referral';
+
+            if (!in_array('Balance', $column) || $use_referral) {
+
+                $promo_source = null;
+                if ( $newTrx->id_promo_campaign_promo_code || $newTrx->transaction_vouchers || $use_referral) 
+                {
+                    if ( $newTrx->id_promo_campaign_promo_code ) {
+                        $promo_source = 'promo_code';
+                    }
+                    elseif ( ($newTrx->transaction_vouchers[0]->status??false) == 'success' )
+                    {
+                        $promo_source = 'voucher_online';
+                    }
+                }
+
+                if( app($this->trx)->checkPromoGetPoint($promo_source) || $use_referral)
+                {
+                    $savePoint = app($this->getNotif)->savePoint($newTrx);
+                }
+            }
+        }
         //update taken_by_sistem_at
         $dataTrx = TransactionPickup::whereIn('id_transaction', $idTrx)
-                                    ->whereNull('ready_at')
-                                    ->whereNull('reject_at')
-                                    ->whereNull('taken_by_system_at')
                                     ->update(['taken_by_system_at' => date('Y-m-d 00:00:00')]);
 
         return response()->json(['status' => 'success']);
-
     }
 
     public function cancelTransactionIPay()
