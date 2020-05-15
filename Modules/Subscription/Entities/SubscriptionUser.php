@@ -51,7 +51,8 @@ class SubscriptionUser extends Eloquent
 		'subscription_price_cash',
 		'payment_method',
 		'paid_status',
-		'void_date'
+		'void_date',
+		'is_used'
 	];
 
 	public function subscription()
