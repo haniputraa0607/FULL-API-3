@@ -16,6 +16,7 @@ use App\Http\Models\Configs;
 use App\Http\Models\LogBalance;
 
 use DB;
+use Modules\Achievement\Entities\AchievementUser;
 
 class ApiMembership extends Controller
 {
@@ -114,34 +115,53 @@ class ApiMembership extends Controller
 
 					if($membership['min_value'] == null) $membership['min_value'] = '0';
 					if($membership['min_retain_value'] == null) $membership['min_retain_value'] = '0';
+
 					if($post['membership_type'] == 'value'){
 						$data['min_total_value'] = $membership['min_value'];
 						$data['min_total_count'] = null;
 						$data['min_total_balance'] = null;
+						$data['min_total_achievement'] = null;
 
 						$data['retain_min_total_value'] = $membership['min_retain_value'];
 						$data['retain_min_total_count'] = null;
 						$data['retain_min_total_balance'] = null;
+						$data['retain_min_total_achievement'] = null;
 					}
 
 					if($post['membership_type'] == 'count'){
 						$data['min_total_value'] = null;
 						$data['min_total_count'] = $membership['min_value'];
 						$data['min_total_balance'] = null;
+						$data['min_total_achievement'] = null;
 
 						$data['retain_min_total_value'] = null;
 						$data['retain_min_total_count'] = $membership['min_retain_value'];
 						$data['retain_min_total_balance'] = null;
+						$data['retain_min_total_achievement'] = null;
 					}
 
 					if($post['membership_type'] == 'balance'){
 						$data['min_total_value'] = null;
 						$data['min_total_count'] = null;
 						$data['min_total_balance'] = $membership['min_value'];
+						$data['min_total_achievement'] = null;
 
 						$data['retain_min_total_value'] = null;
 						$data['retain_min_total_count'] = null;
 						$data['retain_min_total_balance'] = $membership['min_retain_value'];
+						$data['retain_min_total_achievement'] = null;
+					}
+
+					if($post['membership_type'] == 'achievement'){
+						$data['min_total_value'] = null;
+						$data['min_total_count'] = null;
+						$data['min_total_balance'] = null;
+						$data['min_total_achievement'] = $membership['min_value'];
+
+						$data['retain_min_total_value'] = null;
+						$data['retain_min_total_count'] = null;
+						$data['retain_min_total_balance'] = null;
+						$data['retain_min_total_achievement'] = $membership['min_retain_value'];
 					}
 
 					if(isset($post['retain_days'])){
@@ -239,35 +259,53 @@ class ApiMembership extends Controller
 				if(!isset($membership['min_retain_value'])) {
 					$membership['min_retain_value'] = 0;
 				}
-
+				
 				if($post['membership_type'] == 'value'){
 					$data['min_total_value'] = $membership['min_value'];
 					$data['min_total_count'] = null;
 					$data['min_total_balance'] = null;
+					$data['min_total_achievement'] = null;
 
 					$data['retain_min_total_value'] = $membership['min_retain_value'];
 					$data['retain_min_total_count'] = null;
 					$data['retain_min_total_balance'] = null;
+					$data['retain_min_total_achievement'] = null;
 				}
 
 				if($post['membership_type'] == 'count'){
 					$data['min_total_value'] = null;
 					$data['min_total_count'] = $membership['min_value'];
 					$data['min_total_balance'] = null;
+					$data['min_total_achievement'] = null;
 
 					$data['retain_min_total_value'] = null;
 					$data['retain_min_total_count'] = $membership['min_retain_value'];
 					$data['retain_min_total_balance'] = null;
+					$data['retain_min_total_achievement'] = null;
 				}
 
 				if($post['membership_type'] == 'balance'){
 					$data['min_total_value'] = null;
 					$data['min_total_count'] = null;
 					$data['min_total_balance'] = $membership['min_value'];
+					$data['min_total_achievement'] = null;
 
 					$data['retain_min_total_value'] = null;
 					$data['retain_min_total_count'] = null;
 					$data['retain_min_total_balance'] = $membership['min_retain_value'];
+					$data['retain_min_total_achievement'] = null;
+				}
+
+				if($post['membership_type'] == 'achievement'){
+					$data['min_total_value'] = null;
+					$data['min_total_count'] = null;
+					$data['min_total_balance'] = null;
+					$data['min_total_achievement'] = $membership['min_value'];
+
+					$data['retain_min_total_value'] = null;
+					$data['retain_min_total_count'] = null;
+					$data['retain_min_total_balance'] = null;
+					$data['retain_min_total_achievement'] = $membership['min_retain_value'];
 				}
 
 				$data['benefit_point_multiplier'] = $membership['benefit_point_multiplier'];
@@ -718,6 +756,20 @@ class ApiMembership extends Controller
 							$membership_baru = $all;
 						}
 						break;
+					case 'achievement':
+						$total_achievement = DB::table('achievement_users')
+						->join('achievement_details', 'achievement_users.id_achievement_detail', '=', 'achievement_details.id_achievement_detail')
+						->join('achievement_groups', 'achievement_details.id_achievement_group', '=', 'achievement_groups.id_achievement_group')
+						->where('id_user',$datauser->id)
+						->where('achievement_groups.status', 'Active')
+						->where('achievement_groups.is_calculate', 1)
+						->groupBy('achievement_groups.id_achievement_group')->count();
+						
+						if($total_achievement >= $all['min_total_achievement']){
+							//level up
+							$membership_baru = $all;
+						}
+						break;
 				}
 			}
 
@@ -735,10 +787,12 @@ class ApiMembership extends Controller
 				$data['min_total_value'] 				= $membership_baru['min_total_value'];
 				$data['min_total_count'] 				= $membership_baru['min_total_count'];
 				$data['min_total_balance'] 				= $membership_baru['min_total_balance'];
+				$data['min_total_achievement'] 			= $membership_baru['min_total_achievement'];
 				$data['retain_date'] 					= $date_end;
 				$data['retain_min_total_value'] 		= $membership_baru['retain_min_total_value'];
 				$data['retain_min_total_count'] 		= $membership_baru['retain_min_total_count'];
 				$data['retain_min_total_balance'] 		= $membership_baru['retain_min_total_balance'];
+				$data['retain_min_total_achievement'] 	= $membership_baru['retain_min_total_achievement'];
 				$data['benefit_point_multiplier'] 		= $membership_baru['benefit_point_multiplier'];
 				$data['benefit_cashback_multiplier'] 	= $membership_baru['benefit_cashback_multiplier'];
 				$data['benefit_promo_id'] 				= $membership_baru['benefit_promo_id'];

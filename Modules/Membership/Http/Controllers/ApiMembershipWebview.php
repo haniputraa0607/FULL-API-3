@@ -39,6 +39,10 @@ class ApiMembershipWebview extends Controller
 				$result['user_membership']['min_value'] 		= $result['user_membership']->min_total_value;
 				$result['user_membership']['retain_min_value'] 	= $result['user_membership']->retain_min_total_value;
 				break;
+			case 'achievement':
+				$result['user_membership']['min_value'] 		= $result['user_membership']->min_total_achievement;
+				$result['user_membership']['retain_min_value'] 	= $result['user_membership']->retain_min_total_achievement;
+				break;
 		}
 		// $result['user_membership']['membership_bg_image'] = env('S3_URL_API') . $result['user_membership']->membership->membership_bg_image;
 		// $result['user_membership']['membership_background_card_color'] = $result['user_membership']->membership->membership_background_card_color;
@@ -49,14 +53,16 @@ class ApiMembershipWebview extends Controller
 		unset($result['user_membership']['min_total_count']);
 		unset($result['user_membership']['min_total_value']);
 		unset($result['user_membership']['min_total_balance']);
+		unset($result['user_membership']['min_total_achievement']);
 		unset($result['user_membership']['retain_min_total_value']);
 		unset($result['user_membership']['retain_min_total_count']);
 		unset($result['user_membership']['retain_min_total_balance']);
+		unset($result['user_membership']['retain_min_total_achievement']);
 		unset($result['user_membership']['created_at']);
 		unset($result['user_membership']['updated_at']);
 
 		$membershipUser['name'] = $result['user_membership']->user->name;
-		$allMembership = Membership::with('membership_promo_id')->orderBy('min_total_value','asc')->orderBy('min_total_count', 'asc')->orderBy('min_total_balance', 'asc')->get()->toArray();
+		$allMembership = Membership::with('membership_promo_id')->orderBy('min_total_value','asc')->orderBy('min_total_count', 'asc')->orderBy('min_total_balance', 'asc')->orderBy('min_total_achievement', 'asc')->get()->toArray();
 		$nextMembershipName = "";
 		// $nextMembershipImage = "";
 		$nextTrx = 0;
@@ -103,6 +109,18 @@ class ApiMembershipWebview extends Controller
 								}
 							}
 							break;
+						case 'achievement':
+							$allMembership[$index]['min_value'] 		= $dataMembership['min_total_acheivement'];
+							$allMembership[$index]['retain_min_value'] 	= $dataMembership['retain_min_total_acheivement'];
+							if($dataMembership['min_total_acheivement'] > $result['user_membership']['min_total_acheivement']){
+								if($nextMembershipName == ""){
+									$nextTrx = $dataMembership['min_total_acheivement'];
+									$nextTrxType = 'value';
+									$nextMembershipName = $dataMembership['membership_name'];
+									// $nextMembershipImage =  env('S3_URL_API') . $dataMembership['membership_image'];
+								}
+							}
+							break;
 					}
 					
 					if ($dataMembership['membership_name'] == $result['user_membership']['membership_name']) {
@@ -112,9 +130,11 @@ class ApiMembershipWebview extends Controller
 					unset($allMembership[$index]['min_total_count']);
 					unset($allMembership[$index]['min_total_value']);
 					unset($allMembership[$index]['min_total_balance']);
+					unset($allMembership[$index]['min_total_achievement']);
 					unset($allMembership[$index]['retain_min_total_value']);
 					unset($allMembership[$index]['retain_min_total_count']);
 					unset($allMembership[$index]['retain_min_total_balance']);
+					unset($allMembership[$index]['retain_min_total_achievement']);
 					unset($allMembership[$index]['created_at']);
 					unset($allMembership[$index]['updated_at']);
 					
@@ -160,6 +180,18 @@ class ApiMembershipWebview extends Controller
 				$membershipUser['progress_now'] = (int) $total_balance;
 				$membershipUser['progress_active'] = ($total_balance / $nextTrx) * 100;
 				// $result['next_trx']		= $nextTrx - $total_balance;
+			}elseif($nextTrxType == 'achievement'){
+				$total_achievement = DB::table('achievement_users')
+				->join('achievement_details', 'achievement_users.id_achievement_detail', '=', 'achievement_details.id_achievement_detail')
+				->join('achievement_groups', 'achievement_details.id_achievement_group', '=', 'achievement_groups.id_achievement_group')
+				->where('id_user', $post['id_user'])
+				->where('achievement_groups.status', 'Active')
+				->where('achievement_groups.is_calculate', 1)
+				->groupBy('achievement_groups.id_achievement_group')->count();
+				$membershipUser['progress_now_text'] = $total_achievement;
+				$membershipUser['progress_now'] = (int) $total_achievement;
+				$membershipUser['progress_active'] = ($total_achievement / $nextTrx) * 100;
+				// $result['next_trx']		= $nextTrx - $total_balance;
 			}
 		}
 		$result['all_membership'] = $allMembership;
@@ -179,6 +211,16 @@ class ApiMembershipWebview extends Controller
 				$total_balance = LogBalance::where('id_user', $post['id_user'])->whereNotIn('source', ['Rejected Order', 'Rejected Order Midtrans', 'Rejected Order Point', 'Reversal', 'Point Injection', 'Welcome Point'])->where('balance', '>', 0)->sum('balance');
 				$membershipUser['progress_now_text'] = MyHelper::requestNumber($total_balance,'_CURRENCY');
 				$membershipUser['progress_now'] = (int) $total_balance;
+			}elseif($allMembership[0]['membership_type'] == 'achievement'){
+				$total_achievement = DB::table('achievement_users')
+				->join('achievement_details', 'achievement_users.id_achievement_detail', '=', 'achievement_details.id_achievement_detail')
+				->join('achievement_groups', 'achievement_details.id_achievement_group', '=', 'achievement_groups.id_achievement_group')
+				->where('id_user', $post['id_user'])
+				->where('achievement_groups.status', 'Active')
+				->where('achievement_groups.is_calculate', 1)
+				->groupBy('achievement_groups.id_achievement_group')->count();
+				$membershipUser['progress_now_text'] = $total_achievement;
+				$membershipUser['progress_now'] = (int) $total_achievement;
 			}
 		}
 		unset($result['user_membership']['user']);
