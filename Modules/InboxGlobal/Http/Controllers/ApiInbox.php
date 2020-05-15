@@ -130,7 +130,7 @@ class ApiInbox extends Controller
 			}
 		}
 
-		$privates = UserInbox::where('id_user','=',$user['id'])->whereDate('created_at','>=',$max_date)->get()->toArray();
+		$privates = UserInbox::where('id_user','=',$user['id'])->whereDate('inboxes_send_at','>=',$max_date)->get()->toArray();
 
 		foreach($privates as $private){
 			$content = [];
