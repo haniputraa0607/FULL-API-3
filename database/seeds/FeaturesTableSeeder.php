@@ -1971,6 +1971,14 @@ class FeaturesTableSeeder extends Seeder
                     'created_at' => date('Y-m-d H:00:00'),
                     'updated_at' => date('Y-m-d H:00:00'),
                 ),
+            245 =>
+                array (
+                    'id_feature' => 246,
+                    'feature_type' => 'Setting',
+                    'feature_module' => 'Setting Inbox User',
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00'),
+                ),
         ));
     }
 }
