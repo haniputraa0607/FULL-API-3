@@ -13,6 +13,7 @@ use App\Http\Models\InboxGlobalRule;
 use App\Http\Models\InboxGlobalRuleParent;
 use App\Http\Models\InboxGlobalRead;
 use App\Http\Models\News;
+use App\Http\Models\Setting;
 
 use Modules\InboxGlobal\Http\Requests\MarkedInbox;
 use Modules\InboxGlobal\Http\Requests\DeleteUserInbox;
@@ -48,10 +49,11 @@ class ApiInbox extends Controller
 		$countUnread = 0;
 		$countInbox = 0;
 		$arrDate = [];
-
+		$max_date = date('Y-m-d',time() - ((Setting::select('value')->where('key','inbox_max_days')->pluck('value')->first()?:30) * 86400));
 		$globals = InboxGlobal::with('inbox_global_rule_parents', 'inbox_global_rule_parents.rules')
 								->where('inbox_global_start', '<=', $today)
 								->where('inbox_global_end', '>=', $today)
+								->whereDate('inbox_global_start','>',$max_date)
 								->get()
 								->toArray();
 
@@ -128,7 +130,7 @@ class ApiInbox extends Controller
 			}
 		}
 
-		$privates = UserInbox::where('id_user','=',$user['id'])->get()->toArray();
+		$privates = UserInbox::where('id_user','=',$user['id'])->whereDate('inboxes_send_at','>',$max_date)->get()->toArray();
 
 		foreach($privates as $private){
 			$content = [];
@@ -385,12 +387,14 @@ class ApiInbox extends Controller
 
 		$today = date("Y-m-d H:i:s");
 		$countUnread = 0;
-
+        $setting_date = Setting::select('value')->where('key','inbox_max_days')->pluck('value')->first();
+        $max_date = date('Y-m-d',time() - ((is_numeric($setting_date)?$setting_date:30) * 86400));
 		$read = array_pluck(InboxGlobalRead::where('id_user', $user['id'])->get(), 'id_inbox_global');
 
 		$globals = InboxGlobal::with('inbox_global_rule_parents', 'inbox_global_rule_parents.rules')
 							->where('inbox_global_start', '<=', $today)
 							->where('inbox_global_end', '>=', $today)
+                            ->whereDate('inbox_global_start','>=',$max_date)
 							->get()
 							->toArray();
 
@@ -411,7 +415,7 @@ class ApiInbox extends Controller
 			}
 		}
 
-		$privates = UserInbox::where('id_user','=',$user['id'])->where('read', '0')->get();
+		$privates = UserInbox::where('id_user','=',$user['id'])->where('read', '0')->whereDate('inboxes_send_at','>=',$max_date)->get();
 
 
 		$countUnread = $countUnread + count($privates);
