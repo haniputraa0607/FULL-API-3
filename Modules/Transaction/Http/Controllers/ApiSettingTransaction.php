@@ -10,6 +10,7 @@ use App\Http\Models\Setting;
 use App\Http\Models\Product;
 use App\Http\Models\ProductPrice;
 use App\Http\Models\Outlet;
+use App\Lib\MyHelper;
 
 use DB;
 
@@ -198,5 +199,15 @@ class ApiSettingTransaction extends Controller
         }
 
         return $post;
+    }
+    /**
+     * Check credit card payment gateway for transaction
+     * @param  Request $request [description]
+     * @return Array           [description]
+     */
+    public function ccPayment(Request $request)
+    {
+        $pg = Setting::select('value')->where('key','credit_card_payment_gateway')->pluck('value')->first()?:'Ipay88';
+        return MyHelper::checkGet($pg);
     }
 }

@@ -982,6 +982,15 @@ class ConfigsTableSeeder extends Seeder
                     'created_at' => date('Y-m-d H:i:s'),
                     'updated_at' => date('Y-m-d H:i:s'),
                 ),
+            106 =>
+                array (
+                    'id_config' => 107,
+                    'config_name' => 'credit card multi payment',
+                    'description' => '',
+                    'is_active' => 1,
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
         ));
     }
 }
