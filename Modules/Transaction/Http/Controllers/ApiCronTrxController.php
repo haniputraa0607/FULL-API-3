@@ -53,26 +53,17 @@ class ApiCronTrxController extends Controller
         $crossLine = date('Y-m-d H:i:s', strtotime('- 3days'));
         $dateLine  = date('Y-m-d H:i:s', strtotime('- 1days'));
         $now       = date('Y-m-d H:i:s');
+        $expired   = date('Y-m-d H:i:s',strtotime('- 15minutes'));
 
-        $getTrx = Transaction::where('transaction_payment_status', 'Pending')->where('transaction_date', '<=', $now)->get();
+        $getTrx = Transaction::where('transaction_payment_status', 'Pending')->where('transaction_date', '<=', $expired)->get();
 
         if (empty($getTrx)) {
             return response()->json(['empty']);
         }
-
-        foreach ($getTrx as $key => $value) {
-
-        	db::begintransaction();
-            $singleTrx = Transaction::where('id_transaction', $value->id_transaction)->with('outlet_name')->first();
-            if (empty($singleTrx)) {
-                continue;
-            }
-
-            $expired_at = date('Y-m-d H:i:s', strtotime('+30 minutes', strtotime($singleTrx->transaction_date)));
-
-            if ($expired_at >= $now) {
-                continue;
-            }
+        $count = 0;
+        foreach ($getTrx as $key => $singleTrx) {
+        	DB::beginTransaction();
+            $singleTrx->load('outlet_name');
 
             $productTrx = TransactionProduct::where('id_transaction', $singleTrx->id_transaction)->get();
             if (empty($productTrx)) {
@@ -83,8 +74,17 @@ class ApiCronTrxController extends Controller
             if (empty($user)) {
                 continue;
             }
-
-            $connectMidtrans = Midtrans::expire($singleTrx->transaction_receipt_number);
+            if($singleTrx->trasaction_payment_type == 'Midtrans') {
+                $connectMidtrans = Midtrans::expire($singleTrx->transaction_receipt_number);
+            }elseif($singleTrx->trasaction_payment_type == 'Ipay88') {
+                $trx_ipay = TransactionPaymentIpay88::where('id_transaction',$singleTrx->id_transaction)->first();
+                $update = \Modules\IPay88\Lib\IPay88::create()->update($trx_ipay?:$singleTrx->id_transaction,[
+                    'type' =>'trx',
+                    'Status' => '0',
+                    'requery_response' => 'Cancelled by cron'
+                ],false,false);
+                continue;                
+            }
             // $detail = $this->getHtml($singleTrx, $productTrx, $user->name, $user->phone, $singleTrx->created_at, $singleTrx->transaction_receipt_number);
 
             // $autoCrm = app($this->autocrm)->SendAutoCRM('Transaction Online Cancel', $user->phone, ['date' => $singleTrx->created_at, 'status' => $singleTrx->transaction_payment_status, 'name'  => $user->name, 'id' => $singleTrx->transaction_receipt_number, 'receipt' => $detail, 'id_reference' => $singleTrx->transaction_receipt_number]);
@@ -121,8 +121,8 @@ class ApiCronTrxController extends Controller
             }
 
             // delete promo campaign report
-            if ($value->id_promo_campaign_promo_code) {
-            	$update_promo_report = app($this->promo_campaign)->deleteReport($value->id_transaction, $value->id_promo_campaign_promo_code);
+            if ($singleTrx->id_promo_campaign_promo_code) {
+            	$update_promo_report = app($this->promo_campaign)->deleteReport($singleTrx->id_transaction, $singleTrx->id_promo_campaign_promo_code);
             	if (!$update_promo_report) {
 	            	db::rollBack();
 	            	continue;
