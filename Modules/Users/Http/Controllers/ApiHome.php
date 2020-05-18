@@ -71,7 +71,7 @@ class ApiHome extends Controller
     public function getBanner()
     {
         // banner
-        $banners = Banner::orderBy('position')->get();
+        $banners = Banner::orderBy('position')->where('banner_start', '<=', date('Y-m-d H:i:s'))->where('banner_end', '>=', date('Y-m-d H:i:s'))->get();
         $gofood = 0;
         $setting = Setting::where('key', 'banner-gofood')->first();
         if (!empty($setting)) {
@@ -86,22 +86,31 @@ class ApiHome extends Controller
         foreach ($banners as $key => $value) {
 
             $item['image_url']  = env('S3_URL_API').$value->image;
+            $item['type']       = 'none';
             $item['id_news']    = $value->id_news;
             $item['news_title'] = "";
             $item['url']        = $value->url;
 
-            if ($value->id_news != "") {
+            if($item['url'] != null){
+                $item['type']       = 'link';
+            }
+
+            if ($value->id_news != "" && isset($value->news->news_title)) {
+                $item['type']       = 'news';
                 $item['news_title'] = $value->news->news_title;
                 // if news, generate webview news detail url
                 $item['url']        = env('API_URL') .'news/webview/'. $value->id_news;
-            }
-
-            if ($value->type == 'gofood') {
+            }elseif ($value->type == 'gofood') {
+                $item['type']       = 'gofood';
                 $item['id_news'] = 99999999;
                 $item['news_title'] = "GO-FOOD";
                 $item['url']     = env('APP_URL').'outlet/webview/gofood/list';
+            }elseif ($value->type == 'referral') {
+                $item['type']       = 'referral';
+                $item['id_news'] = 999999999;
+                $item['news_title'] = "Referral";
+                $item['url']     = env('API_URL') . 'api/referral/webview';
             }
-
             array_push($array, $item);
         }
 
