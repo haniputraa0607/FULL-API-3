@@ -57,13 +57,19 @@ class ApiDisburseSettingController extends Controller
         ];
         $bankCode = BankName::where('id_bank_name', $post['id_bank_name'])->first()->bank_code;
 
-        $validationAccount = MyHelper::connectIris('GET','api/v1/account_validation?bank='.$bankCode.'&account='.$post['beneficiary_account'], [], []);
+        $validationAccount = MyHelper::connectIris('Account Validation' ,'GET','api/v1/account_validation?bank='.$bankCode.'&account='.$post['beneficiary_account'], [], []);
 
         if(isset($validationAccount['status']) && $validationAccount['status'] == 'success' && isset($validationAccount['response']['account_name'])){
-            if(isset($post['outlets']) && $post['outlets'] == 'all'){
+            if(isset($post['outlet_code'])){
+                $update = Outlet::where('outlets.outlet_code', $post['outlet_code'])->update($dt);
+            }elseif(isset($post['outlets']) && $post['outlets'] == 'all'){
                 if(!empty($post['id_user_franchise'])){
                     $update = Outlet::join('user_franchise_outlet', 'outlets.id_outlet', 'user_franchise_outlet.id_outlet')
+                        ->whereNull('outlets.beneficiary_account')
                         ->where('user_franchise_outlet.id_user_franchise', $post['id_user_franchise'])
+                        ->update($dt);
+                }else{
+                    $update = Outlet::whereNull('outlets.beneficiary_account')
                         ->update($dt);
                 }
             }elseif(isset($post['outlets'])){
@@ -102,7 +108,7 @@ class ApiDisburseSettingController extends Controller
                                         'mdr' => $post['mdr'],
                                         'mdr_central' => $post['mdr_central'],
                                         'percent_type' => $post['percent_type'],
-                                        'days_to_sent' =>  $post['days_to_sent']]);
+                                        'days_to_sent' =>  $post['days_to_sent']??NULL]);
         return response()->json(MyHelper::checkUpdate($update));
     }
 
@@ -162,8 +168,26 @@ class ApiDisburseSettingController extends Controller
             $length = $post['length'];
         }
 
-        $outlet = Outlet::select('id_outlet as 0', DB::raw('CONCAT(outlet_code," - ", outlet_name) as "1"'), 'status_franchise as 2',
-            'outlet_special_status as 3', DB::raw('CONCAT(outlet_special_fee," %") as "4"'));
+
+        $outlet = Outlet::where('outlet_special_status', 1)
+            ->select('id_outlet as 0', DB::raw('CONCAT(outlet_code," - ", outlet_name) as "1"'), 'status_franchise as 2',
+            DB::raw('CONCAT(outlet_special_fee," %") as "3"'));
+
+        if(isset($post["search"]["value"]) && !empty($post["search"]["value"])){
+            $key = $post["search"]["value"];
+            $outlet->where(function ($q) use ($key){
+                $q->orWhere('outlets.outlet_code', 'like', '%'.$key.'%');
+                $q->orWhere('outlets.outlet_name', 'like', '%'.$key.'%');
+                $q->orWhere('outlets.outlet_special_fee', 'like', '%'.$key.'%');
+
+                if(strpos(strtolower($key), 'not') !== false){
+                    $q->orWhere('outlets.status_franchise', 0);
+                    $q->orWhereNull('outlets.status_franchise');
+                }elseif(strpos(strtolower($key), 'franchise') !== false){
+                    $q->orWhere('outlets.status_franchise', 1);
+                }
+            });
+        }
         $total = $outlet->count();
         $data = $outlet->skip($start)->take($length)->get()->toArray();
 
@@ -180,9 +204,28 @@ class ApiDisburseSettingController extends Controller
         $post = $request->json()->all();
 
         if(isset($post['outlet_special_fee']) && !empty($post['outlet_special_fee'])
-            && isset($post['id_outlet']) && count($post['id_outlet']) > 0){
-            $update = Outlet::whereIn('id_outlet', $post['id_outlet'])
-                ->update(['outlet_special_status' => 1, 'outlet_special_fee' => $post['outlet_special_fee']]);
+            && isset($post['id_outlet'])){
+            if($post['id_outlet'] == 'all'){
+                $update = Outlet::where('outlet_special_status', 1)
+                    ->update(['outlet_special_fee' => $post['outlet_special_fee']]);
+            }else{
+                $update = Outlet::whereIn('id_outlet', $post['id_outlet'])
+                    ->update(['outlet_special_fee' => $post['outlet_special_fee']]);
+            }
+
+            return response()->json(MyHelper::checkUpdate($update));
+        }else{
+            return response()->json([
+                'status' => 'fail',
+                'messages' => 'Incompleted input'
+            ]);
+        }
+    }
+
+    function settingOutletSpecial(Request $request){
+        $post = $request->json()->all();
+        if(isset($post['id_outlet'])){
+            $update = Outlet::whereIn('id_outlet', $post['id_outlet'])->update(['outlet_special_status' => $post['status']]);
 
             return response()->json(MyHelper::checkUpdate($update));
         }else{

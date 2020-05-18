@@ -1979,6 +1979,22 @@ class FeaturesTableSeeder extends Seeder
                     'created_at' => date('Y-m-d H:00:00'),
                     'updated_at' => date('Y-m-d H:00:00'),
                 ),
+            246 =>
+                array (
+                    'id_feature' => 247,
+                    'feature_type' => 'List',
+                    'feature_module' => 'List User Franchise',
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00'),
+                ),
+            247 =>
+                array (
+                    'id_feature' => 248,
+                    'feature_type' => 'Update',
+                    'feature_module' => 'User Franchise',
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00'),
+                ),
         ));
     }
 }

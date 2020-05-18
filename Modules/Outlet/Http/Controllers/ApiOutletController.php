@@ -22,6 +22,8 @@ use App\Http\Models\Setting;
 use App\Http\Models\OauthAccessToken;
 use App\Http\Models\Product;
 use App\Http\Models\ProductPrice;
+use Modules\Disburse\Entities\UserFranchise;
+use Modules\Disburse\Entities\UserFranchiseOultet;
 use Modules\Outlet\Entities\OutletScheduleUpdate;
 
 use App\Imports\ExcelImport;
@@ -2281,5 +2283,30 @@ class ApiOutletController extends Controller
         }
 
         return response()->json(MyHelper::checkGet($outlet));
+    }
+
+    function listUserFranchise(Request $request){
+        $post = $request->json()->all();
+        $list = UserFranchise::paginate(20);
+
+        return response()->json(MyHelper::checkGet($list));
+    }
+
+    function detailUserFranchise(Request $request){
+        $post = $request->json()->all();
+        $userFranchise = UserFranchise::where('phone', $post['phone'])->first();
+
+        $listOutlet = [];
+        if($userFranchise){
+            $listOutlet = UserFranchiseOultet::join('outlets', 'user_franchise_outlet.id_outlet', 'outlets.id_outlet')
+                ->where('id_user_franchise', $userFranchise['id_user_franchise'])->paginate(20);
+        }
+
+        $result = [
+            'status' => 'success',
+            'data_user' => $userFranchise,
+            'list_outlet' => $listOutlet
+        ];
+        return response()->json($result);
     }
 }

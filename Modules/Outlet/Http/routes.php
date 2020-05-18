@@ -75,4 +75,8 @@ Route::group(['prefix' => 'api/outlet', 'middleware' => ['log_activities', 'auth
     Route::post('max-order', 'ApiOutletController@listMaxOrder');
     Route::post('max-order/update', 'ApiOutletController@updateMaxOrder');
     Route::any('schedule/save', 'ApiOutletController@scheduleSave');
+
+    /*user franchise*/
+    Route::any('list/user-franchise', 'ApiOutletController@listUserFranchise');
+    Route::any('detail/user-franchise', 'ApiOutletController@detailUserFranchise');
 });

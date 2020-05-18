@@ -46,6 +46,7 @@ Route::group(['prefix' => 'disburse'], function () {
         //setting fee special outlet
         Route::any('setting/fee-outlet-special/outlets', 'ApiDisburseSettingController@getOutlets');
         Route::post('setting/fee-outlet-special/update', 'ApiDisburseSettingController@settingFeeOutletSpecial');
+        Route::post('setting/outlet-special', 'ApiDisburseSettingController@settingOutletSpecial');
 
         //sync list bank
         Route::any('sync-bank', 'ApiDisburseController@syncListBank');

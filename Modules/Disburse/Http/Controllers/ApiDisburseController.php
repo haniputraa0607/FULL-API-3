@@ -78,13 +78,17 @@ class ApiDisburseController extends Controller
         $post = $request->json()->all();
 
         $outlet = Outlet::leftJoin('bank_name', 'bank_name.id_bank_name', 'outlets.id_bank_name')
-                ->select('outlets.id_outlet', 'outlets.outlet_code', 'outlets.outlet_name', 'outlets.id_bank_name',
+                ->select('outlets.id_outlet', 'outlets.outlet_code', 'outlets.outlet_name', 'outlets.id_bank_name', 'outlets.status_franchise',
                     'outlets.beneficiary_name', 'outlets.beneficiary_alias', 'outlets.beneficiary_account', 'outlets.beneficiary_email',
                     'bank_name.bank_name', 'bank_name.bank_code', 'outlets.outlet_special_status', 'outlets.outlet_special_fee');
 
         if(isset($post['id_user_franchise']) && !empty($post['id_user_franchise'])){
             $outlet->join('user_franchisee_outlet', 'outlets.id_outlet', 'user_franchisee_outlet.id_outlet')
                 ->where('user_franchisee_outlet.id_user_franchise', $post['id_user_franchise']);
+        }
+
+        if(isset($post['type']) && $post['type'] == 'add_bank_account'){
+            $outlet->whereNull('outlets.beneficiary_account');
         }
 
         if(isset($post['conditions']) && !empty($post['conditions'])){
@@ -505,7 +509,7 @@ class ApiDisburseController extends Controller
     }
 
     function syncListBank(){
-        $getListBank = MyHelper::connectIris('GET','api/v1/beneficiary_banks',[]);
+        $getListBank = MyHelper::connectIris('Banks', 'GET','api/v1/beneficiary_banks',[]);
 
         if(isset($getListBank['status']) && $getListBank['status'] == 'success'){
             $getCurrentListBank = BankName::get()->toArray();
