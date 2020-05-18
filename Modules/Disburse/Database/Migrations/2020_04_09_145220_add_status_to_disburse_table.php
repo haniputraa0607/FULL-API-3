@@ -13,7 +13,7 @@ class AddStatusToDisburseTable extends Migration
      */
     public function up()
     {
-        \DB::statement("ALTER TABLE `disburse` CHANGE COLUMN `disburse_status` `disburse_status` ENUM('Success', 'Queued', 'Processed', 'Fail', 'Rejected', 'Hold') COLLATE 'utf8mb4_unicode_ci' NULL DEFAULT NULL");
+        \DB::statement("ALTER TABLE `disburse` CHANGE COLUMN `disburse_status` `disburse_status` ENUM('Success', 'Queued', 'Processed', 'Fail', 'Rejected', 'Hold', 'Approved', 'Retry From Failed') COLLATE 'utf8mb4_unicode_ci' NULL DEFAULT NULL");
         \DB::statement("ALTER TABLE disburse CHANGE recipient_name beneficiary_name varchar (191)");
     }
 

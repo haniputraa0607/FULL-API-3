@@ -312,7 +312,7 @@ class ApiNews extends Controller
                         'post_date' => $data['news_post_date']??'',
                         'publish_date' => $data['news_publish_date']??'',
                         'expired_date' => $data['news_expired_date']??'',
-                        'detail' => view('news::webview.news',['news'=>[$data]])->render()
+                        // 'detail' => view('news::webview.news',['news'=>[$data]])->render()
                     ],null,true);
                 }
                 return response()->json(MyHelper::checkCreate($save));
