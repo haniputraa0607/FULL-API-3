@@ -47,7 +47,7 @@ class SyncOutletSeed implements ShouldQueue
                 'id_outlet_seed'            => $value['id'],
                 'outlet_code'               => ($value['id'] == 0) ? 'JJ' . $value['id'] : $explodeName[0],
                 // 'outlet_name'               => ($value['id'] == 0) ? $value['name'] : str_replace($explodeName[0].' - ', '', $value['name']),
-                'outlet_name'               => ($value['id'] == 0) ? $value['name'] : 'Jilid '.ltrim(substr($explodeName[0],4), '0').' '.end($explodeName),
+                'outlet_name'               => ($value['id'] == 0) ? $value['name'] : 'Jilid '.ltrim(substr($explodeName[0],-4), '0').' '.end($explodeName),
                 'outlet_address'            => $value['address'],
                 'outlet_longitude'          => $value['long'],
                 'outlet_latitude'           => $value['lang'],
