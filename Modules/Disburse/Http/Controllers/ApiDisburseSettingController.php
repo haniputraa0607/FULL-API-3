@@ -236,4 +236,15 @@ class ApiDisburseSettingController extends Controller
         }
     }
 
+    function settingApproverPayouts(Request $request){
+        $post = $request->json()->all();
+        if($post){
+            $update = Setting::where('key', 'disburse_auto_approve_setting')->update($post);
+            return response()->json(MyHelper::checkUpdate($update));
+        }else{
+            $setting = Setting::where('key', 'disburse_auto_approve_setting')->first();
+            return response()->json(MyHelper::checkGet($setting));
+        }
+    }
+
 }

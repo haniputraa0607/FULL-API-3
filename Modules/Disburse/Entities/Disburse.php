@@ -21,6 +21,8 @@ class Disburse extends Model
         'request',
         'response',
         'notes',
-        'reference_no'
+        'reference_no',
+        'old_reference_no',
+        'count_retry'
 	];
 }

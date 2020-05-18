@@ -39,7 +39,8 @@ class ApiIrisController extends Controller
             'processed' => 'Processed',
             'completed' => 'Success',
             'failed' => 'Fail',
-            'rejected' => 'Rejected'
+            'rejected' => 'Rejected',
+            'approved' => 'Approved'
         ];
         $data = Disburse::where('reference_no', $reference_no)->update(['disburse_status' => $arrStatus[$status]]);
 
@@ -79,6 +80,14 @@ class ApiIrisController extends Controller
         $settingGlobalFeePoint = Setting::where('key', 'global_setting_point_charged')->first()->value_text;
         $settingGlobalFeePoint = json_decode($settingGlobalFeePoint);
         $settingMDRAll = MDR::get()->toArray();
+
+        $arrStatus = [
+            'queued' => 'Queued',
+            'processed' => 'Processed',
+            'completed' => 'Success',
+            'failed' => 'Fail',
+            'rejected' => 'Rejected'
+        ];
 
         if(!empty($getData)){
             DB::beginTransaction();
@@ -275,6 +284,7 @@ class ApiIrisController extends Controller
                     $dataToInsert[] = [
                         'id_outlet' => $val['id_outlet'],
                         'disburse_nominal' => $val['total_amount'],
+                        'beneficiary_name' => $val['bank_code'],
                         'beneficiary_bank_name' => $val['beneficiary_name'],
                         'beneficiary_account_number' => $val['beneficiary_account'],
                         'beneficiary_email' => $val['beneficiary_email'],
@@ -285,13 +295,7 @@ class ApiIrisController extends Controller
                     ];
                 }
 
-                $arrStatus = [
-                    'queued' => 'Queued',
-                    'processed' => 'Processed',
-                    'completed' => 'Success',
-                    'failed' => 'Fail',
-                    'rejected' => 'Rejected'
-                ];
+
                 $sendToIris = MyHelper::connectIris('Payouts', 'POST','api/v1/payouts', ['payouts' => $dataToSend]);
 
                 if(isset($sendToIris['status']) && $sendToIris['status'] == 'success'){
@@ -321,12 +325,49 @@ class ApiIrisController extends Controller
                     }
                 }
                 DB::commit();
-
-                return 'success';
             }catch (\Exception $e){
                 DB::rollback();
                 return 'fail';
             }
         }
+
+        //proses retry failed disburse
+        $dataRetry = Disburse::join('outlets', 'outlets.id_outlet', 'disburse.id_outlet')
+            ->leftJoin('bank_name', 'bank_name.id_bank_name', 'outlets.id_bank_name')
+            ->where('disburse_status', 'Retry From Failed')
+            ->select('outlets.beneficiary_name', 'outlets.beneficiary_account', 'bank_name.bank_code as beneficiary_bank', 'outlets.beneficiary_email',
+                'disburse_nominal as amount', 'notes', 'reference_no as ref')
+            ->get()->toArray();
+
+        $sendToIris = MyHelper::connectIris('Payouts', 'POST','api/v1/payouts', ['payouts' => $dataRetry]);
+
+        if(isset($sendToIris['status']) && $sendToIris['status'] == 'success'){
+            if(isset($sendToIris['response']['payouts']) && !empty($sendToIris['response']['payouts'])){
+                $a=0;
+                $return = $sendToIris['response']['payouts'];
+                foreach ($dataRetry as $val){
+                    $getData = Disburse::where('reference_no', $val['ref'])->first();
+                    $oldRefNo = $getData['old_reference_no'].','.$getData['reference_no'];
+                    $oldRefNo = ltrim($oldRefNo,",");
+                    $count = $getData['count_retry'] + 1;
+                    $update = Disburse::where('id_disburse', $getData['id_disburse'])
+                        ->update(['old_reference_no' => $oldRefNo, 'reference_no' => $return[$a]['reference_no'],
+                        'count_retry' => $count, 'disburse_status' => $arrStatus[ $return[$a]['status']]]);
+                    $a++;
+                }
+            }
+        }
+
+        //proses approve if setting approver by sistem
+        $settingApprover = Setting::where('key', 'disburse_auto_approve_setting')->first();
+        if($settingApprover && $settingApprover['value'] == 1){
+            $getDataToApprove = Disburse::where('disburse_status', 'Queued')
+                ->pluck('reference_no');
+            if(!empty($getDataToApprove)){
+                $sendApprover = MyHelper::connectIris('Approver', 'POST','api/v1/payouts/approve', ['reference_nos' => $getDataToApprove], 1);
+            }
+        }
+
+        return 'succes';
     }
 }
