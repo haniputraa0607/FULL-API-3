@@ -1,10 +1,12 @@
 <?php
 namespace App\Lib;
 
+use App\Http\Models\LogTopup;
 use App\Http\Models\Setting;
 use Image;
 use File;
 use DB;
+use Modules\Disburse\Entities\LogIRIS;
 use Storage;
 use App\Http\Models\Notification;
 use App\Http\Models\Store;
@@ -2495,26 +2497,44 @@ class MyHelper{
         }
     }
 
-    public static function connectIris($method, $url, $body){
+    public static function connectIris($subject, $method, $url, $body){
         $baseUrl = env('URL_IRIS');
         //$apiKey = MyHelper::decrypt2019(env('API_KEY_IRIS'));
         $urlApi = $baseUrl.$url;
         $base64 = base64_encode(env('API_KEY_IRIS').':');
         $jsonBody = json_encode($body);
 
+        $header = [
+            'Content-Type'  => 'application/json',
+            'Accept' => 'application/json',
+            'Authorization' => 'Basic '.$base64
+        ];
+        $client = new Client([
+            'headers' => $header
+        ]);
+
         try {
-            $client = new Client([
-                'headers' => [
-                    'Content-Type'  => 'application/json',
-                    'Accept' => 'application/json',
-                    'Authorization' => 'Basic '.$base64
-                ]
-            ]);
             $output = $client->request($method, $urlApi, ['body' => $jsonBody]);
             $output = json_decode($output->getBody(), true);
+
+            $dataLog= [
+                'subject' => $subject,
+                'request_header'=> json_encode($header),
+                'request' => $jsonBody,
+                'request_url' => $urlApi,
+                'response' => json_encode($output)
+            ];
+            LogIRIS::create($dataLog);
             return ['status' => 'success', 'response' => $output];
         }catch (\GuzzleHttp\Exception\RequestException $e) {
-
+            $dataLog= [
+                'subject' => $subject,
+                'request_header'=> json_encode($header),
+                'request' => $jsonBody,
+                'request_url' => $urlApi,
+                'response' => json_encode($e)
+            ];
+            LogIRIS::create($dataLog);
             try{
                 if($e->getResponse()){
                     $response = $e->getResponse()->getBody()->getContents();

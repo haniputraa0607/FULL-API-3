@@ -22,6 +22,7 @@ use Modules\Disburse\Entities\Disburse;
 
 use DB;
 use Modules\Disburse\Entities\DisburseTransaction;
+use Modules\Disburse\Entities\LogIRIS;
 use Modules\Disburse\Entities\MDR;
 use Modules\Disburse\Entities\UserFranchisee;
 use Modules\IPay88\Entities\TransactionPaymentIpay88;
@@ -42,9 +43,19 @@ class ApiIrisController extends Controller
         ];
         $data = Disburse::where('reference_no', $reference_no)->update(['disburse_status' => $arrStatus[$status]]);
 
+        $dataLog = [
+            'subject' => 'Callback IRIS',
+            'id_reference' => $post['reference_no']??null,
+            'request'=> json_encode($post)
+        ];
+
         if($data){
+            $dataLog['response'] = json_encode(['status' => 'success']);
+            LogIRIS::create($dataLog);
             return response()->json(['status' => 'success']);
         }else{
+            $dataLog['response'] = json_encode(['status' => 'fail', 'messages' => ['Failed Update status']]);
+            LogIRIS::create($dataLog);
             return response()->json(['status' => 'fail',
                 'messages' => ['Failed Update status']]);
         }
@@ -281,7 +292,7 @@ class ApiIrisController extends Controller
                     'failed' => 'Fail',
                     'rejected' => 'Rejected'
                 ];
-                $sendToIris = MyHelper::connectIris('POST','api/v1/payouts', ['payouts' => $dataToSend]);
+                $sendToIris = MyHelper::connectIris('Payouts', 'POST','api/v1/payouts', ['payouts' => $dataToSend]);
 
                 if(isset($sendToIris['status']) && $sendToIris['status'] == 'success'){
                     if(isset($sendToIris['response']['payouts']) && !empty($sendToIris['response']['payouts'])){
