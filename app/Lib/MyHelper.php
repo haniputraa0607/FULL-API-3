@@ -2497,11 +2497,16 @@ class MyHelper{
         }
     }
 
-    public static function connectIris($subject, $method, $url, $body){
+    public static function connectIris($subject, $method, $url, $body, $approver = null){
         $baseUrl = env('URL_IRIS');
         //$apiKey = MyHelper::decrypt2019(env('API_KEY_IRIS'));
         $urlApi = $baseUrl.$url;
-        $base64 = base64_encode(env('API_KEY_IRIS').':');
+        if($approver == 1){
+            $base64 = base64_encode(env('API_KEY_IRIS_APPROVER').':');
+        }else{
+            $base64 = base64_encode(env('API_KEY_IRIS').':');
+        }
+
         $jsonBody = json_encode($body);
 
         $header = [

@@ -50,6 +50,11 @@ Route::group(['prefix' => 'disburse'], function () {
 
         //sync list bank
         Route::any('sync-bank', 'ApiDisburseController@syncListBank');
+
+        //approver
+        Route::any('setting/approver', 'ApiDisburseSettingController@settingApproverPayouts');
+
+        Route::any('update-status', 'ApiDisburseController@updateStatusDisburse');
     });
 
     Route::group(['middleware' => ['auth:user-franchise', 'scopes:be']], function () {
