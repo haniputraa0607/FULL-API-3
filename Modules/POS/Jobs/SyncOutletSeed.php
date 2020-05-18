@@ -41,20 +41,24 @@ class SyncOutletSeed implements ShouldQueue
             $franchise = ($value['status_franchise'] == 0) ? 'Non Franchise' : 'Franchise' ;
             $explodeName = explode(' - ', $value['name']);
 
-            $id_outlet = Outlet::updateOrCreate([
-                'id_outlet_seed'            => $value['id']
-            ], [
-                'id_outlet_seed'            => $value['id'],
-                'outlet_code'               => ($value['id'] == 0) ? 'JJ' . $value['id'] : $explodeName[0],
-                // 'outlet_name'               => ($value['id'] == 0) ? $value['name'] : str_replace($explodeName[0].' - ', '', $value['name']),
-                'outlet_name'               => ($value['id'] == 0) ? $value['name'] : 'Jilid '.ltrim(substr($explodeName[0],-4), '0').' '.end($explodeName),
-                'outlet_address'            => $value['address'],
-                'outlet_longitude'          => $value['long'],
-                'outlet_latitude'           => $value['lang'],
-                'outlet_status'             => $value['status'],
-                'id_city'                   => $value['id_city'],
-                'status_franchise'          => $value['status_franchise']
-            ]);
+            $data['outlet_code'] = ($value['id'] == 0) ? 'JJ' . $value['id'] : $explodeName[0];
+            $data['outlet_address'] = $value['address'];
+            $data['outlet_longitude'] = $value['long'];
+            $data['outlet_latitude'] = $value['lang'];
+            $data['outlet_status'] = $value['status'];
+            $data['id_city'] = $value['id_city'];
+            $data['status_franchise'] = $value['status_franchise'];
+
+
+            $cekOutlet = Outlet::where('id_outlet_seed', $value['id'])->first();
+            if($cekOutlet){
+                $updateOutlet = Outlet::where('id_outlet_seed', $value['id'])->update($data);
+                $id_outlet = $cekOutlet;
+            }else{
+                $data['outlet_name'] = ($value['id'] == 0) ? $value['name'] : 'Jilid '.ltrim(substr($explodeName[0],-4), '0').' '.end($explodeName);
+                $id_outlet = Outlet::create($data);
+            }
+
             $id_user_franchise = UserFranchise::updateOrCreate([
                 'id_user_franchise_seed'   => $value['user_franchisee']['id']
             ], [
