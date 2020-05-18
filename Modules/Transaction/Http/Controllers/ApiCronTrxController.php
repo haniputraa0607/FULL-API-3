@@ -356,7 +356,7 @@ class ApiCronTrxController extends Controller
 
             $use_referral = optional(optional($newTrx->promo_campaign_promo_code)->promo_campaign)->promo_type == 'Referral';
 
-            if (!in_array('Balance', $column) || $use_referral) {
+            if ((!in_array('Balance', $column) || $use_referral) && $newTrx->user) {
 
                 $promo_source = null;
                 if ( $newTrx->id_promo_campaign_promo_code || $newTrx->transaction_vouchers || $use_referral) 
