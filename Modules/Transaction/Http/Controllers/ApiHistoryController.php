@@ -491,13 +491,17 @@ class ApiHistoryController extends Controller
     {
         $transaction = Transaction::select(\DB::raw('*,sum(transaction_products.transaction_product_qty) as sum_qty'))->distinct('transactions.*')
             ->join('outlets', 'transactions.id_outlet', '=', 'outlets.id_outlet')
-            ->join('brand_outlet', 'outlets.id_outlet', '=', 'brand_outlet.id_outlet')
             ->leftJoin('transaction_products', 'transactions.id_transaction', '=', 'transaction_products.id_transaction')
             ->where('transactions.id_user', $id)
             ->with('outlet', 'logTopup')
             ->orderBy('transaction_date', 'DESC')
             ->groupBy('transactions.id_transaction');
-
+        if ($post['brand']??false) {
+            $transaction->join('brand_outlet', function($join) use ($post) {
+                $join->on('outlets.id_outlet', '=', 'brand_outlet.id_outlet');
+                $join->where('brand_outlet.id_brand','=',$post['brand']);
+            });
+        }
         if (isset($post['outlet']) || isset($post['brand'])) {
             if (isset($post['outlet']) && !isset($post['brand'])) {
                 $transaction->where('transactions.id_outlet', $post['outlet']);
