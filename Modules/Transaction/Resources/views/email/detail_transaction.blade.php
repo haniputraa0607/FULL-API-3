@@ -441,7 +441,7 @@
             </div>
         </div>
     @endif
-    @if ($data['trasaction_type'] != 'Offline')
+    @if ($data['trasaction_type'] != 'Pickup Order')
         <div class="kotak-biasa" style="background-color: #FFFFFF;box-shadow: 0 0.7px 3.3px #eeeeee;">
             <div class="container" style="padding: 10px;margin-top: 10px;">
                 <div class="text-center">
