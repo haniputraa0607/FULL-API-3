@@ -62,7 +62,7 @@ class ApiCronTrxController extends Controller
         }
         $count = 0;
         foreach ($getTrx as $key => $singleTrx) {
-        	DB::beginTransaction();
+
             $singleTrx->load('outlet_name');
 
             $productTrx = TransactionProduct::where('id_transaction', $singleTrx->id_transaction)->get();
@@ -92,6 +92,8 @@ class ApiCronTrxController extends Controller
             //     continue;
             // }
 
+            DB::begintransaction();
+
             $singleTrx->transaction_payment_status = 'Cancelled';
             $singleTrx->void_date = $now;
             $singleTrx->save();
@@ -105,7 +107,7 @@ class ApiCronTrxController extends Controller
             foreach($logBalance as $logB){
                 $reversal = app($this->balance)->addLogBalance( $singleTrx->id_user, abs($logB['balance']), $singleTrx->id_transaction, 'Reversal', $singleTrx->transaction_grandtotal);
 	            if (!$reversal) {
-	            	db::rollback();
+	            	DB::rollback();
 	            	continue;
 	            }
                 $usere= User::where('id',$singleTrx->id_user)->first();
@@ -124,19 +126,19 @@ class ApiCronTrxController extends Controller
             if ($singleTrx->id_promo_campaign_promo_code) {
             	$update_promo_report = app($this->promo_campaign)->deleteReport($singleTrx->id_transaction, $singleTrx->id_promo_campaign_promo_code);
             	if (!$update_promo_report) {
-	            	db::rollBack();
+	            	DB::rollBack();
 	            	continue;
 	            }	
             }
 
             // return voucher
-            $update_voucher = app($this->voucher)->returnVoucher($value->id_transaction);
+            $update_voucher = app($this->voucher)->returnVoucher($singleTrx->id_transaction);
 
             if (!$update_voucher) {
-            	db::rollback();
+            	DB::rollback();
             	continue;
             }
-            db::commit();
+            DB::commit();
 
         }
 
