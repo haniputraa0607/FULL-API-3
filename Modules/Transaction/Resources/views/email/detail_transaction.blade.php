@@ -441,7 +441,7 @@
             </div>
         </div>
     @endif
-    @if ($data['trasaction_type'] != 'Offline')
+    @if ($data['trasaction_type'] != 'Pickup Order')
         <div class="kotak-biasa" style="background-color: #FFFFFF;box-shadow: 0 0.7px 3.3px #eeeeee;">
             <div class="container" style="padding: 10px;margin-top: 10px;">
                 <div class="text-center">
@@ -460,7 +460,7 @@
                     <div class="col-12 text-15px space-nice text-black-grey-light WorkSans-Bold" style="padding-bottom: 8.3px;">PICK UP</div>
                     <div class="col-12 text-21-7px WorkSans-Bold" style="color: #a6ba35;">
                         @if ($data['detail']['pickup_type'] == 'set time')
-                            {{ date('H:i', strtotime($data['detail']['pickup_at'])) }}
+                            @if(isset($data['detail']['pickup_time'])){{ date('H:i', strtotime($data['detail']['pickup_time'])) }}@endif
                         @elseif($data['detail']['pickup_type'] == 'at arrival')
                             SAAT KEDATANGAN
                         @else

@@ -971,12 +971,6 @@ class ApiOnlineTransaction extends Controller
                         'messages' => ['Modifier not found']
                     ];
                 }
-                if($mod['product_modifier_stock_status']!='Available'){
-                    return [
-                        'status' => 'fail',
-                        'messages' => ['Modifier not available']
-                    ];
-                }
                 $mod = $mod->toArray();
                 $insert_modifier[] = [
                     'id_transaction_product'=>$trx_product['id_transaction_product'],
@@ -1471,6 +1465,7 @@ class ApiOnlineTransaction extends Controller
 
                     //inset pickup_at when pickup_type = right now
                     if($insertPickup['pickup_type'] == 'right now'){
+                        $settingTime = Setting::where('key', 'processing_time')->first();
                         $updatePickup = TransactionPickup::where('id_transaction', $insertTransaction['id_transaction'])->update(['pickup_at' => date('Y-m-d H:i:s', strtotime('+ '.$settingTime['value'].'minutes'))]);
                     }
 
@@ -2033,10 +2028,6 @@ class ApiOnlineTransaction extends Controller
                 $mod = $mod->find($id_product_modifier);
                 if(!$mod){
                     $missing_modifier++;
-                    continue;
-                }
-                if($mod['product_modifier_stock_status']!='Available'){
-                    $removed_modifier[] = $mod['text'];
                     continue;
                 }
                 $mod = $mod->toArray();
