@@ -2186,6 +2186,16 @@ class ApiOnlineTransaction extends Controller
 
             $result['points'] -= $result['used_point'];
         }
+
+        if (!empty($result['subscription'])) 
+        {
+	        if ($result['subscription'] >= $result['grandtotal']) {
+	        	$result['grandtotal'] = 0;
+	        }else{
+	        	$result['grandtotal'] = $result['grandtotal'] - $result['subscription'];
+	        }
+        }
+
         $result['total_payment'] = $result['grandtotal'] - $result['used_point'] - $result['subscription'];
         return MyHelper::checkGet($result)+['messages'=>$error_msg,'promo_error'=>$promo_error];
     }
