@@ -58,7 +58,7 @@ class Kernel extends ConsoleKernel
          * cancel all pending transaction that have been more than 1 x 24 hours
          * run every hour
          */
-        $schedule->call('Modules\Transaction\Http\Controllers\ApiCronTrxController@cron')->hourly();
+        $schedule->call('Modules\Transaction\Http\Controllers\ApiCronTrxController@cron')->cron('*/15 * * * *');
 
         /**
          * update all pickup transaction that have been more than 1 x 24 hours
@@ -106,11 +106,6 @@ class Kernel extends ConsoleKernel
             $schedule->call('Modules\Disburse\Http\Controllers\ApiIrisController@disburse')->dailyAt(env('TIME_CRON_DISBURSE'));
         }
 
-        /**
-         * To cancel payment ipay
-         * run every 15 minute
-         */
-        $schedule->call('Modules\Transaction\Http\Controllers\ApiCronTrxController@cancelTransactionIPay')->cron('*/15 * * * *');
     }
 
     /**

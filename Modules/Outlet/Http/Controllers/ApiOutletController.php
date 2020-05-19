@@ -1952,10 +1952,11 @@ class ApiOutletController extends Controller
         $outlet = Outlet::with(['today','brands'=>function($query){
                     $query->where([['brand_active',1],['brand_visibility',1]]);
                     $query->select('brands.id_brand','name_brand');
-                }])->select('id_outlet','outlet_code','outlet_name','outlet_address','outlet_latitude','outlet_longitude','outlet_phone','outlet_status')->find($request->json('id_outlet'))->toArray();
+                }])->select('id_outlet','outlet_code','outlet_name','outlet_address','outlet_latitude','outlet_longitude','outlet_phone','outlet_status')->find($request->json('id_outlet'));
         if(!$outlet){
             return MyHelper::checkGet([]);
         }
+        $outlet = $outlet->toArray();
         $outlet['status'] = $this->checkOutletStatus($outlet);
         return MyHelper::checkGet($outlet);
     }
