@@ -24,6 +24,7 @@ use App\Http\Models\TransactionPickupGoSend;
 use App\Http\Models\User;
 use App\Http\Models\UserOutlet;
 use App\Lib\GoSend;
+use App\Lib\Midtrans;
 use App\Lib\MyHelper;
 use App\Lib\PushNotificationHelper;
 use DB;
@@ -1289,15 +1290,13 @@ class ApiOutletApp extends Controller
                             }
                         }
                     } else {
+                        $point = 0;
                         $payMidtrans = TransactionPaymentMidtran::find($pay['id_payment']);
                         if ($payMidtrans) {
-                            $refund = app($this->balance)->addLogBalance($order['id_user'], $point = $payMidtrans['gross_amount'], $order['id_transaction'], 'Rejected Order Midtrans', $order['transaction_grandtotal']);
-                            if ($refund == false) {
+                            $refund = Midtrans::refund($order['transaction_receipt_number'],['reason' => $post['reason']??'']);
+                            if ($refund['status'] != 'success') {
                                 DB::rollback();
-                                return response()->json([
-                                    'status'   => 'fail',
-                                    'messages' => ['Insert Cashback Failed'],
-                                ]);
+                                return response()->json($refund);
                             }
                         }
                     }
@@ -1324,12 +1323,13 @@ class ApiOutletApp extends Controller
                 $payOvo      = TransactionPaymentOvo::where('id_transaction', $order['id_transaction'])->first();
                 $payIpay     = TransactionPaymentIpay88::where('id_transaction', $order['id_transaction'])->first();
                 if ($payMidtrans) {
-                    $refund = app($this->balance)->addLogBalance($order['id_user'], $point = $payMidtrans['gross_amount'], $order['id_transaction'], 'Rejected Order Midtrans', $order['transaction_grandtotal']);
+                    $point = 0;
+                    $refund = Midtrans::refund($order['transaction_receipt_number']);
                     if ($refund == false) {
                         DB::rollback();
                         return response()->json([
                             'status'   => 'fail',
-                            'messages' => ['Insert Cashback Failed'],
+                            'messages' => ['Refund Payment Failed'],
                         ]);
                     }
                 } elseif ($payOvo) {
