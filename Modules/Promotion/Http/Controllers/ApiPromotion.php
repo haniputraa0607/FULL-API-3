@@ -32,6 +32,7 @@ use App\Http\Models\News;
 use App\Lib\MyHelper;
 use App\Lib\PushNotificationHelper;
 use App\Lib\classMaskingJson;
+use App\Lib\classJatisSMS;
 use App\Lib\apiwha;
 use Validator;
 use Hash;
@@ -49,6 +50,7 @@ class ApiPromotion extends Controller
 		$this->dealsClaim  = "Modules\Deals\Http\Controllers\ApiDealsClaim";
 		$this->deals  = "Modules\Deals\Http\Controllers\ApiDeals";
 		$this->rajasms = new classMaskingJson();
+		$this->jatissms = new classJatisSMS();
 		$this->apiwha = new apiwha();
     }
 
@@ -316,7 +318,7 @@ class ApiPromotion extends Controller
 					//get deals template
 					$dealsTemplate = DealsPromotionTemplate::find($post['id_deals_promotion_template'][$key]);
 					if(!$dealsTemplate){
-						DB::rollback();
+						DB::rollBack();
 						$result = [
 							'status'	=> 'fail',
 							'messages'	=> ['Update Promotion Content Failed.', 'Deals Not Found.']
@@ -857,7 +859,7 @@ class ApiPromotion extends Controller
 				//get deals template
 				$dealsTemplate = DealsPromotionTemplate::find($post['id_deals_promotion_template'][0]);
 				if(!$dealsTemplate){
-					DB::rollback();
+					DB::rollBack();
 					$result = [
 						'status'	=> 'fail',
 						'messages'	=> ['Update Promotion Content Failed.', 'Deals Not Found.']
@@ -1676,6 +1678,10 @@ class ApiPromotion extends Controller
 			Mail::send('emails.test', $data, function($message) use ($to,$subject,$name,$setting)
 			{
 				$message->to($to, $name)->subject($subject);
+				if(env('MAIL_DRIVER') == 'mailgun'){
+					$message->trackClicks(true)
+							->trackOpens(true);
+				}
 				if(!empty($setting['email_from']) && !empty($setting['email_sender'])){
 					$message->from($setting['email_sender'], $setting['email_from']);
 				}else if(!empty($setting['email_sender'])){
@@ -1734,13 +1740,56 @@ class ApiPromotion extends Controller
 
 			$content 	= app($this->autocrm)->TextReplace($promotionContent['promotion_sms_content'], $user['id'], null, 'id');
 
-			array_push($senddata['datapacket'],array(
-					'number' => trim($user['phone']),
-					'message' => urlencode(stripslashes(utf8_encode($content))),
-					'sendingdatetime' => ""));
+			switch (env('SMS_GATEWAY')) {
+				case 'Jatis':
+					$senddata = [
+						'userid'	=> env('SMS_USER'),
+						'password'	=> env('SMS_PASSWORD'),
+						'msisdn'	=> '62'.substr($user['phone'],1),
+						'sender'	=> env('SMS_SENDER'),
+						'division'	=> env('SMS_DIVISION'),
+						'batchname'	=> env('SMS_BATCHNAME'),
+						'uploadby'	=> env('SMS_UPLOADBY'),
+						'channel'   => env('SMS_CHANNEL')
+					];
 
-			$this->rajasms->setData($senddata);
-			$send = $this->rajasms->send();
+					$senddata['message'] = $content;
+
+					$this->jatissms->setData($senddata);
+					$send = $this->jatissms->send();
+
+					break;
+				case 'RajaSMS':
+					$senddata = array(
+						'apikey' => env('SMS_KEY'),
+						'callbackurl' => env('APP_URL'),
+						'datapacket'=>array()
+					);
+
+					array_push($senddata['datapacket'],array(
+						'number' => trim($user['phone']),
+						'message' => urlencode(stripslashes(utf8_encode($content))),
+						'sendingdatetime' => ""));
+
+					$this->rajasms->setData($senddata);
+					$send = $this->rajasms->send();
+					break;
+				default:
+					$senddata = array(
+						'apikey' => env('SMS_KEY'),
+						'callbackurl' => env('APP_URL'),
+						'datapacket'=>array()
+					);
+
+					array_push($senddata['datapacket'],array(
+						'number' => trim($user['phone']),
+						'message' => urlencode(stripslashes(utf8_encode($content))),
+						'sendingdatetime' => ""));
+
+					$this->rajasms->setData($senddata);
+					$send = $this->rajasms->send();
+					break;
+			}
 
 			$updateCountPromotion = PromotionContent::where('id_promotion_content', $promotionContent['id_promotion_content'])->update(['promotion_count_sms_sent' => $promotionContent['promotion_count_sms_sent']+1]);
 
@@ -2190,7 +2239,7 @@ class ApiPromotion extends Controller
 						$deleteDeals = app($this->deals)->delete($dataContent['id_deals']);
 
 						if (!$deleteDeals) {
-							DB::rollback();
+							DB::rollBack();
 							return response()->json(MyHelper::checkDelete($delete));
 						}
 					}
@@ -2211,12 +2260,12 @@ class ApiPromotion extends Controller
 						DB::commit();
 					}
 					else {
-						DB::rollback();
+						DB::rollBack();
 					}
 
 					return response()->json(MyHelper::checkDelete($delete));
 				}else{
-					DB::rollback();
+					DB::rollBack();
 					return response()->json([
 						'status'   => 'fail',
 						'messages' => ['Failed Delete promotion.']
@@ -2228,7 +2277,7 @@ class ApiPromotion extends Controller
 					DB::commit();
 				}
 				else {
-					DB::rollback();
+					DB::rollBack();
 				}
 				return response()->json(MyHelper::checkDelete($delete));
 			}
