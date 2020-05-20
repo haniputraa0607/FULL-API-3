@@ -96,6 +96,12 @@ class Kernel extends ConsoleKernel
         $schedule->call('Modules\SettingFraud\Http\Controllers\ApiFraud@fraudCron')->cron('*/59 * * * *');
 
         /**
+         * reset notify outlet flag
+         * run every day at 01:00
+         */
+        $schedule->call('Modules\Outlet\Http\Controllers\ApiOutletController@resetNotify')->dailyAt('00:30');
+
+        /**
          * To process diburse
          */
         if(env('TYPE_CRON_DISBURSE') == 'monthly'){
