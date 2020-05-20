@@ -26,6 +26,7 @@ use App\Http\Models\PromotionRuleParent;
 use App\Http\Models\InboxGlobalRule;
 use App\Http\Models\InboxGlobalRuleParent;
 use App\Http\Models\LogTopupManual;
+use App\Http\Models\LogApiSms;
 use Modules\Product\Entities\ProductStockStatusUpdate;
 use Modules\PointInjection\Entities\PointInjectionRule;
 use Modules\PointInjection\Entities\PointInjectionRuleParent;
@@ -1982,7 +1983,7 @@ class MyHelper{
 			}
 			elseif($type == 'inbox_global'){
 				$createRuleParent = InboxGlobalRuleParent::create($dataRuleParent);
-			} 
+			}
 			elseif ($type == 'point_injection') {
 				$createRuleParent = PointInjectionRuleParent::create($dataRuleParent);
 			}
@@ -2047,7 +2048,19 @@ class MyHelper{
 			return ['status' => 'fail'];
 		}
 	}
-
+	public static function logApiSMS($arr){
+    	if(!is_array($arr)){return false;}
+		$trace=array_slice((new \Exception)->getTrace(),1,6);
+		$log=[
+		    'request_body'=>null,
+		    'request_url'=>null,
+		    'response'=>null,
+		    'phone'=>null
+		];
+		$log=array_merge($log,$arr);
+		array_walk($log, function(&$data){if(is_array($data)){$data=json_encode($data);}});
+		LogApiSms::create($log);
+    }
 	public static function cut_str($str, $left, $right) {
 		$str = substr ( stristr ( $str, $left ), strlen ( $left ) );
 		$leftLen = strlen ( stristr ( $str, $right ) );
@@ -2232,7 +2245,7 @@ class MyHelper{
     	}
     	return $string;
 	}
-	
+
 	public static function postCURLWithBearer($url, $data, $bearer) {
 		$uri = env('APP_API_URL');
         $ch = curl_init($uri.$url);

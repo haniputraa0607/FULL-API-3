@@ -2,21 +2,21 @@
 
 namespace App\Lib;
 
-class classMaskingJson {
+class classJatisSMS {
 	protected $data;
 	protected $smsserverip;
 	public function setData($data) {
 		$this->data = $data;
 	}
 	public function send() {
-		$dt=json_encode($this->data);
-		$curlHandle = curl_init(env('SMS_URL')."/sms/api_sms_masking_send_json.php");
+		$dt=http_build_query($this->data);
+		$curlHandle = curl_init(env('SMS_URL'));
 		curl_setopt($curlHandle, CURLOPT_CUSTOMREQUEST, "POST");
 		curl_setopt($curlHandle, CURLOPT_POSTFIELDS, $dt);
 		curl_setopt($curlHandle, CURLOPT_RETURNTRANSFER, true);
 		curl_setopt($curlHandle, CURLOPT_HTTPHEADER, array(
-			'Content-Type: application/json',
-			'Content-Length: ' . strlen($dt))
+            'Content-Type: application/x-www-form-urlencoded'
+            )
 		);
 		curl_setopt($curlHandle, CURLOPT_TIMEOUT, 5);
 		curl_setopt($curlHandle, CURLOPT_CONNECTTIMEOUT, 5);
@@ -47,19 +47,19 @@ class classMaskingJson {
 		}
 
         $phone = null;
-        if(isset($this->data['number'])){
-            if(substr($this->data['number'], 0, 2) == '62'){
-                $phone = '0'.substr($this->data['number'],2);
+        if(isset($this->data['msisdn'])){
+            if(substr($this->data['msisdn'], 0, 2) == '62'){
+                $phone = '0'.substr($this->data['msisdn'],2);
             }else{
-                $phone = $this->data['number'];
+                $phone = $this->data['msisdn'];
             }
         }
-		$log=[
-			'request_body'=>$this->data,
-			'request_url'=>env('SMS_URL'),
-			'response'=>$curl_response,
-			'phone'=>$phone
-		];
+        $log=[
+            'request_body'=>$this->data,
+            'request_url'=>env('SMS_URL'),
+            'response'=>$curl_response,
+            'phone'=>$phone
+        ];
 		MyHelper::logApiSMS($log);
 
 		return $hasil;
