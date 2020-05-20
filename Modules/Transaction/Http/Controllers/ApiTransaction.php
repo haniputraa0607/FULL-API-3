@@ -2327,22 +2327,12 @@ class ApiTransaction extends Controller
             $gmaps = [];
         };
 
-        foreach ($gmaps as &$gmap){
-            $gmap = [
-                'id_user_address' => 0,
-                'short_address' => $gmap['name'],
-                'address' => $gmap['vicinity'],
-                'latitude' => $gmap['geometry']['location']['lat'],
-                'longitude' => $gmap['geometry']['location']['lng'],
-                'description' => ''
-            ];
-        }
-
         $maxmin = MyHelper::getRadius($latitude,$longitude,$distance);
         $user_address = UserAddress::select('id_user_address','short_address','address','latitude','longitude','description')->where('id_user',$id)
             ->whereBetween('latitude',[$maxmin['latitude']['min'],$maxmin['latitude']['max']])
             ->whereBetween('longitude',[$maxmin['longitude']['min'],$maxmin['longitude']['max']])
             ->take(10);
+
         if($keyword = $request->json('keyword')){
             $user_address->where(function($query) use ($keyword) {
                 $query->where('name',$keyword);
@@ -2352,6 +2342,31 @@ class ApiTransaction extends Controller
         }
 
         $user_address = $user_address->get()->toArray();
+
+        $saved = array_map(function($i){
+            return [
+                'latitude' => $i['latitude'],
+                'longitude' => $i['longitude']
+            ];
+        },$user_address);
+
+        foreach ($gmaps as $key => &$gmap){
+            $coor = [
+                'latitude' => number_format($gmap['geometry']['location']['lat'],8),
+                'longitude' => number_format($gmap['geometry']['location']['lng'],8)
+            ];
+            if(in_array($coor, $saved)){
+                unset($gmaps[$key]);
+            }
+            $gmap = [
+                'id_user_address' => 0,
+                'short_address' => $gmap['name'],
+                'address' => $gmap['vicinity'],
+                'latitude' => $coor['latitude'],
+                'longitude' => $coor['longitude'],
+                'description' => ''
+            ];
+        }
 
         $selected_address = $user_address[0]??null;
 
@@ -2396,17 +2411,33 @@ class ApiTransaction extends Controller
         $data['description'] = isset($post['description']) ? $post['description'] : null;
         $data['latitude'] = number_format($post['latitude'],8);
         $data['longitude'] = number_format($post['longitude'],8);
-        $exists = UserAddress::where('id_user',$request->user()->id)->where('name',$data['name'])->exists();
+        $type = ucfirst($post['type'] ?? 'Other');
+        $data['name'] = $type != 'Other'?$type:$data['name'];
+        $exists = UserAddress::where('id_user',$request->user()->id)
+            ->where('name',$data['name'])
+            ->where('favorite',1)
+            ->where(function($q) use ($type){
+                $q->where('type',$type);
+                if($type == 'Other'){
+                    $q->orWhereNull('type');
+                }
+            })
+            ->exists();
         if($exists){
-            return ['status'=>'fail','messages'=>['Address with same name already exists']];
+            return ['status'=>'fail','messages'=>['Alamat dengan nama yang sama sudah ada']];
         }
-        $type = ($post['type']??null)?ucfirst($post['type']):null;
-        if($type){
-            UserAddress::where('type',$type)->update(['type'=>null]);
+        if(in_array($type, ['Home','Work'])){
+            UserAddress::where('type',$type)->delete();
         }
-        $found = UserAddress::where($data)->first();
+        $toMatch = $data;
+        unset($toMatch['name']);
+        $found = UserAddress::where($toMatch+['type'=>$type])->first();
         if($found){
+            if($found->favorite){
+                return ['status'=>'fail','messages'=>['Alamat sudah disimpan sebagai '.(in_array($found->type,['Work','Home'])?$found->type:$found->name)]];
+            }
             $found->update([
+                'name' => $data['name'],
                 'type' => $type?:$found->type,
                 'favorite' => 1,
             ]);

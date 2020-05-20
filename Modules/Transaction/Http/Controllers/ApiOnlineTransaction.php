@@ -46,6 +46,7 @@ use Modules\PromoCampaign\Entities\PromoCampaignPromoCode;
 use Modules\PromoCampaign\Entities\PromoCampaignReferral;
 use Modules\PromoCampaign\Entities\PromoCampaignReferralTransaction;
 use Modules\PromoCampaign\Entities\UserReferralCode;
+use Modules\PromoCampaign\Entities\UserPromo;
 use Modules\Subscription\Entities\TransactionPaymentSubscription;
 use Modules\Subscription\Entities\SubscriptionUserVoucher;
 use Modules\PromoCampaign\Entities\PromoCampaignReport;
@@ -91,6 +92,7 @@ class ApiOnlineTransaction extends Controller
         $this->promo_campaign       = "Modules\PromoCampaign\Http\Controllers\ApiPromoCampaign";
         $this->subscription_use     = "Modules\Subscription\Http\Controllers\ApiSubscriptionUse";
         $this->promo       = "Modules\PromoCampaign\Http\Controllers\ApiPromo";
+        $this->outlet       = "Modules\Outlet\Http\Controllers\ApiOutletController";
     }
 
     public function newTransaction(NewTransaction $request) {
@@ -271,6 +273,11 @@ class ApiOnlineTransaction extends Controller
         $discount_promo = [];
         $promo_discount = 0;
         $promo_source = null;
+
+        if($request->json('promo_code') || $request->json('id_deals_user') || $request->json('id_subscription_user')){
+        	$removePromo = UserPromo::where('id_user',$request->user()->id)->delete();
+        }
+
         if($request->json('promo_code') && !$request->json('id_deals_user')){
             $code=PromoCampaignPromoCode::where('promo_code',$request->promo_code)
                 ->join('promo_campaigns', 'promo_campaigns.id_promo_campaign', '=', 'promo_campaign_promo_codes.id_promo_campaign')
@@ -596,7 +603,12 @@ class ApiOnlineTransaction extends Controller
                 ];
             }
             $dataAddressKeys['id_user'] = $user['id'];
-            UserAddress::updateOrCreate($dataAddressKeys,$dataAddress);
+            $addressx = UserAddress::where($dataAddressKeys)->first();
+            if(!$addressx){
+                UserAddress::create($dataAddressKeys+$dataAddress);
+            }elseif(!$addressx->favorite){
+                $addressx->update($dataAddress);
+            }
             $checkKey = GoSend::checkKey();
             if(is_array($checkKey) && $checkKey['status'] == 'fail'){
                 DB::rollback();
@@ -637,6 +649,9 @@ class ApiOnlineTransaction extends Controller
 
         if($post['type'] == 'GO-SEND'){
             if(!($outlet['outlet_latitude']&&$outlet['outlet_longitude']&&$outlet['outlet_phone']&&$outlet['outlet_address'])){
+                app($this->outlet)->sendNotifIncompleteOutlet($outlet['id_outlet']);
+                $outlet->notify_admin = 1;
+                $outlet->save();
                 return [
                     'status' => 'fail',
                     'messages' => ['Tidak dapat melakukan pengiriman dari outlet ini']
@@ -1763,6 +1778,9 @@ class ApiOnlineTransaction extends Controller
 
         if(($post['type']??null) == 'GO-SEND'){
             if(!($outlet['outlet_latitude']&&$outlet['outlet_longitude']&&$outlet['outlet_phone']&&$outlet['outlet_address'])){
+                app($this->outlet)->sendNotifIncompleteOutlet($outlet['id_outlet']);
+                $outlet->notify_admin = 1;
+                $outlet->save();
                 return [
                     'status' => 'fail',
                     'messages' => ['Tidak dapat melakukan pengiriman dari outlet ini']

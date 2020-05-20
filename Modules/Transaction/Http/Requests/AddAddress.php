@@ -11,7 +11,7 @@ class AddAddress extends FormRequest
     public function rules()
     {
         return [
-            'name'  => 'sometimes|string',
+            'name'  => 'sometimes|nullable|string',
             // 'phone' => 'required|numeric',
             // 'id_city'   => 'required|integer',
             'short_address'   => 'required|string',
