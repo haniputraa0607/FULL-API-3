@@ -136,10 +136,9 @@ class Midtrans {
             $param = [];
         }
         $status = MyHelper::post($url, Self::bearer(), $param);
-        \Log::info($order_id);
         return [
             'status' => ($status['status_code']??false)==200?'success':'fail',
-            'messages' => [$status['status_message']??'Something went wrong']
+            'messages' => [$status['status_message']??'Something went wrong','Refund failed']
         ];
     }
 
