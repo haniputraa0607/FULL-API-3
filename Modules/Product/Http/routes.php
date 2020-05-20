@@ -40,6 +40,7 @@ Route::group(['prefix' => 'api/product','middleware' => ['log_activities','auth:
     Route::post('delete', 'ApiProductController@delete');
     Route::post('import', 'ApiProductController@import');
     Route::get('list/price/{id_outlet}', 'ApiProductController@listProductPriceByOutlet');
+    Route::get('list/product-detail/{id_outlet}', 'ApiProductController@listProductDetailByOutlet');
     Route::post('export', 'ApiProductController@export');
     Route::post('import', 'ApiProductController@import');
     Route::post('ajax-product-brand', 'ApiProductController@ajaxProductBrand');
@@ -89,7 +90,9 @@ Route::group(['prefix' => 'api/product','middleware' => ['log_activities','auth:
 
     /* PRICES */
     Route::post('prices', 'ApiProductController@productPrices');
+    Route::post('prices/all-product', 'ApiProductController@allProductPrices');
     Route::post('outlet-detail', 'ApiProductController@productDetail');
+    Route::post('outlet-detail/all-product', 'ApiProductController@allProductDetail');
 
     /* tag */
     Route::group(['prefix' => 'tag'], function() {
