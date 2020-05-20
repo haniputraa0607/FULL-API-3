@@ -772,10 +772,11 @@ class ApiDealsVoucher extends Controller
         if(isset($post['id_outlet']) && is_numeric($post['id_outlet'])){
             $voucher->join('deals_vouchers', 'deals_users.id_deals_voucher', 'deals_vouchers.id_deals_voucher')
                 ->join('deals', 'deals.id_deals', 'deals_vouchers.id_deals')
-                ->join('deals_outlets', 'deals.id_deals', 'deals_outlets.id_deals')
+                ->leftJoin('deals_outlets', 'deals.id_deals', 'deals_outlets.id_deals')
                 ->where(function ($query) use ($post) {
                     $query->where('deals_users.id_outlet', $post['id_outlet'])
-                        ->orWhere('deals_outlets.id_outlet', $post['id_outlet']);
+                        ->orWhere('deals_outlets.id_outlet', $post['id_outlet'])
+                        ->orWhere('deals.is_all_outlet','=',1);
                 })
                 ->select('deals_users.*')->distinct();
 

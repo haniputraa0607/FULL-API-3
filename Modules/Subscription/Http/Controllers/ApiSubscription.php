@@ -1728,9 +1728,10 @@ class ApiSubscription extends Controller
         if(isset($post['id_outlet']) && is_numeric($post['id_outlet'])){
             $subs->join('subscription_user_vouchers', 'subscription_users.id_subscription_user', 'subscription_user_vouchers.id_subscription_user')
                 ->join('subscriptions', 'subscriptions.id_subscription', 'subscription_users.id_subscription')
-                ->join('subscription_outlets', 'subscriptions.id_subscription', 'subscription_outlets.id_subscription')
+                ->leftjoin('subscription_outlets', 'subscriptions.id_subscription', 'subscription_outlets.id_subscription')
                 ->where(function ($query) use ($post) {
-                    $query->orWhere('subscription_outlets.id_outlet', $post['id_outlet']);
+                    $query->orWhere('subscription_outlets.id_outlet', $post['id_outlet'])
+                    	->orWhere('subscriptions.is_all_outlet','=',1);
                 })
                 ->distinct();
         }
