@@ -24,6 +24,11 @@ class ApiNewsCategoryController extends Controller
         if(!$request->json('all')){
             $list->select('id_news_category','category_name');
         }
+
+        if(!$request->json('admin') && $request->json('admin') != 1){
+            $list->whereRaw('id_news_category in (select news.id_news_category from news where news.id_news_category = news_categories.id_news_category)');
+        }
+
         if(is_numeric($id=$request->json('id_news_category'))){
             if($id==0){
                 $list=[

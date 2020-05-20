@@ -544,7 +544,7 @@ class ApiNews extends Controller
             }
 
             if(!isset($post['id_news'])){
-                $news->select('id_news','id_news_category','news_title','news_publish_date','news_expired_date','news_slug','news_content_short','news_image_luar','news_image_dalam');
+                $news->select('id_news','id_news_category','news_title','news_publish_date','news_expired_date', DB::raw("DATE_FORMAT(news_post_date, '%W, %d %M %Y %H:%i') as news_post_date"), 'news_slug','news_content_short','news_image_luar','news_image_dalam');
             }else{
                 $news->with('news_form_structures');
             }

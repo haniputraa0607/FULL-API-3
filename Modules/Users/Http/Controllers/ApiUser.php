@@ -1752,7 +1752,7 @@ class ApiUser extends Controller
 
                 //cek complete profile ?
                 if($datauser[0]['complete_profile'] != "1"){
-                    if($datauser[0]['name'] != "" && $datauser[0]['email'] != "" && $datauser[0]['gender'] != "" && $datauser[0]['birthday'] != "" && $datauser[0]['id_city'] != "" && $datauser[0]['celebrate'] != "" && $datauser[0]['job'] != "" && $datauser[0]['address'] != ""){
+                    if($datauser[0]['name'] != "" && $datauser[0]['email'] != "" && $datauser[0]['gender'] != "" && $datauser[0]['birthday'] != "" && $datauser[0]['id_city'] != "" && $datauser[0]['job'] != "" && $datauser[0]['id_card_image'] != ""){
                         //get point
 
                         $complete_profile_cashback = 0;
