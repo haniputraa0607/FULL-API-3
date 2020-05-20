@@ -963,7 +963,6 @@ class ConfigsTableSeeder extends Seeder
                     'created_at' => date('Y-m-d H:i:s'),
                     'updated_at' => date('Y-m-d H:i:s'),
                 ),
-                ,
             106 =>
                 array (
                     'id_config' => 107,
@@ -977,6 +976,33 @@ class ConfigsTableSeeder extends Seeder
                 array (
                     'id_config' => 108,
                     'config_name' => 'intro',
+                    'description' => '',
+                    'is_active' => 1,
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
+            108 =>
+                array (
+                    'id_config' => 109,
+                    'config_name' => 'credit card multi payment',
+                    'description' => '',
+                    'is_active' => 1,
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
+            109 =>
+                array (
+                    'id_config' => 110,
+                    'config_name' => 'refund midtrans',
+                    'description' => '',
+                    'is_active' => 1,
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
+            110 =>
+                array (
+                    'id_config' => 111,
+                    'config_name' => 'refund ovo',
                     'description' => '',
                     'is_active' => 1,
                     'created_at' => date('Y-m-d H:i:s'),
