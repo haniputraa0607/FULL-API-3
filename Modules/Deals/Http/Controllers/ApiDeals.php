@@ -1415,7 +1415,7 @@ class ApiDeals extends Controller
         $deals->where('step_complete', '=', 1);
 
         if ($request->json('id_outlet') && is_integer($request->json('id_outlet'))) {
-            $deals->join('deals_outlets', 'deals.id_deals', 'deals_outlets.id_deals')
+            $deals->leftJoin('deals_outlets', 'deals.id_deals', 'deals_outlets.id_deals')
             	->where(function($query) use ($request){
 	                $query->where('id_outlet', $request->json('id_outlet'))
 	                		->orWhere('deals.is_all_outlet','=',1);
