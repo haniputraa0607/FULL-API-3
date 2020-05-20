@@ -88,6 +88,7 @@ Route::group(['middleware' => ['auth_client', 'user_agent'], 'prefix' => 'api/tr
     Route::post('/courier', 'ApiTransaction@getCourier');
     Route::any('/grand-total', 'ApiSettingTransactionV2@grandTotal');
 
+    Route::any('/cc-payment', 'ApiSettingTransaction@ccPayment');
     Route::post('/new-transaction', 'ApiTransaction@transaction');
 
     Route::post('/shipping/gosend', 'ApiTransaction@shippingCostGoSend');

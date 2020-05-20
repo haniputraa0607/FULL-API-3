@@ -2,6 +2,7 @@
 
 namespace Modules\OutletApp\Http\Controllers;
 
+use App\Http\Models\Configs;
 use App\Http\Models\DateHoliday;
 use App\Http\Models\Holiday;
 use App\Http\Models\LogBalance;
@@ -14,6 +15,7 @@ use App\Http\Models\ProductPrice;
 use App\Http\Models\Setting;
 use App\Http\Models\Transaction;
 use App\Http\Models\TransactionMultiplePayment;
+use Modules\IPay88\Entities\TransactionPaymentIpay88;
 use App\Http\Models\TransactionPaymentBalance;
 use App\Http\Models\TransactionPaymentMidtran;
 use App\Http\Models\TransactionPaymentOffline;
@@ -23,6 +25,8 @@ use App\Http\Models\TransactionPickupGoSend;
 use App\Http\Models\User;
 use App\Http\Models\UserOutlet;
 use App\Lib\GoSend;
+use App\Lib\Midtrans;
+use App\Lib\Ovo;
 use App\Lib\MyHelper;
 use App\Lib\PushNotificationHelper;
 use DB;
@@ -31,7 +35,6 @@ use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
 use Modules\Brand\Entities\Brand;
 use Modules\Brand\Entities\BrandProduct;
-use Modules\IPay88\Entities\TransactionPaymentIpay88;
 use Modules\OutletApp\Entities\OutletAppOtp;
 use Modules\OutletApp\Http\Requests\DeleteToken;
 use Modules\OutletApp\Http\Requests\DetailOrder;
@@ -1266,7 +1269,34 @@ class ApiOutletApp extends Controller
                     } elseif ($pay['type'] == 'Ovo') {
                         $payOvo = TransactionPaymentOvo::find($pay['id_payment']);
                         if ($payOvo) {
-                            $refund = app($this->balance)->addLogBalance($order['id_user'], $point = $payOvo['amount'], $order['id_transaction'], 'Rejected Order Ovo', $order['transaction_grandtotal']);
+                            if(Configs::select('is_active')->where('config_name','refund ovo')->pluck('is_active')->first()){
+                                $point = 0;
+                                $transaction = TransactionPaymentOvo::where('transaction_payment_ovos.id_transaction', $post['id_transaction'])
+                                    ->join('transactions','transactions.id_transaction','=','transaction_payment_ovos.id_transaction')
+                                    ->first();
+                                $refund = Ovo::Void($transaction);
+                                if ($refund['status_code'] != '200') {
+                                    DB::rollback();
+                                    return response()->json([
+                                        'status'   => 'fail',
+                                        'messages' => ['Refund Ovo Failed'],
+                                    ]);
+                                }
+                            }else{
+                                $refund = app($this->balance)->addLogBalance($order['id_user'], $point = $payOvo['amount'], $order['id_transaction'], 'Rejected Order Ovo', $order['transaction_grandtotal']);
+                                if ($refund == false) {
+                                    DB::rollback();
+                                    return response()->json([
+                                        'status'   => 'fail',
+                                        'messages' => ['Insert Cashback Failed'],
+                                    ]);
+                                }
+                            }
+                        }
+                    } elseif (strtolower($pay['type']) == 'ipay88') {
+                        $payIpay = TransactionPaymentIpay88::find($pay['id_payment']);
+                        if ($payIpay) {
+                            $refund = app($this->balance)->addLogBalance($order['id_user'], $point = ($payIpay['amount']/100), $order['id_transaction'], 'Rejected Order', $order['transaction_grandtotal']);
                             if ($refund == false) {
                                 DB::rollback();
                                 return response()->json([
@@ -1276,15 +1306,24 @@ class ApiOutletApp extends Controller
                             }
                         }
                     } else {
+                        $point = 0;
                         $payMidtrans = TransactionPaymentMidtran::find($pay['id_payment']);
                         if ($payMidtrans) {
-                            $refund = app($this->balance)->addLogBalance($order['id_user'], $point = $payMidtrans['gross_amount'], $order['id_transaction'], 'Rejected Order Midtrans', $order['transaction_grandtotal']);
-                            if ($refund == false) {
-                                DB::rollback();
-                                return response()->json([
-                                    'status'   => 'fail',
-                                    'messages' => ['Insert Cashback Failed'],
-                                ]);
+                            if(Configs::select('is_active')->where('config_name','refund midtrans')->pluck('is_active')->first()){
+                                $refund = Midtrans::refund($order['transaction_receipt_number'],['reason' => $post['reason']??'']);
+                                if ($refund['status'] != 'success') {
+                                    DB::rollback();
+                                    return response()->json($refund);
+                                }
+                            } else {
+                                $refund = app($this->balance)->addLogBalance( $order['id_user'], $point = $payMidtrans['gross_amount'], $order['id_transaction'], 'Rejected Order Midtrans', $order['transaction_grandtotal']);
+                                if ($refund == false) {
+                                    DB::rollback();
+                                    return response()->json([
+                                        'status'    => 'fail',
+                                        'messages'  => ['Insert Cashback Failed']
+                                    ]);
+                                }
                             }
                         }
                     }
@@ -1309,17 +1348,51 @@ class ApiOutletApp extends Controller
             } else {
                 $payMidtrans = TransactionPaymentMidtran::where('id_transaction', $order['id_transaction'])->first();
                 $payOvo      = TransactionPaymentOvo::where('id_transaction', $order['id_transaction'])->first();
+                $payIpay     = TransactionPaymentIpay88::where('id_transaction', $order['id_transaction'])->first();
                 if ($payMidtrans) {
-                    $refund = app($this->balance)->addLogBalance($order['id_user'], $point = $payMidtrans['gross_amount'], $order['id_transaction'], 'Rejected Order Midtrans', $order['transaction_grandtotal']);
-                    if ($refund == false) {
-                        DB::rollback();
-                        return response()->json([
-                            'status'   => 'fail',
-                            'messages' => ['Insert Cashback Failed'],
-                        ]);
+                    $point = 0;
+                    if(Configs::select('is_active')->where('config_name','refund midtrans')->pluck('is_active')->first()){
+                        $refund = Midtrans::refund($order['transaction_receipt_number'],['reason' => $post['reason']??'']);
+                        if ($refund['status'] != 'success') {
+                            DB::rollback();
+                            return response()->json($refund);
+                        }
+                    } else {
+                        $refund = app($this->balance)->addLogBalance( $order['id_user'], $point = $payMidtrans['gross_amount'], $order['id_transaction'], 'Rejected Order Midtrans', $order['transaction_grandtotal']);
+                        if ($refund == false) {
+                            DB::rollback();
+                            return response()->json([
+                                'status'    => 'fail',
+                                'messages'  => ['Insert Cashback Failed']
+                            ]);
+                        }
                     }
                 } elseif ($payOvo) {
-                    $refund = app($this->balance)->addLogBalance($order['id_user'], $point = $payOvo['amount'], $order['id_transaction'], 'Rejected Order Ovo', $order['transaction_grandtotal']);
+                    if(Configs::select('is_active')->where('config_name','refund ovo')->pluck('is_active')->first()){
+                        $point = 0;
+                        $transaction = TransactionPaymentOvo::where('transaction_payment_ovos.id_transaction', $post['id_transaction'])
+                            ->join('transactions','transactions.id_transaction','=','transaction_payment_ovos.id_transaction')
+                            ->first();
+                        $refund = Ovo::Void($transaction);
+                        if ($refund['status_code'] != '200') {
+                            DB::rollback();
+                            return response()->json([
+                                'status'   => 'fail',
+                                'messages' => ['Refund Ovo Failed'],
+                            ]);
+                        }
+                    }else{
+                        $refund = app($this->balance)->addLogBalance($order['id_user'], $point = $payOvo['amount'], $order['id_transaction'], 'Rejected Order Ovo', $order['transaction_grandtotal']);
+                        if ($refund == false) {
+                            DB::rollback();
+                            return response()->json([
+                                'status'   => 'fail',
+                                'messages' => ['Insert Cashback Failed'],
+                            ]);
+                        }
+                    }
+                } elseif ($payIpay) {
+                    $refund = app($this->balance)->addLogBalance($order['id_user'], $point = ($payIpay['amount']/100), $order['id_transaction'], 'Rejected Order', $order['transaction_grandtotal']);
                     if ($refund == false) {
                         DB::rollback();
                         return response()->json([
