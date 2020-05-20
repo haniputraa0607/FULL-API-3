@@ -14,7 +14,7 @@ use App\Http\Models\ProductPrice;
 use App\Http\Models\Setting;
 use App\Http\Models\Transaction;
 use App\Http\Models\TransactionMultiplePayment;
-use App\Http\Models\TransactionPaymentIpay88;
+use Modules\IPay88\Entities\TransactionPaymentIpay88;
 use App\Http\Models\TransactionPaymentBalance;
 use App\Http\Models\TransactionPaymentMidtran;
 use App\Http\Models\TransactionPaymentOffline;
