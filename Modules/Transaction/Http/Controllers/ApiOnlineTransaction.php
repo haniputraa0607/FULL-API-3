@@ -46,6 +46,7 @@ use Modules\PromoCampaign\Entities\PromoCampaignPromoCode;
 use Modules\PromoCampaign\Entities\PromoCampaignReferral;
 use Modules\PromoCampaign\Entities\PromoCampaignReferralTransaction;
 use Modules\PromoCampaign\Entities\UserReferralCode;
+use Modules\PromoCampaign\Entities\UserPromo;
 use Modules\Subscription\Entities\TransactionPaymentSubscription;
 use Modules\Subscription\Entities\SubscriptionUserVoucher;
 use Modules\PromoCampaign\Entities\PromoCampaignReport;
@@ -271,6 +272,11 @@ class ApiOnlineTransaction extends Controller
         $discount_promo = [];
         $promo_discount = 0;
         $promo_source = null;
+
+        if($request->json('promo_code') || $request->json('id_deals_user') || $request->json('id_subscription_user')){
+        	$removePromo = UserPromo::where('id_user',$request->user()->id)->delete();
+        }
+
         if($request->json('promo_code') && !$request->json('id_deals_user')){
             $code=PromoCampaignPromoCode::where('promo_code',$request->promo_code)
                 ->join('promo_campaigns', 'promo_campaigns.id_promo_campaign', '=', 'promo_campaign_promo_codes.id_promo_campaign')
