@@ -30,7 +30,7 @@ class Ovo {
         }
         return hash_hmac('sha256', $app_id.$time, $app_key);
     }
-    
+
     static function PayTransaction($dataTrx, $dataPay, $amount, $env, $type="trx") {
         if($env == 'production'){
             $url = env('OVO_PROD_URL');
@@ -50,11 +50,16 @@ class Ovo {
 
         $now = time();
 
-        $data['type'] = "0200"; 
+        $data['type'] = "0200";
         $data['processingCode'] = "040000";
         $data['amount'] = (int)$amount;
         // $data['date'] = date('Y-m-d H:i:s.v', strtotime($dataTrx['transaction_date']));
-        $data['date'] = date('Y-m-d H:i:s.v');
+        // $data['date'] = date('Y-m-d H:i:s.v');
+
+        //for millisecond data appears, because if using date('Y-m-d H:i:s.v') always return 000
+        $datenow = DateTime::createFromFormat('U.u', microtime(true));
+        $data['date'] = $datenow->setTimezone(new DateTimeZone('Asia/Jakarta'))->format("Y-m-d H:i:s.v");
+
         $data['referenceNumber'] = $dataPay['reference_number'];
         $data['tid']        = $tid;
         $data['mid']        = $mid;
@@ -104,7 +109,7 @@ class Ovo {
                 //     'response' => $response
                 // ];
                 return $pay;
-        
+
             }
 
             $updateLog = LogOvoDeals::where('id_log_ovo_deals', $createLog['id_log_ovo_deals'])->update([
@@ -145,7 +150,7 @@ class Ovo {
                 //     'response' => $response
                 // ];
                 return $pay;
-        
+
             }
 
             $updateLog = LogOvo::where('id_log_ovo', $createLog['id_log'])->update([
@@ -175,10 +180,16 @@ class Ovo {
             $app_id = env('OVO_STAGING_APP_ID');
         }
 
-        $data['type'] = "0400"; 
+        $data['type'] = "0400";
         $data['processingCode'] = "040000";
         $data['amount'] = $amount;
-        $data['date'] = date('Y-m-d H:i:s.v');
+
+        // $data['date'] = date('Y-m-d H:i:s.v');
+
+        //for millisecond data appears, because if using date('Y-m-d H:i:s.v') always return 000
+        $datenow = DateTime::createFromFormat('U.u', microtime(true));
+        $data['date'] = $datenow->setTimezone(new DateTimeZone('Asia/Jakarta'))->format("Y-m-d H:i:s.v");
+
         $data['referenceNumber'] = $dataPay['reference_number'];
         $data['tid']        = $tid;
         $data['mid']        = $mid;
@@ -231,7 +242,7 @@ class Ovo {
                 if($reversal['status_code'] != 404){
                     break;
                     return $reversal;
-            
+
                 }
 
             }else{
@@ -240,11 +251,11 @@ class Ovo {
                     'response' => json_encode($reversal['response']??'')
                 ]);
                 break;
-                return $reversal; 
+                return $reversal;
             }
         }
 
-        return $reversal; 
+        return $reversal;
     }
 
     /**
@@ -270,10 +281,16 @@ class Ovo {
             $app_id = env('OVO_STAGING_APP_ID');
         }
 
-        $data['type'] = "0200"; 
+        $data['type'] = "0200";
         $data['processingCode'] = "020040";
         $data['amount'] = $transaction['transaction_grandtotal']??$transaction['voucher_price_cash'];
-        $data['date'] = date('Y-m-d H:i:s.v');
+
+        // $data['date'] = date('Y-m-d H:i:s.v');
+
+        //for millisecond data appears, because if using date('Y-m-d H:i:s.v') always return 000
+        $datenow = DateTime::createFromFormat('U.u', microtime(true));
+        $data['date'] = $datenow->setTimezone(new DateTimeZone('Asia/Jakarta'))->format("Y-m-d H:i:s.v");
+
         $data['referenceNumber'] = $transaction['reference_number'];
         $data['tid']        = $tid;
         $data['mid']        = $mid;
@@ -328,7 +345,7 @@ class Ovo {
                     if($reversal['status_code'] != 404){
                         break;
                         return $reversal;
-                
+
                     }
                 }else{
                     $updateLog = LogOvo::where('id_log_ovo', $createLog['id_log_ovo'])->update([
@@ -340,7 +357,7 @@ class Ovo {
                     if($reversal['status_code'] != 404){
                         break;
                         return $reversal;
-                
+
                     }
                 }
 
@@ -351,19 +368,19 @@ class Ovo {
                         'response' => json_encode($pay)
                     ]);
                     break;
-                    return $reversal; 
+                    return $reversal;
                 }else{
                     $updateLog = LogOvo::where('id_log_ovo', $createLog['id_log_ovo'])->update([
                         'response_status' => 'fail',
                         'response' => json_encode($pay)
                     ]);
                     break;
-                    return $reversal; 
+                    return $reversal;
                 }
             }
         }
 
-        return $reversal; 
+        return $reversal;
     }
 
     //detail response ovo
@@ -455,10 +472,16 @@ class Ovo {
             $app_id = env('OVO_STAGING_APP_ID');
         }
 
-        $data['type'] = "0100"; 
+        $data['type'] = "0100";
         $data['processingCode'] = "040000";
         $data['amount'] = (int)$dataTrx['transaction_grandtotal'];
-        $data['date'] = date('Y-m-d H:i:s.v');
+
+        // $data['date'] = date('Y-m-d H:i:s.v');
+
+        //for millisecond data appears, because if using date('Y-m-d H:i:s.v') always return 000
+        $datenow = DateTime::createFromFormat('U.u', microtime(true));
+        $data['date'] = $datenow->setTimezone(new DateTimeZone('Asia/Jakarta'))->format("Y-m-d H:i:s.v");
+
         $data['referenceNumber'] = $dataPay['reference_number'];
         $data['tid'] = env('OVO_TID');
         $data['mid'] = env('OVO_MID');
@@ -480,8 +503,8 @@ class Ovo {
         ];
 
         $check = MyHelper::post($url, null, $data, 0, $header);
-        
-        return $check; 
+
+        return $check;
     }
 }
 ?>
