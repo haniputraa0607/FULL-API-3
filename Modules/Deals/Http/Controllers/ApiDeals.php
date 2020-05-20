@@ -1412,11 +1412,15 @@ class ApiDeals extends Controller
         $deals = (new Deal)->newQuery();
         $deals->where('deals_type', '!=','WelcomeVoucher');
         $deals->where('deals_publish_end', '>=', date('Y-m-d H:i:s'));
+        $deals->where('step_complete', '=', 1);
 
         if ($request->json('id_outlet') && is_integer($request->json('id_outlet'))) {
             $deals->join('deals_outlets', 'deals.id_deals', 'deals_outlets.id_deals')
-                ->where('id_outlet', $request->json('id_outlet'))
-                ->addSelect('deals.*')->distinct();
+            	->where(function($query) use ($request){
+	                $query->where('id_outlet', $request->json('id_outlet'))
+	                		->orWhere('deals.is_all_outlet','=',1);
+            	})
+	            ->addSelect('deals.*')->distinct();
         }
 
         // brand
@@ -1424,7 +1428,7 @@ class ApiDeals extends Controller
             $deals->where('id_brand',$request->json('id_brand'));
         }
 
-        $deals->addSelect('id_brand', 'id_deals','deals_title','deals_second_title','deals_voucher_price_point','deals_voucher_price_cash','deals_total_voucher','deals_total_claimed','deals_voucher_type','deals_image','deals_start','deals_end','deals_type','is_offline','is_online');
+        $deals->addSelect('id_brand', 'deals.id_deals','deals_title','deals_second_title','deals_voucher_price_point','deals_voucher_price_cash','deals_total_voucher','deals_total_claimed','deals_voucher_type','deals_image','deals_start','deals_end','deals_type','is_offline','is_online');
 
         if ($request->json('key_free')) {
             $deals->where(function($query) use ($request){
@@ -1433,53 +1437,51 @@ class ApiDeals extends Controller
             });
         }
 
-        if(!$request->json('voucher_type_cash') &&  !$request->json('voucher_type_point') &&  !$request->json('voucher_type_free')){
-            if ($request->json('min_price')) {
-                $deals->where('deals_voucher_price_cash', '>=', $request->json('min_price'));
-            }
+        $deals->where(function($query) use ($request){
 
-            if ($request->json('max_price')) {
-                $deals->where('deals_voucher_price_cash', '<=', $request->json('max_price'));
-            }
-        }elseif($request->json('voucher_type_cash') &&  !$request->json('voucher_type_point') &&  !$request->json('voucher_type_free')){
-            if ($request->json('min_price')) {
-                $deals->where('deals_voucher_price_cash', '>=', $request->json('min_price'));
-            }
+        	if(!$request->json('voucher_type_cash') &&  !$request->json('voucher_type_point') &&  !$request->json('voucher_type_free'))
+        	{
+        		if ($request->json('min_price')) {
+	                $query->where('deals_voucher_price_cash', '>=', $request->json('min_price'));
+	            }
 
-            if ($request->json('max_price')) {
-                $deals->where('deals_voucher_price_cash', '<=', $request->json('max_price'));
-            }
-        }else{
-            if($request->json('voucher_type_point')){
-                if ($request->json('min_interval_point')) {
-                    $deals->where('deals_voucher_price_point', '>=', $request->json('min_interval_point'));
-                }
+	            if ($request->json('max_price')) {
+	                $query->where('deals_voucher_price_cash', '<=', $request->json('max_price'));
+	            }
+        	}
+        	else
+        	{
+	        	if ($request->json('voucher_type_cash')) {
+	                $query->orWhere(function ($amp) use ($request) {
+	                    $amp->whereNotNull('deals_voucher_price_cash');
+	                    if($val=$request->json('min_price')){
+	                        $amp->where('deals_voucher_price_cash','>=',$val);
+	                    }
+	                    if($val=$request->json('max_price')){
+	                        $amp->where('deals_voucher_price_cash','<=',$val);
+	                    }
+	                });
+	            }
 
-                if ($request->json('max_interval_point')) {
-                    $deals->where('deals_voucher_price_point', '<=', $request->json('max_interval_point'));
-                }
-            }
+	            if ($request->json('voucher_type_point')) {
+	                $query->orWhere(function ($amp) use ($request) {
+	                    $amp->whereNotNull('deals_voucher_price_point');
+	                    if($val=$request->json('min_interval_point')){
+	                        $amp->where('deals_voucher_price_point','>=',$val);
+	                    }
+	                    if($val=$request->json('max_interval_point')){
+	                        $amp->where('deals_voucher_price_point','<=',$val);
+	                    }
+	                });
+	            }
 
-            if($request->json('voucher_type_free')){
-                $deals->where(function ($query) use ($request) {
-                    $query->whereNull('deals_voucher_price_point');
-                    $query->whereNull('deals_voucher_price_cash');
-                });
-            }
-
-            if ($request->json('min_price') || $request->json('max_price')) {
-                $deals->orWhere(function ($query) use ($request) {
-                    if ($request->json('min_price')) {
-                        $query->where('deals_voucher_price_cash', '>=', $request->json('min_price'));
-                    }
-
-                    if ($request->json('max_price')) {
-                        $query->where('deals_voucher_price_cash', '<=', $request->json('max_price'));
-                    }
-                });
-            }
-
-        }
+	            if ($request->json('voucher_type_free')) {
+	                $query->orWhere(function ($amp) use ($request) {
+	                    $amp->whereNull('deals_voucher_price_point')->whereNull('deals_voucher_price_cash');
+	                });
+	            }
+        	}
+        });
 
         if($request->json('sort')){
             if($request->json('sort') == 'best'){
