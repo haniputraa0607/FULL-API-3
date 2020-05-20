@@ -74,6 +74,7 @@ class ApiOutletController extends Controller
         $this->promo_campaign       = "Modules\PromoCampaign\Http\Controllers\ApiPromoCampaign";
         $this->subscription_use     = "Modules\Subscription\Http\Controllers\ApiSubscriptionUse";
         $this->promo       			= "Modules\PromoCampaign\Http\Controllers\ApiPromo";
+        $this->autocrm              = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
     }
 
     function checkInputOutlet($post=[]) {
@@ -2309,5 +2310,54 @@ class ApiOutletController extends Controller
             'list_outlet' => $listOutlet
         ];
         return response()->json($result);
+    }
+
+    public function sendNotifIncompleteOutlet(...$id_outlets)
+    {
+        if(!$id_outlets){
+            // find incomplete outlet
+            $outlets = Outlet::where(function($q) {
+                $q->whereNull('outlet_latitude')
+                    ->orWhereNull('outlet_longitude')
+                    ->orWhereNull('outlet_phone')
+                    ->orWhereNull('outlet_address');
+            })->get();
+        }else{
+            $outlets = Outlet::whereIn('id_outlet',$id_outlets)->where('notify_admin',0)->get();
+        }
+        $phone = User::select('phone')->pluck('phone')->first();
+        $complete = [0,0];
+        foreach ($outlets as $outlet) {
+            $variable = [];
+            foreach ($outlet->toArray() as $key => $value) {
+                $variable[str_replace('outlet_','',$key)] = $value;
+            }
+            $incomplete = [];
+            if(!$outlet['outlet_latitude']){
+                $incomplete[] = 'Outlet Latitude';
+            }
+            if(!$outlet['outlet_longitude']){
+                $incomplete[] = 'Outlet Longitude';
+            }
+            if(!$outlet['outlet_phone']){
+                $incomplete[] = 'Outlet Phone';
+            }
+            if(!$outlet['outlet_address']){
+                $incomplete[] = 'Outlet Address';
+            }
+            $variable['incomplete_data'] = implode(', ', $incomplete);
+            $send = app($this->autocrm)->SendAutoCRM('Incomplete Outlet Data', $phone, $variable);
+            $complete[1]++;
+            if(!$send){
+                \Log::warning('Failed send forward email Incomplete Outlet Data for outlet '.$outlet->code.' - '.$outlet->name);
+            }else{
+                $complete[0]++;
+            }
+        }
+        return ['status'=>'success','result' => ['incomplete'=>$complete[1],'send'=>$complete[0]]];
+    }
+    public function resetNotify()
+    {
+        Outlet::where('notify_admin',1)->update(['notify_admin'=>0]);
     }
 }
