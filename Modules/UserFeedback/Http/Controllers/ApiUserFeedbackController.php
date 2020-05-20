@@ -156,7 +156,7 @@ class ApiUserFeedbackController extends Controller
         $post = $request->json()->all();
         $user = $request->user();
         $id_transaction = $post['id'];
-        $transaction = Transaction::select('id_transaction','transaction_receipt_number','id_outlet')->where('id_user',$user->id)
+        $transaction = Transaction::select('id_transaction','transaction_receipt_number','id_outlet','transaction_date')->where('id_user',$user->id)
         ->find($id_transaction);
         if(!$transaction){
             return [
@@ -186,7 +186,7 @@ class ApiUserFeedbackController extends Controller
             $variables = [
                 'receipt_number' => $transaction->transaction_receipt_number,
                 'outlet_name' => $transaction->outlet_name->outlet_name,
-                'transaction_date' => date('d F Y H:i',strtotime($transaction->transaction_date)),
+                'transaction_date' => MyHelper::indonesian_date_v2($transaction->transaction_date,'d F Y H:i'),
                 'rating_value' => (string) $rating->rating_value,
                 'rating_text' => $rating->text,
                 'notes' => $post['notes']??'',
