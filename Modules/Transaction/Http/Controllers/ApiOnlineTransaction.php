@@ -596,7 +596,12 @@ class ApiOnlineTransaction extends Controller
                 ];
             }
             $dataAddressKeys['id_user'] = $user['id'];
-            UserAddress::updateOrCreate($dataAddressKeys,$dataAddress);
+            $addressx = UserAddress::where($dataAddressKeys)->first();
+            if(!$addressx){
+                UserAddress::create($dataAddressKeys+$dataAddress);
+            }elseif(!$addressx->favorite){
+                $addressx->update($dataAddress);
+            }
             $checkKey = GoSend::checkKey();
             if(is_array($checkKey) && $checkKey['status'] == 'fail'){
                 DB::rollback();
