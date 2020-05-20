@@ -1554,10 +1554,14 @@ class ApiSubscription extends Controller
         $post = $request->json()->all();
         $subs = (new Subscription)->newQuery();
         $subs->where('subscription_publish_end', '>=', date('Y-m-d H:i:s'));
+        $subs->where('subscription_step_complete', '=', 1);
 
         if ($request->json('id_outlet') && is_integer($request->json('id_outlet'))) {
-            $subs = $subs->join('subscription_outlets', 'subscriptions.id_subscription', '=', 'subscription_outlets.id_subscription')
-                ->where('id_outlet', $request->json('id_outlet'))
+            $subs = $subs->leftJoin('subscription_outlets', 'subscriptions.id_subscription', '=', 'subscription_outlets.id_subscription')
+            	->where(function($query) use ($request){
+            		$query->where('id_outlet', $request->json('id_outlet'))
+            			->orWhere('subscriptions.is_all_outlet','=',1);
+            	})
                 ->addSelect('subscriptions.*')->distinct();
         }
 
