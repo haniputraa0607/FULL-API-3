@@ -1925,76 +1925,138 @@ class ApiOutletApp extends Controller
 
         switch ($list['trasaction_payment_type']) {
             case 'Balance':
-                $log = LogBalance::where('id_reference', $list['id_transaction'])->first();
-                if ($log['balance'] < 0) {
-                    $list['balance'] = $log['balance'];
-                    $list['check']   = 'tidak topup';
+                $multiPayment = TransactionMultiplePayment::where('id_transaction', $list['id_transaction'])->get()->toArray();
+                if ($multiPayment) {
+                    foreach ($multiPayment as $keyMP => $mp) {
+                        switch ($mp['type']) {
+                            case 'Balance':
+                                $log = LogBalance::where('id_reference', $mp['id_transaction'])->first();
+                                if ($log['balance'] < 0) {
+                                    $list['balance'] = $log['balance'];
+                                    $list['check'] = 'tidak topup';
+                                } else {
+                                    $list['balance'] = $list['transaction_grandtotal'] - $log['balance'];
+                                    $list['check'] = 'topup';
+                                }
+                                $list['payment'][] = [
+                                    'name'      => 'Balance',
+                                    'amount'    => $list['balance']
+                                ];
+                                break;
+                            case 'Manual':
+                                $payment = TransactionPaymentManual::with('manual_payment_method.manual_payment')->where('id_transaction', $list['id_transaction'])->first();
+                                $list['payment'] = $payment;
+                                $list['payment'][] = [
+                                    'name'      => 'Cash',
+                                    'amount'    => $payment['payment_nominal']
+                                ];
+                                break;
+                            case 'Midtrans':
+                                $payMidtrans = TransactionPaymentMidtran::find($mp['id_payment']);
+                                $payment['name']      = strtoupper(str_replace('_', ' ', $payMidtrans->payment_type)).' '.strtoupper($payMidtrans->bank);
+                                $payment['amount']    = $payMidtrans->gross_amount;
+                                $list['payment'][] = $payment;
+                                break;
+                            case 'Ovo':
+                                $payment = TransactionPaymentOvo::find($mp['id_payment']);
+                                $payment['name']    = 'OVO';
+                                $list['payment'][] = $payment;
+                                break;
+                            case 'Ipay88':
+                                $PayIpay = TransactionPaymentIpay88::find($mp['id_payment']);
+                                $payment['name']    = $PayIpay->payment_method;
+                                $payment['amount']    = $PayIpay->amount / 100;
+                                $list['payment'][] = $payment;
+                                break;
+                            case 'Offline':
+                                $payment = TransactionPaymentOffline::where('id_transaction', $list['id_transaction'])->get();
+                                foreach ($payment as $key => $value) {
+                                    $list['payment'][$key] = [
+                                        'name'      => $value['payment_bank'],
+                                        'amount'    => $value['payment_amount']
+                                    ];
+                                }
+                                break;
+                            default:
+                                $list['payment'][] = [
+                                    'name'      => null,
+                                    'amount'    => null
+                                ];
+                                break;
+                        }
+                    }
                 } else {
-                    $list['balance'] = $list['transaction_grandtotal'] - $log['balance'];
-                    $list['check']   = 'topup';
+                    $log = LogBalance::where('id_reference', $list['id_transaction'])->first();
+                    if ($log['balance'] < 0) {
+                        $list['balance'] = $log['balance'];
+                        $list['check'] = 'tidak topup';
+                    } else {
+                        $list['balance'] = $list['transaction_grandtotal'] - $log['balance'];
+                        $list['check'] = 'topup';
+                    }
+                    $list['payment'][] = [
+                        'name'      => 'Balance',
+                        'amount'    => $list['balance']
+                    ];
                 }
-                $list['payment'][] = [
-                    'name'   => 'Balance',
-                    'amount' => $list['balance'],
-                ];
                 break;
             case 'Manual':
-                $payment           = TransactionPaymentManual::with('manual_payment_method.manual_payment')->where('id_transaction', $list['id_transaction'])->first();
-                $list['payment']   = $payment;
+                $payment = TransactionPaymentManual::with('manual_payment_method.manual_payment')->where('id_transaction', $list['id_transaction'])->first();
+                $list['payment'] = $payment;
                 $list['payment'][] = [
-                    'name'   => 'Cash',
-                    'amount' => $payment['payment_nominal'],
+                    'name'      => 'Cash',
+                    'amount'    => $payment['payment_nominal']
                 ];
                 break;
             case 'Midtrans':
                 $multiPayment = TransactionMultiplePayment::where('id_transaction', $list['id_transaction'])->get();
-                $payment      = [];
-                foreach ($multiPayment as $dataKey => $dataPay) {
-                    if ($dataPay['type'] == 'Midtrans') {
-                        $payMidtrans                 = TransactionPaymentMidtran::find($dataPay['id_payment']);
-                        $payment[$dataKey]['name']   = strtoupper(str_replace('_', ' ', $payMidtrans->payment_type)) . ' ' . strtoupper($payMidtrans->bank);
-                        $payment[$dataKey]['amount'] = $payMidtrans->gross_amount;
-                    } else {
-                        $dataPay                     = TransactionPaymentBalance::find($dataPay['id_payment']);
-                        $payment[$dataKey]           = $dataPay;
-                        $list['balance']             = $dataPay['balance_nominal'];
-                        $payment[$dataKey]['name']   = 'Balance';
-                        $payment[$dataKey]['amount'] = $dataPay['balance_nominal'];
+                $payment = [];
+                foreach($multiPayment as $dataKey => $dataPay){
+                    if($dataPay['type'] == 'Midtrans'){
+                        $payMidtrans = TransactionPaymentMidtran::find($dataPay['id_payment']);
+                        $payment[$dataKey]['name']      = strtoupper(str_replace('_', ' ', $payMidtrans->payment_type)).' '.strtoupper($payMidtrans->bank);
+                        $payment[$dataKey]['amount']    = $payMidtrans->gross_amount;
+                    }else{
+                        $dataPay = TransactionPaymentBalance::find($dataPay['id_payment']);
+                        $payment[$dataKey] = $dataPay;
+                        $list['balance'] = $dataPay['balance_nominal'];
+                        $payment[$dataKey]['name']          = 'Balance';
+                        $payment[$dataKey]['amount']        = $dataPay['balance_nominal'];
                     }
                 }
                 $list['payment'] = $payment;
                 break;
             case 'Ovo':
                 $multiPayment = TransactionMultiplePayment::where('id_transaction', $list['id_transaction'])->get();
-                $payment      = [];
-                foreach ($multiPayment as $dataKey => $dataPay) {
-                    if ($dataPay['type'] == 'Ovo') {
-                        $payment[$dataKey]         = TransactionPaymentOvo::find($dataPay['id_payment']);
-                        $payment[$dataKey]['name'] = 'OVO';
-                    } else {
-                        $dataPay                     = TransactionPaymentBalance::find($dataPay['id_payment']);
-                        $payment[$dataKey]           = $dataPay;
-                        $list['balance']             = $dataPay['balance_nominal'];
-                        $payment[$dataKey]['name']   = 'Balance';
-                        $payment[$dataKey]['amount'] = $dataPay['balance_nominal'];
+                $payment = [];
+                foreach($multiPayment as $dataKey => $dataPay){
+                    if($dataPay['type'] == 'Ovo'){
+                        $payment[$dataKey] = TransactionPaymentOvo::find($dataPay['id_payment']);
+                        $payment[$dataKey]['name']    = 'OVO';
+                    }else{
+                        $dataPay = TransactionPaymentBalance::find($dataPay['id_payment']);
+                        $payment[$dataKey] = $dataPay;
+                        $list['balance'] = $dataPay['balance_nominal'];
+                        $payment[$dataKey]['name']          = 'Balance';
+                        $payment[$dataKey]['amount']        = $dataPay['balance_nominal'];
                     }
                 }
                 $list['payment'] = $payment;
                 break;
             case 'Ipay88':
                 $multiPayment = TransactionMultiplePayment::where('id_transaction', $list['id_transaction'])->get();
-                $payment      = [];
-                foreach ($multiPayment as $dataKey => $dataPay) {
-                    if ($dataPay['type'] == 'IPay88') {
-                        $PayIpay                     = TransactionPaymentIpay88::find($dataPay['id_payment']);
-                        $payment[$dataKey]['name']   = $PayIpay->payment_method;
-                        $payment[$dataKey]['amount'] = $PayIpay->amount / 100;
-                    } else {
-                        $dataPay                     = TransactionPaymentBalance::find($dataPay['id_payment']);
-                        $payment[$dataKey]           = $dataPay;
-                        $list['balance']             = $dataPay['balance_nominal'];
-                        $payment[$dataKey]['name']   = 'Balance';
-                        $payment[$dataKey]['amount'] = $dataPay['balance_nominal'];
+                $payment = [];
+                foreach($multiPayment as $dataKey => $dataPay){
+                    if($dataPay['type'] == 'IPay88'){
+                        $PayIpay = TransactionPaymentIpay88::find($dataPay['id_payment']);
+                        $payment[$dataKey]['name']    = $PayIpay->payment_method;
+                        $payment[$dataKey]['amount']    = $PayIpay->amount / 100;
+                    }else{
+                        $dataPay = TransactionPaymentBalance::find($dataPay['id_payment']);
+                        $payment[$dataKey] = $dataPay;
+                        $list['balance'] = $dataPay['balance_nominal'];
+                        $payment[$dataKey]['name']          = 'Balance';
+                        $payment[$dataKey]['amount']        = $dataPay['balance_nominal'];
                     }
                 }
                 $list['payment'] = $payment;
@@ -2003,15 +2065,15 @@ class ApiOutletApp extends Controller
                 $payment = TransactionPaymentOffline::where('id_transaction', $list['id_transaction'])->get();
                 foreach ($payment as $key => $value) {
                     $list['payment'][$key] = [
-                        'name'   => $value['payment_bank'],
-                        'amount' => $value['payment_amount'],
+                        'name'      => $value['payment_bank'],
+                        'amount'    => $value['payment_amount']
                     ];
                 }
                 break;
             default:
                 $list['payment'][] = [
-                    'name'   => null,
-                    'amount' => null,
+                    'name'      => null,
+                    'amount'    => null
                 ];
                 break;
         }
@@ -2104,6 +2166,9 @@ class ApiOutletApp extends Controller
             if (isset($list['transaction_payment_status']) && $list['transaction_payment_status'] == 'Cancelled') {
                 $result['transaction_status']      = 0;
                 $result['transaction_status_text'] = 'ORDER ANDA DIBATALKAN';
+            } elseif (isset($list['transaction_payment_status']) && $list['transaction_payment_status'] == 'Pending') {
+                $result['transaction_status']      = 6;
+                $result['transaction_status_text'] = 'MENUNGGU PEMBAYARAN';
             } elseif ($list['detail']['reject_at'] != null) {
                 $result['transaction_status']      = 0;
                 $result['transaction_status_text'] = 'ORDER ANDA DITOLAK';
@@ -2112,7 +2177,7 @@ class ApiOutletApp extends Controller
                 $result['transaction_status_text'] = 'ORDER SELESAI';
             } elseif ($list['detail']['taken_at'] != null) {
                 $result['transaction_status']      = 2;
-                $result['transaction_status_text'] = 'ORDER SUDAH DITERIMA';
+                $result['transaction_status_text'] = 'ORDER SUDAH DIAMBIL';
             } elseif ($list['detail']['ready_at'] != null) {
                 $result['transaction_status']      = 3;
                 $result['transaction_status_text'] = 'ORDER SUDAH SIAP';

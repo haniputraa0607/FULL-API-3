@@ -186,19 +186,19 @@ class ApiSubscriptionWebview extends Controller
 
         $result['subscription_voucher_used'] = 0;
         
-        $i = 0;
-        $result['subscription_content'][$i]['title']        = 'Voucher';
         foreach ($subs['subscription_user_vouchers'] as $key => $value) {
             if (!is_null($value['used_at'])) {
                 $getTrx = Transaction::select(DB::raw('transactions.*,sum(transaction_products.transaction_product_qty) item_total'))->leftJoin('transaction_products','transactions.id_transaction','=','transaction_products.id_transaction')->with('outlet')->where('transactions.id_transaction', $value['id_transaction'])->groupBy('transactions.id_transaction')->first();
-                $result['subscription_content'][$i]['detail_voucher'][$key]['used_at']    = $value['used_at'];
-                $result['subscription_content'][$i]['detail_voucher'][$key]['outlet']     = $getTrx->outlet->outlet_name;
-                $result['subscription_content'][$i]['detail_voucher'][$key]['item']       = $getTrx->item_total;
+                $voucher[$key]['used_at']    = $value['used_at'];
+                $voucher[$key]['outlet']     = $getTrx->outlet->outlet_name;
+                $voucher[$key]['item']       = $getTrx->item_total;
                 $result['subscription_voucher_used']    = $result['subscription_voucher_used'] + 1;
-                $i++;
             }
         }
-
+        $i = 0;
+        $result['subscription_content'][$i]['title']            = 'Voucher';
+        $result['subscription_content'][$i]['detail_voucher']   = $voucher;
+        $i++;
         foreach ($subs['subscription']['subscription_content'] as $keyContent => $valueContent) {
             if (!empty($valueContent['subscription_content_details'])) {
                 $result['subscription_content'][$i]['title'] = $valueContent['title'];
