@@ -53,19 +53,21 @@ class ApiMembershipWebview extends Controller
 			'achievement_groups.id_achievement_group',
 			'achievement_groups.name as name_group',
 			'achievement_groups.logo_badge_default',
+			'achievement_groups.description',
 			'achievement_details.name as name_badge',
 			'achievement_details.logo_badge'
 		)->join('achievement_details', 'achievement_groups.id_achievement_group', 'achievement_details.id_achievement_group')
 		->join('achievement_users', 'achievement_details.id_achievement_detail', 'achievement_users.id_achievement_detail')
 		->where('id_user', $post['id_user'])->orderBy('achievement_details.id_achievement_detail', 'DESC')->get()->toArray();
 		$result['user_badge'] = [];
-		foreach ($getUserAch as $keyUA => $userAch) {
+		foreach ($getUserAch as $userAch) {
 			$search = array_search(MyHelper::decSlug($userAch['id_achievement_group']), array_column($result['user_badge'], 'id_achievement_group'));
 			if ($search === false) {
 				$result['user_badge'][] = [
 					'id_achievement_group'		=> MyHelper::decSlug($userAch['id_achievement_group']),
 					'name_group'				=> $userAch['name_group'],
 					'logo_badge_default'		=> env('S3_URL_API').$userAch['logo_badge_default'],
+					'description'				=> $userAch['description'],
 					'name_badge'				=> $userAch['name_badge'],
 					'logo_badge'				=> env('S3_URL_API').$userAch['logo_badge']
 				];
