@@ -10,6 +10,9 @@ use App\Http\Models\User;
 use App\Http\Models\Setting;
 use App\Http\Models\LogBalance;
 use App\Lib\MyHelper;
+use Illuminate\Support\Facades\DB;
+use Modules\Achievement\Entities\AchievementGroup;
+
 class ApiMembershipWebview extends Controller
 {
 	public function detail(Request $request)
@@ -42,7 +45,31 @@ class ApiMembershipWebview extends Controller
 			case 'achievement':
 				$result['user_membership']['min_value'] 		= $result['user_membership']->min_total_achievement;
 				$result['user_membership']['retain_min_value'] 	= $result['user_membership']->retain_min_total_achievement;
+				
 				break;
+		}
+
+		$getUserAch = AchievementGroup::select(
+			'achievement_groups.id_achievement_group',
+			'achievement_groups.name as name_group',
+			'achievement_groups.logo_badge_default',
+			'achievement_details.name as name_badge',
+			'achievement_details.logo_badge'
+		)->join('achievement_details', 'achievement_groups.id_achievement_group', 'achievement_details.id_achievement_group')
+		->join('achievement_users', 'achievement_details.id_achievement_detail', 'achievement_users.id_achievement_detail')
+		->where('id_user', $post['id_user'])->orderBy('achievement_details.id_achievement_detail', 'DESC')->get()->toArray();
+		$result['user_badge'] = [];
+		foreach ($getUserAch as $keyUA => $userAch) {
+			$search = array_search(MyHelper::decSlug($userAch['id_achievement_group']), array_column($result['user_badge'], 'id_achievement_group'));
+			if ($search === false) {
+				$result['user_badge'][] = [
+					'id_achievement_group'		=> MyHelper::decSlug($userAch['id_achievement_group']),
+					'name_group'				=> $userAch['name_group'],
+					'logo_badge_default'		=> env('S3_URL_API').$userAch['logo_badge_default'],
+					'name_badge'				=> $userAch['name_badge'],
+					'logo_badge'				=> env('S3_URL_API').$userAch['logo_badge']
+				];
+			}
 		}
 		// $result['user_membership']['membership_bg_image'] = env('S3_URL_API') . $result['user_membership']->membership->membership_bg_image;
 		// $result['user_membership']['membership_background_card_color'] = $result['user_membership']->membership->membership_background_card_color;
@@ -110,12 +137,12 @@ class ApiMembershipWebview extends Controller
 							}
 							break;
 						case 'achievement':
-							$allMembership[$index]['min_value'] 		= $dataMembership['min_total_acheivement'];
-							$allMembership[$index]['retain_min_value'] 	= $dataMembership['retain_min_total_acheivement'];
-							if($dataMembership['min_total_acheivement'] > $result['user_membership']['min_total_acheivement']){
+							$allMembership[$index]['min_value'] 		= $dataMembership['min_total_achievement'];
+							$allMembership[$index]['retain_min_value'] 	= $dataMembership['retain_min_total_achievement'];
+							if($dataMembership['min_total_achievement'] > $result['user_membership']['min_total_achievement']){
 								if($nextMembershipName == ""){
-									$nextTrx = $dataMembership['min_total_acheivement'];
-									$nextTrxType = 'value';
+									$nextTrx = $dataMembership['min_total_achievement'];
+									$nextTrxType = 'achievement';
 									$nextMembershipName = $dataMembership['membership_name'];
 									// $nextMembershipImage =  env('S3_URL_API') . $dataMembership['membership_image'];
 								}
@@ -187,7 +214,7 @@ class ApiMembershipWebview extends Controller
 				->where('id_user', $post['id_user'])
 				->where('achievement_groups.status', 'Active')
 				->where('achievement_groups.is_calculate', 1)
-				->groupBy('achievement_groups.id_achievement_group')->count();
+				->groupBy('achievement_groups.id_achievement_group')->get()->count();
 				$membershipUser['progress_now_text'] = $total_achievement;
 				$membershipUser['progress_now'] = (int) $total_achievement;
 				$membershipUser['progress_active'] = ($total_achievement / $nextTrx) * 100;
