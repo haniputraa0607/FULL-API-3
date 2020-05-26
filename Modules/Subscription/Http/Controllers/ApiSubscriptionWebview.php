@@ -185,7 +185,7 @@ class ApiSubscriptionWebview extends Controller
         $result['time_server'] = date('Y-m-d H:i:s');
 
         $result['subscription_voucher_used'] = 0;
-        
+        $voucher = [];
         foreach ($subs['subscription_user_vouchers'] as $key => $value) {
             if (!is_null($value['used_at'])) {
                 $getTrx = Transaction::select(DB::raw('transactions.*,sum(transaction_products.transaction_product_qty) item_total'))->leftJoin('transaction_products','transactions.id_transaction','=','transaction_products.id_transaction')->with('outlet')->where('transactions.id_transaction', $value['id_transaction'])->groupBy('transactions.id_transaction')->first();
