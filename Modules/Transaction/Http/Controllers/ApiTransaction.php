@@ -1721,6 +1721,10 @@ class ApiTransaction extends Controller
             $list['date'] = $list['transaction_date'];
             $list['type'] = 'trx';
 
+            if(isset($list['pickup_by']) && $list['pickup_by'] == 'GO-SEND'){
+                $list['trasaction_type'] = 'Delivery';
+            }
+
             $result = [
                 'id_transaction'                => $list['id_transaction'],
                 'transaction_receipt_number'    => $list['transaction_receipt_number'],
@@ -1915,6 +1919,12 @@ class ApiTransaction extends Controller
                     'text'  => 'Your order has been canceled',
                     'date'  => date('d F Y H:i', strtotime($list['void_date']))
                 ];
+                } 
+                elseif ($list['transaction_payment_status'] == 'Pending') {
+                    $result['detail']['detail_status'][] = [
+                    'text'  => '',
+                    'date'  => date('d F Y H:i', strtotime($list['void_date']))
+                ];
                 } else {
                     if ($list['detail']['reject_at'] != null) {
                         $result['detail']['detail_status'][] = [
@@ -1925,30 +1935,30 @@ class ApiTransaction extends Controller
                     }
                     if ($list['detail']['taken_by_system_at'] != null) {
                         $result['detail']['detail_status'][] = [
-                        'text'  => 'Your order has been done by system',
+                        'text'  => 'Pesanan Anda sudah selesai',
                         'date'  => date('d F Y H:i', strtotime($list['detail']['taken_by_system_at']))
                     ];
                     }
                     if ($list['detail']['taken_at'] != null) {
                         $result['detail']['detail_status'][] = [
-                        'text'  => 'Your order has been taken',
+                        'text'  => 'Pesanan Anda sudah diambil',
                         'date'  => date('d F Y H:i', strtotime($list['detail']['taken_at']))
                     ];
                     }
                     if ($list['detail']['ready_at'] != null) {
                         $result['detail']['detail_status'][] = [
-                        'text'  => 'Your order is ready ',
+                        'text'  => 'Pesanan Anda sudah siap ',
                         'date'  => date('d F Y H:i', strtotime($list['detail']['ready_at']))
                     ];
                     }
                     if ($list['detail']['receive_at'] != null) {
                         $result['detail']['detail_status'][] = [
-                        'text'  => 'Your order has been received',
+                        'text'  => 'Pesanan Anda sudah diterima',
                         'date'  => date('d F Y H:i', strtotime($list['detail']['receive_at']))
                     ];
                     }
                     $result['detail']['detail_status'][] = [
-                        'text'  => 'Your order awaits confirmation ',
+                        'text'  => 'Pesanan Anda menunggu konfirmasi',
                         'date'  => date('d F Y H:i', strtotime($list['transaction_date']))
                     ];
                 }
