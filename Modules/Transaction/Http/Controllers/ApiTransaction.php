@@ -1553,7 +1553,7 @@ class ApiTransaction extends Controller
                                     $payment['name']    = 'OVO';
                                     $list['payment'][] = $payment;
                                     break;
-                                case 'Ipay88':
+                                case 'IPay88':
                                     $PayIpay = TransactionPaymentIpay88::find($mp['id_payment']);
                                     $payment['name']    = $PayIpay->payment_method;
                                     $payment['amount']    = $PayIpay->amount / 100;
@@ -1769,7 +1769,7 @@ class ApiTransaction extends Controller
                     $result['transaction_status_text'] = 'ORDER SELESAI';
                 } elseif($list['detail']['taken_at'] != null) {
                     $result['transaction_status'] = 2;
-                    $result['transaction_status_text'] = 'ORDER SUDAH DITERIMA';
+                    $result['transaction_status_text'] = 'ORDER SUDAH DIAMBIL';
                 } elseif($list['detail']['ready_at'] != null) {
                     $result['transaction_status'] = 3;
                     $result['transaction_status_text'] = 'ORDER SUDAH SIAP';
