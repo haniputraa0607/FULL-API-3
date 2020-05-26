@@ -256,6 +256,20 @@ class ApiConfirm extends Controller
                 'order_id'       => $check['transaction_receipt_number']
             ];
 
+            switch (strtolower($post['payment_detail']??'')) {
+                case 'credit card':
+                    $dataNotifMidtrans['payment_type'] = 'Credit Card';
+                    break;
+
+                case 'gopay':
+                    $dataNotifMidtrans['payment_type'] = 'Gopay';
+                    break;
+                
+                default:
+                    $dataNotifMidtrans['payment_type'] = null;
+                    break;
+            }
+
             $insertNotifMidtrans = TransactionPaymentMidtran::create($dataNotifMidtrans);
             if (!$insertNotifMidtrans) {
                 DB::rollback();
