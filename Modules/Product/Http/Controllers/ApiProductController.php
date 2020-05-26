@@ -1414,6 +1414,40 @@ class ApiProductController extends Controller
         return response()->json(MyHelper::checkUpdate($save));
     }
 
+    function allProductPrices(Request $request)
+    {
+        $data = [];
+        $post = $request->json()->all();
+
+        if (isset($post['id_outlet'])) {
+            $data['id_outlet'] = $post['id_outlet'];
+        }
+
+        $getAllProduct = Product::pluck('id_product');
+        if($post['id_outlet'] == 0){
+            if (isset($post['product_price'])) {
+                $dataGlobalPrice['product_global_price'] = $post['product_price'];
+            }
+            foreach ($getAllProduct as $id_product){
+                $save = ProductGlobalPrice::updateOrCreate([
+                    'id_product' => $id_product
+                ], $dataGlobalPrice);
+            }
+        }else{
+            if (isset($post['product_price'])) {
+                $dataSpecialPrice['product_special_price'] = $post['product_price'];
+            }
+            foreach ($getAllProduct as $id_product){
+                $save = ProductSpecialPrice::updateOrCreate([
+                    'id_product' => $id_product,
+                    'id_outlet'  => $data['id_outlet']
+                ], $dataSpecialPrice);
+            }
+        }
+
+        return response()->json(MyHelper::checkUpdate($save));
+    }
+
 
     function productDetail(Request $request)
     {
@@ -1460,6 +1494,56 @@ class ApiProductController extends Controller
             'id_product' => $data['id_product'],
             'id_outlet'  => $data['id_outlet']
         ], $data);
+
+        return response()->json(MyHelper::checkUpdate($save));
+    }
+
+    function allProductDetail(Request $request)
+    {
+        $data = [];
+        $post = $request->json()->all();
+
+        if (isset($post['product_visibility']) || $post['product_visibility'] == null) {
+            if($post['product_visibility'] == null){
+                $data['product_detail_visibility'] = 'Hidden';
+            }else{
+                $data['product_detail_visibility'] = $post['product_visibility'];
+            }
+        }
+
+        if (isset($post['id_outlet'])) {
+            $data['id_outlet'] = $post['id_outlet'];
+        }
+
+        if (isset($post['product_stock_status'])) {
+            $data['product_detail_stock_status'] = $post['product_stock_status'];
+        }
+
+        $getAllProduct = Product::pluck('id_product');
+
+        foreach ($getAllProduct as $id_product){
+            $product = ProductDetail::where([
+                'id_product' => $id_product,
+                'id_outlet'  => $data['id_outlet']
+            ])->first();
+
+            if(($data['product_detail_stock_status']??false) && (($data['product_detail_stock_status']??false) != $product['product_detail_stock_status']??false)){
+                $create = ProductStockStatusUpdate::create([
+                    'id_product' => $id_product,
+                    'id_user' => $request->user()->id,
+                    'user_type' => 'users',
+                    'id_outlet' => $data['id_outlet'],
+                    'date_time' => date('Y-m-d H:i:s'),
+                    'new_status' => $data['product_detail_stock_status'],
+                    'id_outlet_app_otp' => null
+                ]);
+            }
+
+            $save = ProductDetail::updateOrCreate([
+                'id_product' => $id_product,
+                'id_outlet'  => $data['id_outlet']
+            ], $data);
+        }
 
         return response()->json(MyHelper::checkUpdate($save));
     }
@@ -1565,6 +1649,14 @@ class ApiProductController extends Controller
         }])->get();
         return response()->json(MyHelper::checkGet($product));
     }
+
+    function listProductDetailByOutlet(Request $request, $id_outlet){
+        $product = Product::with(['product_detail'=> function($q) use ($id_outlet){
+            $q->where('id_outlet', $id_outlet);
+        }])->get();
+        return response()->json(MyHelper::checkGet($product));
+    }
+
     function getNextID($id){
         $product = Product::where('id_product', '>', $id)->orderBy('id_product')->first();
         return response()->json(MyHelper::checkGet($product));
