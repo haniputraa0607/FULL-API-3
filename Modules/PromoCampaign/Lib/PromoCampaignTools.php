@@ -77,11 +77,11 @@ class PromoCampaignTools{
 			$errors[]='Promo cannot be used at this outlet';
 			return false;
 		}
-		if(strtotime($promo->date_start??$promo->deals_start)>time()||strtotime($promo->date_end??$promo->deals_end)<time()){
+
+		if( (!empty($promo->date_start) && !empty($promo->date_end)) && (strtotime($promo->date_start)>time()||strtotime($promo->date_end)<time())){
 			$errors[]='Promo is not valid';
 			return false;
 		}
-		
 		$discount=0;
 		// add product discount if exist
 		foreach ($trxs as  $id_trx => &$trx) {

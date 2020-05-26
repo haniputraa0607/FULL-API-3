@@ -102,6 +102,8 @@ class ApiDealsVoucherWebviewController extends Controller
             'deals_image'           => $data['deals_voucher']['deal']['deals_image'],
             'deals_title'           => $data['deals_voucher']['deal']['deals_title'],
             'deals_second_title'    => $data['deals_voucher']['deal']['deals_second_title'],
+            'deals_description'    => $data['deals_voucher']['deal']['deals_description'],
+            'custom_outlet_text'    => $data['deals_voucher']['deal']['custom_outlet_text'],
             'id_deals_voucher'      => $data['id_deals_voucher'],
             'id_deals_user'         => $data['id_deals_user'],
             'voucher_expired'       => date('d F Y', strtotime($data['voucher_expired_at'])),

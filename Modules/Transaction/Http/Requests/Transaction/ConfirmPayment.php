@@ -30,6 +30,7 @@ class ConfirmPayment extends FormRequest
             'payment_account_number'   => 'required_if:payment_type,Manual|numeric',
             'payment_account_name'     => 'required_if:payment_type,Manual|string',
             'payment_receipt_image'    => 'required_if:payment_type,Manual',
+            'payment_detail'           => 'nullable|sometimes|string'
         ];
     }
 
