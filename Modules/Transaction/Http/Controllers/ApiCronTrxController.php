@@ -348,7 +348,13 @@ class ApiCronTrxController extends Controller
         // apply point if ready_at null
         foreach ($trxs as $newTrx) {
             $idTrx[] = $newTrx->id_transaction;
-            if(!empty($newTrx->ready_at) || $newTrx->transaction_payment_status != 'Completed'){
+            if(
+                !empty($newTrx->ready_at) || //   has been marked ready   or 
+                $newTrx->transaction_payment_status != 'Completed' || // payment status not complete  or
+                $newTrx->cashback_insert_status || // cashback has been given   or
+                $newTrx->pickup_by != 'Customer' // not pickup by the customer
+            ){
+                // continue without add cashback
                 continue;
             }
             $newTrx->load('user.memberships', 'outlet', 'productTransaction', 'transaction_vouchers','promo_campaign_promo_code','promo_campaign_promo_code.promo_campaign');
@@ -377,6 +383,7 @@ class ApiCronTrxController extends Controller
                     $savePoint = app($this->getNotif)->savePoint($newTrx);
                 }
             }
+            $newTrx->update(['cashback_insert_status' => 1]);
         }
         //update taken_by_sistem_at
         $dataTrx = TransactionPickup::whereIn('id_transaction', $idTrx)
