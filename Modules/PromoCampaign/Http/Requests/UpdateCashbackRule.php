@@ -19,7 +19,8 @@ class UpdateCashBackRule extends FormRequest
             'promo_code_checkbox'   	=> 'nullable',
             'voucher_online_checkbox'   => 'nullable',
             'voucher_offline_checkbox'  => 'nullable',
-            'update'	=> 'required'
+            'subscription_checkbox'  	=> 'nullable',
+            'update'					=> 'required'
         ];
 
         return $rules;
