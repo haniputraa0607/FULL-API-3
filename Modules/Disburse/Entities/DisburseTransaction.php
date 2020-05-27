@@ -12,6 +12,8 @@ class DisburseTransaction extends Model
 	protected $fillable = [
 	    'id_disburse',
         'id_transaction',
+        'income_central',
+        'income_outlet',
         'fee',
         'mdr_charged',
         'mdr',

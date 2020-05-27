@@ -66,7 +66,6 @@ class ApiIrisController extends Controller
         $getData = Transaction::leftJoin('disburse_transactions', 'disburse_transactions.id_transaction', 'transactions.id_transaction')
             ->join('outlets', 'outlets.id_outlet', 'transactions.id_outlet')
             ->leftJoin('bank_name', 'bank_name.id_bank_name', 'outlets.id_bank_name')
-            ->where('trasaction_type', '!=', 'Offline')
             ->where('transaction_payment_status', '=', 'Completed')
             ->whereNull('disburse_transactions.id_disburse')
             ->select('transactions.id_outlet', 'transactions.id_transaction', 'transactions.transaction_subtotal',
@@ -108,6 +107,8 @@ class ApiIrisController extends Controller
                         $feePromoOutlet = 0;
                         $balanceNominal = 0;
                         $nominalBalance = 0;
+                        $nominalBalanceCentral = 0;
+                        $totalFeeForCentral = 0;
                         $amount = 0;
                         $charged = NULL;
 
@@ -117,11 +118,16 @@ class ApiIrisController extends Controller
                         foreach ($data['transaction_multiple_payment'] as $payments){
 
                             if(strtolower($payments['type']) == 'midtrans'){
-                                $midtrans = TransactionPaymentMidtran::where('id_transaction', $data['id_transaction'])->first()->bank;
-                                $keyMidtrans = array_search($midtrans, array_column($settingMDRAll, 'payment_name'));
+                                $midtrans = TransactionPaymentMidtran::where('id_transaction', $data['id_transaction'])->first();
+                                if(!is_null($midtrans['payment_type'])){
+                                    $payment = $midtrans['payment_type'];
+                                }else{
+                                    $payment = $midtrans['bank'];
+                                }
+                                $keyMidtrans = array_search($payment, array_column($settingMDRAll, 'payment_name'));
                                 if($keyMidtrans !== false){
-                                    if(!is_null($settingMDRAll[$midtrans]['days_to_sent'])){
-                                        $explode = explode(',', $settingMDRAll[$midtrans]['days_to_sent']);
+                                    if(!is_null($settingMDRAll[$keyMidtrans]['days_to_sent'])){
+                                        $explode = explode(',', $settingMDRAll[$keyMidtrans]['days_to_sent']);
                                         $checkDay = array_search(date('l'), $explode);
                                         if($checkDay < 0 || $checkDay === false){
                                             continue 2;
@@ -141,7 +147,14 @@ class ApiIrisController extends Controller
                                 $feePointOutlet = ($settingGlobalFeePoint->outlet == '' ? 0 : $settingGlobalFeePoint->outlet);
 
                                 if((int)$feePointCentral !== 100){
+                                    //calculate charged point to outlet
                                     $nominalBalance = $balanceNominal * (floatval($feePointOutlet) / 100);
+
+                                    //calculate charged point to central
+                                    $nominalBalanceCentral = $balanceNominal * (floatval($feePointCentral) / 100);
+                                }else{
+                                    //calculate charged point to central
+                                    $nominalBalanceCentral = $balanceNominal;
                                 }
                             }elseif(strtolower($payments['type']) == 'ipay88'){
                                 $ipay88 = TransactionPaymentIpay88::where('id_transaction', $data['id_transaction'])->first()->payment_method;
@@ -163,7 +176,7 @@ class ApiIrisController extends Controller
                                     continue 2;
                                 }
                             }elseif (strtolower($payments['type']) == 'ovo'){
-                                $keyipayOvo = array_search('Ovo', array_column($settingMDRAll, 'payment_name'));
+                                $keyipayOvo = array_search('OVO', array_column($settingMDRAll, 'payment_name'));
                                 if($keyipayOvo !== false){
                                     if(!is_null($settingMDRAll[$keyipayOvo]['days_to_sent'])){
                                         $explode = explode(',', $settingMDRAll[$keyipayOvo]['days_to_sent']);
@@ -184,26 +197,34 @@ class ApiIrisController extends Controller
                         }
 
                         $totalChargedPromo = 0;
+                        $totalChargedPromoCentral = 0;
                         if(!empty($data['vouchers'])){
                             $getDeal = Deal::where('id_deals', $data['vouchers'][0]['id_deals'])->first();
                             $feePromoCentral = $getDeal['charged_central'];
                             $feePromoOutlet = $getDeal['charged_outlet'];
                             if((int) $feePromoCentral !== 100){
-                                $totalChargedPromo = $totalChargedPromo + (abs($data['transaction_discount']) * ($feePromoOutlet / 100));
+                                $totalChargedPromo = (abs($data['transaction_discount']) * ($feePromoOutlet / 100));
+                                $totalChargedPromoCentral = (abs($data['transaction_discount']) * ($feePromoCentral / 100));
+                            }else{
+                                $totalChargedPromoCentral = $data['transaction_discount'];
                             }
                         }elseif (!empty($data['promo_campaign'])){
                             $feePromoCentral = $data['promo_campaign']['charged_central'];
                             $feePromoOutlet = $data['promo_campaign']['charged_outlet'];
                             if((int) $feePromoCentral !== 100){
-                                $totalChargedPromo = $totalChargedPromo + (abs($data['transaction_discount']) * ($feePromoOutlet / 100));
+                                $totalChargedPromo = (abs($data['transaction_discount']) * ($feePromoOutlet / 100));
+                                $totalChargedPromoCentral = (abs($data['transaction_discount']) * ($feePromoCentral / 100));
+                            }else{
+                                $totalChargedPromoCentral = $data['transaction_discount'];
                             }
                         }
-                        if($charged == 'Customer'){
-                            $totalFee = 0;
-                        }elseif($feePGType == 'Percent'){
+
+                        if($feePGType == 'Percent'){
                             $totalFee = $grandTotal * (($feePGCentral + $feePG) / 100);
+                            $totalFeeForCentral = $grandTotal * ($feePG/100);
                         }else{
                             $totalFee = $feePGCentral + $feePG;
+                            $totalFeeForCentral = $feePG;
                         }
 
                         $percentFee = 0;
@@ -218,6 +239,7 @@ class ApiIrisController extends Controller
                         }
 
                         $amount = $subTotal - ((floatval($percentFee) / 100) * $subTotal) - $totalFee - $nominalBalance - $totalChargedPromo;
+                        $incomeCentral = ((floatval($percentFee) / 100) * $subTotal) + $totalFeeForCentral - $nominalBalanceCentral - $totalChargedPromoCentral;
 
                         $checkOultet = array_search($data['id_outlet'], array_column($arrTmp, 'id_outlet'));
 
@@ -231,9 +253,12 @@ class ApiIrisController extends Controller
                                 'beneficiary_alias' => $data['beneficiary_alias'],
                                 'bank_code' => $data['bank_code'],
                                 'total_amount' => $amount,
+                                'total_income_central' => $incomeCentral,
                                 'transactions' => [
                                     [
                                         'id_transaction' => $data['id_transaction'],
+                                        'income_outlet'=> $amount,
+                                        'income_central'=> $incomeCentral,
                                         'fee' => $percentFee,
                                         'mdr' => $feePG,
                                         'mdr_central' => $feePGCentral,
@@ -248,8 +273,11 @@ class ApiIrisController extends Controller
                             ];
                         }else{
                             $arrTmp[$checkOultet]['total_amount'] = $arrTmp[$checkOultet]['total_amount'] + $amount;
+                            $arrTmp[$checkOultet]['total_income_central'] = $arrTmp[$checkOultet]['total_income_central'] + $incomeCentral;
                             $arrTmp[$checkOultet]['transactions'][] = [
                                 'id_transaction' => $data['id_transaction'],
+                                'income_outlet'=> $amount,
+                                'income_central'=> $incomeCentral,
                                 'fee' => $percentFee,
                                 'mdr' => $feePG,
                                 'mdr_central' => $feePGCentral,
@@ -284,6 +312,7 @@ class ApiIrisController extends Controller
                     $dataToInsert[] = [
                         'id_outlet' => $val['id_outlet'],
                         'disburse_nominal' => $val['total_amount'],
+                        'total_income_central' => $val['total_income_central'],
                         'beneficiary_name' => $val['bank_code'],
                         'beneficiary_bank_name' => $val['beneficiary_name'],
                         'beneficiary_account_number' => $val['beneficiary_account'],

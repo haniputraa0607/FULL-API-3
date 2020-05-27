@@ -517,7 +517,10 @@ class ApiOnlineTransaction extends Controller
             $post['point']    = 0;
         }
 
-        if ($request->json('promo_code') || $request->json('id_deals_user')) {
+        if ($request->json('promo_code') || $request->json('id_deals_user') || $request->json('id_subscription_user')) {
+        	if ($request->json('id_subscription_user')) {
+        		$promo_source = 'subscription';
+        	}
         	$check = $this->checkPromoGetPoint($promo_source);
         	if ( $check == 0 ) {
         		$post['cashback'] = 0;
@@ -2168,10 +2171,10 @@ class ApiOnlineTransaction extends Controller
         $result['used_point'] = 0;
         $balance = app($this->balance)->balanceNow($user->id);
         $result['points'] = (int) $balance;
-        $result['get_point'] = ($post['payment_type'] != 'Balance') ? $this->checkPromoGetPoint($promo_source) : 0;
         $result['total_promo'] = app($this->promo)->availablePromo();
         if ($request->id_subscription_user && !$request->promo_code && !$request->id_deals_user)
         {
+        	$promo_source = 'subscription';
 	        $result['subscription'] = app($this->subscription_use)->calculate($request->id_subscription_user, $result['grandtotal'], $result['subtotal'], $post['item'], $post['id_outlet'], $subs_error, $errorProduct, $subs_product, $subs_applied_product);
 	        if (!empty($subs_error)) {
 	        	$error = $subs_error;
@@ -2180,6 +2183,7 @@ class ApiOnlineTransaction extends Controller
 	        	$promo_error['product_label'] = $subs_product??'';
 	        }
         }
+        $result['get_point'] = ($post['payment_type'] != 'Balance') ? $this->checkPromoGetPoint($promo_source) : 0;
         if (isset($post['payment_type'])&&$post['payment_type'] == 'Balance') {
             if($balance>=$result['grandtotal']){
                 $result['used_point'] = $result['grandtotal'];
@@ -2514,16 +2518,16 @@ class ApiOnlineTransaction extends Controller
     		return 1;
     	}
 
-    	if ($promo_source != 'promo_code' && $promo_source != 'voucher_online' && $promo_source != 'voucher_offline') {
+    	if ($promo_source != 'promo_code' && $promo_source != 'voucher_online' && $promo_source != 'voucher_offline' && $promo_source != 'subscription') {
     		return 0;
     	}
 
     	$config = app($this->promo)->promoGetCashbackRule();
-    	$getData = Configs::whereIn('config_name',['promo code get point','voucher offline get point','voucher online get point'])->get()->toArray();
+    	// $getData = Configs::whereIn('config_name',['promo code get point','voucher offline get point','voucher online get point'])->get()->toArray();
 
-    	foreach ($getData as $key => $value) {
-    		$config[$value['config_name']] = $value['is_active'];
-    	}
+    	// foreach ($getData as $key => $value) {
+    	// 	$config[$value['config_name']] = $value['is_active'];
+    	// }
 
     	if ($promo_source == 'promo_code') {
     		if ($config['promo code get point'] == 1) {
@@ -2543,6 +2547,14 @@ class ApiOnlineTransaction extends Controller
 
     	if ($promo_source == 'voucher_offline') {
     		if ($config['voucher offline get point'] == 1) {
+    			return 1;
+    		}else{
+    			return 0;
+    		}
+    	}
+
+    	if ($promo_source == 'subscription') {
+    		if ($config['subscription get point'] == 1) {
     			return 1;
     		}else{
     			return 0;

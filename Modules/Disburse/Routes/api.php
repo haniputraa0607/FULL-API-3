@@ -26,6 +26,7 @@ Route::group(['prefix' => 'disburse'], function () {
 
         //settings bank
         Route::any('setting/bank-account', 'ApiDisburseSettingController@updateBankAccount');
+        Route::any('setting/import-bank-account-outlet', 'ApiDisburseSettingController@importBankAccount');
         Route::any('bank', 'ApiDisburseSettingController@getBank');
 
         //settings mdr

@@ -235,13 +235,13 @@ class ApiPromo extends Controller
 
     public function promoGetCashbackRule()
     {
-    	$getData = Configs::whereIn('config_name',['promo code get point','voucher offline get point','voucher online get point'])->get()->toArray();
+    	$getData = Configs::whereIn('config_name',['promo code get point','voucher offline get point','voucher online get point','subscription get point'])->get()->toArray();
 
     	foreach ($getData as $key => $value) {
     		$config[$value['config_name']] = $value['is_active'];
     	}
 
-    	return $getData;
+    	return $config;
     }
 
     public function getDataCashback(Request $request)
@@ -258,6 +258,7 @@ class ApiPromo extends Controller
     	$update = Configs::where('config_name','promo code get point')->update(['is_active' => $post['promo_code_cashback']??0]);
     	$update = Configs::where('config_name','voucher online get point')->update(['is_active' => $post['voucher_online_cashback']??0]);
     	$update = Configs::where('config_name','voucher offline get point')->update(['is_active' => $post['voucher_offline_cashback']??0]);
+    	$update = Configs::where('config_name','subscription get point')->update(['is_active' => $post['subscription_cashback']??0]);
 
     	if(is_numeric($update))
     	{
