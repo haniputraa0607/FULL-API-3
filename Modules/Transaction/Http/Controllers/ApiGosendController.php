@@ -69,7 +69,7 @@ class ApiGosendController extends Controller
             if ($post['booking_id'] ?? false) {
                 $status = [
                     'confirmed'        => 'Finding Driver', //
-                    'allocated'        => 'Driver Found',
+                    'allocated'        => 'Driver Allocated',
                     'out_for_pickup'   => 'Enroute Pickup', //
                     'picked'           => 'Item Picked by Driver',
                     'out_for_delivery' => 'Enroute Drop', //
@@ -80,7 +80,7 @@ class ApiGosendController extends Controller
                     'on_hold'          => 'On Hold',
                 ];
                 $response_code = 200;
-                $toUpdate      = ['latest_status' => $status[$post['status']]];
+                $toUpdate      = ['latest_status' => $post['status']];
                 if ($post['liveTrackingUrl'] ?? false) {
                     $toUpdate['live_tracking_url'] = $post['liveTrackingUrl'];
                 }

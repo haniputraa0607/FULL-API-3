@@ -581,6 +581,7 @@ class ApiHistoryController extends Controller
             $dataList['type'] = 'trx';
             $dataList['id'] = $value['id_transaction'];
             $dataList['date']    = date('Y-m-d H:i', strtotime($value['transaction_date']));
+            $dataList['date_v2']    = MyHelper::indonesian_date_v2($value['transaction_date'],'d F Y H:i');
             $dataList['id_outlet'] = $value['outlet']['id_outlet'];
             $dataList['outlet_code'] = $value['outlet']['outlet_code'];
             $dataList['outlet'] = $value['outlet']['outlet_name'];
@@ -626,6 +627,7 @@ class ApiHistoryController extends Controller
             $dataList['type'] = 'trx';
             $dataList['id'] = $value['id_transaction'] ;
             $dataList['date']    = date('Y-m-d H:i:s', strtotime($value['transaction_date']));
+            $dataList['date_v2']    = MyHelper::indonesian_date_v2($value['transaction_date'],'d F Y H:i');
             $dataList['outlet'] = $value['outlet']['outlet_name'];
             $dataList['outlet_code'] = $value['outlet']['outlet_code'];
             $dataList['amount'] = number_format($value['transaction_grandtotal'], 0, ',', '.');
@@ -715,8 +717,6 @@ class ApiHistoryController extends Controller
                 $dataList['outlet']  = $trx['outlet']['outlet_name'];
                 $dataList['amount'] = $value['point'];
 
-                $listPoint[$key] = $dataList;
-
                 if ($trx['trasaction_type'] == 'Offline') {
                     $log[$key]['online'] = 0;
                 } else {
@@ -733,8 +733,10 @@ class ApiHistoryController extends Controller
                 $dataList['amount']     = $value['point'];
                 $log[$key]['online']     = 1;
 
-                $listPoint[$key] = $dataList;
             }
+
+            $dataList['date_v2']    = MyHelper::indonesian_date_v2($data['date'],'d F Y H:i');
+            $listPoint[$key] = $dataList;
 
             if (!is_null($post['date_start']) && !is_null($post['date_end'])) {
                 $date_start = date('Y-m-d', strtotime($post['date_start'])) . " 00.00.00";
@@ -924,7 +926,6 @@ class ApiHistoryController extends Controller
                         $dataList['amount'] = '+ ' . number_format($value['balance'], 0, ',', '.');
                     }
 
-                    $listBalance[$key] = $dataList;
                 } else {
                     if ($value['balance'] < 0) {
                         $dataList['type']    = 'balance';
@@ -937,7 +938,6 @@ class ApiHistoryController extends Controller
                             $dataList['amount'] = '+ ' . number_format($value['balance'], 0, ',', '.');
                         }
 
-                        $listBalance[$key] = $dataList;
                     } else {
                         $dataList['type']    = 'profile';
                         $dataList['id']      = $value['id_log_balance'];
@@ -949,7 +949,6 @@ class ApiHistoryController extends Controller
                             $dataList['amount'] = '+ ' . number_format($value['balance'], 0, ',', '.');
                         }
 
-                        $listBalance[$key] = $dataList;
                     }
                 }
             } elseif ($value['source'] == 'Voucher' || $value['source'] == 'Deals Balance') {
@@ -963,7 +962,6 @@ class ApiHistoryController extends Controller
                 // $dataList['amount'] = number_format($value['balance'], 0, ',', '.');
                 // $dataList['online'] = 1;
 
-                $listBalance[$key] = $dataList;
             } elseif ($value['source'] == 'Subscription Balance') {
                 $dataSubscription = SubscriptionUser::where('id_subscription_user', $value['id_reference'])->first();
                 if($dataSubscription){
@@ -973,7 +971,6 @@ class ApiHistoryController extends Controller
                     $dataList['outlet'] = 'Buy a Subscription';
                     $dataList['amount'] = '- ' . ltrim(number_format($value['balance'], 0, ',', '.'), '-');
 
-                    $listBalance[$key] = $dataList;
                 }
             } elseif ($value['source'] == 'Reversal Duplicate') {
                 continue;
@@ -990,7 +987,6 @@ class ApiHistoryController extends Controller
                 $dataList['date']    = date('Y-m-d H:i:s', strtotime($value['created_at']));
                 $dataList['amount'] = '+ ' . number_format($value['balance'], 0, ',', '.');
 
-                $listBalance[$key] = $dataList;
             } elseif($value['source'] == 'Balance Reset') {
                 $dataList['type']   = 'profile';
                 $dataList['id']      = $value['id_log_balance'];
@@ -998,7 +994,6 @@ class ApiHistoryController extends Controller
                 $dataList['outlet'] = 'Point Expired';
                 $dataList['amount'] = number_format($value['balance'], 0, ',', '.');
 
-                $listBalance[$key] = $dataList;
             } elseif($value['source'] == 'Referral Bonus') {
                 $dataList['type']   = 'profile';
                 $dataList['id']      = $value['id_log_balance'];
@@ -1006,7 +1001,6 @@ class ApiHistoryController extends Controller
                 $dataList['outlet'] = 'Referral Bonus';
                 $dataList['amount'] = MyHelper::requestNumber($value['balance'], '_POINT');
 
-                $listBalance[$key] = $dataList;
             } else {
                 $dataList['type']   = 'profile';
                 $dataList['id']      = $value['id_log_balance'];
@@ -1014,8 +1008,10 @@ class ApiHistoryController extends Controller
                 $dataList['outlet'] = 'Welcome Point';
                 $dataList['amount'] = '+ ' . number_format($value['balance'], 0, ',', '.');
 
-                $listBalance[$key] = $dataList;
             }
+
+            $dataList['date_v2'] = MyHelper::indonesian_date_v2($dataList['date'],'d F Y H:i');
+            $listBalance[$key] = $dataList;
 
             if (isset($post['date_start']) && !is_null($post['date_start']) && isset($post['date_end']) && !is_null($post['date_end'])) {
                 $date_start = date('Y-m-d', strtotime($post['date_start'])) . " 00.00.00";
