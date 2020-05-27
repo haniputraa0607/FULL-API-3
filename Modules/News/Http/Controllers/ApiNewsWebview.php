@@ -87,10 +87,14 @@ class ApiNewsWebview extends Controller
                     $news['news_product'][$keyProduct]['product_image'] = null;
                 }
             }
-
+            
             $news['news_post_date'] = date('l, d F Y  H:i', strtotime($news['news_post_date']));
-            $news['news_event_date'] = date('d', strtotime($news['news_event_date_start'])) . ' - ' . date('d F Y', strtotime($news['news_event_date_end']));
-            $news['news_event_hours'] = date('H:i', strtotime($news['news_event_time_start'])) . ' - ' . date('H:i', strtotime($news['news_event_time_end']));
+            if($news['news_event_date_start'] != null && $news['news_event_time_end'] != null){
+                $news['news_event_date'] = date('d', strtotime($news['news_event_date_start'])) . ' - ' . date('d F Y', strtotime($news['news_event_date_end']));
+            }
+            if($news['news_event_time_start'] != null && $news['news_event_time_end'] != null){
+                $news['news_event_hours'] = date('H:i', strtotime($news['news_event_time_start'])) . ' - ' . date('H:i', strtotime($news['news_event_time_end']));
+            }
             unset($news['news_publish_date']);
             unset($news['news_expired_date']);
             unset($news['news_event_date_start']);
