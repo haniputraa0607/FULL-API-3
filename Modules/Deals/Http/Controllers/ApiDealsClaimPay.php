@@ -353,7 +353,7 @@ class ApiDealsClaimPay extends Controller
 
                         if (($pay['voucher']['payment_method']??false) == 'Balance') 
                         {
-	                        $autocrm = app($this->autocrm)->SendAutoCRM('Claim Paid Deals Success', $phone,
+	                        $autocrm = app($this->autocrm)->SendAutoCRM('Claim Point Deals Success', $phone,
 	                            [
 	                                'claimed_at'                => $voucher->claimed_at, 
 	                                'deals_title'               => $voucher->dealVoucher->deals->deals_title,
