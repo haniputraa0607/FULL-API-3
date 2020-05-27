@@ -743,7 +743,8 @@ class ApiOutletApp extends Controller
         DB::beginTransaction();
         $pickup = TransactionPickup::where('id_transaction', $order->id_transaction)->update(['ready_at' => date('Y-m-d H:i:s')]);
 
-        if ($pickup) {
+        // sendPoint delivery after status delivered only
+        if ($pickup && $order->pickup_by == 'Customer' && $order->cashback_insert_status != 1) {
             //send notif to customer
             $user = User::find($order->id_user);
 
@@ -778,6 +779,7 @@ class ApiOutletApp extends Controller
 
             }
 
+            $newTrx->update(['cashback_insert_status' => 1]);
             $checkMembership = app($this->membership)->calculateMembership($user['phone']);
             DB::commit();
             $send = app($this->autocrm)->SendAutoCRM('Order Ready', $user['phone'], [
@@ -1802,6 +1804,59 @@ class ApiOutletApp extends Controller
                     }
                     $trxGoSend->update($toUpdate);
                     if (in_array(strtolower($status['status']), ['completed', 'delivered'])) {
+                        // sendPoint delivery after status delivered only
+                        if ($trx->cashback_insert_status != 1) {
+                            //send notif to customer
+                            $user = User::find($trx->id_user);
+
+                            $newTrx    = Transaction::with('user.memberships', 'outlet', 'productTransaction', 'transaction_vouchers','promo_campaign_promo_code','promo_campaign_promo_code.promo_campaign')->where('id_transaction', $trx->id_transaction)->first();
+                            $checkType = TransactionMultiplePayment::where('id_transaction', $trx->id_transaction)->get()->toArray();
+                            $column    = array_column($checkType, 'type');
+                            
+                            $use_referral = optional(optional($newTrx->promo_campaign_promo_code)->promo_campaign)->promo_type == 'Referral';
+
+                            if (!in_array('Balance', $column) || $use_referral) {
+
+                                $promo_source = null;
+                                if ($newTrx->id_promo_campaign_promo_code || $newTrx->transaction_vouchers) {
+                                    if ($newTrx->id_promo_campaign_promo_code) {
+                                        $promo_source = 'promo_code';
+                                    } elseif (($newTrx->transaction_vouchers[0]->status ?? false) == 'success') {
+                                        $promo_source = 'voucher_online';
+                                    }
+                                }
+
+                                if (app($this->trx)->checkPromoGetPoint($promo_source) || $use_referral) {
+                                    $savePoint = app($this->getNotif)->savePoint($newTrx);
+                                    // return $savePoint;
+                                    if (!$savePoint) {
+                                        DB::rollback();
+                                        return response()->json([
+                                            'status'   => 'fail',
+                                            'messages' => ['Transaction failed'],
+                                        ]);
+                                    }
+                                }
+
+                            }
+
+                            $newTrx->update(['cashback_insert_status' => 1]);
+                            $checkMembership = app($this->membership)->calculateMembership($user['phone']);
+                            DB::commit();
+                            $send = app($this->autocrm)->SendAutoCRM('Order Ready', $user['phone'], [
+                                "outlet_name"      => $outlet['outlet_name'],
+                                'id_transaction'   => $trx->id_transaction,
+                                "id_reference"     => $trx->transaction_receipt_number . ',' . $trx->id_outlet,
+                                "transaction_date" => $trx->transaction_date,
+                            ]);
+                            if ($send != true) {
+                                // DB::rollback();
+                                return response()->json([
+                                    'status'   => 'fail',
+                                    'messages' => ['Failed Send notification to customer'],
+                                ]);
+                            }
+                        }
                         $arrived_at = date('Y-m-d H:i:s', strtotime($status['orderArrivalTime'] ?? time()));
                         TransactionPickup::where('id_transaction', $trx->id_transaction)->update(['arrived_at' => $arrived_at]);
                     }
