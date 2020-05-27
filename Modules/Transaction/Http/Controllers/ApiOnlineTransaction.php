@@ -3,6 +3,7 @@
 namespace Modules\Transaction\Http\Controllers;
 
 use App\Http\Models\DailyTransactions;
+use App\Jobs\FraudJob;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
@@ -232,6 +233,8 @@ class ApiOnlineTransaction extends Controller
                 'messages'  => ['Akun Anda telah diblokir karena menunjukkan aktivitas mencurigakan. Untuk informasi lebih lanjut harap hubungi customer service kami di hello@example.id']
             ]);
         }
+
+        $config_fraud_use_queue = Configs::where('config_name', 'fraud use queue')->first()->is_active;
 
         if (count($user['memberships']) > 0) {
             $post['membership_level']    = $user['memberships'][0]['membership_name'];
@@ -756,15 +759,7 @@ class ApiOnlineTransaction extends Controller
                 ]);
             }
 
-            //======= Start Check Fraud Referral User =======//
-            $data = [
-                'id_user' => $insertTransaction['id_user'],
-                'referral_code' => $request->promo_code,
-                'referral_code_use_date' => $insertTransaction['transaction_date'],
-                'id_transaction' => $insertTransaction['id_transaction']
-            ];
-            app($this->setting_fraud)->fraudCheckReferralUser($data);
-            //======= End Check Fraud Referral User =======//
+            $promo_code_ref = $request->promo_code;
         }
 
         // add transaction voucher
@@ -1385,68 +1380,7 @@ class ApiOnlineTransaction extends Controller
             }
         }
 
-		$fraudTrxDay = FraudSetting::where('parameter', 'LIKE', '%transactions in 1 day%')->where('fraud_settings_status','Active')->first();
-		$fraudTrxWeek = FraudSetting::where('parameter', 'LIKE', '%transactions in 1 week%')->where('fraud_settings_status','Active')->first();
-
         if ($post['transaction_payment_status'] == 'Completed') {
-
-            //========= This process to check if user have fraud ============//
-            $geCountTrxDay = Transaction::leftJoin('transaction_pickups', 'transaction_pickups.id_transaction', '=', 'transactions.id_transaction')
-                ->where('transactions.id_user', $insertTransaction['id_user'])
-                ->whereRaw('DATE(transactions.transaction_date) = "'.date('Y-m-d', strtotime($post['transaction_date'])).'"')
-                ->where('transactions.transaction_payment_status','Completed')
-                ->whereNull('transaction_pickups.reject_at')
-                ->count();
-
-            $currentWeekNumber = date('W',strtotime($post['transaction_date']));
-            $currentYear = date('Y',strtotime($post['transaction_date']));
-            $dto = new DateTime();
-            $dto->setISODate($currentYear,$currentWeekNumber);
-            $start = $dto->format('Y-m-d');
-            $dto->modify('+6 days');
-            $end = $dto->format('Y-m-d');
-
-            $geCountTrxWeek = Transaction::leftJoin('transaction_pickups', 'transaction_pickups.id_transaction', '=', 'transactions.id_transaction')
-                ->where('id_user', $insertTransaction['id_user'])
-                ->where('transactions.transaction_payment_status','Completed')
-                ->whereNull('transaction_pickups.reject_at')
-                ->whereRaw('Date(transactions.transaction_date) BETWEEN "'.$start.'" AND "'.$end.'"')
-                ->count();
-
-            $countTrxDay = $geCountTrxDay + 1;
-            $countTrxWeek = $geCountTrxWeek + 1;
-            //================================ End ================================//
-
-
-
-            if((($fraudTrxDay && $countTrxDay <= $fraudTrxDay['parameter_detail']) && ($fraudTrxWeek && $countTrxWeek <= $fraudTrxWeek['parameter_detail']))
-                || (!$fraudTrxDay && !$fraudTrxWeek)){
-
-            }else{
-                if($countTrxDay > $fraudTrxDay['parameter_detail'] && $fraudTrxDay){
-                    $fraudFlag = 'transaction day';
-                }elseif($countTrxWeek > $fraudTrxWeek['parameter_detail'] && $fraudTrxWeek){
-                    $fraudFlag = 'transaction week';
-                }else{
-                    $fraudFlag = NULL;
-                }
-
-                $updatePointCashback = Transaction::where('id_transaction', $insertTransaction['id_transaction'])
-                    ->update([
-                        'transaction_point_earned' => NULL,
-                        'transaction_cashback_earned' => NULL,
-                        'fraud_flag' => $fraudFlag
-                    ]);
-
-                if(!$updatePointCashback){
-                    DB::rollback();
-                    return response()->json([
-                        'status' => 'fail',
-                        'messages' => ['Failed update Point and Cashback']
-                    ]);
-                }
-            }
-
             $checkMembership = app($this->membership)->calculateMembership($user['phone']);
             if (!$checkMembership) {
                 DB::rollback();
@@ -1478,21 +1412,17 @@ class ApiOnlineTransaction extends Controller
 
                 if ($post['transaction_payment_status'] == 'Completed' || $save['type'] == 'no_topup') {
 
+                    if($config_fraud_use_queue == 1){
+                        FraudJob::dispatch($user, $insertTransaction, 'transaction')->onConnection('fraudqueue');
+                    }else {
+                        if($config_fraud_use_queue != 1){
+                            $checkFraud = app($this->setting_fraud)->checkFraudTrxOnline($user, $insertTransaction);
+                        }
+                    }
                     //inset pickup_at when pickup_type = right now
                     if($insertPickup['pickup_type'] == 'right now'){
                         $settingTime = Setting::where('key', 'processing_time')->first();
                         $updatePickup = TransactionPickup::where('id_transaction', $insertTransaction['id_transaction'])->update(['pickup_at' => date('Y-m-d H:i:s', strtotime('+ '.$settingTime['value'].'minutes'))]);
-                    }
-
-                    // Fraud Detection
-                    $userData = User::find($user['id']);
-
-                    if($fraudTrxDay){
-                        $checkFraud = app($this->setting_fraud)->checkFraud($fraudTrxDay, $userData, null, $countTrxDay, $countTrxWeek, $post['transaction_date'], 0, $insertTransaction['transaction_receipt_number']);
-                    }
-
-                    if($fraudTrxWeek){
-                        $checkFraud = app($this->setting_fraud)->checkFraud($fraudTrxWeek, $userData, null, $countTrxDay, $countTrxWeek, $post['transaction_date'], 0, $insertTransaction['transaction_receipt_number']);
                     }
                 }
 
@@ -1565,15 +1495,6 @@ class ApiOnlineTransaction extends Controller
 
             if ($post['payment_type'] == 'Midtrans') {
                 if ($post['transaction_payment_status'] == 'Completed') {
-                    $userData = User::find($user['id']);
-
-                    if($fraudTrxDay){
-                        $checkFraud = app($this->setting_fraud)->checkFraud($fraudTrxDay, $userData, null, $countTrxDay, $countTrxWeek, $post['transaction_date'], 0, $insertTransaction['transaction_receipt_number']);
-                    }
-
-                    if($fraudTrxWeek){
-                        $checkFraud = app($this->setting_fraud)->checkFraud($fraudTrxWeek, $userData, null, $countTrxDay, $countTrxWeek, $post['transaction_date'], 0, $insertTransaction['transaction_receipt_number']);
-                    }
                     //bank
                     $bank = ['BNI', 'Mandiri', 'BCA'];
                     $getBank = array_rand($bank);
@@ -1639,7 +1560,13 @@ class ApiOnlineTransaction extends Controller
                 'referral_code_use_date' => $insertTransaction['transaction_date'],
                 'id_transaction' => $insertTransaction['id_transaction']
             ];
-            app($this->setting_fraud)->fraudCheckReferralUser($data);
+            if($config_fraud_use_queue == 1){
+                FraudJob::dispatch($user, $data, 'referral user')->onConnection('fraudqueue');
+                FraudJob::dispatch($user, $data, 'referral')->onConnection('fraudqueue');
+            }else{
+                app($this->setting_fraud)->fraudCheckReferralUser($data);
+                app($this->setting_fraud)->fraudCheckReferral($data);
+            }
             //======= End Check Fraud Referral User =======//
         }
 
