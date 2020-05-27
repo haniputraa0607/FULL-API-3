@@ -23,11 +23,13 @@ class ApiDisburseController extends Controller
         $nominal_success = Disburse::where('disburse.disburse_status', 'Success');
         $nominal_fail = Disburse::where('disburse.disburse_status', 'Fail');
         $nominal_trx = DailyReportTrx::where('trx_type', 'Online');
+        $income_central = Disburse::orderBy('disburse.created_at');
 
         if(isset($post['id_outlet']) && !empty($post['id_outlet']) && $post['id_outlet'] != 'all'){
             $nominal_success->where('disburse.id_outlet', $post['id_outlet']);
             $nominal_fail->where('disburse.id_outlet', $post['id_outlet']);
             $nominal_trx->where('daily_report_trx.id_outlet', $post['id_outlet']);
+            $income_central->where('disburse.id_outlet', $post['id_outlet']);
         }
 
         if(isset($post['fitler_date']) && $post['fitler_date'] == 'today'){
@@ -35,6 +37,7 @@ class ApiDisburseController extends Controller
             $nominal_success->whereDate('disburse.created_at', date('Y-m-d'));
             $nominal_fail->whereDate('disburse.created_at', date('Y-m-d'));
             $nominal_trx->whereDate('daily_report_trx.trx_date', date('Y-m-d'));
+            $income_central->where('disburse.created_at', date('Y-m-d'));
 
         }elseif(isset($post['fitler_date']) && $post['fitler_date'] == 'specific_date'){
             if(isset($post['start_date']) && !empty($post['start_date']) &&
@@ -48,6 +51,8 @@ class ApiDisburseController extends Controller
                     ->whereDate('disburse.created_at', '<=', $end_date);
                 $nominal_trx->whereDate('daily_report_trx.trx_date', '>=', $start_date)
                     ->whereDate('daily_report_trx.trx_date', '<=', $end_date);
+                $income_central->whereDate('disburse.created_at', '>=', $start_date)
+                    ->whereDate('disburse.created_at', '<=', $end_date);
             }
         }
 
@@ -63,12 +68,14 @@ class ApiDisburseController extends Controller
         $nominal_success = $nominal_success->sum('disburse.disburse_nominal');
         $nominal_fail = $nominal_fail->sum('disburse.disburse_nominal');
         $nominal_trx = $nominal_trx->sum('trx_grand');
+        $income_central = $income_central->sum('total_income_central');
         $result = [
             'status' => 'success',
             'result' => [
                 'nominal_success' => $nominal_success,
                 'nominal_fail' => $nominal_fail,
-                'nominal_trx' => $nominal_trx
+                'nominal_trx' => $nominal_trx,
+                'income_central' => $income_central
             ]
         ];
         return response()->json($result);
@@ -87,9 +94,9 @@ class ApiDisburseController extends Controller
                 ->where('user_franchisee_outlet.id_user_franchise', $post['id_user_franchise']);
         }
 
-        if(isset($post['type']) && $post['type'] == 'add_bank_account'){
-            $outlet->whereNull('outlets.beneficiary_account');
-        }
+//        if(isset($post['type']) && $post['type'] == 'add_bank_account'){
+//            $outlet->whereNull('outlets.beneficiary_account');
+//        }
 
         if(isset($post['conditions']) && !empty($post['conditions'])){
             $rule = 'and';
