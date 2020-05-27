@@ -1008,6 +1008,15 @@ class ConfigsTableSeeder extends Seeder
                     'created_at' => date('Y-m-d H:i:s'),
                     'updated_at' => date('Y-m-d H:i:s'),
                 ),
+            111 =>
+            array (
+                'id_config' => 112,
+                'config_name' => 'subscription get point',
+                'description' => '',
+                'is_active' => 0,
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ),
         ));
     }
 }
