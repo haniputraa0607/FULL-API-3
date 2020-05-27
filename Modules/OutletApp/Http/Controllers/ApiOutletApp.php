@@ -2215,6 +2215,7 @@ class ApiOutletApp extends Controller
             'transaction_cashback_earned' => MyHelper::requestNumber($list['transaction_cashback_earned'], '_POINT'),
             'trasaction_payment_type'     => $list['trasaction_payment_type'],
             'transaction_payment_status'  => $list['transaction_payment_status'],
+            'rejectable'                  => 0,
             'outlet'                      => [
                 'outlet_name'    => $list['outlet']['outlet_name'],
                 'outlet_address' => $list['outlet']['outlet_address'],
@@ -2254,6 +2255,7 @@ class ApiOutletApp extends Controller
             } else {
                 $result['transaction_status']      = 5;
                 $result['transaction_status_text'] = 'ORDER PENDING';
+                $result['rejectable']              = 1;
             }
 
             if ($list['transaction_pickup_go_send']) {
@@ -2274,11 +2276,13 @@ class ApiOutletApp extends Controller
                     case 'confirmed':
                         $result['delivery_info']['delivery_status'] = 'Driver belum ditemukan';
                         $result['transaction_status_text']          = 'SEDANG MENCARI DRIVER';
+                        $result['rejectable']                       = 0;
                         break;
                     case 'driver allocated':
                     case 'allocated':
                         $result['delivery_info']['delivery_status'] = 'Driver ditemukan';
                         $result['transaction_status_text']          = 'DRIVER DITEMUKAN';
+                        $result['rejectable']                       = 0;
                         break;
                     case 'enroute pickup':
                     case 'out_for_pickup':
@@ -2292,6 +2296,7 @@ class ApiOutletApp extends Controller
                             'vehicle_number' => $list['transaction_pickup_go_send']['vehicle_number'],
                         ];
                         $result['delivery_info']['cancelable'] = 1;
+                        $result['rejectable']                  = 0;
                         break;
                     case 'enroute drop':
                     case 'out_for_delivery':
@@ -2305,6 +2310,7 @@ class ApiOutletApp extends Controller
                             'vehicle_number' => $list['transaction_pickup_go_send']['vehicle_number'],
                         ];
                         $result['delivery_info']['cancelable'] = 0;
+                        $result['rejectable']                  = 0;
                         break;
                     case 'completed':
                     case 'delivered':
@@ -2323,6 +2329,7 @@ class ApiOutletApp extends Controller
                         $result['delivery_info']['booking_status'] = 0;
                         $result['transaction_status_text']         = 'SEDANG MENCARI DRIVER';
                         $result['delivery_info']['cancelable']     = 0;
+                        $result['rejectable']              = 1;
                         break;
                     case 'driver not found':
                     case 'no_driver':
@@ -2330,6 +2337,7 @@ class ApiOutletApp extends Controller
                         $result['transaction_status_text']          = 'SEDANG MENCARI DRIVER';
                         $result['delivery_info']['delivery_status'] = 'Driver tidak ditemukan';
                         $result['delivery_info']['cancelable']      = 0;
+                        $result['rejectable']              = 1;
                         break;
                 }
             }
