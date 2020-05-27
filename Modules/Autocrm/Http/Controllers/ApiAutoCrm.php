@@ -89,77 +89,83 @@ class ApiAutoCrm extends Controller
 					);
 
 					if($autocrm_title == 'Transaction Success'){
+						 try{
+							Mail::send('emails.test2', $data, function($message) use ($to,$subject,$name,$setting,$variables)
+							{
 
-						Mail::send('emails.test2', $data, function($message) use ($to,$subject,$name,$setting,$variables)
-						{
-
-							if(stristr($to, 'gmail.con')){
-								$to = str_replace('gmail.con', 'gmail.com', $to);
-							}
-
-                            if(!empty($setting['email_from']) && !empty($setting['email_sender'])){
-                                $message->from($setting['email_sender'], $setting['email_from']);
-                            }else if(!empty($setting['email_sender'])){
-                                $message->from($setting['email_sender']);
-                            }
-
-							if(!empty($setting['email_reply_to'])){
-								$message->replyTo($setting['email_reply_to'], $setting['email_reply_to_name']);
-							}
-
-							if(!empty($setting['email_cc']) && !empty($setting['email_cc_name'])){
-								$message->cc($setting['email_cc'], $setting['email_cc_name']);
-							}
-
-							if(!empty($setting['email_bcc']) && !empty($setting['email_bcc_name'])){
-								$message->bcc($setting['email_bcc'], $setting['email_bcc_name']);
-							}
-
-							// attachment
-							if(isset($variables['attachment'])){
-								if(is_array($variables['attachment'])){
-									foreach($variables['attachment'] as $attach){
-										$message->attach($attach);
-									}
-								}else{
-									$message->attach($variables['attachment']);
+								if(stristr($to, 'gmail.con')){
+									$to = str_replace('gmail.con', 'gmail.com', $to);
 								}
-							}
-						});
+
+								if(!empty($setting['email_from']) && !empty($setting['email_sender'])){
+									$message->from($setting['email_sender'], $setting['email_from']);
+								}else if(!empty($setting['email_sender'])){
+									$message->from($setting['email_sender']);
+								}
+
+								if(!empty($setting['email_reply_to'])){
+									$message->replyTo($setting['email_reply_to'], $setting['email_reply_to_name']);
+								}
+
+								if(!empty($setting['email_cc']) && !empty($setting['email_cc_name'])){
+									$message->cc($setting['email_cc'], $setting['email_cc_name']);
+								}
+
+								if(!empty($setting['email_bcc']) && !empty($setting['email_bcc_name'])){
+									$message->bcc($setting['email_bcc'], $setting['email_bcc_name']);
+								}
+
+								// attachment
+								if(isset($variables['attachment'])){
+									if(is_array($variables['attachment'])){
+										foreach($variables['attachment'] as $attach){
+											$message->attach($attach);
+										}
+									}else{
+										$message->attach($variables['attachment']);
+									}
+								}
+							});
+						}catch(\Exception $e){
+							
+						}
 					}else{
-						Mail::send('emails.test', $data, function($message) use ($to,$subject,$name,$setting,$variables,$autocrm_title,$crm)
-						{
-							$message->to($to, $name)->subject($subject);
-                            if(!empty($setting['email_from']) && !empty($setting['email_sender'])){
-                                $message->from($setting['email_sender'], $setting['email_from']);
-                            }else if(!empty($setting['email_sender'])){
-                                $message->from($setting['email_sender']);
-                            }
-
-							if(!empty($setting['email_reply_to'])){
-								$message->replyTo($setting['email_reply_to'], $setting['email_reply_to_name']);
-							}
-
-							if(!empty($setting['email_cc']) && !empty($setting['email_cc_name'])){
-								$message->cc($setting['email_cc'], $setting['email_cc_name']);
-							}
-
-							if(!empty($setting['email_bcc']) && !empty($setting['email_bcc_name'])){
-								$message->bcc($setting['email_bcc'], $setting['email_bcc_name']);
-							}
-
-							// attachment
-							if((isset($variables['attachment']) && !(stristr($autocrm_title,'nquiry'))) ||
-							((stristr($autocrm_title,'nquiry')&&$crm['attachment_mail']==1))){
-								if(is_array($variables['attachment'])){
-									foreach($variables['attachment'] as $attach){
-										$message->attach($attach);
-									}
-								}else{
-									$message->attach($variables['attachment']);
+					    try{
+    						Mail::send('emails.test', $data, function($message) use ($to,$subject,$name,$setting,$variables,$autocrm_title,$crm)
+								{
+								$message->to($to, $name)->subject($subject);
+								if(!empty($setting['email_from']) && !empty($setting['email_sender'])){
+									$message->from($setting['email_sender'], $setting['email_from']);
+								}else if(!empty($setting['email_sender'])){
+									$message->from($setting['email_sender']);
 								}
-							}
-						});
+
+								if(!empty($setting['email_reply_to'])){
+									$message->replyTo($setting['email_reply_to'], $setting['email_reply_to_name']);
+								}
+
+								if(!empty($setting['email_cc']) && !empty($setting['email_cc_name'])){
+									$message->cc($setting['email_cc'], $setting['email_cc_name']);
+								}
+
+								if(!empty($setting['email_bcc']) && !empty($setting['email_bcc_name'])){
+									$message->bcc($setting['email_bcc'], $setting['email_bcc_name']);
+								}
+
+								// attachment
+								if((isset($variables['attachment']) && !(stristr($autocrm_title,'nquiry'))) ||
+								((stristr($autocrm_title,'nquiry')&&$crm['attachment_mail']==1))){
+									if(is_array($variables['attachment'])){
+										foreach($variables['attachment'] as $attach){
+											$message->attach($attach);
+										}
+									}else{
+										$message->attach($variables['attachment']);
+									}
+								}
+							});
+					    }catch(\Exception $e){
+                        }
 
 					}
 
@@ -201,42 +207,46 @@ class ApiAutoCrm extends Controller
 							'html_message' => $content,
 							'setting' => $setting
 						);
-						Mail::send('emails.test', $data, function($message) use ($to,$subject,$name,$setting, $autocrm_title,$variables)
-						{
-							$message->to($to, $name)->subject($subject);
-                            if(!empty($setting['email_from']) && !empty($setting['email_sender'])){
-                                $message->from($setting['email_sender'], $setting['email_from']);
-                            }else if(!empty($setting['email_sender'])){
-                                $message->from($setting['email_sender']);
-                            }
-
-							if(!empty($setting['email_reply_to'])){
-								$message->replyTo($setting['email_reply_to'], $setting['email_reply_to_name']);
-							}
-
-							if(!empty($setting['email_cc']) && !empty($setting['email_cc_name'])){
-								$message->cc($setting['email_cc'], $setting['email_cc_name']);
-							}
-
-							if(!empty($setting['email_bcc']) && !empty($setting['email_bcc_name'])){
-								$message->bcc($setting['email_bcc'], $setting['email_bcc_name']);
-							}
-
-							// attachment
-							if((stristr($autocrm_title,'nquiry')&&$crm['attachment_forward']==1) || isset($variables['attachment'])){
-								if(is_array($variables['attachment'])){
-									foreach($variables['attachment'] as $attach){
-										if(is_array($attach)){
-											$message->attach(...$attach);
-										}else{
-											$message->attach($attach);
-										}
-									}
-								}else{
-									$message->attach($variables['attachment']);
+						try{
+							Mail::send('emails.test', $data, function($message) use ($to,$subject,$name,$setting, $autocrm_title,$variables)
+							{
+								$message->to($to, $name)->subject($subject);
+								if(!empty($setting['email_from']) && !empty($setting['email_sender'])){
+									$message->from($setting['email_sender'], $setting['email_from']);
+								}else if(!empty($setting['email_sender'])){
+									$message->from($setting['email_sender']);
 								}
-							}
-						});
+
+								if(!empty($setting['email_reply_to'])){
+									$message->replyTo($setting['email_reply_to'], $setting['email_reply_to_name']);
+								}
+
+								if(!empty($setting['email_cc']) && !empty($setting['email_cc_name'])){
+									$message->cc($setting['email_cc'], $setting['email_cc_name']);
+								}
+
+								if(!empty($setting['email_bcc']) && !empty($setting['email_bcc_name'])){
+									$message->bcc($setting['email_bcc'], $setting['email_bcc_name']);
+								}
+
+								// attachment
+								if((stristr($autocrm_title,'nquiry')&&$crm['attachment_forward']==1) || isset($variables['attachment'])){
+									if(is_array($variables['attachment'])){
+										foreach($variables['attachment'] as $attach){
+											if(is_array($attach)){
+												$message->attach(...$attach);
+											}else{
+												$message->attach($attach);
+											}
+										}
+									}else{
+										$message->attach($variables['attachment']);
+									}
+								}
+							});
+						}catch(\Exception $e){
+							
+						}
 
 						$logData = [];
 						$logData['id_user'] = $user['id'];

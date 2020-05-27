@@ -121,7 +121,7 @@ class Controller extends BaseController
             $result = [
                 'status' => 'success',
                 'result' => [
-                    'pathinfo' => url('/').'/'.$upload['path'],
+                    'pathinfo' => env('S3_URL_API').$upload['path'],
                     'path' => $upload['path']
                 ]
             ];
