@@ -920,12 +920,14 @@ class ApiOutletApp extends Controller
             foreach ($x as $product) {
                 $create = ProductStockStatusUpdate::create([
                     'id_product'        => $product['id_product'],
-                    'id_user'           => $user_outlet['id_user_outlet'],
-                    'user_type'         => 'user_outlets',
+                    'id_user'           => null,
+                    'user_type'         => 'seeds',
+                    'user_name'         => $user_outlet['name'],
+                    'user_email'        => $user_outlet['email'],
                     'id_outlet'         => $outlet->id_outlet,
                     'date_time'         => $date_time,
                     'new_status'        => 'Sold Out',
-                    'id_outlet_app_otp' => $otp->id_outlet_app_otp,
+                    'id_outlet_app_otp' => null,
                 ]);
             }
             $updated += $found->update(['product_stock_status' => 'Sold Out']);
@@ -938,12 +940,14 @@ class ApiOutletApp extends Controller
             foreach ($x as $product) {
                 $create = ProductStockStatusUpdate::create([
                     'id_product'        => $product['id_product'],
-                    'id_user'           => $user_outlet['id_user_outlet'],
-                    'user_type'         => 'user_outlets',
+                    'id_user'           => null,
+                    'user_type'         => 'seeds',
+                    'user_name'         => $user_outlet['name'],
+                    'user_email'        => $user_outlet['email'],
                     'id_outlet'         => $outlet->id_outlet,
                     'date_time'         => $date_time,
                     'new_status'        => 'Available',
-                    'id_outlet_app_otp' => $otp->id_outlet_app_otp,
+                    'id_outlet_app_otp' => null,
                 ]);
             }
             $updated += $found->update(['product_stock_status' => 'Available']);
@@ -1585,7 +1589,7 @@ class ApiOutletApp extends Controller
     {
         $outlet = $request->user();
         $date   = $request->json('date') ?: date('Y-m-d');
-        $data   = ProductStockStatusUpdate::select(\DB::raw('id_product_stock_status_update,brand_product.id_brand,CONCAT(user_type,",",id_user) as user,DATE_FORMAT(date_time, "%H:%i") as time,product_name,new_status as old_status,new_status,new_status as to_available'))
+        $data   = ProductStockStatusUpdate::distinct()->select(\DB::raw('id_product_stock_status_update,brand_product.id_brand,CONCAT(user_type,",",COALESCE(id_user,""),",",COALESCE(user_name,"")) as user,DATE_FORMAT(date_time, "%H:%i") as time,product_name,new_status as old_status,new_status,new_status as to_available'))
             ->join('products', 'products.id_product', '=', 'product_stock_status_updates.id_product')
             ->join('brand_product', 'products.id_product', '=', 'brand_product.id_product')
             ->where('id_outlet', $outlet->id_outlet)
