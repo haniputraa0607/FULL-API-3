@@ -88,7 +88,8 @@ class Transaction extends Model
 		'latitude',
 		'longitude',
 		'membership_promo_id',
-        'fraud_flag'
+        'fraud_flag',
+        'cashback_insert_status'
 	];
 
 	public function user()
