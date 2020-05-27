@@ -1795,52 +1795,65 @@ class ApiTransaction extends Controller
                     }
                     switch (strtolower($list['transaction_pickup_go_send']['latest_status'])) {
                         case 'finding driver':
+                        case 'confirmed':
                             $result['delivery_info']['delivery_status'] = 'Driver belum ditemukan';
+                            $result['transaction_status_text']          = 'SEDANG MENCARI DRIVER';
+                            break;
+                        case 'driver allocated':
+                        case 'allocated':
+                            $result['delivery_info']['delivery_status'] = 'Driver ditemukan';
+                            $result['transaction_status_text']          = 'DRIVER DITEMUKAN';
                             break;
                         case 'enroute pickup':
+                        case 'out_for_pickup':
                             $result['delivery_info']['delivery_status'] = 'Driver dalam perjalanan menuju Outlet';
-                            $result['delivery_info']['driver'] = [
-                                'driver_id' => $list['transaction_pickup_go_send']['driver_id'],
-                                'driver_name' => $list['transaction_pickup_go_send']['driver_name'],
-                                'driver_phone' => $list['transaction_pickup_go_send']['driver_phone'],
-                                'driver_photo' => $list['transaction_pickup_go_send']['driver_photo'],
+                            $result['transaction_status_text']          = 'DRIVER SEDANG MENUJU OUTLET';
+                            $result['delivery_info']['driver']          = [
+                                'driver_id'      => $list['transaction_pickup_go_send']['driver_id'],
+                                'driver_name'    => $list['transaction_pickup_go_send']['driver_name'],
+                                'driver_phone'   => $list['transaction_pickup_go_send']['driver_phone'],
+                                'driver_photo'   => $list['transaction_pickup_go_send']['driver_photo'],
                                 'vehicle_number' => $list['transaction_pickup_go_send']['vehicle_number'],
                             ];
                             $result['delivery_info']['cancelable'] = 1;
                             break;
                         case 'enroute drop':
+                        case 'out_for_delivery':
                             $result['delivery_info']['delivery_status'] = 'Driver mengantarkan pesanan';
-                            $result['transaction_status_text'] = 'PROSES PENGANTARAN';
-                            $result['delivery_info']['driver'] = [
-                                'driver_id' => $list['transaction_pickup_go_send']['driver_id'],
-                                'driver_name' => $list['transaction_pickup_go_send']['driver_name'],
-                                'driver_phone' => $list['transaction_pickup_go_send']['driver_phone'],
-                                'driver_photo' => $list['transaction_pickup_go_send']['driver_photo'],
+                            $result['transaction_status_text']          = 'PROSES PENGANTARAN';
+                            $result['delivery_info']['driver']          = [
+                                'driver_id'      => $list['transaction_pickup_go_send']['driver_id'],
+                                'driver_name'    => $list['transaction_pickup_go_send']['driver_name'],
+                                'driver_phone'   => $list['transaction_pickup_go_send']['driver_phone'],
+                                'driver_photo'   => $list['transaction_pickup_go_send']['driver_photo'],
                                 'vehicle_number' => $list['transaction_pickup_go_send']['vehicle_number'],
                             ];
                             $result['delivery_info']['cancelable'] = 0;
                             break;
                         case 'completed':
-                            $result['transaction_status_text'] = 'ORDER SUDAH DIAMBIL';
+                        case 'delivered':
+                            $result['transaction_status_text']          = 'ORDER SUDAH DIAMBIL';
                             $result['delivery_info']['delivery_status'] = 'Pesanan sudah diterima Customer';
-                            $result['delivery_info']['driver'] = [
-                                'driver_id' => $list['transaction_pickup_go_send']['driver_id'],
-                                'driver_name' => $list['transaction_pickup_go_send']['driver_name'],
-                                'driver_phone' => $list['transaction_pickup_go_send']['driver_phone'],
-                                'driver_photo' => $list['transaction_pickup_go_send']['driver_photo'],
+                            $result['delivery_info']['driver']          = [
+                                'driver_id'      => $list['transaction_pickup_go_send']['driver_id'],
+                                'driver_name'    => $list['transaction_pickup_go_send']['driver_name'],
+                                'driver_phone'   => $list['transaction_pickup_go_send']['driver_phone'],
+                                'driver_photo'   => $list['transaction_pickup_go_send']['driver_photo'],
                                 'vehicle_number' => $list['transaction_pickup_go_send']['vehicle_number'],
                             ];
                             $result['delivery_info']['cancelable'] = 0;
                             break;
                         case 'cancelled':
                             $result['delivery_info']['booking_status'] = 0;
-                            $result['transaction_status_text'] = 'Pengantaran dibatalkan';
-                            $result['delivery_info']['cancelable'] = 0;
+                            $result['transaction_status_text']         = 'SEDANG MENCARI DRIVER';
+                            $result['delivery_info']['cancelable']     = 0;
                             break;
                         case 'driver not found':
-                            $result['delivery_info']['booking_status'] = 0;
+                        case 'no_driver':
+                            $result['delivery_info']['booking_status']  = 0;
+                            $result['transaction_status_text']          = 'SEDANG MENCARI DRIVER';
                             $result['delivery_info']['delivery_status'] = 'Driver tidak ditemukan';
-                            $result['delivery_info']['cancelable'] = 0;
+                            $result['delivery_info']['cancelable']      = 0;
                             break;
                     }
                 }
