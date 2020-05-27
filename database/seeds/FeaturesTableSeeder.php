@@ -1995,6 +1995,14 @@ class FeaturesTableSeeder extends Seeder
                     'created_at' => date('Y-m-d H:00:00'),
                     'updated_at' => date('Y-m-d H:00:00'),
                 ),
+            248 =>
+                array(
+                    'id_feature' => 249,
+                    'feature_type' => 'Report',
+                    'feature_module' => 'Report GoSend',
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00'),
+                ),
         ));
     }
 }

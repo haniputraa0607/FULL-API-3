@@ -51,4 +51,6 @@ Route::group(['middleware' => ['api','log_activities', 'auth:api', 'user_agent',
     Route::post('/compare/voucher', 'ApiCompareReport@getVoucherReport');
     // Route::post('/compare/reg', 'ApiCompareReport@getRegReport');
 
+    //Report Gosend
+    Route::any('gosend', 'ApiReportGosend@getReport');
 });

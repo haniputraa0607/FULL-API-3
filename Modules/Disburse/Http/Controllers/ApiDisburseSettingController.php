@@ -83,6 +83,43 @@ class ApiDisburseSettingController extends Controller
 
     }
 
+    function importBankAccount(Request $request){
+        $post = $request->json()->all();
+
+        if(isset($post['data_import']) && !empty($post['data_import'])){
+            $arrFailed = [];
+            $arrSuccess = [];
+            $listBank = BankName::get()->toArray();
+            foreach ($post['data_import'] as $val){
+                $val = (array)$val;
+                $searchBankCode = array_search($val['bank_code'], array_column($listBank, 'bank_code'));
+                if($searchBankCode !== false){
+                    $dt = [
+                        'id_bank_name' => $listBank[$searchBankCode]['id_bank_name'],
+                        'beneficiary_name' => $val['beneficiary_name'],
+                        'beneficiary_alias' => $val['beneficiary_alias'],
+                        'beneficiary_account' => $val['beneficiary_account'],
+                        'beneficiary_email' => $val['beneficiary_email']
+                    ];
+                    $update = Outlet::where('outlet_code', $val['outlet_code'])
+                        ->update($dt);
+
+                    if(!$update){
+                        $arrFailed[] = $val['outlet_code'].'-'.$val['outlet_name'];
+                    }else{
+                        $arrSuccess[] = $val['outlet_code'].'-'.$val['outlet_name'];
+                    }
+                }else{
+                    $arrFailed[] = $val['outlet_code'].'-'.$val['outlet_name'];
+                }
+            }
+
+            return response()->json(['status' => 'success', 'data_failed' => $arrFailed, 'data_success' => $arrSuccess]);
+        }else{
+            return response()->json(['status' => 'fail', 'message' => 'Empty data']);
+        }
+    }
+
     public function getMdr(Request $request){
         $post = $request->json()->all();
         $mdr = MDR::whereNotNull('payment_name')->get()->toArray();

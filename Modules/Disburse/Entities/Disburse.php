@@ -12,6 +12,7 @@ class Disburse extends Model
 	protected $fillable = [
 	    'id_outlet',
 	    'disburse_nominal',
+        'total_income_central',
 		'disburse_status',
         'id_bank_name',
         'beneficiary_account_number',
