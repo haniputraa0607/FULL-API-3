@@ -22,6 +22,10 @@ Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scop
     Route::any('destroy', 'ApiAchievement@destroy');
 });
 
+Route::group(['middleware' => ['auth:api', 'log_activities', 'scopes:apps'], 'prefix' => 'achievement'], function () {
+    Route::any('myachievement', 'ApiAchievement@detailAchievement');
+});
+
 Route::middleware('auth:api')->get('/achievement', function (Request $request) {
     return $request->user();
 });

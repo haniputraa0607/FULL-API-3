@@ -1028,7 +1028,7 @@ class ApiOnlineTransaction extends Controller
             $trx_product->save();
             $dataProductMidtrans = [
                 'id'       => $checkProduct['id_product'],
-                'price'    => $productPrice+$mod_subtotal,
+                'price'    => $productPrice + $mod_subtotal - ($trx_product['transaction_product_discount']/$trx_product['transaction_product_qty']),
                 // 'name'     => $checkProduct['product_name'].($more_mid_text?'('.trim($more_mid_text,',').')':''), // name & modifier too long
                 'name'     => $checkProduct['product_name'],
                 'quantity' => $valueProduct['qty'],

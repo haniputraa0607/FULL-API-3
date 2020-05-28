@@ -8,6 +8,7 @@ use App\Lib\MyHelper;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Modules\Achievement\Entities\AchievementCategory;
 use Modules\Achievement\Entities\AchievementDetail;
@@ -553,5 +554,45 @@ class ApiAchievement extends Controller
         return response()->json([
             'status'    => 'success'
         ]);
+    }
+
+    public function detailAchievement(Request $request)
+    {
+        $getAchievement = AchievementCategory::with('achievement_group')->get()->toArray();
+
+        foreach ($getAchievement as $keyCatAch => $category) {
+            $result[$keyCatAch] = [
+                'id_achievement_category'   => $category['id_achievement_category'],
+                'name'                      => $category['name']
+            ];
+            $result[$keyCatAch]['detail'] = [];
+            foreach ($category['achievement_group'] as $keyAchGroup => $group) {
+                $getAchievementUser = AchievementUser::select('achievement_details.*')
+                ->join('achievement_details', 'achievement_users.id_achievement_detail', 'achievement_details.id_achievement_detail')
+                ->join('achievement_groups', 'achievement_details.id_achievement_group', 'achievement_groups.id_achievement_group')
+                ->where([
+                    'achievement_users.id_user'                 => Auth::user()->id,
+                    'achievement_groups.id_achievement_group'   => MyHelper::decSlug($group['id_achievement_group'])
+                ])->orderBy('achievement_details.id_achievement_detail', 'DESC')->first();
+                // return $getAchievementUser;
+                if ($getAchievementUser) {
+                    $result[$keyCatAch]['detail'][$keyAchGroup] = [
+                        'name'          => $group['name'],
+                        'logo_badge'    => env('S3_URL_API').$getAchievementUser->logo_badge,
+                        'description'   => $group['description'],
+                        'level'         => $getAchievementUser->name
+                    ];
+                } else {
+                    $result[$keyCatAch]['detail'][$keyAchGroup] = [
+                        'name'          => $group['name'],
+                        'logo_badge'    => env('S3_URL_API').$group['logo_badge_default'],
+                        'description'   => $group['description'],
+                        'level'         => 'Belum Tercapai'
+                    ];
+                }
+                
+            }
+        }
+        return response()->json(MyHelper::checkGet($result));
     }
 }
