@@ -186,6 +186,10 @@ class ApiHistoryController extends Controller
             $post['cancel'] = null;
         }
 
+        if( $post['cancel'] == null && $post['pending'] == null && $post['completed'] == null){
+            $post['completed'] = 1;
+        }
+        
         if (!isset($post['buy_voucher'])) {
             $post['buy_voucher'] = null;
         }
