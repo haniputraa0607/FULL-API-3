@@ -43,6 +43,7 @@ use Modules\OutletApp\Http\Requests\ListProduct;
 use Modules\OutletApp\Http\Requests\ProductSoldOut;
 use Modules\OutletApp\Http\Requests\UpdateToken;
 use Modules\Outlet\Entities\OutletScheduleUpdate;
+use Modules\OutletApp\Jobs\AchievementCheck;
 use Modules\Product\Entities\ProductStockStatusUpdate;
 use Modules\SettingFraud\Entities\FraudDetectionLogTransactionDay;
 use Modules\SettingFraud\Entities\FraudDetectionLogTransactionWeek;
@@ -874,6 +875,8 @@ class ApiOutletApp extends Controller
                     'messages' => ['Failed Send notification to customer'],
                 ]);
             }
+
+            AchievementCheck::dispatch(['id_transaction' => $order->id_transaction])->onConnection('achievement');
 
             DB::commit();
         }
