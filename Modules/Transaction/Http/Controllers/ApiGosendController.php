@@ -84,8 +84,8 @@ class ApiGosendController extends Controller
                 ];
                 $response_code = 200;
                 $toUpdate      = ['latest_status' => $post['status']];
-                if ($post['liveTrackingUrl'] ?? false) {
-                    $toUpdate['live_tracking_url'] = $post['liveTrackingUrl'];
+                if ($post['live_tracking_url'] ?? false) {
+                    $toUpdate['live_tracking_url'] = $post['live_tracking_url'];
                 }
                 if ($post['driver_id'] ?? false) {
                     $toUpdate['driver_id'] = $post['driver_id'];
