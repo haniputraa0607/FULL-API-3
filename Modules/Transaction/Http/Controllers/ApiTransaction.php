@@ -1807,6 +1807,13 @@ class ApiTransaction extends Controller
                         case 'allocated':
                             $result['delivery_info']['delivery_status'] = 'Driver ditemukan';
                             $result['transaction_status_text']          = 'DRIVER DITEMUKAN';
+                            $result['delivery_info']['driver']          = [
+                                'driver_id'      => $list['transaction_pickup_go_send']['driver_id'],
+                                'driver_name'    => $list['transaction_pickup_go_send']['driver_name'],
+                                'driver_phone'   => $list['transaction_pickup_go_send']['driver_phone'],
+                                'driver_photo'   => $list['transaction_pickup_go_send']['driver_photo'],
+                                'vehicle_number' => $list['transaction_pickup_go_send']['vehicle_number'],
+                            ];
                             break;
                         case 'enroute pickup':
                         case 'out_for_pickup':
