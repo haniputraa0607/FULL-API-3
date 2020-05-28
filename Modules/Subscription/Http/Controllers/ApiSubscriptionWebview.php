@@ -190,8 +190,13 @@ class ApiSubscriptionWebview extends Controller
             if (!is_null($value['used_at'])) {
                 $getTrx = Transaction::select(DB::raw('transactions.*,sum(transaction_products.transaction_product_qty) item_total'))->leftJoin('transaction_products','transactions.id_transaction','=','transaction_products.id_transaction')->with('outlet')->where('transactions.id_transaction', $value['id_transaction'])->groupBy('transactions.id_transaction')->first();
                 $voucher[$key]['used_at']    = $value['used_at'];
-                $voucher[$key]['outlet']     = $getTrx->outlet->outlet_name;
-                $voucher[$key]['item']       = $getTrx->item_total;
+                if (is_null($getTrx->outlet)) {
+                    $voucher[$key]['outlet']     = '-';
+                    $voucher[$key]['item']       = '-';
+                } else {
+                    $voucher[$key]['outlet']     = $getTrx->outlet->outlet_name;
+                    $voucher[$key]['item']       = $getTrx->item_total;
+                }
                 $result['subscription_voucher_used']    = $result['subscription_voucher_used'] + 1;
             }
         }
