@@ -30,7 +30,8 @@ class PromoCampaignProductDiscountRule extends Eloquent
 
 	protected $casts = [
 		'id_promo_campaign' => 'int',
-		'discount_value' => 'int'
+		'discount_value' => 'int',
+		'max_percent_discount' => 'int'
 	];
 
 	protected $fillable = [
@@ -38,7 +39,8 @@ class PromoCampaignProductDiscountRule extends Eloquent
 		'is_all_product',
 		'discount_type',
 		'discount_value',
-		'max_product'
+		'max_product',
+		'max_percent_discount'
 	];
 
 	public function promo_campaign()

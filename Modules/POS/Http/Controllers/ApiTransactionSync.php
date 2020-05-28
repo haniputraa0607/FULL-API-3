@@ -35,12 +35,12 @@ use App\Http\Models\LogBalance;
 use App\Http\Models\SpecialMembership;
 use App\Http\Models\DealsVoucher;
 use App\Http\Models\Configs;
-use App\Http\Models\FraudSetting;
+use Modules\SettingFraud\Entities\FraudSetting;
 use App\Http\Models\LogBackendError;
 use App\Http\Models\SyncTransactionFaileds;
 use App\Http\Models\SyncTransactionQueues;
 use App\Lib\MyHelper;
-use Mailgun;
+use Mail;
 
 use Modules\POS\Http\Requests\reqMember;
 use Modules\POS\Http\Requests\reqVoucher;
@@ -69,18 +69,18 @@ class ApiTransactionSync extends Controller
         $this->balance    = "Modules\Balance\Http\Controllers\BalanceController";
         $this->membership = "Modules\Membership\Http\Controllers\ApiMembership";
         $this->autocrm  = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
-        $this->setting_fraud = "Modules\SettingFraud\Http\Controllers\ApiSettingFraud";
-        
+        $this->setting_fraud = "Modules\SettingFraud\Http\Controllers\ApiFraud";
+
         $this->pos = "Modules\POS\Http\Controllers\ApiPos";
     }
-    
+
     public function transaction(){
         $x = 10;
         $getDataQueue = SyncTransactionQueues::Orderby('created_at', 'asc')->limit($x)->get()->toArray();
-        
+
         foreach($getDataQueue as $key => $trans){
             $checkOutlet = Outlet::where('outlet_code', $trans['outlet_code'])->first();
-            
+
             $config['point']    = Configs::where('config_name', 'point')->first()->is_active;
             $config['balance']  = Configs::where('config_name', 'balance')->first()->is_active;
             $settingPoint       = Setting::where('key', 'point_conversion_value')->first()->value;
@@ -88,7 +88,7 @@ class ApiTransactionSync extends Controller
             $countDataTrans = count($dataTrans);
             $checkSuccess = 0;
             $checkDuplicate = 0;
-            
+
             $receipt = array_column($dataTrans, 'trx_id');
             $checkReceipt = Transaction::select('transaction_receipt_number', 'id_transaction')->where('id_outlet', $checkOutlet['id_outlet'])
                                 ->whereIn('transaction_receipt_number', $receipt)
@@ -104,7 +104,7 @@ class ApiTransactionSync extends Controller
                 $checkDuplicate++;
                 unset($dataTrans[$key]);
             }
-            
+
             //check possibility duplicate
             $receiptDuplicate = Transaction::where('id_outlet', '!=', $checkOutlet['id_outlet'])
                                 ->whereIn('transaction_receipt_number', $validReceipt)
@@ -143,14 +143,14 @@ class ApiTransactionSync extends Controller
             foreach ($dataTrans as $key => $trx) {
                 if(!empty($trx->date_time) &&
                     isset($trx->total) && isset($trx->service) &&
-                    isset($trx->tax) && isset($trx->discount) && isset($trx->grand_total) &&  
+                    isset($trx->tax) && isset($trx->discount) && isset($trx->grand_total) &&
                     isset($trx->menu)){
 
                     $insertTrx = $this->insertTransaction($checkOutlet, $trx, $config, $settingPoint, $countSettingCashback, $fraudTrxDay, $fraudTrxWeek);
                     if(isset($insertTrx['id_transaction'])){
                             $checkSuccess++;
                             $result[] = $insertTrx;
-                            
+
                     }else{
                         $data = [
                             'outlet_code' => $trans['outlet_code'],
@@ -185,7 +185,7 @@ class ApiTransactionSync extends Controller
             }
         }
     }
-    
+
     function insertTransaction($outlet, $trx, $config, $settingPoint, $countSettingCashback, $fraudTrxDay, $fraudTrxWeek){
         $trx = (array)$trx;
         DB::beginTransaction();
@@ -397,7 +397,7 @@ class ApiTransactionSync extends Controller
                     $allProductCode = array_column($checkProduct, 'product_code');
                     foreach ($trx['menu'] as $row => $menu) {
                         $menu = (array)$menu;
-                        if(!empty($menu['plu_id']) && !empty($menu['name']) 
+                        if(!empty($menu['plu_id']) && !empty($menu['name'])
                             && isset($menu['price']) && isset($menu['qty']) ){
 
                             $getIndexProduct = array_search($menu['plu_id'], $allProductCode);
@@ -442,7 +442,7 @@ class ApiTransactionSync extends Controller
 
                             $createProduct = TransactionProduct::create($dataProduct);
 
-                            // update modifiers 
+                            // update modifiers
                             if (!empty($menu['modifiers'])) {
 
                                 $allModCode = array_column($menu['modifiers'], 'code');
@@ -548,7 +548,7 @@ class ApiTransactionSync extends Controller
 
                         if ($createTrx['transaction_cashback_earned']) {
 
-                            $insertDataLogCash = app($this->balance)->addLogBalance($createTrx['id_user'], $createTrx['transaction_cashback_earned'], $createTrx['id_transaction'], 'Transaction', $createTrx['transaction_grandtotal']);
+                            $insertDataLogCash = app($this->balance)->addLogBalance($createTrx['id_user'], $createTrx['transaction_cashback_earned'], $createTrx['id_transaction'], 'Offline Transaction', $createTrx['transaction_grandtotal']);
                             if (!$insertDataLogCash) {
                                 DB::rollback();
                                 return [
@@ -793,5 +793,5 @@ class ApiTransactionSync extends Controller
             return ['status' => 'fail', 'messages' => $e];
         }
     }
-     
+
 }

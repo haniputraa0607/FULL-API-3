@@ -1,10 +1,12 @@
 <?php
 namespace App\Lib;
 
+use App\Http\Models\LogTopup;
 use App\Http\Models\Setting;
 use Image;
 use File;
 use DB;
+use Modules\Disburse\Entities\LogIRIS;
 use Storage;
 use App\Http\Models\Notification;
 use App\Http\Models\Store;
@@ -24,6 +26,8 @@ use App\Http\Models\PromotionRuleParent;
 use App\Http\Models\InboxGlobalRule;
 use App\Http\Models\InboxGlobalRuleParent;
 use App\Http\Models\LogTopupManual;
+use App\Http\Models\LogApiSms;
+use Modules\Product\Entities\ProductStockStatusUpdate;
 use Modules\PointInjection\Entities\PointInjectionRule;
 use Modules\PointInjection\Entities\PointInjectionRuleParent;
 
@@ -391,17 +395,78 @@ class MyHelper{
 
 	public static function encSlug ($id)
 	{
-		$firstRand 	= self::createrandom(env('ENC_FIRST_SLUG', 4), null, '12356789');
-		$lastRand 	= self::createrandom(env('ENC_LAST_SLUG', 3), null, '12356789');
-
-		return implode('', [$firstRand, $id, $lastRand]);
+		// create random char awal 1-9
+		$randfirst = self::createrandom(1, null, '123456789');
+		// bikin switch case untuk char 1-9
+		switch($randfirst) {
+		  case 1: $firstRand  = self::createrandom(3, null, '123456789');
+		      $lastRand   = self::createrandom(4, null, '123456789');
+		      break;
+		  case 2: $firstRand  = self::createrandom(2, null, '123456789');
+		      $lastRand   = self::createrandom(3, null, '123456789');
+		      break;
+		  case 3: $firstRand  = self::createrandom(4, null, '123456789');
+		      $lastRand   = self::createrandom(4, null, '123456789');
+		      break;
+		  case 4: $firstRand  = self::createrandom(1, null, '123456789');
+		      $lastRand   = self::createrandom(4, null, '123456789');
+		      break;
+		  case 5: $firstRand  = self::createrandom(5, null, '123456789');
+		      $lastRand   = self::createrandom(1, null, '123456789');
+		      break;
+		  case 6: $firstRand  = self::createrandom(3, null, '123456789');
+		      $lastRand   = self::createrandom(3, null, '123456789');
+		      break;
+		  case 7: $firstRand  = self::createrandom(2, null, '123456789');
+		      $lastRand   = self::createrandom(4, null, '123456789');
+		      break;
+		  case 8: $firstRand  = self::createrandom(3, null, '123456789');
+		      $lastRand   = self::createrandom(2, null, '123456789');
+		      break;
+		  case 9: $firstRand  = self::createrandom(2, null, '123456789');
+		      $lastRand   = self::createrandom(2, null, '123456789');
+		      break;
+		}
+		// $firstRand   = self::createrandom(env('ENC_FIRST_SLUG', 4), null, '123456789');
+		// $lastRand  = self::createrandom(env('ENC_LAST_SLUG', 3), null, '123456789');
+		return $randfirst . implode('', [$firstRand, $id, $lastRand]);
 	}
-
 	public static function decSlug ($id)
 	{
-		$firstString = substr($id, env('ENC_FIRST_SLUG', 4));
-		$string = substr($firstString, 0, -env('ENC_LAST_SLUG', 3));
-
+		// ambil char pertama
+		$randfirst = substr($id, 0, 1);
+		// hilangkan char pertama
+		$id = substr($id, 1);
+		// bikin switch case untuk char 1-9
+		switch($randfirst) {
+		  case 1: $firstString = substr($id, 3);
+		      $string = substr($firstString, 0, -4);
+		      break;
+		  case 2: $firstString = substr($id, 2);
+		      $string = substr($firstString, 0, -3);
+		      break;
+		  case 3: $firstString = substr($id, 4);
+		      $string = substr($firstString, 0, -4);
+		      break;
+		  case 4: $firstString = substr($id, 1);
+		      $string = substr($firstString, 0, -4);
+		      break;
+		  case 5: $firstString = substr($id, 5);
+		      $string = substr($firstString, 0, -1);
+		      break;
+		  case 6: $firstString = substr($id, 3);
+		      $string = substr($firstString, 0, -3);
+		      break;
+		  case 7: $firstString = substr($id, 2);
+		      $string = substr($firstString, 0, -4);
+		      break;
+		  case 8: $firstString = substr($id, 3);
+		      $string = substr($firstString, 0, -2);
+		      break;
+		  case 9: $firstString = substr($id, 2);
+		      $string = substr($firstString, 0, -2);
+		      break;
+		}
 		return $string;
 	}
 
@@ -875,10 +940,6 @@ class MyHelper{
 
 	public static function uploadPhotoStrict($foto, $path, $width=800, $height=800, $name=null, $forceextension=null) {
 		// kalo ada foto1
-		if (!file_exists($path)) {
-			mkdir($path, 666, true);
-		}
-		
 		$decoded = base64_decode($foto);
 		if($forceextension != null)
 			$ext = $forceextension;
@@ -910,6 +971,9 @@ class MyHelper{
 					];
 				}
 			}else{
+				if (!file_exists($path)) {
+					mkdir($path, 666, true);
+				}
 				if (file_put_contents($upload, $decoded)) {
 						$result = [
 							'status' => 'success',
@@ -1096,6 +1160,79 @@ class MyHelper{
 
 	}
 
+    public static function createFile($content, $ext="json", $path, $name=null) {
+        // kalo ada file
+        $decoded = json_encode($content);
+
+        // set picture name
+        if($name != null)
+            $pictName = $name.'.'.$ext;
+        else
+            $pictName = mt_rand(0, 1000).''.time().'.'.$ext;
+
+        // path
+        $upload = $path.$pictName;
+
+        if(env('STORAGE') &&  env('STORAGE') == 's3'){
+            $save = Storage::disk('s3')->put($upload, $decoded, 'public');
+            if ($save) {
+                $result = [
+                    'status' => 'success',
+                    'path'  => $upload
+                ];
+            }
+            else {
+                $result = [
+                    'status' => 'fail'
+                ];
+            }
+        }else{
+            $save = Storage::disk(env('STORAGE'))->put($upload, $decoded);
+            if ($save) {
+                $result = [
+                    'status' => 'success',
+                    'path'  => $upload
+                ];
+            }
+            else {
+                $result = [
+                    'status' => 'fail'
+                ];
+            }
+        }
+
+        return $result;
+    }
+
+    public static function deleteFile($path) {
+        if(env('STORAGE') &&  env('STORAGE') == 's3'){
+            if(Storage::disk('s3')->exists($path)) {
+                if(Storage::disk('s3')->delete($path)){
+                    return true;
+                }
+                else {
+                    return false;
+                }
+            }
+            else {
+                return true;
+            }
+        }else{
+            if (Storage::disk(env('STORAGE'))->exists($path)) {
+                if (Storage::disk(env('STORAGE'))->delete($path)) {
+                    return true;
+                }
+                else {
+                    return false;
+                }
+            }
+            else {
+                return true;
+            }
+        }
+
+    }
+
 	public static function sendNotification($id, $type){
 			return true;
 	}
@@ -1188,7 +1325,7 @@ class MyHelper{
 			}
 	}
 
-	public static function get($url, $bearer=null, $header=null){
+	public static function get($url, $bearer=null, $header=null,&$status_code=null,&$response_header=null){
 		$client = new Client;
 
 		$content = array(
@@ -1212,12 +1349,16 @@ class MyHelper{
 
 		try {
 			$response =  $client->request('GET', $url, $content);
+			$status_code = $response->getStatusCode();
+			$response_header = $response->getHeaders();
 			return json_decode($response->getBody(), true);
 		}
 		catch (\GuzzleHttp\Exception\RequestException $e) {
 			try{
 				if($e->getResponse()){
 						$response = $e->getResponse()->getBody()->getContents();
+						$response_header = $e->getResponse()->getHeaders();
+						$status_code = $e->getResponse()->getStatusCode();
 						return json_decode($response, true);
 				}
 				else return ['status' => 'fail', 'messages' => [0 => 'Check your internet connection.']];
@@ -1228,7 +1369,7 @@ class MyHelper{
 		}
 	}
 
-	public static function post($url, $bearer=null, $post, $form_type=0, $header=null){
+	public static function post($url, $bearer=null, $post, $form_type=0, $header=null,&$status_code = null,&$response_header = null){
 		$client = new Client;
 
 		$content = array(
@@ -1261,11 +1402,15 @@ class MyHelper{
 
 		try {
 			$response = $client->post($url, $content);
+			$status_code = $response->getStatusCode();
+			$response_header = $response->getHeaders();
 			return json_decode($response->getBody(), true);
 		}catch (\GuzzleHttp\Exception\RequestException $e) {
 			try{
 				if($e->getResponse()){
 					$response = $e->getResponse()->getBody()->getContents();
+					$status_code = $e->getResponse()->getStatusCode();
+					$response_header = $e->getResponse()->getHeaders();
 					return json_decode($response, true);
 				}
 				else  return ['status' => 'fail', 'messages' => [0 => 'Check your internet connection.']];
@@ -1276,7 +1421,7 @@ class MyHelper{
 		}
 	}
 
-	public static function post2($url, $bearer=null, $post, $form_type=0, $header=null){
+	public static function put($url, $bearer=null, $post, $form_type=0, $header=null,&$status_code = null,&$response_header = null){
 		$client = new Client;
 
 		$content = array(
@@ -1306,10 +1451,64 @@ class MyHelper{
 				}
 			}
 		}
-		$content['timeout']=65;
+
+		try {
+			$response = $client->put($url, $content);
+			$status_code = $response->getStatusCode();
+			$response_header = $response->getHeaders();
+			return json_decode($response->getBody(), true);
+		}catch (\GuzzleHttp\Exception\RequestException $e) {
+			try{
+				if($e->getResponse()){
+					$response = $e->getResponse()->getBody()->getContents();
+					$status_code = $e->getResponse()->getStatusCode();
+					$response_header = $e->getResponse()->getHeaders();
+					return json_decode($response, true);
+				}
+				else  return ['status' => 'fail', 'messages' => [0 => 'Check your internet connection.']];
+			}
+			catch(Exception $e){
+				return ['status' => 'fail', 'messages' => [0 => 'Check your internet connection.']];
+			}
+		}
+	}
+
+	public static function postWithTimeout($url, $bearer=null, $post, $form_type=0, $header=null, $timeout = 65){
+		$client = new Client;
+
+		$content = array(
+			'headers' => [
+				'Accept'        => 'application/json',
+				'Content-Type'  => 'application/json',
+			]
+		);
+
+		// if form_type = 0
+		if ($form_type == 0) {
+			$content['json'] = (array)$post;
+		}
+		else {
+			$content['form_params'] = $post;
+		}
+
+		// if null bearer
+		if (!is_null($bearer)) {
+			$content['headers']['Authorization'] = $bearer;
+		}
+
+		if(!is_null($header)){
+			if(is_array($header)){
+				foreach($header as $key => $dataHeader){
+					$content['headers'][$key] = $dataHeader;
+				}
+			}
+		}
+		$content['timeout']=$timeout;
+
 		try {
 			$response = $client->post($url, $content);
-			$return = json_decode($response->getBody(), true);
+			// return plain response if json_decode fail because response is plain text
+			$return = json_decode($response->getBody()->getContents(), true)?:$response->getBody()->__toString();
 			return [
 				'status_code' => $response->getStatusCode(),
 				'response' => $return
@@ -1784,7 +1983,7 @@ class MyHelper{
 			}
 			elseif($type == 'inbox_global'){
 				$createRuleParent = InboxGlobalRuleParent::create($dataRuleParent);
-			} 
+			}
 			elseif ($type == 'point_injection') {
 				$createRuleParent = PointInjectionRuleParent::create($dataRuleParent);
 			}
@@ -1849,7 +2048,19 @@ class MyHelper{
 			return ['status' => 'fail'];
 		}
 	}
-
+	public static function logApiSMS($arr){
+    	if(!is_array($arr)){return false;}
+		$trace=array_slice((new \Exception)->getTrace(),1,6);
+		$log=[
+		    'request_body'=>null,
+		    'request_url'=>null,
+		    'response'=>null,
+		    'phone'=>null
+		];
+		$log=array_merge($log,$arr);
+		array_walk($log, function(&$data){if(is_array($data)){$data=json_encode($data);}});
+		LogApiSms::create($log);
+    }
 	public static function cut_str($str, $left, $right) {
 		$str = substr ( stristr ( $str, $left ), strlen ( $left ) );
 		$leftLen = strlen ( stristr ( $str, $right ) );
@@ -1979,6 +2190,40 @@ class MyHelper{
 
 		return trim(($hari?$days[date('w', strtotime($date))].', ':'').date('d', strtotime($date)).' '.$bulan[date('n', strtotime($date))].' '.date('Y', strtotime($date)).($clock?date(' H:i', strtotime($date)):''));
 	}
+
+	public static function indonesian_date_v2($timestamp = '', $date_format = 'l, d F Y H:i') {
+		if (trim ($timestamp) == '')
+		{
+				$timestamp = time ();
+		}
+		elseif (!ctype_digit ($timestamp))
+		{
+			$timestamp = strtotime ($timestamp);
+		}
+		# remove S (st,nd,rd,th) there are no such things in indonesia :p
+		$date_format = preg_replace ("/S/", "", $date_format);
+		$pattern = array (
+			'/Mon[^day]/','/Tue[^sday]/','/Wed[^nesday]/','/Thu[^rsday]/',
+			'/Fri[^day]/','/Sat[^urday]/','/Sun[^day]/','/Monday/','/Tuesday/',
+			'/Wednesday/','/Thursday/','/Friday/','/Saturday/','/Sunday/',
+			'/Jan[^uary]/','/Feb[^ruary]/','/Mar[^ch]/','/Apr[^il]/','/May/',
+			'/Jun[^e]/','/Jul[^y]/','/Aug[^ust]/','/Sep[^tember]/','/Oct[^ober]/',
+			'/Nov[^ember]/','/Dec[^ember]/','/January/','/February/','/March/',
+			'/April/','/June/','/July/','/August/','/September/','/October/',
+			'/November/','/December/',
+		);
+		$replace = array ( 'Sen','Sel','Rab','Kam','Jum','Sab','Min',
+			'Senin','Selasa','Rabu','Kamis','Jumat','Sabtu','Minggu',
+			'Jan','Feb','Mar','Apr','Mei','Jun','Jul','Ags','Sep','Okt','Nov','Des',
+			'Januari','Februari','Maret','April','Juni','Juli','Agustus','Sepember',
+			'Oktober','November','Desember',
+		);
+		$date = date ($date_format, $timestamp);
+		$date = preg_replace ($pattern, $replace, $date);
+		$date = "{$date}";
+		return $date;
+	}
+
 	public static function isJoined($query, $table){
         $joins = $query->getQuery()->joins;
         if($joins == null) {
@@ -2000,7 +2245,7 @@ class MyHelper{
     	}
     	return $string;
 	}
-	
+
 	public static function postCURLWithBearer($url, $data, $bearer) {
 		$uri = env('APP_API_URL');
         $ch = curl_init($uri.$url);
@@ -2066,6 +2311,27 @@ class MyHelper{
         }
     }
     /**
+     * Get max min latitude based on radius. Hanya perhitngan kasar,
+     * @param  Float  $lat    user latitude
+     * @param  Float  $lon    user longitude
+     * @param  Float  $radius    radius in meter
+     * @return Array    ['latitude'=>['max'=>xxx,'min'=>xxx],'longitude'=>['max'=>xxx,'min'=>xxx]]
+     */
+    public static function getRadius($lat, $lon, $radius) {
+        $distance = (float) $radius / 111319.5;
+        $result = [
+        	'latitude' => [
+        		'min' => $lat - $distance,
+        		'max' => $lat + $distance
+        	],
+        	'longitude' => [
+        		'min' => $lon - $distance,
+        		'max' => $lon + $distance
+        	],
+        ];
+        return $result;
+    }
+    /**
      * Group some array based on a column
      * @param  array        $array        data
      * @param  string       $col          column as key for grouping
@@ -2078,7 +2344,11 @@ class MyHelper{
             if($col_modifier!==null){
                 $key = $col_modifier($value[$col],$value,$old);
             }else{
-                $key = $value[$col];
+            	if(is_array($value)){
+	                $key = $value[$col];
+            	}else{
+	                $key = $value->$col;
+            	}
             }
             $newArray[$key][]=$value;
         }
@@ -2123,21 +2393,57 @@ class MyHelper{
 	 * @return float/int    converted number
 	 */
 	public static function requestNumber($number,$type='int',$custom=[]) {
+		if($type === '_CURRENCY'){$type = env('CURRENCY_FORMAT');}
+		elseif($type === '_POINT'){$type = env('POINT_FORMAT');}
 		switch ($type) {
 			case 'int':
 				return (int) $number;
 				break;
-			
+
 			case 'float':
 				return (float) $number;
 				break;
-			
+
 			case 'double':
 				return (double) $number;
 				break;
-			
+
+			case 'rupiah':
+				return 'Rp'.number_format($number,0,',','.');
+				break;
+
+			case 'dollar':
+				return '$'.number_format($number,2,'.',',');
+				break;
+
+			case 'thousand_id':
+				return number_format($number,0,',','.');
+				break;
+
+			case 'thousand_sg':
+				return number_format($number,2,'.',',');
+				break;
+
 			case 'custom':
 				return number_format($number,...$custom);
+				break;
+
+			case 'short':
+				if ($number < 1000) {
+				    // Anything less than a million
+				    $n_format = number_format($number,0);
+				} elseif ($number < 1000000) {
+				    // Anything less than a billion
+				    $n_format = number_format($number / 1000, 0) . 'K';
+				} elseif ($number < 1000000000) {
+				    // Anything less than a billion
+				    $n_format = number_format($number / 1000000, 0) . 'M';
+				} else {
+				    // At least a billion
+				    $n_format = number_format($number / 1000000000, 0) . 'B';
+				}
+				return $n_format;
+				break;
 
 			default:
 				return $number;
@@ -2201,6 +2507,62 @@ class MyHelper{
                 'status' => 'fail',
                 'messages' => [$phoneSetting->message_failed]
             ];
+        }
+    }
+
+    public static function connectIris($subject, $method, $url, $body, $approver = null){
+        $baseUrl = env('URL_IRIS');
+        //$apiKey = MyHelper::decrypt2019(env('API_KEY_IRIS'));
+        $urlApi = $baseUrl.$url;
+        if($approver == 1){
+            $base64 = base64_encode(env('API_KEY_IRIS_APPROVER').':');
+        }else{
+            $base64 = base64_encode(env('API_KEY_IRIS').':');
+        }
+
+        $jsonBody = json_encode($body);
+
+        $header = [
+            'Content-Type'  => 'application/json',
+            'Accept' => 'application/json',
+            'Authorization' => 'Basic '.$base64
+        ];
+        $client = new Client([
+            'headers' => $header
+        ]);
+
+        try {
+            $output = $client->request($method, $urlApi, ['body' => $jsonBody]);
+            $output = json_decode($output->getBody(), true);
+
+            $dataLog= [
+                'subject' => $subject,
+                'request_header'=> json_encode($header),
+                'request' => $jsonBody,
+                'request_url' => $urlApi,
+                'response' => json_encode($output)
+            ];
+            LogIRIS::create($dataLog);
+            return ['status' => 'success', 'response' => $output];
+        }catch (\GuzzleHttp\Exception\RequestException $e) {
+            $dataLog= [
+                'subject' => $subject,
+                'request_header'=> json_encode($header),
+                'request' => $jsonBody,
+                'request_url' => $urlApi,
+                'response' => json_encode($e)
+            ];
+            LogIRIS::create($dataLog);
+            try{
+                if($e->getResponse()){
+                    $response = $e->getResponse()->getBody()->getContents();
+                    return ['status' => 'fail', 'response' => json_decode($response, true)];
+                }
+                return ['status' => 'fail', 'response' => ['Check your internet connection.']];
+            }
+            catch(Exception $e){
+                return ['status' => 'fail', 'response' => ['Check your internet connection.']];
+            }
         }
     }
 }

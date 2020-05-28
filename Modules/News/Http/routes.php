@@ -12,6 +12,7 @@ Route::group(['prefix' => 'api/news', 'middleware' => ['log_activities', 'auth:a
         // Route::any('list/web', 'ApiNews@listNews');
         // Route::any('list', 'ApiNews@listNews');
         Route::any('webview', 'ApiNews@webview');
+        Route::any('/detail', 'ApiNewsWebview@detailNews');
 });
 
 

@@ -13,6 +13,7 @@ use App\Http\Models\InboxGlobalRule;
 use App\Http\Models\InboxGlobalRuleParent;
 use App\Http\Models\InboxGlobalRead;
 use App\Http\Models\News;
+use App\Http\Models\Setting;
 
 use Modules\InboxGlobal\Http\Requests\MarkedInbox;
 use Modules\InboxGlobal\Http\Requests\DeleteUserInbox;
@@ -48,10 +49,11 @@ class ApiInbox extends Controller
 		$countUnread = 0;
 		$countInbox = 0;
 		$arrDate = [];
-
+		$max_date = date('Y-m-d',time() - ((Setting::select('value')->where('key','inbox_max_days')->pluck('value')->first()?:30) * 86400));
 		$globals = InboxGlobal::with('inbox_global_rule_parents', 'inbox_global_rule_parents.rules')
 								->where('inbox_global_start', '<=', $today)
 								->where('inbox_global_end', '>=', $today)
+								->whereDate('inbox_global_start','>',$max_date)
 								->get()
 								->toArray();
 
@@ -110,6 +112,8 @@ class ApiInbox extends Controller
 				}
 
 				if($mode == 'simple'){
+					$content['date_indo'] = MyHelper::dateFormatInd($content['created_at'],true,false,true);
+					$content['time'] = date('H:i',strtotime($content['created_at']));
 					$arrInbox[] = $content;
 				}else{
 					if(!in_array(date('Y-m-d', strtotime($content['created_at'])), $arrDate)){
@@ -126,7 +130,7 @@ class ApiInbox extends Controller
 			}
 		}
 
-		$privates = UserInbox::where('id_user','=',$user['id'])->get()->toArray();
+		$privates = UserInbox::where('id_user','=',$user['id'])->whereDate('inboxes_send_at','>',$max_date)->get()->toArray();
 
 		foreach($privates as $private){
 			$content = [];
@@ -256,7 +260,7 @@ class ApiInbox extends Controller
 					'messages'  => ['Inbox not found']
 				];
 			}
-		}else{
+		}elseif($post['type'] == 'global'){
 			$inboxGlobal = InboxGlobal::where('id_inbox_global', $post['id_inbox'])->first();
 			if(!empty($inboxGlobal)){
 
@@ -284,6 +288,96 @@ class ApiInbox extends Controller
 				];
 			}
 
+		}elseif($post['type'] == 'multiple'){
+			if($post['inboxes']['global']??false){
+				foreach ($post['inboxes']['global'] as $id_inbox) {
+					$inboxGlobal = InboxGlobal::where('id_inbox_global', $id_inbox)->first();
+					if($inboxGlobal){
+						$inboxGlobalRead = InboxGlobalRead::where('id_inbox_global', $id_inbox)->where('id_user', $user['id'])->first();
+						if(empty($inboxGlobalRead)){
+							$create = InboxGlobalRead::create(['id_inbox_global' => $id_inbox, 'id_user' => $user['id']]);
+						}
+					}
+				}
+			}
+			if($post['inboxes']['private']){
+				$update = UserInbox::whereIn('id_user_inboxes', $post['inboxes']['private'])->where('id_user', $user['id'])->update(['read' => '1']);
+			}
+			$countUnread = $this->listInboxUnread( $user['id']);
+			$result = [
+				'status'  => 'success',
+				'result'  => ['count_unread' => $countUnread]
+			];
+		}
+		return response()->json($result);
+	}
+	/**
+	 * update status requested inbox to unread
+	 * @param  MarkedInbox $request [description]
+	 * @return Response               [description]
+	 */
+	public function unmarkInbox(MarkedInbox $request){
+		$user = $request->user();
+		$post = $request->json()->all();
+		if($post['type'] == 'private'){
+			$userInbox = UserInbox::where('id_user_inboxes', $post['id_inbox'])->first();
+			if(!empty($userInbox)){
+				$update = UserInbox::where('id_user_inboxes', $post['id_inbox'])->update(['read' => '0']);
+				// if(!$update){
+				// 	$result = [
+				// 		'status'  => 'fail',
+				// 		'messages'  => ['Failed marked inbox']
+				// 	];
+				// }else{
+					$countUnread = $this->listInboxUnread( $user['id']);
+					$result = [
+						'status'  => 'success',
+						'result'  => ['count_unread' => $countUnread]
+					];
+				// }
+			}else{
+				$result = [
+					'status'  => 'fail',
+					'messages'  => ['Inbox not found']
+				];
+			}
+		}elseif($post['type'] == 'global'){
+			$inboxGlobal = InboxGlobal::where('id_inbox_global', $post['id_inbox'])->first();
+			if(!empty($inboxGlobal)){
+
+				$delete = InboxGlobalRead::where('id_inbox_global', $post['id_inbox'])->where('id_user', $user['id'])->delete();
+				if($delete){
+					$countUnread = $this->listInboxUnread( $user['id']);
+					$result = [
+						'status'  => 'success',
+						'result'  => ['count_unread' => $countUnread]
+					];
+				}else{
+					$result = [
+						'status'  => 'fail',
+						'messages'  => ['Failed unread inbox']
+					];
+				}
+
+			}else{
+				$result = [
+					'status'  => 'fail',
+					'messages'  => ['Inbox not found']
+				];
+			}
+
+		}elseif($post['type'] == 'multiple'){
+			if($post['inboxes']['global']??false){
+				$delete = InboxGlobalRead::where('id_user',$user['id'])->whereIn('id_inbox_global',$post['inboxes']['global']);
+			}
+			if($post['inboxes']['private']){
+				$update = UserInbox::whereIn('id_user_inboxes', $post['inboxes']['private'])->where('id_user', $user['id'])->update(['read' => '0']);
+			}
+			$countUnread = $this->listInboxUnread( $user['id']);
+			$result = [
+				'status'  => 'success',
+				'result'  => ['count_unread' => $countUnread]
+			];
 		}
 		return response()->json($result);
 	}
@@ -293,12 +387,14 @@ class ApiInbox extends Controller
 
 		$today = date("Y-m-d H:i:s");
 		$countUnread = 0;
-
+        $setting_date = Setting::select('value')->where('key','inbox_max_days')->pluck('value')->first();
+        $max_date = date('Y-m-d',time() - ((is_numeric($setting_date)?$setting_date:30) * 86400));
 		$read = array_pluck(InboxGlobalRead::where('id_user', $user['id'])->get(), 'id_inbox_global');
 
 		$globals = InboxGlobal::with('inbox_global_rule_parents', 'inbox_global_rule_parents.rules')
 							->where('inbox_global_start', '<=', $today)
 							->where('inbox_global_end', '>=', $today)
+                            ->whereDate('inbox_global_start','>=',$max_date)
 							->get()
 							->toArray();
 
@@ -319,7 +415,7 @@ class ApiInbox extends Controller
 			}
 		}
 
-		$privates = UserInbox::where('id_user','=',$user['id'])->where('read', '0')->get();
+		$privates = UserInbox::where('id_user','=',$user['id'])->where('read', '0')->whereDate('inboxes_send_at','>=',$max_date)->get();
 
 
 		$countUnread = $countUnread + count($privates);

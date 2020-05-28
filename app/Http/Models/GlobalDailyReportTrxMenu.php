@@ -25,6 +25,7 @@ class GlobalDailyReportTrxMenu extends Model
         'total_rec',
         'total_qty',
         'total_nominal',
+        'total_product_discount',
         'cust_male',
         'cust_female',
         'cust_android',
@@ -38,7 +39,8 @@ class GlobalDailyReportTrxMenu extends Model
         'cust_teens',
         'cust_young_adult',
         'cust_adult',
-        'cust_old'
+        'cust_old',
+        'product_name'
     ];
 	
     public function product()

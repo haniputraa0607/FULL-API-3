@@ -10,11 +10,9 @@ Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scop
     Route::any('/intro/home', 'ApiTutorial@introHomeFrontend');
     Route::any('/faq', 'ApiSetting@faqList');
     Route::get('/webview/faq', 'ApiSetting@faqWebview');
-    Route::any('whatsapp', 'ApiSetting@settingWhatsApp');
     Route::any('jobs_list', 'ApiSetting@jobsList');
     Route::any('celebrate_list', 'ApiSetting@celebrateList');
     Route::post('webview', 'ApiSetting@settingWebview');
-    Route::get('/cron/point-reset', 'ApiSetting@cronPointReset');
 
     // complete profile
     Route::group(['prefix' => 'complete-profile'], function()
@@ -59,12 +57,15 @@ Route::group([ 'prefix' => 'api/setting', 'namespace' => 'Modules\Setting\Http\C
 {
     Route::any('webview/{key}', 'ApiSettingWebview@aboutWebview');
     Route::any('/faq/webview', 'ApiSettingWebview@faqWebviewView');
+    Route::any('detail/{key}', 'ApiSettingWebview@aboutDetail');
+    Route::any('/faq/detail', 'ApiSettingWebview@faqDetailView');
     Route::any('/intro/list', 'ApiTutorial@introListFrontend');
     Route::any('/text_menu_list', 'ApiSetting@textMenuList');
 });
 
 Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scopes:be'], 'prefix' => 'api/setting', 'namespace' => 'Modules\Setting\Http\Controllers'], function()
 {
+    Route::any('whatsapp', 'ApiSetting@settingWhatsApp');
     Route::any('be/celebrate_list', 'ApiSetting@celebrateList');
     Route::any('be/jobs_list', 'ApiSetting@jobsList');
     Route::get('be/complete-profile', 'ApiSetting@getCompleteProfile');
@@ -115,6 +116,10 @@ Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scop
     Route::any('/phone/update', ['middleware' => 'feature_control:210', 'uses' => 'ApiSetting@updatePhoneSetting']);
     Route::get('/phone', ['middleware' => 'feature_control:210', 'uses' => 'ApiSetting@phoneSetting']);
 
+    /* Maintenance Mode */
+    Route::post('maintenance-mode/update', ['middleware' => 'feature_control:235', 'uses' => 'ApiSetting@updateMaintenanceMode']);
+    Route::get('maintenance-mode', ['middleware' => 'feature_control:235', 'uses' => 'ApiSetting@maintenanceMode']);
+
     Route::group(['middleware' => ['auth:api', 'scopes:be'], 'prefix' => 'dashboard'], function()
     {
         Route::any('', 'ApiDashboardSetting@getDashboard');
@@ -128,7 +133,7 @@ Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scop
     });
 
     // banner
-    Route::group(['middleware' => ['auth:api', 'scopes:apps'], 'prefix' => 'banner'], function()
+    Route::group(['middleware' => ['auth:api', 'scopes:be'], 'prefix' => 'banner'], function()
     {
         Route::get('list', ['middleware' => 'feature_control:144', 'uses' => 'ApiBanner@index']);
         Route::post('create', ['middleware' => 'feature_control:145', 'uses' => 'ApiBanner@create']);
@@ -145,6 +150,16 @@ Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scop
         Route::post('update', 'ApiFeaturedDeal@update');
         Route::post('reorder', 'ApiFeaturedDeal@reorder');
         Route::post('delete', 'ApiFeaturedDeal@destroy');
+    });
+
+    // featured subscription
+    Route::group(['middleware' => ['auth:api', 'scopes:be'], 'prefix' => 'featured_subscription'], function()
+    {
+        Route::get('list', 'ApiFeaturedSubscription@index');
+        Route::post('create', 'ApiFeaturedSubscription@create');
+        Route::post('update', 'ApiFeaturedSubscription@update');
+        Route::post('reorder', 'ApiFeaturedSubscription@reorder');
+        Route::post('delete', 'ApiFeaturedSubscription@destroy');
     });
 });
 

@@ -62,6 +62,7 @@ class ApiHiddenDeals extends Controller
                     DB::rollback();
                     return response()->json(MyHelper::checkCreate($claim));
                 }
+                $send = app($this->autocrm)->SendAutoCRM('Create Inject Voucher', $request->user()->phone, $post,null,true);
             }
             else {
                 DB::rollback();
@@ -148,6 +149,9 @@ class ApiHiddenDeals extends Controller
             return response()->json(MyHelper::checkGet($deals));
         }
         else {
+        	if ($deals['step_complete'] != 1) {
+            	return response()->json(['status' => 'fail', 'messages' => 'Deals is not complete']);
+        	}
             $countUser = 0;
             $countVoucher = 0;
             foreach($users as $datauser){
@@ -200,43 +204,33 @@ class ApiHiddenDeals extends Controller
                         }
                         // WITH VOUCHER
                         else {
-                            DB::rollback();
-                            return response()->json([
-                                'status'   => 'fail',
-                                'messages' => ['Voucher is not free.']
-                            ]);
-                            // $voucher = $this->checkVoucherRegistered($deals->id_deals);
+                            // DB::rollback();
+                            // return response()->json([
+                            //     'status'   => 'fail',
+                            //     'messages' => ['Voucher is not free.']
+                            // ]);
+                            $voucher = $this->checkVoucherRegistered($deals->id_deals);
         
-                            // if ($voucher) {
-                            //     // BATAS
-                            //     $batas = $this->limit($voucher, $user);
+                            if ($voucher) {
+                                // BATAS
+                                $batas = $this->limit($voucher, $user);
         
-                            //     // UPDATE DEALS
-                            //     $updateDeals = Deal::where('id_deals', $deals->id_deals)->update([
-                            //         'deals_total_claimed' => $deals->deals_total_claimed + $batas,
-                            //         // 'deals_total_voucher' => $batas + $deals->deals_total_voucher
-                            //     ]);
-        
-                            //     if ($updateDeals) {
-                            //         $claim = $this->claimedWithVoucher($deals, $user, $voucher);
-        
-                            //         if (!$claim) {
-                            //             DB::rollback();
-                            //             return response()->json(MyHelper::checkUpdate($claim));
-                            //         }
-                            //     }
-                            //     else {
-                            //         DB::rollback();
-                            //         return response()->json(MyHelper::checkUpdate($updateDeals));
-                            //     }
-                            // }
-                            // else {
-                            //     DB::rollback();
-                            //     return response()->json([
-                            //         'status'   => 'fail',
-                            //         'messages' => ['Voucher is empty']
-                            //     ]);
-                            // }                  
+                                $claim = $this->claimedWithVoucher($deals, $user, $voucher);
+    
+                                if (!$claim) {
+                                    DB::rollback();
+                                    return response()->json(MyHelper::checkUpdate($claim));
+                                }
+
+                                $countVoucher++;
+                            }
+                            else {
+                                DB::rollback();
+                                return response()->json([
+                                    'status'   => 'fail',
+                                    'messages' => ['Voucher is empty']
+                                ]);
+                            }
                         }
                     }
                     // else {

@@ -34,13 +34,27 @@ Route::group(['middleware' => ['auth:api', 'log_activities', 'scopes:be'], 'pref
     Route::post('show-step2', 'ApiPromoCampaign@showStep2');
 });
 
+Route::group(['middleware' => ['auth:api', 'log_activities', 'scopes:be'], 'prefix' => 'promo-setting'], function () {
+    Route::get('cashback', 'ApiPromo@getDataCashback');
+    Route::post('cashback', 'ApiPromo@updateDataCashback');
+});
 
 // APPS
 Route::group(['middleware' => ['auth:api', 'log_activities', 'scopes:apps'], 'prefix' => 'promo-campaign'], function () {
     Route::post('check-validation', 'ApiPromoCampaign@checkValid');
+    Route::post('check-used-promo', 'ApiPromo@checkUsedPromo');
+    Route::any('cancel', 'ApiPromo@cancelPromo');
 });
 
 // DEVELOPMENT
 Route::group(['middleware' => ['auth:api', 'log_activities', 'scopes:apps'], 'prefix' => 'promo-campaign'], function () {
     Route::post('validate', 'ApiPromoCampaign@validateCode');
+});
+
+// Referral
+Route::group(['middleware' => ['auth:api', 'log_activities', 'scopes:be','feature_control:216'], 'prefix' => 'referral'], function () {
+    Route::get('setting', 'ApiReferralController@setting');
+    Route::post('settingUpdate', 'ApiReferralController@settingUpdate');
+    Route::post('report', 'ApiReferralController@report');
+    Route::post('report/{key}', 'ApiReferralController@reportAjax');
 });

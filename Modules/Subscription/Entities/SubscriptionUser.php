@@ -51,7 +51,8 @@ class SubscriptionUser extends Eloquent
 		'subscription_price_cash',
 		'payment_method',
 		'paid_status',
-		'void_date'
+		'void_date',
+		'is_used'
 	];
 
 	public function subscription()
@@ -68,4 +69,10 @@ class SubscriptionUser extends Eloquent
 	{
 		return $this->hasMany(\Modules\Subscription\Entities\SubscriptionUserVoucher::class, 'id_subscription_user');
 	}
+
+	public function subscription_payment_ipay88()
+	{
+		return $this->hasOne(\Modules\IPay88\Entities\SubscriptionPaymentIpay88::class, 'id_subscription_user');
+	}
+
 }

@@ -29,6 +29,8 @@ Route::group(['prefix' => 'api/product','middleware' => ['log_activities','auth:
     Route::any('be/imageOverride', 'ApiProductController@imageOverride');
     Route::post('category/assign', 'ApiProductController@categoryAssign');
     Route::post('price/update', 'ApiProductController@priceUpdate');
+    Route::post('detail/update', 'ApiProductController@updateProductDetail');
+    Route::post('detail/update/price', 'ApiProductController@updatePriceDetail');
     Route::post('create', 'ApiProductController@create');
     Route::post('update', 'ApiProductController@update');
     Route::post('update/allow_sync', 'ApiProductController@updateAllowSync');
@@ -38,6 +40,10 @@ Route::group(['prefix' => 'api/product','middleware' => ['log_activities','auth:
     Route::post('delete', 'ApiProductController@delete');
     Route::post('import', 'ApiProductController@import');
     Route::get('list/price/{id_outlet}', 'ApiProductController@listProductPriceByOutlet');
+    Route::get('list/product-detail/{id_outlet}', 'ApiProductController@listProductDetailByOutlet');
+    Route::post('export', 'ApiProductController@export');
+    Route::post('import', 'ApiProductController@import');
+    Route::post('ajax-product-brand', 'ApiProductController@ajaxProductBrand');
 
     /* photo */
     Route::group(['prefix' => 'photo'], function() {
@@ -59,6 +65,8 @@ Route::group(['prefix' => 'api/product','middleware' => ['log_activities','auth:
         Route::post('delete', 'ApiProductModifierController@destroy');
         Route::post('list-price', 'ApiProductModifierController@listPrice');
         Route::post('update-price', 'ApiProductModifierController@updatePrice');
+        Route::post('list-detail', 'ApiProductModifierController@listDetail');
+        Route::post('update-detail', 'ApiProductModifierController@updateDetail');
     });
 
     Route::group(['prefix' => 'category'], function() {
@@ -70,8 +78,21 @@ Route::group(['prefix' => 'api/product','middleware' => ['log_activities','auth:
         Route::post('delete', 'ApiCategoryController@delete');
     });
 
+    Route::group(['prefix' => 'promo-category'], function() {
+        Route::any('/', 'ApiPromoCategoryController@index')->middleware(['feature_control:236']);
+        Route::post('assign', 'ApiPromoCategoryController@assign')->middleware(['feature_control:239']);
+        Route::post('reorder', 'ApiPromoCategoryController@reorder')->middleware(['feature_control:239']);
+        Route::post('create', 'ApiPromoCategoryController@store')->middleware(['feature_control:238']);
+        Route::post('show', 'ApiPromoCategoryController@show')->middleware(['feature_control:237']);
+        Route::post('update', 'ApiPromoCategoryController@update')->middleware(['feature_control:239']);
+        Route::post('delete', 'ApiPromoCategoryController@destroy')->middleware(['feature_control:240']);
+    });
+
     /* PRICES */
     Route::post('prices', 'ApiProductController@productPrices');
+    Route::post('prices/all-product', 'ApiProductController@allProductPrices');
+    Route::post('outlet-detail', 'ApiProductController@productDetail');
+    Route::post('outlet-detail/all-product', 'ApiProductController@allProductDetail');
 
     /* tag */
     Route::group(['prefix' => 'tag'], function() {

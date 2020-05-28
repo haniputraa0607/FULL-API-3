@@ -55,6 +55,7 @@ class User extends Authenticatable
 		'id_membership',
 		'email',
 		'password',
+        'id_card_image',
 		'id_city',
 		'gender',
 		'provider',
@@ -200,5 +201,15 @@ class User extends Authenticatable
     public function log_popup()
     {
     	return $this->hasOne(UserFeedbackLog::class,'id_user');
+    }
+
+    public function referred_user()
+    {
+    	return $this->belongsToMany(User::class,'promo_campaign_referral_transactions','id_referrer','id_user');
+    }
+
+    public function referred_transaction()
+    {
+    	return $this->hasMany(\Modules\PromoCampaign\Entities\PromoCampaignReferralTransaction::class,'id_referrer','id');
     }
 }

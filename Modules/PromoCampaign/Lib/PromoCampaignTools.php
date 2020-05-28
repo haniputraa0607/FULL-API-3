@@ -3,12 +3,19 @@
 namespace Modules\PromoCampaign\Lib;
 
 use Modules\PromoCampaign\Entities\PromoCampaign;
+use Modules\PromoCampaign\Entities\PromoCampaignPromoCode;
 use Modules\PromoCampaign\Entities\PromoCampaignReport;
+use Modules\PromoCampaign\Entities\UserReferralCode;
+use Modules\PromoCampaign\Entities\PromoCampaignReferralTransaction;
+use Modules\PromoCampaign\Entities\PromoCampaignReferral;
 use App\Http\Models\Product;
+use App\Http\Models\ProductModifier;
 use App\Http\Models\UserDevice;
 use App\Http\Models\User;
 use App\Http\Models\Transaction;
 use App\Http\Models\Setting;
+use App\Http\Models\Deal;
+use App\Http\Models\DealsUser;
 
 use App\Lib\MyHelper;
 
@@ -25,7 +32,7 @@ class PromoCampaignTools{
 	 * @param  	array 		$error     	error message
 	 * @return 	array/boolean     modified array of trxs if can, otherwise false
 	 */
-	public function validatePromo($id_promo, $id_outlet, $trxs, &$errors){
+	public function validatePromo($id_promo, $id_outlet, $trxs, &$errors, $source='promo_campaign', &$errorProduct=0){
 		/**
 		 $trxs=[
 			{
@@ -42,34 +49,46 @@ class PromoCampaignTools{
 			$errors[]='Transaction data not valid';
 			return false;
 		}
-		$promo=PromoCampaign::with('promo_campaign_outlets')->find($id_promo);
-		
+
+		if ($source == 'promo_campaign') 
+		{
+			$promo=PromoCampaign::with('promo_campaign_outlets')->find($id_promo);
+			$promo_outlet = $promo->promo_campaign_outlets;
+		}
+		elseif($source == 'deals')
+		{
+			$promo=Deal::with('outlets_active')->find($id_promo);
+			$promo_outlet = $promo->outlets_active;
+		}
+		else
+		{
+			$errors[]='Promo not found';
+			return false;
+		}
 
 		if(!$promo){
-			$errors[]='Promo Campaign not found';
+			$errors[]='Promo not found';
 			return false;
 		}
 
-		$outlet = $this->checkOutletRule($id_outlet, $promo->is_all_outlet, $promo->promo_campaign_outlets);
+		$outlet = $this->checkOutletRule($id_outlet, $promo->is_all_outlet??0, $promo_outlet);
 
 		if(!$outlet){
-			$errors[]='Promo Campaign cannot be used at this outlet';
+			$errors[]='Promo cannot be used at this outlet';
 			return false;
 		}
 
-		if(strtotime($promo->date_start)>time()||strtotime($promo->date_end)<time()){
-			$errors[]='Promo campaign not valid';
+		if( (!empty($promo->date_start) && !empty($promo->date_end)) && (strtotime($promo->date_start)>time()||strtotime($promo->date_end)<time())){
+			$errors[]='Promo is not valid';
 			return false;
 		}
-		
 		$discount=0;
 		// add product discount if exist
 		foreach ($trxs as  $id_trx => &$trx) {
 			$product=Product::with(['product_prices' => function($q) use ($id_outlet){ 
 							$q->where('id_outlet', '=', $id_outlet)
 							  ->where('product_status', '=', 'Active')
-							  ->where('product_stock_status', '=', 'Available')
-							  ->where('product_visibility', '=', 'Visible');
+							  ->where('product_stock_status', '=', 'Available');
 						} ])->find($trx['id_product']);
 			//is product available
 			if(!$product){
@@ -86,26 +105,49 @@ class PromoCampaignTools{
 			}
 		}
 
+		//get all modifier in array
+		$mod = [];
+		foreach ($trxs as $key => $value) {
+			foreach ($value['modifiers'] as $key2 => $value2) {
+				$mod[] = $value2['id_product_modifier']??$value2;
+			}
+		}
+		// remove duplicate modifiers
+		$mod = array_flip($mod);
+		$mod = array_flip($mod);
+		// get all modifier data
+		$mod = $this->getAllModifier($mod, $id_outlet);
+
+		// get mod price 
+		$mod_price =[];
+		foreach ($mod as $key => $value) {
+			$mod_price[$value['id_product_modifier']] = $value['product_modifier_price']??0;
+		}
+
 		switch ($promo->promo_type) {
 			case 'Product discount':
 				// load required relationship
-				$promo->load('promo_campaign_product_discount','promo_campaign_product_discount_rules');
-				$promo_rules=$promo->promo_campaign_product_discount_rules;
+				$promo->load($source.'_product_discount',$source.'_product_discount_rules');
+				$promo_rules=$promo[$source.'_product_discount_rules'];
 				$max_product = $promo_rules->max_product;
 				$qty_promo_available = [];
 
 				if(!$promo_rules->is_all_product){
-					$promo_product=$promo->promo_campaign_product_discount->toArray();
+					$promo_product=$promo[$source.'_product_discount']->toArray();
 				}else{
 					$promo_product="*";
 				}
 
 				// sum total quantity of same product, if greater than max product assign value to max product
+				// get all modifier price total, index array of item, and qty for each modifier
+				$item_get_promo = [];
+				$mod_price_per_item = [];
+				$mod_price_qty_per_item = [];
 				foreach ($trxs as $key => $value) 
 				{
 					if (isset($item_get_promo[$value['id_product']])) 
 					{
-						if ( ($item_get_promo[$value['id_product']] + $value['qty']) >= $max_product) {
+						if ( ($item_get_promo[$value['id_product']] + $value['qty']) >= $max_product && !empty($max_product)) {
 							$item_get_promo[$value['id_product']] = $max_product;
 						}else{
 							$item_get_promo[$value['id_product']] += $value['qty'];
@@ -113,22 +155,71 @@ class PromoCampaignTools{
 					}
 					else
 					{
-						if ($value['qty'] >= $max_product) {
+						if ($value['qty'] >= $max_product && !empty($max_product)) {
 							$item_get_promo[$value['id_product']] = $max_product;
 						}else{
 							$item_get_promo[$value['id_product']] = $value['qty'];
 						}
 					}
+
+					$mod_price_qty_per_item[$value['id_product']][$key] = [];
+					$mod_price_qty_per_item[$value['id_product']][$key]['qty'] = $value['qty'];
+					$mod_price_qty_per_item[$value['id_product']][$key]['price'] = 0;
+					$mod_price_per_item[$value['id_product']][$key] = 0;
+
+					foreach ($value['modifiers'] as $key2 => $value2) 
+					{
+						$mod_price_qty_per_item[$value['id_product']][$key]['price'] += ($mod_price[$value2['id_product_modifier']??$value2]??0);
+						$mod_price_per_item[$value['id_product']][$key] += ($mod_price[$value2['id_product_modifier']??$value2]??0);
+					}
+
 				}
 
-				// check qty item get promo
-				foreach ($trxs as $key => $value) {
-					if (($item_get_promo[$value['id_product']] - $value['qty']) > 0) {
-						$trxs[$key]['promo_qty'] = $value['qty'];
-						$item_get_promo[$value['id_product']] -= $value['qty'];
-					}else{
-						$trxs[$key]['promo_qty'] = $item_get_promo[$value['id_product']];
-						$item_get_promo[$value['id_product']] = 0;
+				// sort mod price qty ascending
+				foreach ($mod_price_qty_per_item as $key => $value) {
+
+					//sort price only to get index key
+					asort($mod_price_per_item[$key]);
+					
+					// sort mod by price
+					$keyPositions = [];
+					foreach ($mod_price_per_item[$key] as $key2 => $row) {
+						$keyPositions[] = $key2;
+					}
+
+					foreach ($value as $key2 => $row) {
+					    $price[$key][$key2]  = $row['price'];
+					}
+
+					array_multisort($price[$key], SORT_ASC, $value);
+
+
+					$sortedArray = [];
+					foreach ($value as $key2 => $row) {
+					    $sortedArray[$keyPositions[$key2]] = $row;
+					}
+
+					// assign sorted value to current mod key
+					$mod_price_qty_per_item[$key] = $sortedArray;
+				}
+
+				// check promo qty for each item
+				foreach ($mod_price_qty_per_item as $key => $value) 
+				{
+					foreach ($value as $key2 => &$value2) 
+					{
+						if ($value2['qty'] > 0) {
+							if (($item_get_promo[$key] - $value2['qty']) > 0) 
+							{
+								$trxs[$key2]['promo_qty'] = $value2['qty'];
+								$item_get_promo[$key] -= $value2['qty'];
+							}
+							else
+							{
+								$trxs[$key2]['promo_qty'] = $item_get_promo[$key];
+								$item_get_promo[$key] = 0;
+							}
+						}
 					}
 				}
 
@@ -138,15 +229,18 @@ class PromoCampaignTools{
 					if ($trx['promo_qty'] == 0) {
 						continue;
 					}
+
+					$modifier = 0;
+					foreach ($trx['modifiers'] as $key2 => $value2) 
+					{
+						$modifier += $mod_price[$value2['id_product_modifier']??$value2]??0;
+					}
+
 					// is all product get promo
 					if($promo_rules->is_all_product){
 						// get product data
-						$product=Product::with(['product_prices' => function($q) use ($id_outlet){ 
-							$q->where('id_outlet', '=', $id_outlet)
-							  ->where('product_status', '=', 'Active')
-							  ->where('product_stock_status', '=', 'Available')
-							  ->where('product_visibility', '=', 'Visible');
-						} ])->find($trx['id_product']);
+						$product = $this->getOneProduct($id_outlet, $trx['id_product']);
+						
 						//is product available
 						if(!$product){
 							// product not available
@@ -154,17 +248,13 @@ class PromoCampaignTools{
 							continue;
 						}
 						// add discount
-						$discount+=$this->discount_product($product,$promo_rules,$trx);
+						$discount+=$this->discount_product($product,$promo_rules,$trx, $modifier);
 					}else{
 						// is product available in promo
 						if(is_array($promo_product)&&in_array($trx['id_product'],array_column($promo_product,'id_product'))){
 							// get product data
-							$product=Product::with(['product_prices' => function($q) use ($id_outlet){ 
-								$q->where('id_outlet', '=', $id_outlet)
-								  ->where('product_status', '=', 'Active')
-								  ->where('product_stock_status', '=', 'Available')
-								  ->where('product_visibility', '=', 'Visible');
-							} ])->find($trx['id_product']);
+							$product = $this->getOneProduct($id_outlet, $trx['id_product']);
+
 							//is product available
 							if(!$product){
 								// product not available
@@ -172,7 +262,7 @@ class PromoCampaignTools{
 								continue;
 							}
 							// add discount
-							$discount+=$this->discount_product($product,$promo_rules,$trx);
+							$discount+=$this->discount_product($product,$promo_rules,$trx, $modifier);
 						}
 					}
 				}
@@ -182,14 +272,15 @@ class PromoCampaignTools{
 					$message = MyHelper::simpleReplace($message,['product'=>'product bertanda khusus']);
 
 					$errors[]= $message;
+					$errorProduct = 1;
 					return false;
 				}
 				break;
 
 			case 'Tier discount':
 				// load requirement relationship
-				$promo->load('promo_campaign_tier_discount_rules','promo_campaign_tier_discount_product');
-				$promo_product=$promo->promo_campaign_tier_discount_product;
+				$promo->load($source.'_tier_discount_rules',$source.'_tier_discount_product');
+				$promo_product=$promo[$source.'_tier_discount_product'];
 				$promo_product->load('product');
 				if(!$promo_product){
 					$errors[]='Tier discount promo product is not set correctly';
@@ -210,7 +301,7 @@ class PromoCampaignTools{
 				}
 
 				// get min max required for error message
-				$promo_rules=$promo->promo_campaign_tier_discount_rules;
+				$promo_rules=$promo[$source.'_tier_discount_rules'];
 				$min_qty = 1;
 				$max_qty = 1;
 				foreach ($promo_rules as $rule) {
@@ -229,6 +320,7 @@ class PromoCampaignTools{
 					$message = MyHelper::simpleReplace($message,['product'=>$promo_product->product->product_name, 'minmax'=>$minmax]);
 
 					$errors[]= $message;
+					$errorProduct = 1;
 					return false;
 				}
 				//get cart's product to apply promo
@@ -249,6 +341,7 @@ class PromoCampaignTools{
 					$message = MyHelper::simpleReplace($message,['product'=>$promo_product->product->product_name, 'minmax'=>$minmax]);
 
 					$errors[]= $message;
+					$errorProduct = 1;
 					return false;
 				}
 				//find promo
@@ -276,13 +369,21 @@ class PromoCampaignTools{
 					$message = MyHelper::simpleReplace($message,['product'=>$promo_product->product->product_name, 'minmax'=>$minmax]);
 
 					$errors[]= $message;
+					$errorProduct = 1;
 					return false;
 				}
 				// count discount
 				foreach ($trxs as $key => &$trx) {
+
+					$modifier = 0;
+					foreach ($trx['modifiers'] as $key2 => $value2) 
+					{
+						$modifier += $mod_price[$value2['id_product_modifier']??$value2]??0;
+					}
+
 					if($trx['id_product']==$promo_product->id_product){
 						$trx['promo_qty'] = $trx['qty'];
-						$discount+=$this->discount_product($promo_product->product,$promo_rule,$trx);
+						$discount+=$this->discount_product($promo_product->product,$promo_rule,$trx, $modifier);
 					}
 				}
 
@@ -290,8 +391,8 @@ class PromoCampaignTools{
 
 			case 'Buy X Get Y':
 				// load requirement relationship
-				$promo->load('promo_campaign_buyxgety_rules','promo_campaign_buyxgety_product_requirement');
-				$promo_product=$promo->promo_campaign_buyxgety_product_requirement;
+				$promo->load($source.'_buyxgety_rules',$source.'_buyxgety_product_requirement');
+				$promo_product=$promo[$source.'_buyxgety_product_requirement'];
 				$promo_product->load('product');
 
 				if(!$promo_product){
@@ -312,7 +413,7 @@ class PromoCampaignTools{
 					}
 				}
 
-				$promo_rules=$promo->promo_campaign_buyxgety_rules;
+				$promo_rules=$promo[$source.'_buyxgety_rules'];
 				$min_qty=1;
 				$max_qty=1;
 				// get min max for error message
@@ -333,6 +434,7 @@ class PromoCampaignTools{
 					$message = MyHelper::simpleReplace($message,['product'=>$promo_product->product->product_name, 'minmax'=>$minmax]);
 
 					$errors[]= $message;
+					$errorProduct = 1;
 					return false;
 				}
 				//get cart's product to get benefit
@@ -353,10 +455,11 @@ class PromoCampaignTools{
 					$message = MyHelper::simpleReplace($message,['product'=>$promo_product->product->product_name, 'minmax'=>$minmax]);
 
 					$errors[]= $message;
+					$errorProduct = 1;
 					return false;
 				}
 				//find promo
-				$promo_rules=$promo->promo_campaign_buyxgety_rules;
+				$promo_rules=$promo[$source.'_buyxgety_rules'];
 				$promo_rule=false;
 				$min_qty=null;
 				$max_qty=null;
@@ -388,18 +491,16 @@ class PromoCampaignTools{
 					$message = MyHelper::simpleReplace($message,['product'=>$promo_product->product->product_name, 'minmax'=>$minmax]);
 
 					$errors[]= $message;
+					$errorProduct = 1;
 					return false;
 				}
-				$benefit_product=Product::with(['brands','product_prices' => function($q) use ($id_outlet){ 
-							$q->where('id_outlet', '=', $id_outlet)
-							  ->where('product_status', '=', 'Active')
-							  ->where('product_stock_status', '=', 'Available')
-							  ->where('product_visibility', '=', 'Visible');
-						} ])->find($promo_rule->benefit_id_product);
+				$benefit_product = $this->getOneProduct($id_outlet, $promo_rule->benefit_id_product,1);
+
 				$benefit_qty=$promo_rule->benefit_qty;
-				$benefit_value=$promo_rule->discount_nominal??$promo_rule->discount_percent;
-				$benefit_type = $promo_rule->discount_nominal?'Nominal':'Percent';
-				
+				$benefit_value=$promo_rule->discount_value;
+				$benefit_type = $promo_rule->discount_type;
+				$benefit_max_value = $promo_rule->max_percent_discount;
+
 				if(!$benefit_product){
 					$errors[]="Product benefit not found.";
 					return false;
@@ -409,27 +510,30 @@ class PromoCampaignTools{
 				$rule=(object) [
 					'max_qty'=>$benefit_qty,
 					'discount_type'=>$benefit_type,
-					'discount_value'=>$benefit_value
+					'discount_value'=>$benefit_value,
+					'max_percent_discount'=>$benefit_max_value
 				];
 
 				// add product benefit
 				$benefit_item = [
 					'id_custom' 	=> isset(end($trxs)['id_custom']) ? end($trxs)['id_custom']+1 : '',
 					'id_product'	=> $benefit_product->id_product,
-					'id_brand'		=> $benefit_product->brands[0]->id_brand??'',
+					'id_brand'		=> $promo->id_brand??'',
 					'qty'			=> $promo_rule->benefit_qty,
 					'is_promo'		=> 1,
-					'is_free'		=> ($promo_rule->discount_percent == 100) ? 1 : 0,
-					'modifiers'		=> []
+					'is_free'		=> ($promo_rule->discount_type == "percent" && $promo_rule->discount_value == 100) ? 1 : 0,
+					'modifiers'		=> [],
+					'bonus'			=> 1
 				];
 				// $benefit_item['id_product']	= $benefit_product->id_product;
 				// $benefit_item['id_brand'] 	= $benefit_product->brands[0]->id_brand??'';
 				// $benefit_item['qty'] 		= $promo_rule->benefit_qty;
-				
+
 				$discount+=$this->discount_product($benefit_product,$rule,$benefit_item);
 
 				// return $benefit_item;
 				array_push($trxs, $benefit_item);
+				// return $trxs;
 				break;
 
 			case 'Discount global':
@@ -459,12 +563,50 @@ class PromoCampaignTools{
 					break;
 				}
 				break;
+			case 'Referral':
+				$promo->load('promo_campaign_referral');
+				$promo_rules=$promo->promo_campaign_referral;
+				if($promo_rules->referred_promo_type == 'Product Discount'){
+					$rule=(object) [
+						'max_qty'=>false,
+						'discount_type'=>$promo_rules->referred_promo_unit,
+						'discount_value'=>$promo_rules->referred_promo_value,
+						'max_percent_discount'=>$promo_rules->referred_promo_value_max
+					];
+					foreach ($trxs as  $id_trx => &$trx) {
+						// get product data
+						$product=Product::with(['product_prices' => function($q) use ($id_outlet){ 
+							$q->where('id_outlet', '=', $id_outlet)
+							  ->where('product_status', '=', 'Active')
+							  ->where('product_stock_status', '=', 'Available');
+						} ])->find($trx['id_product']);
+						$cur_mod_price = 0;
+						foreach ($trx['modifiers'] as $modifier) {
+			                $id_product_modifier = is_numeric($modifier)?$modifier:$modifier['id_product_modifier'];
+			                $qty_product_modifier = is_numeric($modifier)?1:$modifier['qty'];
+			                $cur_mod_price += ($mod_price[$id_product_modifier]??0)*$qty_product_modifier;
+						}
+						//is product available
+						if(!$product){
+							// product not available
+							$errors[]='Product with id '.$trx['id_product'].' could not be found';
+							continue;
+						}
+						// add discount
+						$discount += $this->discount_product($product,$rule,$trx,$cur_mod_price);
+					}
+				}else{
+					return [
+						'item'=>$trxs,
+						'discount'=>0
+					];
+				}
 		}
 		// discount?
-		if($discount<=0){
-			$errors[]='Does not get any discount';
-			return false;
-		}
+		// if($discount<=0){
+		// 	$errors[]='Does not get any discount';
+		// 	return false;
+		// }
 		return [
 			'item'=>$trxs,
 			'discount'=>$discount
@@ -603,7 +745,7 @@ class PromoCampaignTools{
 	 * @param  Array 								$trx 			transaction data
 	 * @return int discount
 	 */
-	protected function discount_product($product,$promo_rules,&$trx){
+	protected function discount_product($product,$promo_rules,&$trx, $modifier=null){
 		// check discount type
 		$discount=0;
 		// set quantity of product to apply discount
@@ -624,18 +766,23 @@ class PromoCampaignTools{
 			$discount_qty = $trx['promo_qty'];
 			unset($trx['promo_qty']);
 		}
-		$product_price=$product->product_prices[0]->product_price??[];
+
+		$product_price = ($product->product_price??$product->product_prices[0]->product_price??null) + $modifier;
 		if(isset($trx['new_price'])&&$trx['new_price']){
 			$product_price=$trx['new_price']/$trx['qty'];
 		}
-		if($promo_rules->discount_type=='Nominal'){
+		if($promo_rules->discount_type=='Nominal' || $promo_rules->discount_type=='nominal'){
 			$discount=$promo_rules->discount_value*$discount_qty;
 			$trx['discount']=($trx['discount']??0)+$discount;
 			$trx['new_price']=($product_price*$trx['qty'])-$trx['discount'];
 			$trx['is_promo']=1;
 		}else{
 			// percent
-			$discount=(int)((($promo_rules->discount_value/100)*$product_price)*$discount_qty);
+			$discount_per_product = ($promo_rules->discount_value/100)*$product_price;
+			if ($discount_per_product > $promo_rules->max_percent_discount && !empty($promo_rules->max_percent_discount)) {
+				$discount_per_product = $promo_rules->max_percent_discount;
+			}
+			$discount=(int)($discount_per_product*$discount_qty);
 			$trx['discount']=($trx['discount']??0)+$discount;
 			$trx['new_price']=($product_price*$trx['qty'])-$trx['discount'];
 			$trx['is_promo']=1;
@@ -655,7 +802,7 @@ class PromoCampaignTools{
 	 * @param  int 		$id_user  id user
 	 * @return boolean	true/false
 	 */
-	public function validateUser($id_promo, $id_user, $phone, $device_type, $device_id, &$errors=[]){
+	public function validateUser($id_promo, $id_user, $phone, $device_type, $device_id, &$errors=[],$id_code=null){
 		$promo=PromoCampaign::find($id_promo);
 
 		if(!$promo){
@@ -665,6 +812,27 @@ class PromoCampaignTools{
 		if(!$promo->step_complete || !$promo->user_type){
         	$errors[]='Promo campaign not finished';
     		return false;
+		}
+
+		if($promo->promo_type == 'Referral'){
+			if(User::find($id_user)->transaction_online){
+	        	$errors[]='Kode promo tidak ditemukan';
+				return false;
+			}
+			if(UserReferralCode::where([
+				'id_promo_campaign_promo_code'=>$id_code,
+				'id_user'=>$id_user
+			])->exists()){
+	        	$errors[]='Kode promo tidak ditemukan';
+	    		return false;
+			}
+	        $referer = UserReferralCode::where('id_promo_campaign_promo_code',$id_code)
+	            ->join('users','users.id','=','user_referral_codes.id_user')
+	            ->where('users.is_suspended','=',0)
+	            ->first();
+	        if(!$referer){
+	        	$errors[] = 'Kode promo tidak ditemukan';
+	        }
 		}
 
 		//check user 
@@ -745,8 +913,8 @@ class PromoCampaignTools{
                 $count = 0;
             }
         }
-        if($countSemen>$productItem['product_prices'][0]['product_price']??[]){
-        	$countSemen=$productItem['product_prices'][0]['product_price']??[];
+        if( $countSemen > ($productItem['product_prices'][0]['product_price']??[]) ){
+        	$countSemen = $productItem['product_prices'][0]['product_price']??[];
         }
         return $countSemen;
     }
@@ -802,44 +970,68 @@ class PromoCampaignTools{
     	return $message;
     }
 
-    function getRequiredProduct($id_promo_campaign){
-    	$promo = PromoCampaign::where('id_promo_campaign','=',$id_promo_campaign)
-    			->with([
-					'promo_campaign_product_discount.product' => function($q) {
-						$q->select('id_product', 'id_product_category', 'product_code', 'product_name');
-					},
-					'promo_campaign_buyxgety_product_requirement.product' => function($q) {
-						$q->select('id_product', 'id_product_category', 'product_code', 'product_name');
-					},
-					'promo_campaign_tier_discount_product.product' => function($q) {
-						$q->select('id_product', 'id_product_category', 'product_code', 'product_name');
-					},
-					'promo_campaign_product_discount_rules',
-					'promo_campaign_tier_discount_rules',
-					'promo_campaign_buyxgety_rules'
-				])
-                ->first();
+    function getRequiredProduct($id_promo, $source='promo_campaign'){
+    	if ($source == 'deals') {
+    		$promo = Deal::where('id_deals','=',$id_promo)
+	    			->with([
+						'deals_product_discount.product' => function($q) {
+							$q->select('id_product', 'id_product_category', 'product_code', 'product_name');
+						},
+						'deals_buyxgety_product_requirement.product' => function($q) {
+							$q->select('id_product', 'id_product_category', 'product_code', 'product_name');
+						},
+						'deals_tier_discount_product.product' => function($q) {
+							$q->select('id_product', 'id_product_category', 'product_code', 'product_name');
+						},
+						'deals_product_discount_rules',
+						'deals_tier_discount_rules',
+						'deals_buyxgety_rules'
+					])
+	                ->first();
+    	}elseif($source == 'promo_campaign'){
+	    	$promo = PromoCampaign::where('id_promo_campaign','=',$id_promo)
+	    			->with([
+						'promo_campaign_product_discount.product' => function($q) {
+							$q->select('id_product', 'id_product_category', 'product_code', 'product_name');
+						},
+						'promo_campaign_buyxgety_product_requirement.product' => function($q) {
+							$q->select('id_product', 'id_product_category', 'product_code', 'product_name');
+						},
+						'promo_campaign_tier_discount_product.product' => function($q) {
+							$q->select('id_product', 'id_product_category', 'product_code', 'product_name');
+						},
+						'promo_campaign_product_discount_rules',
+						'promo_campaign_tier_discount_rules',
+						'promo_campaign_buyxgety_rules'
+					])
+	                ->first();
+    	}
+
         if ($promo) {
         	$promo = $promo->toArray();
-        	if ( ($promo['promo_campaign_product_discount_rules']['is_all_product']??false) == 1) 
+        	if ( ($promo[$source.'_product_discount_rules']['is_all_product']??false) == 1) 
 	        {
-	        	$product = '*';
+	        	$product = ['*'];
 	        }
-	        elseif ( !empty($promo['promo_campaign_product_discount']) )
+	        elseif ( !empty($promo[$source.'_product_discount']) )
 	        {
-	        	$product = $promo['promo_campaign_product_discount'][0]['product']??'';
+	        	$product = $promo[$source.'_product_discount'][0]['product']??'';
 	        }
-	        elseif ( !empty($promo['promo_campaign_tier_discount_product']) )
+	        elseif ( !empty($promo[$source.'_tier_discount_product']) )
 	        {
-	        	$product = $promo['promo_campaign_tier_discount_product']['product']??'';
+	        	$product = $promo[$source.'_tier_discount_product']['product']??'';
 	        }
-	        elseif ( !empty($promo['promo_campaign_buyxgety_product_requirement']) )
+	        elseif ( !empty($promo[$source.'_buyxgety_product_requirement']) )
 	        {
-	        	$product = $promo['promo_campaign_buyxgety_product_requirement']['product']??'';
+	        	$product = $promo[$source.'_buyxgety_product_requirement']['product']??'';
 	        }
 	        else
 	        {
 	        	$product = null;
+	        }
+
+	        if (!empty($product)) {
+	        	$product['id_brand'] = $promo['id_brand']??'';
 	        }
 	        return $product;
         }else{
@@ -847,5 +1039,170 @@ class PromoCampaignTools{
         }
     }
 
+    function getAllModifier($array_modifier, $id_outlet)
+    {
+    	$mod = ProductModifier::select('product_modifiers.id_product_modifier','text','product_modifier_stock_status','product_modifier_price')
+                // produk modifier yang tersedia di outlet
+                ->join('product_modifier_prices','product_modifiers.id_product_modifier','=','product_modifier_prices.id_product_modifier')
+                ->leftJoin('product_modifier_details','product_modifiers.id_product_modifier','=','product_modifier_details.id_product_modifier')
+                ->where('product_modifier_prices.id_outlet',$id_outlet)
+                // produk aktif
+                ->where('product_modifier_status','Active')
+                // product visible
+                ->where(function($query){
+                    $query->where('product_modifier_details.product_modifier_visibility','=','Visible')
+                    ->orWhere(function($q){
+                        $q->whereNull('product_modifier_details.product_modifier_visibility')
+                        ->where('product_modifiers.product_modifier_visibility', 'Visible');
+                    });
+                })
+                ->whereIn('product_modifiers.id_product_modifier',$array_modifier)
+                ->groupBy('product_modifiers.id_product_modifier')
+                // product modifier dengan id
+                ->get();
+        if ($mod) {
+        	return $mod;
+        }else{
+        	return [];
+        }
+    }
+
+    public function getOneProduct($id_outlet, $id_product, $brand=null)
+    {
+    	$product = Product::join('product_prices','product_prices.id_product','=','products.id_product')
+	                ->where('product_prices.id_outlet','=',$id_outlet)
+	                ->where('products.id_product','=',$id_product)
+	                ->where(function($query){
+	                    $query->where('product_prices.product_visibility','=','Visible')
+	                            ->orWhere(function($q){
+	                                $q->whereNull('product_prices.product_visibility')
+	                                ->where('products.product_visibility', 'Visible');
+	                            });
+	                })
+	                ->where('product_prices.product_status','=','Active')
+	                ->whereNotNull('product_prices.product_price');
+
+		if (!empty($brand)) {
+
+			$product = $product->with('brands');
+		}
+
+		$product = $product->first();
+
+		return $product;
+    }
+
+    /**
+     * Create referal promo code 
+     * @param  Integer $id_user user id of user
+     * @return boolean       true if success
+     */
+    public static function createReferralCode($id_user) {
+    	//check user have referral code
+    	$referral_campaign = PromoCampaign::select('id_promo_campaign')->where('promo_type','referral')->first();
+    	if(!$referral_campaign){
+    		return false;
+    	}
+    	$check = UserReferralCode::where('id_user',$id_user)->first();
+    	if($check){
+    		return $check;
+    	}
+    	$max_iterate = 1000;
+    	$iterate = 0;
+    	$exist = true;
+    	do{
+    		$promo_code = MyHelper::createrandom(6, 'PromoCode');
+    		$exist = PromoCampaignPromoCode::where('promo_code',$promo_code)->exists();
+    		if($exist){$promo_code=false;};
+    		$iterate++;
+    	}while($exist&&$iterate<=$max_iterate);
+    	if(!$promo_code){
+    		return false;
+    	}
+    	$create = PromoCampaignPromoCode::create([
+    		'id_promo_campaign' => $referral_campaign->id_promo_campaign,
+    		'promo_code' => $promo_code
+    	]);
+    	if(!$create){
+    		return false;
+    	}
+    	$create2 = UserReferralCode::create([
+    		'id_promo_campaign_promo_code' => $create->id_promo_campaign_promo_code,
+    		'id_user' => $id_user
+    	]);
+    	return $create2;
+    }
+    /**
+     * Apply cashback to referrer
+     * @param  Transaction $transaction Transaction model
+     * @return boolean 
+     */
+    public static function applyReferrerCashback($transaction)
+    {
+    	if(!$transaction['id_promo_campaign_promo_code']){
+    		return true;
+    	}
+    	$transaction->load('promo_campaign_promo_code','promo_campaign_promo_code.promo_campaign');
+    	$use_referral = ($transaction['promo_campaign_promo_code']['promo_campaign']['promo_type']??false) === 'Referral';
+        // apply cashback to referrer
+        if ($use_referral){
+            $referral_rule = PromoCampaignReferral::where('id_promo_campaign',$transaction['promo_campaign_promo_code']['id_promo_campaign'])->first();
+            $referrer = UserReferralCode::where('id_promo_campaign_promo_code',$transaction['id_promo_campaign_promo_code'])->pluck('id_user')->first();
+            if(!$referrer || !$referral_rule){
+            	return false;
+            }
+            $referrer_cashback = 0;
+            if($referral_rule->referrer_promo_unit == 'Percent'){
+                $referrer_discount_percent = $referral_rule->referrer_promo_value<=100?$referral_rule->referrer_promo_value:100;
+                $referrer_cashback = $transaction['transaction_grandtotal']*$referrer_discount_percent/100;
+            }else{
+                if($transaction['transaction_grandtotal'] >= $referral_rule->referred_min_value){
+                    $referrer_cashback = $referral_rule->referrer_promo_value<=$transaction['transaction_grandtotal']?$referral_rule->referrer_promo_value:$transaction['transaction_grandtotal'];
+                }
+            }
+            if($referrer_cashback){
+                $insertDataLogCash = app("Modules\Balance\Http\Controllers\BalanceController")->addLogBalance( $referrer, $referrer_cashback, $transaction['id_transaction'], 'Referral Bonus', $transaction['transaction_grandtotal']);
+                if (!$insertDataLogCash) {
+                    return false;
+                }
+                PromoCampaignReferralTransaction::where('id_transaction',$transaction['id_transaction'])->update(['referrer_bonus'=>$referrer_cashback]);
+	            $referrer_total_cashback = UserReferralCode::where('id_user',$referrer)->first();
+	            if($referrer_total_cashback){
+	            	$upData = [
+	            		'cashback_earned'=>$referrer_total_cashback->cashback_earned+$referrer_cashback,
+	            		'number_transaction'=>$referrer_total_cashback->number_transaction+1
+	            	];
+	            	if(!$referrer_total_cashback->referral_code){
+	            		$upData['referral_code'] = PromoCampaignPromoCode::select('promo_code')->where('id_promo_campaign_promo_code',$transaction['id_promo_campaign_promo_code'])->pluck('promo_code')->first();
+	            	}
+	            	$up = $referrer_total_cashback->update($upData);
+	            }else{
+	            	$up = UserReferralCode::create([
+	            		'id_user' => $referrer,
+	            		'referral_code' => PromoCampaignPromoCode::select('promo_code')->where('id_promo_campaign_promo_code',$transaction['id_promo_campaign_promo_code'])->pluck('promo_code')->first(),
+	            		'number_transaction' => 1,
+	            		'cashback_earned' => $referrer_cashback
+	            	]);
+	            }
+	            if(!$up){
+	            	return false;
+	            }
+            }
+        }
+        return true;
+    }
+
+    public function removeBonusItem($item)
+    {
+    	foreach ($item as $key => $value) 
+		{
+			if (!empty($value['bonus'])) {
+				unset($item[$key]);
+				break;
+			}
+		}
+
+		return $item;
+    }
 }
 ?>

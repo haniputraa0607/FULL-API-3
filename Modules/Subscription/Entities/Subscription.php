@@ -8,6 +8,7 @@
 namespace Modules\Subscription\Entities;
 
 use Reliese\Database\Eloquent\Model as Eloquent;
+use App\Lib\MyHelper;
 
 /**
  * Class Subscription
@@ -65,6 +66,7 @@ class Subscription extends Eloquent
 	];
 
 	protected $fillable = [
+	    'id_brand',
 		'subscription_title',
 		'subscription_sub_title',
 		'subscription_image',
@@ -96,11 +98,23 @@ class Subscription extends Eloquent
 		'url_subscription_image', 
 		'subscription_status', 
 		'subscription_price_type', 
+		'subscription_price_pretty',
 		'url_webview'
 	];
 
 	public function getUrlWebviewAttribute() {
 		return env('APP_API_URL') ."api/webview/subscription/". $this->id_subscription;
+	}
+
+	public function getSubscriptionPricePrettyAttribute() {
+	    $pretty = "Gratis";
+		if ($this->subscription_price_point) {
+            $pretty = MyHelper::requestNumber($this->subscription_price_point,'_POINT');
+        }
+        elseif ($this->subscription_price_cash) {
+            $pretty = MyHelper::requestNumber($this->subscription_price_cash,'_CURRENCY');
+        }
+        return $pretty;
 	}
 
 	public function getSubscriptionPriceTypeAttribute() {
@@ -174,5 +188,26 @@ class Subscription extends Eloquent
 	public function subscription_users()
 	{
 		return $this->hasMany(\Modules\Subscription\Entities\SubscriptionUser::class, 'id_subscription');
+	}
+
+	public function subscription_products()
+	{
+		return $this->hasMany(\Modules\Subscription\Entities\SubscriptionProduct::class, 'id_subscription');
+	}
+
+	public function outlets_active()
+	{
+		return $this->belongsToMany(\App\Http\Models\Outlet::class, 'subscription_outlets', 'id_subscription', 'id_outlet')->where('outlet_status', 'Active');
+	}
+
+	public function products()
+	{
+		return $this->belongsToMany(\App\Http\Models\Product::class, 'subscription_products', 'id_subscription', 'id_product')
+					->withPivot('id_subscription_product')
+					->withTimestamps();
+	}
+
+    public function brand(){
+		return $this->belongsTo(\Modules\Brand\Entities\Brand::class,'id_brand');
 	}
 }

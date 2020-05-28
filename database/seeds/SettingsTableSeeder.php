@@ -695,7 +695,69 @@ class SettingsTableSeeder extends Seeder
                     'created_at' => date('Y-m-d H:i:s'),
                     'updated_at' => date('Y-m-d H:i:s'),
                 ),
-
+            77 =>
+                array(
+                   'id_setting' => 78,
+                    'key' => 'coupon_confirmation_pop_up',
+                    'value' => NULL,
+                    'value_text' => 'Kupon <b>%title%</b> untuk pembelian <b>%product%</b> akan digunakan pada transaksi ini',
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
+            78 =>
+                array(
+                    'id_setting' => 79,
+                    'key' => 'maintenance_mode',
+                    'value' => '0',
+                    'value_text' => '{"message":"there is maintenance","image":""}',
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
+            79 =>
+                array(
+                    'id_setting' => 80,
+                    'key' => 'description_product_discount_no_qty',
+                    'value' => 'Anda berhak mendapatkan potongan %discount% untuk pembelian %product%.',
+                    'value_text' => null,
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
+            80 =>
+                array(
+                    'id_setting' => 81,
+                    'key' => 'promo_error_ok_button_v2',
+                    'value' => 'Ok',
+                    'value_text' => null,
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
+            81 =>
+                array(
+                    'id_setting' => 82,
+                    'key' => 'global_setting_fee',
+                    'value' => null,
+                    'value_text' => '{"fee_outlet":"","fee_central":""}',
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
+            82 =>
+                array(
+                    'id_setting' => 83,
+                    'key' => 'global_setting_point_charged',
+                    'value' => null,
+                    'value_text' => '{"outlet":"","central":""}',
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
+            83 =>
+                array(
+                    'id_setting' => 84,
+                    'key' => 'disburse_auto_approve_setting',
+                    'value' => 0,
+                    'value_text' => null,
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
         ));
     }
 }

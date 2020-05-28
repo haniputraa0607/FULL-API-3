@@ -9,7 +9,7 @@ Route::group(['prefix' => 'api/v1/pos/', 'namespace' => 'Modules\POS\Http\Contro
         Route::any('check/member', 'ApiPOS@checkMember');
         Route::any('check/voucher', 'ApiPOS@checkVoucher');
         Route::any('voucher/void', 'ApiPOS@voidVoucher');
-        Route::post('outlet/sync', 'ApiPOS@syncOutlet');
+        Route::post('outlet/sync', 'ApiPOS@syncOutletSeed');
         Route::any('menu', 'ApiPOS@syncMenuReturn');
         Route::any('outlet/menu', 'ApiPOS@syncOutletMenu');
         Route::post('menu/sync', 'ApiPOS@syncMenu');
@@ -55,9 +55,4 @@ Route::group(['prefix' => 'api/quinos', 'namespace' => 'Modules\POS\Http\Control
         Route::post('user/new', 'ApiQuinos@createQuinosUser');
         Route::post('user/update', 'ApiQuinos@updateQuinosUser');
     });
-});
-Route::group(['prefix' => 'api/v1/pos/', 'namespace' => 'Modules\POS\Http\Controllers'], function()
-{
-    Route::any('outlet/menu/cron', 'ApiPOS@syncOutletMenuCron');
-    Route::any('transaction/queue/cron', 'ApiTransactionSync@transaction');
 });

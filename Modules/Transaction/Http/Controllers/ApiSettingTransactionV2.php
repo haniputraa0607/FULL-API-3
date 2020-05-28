@@ -7,9 +7,12 @@ use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
 
 use App\Http\Models\Setting;
+use App\Http\Models\Outlet;
 use App\Http\Models\Product;
 use App\Http\Models\ProductPrice;
 use App\Http\Models\ProductModifier;
+use App\Http\Models\ProductModifierPrice;
+use App\Http\Models\ProductModifierGlobalPrice;
 
 use DB;
 
@@ -17,7 +20,7 @@ class ApiSettingTransactionV2 extends Controller
 {
     public function setting($value) {
         $setting = Setting::where('key', $value)->first();
-        
+
         if (empty($setting->value)) {
             return response()->json(['Setting Not Found']);
         }
@@ -27,7 +30,7 @@ class ApiSettingTransactionV2 extends Controller
 
     public function grandTotal() {
         $grandTotal = $this->setting('transaction_grand_total_order');
-        
+
         $grandTotal = explode(',', $grandTotal);
         foreach ($grandTotal as $key => $value) {
             if (substr($grandTotal[$key], 0, 5) == 'empty') {
@@ -109,11 +112,11 @@ class ApiSettingTransactionV2 extends Controller
 
     public function convertFormula($value) {
         $convert = $this->$value();
-        
+
         return $convert;
     }
 
-    public function countTransaction($value, $data) {
+    public function countTransaction($value, $data,$discount_promo=[]) {
         $subtotal = isset($data['subtotal']) ? $data['subtotal'] : 0;
         $service  = isset($data['service']) ? $data['service'] : 0;
         $tax      = isset($data['tax']) ? $data['tax'] : 0;
@@ -121,17 +124,29 @@ class ApiSettingTransactionV2 extends Controller
         $discount = isset($data['discount']) ? $data['discount'] : 0;
         // return $data;
         if ($value == 'subtotal') {
+            $different_price = Outlet::select('outlet_different_price')->where('id_outlet',$data['id_outlet'])->pluck('outlet_different_price')->first();
             $dataSubtotal = [];
-            foreach ($data['item'] as $keyData => $valueData) {
+            foreach (($discount_promo['item']??$data['item']) as $keyData => $valueData) {
+                $this_discount=0;
+                $this_discount=$valueData['discount']??0;
+
+                // if($discount_promo){
+                //     foreach ($discount_promo['item']??[] as $disc) {
+                //         if($disc['id_product']==$valueData['id_product']){
+                //             $this_discount=$disc['discount']??0;
+                //         }
+                //     }
+                // }
+
                 $product = Product::with('product_discounts', 'product_prices')->where('id_product', $valueData['id_product'])->first();
                 if (empty($product)) {
                     DB::rollback();
                     return response()->json([
-                        'status' => 'fail', 
+                        'status' => 'fail',
                         'messages' => ['Product Not Found']
                     ]);
                 }
-                
+
                 $productPrice = ProductPrice::where(['id_product' => $valueData['id_product'], 'id_outlet' => $data['id_outlet']])->first();
                 if (empty($productPrice)) {
                     DB::rollback();
@@ -142,7 +157,7 @@ class ApiSettingTransactionV2 extends Controller
                     ]);
                 }
 
-                if($productPrice['product_price'] == null || $productPrice['product_price_base'] == null || $productPrice['product_price_tax'] == null){
+                if($productPrice['product_price'] == null){
                     return response()->json([
                         'status'    => 'fail',
                         'messages'  => ['Price Product Not Valid'],
@@ -153,27 +168,17 @@ class ApiSettingTransactionV2 extends Controller
                 foreach ($valueData['modifiers'] as $modifier) {
                     $id_product_modifier = is_numeric($modifier)?$modifier:$modifier['id_product_modifier'];
                     $qty_product_modifier = is_numeric($modifier)?1:$modifier['qty'];
-                    $mod = ProductModifier::with(['product_modifier_prices'=>function($query) use ($data){
-                            $query->select('id_product_modifier_price','id_product_modifier','product_modifier_price');
-                            $query->where('id_outlet',$data['id_outlet']);
-                        }])
-                        ->whereHas('product_modifier_prices',function($query) use ($data){
-                            $query->where('id_outlet',$data['id_outlet']);
-                            $query->whereNotNull('product_modifier_price');
-                        })
-                        ->find($id_product_modifier);
-                    if(!$mod||!isset($mod['product_modifier_prices'][0]['product_modifier_price'])){
-                        DB::rollBack();
-                        return [
-                            'status' => 'fail',
-                            'messages' => ['Modifier not found']
-                        ];
+                    if($different_price){
+                        $mod_price = ProductModifierPrice::select('product_modifier_price')->where('id_outlet',$data['id_outlet'])->where('id_product_modifier',$id_product_modifier)->pluck('product_modifier_price')->first()?:0;
+                    }else{
+                        $mod_price = ProductModifierGlobalPrice::select('product_modifier_price')->where('id_product_modifier',$id_product_modifier)->pluck('product_modifier_price')->first()?:0;
                     }
-                    $mod = $mod->toArray();
-                    $mod_subtotal += $mod['product_modifier_prices'][0]['product_modifier_price']*$qty_product_modifier;
+                    $mod_subtotal += $mod_price*$qty_product_modifier;
                 }
                 // $price = $productPrice['product_price_base'] * $valueData['qty'];
-                $price = ($productPrice['product_price']+$mod_subtotal) * $valueData['qty'];
+                // remove discount from substotal
+                // $price = (($productPrice['product_price']+$mod_subtotal) * $valueData['qty'])-$this_discount;
+                $price = (($productPrice['product_price']+$mod_subtotal) * $valueData['qty']);
                 array_push($dataSubtotal, $price);
             }
 
@@ -182,26 +187,29 @@ class ApiSettingTransactionV2 extends Controller
 
         if ($value == 'discount') {
             $discountTotal = 0;
-            $discount = [];
-            $discountFormula = $this->convertFormula('discount');
+            // $discount = [];
+            // $discountFormula = $this->convertFormula('discount');
 
-            $checkSettingPercent = Setting::where('key', 'discount_percent')->first();
-            $checkSettingNominal = Setting::where('key', 'discount_nominal')->first();
-            $count = 0;
+            // $checkSettingPercent = Setting::where('key', 'discount_percent')->first();
+            // $checkSettingNominal = Setting::where('key', 'discount_nominal')->first();
+            // $count = 0;
 
-            if (!empty($checkSettingPercent)) {
-                if ($checkSettingPercent['value'] != '0' && $checkSettingPercent['value'] != '') {
-                    $count = (eval('return ' . preg_replace('/([a-zA-Z0-9]+)/', '\$$1', $discountFormula) . ';'));
-                }
-            } else {
-                if (!empty($checkSettingNominal)) {
-                    if ($checkSettingNominal['value'] != '0' && $checkSettingNominal['value'] != '') {
-                        $count = $checkSettingNominal;
-                    }
-                }
+            // if (!empty($checkSettingPercent)) {
+            //     if ($checkSettingPercent['value'] != '0' && $checkSettingPercent['value'] != '') {
+            //         $count = (eval('return ' . preg_replace('/([a-zA-Z0-9]+)/', '\$$1', $discountFormula) . ';'));
+            //     }
+            // } else {
+            //     if (!empty($checkSettingNominal)) {
+            //         if ($checkSettingNominal['value'] != '0' && $checkSettingNominal['value'] != '') {
+            //             $count = $checkSettingNominal;
+            //         }
+            //     }
+            // }
+            foreach ($discount_promo['item']??$data['item'] as $keyData => $valueData) {
+                $this_discount=$valueData['discount']??0;
+                $discountTotal += $this_discount;
             }
-
-            return $count;
+            return $discountTotal;
         }
 
         if ($value == 'service') {
@@ -239,7 +247,7 @@ class ApiSettingTransactionV2 extends Controller
             //             'product' => $checkProduct['product_name']
             //         ]);
             //     }
-    
+
             //     $checkPriceProduct = ProductPrice::where(['id_product' => $checkProduct['id_product'], 'id_outlet' => $data['id_outlet']])->first();
             //     if (empty($checkPriceProduct)) {
             //         return response()->json([
@@ -299,7 +307,7 @@ class ApiSettingTransactionV2 extends Controller
             if (empty($product)) {
                 DB::rollback();
                 return response()->json([
-                    'status' => 'fail', 
+                    'status' => 'fail',
                     'messages' => ['Product Not Found']
                 ]);
             }
@@ -308,7 +316,7 @@ class ApiSettingTransactionV2 extends Controller
             if (empty($priceProduct)) {
                 DB::rollback();
                 return response()->json([
-                    'status' => 'fail', 
+                    'status' => 'fail',
                     'messages' => ['Product Price Not Found']
                 ]);
             }
@@ -370,7 +378,7 @@ class ApiSettingTransactionV2 extends Controller
             if (empty($product)) {
                 DB::rollback();
                 return response()->json([
-                    'status' => 'fail', 
+                    'status' => 'fail',
                     'messages' => ['Product Not Found']
                 ]);
             }
@@ -379,7 +387,7 @@ class ApiSettingTransactionV2 extends Controller
             if (empty($priceProduct)) {
                 DB::rollback();
                 return response()->json([
-                    'status' => 'fail', 
+                    'status' => 'fail',
                     'messages' => ['Product Price Not Found']
                 ]);
             }
@@ -445,7 +453,7 @@ class ApiSettingTransactionV2 extends Controller
                $rndstring .= $template[$b];
        }
 
-       return $rndstring; 
+       return $rndstring;
     }
 
     public function getrandomnumber($length) {
@@ -465,6 +473,6 @@ class ApiSettingTransactionV2 extends Controller
                $rndstring .= $template[$b];
        }
 
-       return $rndstring; 
+       return $rndstring;
     }
 }

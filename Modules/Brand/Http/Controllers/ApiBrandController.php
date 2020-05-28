@@ -48,7 +48,8 @@ class ApiBrandController extends Controller
         $post = $request->json()->all();
 
         if (isset($post['logo_brand'])) {
-            $upload = MyHelper::uploadPhoto($post['logo_brand'], $path = 'img/brand/logo/');
+            $upload = MyHelper::uploadPhotoStrict($post['logo_brand'], $path = 'img/brand/logo/', 200, 200);
+
             if ($upload['status'] == "success") {
                 $post['logo_brand'] = $upload['path'];
             } else {
@@ -257,7 +258,11 @@ class ApiBrandController extends Controller
     public function productStore(Request $request)
     {
         $post = $request->json()->all();
-
+        $post = array_map(function($var){
+            $id_product_category = BrandProduct::select('id_product_category')->where('id_product',$var['id_product'])->orderBy('id_product_category')->pluck('id_product_category')->first();
+            $var['id_product_category'] = $id_product_category;
+            return $var;
+        },$post);
         try {
             $create = BrandProduct::insert($post);
             return response()->json(MyHelper::checkDelete($create));

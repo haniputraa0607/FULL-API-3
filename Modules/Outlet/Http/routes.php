@@ -2,6 +2,7 @@
 Route::group(['prefix' => 'api/outlet', 'middleware' => ['log_activities', 'auth:api', 'user_agent', 'scopes:apps'], 'namespace' => 'Modules\Outlet\Http\Controllers'], function()
 {
     Route::any('list', 'ApiOutletController@listOutlet');
+    Route::any('list/simple', 'ApiOutletController@listOutletSimple');
     Route::any('list/ordernow', 'ApiOutletController@listOutletOrderNow');
     Route::any('list/gofood', 'ApiOutletGofoodController@listOutletGofood');
     Route::any('filter', 'ApiOutletController@filter');
@@ -9,6 +10,7 @@ Route::group(['prefix' => 'api/outlet', 'middleware' => ['log_activities', 'auth
 
     /*WEBVIEW*/
     Route::any('webview/{id}', 'ApiOutletWebview@detailWebview');
+    Route::any('detail/mobile', 'ApiOutletWebview@detailOutlet');
     Route::any('webview/gofood/list', 'ApiOutletWebview@listOutletGofood');
     Route::any('webview/gofood/list/v2', 'ApiOutletWebview@listOutletGofood');
 
@@ -34,6 +36,8 @@ Route::group(['prefix' => 'api/outlet', 'middleware' => ['log_activities', 'auth
     Route::any('be/filter', ['middleware' => 'feature_control:24', 'uses' =>'ApiOutletController@filter']);
     Route::any('list/code', ['middleware' => 'feature_control:24', 'uses' =>'ApiOutletController@getAllCodeOutlet']);
     Route::any('ajax_handler','ApiOutletController@ajaxHandler');
+    Route::post('different_price','ApiOutletController@differentPrice');
+    Route::post('different_price/update','ApiOutletController@updateDifferentPrice');
 
     /* photo */
     Route::group(['prefix' => 'photo'], function() {
@@ -71,5 +75,8 @@ Route::group(['prefix' => 'api/outlet', 'middleware' => ['log_activities', 'auth
     Route::post('max-order', 'ApiOutletController@listMaxOrder');
     Route::post('max-order/update', 'ApiOutletController@updateMaxOrder');
     Route::any('schedule/save', 'ApiOutletController@scheduleSave');
-});
 
+    /*user franchise*/
+    Route::any('list/user-franchise', 'ApiOutletController@listUserFranchise');
+    Route::any('detail/user-franchise', 'ApiOutletController@detailUserFranchise');
+});

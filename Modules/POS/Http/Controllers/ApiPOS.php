@@ -26,6 +26,8 @@ use App\Http\Models\Product;
 use App\Http\Models\ProductPrice;
 use App\Http\Models\ProductPhoto;
 use App\Http\Models\ProductModifier;
+use App\Http\Models\ProductModifierDetail;
+use App\Http\Models\ProductModifierGlobalPrice;
 use App\Http\Models\ProductModifierPrice;
 use App\Http\Models\ProductModifierProduct;
 use App\Http\Models\Outlet;
@@ -37,12 +39,12 @@ use App\Http\Models\LogBalance;
 use App\Http\Models\SpecialMembership;
 use App\Http\Models\DealsVoucher;
 use App\Http\Models\Configs;
-use App\Http\Models\FraudSetting;
+use Modules\SettingFraud\Entities\FraudSetting;
 use App\Http\Models\LogBackendError;
 use App\Http\Models\SyncTransactionFaileds;
 use App\Http\Models\SyncTransactionQueues;
 use App\Lib\MyHelper;
-use Mailgun;
+use Mail;
 
 use Modules\POS\Http\Requests\reqMember;
 use Modules\POS\Http\Requests\reqVoucher;
@@ -64,6 +66,10 @@ use Exception;
 
 use DB;
 use DateTime;
+use GuzzleHttp\Client;
+use Modules\Disburse\Entities\UserFranchisee;
+use Modules\Disburse\Entities\UserFranchiseeOultet;
+use Modules\POS\Jobs\SyncOutletSeed;
 
 class ApiPOS extends Controller
 {
@@ -74,7 +80,7 @@ class ApiPOS extends Controller
         $this->membership = "Modules\Membership\Http\Controllers\ApiMembership";
         $this->balance    = "Modules\Balance\Http\Controllers\BalanceController";
         $this->autocrm  = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
-        $this->setting_fraud = "Modules\SettingFraud\Http\Controllers\ApiSettingFraud";
+        $this->setting_fraud = "Modules\SettingFraud\Http\Controllers\ApiFraud";
 
         $this->pos = "Modules\POS\Http\Controllers\ApiPos";
     }
@@ -142,7 +148,7 @@ class ApiPOS extends Controller
                 $balance = TransactionPaymentBalance::where('id_transaction', $check['id_transaction'])->get();
                 if ($balance) {
                     foreach ($balance as $payBalance) {
-                        $pay['payment_type'] = 'Kenangan Points';
+                        $pay['payment_type'] = 'Points';
                         $pay['payment_nominal'] = (int) $payBalance['balance_nominal'];
                         $transactions['payments'][] = $pay;
                     }
@@ -161,7 +167,7 @@ class ApiPOS extends Controller
                     if ($payMulti['type'] == 'Balance') {
                         $balance = TransactionPaymentBalance::find($payMulti['id_payment']);
                         if ($balance) {
-                            $pay['payment_type'] = 'Kenangan Points';
+                            $pay['payment_type'] = 'Points';
                             $pay['payment_nominal'] = (int) $balance['balance_nominal'];
                             $transactions['payments'][] = $pay;
                         }
@@ -417,6 +423,58 @@ class ApiPOS extends Controller
 
     }
 
+    function getAuthSeed() {
+        $accurateAuth = new Client([
+            'base_uri'  => env('POS_URL'),
+        ]);
+        $getToken = $accurateAuth->post('auth', [
+            'headers'   => [
+                'Content-Type'  => 'application/x-www-form-urlencoded',
+                'Accept'        => 'application/json',
+            ],
+            'body' => http_build_query([
+                'key'       => env('POS_KEY'),
+                'secret'    => env('POS_SECRET'),
+            ])
+        ]);
+        $accurateToken = json_decode($getToken->getBody(), true);
+        return $accurateToken;
+    }
+
+    function getPerPageOutlet($bearer, $url = null) {
+        $accurateAuth = new Client([
+            'base_uri'  => env('POS_URL'),
+        ]);
+        $getToken = $accurateAuth->get('outlet' . $url, [
+            'headers'   => [
+                'Content-Type'  => 'application/json',
+                'Authorization' => $bearer,
+            ]
+        ]);
+        $outlet = json_decode($getToken->getBody(), true);
+        return $outlet;
+    }
+
+    public function syncOutletSeed() {
+        $auth = $this->getAuthSeed();
+
+        if ($auth['success'] == true) {
+            $outlet = $this->getPerPageOutlet('Bearer ' . $auth['result']['access_token']);
+            if ($outlet['status'] == 'success') {
+                SyncOutletSeed::dispatch($outlet['result']['data']);
+                if (!is_null($outlet['result']['next_page_url'])) {
+                    for ($i = 2; $i <= $outlet['result']['last_page']; $i++) {
+                        $outlet = $this->getPerPageOutlet('Bearer ' . $auth['result']['access_token'], '?page='.$i);
+                        SyncOutletSeed::dispatch($outlet['result']['data']);
+                    }
+                }
+            }
+        }
+        return [
+            'stuatus'   => 'success'
+        ];
+    }
+
     public function syncOutlet(reqOutlet $request)
     {
         $post = $request->json()->all();
@@ -629,7 +687,7 @@ class ApiPOS extends Controller
                             }
                             // cek name pos, jika beda product tidak di update
                             if (empty($product->product_name_pos) || $product->product_name_pos == $menu['name']) {
-                                // update modifiers 
+                                // update modifiers
                                 if (isset($menu['modifiers'])) {
                                     ProductModifierProduct::where('id_product',$product['id_product'])->delete();
                                     foreach ($menu['modifiers'] as $mod) {
@@ -641,7 +699,7 @@ class ApiPOS extends Controller
                                         $dataProductMod['modifier_type'] = 'Specific';
                                         $updateProductMod = ProductModifier::updateOrCreate([
                                             'code'  => $mod['code']
-                                        ], $dataProductMod);                                        
+                                        ], $dataProductMod);
                                         $id_product_modifier = $updateProductMod['id_product_modifier'];
                                         ProductModifierProduct::create([
                                             'id_product_modifier' => $id_product_modifier,
@@ -649,7 +707,7 @@ class ApiPOS extends Controller
                                         ]);
                                     }
                                 }
-                                // update price 
+                                // update price
                                 $productPrice = ProductPrice::where('id_product', $product->id_product)->where('id_outlet', $outlet->id_outlet)->first();
                                 if ($productPrice) {
                                     $oldPrice =  $productPrice->product_price;
@@ -834,9 +892,13 @@ class ApiPOS extends Controller
                         $data_price['product_modifier_price'] = $modifier['price'];
                     }
                     if($modifier['status']??false){
-                        $data_price['product_modifier_status'] = $modifier['status'];
+                        ProductModifierDetail::updateOrCreate(['id_product_modifier' => $promod->id_product_modifier], ['product_modifier_status' => $modifier['status']]);
                     }
-                    ProductModifierPrice::updateOrCreate($data_key,$data_price);
+                    if($outlet->outlet_different_price){
+                        ProductModifierPrice::updateOrCreate($data_key,$data_price);
+                    }else{
+                        ProductModifierGlobalPrice::updateOrCreate(['id_product_modifier' => $promod->id_product_modifier],['product_modifier_price' => $modifier['price']]);
+                    }
                 }
             }
             if ($flag == 'partial') {
@@ -967,14 +1029,12 @@ class ApiPOS extends Controller
                     'content' => $content,
                     'setting' => $setting
                 );
-                Mailgun::send('pos::email_sync_menu', $data, function ($message) use ($to, $subject, $setting) {
-                    $message->to($to)->subject($subject)
-                        ->trackClicks(true)
-                        ->trackOpens(true);
-                    if (!empty($setting['email_from']) && !empty($setting['email_sender'])) {
-                        $message->from($setting['email_from'], $setting['email_sender']);
-                    } else if (!empty($setting['email_from'])) {
-                        $message->from($setting['email_from']);
+                Mail::send('pos::email_sync_menu', $data, function ($message) use ($to, $subject, $setting) {
+                    $message->to($to)->subject($subject);
+                    if(!empty($setting['email_from']) && !empty($setting['email_sender'])){
+                        $message->from($setting['email_sender'], $setting['email_from']);
+                    }else if(!empty($setting['email_sender'])){
+                        $message->from($setting['email_sender']);
                     }
                     if (!empty($setting['email_reply_to'])) {
                         $message->replyTo($setting['email_reply_to'], $setting['email_reply_to_name']);
@@ -1565,7 +1625,7 @@ class ApiPOS extends Controller
 
                         if ($createTrx['transaction_cashback_earned']) {
 
-                            $insertDataLogCash = app($this->balance)->addLogBalance($createTrx['id_user'], $createTrx['transaction_cashback_earned'], $createTrx['id_transaction'], 'Transaction', $createTrx['transaction_grandtotal']);
+                            $insertDataLogCash = app($this->balance)->addLogBalance($createTrx['id_user'], $createTrx['transaction_cashback_earned'], $createTrx['id_transaction'], 'Offline Transaction', $createTrx['transaction_grandtotal']);
                             if (!$insertDataLogCash) {
                                 DB::rollback();
                                 return [
@@ -2098,7 +2158,7 @@ class ApiPOS extends Controller
         DB::commit();
         return response()->json(MyHelper::checkGet($insertRequest));
     }
-    
+
     public function syncOutletMenuCron(Request $request)
     {
         $syncDatetime = date('d F Y h:i');
@@ -2139,7 +2199,7 @@ class ApiPOS extends Controller
                     }
                 }
             }
-            
+
             // if (count($listRejected) > 0) {
             //     $this->syncSendEmail($syncDatetime, $outlet->outlet_code, $outlet->outlet_name, $rejectedProduct, null);
             // }

@@ -55,6 +55,9 @@ Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scop
     Route::post('/point/detail', 'ApiTransaction@transactionPointDetail');
     Route::post('/balance/detail', 'ApiTransaction@transactionBalanceDetail');
 
+    /*History V2*/
+    Route::post('history-balance/v2', 'ApiHistoryController@historyBalanceV2');
+
     // Route::post('history', 'ApiHistoryController@historyAll');
     Route::post('history-trx/{mode?}', 'ApiHistoryController@historyTrx');
     Route::post('history-ongoing/{mode?}', 'ApiHistoryController@historyTrxOnGoing');
@@ -62,7 +65,9 @@ Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scop
     Route::post('history-balance/{mode?}', 'ApiHistoryController@historyBalance');
 
     Route::post('/shipping', 'ApiTransaction@getShippingFee');
-    Route::get('/address', 'ApiTransaction@getAddress');
+    Route::any('/address', 'ApiTransaction@getAddress');
+    Route::post('/address/nearby', 'ApiTransaction@getNearbyAddress');
+    Route::post('/address/detail', 'ApiTransaction@detailAddress');
     Route::post('/address/add', 'ApiTransaction@addAddress');
     Route::post('/address/update', 'ApiTransaction@updateAddress');
     Route::post('/address/delete', 'ApiTransaction@deleteAddress');
@@ -71,6 +76,7 @@ Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scop
     Route::post('/check', 'ApiOnlineTransaction@checkTransaction');
     Route::post('/new', 'ApiOnlineTransaction@newTransaction');
     Route::post('/confirm', 'ApiConfirm@confirmTransaction');
+    Route::post('/cancel', 'ApiOnlineTransaction@cancelTransaction');
     Route::post('/prod/confirm', 'ApiTransactionProductionController@confirmTransaction2');
     Route::get('/{key}', 'ApiTransaction@transactionList');
 });
@@ -82,6 +88,7 @@ Route::group(['middleware' => ['auth_client', 'user_agent'], 'prefix' => 'api/tr
     Route::post('/courier', 'ApiTransaction@getCourier');
     Route::any('/grand-total', 'ApiSettingTransactionV2@grandTotal');
 
+    Route::any('/cc-payment', 'ApiSettingTransaction@ccPayment');
     Route::post('/new-transaction', 'ApiTransaction@transaction');
 
     Route::post('/shipping/gosend', 'ApiTransaction@shippingCostGoSend');
@@ -89,21 +96,14 @@ Route::group(['middleware' => ['auth_client', 'user_agent'], 'prefix' => 'api/tr
 
 Route::group(['prefix' => 'api/transaction', 'middleware' => ['log_activities', 'user_agent'], 'namespace' => 'Modules\Transaction\Http\Controllers'], function () {
     Route::any('/finish', 'ApiTransaction@transactionFinish');
-    Route::any('/cancel', 'ApiTransaction@transactionCancel');
+    // Route::any('/cancel', 'ApiTransaction@transactionCancel');
     Route::any('/error', 'ApiTransaction@transactionError');
     Route::any('/notif', 'ApiNotification@receiveNotification');
 });
 
 Route::group(['prefix' => 'api/transaction', 'middleware' => ['log_activities', 'auth:api', 'user_agent', 'scopes:be'], 'namespace' => 'Modules\Transaction\Http\Controllers'], function () {
     Route::post('be/detail/webview/{mode?}', 'ApiWebviewController@webview');
-
-Route::group(['prefix' => 'api/transaction', 'middleware' => ['log_activities', 'auth:api', 'user_agent', 'scopes:apps'], 'namespace' => 'Modules\Transaction\Http\Controllers'], function () {
-
-    Route::post('/detail/webview/point', 'ApiWebviewController@webviewPoint');
-    Route::post('/detail/webview/balance', 'ApiWebviewController@webviewBalance');
-    Route::post('/detail/webview/{mode?}', 'ApiWebviewController@webview');
-
-    Route::post('/detail/webview/success', 'ApiWebviewController@trxSuccess');
+    Route::post('be/detail', 'ApiTransaction@transactionDetail');
 });
 
 Route::group(['middleware' => ['auth:api', 'user_agent', 'scopes:apps'], 'prefix' => 'api/transaction', 'namespace' => 'Modules\Transaction\Http\Controllers'], function () {
@@ -120,6 +120,12 @@ Route::group(['prefix' => 'api/cron/transaction', 'namespace' => 'Modules\Transa
     Route::any('/pickup/completed', 'ApiCronTrxController@completeTransactionPickup');
     Route::any('/expire', 'ApiCronTrxController@cron');
     Route::any('/schedule', 'ApiCronTrxController@checkSchedule');
+    Route::any('reversal/new', 'ApiOvoReversal@insertReversal');
+    Route::any('reversal/process', 'ApiOvoReversal@processReversal');
+});
+
+Route::group(['middleware' => ['auth:api', 'log_activities'],'prefix' => 'api/transaction/void', 'namespace' => 'Modules\Transaction\Http\Controllers'], function () {
+    Route::any('ovo', 'ApiOvoReversal@void');
 });
 
 Route::group(['prefix' => 'api/transaction', 'namespace' => 'Modules\Transaction\Http\Controllers'], function () {
@@ -133,7 +139,7 @@ Route::group(['prefix' => 'api/transaction', 'namespace' => 'Modules\Transaction
     });
 });
 
-Route::group(['prefix' => 'api/transaction', 'namespace' => 'Modules\Transaction\Http\Controllers'], function() {
+Route::group(['prefix' => 'api/transaction', 'namespace' => 'Modules\Transaction\Http\Controllers'], function () {
     Route::any('/web/view/detail', 'ApiWebviewController@detail');
     Route::any('/web/view/detail/check', 'ApiWebviewController@check');
     Route::any('/web/view/detail/point', 'ApiWebviewController@detailPoint');
@@ -142,4 +148,13 @@ Route::group(['prefix' => 'api/transaction', 'namespace' => 'Modules\Transaction
     Route::any('/web/view/outletapp', 'ApiWebviewController@receiptOutletapp');
 });
 
+Route::group(['prefix' => 'api/transaction', 'middleware' => ['log_activities', 'auth:api', 'user_agent', 'scopes:apps'], 'namespace' => 'Modules\Transaction\Http\Controllers'], function () {
+
+    Route::post('/detail/webview/point', 'ApiWebviewController@webviewPoint');
+    Route::post('/detail/webview/balance', 'ApiWebviewController@webviewBalance');
+    Route::post('/detail/webview/{mode?}', 'ApiWebviewController@webview');
+
+    Route::post('/detail/webview/success', 'ApiWebviewController@trxSuccess');
 });
+
+Route::any('api/transaction/update-gosend', 'Modules\Transaction\Http\Controllers\ApiGosendController@updateStatus');

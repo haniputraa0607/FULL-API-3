@@ -128,6 +128,20 @@ class Midtrans {
 
         return $status;
     }
+    static function refund($order_id,$param = null)
+    {
+        // $url    = env('BASE_MIDTRANS_PRO').'/v2/'.$order_id.'/expire';
+        $url    = env('BASE_MIDTRANS_SANDBOX').'/v2/'.$order_id.'/refund';
+        if(!$param){
+            $param = [];
+        }
+        $status = MyHelper::post($url, Self::bearer(), $param);
+        return [
+            'status' => ($status['status_code']??false)==200?'success':'fail',
+            'messages' => [$status['status_message']??'Something went wrong','Refund failed']
+        ];
+    }
+
 
     // static function checkStatus($orderId) {
     //     $url = 'https://api.sandbox.midtrans.com/v2/'.$orderId.'/status';

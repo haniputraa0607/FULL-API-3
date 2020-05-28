@@ -22,6 +22,9 @@ use App\Http\Models\Setting;
 use App\Http\Models\OauthAccessToken;
 use App\Http\Models\Product;
 use App\Http\Models\ProductPrice;
+use Modules\Disburse\Entities\UserFranchise;
+use Modules\Disburse\Entities\UserFranchiseOultet;
+use Modules\Outlet\Entities\OutletScheduleUpdate;
 
 use App\Imports\ExcelImport;
 use App\Imports\FirstSheetOnlyImport;
@@ -68,6 +71,10 @@ class ApiOutletController extends Controller
 
     function __construct() {
         date_default_timezone_set('Asia/Jakarta');
+        $this->promo_campaign       = "Modules\PromoCampaign\Http\Controllers\ApiPromoCampaign";
+        $this->subscription_use     = "Modules\Subscription\Http\Controllers\ApiSubscriptionUse";
+        $this->promo       			= "Modules\PromoCampaign\Http\Controllers\ApiPromo";
+        $this->autocrm              = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
     }
 
     function checkInputOutlet($post=[]) {
@@ -438,19 +445,23 @@ class ApiOutletController extends Controller
         }elseif(isset($post['admin'])){
             $outlet = Outlet::with(['user_outlets','city','today', 'outlet_schedules'])->select('*');
             if(isset($post['id_product'])){
-                $outlet = $outlet->with(['product_prices'=> function($q) use ($post){
+                $outlet = $outlet->with(['product_detail'=> function($q) use ($post){
+                    $q->where('id_product', $post['id_product']);
+                }, 'product_special_price'=> function($q) use ($post){
                     $q->where('id_product', $post['id_product']);
                 }]);
             }else{
-                $outlet = $outlet->with(['product_prices']);
+                $outlet = $outlet->with(['product_detail', 'product_special_price']);
             }
         }
         elseif($post['simple_result']??false) {
             $outlet = Outlet::select('outlets.id_outlet','outlets.outlet_name');
+        }elseif(($post['filter']??false) == 'different_price'){
+            $outlet = Outlet::where('outlet_different_price','1')->select('id_outlet','outlet_name','outlet_code');
         }else{
             $outlet = Outlet::with(['city', 'outlet_photos', 'outlet_schedules', 'today', 'user_outlets','brands']);
             if(!($post['id_outlet']??false)||!($post['id_outlet']??false)){
-                $outlet->select('outlets.id_outlet','outlets.outlet_name','outlets.outlet_code','outlets.outlet_status','outlets.outlet_address','outlets.id_city','outlet_latitude','outlet_longitude');
+                $outlet->select('outlets.id_outlet','outlets.outlet_name','outlets.outlet_code','outlets.outlet_status','outlets.outlet_address','outlets.id_city','outlet_latitude','outlet_longitude', 'outlets.status_franchise');
             }
         }
         if($post['rule']??false){
@@ -882,7 +893,7 @@ class ApiOutletController extends Controller
         $grabfood = $request->json('grabfood');
 
         // outlet
-        $outlet = Outlet::with(['today'])->select('outlets.id_outlet','outlets.outlet_name','outlets.outlet_phone','outlets.outlet_code','outlets.outlet_status','outlets.outlet_address','outlets.id_city','outlet_latitude','outlet_longitude')->with(['brands'=>function($query){$query->select('brands.id_brand','name_brand','logo_brand');}])->where('outlet_status', 'Active')->whereNotNull('id_city')->orderBy('outlet_name','asc');
+        $outlet = Outlet::with(['today'])->distinct('outlets.id_outlet')->select('outlets.id_outlet','outlets.outlet_name','outlets.outlet_phone','outlets.outlet_code','outlets.outlet_status','outlets.outlet_address','outlets.id_city','outlet_latitude','outlet_longitude')->with(['brands'=>function($query){$query->select('brands.id_brand','name_brand','logo_brand');}])->where('outlet_status', 'Active')->whereNotNull('id_city')->orderBy('outlet_name','asc');
 
         $outlet->whereHas('brands',function($query){
             $query->where('brand_active','1');
@@ -923,46 +934,16 @@ class ApiOutletController extends Controller
             }
 
             // give all product flag is_promo = 0
-            foreach ($outlet as $key => $value) {
+	        foreach ($outlet as $key => $value) {
 				$outlet[$key]['is_promo'] = 0;
 			}
-			// check if isset promo_code
-            if (isset($post['promo_code'])) {
-	        	$code=PromoCampaignPromoCode::where('promo_code',$request->promo_code)
-		                ->join('promo_campaigns', 'promo_campaigns.id_promo_campaign', '=', 'promo_campaign_promo_codes.id_promo_campaign')
-		                ->where('step_complete', '=', 1)
-		                ->where( function($q){
-		                	$q->whereColumn('usage','<','limitation_usage')
-		                		->orWhere('code_type','Single');
-		                } )
-		                ->with(['promo_campaign.promo_campaign_outlets'])
-		                ->first();
 
-		        if(!$code){
-		            return [
-		                'status'=>'fail',
-		                'messages'=>['Promo code not valid']
-		            ];
-		        }else{
+			$promo_data = $this->applyPromo($post, $outlet, $promo_error);
 
-		        	// if valid give flag is_promo = 1
-		        	$code = $code->toArray();
-	        		if ($code['promo_campaign']['is_all_outlet']) {
-	        			foreach ($outlet as $key => $value) {
-	    					$outlet[$key]['is_promo'] = 1;
-	    				}
-	        		}else{
-			        	foreach ($code['promo_campaign']['promo_campaign_outlets'] as $key => $value) {
-		        			foreach ($outlet as $key2 => $value2) {
-		        				if ( $value2['id_outlet'] == $value['id_outlet'] ) {
-		    						$outlet[$key2]['is_promo'] = 1;
-		    						break;
-		    					}
-		        			}
-			        	}
-	        		}
-		        }
+	        if ($promo_data) {
+	        	$outlet = $promo_data;
 	        }
+
             foreach ($outlet as $key => $value) {
                 $jaraknya =   number_format((float)$this->distance($latitude, $longitude, $value['outlet_latitude'], $value['outlet_longitude'], "K"), 2, '.', '');
                 settype($jaraknya, "float");
@@ -1033,11 +1014,13 @@ class ApiOutletController extends Controller
                 $urutan['current_page']  = $page;
                 $urutan['data']          = $pagingOutlet['data'];
                 $urutan['total']         = count($dataOutlet);
+                $urutan['total_promo']	 = app($this->promo)->availablePromo();
                 $urutan['next_page_url'] = null;
 
                 if ($pagingOutlet['status'] == true) {
                     $urutan['next_page_url'] = ENV('APP_API_URL').'api/outlet/filter?page='.$next_page;
                 }
+                $urutan['promo_error']   = $promo_error;
             } else {
                 if($countAll){
                     return response()->json(['status' => 'fail', 'messages' => ['empty']]);
@@ -1804,9 +1787,10 @@ class ApiOutletController extends Controller
 
     function updateAdminOutlet(UpdateUserOutlet $request){
         $post = $request->json()->all();
-
-            foreach($post['type'] as $value){
-                $post[$value] = 1;
+            // fix update type just add, not delete current position
+            $available_types = ['enquiry','pickup_order','delivery','payment','outlet_apps'];
+            foreach($available_types as $value){
+                $post[$value] = in_array($value,$post['type'])?1:null;
             }
             unset($post['type']);
             $userOutlet = UserOutlet::where('id_user_outlet', $post['id_user_outlet'])->first();
@@ -1838,6 +1822,7 @@ class ApiOutletController extends Controller
     {
         $post = $request->json()->all();
         DB::beginTransaction();
+        $date_time = date('Y-m-d H:i:s');
         foreach ($post['day'] as $key => $value) {
             $data = [
                 'day'       => $value,
@@ -1846,11 +1831,39 @@ class ApiOutletController extends Controller
                 'is_closed' => $post['is_closed'][$key],
                 'id_outlet' => $post['id_outlet']
             ];
-
-            $save = OutletSchedule::updateOrCreate(['id_outlet' => $post['id_outlet'], 'day' => $value], $data);
-            if (!$save) {
-                DB::rollBack();
-                return response()->json(['status' => 'fail']);
+            $old = OutletSchedule::select('id_outlet_schedule','id_outlet','day','open','close','is_closed')->where(['id_outlet' => $post['id_outlet'], 'day' => $value])->first();
+            $old_data = $old?$old->toArray():[];
+            if($old){
+                $save = $old->update($data);
+                $new = $old;
+                if (!$save) {
+                    DB::rollBack();
+                    return response()->json(['status' => 'fail']);
+                }
+            }else{
+                $new = OutletSchedule::create([
+                    'id_outlet' => $id_outlet,
+                    'day' => $value['day']
+                ]+$value);
+                if (!$new) {
+                    DB::rollBack();
+                    return response()->json(['status' => 'fail']);
+                }
+            }
+            $new_data = $new->toArray();
+            unset($new_data['created_at']);
+            unset($new_data['updated_at']);
+            if(array_diff($new_data,$old_data)){
+                $create = OutletScheduleUpdate::create([
+                    'id_outlet' => $post['id_outlet'],
+                    'id_outlet_schedule' => $new_data['id_outlet_schedule'],
+                    'id_user' => $request->user()->id,
+                    'id_outlet_app_otp' => null,
+                    'user_type' => 'users',
+                    'date_time' => $date_time,
+                    'old_data' => $old_data?json_encode($old_data):null,
+                    'new_data' => json_encode($new_data)
+                ]);
             }
         }
 
@@ -1940,10 +1953,11 @@ class ApiOutletController extends Controller
         $outlet = Outlet::with(['today','brands'=>function($query){
                     $query->where([['brand_active',1],['brand_visibility',1]]);
                     $query->select('brands.id_brand','name_brand');
-                }])->select('id_outlet','outlet_code','outlet_name','outlet_address','outlet_latitude','outlet_longitude','outlet_phone','outlet_status')->find($request->json('id_outlet'))->toArray();
+                }])->select('id_outlet','outlet_code','outlet_name','outlet_address','outlet_latitude','outlet_longitude','outlet_phone','outlet_status')->find($request->json('id_outlet'));
         if(!$outlet){
             return MyHelper::checkGet([]);
         }
+        $outlet = $outlet->toArray();
         $outlet['status'] = $this->checkOutletStatus($outlet);
         return MyHelper::checkGet($outlet);
     }
@@ -1953,45 +1967,55 @@ class ApiOutletController extends Controller
         $user = $request->user();
 
         try{
-//            $outlet = Outlet::join('transactions','outlets.id_outlet', '=', 'transactions.id_outlet')
-//                ->join('users', 'users.id', '=', 'transactions.id_user')
-//                ->selectRaw('outlets.*,
-//                        (111.111 * DEGREES(ACOS(LEAST(1.0, COS(RADIANS(outlet_latitude))
-//                             * COS(RADIANS('.$post['latitude'].'))
-//                             * COS(RADIANS(outlet_longitude - '.$post['longitude'].'))
-//                             + SIN(RADIANS(outlet_latitude))
-//                             * SIN(RADIANS('.$post['latitude'].')))))) AS distance_in_km' )
-//                ->with(['user_outlets','city','today', 'outlet_schedules', 'brands'])
-//                ->where('users.phone',$user['phone'])
-//                ->where('outlets.outlet_status', 'Active')
-//                ->whereHas('brands',function($query){
-//                    $query->where('brand_active','1');
-//                })
-//                ->orderBy('distance_in_km')
-//                ->get()->toArray();
-//
-//            if(empty($outlet)){
-                $title = Setting::where('key', 'order_now_title')->first()->value;
-                $subTitleSuccess = Setting::where('key', 'order_now_sub_title_success')->first()->value;
-                $subTitleFail = Setting::where('key', 'order_now_sub_title_fail')->first()->value;
+            $title = Setting::where('key', 'order_now_title')->first()->value;
+            $subTitleSuccess = Setting::where('key', 'order_now_sub_title_success')->first()->value;
+            $subTitleFail = Setting::where('key', 'order_now_sub_title_fail')->first()->value;
 
-                $outlet = Outlet::selectRaw('outlets.id_outlet, outlets.outlet_name, outlets.outlet_code,outlets.outlet_status,outlets.outlet_address,outlets.id_city, outlets.outlet_latitude, outlets.outlet_longitude,
-                        (111.111 * DEGREES(ACOS(LEAST(1.0, COS(RADIANS(outlets.outlet_latitude))
-                             * COS(RADIANS('.$post['latitude'].'))
-                             * COS(RADIANS(outlets.outlet_longitude - '.$post['longitude'].'))
-                             + SIN(RADIANS(outlets.outlet_latitude))
-                             * SIN(RADIANS('.$post['latitude'].')))))) AS distance_in_km' )
-                    ->with(['user_outlets','city','today', 'outlet_schedules', 'brands'])
-                    ->where('outlets.outlet_status', 'Active')
-                    ->whereNotNull('outlets.outlet_latitude')
-                    ->whereNotNull('outlets.outlet_longitude')
-                    ->whereHas('brands',function($query){
-                        $query->where('brand_active','1');
-                    })
-                    ->orderBy('distance_in_km', 'asc')
-                    ->limit(5)
-                    ->get()->toArray();
-//            }
+            $day = [
+                'Mon' => 'Senin',
+                'Tue' => 'Selasa',
+                'Wed' => 'Rabu',
+                'Thu' => 'Kamis',
+                'Fri' => 'Jumat',
+                'Sat' => 'Sabtu',
+                'Sun' => 'Minggu'
+            ];
+
+            $data = [
+                'current_date' => date('Y-m-d'),
+                'current_day' => $day[date('D')],
+                'current_hour' => date('H:i:s')
+            ];
+
+            $outlet = Outlet::join('cities', 'cities.id_city', 'outlets.id_city')
+                ->selectRaw('outlets.id_outlet, outlets.outlet_name, outlets.outlet_code,outlets.outlet_status,outlets.outlet_address,outlets.id_city, outlets.outlet_latitude, outlets.outlet_longitude,
+                    (111.111 * DEGREES(ACOS(LEAST(1.0, COS(RADIANS(outlets.outlet_latitude))
+                         * COS(RADIANS('.$post['latitude'].'))
+                         * COS(RADIANS(outlets.outlet_longitude - '.$post['longitude'].'))
+                         + SIN(RADIANS(outlets.outlet_latitude))
+                         * SIN(RADIANS('.$post['latitude'].')))))) AS distance_in_km' )
+                ->with(['user_outlets','city','today', 'outlet_schedules', 'brands'])
+                ->where('outlets.outlet_status', 'Active')
+                ->whereNotNull('outlets.outlet_latitude')
+                ->whereNotNull('outlets.outlet_longitude')
+                ->whereHas('brands',function($query){
+                    $query->where('brand_active','1');
+                })
+                ->whereIn('id_outlet',function($query) use ($data){
+                    $query->select('id_outlet')
+                        ->from('outlet_schedules')
+                        ->where('day', $data['current_day'])
+                        ->where('is_closed', 0)
+                        ->whereRaw('TIME_TO_SEC("'.$data['current_hour'].'") >= TIME_TO_SEC(open) AND TIME_TO_SEC("'.$data['current_hour'].'") <= TIME_TO_SEC(close)');
+                })->whereNotIn('id_outlet',function($query) use ($data){
+                    $query->select('id_outlet')
+                        ->from('outlet_holidays')
+                        ->join('date_holidays', 'date_holidays.id_holiday', 'outlet_holidays.id_holiday')
+                        ->where('date', $data['current_date']);
+                })
+                ->orderBy('distance_in_km', 'asc')
+                ->limit(5)
+                ->get()->toArray();
 
             if(count($outlet) > 0){
                 $loopdata=&$outlet;
@@ -2136,5 +2160,204 @@ class ApiOutletController extends Controller
         }else{
             return response()->json(['status' => 'fail', 'message' => 'empty']);
         }
+    }
+
+    public function applyPromo($promo_post, $data_outlet, &$promo_error)
+    {
+    	// check promo
+    	$post = $promo_post;
+    	$outlet = $data_outlet;
+
+    	// give all product flag is_promo = 0
+        foreach ($outlet as $key => $value) {
+			$outlet[$key]['is_promo'] = 0;
+		}
+
+		$promo_error = null;
+		if (
+				(!empty($post['promo_code']) && empty($post['id_deals_user']) && empty($post['id_subscription_user']) ) ||
+        		(empty($post['promo_code']) && !empty($post['id_deals_user']) && empty($post['id_subscription_user']) ) ||
+        		(empty($post['promo_code']) && empty($post['id_deals_user']) && !empty($post['id_subscription_user']) )
+			) {
+        // if (isset($post['promo_code'])) {
+        	if (!empty($post['promo_code']))
+        	{
+        		$code = app($this->promo_campaign)->checkPromoCode($post['promo_code'], 1);
+        		$source = 'promo_campaign';
+        	}
+        	elseif (!empty($post['id_deals_user']))
+        	{
+        		$code = app($this->promo_campaign)->checkVoucher($post['id_deals_user'], 1);
+        		$source = 'deals';
+        	}
+        	elseif (!empty($post['id_subscription_user']))
+        	{
+        		$code = app($this->subscription_use)->checkSubscription($post['id_subscription_user'], 1);
+        		$source = 'subscription';
+        	}
+
+	        if(!$code){
+	        	$promo_error = 'Promo not valid';
+	        	return false;
+	        }else{
+
+	        	if ( ($code['promo_campaign']['date_end']??$code['voucher_expired_at']??$code['subscription_expired_at']) < date('Y-m-d H:i:s') ) {
+	        		$promo_error = 'Promo is ended';
+	        		return false;
+	        	}
+
+	        	// if valid give flag is_promo = 1
+	        	$code = $code->toArray();
+        		if ($code['promo_campaign']['is_all_outlet']??$code['subscription_user']['subscription']['is_all_outlet']??$code['deal_voucher']['deals']['is_all_outlet']??false) {
+        			foreach ($outlet as $key => $value) {
+        			    if(isset($code['deal_voucher']['deals']['id_brand'])){
+        			        $checkAvailableOutletByBrand = array_search($code['deal_voucher']['deals']['id_brand'], array_column($outlet[$key]['brands'], 'id_brand'));
+                            if($checkAvailableOutletByBrand !== false){
+                                $outlet[$key]['is_promo'] = 1;
+                            }
+                        }else{
+                            $outlet[$key]['is_promo'] = 1;
+                        }
+    				}
+        		}else{
+		        	foreach ( ($code['promo_campaign']['promo_campaign_outlets']??$code['deal_voucher']['deals']['outlets_active']??$code['subscription_user']['subscription']['outlets_active']) as $key => $value) {
+	        			foreach ($outlet as $key2 => $value2) {
+	        				if ( $value2['id_outlet'] == $value['id_outlet'] ) {
+	    						$outlet[$key2]['is_promo'] = 1;
+	    						break;
+	    					}
+	        			}
+		        	}
+        		}
+	        }
+	    }elseif (
+        	(!empty($post['promo_code']) && !empty($post['id_deals_user'])) ||
+        	(!empty($post['id_subscription_user']) && !empty($post['id_deals_user'])) ||
+        	(!empty($post['promo_code']) && !empty($post['id_subscription_user']))
+        ) {
+        	$promo_error = 'Can only use Subscription, Promo Code, or Voucher';
+        }
+
+        return $outlet;
+        // end check promo
+    }
+    /**
+     * Get list different outlet
+     * @param  Request $request [description]
+     * @return [type]           [description]
+     */
+    public function differentPrice(Request $request) {
+        $data = Outlet::select('id_outlet','outlet_code','outlet_name','outlet_different_price');
+        if($keyword = $request->json('keyword')){
+            $data->where('outlet_code','like',"%$keyword%")
+                ->orWhere('outlet_name','like',"%$keyword%");
+        }
+        if($request->page){
+            return MyHelper::checkGet($data->paginate(20));
+        }else{
+            return MyHelper::checkGet($data->get());
+        }
+    }
+    public function updateDifferentPrice(Request $request) {
+        $post = $request->json()->all();
+        $update = Outlet::whereIn('id_outlet',$post['id_outlet']??'')->update(['outlet_different_price'=>$post['status']??0]);
+        if($update){
+            return [
+                'status'=>'success',
+                'result'=>$post['status']??0
+            ];
+        }
+        return ['status'=>'fail'];
+    }
+
+    function listOutletSimple(Request $request)
+    {
+        $outlet = Outlet::select('id_outlet', 'outlet_code', 'outlet_name')->where('outlet_status', 'Active')->orderBy('outlet_name')->get()->toArray();
+
+        foreach ($outlet as $key => $value) {
+            unset($outlet[$key]['call']);
+            unset($outlet[$key]['url']);
+            $brands = BrandOutlet::where('id_outlet', $value['id_outlet'])->select('id_brand')->get();
+            if($brands){
+                $brands = $brands->pluck('id_brand');
+            }
+            $outlet[$key]['id_brands'] = $brands;
+        }
+
+        return response()->json(MyHelper::checkGet($outlet));
+    }
+
+    function listUserFranchise(Request $request){
+        $post = $request->json()->all();
+        $list = UserFranchise::paginate(20);
+
+        return response()->json(MyHelper::checkGet($list));
+    }
+
+    function detailUserFranchise(Request $request){
+        $post = $request->json()->all();
+        $userFranchise = UserFranchise::where('phone', $post['phone'])->first();
+
+        $listOutlet = [];
+        if($userFranchise){
+            $listOutlet = UserFranchiseOultet::join('outlets', 'user_franchise_outlet.id_outlet', 'outlets.id_outlet')
+                ->where('id_user_franchise', $userFranchise['id_user_franchise'])->paginate(20);
+        }
+
+        $result = [
+            'status' => 'success',
+            'data_user' => $userFranchise,
+            'list_outlet' => $listOutlet
+        ];
+        return response()->json($result);
+    }
+
+    public function sendNotifIncompleteOutlet(...$id_outlets)
+    {
+        if(!$id_outlets){
+            // find incomplete outlet
+            $outlets = Outlet::where(function($q) {
+                $q->whereNull('outlet_latitude')
+                    ->orWhereNull('outlet_longitude')
+                    ->orWhereNull('outlet_phone')
+                    ->orWhereNull('outlet_address');
+            })->get();
+        }else{
+            $outlets = Outlet::whereIn('id_outlet',$id_outlets)->where('notify_admin',0)->get();
+        }
+        $phone = User::select('phone')->pluck('phone')->first();
+        $complete = [0,0];
+        foreach ($outlets as $outlet) {
+            $variable = [];
+            foreach ($outlet->toArray() as $key => $value) {
+                $variable[str_replace('outlet_','',$key)] = $value;
+            }
+            $incomplete = [];
+            if(!$outlet['outlet_latitude']){
+                $incomplete[] = 'Outlet Latitude';
+            }
+            if(!$outlet['outlet_longitude']){
+                $incomplete[] = 'Outlet Longitude';
+            }
+            if(!$outlet['outlet_phone']){
+                $incomplete[] = 'Outlet Phone';
+            }
+            if(!$outlet['outlet_address']){
+                $incomplete[] = 'Outlet Address';
+            }
+            $variable['incomplete_data'] = implode(', ', $incomplete);
+            $send = app($this->autocrm)->SendAutoCRM('Incomplete Outlet Data', $phone, $variable);
+            $complete[1]++;
+            if(!$send){
+                \Log::warning('Failed send forward email Incomplete Outlet Data for outlet '.$outlet->code.' - '.$outlet->name);
+            }else{
+                $complete[0]++;
+            }
+        }
+        return ['status'=>'success','result' => ['incomplete'=>$complete[1],'send'=>$complete[0]]];
+    }
+    public function resetNotify()
+    {
+        Outlet::where('notify_admin',1)->update(['notify_admin'=>0]);
     }
 }

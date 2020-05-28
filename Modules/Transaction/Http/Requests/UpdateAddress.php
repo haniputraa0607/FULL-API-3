@@ -13,10 +13,8 @@ class UpdateAddress extends FormRequest
         return [
             'id_user_address' => 'required|integer',
             'name'            => 'required|string',
-            'phone'           => 'required|numeric',
-            'id_city'         => 'required|integer',
+            'short_address'   => 'required|string',
             'address'         => 'required|string',
-            'postal_code'     => 'required|string',
         ];
     }
 

@@ -1714,7 +1714,295 @@ class FeaturesTableSeeder extends Seeder
                 'feature_module' => 'Feedback Rating Item',
                 'created_at' => date('Y-m-d H:00:00'),
                 'updated_at' => date('Y-m-d H:00:00'),
-            )
+            ),
+            213 =>
+                array(
+                    'id_feature' => 214,
+                    'feature_type' => 'Report',
+                    'feature_module' => 'Report Fraud Transaction Point',
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00'),
+                ),
+            214 =>
+                array(
+                    'id_feature' => 215,
+                    'feature_type' => 'Report',
+                    'feature_module' => 'Report Fraud In Between Transaction',
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00'),
+                ),
+            215 =>
+                array(
+                    'id_feature' => 216,
+                    'feature_type' => 'Update',
+                    'feature_module' => 'Referral',
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00'),
+                ),
+            216 =>
+                array(
+                    'id_feature' => 217,
+                    'feature_type' => 'Report',
+                    'feature_module' => 'Report Fraud Referral User',
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00'),
+                ),
+            217 =>
+                array(
+                    'id_feature' => 218,
+                    'feature_type' => 'Report',
+                    'feature_module' => 'Report Fraud Referral',
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00'),
+                ),
+            218 =>
+                array(
+                    'id_feature' => 219,
+                    'feature_type' => 'Report',
+                    'feature_module' => 'Report Fraud Promo Code',
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00'),
+                ),
+            219 =>
+                array(
+                    'id_feature' => 220,
+                    'feature_type' => 'Update',
+                    'feature_module' => 'Maintenance Mode Setting',
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00'),
+                ),
+            220 =>
+            array(
+                'id_feature' => 221,
+                'feature_type' => 'List',
+                'feature_module' => 'Achievement',
+                'created_at' => date('Y-m-d H:00:00'),
+                'updated_at' => date('Y-m-d H:00:00'),
+            ),
+            221 =>
+            array(
+                'id_feature' => 222,
+                'feature_type' => 'Detail',
+                'feature_module' => 'Achievement',
+                'created_at' => date('Y-m-d H:00:00'),
+                'updated_at' => date('Y-m-d H:00:00'),
+            ),
+            222 =>
+            array(
+                'id_feature' => 223,
+                'feature_type' => 'Create',
+                'feature_module' => 'Achievement',
+                'created_at' => date('Y-m-d H:00:00'),
+                'updated_at' => date('Y-m-d H:00:00'),
+            ),
+            223 =>
+            array(
+                'id_feature' => 224,
+                'feature_type' => 'Update',
+                'feature_module' => 'Achievement',
+                'created_at' => date('Y-m-d H:00:00'),
+                'updated_at' => date('Y-m-d H:00:00'),
+            ),
+            224 =>
+            array(
+                'id_feature' => 225,
+                'feature_type' => 'Delete',
+                'feature_module' => 'Achievement',
+                'created_at' => date('Y-m-d H:00:00'),
+                'updated_at' => date('Y-m-d H:00:00'),
+            ),
+            225 =>
+            array(
+                'id_feature' => 226,
+                'feature_type' => 'Report',
+                'feature_module' => 'Achievement',
+                'created_at' => date('Y-m-d H:00:00'),
+                'updated_at' => date('Y-m-d H:00:00'),
+            ),
+            226 =>
+            array(
+                'id_feature' => 227,
+                'feature_type' => 'List',
+                'feature_module' => 'Quest',
+                'created_at' => date('Y-m-d H:00:00'),
+                'updated_at' => date('Y-m-d H:00:00'),
+            ),
+            227 =>
+            array(
+                'id_feature' => 228,
+                'feature_type' => 'Detail',
+                'feature_module' => 'Quest',
+                'created_at' => date('Y-m-d H:00:00'),
+                'updated_at' => date('Y-m-d H:00:00'),
+            ),
+            228 =>
+            array(
+                'id_feature' => 229,
+                'feature_type' => 'Create',
+                'feature_module' => 'Quest',
+                'created_at' => date('Y-m-d H:00:00'),
+                'updated_at' => date('Y-m-d H:00:00'),
+            ),
+            229 =>
+            array(
+                'id_feature' => 230,
+                'feature_type' => 'Update',
+                'feature_module' => 'Quest',
+                'created_at' => date('Y-m-d H:00:00'),
+                'updated_at' => date('Y-m-d H:00:00'),
+            ),
+            230 =>
+            array(
+                'id_feature' => 231,
+                'feature_type' => 'Delete',
+                'feature_module' => 'Quest',
+                'created_at' => date('Y-m-d H:00:00'),
+                'updated_at' => date('Y-m-d H:00:00'),
+            ),
+            231 =>
+            array(
+                'id_feature' => 232,
+                'feature_type' => 'Report',
+                'feature_module' => 'Quest',
+                'created_at' => date('Y-m-d H:00:00'),
+                'updated_at' => date('Y-m-d H:00:00'),
+            ),
+            232 =>
+            array(
+                'id_feature' => 233,
+                'feature_type' => 'Update',
+                'feature_module' => 'Promo Cashback Setting',
+                'created_at' => date('Y-m-d H:00:00'),
+                'updated_at' => date('Y-m-d H:00:00'),
+            ),
+            233 =>
+                array(
+                    'id_feature' => 234,
+                    'feature_type' => 'List',
+                    'feature_module' => 'List Disburse',
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00'),
+                ),
+            234 =>
+                array(
+                    'id_feature' => 235,
+                    'feature_type' => 'Update',
+                    'feature_module' => 'Settings Disburse',
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00'),
+                ),
+            235 =>
+                array (
+                    'id_feature' => 236,
+                    'feature_type' => 'List',
+                    'feature_module' => 'Product Promo Category',
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00'),
+                ),
+            236 =>
+                array (
+                    'id_feature' => 237,
+                    'feature_type' => 'Detail',
+                    'feature_module' => 'Product Promo Category',
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00'),
+                ),
+            237 =>
+                array (
+                    'id_feature' => 238,
+                    'feature_type' => 'Create',
+                    'feature_module' => 'Product Promo Category',
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00'),
+                ),
+            238 =>
+                array (
+                    'id_feature' => 239,
+                    'feature_type' => 'Update',
+                    'feature_module' => 'Product Promo Category',
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00'),
+                ),
+            239 =>
+                array (
+                    'id_feature' => 240,
+                    'feature_type' => 'Delete',
+                    'feature_module' => 'Product Promo Category',
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00'),
+                ),
+            240 =>
+	            array (
+	                'id_feature' => 241,
+	                'feature_type' => 'List',
+	                'feature_module' => 'Featured Subscription',
+	                'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00'),
+	            ),
+            241 =>
+            	array (
+	                'id_feature' => 242,
+	                'feature_type' => 'Create',
+	                'feature_module' => 'Featured Subscription',
+	                'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00'),
+	            ),
+            242 =>
+	            array (
+	                'id_feature' => 243,
+	                'feature_type' => 'Update',
+	                'feature_module' => 'Featured Subscription',
+	                'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00'),
+	            ),
+            243 =>
+	            array (
+	                'id_feature' => 244,
+	                'feature_type' => 'Delete',
+	                'feature_module' => 'Featured Subscription',
+	                'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00'),
+	            ),
+            244 =>
+                array (
+                    'id_feature' => 245,
+                    'feature_type' => 'Report',
+                    'feature_module' => 'Report Point Injection',
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00'),
+                ),
+            245 =>
+                array (
+                    'id_feature' => 246,
+                    'feature_type' => 'Setting',
+                    'feature_module' => 'Setting Inbox User',
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00'),
+                ),
+            246 =>
+                array (
+                    'id_feature' => 247,
+                    'feature_type' => 'List',
+                    'feature_module' => 'List User Franchise',
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00'),
+                ),
+            247 =>
+                array (
+                    'id_feature' => 248,
+                    'feature_type' => 'Update',
+                    'feature_module' => 'User Franchise',
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00'),
+                ),
+            248 =>
+                array(
+                    'id_feature' => 249,
+                    'feature_type' => 'Report',
+                    'feature_module' => 'Report GoSend',
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00'),
+                ),
         ));
     }
 }

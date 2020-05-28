@@ -34,19 +34,20 @@ class UserAddress extends Model
 	protected $primaryKey = 'id_user_address';
 
 	protected $casts = [
-		'id_user' => 'int',
-		'id_city' => 'int'
+		'latitude'  => 'float',
+		'longitude' => 'float'
 	];
 
 	protected $fillable = [
 		'name',
-		'phone',
 		'id_user',
-		'id_city',
+		'short_address',
 		'address',
-		'postal_code',
 		'description',
-		'primary'
+		'latitude',
+		'longitude',
+		'favorite',
+		'type'
 	];
 
 	public function city()
@@ -57,5 +58,15 @@ class UserAddress extends Model
 	public function user()
 	{
 		return $this->belongsTo(\App\Http\Models\User::class, 'id_user');
+	}
+
+	public function getTypeAttribute($value)
+	{
+		return $value?:'';
+	}
+
+	public function getDescriptionAttribute($value)
+	{
+		return $value?:'';
 	}
 }

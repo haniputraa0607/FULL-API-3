@@ -18,6 +18,7 @@ class Kernel extends HttpKernel
         \Illuminate\Foundation\Http\Middleware\ValidatePostSize::class,
         \App\Http\Middleware\TrimStrings::class,
         \Illuminate\Foundation\Http\Middleware\ConvertEmptyStringsToNull::class,
+        \Fruitcake\Cors\HandleCors::class,
         // \App\Http\Middleware\TrustProxies::class,
         //\Fideloper\Proxy\TrustProxies::class,
     ];
@@ -68,7 +69,6 @@ class Kernel extends HttpKernel
         'custom_auth'    => \App\Http\Middleware\CustomAuth::class,
         'feature_control'   => \App\Http\Middleware\FeatureControl::class,
         'user_agent'   => \App\Http\Middleware\UserAgentControl::class,
-        'scopes' => \Laravel\Passport\Http\Middleware\CheckScopes::class,
-        'scope' => \Laravel\Passport\Http\Middleware\CheckForAnyScope::class,
+        'scopes' => \App\Http\Middleware\CheckScopes::class,
     ];
 }

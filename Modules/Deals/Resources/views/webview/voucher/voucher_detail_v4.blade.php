@@ -5,8 +5,7 @@
 @extends('webview.main')
 
 @section('css')
-	<link rel="stylesheet" href="{{ env('S3_URL_VIEW') }}{{ ('assets/css/bootstrap-4.0.0-beta.2.min.css') }}" integrity="sha384-PsH8R72JQ3SOdhVi3uxftmaW6Vc51MKb0q5P2rRUpPvrszuE4W1povHYgTpBfshb" crossorigin="anonymous">
-	<link href="{{ env('S3_URL_VIEW') }}{{ ('assets/css/font-awesome.min.css') }}" rel="stylesheet" integrity="sha384-wvfXpqpZZVQGK6TAh5PVlGOfQNHSoD2xbE+QkPxCAFlNEevoEH3Sl0sibVcOQVnN" crossorigin="anonymous">
+	<link rel="stylesheet" href="{{env('API_URL')}}css/voucher.css">
 	<style type="text/css">
     	p{
     		margin-top: 0px !important;
@@ -191,16 +190,11 @@
 		}
 		.nav-item a{
 			color: #707070 !important;
-			font-weight: 600;
-			padding-left: 28px;
-			padding-right: 28px;
 		}
 		.nav-item .active{
 			color: #383b67 !important;
 			border:none !important;
 			border-bottom: 3px solid #383b67 !important;
-			font-weight: 600;
-			padding: 10px;
 			border-radius: 3px;
 		}
 		.nav-item .active:hover{
@@ -219,6 +213,10 @@
 		}
 		.nav>li>a:focus, .nav>li>a:hover {
 			background-color: transparent;
+		}
+		::-webkit-scrollbar {
+			width: 0px;
+			background: transparent; /* make scrollbar transparent */
 		}
     </style>
 @stop
@@ -324,7 +322,7 @@
 					</div>
 					<div class="tab-content mt-4 WorkSans-Regular" id="myTabContent" style="padding: 0 15px;padding-bottom: 5px;font-size: 11.7px;color: #707070;">
 						<div class="tab-pane fade show active" id="ketentuan" role="tabpanel" aria-labelledby="ketentuan-tab">
-							@if($voucher['deal_voucher']['deal']['deals_tos'] != "")
+							@if(isset($voucher['deal_voucher']['deal']['deals_tos']) && $voucher['deal_voucher']['deal']['deals_tos'] != "")
 							{!! $voucher['deal_voucher']['deal']['deals_tos'] !!}
 							@endif
 						</div>
@@ -347,7 +345,7 @@
 
 				@if(!isset($voucher['redeemed_at']) || $voucher['redeemed_at'] == null)
 					<center style="position: fixed; bottom: 0; width: 100%; background-color: #ffffff;">
-						<button style="outline:none; font-size:15px; margin-bottom: 15px; margin-top: 15px; background-color: #383b67; color: #ffffff" type="button" id="invalidate" class="btn WorkSans-Bold">{{$voucher['button_text']}}</button>
+						<button style="outline:none; font-size:15px; margin-bottom: 15px; margin-top: 15px; background-color: #383b67; color: #ffffff" type="button" onclick="location.href='{{url()->current()}}#use_voucher'" id="invalidate" class="btn WorkSans-Bold">{{$voucher['button_text']}}</button>
 					</center>
 				@endif
 				@endif
@@ -365,177 +363,7 @@
 @stop
 
 @section('page-script')
-	<script src="{{ env('S3_URL_VIEW') }}{{ ('assets/js/jquery.min.js') }}"></script>
-    <script src="{{ env('S3_URL_VIEW') }}{{ ('assets/js/popper-1.12.3.min.js') }}" integrity="sha384-vFJXuSJphROIrBnz7yo7oB41mKfc8JzQZiCq4NCceLEaO4IHwicKwpJf9c9IpFgh" crossorigin="anonymous"></script>
-    <script src="{{ env('S3_URL_VIEW') }}{{ ('assets/js/bootstrap-4.0.0-beta.2.min.js') }}" integrity="sha384-alpBpkh1PFOepccYVYDB4do5UnbKysX5WZXm3XxPqe5iKTfUKjNkCk9SaVuEZflJ" crossorigin="anonymous"></script>
-	<script type="text/javascript">
-		@php $month = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', "Juli", 'Agustus', 'September', 'Oktober', 'November', 'Desember']; @endphp
-
-		// timer
-		var deals_end   = "{{ strtotime($voucher['voucher_expired_at']) }}";
-		var server_time = "{{ strtotime($voucher['deal_voucher']['deal']['time_server']) }}";
-		var timer_text;
-		var difference;
-
-		if (server_time <= deals_end) {
-			difference = deals_end - server_time;
-			document.getElementById('timer').classList.add("text-center");
-		}
-
-		var display_flag = 0;
-		this.interval = setInterval(() => {
-			daysDifference = Math.floor(difference/60/60/24);
-			if (daysDifference >= 0) {
-				document.getElementById('day').classList.add("text-center");
-				document.getElementById("day").innerHTML = " ";
-				document.getElementById("day").innerHTML += " ";
-				document.getElementById('day').innerHTML += daysDifference;
-				document.getElementById("day").innerHTML += " Hari";
-			}
-
-			if(difference >= 0) {
-				timer_text = timer(difference);
-				document.getElementById("timer").innerHTML = " ";
-				document.getElementById("timer").innerHTML += " ";
-				document.getElementById('timer').innerHTML += timer_text;
-
-				difference--;
-			}
-			else {
-				clearInterval(this.interval);
-			}
-
-			// if days then stop the timer
-			if (timer_text!=null && timer_text.includes("day")) {
-				clearInterval(this.interval);
-			}
-
-			// show timer
-			if (display_flag == 0) {
-				document.getElementById('timer');
-				display_flag = 1;
-			}
-		}, 1000); // 1 second
-
-		function timer(difference) {
-			if(difference === 0) {
-				return null;    // stop the function
-			}
-
-			var daysDifference, hoursDifference, minutesDifference, secondsDifference, timer;
-
-			// countdown
-			daysDifference = Math.floor(difference/60/60/24);
-			difference -= daysDifference*60*60*24;
-
-			hoursDifference = Math.floor(difference/60/60);
-			difference -= hoursDifference*60*60;
-			hoursDifference = ("0" + hoursDifference).slice(-2);
-
-			minutesDifference = Math.floor(difference/60);
-			difference -= minutesDifference*60;
-			minutesDifference = ("0" + minutesDifference).slice(-2);
-
-			secondsDifference = Math.floor(difference);
-
-			if (secondsDifference-1 < 0) {
-				secondsDifference = "00";
-			}
-			else {
-				secondsDifference = secondsDifference-1;
-				secondsDifference = ("0" + secondsDifference).slice(-2);
-			}
-
-			timer = hoursDifference + ":" + minutesDifference + ":" + secondsDifference;
-
-			return timer;
-		}
-	</script>
-	<script type="text/javascript">
-        $(document).ready(function() {
-			$('#textSK').hide();
-			$('#textTP').css('display','none');
-			$('#showTP').css('margin-bottom','20px');
-			$(document).on('click', '#showSK', function() {
-				$('#textSK').slideDown( "slow" );
-				$( "#showSK" ).replaceWith( '<div id="hideSK" style="background-color: rgb(248, 249, 251);" class="title-wrapper col-md-12 clearfix ProductSans-Bold"><div class="title col-left" style="font-size: 15px; color: rgb(102, 102, 102);">Syarat & Ketentuan</div><div class="title" style="font-size: 15px; color: rgb(102, 102, 102);"><i class="fas fa-chevron-up"></i></i></div></div>' );
-				if ($("#textTP").is(":visible")) {
-				    $('html, body').animate({scrollTop: ($(document).height()-$("#textTP").height())-250}, 'slow');
-				} else {
-				    $('html, body').animate({scrollTop: $(document).height()-220}, 'slow');
-				}
-			});
-			$(document).on('click', '#hideSK', function() {
-				$('#textSK').slideUp( "slow" );
-				$( "#hideSK" ).replaceWith( '<div id="showSK" style="background-color: rgb(248, 249, 251);" class="title-wrapper col-md-12 clearfix ProductSans-Bold"><div class="title col-left" style="font-size: 15px; color: rgb(102, 102, 102);">Syarat & Ketentuan</div><div class="title" style="font-size: 15px; color: rgb(102, 102, 102);"><i class="fas fa-chevron-down"></i></i></div></div>' );
-			});
-			$(document).on('click', '#showTP', function(e) {
-				$('#textTP').slideDown( "slow" );
-				$( "#showTP" ).replaceWith( '<div id="hideTP" style="background-color: rgb(248, 249, 251);" class="title-wrapper col-md-12 clearfix ProductSans-Bold"><div class="title col-left" style="font-size: 15px; color: rgb(102, 102, 102);">Tempat Penukaran</div><div class="title" style="font-size: 15px; color: rgb(102, 102, 102);"><i class="fas fa-chevron-up"></i></div></div>' );
-				$('html, body').animate({scrollTop: $(document).height()-160}, 'slow');
-			});
-			$(document).on('click', '#hideTP', function() {
-				$('#textTP').slideUp( "slow" );
-				$( "#hideTP" ).replaceWith( '<div id="showTP" style="background-color: rgb(248, 249, 251);" class="title-wrapper col-md-12 clearfix ProductSans-Bold"><div class="title col-left" style="font-size: 15px; color: rgb(102, 102, 102);">Tempat Penukaran</div><div class="title" style="font-size: 15px; color: rgb(102, 102, 102);"><i class="fas fa-chevron-down"></i></div></div>' );
-				$('#showTP').css('margin-bottom','20px');
-			});
-
-            $(document).on('click', '.deals-qr', function(e) {
-                e.preventDefault();
-                $('#qr-code-modal').fadeIn('fast');
-                $('.deals-detail').css({'height': '100vh', 'overflow-y':'scroll'});
-
-                // send flag to native
-                var url = window.location.href;
-                var result = url.replace("#true", "");
-                result = result.replace("#false", "");
-                result = result.replace("#", "");
-
-                window.location.href = result + '#true';
-            });
-
-            $(document).on('click', '#qr-code-modal', function() {
-                $('#qr-code-modal').fadeOut('fast');
-                $('.deals-detail').attr('style', '');
-
-                // send flag to native
-                var url = window.location.href;
-                var result = url.replace("#true", "");
-                result = result.replace("#false", "");
-                result = result.replace("#", "");
-
-                window.location.href = result + '#false';
-            });
-
-            $(document).on('click', '#invalidate', function() {
-                // send flag to native
-
-                var url_first = window.location.href;
-                var result_first = url_first.replace("#yes", "");
-                result_first = result_first.replace("#no", "");
-                result_first = result_first.replace("#", "");
-
-                window.location.href = result_first + '#yes';
-
-                // if (url == window.location.href+'#false') {
-                //     console.log('kosong atau false');
-                //     var result = url.replace("#true", "");
-                //     result = result.replace("#false", "");
-                //     result = result.replace("#", "");
-
-                //     window.location.href = result + '#true';
-                // } else {
-                //     console.log('true');
-                //     var result = url.replace("#true", "");
-                //     result = result.replace("#false", "");
-                //     result = result.replace("#", "");
-
-                //     window.location.href = result + '#false';
-                // }
-
-            });
-
-        });
-        // window.stop()
-    </script>
+	<script src="{{env('API_URL')}}js/jquery.js"></script>
+	<script src="{{env('API_URL')}}js/popper.js"></script>
+    <script src="{{env('API_URL')}}js/voucher.js"></script>
 @stop

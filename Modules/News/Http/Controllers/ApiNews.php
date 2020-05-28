@@ -304,7 +304,17 @@ class ApiNews extends Controller
                     }
                 }
                 DB::commit();
-
+                if($save){
+                    $send = app($this->autocrm)->SendAutoCRM('Create News', $request->user()->phone, [
+                        'title' => $data['news_title']??'',
+                        'content' => $data['news_content_long']??'',
+                        'image' => $data['news_image_dalam']??'',
+                        'post_date' => $data['news_post_date']??'',
+                        'publish_date' => $data['news_publish_date']??'',
+                        'expired_date' => $data['news_expired_date']??'',
+                        // 'detail' => view('news::webview.news',['news'=>[$data]])->render()
+                    ],null,true);
+                }
                 return response()->json(MyHelper::checkCreate($save));
             }
             else {
@@ -388,6 +398,17 @@ class ApiNews extends Controller
 						$saveForm = NewsFormStructure::create($dataForm);
 					}
 				}
+                if($save){
+                    $send = app($this->autocrm)->SendAutoCRM('Update News', $request->user()->phone, [
+                        'title' => $data['news_title']??'',
+                        'content' => $data['news_content_long']??'',
+                        'image' => $data['news_image_dalam']??'',
+                        'post_date' => $data['news_post_date']??'',
+                        'publish_date' => $data['news_publish_date']??'',
+                        'expired_date' => $data['news_expired_date']??'',
+                        'detail' => view('news::webview.news',['news'=>[$data]])->render()
+                    ],null,true);
+                }
                 return response()->json(MyHelper::checkUpdate($save));
             }
             else {
@@ -523,7 +544,7 @@ class ApiNews extends Controller
             }
 
             if(!isset($post['id_news'])){
-                $news->select('id_news','id_news_category','news_title','news_publish_date','news_expired_date','news_slug','news_content_short','news_image_luar','news_image_dalam');
+                $news->select('id_news','id_news_category','news_title','news_publish_date','news_expired_date', 'news_post_date', 'news_slug','news_content_short','news_image_luar','news_image_dalam');
             }else{
                 $news->with('news_form_structures');
             }

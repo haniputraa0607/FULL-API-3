@@ -32,6 +32,7 @@ Route::group(['middleware' => ['auth:api', 'log_activities', 'scopes:be'] ], fun
 });
 
 /* NO AUTH */
+Route::get('maintenance-mode', 'Controller@maintenance');
 Route::any('city/list', 'Controller@listCity');
 Route::get('province/list', 'Controller@listProvince');
 Route::get('courier/list', 'Controller@listCourier');

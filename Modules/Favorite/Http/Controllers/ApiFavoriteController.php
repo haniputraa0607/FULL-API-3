@@ -53,7 +53,7 @@ class ApiFavoriteController extends Controller
         $longitude = $request->json('longitude');
         $nf = $request->json('number_format')?:'float';
         $favorite = Favorite::where('id_user',$user->id);
-        $select = ['id_favorite','id_outlet','favorites.id_product','id_brand','id_user','product_qty','notes'];
+        $select = ['id_favorite','favorites.id_outlet','favorites.id_product','id_brand','id_user','notes'];
         $with = [
             'modifiers'=>function($query){
                 $query->select('product_modifiers.id_product_modifier','type','code','text','favorite_modifiers.qty');
@@ -61,15 +61,43 @@ class ApiFavoriteController extends Controller
         ];
         // detail or list
         if(!$id_favorite){
+
+            if ($request->json('id_brand')) {
+                $favorite->where('favorites.id_brand',$request->json('id_brand'));
+            }
+
+            if ($request->json('id_outlet')) {
+                $favorite->where('favorites.id_outlet',$request->json('id_outlet'));
+            }
+
+            if ($request->json('topping') == 'used') {
+                $favorite->whereRaw('favorites.id_favorite in (select fm.id_favorite from favorite_modifiers fm where fm.id_favorite = favorites.id_favorite)');
+            }elseif($request->json('topping') == 'unused'){
+                $favorite->whereRaw('favorites.id_favorite not in (select fm.id_favorite from favorite_modifiers fm where fm.id_favorite = favorites.id_favorite)');
+            }
+
+            if ($request->json('key_free')) {
+                $favorite->whereIn('favorites.id_favorite', function($query) use($request){
+                    $query->select('f.id_favorite')
+                        ->from('favorites as f')
+                        ->join('products', 'products.id_product', 'f.id_product')
+                        ->join('outlets', 'outlets.id_outlet', 'f.id_outlet')
+                        ->join('brands', 'brands.id_brand', 'f.id_brand')
+                        ->where('products.product_name', 'LIKE', '%' . $request->json('key_free') . '%')
+                        ->orWhere('outlets.outlet_name', 'LIKE', '%' . $request->json('key_free') . '%')
+                        ->orWhere('brands.name_brand', 'LIKE', '%' . $request->json('key_free') . '%');
+                });
+            }
+
             if($request->page){
-                $data = Favorite::where('id_user',$user->id)->select($select)->with($with)->paginate(10)->toArray();
+                $data = $favorite->select($select)->with($with)->paginate(10)->toArray();
                 $datax = &$data['data'];
             }else{
-                $data = Favorite::where('id_user',$user->id)->select($select)->with($with)->get()->toArray();
+                $data = $favorite->select($select)->with($with)->get()->toArray();
                 $datax = &$data;
             }
             if(count($datax)>=1){
-                $datax = MyHelper::groupIt($datax,'id_outlet',function($key,&$val) use ($nf,$data){
+                $datax = MyHelper::groupIt($datax,'id_outlet',function($key,&$val) use ($nf,$data, $request){
                     $total_price = $val['product']['price'];
                     $val['product']['price']=MyHelper::requestNumber($val['product']['price'],$nf);
                     foreach ($val['modifiers'] as &$modifier) {
@@ -81,24 +109,53 @@ class ApiFavoriteController extends Controller
                         $total_price+=$price*$modifier['qty'];
                     }
                     $val['product_price_total'] = $total_price;
-                    return $key;
+
+                    if ($request->json('max_price') && $request->json('min_price')) {
+                        if ((int)$request->json('max_price') >= (int)$total_price &&
+                            (int)$request->json('min_price') <= (int)$total_price) {
+                            return $key;
+                        }else{
+                            return 'remove';
+                        }
+                    }else{
+                        if (!empty($request->json('max_price')) && (int)$request->json('max_price') < (int)$total_price){
+                            return 'remove';
+                        }elseif (!empty($request->json('min_price')) && (int)$request->json('min_price') > (int)$total_price){
+                            return 'remove';
+                        }else{
+                            return $key;
+                        }
+                    }
                 },function($key,&$val) use ($latitude,$longitude){
+                    if($key == "remove"){
+                        return $key;
+                    }
+
                     $outlet = Outlet::select('id_outlet','outlet_code','outlet_name','outlet_address','outlet_latitude','outlet_longitude')->with('today')->find($key)->toArray();
                     $status = app('Modules\Outlet\Http\Controllers\ApiOutletController')->checkOutletStatus($outlet);
                     $outlet['outlet_address']=$outlet['outlet_address']??'';
                     $outlet['status']=$status;
-                    $outlet['distance_raw'] = MyHelper::count_distance($latitude,$longitude,$outlet['outlet_latitude'],$outlet['outlet_longitude']);
-                    $outlet['distance'] = MyHelper::count_distance($latitude,$longitude,$outlet['outlet_latitude'],$outlet['outlet_longitude'],'K',true);
+                    if(!empty($latitude)&&!empty($longitude)){
+                        $outlet['distance_raw'] = MyHelper::count_distance($latitude,$longitude,$outlet['outlet_latitude'],$outlet['outlet_longitude']);
+                        $outlet['distance'] = MyHelper::count_distance($latitude,$longitude,$outlet['outlet_latitude'],$outlet['outlet_longitude'],'K',true);
+                    }else{
+                        $outlet['distance_raw'] = null;
+                        $outlet['distance'] = '';
+                    }
                     $val=[
                         'outlet'=>$outlet,
                         'favorites'=>$val
                     ];
                     return $key;
                 });
+                unset($datax['remove']);
                 $datax = array_values($datax);
-                usort($datax, function(&$a,&$b){
-                    return $a['outlet']['distance_raw'] <=> $b['outlet']['distance_raw'];
-                });
+
+                if(!empty($latitude)&&!empty($longitude)){
+                    usort($datax, function(&$a,&$b){
+                        return $a['outlet']['distance_raw'] <=> $b['outlet']['distance_raw'];
+                    });
+                }
             }else{
                 $data = [];
             }
@@ -145,8 +202,7 @@ class ApiFavoriteController extends Controller
             ['id_product',$request->json('id_product')],
             ['id_brand',$request->json('id_brand')],
             ['id_user',$id_user],
-            ['notes',$request->json('notes')??''],
-            ['product_qty',$request->json('product_qty')]
+            ['notes',$request->json('notes')??'']
         ])->where(function($query) use ($modifiers){
             foreach ($modifiers as $modifier) {
                 if(is_array($modifier)){
@@ -173,7 +229,6 @@ class ApiFavoriteController extends Controller
                 'id_outlet' => $request->json('id_outlet'),
                 'id_brand' => $request->json('id_brand'),
                 'id_product' => $request->json('id_product'),
-                'product_qty' => $request->json('product_qty'),
                 'id_user' => $id_user,
                 'notes' => $request->json('notes')?:''];
 

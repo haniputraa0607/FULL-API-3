@@ -47,7 +47,8 @@ class MonthlyReportTrx extends Model
         'cust_teens',
         'cust_young_adult',
         'cust_adult',
-        'cust_old'
+        'cust_old',
+        'trx_total_item'
     ];
 	
 	/**

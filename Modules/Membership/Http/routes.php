@@ -1,12 +1,12 @@
 <?php
-Route::group(['middleware' => ['auth:api', 'log_activities','user_agent', 'scopes:apps'], 'prefix' => 'api/membership', 'namespace' => 'Modules\Membership\Http\Controllers'], function()
+Route::group(['middleware' => ['auth:api', 'log_activities', 'scopes:apps'], 'prefix' => 'api/membership', 'namespace' => 'Modules\Membership\Http\Controllers'], function()
 {
-    Route::any('/detail/webview', 'ApiMembershipWebview@webview');
+    Route::any('/detail', 'ApiMembershipWebview@detail');
 });
 
 Route::group(['middleware'=>['auth:api', 'scopes:apps'], 'prefix' => 'api/membership', 'namespace' => 'Modules\Membership\Http\Controllers'], function()
 {
-    Route::any('/web/view', 'ApiMembershipWebview@detailWebview');
+    // Route::any('/detail', 'ApiMembershipWebview@detail');
 });
 
 Route::group(['middleware' => ['auth:api', 'log_activities','user_agent', 'scopes:be'], 'prefix' => 'api/membership', 'namespace' => 'Modules\Membership\Http\Controllers'], function()

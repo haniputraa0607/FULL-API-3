@@ -7,7 +7,8 @@ Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scop
     Route::post('delete', ['middleware' => 'feature_control:209', 'uses' => 'ApiPointInjectionController@destroy']);
     Route::post('review', ['middleware' => 'feature_control:206', 'uses' => 'ApiPointInjectionController@review']);
     Route::post('getUserList', ['middleware' => 'feature_control:206', 'uses' => 'ApiPointInjectionController@getUserList']);
-});
-Route::group(['prefix' => 'api/point-injection', 'namespace' => 'Modules\PointInjection\Http\Controllers'], function () {
-    Route::get('getPointInjection', 'ApiPointInjectionController@getPointInjection');
+
+    /*Report*/
+    Route::post('report', ['middleware' => 'feature_control:243', 'uses' => 'ApiPointInjectionReportController@index']);
+    Route::post('detail', ['middleware' => 'feature_control:243', 'uses' => 'ApiPointInjectionReportController@detail']);
 });

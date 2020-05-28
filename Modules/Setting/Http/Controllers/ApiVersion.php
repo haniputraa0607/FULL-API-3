@@ -17,6 +17,27 @@ class ApiVersion extends Controller
 {
     public function index(VersionList $request)
     {
+        /*Start check status maintenance mode for apps*/
+        $getMaintenance = Setting::where('key', 'maintenance_mode')->first();
+        if($getMaintenance && $getMaintenance['value'] == 1){
+            $dt = (array)json_decode($getMaintenance['value_text']);
+            $message = $dt['message'];
+            if($dt['image'] != ""){
+                $url_image = env('S3_URL_API').$dt['image'];
+            }else{
+                $url_image = env('S3_URL_API').'img/maintenance/default.png';
+            }
+            return response()->json([
+                'status' => 'fail',
+                'messages' => [$message],
+                'maintenance' => env('API_URL') ."api/maintenance-mode",
+                'data_maintenance' => [
+                    'url_image' => $url_image,
+                    'text' => $message
+                ]
+            ], 200);
+        }
+        /*=======================End====================*/
         $post = $request->json()->all();
         $dbSetting = Setting::where('key', 'like', 'version_%')->get()->toArray();
         $dbDevice = Version::select('app_type', 'app_version')->orderBy('app_version', 'desc')->where('rules', '1')->get()->toArray();

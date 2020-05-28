@@ -100,6 +100,11 @@ class Product extends Model
 		return $this->hasMany(\App\Http\Models\ProductPrice::class, 'id_product');
 	}
 
+    public function product_detail()
+    {
+        return $this->hasMany(\Modules\Product\Entities\ProductDetail::class, 'id_product');
+    }
+
 	public function prices()
 	{
 		return $this->hasMany(\App\Http\Models\ProductPrice::class, 'id_product')->join('outlets', 'product_prices.id_outlet', 'outlets.id_outlet')->select('id_product', 'outlets.id_outlet', 'product_price');
@@ -121,6 +126,22 @@ class Product extends Model
 	{
 		return $this->hasMany(\App\Http\Models\ProductPrice::class, 'id_product')->where('product_visibility', 'Hidden');
 	}
+
+    public function product_detail_hiddens()
+    {
+        return $this->hasMany(\Modules\Product\Entities\ProductDetail::class, 'id_product')->where('product_detail_visibility', 'Hidden');
+    }
+
+    public function global_price()
+    {
+        return $this->hasMany(\Modules\Product\Entities\ProductGlobalPrice::class, 'id_product');
+    }
+
+    public function product_special_price()
+    {
+        return $this->hasMany(\Modules\Product\Entities\ProductSpecialPrice::class, 'id_product');
+    }
+
 	public function all_prices()
 	{
 		return $this->hasMany(\App\Http\Models\ProductPrice::class, 'id_product');
@@ -146,4 +167,9 @@ class Product extends Model
 
         return $this->hasMany(ProductDiscount::class, 'id_product', 'id_product')->where('discount_days', 'like', '%'.$day.'%')->where('discount_start', '<=', $now)->where('discount_end', '>=', $now)->where('discount_time_start', '<=', $time)->where('discount_time_end', '>=', $time);
     }
+
+    public function product_promo_categories(){
+        return $this->belongsToMany(\Modules\Product\Entities\ProductPromoCategory::class,'product_product_promo_categories', 'id_product','id_product_promo_category')->withPivot('id_product','id_product_promo_category','position');
+    }
+    
 }

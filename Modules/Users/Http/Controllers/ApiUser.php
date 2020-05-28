@@ -17,10 +17,11 @@ use App\Http\Models\UserOutlet;
 use App\Http\Models\LogActivitiesApps;
 use App\Http\Models\LogActivitiesBE;
 use App\Http\Models\UserInbox;
+use App\Http\Models\UserAddress;
 use App\Http\Models\LogPoint;
 use App\Http\Models\UserNotification;
 use App\Http\Models\Transaction;
-use App\Http\Models\FraudSetting;
+use Modules\SettingFraud\Entities\FraudSetting;
 use App\Http\Models\Setting;
 use App\Http\Models\Feature;
 use App\Http\Models\OauthAccessToken;
@@ -61,7 +62,7 @@ class ApiUser extends Controller
         }
         $this->membership  = "Modules\Membership\Http\Controllers\ApiMembership";
         $this->inbox  = "Modules\InboxGlobal\Http\Controllers\ApiInbox";
-        $this->setting_fraud = "Modules\SettingFraud\Http\Controllers\ApiSettingFraud";
+        $this->setting_fraud = "Modules\SettingFraud\Http\Controllers\ApiFraud";
     }
 
     function LogActivityFilter($rule='and', $conditions = null, $order_field='id', $order_method='asc', $skip=0, $take=999999999999){
@@ -867,7 +868,7 @@ class ApiUser extends Controller
             return response()->json([
                 'status' => 'success',
                 'result' => $data,
-                'messages' => ['Akun Anda telah diblokir karena menunjukkan aktivitas mencurigakan. Untuk informasi lebih lanjut harap hubungi customer service kami di hello@champresto.id']
+                'messages' => ['Akun Anda telah diblokir karena menunjukkan aktivitas mencurigakan. Untuk informasi lebih lanjut harap hubungi customer service kami di hello@example.id']
             ]);
         }
 
@@ -1172,7 +1173,7 @@ class ApiUser extends Controller
                         $check = array_column($check,'id_user');
 
                         if($deviceCus && count($deviceCus) > (int)$fraud['parameter_detail'] && array_search($datauser[0]['id'], $check) !== false){
-                            $sendFraud = app($this->setting_fraud)->SendFraudDetection($fraud['id_fraud_setting'], $datauser[0], null, ['device_id' => $device_id, 'device_type' => $request->json('device_type')], 0, 0, null, 0);
+                            $sendFraud = app($this->setting_fraud)->checkFraud($fraud, $datauser[0], ['device_id' => $device_id, 'device_type' => $request->json('device_type')], 0, 0, null, 0);
                             $data = User::with('city')->where('phone', '=', $datauser[0]['phone'])->get()->toArray();
 
                             if ($data[0]['is_suspended'] == 1) {
@@ -1464,7 +1465,7 @@ class ApiUser extends Controller
                             $check = array_column($check,'id_user');
 
                             if($deviceCus && count($deviceCus) > (int)$fraud['parameter_detail'] && array_search($data[0]['id'], $check) !== false){
-                                $sendFraud = app($this->setting_fraud)->SendFraudDetection($fraud['id_fraud_setting'], $data[0], null, ['device_id' => $device_id, 'device_type' => $device_type], 0, 0, null, 0);
+                                $sendFraud = app($this->setting_fraud)->checkFraud($fraud, $data[0], ['device_id' => $device_id, 'device_type' => $request->json('device_type')], 0, 0, null, 0);
                                 $data = User::with('city')->where('phone', '=', $phone)->get()->toArray();
 
                                 if ($data[0]['is_suspended'] == 1) {
@@ -1609,6 +1610,16 @@ class ApiUser extends Controller
         unset($post['sent_pin']);
 
 
+        if(isset($post['id_card_image']) && !empty($post['id_card_image'])){
+            $idCardImage = $request->json('id_card_image');
+            $path = 'img/customer/idcard/';
+            $upload = MyHelper::uploadPhoto($idCardImage, $path, null, $post['phone']);
+
+            if ($upload['status'] == "success") {
+                $post['id_card_image'] = $upload['path'];
+            }
+        }
+
         $result = MyHelper::checkGet(User::create($post));
 
         if($result['status'] == "success"){
@@ -1711,8 +1722,29 @@ class ApiUser extends Controller
                 if($request->json('address')){
                     $dataupdate['address'] = $request->json('address');
                 }
+                if($request->json('id_card_image') && !empty($request->json('id_card_image'))){
+                    if(is_null($data[0]['id_card_image']) || empty($data[0]['id_card_image'])){
+                        $idCardImage = $request->json('id_card_image');
+                        $path = 'img/customer/idcard/';
+                        $upload = MyHelper::uploadPhoto($idCardImage, $path, null, $phone);
+
+                        if ($upload['status'] == "success") {
+                            $dataupdate['id_card_image'] = $upload['path'];
+                        }
+                    }
+                }
 
                 DB::beginTransaction();
+
+                $referral = \Modules\PromoCampaign\Lib\PromoCampaignTools::createReferralCode($data[0]['id']);
+
+                if(!$referral){
+                    DB::rollback();
+                    return [
+                        'status'=>'fail',
+                        'messages' => ['failed create referral code']
+                    ];
+                }
 
                 $update = User::where('id','=',$data[0]['id'])->update($dataupdate);
 
@@ -1720,7 +1752,7 @@ class ApiUser extends Controller
 
                 //cek complete profile ?
                 if($datauser[0]['complete_profile'] != "1"){
-                    if($datauser[0]['name'] != "" && $datauser[0]['email'] != "" && $datauser[0]['gender'] != "" && $datauser[0]['birthday'] != "" && $datauser[0]['id_city'] != "" && $datauser[0]['celebrate'] != "" && $datauser[0]['job'] != "" && $datauser[0]['address'] != ""){
+                    if($datauser[0]['name'] != "" && $datauser[0]['email'] != "" && $datauser[0]['gender'] != "" && $datauser[0]['birthday'] != "" && $datauser[0]['id_city'] != "" && $datauser[0]['job'] != "" && $datauser[0]['id_card_image'] != ""){
                         //get point
 
                         $complete_profile_cashback = 0;
@@ -1786,6 +1818,10 @@ class ApiUser extends Controller
                     }
                 }
 
+                $urlIdCard = "";
+                if(!empty($datauser[0]['id_card_image']) && !is_null($datauser[0]['id_card_image'])){
+                    $urlIdCard = env('S3_URL_API').$datauser[0]['id_card_image'];
+                }
                 DB::commit();
                 $result = [
                     'status'	=> 'success',
@@ -1798,7 +1834,8 @@ class ApiUser extends Controller
                         'relationship' => $datauser[0]['relationship'],
                         'celebrate' => $datauser[0]['celebrate'],
                         'job' => $datauser[0]['job'],
-                        'address' => $datauser[0]['address']
+                        'address' => $datauser[0]['address'],
+                        'id_card_image' => $urlIdCard
                     ],
                     'message'	=> 'Data telah berhasil diubah'
                 ];
@@ -1877,6 +1914,32 @@ class ApiUser extends Controller
             ->where('user_outlets.id_outlet','=',$post['id_outlet'])
             ->first();
         return response()->json(MyHelper::checkGet($check));
+    }
+
+    function listAddress(Request $request){
+        $user_id = User::select('id')->where('phone',$request->json('phone'))->pluck('id')->first();
+        $pg = UserAddress::where('id_user',$user_id);
+        if($request->favorite){
+            $pg->select('name','type','short_address','address','description')->where('favorite',1)->orderBy('type','desc');
+        }else{
+            $pg->select('name','favorite','short_address','address','description','updated_at');
+        }
+        $pg->orderBy('updated_at','desc');
+        if($request->json('keyword')){
+            $pg->where(function($query) use ($request){
+                $query->where('name','like',"%{$request->json('keyword')}%");
+                $query->orWhere('type','like',"%{$request->json('keyword')}%");
+                $query->orWhere('short_address','like',"%{$request->json('keyword')}%");
+                $query->orWhere('address','like',"%{$request->json('keyword')}%");
+                $query->orWhere('description','like',"%{$request->json('keyword')}%");
+            });
+        }
+        if($request->page){
+            $pg = $pg->paginate(20);
+        }else{
+            $pg = $pg->get();
+        }
+        return MyHelper::checkGet($pg->toArray());
     }
 
     function listVar($var){
@@ -2324,6 +2387,20 @@ class ApiUser extends Controller
             if(stristr($post['update']['birthday'], '/')){
                 $explode = explode('/', $post['update']['birthday']);
                 $post['update']['birthday'] = $explode[2].'-'.$explode[1].'-'.$explode[0];
+            }
+        }
+
+        if(isset($post['update']['id_card_image']) && !empty($post['update']['id_card_image'])){
+            if(is_null($user[0]['id_card_image']) || empty($user[0]['id_card_image'])){
+                $idCardImage = $post['update']['id_card_image'];
+                $path = 'img/customer/idcard/';
+                $upload = MyHelper::uploadPhoto($idCardImage, $path, null, $user[0]['phone']);
+
+                if ($upload['status'] == "success") {
+                    $post['update']['id_card_image'] = $upload['path'];
+                }
+            }else{
+                unset($post['update']['id_card_image']);
             }
         }
 
@@ -2837,6 +2914,124 @@ class ApiUser extends Controller
         } else {
             $encUser = MyHelper::encrypt2019(['id_user' => $user['id']]);
             return MyHelper::checkGet($encUser);
+        }
+    }
+
+    public function validationPhone(Request $request){
+        $post = $request->json()->all();
+        if(isset($post['phone']) && !empty($post['phone'])){
+            $phone = $post['phone'];
+
+            $phone = preg_replace("/[^0-9]/", "", $phone);
+
+            $checkPhoneFormat = MyHelper::phoneCheckFormat($phone);
+
+            if(isset($checkPhoneFormat['status']) && $checkPhoneFormat['status'] == 'fail'){
+                return response()->json([
+                    'status' => 'fail',
+                    'messages' => [$checkPhoneFormat['messages']]
+                ]);
+            }elseif(isset($checkPhoneFormat['status']) && $checkPhoneFormat['status'] == 'success'){
+                return response()->json([
+                    'status' => 'success'
+                ]);
+            }
+        }else{
+            return response()->json([
+                'status' => 'fail',
+                'messages' => ['Data incompleted']
+            ]);
+        }
+    }
+
+    function sendVerifyEmail(Request $request){
+        $post = $request->json()->all();
+
+        if(isset($post['email']) && !empty($post['email']) && !empty($request->user())){
+            $id = $request->user()->id;
+            $user = User::where('id', $id)->first();
+            if (empty($user)) {
+                return response()->json([
+                    'status'    => 'fail',
+                    'messages'  => ['User Not Found']
+                ]);
+            }
+
+            if($post['email'] != $user['email']){
+                return response()->json([
+                    'status'    => 'fail',
+                    'messages'  => ['Email does not match']
+                ]);
+            }
+
+            $phone = $user['phone'];
+            $encrypt = MyHelper::encrypt2019($phone.'|'.$post['email']);
+            $autocrm = app($this->autocrm)->SendAutoCRM('Email Verify', $phone,
+                ['button_verify' => '<a href="'.env('URL_EMAIL_VERIFY').'/email/verify/'.$encrypt.'" style="background-color: #3598dc; border: none; color: white;padding: 15px 32px;text-align: center;text-decoration: none;display: inline-block;margin: 4px 2px;cursor: pointer;font-family: Ubuntu-Bold">Verify Email</a>'
+                ]);
+
+            if($autocrm){
+                return response()->json([
+                    'status'    => 'success',
+                    'messages'  => ['Verification sent to your email']
+                ]);
+            }else{
+                return response()->json([
+                    'status'    => 'fail',
+                    'messages'  => ['Failed to send']
+                ]);
+            }
+
+        }else{
+            return response()->json([
+                'status' => 'fail',
+                'messages' => ['Data incompleted']
+            ]);
+        }
+    }
+
+    function verifyEmail(Request $request, $slug){
+        $setting = Setting::where('key', 'LIKE', 'email_copyright')->first();
+
+        try{
+            $decrypt = MyHelper::decrypt2019($slug);
+
+            if(!empty($decrypt)){
+                $explode = explode("|",$decrypt);
+                if(!empty($explode)){
+                    $phone = $explode[0];
+                    $email = $explode[1];
+
+                    $user = User::where('phone', $phone)->where('email', $email)->first();
+                    if(!empty($user)){
+                        if($user['email_verified'] == 1){
+                            $data = ['status_verify' => 'already', 'message' => 'This page is expired, your email is already verified', 'settings' => $setting];
+                            return view('users::verify_email', $data);
+                        }else{
+                            $udpate = User::where('phone', $phone)->where('email', $email)->update(['email_verified' => 1]);
+                            if($udpate){
+                                $data = ['status_verify' => 'success', 'message' => 'Successfully verified your email ', 'settings' => $setting];
+                                return view('users::verify_email', $data);
+                            }else{
+                                $data = ['status_verify' => 'fail', 'message' => 'Failed verify your email, something went wrong', 'settings' => $setting];
+                                return view('users::verify_email', $data);
+                            }
+                        }
+                    }else{
+                        $data = ['status_verify' => 'fail', 'message' => 'Failed verify your email, user not found', 'settings' => $setting];
+                        return view('users::verify_email', $data);
+                    }
+                }else{
+                    $data = ['status_verify' => 'fail', 'message' => 'Failed to verify your email, something went wrong', 'settings' => $setting];
+                    return view('users::verify_email', $data);
+                }
+            }else{
+                $data = ['status_verify' => 'fail', 'message' => 'Failed to verify your email, something went wrong', 'settings' => $setting];
+                return view('users::verify_email', $data);
+            }
+        }catch (\Exception $e){
+            $data = ['status_verify' => 'fail', 'message' => 'Failed to verify your email, something went wrong', 'settings' => $setting];
+            return view('users::verify_email', $data);
         }
     }
 }

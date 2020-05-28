@@ -18,7 +18,7 @@ use App\Http\Models\HomeBackground;
 use App\Http\Models\UsersMembership;
 use App\Http\Models\Transaction;
 use App\Http\Models\Banner;
-use App\Http\Models\FraudSetting;
+use Modules\SettingFraud\Entities\FraudSetting;
 use App\Http\Models\OauthAccessToken;
 use App\Http\Models\FeaturedDeal;
 use Modules\Subscription\Entities\FeaturedSubscription;
@@ -39,7 +39,7 @@ class ApiHome extends Controller
 		$this->balance  = "Modules\Balance\Http\Controllers\BalanceController";
 		$this->point  = "Modules\Deals\Http\Controllers\ApiDealsClaim";
 		$this->autocrm  = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
-        $this->setting_fraud = "Modules\SettingFraud\Http\Controllers\ApiSettingFraud";
+        $this->setting_fraud = "Modules\SettingFraud\Http\Controllers\ApiFraud";
 		$this->endPoint  = env('S3_URL_API');
         $this->deals = "Modules\Deals\Http\Controllers\ApiDeals";
     }
@@ -71,7 +71,7 @@ class ApiHome extends Controller
     public function getBanner()
     {
         // banner
-        $banners = Banner::orderBy('position')->get();
+        $banners = Banner::orderBy('position')->where('banner_start', '<=', date('Y-m-d H:i:s'))->where('banner_end', '>=', date('Y-m-d H:i:s'))->get();
         $gofood = 0;
         $setting = Setting::where('key', 'banner-gofood')->first();
         if (!empty($setting)) {
@@ -86,22 +86,31 @@ class ApiHome extends Controller
         foreach ($banners as $key => $value) {
 
             $item['image_url']  = env('S3_URL_API').$value->image;
+            $item['type']       = 'none';
             $item['id_news']    = $value->id_news;
             $item['news_title'] = "";
             $item['url']        = $value->url;
 
-            if ($value->id_news != "") {
+            if($item['url'] != null){
+                $item['type']       = 'link';
+            }
+
+            if ($value->id_news != "" && isset($value->news->news_title)) {
+                $item['type']       = 'news';
                 $item['news_title'] = $value->news->news_title;
                 // if news, generate webview news detail url
                 $item['url']        = env('API_URL') .'news/webview/'. $value->id_news;
-            }
-
-            if ($value->type == 'gofood') {
+            }elseif ($value->type == 'gofood') {
+                $item['type']       = 'gofood';
                 $item['id_news'] = 99999999;
                 $item['news_title'] = "GO-FOOD";
                 $item['url']     = env('APP_URL').'outlet/webview/gofood/list';
+            }elseif ($value->type == 'referral') {
+                $item['type']       = 'referral';
+                $item['id_news'] = 999999999;
+                $item['news_title'] = "Referral";
+                $item['url']     = env('API_URL') . 'api/referral/webview';
             }
-
             array_push($array, $item);
         }
 
@@ -548,24 +557,6 @@ class ApiHome extends Controller
             ];
         }
 
-        //check fraud
-        if($user->new_login == '1'){
-            $deviceCus = UserDevice::where('device_type','=',$device_type)
-            ->where('device_id','=',$device_id)
-            // ->where('device_token','=',$device_token)
-            ->orderBy('id_device_user', 'ASC')
-            ->first();
-
-            $lastDevice = UserDevice::where('id_user','=',$user->id)->orderBy('id_device_user', 'desc')->first();
-            if($deviceCus && $deviceCus['id_user'] != $user->id){
-                // send notif fraud detection
-                $fraud = FraudSetting::where('parameter', 'LIKE', '%device ID%')->first();
-                if($fraud){
-                    $sendFraud = app($this->setting_fraud)->SendFraudDetection($fraud['id_fraud_setting'], $user, null, $lastDevice);
-                }
-            }
-        }
-
         return $result;
     }
 
@@ -692,12 +683,16 @@ class ApiHome extends Controller
         if($retUser['birthday']??false){
             $retUser['birthday']=date("d F Y", strtotime($retUser['birthday']));
         }
+
+        if($retUser['id_card_image']??false){
+            $retUser['id_card_image'] = env('S3_URL_API').$retUser['id_card_image'];
+        }
         array_walk_recursive($retUser, function(&$it,$ix){
             if($it==null&&!in_array($ix, ['city','membership'])){
                 $it="";
             }
         });
-        $hidden=['password_k','created_at','updated_at','provider','phone_verified','email_verified','email_unsubscribed','level','points','rank','android_device','ios_device','is_suspended','balance','complete_profile','subtotal_transaction','count_transaction','id_membership','relationship'];
+        $hidden=['password_k','created_at','updated_at','provider','phone_verified','email_unsubscribed','level','points','rank','android_device','ios_device','is_suspended','balance','complete_profile','subtotal_transaction','count_transaction','id_membership','relationship'];
         foreach ($hidden as $hide) {
             unset($retUser[$hide]);
         }

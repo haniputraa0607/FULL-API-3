@@ -3,13 +3,17 @@
 Route::group(['middleware' => ['auth:api', 'log_activities', 'scopes:apps'], 'prefix' => 'api/deals', 'namespace' => 'Modules\Deals\Http\Controllers'], function () {
     /* MASTER DEALS */
     Route::any('list', 'ApiDeals@listDeal');
+    Route::any('list/v2', 'ApiDeals@listDealV2');
     Route::any('me', 'ApiDeals@myDeal');
     Route::any('detail', 'ApiDealsWebview@dealsDetail');
 
     /* CLAIM */
     Route::group(['prefix' => 'claim'], function () {
         Route::post('/', 'ApiDealsClaim@claim');
+        Route::post('cancel', 'ApiDealsClaimPay@cancel');
         Route::post('paid', 'ApiDealsClaimPay@claim');
+        Route::post('paid/confirm', 'ApiDealsClaimPay@confirm');
+        Route::post('paid/status', 'ApiDealsClaimPay@status');
         Route::post('pay-now', 'ApiDealsClaimPay@bayarSekarang');
     });
 
@@ -25,9 +29,17 @@ Route::group(['prefix' => 'api/deals', 'namespace' => 'Modules\Deals\Http\Contro
 
 Route::group(['middleware' => ['auth:api', 'log_activities', 'scopes:apps'], 'prefix' => 'api/voucher', 'namespace' => 'Modules\Deals\Http\Controllers'], function () {
     Route::any('me', 'ApiDealsVoucher@myVoucher');
+    Route::any('me/v2', 'ApiDealsVoucher@myVoucherV2');
+    Route::any('cancel', 'ApiDealsVoucher@unuseVoucher');
+    Route::any('status', 'ApiDealsVoucher@checkStatus');
 });
 
 /* Webview */
+Route::group(['middleware' => ['auth:api', 'scopes:apps'], 'prefix' => 'api/detail', 'namespace' => 'Modules\Deals\Http\Controllers'], function () {
+    Route::any('voucher', 'ApiDealsVoucherWebviewController@detailVoucher');
+    Route::any('mydeals', 'ApiDealsWebview@dealsDetailLater');
+});
+
 Route::group(['middleware' => ['auth:api','web', 'scopes:apps'], 'prefix' => 'api/webview', 'namespace' => 'Modules\Deals\Http\Controllers'], function () {
     Route::any('deals/{id_deals}/{deals_type}', 'ApiDealsWebview@webviewDealsDetail');
     Route::any('mydeals/{id_deals_user}', 'ApiDealsWebview@dealsClaim');
@@ -39,11 +51,15 @@ Route::group(['middleware' => ['auth:api','web', 'scopes:apps'], 'prefix' => 'ap
 /*=================== BE Route ===================*/
 Route::group(['middleware' => ['auth:api', 'log_activities','user_agent', 'scopes:be'], 'prefix' => 'api/deals', 'namespace' => 'Modules\Deals\Http\Controllers'], function () {
     Route::any('be/list', ['middleware' => 'feature_control:72', 'uses' => 'ApiDeals@listDeal']);
+    Route::any('be/detail', ['middleware' => 'feature_control:72', 'uses' => 'ApiDeals@detail']);
     Route::post('create', ['middleware' => 'feature_control:74', 'uses' => 'ApiDeals@createReq']);
     Route::post('update', ['middleware' => 'feature_control:75', 'uses' => 'ApiDeals@updateReq']);
+    Route::post('update-content', ['middleware' => 'feature_control:75', 'uses' => 'ApiDeals@updateContent']);
+    Route::post('update-complete', ['middleware' => 'feature_control:75', 'uses' => 'ApiDeals@updateComplete']);
     Route::post('delete', ['middleware' => 'feature_control:76', 'uses' => 'ApiDeals@deleteReq']);
     Route::post('user', ['middleware' => 'feature_control:72', 'uses' => 'ApiDeals@listUserVoucher']);
     Route::post('voucher', ['middleware' => 'feature_control:72', 'uses' => 'ApiDeals@listVoucher']);
+    Route::any('void/ovo', ['middleware' => 'feature_control:227', 'uses' => 'ApiDealsClaimPay@void']);
 
     /* MANUAL PAYMENT */
     Route::group(['prefix' => 'manualpayment'], function () {

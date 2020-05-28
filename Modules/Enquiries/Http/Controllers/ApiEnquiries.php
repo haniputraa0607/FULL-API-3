@@ -17,7 +17,6 @@ use Hash;
 use App\Lib\PushNotificationHelper;
 use DB;
 use Mail;
-use Mailgun;
 use File;
 
 use Modules\Enquiries\Http\Requests\Create;
@@ -103,9 +102,9 @@ class ApiEnquiries extends Controller
         	$dataUploadFile = [];
 
 			if (is_array($post['enquiry_file'])) {
-				for ($i=0; $i < count($post['enquiry_file']); $i++) { 
+				for ($i=0; $i < count($post['enquiry_file']); $i++) {
 					$upload = MyHelper::uploadFile($post['enquiry_file'][$i], $this->saveFile, strtolower($post['ext'][$i]));
-					
+
 					if (isset($upload['status']) && $upload['status'] == "success") {
 					    $data['enquiry_file'] = $upload['path'];
 
@@ -318,15 +317,13 @@ class ApiEnquiries extends Controller
 					'setting' => $setting
 				);
 				// return $data;
-				Mailgun::send('emails.test', $data, function($message) use ($to,$subject,$name,$setting)
+				Mail::send('emails.test', $data, function($message) use ($to,$subject,$name,$setting)
 				{
-					$message->to($to, $name)->subject($subject)
-									->trackClicks(true)
-									->trackOpens(true);
+					$message->to($to, $name)->subject($subject);
 					if(!empty($setting['email_from']) && !empty($setting['email_sender'])){
-						$message->from($setting['email_from'], $setting['email_sender']);
-					}else if(!empty($setting['email_from'])){
-						$message->from($setting['email_from']);
+						$message->from($setting['email_sender'], $setting['email_from']);
+					}else if(!empty($setting['email_sender'])){
+						$message->from($setting['email_sender']);
 					}
 
 					if(!empty($setting['email_reply_to'])){
