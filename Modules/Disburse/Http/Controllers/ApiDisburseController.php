@@ -454,8 +454,9 @@ class ApiDisburseController extends Controller
             ->select('outlets.outlet_name', 'outlets.outlet_code', 'disburse.id_disburse', 'disburse.disburse_nominal', 'disburse.disburse_status', 'disburse.beneficiary_account_number',
                 'disburse.beneficiary_name', 'disburse.created_at', 'disburse.updated_at', 'bank_name.bank_code', 'bank_name.bank_name')->first();
         $data = Transaction::join('disburse_transactions', 'disburse_transactions.id_transaction', 'transactions.id_transaction')
+            ->leftJoin('transaction_payment_balances', 'transaction_payment_balances.id_transaction', 'transactions.id_transaction')
             ->where('disburse_transactions.id_disburse', $id)
-            ->select('disburse_transactions.*', 'transactions.*')->paginate(25);
+            ->select('disburse_transactions.*', 'transactions.*', 'transaction_payment_balances.balance_nominal')->paginate(25);
 
         $result = [
             'status' => 'success',
