@@ -155,6 +155,10 @@ class ApiReportGosend extends Controller
                         if($row['subject'] == 'transaction_shipment_go_send'){
                             $data->where('transactions.transaction_shipment_go_send',$row['operator'] ,$row['parameter']);
                         }
+
+                        if($row['subject'] == 'transaction_grandtotal'){
+                            $data->where('transactions.transaction_grandtotal',$row['operator'] ,$row['parameter']);
+                        }
                     }
                 }
             }else{
@@ -231,6 +235,10 @@ class ApiReportGosend extends Controller
 
                             if($row['subject'] == 'transaction_shipment_go_send'){
                                 $subquery->orWhere('transactions.transaction_shipment_go_send',$row['operator'] ,$row['parameter']);
+                            }
+
+                            if($row['subject'] == 'transaction_grandtotal'){
+                                $subquery->orWhere('transactions.transaction_grandtotal',$row['operator'] ,$row['parameter']);
                             }
                         }
                     }
