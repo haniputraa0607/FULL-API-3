@@ -319,15 +319,19 @@ class ApiSubscriptionClaimPay extends Controller
                     if(\Module::collections()->has('Autocrm')) {
                         $phone=User::where('id', $voucher->id_user)->pluck('phone')->first();
                         $voucher->load('subscription');
-                        $autocrm = app($this->autocrm)->SendAutoCRM('Buy Paid Subscription Success', $phone,
-                            [
-                                'bought_at'                        => $voucher->bought_at,
-                                'subscription_title'               => $voucher->subscription->subscription_title,
-                                'id_subscription_user'             => $return['result']['voucher']['id_subscription_user'],
-                                'subscription_price_point'         => (string) $voucher->subscription_price_point,
-                                'id_subscription'                  => $voucher->id_subscription
-                            ]
-                        );
+                        
+                        if (($pay['voucher']['payment_method']??false) == 'Balance')
+                        {
+	                        $autocrm = app($this->autocrm)->SendAutoCRM('Buy Point Subscription Success', $phone,
+	                            [
+	                                'bought_at'                        => $voucher->bought_at,
+	                                'subscription_title'               => $voucher->subscription->subscription_title,
+	                                'id_subscription_user'             => $return['result']['voucher']['id_subscription_user'],
+	                                'subscription_price_point'         => (string) $voucher->subscription_price_point,
+	                                'id_subscription'                  => $voucher->id_subscription
+	                            ]
+	                        );
+	                	}
                     }
                     $result = [
                         'id_subscription_user'=>$return['result']['voucher']['id_subscription_user'],
