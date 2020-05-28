@@ -124,7 +124,7 @@ class ApiIrisController extends Controller
                                 }else{
                                     $payment = $midtrans['bank'];
                                 }
-                                $keyMidtrans = array_search($payment, array_column($settingMDRAll, 'payment_name'));
+                                $keyMidtrans = array_search(strtoupper($payment), array_column($settingMDRAll, 'payment_name'));
                                 if($keyMidtrans !== false){
                                     if(!is_null($settingMDRAll[$keyMidtrans]['days_to_sent'])){
                                         $explode = explode(',', $settingMDRAll[$keyMidtrans]['days_to_sent']);
@@ -158,7 +158,7 @@ class ApiIrisController extends Controller
                                 }
                             }elseif(strtolower($payments['type']) == 'ipay88'){
                                 $ipay88 = TransactionPaymentIpay88::where('id_transaction', $data['id_transaction'])->first()->payment_method;
-                                $keyipay88 = array_search($ipay88, array_column($settingMDRAll, 'payment_name'));
+                                $keyipay88 = array_search(strtoupper($ipay88), array_column($settingMDRAll, 'payment_name'));
                                 if($keyipay88 !== false){
                                     if(!is_null($settingMDRAll[$keyipay88]['days_to_sent'])){
                                         $explode = explode(',', $settingMDRAll[$keyipay88]['days_to_sent']);
@@ -221,10 +221,10 @@ class ApiIrisController extends Controller
 
                         if($feePGType == 'Percent'){
                             $totalFee = $grandTotal * (($feePGCentral + $feePG) / 100);
-                            $totalFeeForCentral = $grandTotal * ($feePG/100);
+                            $totalFeeForCentral = $grandTotal * ($feePGCentral/100);
                         }else{
                             $totalFee = $feePGCentral + $feePG;
-                            $totalFeeForCentral = $feePG;
+                            $totalFeeForCentral = $feePGCentral;
                         }
 
                         $percentFee = 0;

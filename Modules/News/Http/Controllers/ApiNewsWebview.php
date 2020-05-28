@@ -88,7 +88,8 @@ class ApiNewsWebview extends Controller
                 }
             }
             
-            $news['news_post_date'] = date('l, d F Y  H:i', strtotime($news['news_post_date']));
+            //$news['news_post_date'] = date('l, d F Y  H:i', strtotime($news['news_post_date']));
+            $news['news_post_date'] = date('Y-m-d H:i:s', strtotime($news['news_post_date']));
             if($news['news_event_date_start'] != null && $news['news_event_time_end'] != null){
                 $news['news_event_date'] = date('d', strtotime($news['news_event_date_start'])) . ' - ' . date('d F Y', strtotime($news['news_event_date_end']));
             }
