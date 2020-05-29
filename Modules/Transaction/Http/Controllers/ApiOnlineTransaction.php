@@ -896,10 +896,18 @@ class ApiOnlineTransaction extends Controller
             }
 
             $productPrice = 0;
-            $checkPriceProduct = ProductSpecialPrice::where(['id_product' => $checkProduct['id_product'], 'id_outlet' => $post['id_outlet']])->first();
 
-            if(isset($checkPriceProduct['product_special_price'])){
-                $productPrice = $checkPriceProduct['product_special_price'];
+            if($outlet['outlet_different_price']){
+                $checkPriceProduct = ProductSpecialPrice::where(['id_product' => $checkProduct['id_product'], 'id_outlet' => $post['id_outlet']])->first();
+                if(isset($checkPriceProduct['product_special_price'])){
+                    $productPrice = $checkPriceProduct['product_special_price'];
+                }else{
+                    DB::rollback();
+                    return response()->json([
+                        'status'    => 'fail',
+                        'messages'  => ['Product Price Not Valid']
+                    ]);
+                }
             }else{
                 $checkPriceProduct = ProductGlobalPrice::where(['id_product' => $checkProduct['id_product']])->first();
 
@@ -1934,38 +1942,57 @@ class ApiOnlineTransaction extends Controller
         foreach ($discount_promo['item']??$post['item'] as &$item) {
             // get detail product
             $product = Product::select([
-                'products.id_product','products.product_name','products.product_code','products.product_description',
+                    'products.id_product','products.product_name','products.product_code','products.product_description',
                 DB::raw('(CASE
-                        WHEN (select product_special_price.product_special_price from product_special_price  where product_special_price.id_product = products.id_product AND product_special_price.id_outlet = '.$post['id_outlet'].' ) 
-                        is NULL THEN product_global_price.product_global_price
-                        ELSE (select product_special_price.product_special_price from product_special_price  where product_special_price.id_product = products.id_product AND product_special_price.id_outlet = '.$post['id_outlet'].' )
+                        WHEN (select outlets.outlet_different_price from outlets  where outlets.id_outlet = '.$post['id_outlet'].' ) = 1 
+                        AND (select product_special_price.product_special_price from product_special_price  where product_special_price.id_product = products.id_product AND product_special_price.id_outlet = '.$post['id_outlet'].' ) is not null
+                        THEN (select product_special_price.product_special_price from product_special_price  where product_special_price.id_product = products.id_product AND product_special_price.id_outlet = '.$post['id_outlet'].' )
+                        ELSE product_global_price.product_global_price
                     END) as product_price'),
-                'product_detail.max_order','product_detail.product_detail_stock_status as product_stock_status',
-                'brand_product.id_product_category','brand_product.id_brand'
-            ])
-            ->join('brand_product','brand_product.id_product','=','products.id_product')
-            ->leftJoin('product_global_price','product_global_price.id_product','=','products.id_product')
-            // produk tersedia di outlet
-            ->join('product_detail','product_detail.id_product','=','products.id_product')
-            ->where('product_detail.id_outlet','=',$post['id_outlet'])
-            // brand produk ada di outlet
-            ->where('brand_outlet.id_outlet','=',$outlet->id_outlet)
-            ->join('brand_outlet','brand_outlet.id_brand','=','brand_product.id_brand')
-            // produk ada di brand ini
-            ->where('brand_product.id_brand',$item['id_brand'])
-                ->where(function($query){
-                    $query->where('product_detail.product_detail_visibility','=','Visible')
-                        ->orWhere(function($q){
-                            $q->whereNull('product_detail.product_detail_visibility')
-                                ->where('products.product_visibility', 'Visible');
-                        });
+                    DB::raw('(CASE
+                            WHEN (select product_detail.product_detail_stock_status from product_detail  where product_detail.id_product = products.id_product AND product_detail.id_outlet = '.$post['id_outlet'].' ) 
+                            is NULL THEN "Available"
+                            ELSE (select product_detail.product_detail_stock_status from product_detail  where product_detail.id_product = products.id_product AND product_detail.id_outlet = '.$post['id_outlet'].' )
+                        END) as product_stock_status'),
+                    DB::raw('(CASE
+                            WHEN (select product_detail.max_order from product_detail  where product_detail.id_product = products.id_product AND product_detail.id_outlet = '.$post['id_outlet'].' ) 
+                            is NULL THEN NULL
+                            ELSE (select product_detail.max_order from product_detail  where product_detail.id_product = products.id_product AND product_detail.id_outlet = '.$post['id_outlet'].' )
+                        END) as max_order'),
+                    'brand_product.id_product_category','brand_product.id_brand',
+                ])
+                ->join('brand_product','brand_product.id_product','=','products.id_product')
+                ->leftJoin('product_global_price','product_global_price.id_product','=','products.id_product')
+                // brand produk ada di outlet
+                ->where('brand_outlet.id_outlet','=',$post['id_outlet'])
+                ->join('brand_outlet','brand_outlet.id_brand','=','brand_product.id_brand')
+                ->whereRaw('products.id_product in (CASE
+                        WHEN (select product_detail.id_product from product_detail  where product_detail.id_product = products.id_product AND product_detail.id_outlet = '.$post['id_outlet'].' )
+                        is NULL AND products.product_visibility = "Visible" THEN products.id_product
+                        WHEN (select product_detail.id_product from product_detail  where product_detail.product_detail_visibility = "" AND product_detail.id_product = products.id_product AND product_detail.id_outlet = '.$post['id_outlet'].' )
+                        is NOT NULL AND products.product_visibility = "Visible" THEN products.id_product
+                        ELSE (select product_detail.id_product from product_detail  where product_detail.product_detail_visibility = "Visible" AND product_detail.id_product = products.id_product AND product_detail.id_outlet = '.$post['id_outlet'].' )
+                    END)')
+                ->whereRaw('products.id_product in (CASE
+                        WHEN (select product_detail.id_product from product_detail  where product_detail.id_product = products.id_product AND product_detail.id_outlet = '.$post['id_outlet'].' )
+                        is NULL THEN products.id_product
+                        ELSE (select product_detail.id_product from product_detail  where product_detail.product_detail_status = "Active" AND product_detail.id_product = products.id_product AND product_detail.id_outlet = '.$post['id_outlet'].' )
+                    END)')
+                ->where(function ($query) use ($post){
+                    $query->orWhereRaw('(select product_special_price.product_special_price from product_special_price  where product_special_price.id_product = products.id_product AND product_special_price.id_outlet = '.$post['id_outlet'].' ) is NOT NULL');
+                    $query->orWhereRaw('(select product_global_price.product_global_price from product_global_price  where product_global_price.id_product = products.id_product) is NOT NULL');
                 })
-            ->where('product_detail.product_detail_status','=','Active')
-            ->with([
-                'photos'=>function($query){
-                    $query->select('id_product','product_photo');
-                }
-            ])
+                ->with([
+                    'brand_category' => function($query){
+                        $query->groupBy('id_product','id_brand');
+                    },
+                    'photos' => function($query){
+                        $query->select('id_product','product_photo');
+                    },
+                    'product_promo_categories' => function($query){
+                        $query->select('product_promo_categories.id_product_promo_category','product_promo_category_name as product_category_name','product_promo_category_order as product_category_order');
+                    },
+                ])
             ->groupBy('products.id_product')
             ->orderBy('products.position')
             ->find($item['id_product']);

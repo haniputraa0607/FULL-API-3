@@ -1674,16 +1674,14 @@ class ApiProductController extends Controller
         $product = Product::select('id_product','product_code','product_name','product_description','product_code','product_visibility')
         ->where('id_product',$post['id_product'])
         ->whereHas('brand_category')
-        ->whereHas('product_detail',function($query) use ($post){
-            $query->where('id_outlet',$post['id_outlet'])
-            ->where('product_detail_status','=','Active');
-        })
+        ->whereRaw('products.id_product in (CASE
+                    WHEN (select product_detail.id_product from product_detail  where product_detail.id_product = products.id_product AND product_detail.id_outlet = '.$post['id_outlet'].' )
+                    is NULL THEN products.id_product
+                    ELSE (select product_detail.id_product from product_detail  where product_detail.product_detail_status = "Active" AND product_detail.id_product = products.id_product AND product_detail.id_outlet = '.$post['id_outlet'].' )
+                END)')
         ->with(['photos','brand_category'=>function($query) use ($post){
             $query->where('id_product',$post['id_product']);
             $query->where('id_brand',$post['id_brand']);
-        },'product_detail'=>function($query) use ($post){
-            $query->select('id_product','id_outlet','product_detail_status','product_detail_visibility','max_order');
-            $query->where('id_outlet',$post['id_outlet']);
         }])
         ->first();
         if(!$product){
@@ -1693,7 +1691,17 @@ class ApiProductController extends Controller
             $product = $product->append('photo')->toArray();
             unset($product['photos']);
         }
-        $max_order = $product['product_detail'][0]['max_order'];
+        $product['product_detail'] = ProductDetail::where(['id_product' => $post['id_product'], 'id_outlet' => $post['id_outlet']])->first();
+
+        if(empty($product['product_detail'])){
+            $product['product_detail']['product_detail_visibility'] = $product['product_visibility'];
+            $product['product_detail']['product_detail_status'] = 'Active';
+        }
+        $max_order = null;
+
+        if(isset($product['product_detail']['max_order'])){
+            $max_order = $product['product_detail']['max_order'];
+        }
         if($max_order==null){
             $max_order = Outlet::select('max_order')->where('id_outlet',$post['id_outlet'])->pluck('max_order')->first();
             if($max_order == null){
@@ -1704,7 +1712,7 @@ class ApiProductController extends Controller
             }
         }
 
-        if(isset($product['product_detail']['product_detail_visibility']) && !(empty($product['product_detail']['product_detail_visibility'])&&$product['product_detail_visibility']=='Visible') && ($product['product_detail'][0]['product_detail_visibility']??false)!='Visible'){
+        if(isset($product['product_detail']['product_detail_visibility']) && $product['product_detail']['product_detail_visibility']!='Visible'){
             return MyHelper::checkGet([]);
         }
         unset($product['product_detail']);
