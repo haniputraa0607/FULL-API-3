@@ -356,9 +356,10 @@ class ApiCategoryController extends Controller
         $products = Product::select([
                 'products.id_product','products.product_name','products.product_code','products.product_description',
                 DB::raw('(CASE
-                        WHEN (select product_special_price.product_special_price from product_special_price  where product_special_price.id_product = products.id_product AND product_special_price.id_outlet = '.$post['id_outlet'].' ) 
-                        is NULL THEN product_global_price.product_global_price
-                        ELSE (select product_special_price.product_special_price from product_special_price  where product_special_price.id_product = products.id_product AND product_special_price.id_outlet = '.$post['id_outlet'].' )
+                        WHEN (select outlets.outlet_different_price from outlets  where outlets.id_outlet = '.$post['id_outlet'].' ) = 1 
+                        AND (select product_special_price.product_special_price from product_special_price  where product_special_price.id_product = products.id_product AND product_special_price.id_outlet = '.$post['id_outlet'].' ) is not null
+                        THEN (select product_special_price.product_special_price from product_special_price  where product_special_price.id_product = products.id_product AND product_special_price.id_outlet = '.$post['id_outlet'].' )
+                        ELSE product_global_price.product_global_price
                     END) as product_price'),
             DB::raw('(CASE
                         WHEN (select product_detail.product_detail_stock_status from product_detail  where product_detail.id_product = products.id_product AND product_detail.id_outlet = '.$post['id_outlet'].' ) 
@@ -383,6 +384,10 @@ class ApiCategoryController extends Controller
                         is NULL THEN products.id_product
                         ELSE (select product_detail.id_product from product_detail  where product_detail.product_detail_status = "Active" AND product_detail.id_product = products.id_product AND product_detail.id_outlet = '.$post['id_outlet'].' )
                     END)')
+            ->where(function ($query) use ($post){
+                $query->WhereRaw('(select product_special_price.product_special_price from product_special_price  where product_special_price.id_product = products.id_product AND product_special_price.id_outlet = '.$post['id_outlet'].' ) is NOT NULL');
+                $query->orWhereRaw('(select product_global_price.product_global_price from product_global_price  where product_global_price.id_product = products.id_product) is NOT NULL');
+            })
             ->with([
                 'brand_category' => function($query){
                     $query->groupBy('id_product','id_brand');
