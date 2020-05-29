@@ -875,15 +875,7 @@ class ApiOnlineTransaction extends Controller
             }
 
             $checkDetailProduct = ProductDetail::where(['id_product' => $checkProduct['id_product'], 'id_outlet' => $post['id_outlet']])->first();
-            if (empty($checkDetailProduct)) {
-                DB::rollback();
-                return response()->json([
-                    'status'    => 'fail',
-                    'messages'  => ['Product Detail Not Valid']
-                ]);
-            }
-
-            if ($checkDetailProduct['product_detail_stock_status'] == 'Sold Out') {
+            if (!empty($checkDetailProduct) && $checkDetailProduct['product_detail_stock_status'] == 'Sold Out') {
                 DB::rollback();
                 return response()->json([
                     'status'    => 'fail',
@@ -902,11 +894,17 @@ class ApiOnlineTransaction extends Controller
                 if(isset($checkPriceProduct['product_special_price'])){
                     $productPrice = $checkPriceProduct['product_special_price'];
                 }else{
-                    DB::rollback();
-                    return response()->json([
-                        'status'    => 'fail',
-                        'messages'  => ['Product Price Not Valid']
-                    ]);
+                    $checkPriceProduct = ProductGlobalPrice::where(['id_product' => $checkProduct['id_product']])->first();
+
+                    if(isset($checkPriceProduct['product_global_price'])){
+                        $productPrice = $checkPriceProduct['product_global_price'];
+                    }else{
+                        DB::rollback();
+                        return response()->json([
+                            'status'    => 'fail',
+                            'messages'  => ['Product Price Not Valid']
+                        ]);
+                    }
                 }
             }else{
                 $checkPriceProduct = ProductGlobalPrice::where(['id_product' => $checkProduct['id_product']])->first();
