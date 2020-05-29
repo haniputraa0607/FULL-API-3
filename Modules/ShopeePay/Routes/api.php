@@ -13,6 +13,6 @@ use Illuminate\Http\Request;
 |
 */
 
-Route::middleware('auth:api')->get('/shopeepay', function (Request $request) {
-    return $request->user();
+Route::group(['prefix'=>'shopeepay','middleware'=>['log_notif_shopeepay']],function(){
+	Route::post('notif', 'ShopeePayController@notifShopeePay');
 });
