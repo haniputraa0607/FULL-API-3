@@ -551,8 +551,8 @@ class ApiProductController extends Controller
                             $result['no_update']++;
                         }
                         if($value['global_price']??false){
-                            $update = ProductModifierGlobalPrice::create([
-                                'id_product_modifier' => $product->id_product_modifier,
+                            $update = ProductModifierGlobalPrice::updateOrCreate([
+                                'id_product_modifier' => $product->id_product_modifier],[
                                 'product_modifier_price'=>$value['global_price']
                             ]);
                             if($update){
@@ -769,8 +769,7 @@ class ApiProductController extends Controller
                 break;
 
             case 'modifier-price':
-                $subquery = str_replace('?','0',ProductModifierPrice::select(\DB::raw('id_product_modifier,MAX(product_modifier_price) as global_price'))->leftJoin('outlets','outlets.id_outlet','=','product_modifier_prices.id_outlet')
-                    ->where('outlets.outlet_different_price','=',0)
+                $subquery = str_replace('?','0',ProductModifierGlobalPrice::select(\DB::raw('id_product_modifier,product_modifier_price as global_price'))
                     ->groupBy('id_product_modifier')
                     ->toSql());
                 $different_outlet = Outlet::select('outlet_code','id_product_modifier','product_modifier_price')
@@ -798,10 +797,8 @@ class ApiProductController extends Controller
                     foreach ($do as $outlet_code => $x) {
                         $inc++;
                         $product['price_'.$outlet_code] = $x[$product['id_product_modifier']][0]['product_modifier_price']??'';
-                        if($inc === count($do)){
-                            unset($product['id_product_modifier']);
-                        }
                     }
+                    unset($product['id_product_modifier']);
                 }
                 break;
 
