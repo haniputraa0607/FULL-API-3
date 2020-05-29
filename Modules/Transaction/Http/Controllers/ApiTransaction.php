@@ -1950,7 +1950,7 @@ class ApiTransaction extends Controller
                         $result['detail']['detail_status'][] = [
                         'text'  => 'Order rejected',
                         'date'  => date('d F Y H:i', strtotime($list['detail']['reject_at'])),
-                        'reason'=> $list['detail']['reject_reason']
+                        'reason'=> $result['detail']['reject_reason']
                     ];
                     }
                     if ($list['detail']['taken_by_system_at'] != null) {
