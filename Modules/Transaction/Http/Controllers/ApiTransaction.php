@@ -1936,14 +1936,14 @@ class ApiTransaction extends Controller
             if ($list['trasaction_payment_type'] != 'Offline') {
                 if ($list['transaction_payment_status'] == 'Cancelled') {
                     $result['detail']['detail_status'][] = [
-                    'text'  => 'Your order has been canceled',
+                    'text'  => 'Pesanan Anda dibatalkan karena pembayaran gagal',
                     'date'  => date('d F Y H:i', strtotime($list['void_date']))
                 ];
                 } 
                 elseif ($list['transaction_payment_status'] == 'Pending') {
                     $result['detail']['detail_status'][] = [
-                    'text'  => '',
-                    'date'  => date('d F Y H:i', strtotime($list['void_date']))
+                    'text'  => 'Menunggu konfirmasi pembayaran',
+                    'date'  => date('d F Y H:i', strtotime($list['transaction_date']))
                 ];
                 } else {
                     if ($list['detail']['reject_at'] != null) {
