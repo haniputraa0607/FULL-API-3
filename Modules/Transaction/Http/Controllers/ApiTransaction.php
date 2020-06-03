@@ -1316,7 +1316,7 @@ class ApiTransaction extends Controller
                     ->groupBy('transactions.id_transaction');
                     // ->orderBy('transactions.id_transaction', 'DESC');
         if($delivery){
-            // $query->where('pickup_by','<>','Customer');
+            $query->where('pickup_by','<>','Customer');
         }else{
             $query->where('pickup_by','Customer');
         }
@@ -1426,7 +1426,7 @@ class ApiTransaction extends Controller
 
         if ($type == 'trx') {
             if($request->json('admin')){
-                $list = Transaction::where('transactions.id_transaction', $id);
+                $list = Transaction::where('transactions.id_transaction', $id)->with('user');
             }else{
                 $list = Transaction::where([['transactions.id_transaction', $id],
                     ['id_user',$request->user()->id]]);
@@ -1741,6 +1741,11 @@ class ApiTransaction extends Controller
                     'outlet_address'    => $list['outlet']['outlet_address']
                 ]
             ];
+
+            if(isset($list['user']['phone'])){
+                $result['user']['phone'] = $list['user']['phone'];
+                $result['user']['name'] = $list['user']['name'];
+            }
 
             if ($list['trasaction_payment_type'] != 'Offline') {
                 $result['detail'] = [
