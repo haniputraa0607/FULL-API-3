@@ -1783,11 +1783,12 @@ class ApiOutletApp extends Controller
                     'On Hold' => 'on_hold',
                 ];
                 $status = GoSend::getStatus($trx['transaction_receipt_number']);
+                $status['status'] = $ref_status[$status['status']]??$status['status'];
                 if($status['receiver_name'] ?? '') {
                     $toUpdate['receiver_name'] = $status['receiver_name'];
                 }
                 if ($status['status'] ?? false) {
-                    $toUpdate = ['latest_status' => $ref_status[$status['status']]??$status['status']];
+                    $toUpdate = ['latest_status' => $status['status']];
                     if ($status['liveTrackingUrl'] ?? false) {
                         $toUpdate['live_tracking_url'] = $status['liveTrackingUrl'];
                     }
@@ -1806,7 +1807,7 @@ class ApiOutletApp extends Controller
                     if ($status['vehicleNumber'] ?? false) {
                         $toUpdate['vehicle_number'] = $status['vehicleNumber'];
                     }
-                    if (!in_array(strtolower($status['status']), ['finding driver', 'driver not found', 'cancelled']) && strpos(env('GO_SEND_URL'), 'integration')) {
+                    if (!in_array(strtolower($status['status']), ['allocated', 'no_driver', 'cancelled']) && strpos(env('GO_SEND_URL'), 'integration')) {
                         $toUpdate['driver_id']      = '00510001';
                         $toUpdate['driver_phone']   = '08111251307';
                         $toUpdate['driver_name']    = 'Anton Lucarus';
@@ -1870,15 +1871,41 @@ class ApiOutletApp extends Controller
                         }
                         $arrived_at = date('Y-m-d H:i:s', strtotime($status['orderArrivalTime'] ?? time()));
                         TransactionPickup::where('id_transaction', $trx->id_transaction)->update(['arrived_at' => $arrived_at]);
+                        $dataSave = [
+                            'id_transaction'                => $trx['id_transaction'],
+                            'id_transaction_pickup_go_send' => $trxGoSend['id_transaction_pickup_go_send'],
+                            'status'                        => $status['status'] ?? 'on_going',
+                            'go_send_order_no'              => $status['orderNo'] ?? ''
+                        ];
+                        GoSend::saveUpdate($dataSave);
+                    } elseif (in_array(strtolower($status['status']), ['cancelled', 'rejected', 'no_driver'])) {
+                        $trxGoSend->update([
+                            'live_tracking_url' => null,
+                            'driver_id' => null,
+                            'driver_name' => null,
+                            'driver_phone' => null,
+                            'driver_photo' => null,
+                            'vehicle_number' => null,
+                            'receiver_name' => null
+                        ]);
+                        $dataSave = [
+                            'id_transaction'                => $trx['id_transaction'],
+                            'id_transaction_pickup_go_send' => $trxGoSend['id_transaction_pickup_go_send'],
+                            'status'                        => $status['status'] ?? 'on_going',
+                            'go_send_order_no'              => $status['orderNo'] ?? ''
+                        ];
+                        GoSend::saveUpdate($dataSave);
+                        $this->bookGoSend($trx);
+                    } else {
+                        $dataSave = [
+                            'id_transaction'                => $trx['id_transaction'],
+                            'id_transaction_pickup_go_send' => $trxGoSend['id_transaction_pickup_go_send'],
+                            'status'                        => $status['status'] ?? 'on_going',
+                            'go_send_order_no'              => $status['orderNo'] ?? ''
+                        ];
+                        GoSend::saveUpdate($dataSave);
                     }
                 }
-                $dataSave = [
-                    'id_transaction'                => $trx['id_transaction'],
-                    'id_transaction_pickup_go_send' => $trxGoSend['id_transaction_pickup_go_send'],
-                    'status'                        => $status['status'] ?? 'on_going',
-                    'go_send_order_no'              => $status['orderNo'] ?? ''
-                ];
-                GoSend::saveUpdate($dataSave);
                 return MyHelper::checkGet($trxGoSend);
                 break;
 

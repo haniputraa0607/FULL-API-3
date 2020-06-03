@@ -24,6 +24,7 @@ class ApiGosendController extends Controller
         $this->getNotif   = "Modules\Transaction\Http\Controllers\ApiNotification";
         $this->membership = "Modules\Membership\Http\Controllers\ApiMembership";
         $this->trx        = "Modules\Transaction\Http\Controllers\ApiOnlineTransaction";
+        $this->outlet_app = "Modules\OutletApp\Http\Controllers\ApiOutletApp";
     }
     /**
      * Update latest status from gosend
@@ -71,6 +72,7 @@ class ApiGosendController extends Controller
             $response_code = 404;
             $response_body = ['status' => 'fail', 'messages' => ['Transaction Not Found']];
         } else {
+            $id_transaction = TransactionPickup::select('id_transaction')->where('id_transaction_pickup', $tpg->id_transaction_pickup)->pluck('id_transaction')->first();
             if ($post['booking_id'] ?? false) {
                 $status = [
                     'confirmed'        => 'Finding Driver', //
@@ -141,8 +143,8 @@ class ApiGosendController extends Controller
                     }
                 }
                 $tpg->update($toUpdate);
+                $trx = Transaction::where('transactions.id_transaction', $id_transaction)->join('transaction_pickups', 'transaction_pickups.id_transaction', '=', 'transactions.id_transaction')->where('pickup_by', 'GO-SEND')->first();
                 if (in_array(strtolower($post['status']), ['completed', 'delivered'])) {
-                    $trx = Transaction::where('transactions.id_transaction', $request->id_transaction)->join('transaction_pickups', 'transaction_pickups.id_transaction', '=', 'transactions.id_transaction')->where('pickup_by', 'GO-SEND')->first();
                     // sendPoint delivery after status delivered only
                     if ($trx->cashback_insert_status != 1) {
                         //send notif to customer
@@ -198,15 +200,40 @@ class ApiGosendController extends Controller
                     }
                     $arrived_at = date('Y-m-d H:i:s', strtotime($status['orderArrivalTime'] ?? time()));
                     TransactionPickup::where('id_transaction', $trx->id_transaction)->update(['arrived_at' => $arrived_at]);
+                    $dataSave       = [
+                        'id_transaction'                => $id_transaction,
+                        'id_transaction_pickup_go_send' => $tpg['id_transaction_pickup_go_send'],
+                        'status'                        => $status[$post['status']] ?? '',
+                        'go_send_order_no'              => $post['booking_id']
+                    ];
+                    GoSend::saveUpdate($dataSave);
+                } elseif (in_array(strtolower($post['status']), ['cancelled', 'rejected', 'no_driver'])) {
+                    $tpg->update([
+                        'live_tracking_url' => null,
+                        'driver_id' => null,
+                        'driver_name' => null,
+                        'driver_phone' => null,
+                        'driver_photo' => null,
+                        'vehicle_number' => null,
+                        'receiver_name' => null
+                    ]);
+                    $dataSave       = [
+                        'id_transaction'                => $id_transaction,
+                        'id_transaction_pickup_go_send' => $tpg['id_transaction_pickup_go_send'],
+                        'status'                        => $status[$post['status']] ?? '',
+                        'go_send_order_no'              => $post['booking_id']
+                    ];
+                    GoSend::saveUpdate($dataSave);
+                    app($this->outlet_app)->bookGoSend($trx);
+                }else{
+                    $dataSave       = [
+                        'id_transaction'                => $id_transaction,
+                        'id_transaction_pickup_go_send' => $tpg['id_transaction_pickup_go_send'],
+                        'status'                        => $status[$post['status']] ?? '',
+                        'go_send_order_no'              => $post['booking_id']
+                    ];
+                    GoSend::saveUpdate($dataSave);
                 }
-                $id_transaction = TransactionPickup::select('id_transaction')->where('id_transaction_pickup', $tpg->id_transaction_pickup)->pluck('id_transaction')->first();
-                $dataSave       = [
-                    'id_transaction'                => $id_transaction,
-                    'id_transaction_pickup_go_send' => $tpg['id_transaction_pickup_go_send'],
-                    'status'                        => $status[$post['status']] ?? 'Finding Driver',
-                    'go_send_order_no'              => $post['booking_id']
-                ];
-                GoSend::saveUpdate($dataSave);
                 $trx     = Transaction::where('id_transaction', $id_transaction)->first();
                 $outlet  = Outlet::where('id_outlet', $trx->id_outlet)->first();
                 $phone   = User::select('phone')->where('id', $trx->id_user)->pluck('phone')->first();
