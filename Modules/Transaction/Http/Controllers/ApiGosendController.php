@@ -8,11 +8,14 @@ use App\Http\Models\Setting;
 use App\Http\Models\Transaction;
 use App\Http\Models\TransactionPickup;
 use App\Http\Models\TransactionPickupGoSend;
+use App\Http\Models\TransactionMultiplePayment;
 use App\Http\Models\User;
 use App\Lib\GoSend;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
+
+use DB;
 
 class ApiGosendController extends Controller
 {
@@ -22,6 +25,7 @@ class ApiGosendController extends Controller
         $this->getNotif   = "Modules\Transaction\Http\Controllers\ApiNotification";
         $this->membership = "Modules\Membership\Http\Controllers\ApiMembership";
         $this->trx        = "Modules\Transaction\Http\Controllers\ApiOnlineTransaction";
+        $this->outlet_app = "Modules\OutletApp\Http\Controllers\ApiOutletApp";
     }
     /**
      * Update latest status from gosend
@@ -69,8 +73,9 @@ class ApiGosendController extends Controller
             $response_code = 404;
             $response_body = ['status' => 'fail', 'messages' => ['Transaction Not Found']];
         } else {
+            $id_transaction = TransactionPickup::select('id_transaction')->where('id_transaction_pickup', $tpg->id_transaction_pickup)->pluck('id_transaction')->first();
             if ($post['booking_id'] ?? false) {
-                $status = [
+                $ref_status = [
                     'confirmed'        => 'Finding Driver', //
                     'allocated'        => 'Driver Allocated',
                     'out_for_pickup'   => 'Enroute Pickup', //
@@ -84,34 +89,57 @@ class ApiGosendController extends Controller
                 ];
                 $response_code = 200;
                 $toUpdate      = ['latest_status' => $post['status']];
-                if ($post['live_tracking_url'] ?? false) {
-                    $toUpdate['live_tracking_url'] = $post['live_tracking_url'];
+                if($post['receiver_name'] ?? '') {
+                    $toUpdate['receiver_name'] = $post['receiver_name'];
                 }
-                if ($post['driver_id'] ?? false) {
-                    $toUpdate['driver_id'] = $post['driver_id'];
-                }
-                if ($post['driver_name'] ?? false) {
-                    $toUpdate['driver_name'] = $post['driver_name'];
-                }
-                if ($post['driver_phone'] ?? false) {
-                    $toUpdate['driver_phone'] = $post['driver_phone'];
-                }
-                if ($post['driver_photo'] ?? false) {
-                    $toUpdate['driver_photo'] = $post['driver_photo'];
-                }
-                if ($post['vehicle_number'] ?? false) {
-                    $toUpdate['vehicle_number'] = $post['vehicle_number'];
-                }
-                if (!in_array(strtolower($post['status']), ['confirmed', 'no_driver', 'cancelled']) && strpos(env('GO_SEND_URL'), 'integration')) {
-                    $toUpdate['driver_id']      = '00510001';
-                    $toUpdate['driver_phone']   = '08111251307';
-                    $toUpdate['driver_name']    = 'Anton Lucarus';
-                    $toUpdate['driver_photo']   = 'http://beritatrans.com/cms/wp-content/uploads/2020/02/images4-553x400.jpeg';
-                    $toUpdate['vehicle_number'] = 'AB 2641 XY';
+                if (!in_array(strtolower($post['status']), ['confirmed', 'no_driver', 'cancelled']) && (empty($tpg->live_tracking_url) || empty($tpg->driver_id) || empty($tpg->driver_name) || empty($tpg->driver_phone) || empty($tpg->driver_photo) || empty($tpg->vehicle_number))) {
+                    if ($post['live_tracking_url'] ?? false) {
+                        $toUpdate['live_tracking_url'] = $post['live_tracking_url'];
+                    }
+                    if ($post['driver_name'] ?? false) {
+                        $toUpdate['driver_name'] = $post['driver_name'];
+                    }
+                    if ($post['driver_phone'] ?? false) {
+                        $toUpdate['driver_phone'] = $post['driver_phone'];
+                    }
+                    if ($post['driver_photo_url'] ?? false) {
+                        $toUpdate['driver_photo'] = $post['driver_photo_url'];
+                    }
+                    $tpg->update($toUpdate);
+                    // request booking detail because some data not available from webhook request
+                    $status = GoSend::getStatus($post['booking_id'], true);
+                    if ($status['receiverName'] ?? false) {
+                        $toUpdate['receiver_name'] = $status['receiverName'];
+                    }
+                    if ($status['liveTrackingUrl'] ?? false) {
+                        $toUpdate['live_tracking_url'] = $status['liveTrackingUrl'];
+                    }
+                    if ($status['driverId'] ?? false) {
+                        $toUpdate['driver_id'] = $post['driver_id'] ?: $status['driverId'];
+                    }
+                    if ($status['driverName'] ?? false) {
+                        $toUpdate['driver_name'] = $status['driverName'];
+                    }
+                    if ($status['driverPhone'] ?? false) {
+                        $toUpdate['driver_phone'] = $status['driverPhone'];
+                    }
+                    if ($status['driverPhoto'] ?? false) {
+                        $toUpdate['driver_photo'] = $status['driverPhoto'];
+                    }
+                    if ($status['vehicleNumber'] ?? false) {
+                        $toUpdate['vehicle_number'] = $status['vehicleNumber'];
+                    }
+                    if(strpos(env('GO_SEND_URL'), 'integration')){
+                        $toUpdate['driver_id']      = $toUpdate['driver_id']??'00510001';
+                        $toUpdate['driver_phone']   = $toUpdate['driver_phone']?:'08111251307';
+                        $toUpdate['driver_name']    = $toUpdate['driver_name']?:'Anton Lucarus';
+                        $toUpdate['driver_photo']   = $toUpdate['driver_photo']?:'http://beritatrans.com/cms/wp-content/uploads/2020/02/images4-553x400.jpeg';
+                        $toUpdate['vehicle_number'] = $toUpdate['vehicle_number']??'AB 2641 XY';                        
+                    }
                 }
                 $tpg->update($toUpdate);
+                $trx = Transaction::where('transactions.id_transaction', $id_transaction)->join('transaction_pickups', 'transaction_pickups.id_transaction', '=', 'transactions.id_transaction')->where('pickup_by', 'GO-SEND')->first();
                 if (in_array(strtolower($post['status']), ['completed', 'delivered'])) {
-                    $trx = Transaction::where('transactions.id_transaction', $request->id_transaction)->join('transaction_pickups', 'transaction_pickups.id_transaction', '=', 'transactions.id_transaction')->where('pickup_by', 'GO-SEND')->first();
                     // sendPoint delivery after status delivered only
                     if ($trx->cashback_insert_status != 1) {
                         //send notif to customer
@@ -120,7 +148,7 @@ class ApiGosendController extends Controller
                         $newTrx    = $trx;
                         $checkType = TransactionMultiplePayment::where('id_transaction', $trx->id_transaction)->get()->toArray();
                         $column    = array_column($checkType, 'type');
-                        
+                        $outlet    = $trx->outlet;
                         $use_referral = optional(optional($newTrx->promo_campaign_promo_code)->promo_campaign)->promo_type == 'Referral';
 
                         if (!in_array('Balance', $column) || $use_referral) {
@@ -165,16 +193,43 @@ class ApiGosendController extends Controller
                             ]);
                         }
                     }
-                    $arrived_at = date('Y-m-d H:i:s', strtotime($status['orderArrivalTime'] ?? time()));
+                    $status = GoSend::getStatus($post['booking_id'], true);
+                    $arrived_at = date('Y-m-d H:i:s', ($status['orderArrivalTime']??false)?strtotime($status['orderArrivalTime']):time());
                     TransactionPickup::where('id_transaction', $trx->id_transaction)->update(['arrived_at' => $arrived_at]);
+                    $dataSave       = [
+                        'id_transaction'                => $id_transaction,
+                        'id_transaction_pickup_go_send' => $tpg['id_transaction_pickup_go_send'],
+                        'status'                        => $post['status'],
+                        'go_send_order_no'              => $post['booking_id']
+                    ];
+                    GoSend::saveUpdate($dataSave);
+                } elseif (in_array(strtolower($post['status']), ['cancelled', 'rejected', 'no_driver'])) {
+                    $tpg->update([
+                        'live_tracking_url' => null,
+                        'driver_id' => null,
+                        'driver_name' => null,
+                        'driver_phone' => null,
+                        'driver_photo' => null,
+                        'vehicle_number' => null,
+                        'receiver_name' => null
+                    ]);
+                    $dataSave       = [
+                        'id_transaction'                => $id_transaction,
+                        'id_transaction_pickup_go_send' => $tpg['id_transaction_pickup_go_send'],
+                        'status'                        => $post['status'],
+                        'go_send_order_no'              => $post['booking_id']
+                    ];
+                    GoSend::saveUpdate($dataSave);
+                    app($this->outlet_app)->bookGoSend($trx, true);
+                }else{
+                    $dataSave       = [
+                        'id_transaction'                => $id_transaction,
+                        'id_transaction_pickup_go_send' => $tpg['id_transaction_pickup_go_send'],
+                        'status'                        => $post['status'],
+                        'go_send_order_no'              => $post['booking_id']
+                    ];
+                    GoSend::saveUpdate($dataSave);
                 }
-                $id_transaction = TransactionPickup::select('id_transaction')->where('id_transaction_pickup', $tpg->id_transaction_pickup)->pluck('id_transaction')->first();
-                $dataSave       = [
-                    'id_transaction'                => $id_transaction,
-                    'id_transaction_pickup_go_send' => $tpg['id_transaction_pickup_go_send'],
-                    'status'                        => $status[$post['status']] ?? 'Finding Driver',
-                ];
-                GoSend::saveUpdate($dataSave);
                 $trx     = Transaction::where('id_transaction', $id_transaction)->first();
                 $outlet  = Outlet::where('id_outlet', $trx->id_outlet)->first();
                 $phone   = User::select('phone')->where('id', $trx->id_user)->pluck('phone')->first();
@@ -184,7 +239,7 @@ class ApiGosendController extends Controller
                         'receipt_number'  => $trx->receipt_number,
                         'outlet_code'     => $outlet->outlet_code,
                         'outlet_name'     => $outlet->outlet_name,
-                        'delivery_status' => $status[$post['status']] ?? 'Finding Driver',
+                        'delivery_status' => $ref_status[$post['status']] ?? 'Finding Driver',
                     ]
                 );
                 $response_body = ['status' => 'success', 'messages' => ['Success update']];
