@@ -495,6 +495,7 @@ class ApiHistoryController extends Controller
     {
         $transaction = Transaction::select(\DB::raw('*,sum(transaction_products.transaction_product_qty) as sum_qty'))->distinct('transactions.*')
             ->join('outlets', 'transactions.id_outlet', '=', 'outlets.id_outlet')
+            ->join('transaction_pickups','transaction_pickups.id_transaction','=','transactions.id_transaction')
             ->leftJoin('transaction_products', 'transactions.id_transaction', '=', 'transaction_products.id_transaction')
             ->where('transactions.id_user', $id)
             ->with('outlet', 'logTopup')
@@ -604,7 +605,8 @@ class ApiHistoryController extends Controller
                 'rating_item_image' => $feedback->image?(env('S3_URL_API').$feedback->image):null,
                 'rating_item_text' => $feedback->text?:$feedback->rating_item_text,
             ]:null;
-
+            $dataList['display_review'] = ($value['transaction_payment_status'] == 'Completed' && !empty($value['taken_at'].$value['taken_by_system_at']))?1:0;
+            $dataList['button_reorder'] = ($value['transaction_payment_status'] == 'Completed')?1:0;
             $listTransaction[] = $dataList;
         }
 

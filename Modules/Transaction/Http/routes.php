@@ -1,5 +1,6 @@
 <?php
 
+Route::any('api/transaction/update-gosend', 'Modules\Transaction\Http\Controllers\ApiGosendController@updateStatus');
 Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scopes:be'], 'prefix' => 'api/transaction', 'namespace' => 'Modules\Transaction\Http\Controllers'], function () {
     Route::post('/outlet', 'ApiNotification@adminOutlet');
     Route::post('/admin/confirm', 'ApiNotification@adminOutletComfirm');
@@ -156,5 +157,3 @@ Route::group(['prefix' => 'api/transaction', 'middleware' => ['log_activities', 
 
     Route::post('/detail/webview/success', 'ApiWebviewController@trxSuccess');
 });
-
-Route::any('api/transaction/update-gosend', 'Modules\Transaction\Http\Controllers\ApiGosendController@updateStatus');

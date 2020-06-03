@@ -20,6 +20,10 @@ Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scop
     Route::any('detail', 'ApiAchievement@show');
     Route::any('detail/update', 'ApiAchievement@update');
     Route::any('destroy', 'ApiAchievement@destroy');
+    Route::group(['prefix' => 'report'], function () {
+        Route::any('user-achivement', 'ApiAchievement@reportUser');
+        Route::any('list-achivement', 'ApiAchievement@reportAch');
+    });
 });
 
 Route::group(['middleware' => ['auth:api', 'log_activities', 'scopes:apps'], 'prefix' => 'achievement'], function () {

@@ -446,6 +446,14 @@ class ApiMembership extends Controller
 											->whereDate('created_at','<=', date('Y-m-d', strtotime($check['retain_date'])))
 											->sum('balance');
 
+					$total_achievement = DB::table('achievement_users')
+					->join('achievement_details', 'achievement_users.id_achievement_detail', '=', 'achievement_details.id_achievement_detail')
+					->join('achievement_groups', 'achievement_details.id_achievement_group', '=', 'achievement_groups.id_achievement_group')
+					->where('id_user', $check['id'])
+					->where('achievement_groups.status', 'Active')
+						->where('achievement_groups.is_calculate', 1)
+						->groupBy('achievement_groups.id_achievement_group')->count();
+
 					//update user count & subtotal transaction
 					$user = User::where('users.phone', $phone)->update(['subtotal_transaction'=> $trx_value, 'count_transaction' => $trx_count]);
 
@@ -482,6 +490,15 @@ class ApiMembership extends Controller
 									}
 								}
 							}
+
+							//cek total transaction achievement
+							if($all['membership_type'] == 'achievement'){
+								if($all['min_total_achievement'] > $membership['min_total_achievement']){
+									if($total_achievement >= $all['min_total_achievement']){
+										$membership_baru = $all;
+									}
+								}
+							}
 						}
 					} else {
 						//sudah waktunya dicek untuk retain
@@ -510,6 +527,15 @@ class ApiMembership extends Controller
 							if($all['membership_type'] == 'balance'){
 								if($all['min_total_balance'] > $membership['min_total_balance']){
 									if($total_balance >= $all['min_total_balance']){
+										//level up
+										$membership_baru = $all;
+									}
+								}
+							}
+							//cek total achievement
+							if($all['membership_type'] == 'achievement'){
+								if($all['min_total_achievement'] > $membership['min_total_achievement']){
+									if($total_achievement >= $all['min_total_achievement']){
 										//level up
 										$membership_baru = $all;
 									}
@@ -551,6 +577,15 @@ class ApiMembership extends Controller
 											}
 										}
 									}
+									//cek total achievement
+									if($all['membership_type'] == 'achievement'){
+										if($all['min_total_achievement'] < $membership['min_total_achievement']){
+											if($trx_count >= $all['min_total_achievement']){
+												//level up
+												$membership_baru = $all;
+											}
+										}
+									}
 								}
 							}
 						}
@@ -572,6 +607,14 @@ class ApiMembership extends Controller
 											->where('balance', '>', 0)
 											->whereNotIn('source', ['Rejected Order', 'Rejected Order Midtrans', 'Rejected Order Point', 'Reversal'])
 											->sum('balance');
+
+					$total_achievement = DB::table('achievement_users')
+					->join('achievement_details', 'achievement_users.id_achievement_detail', '=', 'achievement_details.id_achievement_detail')
+					->join('achievement_groups', 'achievement_details.id_achievement_group', '=', 'achievement_groups.id_achievement_group')
+					->where('id_user', $check['id'])
+					->where('achievement_groups.status', 'Active')
+						->where('achievement_groups.is_calculate', 1)
+						->groupBy('achievement_groups.id_achievement_group')->count();
 
 					//update user count & subtotal transaction
 					$user = User::where('users.phone', $phone)->update(['subtotal_transaction'=> $trx_value, 'count_transaction' => $trx_count]);
@@ -607,6 +650,15 @@ class ApiMembership extends Controller
 								}
 							}
 						}
+						//cek total achievement
+						if($all['membership_type'] == 'achievement'){
+							if($all['min_total_achievement'] > $membership['min_total_achievement']){
+								if($total_achievement >= $all['min_total_achievement']){
+									//level up
+									$membership_baru = $all;
+								}
+							}
+						}
 					}
 				}
 			} else {
@@ -626,6 +678,14 @@ class ApiMembership extends Controller
 				$total_balance = LogBalance::whereNotIn('source', ['Rejected Order', 'Rejected Order Midtrans', 'Rejected Order Point', 'Reversal'])
 											->where('balance', '>', 0)
 											->where('id_user',$check['id'])->sum('balance');
+
+				$total_achievement = DB::table('achievement_users')
+				->join('achievement_details', 'achievement_users.id_achievement_detail', '=', 'achievement_details.id_achievement_detail')
+				->join('achievement_groups', 'achievement_details.id_achievement_group', '=', 'achievement_groups.id_achievement_group')
+				->where('id_user', $check['id'])
+				->where('achievement_groups.status', 'Active')
+					->where('achievement_groups.is_calculate', 1)
+					->groupBy('achievement_groups.id_achievement_group')->count();
 
 				//update user count & subtotal transaction
 				$user = User::where('users.phone', $phone)->update(['subtotal_transaction'=> $trx_value, 'count_transaction' => $trx_count]);
@@ -655,6 +715,13 @@ class ApiMembership extends Controller
 							$membership_baru = $all;
 						}
 					}
+					//cek total achievement
+					if($all['membership_type'] == 'achievement'){
+						if($total_achievement >= $all['min_total_achievement']){
+							//level up
+							$membership_baru = $all;
+						}
+					}
 				}
 			}
 
@@ -672,10 +739,12 @@ class ApiMembership extends Controller
 				$data['min_total_value'] 				= $membership_baru['min_total_value'];
 				$data['min_total_count'] 				= $membership_baru['min_total_count'];
 				$data['min_total_balance'] 				= $membership_baru['min_total_balance'];
+				$data['min_total_achievement'] 			= $membership_baru['min_total_achievement'];
 				$data['retain_date'] 					= $date_end;
 				$data['retain_min_total_value'] 		= $membership_baru['retain_min_total_value'];
 				$data['retain_min_total_count'] 		= $membership_baru['retain_min_total_count'];
 				$data['retain_min_total_balance'] 		= $membership_baru['retain_min_total_balance'];
+				$data['retain_min_total_achievement']	= $membership_baru['retain_min_total_achievement'];
 				$data['benefit_point_multiplier'] 		= $membership_baru['benefit_point_multiplier'];
 				$data['benefit_cashback_multiplier'] 	= $membership_baru['benefit_cashback_multiplier'];
 				$data['benefit_promo_id'] 				= $membership_baru['benefit_promo_id'];

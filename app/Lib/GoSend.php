@@ -188,7 +188,7 @@ class GoSend
 
         try {
             LogApiGosend::create([
-                'type'              => 'get_status',
+                'type'              => 'get_price',
                 'id_reference'      => null,
                 'request_url'       => $url,
                 'request_method'    => 'GET',
@@ -228,7 +228,22 @@ class GoSend
      */
     public static function saveUpdate($dataUpdate)
     {
-        $found = TransactionPickupGoSendUpdate::where(['id_transaction_pickup_go_send' => $dataUpdate['id_transaction_pickup_go_send'], 'status' => $dataUpdate['status']])->first();
+        if(!$dataUpdate['status']??false){
+            return false;
+        }
+        $found = TransactionPickupGoSendUpdate::where(['id_transaction_pickup_go_send' => $dataUpdate['id_transaction_pickup_go_send'], 'go_send_order_no' => $dataUpdate['go_send_order_no'], 'status' => $dataUpdate['status']])->first();
+        $ref_status = [
+            'confirmed' => 'Finding Driver',
+            'allocated' => 'Driver Allocated',
+            'out_for_pickup' => 'Enroute Pickup',
+            'picked' => 'Item Picked by Driver',
+            'out_for_delivery' => 'Enroute Drop',
+            'cancelled' => 'Cancelled',
+            'delivered' => 'Completed',
+            'rejected' => 'Rejected',
+            'no_driver' => 'Driver not found',
+            'on_hold' => 'On Hold'
+        ];
         if (!$found) {
             $trx_pickup = TransactionPickup::where('id_transaction', $dataUpdate['id_transaction'])->first();
             if ($dataUpdate['status'] == 'Completed') {
@@ -240,8 +255,8 @@ class GoSend
             $dataPush = [
                 'type' => 'update_delivery',
                 'subject' => 'Update Delivery',
-                'string_body' => $trx->transaction_receipt_number.' '.($dataUpdate['status'] ?? 'Finding Driver'),
-                'status' => ($dataUpdate['status'] ?? 'Finding Driver'),
+                'string_body' => $trx->transaction_receipt_number.' '.($ref_status[$dataUpdate['status']] ?? $dataUpdate['status']),
+                'status' => $dataUpdate['status'],
                 'id_transaction' => $trx->id_transaction,
                 'order_id' => $trx_pickup->order_id
             ];
