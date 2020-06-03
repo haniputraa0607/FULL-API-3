@@ -84,30 +84,54 @@ class ApiGosendController extends Controller
                 ];
                 $response_code = 200;
                 $toUpdate      = ['latest_status' => $post['status']];
-                if ($post['live_tracking_url'] ?? false) {
-                    $toUpdate['live_tracking_url'] = $post['live_tracking_url'];
+                if($post['receiver_name'] ?? '') {
+                    $toUpdate['receiver_name'] = $post['receiver_name'];
                 }
-                if ($post['driver_id'] ?? false) {
-                    $toUpdate['driver_id'] = $post['driver_id'];
-                }
-                if ($post['driver_name'] ?? false) {
-                    $toUpdate['driver_name'] = $post['driver_name'];
-                }
-                if ($post['driver_phone'] ?? false) {
-                    $toUpdate['driver_phone'] = $post['driver_phone'];
-                }
-                if ($post['driver_photo'] ?? false) {
-                    $toUpdate['driver_photo'] = $post['driver_photo'];
-                }
-                if ($post['vehicle_number'] ?? false) {
-                    $toUpdate['vehicle_number'] = $post['vehicle_number'];
-                }
-                if (!in_array(strtolower($post['status']), ['confirmed', 'no_driver', 'cancelled']) && strpos(env('GO_SEND_URL'), 'integration')) {
-                    $toUpdate['driver_id']      = '00510001';
-                    $toUpdate['driver_phone']   = '08111251307';
-                    $toUpdate['driver_name']    = 'Anton Lucarus';
-                    $toUpdate['driver_photo']   = 'http://beritatrans.com/cms/wp-content/uploads/2020/02/images4-553x400.jpeg';
-                    $toUpdate['vehicle_number'] = 'AB 2641 XY';
+                if (!in_array(strtolower($post['status']), ['confirmed', 'no_driver', 'cancelled']) && (empty($tpg->live_tracking_url) || empty($tpg->driver_id) || empty($tpg->driver_name) || empty($tpg->driver_phone) || empty($tpg->driver_photo) || empty($tpg->vehicle_number))) {
+                    $status = GoSend::getStatus($post['booking_id'], true);
+                    if ($post['live_tracking_url'] ?? false) {
+                        $toUpdate['live_tracking_url'] = $post['live_tracking_url'];
+                    }
+                    if ($post['driver_id'] ?? false) {
+                        $toUpdate['driver_id'] = $post['driver_id'];
+                    }
+                    if ($post['driver_name'] ?? false) {
+                        $toUpdate['driver_name'] = $post['driver_name'];
+                    }
+                    if ($post['driver_phone'] ?? false) {
+                        $toUpdate['driver_phone'] = $post['driver_phone'];
+                    }
+                    if ($post['driver_photo_url'] ?? false) {
+                        $toUpdate['driver_photo'] = $post['driver_photo_url'];
+                    }
+                    if ($post['vehicle_number'] ?? false) {
+                        $toUpdate['vehicle_number'] = $post['vehicle_number'];
+                    }
+                    if ($status['liveTrackingUrl'] ?? false) {
+                        $toUpdate['live_tracking_url'] = $status['liveTrackingUrl'];
+                    }
+                    if ($status['driverId'] ?? false) {
+                        $toUpdate['driver_id'] = $post['driver_id'] ?: $status['driverId'];
+                    }
+                    if ($status['driverName'] ?? false) {
+                        $toUpdate['driver_name'] = $status['driverName'];
+                    }
+                    if ($status['driverPhone'] ?? false) {
+                        $toUpdate['driver_phone'] = $status['driverPhone'];
+                    }
+                    if ($status['driverPhoto'] ?? false) {
+                        $toUpdate['driver_photo'] = $status['driverPhoto'];
+                    }
+                    if ($status['vehicleNumber'] ?? false) {
+                        $toUpdate['vehicle_number'] = $status['vehicleNumber'];
+                    }
+                    if(strpos(env('GO_SEND_URL'), 'integration')){
+                        $toUpdate['driver_id']      = $toUpdate['driver_id']?:'00510001';
+                        $toUpdate['driver_phone']   = $toUpdate['driver_phone']?:'08111251307';
+                        $toUpdate['driver_name']    = $toUpdate['driver_name']?:'Anton Lucarus';
+                        $toUpdate['driver_photo']   = $toUpdate['driver_photo']?:'http://beritatrans.com/cms/wp-content/uploads/2020/02/images4-553x400.jpeg';
+                        $toUpdate['vehicle_number'] = $toUpdate['vehicle_number']?:'AB 2641 XY';                        
+                    }
                 }
                 $tpg->update($toUpdate);
                 if (in_array(strtolower($post['status']), ['completed', 'delivered'])) {

@@ -1782,6 +1782,9 @@ class ApiOutletApp extends Controller
                     'On Hold' => 'on_hold',
                 ];
                 $status = GoSend::getStatus($trx['transaction_receipt_number']);
+                if($status['receiver_name'] ?? '') {
+                    $toUpdate['receiver_name'] = $status['receiver_name'];
+                }
                 if ($status['status'] ?? false) {
                     $toUpdate = ['latest_status' => $ref_status[$status['status']]??$status['status']];
                     if ($status['liveTrackingUrl'] ?? false) {
@@ -2269,11 +2272,11 @@ class ApiOutletApp extends Controller
                 $result['delivery_info'] = [
                     'driver'            => null,
                     'delivery_status'   => '',
-                    'delivery_address'  => $list['transaction_pickup_go_send']['destination_address'],
+                    'delivery_address'  => $list['transaction_pickup_go_send']['destination_address']?:'',
                     'booking_status'    => 0,
                     'cancelable'        => 1,
-                    'go_send_order_no'  => $list['transaction_pickup_go_send']['go_send_order_no'],
-                    'live_tracking_url' => $list['transaction_pickup_go_send']['live_tracking_url'],
+                    'go_send_order_no'  => $list['transaction_pickup_go_send']['go_send_order_no']?:'',
+                    'live_tracking_url' => $list['transaction_pickup_go_send']['live_tracking_url']?:'',
                 ];
                 if ($list['transaction_pickup_go_send']['go_send_id']) {
                     $result['delivery_info']['booking_status'] = 1;
@@ -2290,11 +2293,11 @@ class ApiOutletApp extends Controller
                         $result['delivery_info']['delivery_status'] = 'Driver ditemukan';
                         $result['transaction_status_text']          = 'DRIVER DITEMUKAN';
                         $result['delivery_info']['driver']          = [
-                            'driver_id'      => $list['transaction_pickup_go_send']['driver_id'],
-                            'driver_name'    => $list['transaction_pickup_go_send']['driver_name'],
-                            'driver_phone'   => $list['transaction_pickup_go_send']['driver_phone'],
-                            'driver_photo'   => $list['transaction_pickup_go_send']['driver_photo'],
-                            'vehicle_number' => $list['transaction_pickup_go_send']['vehicle_number'],
+                            'driver_id'      => $list['transaction_pickup_go_send']['driver_id']?:'',
+                            'driver_name'    => $list['transaction_pickup_go_send']['driver_name']?:'',
+                            'driver_phone'   => $list['transaction_pickup_go_send']['driver_phone']?:'',
+                            'driver_photo'   => $list['transaction_pickup_go_send']['driver_photo']?:'',
+                            'vehicle_number' => $list['transaction_pickup_go_send']['vehicle_number']?:'',
                         ];
                         $result['rejectable']                       = 0;
                         break;
@@ -2303,11 +2306,11 @@ class ApiOutletApp extends Controller
                         $result['delivery_info']['delivery_status'] = 'Driver dalam perjalanan menuju Outlet';
                         $result['transaction_status_text']          = 'DRIVER SEDANG MENUJU OUTLET';
                         $result['delivery_info']['driver']          = [
-                            'driver_id'      => $list['transaction_pickup_go_send']['driver_id'],
-                            'driver_name'    => $list['transaction_pickup_go_send']['driver_name'],
-                            'driver_phone'   => $list['transaction_pickup_go_send']['driver_phone'],
-                            'driver_photo'   => $list['transaction_pickup_go_send']['driver_photo'],
-                            'vehicle_number' => $list['transaction_pickup_go_send']['vehicle_number'],
+                            'driver_id'      => $list['transaction_pickup_go_send']['driver_id']?:'',
+                            'driver_name'    => $list['transaction_pickup_go_send']['driver_name']?:'',
+                            'driver_phone'   => $list['transaction_pickup_go_send']['driver_phone']?:'',
+                            'driver_photo'   => $list['transaction_pickup_go_send']['driver_photo']?:'',
+                            'vehicle_number' => $list['transaction_pickup_go_send']['vehicle_number']?:'',
                         ];
                         $result['delivery_info']['cancelable'] = 1;
                         $result['rejectable']                  = 0;
@@ -2317,11 +2320,11 @@ class ApiOutletApp extends Controller
                         $result['delivery_info']['delivery_status'] = 'Driver mengantarkan pesanan';
                         $result['transaction_status_text']          = 'PROSES PENGANTARAN';
                         $result['delivery_info']['driver']          = [
-                            'driver_id'      => $list['transaction_pickup_go_send']['driver_id'],
-                            'driver_name'    => $list['transaction_pickup_go_send']['driver_name'],
-                            'driver_phone'   => $list['transaction_pickup_go_send']['driver_phone'],
-                            'driver_photo'   => $list['transaction_pickup_go_send']['driver_photo'],
-                            'vehicle_number' => $list['transaction_pickup_go_send']['vehicle_number'],
+                            'driver_id'      => $list['transaction_pickup_go_send']['driver_id']?:'',
+                            'driver_name'    => $list['transaction_pickup_go_send']['driver_name']?:'',
+                            'driver_phone'   => $list['transaction_pickup_go_send']['driver_phone']?:'',
+                            'driver_photo'   => $list['transaction_pickup_go_send']['driver_photo']?:'',
+                            'vehicle_number' => $list['transaction_pickup_go_send']['vehicle_number']?:'',
                         ];
                         $result['delivery_info']['cancelable'] = 0;
                         $result['rejectable']                  = 0;
@@ -2331,11 +2334,11 @@ class ApiOutletApp extends Controller
                         $result['transaction_status_text']          = 'ORDER SUDAH DIAMBIL';
                         $result['delivery_info']['delivery_status'] = 'Pesanan sudah diterima Customer';
                         $result['delivery_info']['driver']          = [
-                            'driver_id'      => $list['transaction_pickup_go_send']['driver_id'],
-                            'driver_name'    => $list['transaction_pickup_go_send']['driver_name'],
-                            'driver_phone'   => $list['transaction_pickup_go_send']['driver_phone'],
-                            'driver_photo'   => $list['transaction_pickup_go_send']['driver_photo'],
-                            'vehicle_number' => $list['transaction_pickup_go_send']['vehicle_number'],
+                            'driver_id'      => $list['transaction_pickup_go_send']['driver_id']?:'',
+                            'driver_name'    => $list['transaction_pickup_go_send']['driver_name']?:'',
+                            'driver_phone'   => $list['transaction_pickup_go_send']['driver_phone']?:'',
+                            'driver_photo'   => $list['transaction_pickup_go_send']['driver_photo']?:'',
+                            'vehicle_number' => $list['transaction_pickup_go_send']['vehicle_number']?:'',
                         ];
                         $result['delivery_info']['cancelable'] = 0;
                         break;
