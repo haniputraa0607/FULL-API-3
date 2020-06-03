@@ -1915,7 +1915,7 @@ class ApiOutletApp extends Controller
                             'go_send_order_no'              => $status['orderNo'] ?? ''
                         ];
                         GoSend::saveUpdate($dataSave);
-                        $this->bookGoSend($trx);
+                        $this->bookGoSend($trx, true);
                     } else {
                         $dataSave = [
                             'id_transaction'                => $trx['id_transaction'],
