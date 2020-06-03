@@ -204,6 +204,7 @@ class ApiGosendController extends Controller
                     'id_transaction'                => $id_transaction,
                     'id_transaction_pickup_go_send' => $tpg['id_transaction_pickup_go_send'],
                     'status'                        => $status[$post['status']] ?? 'Finding Driver',
+                    'go_send_order_no'              => $post['booking_id']
                 ];
                 GoSend::saveUpdate($dataSave);
                 $trx     = Transaction::where('id_transaction', $id_transaction)->first();

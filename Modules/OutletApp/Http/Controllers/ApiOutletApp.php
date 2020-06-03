@@ -1736,6 +1736,7 @@ class ApiOutletApp extends Controller
             'id_transaction'                => $trx['id_transaction'],
             'id_transaction_pickup_go_send' => $trx['transaction_pickup']['transaction_pickup_go_send']['id_transaction_pickup_go_send'],
             'status'                        => $status['status'] ?? 'Finding Driver',
+            'go_send_order_no'              => $booking['orderNo']
         ];
         GoSend::saveUpdate($dataSave);
         if ($updateGoSend) {
@@ -1875,6 +1876,7 @@ class ApiOutletApp extends Controller
                     'id_transaction'                => $trx['id_transaction'],
                     'id_transaction_pickup_go_send' => $trxGoSend['id_transaction_pickup_go_send'],
                     'status'                        => $status['status'] ?? 'on_going',
+                    'go_send_order_no'              => $status['orderNo'] ?? ''
                 ];
                 GoSend::saveUpdate($dataSave);
                 return MyHelper::checkGet($trxGoSend);
