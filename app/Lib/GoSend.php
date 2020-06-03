@@ -188,7 +188,7 @@ class GoSend
 
         try {
             LogApiGosend::create([
-                'type'              => 'get_status',
+                'type'              => 'get_price',
                 'id_reference'      => null,
                 'request_url'       => $url,
                 'request_method'    => 'GET',
