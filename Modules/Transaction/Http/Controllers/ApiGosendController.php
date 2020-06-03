@@ -8,6 +8,7 @@ use App\Http\Models\Setting;
 use App\Http\Models\Transaction;
 use App\Http\Models\TransactionPickup;
 use App\Http\Models\TransactionPickupGoSend;
+use App\Http\Models\TransactionMultiplePayment;
 use App\Http\Models\User;
 use App\Lib\GoSend;
 use Illuminate\Http\Request;
@@ -95,9 +96,6 @@ class ApiGosendController extends Controller
                     if ($post['live_tracking_url'] ?? false) {
                         $toUpdate['live_tracking_url'] = $post['live_tracking_url'];
                     }
-                    if ($post['driver_id'] ?? false) {
-                        $toUpdate['driver_id'] = $post['driver_id'];
-                    }
                     if ($post['driver_name'] ?? false) {
                         $toUpdate['driver_name'] = $post['driver_name'];
                     }
@@ -106,9 +104,6 @@ class ApiGosendController extends Controller
                     }
                     if ($post['driver_photo_url'] ?? false) {
                         $toUpdate['driver_photo'] = $post['driver_photo_url'];
-                    }
-                    if ($post['vehicle_number'] ?? false) {
-                        $toUpdate['vehicle_number'] = $post['vehicle_number'];
                     }
                     $tpg->update($toUpdate);
                     // request booking detail because some data not available from webhook request
@@ -135,11 +130,11 @@ class ApiGosendController extends Controller
                         $toUpdate['vehicle_number'] = $status['vehicleNumber'];
                     }
                     if(strpos(env('GO_SEND_URL'), 'integration')){
-                        $toUpdate['driver_id']      = $toUpdate['driver_id']?:'00510001';
+                        $toUpdate['driver_id']      = $toUpdate['driver_id']??'00510001';
                         $toUpdate['driver_phone']   = $toUpdate['driver_phone']?:'08111251307';
                         $toUpdate['driver_name']    = $toUpdate['driver_name']?:'Anton Lucarus';
                         $toUpdate['driver_photo']   = $toUpdate['driver_photo']?:'http://beritatrans.com/cms/wp-content/uploads/2020/02/images4-553x400.jpeg';
-                        $toUpdate['vehicle_number'] = $toUpdate['vehicle_number']?:'AB 2641 XY';                        
+                        $toUpdate['vehicle_number'] = $toUpdate['vehicle_number']??'AB 2641 XY';                        
                     }
                 }
                 $tpg->update($toUpdate);
@@ -153,7 +148,7 @@ class ApiGosendController extends Controller
                         $newTrx    = $trx;
                         $checkType = TransactionMultiplePayment::where('id_transaction', $trx->id_transaction)->get()->toArray();
                         $column    = array_column($checkType, 'type');
-                        
+                        $outlet    = $trx->outlet;
                         $use_referral = optional(optional($newTrx->promo_campaign_promo_code)->promo_campaign)->promo_type == 'Referral';
 
                         if (!in_array('Balance', $column) || $use_referral) {
@@ -203,7 +198,7 @@ class ApiGosendController extends Controller
                     $dataSave       = [
                         'id_transaction'                => $id_transaction,
                         'id_transaction_pickup_go_send' => $tpg['id_transaction_pickup_go_send'],
-                        'status'                        => $status[$post['status']] ?? '',
+                        'status'                        => $post['status'],
                         'go_send_order_no'              => $post['booking_id']
                     ];
                     GoSend::saveUpdate($dataSave);
@@ -220,7 +215,7 @@ class ApiGosendController extends Controller
                     $dataSave       = [
                         'id_transaction'                => $id_transaction,
                         'id_transaction_pickup_go_send' => $tpg['id_transaction_pickup_go_send'],
-                        'status'                        => $status[$post['status']] ?? '',
+                        'status'                        => $post['status'],
                         'go_send_order_no'              => $post['booking_id']
                     ];
                     GoSend::saveUpdate($dataSave);
@@ -229,7 +224,7 @@ class ApiGosendController extends Controller
                     $dataSave       = [
                         'id_transaction'                => $id_transaction,
                         'id_transaction_pickup_go_send' => $tpg['id_transaction_pickup_go_send'],
-                        'status'                        => $status[$post['status']] ?? '',
+                        'status'                        => $post['status'],
                         'go_send_order_no'              => $post['booking_id']
                     ];
                     GoSend::saveUpdate($dataSave);
