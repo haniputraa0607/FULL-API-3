@@ -255,7 +255,7 @@ class GoSend
             $dataPush = [
                 'type' => 'update_delivery',
                 'subject' => 'Update Delivery',
-                'string_body' => $trx->transaction_receipt_number.' '.$ref_status[$dataUpdate['status']] ?? $dataUpdate['status'],
+                'string_body' => $trx->transaction_receipt_number.' '.($ref_status[$dataUpdate['status']] ?? $dataUpdate['status']),
                 'status' => $dataUpdate['status'],
                 'id_transaction' => $trx->id_transaction,
                 'order_id' => $trx_pickup->order_id

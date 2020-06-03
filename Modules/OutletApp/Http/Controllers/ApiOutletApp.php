@@ -1684,7 +1684,7 @@ class ApiOutletApp extends Controller
         return response()->json($result);
     }
 
-    public function bookGoSend($trx)
+    public function bookGoSend($trx,$fromRetry = false)
     {
         $trx->load('transaction_pickup', 'transaction_pickup.transaction_pickup_go_send', 'outlet');
         if (!($trx['transaction_pickup']['transaction_pickup_go_send']['id_transaction_pickup_go_send'] ?? false)) {
@@ -1715,6 +1715,14 @@ class ApiOutletApp extends Controller
         $destination['note']      = $trx['transaction_pickup']['transaction_pickup_go_send']['destination_note'];
 
         $packageDetail = Setting::where('key', 'go_send_package_detail')->first();
+
+        //update id from go-send
+        $updateGoSend = TransactionPickupGoSend::find($trx['transaction_pickup']['transaction_pickup_go_send']['id_transaction_pickup_go_send']);
+        $maxRetry = Setting::select('value')->where('key', 'booking_delivery_max_retry')->pluck('value')->first()?:5;
+        if ($fromRetry && $updateGoSend->retry_count >= $maxRetry) {
+            return ['status'  => 'fail', 'messages' => ['Retry reach limit']];
+        }
+
         if ($packageDetail) {
             $packageDetail = str_replace('%order_id%', $trx['transaction_pickup']['order_id'], $packageDetail['value']);
         } else {
@@ -1729,9 +1737,20 @@ class ApiOutletApp extends Controller
         if (!isset($booking['id'])) {
             return ['status' => 'fail', 'messages' => $booking['messages'] ?? ['failed booking GO-SEND']];
         }
+        $ref_status = [
+            'Finding Driver' => 'confirmed',
+            'Driver Allocated' => 'allocated',
+            'Enroute Pickup' => 'out_for_pickup',
+            'Item Picked by Driver' => 'picked',
+            'Enroute Drop' => 'out_for_delivery',
+            'Cancelled' => 'cancelled',
+            'Completed' => 'delivered',
+            'Rejected' => 'rejected',
+            'Driver not found' => 'no_driver',
+            'On Hold' => 'on_hold',
+        ];
         $status = GoSend::getStatus($booking['orderNo'], true);
-        //update id from go-send
-        $updateGoSend = TransactionPickupGoSend::find($trx['transaction_pickup']['transaction_pickup_go_send']['id_transaction_pickup_go_send']);
+        $status['status'] = $ref_status[$status['status']] ?? $status['status'];
         $dataSave     = [
             'id_transaction'                => $trx['id_transaction'],
             'id_transaction_pickup_go_send' => $trx['transaction_pickup']['transaction_pickup_go_send']['id_transaction_pickup_go_send'],
@@ -1749,6 +1768,7 @@ class ApiOutletApp extends Controller
             $updateGoSend->driver_photo      = $status['driverPhoto'] ?? null;
             $updateGoSend->vehicle_number    = $status['vehicleNumber'] ?? null;
             $updateGoSend->live_tracking_url = $status['liveTrackingUrl'] ?? null;
+            $updateGoSend->retry_count = $fromRetry?($updateGoSend->retry_count+1):0;
             $updateGoSend->save();
 
             if (!$updateGoSend) {

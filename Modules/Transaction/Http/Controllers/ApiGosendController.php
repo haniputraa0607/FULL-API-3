@@ -74,7 +74,7 @@ class ApiGosendController extends Controller
         } else {
             $id_transaction = TransactionPickup::select('id_transaction')->where('id_transaction_pickup', $tpg->id_transaction_pickup)->pluck('id_transaction')->first();
             if ($post['booking_id'] ?? false) {
-                $status = [
+                $ref_status = [
                     'confirmed'        => 'Finding Driver', //
                     'allocated'        => 'Driver Allocated',
                     'out_for_pickup'   => 'Enroute Pickup', //
@@ -243,7 +243,7 @@ class ApiGosendController extends Controller
                         'receipt_number'  => $trx->receipt_number,
                         'outlet_code'     => $outlet->outlet_code,
                         'outlet_name'     => $outlet->outlet_name,
-                        'delivery_status' => $status[$post['status']] ?? 'Finding Driver',
+                        'delivery_status' => $ref_status[$post['status']] ?? 'Finding Driver',
                     ]
                 );
                 $response_body = ['status' => 'success', 'messages' => ['Success update']];

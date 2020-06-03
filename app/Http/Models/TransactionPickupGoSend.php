@@ -37,6 +37,7 @@ class TransactionPickupGoSend extends Model
 		'driver_photo',
 		'vehicle_number',
 		'receiver_name',
+		'retry_count',
 		'created_at',
 		'updated_at'
 	];
