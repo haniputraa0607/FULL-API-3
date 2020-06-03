@@ -1889,7 +1889,7 @@ class ApiOutletApp extends Controller
                                 ]);
                             }
                         }
-                        $arrived_at = date('Y-m-d H:i:s', strtotime($status['orderArrivalTime'] ?? time()));
+                        $arrived_at = date('Y-m-d H:i:s', ($status['orderArrivalTime']??false)?strtotime($status['orderArrivalTime']):time());
                         TransactionPickup::where('id_transaction', $trx->id_transaction)->update(['arrived_at' => $arrived_at]);
                         $dataSave = [
                             'id_transaction'                => $trx['id_transaction'],

@@ -193,7 +193,8 @@ class ApiGosendController extends Controller
                             ]);
                         }
                     }
-                    $arrived_at = date('Y-m-d H:i:s', strtotime($status['orderArrivalTime'] ?? time()));
+                    $status = GoSend::getStatus($post['booking_id'], true);
+                    $arrived_at = date('Y-m-d H:i:s', ($status['orderArrivalTime']??false)?strtotime($status['orderArrivalTime']):time());
                     TransactionPickup::where('id_transaction', $trx->id_transaction)->update(['arrived_at' => $arrived_at]);
                     $dataSave       = [
                         'id_transaction'                => $id_transaction,
