@@ -14,6 +14,8 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
 
+use DB;
+
 class ApiGosendController extends Controller
 {
     public function __construct()
@@ -88,7 +90,6 @@ class ApiGosendController extends Controller
                     $toUpdate['receiver_name'] = $post['receiver_name'];
                 }
                 if (!in_array(strtolower($post['status']), ['confirmed', 'no_driver', 'cancelled']) && (empty($tpg->live_tracking_url) || empty($tpg->driver_id) || empty($tpg->driver_name) || empty($tpg->driver_phone) || empty($tpg->driver_photo) || empty($tpg->vehicle_number))) {
-                    $status = GoSend::getStatus($post['booking_id'], true);
                     if ($post['live_tracking_url'] ?? false) {
                         $toUpdate['live_tracking_url'] = $post['live_tracking_url'];
                     }
@@ -106,6 +107,12 @@ class ApiGosendController extends Controller
                     }
                     if ($post['vehicle_number'] ?? false) {
                         $toUpdate['vehicle_number'] = $post['vehicle_number'];
+                    }
+                    $tpg->update($toUpdate);
+                    // request booking detail because some data not available from webhook request
+                    $status = GoSend::getStatus($post['booking_id'], true);
+                    if ($status['receiverName'] ?? false) {
+                        $toUpdate['receiver_name'] = $status['receiverName'];
                     }
                     if ($status['liveTrackingUrl'] ?? false) {
                         $toUpdate['live_tracking_url'] = $status['liveTrackingUrl'];
