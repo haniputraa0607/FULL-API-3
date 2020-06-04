@@ -62,6 +62,7 @@ class ApiSetting extends Controller
     function __construct() {
         date_default_timezone_set('Asia/Jakarta');
         $this->endPoint = env('S3_URL_API');
+		$this->autocrm  = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
     }
     public function emailUpdate(Request $request) {
 		$data = $request->json()->all();
