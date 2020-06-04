@@ -115,7 +115,7 @@ class ApiGosendController extends Controller
                         $toUpdate['live_tracking_url'] = $status['liveTrackingUrl'];
                     }
                     if ($status['driverId'] ?? false) {
-                        $toUpdate['driver_id'] = $post['driver_id'] ?: $status['driverId'];
+                        $toUpdate['driver_id'] = $status['driverId'];
                     }
                     if ($status['driverName'] ?? false) {
                         $toUpdate['driver_name'] = $status['driverName'];
@@ -131,11 +131,17 @@ class ApiGosendController extends Controller
                     }
                     if(strpos(env('GO_SEND_URL'), 'integration')){
                         $toUpdate['driver_id']      = $toUpdate['driver_id']??'00510001';
-                        $toUpdate['driver_phone']   = $toUpdate['driver_phone']?:'08111251307';
-                        $toUpdate['driver_name']    = $toUpdate['driver_name']?:'Anton Lucarus';
-                        $toUpdate['driver_photo']   = $toUpdate['driver_photo']?:'http://beritatrans.com/cms/wp-content/uploads/2020/02/images4-553x400.jpeg';
+                        $toUpdate['driver_phone']   = $toUpdate['driver_phone']??'08111251307';
+                        $toUpdate['driver_name']    = $toUpdate['driver_name']??'Anton Lucarus';
+                        $toUpdate['driver_photo']   = $toUpdate['driver_photo']??'http://beritatrans.com/cms/wp-content/uploads/2020/02/images4-553x400.jpeg';
                         $toUpdate['vehicle_number'] = $toUpdate['vehicle_number']??'AB 2641 XY';                        
                     }
+                } elseif (strtolower($post['status']) == 'confirmed'){
+                    $toUpdate['driver_id']      = null;
+                    $toUpdate['driver_phone']   = null;
+                    $toUpdate['driver_name']    = null;
+                    $toUpdate['driver_photo']   = null;
+                    $toUpdate['vehicle_number'] = null;                        
                 }
                 $tpg->update($toUpdate);
                 $trx = Transaction::where('transactions.id_transaction', $id_transaction)->join('transaction_pickups', 'transaction_pickups.id_transaction', '=', 'transactions.id_transaction')->where('pickup_by', 'GO-SEND')->first();
