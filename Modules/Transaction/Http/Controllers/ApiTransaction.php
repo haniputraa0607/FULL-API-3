@@ -1186,8 +1186,11 @@ class ApiTransaction extends Controller
         // return $post;
         $start = date('Y-m-d', strtotime($post['date_start']));
         $end = date('Y-m-d', strtotime($post['date_end']));
-        $query = LogBalance::select('log_balances.*',
-                              'users.name')
+        $query = LogBalance::select(
+        				'log_balances.*',
+                        'users.name',
+                        'users.phone'
+                    )
                     ->leftJoin('users','log_balances.id_user','=','users.id')
                     ->where('log_balances.created_at', '>=', $start)
                     ->where('log_balances.created_at', '<=', $end)
@@ -1227,9 +1230,18 @@ class ApiTransaction extends Controller
             $search     = '1';
         }
 
-        $akhir = $query->paginate(10);
+        $akhir = $query->paginate(10)->toArray();
 
         if ($akhir) {
+
+        	 $akhir['data'] = $query->paginate(10)
+			        				->each(function($q){
+									    $q->setAppends([
+									        'get_reference'
+									    ]);
+									})
+				        			->toArray();
+
             $result = [
                 'status'     => 'success',
                 'data'       => $akhir,
@@ -1253,7 +1265,24 @@ class ApiTransaction extends Controller
     }
 
     public function balanceUser(Request $request) {
-        $balance = LogBalance::with('user')->paginate(10);
+
+        $balance = LogBalance::with('user')
+        			->orderBy('id_log_balance', 'desc')
+        			->paginate(10)
+        			->toArray();
+
+        if ($balance) {
+	        $balance['data'] = LogBalance::with('user')
+			        			->orderBy('id_log_balance', 'desc')
+			        			->paginate(10)
+			        			->each(function($q){
+								    $q->setAppends([
+								        'get_reference'
+								    ]);
+								})
+			        			->toArray();
+        }
+
         return response()->json(MyHelper::checkGet($balance));
     }
 
