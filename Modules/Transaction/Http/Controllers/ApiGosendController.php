@@ -136,6 +136,12 @@ class ApiGosendController extends Controller
                         $toUpdate['driver_photo']   = $toUpdate['driver_photo']??'http://beritatrans.com/cms/wp-content/uploads/2020/02/images4-553x400.jpeg';
                         $toUpdate['vehicle_number'] = $toUpdate['vehicle_number']??'AB 2641 XY';                        
                     }
+                } elseif (strtolower($post['status']) == 'confirmed'){
+                    $toUpdate['driver_id']      = null;
+                    $toUpdate['driver_phone']   = null;
+                    $toUpdate['driver_name']    = null;
+                    $toUpdate['driver_photo']   = null;
+                    $toUpdate['vehicle_number'] = null;                        
                 }
                 $tpg->update($toUpdate);
                 $trx = Transaction::where('transactions.id_transaction', $id_transaction)->join('transaction_pickups', 'transaction_pickups.id_transaction', '=', 'transactions.id_transaction')->where('pickup_by', 'GO-SEND')->first();
