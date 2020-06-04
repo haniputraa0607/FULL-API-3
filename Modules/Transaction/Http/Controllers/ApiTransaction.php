@@ -12,7 +12,9 @@ use App\Http\Models\City;
 use App\Http\Models\User;
 use App\Http\Models\Courier;
 use App\Http\Models\Product;
+use App\Http\Models\ProductPrice;
 use App\Http\Models\ProductModifierPrice;
+use App\Http\Models\ProductModifierGlobalPrice;
 use App\Http\Models\Setting;
 use App\Http\Models\StockLog;
 use App\Http\Models\UserAddress;
@@ -36,6 +38,7 @@ use App\Http\Models\DealsPaymentManual;
 use Modules\IPay88\Entities\DealsPaymentIpay88;
 use App\Http\Models\UserTrxProduct;
 use Modules\Brand\Entities\Brand;
+use Modules\Product\Entities\ProductGlobalPrice;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -1186,8 +1189,11 @@ class ApiTransaction extends Controller
         // return $post;
         $start = date('Y-m-d', strtotime($post['date_start']));
         $end = date('Y-m-d', strtotime($post['date_end']));
-        $query = LogBalance::select('log_balances.*',
-                              'users.name')
+        $query = LogBalance::select(
+        				'log_balances.*',
+                        'users.name',
+                        'users.phone'
+                    )
                     ->leftJoin('users','log_balances.id_user','=','users.id')
                     ->where('log_balances.created_at', '>=', $start)
                     ->where('log_balances.created_at', '<=', $end)
@@ -1227,9 +1233,18 @@ class ApiTransaction extends Controller
             $search     = '1';
         }
 
-        $akhir = $query->paginate(10);
+        $akhir = $query->paginate(10)->toArray();
 
         if ($akhir) {
+
+        	 $akhir['data'] = $query->paginate(10)
+			        				->each(function($q){
+									    $q->setAppends([
+									        'get_reference'
+									    ]);
+									})
+				        			->toArray();
+
             $result = [
                 'status'     => 'success',
                 'data'       => $akhir,
@@ -1253,7 +1268,24 @@ class ApiTransaction extends Controller
     }
 
     public function balanceUser(Request $request) {
-        $balance = LogBalance::with('user')->paginate(10);
+
+        $balance = LogBalance::with('user')
+        			->orderBy('id_log_balance', 'desc')
+        			->paginate(10)
+        			->toArray();
+
+        if ($balance) {
+	        $balance['data'] = LogBalance::with('user')
+			        			->orderBy('id_log_balance', 'desc')
+			        			->paginate(10)
+			        			->each(function($q){
+								    $q->setAppends([
+								        'get_reference'
+								    ]);
+								})
+			        			->toArray();
+        }
+
         return response()->json(MyHelper::checkGet($balance));
     }
 
@@ -1793,11 +1825,11 @@ class ApiTransaction extends Controller
                     $result['delivery_info'] = [
                         'driver' => null,
                         'delivery_status' => '',
-                        'delivery_address' => $list['transaction_pickup_go_send']['destination_address'],
+                        'delivery_address' => $list['transaction_pickup_go_send']['destination_address']?:'',
                         'booking_status' => 0,
                         'cancelable' => 1,
-                        'go_send_order_no' => $list['transaction_pickup_go_send']['go_send_order_no'],
-                        'live_tracking_url' => $list['transaction_pickup_go_send']['live_tracking_url']
+                        'go_send_order_no' => $list['transaction_pickup_go_send']['go_send_order_no']?:'',
+                        'live_tracking_url' => $list['transaction_pickup_go_send']['live_tracking_url']?:''
                     ];
                     if($list['transaction_pickup_go_send']['go_send_id']){
                         $result['delivery_info']['booking_status'] = 1;
@@ -1813,11 +1845,11 @@ class ApiTransaction extends Controller
                             $result['delivery_info']['delivery_status'] = 'Driver ditemukan';
                             $result['transaction_status_text']          = 'DRIVER DITEMUKAN';
                             $result['delivery_info']['driver']          = [
-                                'driver_id'      => $list['transaction_pickup_go_send']['driver_id'],
-                                'driver_name'    => $list['transaction_pickup_go_send']['driver_name'],
-                                'driver_phone'   => $list['transaction_pickup_go_send']['driver_phone'],
-                                'driver_photo'   => $list['transaction_pickup_go_send']['driver_photo'],
-                                'vehicle_number' => $list['transaction_pickup_go_send']['vehicle_number'],
+                                'driver_id'      => $list['transaction_pickup_go_send']['driver_id']?:'',
+                                'driver_name'    => $list['transaction_pickup_go_send']['driver_name']?:'',
+                                'driver_phone'   => $list['transaction_pickup_go_send']['driver_phone']?:'',
+                                'driver_photo'   => $list['transaction_pickup_go_send']['driver_photo']?:'',
+                                'vehicle_number' => $list['transaction_pickup_go_send']['vehicle_number']?:'',
                             ];
                             break;
                         case 'enroute pickup':
@@ -1825,11 +1857,11 @@ class ApiTransaction extends Controller
                             $result['delivery_info']['delivery_status'] = 'Driver dalam perjalanan menuju Outlet';
                             $result['transaction_status_text']          = 'DRIVER SEDANG MENUJU OUTLET';
                             $result['delivery_info']['driver']          = [
-                                'driver_id'      => $list['transaction_pickup_go_send']['driver_id'],
-                                'driver_name'    => $list['transaction_pickup_go_send']['driver_name'],
-                                'driver_phone'   => $list['transaction_pickup_go_send']['driver_phone'],
-                                'driver_photo'   => $list['transaction_pickup_go_send']['driver_photo'],
-                                'vehicle_number' => $list['transaction_pickup_go_send']['vehicle_number'],
+                                'driver_id'      => $list['transaction_pickup_go_send']['driver_id']?:'',
+                                'driver_name'    => $list['transaction_pickup_go_send']['driver_name']?:'',
+                                'driver_phone'   => $list['transaction_pickup_go_send']['driver_phone']?:'',
+                                'driver_photo'   => $list['transaction_pickup_go_send']['driver_photo']?:'',
+                                'vehicle_number' => $list['transaction_pickup_go_send']['vehicle_number']?:'',
                             ];
                             $result['delivery_info']['cancelable'] = 1;
                             break;
@@ -1838,11 +1870,11 @@ class ApiTransaction extends Controller
                             $result['delivery_info']['delivery_status'] = 'Driver mengantarkan pesanan';
                             $result['transaction_status_text']          = 'PROSES PENGANTARAN';
                             $result['delivery_info']['driver']          = [
-                                'driver_id'      => $list['transaction_pickup_go_send']['driver_id'],
-                                'driver_name'    => $list['transaction_pickup_go_send']['driver_name'],
-                                'driver_phone'   => $list['transaction_pickup_go_send']['driver_phone'],
-                                'driver_photo'   => $list['transaction_pickup_go_send']['driver_photo'],
-                                'vehicle_number' => $list['transaction_pickup_go_send']['vehicle_number'],
+                                'driver_id'      => $list['transaction_pickup_go_send']['driver_id']?:'',
+                                'driver_name'    => $list['transaction_pickup_go_send']['driver_name']?:'',
+                                'driver_phone'   => $list['transaction_pickup_go_send']['driver_phone']?:'',
+                                'driver_photo'   => $list['transaction_pickup_go_send']['driver_photo']?:'',
+                                'vehicle_number' => $list['transaction_pickup_go_send']['vehicle_number']?:'',
                             ];
                             $result['delivery_info']['cancelable'] = 0;
                             break;
@@ -1851,11 +1883,11 @@ class ApiTransaction extends Controller
                             $result['transaction_status_text']          = 'ORDER SUDAH DIAMBIL';
                             $result['delivery_info']['delivery_status'] = 'Pesanan sudah diterima Customer';
                             $result['delivery_info']['driver']          = [
-                                'driver_id'      => $list['transaction_pickup_go_send']['driver_id'],
-                                'driver_name'    => $list['transaction_pickup_go_send']['driver_name'],
-                                'driver_phone'   => $list['transaction_pickup_go_send']['driver_phone'],
-                                'driver_photo'   => $list['transaction_pickup_go_send']['driver_photo'],
-                                'vehicle_number' => $list['transaction_pickup_go_send']['vehicle_number'],
+                                'driver_id'      => $list['transaction_pickup_go_send']['driver_id']?:'',
+                                'driver_name'    => $list['transaction_pickup_go_send']['driver_name']?:'',
+                                'driver_phone'   => $list['transaction_pickup_go_send']['driver_phone']?:'',
+                                'driver_photo'   => $list['transaction_pickup_go_send']['driver_photo']?:'',
+                                'vehicle_number' => $list['transaction_pickup_go_send']['vehicle_number']?:'',
                             ];
                             $result['delivery_info']['cancelable'] = 0;
                             break;
@@ -2087,16 +2119,14 @@ class ApiTransaction extends Controller
             id_brand,
             transaction_products.id_outlet,
             outlets.outlet_code,
+            outlets.outlet_different_price,
             transaction_product_qty as qty,
-            product_prices.product_price,
             products.product_name,
             products.product_code,
             transaction_products.transaction_product_note as note
             '))
         ->join('products','products.id_product','=','transaction_products.id_product')
-        ->join('product_prices','product_prices.id_product','=','products.id_product')
         ->join('outlets','outlets.id_outlet','=','transaction_products.id_outlet')
-        ->whereRaw('product_prices.id_outlet = transaction_products.id_outlet')
         ->where(['id_transaction'=>$id_transaction])
         ->with(['modifiers'=>function($query){
                     $query->select('id_transaction_product','product_modifiers.code','transaction_product_modifiers.id_product_modifier','qty','product_modifiers.text')->join('product_modifiers','product_modifiers.id_product_modifier','=','transaction_product_modifiers.id_product_modifier');
@@ -2107,11 +2137,23 @@ class ApiTransaction extends Controller
         $id_outlet = $trx['id_outlet'];
         $total_mod_price = 0;
         foreach ($pts as &$pt) {
+            if ($pt['outlet_different_price']) {
+                $pt['product_price'] = ProductPrice::select('product_price')->where([
+                    'id_outlet' => $pt['id_outlet'],
+                    'id_product' => $pt['id_product']
+                ])->pluck('product_price')->first()?:0;
+            } else {
+                $pt['product_price'] = ProductGlobalPrice::select('product_global_price')->where('id_product',$pt['id_product'])->pluck('product_global_price')->first()?:0;
+            }
             foreach ($pt['modifiers'] as &$modifier) {
-                $price = ProductModifierPrice::select('product_modifier_price')->where([
-                    'id_product_modifier'=>$modifier['id_product_modifier'],
-                    'id_outlet' => $id_outlet
-                ])->pluck('product_modifier_price')->first();
+                if ($pt['outlet_different_price']) {
+                    $price = ProductModifierPrice::select('product_modifier_price')->where([
+                        'id_product_modifier'=>$modifier['id_product_modifier'],
+                        'id_outlet' => $id_outlet
+                    ])->pluck('product_modifier_price')->first();
+                } else {
+                    $price = ProductModifierGlobalPrice::select('product_modifier_price')->where('id_product_modifier', $modifier['id_product_modifier'])->pluck('product_modifier_price')->first();
+                }
                 $total_mod_price+=$price*$modifier['qty'];
                 $modifier['product_modifier_price'] = MyHelper::requestNumber($price,$rn);
             }

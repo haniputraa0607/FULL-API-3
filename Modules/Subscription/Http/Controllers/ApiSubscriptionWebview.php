@@ -46,7 +46,8 @@ class ApiSubscriptionWebview extends Controller
             'subscription_price_pretty'     => $subs['subscription_price_pretty'],
             'subscription_voucher_total'    => $subs['subscription_voucher_total'],
             'button_text'                   => 'BELI',
-            'button_status'                 => 0
+            'button_status'                 => 0,
+            'user_point'					=> Auth()->user()->points
         ];
 
         //text konfirmasi pembelian
