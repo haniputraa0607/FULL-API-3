@@ -51,7 +51,7 @@ class ApiConfirm extends Controller
         $productMidtrans = [];
         $dataDetailProduct = [];
 
-        $check = Transaction::with('transaction_shipments', 'productTransaction.product','outlet_name')->where('id_transaction', $post['id'])->first();
+        $check = Transaction::with('transaction_shipments', 'productTransaction.product','outlet_name', 'transaction_payment_subscription')->where('id_transaction', $post['id'])->first();
 
         if (empty($check)) {
             DB::rollback();
@@ -145,6 +145,10 @@ class ApiConfirm extends Controller
                 'quantity' => 1,
             ];
             array_push($dataDetailProduct, $dataDis);
+        }
+
+        if ($check['transaction_payment_subscription']) {
+            $countGrandTotal -= $check['transaction_payment_subscription']['subscription_nominal'];
         }
 
         $detailPayment = [
@@ -252,7 +256,7 @@ class ApiConfirm extends Controller
 
             $dataNotifMidtrans = [
                 'id_transaction' => $check['id_transaction'],
-                'gross_amount'   => $check['transaction_grandtotal'],
+                'gross_amount'   => $countGrandTotal,
                 'order_id'       => $check['transaction_receipt_number']
             ];
 

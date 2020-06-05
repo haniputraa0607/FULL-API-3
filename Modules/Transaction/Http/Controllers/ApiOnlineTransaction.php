@@ -801,6 +801,7 @@ class ApiOnlineTransaction extends Controller
                 ]);
 	        }
 
+	        $subscription['grandtotal'] = $insertTransaction['transaction_grandtotal'] - $subscription_total;
 	        $data_subs = app($this->subscription_use)->checkSubscription( $request->json('id_subscription_user') );
 	        $insert_subs_data['id_transaction'] = $insertTransaction['id_transaction'];
 	        $insert_subs_data['id_subscription_user_voucher'] = $data_subs->id_subscription_user_voucher;
@@ -1469,7 +1470,7 @@ class ApiOnlineTransaction extends Controller
         if (isset($post['payment_type'])) {
 
             if ($post['payment_type'] == 'Balance') {
-                $save = app($this->balance)->topUp($insertTransaction['id_user'], $insertTransaction['transaction_grandtotal'], $insertTransaction['id_transaction']);
+                $save = app($this->balance)->topUp($insertTransaction['id_user'], ($subscription['grandtotal']??$insertTransaction['transaction_grandtotal']), $insertTransaction['id_transaction']);
 
                 if (!isset($save['status'])) {
                     DB::rollback();
@@ -2212,15 +2213,16 @@ class ApiOnlineTransaction extends Controller
         if (isset($post['payment_type'])&&$post['payment_type'] == 'Balance') {
             if($balance>=$result['grandtotal']){
                 $result['used_point'] = $result['grandtotal'];
+
+	            if ($result['subscription'] >= $result['used_point']) {
+	            	$result['used_point'] = 0;
+	            }else{
+	            	$result['used_point'] = $result['used_point'] - $result['subscription'];
+	            }
             }else{
                 $result['used_point'] = $balance;
             }
 
-            if ($result['subscription'] >= $result['used_point']) {
-            	$result['used_point'] = 0;
-            }else{
-            	$result['used_point'] = $result['used_point'] - $result['subscription'];
-            }
 
             $result['points'] -= $result['used_point'];
         }
@@ -2234,7 +2236,7 @@ class ApiOnlineTransaction extends Controller
 	        }
         }
 
-        $result['total_payment'] = $result['grandtotal'] - $result['used_point'] - $result['subscription'];
+        $result['total_payment'] = $result['grandtotal'] - $result['used_point'];
         return MyHelper::checkGet($result)+['messages'=>$error_msg,'promo_error'=>$promo_error];
     }
 
