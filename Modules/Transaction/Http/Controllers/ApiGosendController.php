@@ -239,15 +239,6 @@ class ApiGosendController extends Controller
                 $trx     = Transaction::where('id_transaction', $id_transaction)->first();
                 $outlet  = Outlet::where('id_outlet', $trx->id_outlet)->first();
                 $phone   = User::select('phone')->where('id', $trx->id_user)->pluck('phone')->first();
-                $autocrm = app($this->autocrm)->SendAutoCRM('Delivery Status Update', $phone,
-                    [
-                        'id_reference'    => $id_transaction,
-                        'receipt_number'  => $trx->transaction_receipt_number,
-                        'outlet_code'     => $outlet->outlet_code,
-                        'outlet_name'     => $outlet->outlet_name,
-                        'delivery_status' => $ref_status[$post['status']] ?? 'Finding Driver',
-                    ]
-                );
                 $response_body = ['status' => 'success', 'messages' => ['Success update']];
             } else {
                 $response_code = 400;
