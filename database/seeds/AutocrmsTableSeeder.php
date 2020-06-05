@@ -679,7 +679,7 @@ Message :
                 'autocrm_forward_email' => NULL,
                 'autocrm_forward_email_subject' => 'New Deals',
                 'autocrm_forward_email_content' => 'New Deals',
-                'custom_text_replace'=>'%redeemed_at%;%voucher_code%;%outlet_name%;%outlet_code%;%deals_title%;',
+                'custom_text_replace'=>'%redeemed_at%;%voucher_code%;%outlet_name%;%outlet_code%;%deals_title%;%qr_code%;',
                 'created_at' => '2018-03-12 13:53:17',
                 'updated_at' => '2018-04-23 06:42:39',
             ),
