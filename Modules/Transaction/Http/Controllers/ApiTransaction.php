@@ -1893,13 +1893,14 @@ class ApiTransaction extends Controller
                             break;
                         case 'cancelled':
                             $result['delivery_info']['booking_status'] = 0;
-                            $result['transaction_status_text']         = 'SEDANG MENCARI DRIVER';
+                            $result['transaction_status_text']         = 'PENGANTARAN DIBATALKAN';
+                            $result['delivery_info']['delivery_status'] = 'Pengantaran dibatalkan';
                             $result['delivery_info']['cancelable']     = 0;
                             break;
                         case 'driver not found':
                         case 'no_driver':
                             $result['delivery_info']['booking_status']  = 0;
-                            $result['transaction_status_text']          = 'SEDANG MENCARI DRIVER';
+                            $result['transaction_status_text']          = 'DRIVER TIDAK DITEMUKAN';
                             $result['delivery_info']['delivery_status'] = 'Driver tidak ditemukan';
                             $result['delivery_info']['cancelable']      = 0;
                             break;
