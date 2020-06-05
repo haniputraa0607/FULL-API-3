@@ -14,6 +14,12 @@ use App\Http\Models\DailyReportTrxMenu;
 use App\Http\Models\DailyMembershipReport;
 use App\Http\Models\MonthlyMembershipReport;
 
+use App\Http\Models\TransactionPaymentMidtran;
+use App\Http\Models\TransactionPaymentBalance;
+use Modules\IPay88\Entities\TransactionPaymentIpay88;
+use App\Http\Models\TransactionPaymentOvo;
+use App\Http\Models\TransactionPaymentOffline;
+
 use App\Http\Models\GlobalMonthlyReportTrx;
 use App\Http\Models\GlobalDailyReportTrx;
 use App\Http\Models\GlobalMonthlyReportTrxMenu;
@@ -45,7 +51,9 @@ class ApiCronReport extends Controller
 {
     function __construct() 
     {
-        date_default_timezone_set('Asia/Jakarta');
+		date_default_timezone_set('Asia/Jakarta');
+		$this->month = '';
+		$this->year = '';
     }
 	
     /* CRON */
@@ -69,7 +77,7 @@ class ApiCronReport extends Controller
         // else {
             // DATE START
             $dateStart = $this->firstTrx();
-            // $dateStart = "2020-02-24";
+            // $dateStart = "2020-05-29";
 
             if ($dateStart) {
                 // UP TO YESTERDAY
@@ -173,9 +181,15 @@ class ApiCronReport extends Controller
                 return false;
             }
 
-			if (!$this->monthlyReportPayment($date)) {
-                return false;
-            }
+			$month = date('m', strtotime($date));
+			$year = date('Y', strtotime($date));
+			if($month != $this->month || $year != $this->year){
+				$this->month = $month;
+				$this->year = $year;
+				if (!$this->monthlyReportPayment($month, $year)) {
+					return false;
+				}
+			}
         }
 		
 		// MEMBERSHIP REGISTRATION DAILY
@@ -701,140 +715,356 @@ class ApiCronReport extends Controller
     }
 	
 	/* REPORT PAYMENT */
+    // function dailyReportPayment($date) 
+    // {
+    //     $date = date('Y-m-d', strtotime($date));
+
+    //     $getTransactions = Transaction::whereDate('transactions.transaction_date', $date)
+    //         ->whereNotNull('transactions.id_user')
+    //         ->where('transactions.transaction_payment_status', 'Completed')
+    //         ->whereNull('transaction_pickups.reject_at')
+    //         ->groupBy('transactions.id_transaction', 'transactions.id_outlet')
+    //         ->select(
+    //         	'transactions.id_transaction', 
+    //         	'transactions.id_outlet', 
+    //         	'transactions.id_user', 
+    //         	'transactions.transaction_date', 
+    //         	'transactions.trasaction_payment_type'
+    //         )
+    //         ->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+    //         ->get()->toArray();
+
+    //     $global = [];
+    //     foreach ($getTransactions as $dtTrx){
+    //         $total = 0;
+    //         $count = 0;
+    //         $is_offline = "";
+    //         $getTransactionPayment = [];
+    //         $trx_payment = $dtTrx['trasaction_payment_type'];
+
+    //         if($dtTrx['trasaction_payment_type'] == 'Manual')
+    //         {
+    //             $getTransactionPayment = Transaction::join('transaction_payment_manuals', 'transaction_payment_manuals.id_transaction', 'transactions.id_transaction')
+    //                 ->where('transactions.id_transaction', $dtTrx['id_transaction'])
+    //                 ->select(
+    //                 	'transaction_payment_manuals.payment_method as payment_type',
+    //                 	'transaction_payment_manuals.payment_bank as payment',
+    //                 	'transaction_payment_manuals.payment_nominal as trx_payment_nominal'
+    //                 )->get()->toArray();
+    //         }
+    //         elseif($dtTrx['trasaction_payment_type'] == 'Midtrans')
+    //         {
+    //             $getTransactionPayment = Transaction::join('transaction_payment_midtrans', 'transaction_payment_midtrans.id_transaction', 'transactions.id_transaction')
+    //                 ->where('transactions.id_transaction', $dtTrx['id_transaction'])
+    //                 ->select(
+    //                 	'transaction_payment_midtrans.payment_type as payment_type', 
+    //                 	'transaction_payment_midtrans.bank as payment', 
+    //                 	'transaction_payment_midtrans.gross_amount as trx_payment_nominal'
+    //                 )->get()->toArray();
+    //         }
+    //         elseif($dtTrx['trasaction_payment_type'] == 'Offline')
+    //         {
+    //             $getTransactionPayment = Transaction::join('transaction_payment_offlines', 'transaction_payment_offlines.id_transaction', 'transactions.id_transaction')
+    //                 ->where('transactions.id_transaction', $dtTrx['id_transaction'])
+    //                 ->where('payment_amount', '!=', 0)
+    //                 ->select(
+    //                 	'transaction_payment_offlines.payment_type as payment_type',
+    //                 	'transaction_payment_offlines.payment_bank as payment',
+    //                 	'transaction_payment_offlines.payment_amount as trx_payment_nominal'
+    //                 )->get()->toArray();
+
+    //             $is_offline = ' (Offline)';
+    //         }
+    //         elseif($dtTrx['trasaction_payment_type'] == 'Balance')
+    //         {
+    //             $getTransactionPayment = Transaction::join('transaction_payment_balances', 'transaction_payment_balances.id_transaction', 'transactions.id_transaction')
+    //                 ->where('transactions.id_transaction', $dtTrx['id_transaction'])
+    //                 ->where('balance_nominal', '!=', 0)
+    //                 ->select('transaction_payment_balances.balance_nominal AS trx_payment_nominal')->get()->toArray();
+
+    //             $trx_payment = 'Balance';
+    //         }
+    //         elseif($dtTrx['trasaction_payment_type'] == 'Ovo')
+    //         {
+    //             $getTransactionPayment = Transaction::join('transaction_payment_ovos', 'transaction_payment_ovos.id_transaction', 'transactions.id_transaction')
+    //                 ->where('transactions.id_transaction', $dtTrx['id_transaction'])
+    //                 ->where('amount', '!=', 0)
+    //                 ->select('transaction_payment_ovos.amount AS trx_payment_nominal')->get()->toArray();
+
+    //             $trx_payment = 'Ovo';
+    //         }
+
+    //         foreach ($getTransactionPayment as $dtPayment){
+
+    //         	if ( !empty($dtPayment['payment_type']) && !empty($dtPayment['payment'])) 
+    //         	{
+    //         		$trx_payment = $dtPayment['payment_type'].' '.$dtPayment['payment'].($is_offline??'');
+    //         	}
+    //         	else
+    //         	{
+    //         		$trx_payment = ($dtPayment['payment_type']??$dtPayment['payment']??$trx_payment).($is_offline??'');
+    //         	}
+
+    //             $getDaily = DailyReportPayment::where('id_outlet', $dtTrx['id_outlet'])
+    //                 ->where('trx_date', date('Y-m-d', strtotime($dtTrx['transaction_date'])))
+    //                 ->where('trx_payment', $trx_payment)->first();
+
+    //             $dataToInsert = [
+    //                 'id_outlet' => $dtTrx['id_outlet'],
+    //                 'trx_date' => date('Y-m-d', strtotime($dtTrx['transaction_date'])),
+    //                 'trx_payment_count' => 1,
+    //                 'trx_payment_nominal' => $dtPayment['trx_payment_nominal'],
+    //                 'trx_payment' => $trx_payment
+    //             ];
+
+    //             if($getDaily){
+    //                 $dataToInsert['trx_payment_count'] = $getDaily['trx_payment_count'] + 1;
+    //                 $dataToInsert['trx_payment_nominal'] = $getDaily['trx_payment_nominal'] + ($dtPayment['trx_payment_nominal']??0);
+    //                 DailyReportPayment::where('id_daily_report_payment', $getDaily['id_daily_report_payment'])
+    //                     ->update($dataToInsert);
+    //             }else{
+    //                 DailyReportPayment::create($dataToInsert);
+    //             }
+
+    //             $global_key = array_search($trx_payment, array_column($global, 'trx_payment'));
+
+    //             if ($global_key || $global_key === 0) 
+    //             {
+    //             	$global[$global_key]['trx_payment_count'] = $global[$global_key]['trx_payment_count'] + 1;
+    //             	$global[$global_key]['trx_payment_nominal'] = $global[$global_key]['trx_payment_nominal'] + $dtPayment['trx_payment_nominal'];
+    //             }
+    //             else
+    //             {
+    //             	$new_global['trx_payment'] = $trx_payment;
+    //             	$new_global['trx_payment_count'] = 1;
+    //             	$new_global['trx_payment_nominal'] = $dtPayment['trx_payment_nominal'];
+    //             	array_push($global, $new_global);
+
+	//                 $global_key = array_search($trx_payment, array_column($global, 'trx_payment'));
+    //             }
+
+	// 	        $saveGlobal = GlobalDailyReportPayment::updateOrCreate([
+	// 	            'trx_date'  => date('Y-m-d', strtotime($date)),
+	// 	            'trx_payment' => $trx_payment
+	// 	        ], $global[$global_key]);
+    //         }
+    //     }
+
+    //     return true;
+	// }
+	
     function dailyReportPayment($date) 
     {
-        $date = date('Y-m-d', strtotime($date));
+		$date = date('Y-m-d', strtotime($date));
+		
+		//delete report if there is already a report for the date
+		$delete = DailyReportPayment::where('trx_date', $date)->delete();
+		$delete = GlobalDailyReportPayment::where('trx_date', $date)->delete();
 
-        $getTransactions = Transaction::whereDate('transactions.transaction_date', $date)
-            ->whereNotNull('transactions.id_user')
-            ->where('transactions.transaction_payment_status', 'Completed')
-            ->whereNull('transaction_pickups.reject_at')
-            ->groupBy('transactions.id_transaction', 'transactions.id_outlet')
-            ->select(
-            	'transactions.id_transaction', 
-            	'transactions.id_outlet', 
-            	'transactions.id_user', 
-            	'transactions.transaction_date', 
-            	'transactions.trasaction_payment_type'
-            )
-            ->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
-            ->get()->toArray();
+		//midtrans
+			$dataPayment = TransactionPaymentMidtran::join('transactions', 'transactions.id_transaction', 'transaction_payment_midtrans.id_transaction')
+			->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+			->select(
+				'transactions.id_outlet', 
+				DB::raw('DATE(transactions.transaction_date) as trx_date'), 
+				DB::raw('COUNT(transactions.id_transaction) as trx_payment_count'), 
+				DB::raw('SUM(transaction_payment_midtrans.gross_amount) as trx_payment_nominal'), 
+				DB::raw("CONCAT_WS(' ', transaction_payment_midtrans.payment_type, transaction_payment_midtrans.bank) AS trx_payment")
+			)
+			->whereDate('transactions.transaction_date', $date)
+			->where('transactions.transaction_payment_status', 'Completed')
+			->whereNull('transaction_pickups.reject_at')
+			->groupBy('transactions.id_outlet', 'trx_payment')
+			->get()->toArray();
 
-        $global = [];
-        foreach ($getTransactions as $dtTrx){
-            $total = 0;
-            $count = 0;
-            $is_offline = "";
-            $getTransactionPayment = [];
-            $trx_payment = $dtTrx['trasaction_payment_type'];
+			if($dataPayment){
+				//insert daily
+				$insertDaily = DailyReportPayment::insert($dataPayment);
+			}
 
-            if($dtTrx['trasaction_payment_type'] == 'Manual')
-            {
-                $getTransactionPayment = Transaction::join('transaction_payment_manuals', 'transaction_payment_manuals.id_transaction', 'transactions.id_transaction')
-                    ->where('transactions.id_transaction', $dtTrx['id_transaction'])
-                    ->select(
-                    	'transaction_payment_manuals.payment_method as payment_type',
-                    	'transaction_payment_manuals.payment_bank as payment',
-                    	'transaction_payment_manuals.payment_nominal as trx_payment_nominal'
-                    )->get()->toArray();
-            }
-            elseif($dtTrx['trasaction_payment_type'] == 'Midtrans')
-            {
-                $getTransactionPayment = Transaction::join('transaction_payment_midtrans', 'transaction_payment_midtrans.id_transaction', 'transactions.id_transaction')
-                    ->where('transactions.id_transaction', $dtTrx['id_transaction'])
-                    ->select(
-                    	'transaction_payment_midtrans.payment_type as payment_type', 
-                    	'transaction_payment_midtrans.bank as payment', 
-                    	'transaction_payment_midtrans.gross_amount as trx_payment_nominal'
-                    )->get()->toArray();
-            }
-            elseif($dtTrx['trasaction_payment_type'] == 'Offline')
-            {
-                $getTransactionPayment = Transaction::join('transaction_payment_offlines', 'transaction_payment_offlines.id_transaction', 'transactions.id_transaction')
-                    ->where('transactions.id_transaction', $dtTrx['id_transaction'])
-                    ->where('payment_amount', '!=', 0)
-                    ->select(
-                    	'transaction_payment_offlines.payment_type as payment_type',
-                    	'transaction_payment_offlines.payment_bank as payment',
-                    	'transaction_payment_offlines.payment_amount as trx_payment_nominal'
-                    )->get()->toArray();
+			$dataPaymentGlobal = TransactionPaymentMidtran::join('transactions', 'transactions.id_transaction', 'transaction_payment_midtrans.id_transaction')
+			->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+			->select(
+				DB::raw('DATE(transactions.transaction_date) as trx_date'), 
+				DB::raw('COUNT(transactions.id_transaction) as trx_payment_count'), 
+				DB::raw('SUM(transaction_payment_midtrans.gross_amount) as trx_payment_nominal'), 
+				DB::raw("CONCAT_WS(' ', transaction_payment_midtrans.payment_type, transaction_payment_midtrans.bank) AS trx_payment")
+			)
+			->whereDate('transactions.transaction_date', $date)
+			->where('transactions.transaction_payment_status', 'Completed')
+			->whereNull('transaction_pickups.reject_at')
+			->groupBy('trx_payment')
+			->get()->toArray();
 
-                $is_offline = ' (Offline)';
-            }
-            elseif($dtTrx['trasaction_payment_type'] == 'Balance')
-            {
-                $getTransactionPayment = Transaction::join('transaction_payment_balances', 'transaction_payment_balances.id_transaction', 'transactions.id_transaction')
-                    ->where('transactions.id_transaction', $dtTrx['id_transaction'])
-                    ->where('balance_nominal', '!=', 0)
-                    ->select('transaction_payment_balances.balance_nominal AS trx_payment_nominal')->get()->toArray();
+			if($dataPaymentGlobal){
+				//insert global
+				$insertGlobal = GlobalDailyReportPayment::insert($dataPaymentGlobal);
+			}
+		//end midtrans
 
-                $trx_payment = 'Balance';
-            }
-            elseif($dtTrx['trasaction_payment_type'] == 'Ovo')
-            {
-                $getTransactionPayment = Transaction::join('transaction_payment_ovos', 'transaction_payment_ovos.id_transaction', 'transactions.id_transaction')
-                    ->where('transactions.id_transaction', $dtTrx['id_transaction'])
-                    ->where('amount', '!=', 0)
-                    ->select('transaction_payment_ovos.amount AS trx_payment_nominal')->get()->toArray();
+		//ovo
+			$dataPayment = TransactionPaymentOvo::join('transactions', 'transactions.id_transaction', 'transaction_payment_ovos.id_transaction')
+			->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+			->select(
+				'transactions.id_outlet', 
+				DB::raw('DATE(transactions.transaction_date) as trx_date'), 
+				DB::raw('COUNT(transactions.id_transaction) as trx_payment_count'), 
+				DB::raw('SUM(transaction_payment_ovos.amount) as trx_payment_nominal'), 
+				DB::raw("'OVO' as 'trx_payment'")
+			)
+			->whereDate('transactions.transaction_date', $date)
+			->where('transactions.transaction_payment_status', 'Completed')
+			->whereNull('transaction_pickups.reject_at')
+			->groupBy('transactions.id_outlet', 'trx_payment')
+			->get()->toArray();
 
-                $trx_payment = 'Ovo';
-            }
+			if($dataPayment){
+				//insert daily
+				$insertDaily = DailyReportPayment::insert($dataPayment);
+			}
 
-            foreach ($getTransactionPayment as $dtPayment){
+			$dataPaymentGlobal = TransactionPaymentOvo::join('transactions', 'transactions.id_transaction', 'transaction_payment_ovos.id_transaction')
+			->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+			->select(
+				DB::raw('DATE(transactions.transaction_date) as trx_date'), 
+				DB::raw('COUNT(transactions.id_transaction) as trx_payment_count'), 
+				DB::raw('SUM(transaction_payment_ovos.amount) as trx_payment_nominal'), 
+				DB::raw("'OVO' as 'trx_payment'")
+			)
+			->whereDate('transactions.transaction_date', $date)
+			->where('transactions.transaction_payment_status', 'Completed')
+			->whereNull('transaction_pickups.reject_at')
+			->groupBy('trx_payment')
+			->get()->toArray();
 
-            	if ( !empty($dtPayment['payment_type']) && !empty($dtPayment['payment'])) 
-            	{
-            		$trx_payment = $dtPayment['payment_type'].' '.$dtPayment['payment'].($is_offline??'');
-            	}
-            	else
-            	{
-            		$trx_payment = ($dtPayment['payment_type']??$dtPayment['payment']??$trx_payment).($is_offline??'');
-            	}
+			if($dataPaymentGlobal){
+				//insert global
+				$insertGlobal = GlobalDailyReportPayment::insert($dataPaymentGlobal);
+			}
+		//end ovo
 
-                $getDaily = DailyReportPayment::where('id_outlet', $dtTrx['id_outlet'])
-                    ->where('trx_date', date('Y-m-d', strtotime($dtTrx['transaction_date'])))
-                    ->where('trx_payment', $trx_payment)->first();
+		//Ipay88
+			$dataPayment = TransactionPaymentIpay88::join('transactions', 'transactions.id_transaction', 'transaction_payment_ipay88s.id_transaction')
+			->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+			->select(
+				'transactions.id_outlet', 
+				DB::raw('DATE(transactions.transaction_date) as trx_date'), 
+				DB::raw('COUNT(transactions.id_transaction) as trx_payment_count'), 
+				DB::raw('SUM(transaction_payment_ipay88s.amount / 100) as trx_payment_nominal'), 
+				DB::raw("transaction_payment_ipay88s.payment_method AS trx_payment")
+			)
+			->whereDate('transactions.transaction_date', $date)
+			->where('transactions.transaction_payment_status', 'Completed')
+			->whereNull('transaction_pickups.reject_at')
+			->groupBy('transactions.id_outlet', 'trx_payment')
+			->get()->toArray();
 
-                $dataToInsert = [
-                    'id_outlet' => $dtTrx['id_outlet'],
-                    'trx_date' => date('Y-m-d', strtotime($dtTrx['transaction_date'])),
-                    'trx_payment_count' => 1,
-                    'trx_payment_nominal' => $dtPayment['trx_payment_nominal'],
-                    'trx_payment' => $trx_payment
-                ];
+			if($dataPayment){
+				//insert daily
+				$insertDaily = DailyReportPayment::insert($dataPayment);
+			}
 
-                if($getDaily){
-                    $dataToInsert['trx_payment_count'] = $getDaily['trx_payment_count'] + 1;
-                    $dataToInsert['trx_payment_nominal'] = $getDaily['trx_payment_nominal'] + ($dtPayment['trx_payment_nominal']??0);
-                    DailyReportPayment::where('id_daily_report_payment', $getDaily['id_daily_report_payment'])
-                        ->update($dataToInsert);
-                }else{
-                    DailyReportPayment::create($dataToInsert);
-                }
+			$dataPaymentGlobal = TransactionPaymentIpay88::join('transactions', 'transactions.id_transaction', 'transaction_payment_ipay88s.id_transaction')
+			->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+			->select(
+				DB::raw('DATE(transactions.transaction_date) as trx_date'), 
+				DB::raw('COUNT(transactions.id_transaction) as trx_payment_count'), 
+				DB::raw('SUM(transaction_payment_ipay88s.amount / 100) as trx_payment_nominal'), 
+				DB::raw("transaction_payment_ipay88s.payment_method AS trx_payment")
+			)
+			->whereDate('transactions.transaction_date', $date)
+			->where('transactions.transaction_payment_status', 'Completed')
+			->whereNull('transaction_pickups.reject_at')
+			->groupBy('trx_payment')
+			->get()->toArray();
 
-                $global_key = array_search($trx_payment, array_column($global, 'trx_payment'));
+			if($dataPaymentGlobal){
+				//insert global
+				$insertGlobal = GlobalDailyReportPayment::insert($dataPaymentGlobal);
+			}
+		//end Ipay88
 
-                if ($global_key || $global_key === 0) 
-                {
-                	$global[$global_key]['trx_payment_count'] = $global[$global_key]['trx_payment_count'] + 1;
-                	$global[$global_key]['trx_payment_nominal'] = $global[$global_key]['trx_payment_nominal'] + $dtPayment['trx_payment_nominal'];
-                }
-                else
-                {
-                	$new_global['trx_payment'] = $trx_payment;
-                	$new_global['trx_payment_count'] = 1;
-                	$new_global['trx_payment_nominal'] = $dtPayment['trx_payment_nominal'];
-                	array_push($global, $new_global);
+		//balance
+			$dataPayment = TransactionPaymentBalance::join('transactions', 'transactions.id_transaction', 'transaction_payment_balances.id_transaction')
+			->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+			->select(
+				'transactions.id_outlet', 
+				DB::raw('DATE(transactions.transaction_date) as trx_date'), 
+				DB::raw('COUNT(transactions.id_transaction) as trx_payment_count'), 
+				DB::raw('SUM(transaction_payment_balances.balance_nominal) as trx_payment_nominal'), 
+				DB::raw("'Jiwa Poin' AS trx_payment")
+			)
+			->whereDate('transactions.transaction_date', $date)
+			->where('transactions.transaction_payment_status', 'Completed')
+			->whereNull('transaction_pickups.reject_at')
+			->groupBy('transactions.id_outlet', 'trx_payment')
+			->get()->toArray();
 
-	                $global_key = array_search($trx_payment, array_column($global, 'trx_payment'));
-                }
+			if($dataPayment){
+				//insert daily
+				$insertDaily = DailyReportPayment::insert($dataPayment);
+			}
 
-		        $saveGlobal = GlobalDailyReportPayment::updateOrCreate([
-		            'trx_date'  => date('Y-m-d', strtotime($date)),
-		            'trx_payment' => $trx_payment
-		        ], $global[$global_key]);
-            }
-        }
+			$dataPaymentGlobal = TransactionPaymentBalance::join('transactions', 'transactions.id_transaction', 'transaction_payment_balances.id_transaction')
+			->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+			->select(
+				DB::raw('DATE(transactions.transaction_date) as trx_date'), 
+				DB::raw('COUNT(transactions.id_transaction) as trx_payment_count'), 
+				DB::raw('SUM(transaction_payment_balances.balance_nominal) as trx_payment_nominal'), 
+				DB::raw("'Jiwa Poin' AS trx_payment")
+			)
+			->whereDate('transactions.transaction_date', $date)
+			->where('transactions.transaction_payment_status', 'Completed')
+			->whereNull('transaction_pickups.reject_at')
+			->groupBy('trx_payment')
+			->get()->toArray();
+
+			if($dataPaymentGlobal){
+				//insert global
+				$insertGlobal = GlobalDailyReportPayment::insert($dataPaymentGlobal);
+			}
+		//end balance
+
+		//offline
+			$dataPayment = TransactionPaymentOffline::join('transactions', 'transactions.id_transaction', 'transaction_payment_offlines.id_transaction')
+			->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+			->select(
+				'transactions.id_outlet', 
+				DB::raw('DATE(transactions.transaction_date) as trx_date'), 
+				DB::raw('COUNT(transactions.id_transaction) as trx_payment_count'), 
+				DB::raw('SUM(transaction_payment_offlines.payment_amount) as trx_payment_nominal'), 
+				DB::raw("CONCAT_WS(' ', transaction_payment_offlines.payment_type, transaction_payment_offlines.payment_bank, ' (Offline)') AS trx_payment")
+			)
+			->whereDate('transactions.transaction_date', $date)
+			->where('transactions.transaction_payment_status', 'Completed')
+			->whereNull('transaction_pickups.reject_at')
+			->groupBy('transactions.id_outlet', 'trx_payment')
+			->get()->toArray();
+
+			if($dataPayment){
+				//insert daily
+				$insertDaily = DailyReportPayment::insert($dataPayment);
+			}
+
+			$dataPaymentGlobal = TransactionPaymentOffline::join('transactions', 'transactions.id_transaction', 'transaction_payment_offlines.id_transaction')
+			->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+			->select(
+				DB::raw('DATE(transactions.transaction_date) as trx_date'), 
+				DB::raw('COUNT(transactions.id_transaction) as trx_payment_count'), 
+				DB::raw('SUM(transaction_payment_offlines.payment_amount) as trx_payment_nominal'), 
+				DB::raw("CONCAT_WS(' ', transaction_payment_offlines.payment_type, transaction_payment_offlines.payment_bank, ' (Offline)') AS trx_payment")
+			)
+			->whereDate('transactions.transaction_date', $date)
+			->where('transactions.transaction_payment_status', 'Completed')
+			->whereNull('transaction_pickups.reject_at')
+			->groupBy('trx_payment')
+			->get()->toArray();
+
+			if($dataPaymentGlobal){
+				//insert global
+				$insertGlobal = GlobalDailyReportPayment::insert($dataPaymentGlobal);
+			}
+		//end offline
 
         return true;
     }
@@ -1129,147 +1359,383 @@ class ApiCronReport extends Controller
         return true;
     }
 
-    /* REPORT PAYMENT */
-    function monthlyReportPayment($date) 
-    {
-        $date = date('Y-m-d', strtotime($date));
+	/* REPORT PAYMENT */
+	//
+		// function monthlyReportPayment($date) 
+		// {
+		// 	$date = date('Y-m-d', strtotime($date));
 
-        $getTransactions = Transaction::whereDate('transactions.transaction_date', $date)
-            ->whereNotNull('transactions.id_user')
-            ->where('transactions.transaction_payment_status', 'Completed')
-            ->whereNull('transaction_pickups.reject_at')
-            ->groupBy('transactions.id_transaction', 'transactions.id_outlet')
-            ->select(
-            	'transactions.id_transaction', 
-            	'transactions.id_outlet', 
-            	'transactions.id_user', 
-            	'transactions.transaction_date', 
-            	'transactions.trasaction_payment_type'
-            )
-            ->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
-            ->get()->toArray();
+		// 	$getTransactions = Transaction::whereDate('transactions.transaction_date', $date)
+		// 		->whereNotNull('transactions.id_user')
+		// 		->where('transactions.transaction_payment_status', 'Completed')
+		// 		->whereNull('transaction_pickups.reject_at')
+		// 		->groupBy('transactions.id_transaction', 'transactions.id_outlet')
+		// 		->select(
+		// 			'transactions.id_transaction', 
+		// 			'transactions.id_outlet', 
+		// 			'transactions.id_user', 
+		// 			'transactions.transaction_date', 
+		// 			'transactions.trasaction_payment_type'
+		// 		)
+		// 		->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+		// 		->get()->toArray();
 
-        $global = [];
-        foreach ($getTransactions as $dtTrx){
-            $total = 0;
-            $count = 0;
-            $is_offline = "";
-            $getTransactionPayment = [];
-            $trx_payment = $dtTrx['trasaction_payment_type'];
+		// 	$global = [];
+		// 	foreach ($getTransactions as $dtTrx){
+		// 		$total = 0;
+		// 		$count = 0;
+		// 		$is_offline = "";
+		// 		$getTransactionPayment = [];
+		// 		$trx_payment = $dtTrx['trasaction_payment_type'];
 
-            if($dtTrx['trasaction_payment_type'] == 'Manual')
-            {
-                $getTransactionPayment = Transaction::join('transaction_payment_manuals', 'transaction_payment_manuals.id_transaction', 'transactions.id_transaction')
-                    ->where('transactions.id_transaction', $dtTrx['id_transaction'])
-                    ->select(
-                    	'transaction_payment_manuals.payment_method as payment_type',
-                    	'transaction_payment_manuals.payment_bank as payment',
-                    	'transaction_payment_manuals.payment_nominal as trx_payment_nominal'
-                    )->get()->toArray();
-            }
-            elseif($dtTrx['trasaction_payment_type'] == 'Midtrans')
-            {
-                $getTransactionPayment = Transaction::join('transaction_payment_midtrans', 'transaction_payment_midtrans.id_transaction', 'transactions.id_transaction')
-                    ->where('transactions.id_transaction', $dtTrx['id_transaction'])
-                    ->select(
-                    	'transaction_payment_midtrans.payment_type as payment_type', 
-                    	'transaction_payment_midtrans.bank as payment', 
-                    	'transaction_payment_midtrans.gross_amount as trx_payment_nominal'
-                    )->get()->toArray();
-            }
-            elseif($dtTrx['trasaction_payment_type'] == 'Offline')
-            {
-                $getTransactionPayment = Transaction::join('transaction_payment_offlines', 'transaction_payment_offlines.id_transaction', 'transactions.id_transaction')
-                    ->where('transactions.id_transaction', $dtTrx['id_transaction'])
-                    ->where('payment_amount', '!=', 0)
-                    ->select(
-                    	'transaction_payment_offlines.payment_type as payment_type',
-                    	'transaction_payment_offlines.payment_bank as payment',
-                    	'transaction_payment_offlines.payment_amount as trx_payment_nominal'
-                    )->get()->toArray();
-                $is_offline = ' (Offline)';
-            }
-            elseif($dtTrx['trasaction_payment_type'] == 'Balance')
-            {
-                $getTransactionPayment = Transaction::join('transaction_payment_balances', 'transaction_payment_balances.id_transaction', 'transactions.id_transaction')
-                    ->where('transactions.id_transaction', $dtTrx['id_transaction'])
-                    ->where('balance_nominal', '!=', 0)
-                    ->select('transaction_payment_balances.balance_nominal AS trx_payment_nominal')->get()->toArray();
+		// 		if($dtTrx['trasaction_payment_type'] == 'Manual')
+		// 		{
+		// 			$getTransactionPayment = Transaction::join('transaction_payment_manuals', 'transaction_payment_manuals.id_transaction', 'transactions.id_transaction')
+		// 				->where('transactions.id_transaction', $dtTrx['id_transaction'])
+		// 				->select(
+		// 					'transaction_payment_manuals.payment_method as payment_type',
+		// 					'transaction_payment_manuals.payment_bank as payment',
+		// 					'transaction_payment_manuals.payment_nominal as trx_payment_nominal'
+		// 				)->get()->toArray();
+		// 		}
+		// 		elseif($dtTrx['trasaction_payment_type'] == 'Midtrans')
+		// 		{
+		// 			$getTransactionPayment = Transaction::join('transaction_payment_midtrans', 'transaction_payment_midtrans.id_transaction', 'transactions.id_transaction')
+		// 				->where('transactions.id_transaction', $dtTrx['id_transaction'])
+		// 				->select(
+		// 					'transaction_payment_midtrans.payment_type as payment_type', 
+		// 					'transaction_payment_midtrans.bank as payment', 
+		// 					'transaction_payment_midtrans.gross_amount as trx_payment_nominal'
+		// 				)->get()->toArray();
+		// 		}
+		// 		elseif($dtTrx['trasaction_payment_type'] == 'Offline')
+		// 		{
+		// 			$getTransactionPayment = Transaction::join('transaction_payment_offlines', 'transaction_payment_offlines.id_transaction', 'transactions.id_transaction')
+		// 				->where('transactions.id_transaction', $dtTrx['id_transaction'])
+		// 				->where('payment_amount', '!=', 0)
+		// 				->select(
+		// 					'transaction_payment_offlines.payment_type as payment_type',
+		// 					'transaction_payment_offlines.payment_bank as payment',
+		// 					'transaction_payment_offlines.payment_amount as trx_payment_nominal'
+		// 				)->get()->toArray();
+		// 			$is_offline = ' (Offline)';
+		// 		}
+		// 		elseif($dtTrx['trasaction_payment_type'] == 'Balance')
+		// 		{
+		// 			$getTransactionPayment = Transaction::join('transaction_payment_balances', 'transaction_payment_balances.id_transaction', 'transactions.id_transaction')
+		// 				->where('transactions.id_transaction', $dtTrx['id_transaction'])
+		// 				->where('balance_nominal', '!=', 0)
+		// 				->select('transaction_payment_balances.balance_nominal AS trx_payment_nominal')->get()->toArray();
 
-                $trx_payment = 'Balance';
-            }
-            elseif($dtTrx['trasaction_payment_type'] == 'Ovo')
-            {
-                $getTransactionPayment = Transaction::join('transaction_payment_ovos', 'transaction_payment_ovos.id_transaction', 'transactions.id_transaction')
-                    ->where('transactions.id_transaction', $dtTrx['id_transaction'])
-                    ->where('amount', '!=', 0)
-                    ->select('transaction_payment_ovos.amount AS trx_payment_nominal')->get()->toArray();
+		// 			$trx_payment = 'Balance';
+		// 		}
+		// 		elseif($dtTrx['trasaction_payment_type'] == 'Ovo')
+		// 		{
+		// 			$getTransactionPayment = Transaction::join('transaction_payment_ovos', 'transaction_payment_ovos.id_transaction', 'transactions.id_transaction')
+		// 				->where('transactions.id_transaction', $dtTrx['id_transaction'])
+		// 				->where('amount', '!=', 0)
+		// 				->select('transaction_payment_ovos.amount AS trx_payment_nominal')->get()->toArray();
 
-                $trx_payment = 'Ovo';
-            }
+		// 			$trx_payment = 'Ovo';
+		// 		}
 
-            $month = date('m', strtotime($dtTrx['transaction_date']));
-            $year = date('Y', strtotime($dtTrx['transaction_date']));
+		// 		$month = date('m', strtotime($dtTrx['transaction_date']));
+		// 		$year = date('Y', strtotime($dtTrx['transaction_date']));
 
-            foreach ($getTransactionPayment as $dtPayment){
+		// 		foreach ($getTransactionPayment as $dtPayment){
 
-            	if ( !empty($dtPayment['payment_type']) && !empty($dtPayment['payment'])) 
-            	{
-            		$trx_payment = $dtPayment['payment_type'].' '.$dtPayment['payment'].($is_offline??'');
-            	}
-            	else
-            	{
-            		$trx_payment = ($dtPayment['payment_type']??$dtPayment['payment']??$trx_payment).($is_offline??'');
-            	}
+		// 			if ( !empty($dtPayment['payment_type']) && !empty($dtPayment['payment'])) 
+		// 			{
+		// 				$trx_payment = $dtPayment['payment_type'].' '.$dtPayment['payment'].($is_offline??'');
+		// 			}
+		// 			else
+		// 			{
+		// 				$trx_payment = ($dtPayment['payment_type']??$dtPayment['payment']??$trx_payment).($is_offline??'');
+		// 			}
 
-                $getMonthly = MonthlyReportPayment::where('id_outlet', $dtTrx['id_outlet'])
-                    ->where('trx_month', $month)
-                    ->where('trx_year', $year)
-                    ->where('trx_payment', $trx_payment)->first();
+		// 			$getMonthly = MonthlyReportPayment::where('id_outlet', $dtTrx['id_outlet'])
+		// 				->where('trx_month', $month)
+		// 				->where('trx_year', $year)
+		// 				->where('trx_payment', $trx_payment)->first();
 
-                $dataToInsert = [
-                    'id_outlet' => $dtTrx['id_outlet'],
-                    'trx_month' => $month,
-                    'trx_year' => $year,
-                    'trx_payment_count' => 1,
-                    'trx_payment_nominal' => $dtPayment['trx_payment_nominal'],
-                    'trx_payment' => $trx_payment
-                ];
+		// 			$dataToInsert = [
+		// 				'id_outlet' => $dtTrx['id_outlet'],
+		// 				'trx_month' => $month,
+		// 				'trx_year' => $year,
+		// 				'trx_payment_count' => 1,
+		// 				'trx_payment_nominal' => $dtPayment['trx_payment_nominal'],
+		// 				'trx_payment' => $trx_payment
+		// 			];
 
-                if($getMonthly){
-                    $dataToInsert['trx_payment_count'] = $getMonthly['trx_payment_count'] + 1;
-                    $dataToInsert['trx_payment_nominal'] = $getMonthly['trx_payment_nominal'] + ($dtPayment['trx_payment_nominal']??0);
-                    MonthlyReportPayment::where('id_monthly_report_payment', $getMonthly['id_monthly_report_payment'])
-                        ->update($dataToInsert);
-                }else{
-                    MonthlyReportPayment::create($dataToInsert);
-                }
+		// 			if($getMonthly){
+		// 				$dataToInsert['trx_payment_count'] = $getMonthly['trx_payment_count'] + 1;
+		// 				$dataToInsert['trx_payment_nominal'] = $getMonthly['trx_payment_nominal'] + ($dtPayment['trx_payment_nominal']??0);
+		// 				MonthlyReportPayment::where('id_monthly_report_payment', $getMonthly['id_monthly_report_payment'])
+		// 					->update($dataToInsert);
+		// 			}else{
+		// 				MonthlyReportPayment::create($dataToInsert);
+		// 			}
 
-                $global_key = array_search($trx_payment, array_column($global, 'trx_payment'));
+		// 			$global_key = array_search($trx_payment, array_column($global, 'trx_payment'));
 
-                if ($global_key || $global_key === 0) 
-                {
-                	$global[$global_key]['trx_payment_count'] = $global[$global_key]['trx_payment_count'] + 1;
-                	$global[$global_key]['trx_payment_nominal'] = $global[$global_key]['trx_payment_nominal'] + $dtPayment['trx_payment_nominal'];
-                }
-                else
-                {
-                	$new_global['trx_payment'] = $trx_payment;
-                	$new_global['trx_payment_count'] = 1;
-                	$new_global['trx_payment_nominal'] = $dtPayment['trx_payment_nominal'];
-                	array_push($global, $new_global);
+		// 			if ($global_key || $global_key === 0) 
+		// 			{
+		// 				$global[$global_key]['trx_payment_count'] = $global[$global_key]['trx_payment_count'] + 1;
+		// 				$global[$global_key]['trx_payment_nominal'] = $global[$global_key]['trx_payment_nominal'] + $dtPayment['trx_payment_nominal'];
+		// 			}
+		// 			else
+		// 			{
+		// 				$new_global['trx_payment'] = $trx_payment;
+		// 				$new_global['trx_payment_count'] = 1;
+		// 				$new_global['trx_payment_nominal'] = $dtPayment['trx_payment_nominal'];
+		// 				array_push($global, $new_global);
 
-	                $global_key = array_search($trx_payment, array_column($global, 'trx_payment'));
-                }
+		// 				$global_key = array_search($trx_payment, array_column($global, 'trx_payment'));
+		// 			}
 
-		        $saveGlobal = GlobalMonthlyReportPayment::updateOrCreate([
-		            'trx_month' => $month,
-                    'trx_year' => $year,
-		            'trx_payment' => $trx_payment
-		        ], $global[$global_key]);
-            }
-        }
-        
+		// 			$saveGlobal = GlobalMonthlyReportPayment::updateOrCreate([
+		// 				'trx_month' => $month,
+		// 				'trx_year' => $year,
+		// 				'trx_payment' => $trx_payment
+		// 			], $global[$global_key]);
+		// 		}
+		// 	}
+			
+		// 	return true;
+		// }
+	//
+	
+	function monthlyReportPayment($month, $year) 
+    {		
+		//delete report if there is already a report for the date
+		$delete = MonthlyReportPayment::whereMonth('trx_month', $month)->whereYear('trx_year', $year)->delete();
+		$delete = GlobalMonthlyReportPayment::whereMonth('trx_month', $month)->whereYear('trx_year', $year)->delete();
+
+		//midtrans
+			$dataPayment = TransactionPaymentMidtran::join('transactions', 'transactions.id_transaction', 'transaction_payment_midtrans.id_transaction')
+			->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+			->select(
+				'transactions.id_outlet', 
+				DB::raw('"'.$month.'" as trx_month'), 
+				DB::raw('"'.$year.'" as trx_year'),  
+				DB::raw('COUNT(transactions.id_transaction) as trx_payment_count'), 
+				DB::raw('SUM(transaction_payment_midtrans.gross_amount) as trx_payment_nominal'), 
+				DB::raw("CONCAT_WS(' ', transaction_payment_midtrans.payment_type, transaction_payment_midtrans.bank) AS trx_payment")
+			)
+			->whereMonth('transactions.transaction_date', $month)
+			->whereYear('transactions.transaction_date', $year)
+			->where('transactions.transaction_payment_status', 'Completed')
+			->whereNull('transaction_pickups.reject_at')
+			->groupBy('transactions.id_outlet', 'trx_payment', 'trx_month', 'trx_year')
+			->get()->toArray();
+
+			if($dataPayment){
+				//insert daily
+				$insertDaily = MonthlyReportPayment::insert($dataPayment);
+			}
+
+			$dataPaymentGlobal = TransactionPaymentMidtran::join('transactions', 'transactions.id_transaction', 'transaction_payment_midtrans.id_transaction')
+			->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+			->select(
+				DB::raw('"'.$month.'" as trx_month'), 
+				DB::raw('"'.$year.'" as trx_year'), 
+				DB::raw('COUNT(transactions.id_transaction) as trx_payment_count'), 
+				DB::raw('SUM(transaction_payment_midtrans.gross_amount) as trx_payment_nominal'), 
+				DB::raw("CONCAT_WS(' ', transaction_payment_midtrans.payment_type, transaction_payment_midtrans.bank) AS trx_payment")
+			)
+			->whereMonth('transactions.transaction_date', $month)
+			->whereYear('transactions.transaction_date', $year)
+			->where('transactions.transaction_payment_status', 'Completed')
+			->whereNull('transaction_pickups.reject_at')
+			->groupBy('trx_payment', 'trx_month', 'trx_year')
+			->get()->toArray();
+
+			if($dataPaymentGlobal){
+				//insert global
+				$insertGlobal = GlobalMonthlyReportPayment::insert($dataPaymentGlobal);
+			}
+		//end midtrans
+
+		//ovo
+			$dataPayment = TransactionPaymentOvo::join('transactions', 'transactions.id_transaction', 'transaction_payment_ovos.id_transaction')
+			->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+			->select(
+				'transactions.id_outlet', 
+				DB::raw('"'.$month.'" as trx_month'), 
+				DB::raw('"'.$year.'" as trx_year'), 
+				DB::raw('COUNT(transactions.id_transaction) as trx_payment_count'), 
+				DB::raw('SUM(transaction_payment_ovos.amount) as trx_payment_nominal'), 
+				DB::raw("'OVO' as 'trx_payment'")
+			)
+			->whereMonth('transactions.transaction_date', $month)
+			->whereYear('transactions.transaction_date', $year)
+			->where('transactions.transaction_payment_status', 'Completed')
+			->whereNull('transaction_pickups.reject_at')
+			->groupBy('transactions.id_outlet', 'trx_payment', 'trx_month', 'trx_year')
+			->get()->toArray();
+
+			if($dataPayment){
+				//insert daily
+				$insertDaily = MonthlyReportPayment::insert($dataPayment);
+			}
+
+			$dataPaymentGlobal = TransactionPaymentOvo::join('transactions', 'transactions.id_transaction', 'transaction_payment_ovos.id_transaction')
+			->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+			->select(
+				DB::raw('"'.$month.'" as trx_month'), 
+				DB::raw('"'.$year.'" as trx_year'), 
+				DB::raw('COUNT(transactions.id_transaction) as trx_payment_count'), 
+				DB::raw('SUM(transaction_payment_ovos.amount) as trx_payment_nominal'), 
+				DB::raw("'OVO' as 'trx_payment'")
+			)
+			->whereMonth('transactions.transaction_date', $month)
+			->whereYear('transactions.transaction_date', $year)
+			->where('transactions.transaction_payment_status', 'Completed')
+			->whereNull('transaction_pickups.reject_at')
+			->groupBy('trx_payment', 'trx_month', 'trx_year')
+			->get()->toArray();
+
+			if($dataPaymentGlobal){
+				//insert global
+				$insertGlobal = GlobalMonthlyReportPayment::insert($dataPaymentGlobal);
+			}
+		//end ovo
+
+		//Ipay88
+			$dataPayment = TransactionPaymentIpay88::join('transactions', 'transactions.id_transaction', 'transaction_payment_ipay88s.id_transaction')
+			->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+			->select(
+				'transactions.id_outlet', 
+				DB::raw('"'.$month.'" as trx_month'), 
+				DB::raw('"'.$year.'" as trx_year'),  
+				DB::raw('COUNT(transactions.id_transaction) as trx_payment_count'), 
+				DB::raw('SUM(transaction_payment_ipay88s.amount / 100) as trx_payment_nominal'), 
+				DB::raw("transaction_payment_ipay88s.payment_method AS trx_payment")
+			)
+			->whereMonth('transactions.transaction_date', $month)
+			->whereYear('transactions.transaction_date', $year)
+			->where('transactions.transaction_payment_status', 'Completed')
+			->whereNull('transaction_pickups.reject_at')
+			->groupBy('transactions.id_outlet', 'trx_payment', 'trx_month', 'trx_year')
+			->get()->toArray();
+
+			if($dataPayment){
+				//insert daily
+				$insertDaily = MonthlyReportPayment::insert($dataPayment);
+			}
+
+			$dataPaymentGlobal = TransactionPaymentIpay88::join('transactions', 'transactions.id_transaction', 'transaction_payment_ipay88s.id_transaction')
+			->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+			->select(
+				DB::raw('"'.$month.'" as trx_month'), 
+				DB::raw('"'.$year.'" as trx_year'), 
+				DB::raw('COUNT(transactions.id_transaction) as trx_payment_count'), 
+				DB::raw('SUM(transaction_payment_ipay88s.amount / 100) as trx_payment_nominal'), 
+				DB::raw("transaction_payment_ipay88s.payment_method AS trx_payment")
+			)
+			->whereMonth('transactions.transaction_date', $month)
+			->whereYear('transactions.transaction_date', $year)
+			->where('transactions.transaction_payment_status', 'Completed')
+			->whereNull('transaction_pickups.reject_at')
+			->groupBy('trx_payment', 'trx_month', 'trx_year')
+			->get()->toArray();
+
+			if($dataPaymentGlobal){
+				//insert global
+				$insertGlobal = GlobalMonthlyReportPayment::insert($dataPaymentGlobal);
+			}
+		//end Ipay88
+
+		//balance
+			$dataPayment = TransactionPaymentBalance::join('transactions', 'transactions.id_transaction', 'transaction_payment_balances.id_transaction')
+			->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+			->select(
+				'transactions.id_outlet', 
+				DB::raw('"'.$month.'" as trx_month'), 
+				DB::raw('"'.$year.'" as trx_year'), 
+				DB::raw('COUNT(transactions.id_transaction) as trx_payment_count'), 
+				DB::raw('SUM(transaction_payment_balances.balance_nominal) as trx_payment_nominal'), 
+				DB::raw("'Jiwa Poin' AS trx_payment")
+			)
+			->whereMonth('transactions.transaction_date', $month)
+			->whereYear('transactions.transaction_date', $year)
+			->where('transactions.transaction_payment_status', 'Completed')
+			->whereNull('transaction_pickups.reject_at')
+			->groupBy('transactions.id_outlet', 'trx_payment', 'trx_month', 'trx_year')
+			->get()->toArray();
+
+			if($dataPayment){
+				//insert daily
+				$insertDaily = MonthlyReportPayment::insert($dataPayment);
+			}
+
+			$dataPaymentGlobal = TransactionPaymentBalance::join('transactions', 'transactions.id_transaction', 'transaction_payment_balances.id_transaction')
+			->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+			->select(
+				DB::raw('"'.$month.'" as trx_month'), 
+				DB::raw('"'.$year.'" as trx_year'), 
+				DB::raw('COUNT(transactions.id_transaction) as trx_payment_count'), 
+				DB::raw('SUM(transaction_payment_balances.balance_nominal) as trx_payment_nominal'), 
+				DB::raw("'Jiwa Poin' AS trx_payment")
+			)
+			->whereMonth('transactions.transaction_date', $month)
+			->whereYear('transactions.transaction_date', $year)
+			->where('transactions.transaction_payment_status', 'Completed')
+			->whereNull('transaction_pickups.reject_at')
+			->groupBy('trx_payment', 'trx_month', 'trx_year')
+			->get()->toArray();
+
+			if($dataPaymentGlobal){
+				//insert global
+				$insertGlobal = GlobalMonthlyReportPayment::insert($dataPaymentGlobal);
+			}
+		//end balance
+
+		//offline
+			$dataPayment = TransactionPaymentOffline::join('transactions', 'transactions.id_transaction', 'transaction_payment_offlines.id_transaction')
+			->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+			->select(
+				'transactions.id_outlet', 
+				DB::raw('"'.$month.'" as trx_month'), 
+				DB::raw('"'.$year.'" as trx_year'), 
+				DB::raw('COUNT(transactions.id_transaction) as trx_payment_count'), 
+				DB::raw('SUM(transaction_payment_offlines.payment_amount) as trx_payment_nominal'), 
+				DB::raw("CONCAT_WS(' ', transaction_payment_offlines.payment_type, transaction_payment_offlines.payment_bank, ' (Offline)') AS trx_payment")
+			)
+			->whereMonth('transactions.transaction_date', $month)
+			->whereYear('transactions.transaction_date', $year)
+			->where('transactions.transaction_payment_status', 'Completed')
+			->whereNull('transaction_pickups.reject_at')
+			->groupBy('transactions.id_outlet', 'trx_payment')
+			->get()->toArray();
+
+			if($dataPayment){
+				//insert daily
+				$insertDaily = MonthlyReportPayment::insert($dataPayment);
+			}
+
+			$dataPaymentGlobal = TransactionPaymentOffline::join('transactions', 'transactions.id_transaction', 'transaction_payment_offlines.id_transaction')
+			->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+			->select(
+				DB::raw('"'.$month.'" as trx_month'), 
+				DB::raw('"'.$year.'" as trx_year'),  
+				DB::raw('COUNT(transactions.id_transaction) as trx_payment_count'), 
+				DB::raw('SUM(transaction_payment_offlines.payment_amount) as trx_payment_nominal'), 
+				DB::raw("CONCAT_WS(' ', transaction_payment_offlines.payment_type, transaction_payment_offlines.payment_bank, ' (Offline)') AS trx_payment")
+			)
+			->whereMonth('transactions.transaction_date', $month)
+			->whereYear('transactions.transaction_date', $year)
+			->where('transactions.transaction_payment_status', 'Completed')
+			->whereNull('transaction_pickups.reject_at')
+			->groupBy('trx_payment')
+			->get()->toArray();
+
+			if($dataPaymentGlobal){
+				//insert global
+				$insertGlobal = GlobalMonthlyReportPayment::insert($dataPaymentGlobal);
+			}
+		//end offline
+
         return true;
     }
     
