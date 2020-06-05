@@ -86,6 +86,10 @@ class ApiDealsInvalidate extends Controller
                             // query lagi
                             $deals = $this->outletAvailable($request->user(), $request->json('id_deals_user'), $request->json('outlet_code'))->toArray();
 
+                            // generate qr code
+                            $deals['qr_code'] = $this->getQrCode($deals);
+
+
                             // add voucher invalidate success webview url
                             $deals['webview_url'] = env('API_URL') ."api/webview/voucher/v2/". $deals['id_deals_user'];
 
@@ -100,7 +104,8 @@ class ApiDealsInvalidate extends Controller
                                     'outlet_name'       => $deals['outlet_name'],
                                     'outlet_code'       => $deals['outlet_code'],
                                     'id_deals'          => $deals['deal_voucher']['deal']['id_deals'],
-                                    'id_brand'          => $deals['deal_voucher']['deal']['id_brand']
+                                    'id_brand'          => $deals['deal_voucher']['deal']['id_brand'],
+                                    'qr_code'			=> $deals['qr_code']
                                 ]);
 
                             // RETURN INFO REDEEM
@@ -238,4 +243,19 @@ class ApiDealsInvalidate extends Controller
           return $deal;
     }
 
+    function getQrCode($datavoucher)
+    {
+    	preg_match("/chart.googleapis.com\/chart\?chl=(.*)&chs=250x250/", $datavoucher['voucher_hash'], $matches);
+
+    	// replace voucher_code with code from voucher_hash
+        if (isset($matches[1])) {
+            $qr = $matches[1];
+        }
+        else {
+            $voucherHash = $datavoucher['voucher_hash'];
+            $qr = str_replace("https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=",'',  $voucherHash);
+        }
+
+    	return $qr??null;
+    }
 }
