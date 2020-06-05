@@ -242,7 +242,7 @@ class ApiGosendController extends Controller
                 $autocrm = app($this->autocrm)->SendAutoCRM('Delivery Status Update', $phone,
                     [
                         'id_reference'    => $id_transaction,
-                        'receipt_number'  => $trx->receipt_number,
+                        'receipt_number'  => $trx->transaction_receipt_number,
                         'outlet_code'     => $outlet->outlet_code,
                         'outlet_name'     => $outlet->outlet_name,
                         'delivery_status' => $ref_status[$post['status']] ?? 'Finding Driver',
