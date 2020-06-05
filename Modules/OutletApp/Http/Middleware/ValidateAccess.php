@@ -17,16 +17,23 @@ class ValidateAccess
      * @param  \Closure  $next
      * @return mixed
      */
-    public function handle(Request $request, Closure $next, $feature, $validator = 'otp')
+    public function handle(Request $request, Closure $next, $feature, $validator = null)
     {
         $errors = ['Something went wrong'];
-        if($validator = 'seeds') {
+        $validator = $validator ?: MyHelper::setting('outlet_apps_access_feature','value','otp');
+        if ($validator == 'off') {
+            $request->merge(['validator' => null,'user_outlet' => ['id_user' => null, 'user_type' => null, 'name' => null, 'email' => null]]);
+            return $next($request);
+        } elseif ($validator == 'seeds') {
             $validate = $this->getUserSeed($feature,$request,$request->user(),$errors);
         } else {
             $validate = $this->getUserOutlet($feature,$request->otp,$request->user());
+            if (!$validate) {
+                $errors = ['OTP tidak sesuai'];
+            }
         }
         if($validate){
-            $request->merge(['user_outlet'=>$validate['user'],'outlet_app_otps'=>$validate['otp']]);
+            $request->merge(['validator'=>$validator, 'user_outlet'=>$validate['user'], 'outlet_app_otps'=>$validate['otp']]);
             return $next($request);
         }
         return [
@@ -43,7 +50,9 @@ class ValidateAccess
             $verify = password_verify($pin, $otp->pin);
             if($verify){
                 $otp->update(['used'=>1]);
-                $user = UserOutlet::where('id_user_outlet',$otp->id_user_outlet)->first();
+                $user = UserOutlet::where('id_user_outlet',$otp->id_user_outlet)->first()->toArray();
+                $user['user_type'] = 'user_outlets';
+                $user['id_user'] = $user['id_user_outlet'];
                 break;
             }
         }
@@ -66,6 +75,8 @@ class ValidateAccess
             ]);
             if($verify['status'] == 'success') {
                 $user = [
+                    'id_user' => null,
+                    'user_type' => 'seeds',
                     'name' => $verify['result']['name']??'',
                     'email' => $verify['result']['email']??''
                 ];
