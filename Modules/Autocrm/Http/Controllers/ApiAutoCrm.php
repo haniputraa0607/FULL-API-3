@@ -51,9 +51,8 @@ class ApiAutoCrm extends Controller
 		if(!$outlet){
 			$users = User::where('phone','=',$receipient)->get()->toArray();
 		}else{
-			$users = UserOutlet::where('phone','=',$receipient)->get()->toArray();
+			$users = UserOutlet::select('id_user_outlet as id', 'user_outlets.*')->where('phone','=',$receipient)->get()->toArray();
 		}
-		$users = User::where('phone','=',$receipient)->get()->toArray();
 		if(empty($users)){
 			return true;
 		}

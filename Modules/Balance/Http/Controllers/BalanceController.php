@@ -220,7 +220,6 @@ class BalanceController extends Controller
 
             if (!is_null($idTrx)) {
                 $dataTrx = Transaction::where('id_transaction', $idTrx)->with('outlet')->first();
-
                 if (empty($dataTrx)) {
                     return [
                         'status'   => 'fail',
@@ -228,6 +227,7 @@ class BalanceController extends Controller
                     ];
                 }
 
+                $dataTrx['transaction_grandtotal'] = $grandTotal;
                 $balanceNotif = app($this->notif)->balanceNotif($dataTrx);
 
                 if ($balanceNotif) {
@@ -284,13 +284,13 @@ class BalanceController extends Controller
         } else {
             if (!is_null($idTrx)) {
                 $dataTrx = Transaction::where('id_transaction', $idTrx)->with('outlet')->first();
-
                 if (empty($dataTrx)) {
                     return [
                         'status'   => 'fail',
                         'messages' => ['transaction not found']
                     ];
                 }
+                $dataTrx['transaction_grandtotal'] = $grandTotal;
 
                 $dataBalance = [
                     'id_transaction'         => $dataTrx['id_transaction'],

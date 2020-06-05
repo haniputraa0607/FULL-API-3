@@ -2565,4 +2565,15 @@ class MyHelper{
             }
         }
     }
+    /**
+     * Get setting value from setting table
+     * @param string $key setting key
+     * @param string $column value column [value|value_text]
+     * @param string default value if setting not exist
+     * @return  string/array result
+     */
+    public static function setting($key,$column = 'value',$default = '')
+    {
+    	return Setting::select($column)->where('key',$key)->pluck($column)->first()??$default;
+    }
 }

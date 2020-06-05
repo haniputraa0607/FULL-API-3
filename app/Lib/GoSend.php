@@ -267,7 +267,7 @@ class GoSend
                     'receipt_number'  => $trx->transaction_receipt_number,
                     'outlet_code'     => $outlet->outlet_code,
                     'outlet_name'     => $outlet->outlet_name,
-                    'delivery_status' => $dataUpdate['status'] ?? 'Finding Driver',
+                    'delivery_status' => ($ref_status[$dataUpdate['status']] ?? $dataUpdate['status']),
                 ]
             );
             TransactionPickupGoSendUpdate::create($dataUpdate);

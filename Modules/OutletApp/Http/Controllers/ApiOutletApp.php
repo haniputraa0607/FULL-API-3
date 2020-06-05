@@ -923,8 +923,8 @@ class ApiOutletApp extends Controller
             foreach ($x as $product) {
                 $create = ProductStockStatusUpdate::create([
                     'id_product'        => $product['id_product'],
-                    'id_user'           => null,
-                    'user_type'         => 'seeds',
+                    'id_user'           => $user_outlet['id_user'],
+                    'user_type'         => $user_outlet['user_type'],
                     'user_name'         => $user_outlet['name'],
                     'user_email'        => $user_outlet['email'],
                     'id_outlet'         => $outlet->id_outlet,
@@ -943,8 +943,8 @@ class ApiOutletApp extends Controller
             foreach ($x as $product) {
                 $create = ProductStockStatusUpdate::create([
                     'id_product'        => $product['id_product'],
-                    'id_user'           => null,
-                    'user_type'         => 'seeds',
+                    'id_user'           => $user_outlet['id_user'],
+                    'user_type'         => $user_outlet['user_type'],
                     'user_name'         => $user_outlet['name'],
                     'user_email'        => $user_outlet['email'],
                     'id_outlet'         => $outlet->id_outlet,
@@ -1506,9 +1506,11 @@ class ApiOutletApp extends Controller
                 $create = OutletScheduleUpdate::create([
                     'id_outlet'          => $id_outlet,
                     'id_outlet_schedule' => $new_data['id_outlet_schedule'],
-                    'id_user'            => $user_outlet->id_user_outlet,
+                    'id_user'            => $user_outlet['id_user'],
                     'id_outlet_app_otp'  => $otp->id_outlet_app_otp,
-                    'user_type'          => 'user_outlets',
+                    'user_type'          => $user_outlet['user_type'],
+                    'user_name'          => $user_outlet['name'],
+                    'user_email'         => $user_outlet['email'],
                     'date_time'          => $date_time,
                     'old_data'           => $old_data ? json_encode($old_data) : null,
                     'new_data'           => json_encode($new_data),
@@ -1626,43 +1628,50 @@ class ApiOutletApp extends Controller
 
     public function requestOTP(Request $request)
     {
-        if (!in_array($request->feature, ['Update Stock Status', 'Update Schedule', 'Create Holiday', 'Update Holiday', 'Delete Holiday'])) {
-            return [
-                'status'   => 'fail',
-                'messages' => 'Invalid requested feature',
-            ];
-        }
-        $outlet = $request->user();
-        $post   = $request->json()->all();
-        $users  = UserOutlet::where(['id_outlet' => $outlet->id_outlet, 'outlet_apps' => '1'])->get();
-        if (count($users) === 0) {
-            return MyHelper::checkGet([], 'User Outlet Apps empty');
-        }
-        $status = false;
-        foreach ($users as $user) {
-            $pinnya = rand(1000, 9999);
-            $pin    = password_hash($pinnya, PASSWORD_BCRYPT);
-            $create = OutletAppOtp::create([
-                'id_user_outlet' => $user->id_user_outlet,
-                'id_outlet'      => $outlet->id_outlet,
-                'feature'        => $post['feature'],
-                'pin'            => $pin,
-            ]);
-            $send = app($this->autocrm)->SendAutoCRM('Outlet App Request PIN', $user->phone, [
-                'outlet_name' => $outlet->outlet_name,
-                'outlet_code' => $outlet->outlet_code,
-                'feature'     => $post['feature'],
-                'admin_name'  => $user->name,
-                'pin'         => $pinnya,
-            ]);
-            if (!$status && ($create && $send)) {
-                $status = true;
+        $af = MyHelper::setting('outlet_apps_access_feature','value','otp');
+        if ($af == 'seeds') {
+            return MyHelper::checkGet(['status'=>'active','method' => 'auth-email']);
+        } elseif ($af == 'otp') {
+            if (!in_array($request->feature, ['Update Stock Status', 'Update Schedule', 'Create Holiday', 'Update Holiday', 'Delete Holiday'])) {
+                return [
+                    'status'   => 'fail',
+                    'messages' => 'Invalid requested feature',
+                ];
             }
+            $outlet = $request->user();
+            $post   = $request->json()->all();
+            $users  = UserOutlet::where(['id_outlet' => $outlet->id_outlet, 'outlet_apps' => '1'])->get();
+            if (count($users) === 0) {
+                return MyHelper::checkGet([], 'User Outlet Apps empty');
+            }
+            $status = false;
+            foreach ($users as $user) {
+                $pinnya = rand(1000, 9999);
+                $pin    = password_hash($pinnya, PASSWORD_BCRYPT);
+                $create = OutletAppOtp::create([
+                    'id_user_outlet' => $user->id_user_outlet,
+                    'id_outlet'      => $outlet->id_outlet,
+                    'feature'        => $post['feature'],
+                    'pin'            => $pin,
+                ]);
+                $send = app($this->autocrm)->SendAutoCRM('Outlet App Request PIN', $user->phone, [
+                    'outlet_name' => $outlet->outlet_name,
+                    'outlet_code' => $outlet->outlet_code,
+                    'feature'     => $post['feature'],
+                    'admin_name'  => $user->name,
+                    'pin'         => $pinnya,
+                ], null, false, true);
+                if (!$status && ($create && $send)) {
+                    $status = true;
+                }
+            }
+            if (!$status) {
+                return MyHelper::checkGet([], 'Failed send PIN');
+            }
+            return MyHelper::checkGet(['status'=>'active','method' => 'OTP']);
+        } else {
+            return MyHelper::checkGet(['status' => 'inactive']);            
         }
-        if (!$status) {
-            return MyHelper::checkGet([], 'Failed send PIN');
-        }
-        return ['status' => 'success'];
     }
 
     public function bookDelivery(Request $request)
@@ -2393,14 +2402,15 @@ class ApiOutletApp extends Controller
                         break;
                     case 'cancelled':
                         $result['delivery_info']['booking_status'] = 0;
-                        $result['transaction_status_text']         = 'SEDANG MENCARI DRIVER';
+                        $result['transaction_status_text']         = 'PENGANTARAN DIBATALKAN';
+                        $result['delivery_info']['delivery_status'] = 'Pengantaran dibatalkan';
                         $result['delivery_info']['cancelable']     = 0;
                         $result['rejectable']              = 1;
                         break;
                     case 'driver not found':
                     case 'no_driver':
                         $result['delivery_info']['booking_status']  = 0;
-                        $result['transaction_status_text']          = 'SEDANG MENCARI DRIVER';
+                        $result['transaction_status_text']          = 'DRIVER TIDAK DITEMUKAN';
                         $result['delivery_info']['delivery_status'] = 'Driver tidak ditemukan';
                         $result['delivery_info']['cancelable']      = 0;
                         $result['rejectable']              = 1;

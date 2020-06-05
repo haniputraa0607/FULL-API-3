@@ -131,6 +131,11 @@ class Transaction extends Model
 		return $this->hasOne(\Modules\IPay88\Entities\TransactionPaymentIpay88::class, 'id_transaction');
 	}
 
+	public function transaction_payment_subscription()
+	{
+		return $this->hasOne(\Modules\Subscription\Entities\TransactionPaymentSubscription::class, 'id_transaction');
+	}
+
 	public function products()
 	{
 		return $this->belongsToMany(\App\Http\Models\Product::class, 'transaction_products', 'id_transaction', 'id_product')
