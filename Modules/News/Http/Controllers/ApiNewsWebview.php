@@ -48,7 +48,7 @@ class ApiNewsWebview extends Controller
     }
     public function detailNews(Request $request)
     {
-        $news = News::with('newsOutlet','newsOutlet.outlet','newsProduct','newsProduct.product')->find($request->id_news)->toArray();
+        $news = News::with('newsOutlet','newsOutlet.outlet','newsProduct.product.photos')->find($request->id_news)->toArray();
         $totalOutlet = 0;
         $outlet = Outlet::get()->toArray();
         if ($outlet) {
@@ -84,7 +84,7 @@ class ApiNewsWebview extends Controller
                 unset($news['news_product']);
                 foreach ($newsProduct as $keyProduct => $valProduct) {
                     $news['news_product'][$keyProduct]['product_name']  = $valProduct['product']['product_name'];
-                    $news['news_product'][$keyProduct]['product_image'] = null;
+                    $news['news_product'][$keyProduct]['product_image'] = env('S3_URL_API').($valProduct['product']['photos'][0]['product_photo']??'img/product/item/default.png');
                 }
             }
             
