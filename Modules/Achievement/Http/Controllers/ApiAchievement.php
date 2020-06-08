@@ -2,6 +2,7 @@
 
 namespace Modules\Achievement\Http\Controllers;
 
+use App\Http\Models\Membership;
 use App\Http\Models\Transaction;
 use App\Http\Models\User;
 use App\Lib\MyHelper;
@@ -59,6 +60,18 @@ class ApiAchievement extends Controller
         ), 0 ) AS total_user'))->leftJoin('achievement_categories', 'achievement_groups.id_achievement_category', '=', 'achievement_categories.id_achievement_category');
         if ($request->post('keyword')) {
             $data->where('achievement_groups.name', 'like', "%{$request->post('keyword')}%");
+        }
+        return MyHelper::checkGet($data->paginate());
+    }
+
+    public function reportMembership(Request $request)
+    {
+        $data = Membership::select('memberships.*', DB::raw('COALESCE((
+            SELECT COUNT(*) from users_memberships
+            WHERE users_memberships.id_membership = memberships.id_membership
+        ), 0 ) AS total_user'));
+        if ($request->post('keyword')) {
+            $data->where('memberships.name', 'like', "%{$request->post('keyword')}%");
         }
         return MyHelper::checkGet($data->paginate());
     }
