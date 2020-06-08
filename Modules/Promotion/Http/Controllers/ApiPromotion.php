@@ -1675,31 +1675,31 @@ class ApiPromotion extends Controller
 				'setting' => $setting
 			);
 
-			Mail::send('emails.test', $data, function($message) use ($to,$subject,$name,$setting)
-			{
-				$message->to($to, $name)->subject($subject);
-				if(env('MAIL_DRIVER') == 'mailgun'){
-					$message->trackClicks(true)
-							->trackOpens(true);
-				}
-				if(!empty($setting['email_from']) && !empty($setting['email_sender'])){
-					$message->from($setting['email_sender'], $setting['email_from']);
-				}else if(!empty($setting['email_sender'])){
-					$message->from($setting['email_sender']);
-				}
+			try{
+				Mail::send('emails.test', $data, function($message) use ($to,$subject,$name,$setting)
+				{
+					$message->to($to, $name)->subject($subject);
+					if(!empty($setting['email_from']) && !empty($setting['email_sender'])){
+						$message->from($setting['email_sender'], $setting['email_from']);
+					}else if(!empty($setting['email_sender'])){
+						$message->from($setting['email_sender']);
+					}
 
-				if(isset($setting['email_reply_to'])){
-					$message->replyTo($setting['email_reply_to']);
-				}
+					if(isset($setting['email_reply_to'])){
+						$message->replyTo($setting['email_reply_to']);
+					}
 
-				if(isset($setting['email_cc'])){
-					$message->cc($setting['email_cc']);
-				}
+					if(isset($setting['email_cc'])){
+						$message->cc($setting['email_cc']);
+					}
 
-				if(isset($setting['email_bcc'])){
-					$message->bcc($setting['email_bcc']);
-				}
-			});
+					if(isset($setting['email_bcc'])){
+						$message->bcc($setting['email_bcc']);
+					}
+				});
+			}catch(\Exception $e){
+							
+			}
 			$updateCountPromotion = PromotionContent::where('id_promotion_content', $promotionContent['id_promotion_content'])->update(['promotion_count_email_sent' => $promotionContent['promotion_count_email_sent']+1]);
 			return ([
 				'status'  => 'success',

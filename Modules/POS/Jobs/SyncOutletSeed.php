@@ -55,6 +55,8 @@ class SyncOutletSeed implements ShouldQueue
                 $updateOutlet = Outlet::where('id_outlet_seed', $value['id'])->update($data);
                 $id_outlet = $cekOutlet;
             }else{
+                //for new outlet get name & status inactive
+                $data['outlet_status'] = 'Inactive';
                 $data['outlet_name'] = ($value['id'] == 0) ? $value['name'] : 'Jilid '.ltrim(substr($explodeName[0],-4), '0').' '.end($explodeName);
                 $id_outlet = Outlet::create($data);
             }

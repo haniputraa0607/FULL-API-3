@@ -10,6 +10,8 @@ use App\Http\Models\Setting;
 use App\Http\Models\Outlet;
 use App\Http\Models\Product;
 use App\Http\Models\ProductPrice;
+use Modules\Product\Entities\ProductGlobalPrice;
+use Modules\Product\Entities\ProductSpecialPrice;
 use App\Http\Models\ProductModifier;
 use App\Http\Models\ProductModifierPrice;
 use App\Http\Models\ProductModifierGlobalPrice;
@@ -147,8 +149,19 @@ class ApiSettingTransactionV2 extends Controller
                     ]);
                 }
 
-                $productPrice = ProductPrice::where(['id_product' => $valueData['id_product'], 'id_outlet' => $data['id_outlet']])->first();
-                if (empty($productPrice)) {
+                // $productPrice = ProductPrice::where(['id_product' => $valueData['id_product'], 'id_outlet' => $data['id_outlet']])->first();
+                if($different_price){
+                    $productPrice = ProductSpecialPrice::where(['id_product' => $valueData['id_product'], 'id_outlet' => $data['id_outlet']])->first();
+                    if($productPrice){
+                        $productPrice['product_price'] = $productPrice['product_special_price'];
+                    }
+                }else{
+                    $productPrice = ProductGlobalPrice::where(['id_product' => $valueData['id_product']])->first();
+                    if($productPrice){
+                        $productPrice['product_price'] = $productPrice['product_global_price'];
+                    }
+                }
+                if (!isset($productPrice)) {
                     DB::rollback();
                     return response()->json([
                         'status' => 'fail',
@@ -318,9 +331,19 @@ class ApiSettingTransactionV2 extends Controller
                     'messages' => ['Product Not Found']
                 ]);
             }
-
-            $priceProduct = ProductPrice::where('id_product', $valueData['id_product'])->where('id_outlet', $data['id_outlet'])->first();
-            if (empty($priceProduct)) {
+            $different_price = Outlet::select('outlet_different_price')->where('id_outlet',$data['id_outlet'])->pluck('outlet_different_price')->first();
+            if($different_price){
+                $productPrice = ProductSpecialPrice::where(['id_product' => $valueData['id_product'], 'id_outlet' => $data['id_outlet']])->first();
+                if($productPrice){
+                    $productPrice['product_price'] = $productPrice['product_special_price'];
+                }
+            }else{
+                $productPrice = ProductGlobalPrice::where(['id_product' => $valueData['id_product']])->first();
+                if($productPrice){
+                    $productPrice['product_price'] = $productPrice['product_global_price'];
+                }
+            }
+            if (empty($productPrice)) {
                 DB::rollback();
                 return response()->json([
                     'status' => 'fail',
@@ -390,8 +413,20 @@ class ApiSettingTransactionV2 extends Controller
                 ]);
             }
 
-            $priceProduct = ProductPrice::where('id_product', $valueData['id_product'])->where('id_outlet', $data['id_outlet'])->first();
-            if (empty($priceProduct)) {
+            // $priceProduct = ProductPrice::where('id_product', $valueData['id_product'])->where('id_outlet', $data['id_outlet'])->first();
+            $different_price = Outlet::select('outlet_different_price')->where('id_outlet',$data['id_outlet'])->pluck('outlet_different_price')->first();
+            if($different_price){
+                $productPrice = ProductSpecialPrice::where(['id_product' => $valueData['id_product'], 'id_outlet' => $data['id_outlet']])->first();
+                if($productPrice){
+                    $productPrice['product_price'] = $productPrice['product_special_price'];
+                }
+            }else{
+                $productPrice = ProductGlobalPrice::where(['id_product' => $valueData['id_product']])->first();
+                if($productPrice){
+                    $productPrice['product_price'] = $productPrice['product_global_price'];
+                }
+            }
+            if (empty($productPrice)) {
                 DB::rollback();
                 return response()->json([
                     'status' => 'fail',

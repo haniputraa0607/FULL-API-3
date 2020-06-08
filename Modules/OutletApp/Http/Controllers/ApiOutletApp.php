@@ -43,6 +43,7 @@ use Modules\OutletApp\Http\Requests\ListProduct;
 use Modules\OutletApp\Http\Requests\ProductSoldOut;
 use Modules\OutletApp\Http\Requests\UpdateToken;
 use Modules\Outlet\Entities\OutletScheduleUpdate;
+use Modules\OutletApp\Jobs\AchievementCheck;
 use Modules\Product\Entities\ProductStockStatusUpdate;
 use Modules\SettingFraud\Entities\FraudDetectionLogTransactionDay;
 use Modules\SettingFraud\Entities\FraudDetectionLogTransactionWeek;
@@ -743,7 +744,8 @@ class ApiOutletApp extends Controller
         DB::beginTransaction();
         $pickup = TransactionPickup::where('id_transaction', $order->id_transaction)->update(['ready_at' => date('Y-m-d H:i:s')]);
 
-        if ($pickup) {
+        // sendPoint delivery after status delivered only
+        if ($pickup && $order->pickup_by == 'Customer' && $order->cashback_insert_status != 1) {
             //send notif to customer
             $user = User::find($order->id_user);
 
@@ -778,6 +780,7 @@ class ApiOutletApp extends Controller
 
             }
 
+            $newTrx->update(['cashback_insert_status' => 1]);
             $checkMembership = app($this->membership)->calculateMembership($user['phone']);
             DB::commit();
             $send = app($this->autocrm)->SendAutoCRM('Order Ready', $user['phone'], [
@@ -873,6 +876,8 @@ class ApiOutletApp extends Controller
                 ]);
             }
 
+            AchievementCheck::dispatch(['id_transaction' => $order->id_transaction])->onConnection('achievement');
+
             DB::commit();
         }
 
@@ -918,12 +923,14 @@ class ApiOutletApp extends Controller
             foreach ($x as $product) {
                 $create = ProductStockStatusUpdate::create([
                     'id_product'        => $product['id_product'],
-                    'id_user'           => $user_outlet['id_user_outlet'],
-                    'user_type'         => 'user_outlets',
+                    'id_user'           => $user_outlet['id_user'],
+                    'user_type'         => $user_outlet['user_type'],
+                    'user_name'         => $user_outlet['name'],
+                    'user_email'        => $user_outlet['email'],
                     'id_outlet'         => $outlet->id_outlet,
                     'date_time'         => $date_time,
                     'new_status'        => 'Sold Out',
-                    'id_outlet_app_otp' => $otp->id_outlet_app_otp,
+                    'id_outlet_app_otp' => null,
                 ]);
             }
             $updated += $found->update(['product_stock_status' => 'Sold Out']);
@@ -936,12 +943,14 @@ class ApiOutletApp extends Controller
             foreach ($x as $product) {
                 $create = ProductStockStatusUpdate::create([
                     'id_product'        => $product['id_product'],
-                    'id_user'           => $user_outlet['id_user_outlet'],
-                    'user_type'         => 'user_outlets',
+                    'id_user'           => $user_outlet['id_user'],
+                    'user_type'         => $user_outlet['user_type'],
+                    'user_name'         => $user_outlet['name'],
+                    'user_email'        => $user_outlet['email'],
                     'id_outlet'         => $outlet->id_outlet,
                     'date_time'         => $date_time,
                     'new_status'        => 'Available',
-                    'id_outlet_app_otp' => $otp->id_outlet_app_otp,
+                    'id_outlet_app_otp' => null,
                 ]);
             }
             $updated += $found->update(['product_stock_status' => 'Available']);
@@ -1497,9 +1506,11 @@ class ApiOutletApp extends Controller
                 $create = OutletScheduleUpdate::create([
                     'id_outlet'          => $id_outlet,
                     'id_outlet_schedule' => $new_data['id_outlet_schedule'],
-                    'id_user'            => $user_outlet->id_user_outlet,
+                    'id_user'            => $user_outlet['id_user'],
                     'id_outlet_app_otp'  => $otp->id_outlet_app_otp,
-                    'user_type'          => 'user_outlets',
+                    'user_type'          => $user_outlet['user_type'],
+                    'user_name'          => $user_outlet['name'],
+                    'user_email'         => $user_outlet['email'],
                     'date_time'          => $date_time,
                     'old_data'           => $old_data ? json_encode($old_data) : null,
                     'new_data'           => json_encode($new_data),
@@ -1583,7 +1594,7 @@ class ApiOutletApp extends Controller
     {
         $outlet = $request->user();
         $date   = $request->json('date') ?: date('Y-m-d');
-        $data   = ProductStockStatusUpdate::select(\DB::raw('id_product_stock_status_update,brand_product.id_brand,CONCAT(user_type,",",id_user) as user,DATE_FORMAT(date_time, "%H:%i") as time,product_name,new_status as old_status,new_status,new_status as to_available'))
+        $data   = ProductStockStatusUpdate::distinct()->select(\DB::raw('id_product_stock_status_update,brand_product.id_brand,CONCAT(user_type,",",COALESCE(id_user,""),",",COALESCE(user_name,"")) as user,DATE_FORMAT(date_time, "%H:%i") as time,product_name,new_status as old_status,new_status,new_status as to_available'))
             ->join('products', 'products.id_product', '=', 'product_stock_status_updates.id_product')
             ->join('brand_product', 'products.id_product', '=', 'brand_product.id_product')
             ->where('id_outlet', $outlet->id_outlet)
@@ -1617,43 +1628,50 @@ class ApiOutletApp extends Controller
 
     public function requestOTP(Request $request)
     {
-        if (!in_array($request->feature, ['Update Stock Status', 'Update Schedule', 'Create Holiday', 'Update Holiday', 'Delete Holiday'])) {
-            return [
-                'status'   => 'fail',
-                'messages' => 'Invalid requested feature',
-            ];
-        }
-        $outlet = $request->user();
-        $post   = $request->json()->all();
-        $users  = UserOutlet::where(['id_outlet' => $outlet->id_outlet, 'outlet_apps' => '1'])->get();
-        if (count($users) === 0) {
-            return MyHelper::checkGet([], 'User Outlet Apps empty');
-        }
-        $status = false;
-        foreach ($users as $user) {
-            $pinnya = rand(1000, 9999);
-            $pin    = password_hash($pinnya, PASSWORD_BCRYPT);
-            $create = OutletAppOtp::create([
-                'id_user_outlet' => $user->id_user_outlet,
-                'id_outlet'      => $outlet->id_outlet,
-                'feature'        => $post['feature'],
-                'pin'            => $pin,
-            ]);
-            $send = app($this->autocrm)->SendAutoCRM('Outlet App Request PIN', $user->phone, [
-                'outlet_name' => $outlet->outlet_name,
-                'outlet_code' => $outlet->outlet_code,
-                'feature'     => $post['feature'],
-                'admin_name'  => $user->name,
-                'pin'         => $pinnya,
-            ]);
-            if (!$status && ($create && $send)) {
-                $status = true;
+        $af = MyHelper::setting('outlet_apps_access_feature','value','otp');
+        if ($af == 'seeds') {
+            return MyHelper::checkGet(['status'=>'active','method' => 'auth-email']);
+        } elseif ($af == 'otp') {
+            if (!in_array($request->feature, ['Update Stock Status', 'Update Schedule', 'Create Holiday', 'Update Holiday', 'Delete Holiday'])) {
+                return [
+                    'status'   => 'fail',
+                    'messages' => 'Invalid requested feature',
+                ];
             }
+            $outlet = $request->user();
+            $post   = $request->json()->all();
+            $users  = UserOutlet::where(['id_outlet' => $outlet->id_outlet, 'outlet_apps' => '1'])->get();
+            if (count($users) === 0) {
+                return MyHelper::checkGet([], 'User Outlet Apps empty');
+            }
+            $status = false;
+            foreach ($users as $user) {
+                $pinnya = rand(1000, 9999);
+                $pin    = password_hash($pinnya, PASSWORD_BCRYPT);
+                $create = OutletAppOtp::create([
+                    'id_user_outlet' => $user->id_user_outlet,
+                    'id_outlet'      => $outlet->id_outlet,
+                    'feature'        => $post['feature'],
+                    'pin'            => $pin,
+                ]);
+                $send = app($this->autocrm)->SendAutoCRM('Outlet App Request PIN', $user->phone, [
+                    'outlet_name' => $outlet->outlet_name,
+                    'outlet_code' => $outlet->outlet_code,
+                    'feature'     => $post['feature'],
+                    'admin_name'  => $user->name,
+                    'pin'         => $pinnya,
+                ], null, false, true);
+                if (!$status && ($create && $send)) {
+                    $status = true;
+                }
+            }
+            if (!$status) {
+                return MyHelper::checkGet([], 'Failed send PIN');
+            }
+            return MyHelper::checkGet(['status'=>'active','method' => 'OTP']);
+        } else {
+            return MyHelper::checkGet(['status' => 'inactive']);            
         }
-        if (!$status) {
-            return MyHelper::checkGet([], 'Failed send PIN');
-        }
-        return ['status' => 'success'];
     }
 
     public function bookDelivery(Request $request)
@@ -1675,7 +1693,7 @@ class ApiOutletApp extends Controller
         return response()->json($result);
     }
 
-    public function bookGoSend($trx)
+    public function bookGoSend($trx,$fromRetry = false)
     {
         $trx->load('transaction_pickup', 'transaction_pickup.transaction_pickup_go_send', 'outlet');
         if (!($trx['transaction_pickup']['transaction_pickup_go_send']['id_transaction_pickup_go_send'] ?? false)) {
@@ -1684,7 +1702,7 @@ class ApiOutletApp extends Controller
                 'messages' => ['Transaksi tidak menggunakan GO-SEND'],
             ];
         }
-        if ($trx['transaction_pickup']['transaction_pickup_go_send']['go_send_id'] && !in_array(strtolower($trx['transaction_pickup']['transaction_pickup_go_send']['latest_status']), ['cancelled', 'driver not found'])) {
+        if ($trx['transaction_pickup']['transaction_pickup_go_send']['go_send_id'] && !in_array(strtolower($trx['transaction_pickup']['transaction_pickup_go_send']['latest_status']), ['cancelled', 'no_driver'])) {
             return [
                 'status'   => 'fail',
                 'messages' => ['Pengiriman sudah dipesan'],
@@ -1706,6 +1724,14 @@ class ApiOutletApp extends Controller
         $destination['note']      = $trx['transaction_pickup']['transaction_pickup_go_send']['destination_note'];
 
         $packageDetail = Setting::where('key', 'go_send_package_detail')->first();
+
+        //update id from go-send
+        $updateGoSend = TransactionPickupGoSend::find($trx['transaction_pickup']['transaction_pickup_go_send']['id_transaction_pickup_go_send']);
+        $maxRetry = Setting::select('value')->where('key', 'booking_delivery_max_retry')->pluck('value')->first()?:5;
+        if ($fromRetry && $updateGoSend->retry_count >= $maxRetry) {
+            return ['status'  => 'fail', 'messages' => ['Retry reach limit']];
+        }
+
         if ($packageDetail) {
             $packageDetail = str_replace('%order_id%', $trx['transaction_pickup']['order_id'], $packageDetail['value']);
         } else {
@@ -1720,13 +1746,25 @@ class ApiOutletApp extends Controller
         if (!isset($booking['id'])) {
             return ['status' => 'fail', 'messages' => $booking['messages'] ?? ['failed booking GO-SEND']];
         }
+        $ref_status = [
+            'Finding Driver' => 'confirmed',
+            'Driver Allocated' => 'allocated',
+            'Enroute Pickup' => 'out_for_pickup',
+            'Item Picked by Driver' => 'picked',
+            'Enroute Drop' => 'out_for_delivery',
+            'Cancelled' => 'cancelled',
+            'Completed' => 'delivered',
+            'Rejected' => 'rejected',
+            'Driver not found' => 'no_driver',
+            'On Hold' => 'on_hold',
+        ];
         $status = GoSend::getStatus($booking['orderNo'], true);
-        //update id from go-send
-        $updateGoSend = TransactionPickupGoSend::find($trx['transaction_pickup']['transaction_pickup_go_send']['id_transaction_pickup_go_send']);
+        $status['status'] = $ref_status[$status['status']] ?? $status['status'];
         $dataSave     = [
             'id_transaction'                => $trx['id_transaction'],
             'id_transaction_pickup_go_send' => $trx['transaction_pickup']['transaction_pickup_go_send']['id_transaction_pickup_go_send'],
             'status'                        => $status['status'] ?? 'Finding Driver',
+            'go_send_order_no'              => $booking['orderNo']
         ];
         GoSend::saveUpdate($dataSave);
         if ($updateGoSend) {
@@ -1739,6 +1777,7 @@ class ApiOutletApp extends Controller
             $updateGoSend->driver_photo      = $status['driverPhoto'] ?? null;
             $updateGoSend->vehicle_number    = $status['vehicleNumber'] ?? null;
             $updateGoSend->live_tracking_url = $status['liveTrackingUrl'] ?? null;
+            $updateGoSend->retry_count = $fromRetry?($updateGoSend->retry_count+1):0;
             $updateGoSend->save();
 
             if (!$updateGoSend) {
@@ -1760,7 +1799,23 @@ class ApiOutletApp extends Controller
                 if (!$trxGoSend) {
                     return MyHelper::checkGet($trx, 'Transaction GoSend Not Found');
                 }
+                $ref_status = [
+                    'Finding Driver' => 'confirmed',
+                    'Driver Allocated' => 'allocated',
+                    'Enroute Pickup' => 'out_for_pickup',
+                    'Item Picked by Driver' => 'picked',
+                    'Enroute Drop' => 'out_for_delivery',
+                    'Cancelled' => 'cancelled',
+                    'Completed' => 'delivered',
+                    'Rejected' => 'rejected',
+                    'Driver not found' => 'no_driver',
+                    'On Hold' => 'on_hold',
+                ];
                 $status = GoSend::getStatus($trx['transaction_receipt_number']);
+                $status['status'] = $ref_status[$status['status']]??$status['status'];
+                if($status['receiver_name'] ?? '') {
+                    $toUpdate['receiver_name'] = $status['receiver_name'];
+                }
                 if ($status['status'] ?? false) {
                     $toUpdate = ['latest_status' => $status['status']];
                     if ($status['liveTrackingUrl'] ?? false) {
@@ -1781,7 +1836,7 @@ class ApiOutletApp extends Controller
                     if ($status['vehicleNumber'] ?? false) {
                         $toUpdate['vehicle_number'] = $status['vehicleNumber'];
                     }
-                    if (!in_array(strtolower($status['status']), ['finding driver', 'driver not found', 'cancelled']) && strpos(env('GO_SEND_URL'), 'integration')) {
+                    if (!in_array(strtolower($status['status']), ['allocated', 'no_driver', 'cancelled']) && strpos(env('GO_SEND_URL'), 'integration')) {
                         $toUpdate['driver_id']      = '00510001';
                         $toUpdate['driver_phone']   = '08111251307';
                         $toUpdate['driver_name']    = 'Anton Lucarus';
@@ -1790,16 +1845,96 @@ class ApiOutletApp extends Controller
                     }
                     $trxGoSend->update($toUpdate);
                     if (in_array(strtolower($status['status']), ['completed', 'delivered'])) {
-                        $arrived_at = date('Y-m-d H:i:s', strtotime($status['orderArrivalTime'] ?? time()));
+                        // sendPoint delivery after status delivered only
+                        if ($trx->cashback_insert_status != 1) {
+                            //send notif to customer
+                            $user = User::find($trx->id_user);
+
+                            $newTrx    = Transaction::with('user.memberships', 'outlet', 'productTransaction', 'transaction_vouchers','promo_campaign_promo_code','promo_campaign_promo_code.promo_campaign')->where('id_transaction', $trx->id_transaction)->first();
+                            $checkType = TransactionMultiplePayment::where('id_transaction', $trx->id_transaction)->get()->toArray();
+                            $column    = array_column($checkType, 'type');
+                            
+                            $use_referral = optional(optional($newTrx->promo_campaign_promo_code)->promo_campaign)->promo_type == 'Referral';
+
+                            if (!in_array('Balance', $column) || $use_referral) {
+
+                                $promo_source = null;
+                                if ($newTrx->id_promo_campaign_promo_code || $newTrx->transaction_vouchers) {
+                                    if ($newTrx->id_promo_campaign_promo_code) {
+                                        $promo_source = 'promo_code';
+                                    } elseif (($newTrx->transaction_vouchers[0]->status ?? false) == 'success') {
+                                        $promo_source = 'voucher_online';
+                                    }
+                                }
+
+                                if (app($this->trx)->checkPromoGetPoint($promo_source) || $use_referral) {
+                                    $savePoint = app($this->getNotif)->savePoint($newTrx);
+                                    // return $savePoint;
+                                    if (!$savePoint) {
+                                        DB::rollback();
+                                        return response()->json([
+                                            'status'   => 'fail',
+                                            'messages' => ['Transaction failed'],
+                                        ]);
+                                    }
+                                }
+
+                            }
+
+                            $newTrx->update(['cashback_insert_status' => 1]);
+                            $checkMembership = app($this->membership)->calculateMembership($user['phone']);
+                            DB::commit();
+                            $send = app($this->autocrm)->SendAutoCRM('Order Ready', $user['phone'], [
+                                "outlet_name"      => $outlet['outlet_name'],
+                                'id_transaction'   => $trx->id_transaction,
+                                "id_reference"     => $trx->transaction_receipt_number . ',' . $trx->id_outlet,
+                                "transaction_date" => $trx->transaction_date,
+                            ]);
+                            if ($send != true) {
+                                // DB::rollback();
+                                return response()->json([
+                                    'status'   => 'fail',
+                                    'messages' => ['Failed Send notification to customer'],
+                                ]);
+                            }
+                        }
+                        $arrived_at = date('Y-m-d H:i:s', ($status['orderArrivalTime']??false)?strtotime($status['orderArrivalTime']):time());
                         TransactionPickup::where('id_transaction', $trx->id_transaction)->update(['arrived_at' => $arrived_at]);
+                        $dataSave = [
+                            'id_transaction'                => $trx['id_transaction'],
+                            'id_transaction_pickup_go_send' => $trxGoSend['id_transaction_pickup_go_send'],
+                            'status'                        => $status['status'] ?? 'on_going',
+                            'go_send_order_no'              => $status['orderNo'] ?? ''
+                        ];
+                        GoSend::saveUpdate($dataSave);
+                    } elseif (in_array(strtolower($status['status']), ['cancelled', 'rejected', 'no_driver'])) {
+                        $trxGoSend->update([
+                            'live_tracking_url' => null,
+                            'driver_id' => null,
+                            'driver_name' => null,
+                            'driver_phone' => null,
+                            'driver_photo' => null,
+                            'vehicle_number' => null,
+                            'receiver_name' => null
+                        ]);
+                        $dataSave = [
+                            'id_transaction'                => $trx['id_transaction'],
+                            'id_transaction_pickup_go_send' => $trxGoSend['id_transaction_pickup_go_send'],
+                            'status'                        => $status['status'] ?? 'on_going',
+                            'go_send_order_no'              => $status['orderNo'] ?? ''
+                        ];
+                        GoSend::saveUpdate($dataSave);
+                        $this->bookGoSend($trx, true);
+                    } else {
+                        $dataSave = [
+                            'id_transaction'                => $trx['id_transaction'],
+                            'id_transaction_pickup_go_send' => $trxGoSend['id_transaction_pickup_go_send'],
+                            'status'                        => $status['status'] ?? 'on_going',
+                            'go_send_order_no'              => $status['orderNo'] ?? ''
+                        ];
+                        GoSend::saveUpdate($dataSave);
                     }
                 }
-                $dataSave = [
-                    'id_transaction'                => $trx['id_transaction'],
-                    'id_transaction_pickup_go_send' => $trxGoSend['id_transaction_pickup_go_send'],
-                    'status'                        => $status['status'] ?? 'on_going',
-                ];
-                GoSend::saveUpdate($dataSave);
                 return MyHelper::checkGet($trxGoSend);
                 break;
 
@@ -2148,6 +2283,7 @@ class ApiOutletApp extends Controller
             'transaction_cashback_earned' => MyHelper::requestNumber($list['transaction_cashback_earned'], '_POINT'),
             'trasaction_payment_type'     => $list['trasaction_payment_type'],
             'transaction_payment_status'  => $list['transaction_payment_status'],
+            'rejectable'                  => 0,
             'outlet'                      => [
                 'outlet_name'    => $list['outlet']['outlet_name'],
                 'outlet_address' => $list['outlet']['outlet_address'],
@@ -2187,69 +2323,97 @@ class ApiOutletApp extends Controller
             } else {
                 $result['transaction_status']      = 5;
                 $result['transaction_status_text'] = 'ORDER PENDING';
+                $result['rejectable']              = 1;
             }
 
             if ($list['transaction_pickup_go_send']) {
                 $result['delivery_info'] = [
                     'driver'            => null,
                     'delivery_status'   => '',
-                    'delivery_address'  => $list['transaction_pickup_go_send']['destination_address'],
+                    'delivery_address'  => $list['transaction_pickup_go_send']['destination_address']?:'',
                     'booking_status'    => 0,
                     'cancelable'        => 1,
-                    'go_send_order_no'  => $list['transaction_pickup_go_send']['go_send_order_no'],
-                    'live_tracking_url' => $list['transaction_pickup_go_send']['live_tracking_url'],
+                    'go_send_order_no'  => $list['transaction_pickup_go_send']['go_send_order_no']?:'',
+                    'live_tracking_url' => $list['transaction_pickup_go_send']['live_tracking_url']?:'',
                 ];
                 if ($list['transaction_pickup_go_send']['go_send_id']) {
                     $result['delivery_info']['booking_status'] = 1;
                 }
                 switch (strtolower($list['transaction_pickup_go_send']['latest_status'])) {
                     case 'finding driver':
+                    case 'confirmed':
                         $result['delivery_info']['delivery_status'] = 'Driver belum ditemukan';
+                        $result['transaction_status_text']          = 'SEDANG MENCARI DRIVER';
+                        $result['rejectable']                       = 0;
+                        break;
+                    case 'driver allocated':
+                    case 'allocated':
+                        $result['delivery_info']['delivery_status'] = 'Driver ditemukan';
+                        $result['transaction_status_text']          = 'DRIVER DITEMUKAN';
+                        $result['delivery_info']['driver']          = [
+                            'driver_id'      => $list['transaction_pickup_go_send']['driver_id']?:'',
+                            'driver_name'    => $list['transaction_pickup_go_send']['driver_name']?:'',
+                            'driver_phone'   => $list['transaction_pickup_go_send']['driver_phone']?:'',
+                            'driver_photo'   => $list['transaction_pickup_go_send']['driver_photo']?:'',
+                            'vehicle_number' => $list['transaction_pickup_go_send']['vehicle_number']?:'',
+                        ];
+                        $result['rejectable']                       = 0;
                         break;
                     case 'enroute pickup':
+                    case 'out_for_pickup':
                         $result['delivery_info']['delivery_status'] = 'Driver dalam perjalanan menuju Outlet';
+                        $result['transaction_status_text']          = 'DRIVER SEDANG MENUJU OUTLET';
                         $result['delivery_info']['driver']          = [
-                            'driver_id'      => $list['transaction_pickup_go_send']['driver_id'],
-                            'driver_name'    => $list['transaction_pickup_go_send']['driver_name'],
-                            'driver_phone'   => $list['transaction_pickup_go_send']['driver_phone'],
-                            'driver_photo'   => $list['transaction_pickup_go_send']['driver_photo'],
-                            'vehicle_number' => $list['transaction_pickup_go_send']['vehicle_number'],
+                            'driver_id'      => $list['transaction_pickup_go_send']['driver_id']?:'',
+                            'driver_name'    => $list['transaction_pickup_go_send']['driver_name']?:'',
+                            'driver_phone'   => $list['transaction_pickup_go_send']['driver_phone']?:'',
+                            'driver_photo'   => $list['transaction_pickup_go_send']['driver_photo']?:'',
+                            'vehicle_number' => $list['transaction_pickup_go_send']['vehicle_number']?:'',
                         ];
                         $result['delivery_info']['cancelable'] = 1;
+                        $result['rejectable']                  = 0;
                         break;
                     case 'enroute drop':
+                    case 'out_for_delivery':
                         $result['delivery_info']['delivery_status'] = 'Driver mengantarkan pesanan';
                         $result['transaction_status_text']          = 'PROSES PENGANTARAN';
                         $result['delivery_info']['driver']          = [
-                            'driver_id'      => $list['transaction_pickup_go_send']['driver_id'],
-                            'driver_name'    => $list['transaction_pickup_go_send']['driver_name'],
-                            'driver_phone'   => $list['transaction_pickup_go_send']['driver_phone'],
-                            'driver_photo'   => $list['transaction_pickup_go_send']['driver_photo'],
-                            'vehicle_number' => $list['transaction_pickup_go_send']['vehicle_number'],
+                            'driver_id'      => $list['transaction_pickup_go_send']['driver_id']?:'',
+                            'driver_name'    => $list['transaction_pickup_go_send']['driver_name']?:'',
+                            'driver_phone'   => $list['transaction_pickup_go_send']['driver_phone']?:'',
+                            'driver_photo'   => $list['transaction_pickup_go_send']['driver_photo']?:'',
+                            'vehicle_number' => $list['transaction_pickup_go_send']['vehicle_number']?:'',
                         ];
                         $result['delivery_info']['cancelable'] = 0;
+                        $result['rejectable']                  = 0;
                         break;
                     case 'completed':
+                    case 'delivered':
                         $result['transaction_status_text']          = 'ORDER SUDAH DIAMBIL';
                         $result['delivery_info']['delivery_status'] = 'Pesanan sudah diterima Customer';
                         $result['delivery_info']['driver']          = [
-                            'driver_id'      => $list['transaction_pickup_go_send']['driver_id'],
-                            'driver_name'    => $list['transaction_pickup_go_send']['driver_name'],
-                            'driver_phone'   => $list['transaction_pickup_go_send']['driver_phone'],
-                            'driver_photo'   => $list['transaction_pickup_go_send']['driver_photo'],
-                            'vehicle_number' => $list['transaction_pickup_go_send']['vehicle_number'],
+                            'driver_id'      => $list['transaction_pickup_go_send']['driver_id']?:'',
+                            'driver_name'    => $list['transaction_pickup_go_send']['driver_name']?:'',
+                            'driver_phone'   => $list['transaction_pickup_go_send']['driver_phone']?:'',
+                            'driver_photo'   => $list['transaction_pickup_go_send']['driver_photo']?:'',
+                            'vehicle_number' => $list['transaction_pickup_go_send']['vehicle_number']?:'',
                         ];
                         $result['delivery_info']['cancelable'] = 0;
                         break;
                     case 'cancelled':
                         $result['delivery_info']['booking_status'] = 0;
-                        $result['transaction_status_text']         = 'Pengantaran dibatalkan';
+                        $result['transaction_status_text']         = 'PENGANTARAN DIBATALKAN';
+                        $result['delivery_info']['delivery_status'] = 'Pengantaran dibatalkan';
                         $result['delivery_info']['cancelable']     = 0;
+                        $result['rejectable']              = 1;
                         break;
                     case 'driver not found':
+                    case 'no_driver':
                         $result['delivery_info']['booking_status']  = 0;
+                        $result['transaction_status_text']          = 'DRIVER TIDAK DITEMUKAN';
                         $result['delivery_info']['delivery_status'] = 'Driver tidak ditemukan';
                         $result['delivery_info']['cancelable']      = 0;
+                        $result['rejectable']              = 1;
                         break;
                 }
             }

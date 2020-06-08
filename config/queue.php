@@ -41,6 +41,13 @@ return [
             'retry_after' => 9000,
         ],
 
+        'achievement' => [
+            'driver' => 'database',
+            'table' => 'achievementjobs',
+            'queue' => 'achievementjobs',
+            'retry_after' => 90,
+        ],
+
         'fraudqueue' => [
             'driver' => 'database',
             'table' => 'fraud_queue',

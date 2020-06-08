@@ -88,7 +88,8 @@ class Transaction extends Model
 		'latitude',
 		'longitude',
 		'membership_promo_id',
-        'fraud_flag'
+        'fraud_flag',
+        'cashback_insert_status'
 	];
 
 	public function user()
@@ -128,6 +129,11 @@ class Transaction extends Model
 	public function transaction_payment_ipay88()
 	{
 		return $this->hasOne(\Modules\IPay88\Entities\TransactionPaymentIpay88::class, 'id_transaction');
+	}
+
+	public function transaction_payment_subscription()
+	{
+		return $this->hasOne(\Modules\Subscription\Entities\TransactionPaymentSubscription::class, 'id_transaction');
 	}
 
 	public function products()

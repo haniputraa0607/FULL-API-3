@@ -565,7 +565,7 @@ class ApiSubscription extends Controller
         }
 
         $count = 0;
-        foreach ($post['content_detail'] as $key => $value) {
+        foreach ($post['content_detail']??[] as $key => $value) {
             $detail_order = 1;
             if ( ($post['id_content_detail'][$key]??0) ) {
                 foreach ($post['id_content_detail'][$key] as $key2 => $value2) {

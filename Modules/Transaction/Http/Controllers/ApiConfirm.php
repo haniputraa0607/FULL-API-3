@@ -53,7 +53,7 @@ class ApiConfirm extends Controller
         $productMidtrans = [];
         $dataDetailProduct = [];
 
-        $check = Transaction::with('transaction_shipments', 'productTransaction.product','outlet_name')->where('id_transaction', $post['id'])->first();
+        $check = Transaction::with('transaction_shipments', 'productTransaction.product','outlet_name', 'transaction_payment_subscription')->where('id_transaction', $post['id'])->first();
 
         if (empty($check)) {
             DB::rollback();
@@ -88,7 +88,7 @@ class ApiConfirm extends Controller
                 }
                 $dataProductMidtrans = [
                     'id'       => $value['id_product'],
-                    'price'    => abs($value['transaction_product_price']+$value['transaction_modifier_subtotal']-$value['transaction_product_discount']),
+                    'price'    => abs($value['transaction_product_price']+$value['transaction_modifier_subtotal']-($value['transaction_product_discount']/$value['transaction_product_qty'])),
                     // 'name'     => $value['product']['product_name'].($more_name_text?'('.trim($more_name_text,',').')':''), // name + modifier too long
                     'name'     => $value['product']['product_name'],
                     'quantity' => $value['transaction_product_qty'],
@@ -147,6 +147,10 @@ class ApiConfirm extends Controller
                 'quantity' => 1,
             ];
             array_push($dataDetailProduct, $dataDis);
+        }
+
+        if ($check['transaction_payment_subscription']) {
+            $countGrandTotal -= $check['transaction_payment_subscription']['subscription_nominal'];
         }
 
         $detailPayment = [
@@ -254,9 +258,23 @@ class ApiConfirm extends Controller
 
             $dataNotifMidtrans = [
                 'id_transaction' => $check['id_transaction'],
-                'gross_amount'   => $check['transaction_grandtotal'],
+                'gross_amount'   => $countGrandTotal,
                 'order_id'       => $check['transaction_receipt_number']
             ];
+
+            switch (strtolower($post['payment_detail']??'')) {
+                case 'credit card':
+                    $dataNotifMidtrans['payment_type'] = 'Credit Card';
+                    break;
+
+                case 'gopay':
+                    $dataNotifMidtrans['payment_type'] = 'Gopay';
+                    break;
+                
+                default:
+                    $dataNotifMidtrans['payment_type'] = null;
+                    break;
+            }
 
             $insertNotifMidtrans = TransactionPaymentMidtran::create($dataNotifMidtrans);
             if (!$insertNotifMidtrans) {

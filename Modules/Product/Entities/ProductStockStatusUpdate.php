@@ -10,6 +10,8 @@ class ProductStockStatusUpdate extends Model
     	'id_product',
     	'id_outlet',
     	'id_user',
+        'user_name',
+        'user_email',
     	'id_outlet_app_otp',
     	'user_type',
     	'date_time',
@@ -17,12 +19,14 @@ class ProductStockStatusUpdate extends Model
     ];
     public function getUserAttribute($value)
     {
-    	[$table,$id_user] = explode(',',$value);
-    	if($table == 'users'){
-    		return \App\Http\Models\User::select('name')->where('id',$id_user)->pluck('name')->first();
-    	}else{
-    		return \App\Http\Models\UserOutlet::select('name')->where('id_user_outlet',$id_user)->pluck('name')->first();
-    	}
+        [$table,$id_user,$name] = explode(',',$value);
+        if($table == 'users'){
+            return \App\Http\Models\User::select('name')->where('id',$id_user)->pluck('name')->first();
+        }elseif($table == 'user_outlets'){
+            return \App\Http\Models\UserOutlet::select('name')->where('id_user_outlet',$id_user)->pluck('name')->first();
+        }else{
+            return $name;
+        }
     }
     public function getNewStatusAttribute($value)
     {

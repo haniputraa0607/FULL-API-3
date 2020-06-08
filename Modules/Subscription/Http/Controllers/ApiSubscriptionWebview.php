@@ -46,7 +46,8 @@ class ApiSubscriptionWebview extends Controller
             'subscription_price_pretty'     => $subs['subscription_price_pretty'],
             'subscription_voucher_total'    => $subs['subscription_voucher_total'],
             'button_text'                   => 'BELI',
-            'button_status'                 => 0
+            'button_status'                 => 0,
+            'user_point'					=> Auth()->user()->points
         ];
 
         //text konfirmasi pembelian
@@ -185,13 +186,18 @@ class ApiSubscriptionWebview extends Controller
         $result['time_server'] = date('Y-m-d H:i:s');
 
         $result['subscription_voucher_used'] = 0;
-        
+        $voucher = [];
         foreach ($subs['subscription_user_vouchers'] as $key => $value) {
             if (!is_null($value['used_at'])) {
                 $getTrx = Transaction::select(DB::raw('transactions.*,sum(transaction_products.transaction_product_qty) item_total'))->leftJoin('transaction_products','transactions.id_transaction','=','transaction_products.id_transaction')->with('outlet')->where('transactions.id_transaction', $value['id_transaction'])->groupBy('transactions.id_transaction')->first();
                 $voucher[$key]['used_at']    = $value['used_at'];
-                $voucher[$key]['outlet']     = $getTrx->outlet->outlet_name;
-                $voucher[$key]['item']       = $getTrx->item_total;
+                if (is_null($getTrx->outlet)) {
+                    $voucher[$key]['outlet']     = '-';
+                    $voucher[$key]['item']       = '-';
+                } else {
+                    $voucher[$key]['outlet']     = $getTrx->outlet->outlet_name;
+                    $voucher[$key]['item']       = $getTrx->item_total;
+                }
                 $result['subscription_voucher_used']    = $result['subscription_voucher_used'] + 1;
             }
         }

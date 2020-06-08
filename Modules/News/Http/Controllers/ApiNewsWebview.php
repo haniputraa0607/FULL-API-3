@@ -48,7 +48,7 @@ class ApiNewsWebview extends Controller
     }
     public function detailNews(Request $request)
     {
-        $news = News::with('newsOutlet','newsOutlet.outlet','newsProduct','newsProduct.product')->find($request->id_news)->toArray();
+        $news = News::with('newsOutlet','newsOutlet.outlet','newsProduct.product.photos')->find($request->id_news)->toArray();
         $totalOutlet = 0;
         $outlet = Outlet::get()->toArray();
         if ($outlet) {
@@ -84,13 +84,18 @@ class ApiNewsWebview extends Controller
                 unset($news['news_product']);
                 foreach ($newsProduct as $keyProduct => $valProduct) {
                     $news['news_product'][$keyProduct]['product_name']  = $valProduct['product']['product_name'];
-                    $news['news_product'][$keyProduct]['product_image'] = null;
+                    $news['news_product'][$keyProduct]['product_image'] = env('S3_URL_API').($valProduct['product']['photos'][0]['product_photo']??'img/product/item/default.png');
                 }
             }
-
-            $news['news_post_date'] = date('l, d F Y  H:i', strtotime($news['news_post_date']));
-            $news['news_event_date'] = date('d', strtotime($news['news_event_date_start'])) . ' - ' . date('d F Y', strtotime($news['news_event_date_end']));
-            $news['news_event_hours'] = date('H:i', strtotime($news['news_event_time_start'])) . ' - ' . date('H:i', strtotime($news['news_event_time_end']));
+            
+            //$news['news_post_date'] = date('l, d F Y  H:i', strtotime($news['news_post_date']));
+            $news['news_post_date'] = date('Y-m-d H:i:s', strtotime($news['news_post_date']));
+            if($news['news_event_date_start'] != null && $news['news_event_time_end'] != null){
+                $news['news_event_date'] = date('d', strtotime($news['news_event_date_start'])) . ' - ' . date('d F Y', strtotime($news['news_event_date_end']));
+            }
+            if($news['news_event_time_start'] != null && $news['news_event_time_end'] != null){
+                $news['news_event_hours'] = date('H:i', strtotime($news['news_event_time_start'])) . ' - ' . date('H:i', strtotime($news['news_event_time_end']));
+            }
             unset($news['news_publish_date']);
             unset($news['news_expired_date']);
             unset($news['news_event_date_start']);

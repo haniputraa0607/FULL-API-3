@@ -10,6 +10,7 @@ class TransactionPickupGoSendUpdate extends Model
     protected $fillable = [
     	'id_transaction',
     	'id_transaction_pickup_go_send',
+    	'go_send_order_no',
     	'status',
     	'description'
     ];

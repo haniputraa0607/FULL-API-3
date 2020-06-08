@@ -520,7 +520,10 @@ class ApiOnlineTransaction extends Controller
             $post['point']    = 0;
         }
 
-        if ($request->json('promo_code') || $request->json('id_deals_user')) {
+        if ($request->json('promo_code') || $request->json('id_deals_user') || $request->json('id_subscription_user')) {
+        	if ($request->json('id_subscription_user')) {
+        		$promo_source = 'subscription';
+        	}
         	$check = $this->checkPromoGetPoint($promo_source);
         	if ( $check == 0 ) {
         		$post['cashback'] = 0;
@@ -793,6 +796,7 @@ class ApiOnlineTransaction extends Controller
                 ]);
 	        }
 
+	        $subscription['grandtotal'] = $insertTransaction['transaction_grandtotal'] - $subscription_total;
 	        $data_subs = app($this->subscription_use)->checkSubscription( $request->json('id_subscription_user') );
 	        $insert_subs_data['id_transaction'] = $insertTransaction['id_transaction'];
 	        $insert_subs_data['id_subscription_user_voucher'] = $data_subs->id_subscription_user_voucher;
@@ -867,15 +871,7 @@ class ApiOnlineTransaction extends Controller
             }
 
             $checkDetailProduct = ProductDetail::where(['id_product' => $checkProduct['id_product'], 'id_outlet' => $post['id_outlet']])->first();
-            if (empty($checkDetailProduct)) {
-                DB::rollback();
-                return response()->json([
-                    'status'    => 'fail',
-                    'messages'  => ['Product Detail Not Valid']
-                ]);
-            }
-
-            if ($checkDetailProduct['product_detail_stock_status'] == 'Sold Out') {
+            if (!empty($checkDetailProduct) && $checkDetailProduct['product_detail_stock_status'] == 'Sold Out') {
                 DB::rollback();
                 return response()->json([
                     'status'    => 'fail',
@@ -888,10 +884,24 @@ class ApiOnlineTransaction extends Controller
             }
 
             $productPrice = 0;
-            $checkPriceProduct = ProductSpecialPrice::where(['id_product' => $checkProduct['id_product'], 'id_outlet' => $post['id_outlet']])->first();
 
-            if(isset($checkPriceProduct['product_special_price'])){
-                $productPrice = $checkPriceProduct['product_special_price'];
+            if($outlet['outlet_different_price']){
+                $checkPriceProduct = ProductSpecialPrice::where(['id_product' => $checkProduct['id_product'], 'id_outlet' => $post['id_outlet']])->first();
+                if(isset($checkPriceProduct['product_special_price'])){
+                    $productPrice = $checkPriceProduct['product_special_price'];
+                }else{
+                    $checkPriceProduct = ProductGlobalPrice::where(['id_product' => $checkProduct['id_product']])->first();
+
+                    if(isset($checkPriceProduct['product_global_price'])){
+                        $productPrice = $checkPriceProduct['product_global_price'];
+                    }else{
+                        DB::rollback();
+                        return response()->json([
+                            'status'    => 'fail',
+                            'messages'  => ['Product Price Not Valid']
+                        ]);
+                    }
+                }
             }else{
                 $checkPriceProduct = ProductGlobalPrice::where(['id_product' => $checkProduct['id_product']])->first();
 
@@ -1020,7 +1030,7 @@ class ApiOnlineTransaction extends Controller
             $trx_product->save();
             $dataProductMidtrans = [
                 'id'       => $checkProduct['id_product'],
-                'price'    => $productPrice+$mod_subtotal,
+                'price'    => $productPrice + $mod_subtotal - ($trx_product['transaction_product_discount']/$trx_product['transaction_product_qty']),
                 // 'name'     => $checkProduct['product_name'].($more_mid_text?'('.trim($more_mid_text,',').')':''), // name & modifier too long
                 'name'     => $checkProduct['product_name'],
                 'quantity' => $valueProduct['qty'],
@@ -1394,7 +1404,7 @@ class ApiOnlineTransaction extends Controller
         if (isset($post['payment_type'])) {
 
             if ($post['payment_type'] == 'Balance') {
-                $save = app($this->balance)->topUp($insertTransaction['id_user'], $insertTransaction['transaction_grandtotal'], $insertTransaction['id_transaction']);
+                $save = app($this->balance)->topUp($insertTransaction['id_user'], ($subscription['grandtotal']??$insertTransaction['transaction_grandtotal']), $insertTransaction['id_transaction']);
 
                 if (!isset($save['status'])) {
                     DB::rollback();
@@ -1858,38 +1868,57 @@ class ApiOnlineTransaction extends Controller
         foreach ($discount_promo['item']??$post['item'] as &$item) {
             // get detail product
             $product = Product::select([
-                'products.id_product','products.product_name','products.product_code','products.product_description',
+                    'products.id_product','products.product_name','products.product_code','products.product_description',
                 DB::raw('(CASE
-                        WHEN (select product_special_price.product_special_price from product_special_price  where product_special_price.id_product = products.id_product AND product_special_price.id_outlet = '.$post['id_outlet'].' ) 
-                        is NULL THEN product_global_price.product_global_price
-                        ELSE (select product_special_price.product_special_price from product_special_price  where product_special_price.id_product = products.id_product AND product_special_price.id_outlet = '.$post['id_outlet'].' )
+                        WHEN (select outlets.outlet_different_price from outlets  where outlets.id_outlet = '.$post['id_outlet'].' ) = 1 
+                        AND (select product_special_price.product_special_price from product_special_price  where product_special_price.id_product = products.id_product AND product_special_price.id_outlet = '.$post['id_outlet'].' ) is not null
+                        THEN (select product_special_price.product_special_price from product_special_price  where product_special_price.id_product = products.id_product AND product_special_price.id_outlet = '.$post['id_outlet'].' )
+                        ELSE product_global_price.product_global_price
                     END) as product_price'),
-                'product_detail.max_order','product_detail.product_detail_stock_status as product_stock_status',
-                'brand_product.id_product_category','brand_product.id_brand'
-            ])
-            ->join('brand_product','brand_product.id_product','=','products.id_product')
-            ->leftJoin('product_global_price','product_global_price.id_product','=','products.id_product')
-            // produk tersedia di outlet
-            ->join('product_detail','product_detail.id_product','=','products.id_product')
-            ->where('product_detail.id_outlet','=',$post['id_outlet'])
-            // brand produk ada di outlet
-            ->where('brand_outlet.id_outlet','=',$outlet->id_outlet)
-            ->join('brand_outlet','brand_outlet.id_brand','=','brand_product.id_brand')
-            // produk ada di brand ini
-            ->where('brand_product.id_brand',$item['id_brand'])
-                ->where(function($query){
-                    $query->where('product_detail.product_detail_visibility','=','Visible')
-                        ->orWhere(function($q){
-                            $q->whereNull('product_detail.product_detail_visibility')
-                                ->where('products.product_visibility', 'Visible');
-                        });
+                    DB::raw('(CASE
+                            WHEN (select product_detail.product_detail_stock_status from product_detail  where product_detail.id_product = products.id_product AND product_detail.id_outlet = '.$post['id_outlet'].' ) 
+                            is NULL THEN "Available"
+                            ELSE (select product_detail.product_detail_stock_status from product_detail  where product_detail.id_product = products.id_product AND product_detail.id_outlet = '.$post['id_outlet'].' )
+                        END) as product_stock_status'),
+                    DB::raw('(CASE
+                            WHEN (select product_detail.max_order from product_detail  where product_detail.id_product = products.id_product AND product_detail.id_outlet = '.$post['id_outlet'].' ) 
+                            is NULL THEN NULL
+                            ELSE (select product_detail.max_order from product_detail  where product_detail.id_product = products.id_product AND product_detail.id_outlet = '.$post['id_outlet'].' )
+                        END) as max_order'),
+                    'brand_product.id_product_category','brand_product.id_brand',
+                ])
+                ->join('brand_product','brand_product.id_product','=','products.id_product')
+                ->leftJoin('product_global_price','product_global_price.id_product','=','products.id_product')
+                // brand produk ada di outlet
+                ->where('brand_outlet.id_outlet','=',$post['id_outlet'])
+                ->join('brand_outlet','brand_outlet.id_brand','=','brand_product.id_brand')
+                ->whereRaw('products.id_product in (CASE
+                        WHEN (select product_detail.id_product from product_detail  where product_detail.id_product = products.id_product AND product_detail.id_outlet = '.$post['id_outlet'].' )
+                        is NULL AND products.product_visibility = "Visible" THEN products.id_product
+                        WHEN (select product_detail.id_product from product_detail  where product_detail.product_detail_visibility = "" AND product_detail.id_product = products.id_product AND product_detail.id_outlet = '.$post['id_outlet'].' )
+                        is NOT NULL AND products.product_visibility = "Visible" THEN products.id_product
+                        ELSE (select product_detail.id_product from product_detail  where product_detail.product_detail_visibility = "Visible" AND product_detail.id_product = products.id_product AND product_detail.id_outlet = '.$post['id_outlet'].' )
+                    END)')
+                ->whereRaw('products.id_product in (CASE
+                        WHEN (select product_detail.id_product from product_detail  where product_detail.id_product = products.id_product AND product_detail.id_outlet = '.$post['id_outlet'].' )
+                        is NULL THEN products.id_product
+                        ELSE (select product_detail.id_product from product_detail  where product_detail.product_detail_status = "Active" AND product_detail.id_product = products.id_product AND product_detail.id_outlet = '.$post['id_outlet'].' )
+                    END)')
+                ->where(function ($query) use ($post){
+                    $query->orWhereRaw('(select product_special_price.product_special_price from product_special_price  where product_special_price.id_product = products.id_product AND product_special_price.id_outlet = '.$post['id_outlet'].' ) is NOT NULL');
+                    $query->orWhereRaw('(select product_global_price.product_global_price from product_global_price  where product_global_price.id_product = products.id_product) is NOT NULL');
                 })
-            ->where('product_detail.product_detail_status','=','Active')
-            ->with([
-                'photos'=>function($query){
-                    $query->select('id_product','product_photo');
-                }
-            ])
+                ->with([
+                    'brand_category' => function($query){
+                        $query->groupBy('id_product','id_brand');
+                    },
+                    'photos' => function($query){
+                        $query->select('id_product','product_photo');
+                    },
+                    'product_promo_categories' => function($query){
+                        $query->select('product_promo_categories.id_product_promo_category','product_promo_category_name as product_category_name','product_promo_category_order as product_category_order');
+                    },
+                ])
             ->groupBy('products.id_product')
             ->orderBy('products.position')
             ->find($item['id_product']);
@@ -2095,10 +2124,10 @@ class ApiOnlineTransaction extends Controller
         $result['used_point'] = 0;
         $balance = app($this->balance)->balanceNow($user->id);
         $result['points'] = (int) $balance;
-        $result['get_point'] = ($post['payment_type'] != 'Balance') ? $this->checkPromoGetPoint($promo_source) : 0;
         $result['total_promo'] = app($this->promo)->availablePromo();
         if ($request->id_subscription_user && !$request->promo_code && !$request->id_deals_user)
         {
+        	$promo_source = 'subscription';
 	        $result['subscription'] = app($this->subscription_use)->calculate($request->id_subscription_user, $result['grandtotal'], $result['subtotal'], $post['item'], $post['id_outlet'], $subs_error, $errorProduct, $subs_product, $subs_applied_product);
 	        if (!empty($subs_error)) {
 	        	$error = $subs_error;
@@ -2107,18 +2136,20 @@ class ApiOnlineTransaction extends Controller
 	        	$promo_error['product_label'] = $subs_product??'';
 	        }
         }
+        $result['get_point'] = ($post['payment_type'] != 'Balance') ? $this->checkPromoGetPoint($promo_source) : 0;
         if (isset($post['payment_type'])&&$post['payment_type'] == 'Balance') {
             if($balance>=$result['grandtotal']){
                 $result['used_point'] = $result['grandtotal'];
+
+	            if ($result['subscription'] >= $result['used_point']) {
+	            	$result['used_point'] = 0;
+	            }else{
+	            	$result['used_point'] = $result['used_point'] - $result['subscription'];
+	            }
             }else{
                 $result['used_point'] = $balance;
             }
 
-            if ($result['subscription'] >= $result['used_point']) {
-            	$result['used_point'] = 0;
-            }else{
-            	$result['used_point'] = $result['used_point'] - $result['subscription'];
-            }
 
             $result['points'] -= $result['used_point'];
         }
@@ -2132,7 +2163,7 @@ class ApiOnlineTransaction extends Controller
 	        }
         }
 
-        $result['total_payment'] = $result['grandtotal'] - $result['used_point'] - $result['subscription'];
+        $result['total_payment'] = $result['grandtotal'] - $result['used_point'];
         return MyHelper::checkGet($result)+['messages'=>$error_msg,'promo_error'=>$promo_error];
     }
 
@@ -2441,16 +2472,16 @@ class ApiOnlineTransaction extends Controller
     		return 1;
     	}
 
-    	if ($promo_source != 'promo_code' && $promo_source != 'voucher_online' && $promo_source != 'voucher_offline') {
+    	if ($promo_source != 'promo_code' && $promo_source != 'voucher_online' && $promo_source != 'voucher_offline' && $promo_source != 'subscription') {
     		return 0;
     	}
 
     	$config = app($this->promo)->promoGetCashbackRule();
-    	$getData = Configs::whereIn('config_name',['promo code get point','voucher offline get point','voucher online get point'])->get()->toArray();
+    	// $getData = Configs::whereIn('config_name',['promo code get point','voucher offline get point','voucher online get point'])->get()->toArray();
 
-    	foreach ($getData as $key => $value) {
-    		$config[$value['config_name']] = $value['is_active'];
-    	}
+    	// foreach ($getData as $key => $value) {
+    	// 	$config[$value['config_name']] = $value['is_active'];
+    	// }
 
     	if ($promo_source == 'promo_code') {
     		if ($config['promo code get point'] == 1) {
@@ -2470,6 +2501,14 @@ class ApiOnlineTransaction extends Controller
 
     	if ($promo_source == 'voucher_offline') {
     		if ($config['voucher offline get point'] == 1) {
+    			return 1;
+    		}else{
+    			return 0;
+    		}
+    	}
+
+    	if ($promo_source == 'subscription') {
+    		if ($config['subscription get point'] == 1) {
     			return 1;
     		}else{
     			return 0;

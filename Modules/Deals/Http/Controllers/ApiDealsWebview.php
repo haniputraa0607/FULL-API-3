@@ -86,12 +86,14 @@ class ApiDealsWebview extends Controller
             'deals_title'                   => $deals['deals_title'],
             'deals_second_title'            => $deals['deals_second_title'],
             'deals_description'             => $deals['deals_description'],
+            'custom_outlet_text'            => $deals['custom_outlet_text'],
             'deals_button'                  => 'Claim',
             'time_server'                   => date('Y-m-d H:i:s'),
             'time_to_end'                   => strtotime($deals['deals_end']) - time(),
             'button_text'                   => 'Get',
             'payment_message'               => 'Are you sure want to claim Free Voucher Offline x Online Limited voucher ?',
-            'payment_success_message'       => 'Claim Voucher Success ! Do you want to use it now ?'
+            'payment_success_message'       => 'Claim Voucher Success ! Do you want to use it now ?',
+            'user_point'					=> Auth()->user()->points
         ];
         if ($deals['deals_voucher_price_cash'] != "") {
             $result['deals_price'] = MyHelper::requestNumber($deals['deals_voucher_price_cash'], '_CURRENCY');
