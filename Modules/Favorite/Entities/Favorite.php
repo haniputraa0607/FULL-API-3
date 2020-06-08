@@ -8,6 +8,7 @@ use App\Http\Models\ProductModifier;
 use App\Http\Models\ProductPrice;
 use App\Http\Models\User;
 use Illuminate\Database\Eloquent\Model;
+use Modules\Product\Entities\ProductGlobalPrice;
 
 class Favorite extends Model
 {
@@ -36,10 +37,15 @@ class Favorite extends Model
 	}
 
 	protected function getProductPrice($id_outlet,$id_product){
-		return ProductPrice::where([
-			'id_outlet'=>$id_outlet,
-			'id_product'=>$id_product
-		])->pluck('product_price')->first();
+		$different_price = $this->outlet_different_price;
+		if ($different_price) {
+			return ProductPrice::where([
+				'id_outlet'=>$id_outlet,
+				'id_product'=>$id_product
+			])->pluck('product_price')->first();
+		} else {
+			return ProductGlobalPrice::select('product_global_price')->where('id_product',$id_product)->pluck('product_global_price')->first()?:0;
+		}
 	}
 
 	public function getProductAttribute(){

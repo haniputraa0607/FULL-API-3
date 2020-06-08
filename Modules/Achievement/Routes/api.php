@@ -23,6 +23,7 @@ Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scop
     Route::group(['prefix' => 'report'], function () {
         Route::any('user-achivement', 'ApiAchievement@reportUser');
         Route::any('list-achivement', 'ApiAchievement@reportAch');
+        Route::any('membership-achivement', 'ApiAchievement@reportMembership');
     });
 });
 

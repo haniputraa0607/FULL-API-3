@@ -12,6 +12,8 @@ class OutletScheduleUpdate extends Model
     	'id_user',
     	'id_outlet_app_otp',
     	'user_type',
+        'user_name',
+        'user_email',
     	'date_time',
     	'old_data',
     	'new_data'
