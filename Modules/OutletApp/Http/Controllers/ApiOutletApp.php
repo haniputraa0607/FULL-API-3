@@ -2327,6 +2327,7 @@ class ApiOutletApp extends Controller
             }
 
             if ($list['transaction_pickup_go_send']) {
+                $result['transaction_status'] = 5;
                 $result['delivery_info'] = [
                     'driver'            => null,
                     'delivery_status'   => '',
@@ -2389,6 +2390,7 @@ class ApiOutletApp extends Controller
                         break;
                     case 'completed':
                     case 'delivered':
+                        $result['transaction_status'] = 2;
                         $result['transaction_status_text']          = 'ORDER SUDAH DIAMBIL';
                         $result['delivery_info']['delivery_status'] = 'Pesanan sudah diterima Customer';
                         $result['delivery_info']['driver']          = [
