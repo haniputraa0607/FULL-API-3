@@ -2098,7 +2098,7 @@ class ApiTransaction extends Controller
 
 
     }
-
+    // api/transaction/item
     public function transactionDetailTrx(Request $request) {
         $trid = $request->json('id_transaction');
         $rn = $request->json('request_number');
