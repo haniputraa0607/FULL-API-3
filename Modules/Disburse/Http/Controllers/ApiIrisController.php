@@ -42,7 +42,8 @@ class ApiIrisController extends Controller
             'rejected' => 'Rejected',
             'approved' => 'Approved'
         ];
-        $data = Disburse::where('reference_no', $reference_no)->update(['disburse_status' => $arrStatus[$status]]);
+        $data = Disburse::where('reference_no', $reference_no)->update(['disburse_status' => $arrStatus[$status],
+            'error_code' => $post['error_code']??null, 'error_message' => $post['error_message']??null]);
 
         $dataLog = [
             'subject' => 'Callback IRIS',
@@ -239,7 +240,8 @@ class ApiIrisController extends Controller
                         }
 
                         $amount = $subTotal - ((floatval($percentFee) / 100) * $subTotal) - $totalFee - $nominalBalance - $totalChargedPromo;
-                        $incomeCentral = ((floatval($percentFee) / 100) * $subTotal) + $totalFeeForCentral - $nominalBalanceCentral - $totalChargedPromoCentral;
+                        $incomeCentral = ((floatval($percentFee) / 100) * $subTotal) + $totalFeeForCentral;
+                        $expenseCentral = $nominalBalanceCentral + $totalChargedPromoCentral;
 
                         $checkOultet = array_search($data['id_outlet'], array_column($arrTmp, 'id_outlet'));
 
@@ -254,11 +256,13 @@ class ApiIrisController extends Controller
                                 'bank_code' => $data['bank_code'],
                                 'total_amount' => $amount,
                                 'total_income_central' => $incomeCentral,
+                                'total_expense_central' => $expenseCentral,
                                 'transactions' => [
                                     [
                                         'id_transaction' => $data['id_transaction'],
                                         'income_outlet'=> $amount,
                                         'income_central'=> $incomeCentral,
+                                        'expense_central'=> $expenseCentral,
                                         'fee' => $percentFee,
                                         'mdr' => $feePG,
                                         'mdr_central' => $feePGCentral,
@@ -274,10 +278,12 @@ class ApiIrisController extends Controller
                         }else{
                             $arrTmp[$checkOultet]['total_amount'] = $arrTmp[$checkOultet]['total_amount'] + $amount;
                             $arrTmp[$checkOultet]['total_income_central'] = $arrTmp[$checkOultet]['total_income_central'] + $incomeCentral;
+                            $arrTmp[$checkOultet]['total_expense_central'] = $arrTmp[$checkOultet]['total_expense_central'] + $expenseCentral;
                             $arrTmp[$checkOultet]['transactions'][] = [
                                 'id_transaction' => $data['id_transaction'],
                                 'income_outlet'=> $amount,
                                 'income_central'=> $incomeCentral,
+                                'expense_central'=> $expenseCentral,
                                 'fee' => $percentFee,
                                 'mdr' => $feePG,
                                 'mdr_central' => $feePGCentral,
@@ -313,8 +319,9 @@ class ApiIrisController extends Controller
                         'id_outlet' => $val['id_outlet'],
                         'disburse_nominal' => $val['total_amount'],
                         'total_income_central' => $val['total_income_central'],
-                        'beneficiary_name' => $val['bank_code'],
-                        'beneficiary_bank_name' => $val['beneficiary_name'],
+                        'total_expense_central' => $val['total_expense_central'],
+                        'beneficiary_name' => $val['beneficiary_name'],
+                        'beneficiary_bank_name' => $val['bank_code'],
                         'beneficiary_account_number' => $val['beneficiary_account'],
                         'beneficiary_email' => $val['beneficiary_email'],
                         'beneficiary_alias' => $val['beneficiary_alias'],

@@ -14,6 +14,7 @@ class DisburseTransaction extends Model
         'id_transaction',
         'income_central',
         'income_outlet',
+        'expense_central',
         'fee',
         'mdr_charged',
         'mdr',
