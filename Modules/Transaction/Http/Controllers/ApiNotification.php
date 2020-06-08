@@ -2,7 +2,9 @@
 
 namespace Modules\Transaction\Http\Controllers;
 
+use App\Http\Models\Configs;
 use App\Http\Models\Transaction;
+use App\Jobs\FraudJob;
 use Modules\IPay88\Entities\TransactionPaymentIpay88;
 use App\Http\Models\TransactionPaymentMidtran;
 use App\Http\Models\LogTopupMidtrans;
@@ -1075,46 +1077,16 @@ Detail: ".$link['short'],
         ]);
 
         if (!$updateCountTrx) {
-            DB::rollback();
+            DB::rollBack();
             return false;
         }
 
-        //========= This process to check if user have fraud ============//
-        $geCountTrxDay = Transaction::leftJoin('transaction_pickups', 'transaction_pickups.id_transaction', '=', 'transactions.id_transaction')
-            ->where('transactions.id_user',$trx['id_user'])
-            ->whereRaw('DATE(transactions.transaction_date) = "'.date('Y-m-d', strtotime($trx['transaction_date'])).'"')
-            ->where('transactions.transaction_payment_status','Completed')
-            ->whereNull('transaction_pickups.reject_at')
-            ->count();
+        $config_fraud_use_queue = Configs::where('config_name', 'fraud use queue')->first()->is_active;
 
-        $currentWeekNumber = date('W',strtotime($trx['transaction_date']));
-        $currentYear = date('Y',strtotime($trx['transaction_date']));
-        $dto = new DateTime();
-        $dto->setISODate($currentYear,$currentWeekNumber);
-        $start = $dto->format('Y-m-d');
-        $dto->modify('+6 days');
-        $end = $dto->format('Y-m-d');
-
-        $geCountTrxWeek = Transaction::leftJoin('transaction_pickups', 'transaction_pickups.id_transaction', '=', 'transactions.id_transaction')
-            ->where('id_user',$trx['id_user'])
-            ->where('transactions.transaction_payment_status','Completed')
-            ->whereNull('transaction_pickups.reject_at')
-            ->whereRaw('Date(transactions.transaction_date) BETWEEN "'.$start.'" AND "'.$end.'"')
-            ->count();
-
-        $countTrxDay = $geCountTrxDay + 1;
-        $countTrxWeek = $geCountTrxWeek + 1;
-        //================================ End ================================//
-
-        $fraudTrxDay = FraudSetting::where('parameter', 'LIKE', '%transactions in 1 day%')->where('fraud_settings_status','Active')->first();
-        $fraudTrxWeek = FraudSetting::where('parameter', 'LIKE', '%transactions in 1 week%')->where('fraud_settings_status','Active')->first();
-        //cek fraud detection transaction per day
-        if ($fraudTrxDay) {
-            $checkFraud = app($this->setting_fraud)->checkFraud($fraudTrxDay, $userData, null, $countTrxDay, $countTrxWeek, $trx['date_time'], 0, $trx['transaction_receipt_number']);
-        }
-        //cek fraud detection transaction per week
-        if ($fraudTrxWeek) {
-            $checkFraud = app($this->setting_fraud)->checkFraud($fraudTrxWeek, $userData, null, $countTrxDay, $countTrxWeek, $trx['date_time'], 0, $trx['transaction_receipt_number']);
+        if($config_fraud_use_queue == 1){
+            FraudJob::dispatch($userData, $trx, 'transaction')->onConnection('fraudqueue');
+        }else {
+            $checkFraud = app($this->setting_fraud)->checkFraudTrxOnline($userData, $trx);
         }
 
         return true;
