@@ -1418,6 +1418,9 @@ class ApiOnlineTransaction extends Controller
 
                 if($save['status'] == 'success'){
                     $checkFraudPoint = app($this->setting_fraud)->fraudTrxPoint($sumBalance, $user, ['id_outlet' => $insertTransaction['id_outlet']]);
+                    if(isset($checkFraudPoint['status'])){
+                        return response()->json($checkFraudPoint);
+                    }
                 }
 
                 if ($post['transaction_payment_status'] == 'Completed' || $save['type'] == 'no_topup') {
@@ -1493,6 +1496,36 @@ class ApiOnlineTransaction extends Controller
 
                     // PromoCampaignTools::applyReferrerCashback($insertTransaction);
 
+                    /* Add daily Trx*/
+                    $dataDailyTrx = [
+                        'id_transaction'    => $insertTransaction['id_transaction'],
+                        'id_outlet'         => $outlet['id_outlet'],
+                        'transaction_date'  => date('Y-m-d H:i:s', strtotime($insertTransaction['transaction_date'])),
+                        'referral_code_use_date'=> date('Y-m-d H:i:s', strtotime($insertTransaction['transaction_date'])),
+                        'id_user'           => $user['id'],
+                        'referral_code'     => NULL
+                    ];
+                    $createDailyTrx = DailyTransactions::create($dataDailyTrx);
+
+                    /* Fraud Referral*/
+                    if($promo_code_ref){
+                        //======= Start Check Fraud Referral User =======//
+                        $data = [
+                            'id_user' => $insertTransaction['id_user'],
+                            'referral_code' => $promo_code_ref,
+                            'referral_code_use_date' => $insertTransaction['transaction_date'],
+                            'id_transaction' => $insertTransaction['id_transaction']
+                        ];
+                        if($config_fraud_use_queue == 1){
+                            FraudJob::dispatch($user, $data, 'referral user')->onConnection('fraudqueue');
+                            FraudJob::dispatch($user, $data, 'referral')->onConnection('fraudqueue');
+                        }else{
+                            app($this->setting_fraud)->fraudCheckReferralUser($data);
+                            app($this->setting_fraud)->fraudCheckReferral($data);
+                        }
+                        //======= End Check Fraud Referral User =======//
+                    }
+
                     DB::commit();
                     return response()->json([
                         'status'     => 'success',
@@ -1552,16 +1585,18 @@ class ApiOnlineTransaction extends Controller
         //    $savelocation = $this->saveLocation($post['latitude'], $post['longitude'], $insertTransaction['id_user'], $insertTransaction['id_transaction']);
         // }
 
-        /* Add to daily trasaction*/
+        /* Add daily Trx*/
         $dataDailyTrx = [
             'id_transaction'    => $insertTransaction['id_transaction'],
             'id_outlet'         => $outlet['id_outlet'],
             'transaction_date'  => date('Y-m-d H:i:s', strtotime($insertTransaction['transaction_date'])),
+            'referral_code_use_date'=> date('Y-m-d H:i:s', strtotime($insertTransaction['transaction_date'])),
             'id_user'           => $user['id'],
-            'referral_code'     => $promo_code_ref
+            'referral_code'     => NULL
         ];
         $createDailyTrx = DailyTransactions::create($dataDailyTrx);
 
+        /* Fraud Referral*/
         if($promo_code_ref){
             //======= Start Check Fraud Referral User =======//
             $data = [

@@ -18,6 +18,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use DateTime;
 use DB;
 
+use Illuminate\Support\Facades\Log;
 class FraudJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
