@@ -619,8 +619,16 @@ class ApiHistoryController extends Controller
             ->leftJoin('transaction_products', 'transactions.id_transaction', '=', 'transaction_products.id_transaction')
             ->with('outlet')
             ->where('transaction_payment_status', 'Completed')
+            ->where(function($q) {
+                $q->where(function ($q2) {
+                    $q2->where('pickup_by','Customer')
+                        ->whereNull('taken_at');
+                })->orWhere(function ($q2) {
+                        $q2->where('pickup_by','<>','Customer')
+                            ->whereNull('arrived_at');
+                    });
+            })
             ->whereDate('transaction_date', date('Y-m-d'))
-            ->whereNull('taken_at')
             ->whereNull('reject_at')
             ->where('transactions.id_user', $id)
             ->orderBy('transaction_date', 'DESC')
