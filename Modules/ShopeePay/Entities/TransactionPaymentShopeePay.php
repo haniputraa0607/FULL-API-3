@@ -22,6 +22,8 @@ class TransactionPaymentShopeePay extends Model
     	'transaction_sn',
     	'payment_status',
     	'user_id_hash',
-    	'terminal_id'
+    	'terminal_id',
+        'redirect_url_app',
+        'redirect_url_http'
     ];
 }

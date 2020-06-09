@@ -30,6 +30,8 @@ class CreateTransactionPaymentShopeePaysTable extends Migration
             $table->string('payment_status')->nullable();
             $table->string('user_id_hash')->nullable();
             $table->string('terminal_id')->nullable();
+            $table->string('redirect_url_app')->nullable();
+            $table->string('redirect_url_http')->nullable();
             $table->timestamps();
 
             $table->foreign('id_transaction')->references('id_transaction')->on('transactions')->onDelete('cascade');

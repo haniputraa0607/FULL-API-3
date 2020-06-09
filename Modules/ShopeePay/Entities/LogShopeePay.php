@@ -15,6 +15,7 @@ class LogShopeePay extends Model
         'request_url',
     	'request_header',
     	'response',
+        'response_header',
     	'response_status_code'
     ];
 }

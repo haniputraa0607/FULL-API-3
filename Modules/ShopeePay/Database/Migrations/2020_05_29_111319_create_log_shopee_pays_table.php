@@ -15,12 +15,12 @@ class CreateLogShopeePaysTable extends Migration
     {
         Schema::connection('mysql2')->create('log_shopee_pays', function (Blueprint $table) {
             $table->bigIncrements('id_log_shopee_pay');
-            $table->string('type');
-            $table->string('id_reference');
-            $table->text('request');
-            $table->text('request_header');
-            $table->text('request_url');
-            $table->text('response');
+            $table->string('type')->nullable();
+            $table->string('id_reference')->nullable();
+            $table->text('request')->nullable();
+            $table->text('request_header')->nullable();
+            $table->text('request_url')->nullable();
+            $table->text('response')->nullable();
             $table->string('response_status_code')->nullable();
             $table->timestamps();
         });
