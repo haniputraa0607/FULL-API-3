@@ -289,7 +289,44 @@ class SendCampaignJob implements ShouldQueue
 
                     if (isset($campaign['campaign_push_clickto']) && $campaign['campaign_push_clickto'] != null) {
                         $dataOptional['type'] = $campaign['campaign_push_clickto'];
-                    } else {
+                    }elseif ($campaign['campaign_push_clickto'] == "News") {
+                        if (!empty($campaign['campaign_push_id_reference'])) {
+                            $dataOptional['type'] = 'Detail News';
+                        } else {
+                            $dataOptional['type'] = 'List News';
+                        }
+                    }
+                    elseif ($campaign['campaign_push_clickto'] == 'History Transaction') {
+                        if (!empty($campaign['campaign_push_id_reference'])) {
+                            $dataOptional['type'] = 'Detail History Transaction';
+                        } else {
+                            $dataOptional['type'] = 'List History Transaction';
+                        }
+                    } elseif ($campaign['campaign_push_clickto'] == 'History Point') {
+                        if (!empty($campaign['campaign_push_id_reference'])) {
+                            $dataOptional['type'] = 'Detail History Point';
+                        } else {
+                            $dataOptional['type'] = 'List History Point';
+                        }
+                    } elseif ($campaign['campaign_push_clickto'] == 'Voucher') {
+                        if (!empty($campaign['campaign_push_id_reference'])) {
+                            $dataOptional['type'] = 'Detail Voucher';
+                        } else{
+                            $dataOptional['type'] = 'List Voucher';
+                        }
+                    }elseif ($campaign['campaign_push_clickto'] == 'Deals') {
+                        if (!empty($campaign['campaign_push_id_reference'])) {
+                            $dataOptional['type'] = 'Detail Deals';
+                        }else{
+                            $dataOptional['type'] = 'List Deals';
+                        }
+                    }elseif ($campaign['campaign_push_clickto'] == 'Subscription') {
+                        if (!empty($campaign['campaign_push_id_reference'])) {
+                            $dataOptional['type'] = 'Detail Subscription';
+                        }else{
+                            $dataOptional['type'] = 'List Subscription';
+                        }
+                    }else {
                         $dataOptional['type'] = 'Home';
                     }
 
@@ -387,6 +424,51 @@ class SendCampaignJob implements ShouldQueue
 
                     if(!empty($campaign['campaign_inbox_id_reference'])){
                         $inbox['inboxes_id_reference'] = $campaign['campaign_inbox_id_reference'];
+                    }else{
+                        $inbox['inboxes_id_reference'] = 0;
+                    }
+
+                    if ($campaign['campaign_inbox_clickto'] == "News") {
+                        if (!empty($campaign['campaign_inbox_id_reference'])) {
+                            $inbox['inboxes_clickto'] = 'Detail News';
+                        } else {
+                            $inbox['inboxes_clickto'] = 'List News';
+                        }
+                    }
+                    elseif ($campaign['campaign_inbox_clickto'] == 'History Transaction') {
+                        if (!empty($campaign['campaign_inbox_id_reference'])) {
+                            $inbox['inboxes_clickto'] = 'Detail History Transaction';
+                        } else {
+                            $inbox['inboxes_clickto'] = 'List History Transaction';
+                        }
+                    } elseif ($campaign['campaign_inbox_clickto'] == 'History Point') {
+                        if (!empty($campaign['campaign_inbox_id_reference'])) {
+                            $inbox['inboxes_clickto'] = 'Detail History Point';
+                        } else {
+                            $inbox['inboxes_clickto'] = 'List History Point';
+                        }
+                    } elseif ($campaign['campaign_inbox_clickto'] == 'Voucher') {
+                        if (!empty($campaign['campaign_inbox_id_reference'])) {
+                            $inbox['inboxes_clickto'] = 'Detail Voucher';
+                        } else{
+                            $inbox['inboxes_clickto'] = 'List Voucher';
+                        }
+                    }elseif ($campaign['campaign_inbox_clickto'] == 'Deals') {
+                        if (!empty($campaign['campaign_inbox_id_reference'])) {
+                            $inbox['inboxes_clickto'] = 'Detail Deals';
+                        }else{
+                            $inbox['inboxes_clickto'] = 'List Deals';
+                        }
+                    }elseif ($campaign['campaign_inbox_clickto'] == 'Subscription') {
+                        if (!empty($campaign['campaign_inbox_id_reference'])) {
+                            $dataOptional['inboxes_clickto'] = 'Detail Subscription';
+                        }else{
+                            $dataOptional['inboxes_clickto'] = 'List Subscription';
+                        }
+                    }elseif ($campaign['campaign_inbox_clickto'] == 'Home') {
+                        $inbox['inboxes_clickto'] = 'Home';
+                    }else{
+                        $inbox['inboxes_clickto'] = '';
                     }
 
                     $inbox['inboxes_send_at'] = date("Y-m-d H:i:s");
