@@ -1564,4 +1564,22 @@ class ApiSetting extends Controller
         return response()->json(MyHelper::checkUpdate($update));
     }
     /* ============== End Maintenance Mode Setting ============== */
+
+    public function settingPhoneNumber() {
+        $phoneSetting = Setting::where('key', 'phone_setting')->first();
+
+        if($phoneSetting){
+            $result = [
+                'status' => 'success',
+                'result' => json_decode($phoneSetting['value_text'])
+            ];
+
+            return response()->json($result);
+        }else{
+            return response()->json([
+                'status'=>'fail',
+                'messages'=>['Failed get phone setting']
+            ]);
+        }
+    }
 }
