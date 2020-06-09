@@ -1018,27 +1018,37 @@ class ApiOutletApp extends Controller
         $outlet            = $request->user();
         $post              = $request->json()->all();
         $post['id_outlet'] = $outlet['id_outlet'];
-        $products          = Product::select([
-            'products.id_product', 'products.product_code', 'products.product_name', 'product_prices.product_stock_status',
+        $products          =Product::select([
+            'products.id_product', 'products.product_code', 'products.product_name',
+            DB::raw('(CASE
+                        WHEN (select product_detail.product_detail_stock_status from product_detail  where product_detail.id_product = products.id_product AND product_detail.id_outlet = '.$post['id_outlet'].' ) 
+                        is NULL THEN "Available"
+                        ELSE (select product_detail.product_detail_stock_status from product_detail  where product_detail.id_product = products.id_product AND product_detail.id_outlet = '.$post['id_outlet'].' )
+                    END) as product_stock_status'),
         ])
-            ->join('brand_product', 'brand_product.id_product', '=', 'products.id_product')
+            ->join('brand_product','brand_product.id_product','=','products.id_product')
+            ->leftJoin('product_global_price','product_global_price.id_product','=','products.id_product')
+            // brand produk ada di outlet
             ->where('brand_product.id_brand', '=', $post['id_brand'])
             ->where('brand_product.id_product_category', '=', $post['id_product_category'])
-        // produk tersedia di outlet
-            ->join('product_prices', 'product_prices.id_product', '=', 'products.id_product')
-            ->where('product_prices.id_outlet', '=', $post['id_outlet'])
-        // brand produk ada di outlet
-            ->where('brand_outlet.id_outlet', '=', $post['id_outlet'])
-            ->join('brand_outlet', 'brand_outlet.id_brand', '=', 'brand_product.id_brand')
-            ->where(function ($query) {
-                $query->where('product_prices.product_visibility', '=', 'Visible')
-                    ->orWhere(function ($q) {
-                        $q->whereNull('product_prices.product_visibility')
-                            ->where('products.product_visibility', 'Visible');
-                    });
+            ->where('brand_outlet.id_outlet','=',$post['id_outlet'])
+            ->join('brand_outlet','brand_outlet.id_brand','=','brand_product.id_brand')
+            ->whereRaw('products.id_product in (CASE
+                        WHEN (select product_detail.id_product from product_detail  where product_detail.id_product = products.id_product AND product_detail.id_outlet = '.$post['id_outlet'].' )
+                        is NULL AND products.product_visibility = "Visible" THEN products.id_product
+                        WHEN (select product_detail.id_product from product_detail  where product_detail.product_detail_visibility = "" AND product_detail.id_product = products.id_product AND product_detail.id_outlet = '.$post['id_outlet'].' )
+                        is NOT NULL AND products.product_visibility = "Visible" THEN products.id_product
+                        ELSE (select product_detail.id_product from product_detail  where product_detail.product_detail_visibility = "Visible" AND product_detail.id_product = products.id_product AND product_detail.id_outlet = '.$post['id_outlet'].' )
+                    END)')
+            ->whereRaw('products.id_product in (CASE
+                        WHEN (select product_detail.id_product from product_detail  where product_detail.id_product = products.id_product AND product_detail.id_outlet = '.$post['id_outlet'].' )
+                        is NULL THEN products.id_product
+                        ELSE (select product_detail.id_product from product_detail  where product_detail.product_detail_status = "Active" AND product_detail.id_product = products.id_product AND product_detail.id_outlet = '.$post['id_outlet'].' )
+                    END)')
+            ->where(function ($query) use ($post){
+                $query->WhereRaw('(select product_special_price.product_special_price from product_special_price  where product_special_price.id_product = products.id_product AND product_special_price.id_outlet = '.$post['id_outlet'].' ) is NOT NULL');
+                $query->orWhereRaw('(select product_global_price.product_global_price from product_global_price  where product_global_price.id_product = products.id_product) is NOT NULL');
             })
-            ->where('product_prices.product_status', '=', 'Active')
-            ->whereNotNull('product_prices.product_price')
             ->groupBy('products.id_product')
             ->orderBy('products.position')
             ->orderBy('products.id_product');
@@ -2327,6 +2337,7 @@ class ApiOutletApp extends Controller
             }
 
             if ($list['transaction_pickup_go_send']) {
+                $result['transaction_status'] = 5;
                 $result['delivery_info'] = [
                     'driver'            => null,
                     'delivery_status'   => '',
@@ -2389,6 +2400,7 @@ class ApiOutletApp extends Controller
                         break;
                     case 'completed':
                     case 'delivered':
+                        $result['transaction_status'] = 2;
                         $result['transaction_status_text']          = 'ORDER SUDAH DIAMBIL';
                         $result['delivery_info']['delivery_status'] = 'Pesanan sudah diterima Customer';
                         $result['delivery_info']['driver']          = [

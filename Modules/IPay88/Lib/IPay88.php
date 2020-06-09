@@ -1,6 +1,8 @@
 <?php
 namespace Modules\IPay88\Lib;
 
+use App\Http\Models\Configs;
+use App\Jobs\FraudJob;
 use Illuminate\Support\Facades\Log;
 use DB;
 
@@ -312,6 +314,15 @@ class IPay88
 
 				        $trx->load('outlet');
 						$trx->load('productTransaction');
+
+						$userData = User::where('id', $trx['id_user'])->first();
+						$config_fraud_use_queue = Configs::where('config_name', 'fraud use queue')->first()->is_active;
+
+						if($config_fraud_use_queue == 1){
+							FraudJob::dispatch($userData, $trx, 'transaction')->onConnection('fraudqueue');
+						}else {
+							$checkFraud = app($this->setting_fraud)->checkFraudTrxOnline($userData, $trx);
+						}
 
 						//send notif to outlet
 						$sendNotifOutlet = app($this->trx)->outletNotif($trx['id_transaction']);

@@ -245,7 +245,7 @@ class ApiDisburseController extends Controller
         $data = Disburse::join('outlets', 'outlets.id_outlet', 'disburse.id_outlet')
             ->join('bank_name', 'bank_name.id_bank_name', 'outlets.id_bank_name')
                 ->select('outlets.outlet_name', 'outlets.outlet_code', 'disburse.id_disburse', 'disburse.disburse_nominal', 'disburse.disburse_status', 'disburse.beneficiary_account_number',
-                'disburse.beneficiary_name', 'disburse.created_at', 'disburse.updated_at', 'bank_name.bank_code', 'bank_name.bank_name', 'disburse.count_retry')->orderBy('disburse.created_at','desc');
+                'disburse.beneficiary_name', 'disburse.created_at', 'disburse.updated_at', 'bank_name.bank_code', 'bank_name.bank_name', 'disburse.count_retry', 'disburse.error_message')->orderBy('disburse.created_at','desc');
 
         if($status != 'all'){
             $data->where('disburse.disburse_status', ucfirst($status));
