@@ -46,4 +46,9 @@ class TransactionPickupGoSend extends Model
 	{
 		return $this->belongsTo(\App\Http\Models\TransactionPickup::class, 'id_transaction_pickup');
 	}
+	
+	public function transaction_pickup_update()
+	{
+		return $this->hasMany(TransactionPickupGoSendUpdate::class, 'id_transaction_pickup_go_send')->orderBy('created_at', 'DESC');
+	}
 }
