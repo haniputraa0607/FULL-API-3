@@ -431,11 +431,12 @@
                     <div class="col-12 text-11-7px text-grey-white space-nice text-center WorkSans">{{ $data['outlet']['outlet_address'] }}</div>
                     @if ($data['trasaction_type'] != 'Offline')
                         <div class="col-12 WorkSans-Bold text-14px space-text text-black-grey-light">Kode Pickup Anda</div>
-
-                        <div style="width: 135px;height: 135px;margin: 0 auto;" data-toggle="modal" data-target="#exampleModal">
-                            <div class="col-12 text-14-3px space-top"><img class="img-responsive" style="display: block; max-width: 100%; padding-top: 10px" src="{{ $data['detail']['order_id_qrcode'] }}"></div>
-                        </div>
-                        <div class="col-12 text-black-grey-light text-20px WorkSans-SemiBold" style="margin-top: 8%;">{{ $data['detail']['order_id'] }}</div>
+                        @if(isset($data['detail']['order_id_qrcode']))
+                            <div style="width: 135px;height: 135px;margin: 0 auto;" data-toggle="modal" data-target="#exampleModal">
+                                <div class="col-12 text-14-3px space-top"><img class="img-responsive" style="display: block; max-width: 100%; padding-top: 10px" src="{{ $data['detail']['order_id_qrcode'] }}"></div>
+                            </div>
+                            <div class="col-12 text-black-grey-light text-20px WorkSans-SemiBold" style="margin-top: 8%;">{{ $data['detail']['order_id'] }}</div>
+                        @endif
                     @endif
                 </div>
             </div>
