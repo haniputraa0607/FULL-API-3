@@ -1876,4 +1876,10 @@ class ApiSubscription extends Controller
         });
         return ['filter' => $return, 'filter_operator' => $request->json('operator')];
     }
+
+    function listSubscriptionAjax(){
+        $data = Subscription::where('subscription_publish_end', '>=', date('Y-m-d H:i:s'))
+                ->select('id_subscription', 'subscription_title')->get()->toArray();
+        return response()->json(MyHelper::checkGet($data));
+    }
 }
