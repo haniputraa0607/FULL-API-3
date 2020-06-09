@@ -1472,7 +1472,7 @@ class ApiTransaction extends Controller
                 'transaction_payment_offlines',
                 'transaction_vouchers.deals_voucher.deal',
                 'promo_campaign_promo_code.promo_campaign',
-                'transaction_pickup_go_send',
+                'transaction_pickup_go_send.transaction_pickup_update',
                 'outlet.city')->first();
             if(!$list){
                 return MyHelper::checkGet([],'empty');
@@ -1827,6 +1827,7 @@ class ApiTransaction extends Controller
                         'driver' => null,
                         'delivery_status' => '',
                         'delivery_address' => $list['transaction_pickup_go_send']['destination_address']?:'',
+                        'delivery_address_note' => $list['transaction_pickup_go_send']['destination_note']?:'',
                         'booking_status' => 0,
                         'cancelable' => 1,
                         'go_send_order_no' => $list['transaction_pickup_go_send']['go_send_order_no']?:'',
@@ -1838,7 +1839,7 @@ class ApiTransaction extends Controller
                     switch (strtolower($list['transaction_pickup_go_send']['latest_status'])) {
                         case 'finding driver':
                         case 'confirmed':
-                            $result['delivery_info']['delivery_status'] = 'Driver belum ditemukan';
+                            $result['delivery_info']['delivery_status'] = 'Sedang mencari driver';
                             $result['transaction_status_text']          = 'SEDANG MENCARI DRIVER';
                             break;
                         case 'driver allocated':
@@ -1975,52 +1976,122 @@ class ApiTransaction extends Controller
 
             if ($list['trasaction_payment_type'] != 'Offline') {
                 if ($list['transaction_payment_status'] == 'Cancelled') {
-                    $result['detail']['detail_status'][] = [
+                    $statusOrder[] = [
                     'text'  => 'Pesanan Anda dibatalkan karena pembayaran gagal',
-                    'date'  => date('d F Y H:i', strtotime($list['void_date']))
+                    'date'  => $list['void_date']
                 ];
                 } 
                 elseif ($list['transaction_payment_status'] == 'Pending') {
-                    $result['detail']['detail_status'][] = [
+                    $statusOrder[] = [
                     'text'  => 'Menunggu konfirmasi pembayaran',
-                    'date'  => date('d F Y H:i', strtotime($list['transaction_date']))
+                    'date'  => $list['transaction_date']
                 ];
                 } else {
                     if ($list['detail']['reject_at'] != null) {
-                        $result['detail']['detail_status'][] = [
+                        $statusOrder[] = [
                         'text'  => 'Order rejected',
-                        'date'  => date('d F Y H:i', strtotime($list['detail']['reject_at'])),
+                        'date'  => $list['detail']['reject_at'],
                         'reason'=> $list['detail']['reject_reason']
                     ];
                     }
                     if ($list['detail']['taken_by_system_at'] != null) {
-                        $result['detail']['detail_status'][] = [
+                        $statusOrder[] = [
                         'text'  => 'Pesanan Anda sudah selesai',
-                        'date'  => date('d F Y H:i', strtotime($list['detail']['taken_by_system_at']))
+                        'date'  => $list['detail']['taken_by_system_at']
                     ];
                     }
                     if ($list['detail']['taken_at'] != null) {
-                        $result['detail']['detail_status'][] = [
+                        $statusOrder[] = [
                         'text'  => 'Pesanan Anda sudah diambil',
-                        'date'  => date('d F Y H:i', strtotime($list['detail']['taken_at']))
+                        'date'  => $list['detail']['taken_at']
                     ];
                     }
                     if ($list['detail']['ready_at'] != null) {
-                        $result['detail']['detail_status'][] = [
+                        $statusOrder[] = [
                         'text'  => 'Pesanan Anda sudah siap ',
-                        'date'  => date('d F Y H:i', strtotime($list['detail']['ready_at']))
+                        'date'  => $list['detail']['ready_at']
                     ];
+                    }
+                    if ($list['transaction_pickup_go_send']) {
+                        foreach ($list['transaction_pickup_go_send']['transaction_pickup_update'] as $valueGosend) {
+                            switch (strtolower($valueGosend['status'])) {
+                                case 'finding driver':
+                                case 'confirmed':
+                                    $statusOrder[] = [
+                                        'text'  => 'Sedang mencari driver',
+                                        'date'  => $valueGosend['created_at']
+                                    ];
+                                    break;
+                                case 'driver allocated':
+                                case 'allocated':
+                                    $statusOrder[] = [
+                                        'text'  => 'Driver ditemukan',
+                                        'date'  => $valueGosend['created_at']
+                                    ];
+                                    break;
+                                case 'enroute pickup':
+                                case 'out_for_pickup':
+                                    $statusOrder[] = [
+                                        'text'  => 'Driver dalam perjalanan menuju Outlet',
+                                        'date'  => $valueGosend['created_at']
+                                    ];
+                                    break;
+                                case 'enroute drop':
+                                case 'out_for_delivery':
+                                    $statusOrder[] = [
+                                        'text'  => 'Driver mengantarkan pesanan',
+                                        'date'  => $valueGosend['created_at']
+                                    ];
+                                    break;
+                                case 'completed':
+                                case 'delivered':
+                                    $statusOrder[] = [
+                                        'text'  => 'Pesanan sudah diterima Customer',
+                                        'date'  => $valueGosend['created_at']
+                                    ];
+                                    break;
+                                case 'cancelled':
+                                    $statusOrder[] = [
+                                        'text'  => 'Pengantaran dibatalkan',
+                                        'date'  => $valueGosend['created_at']
+                                    ];
+                                    break;
+                                case 'driver not found':
+                                case 'no_driver':
+                                    $statusOrder[] = [
+                                        'text'  => 'Driver tidak ditemukan',
+                                        'date'  => $valueGosend['created_at']
+                                    ];
+                                    break;
+                            }
+                        }
                     }
                     if ($list['detail']['receive_at'] != null) {
-                        $result['detail']['detail_status'][] = [
+                        $statusOrder[] = [
                         'text'  => 'Pesanan Anda sudah diterima',
-                        'date'  => date('d F Y H:i', strtotime($list['detail']['receive_at']))
+                        'date'  => $list['detail']['receive_at']
                     ];
                     }
-                    $result['detail']['detail_status'][] = [
+                    $statusOrder[] = [
                         'text'  => 'Pesanan Anda menunggu konfirmasi',
-                        'date'  => date('d F Y H:i', strtotime($list['transaction_date']))
+                        'date'  => $list['transaction_date']
                     ];
+                }
+                
+                usort($statusOrder, function($a1, $a2) {
+                    $v1 = strtotime($a1['date']);
+                    $v2 = strtotime($a2['date']);
+                    return $v2 - $v1; // $v2 - $v1 to reverse direction
+                });
+
+                foreach ($statusOrder as $keyStatus => $status) {
+                    $result['detail']['detail_status'][$keyStatus] = [
+                        'text'  => $status['text'],
+                        'date'  => date('d F Y H:i', strtotime($status['date']))
+                    ];
+                    if ($status['text'] == 'Order rejected') {
+                        $result['detail']['detail_status'][$keyStatus]['reason'] = $list['detail']['reject_reason'];
+                    }
                 }
             }
 
