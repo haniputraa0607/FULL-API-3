@@ -9,11 +9,12 @@ class ShopeePayController extends Controller
 {
     public function __construct()
     {
-        $this->base_url      = env('SHOPHEEPAY_BASE_URL');
-        $this->client_id     = env('SHOPHEEPAY_CLIENT_ID');
-        $this->client_secret = env('SHOPHEEPAY_CLIENT_SECRET');
-        $this->currency      = env('SHOPHEEPAY_CURRENCY', 'IDR');
-        $this->return_url    = env('SHOPHEEPAY_RETURN_URL', );
+        $this->point_of_initiation  = 'app';
+    }
+
+    public function __get($key)
+    {
+        return env('SHOPHEEPAY_'.strtoupper($key));
     }
 
     /**
@@ -37,6 +38,16 @@ class ShopeePayController extends Controller
         $post = $request->post();
 
     }
+    /**
+     * The signature is a hash-based message authentication code (HMAC) using the SHA256
+     * cryptographic function and the aforementioned secret key, operated on the request JSON.
+     * @param  [type] $data [description]
+     * @return [type]       [description]
+     */
+    public function signature($data)
+    {
+        return rtrim(base64_encode(hash_hmac('sha256', json_encode($data), $this->secret_key)),"\n");
+    }
 
     /**
      * signing data and send request
@@ -44,13 +55,16 @@ class ShopeePayController extends Controller
      * @param  [type] $data [description]
      * @return [type]       [description]
      */
-    public function send($url, $data)
+    public function send($url, $data, $logData = null)
     {
+        // fill request_id
+        $data['request_id'] = time().rand(1000,9999);
         $header = [
-            'X-Airpay-ClientId' => '', // client id
-            'X-Airpay-Req-H'    => '', // signature
+            'X-Airpay-ClientId' => $this->client_id, // client id
+            'X-Airpay-Req-H'    => $this->signature($data), // signature
         ];
         $result = MyHelper::postWithTimeout($url, null, $data, 0, $header, 30);
+
         return $result;
     }
     /**
@@ -67,10 +81,10 @@ class ShopeePayController extends Controller
             'merchant_ext_id'      => '',
             'store_ext_id'         => '',
             'amount'               => '',
-            'currency'             => $this->currency,
+            'currency'             => $this->currency?:'IDR',
             'return_url'           => $this->return_url,
-            'point_of_initiation'  => 'app',
-            'validity_period'      => 1200,
+            'point_of_initiation'  => $this->point_of_initiation,
+            'validity_period'      => $this->validity_period?:1200,
             'additional_info'      => '{}',
         ];
         switch ($type) {
@@ -159,6 +173,7 @@ class ShopeePayController extends Controller
         $data = [
             'request_id'           => '',
             'payment_reference_id' => '',
+            'refund_reference_id'  => '',
             'merchant_ext_id'      => '',
             'store_ext_id'         => ''
         ];
@@ -198,6 +213,7 @@ class ShopeePayController extends Controller
         $data = [
             'request_id'           => '',
             'payment_reference_id' => '',
+            'void_reference_id'    => '',
             'merchant_ext_id'      => '',
             'store_ext_id'         => ''
         ];
@@ -235,10 +251,16 @@ class ShopeePayController extends Controller
     public function generateDataSetMerchant($id_reference, $type = 'trx', $payment_method = null, &$errors)
     {
         $data = [
-            'request_id'           => '',
-            'payment_reference_id' => '',
-            'merchant_ext_id'      => '',
-            'store_ext_id'         => ''
+            'request_id' => '',
+            'merchant_name' => '',
+            'merchant_ext_id' => '',
+            'postal_code' => '',
+            'city' => '',
+            'mcc' => $this->mcc,
+            'point_of_initiation' => 'app',
+            'withdrawal_option' => $this->withdrawal_option,
+            'settlement_emails' => '',
+            'logo' => ''
         ];
         switch ($type) {
             case 'trx':
@@ -274,10 +296,20 @@ class ShopeePayController extends Controller
     public function generateDataSetStore($id_reference, $type = 'trx', $payment_method = null, &$errors)
     {
         $data = [
-            'request_id'           => '',
-            'payment_reference_id' => '',
-            'merchant_ext_id'      => '',
-            'store_ext_id'         => ''
+            'request_id' => '',
+            'merchant_ext_id' => '',
+            'store_ext_id' => '',
+            'store_name' => '',
+            'phone' => '',
+            'address' => '',
+            'postal_code' => '',
+            'city' => '',
+            'gps_longitude' => '0',
+            'gps_latitude' => '0',
+            'point_of_initiation' => $this->point_of_initiation,
+            'mcc' => $this->mcc,
+            'email' => '',
+            'settlement_emails' => ''
         ];
         switch ($type) {
             case 'trx':
@@ -295,7 +327,7 @@ class ShopeePayController extends Controller
      */
     public function setStore(...$params)
     {
-        $url      = $this->base_url . 'v3/merchant-host/transaction/void/create';
+        $url      = $this->base_url . 'v3/merchant-host/store/set';
         $postData = $this->generateDataCheckStatus(...$params);
         if (!$postData) {
             return $postData;
@@ -314,9 +346,11 @@ class ShopeePayController extends Controller
     {
         $data = [
             'request_id'           => '',
-            'payment_reference_id' => '',
-            'merchant_ext_id'      => '',
-            'store_ext_id'         => ''
+            'begin_time'           => strtotime(),
+            'end_time'             => strtotime(),
+            'last_reference_id'    => '',
+            'transaction_type_list'=> '',
+            'limit'
         ];
         switch ($type) {
             case 'trx':
@@ -334,7 +368,7 @@ class ShopeePayController extends Controller
      */
     public function transactionList(...$params)
     {
-        $url      = $this->base_url . 'v3/merchant-host/transaction/void/create';
+        $url      = $this->base_url . 'v3/merchant-host/transaction/list';
         $postData = $this->generateDataCheckStatus(...$params);
         if (!$postData) {
             return $postData;
