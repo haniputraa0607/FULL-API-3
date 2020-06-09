@@ -379,7 +379,7 @@ class ApiNotification extends Controller {
         $outlet  = $trx['outlet']['outlet_name'];
         $receipt = $trx['transaction_receipt_number'];
         //$detail = $this->getHtml($trx, $trx['productTransaction'], $name, $phone, $date, $outlet, $receipt);
-        $detail = $this->htmlDetail($trx['id_transaction']);
+        $detail = $this->htmlDetailOrder($trx['id_transaction'], 'Pending');
 
         if ($trx['transaction_payment_status'] == 'Pending') {
             $title = 'Pending';
@@ -424,7 +424,7 @@ class ApiNotification extends Controller {
         $outlet  = $trx['outlet']['outlet_name'];
         $receipt = $trx['transaction_receipt_number'];
         //$detail = $this->getHtml($trx, $trx['productTransaction'], $name, $phone, $date, $outlet, $receipt);
-        $detail = $this->htmlDetail($trx['id_transaction']);
+        $detail = $this->htmlDetailOrder($trx['id_transaction'], 'Expired');
 
         if ($trx['transaction_payment_status'] == 'Pending') {
             $title = 'Pending';
@@ -466,7 +466,7 @@ class ApiNotification extends Controller {
         $outlet  = $trx['outlet']['outlet_name'];
         $receipt = $trx['transaction_receipt_number'];
         //$detail = $this->getHtml($trx, $trx['productTransaction'], $name, $phone, $date, $outlet, $receipt);
-        $detail = $this->htmlDetail($trx['id_transaction']);
+        $detail = $this->htmlDetailOrder($trx['id_transaction'], 'Denied');
 
         if ($trx['transaction_payment_status'] == 'Pending') {
             $title = 'Pending';
@@ -513,7 +513,7 @@ class ApiNotification extends Controller {
         $outlet  = $trx['outlet']['outlet_name'];
         $receipt = $trx['transaction_receipt_number'];
         // $detail = $this->getHtml($trx, $trx['productTransaction'], $name, $phone, $date, $outlet, $receipt);
-        $detail = $this->htmlDetail($trx['id_transaction']);
+        $detail = $this->htmlDetailTrxSuccess($trx['id_transaction']);
 
         if ($trx['transaction_payment_status'] == 'Pending') {
             $title = 'Pending';
@@ -1583,7 +1583,41 @@ Detail: ".$link['short'],
             </table>';
     }
 
-    public function htmlDetail($id){
+    public function htmlDetailOrder($id, $status){
+        $data = Transaction::where([['id_transaction', $id]])->with(
+            'user.city.province',
+            'outlet.city')->first();
+
+        if ($data['trasaction_type'] == 'Pickup Order') {
+            $detail = TransactionPickup::where('id_transaction', $data['id_transaction'])->first();
+            $qrTest = $detail['order_id'];
+        } elseif ($data['trasaction_type'] == 'Delivery') {
+            $detail = TransactionShipment::with('city.province')->where('id_transaction', $data['id_transaction'])->first();
+        }
+
+        $data['detail'] = $detail;
+
+        if($status == 'Expired'){
+            $data['status'] = 'Your order has expired';
+        }elseif ($status == 'Denied'){
+            $data['status'] = 'Your order has been rejected';
+        }elseif ($status == 'Pending'){
+            $data['status'] = 'Your order is pending';
+        }elseif ($status == 'Order Accepted'){
+            $data['status'] = 'Your order is accepted';
+        }elseif ($status == 'Order Ready'){
+            $data['status'] = 'Your order is ready';
+        }elseif ($status == 'Order Reject'){
+            $data['status'] = 'Your order is rejected';
+        }elseif ($status == 'Order Taken'){
+            $data['status'] = 'Your order is taken';
+        }
+
+        $html = view('transaction::email.detail_order')->with(compact('data'))->render();
+        return $html;
+    }
+
+    public function htmlDetailTrxSuccess($id){
         $list = Transaction::where('id_transaction', $id);
         $list = $list->with(
         // 'user.city.province',
@@ -1981,7 +2015,7 @@ Detail: ".$link['short'],
         }
 
         $data = $result;
-        $html = view('transaction::email.detail_transaction')->with(compact('data'))->render();
+        $html = view('transaction::email.detail_transaction_success')->with(compact('data'))->render();
         return $html;
     }
 
