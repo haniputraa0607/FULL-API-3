@@ -2342,6 +2342,7 @@ class ApiOutletApp extends Controller
                     'driver'            => null,
                     'delivery_status'   => '',
                     'delivery_address'  => $list['transaction_pickup_go_send']['destination_address']?:'',
+                    'delivery_address_note' => $list['transaction_pickup_go_send']['destination_note']?:'',
                     'booking_status'    => 0,
                     'cancelable'        => 1,
                     'go_send_order_no'  => $list['transaction_pickup_go_send']['go_send_order_no']?:'',
@@ -2353,7 +2354,7 @@ class ApiOutletApp extends Controller
                 switch (strtolower($list['transaction_pickup_go_send']['latest_status'])) {
                     case 'finding driver':
                     case 'confirmed':
-                        $result['delivery_info']['delivery_status'] = 'Driver belum ditemukan';
+                        $result['delivery_info']['delivery_status'] = 'Sedang mencari driver';
                         $result['transaction_status_text']          = 'SEDANG MENCARI DRIVER';
                         $result['rejectable']                       = 0;
                         break;
@@ -2460,6 +2461,13 @@ class ApiOutletApp extends Controller
             'desc'   => $quantity . ' items',
             'amount' => MyHelper::requestNumber($list['transaction_subtotal'], '_CURRENCY'),
         ];
+        if ($list['transaction_shipment_go_send'] > 0) {
+            $result['payment_detail'][] = [
+                'name'      => 'Delivery',
+                'desc'      => $list['detail']['pickup_by'],
+                'amount'    => MyHelper::requestNumber($list['transaction_shipment_go_send'],'_CURRENCY')
+            ];
+        }
 
         $p = 0;
         if (!empty($list['transaction_vouchers'])) {
