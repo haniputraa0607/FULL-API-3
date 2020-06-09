@@ -3,6 +3,7 @@
 Route::group(['middleware' => ['api', 'log_activities', 'user_agent'], 'prefix' => 'api/setting', 'namespace' => 'Modules\Setting\Http\Controllers'], function()
 {
     Route::get('/courier', 'ApiSetting@settingCourier');
+    Route::get('phone-number', 'ApiSetting@settingPhoneNumber');
 });
 
 Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scopes:apps'], 'prefix' => 'api/setting', 'namespace' => 'Modules\Setting\Http\Controllers'], function()
