@@ -314,26 +314,65 @@ class ShopeePayController extends Controller
 
     /**
      * generate data to be send to Shopheepay
-     * @param  Integer $id_reference id_transaction/id_deals_user
+     * @param  Integer $id_reference id_transaction/id_deals_user or model
      * @param  string $type type of transaction ('trx'/'deals')
      * @return Array       array formdata
      */
-    public function generateDataCheckStatus($id_reference, $type = 'trx', $payment_method = null, &$errors)
+    public function generateDataCheckStatus($reference, $type = 'trx', &$errors = null)
     {
         $data = [
-            'request_id'           => '',
+            'request_id'           => $this->requestId(),
             'payment_reference_id' => '',
             'merchant_ext_id'      => '',
             'store_ext_id'         => '',
         ];
         switch ($type) {
             case 'trx':
+                if (is_numeric($reference)) {
+                    $reference = Transaction::where('id_transaction', $reference)->first();
+                    if (!$reference) {
+                        $errors = ['Transaction not found'];
+                        return false;
+                    }
+                } else {
+                    if (!($reference['transaction_receipt_number'] ?? false)) {
+                        $errors = ['Invalid reference'];
+                        return false;
+                    }
+                }
+                $data['payment_reference_id'] = $reference['transaction_receipt_number'];
+                $outlet                       = Outlet::select('merchant_ext_id', 'outlet_code')->where('id_outlet', $reference['id_outlet'])->first();
+                if (!$outlet->merchant_ext_id || !$outlet->outlet_code) {
+                    $errors = ['Merchant ext id not found'];
+                    return false;
+                }
+                $data['merchant_ext_id'] = $outlet->merchant_ext_id;
+                $data['store_ext_id']    = $outlet->store_ext_id;
+                break;
+
+            case 'deals':
+                if (is_numeric($reference)) {
+                    $reference = DealsPaymentShopeePay::where('id_deals_user', $reference)->first();
+                    if (!$reference) {
+                        $errors = ['Transaction not found'];
+                        return false;
+                    }
+                } else {
+                    if (!($reference['order_id'] ?? false)) {
+                        $errors = ['Invalid reference'];
+                        return false;
+                    }
+                }
+                $data['payment_reference_id'] = $reference['order_id'];
+                $data['merchant_ext_id']      = $this->merchant_ext_id;
+                $data['store_ext_id']         = $this->store_ext_id;
                 break;
 
             default:
                 # code...
                 break;
         }
+        return $data;
     }
 
     /**
@@ -348,20 +387,20 @@ class ShopeePayController extends Controller
         if (!$postData) {
             return $postData;
         }
-        $response = $this->send($url, $postData);
+        $response = $this->send($url, $postData, ['type' => 'check_status', 'id_reference' => $postData['payment_reference_id']]);
         return $response;
     }
 
     /**
      * generate data to be send to Shopheepay
-     * @param  Integer $id_reference id_transaction/id_deals_user
+     * @param  Integer $id_reference id_transaction/id_deals_user or model
      * @param  string $type type of transaction ('trx'/'deals')
      * @return Array       array formdata
      */
-    public function generateDataRefund($id_reference, $type = 'trx', $payment_method = null, &$errors)
+    public function generateDataRefund($reference, $type = 'trx', &$errors = null)
     {
         $data = [
-            'request_id'           => '',
+            'request_id'           => $this->requestId(),
             'payment_reference_id' => '',
             'refund_reference_id'  => '',
             'merchant_ext_id'      => '',
@@ -369,12 +408,51 @@ class ShopeePayController extends Controller
         ];
         switch ($type) {
             case 'trx':
+                if (is_numeric($reference)) {
+                    $reference = Transaction::where('id_transaction', $reference)->first();
+                    if (!$reference) {
+                        $errors = ['Transaction not found'];
+                        return false;
+                    }
+                } else {
+                    if (!($reference['transaction_receipt_number'] ?? false)) {
+                        $errors = ['Invalid reference'];
+                        return false;
+                    }
+                }
+                $data['payment_reference_id'] = $reference['transaction_receipt_number'];
+                $outlet                       = Outlet::select('merchant_ext_id', 'outlet_code')->where('id_outlet', $reference['id_outlet'])->first();
+                if (!$outlet->merchant_ext_id || !$outlet->outlet_code) {
+                    $errors = ['Merchant ext id not found'];
+                    return false;
+                }
+                $data['merchant_ext_id'] = $outlet->merchant_ext_id;
+                $data['store_ext_id']    = $outlet->store_ext_id;
+                break;
+
+            case 'deals':
+                if (is_numeric($reference)) {
+                    $reference = DealsPaymentShopeePay::where('id_deals_user', $reference)->first();
+                    if (!$reference) {
+                        $errors = ['Transaction not found'];
+                        return false;
+                    }
+                } else {
+                    if (!($reference['order_id'] ?? false)) {
+                        $errors = ['Invalid reference'];
+                        return false;
+                    }
+                }
+                $data['payment_reference_id'] = $reference['order_id'];
+                $data['merchant_ext_id']      = $this->merchant_ext_id;
+                $data['store_ext_id']         = $this->store_ext_id;
                 break;
 
             default:
                 # code...
                 break;
         }
+        return $data;
     }
 
     /**
@@ -385,11 +463,11 @@ class ShopeePayController extends Controller
     public function refund(...$params)
     {
         $url      = $this->base_url . 'v3/merchant-host/transaction/refund/create';
-        $postData = $this->generateDataCheckStatus(...$params);
+        $postData = $this->generateDataRefund(...$params);
         if (!$postData) {
             return $postData;
         }
-        $response = $this->send($url, $postData);
+        $response = $this->send($url, $postData, ['type' => 'refund', 'id_reference' => $postData['payment_reference_id']]);
         return $response;
     }
 
@@ -399,10 +477,10 @@ class ShopeePayController extends Controller
      * @param  string $type type of transaction ('trx'/'deals')
      * @return Array       array formdata
      */
-    public function generateDataVoid($id_reference, $type = 'trx', $payment_method = null, &$errors)
+    public function generateDataVoid($reference, $type = 'trx', &$errors = null)
     {
         $data = [
-            'request_id'           => '',
+            'request_id'           => $this->requestId(),
             'payment_reference_id' => '',
             'void_reference_id'    => '',
             'merchant_ext_id'      => '',
@@ -410,12 +488,51 @@ class ShopeePayController extends Controller
         ];
         switch ($type) {
             case 'trx':
+                if (is_numeric($reference)) {
+                    $reference = Transaction::where('id_transaction', $reference)->first();
+                    if (!$reference) {
+                        $errors = ['Transaction not found'];
+                        return false;
+                    }
+                } else {
+                    if (!($reference['transaction_receipt_number'] ?? false)) {
+                        $errors = ['Invalid reference'];
+                        return false;
+                    }
+                }
+                $data['payment_reference_id'] = $reference['transaction_receipt_number'];
+                $outlet                       = Outlet::select('merchant_ext_id', 'outlet_code')->where('id_outlet', $reference['id_outlet'])->first();
+                if (!$outlet->merchant_ext_id || !$outlet->outlet_code) {
+                    $errors = ['Merchant ext id not found'];
+                    return false;
+                }
+                $data['merchant_ext_id'] = $outlet->merchant_ext_id;
+                $data['store_ext_id']    = $outlet->store_ext_id;
+                break;
+
+            case 'deals':
+                if (is_numeric($reference)) {
+                    $reference = DealsPaymentShopeePay::where('id_deals_user', $reference)->first();
+                    if (!$reference) {
+                        $errors = ['Transaction not found'];
+                        return false;
+                    }
+                } else {
+                    if (!($reference['order_id'] ?? false)) {
+                        $errors = ['Invalid reference'];
+                        return false;
+                    }
+                }
+                $data['payment_reference_id'] = $reference['order_id'];
+                $data['merchant_ext_id']      = $this->merchant_ext_id;
+                $data['store_ext_id']         = $this->store_ext_id;
                 break;
 
             default:
                 # code...
                 break;
         }
+        return $data;
     }
 
     /**
@@ -426,11 +543,11 @@ class ShopeePayController extends Controller
     public function void(...$params)
     {
         $url      = $this->base_url . 'v3/merchant-host/transaction/void/create';
-        $postData = $this->generateDataCheckStatus(...$params);
+        $postData = $this->generateDataVoid(...$params);
         if (!$postData) {
             return $postData;
         }
-        $response = $this->send($url, $postData);
+        $response = $this->send($url, $postData, ['type' => 'void', 'id_reference' => $postData['payment_reference_id']]);
         return $response;
     }
 
@@ -441,17 +558,17 @@ class ShopeePayController extends Controller
     public function syncMerchant()
     {
         $merchants = ShopeePayMerchant::all();
-        $errors = [];
+        $errors    = [];
         foreach ($merchants as $merchant) {
-            $response = $this->setMerchant($merchant,$error = []);
-            if($response['status_code'] == 200) {
-                $merchant->update($response['response']['merchant']??[]);
+            $response = $this->setMerchant($merchant, $error = []);
+            if ($response['status_code'] == 200) {
+                $merchant->update($response['response']['merchant'] ?? []);
             }
             $errors += $error;
         }
         $stores = Outlet::whereNotNull('merchant_ext_id')->with('city')->get();
         foreach ($stores as $store) {
-            $response = $this->setStore($store,$error = []);
+            $response = $this->setStore($store, $error = []);
             $errors += $error;
         }
         if ($errors) {
@@ -467,7 +584,7 @@ class ShopeePayController extends Controller
      * @param  string $type type of transaction ('trx'/'deals')
      * @return Array       array formdata
      */
-    public function generateDataSetMerchant($merchant, &$errors)
+    public function generateDataSetMerchant($merchant, &$errors = null)
     {
         $data = [
             'request_id'          => $this->requestId(),
@@ -480,7 +597,7 @@ class ShopeePayController extends Controller
             'withdrawal_option'   => (int) $this->withdrawal_option,
             'national_id_type'    => 1,
             'national_id'         => '3306124403910302',
-            'logo'                => $merchant['logo']?base64_encode(file_get_contents($merchant['logo'])):null
+            'logo'                => $merchant['logo'] ? base64_encode(file_get_contents($merchant['logo'])) : null,
         ];
         return $data;
     }
@@ -507,7 +624,7 @@ class ShopeePayController extends Controller
      * @param  string $type type of transaction ('trx'/'deals')
      * @return Array       array formdata
      */
-    public function generateDataSetStore($store, &$errors)
+    public function generateDataSetStore($store, &$errors = null)
     {
         $data = [
             'request_id'          => $this->requestId(),
@@ -524,7 +641,7 @@ class ShopeePayController extends Controller
             'mcc'                 => $this->mcc,
             'email'               => $store['outlet_email'],
             'merchant_criteria'   => 'UME',
-            'logo'                => null
+            'logo'                => null,
         ];
         return $data;
     }
@@ -551,24 +668,17 @@ class ShopeePayController extends Controller
      * @param  string $type type of transaction ('trx'/'deals')
      * @return Array       array formdata
      */
-    public function generateDataTransactionList($id_reference, $type = 'trx', $payment_method = null, &$errors)
+    public function generateDataTransactionList($from, $to, $last_reference_id = null, $transaction_type_list = null, $limit = null, &$errors = null)
     {
         $data = [
-            'request_id'            => '',
-            'begin_time'            => strtotime(),
-            'end_time'              => strtotime(),
-            'last_reference_id'     => '',
-            'transaction_type_list' => '',
-            'limit',
+            'request_id'            => $this->requestId(),
+            'begin_time'            => is_numeric($from) ? $from : strtotime($from),
+            'end_time'              => is_numeric($to) ? $from : strtotime($to),
+            'last_reference_id'     => $last_reference_id,
+            'transaction_type_list' => $transaction_type_list,
+            'limit'                 => $limit,
         ];
-        switch ($type) {
-            case 'trx':
-                break;
-
-            default:
-                # code...
-                break;
-        }
+        return $data;
     }
 
     /**
@@ -579,11 +689,11 @@ class ShopeePayController extends Controller
     public function transactionList(...$params)
     {
         $url      = $this->base_url . 'v3/merchant-host/transaction/list';
-        $postData = $this->generateDataCheckStatus(...$params);
+        $postData = $this->generateDataTransactionList(...$params);
         if (!$postData) {
             return $postData;
         }
-        $response = $this->send($url, $postData);
+        $response = $this->send($url, $postData, ['type' => 'transaction_list', 'id_reference' => 'LIST-' . time()]);
         return $response;
     }
 }
