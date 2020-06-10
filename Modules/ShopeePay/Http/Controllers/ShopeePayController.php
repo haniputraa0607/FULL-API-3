@@ -5,6 +5,7 @@ namespace Modules\ShopeePay\Http\Controllers;
 use App\Http\Models\Configs;
 use App\Http\Models\Deals;
 use App\Http\Models\DealsUser;
+use App\Http\Models\Outlet;
 use App\Http\Models\Transaction;
 use App\Http\Models\TransactionPickup;
 use App\Http\Models\User;
@@ -16,6 +17,7 @@ use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
 use Modules\ShopeePay\Entities\DealsPaymentShopeePay;
 use Modules\ShopeePay\Entities\LogShopeePay;
+use Modules\ShopeePay\Entities\ShopeePayMerchant;
 use Modules\ShopeePay\Entities\TransactionPaymentShopeePay;
 
 class ShopeePayController extends Controller
@@ -207,6 +209,15 @@ class ShopeePayController extends Controller
     }
 
     /**
+     * Generate unique request id
+     * @return String request id
+     */
+    public function requestId()
+    {
+        return time() . rand(1000, 9999);
+    }
+
+    /**
      * signing data and send request
      * @param  [type] $url  [description]
      * @param  [type] $data [description]
@@ -244,7 +255,7 @@ class ShopeePayController extends Controller
     public function generateDataOrder($reference, $type = 'trx', &$errors = null)
     {
         $data = [
-            'request_id'           => time() . rand(1000, 9999),
+            'request_id'           => $this->requestId(),
             'payment_reference_id' => '',
             'merchant_ext_id'      => '',
             'store_ext_id'         => '',
@@ -424,33 +435,54 @@ class ShopeePayController extends Controller
     }
 
     /**
+     * Sync merchant and store to shopeey
+     * @return [type] [description]
+     */
+    public function syncMerchant()
+    {
+        $merchants = ShopeePayMerchant::all();
+        $errors = [];
+        foreach ($merchants as $merchant) {
+            $response = $this->setMerchant($merchant,$error = []);
+            if($response['status_code'] == 200) {
+                $merchant->update($response['response']['merchant']??[]);
+            }
+            $errors += $error;
+        }
+        $stores = Outlet::whereNotNull('merchant_ext_id')->with('city')->get();
+        foreach ($stores as $store) {
+            $response = $this->setStore($store,$error = []);
+            $errors += $error;
+        }
+        if ($errors) {
+            \Log::error('Sync merchants error: ');
+            \Log::error($errors);
+        }
+        return true;
+    }
+
+    /**
      * generate data to be send to Shopheepay
      * @param  Integer $id_reference id_transaction/id_deals_user
      * @param  string $type type of transaction ('trx'/'deals')
      * @return Array       array formdata
      */
-    public function generateDataSetMerchant($id_reference, $type = 'trx', $payment_method = null, &$errors)
+    public function generateDataSetMerchant($merchant, &$errors)
     {
         $data = [
-            'request_id'          => '',
-            'merchant_name'       => '',
-            'merchant_ext_id'     => '',
-            'postal_code'         => '',
-            'city'                => '',
+            'request_id'          => $this->requestId(),
+            'merchant_name'       => $merchant['merchant_name'],
+            'merchant_ext_id'     => $merchant['merchant_ext_id'],
+            'postal_code'         => $merchant['postal_code'],
+            'city'                => $merchant['city'],
             'mcc'                 => $this->mcc,
-            'point_of_initiation' => 'app',
-            'withdrawal_option'   => $this->withdrawal_option,
-            'settlement_emails'   => '',
-            'logo'                => '',
+            'point_of_initiation' => 0,
+            'withdrawal_option'   => (int) $this->withdrawal_option,
+            'national_id_type'    => 1,
+            'national_id'         => '3306124403910302',
+            'logo'                => $merchant['logo']?base64_encode(file_get_contents($merchant['logo'])):null
         ];
-        switch ($type) {
-            case 'trx':
-                break;
-
-            default:
-                # code...
-                break;
-        }
+        return $data;
     }
 
     /**
@@ -461,11 +493,11 @@ class ShopeePayController extends Controller
     public function setMerchant(...$params)
     {
         $url      = $this->base_url . 'v3/merchant-host/merchant/set';
-        $postData = $this->generateDataCheckStatus(...$params);
+        $postData = $this->generateDataSetMerchant(...$params);
         if (!$postData) {
             return $postData;
         }
-        $response = $this->send($url, $postData);
+        $response = $this->send($url, $postData, ['type' => 'set_merchant', 'id_reference' => $postData['merchant_ext_id']]);
         return $response;
     }
 
@@ -475,31 +507,26 @@ class ShopeePayController extends Controller
      * @param  string $type type of transaction ('trx'/'deals')
      * @return Array       array formdata
      */
-    public function generateDataSetStore($id_reference, $type = 'trx', $payment_method = null, &$errors)
+    public function generateDataSetStore($store, &$errors)
     {
         $data = [
-            'request_id'          => '',
-            'merchant_ext_id'     => '',
-            'store_ext_id'        => '',
-            'store_name'          => '',
-            'phone'               => '',
-            'address'             => '',
-            'postal_code'         => '',
-            'city'                => '',
-            'gps_longitude'       => '0',
-            'gps_latitude'        => '0',
-            'point_of_initiation' => $this->point_of_initiation,
+            'request_id'          => $this->requestId(),
+            'merchant_ext_id'     => $store['merchant_ext_id'],
+            'store_ext_id'        => $store['outlet_code'],
+            'store_name'          => $store['outlet_name'],
+            'phone'               => $store['outlet_phone'],
+            'address'             => $store['outlet_address'],
+            'postal_code'         => $store['outlet_phone'],
+            'city'                => $store['city']['city_name'],
+            'gps_longitude'       => (int) ($store['outlet_latitude'] * 100000),
+            'gps_latitude'        => (int) ($store['outlet_longitude'] * 10000),
+            'point_of_initiation' => 0,
             'mcc'                 => $this->mcc,
-            'email'               => '',
+            'email'               => $store['outlet_email'],
+            'merchant_criteria'   => 'UME',
+            'logo'                => null
         ];
-        switch ($type) {
-            case 'trx':
-                break;
-
-            default:
-                # code...
-                break;
-        }
+        return $data;
     }
 
     /**
@@ -510,11 +537,11 @@ class ShopeePayController extends Controller
     public function setStore(...$params)
     {
         $url      = $this->base_url . 'v3/merchant-host/store/set';
-        $postData = $this->generateDataCheckStatus(...$params);
+        $postData = $this->generateDataSetStore(...$params);
         if (!$postData) {
             return $postData;
         }
-        $response = $this->send($url, $postData);
+        $response = $this->send($url, $postData, ['type' => 'set_store', 'id_reference' => $postData['store_ext_id']]);
         return $response;
     }
 
