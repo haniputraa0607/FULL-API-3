@@ -24,6 +24,13 @@ use Modules\Report\Entities\GlobalDailyReportPayment;
 use Modules\Report\Entities\MonthlyReportPayment;
 use Modules\Report\Entities\GlobalMonthlyReportPayment;
 
+use Modules\Report\Entities\DailyReportTrxModifier;
+use Modules\Report\Entities\GlobalDailyReportTrxModifier;
+use Modules\Report\Entities\MonthlyReportTrxModifier;
+use Modules\Report\Entities\GlobalMonthlyReportTrxModifier;
+
+use Modules\Brand\Entities\Brand;
+
 use Modules\OutletApp\Http\Requests\ReportSummary;
 use App\Lib\MyHelper;
 use DB;
@@ -399,5 +406,229 @@ class ApiOutletAppReport extends Controller
     	$result = MyHelper::checkGet($data);
     	$result['time_server'] 	= date("H:i");
     	return response()->json($result);
+    }
+
+    public function allItemList(ReportSummary $request)
+    {
+    	$post = $request->json()->all();
+    	$post['id_outlet'] = auth()->user()->id_outlet;
+
+    	$data = [
+    		'product' 	=> null,
+    		'modifier'	=> null,
+    		'time_server'	=> date("H:i")
+    	];
+
+    	if ($request->product) {
+    		$product = $this->brandItem($post['id_outlet'], $post['date']);
+    		if ($product) {
+    			$data['product'] = $product;
+    		}
+    	}
+    	if ($request->modifier) {
+    		$modifier = $this->brandModifier($post['id_outlet'], $post['date']);
+    		if ($modifier) {
+    			$data['modifier'] = $modifier;
+    		}
+    	}
+		
+		return response()->json(MyHelper::checkGet($data));
+    }
+
+    function brandItem($outlet,$date)
+    {
+    	if ($date < date("Y-m-d"))
+    	{
+			$item = Brand::whereHas('daily_report_trx_menus',function($q) use ($outlet,$date){
+						$q->whereDate('trx_date', '=', $date)
+						->where('id_outlet', '=', $outlet);
+					})
+					->with(['daily_report_trx_menus' => function($q) use ($outlet, $date){
+						$q->select([
+							'id_report_trx_menu',
+							'id_brand',
+							'id_outlet',
+							'product_name',
+							'total_qty',
+							'total_nominal',
+							'total_product_discount'
+						])
+						->whereDate('trx_date', '=', $date)
+						->where('id_outlet', '=', $outlet)
+						->orderBy('total_qty', 'Desc')
+						->orderBy('total_nominal', 'Desc');	
+					}])
+					->get();
+		}			
+		elseif ($date == date("Y-m-d"))
+	    {
+	    	$date = date("Y-m-d");
+	    	$now = date("Y-m-d");
+	    	// $now = "2020-06-09";
+
+	    	$item = Brand::whereHas('transaction_products', function($q) use ($now, $outlet){
+	    				$q->where('transaction_products.id_outlet', $outlet)
+	    				->whereBetween('transactions.transaction_date',[ date('Y-m-d', strtotime($now)).' 00:00:00', date('Y-m-d', strtotime($now)).' 23:59:59'] )
+	    				->where('transactions.transaction_payment_status','=','Completed')
+	    				->whereNull('transaction_pickups.reject_at')
+	    				->select(
+	    					DB::raw('(select SUM(transaction_products.transaction_product_qty)) as total_qty')
+	    				)
+	    				->Join('transactions','transaction_products.id_transaction', '=', 'transactions.id_transaction')
+	    				->leftJoin('products','transaction_products.id_product', '=', 'products.id_product')
+	    				->leftJoin('transaction_pickups', 'transaction_pickups.id_transaction', '=', 'transactions.id_transaction')
+	    				->groupBy('transaction_products.id_product', 'transaction_products.id_brand')
+	    				->orderBy('total_qty', 'Desc');	
+	    			})
+	    			->with(['transaction_products' => function($q) use ($now, $outlet){
+	    				$q->where('transaction_products.id_outlet', $outlet)
+	    				->whereBetween('transactions.transaction_date',[ date('Y-m-d', strtotime($now)).' 00:00:00', date('Y-m-d', strtotime($now)).' 23:59:59'] )
+	    				->where('transactions.transaction_payment_status','=','Completed')
+	    				->whereNull('transaction_pickups.reject_at')
+	    				->select(
+	    					DB::raw('(select transactions.id_outlet) as id_outlet'),
+	    					DB::raw('(select transaction_products.id_brand) as id_brand'),
+	    					DB::raw('(select transaction_products.id_transaction_product) as id_transaction_product'),
+	    					DB::raw('(select SUM(transaction_products.transaction_product_qty)) as total_qty'),
+	    					DB::raw('(select SUM(transaction_products.transaction_product_subtotal)) as total_nominal'),
+	    					DB::raw('(select count(transaction_products.id_product)) as total_rec'),
+	    					DB::raw('(select products.product_name) as product_name'),
+	    					DB::raw('(SUM(transaction_products.transaction_product_discount)) as total_product_discount')
+	    				)
+	    				->Join('transactions','transaction_products.id_transaction', '=', 'transactions.id_transaction')
+	    				->leftJoin('products','transaction_products.id_product', '=', 'products.id_product')
+	    				->leftJoin('transaction_pickups', 'transaction_pickups.id_transaction', '=', 'transactions.id_transaction')
+	    				->groupBy('transaction_products.id_product','transaction_products.id_brand')
+	    				->orderBy('total_qty', 'Desc')
+	    				->orderBy('total_nominal', 'Desc');	
+	    			}])
+	    			->get();
+	    }
+	    else
+    	{
+    		return null;
+    	}
+
+    	$item = $item->toArray();
+
+    	$data = [];
+    	foreach ($item as $key => $value) {
+    		$data_temp = [
+    			'id_brand' => $value['id_brand'],
+    			'name_brand' => $value['name_brand']
+    		];
+
+    		$data_temp['product'] = [];
+    		foreach ($value['transaction_products']??$value['daily_report_trx_menus']??[] as $key2 => $value2) {
+    			$data_temp['product'][] = [
+    				'product_name' 	=> $value2['product_name'],
+    				'total_qty' 	=> (string) $value2['total_qty'],
+    				'total_nominal' => (string) $value2['total_nominal'],
+    				'total_product_discount' => (string) $value2['total_product_discount'],
+    			];
+    		}
+
+    		$data[] = $data_temp;
+    	}
+
+    	return $data;
+    }
+
+	function brandModifier($outlet,$date)
+    {
+    	if ($date < date("Y-m-d"))
+    	{
+			$item = Brand::whereHas('daily_report_trx_modifiers',function($q) use ($outlet,$date){
+						$q->whereDate('trx_date', '=', $date)
+						->where('id_outlet', '=', $outlet);
+					})
+					->with(['daily_report_trx_modifiers' => function($q) use ($outlet, $date){
+						$q->select([
+							'id_report_trx_modifier',
+							'id_outlet',
+							'id_brand',
+							'text',
+							'total_qty',
+							'total_nominal',
+							'total_rec'
+						])
+						->whereDate('trx_date', '=', $date)
+						->where('id_outlet', '=', $outlet)
+						->orderBy('total_qty', 'Desc')
+						->orderBy('total_nominal', 'Desc');	
+					}])
+					->get();
+		}			
+		elseif ($date == date("Y-m-d"))
+	    {
+	    	$date = date("Y-m-d");
+	    	$now = date("Y-m-d");
+	    	// $now = "2020-06-09";
+
+	    	$item = Brand::whereHas('transaction_products', function($q) use ($now, $outlet){
+	    				$q->where('transaction_product_modifiers.id_outlet', $outlet)
+	    				->whereBetween('transactions.transaction_date',[ date('Y-m-d', strtotime($now)).' 00:00:00', date('Y-m-d', strtotime($now)).' 23:59:59'] )
+	    				->where('transactions.transaction_payment_status','=','Completed')
+	    				->whereNull('transaction_pickups.reject_at')
+	    				->select(
+	    					DB::raw('(select SUM(transaction_product_modifiers.qty)) as total_qty')
+	    				)
+	    				->Join('transactions','transaction_products.id_transaction', '=', 'transactions.id_transaction')
+	    				->Join('transaction_product_modifiers','transaction_product_modifiers.id_transaction_product', '=', 'transaction_products.id_transaction_product')
+	    				->leftJoin('product_modifiers','transaction_product_modifiers.id_product_modifier', '=', 'product_modifiers.id_product_modifier')
+	    				->leftJoin('transaction_pickups', 'transaction_pickups.id_transaction', '=', 'transactions.id_transaction')
+	    				->groupBy('transaction_product_modifiers.id_product_modifier','transaction_products.id_brand')
+	    				->orderBy('total_qty', 'Desc');	
+	    			})
+	    			->with(['transaction_products' => function($q) use ($now, $outlet){
+	    				$q->where('transaction_product_modifiers.id_outlet', $outlet)
+	    				->whereBetween('transactions.transaction_date',[ date('Y-m-d', strtotime($now)).' 00:00:00', date('Y-m-d', strtotime($now)).' 23:59:59'] )
+	    				->where('transactions.transaction_payment_status','=','Completed')
+	    				->whereNull('transaction_pickups.reject_at')
+	    				->select(
+	    					DB::raw('(select transactions.id_outlet) as id_outlet'),
+	    					DB::raw('(select transaction_products.id_brand) as id_brand'),
+	    					DB::raw('(select product_modifiers.text) as text'),
+	    					DB::raw('(select SUM(transaction_product_modifiers.qty)) as total_qty'),
+	    					DB::raw('(select SUM(transaction_product_modifiers.transaction_product_modifier_price)) as total_nominal'),
+	    					DB::raw('(select count(transaction_product_modifiers.id_product_modifier)) as total_rec')
+	    				)
+	    				->Join('transactions','transaction_products.id_transaction', '=', 'transactions.id_transaction')
+	    				->Join('transaction_product_modifiers','transaction_product_modifiers.id_transaction_product', '=', 'transaction_products.id_transaction_product')
+	    				->leftJoin('product_modifiers','transaction_product_modifiers.id_product_modifier', '=', 'product_modifiers.id_product_modifier')
+	    				->leftJoin('transaction_pickups', 'transaction_pickups.id_transaction', '=', 'transactions.id_transaction')
+	    				->groupBy('transaction_product_modifiers.id_product_modifier','transaction_products.id_brand')
+	    				->orderBy('total_qty', 'Desc')
+	    				->orderBy('total_nominal', 'Desc');	
+	    			}])
+	    			->get();
+	    }
+	    else
+    	{
+    		return null;
+    	}
+
+    	$item = $item->toArray();
+
+    	$data = [];
+    	foreach ($item as $key => $value) {
+    		$data_temp = [
+    			'id_brand' => $value['id_brand'],
+    			'name_brand' => $value['name_brand']
+    		];
+
+    		$data_temp['modifier'] = [];
+    		foreach ($value['transaction_products']??$value['daily_report_trx_modifiers']??[] as $key2 => $value2) {
+    			$data_temp['modifier'][] = [
+    				'modifier_name' => $value2['text'],
+    				'total_qty' 	=> (string) $value2['total_qty'],
+    				'total_nominal' => (string) $value2['total_nominal']
+    			];
+    		}
+
+    		$data[] = $data_temp;
+    	}
+
+    	return $data;
     }
 }

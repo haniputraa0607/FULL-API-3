@@ -12,7 +12,9 @@ class ReportSummary extends FormRequest
     {
         return [
             'date'		=> 'required|date',
-            'is_all'    => 'nullable'
+            'is_all'    => 'nullable',
+            'product'	=> 'nullable',
+            'modifier'	=> 'nullable'
         ];
     }
 

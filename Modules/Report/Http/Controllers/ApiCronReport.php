@@ -30,6 +30,11 @@ use Modules\Report\Entities\GlobalDailyReportPayment;
 use Modules\Report\Entities\MonthlyReportPayment;
 use Modules\Report\Entities\GlobalMonthlyReportPayment;
 
+use Modules\Report\Entities\DailyReportTrxModifier;
+use Modules\Report\Entities\GlobalDailyReportTrxModifier;
+use Modules\Report\Entities\MonthlyReportTrxModifier;
+use Modules\Report\Entities\GlobalMonthlyReportTrxModifier;
+
 use App\Http\Models\DailyCustomerReportRegistration;
 use App\Http\Models\MonthlyCustomerReportRegistration;
 
@@ -77,7 +82,7 @@ class ApiCronReport extends Controller
         // else {
             // DATE START
             $dateStart = $this->firstTrx();
-            // $dateStart = "2020-05-29";
+            // $dateStart = "2020-06-09";
 
             if ($dateStart) {
                 // UP TO YESTERDAY
@@ -167,6 +172,10 @@ class ApiCronReport extends Controller
             if (!$this->dailyReportPayment($date)) {
                 return false;
             }
+            // MODIFIER
+            if (!$this->dailyReportModifier($daily, $date)) {
+                return false;
+            }
         }
 		
 		// TRANSACTION & PRODUCT MONTHLY
@@ -190,6 +199,11 @@ class ApiCronReport extends Controller
 					return false;
 				}
 			}
+
+			// MODIFIER
+            if (!$this->monthlyReportModifier($monthly, $date)) {
+                return false;
+            }
         }
 		
 		// MEMBERSHIP REGISTRATION DAILY
@@ -632,7 +646,7 @@ class ApiCronReport extends Controller
     {
         foreach ($outletAll as $outlet) {
              $product = DB::select(DB::raw('
-                        SELECT transaction_products.id_product, transactions.id_outlet, 
+                        SELECT transaction_products.id_product, transaction_products.id_brand, transactions.id_outlet, 
                         (select SUM(transaction_products.transaction_product_qty)) as total_qty, 
                         (select SUM(transaction_products.transaction_product_subtotal)) as total_nominal, 
                         (select SUM(transaction_products.transaction_product_discount)) as total_product_discount, 
@@ -663,7 +677,7 @@ class ApiCronReport extends Controller
                         AND transactions.id_outlet = "'. $outlet .'"
                         AND transaction_payment_status = "Completed"
                         AND transaction_pickups.reject_at IS NULL
-                        GROUP BY transaction_products.id_product
+                        GROUP BY transaction_products.id_product,transaction_products.id_brand
                         ORDER BY transaction_products.id_product ASC
                     '));
 
@@ -692,11 +706,12 @@ class ApiCronReport extends Controller
 					$sum[$value['id_product']]['cust_young_adult'] = $value['cust_young_adult'];
 					$sum[$value['id_product']]['cust_adult'] = $value['cust_adult'];
 					$sum[$value['id_product']]['cust_old'] = $value['cust_old'];
-					
+
                     $save = DailyReportTrxMenu::updateOrCreate([
                         'trx_date'   => date('Y-m-d', strtotime($value['trx_date'])), 
                         'id_product' => $value['id_product'],
-                        'id_outlet'  => $value['id_outlet']
+                        'id_outlet'  => $value['id_outlet'],
+                        'id_brand' 	 => $value['id_brand']
                     ], $value);
 					
 					$saveGlobal = GlobalDailyReportTrxMenu::updateOrCreate([
@@ -1069,6 +1084,93 @@ class ApiCronReport extends Controller
         return true;
     }
 
+    /* REPORT MODIFIER */
+    function dailyReportModifier($outletAll, $date) 
+    {
+        foreach ($outletAll as $outlet) {
+             $modifier = DB::select(DB::raw('
+                        SELECT transaction_product_modifiers.id_product_modifier, transaction_products.id_brand, transactions.id_outlet, 
+                        (select SUM(transaction_product_modifiers.qty)) as total_qty, 
+                        (select SUM(transaction_product_modifiers.transaction_product_modifier_price)) as total_nominal, 
+                        (select count(transaction_product_modifiers.id_product_modifier)) as total_rec, 
+                        (select DATE(transactions.transaction_date)) as trx_date,
+						(select SUM(Case When users.gender = \'Male\' Then 1 Else 0 End)) as cust_male, 
+						(select SUM(Case When users.gender = \'Female\' Then 1 Else 0 End)) as cust_female, 
+						(select SUM(Case When users.android_device is not null Then 1 Else 0 End)) as cust_android, 
+						(select SUM(Case When users.ios_device is not null Then 1 Else 0 End)) as cust_ios, 
+						(select SUM(Case When users.provider = \'Telkomsel\' Then 1 Else 0 End)) as cust_telkomsel, 
+						(select SUM(Case When users.provider = \'XL\' Then 1 Else 0 End)) as cust_xl, 
+						(select SUM(Case When users.provider = \'Indosat\' Then 1 Else 0 End)) as cust_indosat, 
+						(select SUM(Case When users.provider = \'Tri\' Then 1 Else 0 End)) as cust_tri, 
+						(select SUM(Case When users.provider = \'Axis\' Then 1 Else 0 End)) as cust_axis, 
+						(select SUM(Case When users.provider = \'Smart\' Then 1 Else 0 End)) as cust_smart, 
+						(select product_modifiers.text) as text,
+						(select SUM(Case When floor(datediff (now(), users.birthday)/365) >= 11 && floor(datediff (now(), users.birthday)/365) <= 17 Then 1 Else 0 End)) as cust_teens, 
+						(select SUM(Case When floor(datediff (now(), users.birthday)/365) >= 18 && floor(datediff (now(), users.birthday)/365) <= 24 Then 1 Else 0 End)) as cust_young_adult, 
+						(select SUM(Case When floor(datediff (now(), users.birthday)/365) >= 25 && floor(datediff (now(), users.birthday)/365) <= 34 Then 1 Else 0 End)) as cust_adult,
+						(select SUM(Case When floor(datediff (now(), users.birthday)/365) >= 35 && floor(datediff (now(), users.birthday)/365) <= 100 Then 1 Else 0 End)) as cust_old
+                        FROM transaction_product_modifiers 
+                        INNER JOIN transactions ON transaction_product_modifiers.id_transaction = transactions.id_transaction 
+                        INNER JOIN transaction_products ON transaction_product_modifiers.id_transaction_product = transaction_products.id_transaction_product
+						LEFT JOIN users ON users.id = transactions.id_user
+						LEFT JOIN transaction_pickups ON transaction_pickups.id_transaction = transactions.id_transaction
+						LEFT JOIN product_modifiers ON product_modifiers.id_product_modifier = transaction_product_modifiers.id_product_modifier
+						WHERE transactions.transaction_date BETWEEN "'. date('Y-m-d', strtotime($date)) .' 00:00:00" 
+                        AND "'. date('Y-m-d', strtotime($date)) .' 23:59:59"
+                        AND transactions.id_outlet = "'. $outlet .'"
+                        AND transaction_payment_status = "Completed"
+                        AND transaction_pickups.reject_at IS NULL
+                        GROUP BY transaction_product_modifiers.id_product_modifier,transaction_products.id_brand
+                        ORDER BY transaction_product_modifiers.id_product_modifier ASC
+                    '));
+
+            if (!empty($modifier)) {
+                $modifier = json_decode(json_encode($modifier), true);
+                foreach ($modifier as $key => $value) {
+					// $sum = array();
+					$sum[$value['id_product_modifier']]['trx_date'] = $date;
+					$sum[$value['id_product_modifier']]['id_product_modifier'] = $value['id_product_modifier'];
+					$sum[$value['id_product_modifier']]['text'] = $value['text'];
+					$sum[$value['id_product_modifier']]['total_qty'] = ($sum[$value['id_product_modifier']]['total_qty']??0) + $value['total_qty'];
+					$sum[$value['id_product_modifier']]['total_nominal'] = ($sum[$value['id_product_modifier']]['total_nominal']??0) + $value['total_nominal'];
+					$sum[$value['id_product_modifier']]['total_rec'] = ($sum[$value['id_product_modifier']]['total_rec']??0) + $value['total_rec'];
+					$sum[$value['id_product_modifier']]['cust_male'] = $value['cust_male'];
+					$sum[$value['id_product_modifier']]['cust_female'] = $value['cust_female'];
+					$sum[$value['id_product_modifier']]['cust_android'] = $value['cust_android'];
+					$sum[$value['id_product_modifier']]['cust_ios'] = $value['cust_ios'];
+					$sum[$value['id_product_modifier']]['cust_telkomsel'] = $value['cust_telkomsel'];
+					$sum[$value['id_product_modifier']]['cust_xl'] = $value['cust_xl'];
+					$sum[$value['id_product_modifier']]['cust_indosat'] = $value['cust_indosat'];
+					$sum[$value['id_product_modifier']]['cust_tri'] = $value['cust_tri'];
+					$sum[$value['id_product_modifier']]['cust_axis'] = $value['cust_axis'];
+					$sum[$value['id_product_modifier']]['cust_smart'] = $value['cust_smart'];
+					$sum[$value['id_product_modifier']]['cust_teens'] = $value['cust_teens'];
+					$sum[$value['id_product_modifier']]['cust_young_adult'] = $value['cust_young_adult'];
+					$sum[$value['id_product_modifier']]['cust_adult'] = $value['cust_adult'];
+					$sum[$value['id_product_modifier']]['cust_old'] = $value['cust_old'];
+
+                    $save = DailyReportTrxModifier::updateOrCreate([
+                        'trx_date'   => date('Y-m-d', strtotime($value['trx_date'])), 
+                        'id_product_modifier' => $value['id_product_modifier'],
+                        'id_outlet'  => $value['id_outlet'],
+                        'id_brand' 	 => $value['id_brand']
+                    ], $value);
+					
+					$saveGlobal = GlobalDailyReportTrxModifier::updateOrCreate([
+                        'trx_date'   => date('Y-m-d', strtotime($value['trx_date'])), 
+                        'id_product_modifier' => $value['id_product_modifier']
+                    ], $sum[$value['id_product_modifier']]);
+					
+                    if (!$save) {
+                        return false;
+                    }
+                }
+            }
+        }
+
+        return true;
+    }
+
 	/* NEW MONTHLY REPORT */
     function newMonthlyReport($date) 
     {
@@ -1218,7 +1320,7 @@ class ApiCronReport extends Controller
     	$sum = [];
         foreach ($outletAll as $outlet) {
             $product = DB::select(DB::raw('
-                        SELECT transaction_products.id_product, transactions.id_outlet, 
+                        SELECT transaction_products.id_product, transaction_products.id_brand, transactions.id_outlet, 
                         (select SUM(transaction_products.transaction_product_qty)) as total_qty, 
                         (select SUM(transaction_products.transaction_product_subtotal)) as total_nominal, 
                         (select SUM(transaction_products.transaction_product_discount)) as total_product_discount, 
@@ -1250,7 +1352,7 @@ class ApiCronReport extends Controller
                         AND transactions.id_outlet = "'. $outlet .'"
                         AND transaction_payment_status = "Completed"
                         AND transaction_pickups.reject_at IS NULL
-                        GROUP BY id_product
+                        GROUP BY id_product,id_brand
                         ORDER BY id_product ASC
                     '));
 
@@ -1285,7 +1387,8 @@ class ApiCronReport extends Controller
                         'trx_month'  => $value['trx_month'], 
                         'trx_year'   => $value['trx_year'], 
                         'id_product' => $value['id_product'],
-                        'id_outlet'  => $value['id_outlet']
+                        'id_outlet'  => $value['id_outlet'],
+                        'id_brand'  => $value['id_brand']
                     ], $value);
 
 					// $saveGlobal = GlobalMonthlyReportTrxMenu::updateOrCreate([
@@ -1739,4 +1842,125 @@ class ApiCronReport extends Controller
         return true;
     }
     
+    /* REPORT MODIFIER */
+    function monthlyReportModifier($outletAll, $date) 
+    {
+        $month = date('n', strtotime($date));
+        $year = date('Y', strtotime($date));
+
+    	$sum = [];
+        foreach ($outletAll as $outlet) {
+            $modifier = DB::select(DB::raw('
+                        SELECT transaction_product_modifiers.id_product_modifier, transaction_products.id_brand, transactions.id_outlet, 
+                        (select SUM(transaction_product_modifiers.qty)) as total_qty, 
+                        (select SUM(transaction_product_modifiers.transaction_product_modifier_price)) as total_nominal, 
+                        (select count(transaction_product_modifiers.id_product_modifier)) as total_rec, 
+                        (select MONTH(transaction_date)) as trx_month,
+						(select YEAR(transaction_date)) as trx_year,
+						(select SUM(Case When users.gender = \'Male\' Then 1 Else 0 End)) as cust_male, 
+						(select SUM(Case When users.gender = \'Female\' Then 1 Else 0 End)) as cust_female, 
+						(select SUM(Case When users.android_device is not null Then 1 Else 0 End)) as cust_android, 
+						(select SUM(Case When users.ios_device is not null Then 1 Else 0 End)) as cust_ios, 
+						(select SUM(Case When users.provider = \'Telkomsel\' Then 1 Else 0 End)) as cust_telkomsel, 
+						(select SUM(Case When users.provider = \'XL\' Then 1 Else 0 End)) as cust_xl, 
+						(select SUM(Case When users.provider = \'Indosat\' Then 1 Else 0 End)) as cust_indosat, 
+						(select SUM(Case When users.provider = \'Tri\' Then 1 Else 0 End)) as cust_tri, 
+						(select SUM(Case When users.provider = \'Axis\' Then 1 Else 0 End)) as cust_axis, 
+						(select SUM(Case When users.provider = \'Smart\' Then 1 Else 0 End)) as cust_smart, 
+						(select product_modifiers.text) as text,
+						(select SUM(Case When floor(datediff (now(), users.birthday)/365) >= 11 && floor(datediff (now(), users.birthday)/365) <= 17 Then 1 Else 0 End)) as cust_teens, 
+						(select SUM(Case When floor(datediff (now(), users.birthday)/365) >= 18 && floor(datediff (now(), users.birthday)/365) <= 24 Then 1 Else 0 End)) as cust_young_adult, 
+						(select SUM(Case When floor(datediff (now(), users.birthday)/365) >= 25 && floor(datediff (now(), users.birthday)/365) <= 34 Then 1 Else 0 End)) as cust_adult,
+						(select SUM(Case When floor(datediff (now(), users.birthday)/365) >= 35 && floor(datediff (now(), users.birthday)/365) <= 100 Then 1 Else 0 End)) as cust_old
+                        FROM transaction_product_modifiers 
+                        INNER JOIN transactions ON transaction_product_modifiers.id_transaction = transactions.id_transaction 
+                        INNER JOIN transaction_products ON transaction_product_modifiers.id_transaction_product = transaction_products.id_transaction_product
+						LEFT JOIN users ON users.id = transactions.id_user
+						LEFT JOIN transaction_pickups ON transaction_pickups.id_transaction = transactions.id_transaction
+						LEFT JOIN product_modifiers ON product_modifiers.id_product_modifier = transaction_product_modifiers.id_product_modifier
+                        WHERE MONTH(transactions.transaction_date) = "'. $month .'" 
+                    	AND YEAR(transactions.transaction_date) ="'. $year .'"
+                        AND transactions.id_outlet = "'. $outlet .'"
+                        AND transaction_payment_status = "Completed"
+                        AND transaction_pickups.reject_at IS NULL
+                        GROUP BY transaction_product_modifiers.id_product_modifier,transaction_products.id_brand
+                        ORDER BY transaction_product_modifiers.id_product_modifier ASC
+                    '));
+
+            if (!empty($modifier)) {
+                $modifier = json_decode(json_encode($modifier), true);
+                foreach ($modifier as $key => $value) {
+					
+                    $save = MonthlyReportTrxModifier::updateOrCreate([
+                        'trx_month'  => $value['trx_month'], 
+                        'trx_year'   => $value['trx_year'], 
+                        'id_product_modifier' => $value['id_product_modifier'],
+                        'id_outlet'  => $value['id_outlet'],
+                        'id_brand'   => $value['id_brand']
+                    ], $value);
+
+                    if (!$save) {
+                        return false;
+                    }
+                }
+            }
+        }
+
+        // update global trx modifier
+        $modifier = DB::select(DB::raw('
+                    SELECT transaction_product_modifiers.id_product_modifier, 
+                    (select SUM(transaction_product_modifiers.qty)) as total_qty, 
+                    (select SUM(transaction_product_modifiers.transaction_product_modifier_price)) as total_nominal, 
+                    (select count(transaction_product_modifiers.id_product_modifier)) as total_rec, 
+                    (select MONTH(transaction_date)) as trx_month,
+					(select YEAR(transaction_date)) as trx_year,
+					(select SUM(Case When users.gender = \'Male\' Then 1 Else 0 End)) as cust_male, 
+					(select SUM(Case When users.gender = \'Female\' Then 1 Else 0 End)) as cust_female, 
+					(select SUM(Case When users.android_device is not null Then 1 Else 0 End)) as cust_android, 
+					(select SUM(Case When users.ios_device is not null Then 1 Else 0 End)) as cust_ios, 
+					(select SUM(Case When users.provider = \'Telkomsel\' Then 1 Else 0 End)) as cust_telkomsel, 
+					(select SUM(Case When users.provider = \'XL\' Then 1 Else 0 End)) as cust_xl, 
+					(select SUM(Case When users.provider = \'Indosat\' Then 1 Else 0 End)) as cust_indosat, 
+					(select SUM(Case When users.provider = \'Tri\' Then 1 Else 0 End)) as cust_tri, 
+					(select SUM(Case When users.provider = \'Axis\' Then 1 Else 0 End)) as cust_axis, 
+					(select SUM(Case When users.provider = \'Smart\' Then 1 Else 0 End)) as cust_smart, 
+					(select product_modifiers.text) as text,
+					(select SUM(Case When floor(datediff (now(), users.birthday)/365) >= 11 && floor(datediff (now(), users.birthday)/365) <= 17 Then 1 Else 0 End)) as cust_teens, 
+					(select SUM(Case When floor(datediff (now(), users.birthday)/365) >= 18 && floor(datediff (now(), users.birthday)/365) <= 24 Then 1 Else 0 End)) as cust_young_adult, 
+					(select SUM(Case When floor(datediff (now(), users.birthday)/365) >= 25 && floor(datediff (now(), users.birthday)/365) <= 34 Then 1 Else 0 End)) as cust_adult,
+					(select SUM(Case When floor(datediff (now(), users.birthday)/365) >= 35 && floor(datediff (now(), users.birthday)/365) <= 100 Then 1 Else 0 End)) as cust_old
+                    FROM transaction_product_modifiers 
+                    INNER JOIN transactions ON transaction_product_modifiers.id_transaction = transactions.id_transaction 
+                    INNER JOIN transaction_products ON transaction_product_modifiers.id_transaction_product = transaction_products.id_transaction_product
+					LEFT JOIN users ON users.id = transactions.id_user
+					LEFT JOIN transaction_pickups ON transaction_pickups.id_transaction = transactions.id_transaction
+					LEFT JOIN product_modifiers ON product_modifiers.id_product_modifier = transaction_product_modifiers.id_product_modifier
+                    WHERE MONTH(transactions.transaction_date) = "'. $month .'" 
+                    AND YEAR(transactions.transaction_date) ="'. $year .'"
+                    AND transaction_payment_status = "Completed"
+                    AND transaction_pickups.reject_at IS NULL
+                    GROUP BY transaction_product_modifiers.id_product_modifier
+                    ORDER BY transaction_product_modifiers.id_product_modifier ASC
+                '));
+
+        if (!empty($modifier)) {
+            $modifier = json_decode(json_encode($modifier), true);
+            $month = date('n', strtotime($date));
+            $year = date('Y', strtotime($date));
+            foreach ($modifier as $key => $value) {
+
+				$saveGlobal = GlobalMonthlyReportTrxModifier::updateOrCreate([
+                    'trx_month'  => $value['trx_month'], 
+                    'trx_year'   => $value['trx_year'], 
+                    'id_product_modifier' => $value['id_product_modifier']
+                ], $value);
+				
+                if (!$save) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
 }
