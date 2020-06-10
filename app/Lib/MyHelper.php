@@ -214,8 +214,8 @@ class MyHelper{
 	public static function encryptkhusus($value) {
 		if(!$value){return false;}
 		$skey = self::getkey();
-		$depan = substr($skey, 0, env('ENC_DD'));
-		$belakang = substr($skey, -env('ENC_DB'), env('ENC_DB'));
+		$depan = substr($skey, 0, config('configs.ENC_DD'));
+		$belakang = substr($skey, -config('configs.ENC_DB'), config('configs.ENC_DB'));
 		$text = serialize($value);
 		$iv_size = mcrypt_get_iv_size(MCRYPT_RIJNDAEL_256, MCRYPT_MODE_ECB);
 		$iv = mcrypt_create_iv($iv_size, MCRYPT_RAND);
@@ -227,7 +227,7 @@ class MyHelper{
 		if(!$value){return false;}
 		$skey = self::parsekey($value);
 		$jumlah = strlen($value);
-		$value = substr($value, env('ENC_DD'), $jumlah-env('ENC_DD')-env('ENC_DB'));
+		$value = substr($value, config('configs.ENC_DD'), $jumlah-config('configs.ENC_DD')-config('configs.ENC_DB'));
 		$crypttext = self::safe_b64decode($value);
 		$iv_size = mcrypt_get_iv_size(MCRYPT_RIJNDAEL_256, MCRYPT_MODE_ECB);
 		$iv = mcrypt_create_iv($iv_size, MCRYPT_RAND);
@@ -260,11 +260,11 @@ class MyHelper{
 	public static function encryptkhususnew($value) {
 		if(!$value){return false;}
 		$skey = self::getkey();
-		$depan = substr($skey, 0, env('ENC_DD'));
-		$belakang = substr($skey, -env('ENC_DB'), env('ENC_DB'));
-		$ivlen = openssl_cipher_iv_length(env('ENC_CM'));
-		$iv = substr(hash('sha256', env('ENC_SI')), 0, $ivlen);
-		$crypttext = openssl_encrypt($value, env('ENC_CM'), $skey, 0, $iv);
+		$depan = substr($skey, 0, config('configs.ENC_DD'));
+		$belakang = substr($skey, -config('configs.ENC_DB'), config('configs.ENC_DB'));
+		$ivlen = openssl_cipher_iv_length(config('configs.ENC_CM'));
+		$iv = substr(hash('sha256', config('configs.ENC_SI')), 0, $ivlen);
+		$crypttext = openssl_encrypt($value, config('configs.ENC_CM'), $skey, 0, $iv);
 		return trim($depan . self::safe_b64encode($crypttext) . $belakang);
 	}
 
@@ -272,11 +272,11 @@ class MyHelper{
 		if(!$value){return false;}
 		$skey = self::parsekey($value);
 		$jumlah = strlen($value);
-		$value = substr($value, env('ENC_DD'), $jumlah-env('ENC_DD')-env('ENC_DB'));
+		$value = substr($value, config('configs.ENC_DD'), $jumlah-config('configs.ENC_DD')-config('configs.ENC_DB'));
 		$crypttext = self::safe_b64decode($value);
-		$ivlen = openssl_cipher_iv_length(env('ENC_CM'));
-		$iv = substr(hash('sha256', env('ENC_SI')), 0, $ivlen);
-		$decrypttext = openssl_decrypt($crypttext, env('ENC_CM'), $skey, 0, $iv);
+		$ivlen = openssl_cipher_iv_length(config('configs.ENC_CM'));
+		$iv = substr(hash('sha256', config('configs.ENC_SI')), 0, $ivlen);
+		$decrypttext = openssl_decrypt($crypttext, config('configs.ENC_CM'), $skey, 0, $iv);
 		return trim($decrypttext);
 	}
 
@@ -286,11 +286,11 @@ class MyHelper{
 		// biar support array
 		$text = serialize($value);
 		$skey = self::getkey();
-		$depan = substr($skey, 0, env('ENC_DD'));
-		$belakang = substr($skey, -env('ENC_DB'), env('ENC_DB'));
-		$ivlen = openssl_cipher_iv_length(env('ENC_CM'));
-		$iv = substr(hash('sha256', env('ENC_SI')), 0, $ivlen);
-		$crypttext = openssl_encrypt($text, env('ENC_CM'), $skey, 0, $iv);
+		$depan = substr($skey, 0, config('configs.ENC_DD'));
+		$belakang = substr($skey, -config('configs.ENC_DB'), config('configs.ENC_DB'));
+		$ivlen = openssl_cipher_iv_length(config('configs.ENC_CM'));
+		$iv = substr(hash('sha256', config('configs.ENC_SI')), 0, $ivlen);
+		$crypttext = openssl_encrypt($text, config('configs.ENC_CM'), $skey, 0, $iv);
 		return trim($depan . self::safe_b64encode($crypttext) . $belakang);
 	}
 
@@ -298,11 +298,11 @@ class MyHelper{
 		if(!$value){return false;}
 		$skey = self::parsekey($value);
 		$jumlah = strlen($value);
-		$value = substr($value, env('ENC_DD'), $jumlah-env('ENC_DD')-env('ENC_DB'));
+		$value = substr($value, config('configs.ENC_DD'), $jumlah-config('configs.ENC_DD')-config('configs.ENC_DB'));
 		$crypttext = self::safe_b64decode($value);
-		$ivlen = openssl_cipher_iv_length(env('ENC_CM'));
-		$iv = substr(hash('sha256', env('ENC_SI')), 0, $ivlen);
-		$decrypttext = openssl_decrypt($crypttext, env('ENC_CM'), $skey, 0, $iv);
+		$ivlen = openssl_cipher_iv_length(config('configs.ENC_CM'));
+		$iv = substr(hash('sha256', config('configs.ENC_SI')), 0, $ivlen);
+		$decrypttext = openssl_decrypt($crypttext, config('configs.ENC_CM'), $skey, 0, $iv);
 		// dikembalikan ke format array sewaktu return
 		return unserialize(trim($decrypttext));
 	}
@@ -471,16 +471,16 @@ class MyHelper{
 	}
 
 	public static function getkey() {
-		$depan = self::createrandom(env('ENC_DD'));
-		$belakang = self::createrandom(env('ENC_DB'));
-		$skey = $depan . env('ENC_FK') . $belakang;
+		$depan = self::createrandom(config('configs.ENC_DD'));
+		$belakang = self::createrandom(config('configs.ENC_DB'));
+		$skey = $depan . config('configs.ENC_FK') . $belakang;
 		return $skey;
 	}
 
 	public static function parsekey($value) {
-		$depan = substr($value, 0, env('ENC_DD'));
-		$belakang = substr($value, -env('ENC_DB'), env('ENC_DB'));
-		$skey = $depan . env('ENC_FK') . $belakang;
+		$depan = substr($value, 0, config('configs.ENC_DD'));
+		$belakang = substr($value, -config('configs.ENC_DB'), config('configs.ENC_DB'));
+		$skey = $depan . config('configs.ENC_FK') . $belakang;
 		return $skey;
 	}
 
