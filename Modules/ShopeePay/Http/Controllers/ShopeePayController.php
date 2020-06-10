@@ -42,11 +42,20 @@ class ShopeePayController extends Controller
     {
         $post = $request->post();
         $header = $request->header();
-        $status_code = 503;
-        $response = [
-            'status' => 'fail',
-            'messages' => ['Features under development']
-        ];
+        $validSignature = $this->createSignature($post);
+        if (($request->header('X-Airpay-Req-H')) != $validSignature) {
+            $status_code = 401;
+            $response = [
+                'status' => 'fail',
+                'messages' => ['Signature mismatch']
+            ];
+        } else{
+            $status_code = 503;
+            $response = [
+                'status' => 'fail',
+                'messages' => ['Features under development']
+            ];
+        }
         try {
             LogShopeePay::create([
                 'type'                 => 'webhook',
@@ -136,6 +145,13 @@ class ShopeePayController extends Controller
                 $data['payment_reference_id'] = $trx->transaction_receipt_number;
                 $data['merchant_ext_id']      = $trx->outlet->merchant_ext_id;
                 $data['store_ext_id']         = $trx->outlet->outlet_code;
+                $data['amount']               = $reference->amount;
+                break;
+
+            case 'deals':
+                $data['payment_reference_id'] = $reference->payment_reference_id;
+                $data['merchant_ext_id']      = $this->merchant_ext_id;
+                $data['store_ext_id']         = $this->store_ext_id;
                 $data['amount']               = $reference->amount;
                 break;
 

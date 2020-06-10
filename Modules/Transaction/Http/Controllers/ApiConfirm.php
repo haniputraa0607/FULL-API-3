@@ -421,6 +421,7 @@ class ApiConfirm extends Controller
                 $paymentShopeepay->id_transaction = $check['id_transaction'];
                 $paymentShopeepay->amount         = $countGrandTotal * 100;
                 $paymentShopeepay->save();
+                $trx_shopeepay = app($this->shopeepay)->order($paymentShopeepay, 'trx', $errors = null);
             } elseif (!($paymentShopeepay->redirect_url_app && $paymentShopeepay->redirect_url_http)) {
                 $trx_shopeepay = app($this->shopeepay)->order($paymentShopeepay, 'trx', $errors = null);
             }
