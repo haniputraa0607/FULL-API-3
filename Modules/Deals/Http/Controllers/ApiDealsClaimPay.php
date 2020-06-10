@@ -551,13 +551,18 @@ class ApiDealsClaimPay extends Controller
     {
         $paymentShopeepay = DealsPaymentShopeePay::where('id_deals_user', $voucher['id_deals_user'])->first();
         $trx_shopeepay    = null;
+        if (is_null($grossAmount)) {
+            if (!$this->updateInfoDealUsers($voucher->id_deals_user, ['payment_method' => 'Shopeepay'])) {
+                 return false;
+            }
+        }
         $grossAmount = $grossAmount??($voucher->voucher_price_cash);
         if (!$paymentShopeepay) {
             $paymentShopeepay                       = new DealsPaymentShopeePay;
             $paymentShopeepay->id_deals_user        = $voucher['id_deals_user'];
             $paymentShopeepay->id_deals             = $deals['id_deals'];
             $paymentShopeepay->amount               = $grossAmount * 100;
-            $paymentShopeepay->payment_reference_id = time().sprintf("%05d", $voucher->id_deals_user);
+            $paymentShopeepay->order_id = time().sprintf("%05d", $voucher->id_deals_user);
             $paymentShopeepay->save();
             $trx_shopeepay = app($this->shopeepay)->order($paymentShopeepay, 'deals', $errors = null);
         } elseif (!($paymentShopeepay->redirect_url_app && $paymentShopeepay->redirect_url_http)) {
@@ -947,6 +952,8 @@ class ApiDealsClaimPay extends Controller
                             'payment'           => 'ipay88'
                         ];
                         return $ipay88;
+                    }elseif($paymentMethod == 'shopeepay'){
+                        return $this->ipay88($deals, $voucher, -$kurangBayar,$post);
                     }
                 }
             }

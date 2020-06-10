@@ -2,11 +2,19 @@
 
 namespace Modules\ShopeePay\Http\Controllers;
 
+use App\Http\Models\Configs;
+use App\Http\Models\Deals;
+use App\Http\Models\DealsUser;
+use App\Http\Models\Transaction;
+use App\Http\Models\TransactionPickup;
+use App\Http\Models\User;
+use App\Jobs\FraudJob;
+use App\Lib\MyHelper;
+use DB;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
-use App\Http\Models\Transaction;
-use App\Lib\MyHelper;
 use Illuminate\Routing\Controller;
+use Modules\ShopeePay\Entities\DealsPaymentShopeePay;
 use Modules\ShopeePay\Entities\LogShopeePay;
 use Modules\ShopeePay\Entities\TransactionPaymentShopeePay;
 
@@ -15,6 +23,9 @@ class ShopeePayController extends Controller
     public function __construct()
     {
         $this->point_of_initiation = 'app';
+        $this->notif               = "Modules\Transaction\Http\Controllers\ApiNotification";
+        $this->setting_fraud       = "Modules\SettingFraud\Http\Controllers\ApiFraud";
+        $this->autocrm             = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
     }
 
     public function __get($key)
@@ -40,22 +51,133 @@ class ShopeePayController extends Controller
      */
     public function notifShopeePay(Request $request)
     {
-        $post = $request->post();
-        $header = $request->header();
+        $post           = $request->post();
+        $header         = $request->header();
         $validSignature = $this->createSignature($post);
         if (($request->header('X-Airpay-Req-H')) != $validSignature) {
             $status_code = 401;
-            $response = [
-                'status' => 'fail',
-                'messages' => ['Signature mismatch']
+            $response    = [
+                'status'   => 'fail',
+                'messages' => ['Signature mismatch'],
             ];
-        } else{
-            $status_code = 503;
-            $response = [
-                'status' => 'fail',
-                'messages' => ['Features under development']
-            ];
+            goto end;
         }
+
+        DB::beginTransaction();
+        // CHECK ORDER ID
+        if (stristr($post['payment_reference_id'], "TRX")) {
+            $trx = Transaction::where('transaction_receipt_number', $post['payment_reference_id'])->join('transaction_payment_shopee_pays', 'transactions.id_transaction', '=', 'transaction_payment_shopee_pays.id_transaction')->first();
+            if (!$trx) {
+                $status_code = 404;
+                $response    = ['status' => 'fail', 'messages' => ['Transaction not found']];
+                goto end;
+            }
+            if ($trx->amount != $post['amount']) {
+                $status_code = 401;
+                $response    = ['status' => 'fail', 'messages' => ['Invalid amount']];
+                goto end;
+            }
+            if ($post['payment_status'] == '1') {
+                $update = $trx->update(['transaction_payment_status' => 'Completed', 'completed_at' => date('Y-m-d H:i:s')]);
+            }
+            if (!$update) {
+                DB::rollBack();
+                $status_code = 500;
+                $response    = [
+                    'status'   => 'fail',
+                    'messages' => ['Failed update payment status'],
+                ];
+            }
+
+            //inset pickup_at when pickup_type = right now
+            if ($trx['trasaction_type'] == 'Pickup Order') {
+                $detailTrx = TransactionPickup::where('id_transaction', $trx->id_transaction)->first();
+                if ($detailTrx['pickup_type'] == 'right now') {
+                    $settingTime = MyHelper::setting('processing_time');
+                    if ($settingTime) {
+                        $updatePickup = $detailTrx->update(['pickup_at' => date('Y-m-d H:i:s', strtotime('+ ' . $settingTime . 'minutes'))]);
+                    } else {
+                        $updatePickup = $detailTrx->update(['pickup_at' => date('Y-m-d H:i:s')]);
+                    }
+                }
+            }
+
+            TransactionPaymentShopeePay::where('id_transaction', $trx->id_transaction)->update([
+                'transaction_sn' => $post['transaction_sn'] ?? null,
+                'payment_status' => $post['payment_status'] ?? null,
+                'user_id_hash'   => $post['user_id_hash'] ?? null,
+                'terminal_id'    => $post['terminal_id'] ?? null,
+            ]);
+            DB::commit();
+
+            $trx->load('outlet');
+            $trx->load('productTransaction');
+
+            $userData               = User::where('id', $trx['id_user'])->first();
+            $config_fraud_use_queue = Configs::where('config_name', 'fraud use queue')->first()->is_active;
+
+            if ($config_fraud_use_queue == 1) {
+                FraudJob::dispatch($userData, $trx, 'transaction')->onConnection('fraudqueue');
+            } else {
+                $checkFraud = app($this->setting_fraud)->checkFraudTrxOnline($userData, $trx);
+            }
+            $mid = [
+                'order_id'     => $trx['transaction_receipt_number'],
+                'gross_amount' => ($trx['amount'] / 100),
+            ];
+            $send = app($this->notif)->notification($mid, $trx);
+
+            $status_code = 200;
+            $response    = ['status' => 'success'];
+
+        } else {
+            $deals_payment = DealsPaymentShopeePay::where('order_id', $post['payment_reference_id'])->join('deals', 'deals.id_deals', '=', 'deals_payment_shopee_pays.id_deals')->first();
+
+            if (!$deals_payment) {
+                $status_code = 404;
+                $response    = ['status' => 'fail', 'messages' => ['Transaction not found']];
+                goto end;
+            }
+            if ($deals_payment->amount != $post['amount']) {
+                $status_code = 401;
+                $response    = ['status' => 'fail', 'messages' => ['Invalid amount']];
+                goto end;
+            }
+            if ($post['payment_status'] == '1') {
+                $update = DealsUser::where('id_deals_user', $deals_payment->id_deals_user)->update(['paid_status' => 'Completed']);
+            }
+            if (!$update) {
+                DB::rollBack();
+                $status_code = 500;
+                $response    = [
+                    'status'   => 'fail',
+                    'messages' => ['Failed update payment status'],
+                ];
+                goto end;
+            }
+
+            $deals_payment->update([
+                'transaction_sn' => $post['transaction_sn'] ?? null,
+                'payment_status' => $post['payment_status'] ?? null,
+                'user_id_hash'   => $post['user_id_hash'] ?? null,
+                'terminal_id'    => $post['terminal_id'] ?? null,
+            ]);
+            DB::commit();
+
+            $userPhone = User::select('phone')->where('id', $deals_payment->id_user)->pluck('phone')->first();
+            $send      = app($this->autocrm)->SendAutoCRM(
+                'Payment Deals Success',
+                $userPhone,
+                [
+                    'deals_title'   => $deals_payment->title,
+                    'id_deals_user' => $deals_payment->id_deals_user,
+                ]
+            );
+            $status_code = 200;
+            $response    = ['status' => 'success'];
+        }
+
+        end:
         try {
             LogShopeePay::create([
                 'type'                 => 'webhook',
@@ -64,12 +186,12 @@ class ShopeePayController extends Controller
                 'request_url'          => url(route('notif_shopeepay')),
                 'request_header'       => json_encode($header),
                 'response'             => json_encode($response),
-                'response_status_code' => $status_code
+                'response_status_code' => $status_code,
             ]);
         } catch (\Exception $e) {
             \Log::error('Failed write log to LogShopeePay: ' . $e->getMessage());
         }
-        return response()->json($response,$status_code);
+        return response()->json($response, $status_code);
     }
 
     /**
@@ -78,9 +200,9 @@ class ShopeePayController extends Controller
      * @param  [type] $data [description]
      * @return [type]       [description]
      */
-    public function createSignature($data,$custom_key = null)
+    public function createSignature($data, $custom_key = null)
     {
-        $return = rtrim(base64_encode(hex2bin(hash_hmac('sha256', json_encode($data), $custom_key?:$this->client_secret))), "\n");
+        $return = rtrim(base64_encode(hex2bin(hash_hmac('sha256', json_encode($data), $custom_key ?: $this->client_secret))), "\n");
         return $return;
     }
 
@@ -115,7 +237,7 @@ class ShopeePayController extends Controller
 
     /**
      * generate data to be send to Shopheepay
-     * @param  Model $reference TransactionPaymentShopeePay/DealsUserPaymentShopeePay
+     * @param  Model $reference TransactionPaymentShopeePay/DealsPaymentShopeePay
      * @param  string $type type of transaction ('trx'/'deals')
      * @return Array       array formdata
      */
@@ -149,7 +271,7 @@ class ShopeePayController extends Controller
                 break;
 
             case 'deals':
-                $data['payment_reference_id'] = $reference->payment_reference_id;
+                $data['payment_reference_id'] = $reference->order_id;
                 $data['merchant_ext_id']      = $this->merchant_ext_id;
                 $data['store_ext_id']         = $this->store_ext_id;
                 $data['amount']               = $reference->amount;

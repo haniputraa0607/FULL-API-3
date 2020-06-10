@@ -2778,7 +2778,6 @@ class MyHelper{
             return true;
         }
     }
-
     /**
      * update flag transaction online (flag ini digunakan untuk menandai user pernah transaksi online atau belum (digunakan di referral))
      * @param  array/model 	$trx 	 	  	Transacction model
