@@ -26,6 +26,8 @@ class DealsPaymentShopeePay extends Model
     	'user_id_hash',
     	'terminal_id',
         'redirect_url_app',
-        'redirect_url_http'
+        'redirect_url_http',
+        'refund_reference_id',
+        'void_reference_id'
     ];
 }

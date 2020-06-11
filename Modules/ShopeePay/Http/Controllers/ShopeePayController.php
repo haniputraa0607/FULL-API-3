@@ -402,7 +402,7 @@ class ShopeePayController extends Controller
         $data = [
             'request_id'           => $this->requestId(),
             'payment_reference_id' => '',
-            'refund_reference_id'  => '',
+            'refund_reference_id'  => time().rand(10,99),
             'merchant_ext_id'      => '',
             'store_ext_id'         => '',
         ];
@@ -427,7 +427,7 @@ class ShopeePayController extends Controller
                     return false;
                 }
                 $data['merchant_ext_id'] = $outlet->merchant_ext_id;
-                $data['store_ext_id']    = $outlet->store_ext_id;
+                $data['store_ext_id']    = $outlet->outlet_code;
                 break;
 
             case 'deals':
@@ -468,6 +468,32 @@ class ShopeePayController extends Controller
             return $postData;
         }
         $response = $this->send($url, $postData, ['type' => 'refund', 'id_reference' => $postData['payment_reference_id']]);
+        /**
+         * $response
+         * {
+         *     "status_code": 200,
+         *     "response": {
+         *         "request_id": "15918456848159",
+         *         "errcode": 0,
+         *         "debug_msg": "success",
+         *         "transaction_list": [
+         *             {
+         *                 "reference_id": "159184568498",
+         *                 "amount": 100,
+         *                 "create_time": 1591845687,
+         *                 "update_time": 1591845687,
+         *                 "transaction_sn": "004165643666456760",
+         *                 "status": 3,
+         *                 "transaction_type": 15,
+         *                 "merchant_ext_id": "1234",
+         *                 "terminal_id": "",
+         *                 "user_id_hash": "6d65274e5cba19a063ae6e8923e04c877aa228df95c77e87fb81c398800727a0",
+         *                 "store_ext_id": "M000"
+         *             }
+         *         ]
+         *     }
+         * }
+         */
         return $response;
     }
 
@@ -482,7 +508,7 @@ class ShopeePayController extends Controller
         $data = [
             'request_id'           => $this->requestId(),
             'payment_reference_id' => '',
-            'void_reference_id'    => '',
+            'void_reference_id'    => time().rand(10,99),
             'merchant_ext_id'      => '',
             'store_ext_id'         => '',
         ];
@@ -507,7 +533,7 @@ class ShopeePayController extends Controller
                     return false;
                 }
                 $data['merchant_ext_id'] = $outlet->merchant_ext_id;
-                $data['store_ext_id']    = $outlet->store_ext_id;
+                $data['store_ext_id']    = $outlet->outlet_code;
                 break;
 
             case 'deals':
@@ -548,6 +574,32 @@ class ShopeePayController extends Controller
             return $postData;
         }
         $response = $this->send($url, $postData, ['type' => 'void', 'id_reference' => $postData['payment_reference_id']]);
+        /**
+         * $response
+         * {
+         *     "status_code": 200,
+         *     "response": {
+         *         "request_id": "15918459392223",
+         *         "errcode": 0,
+         *         "debug_msg": "success",
+         *         "transaction_list": [
+         *             {
+         *                 "reference_id": "159184593913",
+         *                 "amount": 100,
+         *                 "create_time": 1591845939,
+         *                 "update_time": 1591845939,
+         *                 "transaction_sn": "021110623813340206",
+         *                 "status": 3,
+         *                 "transaction_type": 26,
+         *                 "merchant_ext_id": "1234",
+         *                 "terminal_id": "",
+         *                 "user_id_hash": "6d65274e5cba19a063ae6e8923e04c877aa228df95c77e87fb81c398800727a0",
+         *                 "store_ext_id": "M000"
+         *             }
+         *         ]
+         *     }
+         * }
+         */
         return $response;
     }
 
@@ -595,8 +647,8 @@ class ShopeePayController extends Controller
             'mcc'                 => $this->mcc,
             'point_of_initiation' => 0,
             'withdrawal_option'   => (int) $this->withdrawal_option,
-            'national_id_type'    => 1,
-            'national_id'         => '3306124403910302',
+            'national_id_type'    => $merchant['national_id_type'],
+            'national_id'         => $merchant['national_id'],
             'logo'                => $merchant['logo'] ? base64_encode(file_get_contents($merchant['logo'])) : null,
         ];
         return $data;
