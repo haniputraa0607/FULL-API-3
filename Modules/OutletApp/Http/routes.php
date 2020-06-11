@@ -25,6 +25,7 @@ Route::group(['middleware' => ['auth:outlet-app', 'log_activities_outlet_apps'],
     Route::post('report/summary', 'ApiOutletAppReport@summary');
     Route::post('report/transaction', 'ApiOutletAppReport@transactionList');
     Route::post('report/item', 'ApiOutletAppReport@itemList');
+    Route::post('report/item/all', 'ApiOutletAppReport@allItemList');
     Route::post('request_otp', 'ApiOutletApp@requestOTP');
     Route::post('stock_summary', 'ApiOutletApp@stockSummary');
     Route::post('book-delivery', 'ApiOutletApp@bookDelivery');

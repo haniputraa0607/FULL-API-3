@@ -43,4 +43,29 @@ class Brand extends Model
     public function brand_outlet(){
         return $this->hasMany(BrandOutlet::class, 'id_brand', 'id_brand');
     }
+
+    public function daily_report_trx_menus()
+    {
+        return $this->hasMany(\App\Http\Models\DailyReportTrxMenu::class, 'id_brand', 'id_brand');
+    }
+
+    public function monthly_report_trx_menus()
+    {
+        return $this->hasMany(\App\Http\Models\MonthlyReportTrxMenu::class, 'id_brand', 'id_brand');
+    }
+
+    public function daily_report_trx_modifiers()
+    {
+        return $this->hasMany(\Modules\Report\Entities\DailyReportTrxModifier::class, 'id_brand', 'id_brand');
+    }
+
+    public function monthly_report_trx_modifiers()
+    {
+        return $this->hasMany(\Modules\Report\Entities\MonthlyReportTrxModifier::class, 'id_brand', 'id_brand');
+    }
+
+    public function transaction_products()
+    {
+		return $this->hasMany(\App\Http\Models\TransactionProduct::class, 'id_brand');
+    }
 }
