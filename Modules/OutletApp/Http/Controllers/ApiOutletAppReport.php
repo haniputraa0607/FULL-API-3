@@ -303,6 +303,7 @@ class ApiOutletAppReport extends Controller
     	$data_trx = [];
     	foreach ($trx['data']??$trx as $key => $value) {
 
+    		$data_trx[$key]['id_transaction'] = $value['id_transaction'];
     		$data_trx[$key]['order_id'] = $value['transaction_pickup']['order_id'];
     		$data_trx[$key]['transaction_time'] = date("H:i", strtotime($value['transaction_date']));
     		$data_trx[$key]['transaction_receipt_number'] = $value['transaction_receipt_number'];
