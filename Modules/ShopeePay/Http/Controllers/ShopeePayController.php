@@ -388,6 +388,18 @@ class ShopeePayController extends Controller
             return $postData;
         }
         $response = $this->send($url, $postData, ['type' => 'check_status', 'id_reference' => $postData['payment_reference_id']]);
+        /**
+         * $response
+         * {
+         *     "status_code": 200,
+         *     "response": {
+         *         "request_id": "15918485088617",
+         *         "errcode": 0,
+         *         "debug_msg": "success",
+         *         "payment_status": 2
+         *     }
+         * }
+         */
         return $response;
     }
 
@@ -402,7 +414,7 @@ class ShopeePayController extends Controller
         $data = [
             'request_id'           => $this->requestId(),
             'payment_reference_id' => '',
-            'refund_reference_id'  => time().rand(10,99),
+            'refund_reference_id'  => time() . rand(10, 99),
             'merchant_ext_id'      => '',
             'store_ext_id'         => '',
         ];
@@ -493,6 +505,29 @@ class ShopeePayController extends Controller
          *         ]
          *     }
          * }
+         * {
+         *     "status_code": 200,
+         *     "response": {
+         *         "request_id": "15918508035733",
+         *         "errcode": 121,
+         *         "debug_msg": "Completed",
+         *         "transaction_list": [
+         *             {
+         *                 "reference_id": "159184568498",
+         *                 "amount": 100,
+         *                 "create_time": 1591845687,
+         *                 "update_time": 1591845687,
+         *                 "transaction_sn": "004165643666456760",
+         *                 "status": 3,
+         *                 "transaction_type": 15,
+         *                 "merchant_ext_id": "1234",
+         *                 "terminal_id": "",
+         *                 "user_id_hash": "6d65274e5cba19a063ae6e8923e04c877aa228df95c77e87fb81c398800727a0",
+         *                 "store_ext_id": "M000"
+         *             }
+         *         ]
+         *     }
+         * }
          */
         return $response;
     }
@@ -508,7 +543,7 @@ class ShopeePayController extends Controller
         $data = [
             'request_id'           => $this->requestId(),
             'payment_reference_id' => '',
-            'void_reference_id'    => time().rand(10,99),
+            'void_reference_id'    => time() . rand(10, 99),
             'merchant_ext_id'      => '',
             'store_ext_id'         => '',
         ];
@@ -597,6 +632,14 @@ class ShopeePayController extends Controller
          *                 "store_ext_id": "M000"
          *             }
          *         ]
+         *     }
+         * }
+         * {
+         *     "status_code": 200,
+         *     "response": {
+         *         "request_id": "15918506117324",
+         *         "errcode": 121,
+         *         "debug_msg": "Merchant already voided"
          *     }
          * }
          */
