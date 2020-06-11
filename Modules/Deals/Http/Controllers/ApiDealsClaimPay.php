@@ -564,9 +564,9 @@ class ApiDealsClaimPay extends Controller
             $paymentShopeepay->amount               = $grossAmount * 100;
             $paymentShopeepay->order_id = time().sprintf("%05d", $voucher->id_deals_user);
             $paymentShopeepay->save();
-            $trx_shopeepay = app($this->shopeepay)->order($paymentShopeepay, 'deals', $errors = null);
+            $trx_shopeepay = app($this->shopeepay)->order($paymentShopeepay, 'deals', $errors);
         } elseif (!($paymentShopeepay->redirect_url_app && $paymentShopeepay->redirect_url_http)) {
-            $trx_shopeepay = app($this->shopeepay)->order($paymentShopeepay, 'deals', $errors = null);
+            $trx_shopeepay = app($this->shopeepay)->order($paymentShopeepay, 'deals', $errors);
         }
         if (!$trx_shopeepay || !(($trx_shopeepay['status_code'] ?? 0) == 200 && ($trx_shopeepay['response']['debug_msg'] ?? '') == 'success' && ($trx_shopeepay['response']['errcode'] ?? 0) == 0)) {
             if ($paymentShopeepay->redirect_url_app && $paymentShopeepay->redirect_url_http) {
