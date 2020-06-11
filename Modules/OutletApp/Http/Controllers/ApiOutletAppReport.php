@@ -29,6 +29,12 @@ use Modules\Report\Entities\GlobalDailyReportTrxModifier;
 use Modules\Report\Entities\MonthlyReportTrxModifier;
 use Modules\Report\Entities\GlobalMonthlyReportTrxModifier;
 
+use App\Http\Models\TransactionPaymentMidtran;
+use App\Http\Models\TransactionPaymentBalance;
+use Modules\IPay88\Entities\TransactionPaymentIpay88;
+use App\Http\Models\TransactionPaymentOvo;
+use App\Http\Models\TransactionPaymentOffline;
+
 use Modules\Brand\Entities\Brand;
 
 use Modules\OutletApp\Http\Requests\ReportSummary;
@@ -44,7 +50,9 @@ class ApiOutletAppReport extends Controller
     public function summary(ReportSummary $request)
     {
     	$post = $request->json()->all();
-    	$post['id_outlet'] = auth()->user()->id_outlet;
+		$post['id_outlet'] = auth()->user()->id_outlet;
+		
+		$daily_payment = [];
 
     	if ($post['date'] < date("Y-m-d"))
     	{
@@ -53,8 +61,13 @@ class ApiOutletAppReport extends Controller
 	    				->with('outlet')
 	    				->first();
 
-	    	$daily_payment = DailyReportPayment::whereDate('trx_date', '=', $post['date'])
-	    				->where('id_outlet', '=', $post['id_outlet'])
+			$daily_payment = DailyReportPayment::whereDate('trx_date', '=', $post['date'])
+						->select(
+							DB::raw('FORMAT(trx_payment_count, 0, "de_DE") as trx_payment_count'), 
+							DB::raw('FORMAT(trx_payment_nominal, 0, "de_DE") as trx_payment_nominal'), 
+							DB::raw('trx_payment')
+						)
+						->where('id_outlet', '=', $post['id_outlet'])
 	    				->get();
 
 	    	if ( !$daily_trx ) {
@@ -116,94 +129,106 @@ class ApiOutletAppReport extends Controller
 	            ->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
 	            ->get()->toArray();
 
-	        $global = [];
-	        foreach ($getTransactions as $dtTrx){
-	            $total = 0;
-	            $count = 0;
-	            $getTransactionPayment = [];
-	            $trx_payment = $dtTrx['trasaction_payment_type'];
+				$date = $post['date'];
+		
+			//midtrans
+				$dataPaymentMidtrans = TransactionPaymentMidtran::join('transactions', 'transactions.id_transaction', 'transaction_payment_midtrans.id_transaction')
+				->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+				->select(
+					DB::raw('FORMAT(COUNT(transactions.id_transaction), 0, "de_DE") as trx_payment_count'), 
+					DB::raw('FORMAT(SUM(transaction_payment_midtrans.gross_amount), 0, "de_DE") as trx_payment_nominal'), 
+					DB::raw("CONCAT_WS(' ', transaction_payment_midtrans.payment_type, transaction_payment_midtrans.bank) AS trx_payment")
+				)
+				->where('transactions.id_outlet', $post['id_outlet'])
+				->whereDate('transactions.transaction_date', $date)
+				->where('transactions.transaction_payment_status', 'Completed')
+				->whereNull('transaction_pickups.reject_at')
+				->groupBy('transactions.id_outlet', 'trx_payment')
+				->get()->toArray();
+	
+			//end midtrans	
+	
+			//ovo
+				$dataPaymentOvo = TransactionPaymentOvo::join('transactions', 'transactions.id_transaction', 'transaction_payment_ovos.id_transaction')
+				->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+				->select(
+					DB::raw('FORMAT(COUNT(transactions.id_transaction), 0, "de_DE") as trx_payment_count'), 
+					DB::raw('FORMAT(SUM(transaction_payment_ovos.amount), 0, "de_DE") as trx_payment_nominal'), 
+					DB::raw("'OVO' as 'trx_payment'")
+				)
+				->where('transactions.id_outlet', $post['id_outlet'])
+				->whereDate('transactions.transaction_date', $date)
+				->where('transactions.transaction_payment_status', 'Completed')
+				->whereNull('transaction_pickups.reject_at')
+				->groupBy('transactions.id_outlet', 'trx_payment')
+				->get()->toArray();
+	
+				//merge from midtrans
+				$daily_payment = array_merge($dataPaymentMidtrans, $dataPaymentOvo);
 
-	            if($dtTrx['trasaction_payment_type'] == 'Manual')
-	            {
-	                $getTransactionPayment = Transaction::join('transaction_payment_manuals', 'transaction_payment_manuals.id_transaction', 'transactions.id_transaction')
-	                    ->where('transactions.id_transaction', $dtTrx['id_transaction'])
-	                    ->select(
-	                    	'transaction_payment_manuals.payment_method as payment_type',
-	                    	'transaction_payment_manuals.payment_bank as payment',
-	                    	'transaction_payment_manuals.payment_nominal as trx_payment_nominal'
-	                    )->get()->toArray();
-	            }
-	            elseif($dtTrx['trasaction_payment_type'] == 'Midtrans')
-	            {
-	                $getTransactionPayment = Transaction::join('transaction_payment_midtrans', 'transaction_payment_midtrans.id_transaction', 'transactions.id_transaction')
-	                    ->where('transactions.id_transaction', $dtTrx['id_transaction'])
-	                    ->select(
-	                    	'transaction_payment_midtrans.payment_type as payment_type',
-	                    	'transaction_payment_midtrans.bank as payment',
-	                    	'transaction_payment_midtrans.gross_amount as trx_payment_nominal'
-	                    )->get()->toArray();
-	            }
-	            elseif($dtTrx['trasaction_payment_type'] == 'Offline')
-	            {
-	                $getTransactionPayment = Transaction::join('transaction_payment_offlines', 'transaction_payment_offlines.id_transaction', 'transactions.id_transaction')
-	                    ->where('transactions.id_transaction', $dtTrx['id_transaction'])
-	                    ->where('payment_amount', '!=', 0)
-	                    ->select(
-	                    	'transaction_payment_offlines.payment_type as payment_type',
-	                    	'transaction_payment_offlines.payment_bank as payment',
-	                    	'transaction_payment_offlines.payment_amount as trx_payment_nominal'
-	                    )->get()->toArray();
-	            }
-	            elseif($dtTrx['trasaction_payment_type'] == 'Balance')
-	            {
-	                $getTransactionPayment = Transaction::join('transaction_payment_balances', 'transaction_payment_balances.id_transaction', 'transactions.id_transaction')
-	                    ->where('transactions.id_transaction', $dtTrx['id_transaction'])
-	                    ->where('balance_nominal', '!=', 0)
-	                    ->select('transaction_payment_balances.balance_nominal AS trx_payment_nominal')->get()->toArray();
+			//end ovo
+	
+			//Ipay88
+				$dataPaymentIpay = TransactionPaymentIpay88::join('transactions', 'transactions.id_transaction', 'transaction_payment_ipay88s.id_transaction')
+				->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+				->select(
+					DB::raw('FORMAT(COUNT(transactions.id_transaction), 0, "de_DE") as trx_payment_count'), 
+					DB::raw('FORMAT(SUM(transaction_payment_ipay88s.amount / 100), 0, "de_DE") as trx_payment_nominal'), 
+					DB::raw("transaction_payment_ipay88s.payment_method AS trx_payment")
+				)
+				->where('transactions.id_outlet', $post['id_outlet'])
+				->whereDate('transactions.transaction_date', $date)
+				->where('transactions.transaction_payment_status', 'Completed')
+				->whereNull('transaction_pickups.reject_at')
+				->groupBy('transactions.id_outlet', 'trx_payment')
+				->get()->toArray();
 
-	                $trx_payment = 'Balance';
-	            }
-	            elseif($dtTrx['trasaction_payment_type'] == 'Ovo')
-	            {
-	                $getTransactionPayment = Transaction::join('transaction_payment_ovos', 'transaction_payment_ovos.id_transaction', 'transactions.id_transaction')
-	                    ->where('transactions.id_transaction', $dtTrx['id_transaction'])
-	                    ->where('amount', '!=', 0)
-	                    ->select('transaction_payment_ovos.amount AS trx_payment_nominal')->get()->toArray();
+				// merge from midtrans & ovo
+				$daily_payment = array_merge($daily_payment, $dataPaymentIpay);
 
-	                $trx_payment = 'Ovo';
-	            }
+			//end Ipay88
+	
+			//balance
+				$dataPaymentBalance = TransactionPaymentBalance::join('transactions', 'transactions.id_transaction', 'transaction_payment_balances.id_transaction')
+				->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+				->select(
+					DB::raw('FORMAT(COUNT(transactions.id_transaction), 0, "de_DE") as trx_payment_count'), 
+					DB::raw('FORMAT(SUM(transaction_payment_balances.balance_nominal), 0, "de_DE") as trx_payment_nominal'), 
+					DB::raw("'Jiwa Poin' AS trx_payment")
+				)
+				->where('transactions.id_outlet', $post['id_outlet'])
+				->whereDate('transactions.transaction_date', $date)
+				->where('transactions.transaction_payment_status', 'Completed')
+				->whereNull('transaction_pickups.reject_at')
+				->groupBy('transactions.id_outlet', 'trx_payment')
+				->get()->toArray();
 
-	            foreach ($getTransactionPayment as $dtPayment){
+				
+				// merge from midtrans, ovo, ipay
+				$daily_payment = array_merge($daily_payment, $dataPaymentBalance);
+	
+			//end balance
+	
+			//offline
+				$dataPaymentOffline = TransactionPaymentOffline::join('transactions', 'transactions.id_transaction', 'transaction_payment_offlines.id_transaction')
+				->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+				->select(
+					DB::raw('FORMAT(COUNT(transactions.id_transaction), 0, "de_DE") as trx_payment_count'), 
+					DB::raw('FORMAT(SUM(transaction_payment_offlines.payment_amount), 0, "de_DE") as trx_payment_nominal'), 
+					DB::raw("CONCAT_WS(' ', transaction_payment_offlines.payment_type, transaction_payment_offlines.payment_bank, ' (Offline)') AS trx_payment")
+				)
+				->where('transactions.id_outlet', $post['id_outlet'])
+				->whereDate('transactions.transaction_date', $date)
+				->where('transactions.transaction_payment_status', 'Completed')
+				->whereNull('transaction_pickups.reject_at')
+				->groupBy('transactions.id_outlet', 'trx_payment')
+				->get()->toArray();
 
-	            	if ( !empty($dtPayment['payment_type']) && !empty($dtPayment['payment']))
-	            	{
-	            		$trx_payment = $dtPayment['payment_type'].' '.$dtPayment['payment'];
-	            	}
-	            	else
-	            	{
-	            		$trx_payment = $dtPayment['payment_type']??$dtPayment['payment']??$trx_payment;
-	            	}
-
-	                $global_key = array_search($trx_payment, array_column($global, 'trx_payment'));
-
-	                if ($global_key || $global_key === 0)
-	                {
-	                	$global[$global_key]['trx_payment_count'] = $global[$global_key]['trx_payment_count'] + 1;
-	                	$global[$global_key]['trx_payment_nominal'] = $global[$global_key]['trx_payment_nominal'] + $dtPayment['trx_payment_nominal'];
-	                }
-	                else
-	                {
-	                	$new_global['trx_payment'] = $trx_payment;
-	                	$new_global['trx_payment_count'] = 1;
-	                	$new_global['trx_payment_nominal'] = $dtPayment['trx_payment_nominal'];
-	                	array_push($global, $new_global);
-
-		                $global_key = array_search($trx_payment, array_column($global, 'trx_payment'));
-	                }
-
-	            }
-
-	        }
+				// merge from midtrans, ovo, ipay, balance
+				$daily_payment = array_merge($daily_payment, $dataPaymentOffline);
+	
+			//end offline
+			
 
 	        if ( empty($outlet) ) {
     			return response()->json(MyHelper::checkGet(null));
@@ -217,14 +242,6 @@ class ApiOutletAppReport extends Controller
     	else
     	{
     		return response()->json(MyHelper::checkGet(null));
-    	}
-
-    	$data_payment = [];
-    	foreach ($daily_payment??$global as $key => $value)
-    	{
-    		$data_payment[$key]['trx_payment'] = $value['trx_payment'];
-    		$data_payment[$key]['trx_payment_count'] = number_format($value['trx_payment_count'],0,",",".");
-    		$data_payment[$key]['trx_payment_nominal'] = number_format($value['trx_payment_nominal'],0,",",".");
     	}
 
     	$data['outlet_name'] 	= $daily_trx['outlet']['outlet_name']??$outlet['outlet_name'];
@@ -245,7 +262,7 @@ class ApiOutletAppReport extends Controller
 	    	$data['trx_count']		= 0;
 	    	$data['trx_total_item']	= 0;
     	}
-    	$data['payment']		= $data_payment;
+    	$data['payment']		= $daily_payment;
 
     	return response()->json(MyHelper::checkGet($data));
     }
