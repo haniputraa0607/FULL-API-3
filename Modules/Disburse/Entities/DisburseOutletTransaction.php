@@ -4,13 +4,13 @@ namespace Modules\Disburse\Entities;
 
 use Illuminate\Database\Eloquent\Model;
 
-class DisburseTransaction extends Model
+class DisburseOutletTransaction extends Model
 {
-    protected $table = 'disburse_transactions';
+    protected $table = 'disburse_outlet_transactions';
 	protected $primaryKey = 'id_disburse_transaction';
 
 	protected $fillable = [
-	    'id_disburse',
+	    'id_disburse_outlet',
         'id_transaction',
         'income_central',
         'income_outlet',
