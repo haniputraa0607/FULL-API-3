@@ -212,9 +212,9 @@ class ShopeePayController extends Controller
         $expired = date('Y-m-d H:i:s', time() - $this->validity_period);
 
         $getTrx = Transaction::where('transaction_payment_status', 'Pending')
-            ->join('transaction_payment_shopee_pays','transactions.id_transaction','=','transaction_payment_shopee_pays.id_transaction')
+            ->join('transaction_payment_shopee_pays', 'transactions.id_transaction', '=', 'transaction_payment_shopee_pays.id_transaction')
             ->where('transaction_date', '<=', $expired)
-            ->whereIn('trasaction_payment_type', ['Shopeepay','Balance'])
+            ->whereIn('trasaction_payment_type', ['Shopeepay', 'Balance'])
             ->get();
 
         $count = 0;
@@ -364,8 +364,8 @@ class ShopeePayController extends Controller
         $data = [
             'request_id'           => $this->requestId(),
             'payment_reference_id' => '',
-            'merchant_ext_id'      => '',
-            'store_ext_id'         => '',
+            'merchant_ext_id'      => $this->merchant_ext_id,
+            'store_ext_id'         => $this->store_ext_id,
             'amount'               => '',
             'currency'             => $this->currency ?: 'IDR',
             'return_url'           => $this->return_url,
@@ -375,23 +375,17 @@ class ShopeePayController extends Controller
         ];
         switch ($type) {
             case 'trx':
-                $trx = Transaction::where('id_transaction', $reference->id_transaction)->with(['outlet' => function ($query) {
-                    $query->select('outlet_code', 'id_outlet', 'merchant_ext_id');
-                }])->first();
+                $trx = Transaction::where('id_transaction', $reference->id_transaction)->first();
                 if (!$trx) {
                     $errors = ['Transaction not found'];
                     return false;
                 }
                 $data['payment_reference_id'] = $trx->transaction_receipt_number;
-                $data['merchant_ext_id']      = $trx->outlet->merchant_ext_id;
-                $data['store_ext_id']         = $trx->outlet->outlet_code;
                 $data['amount']               = $reference->amount;
                 break;
 
             case 'deals':
                 $data['payment_reference_id'] = $reference->order_id;
-                $data['merchant_ext_id']      = $this->merchant_ext_id;
-                $data['store_ext_id']         = $this->store_ext_id;
                 $data['amount']               = $reference->amount;
                 break;
 
@@ -430,8 +424,8 @@ class ShopeePayController extends Controller
         $data = [
             'request_id'           => $this->requestId(),
             'payment_reference_id' => '',
-            'merchant_ext_id'      => '',
-            'store_ext_id'         => '',
+            'merchant_ext_id'      => $this->merchant_ext_id,
+            'store_ext_id'         => $this->store_ext_id,
         ];
         switch ($type) {
             case 'trx':
@@ -448,13 +442,6 @@ class ShopeePayController extends Controller
                     }
                 }
                 $data['payment_reference_id'] = $reference['transaction_receipt_number'];
-                $outlet                       = Outlet::select('merchant_ext_id', 'outlet_code')->where('id_outlet', $reference['id_outlet'])->first();
-                if (!$outlet->merchant_ext_id || !$outlet->outlet_code) {
-                    $errors = ['Merchant ext id not found'];
-                    return false;
-                }
-                $data['merchant_ext_id'] = $outlet->merchant_ext_id;
-                $data['store_ext_id']    = $outlet->outlet_code;
                 break;
 
             case 'deals':
@@ -471,8 +458,6 @@ class ShopeePayController extends Controller
                     }
                 }
                 $data['payment_reference_id'] = $reference['order_id'];
-                $data['merchant_ext_id']      = $this->merchant_ext_id;
-                $data['store_ext_id']         = $this->store_ext_id;
                 break;
 
             default:
@@ -523,8 +508,8 @@ class ShopeePayController extends Controller
             'request_id'           => $this->requestId(),
             'payment_reference_id' => '',
             'refund_reference_id'  => $refund_reference_id,
-            'merchant_ext_id'      => '',
-            'store_ext_id'         => '',
+            'merchant_ext_id'      => $this->merchant_ext_id,
+            'store_ext_id'         => $this->store_ext_id,
         ];
         switch ($type) {
             case 'trx':
@@ -541,13 +526,6 @@ class ShopeePayController extends Controller
                     }
                 }
                 $data['payment_reference_id'] = $reference['transaction_receipt_number'];
-                $outlet                       = Outlet::select('merchant_ext_id', 'outlet_code')->where('id_outlet', $reference['id_outlet'])->first();
-                if (!$outlet->merchant_ext_id || !$outlet->outlet_code) {
-                    $errors = ['Merchant ext id not found'];
-                    return false;
-                }
-                $data['merchant_ext_id'] = $outlet->merchant_ext_id;
-                $data['store_ext_id']    = $outlet->outlet_code;
                 break;
 
             case 'deals':
@@ -564,8 +542,6 @@ class ShopeePayController extends Controller
                     }
                 }
                 $data['payment_reference_id'] = $reference['order_id'];
-                $data['merchant_ext_id']      = $this->merchant_ext_id;
-                $data['store_ext_id']         = $this->store_ext_id;
                 break;
 
             default:
@@ -653,8 +629,8 @@ class ShopeePayController extends Controller
             'request_id'           => $this->requestId(),
             'payment_reference_id' => '',
             'void_reference_id'    => $void_reference_id,
-            'merchant_ext_id'      => '',
-            'store_ext_id'         => '',
+            'merchant_ext_id'      => $this->merchant_ext_id,
+            'store_ext_id'         => $this->store_ext_id,
         ];
         switch ($type) {
             case 'trx':
@@ -671,13 +647,6 @@ class ShopeePayController extends Controller
                     }
                 }
                 $data['payment_reference_id'] = $reference['transaction_receipt_number'];
-                $outlet                       = Outlet::select('merchant_ext_id', 'outlet_code')->where('id_outlet', $reference['id_outlet'])->first();
-                if (!$outlet->merchant_ext_id || !$outlet->outlet_code) {
-                    $errors = ['Merchant ext id not found'];
-                    return false;
-                }
-                $data['merchant_ext_id'] = $outlet->merchant_ext_id;
-                $data['store_ext_id']    = $outlet->outlet_code;
                 break;
 
             case 'deals':
@@ -694,8 +663,6 @@ class ShopeePayController extends Controller
                     }
                 }
                 $data['payment_reference_id'] = $reference['order_id'];
-                $data['merchant_ext_id']      = $this->merchant_ext_id;
-                $data['store_ext_id']         = $this->store_ext_id;
                 break;
 
             default:
