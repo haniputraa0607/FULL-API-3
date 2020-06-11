@@ -84,11 +84,6 @@ class Outlet extends Authenticatable
 		'big_order',
 		// 'outlet_open_hours',
 		// 'outlet_close_hours'
-        'id_bank_name',
-        'beneficiary_name',
-        'beneficiary_alias',
-        'beneficiary_account',
-		'beneficiary_email',
 		'status_franchise',
         'outlet_special_status',
         'outlet_special_fee'
