@@ -27,7 +27,7 @@ class ShopeePayController extends Controller
     public function __construct()
     {
         $this->point_of_initiation = 'app';
-        $this->validity_period     = env('SHOPHEEPAY_VALIDITY_PERIOD', 300);
+        $this->validity_period     = MyHelper::setting('shopeepay_validity_period', 'value', 300);
         $this->notif               = "Modules\Transaction\Http\Controllers\ApiNotification";
         $this->setting_fraud       = "Modules\SettingFraud\Http\Controllers\ApiFraud";
         $this->autocrm             = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
