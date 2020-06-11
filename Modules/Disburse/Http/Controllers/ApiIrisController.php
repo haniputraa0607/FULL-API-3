@@ -21,6 +21,8 @@ use Modules\Disburse\Entities\BankName;
 use Modules\Disburse\Entities\Disburse;
 
 use DB;
+use Modules\Disburse\Entities\DisburseOutlet;
+use Modules\Disburse\Entities\DisburseOutletTransaction;
 use Modules\Disburse\Entities\DisburseTransaction;
 use Modules\Disburse\Entities\LogIRIS;
 use Modules\Disburse\Entities\MDR;
@@ -64,15 +66,18 @@ class ApiIrisController extends Controller
     }
 
     public function disburse(){
-        $getData = Transaction::leftJoin('disburse_transactions', 'disburse_transactions.id_transaction', 'transactions.id_transaction')
+        $getData = Transaction::leftJoin('disburse_outlet_transactions', 'disburse_outlet_transactions.id_transaction', 'transactions.id_transaction')
             ->join('outlets', 'outlets.id_outlet', 'transactions.id_outlet')
-            ->leftJoin('bank_name', 'bank_name.id_bank_name', 'outlets.id_bank_name')
+            ->leftJoin('bank_account_outlets', 'bank_account_outlets.id_outlet', 'outlets.id_outlet')
+            ->leftJoin('bank_accounts', 'bank_accounts.id_bank_account', 'bank_account_outlets.id_bank_account')
+            ->leftJoin('bank_name', 'bank_name.id_bank_name', 'bank_accounts.id_bank_name')
             ->where('transaction_payment_status', '=', 'Completed')
-            ->whereNull('disburse_transactions.id_disburse')
+            ->whereNull('disburse_outlet_transactions.id_disburse_transaction')
+            ->whereNotNull('bank_accounts.beneficiary_name')
             ->select('transactions.id_outlet', 'transactions.id_transaction', 'transactions.transaction_subtotal',
                 'transactions.transaction_grandtotal', 'transactions.transaction_discount', 'transactions.id_promo_campaign_promo_code',
                 'bank_name.bank_code', 'outlets.status_franchise', 'outlets.outlet_special_status', 'outlets.outlet_special_fee',
-                'outlets.beneficiary_name', 'outlets.beneficiary_account', 'outlets.beneficiary_email', 'outlets.beneficiary_alias')
+                'bank_accounts.id_bank_account', 'bank_accounts.beneficiary_name', 'bank_accounts.beneficiary_account', 'bank_accounts.beneficiary_email', 'bank_accounts.beneficiary_alias')
             ->with(['transaction_multiple_payment', 'vouchers', 'promo_campaign'])
             ->orderBy('transactions.created_at', 'desc')->get()->toArray();
         $settingGlobalFee = Setting::where('key', 'global_setting_fee')->first()->value_text;
@@ -94,6 +99,7 @@ class ApiIrisController extends Controller
 
             try{
                 $arrTmp = [];
+                $arrTmpDisburse = [];
                 foreach ($getData as $data){
 
                     if(!is_null($data['beneficiary_account'])){
@@ -243,17 +249,29 @@ class ApiIrisController extends Controller
                         $incomeCentral = ((floatval($percentFee) / 100) * $subTotal) + $totalFeeForCentral;
                         $expenseCentral = $nominalBalanceCentral + $totalChargedPromoCentral;
 
+                        //set to send disburse per bank account
+                        $checkAccount = array_search($data['beneficiary_account'], array_column($arrTmpDisburse, 'beneficiary_account'));
+                        if($checkAccount === false){
+                            $arrTmpDisburse[] = [
+                                'beneficiary_name' => $data['beneficiary_name'],
+                                'beneficiary_account' => $data['beneficiary_account'],
+                                'beneficiary_bank' => $data['bank_code'],
+                                'beneficiary_email' => $data['beneficiary_email'],
+                                'beneficiary_alias' => $data['beneficiary_alias'],
+                                'id_bank_account' => $data['id_bank_account'],
+                                'total_amount' => $amount
+                            ];
+                        }else{
+                            $arrTmpDisburse[$checkAccount]['total_amount'] = $arrTmpDisburse[$checkAccount]['total_amount'] + $amount;
+                        }
+
+                        //set to disburse outlet and disburse outlet transaction
                         $checkOultet = array_search($data['id_outlet'], array_column($arrTmp, 'id_outlet'));
 
                         if($checkOultet === false){
                             $arrTmp[] = [
-                                'id_outlet' => $data['id_outlet'],
-                                'beneficiary_name' => $data['beneficiary_name'],
                                 'beneficiary_account' => $data['beneficiary_account'],
-                                'beneficiary_bank_name' => $data['bank_code'],
-                                'beneficiary_email' => $data['beneficiary_email'],
-                                'beneficiary_alias' => $data['beneficiary_alias'],
-                                'bank_code' => $data['bank_code'],
+                                'id_outlet' => $data['id_outlet'],
                                 'total_amount' => $amount,
                                 'total_income_central' => $incomeCentral,
                                 'total_expense_central' => $expenseCentral,
@@ -303,34 +321,43 @@ class ApiIrisController extends Controller
                 $dataToSend = [];
                 $dataToInsert = [];
 
-                foreach ($arrTmp as $val){
-                    $toSend= [
-                        'beneficiary_name' => $val['beneficiary_name'],
-                        'beneficiary_account' => $val['beneficiary_account'],
-                        'beneficiary_bank' => $val['bank_code'],
-                        'beneficiary_email' => $val['beneficiary_email'],
-                        'amount' => $val['total_amount'],
-                        'notes' => 'Payment from apps '.date('d M Y')
+                foreach ($arrTmpDisburse as $value){
+                    $toSend = [
+                        'beneficiary_name' => $value['beneficiary_name'],
+                        'beneficiary_account' => $value['beneficiary_account'],
+                        'beneficiary_bank' => $value['beneficiary_bank'],
+                        'beneficiary_email' => $value['beneficiary_email'],
+                        'amount' => $value['total_amount'],
+                        'notes' => 'Payment from apps '.date('d M Y'),
                     ];
 
                     $dataToSend[] = $toSend;
 
                     $dataToInsert[] = [
-                        'id_outlet' => $val['id_outlet'],
-                        'disburse_nominal' => $val['total_amount'],
-                        'total_income_central' => $val['total_income_central'],
-                        'total_expense_central' => $val['total_expense_central'],
-                        'beneficiary_name' => $val['beneficiary_name'],
-                        'beneficiary_bank_name' => $val['bank_code'],
-                        'beneficiary_account_number' => $val['beneficiary_account'],
-                        'beneficiary_email' => $val['beneficiary_email'],
-                        'beneficiary_alias' => $val['beneficiary_alias'],
+                        'disburse_nominal' => $value['total_amount'],
+                        'id_bank_account' => $value['id_bank_account'],
+                        'beneficiary_name' => $value['beneficiary_name'],
+                        'beneficiary_bank_name' => $value['beneficiary_bank'],
+                        'beneficiary_account_number' => $value['beneficiary_account'],
+                        'beneficiary_email' => $value['beneficiary_email'],
+                        'beneficiary_alias' => $value['beneficiary_alias'],
                         'notes' => 'Payment from apps '.date('d M Y'),
-                        'request' => json_encode($toSend),
-                        'transactions' => $val['transactions']
+                        'request' => json_encode($toSend)
                     ];
                 }
 
+                foreach ($arrTmp as $val){
+                    $checkAccount = array_search($val['beneficiary_account'], array_column($dataToInsert, 'beneficiary_account_number'));
+                    if($checkAccount !== false){
+                        $dataToInsert[$checkAccount]['disburse_outlet'][] = [
+                            'id_outlet' => $val['id_outlet'],
+                            'disburse_nominal' => $val['total_amount'],
+                            'total_income_central' => $val['total_income_central'],
+                            'total_expense_central' => $val['total_expense_central'],
+                            'transactions' => $val['transactions']
+                        ];
+                    }
+                }
 
                 $sendToIris = MyHelper::connectIris('Payouts', 'POST','api/v1/payouts', ['payouts' => $dataToSend]);
 
@@ -342,19 +369,26 @@ class ApiIrisController extends Controller
                             $dataToInsert[$j]['reference_no'] = $val['reference_no'];
                             $dataToInsert[$j]['disburse_status'] = $arrStatus[$val['status']];
 
-                            $insertToDisburseTransaction = $dataToInsert[$j]['transactions'];
-                            unset($dataToInsert[$j]['transactions']);
+                            $insertToDisburseOutlet = $dataToInsert[$j]['disburse_outlet'];
+                            unset($dataToInsert[$j]['disburse_outlet']);
 
                             $insert = Disburse::create($dataToInsert[$j]);
 
                             if($insert){
-                                $count = count($insertToDisburseTransaction);
-                                for($k=0;$k<$count;$k++){
-                                    $insertToDisburseTransaction[$k]['id_disburse'] = $insert['id_disburse'];
-                                    $insertToDisburseTransaction[$k]['created_at'] = date('Y-m-d H:i:s');
-                                    $insertToDisburseTransaction[$k]['updated_at'] = date('Y-m-d H:i:s');
+                                foreach ($insertToDisburseOutlet as $do){
+                                    $do['id_disburse'] = $insert['id_disburse'];
+                                    $disburseOutlet = DisburseOutlet::create($do);
+                                    if($disburseOutlet){
+                                        $insertToDisburseTransaction = $do['transactions'];
+                                        $count = count($insertToDisburseTransaction);
+                                        for($k=0;$k<$count;$k++){
+                                            $insertToDisburseTransaction[$k]['id_disburse_outlet'] = $disburseOutlet['id_disburse_outlet'];
+                                            $insertToDisburseTransaction[$k]['created_at'] = date('Y-m-d H:i:s');
+                                            $insertToDisburseTransaction[$k]['updated_at'] = date('Y-m-d H:i:s');
+                                        }
+                                        DisburseOutletTransaction::insert($insertToDisburseTransaction);
+                                    }
                                 }
-                                DisburseTransaction::insert($insertToDisburseTransaction);
                             }
                             $j++;
                         }
@@ -368,10 +402,10 @@ class ApiIrisController extends Controller
         }
 
         //proses retry failed disburse
-        $dataRetry = Disburse::join('outlets', 'outlets.id_outlet', 'disburse.id_outlet')
-            ->leftJoin('bank_name', 'bank_name.id_bank_name', 'outlets.id_bank_name')
+        $dataRetry = Disburse::join('bank_accounts', 'bank_accounts.id_bank_account', 'disburse.id_bank_account')
+            ->leftJoin('bank_name', 'bank_name.id_bank_name', 'bank_accounts.id_bank_name')
             ->where('disburse_status', 'Retry From Failed')
-            ->select('outlets.beneficiary_name', 'outlets.beneficiary_account', 'bank_name.bank_code as beneficiary_bank', 'outlets.beneficiary_email',
+            ->select('bank_accounts.beneficiary_name', 'bank_accounts.beneficiary_account', 'bank_name.bank_code as beneficiary_bank', 'bank_accounts.beneficiary_email',
                 'disburse_nominal as amount', 'notes', 'reference_no as ref')
             ->get()->toArray();
 
