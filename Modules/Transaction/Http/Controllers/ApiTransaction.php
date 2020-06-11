@@ -1453,15 +1453,19 @@ class ApiTransaction extends Controller
     }
 
     public function transactionDetail(TransactionDetail $request){
-        $id = $request->json('id_transaction');
+        if ($request->json('transaction_receipt_number') !== null) {
+            $id = Transaction::where(['transaction_receipt_number' => $request->json('transaction_receipt_number')])->first()->id_transaction;
+        } else {
+            $id = $request->json('id_transaction');
+        }
+        
         $type = $request->json('type');
 
         if ($type == 'trx') {
             if($request->json('admin')){
-                $list = Transaction::where('transactions.id_transaction', $id)->with('user');
+                $list = Transaction::where(['transactions.id_transaction' => $id])->with('user');
             }else{
-                $list = Transaction::where([['transactions.id_transaction', $id],
-                    ['id_user',$request->user()->id]]);
+                $list = Transaction::where(['transactions.id_transaction' => $id, 'id_user' => $request->user()->id]);
             }
                 $list = $list->leftJoin('transaction_pickups','transaction_pickups.id_transaction','=','transactions.id_transaction')->with(
                 // 'user.city.province',
@@ -1822,7 +1826,7 @@ class ApiTransaction extends Controller
                     $result['transaction_status_text'] = 'ORDER PENDING';
                 }
                 if ($list['transaction_pickup_go_send']) {
-                    $result['transaction_status'] = 5;
+                    // $result['transaction_status'] = 5;
                     $result['delivery_info'] = [
                         'driver' => null,
                         'delivery_status' => '',
