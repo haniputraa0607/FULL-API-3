@@ -206,7 +206,7 @@ class ShopeePayController extends Controller
      * @param  [type] $params [description]
      * @return [type]         [description]
      */
-    public function cronCancel(...$params)
+    public function cronCancel()
     {
         $now     = date('Y-m-d H:i:s');
         $expired = date('Y-m-d H:i:s', time() - $this->validity_period);
