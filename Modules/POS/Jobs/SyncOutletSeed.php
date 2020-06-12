@@ -38,7 +38,7 @@ class SyncOutletSeed implements ShouldQueue
         DB::beginTransaction();
 
         foreach ($this->data as $key => $value) {
-            $franchise = ($value['status_franchise'] == 0) ? 'Non Franchise' : 'Franchise' ;
+            $franchise = ($value['status_franchise'] == 0) ? 'Not Franchise' : 'Franchise' ;
             $explodeName = explode(' - ', $value['name']);
 
             $data['outlet_code'] = ($value['id'] == 0) ? 'JJ' . $value['id'] : $explodeName[0];
