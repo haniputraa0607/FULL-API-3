@@ -47,7 +47,7 @@ class ApiSubscriptionWebview extends Controller
             'subscription_voucher_total'    => $subs['subscription_voucher_total'],
             'button_text'                   => 'BELI',
             'button_status'                 => 0,
-            'user_point'					=> Auth()->user()->points
+            'user_point'					=> Auth()->user()->balance
         ];
 
         //text konfirmasi pembelian
