@@ -93,7 +93,7 @@ class ApiDealsWebview extends Controller
             'button_text'                   => 'Get',
             'payment_message'               => 'Are you sure want to claim Free Voucher Offline x Online Limited voucher ?',
             'payment_success_message'       => 'Claim Voucher Success ! Do you want to use it now ?',
-            'user_point'					=> Auth()->user()->points
+            'user_point'					=> Auth()->user()->balance
         ];
         if ($deals['deals_voucher_price_cash'] != "") {
             $result['deals_price'] = MyHelper::requestNumber($deals['deals_voucher_price_cash'], '_CURRENCY');
