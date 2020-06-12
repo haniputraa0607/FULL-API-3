@@ -1623,7 +1623,7 @@ class ApiOutletApp extends Controller
                 $result[$id_brand]['name_brand'] = Brand::select('name_brand')->where('id_brand', $id_brand)->pluck('name_brand')->first();
             }
             $result[$id_brand]['updates'][] = [
-                'name'    => $name??$outlet['outlet_name'],
+                'name'    => $name?:$outlet['outlet_name'],
                 'time'    => $time,
                 'summary' => array_map(function ($vrb) {
                     return [
