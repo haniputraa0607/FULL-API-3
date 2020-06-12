@@ -2,6 +2,7 @@
 
 namespace Modules\Disburse\Entities;
 
+use App\Lib\MyHelper;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -28,12 +29,18 @@ class UserFranchise extends Authenticatable
 
         return $this->where('phone', $username)->first();
     }
-
+    protected $appends = ['password_default_decrypt'];
 	protected $fillable = [
 		'id_user_franchise_seed',
 	    'phone',
 		'email',
         'password',
+        'password_default_plain_text',
         'user_franchise_type'
 	];
+
+    public function getPasswordDefaultDecryptAttribute()
+    {
+        return MyHelper::decrypt2019($this->password_default_plain_text);
+    }
 }

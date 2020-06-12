@@ -143,6 +143,8 @@ class Midtrans {
         }
         if ($trx->transaction_status == 'capture') {
             $url = env('BASE_MIDTRANS_SANDBOX').'/v2/'.$order_id.'/cancel';
+        } else {
+            $param['reason'] = 'Pengembalian dana';
         }
         if(!$param){
             $param = [];
