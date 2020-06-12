@@ -970,29 +970,43 @@ class ApiOutletApp extends Controller
     {
         $outlet = $request->user();
         $sub    = BrandProduct::select('id_brand', 'id_product', 'id_product_category')->distinct();
-        $data   = DB::query()->fromSub($sub, 'brand_product')->select(\DB::raw('brand_product.id_brand,brand_product.id_product_category,count(*) as total_product,sum(case product_stock_status when "Sold Out" then 1 else 0 end) total_sold_out,product_category_name'))
+        $data   = DB::query()->fromSub($sub, 'brand_product')->select(\DB::raw('brand_product.id_brand,brand_product.id_product_category,count(*) as total_product,sum(case product_detail_stock_status when "Sold Out" then 1 else 0 end) total_sold_out,product_category_name'))
             ->join('product_categories', 'product_categories.id_product_category', '=', 'brand_product.id_product_category')
             ->join('products', function ($query) {
                 $query->on('brand_product.id_product', '=', 'products.id_product')
                     ->groupBy('products.id_product');
             })
         // product availbale in outlet
-            ->join('product_prices', 'product_prices.id_product', '=', 'products.id_product')
-            ->where('product_prices.id_outlet', '=', $outlet['id_outlet'])
-        // brand produk ada di outlet
-            ->whereColumn('brand_outlet.id_outlet', '=', 'product_prices.id_outlet')
-            ->join('brand_outlet', 'brand_outlet.id_brand', '=', 'brand_product.id_brand')
+            ->join('product_detail', function($join) use ($outlet) {
+                $join->on('product_detail.id_product', '=', 'products.id_product')
+                    ->where('product_detail.id_outlet', '=', $outlet['id_outlet']);
+            })
             ->where(function ($query) {
-                $query->where('product_prices.product_visibility', '=', 'Visible')
+                $query->where('product_detail.product_detail_visibility', '=', 'Visible')
                     ->orWhere(function ($q) {
-                        $q->whereNull('product_prices.product_visibility')
+                        $q->whereNull('product_detail.product_detail_visibility')
                             ->where('products.product_visibility', 'Visible');
                     });
             })
-            ->where('product_prices.product_status', '=', 'Active')
-            ->whereNotNull('product_prices.product_price')
-            ->groupBy('brand_product.id_brand', 'brand_product.id_product_category')
+            ->where('product_detail.product_detail_status', '=', 'Active')
+        // brand produk ada di outlet
+            ->join('brand_outlet', function($join) {
+                $join->on('brand_outlet.id_brand', '=', 'brand_product.id_brand')
+                    ->whereColumn('brand_outlet.id_outlet', '=', 'product_detail.id_outlet');
+            });
+        if ($outlet['outlet_different_price']) {
+            $data->join('product_special_price', function($join) use ($outlet) {
+                $join->on('product_special_price.id_product', '=', 'products.id_product')
+                    ->where('product_special_price.id_outlet', $outlet['id_outlet']);
+            })->whereNotNull('product_special_price.product_special_price');
+        } else {
+            $data->join('product_global_price', 'product_global_price.id_product', '=', 'products.id_product')
+                ->whereNotNull('product_global_price.product_global_price');
+        }
+        $data = $data->groupBy('brand_product.id_brand', 'brand_product.id_product_category')
+            ->orderByRaw('CASE WHEN product_category_order IS NULL OR product_category_order = 0 THEN 1 ELSE 0 END')
             ->orderBy('product_category_order')
+            ->orderBy('product_categories.id_product_category')
             ->get()->toArray();
         $result = MyHelper::groupIt($data, 'id_brand', null, function ($key, &$val) {
             $brand = Brand::select('id_brand', 'name_brand', 'order_brand')
@@ -1019,40 +1033,54 @@ class ApiOutletApp extends Controller
         $outlet            = $request->user();
         $post              = $request->json()->all();
         $post['id_outlet'] = $outlet['id_outlet'];
-        $products          =Product::select([
-            'products.id_product', 'products.product_code', 'products.product_name',
-            DB::raw('(CASE
-                        WHEN (select product_detail.product_detail_stock_status from product_detail  where product_detail.id_product = products.id_product AND product_detail.id_outlet = '.$post['id_outlet'].' ) 
-                        is NULL THEN "Available"
-                        ELSE (select product_detail.product_detail_stock_status from product_detail  where product_detail.id_product = products.id_product AND product_detail.id_outlet = '.$post['id_outlet'].' )
-                    END) as product_stock_status'),
+        $products          = Product::select([
+            'products.id_product', 'products.product_code', 'products.product_name', 'product_detail.product_detail_stock_status as product_stock_status',
         ])
-            ->join('brand_product','brand_product.id_product','=','products.id_product')
-            ->leftJoin('product_global_price','product_global_price.id_product','=','products.id_product')
-            // brand produk ada di outlet
-            ->where('brand_product.id_brand', '=', $post['id_brand'])
-            ->where('brand_product.id_product_category', '=', $post['id_product_category'])
-            ->where('brand_outlet.id_outlet','=',$post['id_outlet'])
-            ->join('brand_outlet','brand_outlet.id_brand','=','brand_product.id_brand')
-            ->whereRaw('products.id_product in (CASE
-                        WHEN (select product_detail.id_product from product_detail  where product_detail.id_product = products.id_product AND product_detail.id_outlet = '.$post['id_outlet'].' )
-                        is NULL AND products.product_visibility = "Visible" THEN products.id_product
-                        WHEN (select product_detail.id_product from product_detail  where product_detail.product_detail_visibility = "" AND product_detail.id_product = products.id_product AND product_detail.id_outlet = '.$post['id_outlet'].' )
-                        is NOT NULL AND products.product_visibility = "Visible" THEN products.id_product
-                        ELSE (select product_detail.id_product from product_detail  where product_detail.product_detail_visibility = "Visible" AND product_detail.id_product = products.id_product AND product_detail.id_outlet = '.$post['id_outlet'].' )
-                    END)')
-            ->whereRaw('products.id_product in (CASE
-                        WHEN (select product_detail.id_product from product_detail  where product_detail.id_product = products.id_product AND product_detail.id_outlet = '.$post['id_outlet'].' )
-                        is NULL THEN products.id_product
-                        ELSE (select product_detail.id_product from product_detail  where product_detail.product_detail_status = "Active" AND product_detail.id_product = products.id_product AND product_detail.id_outlet = '.$post['id_outlet'].' )
-                    END)')
-            ->where(function ($query) use ($post){
-                $query->WhereRaw('(select product_special_price.product_special_price from product_special_price  where product_special_price.id_product = products.id_product AND product_special_price.id_outlet = '.$post['id_outlet'].' ) is NOT NULL');
-                $query->orWhereRaw('(select product_global_price.product_global_price from product_global_price  where product_global_price.id_product = products.id_product) is NOT NULL');
+
+        // join brand product
+            ->join('brand_product', function($join) use ($post) {
+                $join->on('brand_product.id_product', '=', 'products.id_product')
+                    ->where('brand_product.id_brand', '=', $post['id_brand'])
+                    ->where('brand_product.id_product_category', '=', $post['id_product_category']);
             })
-            ->groupBy('products.id_product')
+
+        // brand produk ada di outlet
+            ->join('brand_outlet', function($join) use ($post) {
+                $join->on('brand_outlet.id_brand', '=', 'brand_product.id_brand')
+                    ->where('brand_outlet.id_outlet', '=', $post['id_outlet']);
+            })
+
+        // product available (active & visible)
+            ->join('product_detail', function($join) use ($post) {
+                $join->on('product_detail.id_product', '=', 'products.id_product')
+                    ->where('product_detail.id_outlet', '=', $post['id_outlet']);
+            })
+            ->where(function ($query) {
+                $query->where('product_detail.product_detail_visibility', '=', 'Visible')
+                    ->orWhere(function ($q) {
+                        $q->whereNull('product_detail.product_detail_visibility')
+                            ->where('products.product_visibility', 'Visible');
+                    });
+            })
+            ->where('product_detail.product_detail_status', '=', 'Active');
+
+        // has product price
+        if ($outlet->outlet_different_price) {
+            $products->join('product_special_price', function($join) use ($post) {
+                $join->on('product_special_price.id_product', '=', 'products.id_product')
+                    ->where('product_special_price.id_outlet', '=', $post['id_outlet']);
+            })->whereNotNull('product_special_price.product_special_price');
+        } else{
+            $products->join('product_global_price', 'products.id_product', '=', 'product_global_price.id_product')
+                ->whereNotNull('product_global_price.product_global_price');
+        }
+
+        // group by and order
+        $products->groupBy('products.id_product')
             ->orderBy('products.position')
             ->orderBy('products.id_product');
+
+        // build response
         if ($request->page) {
             $data = $products->paginate()->toArray();
             if (empty($data['data'])) {
