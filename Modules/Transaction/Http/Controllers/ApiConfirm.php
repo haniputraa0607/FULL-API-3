@@ -432,8 +432,11 @@ class ApiConfirm extends Controller
                     return [
                         'status' => 'success',
                         'result' => [
-                            'redirect_url_app'  => $paymentShopeepay->redirect_url_app,
-                            'redirect_url_http' => $paymentShopeepay->redirect_url_http,
+                            'redirect'                  => true,
+                            'timer_shopeepay'           => (int) MyHelper::setting('shopeepay_validity_period', 'value', 300),
+                            'message_timeout_shopeepay' => 'Sorry, your payment has expired',
+                            'redirect_url_app'          => $paymentShopeepay->redirect_url_app,
+                            'redirect_url_http'         => $paymentShopeepay->redirect_url_http,
                         ],
                     ];
                 }
@@ -466,8 +469,11 @@ class ApiConfirm extends Controller
             return [
                 'status' => 'success',
                 'result' => [
-                    'redirect_url_app'  => $paymentShopeepay->redirect_url_app,
-                    'redirect_url_http' => $paymentShopeepay->redirect_url_http,
+                    'redirect'                  => true,
+                    'timer_shopeepay'           => (int) MyHelper::setting('shopeepay_validity_period', 'value', 300),
+                    'message_timeout_shopeepay' => 'Sorry, your payment has expired',
+                    'redirect_url_app'          => $paymentShopeepay->redirect_url_app,
+                    'redirect_url_http'         => $paymentShopeepay->redirect_url_http,
                 ],
             ];
         } else {
