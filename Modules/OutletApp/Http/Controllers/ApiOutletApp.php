@@ -44,6 +44,7 @@ use Modules\OutletApp\Http\Requests\ProductSoldOut;
 use Modules\OutletApp\Http\Requests\UpdateToken;
 use Modules\Outlet\Entities\OutletScheduleUpdate;
 use Modules\OutletApp\Jobs\AchievementCheck;
+use Modules\Product\Entities\ProductDetail;
 use Modules\Product\Entities\ProductStockStatusUpdate;
 use Modules\SettingFraud\Entities\FraudDetectionLogTransactionDay;
 use Modules\SettingFraud\Entities\FraudDetectionLogTransactionWeek;
@@ -916,9 +917,9 @@ class ApiOutletApp extends Controller
         $updated     = 0;
         $date_time   = date('Y-m-d H:i:s');
         if ($post['sold_out']) {
-            $found = ProductPrice::where('id_outlet', $outlet['id_outlet'])
+            $found = ProductDetail::where('id_outlet', $outlet['id_outlet'])
                 ->whereIn('id_product', $post['sold_out'])
-                ->where('product_stock_status', '<>', 'Sold Out');
+                ->where('product_detail_stock_status', '<>', 'Sold Out');
             $x = $found->get()->toArray();
             foreach ($x as $product) {
                 $create = ProductStockStatusUpdate::create([
@@ -933,12 +934,12 @@ class ApiOutletApp extends Controller
                     'id_outlet_app_otp' => null,
                 ]);
             }
-            $updated += $found->update(['product_stock_status' => 'Sold Out']);
+            $updated += $found->update(['product_detail_stock_status' => 'Sold Out']);
         }
         if ($post['available']) {
-            $found = ProductPrice::where('id_outlet', $outlet['id_outlet'])
+            $found = ProductDetail::where('id_outlet', $outlet['id_outlet'])
                 ->whereIn('id_product', $post['available'])
-                ->where('product_stock_status', '<>', 'Available');
+                ->where('product_detail_stock_status', '<>', 'Available');
             $x = $found->get()->toArray();
             foreach ($x as $product) {
                 $create = ProductStockStatusUpdate::create([
@@ -953,7 +954,7 @@ class ApiOutletApp extends Controller
                     'id_outlet_app_otp' => null,
                 ]);
             }
-            $updated += $found->update(['product_stock_status' => 'Available']);
+            $updated += $found->update(['product_detail_stock_status' => 'Available']);
         }
         return [
             'status' => 'success',
@@ -1604,7 +1605,7 @@ class ApiOutletApp extends Controller
     {
         $outlet = $request->user();
         $date   = $request->json('date') ?: date('Y-m-d');
-        $data   = ProductStockStatusUpdate::distinct()->select(\DB::raw('id_product_stock_status_update,brand_product.id_brand,CONCAT(user_type,",",COALESCE(id_user,""),",",COALESCE(user_name,"")) as user,DATE_FORMAT(date_time, "%H:%i") as time,product_name,new_status as old_status,new_status,new_status as to_available'))
+        $data   = ProductStockStatusUpdate::distinct()->select(\DB::raw('id_product_stock_status_update,brand_product.id_brand,CONCAT(COALESCE(user_type,""),",",COALESCE(id_user,""),",",COALESCE(user_name,"")) as user,DATE_FORMAT(date_time, "%H:%i") as time,product_name,new_status as old_status,new_status,new_status as to_available'))
             ->join('products', 'products.id_product', '=', 'product_stock_status_updates.id_product')
             ->join('brand_product', 'products.id_product', '=', 'brand_product.id_product')
             ->where('id_outlet', $outlet->id_outlet)
@@ -1622,7 +1623,7 @@ class ApiOutletApp extends Controller
                 $result[$id_brand]['name_brand'] = Brand::select('name_brand')->where('id_brand', $id_brand)->pluck('name_brand')->first();
             }
             $result[$id_brand]['updates'][] = [
-                'name'    => $name,
+                'name'    => $name??$outlet['outlet_name'],
                 'time'    => $time,
                 'summary' => array_map(function ($vrb) {
                     return [
