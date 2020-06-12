@@ -882,29 +882,29 @@ class ApiHistoryController extends Controller
             }
         });
 
-        // if (!is_null($post['online_order']) || !is_null($post['offline_order'])) {
-        //     $log->leftJoin('transactions', 'transactions.id_transaction', 'log_balances.id_reference')
-        //         ->where(function ($query) use ($post) {
-        //             if (!is_null($post['online_order'])) {
-        //                 $query->orWhere(function ($queryLog) {
-        //                     $queryLog->whereIn('source', ['Transaction', 'Transaction Failed', 'Rejected Order', 'Rejected Order Midtrans', 'Rejected Order Point', 'Rejected Order Ovo', 'Reversal'])
-        //                         ->where('trasaction_type', '!=', 'Offline');
-        //                 });
-        //             }
-        //             if (!is_null($post['offline_order'])) {
-        //                 $query->orWhere(function ($queryLog) {
-        //                     $queryLog->where('source', 'Transaction')
-        //                         ->where('trasaction_type', '=', 'Offline');
-        //                 });
-        //             }
-        //         });
-        // }
+         if (!is_null($post['online_order']) || !is_null($post['offline_order'])) {
+             $log->leftJoin('transactions', 'transactions.id_transaction', 'log_balances.id_reference')
+                 ->where(function ($query) use ($post) {
+                     if (!is_null($post['online_order'])) {
+                         $query->orWhere(function ($queryLog) {
+                             $queryLog->whereIn('source', ['Transaction', 'Transaction Failed', 'Rejected Order', 'Rejected Order Midtrans', 'Rejected Order Point', 'Rejected Order Ovo', 'Reversal'])
+                                 ->where('trasaction_type', '!=', 'Offline');
+                         });
+                     }
+                     if (!is_null($post['offline_order'])) {
+                         $query->orWhere(function ($queryLog) {
+                             $queryLog->where('source', 'Transaction')
+                                 ->where('trasaction_type', '=', 'Offline');
+                         });
+                     }
+                 });
+         }
 
-        // if (!is_null($post['voucher'])) {
-        //     $query->orWhere(function ($queryLog) {
-        //         $queryLog->where('source', 'Deals Balance');
-        //     });
-        // }
+         if (!is_null($post['voucher'])) {
+             $log->orWhere(function ($queryLog) {
+                 $queryLog->where('source', 'Deals Balance');
+             });
+         }
 
         $log = $log->get();
 
