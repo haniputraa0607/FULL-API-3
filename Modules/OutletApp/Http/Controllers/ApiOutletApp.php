@@ -2337,7 +2337,7 @@ class ApiOutletApp extends Controller
             }
 
             if ($list['transaction_pickup_go_send']) {
-                $result['transaction_status'] = 5;
+                // $result['transaction_status'] = 5;
                 $result['delivery_info'] = [
                     'driver'            => null,
                     'delivery_status'   => '',
