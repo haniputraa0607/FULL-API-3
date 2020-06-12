@@ -1691,6 +1691,13 @@ class ApiUser extends Controller
         if($data){
             // $pin_x = MyHelper::decryptkhususpassword($data[0]['pin_k'], md5($data[0]['id_user'], true));
             if($request->json('email') != ""){
+                if(!filter_var($request->json('email'), FILTER_VALIDATE_EMAIL)){
+                    $result = [
+                        'status'	=> 'fail',
+                        'messages'	=> ['The email must be a valid email address.']
+                    ];
+                    return response()->json($result);
+                }
                 $checkEmail = User::where('email', '=', $request->json('email'))
                     ->get()
                     ->first();
