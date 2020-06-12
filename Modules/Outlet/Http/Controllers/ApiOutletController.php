@@ -2289,8 +2289,69 @@ class ApiOutletController extends Controller
 
     function listUserFranchise(Request $request){
         $post = $request->json()->all();
-        $list = UserFranchise::paginate(20);
+        $list = UserFranchise::orderBy('created_at');
 
+        if(isset($post['conditions']) && !empty($post['conditions'])){
+            $rule = 'and';
+            if(isset($post['rule'])){
+                $rule = $post['rule'];
+            }
+
+            if($rule == 'and'){
+                foreach ($post['conditions'] as $row){
+                    if(isset($row['subject'])){
+
+                        if($row['subject'] == 'phone'){
+                            if($row['operator'] == '='){
+                                $list->where('phone', $row['parameter']);
+                            }else{
+                                $list->where('phone', 'like', '%'.$row['parameter'].'%');
+                            }
+                        }
+
+                        if($row['subject'] == 'email'){
+                            if($row['operator'] == '='){
+                                $list->where('email', $row['parameter']);
+                            }else{
+                                $list->where('email', 'like', '%'.$row['parameter'].'%');
+                            }
+                        }
+
+                        if($row['subject'] == 'user_status'){
+                            $list->where('user_franchise_type', $row['operator']);
+                        }
+                    }
+                }
+            }else{
+                $list->where(function ($subquery) use ($post){
+                    foreach ($post['conditions'] as $row){
+                        if(isset($row['subject'])){
+                            if($row['subject'] == 'phone'){
+                                if($row['operator'] == '='){
+                                    $subquery->orWhere('phone', $row['parameter']);
+                                }else{
+                                    $subquery->orWhere('phone', 'like', '%'.$row['parameter'].'%');
+                                }
+                            }
+
+                            if($row['subject'] == 'email'){
+                                if($row['operator'] == '='){
+                                    $subquery->orWhere('email', $row['parameter']);
+                                }else{
+                                    $subquery->orWhere('email', 'like', '%'.$row['parameter'].'%');
+                                }
+                            }
+
+                            if($row['subject'] == 'user_status'){
+                                $subquery->orWhere('user_franchise_type', $row['operator']);
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        $list = $list->paginate(25);
         return response()->json(MyHelper::checkGet($list));
     }
 
@@ -2310,6 +2371,31 @@ class ApiOutletController extends Controller
             'list_outlet' => $listOutlet
         ];
         return response()->json($result);
+    }
+
+    function setPasswordDefaultUserFranchise(Request $request){
+        $post = $request->json()->all();
+
+        if(isset($post['phone']) && !empty($post['phone'])){
+            if($post['password'] == $post['re_type_password']){
+                $data = [
+                    'password' => bcrypt($post['password']),
+                    'password_default_plain_text' => MyHelper::encrypt2019($post['password'])
+                ];
+
+                $update = UserFranchise::where('phone', $post['phone'])->update($data);
+
+                if($update){
+                    return response()->json(['status' => 'success']);
+                }else{
+                    return response()->json(['status' => 'fail', 'message' => 'Failed update password']);
+                }
+            }else{
+                return response()->json(['status' => 'fail', 'message' => 'Password does not match']);
+            }
+        }else{
+            return response()->json(['status' => 'fail' , 'messages' => ['Incompleted data']]);
+        }
     }
 
     public function sendNotifIncompleteOutlet(...$id_outlets)

@@ -758,6 +758,15 @@ class SettingsTableSeeder extends Seeder
                     'created_at' => date('Y-m-d H:i:s'),
                     'updated_at' => date('Y-m-d H:i:s'),
                 ),
+            84 =>
+                array(
+                    'id_setting' => 85,
+                    'key' => 'setting_expired_time_email_verify',
+                    'value' => 30,
+                    'value_text' => null,
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                )
         ));
     }
 }

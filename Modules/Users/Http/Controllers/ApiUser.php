@@ -1691,6 +1691,13 @@ class ApiUser extends Controller
         if($data){
             // $pin_x = MyHelper::decryptkhususpassword($data[0]['pin_k'], md5($data[0]['id_user'], true));
             if($request->json('email') != ""){
+                if(!filter_var($request->json('email'), FILTER_VALIDATE_EMAIL)){
+                    $result = [
+                        'status'	=> 'fail',
+                        'messages'	=> ['The email must be a valid email address.']
+                    ];
+                    return response()->json($result);
+                }
                 $checkEmail = User::where('email', '=', $request->json('email'))
                     ->get()
                     ->first();
@@ -2975,25 +2982,40 @@ class ApiUser extends Controller
                     'messages'  => ['Email does not match']
                 ]);
             }
-
             $phone = $user['phone'];
-            $encrypt = MyHelper::encrypt2019($phone.'|'.$post['email']);
-            $autocrm = app($this->autocrm)->SendAutoCRM('Email Verify', $phone,
-                ['button_verify' => '<a href="'.env('URL_EMAIL_VERIFY').'/email/verify/'.$encrypt.'" style="background-color: #3598dc; border: none; color: white;padding: 15px 32px;text-align: center;text-decoration: none;display: inline-block;margin: 4px 2px;cursor: pointer;font-family: Ubuntu-Bold">Verify Email</a>'
-                ]);
 
-            if($autocrm){
-                return response()->json([
-                    'status'    => 'success',
-                    'messages'  => ['Verification sent to your email']
-                ]);
+            //update expired time
+            $getSettingTimeExpired = Setting::where('key', 'setting_expired_time_email_verify')->first();
+            if($getSettingTimeExpired){
+                $dateTimeExpired = date("Y-m-d H:i:s", strtotime("+".$getSettingTimeExpired['value']." minutes"));
+            }else{
+                $dateTimeExpired = date("Y-m-d H:i:s", strtotime("+30 minutes"));
+            }
+            $updateDateTimeExpired = User::where('phone', $phone)->update(['email_verified_valid_time' => $dateTimeExpired]);
+
+            if($updateDateTimeExpired){
+                $encrypt = MyHelper::encrypt2019($phone.'|'.$post['email']);
+                $autocrm = app($this->autocrm)->SendAutoCRM('Email Verify', $phone,
+                    ['button_verify' => '<a href="'.env('URL_EMAIL_VERIFY').'/email/verify/'.$encrypt.'" style="background-color: #3598dc; border: none; color: white;padding: 15px 32px;text-align: center;text-decoration: none;display: inline-block;margin: 4px 2px;cursor: pointer;font-family: Ubuntu-Bold">Verify Email</a>'
+                    ]);
+
+                if($autocrm){
+                    return response()->json([
+                        'status'    => 'success',
+                        'messages'  => ['Verification sent to your email']
+                    ]);
+                }else{
+                    return response()->json([
+                        'status'    => 'fail',
+                        'messages'  => ['Failed to send']
+                    ]);
+                }
             }else{
                 return response()->json([
                     'status'    => 'fail',
-                    'messages'  => ['Failed to send']
+                    'messages'  => ['Failed update expired time']
                 ]);
             }
-
         }else{
             return response()->json([
                 'status' => 'fail',
@@ -3018,6 +3040,9 @@ class ApiUser extends Controller
                     if(!empty($user)){
                         if($user['email_verified'] == 1){
                             $data = ['status_verify' => 'already', 'message' => 'This page is expired, your email is already verified', 'settings' => $setting];
+                            return view('users::verify_email', $data);
+                        }elseif(strtotime(date('Y-m-d H:i:s')) > strtotime($user['email_verified_valid_time'])){
+                            $data = ['status_verify' => 'expired', 'message' => 'This page is expired, please re-request verify email from apps', 'settings' => $setting];
                             return view('users::verify_email', $data);
                         }else{
                             $udpate = User::where('phone', $phone)->where('email', $email)->update(['email_verified' => 1]);

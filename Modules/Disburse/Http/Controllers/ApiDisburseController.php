@@ -742,7 +742,7 @@ class ApiDisburseController extends Controller
             return response()->json(['status' => 'fail', 'message' => 'Current pin does not match']);
         }else{
             $update = UserFranchise::where('id_user_franchise', $post['id_user_franchise'])->update([
-                'password' => bcrypt($post['pin'])
+                'password' => bcrypt($post['pin']), 'password_default_plain_text' => NULL
             ]);
 
             if($update){

@@ -63,6 +63,7 @@ class User extends Authenticatable
 		'relationship',
 		'phone_verified',
 		'email_verified',
+        'email_verified_valid_time',
 		'level',
 		'points',
 		'balance',
