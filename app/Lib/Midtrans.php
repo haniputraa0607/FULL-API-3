@@ -72,6 +72,11 @@ class Midtrans {
             'secure' => true,
         ];
 
+        $dataMidtrans['gopay'] = [
+            'enable_callback' => true,
+            'enable_callback_urlcallback' => env('MIDTRANS_CALLBACK').'='.$receipt,
+        ];
+
         $token = MyHelper::post($url, Self::bearer(), $dataMidtrans);
 
         return $token;
