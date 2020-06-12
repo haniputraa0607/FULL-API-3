@@ -39,6 +39,7 @@ use Modules\IPay88\Entities\DealsPaymentIpay88;
 use App\Http\Models\UserTrxProduct;
 use Modules\Brand\Entities\Brand;
 use Modules\Product\Entities\ProductGlobalPrice;
+use Modules\Product\Entities\ProductSpecialPrice;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -2201,13 +2202,14 @@ class ApiTransaction extends Controller
             transaction_product_qty as qty,
             products.product_name,
             products.product_code,
-            transaction_products.transaction_product_note as note
+            transaction_products.transaction_product_note as note,
+            transaction_products.transaction_product_price
             '))
         ->join('products','products.id_product','=','transaction_products.id_product')
         ->join('outlets','outlets.id_outlet','=','transaction_products.id_outlet')
         ->where(['id_transaction'=>$id_transaction])
         ->with(['modifiers'=>function($query){
-                    $query->select('id_transaction_product','product_modifiers.code','transaction_product_modifiers.id_product_modifier','qty','product_modifiers.text')->join('product_modifiers','product_modifiers.id_product_modifier','=','transaction_product_modifiers.id_product_modifier');
+                    $query->select('id_transaction_product','product_modifiers.code','transaction_product_modifiers.id_product_modifier','qty','product_modifiers.text', 'transaction_product_modifier_price')->join('product_modifiers','product_modifiers.id_product_modifier','=','transaction_product_modifiers.id_product_modifier');
                 }])->get()->toArray();
         if(!$pts){
             return MyHelper::checkGet($pts);
@@ -2216,28 +2218,30 @@ class ApiTransaction extends Controller
         $total_mod_price = 0;
         foreach ($pts as &$pt) {
             if ($pt['outlet_different_price']) {
-                $pt['product_price'] = ProductPrice::select('product_price')->where([
+                $pt['product_price'] = ProductSpecialPrice::select('product_special_price')->where([
                     'id_outlet' => $pt['id_outlet'],
                     'id_product' => $pt['id_product']
-                ])->pluck('product_price')->first()?:0;
+                ])->pluck('product_special_price')->first()?:$pt['transaction_product_price'];
             } else {
-                $pt['product_price'] = ProductGlobalPrice::select('product_global_price')->where('id_product',$pt['id_product'])->pluck('product_global_price')->first()?:0;
+                $pt['product_price'] = ProductGlobalPrice::select('product_global_price')->where('id_product',$pt['id_product'])->pluck('product_global_price')->first()?:$pt['transaction_product_price'];
             }
             foreach ($pt['modifiers'] as &$modifier) {
                 if ($pt['outlet_different_price']) {
                     $price = ProductModifierPrice::select('product_modifier_price')->where([
                         'id_product_modifier'=>$modifier['id_product_modifier'],
                         'id_outlet' => $id_outlet
-                    ])->pluck('product_modifier_price')->first();
+                    ])->pluck('product_modifier_price')->first()?:$modifier['transaction_product_modifier_price'];
                 } else {
-                    $price = ProductModifierGlobalPrice::select('product_modifier_price')->where('id_product_modifier', $modifier['id_product_modifier'])->pluck('product_modifier_price')->first();
+                    $price = ProductModifierGlobalPrice::select('product_modifier_price')->where('id_product_modifier', $modifier['id_product_modifier'])->pluck('product_modifier_price')->first()?:$modifier['transaction_product_modifier_price'];
                 }
                 $total_mod_price+=$price*$modifier['qty'];
                 $modifier['product_modifier_price'] = MyHelper::requestNumber($price,$rn);
+                unset($modifier['transaction_product_modifier_price']);
             }
-            $pt['product_price_total'] = MyHelper::requestNumber($total_mod_price + $pt['product_price'],$rn);
+            $pt['product_price_total'] = MyHelper::requestNumber(($total_mod_price + $pt['product_price'])*$pt['qty'],$rn);
             $pt['product_price'] = MyHelper::requestNumber($pt['product_price'],$rn);
             $pt['note'] = $pt['note']?:'';
+            unset($pt['transaction_product_price']);
         }
         return MyHelper::checkGet($pts);
     }

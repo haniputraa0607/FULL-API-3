@@ -98,6 +98,8 @@ class ApiFavoriteController extends Controller
                 $data = $favorite->select($select)->with($with)->get()->toArray();
                 $datax = &$data;
             }
+            // filter has price only
+            $datax = array_filter($datax, function($x) { return $x['product']['price'];});
             if(count($datax)>=1){
                 $datax = MyHelper::groupIt($datax,'id_outlet',function($key,&$val) use ($nf,$data, $request){
                     $total_price = $val['product']['price'];

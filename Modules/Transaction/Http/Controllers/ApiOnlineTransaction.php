@@ -887,21 +887,14 @@ class ApiOnlineTransaction extends Controller
 
             if($outlet['outlet_different_price']){
                 $checkPriceProduct = ProductSpecialPrice::where(['id_product' => $checkProduct['id_product'], 'id_outlet' => $post['id_outlet']])->first();
-                if(isset($checkPriceProduct['product_special_price'])){
-                    $productPrice = $checkPriceProduct['product_special_price'];
-                }else{
-                    $checkPriceProduct = ProductGlobalPrice::where(['id_product' => $checkProduct['id_product']])->first();
-
-                    if(isset($checkPriceProduct['product_global_price'])){
-                        $productPrice = $checkPriceProduct['product_global_price'];
-                    }else{
-                        DB::rollback();
-                        return response()->json([
-                            'status'    => 'fail',
-                            'messages'  => ['Product Price Not Valid']
-                        ]);
-                    }
+                if(!isset($checkPriceProduct['product_special_price'])){
+                    DB::rollback();
+                    return response()->json([
+                        'status'    => 'fail',
+                        'messages'  => ['Product Price Not Valid']
+                    ]);
                 }
+                $productPrice = $checkPriceProduct['product_special_price'];
             }else{
                 $checkPriceProduct = ProductGlobalPrice::where(['id_product' => $checkProduct['id_product']])->first();
 
@@ -1906,7 +1899,6 @@ class ApiOnlineTransaction extends Controller
                     'products.id_product','products.product_name','products.product_code','products.product_description',
                 DB::raw('(CASE
                         WHEN (select outlets.outlet_different_price from outlets  where outlets.id_outlet = '.$post['id_outlet'].' ) = 1 
-                        AND (select product_special_price.product_special_price from product_special_price  where product_special_price.id_product = products.id_product AND product_special_price.id_outlet = '.$post['id_outlet'].' ) is not null
                         THEN (select product_special_price.product_special_price from product_special_price  where product_special_price.id_product = products.id_product AND product_special_price.id_outlet = '.$post['id_outlet'].' )
                         ELSE product_global_price.product_global_price
                     END) as product_price'),
@@ -1954,6 +1946,7 @@ class ApiOnlineTransaction extends Controller
                         $query->select('product_promo_categories.id_product_promo_category','product_promo_category_name as product_category_name','product_promo_category_order as product_category_order');
                     },
                 ])
+            ->having('product_price','>',0)
             ->groupBy('products.id_product')
             ->orderBy('products.position')
             ->find($item['id_product']);
