@@ -3,6 +3,7 @@
 namespace Modules\Product\Http\Controllers;
 
 use Modules\Brand\Entities\BrandProduct;
+use App\Http\Models\Outlet;
 use App\Http\Models\Product;
 use App\Http\Models\ProductCategory;
 use App\Http\Models\ProductDiscount;
@@ -357,7 +358,6 @@ class ApiCategoryController extends Controller
                 'products.id_product','products.product_name','products.product_code','products.product_description',
                 DB::raw('(CASE
                         WHEN (select outlets.outlet_different_price from outlets  where outlets.id_outlet = '.$post['id_outlet'].' ) = 1 
-                        AND (select product_special_price.product_special_price from product_special_price  where product_special_price.id_product = products.id_product AND product_special_price.id_outlet = '.$post['id_outlet'].' ) is not null
                         THEN (select product_special_price.product_special_price from product_special_price  where product_special_price.id_product = products.id_product AND product_special_price.id_outlet = '.$post['id_outlet'].' )
                         ELSE product_global_price.product_global_price
                     END) as product_price'),
@@ -399,6 +399,7 @@ class ApiCategoryController extends Controller
                     $query->select('product_promo_categories.id_product_promo_category','product_promo_category_name as product_category_name','product_promo_category_order as product_category_order');
                 },
             ])
+            ->having('product_price','>',0)
             ->groupBy('products.id_product', 'product_price', 'product_stock_status')
             ->orderByRaw('CASE WHEN products.position = 0 THEN 1 ELSE 0 END')
             ->orderBy('products.position')
@@ -499,36 +500,43 @@ class ApiCategoryController extends Controller
         if(!($post['id_outlet']??false)){
             $post['id_outlet'] = Setting::where('key','default_outlet')->pluck('value')->first();
         }
+        $is_different_price = Outlet::select('outlet_different_price')->where('id_outlet',$post['id_outlet'])->pluck('outlet_different_price')->first();
         $products = Product::select([
-                'products.id_product','products.product_name','products.product_code','products.product_description',
-                'product_prices.product_price','product_prices.product_stock_status',
+                'products.id_product','products.product_name','products.product_code','products.product_description','product_detail.product_detail_stock_status',
                 'brand_product.id_product_category','brand_product.id_brand'
             ])
             ->join('brand_product','brand_product.id_product','=','products.id_product')
             // produk tersedia di outlet
-            ->join('product_prices','product_prices.id_product','=','products.id_product')
-            ->where('product_prices.id_outlet','=',$post['id_outlet'])
+            ->join('product_detail','product_detail.id_product','=','products.id_product')
+            ->where('product_detail.id_outlet','=',$post['id_outlet'])
             // brand produk ada di outlet
             ->where('brand_outlet.id_outlet','=',$post['id_outlet'])
             ->join('brand_outlet','brand_outlet.id_brand','=','brand_product.id_brand')
             // cari produk
             ->where('products.product_name','like','%'.$post['product_name'].'%')
             ->where(function($query){
-                $query->where('product_prices.product_visibility','=','Visible')
+                $query->where('product_detail.product_detail_visibility','=','Visible')
                         ->orWhere(function($q){
-                            $q->whereNull('product_prices.product_visibility')
+                            $q->whereNull('product_detail.product_detail_visibility')
                             ->where('products.product_visibility', 'Visible');
                         });
             })
-            ->where('product_prices.product_status','=','Active')
-            ->whereNotNull('product_prices.product_price')
+            ->where('product_detail.product_detail_status','=','Active')
             ->whereNotNull('brand_product.id_product_category')
             ->with([
                 'photos'=>function($query){
                     $query->select('id_product','product_photo');
                 }
-            ])
-            ->groupBy('products.id_product')
+            ]);
+        if ($is_different_price) {
+            $products->join('product_special_price',function($join) use ($post) {
+                $join->on('product_special_price.id_product','=', 'products.id_product')
+                    ->where('product_special_price.id_outlet', '=', $post['id_outlet']);
+            })->addSelect('product_special_price.product_special_price as product_price');
+        }else{
+            $products->join('product_global_price', 'product_global_price.id_product', '=', 'products.id_product')->addSelect('product_global_price.product_global_price as product_price');
+        }
+        $products = $products->groupBy('products.id_product')
             ->orderBy('products.position')
             ->get();
         $result = [];
