@@ -402,8 +402,15 @@ class IPay88
                 break;
 
             case 'deals':
-    			$deals_user = DealsUser::with('userMid')->where('id_deals_user',$model->id_deals_user)->first();
-    			$deals = Deal::where('id_deals',$model->id_deals)->first();
+    			$amount = 0;
+            	if(is_numeric($model)){
+	            	$id_deals_user = $model;
+            	} else {
+            		$id_deals_user = $model->id_deals_user;
+            		$amount = $model->amount / 100;
+            	}
+    			$deals_user = DealsUser::with('userMid')->where('id_deals_user',$id_deals_user)->first();
+    			$deals = Deal::where('id_deals',$deals_user->id_deals)->first();
             	switch ($data['Status']) {
             		case '1':
 	                    $update = $deals_user->update(['paid_status'=>'Completed']);
