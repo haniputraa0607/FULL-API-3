@@ -77,8 +77,8 @@ class ApiDisburseSettingController extends Controller
             if($bankAccount){
                 $delete = true;
                 $dtToInsert = [];
-                $getDataBankOutlet = BankAccountOutlet::count();
                 if(isset($post['outlets']) && $post['outlets'] == 'all'){
+                    $getDataBankOutlet = BankAccountOutlet::count();
                     if($getDataBankOutlet > 0){
                         $delete = BankAccountOutlet::whereNotNull('id_outlet')->delete();
                     }
@@ -91,6 +91,7 @@ class ApiDisburseSettingController extends Controller
                         ];
                     }
                 }elseif (isset($post['outlets'])){
+                    $getDataBankOutlet = BankAccountOutlet::whereIn('id_outlet', $post['id_outlet'])->count();
                     if($getDataBankOutlet > 0) {
                         $delete = BankAccountOutlet::whereIn('id_outlet', $post['id_outlet'])->delete();
                     }
