@@ -414,6 +414,7 @@ class ApiOutletAppReport extends Controller
     	$post = $request->json()->all();
     	$post['id_outlet'] = auth()->user()->id_outlet;
 
+    	$result = [];
     	$data = [
     		'product' 	=> null,
     		'modifier'	=> null,
@@ -426,14 +427,34 @@ class ApiOutletAppReport extends Controller
     			$data['product'] = $product;
     		}
     	}
+
     	if ($request->modifier) {
     		$modifier = $this->brandModifier($post['id_outlet'], $post['date']);
     		if ($modifier) {
     			$data['modifier'] = $modifier;
     		}
     	}
+
+    	if ($data['product'] && $data['modifier']) {
+    		$result = $data['product'];
+    		foreach ($result as $key => $value) {
+
+				$mod_key = array_search($value['id_brand'], array_column($data['modifier'], 'id_brand'));
+
+				if($mod_key !== false){
+					$result[$mod_key]['modifier'] = $data['modifier'][$mod_key]['modifier'];
+				}
+			}
+    	}
+    	elseif ($data['product']) {
+    		$result = $data['product'];
+		}
+		elseif ($data['modifier']) {
+			$result = $data['modifier'];
+		}
+
 		
-		return response()->json(MyHelper::checkGet($data));
+		return response()->json(MyHelper::checkGet($result));
     }
 
     function brandItem($outlet,$date)
