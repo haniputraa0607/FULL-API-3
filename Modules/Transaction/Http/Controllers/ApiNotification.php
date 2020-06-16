@@ -162,47 +162,48 @@ class ApiNotification extends Controller {
                 // }
                 if($midtrans['transaction_status'] == 'settlement' && $midtrans['payment_type'] == 'credit_card'){}
                 else{
-
-                    $notif = $this->notification($midtrans, $newTrx);
-                    if (!$notif) {
-                        return response()->json([
-                            'status'   => 'fail',
-                            'messages' => ['Transaction failed']
-                        ]);
-                    }
-
-                    $sendNotifOutlet = app($this->trx)->outletNotif($newTrx['id_transaction']);
-
-                    if($this->url_oauth != ''){
-                        $kirim = $this->kirimOutlet($newTrx['transaction_receipt_number']);
-                        if (isset($kirim['status']) && $kirim['status'] == 1) {
-
-                            // // apply cashback to referrer
-                            // \Modules\PromoCampaign\Lib\PromoCampaignTools::applyReferrerCashback($newTrx);
-
-                            DB::commit();
-                            // langsung
-                            return response()->json(['status' => 'success']);
-                        } elseif (isset($kirim['status']) && $kirim['status'] == 'fail') {
-                            if (isset($kirim['messages'])) {
+                    if($midtrans['transaction_status'] == 'settlement'){
+                        $notif = $this->notification($midtrans, $newTrx);
+                        if (!$notif) {
+                            return response()->json([
+                                'status'   => 'fail',
+                                'messages' => ['Transaction failed']
+                            ]);
+                        }
+    
+                        $sendNotifOutlet = app($this->trx)->outletNotif($newTrx['id_transaction']);
+    
+                        if($this->url_oauth != ''){
+                            $kirim = $this->kirimOutlet($newTrx['transaction_receipt_number']);
+                            if (isset($kirim['status']) && $kirim['status'] == 1) {
+    
+                                // // apply cashback to referrer
+                                // \Modules\PromoCampaign\Lib\PromoCampaignTools::applyReferrerCashback($newTrx);
+    
+                                DB::commit();
+                                // langsung
+                                return response()->json(['status' => 'success']);
+                            } elseif (isset($kirim['status']) && $kirim['status'] == 'fail') {
+                                if (isset($kirim['messages'])) {
+                                    DB::rollback();
+                                    return response()->json([
+                                        'status'   => 'fail',
+                                        'messages' => $kirim['messages']
+                                    ]);
+                                }
+                            } else {
                                 DB::rollback();
                                 return response()->json([
                                     'status'   => 'fail',
-                                    'messages' => $kirim['messages']
+                                    'messages' => ['failed']
                                 ]);
                             }
-                        } else {
-                            DB::rollback();
-                            return response()->json([
-                                'status'   => 'fail',
-                                'messages' => ['failed']
-                            ]);
+                        }else{
+                            //  // apply cashback to referrer
+                            // \Modules\PromoCampaign\Lib\PromoCampaignTools::applyReferrerCashback($newTrx);
+    
+                            DB::commit();
                         }
-                    }else{
-                        //  // apply cashback to referrer
-                        // \Modules\PromoCampaign\Lib\PromoCampaignTools::applyReferrerCashback($newTrx);
-
-                        DB::commit();
                     }
                 }
 
@@ -245,24 +246,24 @@ class ApiNotification extends Controller {
                                         'messages'  => ['Insert Cashback Failed']
                                     ]);
                                 }
+                                $usere = User::where('id', $newTrx['id_user'])->first();
+                                $send = app($this->autocrm)->SendAutoCRM('Rejected Order Point Refund', $usere->phone,
+                                    [
+                                        "outlet_name"       => $newTrx['outlet']['outlet_name'],
+                                        "transaction_date"  => $newTrx['transaction_date'],
+                                        'id_transaction'    => $newTrx['id_transaction'],
+                                        'receipt_number'    => $newTrx['transaction_receipt_number'],
+                                        'received_point'    => (string) $checkBalance['balance_nominal']
+                                    ]
+                                );
+                                if($send != true){
+                                    DB::rollback();
+                                    return response()->json([
+                                            'status' => 'fail',
+                                            'messages' => ['Failed Send notification to customer']
+                                        ]);
+                                }
                             }
-                        }
-                        $usere = User::where('id', $newTrx['id_user'])->first();
-                        $send = app($this->autocrm)->SendAutoCRM('Rejected Order Point Refund', $usere->phone,
-                            [
-                                "outlet_name"       => $newTrx['outlet']['outlet_name'],
-                                "transaction_date"  => $newTrx['transaction_date'],
-                                'id_transaction'    => $newTrx['id_transaction'],
-                                'receipt_number'    => $newTrx['transaction_receipt_number'],
-                                'received_point'    => (string) $checkBalance['balance_nominal']
-                            ]
-                        );
-                        if($send != true){
-                            DB::rollback();
-                            return response()->json([
-                                    'status' => 'fail',
-                                    'messages' => ['Failed Send notification to customer']
-                                ]);
                         }
                     }
                 }
@@ -515,21 +516,7 @@ class ApiNotification extends Controller {
         // $detail = $this->getHtml($trx, $trx['productTransaction'], $name, $phone, $date, $outlet, $receipt);
         $detail = $this->htmlDetailTrxSuccess($trx['id_transaction']);
 
-        if ($trx['transaction_payment_status'] == 'Pending') {
-            $title = 'Pending';
-        }
-
-        if ($trx['transaction_payment_status'] == 'Paid') {
-            $title = 'Terbayar';
-        }
-
-        if ($trx['transaction_payment_status'] == 'Completed') {
-            $title = 'Sukses';
-        }
-
-        if ($trx['transaction_payment_status'] == 'Cancelled') {
-            $title = 'Gagal';
-        }
+        $title = 'Sukses';
 
         $send = app($this->autocrm)->SendAutoCRM('Transaction Success', $trx->user->phone, [
             'notif_type' => 'trx',
