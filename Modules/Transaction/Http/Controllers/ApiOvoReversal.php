@@ -77,7 +77,7 @@ class ApiOvoReversal extends Controller
             $req['batch_no'] = $trx['batch_no'];
             $req['order_id'] = $trx['order_id'];
 
-            $ovoReversal = OvoReversalDeals::updateOrCreate(['id_transaction' => $trx['id_transaction'], 'id_transaction_payment_ovo' => $trx['id_transaction_payment_ovo'],
+            $ovoReversal = OvoReversalDeals::updateOrCreate(['id_deals_user' => $trx['id_deals_user'], 'id_deals_payment_ovo' => $trx['id_deals_payment_ovo'],
                 'date_push_to_pay' => $trx['push_to_pay_at'],
                 'request' => json_encode($req)
             ]);
@@ -85,6 +85,38 @@ class ApiOvoReversal extends Controller
             if($ovoReversal){
                 //update status reversal
                 $updateStatus = DealsPaymentOvo::where('id_deals_payment_ovo', $trx['id_deals_payment_ovo'])->update(['reversal' => 'yes']);
+                if(!$updateStatus){
+                    DB::rollBack();
+                }else{
+                    DB::commit();
+                }
+            }
+        }
+        return 'success';
+
+    }
+
+    //create transaction payment ovo
+    public function insertReversalSubscription(Request $request){
+        //cari transaction yg harus di reversal
+        $TrxReversal = SubscriptionPaymentOvo::join('subscription_users', 'subscription_users.id_subscription_user', 'subscription_payment_ovos.id_subscription_user')
+                        ->where('push_to_pay_at', '<', date('Y-m-d H:i:s', strtotime('- 70second')))->where('reversal', 'not yet')->get();
+        foreach($TrxReversal as $trx){
+            DB::beginTransaction();
+            //insert to ovo_reversal
+            $req['amount'] = (int)$trx['amount'];
+            $req['reference_number'] = $trx['reference_number'];
+            $req['batch_no'] = $trx['batch_no'];
+            $req['order_id'] = $trx['order_id'];
+
+            $ovoReversal = OvoReversalSubscription::updateOrCreate(['id_subscription_user' => $trx['id_subscription_user'], 'id_subscription_payment_ovo' => $trx['id_subscription_payment_ovo'],
+                'date_push_to_pay' => $trx['push_to_pay_at'],
+                'request' => json_encode($req)
+            ]);
+
+            if($ovoReversal){
+                //update status reversal
+                $updateStatus = SubscriptionPaymentOvo::where('id_subscription_payment_ovo', $trx['id_subscription_payment_ovo'])->update(['reversal' => 'yes']);
                 if(!$updateStatus){
                     DB::rollBack();
                 }else{
@@ -146,7 +178,7 @@ class ApiOvoReversal extends Controller
     //process reversal
     public function processReversalDeals(Request $request){
 
-        $list = OvoReversalDeals::join('deals_payment_ovos', 'ovo_reversal_deals.id_deals_users_payment_ovo', 'deals_payment_ovos.id_deals_payment_ovo')->orderBy('date_push_to_pay')->limit(5)->get();
+        $list = OvoReversalDeals::join('deals_payment_ovos', 'ovo_reversal_deals.id_deals_payment_ovo', 'deals_payment_ovos.id_deals_payment_ovo')->orderBy('date_push_to_pay')->limit(5)->get();
 
         foreach($list as $data){
 
@@ -182,6 +214,53 @@ class ApiOvoReversal extends Controller
                 if($update){
                     //delete from ovo_reversal
                     $delete = OvoReversalDeals::where('id_ovo_reversal_deals', $data['id_ovo_reversal_deals'])->delete();
+                }
+            }
+        }
+
+        return 'success';
+
+    }
+
+    //process reversal
+    public function processReversalSubscription(Request $request){
+
+        $list = OvoReversalSubscription::join('subscription_payment_ovos', 'ovo_reversal_subscriptions.id_subscription_payment_ovo', 'subscription_payment_ovos.id_subscription_payment_ovo')->orderBy('date_push_to_pay')->limit(5)->get();
+
+        foreach($list as $data){
+
+            if($data['is_production'] == '1'){
+                $type = 'production';
+            }else{
+                $type = 'staging';
+            }
+
+            $dataReq = json_decode($data['request'], true);
+            $dataReq['id_subscription_payment_ovo'] = $data['id_subscription_payment_ovo'];
+
+            $reversal = Ovo::Reversal($dataReq, $dataReq, $dataReq['amount'], $type, 'deals');
+
+            if(isset($reversal['response'])){
+                $response = $reversal['response'];
+                $dataUpdate = [];
+
+                $dataUpdate['reversal'] = 'yes';
+
+                if(isset($response['traceNumber'])){
+                    $dataUpdate['trace_number'] = $response['traceNumber'];
+                }
+                if(isset($response['type']) && $response['type'] == '0410'){
+                    $dataUpdate['payment_type'] = 'REVERSAL';
+                }
+                if(isset($response['responseCode'])){
+                    $dataUpdate['response_code'] = $response['responseCode'];
+                    $dataUpdate = Ovo::detailResponse($dataUpdate);
+                }
+
+                $update = SubscriptionPaymentOvo::where('id_subscription_user', $data['id_subscription_user'])->update($dataUpdate);
+                if($update){
+                    //delete from ovo_reversal
+                    $delete = OvoReversalSubscription::where('id_ovo_reversal_subscription', $data['id_ovo_reversal_subscription'])->delete();
                 }
             }
         }
