@@ -1164,27 +1164,26 @@ class ApiOutletController extends Controller
             if($outlet['today']['is_closed'] == '1'){
                 $outlet['today']['status'] = 'closed';
             }else{
-                if($outlet['today']['open'] != "00:00" && $outlet['today']['close'] != "00:00"){
-                    if($outlet['today']['open'] && date('H:i:01') < date('H:i', strtotime($outlet['today']['open']))){
-                        $outlet['today']['status'] = 'closed';
-                    }elseif($outlet['today']['close'] && date('H:i') > date('H:i', strtotime('-'.$processing.' minutes', strtotime($outlet['today']['close'])))){
-                        $outlet['today']['status'] = 'closed';
-                    }else{
-                        $holiday = Holiday::join('outlet_holidays', 'holidays.id_holiday', 'outlet_holidays.id_holiday')->join('date_holidays', 'holidays.id_holiday', 'date_holidays.id_holiday')
-                        ->where('id_outlet', $outlet['id_outlet'])->whereDay('date_holidays.date', date('d'))->whereMonth('date_holidays.date', date('m'))->get();
-                        if(count($holiday) > 0){
-                            foreach($holiday as $i => $holi){
-                                if($holi['yearly'] == '0'){
-                                    if($holi['date'] == date('Y-m-d')){
-                                        $outlet['today']['status'] = 'closed';
-                                    }
-                                }else{
+                if($outlet['today']['open'] && date('H:i:01') < date('H:i', strtotime($outlet['today']['open']))){
+                    $outlet['today']['status'] = 'closed';
+                }elseif($outlet['today']['close'] && date('H:i') > date('H:i', strtotime('-'.$processing.' minutes', strtotime($outlet['today']['close'])))){
+                    $outlet['today']['status'] = 'closed';
+                }else{
+                    $holiday = Holiday::join('outlet_holidays', 'holidays.id_holiday', 'outlet_holidays.id_holiday')->join('date_holidays', 'holidays.id_holiday', 'date_holidays.id_holiday')
+                    ->where('id_outlet', $outlet['id_outlet'])->whereDay('date_holidays.date', date('d'))->whereMonth('date_holidays.date', date('m'))->get();
+                    if(count($holiday) > 0){
+                        foreach($holiday as $i => $holi){
+                            if($holi['yearly'] == '0'){
+                                if($holi['date'] == date('Y-m-d')){
                                     $outlet['today']['status'] = 'closed';
                                 }
+                            }else{
+                                $outlet['today']['status'] = 'closed';
                             }
-
                         }
+
                     }
+                }
                 }
             }
         }

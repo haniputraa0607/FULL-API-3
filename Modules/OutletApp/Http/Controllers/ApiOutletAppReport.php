@@ -113,23 +113,7 @@ class ApiOutletAppReport extends Controller
 
     		$daily_trx = json_decode(json_encode($daily_trx), true);
 
-    		$getTransactions = Transaction::whereDate('transactions.created_at', $post['date'])
-    			->where('id_outlet','=',$post['id_outlet'])
-	            ->whereNotNull('transactions.id_user')
-	            ->where('transactions.transaction_payment_status', 'Completed')
-	            ->whereNull('transaction_pickups.reject_at')
-	            ->groupBy('transactions.id_transaction', 'transactions.id_outlet')
-	            ->select(
-	            	'transactions.id_transaction',
-	            	'transactions.id_outlet',
-	            	'transactions.id_user',
-	            	'transactions.transaction_date',
-	            	'transactions.trasaction_payment_type'
-	            )
-	            ->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
-	            ->get()->toArray();
-
-				$date = $post['date'];
+			$date = $post['date'];
 		
 			//midtrans
 				$dataPaymentMidtrans = TransactionPaymentMidtran::join('transactions', 'transactions.id_transaction', 'transaction_payment_midtrans.id_transaction')
