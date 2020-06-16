@@ -1184,7 +1184,6 @@ class ApiOutletController extends Controller
 
                     }
                 }
-                }
             }
         }
 
