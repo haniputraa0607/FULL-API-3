@@ -986,6 +986,20 @@ class ApiHistoryController extends Controller
                     $dataList['amount'] = '- ' . ltrim(number_format($value['balance'], 0, ',', '.'), '-');
 
                 }
+            } elseif($value['source'] == 'Subscription Reversal') {
+                $dataList['type']   = 'profile';
+                $dataList['id']      = $value['id_log_balance'];
+                $dataList['date']    = date('d M Y H:i', strtotime($value['created_at']));
+                $dataList['outlet'] = 'Reversal';
+                $dataList['amount'] = number_format($value['balance'], 0, ',', '.');
+
+            } elseif($value['source'] == 'Deals Reversal') {
+                $dataList['type']   = 'profile';
+                $dataList['id']      = $value['id_log_balance'];
+                $dataList['date']    = date('d M Y H:i', strtotime($value['created_at']));
+                $dataList['outlet'] = 'Reversal';
+                $dataList['amount'] = number_format($value['balance'], 0, ',', '.');
+
             } elseif ($value['source'] == 'Reversal Duplicate') {
                 continue;
             } elseif ($value['source'] == 'Point Injection') {
