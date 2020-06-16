@@ -585,6 +585,7 @@ class ApiDealsClaimPay extends Controller
         return [
             'redirect' => 'true',
             'payment' => 'shopeepay',
+            'id_deals_user' => $voucher->id_deals_user,
             'redirect_url_app'  => $paymentShopeepay->redirect_url_app,
             'redirect_url_http' => $paymentShopeepay->redirect_url_http
         ];
