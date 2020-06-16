@@ -91,7 +91,7 @@ class ApiOutletAppReport extends Controller
                     (select SUM(transaction_shipment)) as trx_shipment,
                     (select SUM(transaction_service)) as trx_service,
                     (select SUM(transaction_discount)) as trx_discount,
-                    (select SUM(transaction_grandtotal)) as trx_grand,
+                    (select SUM(DISTINCT transaction_grandtotal)) as trx_grand,
                     (select SUM(transaction_point_earned)) as trx_point_earned,
                     (select SUM(transaction_cashback_earned)) as trx_cashback_earned,
                     (select TIME(MIN(transaction_date))) as first_trx_time,
