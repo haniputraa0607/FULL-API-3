@@ -469,7 +469,7 @@ class IPay88
 			                DB::rollBack();
 			                continue;
 			            }
-			            $del = app($this->deals_claim)->checkUserClaimed($user, $deals_user->id_deals, true);
+			            // $del = app($this->deals_claim)->checkUserClaimed($user, $deals_user->id_deals, true);
 	                    if(!$update){
 		                    DB::rollBack();
 	                        return [
@@ -538,7 +538,20 @@ class IPay88
 		                        ]
 		                    );
 			            }
-	                    $update = $subscription_user->update(['paid_status'=>'Cancelled']);
+	                    $update = $subscription_user->update(['paid_status'=>'Cancelled', 'void_date' => date('Y-m-d H:i:s')]);
+			            // revert back deals data
+			            if ($subscription) {
+			                $up1 = $subscription->update(['subscription_bought' => $subscription->subscription_bought - 1]);
+			                if (!$up1) {
+			                    DB::rollBack();
+			                    continue;
+			                }
+			            }
+			            // $up2 = SubscriptionUserVoucher::where('id_subscription_user_voucher', $singleTrx->id_subscription_user_voucher)->delete();
+			            // if (!$up2) {
+			            //     DB::rollBack();
+			            //     continue;
+			            // }
 	                    if(!$update){
 		                    DB::rollBack();
 	                        return [

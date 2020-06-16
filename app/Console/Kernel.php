@@ -64,7 +64,13 @@ class Kernel extends ConsoleKernel
          * cancel all pending deals that have been more than 15 minutes
          * run every hour
          */
-        $schedule->call('Modules\Deals\Http\Controllers\ApiCronDealsController@cancel')->cron('*/1 * * * *');
+        $schedule->call('Modules\Deals\Http\Controllers\ApiCronDealsController@cancel')->cron('*/15 * * * *');
+
+        /**
+         * cancel all pending subscription that have been more than 15 minutes
+         * run every hour
+         */
+        $schedule->call('Modules\Subscription\Http\Controllers\ApiCronSubscriptionController@cancel')->cron('*/15 * * * *');
 
         /**
          * update all pickup transaction that have been more than 1 x 24 hours
