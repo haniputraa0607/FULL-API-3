@@ -12,6 +12,7 @@ use App\Http\Models\TransactionMultiplePayment;
 use App\Http\Models\TransactionPaymentBalance;
 use App\Http\Models\DealsUser;
 use App\Http\Models\Deal;
+use App\Http\Models\DealsVoucher;
 use Modules\Subscription\Entities\SubscriptionUser;
 use Modules\Subscription\Entities\Subscription;
 use App\Http\Models\User;
@@ -20,7 +21,6 @@ use Modules\IPay88\Entities\LogIpay88;
 use Modules\IPay88\Entities\TransactionPaymentIpay88;
 use Modules\IPay88\Entities\DealsPaymentIpay88;
 use Modules\IPay88\Entities\SubscriptionPaymentIpay88;
-
 use App\Lib\MyHelper;
 /**
  * IPay88 Payment Integration Class
@@ -461,13 +461,19 @@ class IPay88
 			                $up1 = $deals->update(['deals_total_claimed' => $deals->deals_total_claimed - 1]);
 			                if (!$up1) {
 			                    DB::rollBack();
-			                    continue;
+		                        return [
+		                            'status'=>'fail',
+		                            'messages' => ['Failed update total claimed']
+		                        ];
 			                }
 			            }
 			            $up2 = DealsVoucher::where('id_deals_voucher', $deals_user->id_deals_voucher)->update(['deals_voucher_status' => 'Available']);
 			            if (!$up2) {
 			                DB::rollBack();
-			                continue;
+	                        return [
+	                            'status'=>'fail',
+	                            'messages' => ['Failed update voucher status']
+	                        ];
 			            }
 			            // $del = app($this->deals_claim)->checkUserClaimed($user, $deals_user->id_deals, true);
 	                    if(!$update){
@@ -544,7 +550,10 @@ class IPay88
 			                $up1 = $subscription->update(['subscription_bought' => $subscription->subscription_bought - 1]);
 			                if (!$up1) {
 			                    DB::rollBack();
-			                    continue;
+		                        return [
+		                            'status'=>'fail',
+		                            'messages' => ['Failed update subscription bought']
+		                        ];
 			                }
 			            }
 			            // $up2 = SubscriptionUserVoucher::where('id_subscription_user_voucher', $singleTrx->id_subscription_user_voucher)->delete();

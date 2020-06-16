@@ -2,8 +2,15 @@
 
 namespace Modules\Subscription\Http\Controllers;
 
+use App\Http\Models\LogBalance;
+use App\Http\Models\User;
+use App\Lib\Midtrans;
+use DB;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
+use Modules\IPay88\Entities\SubscriptionPaymentIpay88;
+use Modules\Subscription\Entities\Subscription;
+use Modules\Subscription\Entities\SubscriptionPaymentMidtran;
 use Modules\Subscription\Entities\SubscriptionUser;
 
 class ApiCronSubscriptionController extends Controller
@@ -59,7 +66,7 @@ class ApiCronSubscriptionController extends Controller
             DB::begintransaction();
 
             $singleTrx->paid_status = 'Cancelled';
-            $singleTrx->void_date = date('Y-m-d H:i:s');
+            $singleTrx->void_date   = date('Y-m-d H:i:s');
             $singleTrx->save();
 
             if (!$singleTrx) {
