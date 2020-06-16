@@ -117,14 +117,6 @@ class Kernel extends ConsoleKernel
         }elseif (env('TYPE_CRON_DISBURSE') == 'daily'){
             $schedule->call('Modules\Disburse\Http\Controllers\ApiIrisController@disburse')->dailyAt(env('TIME_CRON_DISBURSE'));
         }
-        /**
-         * Void failed transaction shopeepay
-         */
-        $schedule->call('Modules\ShopeePay\Http\Controllers\ShopeePayController@cronCancel')->cron('*/5 * * * *');
-        /**
-         * Void failed transaction shopeepay
-         */
-        $schedule->call('Modules\ShopeePay\Http\Controllers\ShopeePayController@cronCancelDeals')->cron('*/5 * * * *');
 
     }
 
