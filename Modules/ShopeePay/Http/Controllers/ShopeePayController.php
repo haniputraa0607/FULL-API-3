@@ -3,8 +3,9 @@
 namespace Modules\ShopeePay\Http\Controllers;
 
 use App\Http\Models\Configs;
-use App\Http\Models\Deals;
+use App\Http\Models\Deal;
 use App\Http\Models\DealsUser;
+use App\Http\Models\DealsVoucher;
 use App\Http\Models\LogBalance;
 use App\Http\Models\Outlet;
 use App\Http\Models\Transaction;
@@ -34,6 +35,7 @@ class ShopeePayController extends Controller
         $this->balance             = "Modules\Balance\Http\Controllers\BalanceController";
         $this->voucher             = "Modules\Deals\Http\Controllers\ApiDealsVoucher";
         $this->promo_campaign      = "Modules\PromoCampaign\Http\Controllers\ApiPromoCampaign";
+        $this->deals_claim         = "Modules\Deals\Http\Controllers\ApiDealsClaim";
     }
 
     public function __get($key)
@@ -357,6 +359,22 @@ class ShopeePayController extends Controller
                 DB::rollBack();
                 continue;
             }
+
+            // revert back deals data
+            $deals = Deal::where('id_deals',$singleTrx->id_deals)->first();
+            if ($deals) {
+                $up1 = $deals->update(['deals_total_claimed' => $deals->deals_total_claimed - 1]);
+                if (!$up1) {
+                    DB::rollBack();
+                    continue;
+                }
+            }
+            $up2 = DealsVoucher::where('id_deals_voucher', $singleTrx->id_deals_voucher)->update(['deals_voucher_status' => 'Available']);
+            if (!$up2) {
+                DB::rollBack();
+                continue;
+            }
+            $del = app($this->deals_claim)->checkUserClaimed($user, $singleTrx->id_deals, true);
 
             //reversal balance
             $logBalance = LogBalance::where('id_reference', $singleTrx->id_deals_user)->where('source', 'Deals Balance')->where('balance', '<', 0)->get();

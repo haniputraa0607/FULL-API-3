@@ -5,8 +5,10 @@ namespace Modules\Deals\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
+use App\Http\Models\Deal;
 use App\Http\Models\DealsUser;
 use App\Http\Models\DealsPaymentMidtran;
+use App\Http\Models\DealsVoucher;
 use App\Http\Models\User;
 use App\Http\Models\LogBalance;
 use Modules\IPay88\Entities\DealsPaymentIpay88;
@@ -17,6 +19,7 @@ class ApiCronDealsController extends Controller
 {
     public function __construct()
     {
+        $this->deals_claim               = "Modules\Deals\Http\Controllers\ApiDealsClaim";
         $this->balance             = "Modules\Balance\Http\Controllers\BalanceController";
     }
 
@@ -29,7 +32,7 @@ class ApiCronDealsController extends Controller
         $now       = date('Y-m-d H:i:s');
         $expired   = date('Y-m-d H:i:s',strtotime('- 15minutes'));
 
-        $getTrx = DealsUser::where('paid_status', 'Pending')->where('claimed_at', '<=', $expired)->get();
+        $getTrx = DealsUser::join('deals_vouchers', 'deals_vouchers.id_deals_voucher', '=', 'deals_users.id_deals_voucher')->where('paid_status', 'Pending')->where('claimed_at', '<=', $expired)->get();
 
         if (empty($getTrx)) {
             return response()->json(['empty']);
@@ -71,7 +74,21 @@ class ApiCronDealsController extends Controller
                 DB::rollBack();
                 continue;
             }
-
+            // revert back deals data
+            $deals = Deal::where('id_deals',$singleTrx->id_deals)->first();
+            if ($deals) {
+                $up1 = $deals->update(['deals_total_claimed' => $deals->deals_total_claimed - 1]);
+                if (!$up1) {
+                    DB::rollBack();
+                    continue;
+                }
+            }
+            $up2 = DealsVoucher::where('id_deals_voucher', $singleTrx->id_deals_voucher)->update(['deals_voucher_status' => 'Available']);
+            if (!$up2) {
+                DB::rollBack();
+                continue;
+            }
+            $del = app($this->deals_claim)->checkUserClaimed($user, $singleTrx->id_deals, true);
             //reversal balance
             $logBalance = LogBalance::where('id_reference', $singleTrx->id_deals_user)->where('source', 'Deals Balance')->where('balance', '<', 0)->get();
             foreach($logBalance as $logB){
