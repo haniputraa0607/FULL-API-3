@@ -91,7 +91,7 @@ class ApiOutletAppReport extends Controller
                     (select SUM(transaction_shipment)) as trx_shipment,
                     (select SUM(transaction_service)) as trx_service,
                     (select SUM(transaction_discount)) as trx_discount,
-                    (select SUM(DISTINCT transaction_grandtotal)) as trx_grand,
+                    (select SUM(transaction_grandtotal)) as trx_grand,
                     (select SUM(transaction_point_earned)) as trx_point_earned,
                     (select SUM(transaction_cashback_earned)) as trx_cashback_earned,
                     (select TIME(MIN(transaction_date))) as first_trx_time,
@@ -113,23 +113,7 @@ class ApiOutletAppReport extends Controller
 
     		$daily_trx = json_decode(json_encode($daily_trx), true);
 
-    		$getTransactions = Transaction::whereDate('transactions.created_at', $post['date'])
-    			->where('id_outlet','=',$post['id_outlet'])
-	            ->whereNotNull('transactions.id_user')
-	            ->where('transactions.transaction_payment_status', 'Completed')
-	            ->whereNull('transaction_pickups.reject_at')
-	            ->groupBy('transactions.id_transaction', 'transactions.id_outlet')
-	            ->select(
-	            	'transactions.id_transaction',
-	            	'transactions.id_outlet',
-	            	'transactions.id_user',
-	            	'transactions.transaction_date',
-	            	'transactions.trasaction_payment_type'
-	            )
-	            ->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
-	            ->get()->toArray();
-
-				$date = $post['date'];
+			$date = $post['date'];
 		
 			//midtrans
 				$dataPaymentMidtrans = TransactionPaymentMidtran::join('transactions', 'transactions.id_transaction', 'transaction_payment_midtrans.id_transaction')
