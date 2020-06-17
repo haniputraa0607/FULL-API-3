@@ -240,6 +240,7 @@ class ApiSubscriptionClaim extends Controller
         $subs_user = SubscriptionUser::join('subscription_user_vouchers', 'subscription_user_vouchers.id_subscription_user', '=', 'subscription_users.id_subscription_user')
         ->where('id_user', '=', $id_user)
         ->where('subscription_users.id_subscription', '=', $subs->id_subscription)
+        ->where('paid_status', '<>', 'Cancelled')
         ->orderBy('subscription_expired_at', 'DESC')
         ->groupBy('subscription_user_vouchers.id_subscription_user')
         ->get();

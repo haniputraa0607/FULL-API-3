@@ -502,8 +502,8 @@ class ApiCategoryController extends Controller
         }
         $is_different_price = Outlet::select('outlet_different_price')->where('id_outlet',$post['id_outlet'])->pluck('outlet_different_price')->first();
         $products = Product::select([
-                'products.id_product','products.product_name','products.product_code','products.product_description','product_detail.product_detail_stock_status',
-                'brand_product.id_product_category','brand_product.id_brand'
+                'products.id_product','products.product_name','products.product_code','products.product_description','product_detail.product_detail_stock_status as product_stock_status',
+                'brand_product.id_product_category','brand_product.id_brand','product_detail.id_outlet',
             ])
             ->join('brand_product','brand_product.id_product','=','products.id_product')
             // produk tersedia di outlet

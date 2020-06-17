@@ -814,8 +814,9 @@ class ApiPromoCampaign extends Controller
                         unset($post['promo_tag']);
                     }
 
-                    $promoCampaign = PromoCampaign::where('id_promo_campaign', '=', $post['id_promo_campaign'])->update($post);
-
+                    $promoCampaign = PromoCampaign::where('id_promo_campaign', '=', $post['id_promo_campaign'])->first();
+                    $promoCampaignUpdate = $promoCampaign->update($post);
+                    
                     if ($post['code_type'] != 'Single') 
                     {
 	                    $generateCode = $this->generateCode('update', $post['id_promo_campaign'], $post['code_type'], null, $post['prefix_code'], $post['number_last_code'], $post['total_coupon']);
@@ -829,13 +830,24 @@ class ApiPromoCampaign extends Controller
 	                    }
                     }
 
-                    if ($promoCampaign == 1) {
+                    if ($promoCampaignUpdate == 1) {
+                        $promoCampaign = $promoCampaign->toArray();
                         $result = [
                             'status'  => 'success',
                             'result'  => 'Update Promo Campaign',
                             'promo-campaign'  => $post
                         ];
-                        $send = app($this->autocrm)->SendAutoCRM('Update Promo Campaign', $user['phone'], $post,null,true);
+                        $send = app($this->autocrm)->SendAutoCRM('Update Promo Campaign', $user['phone'], [
+                            'campaign_name' => $promoCampaign['campaign_name']?:'',
+                            'promo_title' => $promoCampaign['promo_title']?:'',
+                            'code_type' => $promoCampaign['code_type']?:'',
+                            'prefix_code' => $promoCampaign['prefix_code']?:'',
+                            'number_last_code' => $promoCampaign['number_last_code']?:'',
+                            'total_coupon' => number_format($promoCampaign['total_coupon'],0,',','.')?:'',
+                            'created_at' => date('d F Y H:i',strtotime($promoCampaign['created_at']))?:'',
+                            'updated_at' => date('d F Y H:i',strtotime($promoCampaign['updated_at']))?:'',
+                            'detail' => view('promocampaign::emails.detail',['detail'=>$promoCampaign])->render()
+                        ] + $promoCampaign,null,true);
                     } else {
                         DB::rollBack();
                         $result = ['status'  => 'fail'];
@@ -904,7 +916,18 @@ class ApiPromoCampaign extends Controller
                     'result'  => 'Creates Promo Campaign & Promo Code Success',
                     'promo-campaign'  => $post
                 ];
-                $send = app($this->autocrm)->SendAutoCRM('Create Promo Campaign', $user['phone'], $post,null,true);
+                $promoCampaign = $promoCampaign->toArray();
+                $send = app($this->autocrm)->SendAutoCRM('Create Promo Campaign', $user['phone'], [
+                    'campaign_name' => $promoCampaign['campaign_name']?:'',
+                    'promo_title' => $promoCampaign['promo_title']?:'',
+                    'code_type' => $promoCampaign['code_type']?:'',
+                    'prefix_code' => $promoCampaign['prefix_code']?:'',
+                    'number_last_code' => $promoCampaign['number_last_code']?:'',
+                    'total_coupon' => number_format($promoCampaign['total_coupon'],0,',','.')?:'',
+                    'created_at' => date('d F Y H:i',strtotime($promoCampaign['created_at']))?:'',
+                    'updated_at' => date('d F Y H:i',strtotime($promoCampaign['updated_at']))?:'',
+                    'detail' => view('promocampaign::emails.detail',['detail'=>$promoCampaign])->render()
+                ] + $promoCampaign,null,true);
             } else {
                 DB::rollBack();
                 $result = [
