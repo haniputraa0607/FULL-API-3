@@ -402,6 +402,14 @@ class ApiNews extends Controller
                 if($save){
                     $data['news_image_dalam'] = $save['news_image_dalam'];
                     $send = app($this->autocrm)->SendAutoCRM('Update News', $request->user()->phone, [
+                        'id_news' => $request->json('id_news'),
+                        'news_content' => $save['news_content_long']??'',
+                        'news_image' => ($save['news_image_dalam']??'')?'<img src="'.env('S3_URL_API').$save['news_image_dalam'].'" style="max-width: 100%"/>':'',
+                        'post_date' => ($save['news_post_date']??'')?date('d F Y H:i',strtotime($save['news_post_date'])):'-',
+                        'publish_date' => ($save['news_publish_date']??'')?date('d F Y H:i',strtotime($save['news_publish_date'])):'-',
+                        'expired_date' => ($save['news_expired_date']??'')?date('d F Y H:i',strtotime($save['news_expired_date'])):'-',
+                        'detail' => view('news::emails.detail',['news'=>[$data]])->render()
+                    ] + $data,null,true);
 
                 }
                 return response()->json(MyHelper::checkUpdate($save));
