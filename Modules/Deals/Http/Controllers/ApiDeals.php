@@ -311,7 +311,13 @@ class ApiDeals extends Controller
                     $dt = 'Welcome Voucher';
                     break;
             }
-            $send = app($this->autocrm)->SendAutoCRM('Create '.$dt, $request->user()->phone, $request->json()->all(),null,true);
+            $deals = $save->toArray();
+            $send = app($this->autocrm)->SendAutoCRM('Create '.$dt, $request->user()->phone, [
+                'voucher_type' => $deals['deals_voucher_type']?:'',
+                'promo_id_type' => $deals['deals_promo_id_type']?:'',
+                'promo_id' => $deals['deals_promo_id']?:'',
+                'detail' => view('deals::emails.detail',['detail'=>$deals])->render()
+            ]+$deals,null,true);
         } else {
             DB::rollback();
         }
@@ -1041,7 +1047,13 @@ class ApiDeals extends Controller
                     $dt = 'Welcome Voucher';
                     break;
             }
-            $send = app($this->autocrm)->SendAutoCRM('Update '.$dt, $request->user()->phone, $request->json()->all(),null,true);
+            $deals = Deal::where('id_deals',$request->json('id_deals'))->first()->toArray();
+            $send = app($this->autocrm)->SendAutoCRM('Update '.$dt, $request->user()->phone, [
+                'voucher_type' => $deals['deals_voucher_type']?:'',
+                'promo_id_type' => $deals['deals_promo_id_type']?:'',
+                'promo_id' => $deals['deals_promo_id']?:'',
+                'detail' => view('deals::emails.detail',['detail'=>$deals])->render()
+            ]+$deals,null,true);
 	        return response()->json(MyHelper::checkUpdate($save));
         } else {
             DB::rollback();
