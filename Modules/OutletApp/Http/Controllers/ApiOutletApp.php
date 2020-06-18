@@ -109,11 +109,38 @@ class ApiOutletApp extends Controller
             ->where('transaction_payment_status', 'Completed')
             ->where('trasaction_type', 'Pickup Order')
             ->whereNull('void_date')
-            ->groupBy('transaction_products.id_transaction')
-            ->orderBy('pickup_at', 'ASC')
-            ->orderBy('transaction_date', 'ASC')
-            ->orderBy('transactions.id_transaction', 'ASC');
+            ->groupBy('transaction_products.id_transaction');
+        switch ($post['sort']??'') {
+            case 'oldest':
+                $list->orderBy('transaction_date','ASC')->orderBy('transactions.id_transaction','ASC');
+                break;
 
+            case 'newest':
+                $list->orderBy('transaction_date','DESC')->orderBy('transactions.id_transaction','DESC');
+                break;
+            
+            case 'shortest_pickup_time':
+                $list->orderBy('pickup_at','ASC')->orderBy('transactions.id_transaction','ASC');
+                break;
+
+            case 'longest_pickup_time':
+                $list->orderBy('pickup_at','DESC')->orderBy('transactions.id_transaction','DESC');
+                break;
+            
+            case 'shortest_delivery_time':
+                $list->orderBy('pickup_at','ASC')->orderBy('transactions.id_transaction','ASC');
+                break;
+
+            case 'longest_delivery_time':
+                $list->orderBy('pickup_at','DESC')->orderBy('transactions.id_transaction','DESC');
+                break;
+            
+            default:
+                $list->orderBy('pickup_at', 'ASC')
+                ->orderBy('transaction_date', 'ASC')
+                ->orderBy('transactions.id_transaction', 'ASC');
+                break;
+        }
         //untuk search
         if (isset($post['search_order_id'])) {
             $list = $list->where('order_id', 'LIKE', '%' . $post['search_order_id'] . '%');
@@ -209,6 +236,14 @@ class ApiOutletApp extends Controller
 
         $result['completed']['count'] = count($listCompleted);
         $result['completed']['data']  = $listCompleted;
+
+        $result['unpaid']['count'] = Transaction::join('transaction_pickups','transaction_pickups.id_transaction','=','transactions.id_transaction')
+            ->where('transaction_payment_status', 'Pending')
+            ->whereNull('taken_at')
+            ->whereNull('taken_by_system_at')
+            ->whereNull('reject_at')
+            ->whereDate('transaction_date',date('Y-m-d'))
+            ->count();
 
         if (isset($post['status'])) {
             if ($post['status'] == 'Pending') {
@@ -1605,6 +1640,37 @@ class ApiOutletApp extends Controller
 
         if ($keyword) {
             $data->where('order_id', 'like', "%$keyword%");
+        }
+        switch ($request->sort) {
+            case 'oldest':
+                $data->orderBy('transaction_date','ASC')->orderBy('transactions.id_transaction','ASC');
+                break;
+
+            case 'newest':
+                $data->orderBy('transaction_date','DESC')->orderBy('transactions.id_transaction','DESC');
+                break;
+            
+            case 'shortest_pickup_time':
+                $data->orderBy('pickup_at','ASC')->orderBy('transactions.id_transaction','ASC');
+                break;
+
+            case 'longest_pickup_time':
+                $data->orderBy('pickup_at','DESC')->orderBy('transactions.id_transaction','DESC');
+                break;
+            
+            case 'shortest_delivery_time':
+                $data->orderBy('pickup_at','ASC')->orderBy('transactions.id_transaction','ASC');
+                break;
+
+            case 'longest_delivery_time':
+                $data->orderBy('pickup_at','DESC')->orderBy('transactions.id_transaction','DESC');
+                break;
+            
+            default:
+                $data->orderBy('pickup_at', 'ASC')
+                ->orderBy('transaction_date', 'ASC')
+                ->orderBy('transactions.id_transaction', 'ASC');
+                break;
         }
 
         if ($request->page) {
