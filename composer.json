@@ -6,6 +6,7 @@
     "type": "project",
     "require": {
         "php": "^7.1.3",
+        "arcanedev/log-viewer": "~4.7.0",
         "bogardo/mailgun": "^5.1",
         "brozot/laravel-fcm": "^1.2",
         "doctrine/dbal": "^2.9",

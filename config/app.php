@@ -186,6 +186,7 @@ return [
         Fruitcake\Cors\CorsServiceProvider::class,
         Jacobcyl\AliOSS\AliOssServiceProvider::class,
         Superbalist\LaravelGoogleCloudStorage\GoogleCloudStorageServiceProvider::class,
+        Arcanedev\LogViewer\LogViewerServiceProvider::class,
     ],
 
     /*
