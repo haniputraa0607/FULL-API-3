@@ -955,10 +955,10 @@ class MyHelper{
 		$upload = $path.$pictName;
 
 		if($ext=='.gif'){
-			if(env('STORAGE') &&  env('STORAGE') == 's3'){
+			if(env('STORAGE')){
 				$resource = $decoded;
 
-				$save = Storage::disk('s3')->put($upload, $resource, 'public');
+				$save = Storage::disk(env('STORAGE'))->put($upload, $resource, 'public');
 				if ($save) {
 						$result = [
 							'status' => 'success',
@@ -1053,10 +1053,10 @@ class MyHelper{
 
 			$img->crop($width, $height);
 
-			if(env('STORAGE') &&  env('STORAGE') == 's3'){
+			if(env('STORAGE')){
 				$resource = $img->stream()->detach();
 
-				$save = Storage::disk('s3')->put($upload, $resource, 'public');
+				$save = Storage::disk(env('STORAGE'))->put($upload, $resource, 'public');
 				if ($save) {
 						$result = [
 							'status' => 'success',

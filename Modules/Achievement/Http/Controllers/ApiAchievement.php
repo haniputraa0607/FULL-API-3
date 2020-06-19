@@ -123,7 +123,7 @@ class ApiAchievement extends Controller
             ]);
 
             $upload = MyHelper::uploadPhotoStrict($post['group']['logo_badge_default'], $this->saveImage, 500, 500);
-
+            return $upload;
             if (isset($upload['status']) && $upload['status'] == "success") {
                 $post['group']['logo_badge_default'] = $upload['path'];
             } else {
@@ -646,9 +646,9 @@ class ApiAchievement extends Controller
             ]);
         }
 
-        $data['group']['logo_badge_default']    = env('S3_URL_API') . $data['group']['logo_badge_default'];
+        $data['group']['logo_badge_default']    = env('STORAGE_URL_API') . $data['group']['logo_badge_default'];
         foreach ($data['detail'] as $key => $value) {
-            $data['detail'][$key]['logo_badge'] = env('S3_URL_API') . $value['logo_badge'];
+            $data['detail'][$key]['logo_badge'] = env('STORAGE_URL_API') . $value['logo_badge'];
         }
 
         return response()->json([
@@ -761,14 +761,14 @@ class ApiAchievement extends Controller
                 if ($getAchievementUser) {
                     $result[$keyCatAch]['detail'][$keyAchGroup] = [
                         'name'          => $group['name'],
-                        'logo_badge'    => env('S3_URL_API') . $getAchievementUser->logo_badge,
+                        'logo_badge'    => env('STORAGE_URL_API') . $getAchievementUser->logo_badge,
                         'description'   => $group['description'],
                         'level'         => $getAchievementUser->name
                     ];
                 } else {
                     $result[$keyCatAch]['detail'][$keyAchGroup] = [
                         'name'          => $group['name'],
-                        'logo_badge'    => env('S3_URL_API') . $group['logo_badge_default'],
+                        'logo_badge'    => env('STORAGE_URL_API') . $group['logo_badge_default'],
                         'description'   => $group['description'],
                         'level'         => 'Belum Tercapai'
                     ];

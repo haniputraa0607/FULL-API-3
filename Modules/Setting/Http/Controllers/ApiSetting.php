@@ -61,7 +61,7 @@ class ApiSetting extends Controller
 
     function __construct() {
         date_default_timezone_set('Asia/Jakarta');
-        $this->endPoint = env('S3_URL_API');
+        $this->endPoint = env('STORAGE_URL_API');
 		$this->autocrm  = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
     }
     public function emailUpdate(Request $request) {
@@ -1246,17 +1246,17 @@ class ApiSetting extends Controller
             foreach ($menuOther as $key=>$value){
                 $val = (array)$value;
                 if($val['icon'] != ''){
-                    $menuOther[$key]->icon = env('S3_URL_API').$val['icon'];
+                    $menuOther[$key]->icon = env('STORAGE_URL_API').$val['icon'];
                 }
             }
 
             foreach ($menuMain as $key=>$value){
                 $val = (array)$value;
                 if($val['icon1'] != ''){
-                    $menuMain[$key]->icon1 = env('S3_URL_API').$val['icon1'];
+                    $menuMain[$key]->icon1 = env('STORAGE_URL_API').$val['icon1'];
                 }
                 if($val['icon2'] != ''){
-                    $menuMain[$key]->icon2 = env('S3_URL_API').$val['icon2'];
+                    $menuMain[$key]->icon2 = env('STORAGE_URL_API').$val['icon2'];
                 }
             }
 
@@ -1519,7 +1519,7 @@ class ApiSetting extends Controller
             $newDt['status'] = $data['value'];
             $newDt['message'] = $dt['message'];
             if($dt['image'] != ""){
-                $newDt['image'] = env('S3_URL_API').$dt['image'];
+                $newDt['image'] = env('STORAGE_URL_API').$dt['image'];
             }else{
                 $newDt['image'] = "";
             }

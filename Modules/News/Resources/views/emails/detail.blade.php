@@ -11,7 +11,7 @@
             if(strpos(strtolower($value), 'http') !== false) {
                 $value = "<img src='$value' style='max-width: 300px'/>";
             } elseif ($value) {
-                $value = '<img src="'.env('S3_URL_API').$value.'" style="max-width: 300px"/>';
+                $value = '<img src="'.env('STORAGE_URL_API').$value.'" style="max-width: 300px"/>';
             }
         }
 

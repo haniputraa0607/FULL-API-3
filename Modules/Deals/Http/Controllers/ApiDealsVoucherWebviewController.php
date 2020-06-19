@@ -94,7 +94,7 @@ class ApiDealsVoucherWebviewController extends Controller
             });
         }
 
-        $voucher['deals_voucher']['deal']['deals_image'] = env('S3_URL_API') . $voucher['deals_voucher']['deal']['deals_image'];
+        $voucher['deals_voucher']['deal']['deals_image'] = env('STORAGE_URL_API') . $voucher['deals_voucher']['deal']['deals_image'];
 
         $data = $voucher;
         

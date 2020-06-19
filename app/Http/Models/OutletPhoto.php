@@ -45,10 +45,10 @@ class OutletPhoto extends Model
 
     public function getUrlOutletPhotoAttribute() {
         if (empty($this->outlet_photo)) {
-            return env('S3_URL_API').'img/default.jpg';
+            return env('STORAGE_URL_API').'img/default.jpg';
         }
         else {
-            return env('S3_URL_API').$this->outlet_photo;
+            return env('STORAGE_URL_API').$this->outlet_photo;
         }
     }
 }

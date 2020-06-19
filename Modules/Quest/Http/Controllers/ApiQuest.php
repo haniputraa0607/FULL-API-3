@@ -154,7 +154,7 @@ class ApiQuest extends Controller
             ]);
         }
 
-        $data['quest']['image']    = env('S3_URL_API') . $data['quest']['image'];
+        $data['quest']['image']    = env('STORAGE_URL_API') . $data['quest']['image'];
 
         return response()->json([
             'status'    => 'success',
