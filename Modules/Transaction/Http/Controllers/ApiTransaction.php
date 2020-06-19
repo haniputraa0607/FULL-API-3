@@ -7,6 +7,7 @@ use Illuminate\Pagination\Paginator;
 use App\Http\Models\Transaction;
 use App\Http\Models\TransactionProduct;
 use App\Http\Models\TransactionPayment;
+use App\Http\Models\TransactionPickupGoSend;
 use App\Http\Models\Province;
 use App\Http\Models\City;
 use App\Http\Models\User;
@@ -2192,8 +2193,8 @@ class ApiTransaction extends Controller
     public function transactionDetailTrx(Request $request) {
         $trid = $request->json('id_transaction');
         $rn = $request->json('request_number');
-        $trx = Transaction::select('id_transaction','id_outlet')->where([
-            'id_transaction' => $trid,
+        $trx = Transaction::join('transaction_pickups', 'transaction_pickups.id_transaction', '=', 'transactions.id_transaction')->select('transactions.id_transaction', 'id_outlet', 'pickup_by', 'pickup_type', 'pickup_at', 'id_transaction_pickup')->where([
+            'transactions.id_transaction' => $trid,
             'id_user' => $request->user()->id
         ])->first();
         if(!$trx){
@@ -2255,7 +2256,38 @@ class ApiTransaction extends Controller
             $pt['note'] = $pt['note']?:'';
             unset($pt['transaction_product_price']);
         }
-        return MyHelper::checkGet($pts);
+        $result = [
+            'id_outlet' => $trx->id_outlet,
+            'item' => $pts
+        ];
+        if ($trx->pickup_by == 'Customer') {
+            $result += [
+                'transaction_type' => 'Pickup Order',
+                'pickup_type' => $trx->pickup_type
+            ];
+            if ($trx->pickup_type == 'set time') {
+                $result += [
+                    'pickup_at' => date('H:i',strtotime($trx->pickup_at))
+                ];
+            }
+        } else {
+            $address = TransactionPickupGoSend::where('id_transaction_pickup',$trx->id_transaction_pickup)->leftJoin('user_addresses',function($join) use ($trx, $request) {
+                $join->on('transaction_pickup_go_sends.destination_latitude', '=', 'user_addresses.latitude')
+                    ->whereColumn('transaction_pickup_go_sends.destination_longitude', '=', 'user_addresses.longitude');
+            })->orderBy('user_addresses.name', 'desc')->first();
+            $result += [
+                'transaction_type' => 'Delivery',
+                'destination' => [
+                    'name' => $address->name?:$address->short_address,
+                    'short_address' => $address->short_address,
+                    'address' => $address->destination_address,
+                    'description' => $address->destination_note,
+                    'latitude' => $address->destination_latitude,
+                    'longitude' => $address->destination_longitude,
+                ]
+            ];
+        }
+        return MyHelper::checkGet($result);
     }
 
     public function transactionPointDetail(Request $request) {

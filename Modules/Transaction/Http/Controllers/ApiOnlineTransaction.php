@@ -2563,28 +2563,26 @@ class ApiOnlineTransaction extends Controller
         ];
     }
 
-    public function getAvailablePayment()
+    public function availablePayment(Request $request)
     {
-        return config('payment_method');
-    }
+        $availablePayment = config('payment_method');
 
-    public function availablePayment(Request $request) {
-        $availablePayment = $this->getAvailablePayment();
-
-        $setting = json_decode(MyHelper::setting('active_payment_methods','value_text','[]'),true)??[];
+        $setting  = json_decode(MyHelper::setting('active_payment_methods', 'value_text', '[]'), true) ?? [];
         $payments = [];
 
         foreach ($setting as $value) {
-            $payment = $availablePayment[$value['code']??'']??false;
-            if (!$payment || !($payment['status']??false) || (!$request->show_all && !($value['status']??false))) {
+            $payment = $availablePayment[$value['code'] ?? ''] ?? false;
+            if (!$payment || !($payment['status'] ?? false) || (!$request->show_all && !($value['status'] ?? false))) {
+                unset($availablePayment[$value['code']]);
                 continue;
             }
             $payments[] = [
-                'code' => $value['code'],
+                'code'            => $value['code'],
                 'payment_gateway' => $payment['payment_gateway'],
-                'payment_method' => $payment['payment_method'],
-                'status' => (int) $value['status']??0,
-                'position' => $value['position']??999
+                'payment_method'  => $payment['payment_method'],
+                'logo'            => $payment['logo'],
+                'text'            => $payment['text'],
+                'status'          => (int) $value['status'] ?? 0
             ];
             unset($availablePayment[$value['code']]);
         }
@@ -2594,22 +2592,20 @@ class ApiOnlineTransaction extends Controller
                     continue;
                 }
                 $payments[] = [
-                    'code' => $code,
+                    'code'            => $code,
                     'payment_gateway' => $payment['payment_gateway'],
-                    'payment_method' => $payment['payment_method'],
-                    'status' => 0,
-                    'position' => $value['position']??999
+                    'payment_method'  => $payment['payment_method'],
+                    'logo'            => $payment['logo'],
+                    'text'            => $payment['text'],
+                    'status'          => 0
                 ];
             }
         }
-        usort($payments, function($a, $b) {
-            return $a['position'] <=> $b['position'];
-        });
         return MyHelper::checkGet($payments);
     }
     /**
      * update available payment
-     * @param 
+     * @param
      * {
      *     payments: [
      *         {'code': 'xxx', status: 1}
@@ -2617,18 +2613,19 @@ class ApiOnlineTransaction extends Controller
      * }
      * @return [type]           [description]
      */
-    public function availablePaymentUpdate(Request $request) {
-        $availablePayment = $this->getAvailablePayment();
+    public function availablePaymentUpdate(Request $request)
+    {
+        $availablePayment = config('payment_method');
         foreach ($request->payments as $key => $value) {
-            $payment = $availablePayment[$value['code']??'']??false;
-            if (!$payment || !($payment['status']??false)) {
+            $payment = $availablePayment[$value['code'] ?? ''] ?? false;
+            if (!$payment || !($payment['status'] ?? false)) {
                 continue;
             }
             $payments[] = [
-                'code' => $value['code'],
-                'status' => $value['status'] ?? 0,
-                'position' => $key+1
-            ];            
+                'code'     => $value['code'],
+                'status'   => $value['status'] ?? 0,
+                'position' => $key + 1,
+            ];
         }
         $update = Setting::updateOrCreate(['key' => 'active_payment_methods'], ['value_text' => json_encode($payments)]);
         return MyHelper::checkUpdate($update);
