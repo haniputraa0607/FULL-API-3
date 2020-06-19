@@ -4,44 +4,44 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 
-        <link rel="stylesheet" href="{{ env('S3_URL_VIEW') }}{{ ('assets/global/plugins/bootstrap/css/bootstrap.min.css') }}" integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous">
+        <link rel="stylesheet" href="{{ env('STORAGE_URL_VIEW') }}{{ ('assets/global/plugins/bootstrap/css/bootstrap.min.css') }}" integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous">
         <link href="https://fonts.googleapis.com/css?family=Open+Sans|Questrial" rel="stylesheet">
         <style type="text/css">
         @font-face {
                 font-family: "GoogleSans-Bold";
                 font-style: normal;
                 font-weight: 400;
-                src: url('{{ env('S3_URL_VIEW') }}{{ ('/fonts/GoogleSans-Bold.ttf') }}');
+                src: url('{{ env('STORAGE_URL_VIEW') }}{{ ('/fonts/GoogleSans-Bold.ttf') }}');
         }
         @font-face {
                 font-family: "GoogleSans-BoldItalic";
                 font-style: normal;
                 font-weight: 400;
-                src: url('{{ env('S3_URL_VIEW') }}{{ ('/fonts/GoogleSans-BoldItalic.ttf') }}');
+                src: url('{{ env('STORAGE_URL_VIEW') }}{{ ('/fonts/GoogleSans-BoldItalic.ttf') }}');
         }
         @font-face {
                 font-family: "GoogleSans-Italic";
                 font-style: normal;
                 font-weight: 400;
-                src: url('{{ env('S3_URL_VIEW') }}{{ ('/fonts/GoogleSans-Italic.ttf') }}');
+                src: url('{{ env('STORAGE_URL_VIEW') }}{{ ('/fonts/GoogleSans-Italic.ttf') }}');
         }
         @font-face {
                 font-family: "GoogleSans-Medium";
                 font-style: normal;
                 font-weight: 400;
-                src: url('{{ env('S3_URL_VIEW') }}{{ ('/fonts/GoogleSans-Medium.ttf') }}');
+                src: url('{{ env('STORAGE_URL_VIEW') }}{{ ('/fonts/GoogleSans-Medium.ttf') }}');
         }
         @font-face {
                 font-family: "GoogleSans-MediumItalic";
                 font-style: normal;
                 font-weight: 400;
-                src: url('{{ env('S3_URL_VIEW') }}{{ ('/fonts/GoogleSans-MediumItalic.ttf') }}');
+                src: url('{{ env('STORAGE_URL_VIEW') }}{{ ('/fonts/GoogleSans-MediumItalic.ttf') }}');
         }
         @font-face {
                 font-family: "GoogleSans";
                 font-style: normal;
                 font-weight: 400;
-                src: url('{{ env('S3_URL_VIEW') }}{{ ('/fonts/GoogleSans-Regular.ttf') }}');
+                src: url('{{ env('STORAGE_URL_VIEW') }}{{ ('/fonts/GoogleSans-Regular.ttf') }}');
         }
         .GoogleSans{
             font-family: "GoogleSans";
@@ -298,8 +298,8 @@ filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#ffffff', end
 
         </style>
 
-        <link rel="stylesheet" href="{{ env('S3_URL_VIEW') }}{{ ('assets/css/owl.carousel.min.css') }}">
-        <link rel="stylesheet" href="{{ env('S3_URL_VIEW') }}{{ ('assets/css/owl.theme.default.min.css') }}">
+        <link rel="stylesheet" href="{{ env('STORAGE_URL_VIEW') }}{{ ('assets/css/owl.carousel.min.css') }}">
+        <link rel="stylesheet" href="{{ env('STORAGE_URL_VIEW') }}{{ ('assets/css/owl.theme.default.min.css') }}">
     </head>
     {{-- <body> --}}
         @php
@@ -315,7 +315,7 @@ filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#ffffff', end
                         <div class="row space-bottom">
                             <div class="owl-carousel owl-theme">
                                 @foreach ($result['custom_page_image_header'] as $key => $value)
-                                <div class="item"> <img style="height: 60vw !important; object-fit: cover" src="{{env('S3_URL_API')}}{{ $value['custom_page_image'] }}"> <div class="questrial-font image-caption-all text-13-3px"></div> </div>
+                                <div class="item"> <img style="height: 60vw !important; object-fit: cover" src="{{env('STORAGE_URL_API')}}{{ $value['custom_page_image'] }}"> <div class="questrial-font image-caption-all text-13-3px"></div> </div>
                                 @endforeach
                             </div>
                         </div>
@@ -484,10 +484,10 @@ filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#ffffff', end
         </div>
 
         {{ csrf_field() }}
-        <script src="{{ env('S3_URL_VIEW') }}{{ ('assets/js/jquery-3.3.1.slim.min.js') }}" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
-        <script src="{{ env('S3_URL_VIEW') }}{{ ('assets/js/bootstrap.min.js') }}" integrity="sha384-ChfqqxuZUCnJSK3+MXmPNIyE6ZbWh2IMqE241rYiqJxyMiZ6OW/JmZQ5stwEULTy" crossorigin="anonymous"></script>
+        <script src="{{ env('STORAGE_URL_VIEW') }}{{ ('assets/js/jquery-3.3.1.slim.min.js') }}" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
+        <script src="{{ env('STORAGE_URL_VIEW') }}{{ ('assets/js/bootstrap.min.js') }}" integrity="sha384-ChfqqxuZUCnJSK3+MXmPNIyE6ZbWh2IMqE241rYiqJxyMiZ6OW/JmZQ5stwEULTy" crossorigin="anonymous"></script>
 
-        <script src="{{ env('S3_URL_VIEW') }}{{ ('assets/js/owl.carousel.min.js') }}"></script>
+        <script src="{{ env('STORAGE_URL_VIEW') }}{{ ('assets/js/owl.carousel.min.js') }}"></script>
         @php
         if (isset($result['custom_page_button_form'])) {
             $action_type = implode('_', explode(' ', strtolower($result['custom_page_button_form'])));

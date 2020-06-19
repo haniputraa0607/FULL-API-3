@@ -39,10 +39,10 @@ class Reward extends Model
 	// ATTRIBUTE IMAGE URL
 	public function getUrlRewardImageAttribute() {
 		if (empty($this->reward_image)) {
-            return env('S3_URL_API').'img/default.jpg';
+            return env('STORAGE_URL_API').'img/default.jpg';
         }
         else {
-            return env('S3_URL_API').$this->reward_image;
+            return env('STORAGE_URL_API').$this->reward_image;
         }
     }
 

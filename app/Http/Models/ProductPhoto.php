@@ -38,10 +38,10 @@ class ProductPhoto extends Model
 
     public function getUrlProductPhotoAttribute() {
         if (empty($this->product_photo)) {
-            return env('S3_URL_API').'img/default.jpg';
+            return env('STORAGE_URL_API').'img/default.jpg';
         }
         else {
-            return env('S3_URL_API').$this->product_photo;
+            return env('STORAGE_URL_API').$this->product_photo;
         }
     }
 }
