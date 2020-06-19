@@ -25,7 +25,7 @@ class Brand extends Model
         if(empty($value)){
             return '';
         }
-        return env('S3_URL_API') . $value;
+        return env('STORAGE_URL_API') . $value;
     }
 
     public function getImageBrandAttribute($value)
@@ -33,7 +33,7 @@ class Brand extends Model
         if(empty($value)){
             return '';
         }
-        return env('S3_URL_API') . $value;
+        return env('STORAGE_URL_API') . $value;
     }
 
     public function brand_product(){
