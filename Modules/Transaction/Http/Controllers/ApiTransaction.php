@@ -2193,7 +2193,9 @@ class ApiTransaction extends Controller
     public function transactionDetailTrx(Request $request) {
         $trid = $request->json('id_transaction');
         $rn = $request->json('request_number');
-        $trx = Transaction::join('transaction_pickups', 'transaction_pickups.id_transaction', '=', 'transactions.id_transaction')->select('transactions.id_transaction', 'id_outlet', 'pickup_by', 'pickup_type', 'pickup_at', 'id_transaction_pickup')->where([
+        $trx = Transaction::join('transaction_pickups', 'transaction_pickups.id_transaction', '=', 'transactions.id_transaction')
+        ->join('outlets', 'outlets.id_outlet', '=', 'transactions.id_outlet')
+        ->select('transactions.id_transaction', 'transactions.id_user', 'transactions.id_outlet', 'outlets.outlet_code', 'pickup_by', 'pickup_type', 'pickup_at', 'id_transaction_pickup')->where([
             'transactions.id_transaction' => $trid,
             'id_user' => $request->user()->id
         ])->first();
@@ -2258,6 +2260,7 @@ class ApiTransaction extends Controller
         }
         $result = [
             'id_outlet' => $trx->id_outlet,
+            'outlet_code' => $trx->outlet_code,
             'item' => $pts
         ];
         if ($trx->pickup_by == 'Customer') {
@@ -2271,21 +2274,25 @@ class ApiTransaction extends Controller
                 ];
             }
         } else {
-            $address = TransactionPickupGoSend::where('id_transaction_pickup',$trx->id_transaction_pickup)->leftJoin('user_addresses',function($join) use ($trx, $request) {
-                $join->on('transaction_pickup_go_sends.destination_latitude', '=', 'user_addresses.latitude')
-                    ->whereColumn('transaction_pickup_go_sends.destination_longitude', '=', 'user_addresses.longitude');
-            })->orderBy('user_addresses.name', 'desc')->first();
+            $address = TransactionPickupGoSend::where('id_transaction_pickup',$trx->id_transaction_pickup)->first();
             $result += [
-                'transaction_type' => 'Delivery',
+                'transaction_type' => 'GO-SEND',
                 'destination' => [
-                    'name' => $address->name?:$address->short_address,
-                    'short_address' => $address->short_address,
+                    'name' => $address->destination_address_name?:$address->destination_short_address,
+                    'short_address' => $address->destination_short_address,
                     'address' => $address->destination_address,
                     'description' => $address->destination_note,
                     'latitude' => $address->destination_latitude,
                     'longitude' => $address->destination_longitude,
                 ]
             ];
+            if (!$result['destination']['name']) {
+                $ua = UserAddress::where(['id_user' => $trx->id_user, 'latitude'=>$address->destination_latitude, 'longitude' => $address->destination_longitude])->first();
+                if ($ua) {
+                    $result['destination']['name'] = $ua->name?:$ua->short_address;
+                    $result['destination']['short_address'] = $ua->short_address;
+                }
+            }
         }
         return MyHelper::checkGet($result);
     }
@@ -2531,7 +2538,7 @@ class ApiTransaction extends Controller
         };
 
         $maxmin = MyHelper::getRadius($latitude,$longitude,$distance);
-        $user_address = UserAddress::select('id_user_address','short_address','address','latitude','longitude','description')->where('id_user',$id)
+        $user_address = UserAddress::select('id_user_address','short_address','address','latitude','longitude','description','favorite')->where('id_user',$id)
             ->whereBetween('latitude',[$maxmin['latitude']['min'],$maxmin['latitude']['max']])
             ->whereBetween('longitude',[$maxmin['longitude']['min'],$maxmin['longitude']['max']])
             ->take(10);
@@ -2567,11 +2574,10 @@ class ApiTransaction extends Controller
                 'address' => $gmap['vicinity'],
                 'latitude' => $coor['latitude'],
                 'longitude' => $coor['longitude'],
-                'description' => ''
+                'description' => '',
+                'favorite' => 0
             ];
         }
-
-        $selected_address = $user_address[0]??null;
 
         // mix history and gmaps
         $user_address = array_merge($user_address,$gmaps);
@@ -2580,6 +2586,20 @@ class ApiTransaction extends Controller
         usort($user_address,function(&$a,&$b) use ($latitude,$longitude){
             return MyHelper::count_distance($latitude,$longitude,$a['latitude'],$a['longitude']) <=> MyHelper::count_distance($latitude,$longitude,$b['latitude'],$b['longitude']);
         });
+
+        foreach ($user_address as $key => $addr) {
+            if ($addr['favorite']) {
+                $selected_address = $addr;
+                break;
+            }
+            if ($addr['id_user_address']) {
+                $selected_address = $addr;
+                continue;
+            }
+            if ($key == 0) {
+                $selected_address = $addr;
+            }
+        }
 
         if(!$selected_address){
             $selected_address = $user_address[0]??null;
