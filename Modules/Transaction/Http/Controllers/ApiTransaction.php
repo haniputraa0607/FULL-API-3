@@ -2538,7 +2538,7 @@ class ApiTransaction extends Controller
         };
 
         $maxmin = MyHelper::getRadius($latitude,$longitude,$distance);
-        $user_address = UserAddress::select('id_user_address','short_address','address','latitude','longitude','description')->where('id_user',$id)
+        $user_address = UserAddress::select('id_user_address','short_address','address','latitude','longitude','description','favorite')->where('id_user',$id)
             ->whereBetween('latitude',[$maxmin['latitude']['min'],$maxmin['latitude']['max']])
             ->whereBetween('longitude',[$maxmin['longitude']['min'],$maxmin['longitude']['max']])
             ->take(10);
@@ -2574,11 +2574,10 @@ class ApiTransaction extends Controller
                 'address' => $gmap['vicinity'],
                 'latitude' => $coor['latitude'],
                 'longitude' => $coor['longitude'],
-                'description' => ''
+                'description' => '',
+                'favorite' => 0
             ];
         }
-
-        $selected_address = $user_address[0]??null;
 
         // mix history and gmaps
         $user_address = array_merge($user_address,$gmaps);
@@ -2587,6 +2586,20 @@ class ApiTransaction extends Controller
         usort($user_address,function(&$a,&$b) use ($latitude,$longitude){
             return MyHelper::count_distance($latitude,$longitude,$a['latitude'],$a['longitude']) <=> MyHelper::count_distance($latitude,$longitude,$b['latitude'],$b['longitude']);
         });
+
+        foreach ($user_address as $key => $addr) {
+            if ($addr['favorite']) {
+                $selected_address = $addr;
+                break;
+            }
+            if ($addr['id_user_address']) {
+                $selected_address = $addr;
+                continue;
+            }
+            if ($key == 0) {
+                $selected_address = $addr;
+            }
+        }
 
         if(!$selected_address){
             $selected_address = $user_address[0]??null;
