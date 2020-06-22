@@ -604,14 +604,14 @@ class ApiOnlineTransaction extends Controller
                 $dataAddressKeys = ['id_user_address'=>$dataAddress['id_user_address']];
             }else{
                 $dataAddressKeys = [
-                    'latitude' => $dataAddress['latitude'],
-                    'longitude' => $dataAddress['longitude']
+                    'latitude' => number_format($dataAddress['latitude'],8),
+                    'longitude' => number_format($dataAddress['longitude'],8)
                 ];
             }
             $dataAddressKeys['id_user'] = $user['id'];
             $addressx = UserAddress::where($dataAddressKeys)->first();
             if(!$addressx){
-                UserAddress::create($dataAddressKeys+$dataAddress);
+                $addressx = UserAddress::create($dataAddressKeys+$dataAddress);
             }elseif(!$addressx->favorite){
                 $addressx->update($dataAddress);
             }
@@ -1328,6 +1328,8 @@ class ApiOnlineTransaction extends Controller
                 $dataGoSend['destination_name']      = $user['name'];
                 $dataGoSend['destination_phone']     = $user['phone'];
                 $dataGoSend['destination_address']   = $post['destination']['address'];
+                $dataGoSend['destination_short_address'] = $post['destination']['short_address'];
+                $dataGoSend['destination_address_name']   = $addressx->name;
                 $dataGoSend['destination_latitude']  = $post['destination']['latitude'];
                 $dataGoSend['destination_longitude'] = $post['destination']['longitude'];
 
