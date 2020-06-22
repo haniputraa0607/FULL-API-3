@@ -539,22 +539,25 @@ class ApiCronReport extends Controller
                     (select TIME(MAX(transaction_date))) as last_trx_time, 
                     (select count(transactions.id_transaction)) as trx_count, 
                     (select AVG(transaction_grandtotal)) as trx_average, 
-                    (select 
-                    	SUM(transaction_products.transaction_product_qty) 
-                    	FROM transaction_products 
-                    	WHERE transaction_products.id_outlet = transactions.id_outlet 
-                    ) as trx_total_item, 
+                    (select SUM(trans_p.trx_total_item)) as trx_total_item,
                     (select DATE(transaction_date)) as trx_date
                     FROM transactions 
                     LEFT JOIN users ON users.id = transactions.id_user 
                     LEFT JOIN transaction_pickups ON transaction_pickups.id_transaction = transactions.id_transaction 
+                    LEFT JOIN (
+                    	select 
+	                    	transaction_products.id_transaction, SUM(transaction_products.transaction_product_qty) trx_total_item
+	                    	FROM transaction_products 
+	                    	GROUP BY transaction_products.id_transaction
+	                ) trans_p
+                    	ON (transactions.id_transaction = trans_p.id_transaction) 
                     WHERE transaction_date BETWEEN "'. date('Y-m-d', strtotime($date)) .' 00:00:00" 
                     AND "'. date('Y-m-d', strtotime($date)) .' 23:59:59"
                     AND transaction_payment_status = "Completed"
                     AND transaction_pickups.reject_at IS NULL
                     GROUP BY transactions.id_outlet,trx_type
                 '));
-    	
+
         if ($trans) {
             $trans = json_decode(json_encode($trans), true);
 			$sum = array();
