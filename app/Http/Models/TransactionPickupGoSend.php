@@ -23,6 +23,8 @@ class TransactionPickupGoSend extends Model
 		'destination_name',
 		'destination_phone',
 		'destination_address',
+		'destination_address_name',
+		'destination_short_address',
 		'destination_note',
 		'destination_latitude',
 		'destination_longitude',

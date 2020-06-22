@@ -11,14 +11,14 @@ return [
     'midtrans_cc'    => [
         'payment_gateway' => 'Midtrans',
         'payment_method'  => 'Credit Card',
-        'status'          => 1,
+        'status'          => 'credit_card_payment_gateway:Midtrans',
         'logo'            => env('STORAGE_URL_API').'default_image/payment_method/ic_creditcard.png',
         'text'            => 'Debit/Credit Card'
     ],
     'ipay88_cc'      => [
         'payment_gateway' => 'Ipay88',
         'payment_method'  => 'Credit Card',
-        'status'          => 1,
+        'status'          => 'credit_card_payment_gateway:Ipay88',
         'logo'            => env('STORAGE_URL_API').'default_image/payment_method/ic_creditcard.png',
         'text'            => 'Debit/Credit Card'
     ],
