@@ -2575,7 +2575,7 @@ class ApiOnlineTransaction extends Controller
         $config = [
             'credit_card_payment_gateway' => MyHelper::setting('credit_card_payment_gateway', 'value', 'Ipay88')
         ];
-
+        $last_status = [];
         foreach ($setting as $value) {
             $payment = $availablePayment[$value['code'] ?? ''] ?? false;
             if (!$payment || !($payment['status'] ?? false) || (!$request->show_all && !($value['status'] ?? false))) {
@@ -2584,8 +2584,8 @@ class ApiOnlineTransaction extends Controller
             }
             if(!is_numeric($payment['status'])){
                 $var = explode(':',$payment['status']);
-                \Log::debug($var,$config);
                 if(($config[$var[0]]??false) != ($var[1]??true)) {
+                    $last_status[$var[0]] = $value['status'];
                     unset($availablePayment[$value['code']]);
                     continue;
                 }
@@ -2596,14 +2596,19 @@ class ApiOnlineTransaction extends Controller
                 'payment_method'  => $payment['payment_method'],
                 'logo'            => $payment['logo'],
                 'text'            => $payment['text'],
-                'status'          => (int) $value['status'] ?? 0
+                'status'          => (int) $value['status'] ? 1 : 0
             ];
             unset($availablePayment[$value['code']]);
         }
         if ($request->show_all) {
             foreach ($availablePayment as $code => $payment) {
-                if (!$payment['status']) {
-                    continue;
+                $status = 0;
+                if (!$payment['status'] || !is_numeric($payment['status'])) {
+                    $var = explode(':',$payment['status']);
+                    if(($config[$var[0]]??false) != ($var[1]??true)) {
+                        continue;
+                    }
+                    $status = $last_status[$var[0]] ?? 0;
                 }
                 $payments[] = [
                     'code'            => $code,
@@ -2611,7 +2616,7 @@ class ApiOnlineTransaction extends Controller
                     'payment_method'  => $payment['payment_method'],
                     'logo'            => $payment['logo'],
                     'text'            => $payment['text'],
-                    'status'          => 0
+                    'status'          => $status
                 ];
             }
         }
