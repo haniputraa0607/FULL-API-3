@@ -2572,11 +2572,23 @@ class ApiOnlineTransaction extends Controller
         $setting  = json_decode(MyHelper::setting('active_payment_methods', 'value_text', '[]'), true) ?? [];
         $payments = [];
 
+        $config = [
+            'credit_card_payment_gateway' => MyHelper::setting('credit_card_payment_gateway', 'value', 'Ipay88')
+        ];
+
         foreach ($setting as $value) {
             $payment = $availablePayment[$value['code'] ?? ''] ?? false;
             if (!$payment || !($payment['status'] ?? false) || (!$request->show_all && !($value['status'] ?? false))) {
                 unset($availablePayment[$value['code']]);
                 continue;
+            }
+            if(!is_numeric($payment['status'])){
+                $var = explode(':',$payment['status']);
+                \Log::debug($var,$config);
+                if(($config[$var[0]]??false) != ($var[1]??true)) {
+                    unset($availablePayment[$value['code']]);
+                    continue;
+                }
             }
             $payments[] = [
                 'code'            => $value['code'],
