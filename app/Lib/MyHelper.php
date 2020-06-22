@@ -752,10 +752,10 @@ class MyHelper{
 				});
 			}
 
-			if(env('STORAGE') &&  env('STORAGE') == 's3'){
+			if(env('STORAGE')){
 				$resource = $img->stream()->detach();
 
-				$save = Storage::disk('s3')->put($upload, $resource, 'public');
+				$save = Storage::disk(env('STORAGE'))->put($upload, $resource, 'public');
 				if ($save) {
 						$result = [
 							'status' => 'success',
@@ -824,10 +824,10 @@ class MyHelper{
 				$constraint->aspectRatio();
 			});
 
-			if(env('STORAGE') &&  env('STORAGE') == 's3'){
+			if(env('STORAGE')){
 				$resource = $img->stream()->detach();
 
-				$save = Storage::disk('s3')->put($upload, $resource, 'public');
+				$save = Storage::disk(env('STORAGE'))->put($upload, $resource, 'public');
 				if ($save) {
 						$result = [
 							'status' => 'success',
@@ -955,10 +955,10 @@ class MyHelper{
 		$upload = $path.$pictName;
 
 		if($ext=='.gif'){
-			if(env('STORAGE') &&  env('STORAGE') == 's3'){
+			if(env('STORAGE')){
 				$resource = $decoded;
 
-				$save = Storage::disk('s3')->put($upload, $resource, 'public');
+				$save = Storage::disk(env('STORAGE'))->put($upload, $resource, 'public');
 				if ($save) {
 						$result = [
 							'status' => 'success',
@@ -1053,10 +1053,10 @@ class MyHelper{
 
 			$img->crop($width, $height);
 
-			if(env('STORAGE') &&  env('STORAGE') == 's3'){
+			if(env('STORAGE')){
 				$resource = $img->stream()->detach();
 
-				$save = Storage::disk('s3')->put($upload, $resource, 'public');
+				$save = Storage::disk(env('STORAGE'))->put($upload, $resource, 'public');
 				if ($save) {
 						$result = [
 							'status' => 'success',
@@ -1100,8 +1100,8 @@ class MyHelper{
 		// path
 		$upload = $path.$pictName;
 
-		if(env('STORAGE') &&  env('STORAGE') == 's3'){
-			$save = Storage::disk('s3')->put($upload, $decoded, 'public');
+		if(env('STORAGE')){
+			$save = Storage::disk(env('STORAGE'))->put($upload, $decoded, 'public');
 			if ($save) {
 					$result = [
 						'status' => 'success',
@@ -1132,9 +1132,9 @@ class MyHelper{
 	}
 
 	public static function deletePhoto($path) {
-		if(env('STORAGE') &&  env('STORAGE') == 's3'){
-			if(Storage::disk('s3')->exists($path)) {
-				if(Storage::disk('s3')->delete($path)){
+		if(env('STORAGE')){
+			if(Storage::disk(env('STORAGE'))->exists($path)) {
+				if(Storage::disk(env('STORAGE'))->delete($path)){
 					return true;
 				}
 				else {
@@ -1173,8 +1173,8 @@ class MyHelper{
         // path
         $upload = $path.$pictName;
 
-        if(env('STORAGE') &&  env('STORAGE') == 's3'){
-            $save = Storage::disk('s3')->put($upload, $decoded, 'public');
+        if(env('STORAGE')){
+            $save = Storage::disk(env('STORAGE'))->put($upload, $decoded, 'public');
             if ($save) {
                 $result = [
                     'status' => 'success',
@@ -1205,9 +1205,9 @@ class MyHelper{
     }
 
     public static function deleteFile($path) {
-        if(env('STORAGE') &&  env('STORAGE') == 's3'){
-            if(Storage::disk('s3')->exists($path)) {
-                if(Storage::disk('s3')->delete($path)){
+        if(env('STORAGE')){
+            if(Storage::disk(env('STORAGE'))->exists($path)) {
+                if(Storage::disk(env('STORAGE'))->delete($path)){
                     return true;
                 }
                 else {

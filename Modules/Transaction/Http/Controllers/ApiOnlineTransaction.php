@@ -2562,4 +2562,72 @@ class ApiOnlineTransaction extends Controller
             'messages' => $errors?:['Something went wrong']
         ];
     }
+
+    public function availablePayment(Request $request)
+    {
+        $availablePayment = config('payment_method');
+
+        $setting  = json_decode(MyHelper::setting('active_payment_methods', 'value_text', '[]'), true) ?? [];
+        $payments = [];
+
+        foreach ($setting as $value) {
+            $payment = $availablePayment[$value['code'] ?? ''] ?? false;
+            if (!$payment || !($payment['status'] ?? false) || (!$request->show_all && !($value['status'] ?? false))) {
+                unset($availablePayment[$value['code']]);
+                continue;
+            }
+            $payments[] = [
+                'code'            => $value['code'],
+                'payment_gateway' => $payment['payment_gateway'],
+                'payment_method'  => $payment['payment_method'],
+                'logo'            => $payment['logo'],
+                'text'            => $payment['text'],
+                'status'          => (int) $value['status'] ?? 0
+            ];
+            unset($availablePayment[$value['code']]);
+        }
+        if ($request->show_all) {
+            foreach ($availablePayment as $code => $payment) {
+                if (!$payment['status']) {
+                    continue;
+                }
+                $payments[] = [
+                    'code'            => $code,
+                    'payment_gateway' => $payment['payment_gateway'],
+                    'payment_method'  => $payment['payment_method'],
+                    'logo'            => $payment['logo'],
+                    'text'            => $payment['text'],
+                    'status'          => 0
+                ];
+            }
+        }
+        return MyHelper::checkGet($payments);
+    }
+    /**
+     * update available payment
+     * @param
+     * {
+     *     payments: [
+     *         {'code': 'xxx', status: 1}
+     *     ]
+     * }
+     * @return [type]           [description]
+     */
+    public function availablePaymentUpdate(Request $request)
+    {
+        $availablePayment = config('payment_method');
+        foreach ($request->payments as $key => $value) {
+            $payment = $availablePayment[$value['code'] ?? ''] ?? false;
+            if (!$payment || !($payment['status'] ?? false)) {
+                continue;
+            }
+            $payments[] = [
+                'code'     => $value['code'],
+                'status'   => $value['status'] ?? 0,
+                'position' => $key + 1,
+            ];
+        }
+        $update = Setting::updateOrCreate(['key' => 'active_payment_methods'], ['value_text' => json_encode($payments)]);
+        return MyHelper::checkUpdate($update);
+    }
 }

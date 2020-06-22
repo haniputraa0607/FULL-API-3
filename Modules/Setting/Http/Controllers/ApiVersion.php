@@ -23,9 +23,9 @@ class ApiVersion extends Controller
             $dt = (array)json_decode($getMaintenance['value_text']);
             $message = $dt['message'];
             if($dt['image'] != ""){
-                $url_image = env('S3_URL_API').$dt['image'];
+                $url_image = env('STORAGE_URL_API').$dt['image'];
             }else{
-                $url_image = env('S3_URL_API').'img/maintenance/default.png';
+                $url_image = env('STORAGE_URL_API').'img/maintenance/default.png';
             }
             return response()->json([
                 'status' => 'fail',

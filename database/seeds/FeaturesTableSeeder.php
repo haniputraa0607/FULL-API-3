@@ -2003,6 +2003,14 @@ class FeaturesTableSeeder extends Seeder
                     'created_at' => date('Y-m-d H:00:00'),
                     'updated_at' => date('Y-m-d H:00:00'),
                 ),
+            249 =>
+                array(
+                    'id_feature' => 250,
+                    'feature_type' => 'Update',
+                    'feature_module' => 'Setting Payment Method',
+                    'created_at' => '2018-05-10 08:00:00',
+                    'updated_at' => '2018-05-10 08:00:00',
+                ),
         ));
     }
 }
