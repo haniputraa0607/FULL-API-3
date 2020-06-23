@@ -657,6 +657,11 @@ class ApiAutoCrm extends Controller
 				$variables['pin'] = substr($variables['pin'], 0, 3).'-'.substr($variables['pin'], 3, 3);
 			}
 
+			//add numeric separator to point
+			if(isset($variables['received_point'])){
+				$variables['received_point'] = MyHelper::requestNumber($variables['received_point'],'_POINT');
+			}
+
 			foreach($query as $replace){
 				$replaced = "";
 				if($replace['type'] == 'String'){
