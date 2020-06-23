@@ -1217,14 +1217,17 @@ class ApiCronReport extends Controller
 						(select SUM(transaction_cashback_earned)) as trx_cashback_earned, 
 						(select count(transactions.id_transaction)) as trx_count, 
 						(select AVG(transaction_grandtotal)) as trx_average,
-						(select 
-	                    	SUM(transaction_products.transaction_product_qty) 
-	                    	FROM transaction_products 
-	                    	WHERE transaction_products.id_outlet = transactions.id_outlet 
-	                    ) as trx_total_item 
+						(select SUM(trans_p.trx_total_item)) as trx_total_item
 						FROM transactions 
 						LEFT JOIN users ON users.id = transactions.id_user
 						LEFT JOIN transaction_pickups ON transaction_pickups.id_transaction = transactions.id_transaction 
+						LEFT JOIN (
+		                	select 
+		                    	transaction_products.id_transaction, SUM(transaction_products.transaction_product_qty) trx_total_item
+		                    	FROM transaction_products 
+		                    	GROUP BY transaction_products.id_transaction
+		                ) trans_p
+		                	ON (transactions.id_transaction = trans_p.id_transaction) 
 						WHERE transaction_date BETWEEN "'. $start .' 00:00:00" 
 						AND "'. $end .' 23:59:59"
 						AND transaction_payment_status = "Completed"
