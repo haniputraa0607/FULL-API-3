@@ -1628,7 +1628,7 @@ class ApiDeals extends Controller
 	    	}
     	}
 
-    	if ( empty($deals['deals_content']) ) {
+    	if ( empty($deals['deals_content']) || empty($deals['deals_description']) ) {
     		$step = 3;
 	    	$errors = 'Deals not complete';
     		return false;
