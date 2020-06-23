@@ -337,20 +337,10 @@ class ApiCronReport extends Controller
 	/* CUSTOMER LEVEL MONTHLY REPORT */
     function customerLevelMonthlyReport($date) 
     {
-		$d1 = new DateTime($date);
-		$d2 = new DateTime(date('Y-m-d'));
-		$interval = date_diff($d1, $d2);
-		$diff = $interval->m + ($interval->y * 12);
-		
-		for($x = 0;$x <= $diff; $x++){
-			$start = date('Y-m-1', strtotime("+ ".$x." month", strtotime($date)));
-			if($x != $diff){
-				$end = date('Y-m-t', strtotime("+ ".$x." month", strtotime($date)));
-			} else {
-				$end = date('Y-m-d');
-			}
-			
-			$trans = DB::select(DB::raw('
+        $start = date('Y-m-1', strtotime("+0  month", strtotime($date)));
+        $end = date('Y-m-t', strtotime("+0 month", strtotime($date)));
+
+        $trans = DB::select(DB::raw('
 					SELECT COUNT(id), id_membership,
 					(select COUNT(users.id)) as cust_total,
 					(select SUM(Case When users.gender = \'Male\' Then 1 Else 0 End)) as cust_male, 
@@ -372,25 +362,25 @@ class ApiCronReport extends Controller
 					WHERE users.created_at BETWEEN "'. $start .' 00:00:00" AND "'. $end .' 23:59:59"
 					GROUP BY users.id_membership
 				'));
-			$trans = json_decode(json_encode($trans), true);
-			
-			if(!empty($trans[0]['cust_total'])){
-				foreach ($trans as $key => $value) {
-					$value['mem_month'] = date('n', strtotime($end));
-					$value['mem_year'] = date('Y', strtotime($end));
-					$save = MonthlyMembershipReport::updateOrCreate([
-							'mem_month'  => date('n', strtotime($end)),
-							'mem_year'  => date('Y', strtotime($end)),
-							'id_membership' => $value['id_membership']
-						], $value);
+        $trans = json_decode(json_encode($trans), true);
 
-					if (!$save) {
-						return false;
-					}
-				}
-				return $trans;
-			}
-		}
+        if(!empty($trans[0]['cust_total'])){
+            foreach ($trans as $key => $value) {
+                $value['mem_month'] = date('n', strtotime($end));
+                $value['mem_year'] = date('Y', strtotime($end));
+                $save = MonthlyMembershipReport::updateOrCreate([
+                    'mem_month'  => date('n', strtotime($end)),
+                    'mem_year'  => date('Y', strtotime($end)),
+                    'id_membership' => $value['id_membership']
+                ], $value);
+
+                if (!$save) {
+                    return false;
+                }
+            }
+            return $trans;
+        }
+
 		return true;
 	}
 	
@@ -449,22 +439,10 @@ class ApiCronReport extends Controller
 	/* NEW CUSTOMER REGISTRATION MONTHLY REPORT */
     function newCustomerRegistrationMonthlyReport($date) 
     {
-		$date = date('Y-m-d', strtotime("-1 month", strtotime($date)));
-		
-		$d1 = new DateTime($date);
-		$d2 = new DateTime(date('Y-m-d'));
-		$interval = date_diff($d1, $d2);
-		$diff = $interval->m + ($interval->y * 12);
-		// print_r(['diff' => $diff]);exit;
-		for($x = 0;$x <= $diff; $x++){
-			$start = date('Y-m-1', strtotime("+ ".$x." month", strtotime($date)));
-			if($x != $diff){
-				$end = date('Y-m-t', strtotime("+ ".$x." month", strtotime($date)));
-			} else {
-				$end = date('Y-m-d');
-			}
-			
-			$trans = DB::select(DB::raw('
+        $start = date('Y-m-1', strtotime("+0  month", strtotime($date)));
+        $end = date('Y-m-t', strtotime("+0 month", strtotime($date)));
+
+        $trans = DB::select(DB::raw('
 					SELECT (select COUNT(users.id)) as total,
 					(select SUM(Case When users.gender = \'Male\' Then 1 Else 0 End)) as cust_male, 
 					(select SUM(Case When users.gender = \'Female\' Then 1 Else 0 End)) as cust_female, 
@@ -485,25 +463,25 @@ class ApiCronReport extends Controller
 					AND "'. $end .' 23:59:59"
 					
 				'));
-			$trans = json_decode(json_encode($trans), true);
-			
-			if(!empty($trans[0]['total'])){
-				foreach ($trans as $key => $value) {
-					$value['reg_month'] = date('n', strtotime($end));
-					$value['reg_year'] = date('Y', strtotime($end));
+        $trans = json_decode(json_encode($trans), true);
 
-					$save = MonthlyCustomerReportRegistration::updateOrCreate([
-							'reg_month'  => date('n', strtotime($end)),
-							'reg_year'  => date('Y', strtotime($end))
-						], $value);
+        if(!empty($trans[0]['total'])){
+            foreach ($trans as $key => $value) {
+                $value['reg_month'] = date('n', strtotime($end));
+                $value['reg_year'] = date('Y', strtotime($end));
 
-					if (!$save) {
-						return false;
-					}
-				}
-				return $trans;
-			}
-		}
+                $save = MonthlyCustomerReportRegistration::updateOrCreate([
+                    'reg_month'  => date('n', strtotime($end)),
+                    'reg_year'  => date('Y', strtotime($end))
+                ], $value);
+
+                if (!$save) {
+                    return false;
+                }
+            }
+            return $trans;
+        }
+
 		return true;
 	}
 	
@@ -1177,21 +1155,10 @@ class ApiCronReport extends Controller
 	/* NEW MONTHLY REPORT */
     function newMonthlyReport($date) 
     {
-		$d1 = new DateTime($date);
-		$d2 = new DateTime(date('Y-m-d'));
-		$interval = date_diff($d1, $d2);
-		$diff = $interval->m + ($interval->y * 12);
-		
-		for($x = 0;$x <= $diff; $x++){
-			$start = date('Y-m-1', strtotime("+ ".$x." month", strtotime($date)));
-			if($x != $diff){
-				$end = date('Y-m-t', strtotime("+ ".$x." month", strtotime($date)));
-			} else {
-				$end = date('Y-m-d');
-			}
+        $start = date('Y-m-1', strtotime("+0  month", strtotime($date)));
+        $end = date('Y-m-t', strtotime("+0 month", strtotime($date)));
 
-			// print_r(['start' => $start, 'end' => $end]);exit;
-			$trans = DB::select(DB::raw('
+        $trans = DB::select(DB::raw('
 						SELECT transactions.id_outlet, 
 						(select SUM(Case When users.gender = \'Male\' Then 1 Else 0 End)) as cust_male, 
 						(select SUM(Case When users.gender = \'Female\' Then 1 Else 0 End)) as cust_female, 
@@ -1217,14 +1184,17 @@ class ApiCronReport extends Controller
 						(select SUM(transaction_cashback_earned)) as trx_cashback_earned, 
 						(select count(transactions.id_transaction)) as trx_count, 
 						(select AVG(transaction_grandtotal)) as trx_average,
-						(select 
-	                    	SUM(transaction_products.transaction_product_qty) 
-	                    	FROM transaction_products 
-	                    	WHERE transaction_products.id_outlet = transactions.id_outlet 
-	                    ) as trx_total_item 
+						(select SUM(trans_p.trx_total_item)) as trx_total_item
 						FROM transactions 
 						LEFT JOIN users ON users.id = transactions.id_user
 						LEFT JOIN transaction_pickups ON transaction_pickups.id_transaction = transactions.id_transaction 
+						LEFT JOIN (
+		                	select 
+		                    	transaction_products.id_transaction, SUM(transaction_products.transaction_product_qty) trx_total_item
+		                    	FROM transaction_products 
+		                    	GROUP BY transaction_products.id_transaction
+		                ) trans_p
+		                	ON (transactions.id_transaction = trans_p.id_transaction) 
 						WHERE transaction_date BETWEEN "'. $start .' 00:00:00" 
 						AND "'. $end .' 23:59:59"
 						AND transaction_payment_status = "Completed"
@@ -1232,85 +1202,85 @@ class ApiCronReport extends Controller
 						GROUP BY transactions.id_outlet
 					'));
 
-			// print_r($trans);exit;
-			if ($trans) {
-				$trans = json_decode(json_encode($trans), true);
-				$sum = array();
-				$sum['trx_month'] = date('n', strtotime($end));
-				$sum['trx_year'] = date('Y', strtotime($end));
-				$sum['trx_subtotal'] = 0;
-				$sum['trx_tax'] = 0;
-				$sum['trx_shipment'] = 0;
-				$sum['trx_service'] = 0;
-				$sum['trx_discount'] = 0;
-				$sum['trx_grand'] = 0;
-				$sum['trx_point_earned'] = 0;
-				$sum['trx_cashback_earned'] = 0;
-				$sum['trx_count'] = 0;
-				$sum['trx_total_item'] = 0;
-				$sum['trx_average'] = 0;
-				$sum['cust_male'] = 0;
-				$sum['cust_female'] = 0;
-				$sum['cust_android'] = 0;
-				$sum['cust_ios'] = 0;
-				$sum['cust_telkomsel'] = 0;
-				$sum['cust_xl'] = 0;
-				$sum['cust_indosat'] = 0;
-				$sum['cust_tri'] = 0;
-				$sum['cust_axis'] = 0;
-				$sum['cust_smart'] = 0;
-				$sum['cust_teens'] = 0;
-				$sum['cust_young_adult'] = 0;
-				$sum['cust_adult'] = 0;
-				$sum['cust_old'] = 0;
-				
-				foreach ($trans as $key => $value) {
-					$value['trx_month'] = date('n', strtotime($end));
-					$value['trx_year'] = date('Y', strtotime($end));
-					$save = MonthlyReportTrx::updateOrCreate([
-						'trx_month' => $value['trx_month'],
-						'trx_year' => $value['trx_year'],
-						'id_outlet' => $value['id_outlet']
-					], $value);
+        // print_r($trans);exit;
+        if ($trans) {
+            $trans = json_decode(json_encode($trans), true);
+            $sum = array();
+            $sum['trx_month'] = date('n', strtotime($end));
+            $sum['trx_year'] = date('Y', strtotime($end));
+            $sum['trx_subtotal'] = 0;
+            $sum['trx_tax'] = 0;
+            $sum['trx_shipment'] = 0;
+            $sum['trx_service'] = 0;
+            $sum['trx_discount'] = 0;
+            $sum['trx_grand'] = 0;
+            $sum['trx_point_earned'] = 0;
+            $sum['trx_cashback_earned'] = 0;
+            $sum['trx_count'] = 0;
+            $sum['trx_total_item'] = 0;
+            $sum['trx_average'] = 0;
+            $sum['cust_male'] = 0;
+            $sum['cust_female'] = 0;
+            $sum['cust_android'] = 0;
+            $sum['cust_ios'] = 0;
+            $sum['cust_telkomsel'] = 0;
+            $sum['cust_xl'] = 0;
+            $sum['cust_indosat'] = 0;
+            $sum['cust_tri'] = 0;
+            $sum['cust_axis'] = 0;
+            $sum['cust_smart'] = 0;
+            $sum['cust_teens'] = 0;
+            $sum['cust_young_adult'] = 0;
+            $sum['cust_adult'] = 0;
+            $sum['cust_old'] = 0;
 
-					if (!$save) {
-						return false;
-					}
-					
-					$sum['trx_subtotal'] += $value['trx_subtotal'];
-					$sum['trx_tax'] += $value['trx_tax'];
-					$sum['trx_shipment'] += $value['trx_shipment'];
-					$sum['trx_service'] += $value['trx_service'];
-					$sum['trx_discount'] += $value['trx_discount'];
-					$sum['trx_grand'] += $value['trx_grand'];
-					$sum['trx_point_earned'] += $value['trx_point_earned'];
-					$sum['trx_cashback_earned'] += $value['trx_cashback_earned'];
-					$sum['trx_count'] += $value['trx_count'];
-					$sum['trx_total_item'] += $value['trx_total_item'];
-					$sum['trx_average'] += $value['trx_average'];
-					$sum['cust_male'] += $value['cust_male'];
-					$sum['cust_female'] += $value['cust_female'];
-					$sum['cust_android'] += $value['cust_android'];
-					$sum['cust_ios'] += $value['cust_ios'];
-					$sum['cust_telkomsel'] += $value['cust_telkomsel'];
-					$sum['cust_xl'] += $value['cust_xl'];
-					$sum['cust_indosat'] += $value['cust_indosat'];
-					$sum['cust_tri'] += $value['cust_tri'];
-					$sum['cust_axis'] += $value['cust_axis'];
-					$sum['cust_smart'] += $value['cust_smart'];
-					$sum['cust_teens'] += $value['cust_teens'];
-					$sum['cust_young_adult'] += $value['cust_young_adult'];
-					$sum['cust_adult'] += $value['cust_adult'];
-					$sum['cust_old'] += $value['cust_old'];
-				}
-				$saveGlobal = GlobalMonthlyReportTrx::updateOrCreate([
-						'trx_month'  => date('n', strtotime($end)),
-						'trx_year'  => date('Y', strtotime($end))
-					], $sum);
-					
-				return $trans;
-			}
-		}
+            foreach ($trans as $key => $value) {
+                $value['trx_month'] = date('n', strtotime($end));
+                $value['trx_year'] = date('Y', strtotime($end));
+                $save = MonthlyReportTrx::updateOrCreate([
+                    'trx_month' => $value['trx_month'],
+                    'trx_year' => $value['trx_year'],
+                    'id_outlet' => $value['id_outlet']
+                ], $value);
+
+                if (!$save) {
+                    return false;
+                }
+
+                $sum['trx_subtotal'] += $value['trx_subtotal'];
+                $sum['trx_tax'] += $value['trx_tax'];
+                $sum['trx_shipment'] += $value['trx_shipment'];
+                $sum['trx_service'] += $value['trx_service'];
+                $sum['trx_discount'] += $value['trx_discount'];
+                $sum['trx_grand'] += $value['trx_grand'];
+                $sum['trx_point_earned'] += $value['trx_point_earned'];
+                $sum['trx_cashback_earned'] += $value['trx_cashback_earned'];
+                $sum['trx_count'] += $value['trx_count'];
+                $sum['trx_total_item'] += $value['trx_total_item'];
+                $sum['trx_average'] += $value['trx_average'];
+                $sum['cust_male'] += $value['cust_male'];
+                $sum['cust_female'] += $value['cust_female'];
+                $sum['cust_android'] += $value['cust_android'];
+                $sum['cust_ios'] += $value['cust_ios'];
+                $sum['cust_telkomsel'] += $value['cust_telkomsel'];
+                $sum['cust_xl'] += $value['cust_xl'];
+                $sum['cust_indosat'] += $value['cust_indosat'];
+                $sum['cust_tri'] += $value['cust_tri'];
+                $sum['cust_axis'] += $value['cust_axis'];
+                $sum['cust_smart'] += $value['cust_smart'];
+                $sum['cust_teens'] += $value['cust_teens'];
+                $sum['cust_young_adult'] += $value['cust_young_adult'];
+                $sum['cust_adult'] += $value['cust_adult'];
+                $sum['cust_old'] += $value['cust_old'];
+            }
+            $saveGlobal = GlobalMonthlyReportTrx::updateOrCreate([
+                'trx_month'  => date('n', strtotime($end)),
+                'trx_year'  => date('Y', strtotime($end))
+            ], $sum);
+
+            return $trans;
+        }
+
         return true;
     }
 
