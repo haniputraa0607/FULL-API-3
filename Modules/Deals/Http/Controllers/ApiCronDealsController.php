@@ -90,7 +90,7 @@ class ApiCronDealsController extends Controller
             //reversal balance
             $logBalance = LogBalance::where('id_reference', $singleTrx->id_deals_user)->where('source', 'Deals Balance')->where('balance', '<', 0)->get();
             foreach ($logBalance as $logB) {
-                $reversal = app($this->balance)->addLogBalance($singleTrx->id_user, abs($logB['balance']), $singleTrx->id_deals_user, 'Deals Reversal', $singleTrx->voucher_price_point ?: $singleTrx->voucher_price_cash);
+                $reversal = app($this->balance)->addLogBalance($singleTrx->id_user, abs($logB['balance']), $singleTrx->id_deals_user, 'Claim Deals Failed', $singleTrx->voucher_price_point ?: $singleTrx->voucher_price_cash);
                 if (!$reversal) {
                     DB::rollBack();
                     continue;
