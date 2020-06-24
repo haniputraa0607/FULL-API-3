@@ -1889,6 +1889,7 @@ class ApiTransaction extends Controller
                         case 'out_for_delivery':
                             $result['delivery_info']['delivery_status'] = 'Driver mengantarkan pesanan';
                             $result['transaction_status_text']          = 'PROSES PENGANTARAN';
+                            $result['transaction_status']               = 3;
                             $result['delivery_info']['driver']          = [
                                 'driver_id'      => $list['transaction_pickup_go_send']['driver_id']?:'',
                                 'driver_name'    => $list['transaction_pickup_go_send']['driver_name']?:'',

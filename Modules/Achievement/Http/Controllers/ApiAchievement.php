@@ -16,6 +16,7 @@ use Modules\Achievement\Entities\AchievementDetail;
 use Modules\Achievement\Entities\AchievementGroup;
 use Modules\Achievement\Entities\AchievementOutletLog;
 use Modules\Achievement\Entities\AchievementProductLog;
+use Modules\Achievement\Entities\AchievementProgress;
 use Modules\Achievement\Entities\AchievementProvinceLog;
 use Modules\Achievement\Entities\AchievementUser;
 use Modules\Achievement\Entities\AchievementUserLog;
@@ -47,8 +48,18 @@ class ApiAchievement extends Controller
             WHERE achievement_users.id_user = users.id
             GROUP BY achievement_groups.id_achievement_group), 0 ) AS total'))
             ->join('memberships', 'users.id_membership', 'memberships.id_membership');
-        if ($request->post('keyword')) {
-            $data->where('users.name', 'like', "%{$request->post('keyword')}%");
+        if (!is_null($request->post('user_filter'))) {
+            switch ($request->post('filter_by')) {
+                case 'phone':
+                    $data->where('users.phone', 'like', "%{$request->post('user_filter')}%");
+                    break;
+                case 'email':
+                    $data->where('users.email', 'like', "%{$request->post('user_filter')}%");
+                    break;
+                case 'name':
+                    $data->where('users.name', 'like', "%{$request->post('user_filter')}%");
+                    break;
+            }
         }
         return MyHelper::checkGet($data->paginate());
     }
@@ -61,8 +72,16 @@ class ApiAchievement extends Controller
             WHERE achievement_details.id_achievement_group = achievement_groups.id_achievement_group
             GROUP BY achievement_details.id_achievement_group
         ), 0 ) AS total_user'))->leftJoin('achievement_categories', 'achievement_groups.id_achievement_category', '=', 'achievement_categories.id_achievement_category');
-        if ($request->post('keyword')) {
-            $data->where('achievement_groups.name', 'like', "%{$request->post('keyword')}%");
+
+        if (!is_null($request->post('ach_filter'))) {
+            switch ($request->post('filter_by')) {
+                case 'name':
+                    $data->where('achievement_groups.name', 'like', "%{$request->post('ach_filter')}%");
+                    break;
+                case 'email':
+                    $data->where('users.email', 'like', "%{$request->post('ach_filter')}%");
+                    break;
+            }
         }
         return MyHelper::checkGet($data->paginate());
     }
@@ -116,14 +135,14 @@ class ApiAchievement extends Controller
                 'group.publish_start'       => 'required',
                 'group.date_start'          => 'required',
                 'group.description'         => 'required',
-                'group.order_by'            => 'required',
+                'rule_total'                => 'required',
                 'group.logo_badge_default'  => 'required',
                 'detail.*.name'             => 'required',
                 'detail.*.logo_badge'       => 'required'
             ]);
 
             $upload = MyHelper::uploadPhotoStrict($post['group']['logo_badge_default'], $this->saveImage, 500, 500);
-            return $upload;
+            
             if (isset($upload['status']) && $upload['status'] == "success") {
                 $post['group']['logo_badge_default'] = $upload['path'];
             } else {
@@ -189,6 +208,27 @@ class ApiAchievement extends Controller
                     } else {
                         $value['id_achievement_group']   = MyHelper::decSlug($group->id_achievement_group);
                     }
+
+                    switch ($post['rule_total']) {
+                        case 'nominal_transaction':
+                            $value['trx_nominal']       = $value['value_total'];
+                            $value['id_product']        = $post['rule']['id_product'];
+                            $value['product_total']     = $post['rule']['product_total'];
+                            $value['id_outlet']         = $post['rule']['id_outlet'];
+                            $value['id_province']       = $post['rule']['id_province'];
+                            unset($value['value_total']);
+                            break;
+                        case 'total_transaction':
+                            $value['trx_total']         = $value['value_total'];
+                            $value['trx_nominal']       = $post['rule']['trx_nominal'];
+                            $value['id_product']        = $post['rule']['id_product'];
+                            $value['product_total']     = $post['rule']['product_total'];
+                            $value['id_outlet']         = $post['rule']['id_outlet'];
+                            $value['id_province']       = $post['rule']['id_province'];
+                            unset($value['value_total']);
+                            break;
+                    }
+
                     $achievementDetail[$key] = AchievementDetail::create($value);
                 }
             } catch (\Exception $e) {
@@ -204,7 +244,7 @@ class ApiAchievement extends Controller
         if (isset($post['group']) && date('Y-m-d H:i', strtotime($post['group']['date_start'])) <= date('Y-m-d H:i')) {
             $getUser = User::select('id')->get()->toArray();
             foreach ($getUser as $key => $value) {
-                self::checkAchievement($value['id'], $achievementDetail);
+                self::checkAchievement($value['id'], $achievementDetail, $post['rule_total']);
             }
         }
 
@@ -225,7 +265,7 @@ class ApiAchievement extends Controller
         }
     }
 
-    public static function checkAchievement($idUser, $detailAchievement)
+    public static function checkAchievement($idUser, $detailAchievement, $rules)
     {
         $achievementPassed = 0;
         $achievement = null;
@@ -563,9 +603,31 @@ class ApiAchievement extends Controller
                             ])),
                             'date'                      => date('Y-m-d H:i:s')
                         ]);
+                        if ($rules == 'total_transaction') {
+                            AchievementProgress::updateOrCreate([
+                                'id_achievement_detail'     => $achievement['id_achievement_detail'],
+                                'id_user'                   => $idUser,
+                            ], [
+                                'id_achievement_detail'     => $achievement['id_achievement_detail'],
+                                'id_user'                   => $idUser,
+                                'progress'                  => $achievement['trx_total'],
+                                'end_progress'              => $achievement['trx_total']
+                            ]);
+                        }
                         $achievementPassed = $achievementPassed + 1;
                         continue;
                     } else {
+                        if ($rules == 'total_transaction') {
+                            AchievementProgress::updateOrCreate([
+                                'id_achievement_detail'     => $achievement['id_achievement_detail'],
+                                'id_user'                   => $idUser,
+                            ], [
+                                'id_achievement_detail'     => $achievement['id_achievement_detail'],
+                                'id_user'                   => $idUser,
+                                'progress'                  => $totalTrx,
+                                'end_progress'              => $achievement['trx_total']
+                            ]);
+                        }
                         if ($achievementPassed - 1 < 0) {
                             $achievement = null;
                         } else {
@@ -750,27 +812,30 @@ class ApiAchievement extends Controller
             ];
             $result[$keyCatAch]['detail'] = [];
             foreach ($category['achievement_group'] as $keyAchGroup => $group) {
-                $getAchievementUser = AchievementUser::select('achievement_details.*')
+                $getAchievementUser = AchievementUser::select('achievement_details.*', 'achievement_progress.*')
                     ->join('achievement_details', 'achievement_users.id_achievement_detail', 'achievement_details.id_achievement_detail')
+                    ->join('achievement_progress', 'achievement_details.id_achievement_detail', 'achievement_progress.id_achievement_detail')
                     ->join('achievement_groups', 'achievement_details.id_achievement_group', 'achievement_groups.id_achievement_group')
                     ->where([
                         'achievement_users.id_user'                 => Auth::user()->id,
                         'achievement_groups.id_achievement_group'   => MyHelper::decSlug($group['id_achievement_group'])
                     ])->orderBy('achievement_details.id_achievement_detail', 'DESC')->first();
-                // return $getAchievementUser;
+
                 if ($getAchievementUser) {
                     $result[$keyCatAch]['detail'][$keyAchGroup] = [
-                        'name'          => $group['name'],
-                        'logo_badge'    => env('STORAGE_URL_API') . $getAchievementUser->logo_badge,
-                        'description'   => $group['description'],
-                        'level'         => $getAchievementUser->name
+                        'name'              => $group['name'],
+                        'logo_badge'        => env('STORAGE_URL_API') . $getAchievementUser->logo_badge,
+                        'description'       => $group['description'],
+                        'level'             => $getAchievementUser->name,
+                        'percentage_level'  => 1
                     ];
                 } else {
                     $result[$keyCatAch]['detail'][$keyAchGroup] = [
-                        'name'          => $group['name'],
-                        'logo_badge'    => env('STORAGE_URL_API') . $group['logo_badge_default'],
-                        'description'   => $group['description'],
-                        'level'         => 'Belum Tercapai'
+                        'name'              => $group['name'],
+                        'logo_badge'        => env('STORAGE_URL_API') . $group['logo_badge_default'],
+                        'description'       => $group['description'],
+                        'level'             => 'Belum Tercapai',
+                        'percentage_level'  => $getAchievementUser['progress'] / $getAchievementUser['end_progress']
                     ];
                 }
             }
