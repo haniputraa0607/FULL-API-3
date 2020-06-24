@@ -1743,6 +1743,8 @@ class ApiOnlineTransaction extends Controller
 
         $shippingGoSend = 0;
 
+        $error_msg=[];
+
         if(($post['type']??null) == 'GO-SEND'){
             if(!($outlet['outlet_latitude']&&$outlet['outlet_longitude']&&$outlet['outlet_phone']&&$outlet['outlet_address'])){
                 app($this->outlet)->sendNotifIncompleteOutlet($outlet['id_outlet']);
@@ -1765,10 +1767,7 @@ class ApiOnlineTransaction extends Controller
             $shippingGoSendx = GoSend::getPrice($coor_origin,$coor_destination);
             $shippingGoSend = $shippingGoSendx[GoSend::getShipmentMethod()]['price']['total_price']??null;
             if($shippingGoSend === null){
-                return [
-                    'status' => 'fail',
-                    'messages' => array_column($shippingGoSendx[GoSend::getShipmentMethod()]['errors']??[],'message')?:['Gagal menghitung ongkos kirim']
-                ];
+                $error_msg += array_column($shippingGoSendx[GoSend::getShipmentMethod()]['errors']??[],'message')?:['Gagal menghitung ongkos kirim'];
             }
             //cek free delivery
             // if($post['is_free'] == 'yes'){
@@ -1881,7 +1880,6 @@ class ApiOnlineTransaction extends Controller
         }
         // end check promo code & voucher
 
-        $error_msg=[];
         $tree = [];
         // check and group product
         $subtotal = 0;
