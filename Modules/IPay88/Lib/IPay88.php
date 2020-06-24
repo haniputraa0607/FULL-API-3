@@ -411,7 +411,7 @@ class IPay88
             		$id_deals_user = $model->id_deals_user;
             		$amount = $model->amount / 100;
             	}
-    			$deals_user = DealsUser::join('deals_vouchers', 'deals_vouchers.id_deals_voucher', '=', 'deals_users.id_deals_voucher')->where('paid_status', 'Pending')->with('userMid')->where('id_deals_user',$id_deals_user)->first();
+    			$deals_user = DealsUser::join('deals_vouchers', 'deals_vouchers.id_deals_voucher', '=', 'deals_users.id_deals_voucher')->with('userMid')->where('id_deals_user',$id_deals_user)->first();
     			$deals = Deal::where('id_deals',$deals_user->id_deals)->first();
             	switch ($data['Status']) {
             		case '1':
