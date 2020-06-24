@@ -4,6 +4,8 @@ namespace Modules\Transaction\Http\Controllers;
 
 use App\Http\Models\Configs;
 use App\Http\Models\Transaction;
+use App\Http\Models\TransactionPaymentManual;
+use App\Http\Models\TransactionPaymentOffline;
 use App\Jobs\FraudJob;
 use Modules\IPay88\Entities\TransactionPaymentIpay88;
 use App\Http\Models\TransactionPaymentMidtran;
@@ -1605,8 +1607,9 @@ Detail: ".$link['short'],
     }
 
     public function htmlDetailTrxSuccess($id){
-        $list = Transaction::where('id_transaction', $id);
-        $list = $list->with(
+        $list = Transaction::where('transactions.id_transaction', $id);
+        $list = $list->leftJoin('transaction_pickups','transaction_pickups.id_transaction','=','transactions.id_transaction')
+            ->with(
         // 'user.city.province',
             'productTransaction.product.product_category',
             'productTransaction.modifiers',
@@ -1615,7 +1618,9 @@ Detail: ".$link['short'],
             'transaction_payment_offlines',
             'transaction_vouchers.deals_voucher.deal',
             'promo_campaign_promo_code.promo_campaign',
+            'transaction_pickup_go_send.transaction_pickup_update',
             'outlet.city')->first();
+
         if(!$list){
             return MyHelper::checkGet([],'empty');
         }
@@ -1690,18 +1695,80 @@ Detail: ".$link['short'],
 
         switch ($list['trasaction_payment_type']) {
             case 'Balance':
-                $log = LogBalance::where('id_reference', $list['id_transaction'])->first();
-                if ($log['balance'] < 0) {
-                    $list['balance'] = $log['balance'];
-                    $list['check'] = 'tidak topup';
+                $multiPayment = TransactionMultiplePayment::where('id_transaction', $list['id_transaction'])->get()->toArray();
+                if ($multiPayment) {
+                    foreach ($multiPayment as $keyMP => $mp) {
+                        switch ($mp['type']) {
+                            case 'Balance':
+                                $log = LogBalance::where('id_reference', $mp['id_transaction'])->first();
+                                if ($log['balance'] < 0) {
+                                    $list['balance'] = $log['balance'];
+                                    $list['check'] = 'tidak topup';
+                                } else {
+                                    $list['balance'] = $list['transaction_grandtotal'] - $log['balance'];
+                                    $list['check'] = 'topup';
+                                }
+                                $list['payment'][] = [
+                                    'name'      => 'Balance',
+                                    'amount'    => $list['balance']
+                                ];
+                                break;
+                            case 'Manual':
+                                $payment = TransactionPaymentManual::with('manual_payment_method.manual_payment')->where('id_transaction', $list['id_transaction'])->first();
+                                $list['payment'] = $payment;
+                                $list['payment'][] = [
+                                    'name'      => 'Cash',
+                                    'amount'    => $payment['payment_nominal']
+                                ];
+                                break;
+                            case 'Midtrans':
+                                $payMidtrans = TransactionPaymentMidtran::find($mp['id_payment']);
+                                $payment['name']      = strtoupper(str_replace('_', ' ', $payMidtrans->payment_type)).' '.strtoupper($payMidtrans->bank);
+                                $payment['amount']    = $payMidtrans->gross_amount;
+                                $list['payment'][] = $payment;
+                                break;
+                            case 'Ovo':
+                                $payment = TransactionPaymentOvo::find($mp['id_payment']);
+                                $payment['name']    = 'OVO';
+                                $list['payment'][] = $payment;
+                                break;
+                            case 'IPay88':
+                                $PayIpay = TransactionPaymentIpay88::find($mp['id_payment']);
+                                $payment['name']    = $PayIpay->payment_method;
+                                $payment['amount']    = $PayIpay->amount / 100;
+                                $list['payment'][] = $payment;
+                                break;
+                            case 'Offline':
+                                $payment = TransactionPaymentOffline::where('id_transaction', $list['id_transaction'])->get();
+                                foreach ($payment as $key => $value) {
+                                    $list['payment'][$key] = [
+                                        'name'      => $value['payment_bank'],
+                                        'amount'    => $value['payment_amount']
+                                    ];
+                                }
+                                break;
+                            default:
+                                $list['payment'][] = [
+                                    'name'      => null,
+                                    'amount'    => null
+                                ];
+                                break;
+                        }
+                    }
                 } else {
-                    $list['balance'] = $list['transaction_grandtotal'] - $log['balance'];
-                    $list['check'] = 'topup';
+                    $log = LogBalance::where('id_reference', $list['id_transaction'])->first();
+                    if ($log['balance'] < 0) {
+                        $list['balance'] = $log['balance'];
+                        $list['check'] = 'tidak topup';
+                    } else {
+                        $list['balance'] = $list['transaction_grandtotal'] - $log['balance'];
+                        $list['check'] = 'topup';
+                    }
+                    $list['payment'][] = [
+                        'name'      => 'Balance',
+                        'amount'    => $list['balance']
+                    ];
                 }
-                $list['payment'][] = [
-                    'name'      => 'Balance',
-                    'amount'    => $list['balance']
-                ];
                 break;
             case 'Manual':
                 $payment = TransactionPaymentManual::with('manual_payment_method.manual_payment')->where('id_transaction', $list['id_transaction'])->first();
@@ -1716,8 +1783,9 @@ Detail: ".$link['short'],
                 $payment = [];
                 foreach($multiPayment as $dataKey => $dataPay){
                     if($dataPay['type'] == 'Midtrans'){
-                        $payment[$dataKey]['name']      = 'Midtrans';
-                        $payment[$dataKey]['amount']    = TransactionPaymentMidtran::find($dataPay['id_payment'])->gross_amount;
+                        $payMidtrans = TransactionPaymentMidtran::find($dataPay['id_payment']);
+                        $payment[$dataKey]['name']      = strtoupper(str_replace('_', ' ', $payMidtrans->payment_type)).' '.strtoupper($payMidtrans->bank);
+                        $payment[$dataKey]['amount']    = $payMidtrans->gross_amount;
                     }else{
                         $dataPay = TransactionPaymentBalance::find($dataPay['id_payment']);
                         $payment[$dataKey] = $dataPay;
@@ -1750,8 +1818,9 @@ Detail: ".$link['short'],
                 $payment = [];
                 foreach($multiPayment as $dataKey => $dataPay){
                     if($dataPay['type'] == 'IPay88'){
-                        $payment[$dataKey]['name']    = 'Ipay88';
-                        $payment[$dataKey]['amount']    = TransactionPaymentIpay88::find($dataPay['id_payment'])->amount / 100;
+                        $PayIpay = TransactionPaymentIpay88::find($dataPay['id_payment']);
+                        $payment[$dataKey]['name']    = $PayIpay->payment_method;
+                        $payment[$dataKey]['amount']    = $PayIpay->amount / 100;
                     }else{
                         $dataPay = TransactionPaymentBalance::find($dataPay['id_payment']);
                         $payment[$dataKey] = $dataPay;
@@ -1855,6 +1924,7 @@ Detail: ".$link['short'],
                 'pickup_type'       => $list['detail']['pickup_type'],
                 'pickup_date'       => date('d F Y', strtotime($list['detail']['pickup_at'])),
                 'pickup_time'       => ($list['detail']['pickup_type'] == 'right now') ? 'RIGHT NOW' : date('H : i', strtotime($list['detail']['pickup_at'])),
+                'pickup_at'         => $list['detail']['pickup_at']
             ];
             if (isset($list['transaction_payment_status']) && $list['transaction_payment_status'] == 'Cancelled') {
                 unset($result['detail']['order_id_qrcode']);
@@ -1862,6 +1932,12 @@ Detail: ".$link['short'],
                 unset($result['detail']['pickup_time']);
                 $result['transaction_status'] = 0;
                 $result['transaction_status_text'] = 'ORDER ANDA DIBATALKAN';
+            } elseif (isset($list['transaction_payment_status']) && $list['transaction_payment_status'] == 'Pending') {
+                unset($result['detail']['order_id_qrcode']);
+                unset($result['detail']['order_id']);
+                unset($result['detail']['pickup_time']);
+                $result['transaction_status'] = 6;
+                $result['transaction_status_text'] = 'MENUNGGU PEMBAYARAN';
             } elseif($list['detail']['reject_at'] != null) {
                 unset($result['detail']['order_id_qrcode']);
                 unset($result['detail']['order_id']);
@@ -1873,7 +1949,7 @@ Detail: ".$link['short'],
                 $result['transaction_status_text'] = 'ORDER SELESAI';
             } elseif($list['detail']['taken_at'] != null) {
                 $result['transaction_status'] = 2;
-                $result['transaction_status_text'] = 'ORDER SUDAH DITERIMA';
+                $result['transaction_status_text'] = 'ORDER SUDAH DIAMBIL';
             } elseif($list['detail']['ready_at'] != null) {
                 $result['transaction_status'] = 3;
                 $result['transaction_status_text'] = 'ORDER SUDAH SIAP';
@@ -1883,6 +1959,95 @@ Detail: ".$link['short'],
             } else {
                 $result['transaction_status'] = 5;
                 $result['transaction_status_text'] = 'ORDER PENDING';
+            }
+            if ($list['transaction_pickup_go_send']) {
+                // $result['transaction_status'] = 5;
+                $result['delivery_info'] = [
+                    'driver' => null,
+                    'delivery_status' => '',
+                    'delivery_address' => $list['transaction_pickup_go_send']['destination_address']?:'',
+                    'delivery_address_note' => $list['transaction_pickup_go_send']['destination_note']?:'',
+                    'booking_status' => 0,
+                    'cancelable' => 1,
+                    'go_send_order_no' => $list['transaction_pickup_go_send']['go_send_order_no']?:'',
+                    'live_tracking_url' => $list['transaction_pickup_go_send']['live_tracking_url']?:''
+                ];
+
+                if($list['transaction_pickup_go_send']['go_send_id']){
+                    $result['delivery_info']['booking_status'] = 1;
+                }
+                switch (strtolower($list['transaction_pickup_go_send']['latest_status'])) {
+                    case 'finding driver':
+                    case 'confirmed':
+                        $result['delivery_info']['delivery_status'] = 'Sedang mencari driver';
+                        $result['transaction_status_text']          = 'SEDANG MENCARI DRIVER';
+                        break;
+                    case 'driver allocated':
+                    case 'allocated':
+                        $result['delivery_info']['delivery_status'] = 'Driver ditemukan';
+                        $result['transaction_status_text']          = 'DRIVER DITEMUKAN';
+                        $result['delivery_info']['driver']          = [
+                            'driver_id'      => $list['transaction_pickup_go_send']['driver_id']?:'',
+                            'driver_name'    => $list['transaction_pickup_go_send']['driver_name']?:'',
+                            'driver_phone'   => $list['transaction_pickup_go_send']['driver_phone']?:'',
+                            'driver_photo'   => $list['transaction_pickup_go_send']['driver_photo']?:'',
+                            'vehicle_number' => $list['transaction_pickup_go_send']['vehicle_number']?:'',
+                        ];
+                        break;
+                    case 'enroute pickup':
+                    case 'out_for_pickup':
+                        $result['delivery_info']['delivery_status'] = 'Driver dalam perjalanan menuju Outlet';
+                        $result['transaction_status_text']          = 'DRIVER SEDANG MENUJU OUTLET';
+                        $result['delivery_info']['driver']          = [
+                            'driver_id'      => $list['transaction_pickup_go_send']['driver_id']?:'',
+                            'driver_name'    => $list['transaction_pickup_go_send']['driver_name']?:'',
+                            'driver_phone'   => $list['transaction_pickup_go_send']['driver_phone']?:'',
+                            'driver_photo'   => $list['transaction_pickup_go_send']['driver_photo']?:'',
+                            'vehicle_number' => $list['transaction_pickup_go_send']['vehicle_number']?:'',
+                        ];
+                        $result['delivery_info']['cancelable'] = 1;
+                        break;
+                    case 'enroute drop':
+                    case 'out_for_delivery':
+                        $result['delivery_info']['delivery_status'] = 'Driver mengantarkan pesanan';
+                        $result['transaction_status_text']          = 'PROSES PENGANTARAN';
+                        $result['delivery_info']['driver']          = [
+                            'driver_id'      => $list['transaction_pickup_go_send']['driver_id']?:'',
+                            'driver_name'    => $list['transaction_pickup_go_send']['driver_name']?:'',
+                            'driver_phone'   => $list['transaction_pickup_go_send']['driver_phone']?:'',
+                            'driver_photo'   => $list['transaction_pickup_go_send']['driver_photo']?:'',
+                            'vehicle_number' => $list['transaction_pickup_go_send']['vehicle_number']?:'',
+                        ];
+                        $result['delivery_info']['cancelable'] = 0;
+                        break;
+                    case 'completed':
+                    case 'delivered':
+                        $result['transaction_status'] = 2;
+                        $result['transaction_status_text']          = 'ORDER SUDAH DIAMBIL';
+                        $result['delivery_info']['delivery_status'] = 'Pesanan sudah diterima Customer';
+                        $result['delivery_info']['driver']          = [
+                            'driver_id'      => $list['transaction_pickup_go_send']['driver_id']?:'',
+                            'driver_name'    => $list['transaction_pickup_go_send']['driver_name']?:'',
+                            'driver_phone'   => $list['transaction_pickup_go_send']['driver_phone']?:'',
+                            'driver_photo'   => $list['transaction_pickup_go_send']['driver_photo']?:'',
+                            'vehicle_number' => $list['transaction_pickup_go_send']['vehicle_number']?:'',
+                        ];
+                        $result['delivery_info']['cancelable'] = 0;
+                        break;
+                    case 'cancelled':
+                        $result['delivery_info']['booking_status'] = 0;
+                        $result['transaction_status_text']         = 'PENGANTARAN DIBATALKAN';
+                        $result['delivery_info']['delivery_status'] = 'Pengantaran dibatalkan';
+                        $result['delivery_info']['cancelable']     = 0;
+                        break;
+                    case 'driver not found':
+                    case 'no_driver':
+                        $result['delivery_info']['booking_status']  = 0;
+                        $result['transaction_status_text']          = 'DRIVER TIDAK DITEMUKAN';
+                        $result['delivery_info']['delivery_status'] = 'Driver tidak ditemukan';
+                        $result['delivery_info']['cancelable']      = 0;
+                        break;
+                }
             }
         }
 
@@ -1944,46 +2109,123 @@ Detail: ".$link['short'],
 
         if ($list['trasaction_payment_type'] != 'Offline') {
             if ($list['transaction_payment_status'] == 'Cancelled') {
-                $result['detail']['detail_status'][] = [
-                    'text'  => 'Your order has been canceled',
-                    'date'  => date('d F Y H:i', strtotime($list['void_date']))
+                $statusOrder[] = [
+                    'text'  => 'Pesanan Anda dibatalkan karena pembayaran gagal',
+                    'date'  => $list['void_date']
                 ];
             }
-            if ($list['detail']['reject_at'] != null) {
-                $result['detail']['detail_status'][] = [
-                    'text'  => 'Order rejected',
-                    'date'  => date('d F Y H:i', strtotime($list['detail']['reject_at'])),
-                    'reason'=> $list['detail']['reject_reason']
+            elseif ($list['transaction_payment_status'] == 'Pending') {
+                $statusOrder[] = [
+                    'text'  => 'Menunggu konfirmasi pembayaran',
+                    'date'  => $list['transaction_date']
+                ];
+            } else {
+                if ($list['detail']['reject_at'] != null) {
+                    $statusOrder[] = [
+                        'text'  => 'Order rejected',
+                        'date'  => $list['detail']['reject_at'],
+                        'reason'=> $list['detail']['reject_reason']
+                    ];
+                }
+                if ($list['detail']['taken_by_system_at'] != null) {
+                    $statusOrder[] = [
+                        'text'  => 'Pesanan Anda sudah selesai',
+                        'date'  => $list['detail']['taken_by_system_at']
+                    ];
+                }
+                if ($list['detail']['taken_at'] != null) {
+                    $statusOrder[] = [
+                        'text'  => 'Pesanan Anda sudah diambil',
+                        'date'  => $list['detail']['taken_at']
+                    ];
+                }
+                if ($list['detail']['ready_at'] != null) {
+                    $statusOrder[] = [
+                        'text'  => 'Pesanan Anda sudah siap ',
+                        'date'  => $list['detail']['ready_at']
+                    ];
+                }
+                if (isset($list['transaction_pickup_go_send'])) {
+                    foreach ($list['transaction_pickup_go_send']['transaction_pickup_update'] as $valueGosend) {
+                        switch (strtolower($valueGosend['status'])) {
+                            case 'finding driver':
+                            case 'confirmed':
+                                $statusOrder[] = [
+                                    'text'  => 'Sedang mencari driver',
+                                    'date'  => $valueGosend['created_at']
+                                ];
+                                break;
+                            case 'driver allocated':
+                            case 'allocated':
+                                $statusOrder[] = [
+                                    'text'  => 'Driver ditemukan',
+                                    'date'  => $valueGosend['created_at']
+                                ];
+                                break;
+                            case 'enroute pickup':
+                            case 'out_for_pickup':
+                                $statusOrder[] = [
+                                    'text'  => 'Driver dalam perjalanan menuju Outlet',
+                                    'date'  => $valueGosend['created_at']
+                                ];
+                                break;
+                            case 'enroute drop':
+                            case 'out_for_delivery':
+                                $statusOrder[] = [
+                                    'text'  => 'Driver mengantarkan pesanan',
+                                    'date'  => $valueGosend['created_at']
+                                ];
+                                break;
+                            case 'completed':
+                            case 'delivered':
+                                $statusOrder[] = [
+                                    'text'  => 'Pesanan sudah diterima Customer',
+                                    'date'  => $valueGosend['created_at']
+                                ];
+                                break;
+                            case 'cancelled':
+                                $statusOrder[] = [
+                                    'text'  => 'Pengantaran dibatalkan',
+                                    'date'  => $valueGosend['created_at']
+                                ];
+                                break;
+                            case 'driver not found':
+                            case 'no_driver':
+                                $statusOrder[] = [
+                                    'text'  => 'Driver tidak ditemukan',
+                                    'date'  => $valueGosend['created_at']
+                                ];
+                                break;
+                        }
+                    }
+                }
+                if ($list['detail']['receive_at'] != null) {
+                    $statusOrder[] = [
+                        'text'  => 'Pesanan Anda sudah diterima',
+                        'date'  => $list['detail']['receive_at']
+                    ];
+                }
+                $statusOrder[] = [
+                    'text'  => 'Pesanan Anda menunggu konfirmasi',
+                    'date'  => $list['transaction_date']
                 ];
             }
-            if ($list['detail']['taken_by_system_at'] != null) {
-                $result['detail']['detail_status'][] = [
-                    'text'  => 'Your order has been done by system',
-                    'date'  => date('d F Y H:i', strtotime($list['detail']['taken_by_system_at']))
+
+            usort($statusOrder, function($a1, $a2) {
+                $v1 = strtotime($a1['date']);
+                $v2 = strtotime($a2['date']);
+                return $v2 - $v1; // $v2 - $v1 to reverse direction
+            });
+
+            foreach ($statusOrder as $keyStatus => $status) {
+                $result['detail']['detail_status'][$keyStatus] = [
+                    'text'  => $status['text'],
+                    'date'  => date('d F Y H:i', strtotime($status['date']))
                 ];
+                if ($status['text'] == 'Order rejected') {
+                    $result['detail']['detail_status'][$keyStatus]['reason'] = $list['detail']['reject_reason'];
+                }
             }
-            if ($list['detail']['taken_at'] != null) {
-                $result['detail']['detail_status'][] = [
-                    'text'  => 'Your order has been taken',
-                    'date'  => date('d F Y H:i', strtotime($list['detail']['taken_at']))
-                ];
-            }
-            if ($list['detail']['ready_at'] != null) {
-                $result['detail']['detail_status'][] = [
-                    'text'  => 'Your order is ready ',
-                    'date'  => date('d F Y H:i', strtotime($list['detail']['ready_at']))
-                ];
-            }
-            if ($list['detail']['receive_at'] != null) {
-                $result['detail']['detail_status'][] = [
-                    'text'  => 'Your order has been received',
-                    'date'  => date('d F Y H:i', strtotime($list['detail']['receive_at']))
-                ];
-            }
-            $result['detail']['detail_status'][] = [
-                'text'  => 'Your order awaits confirmation ',
-                'date'  => date('d F Y H:i', strtotime($list['transaction_date']))
-            ];
         }
 
         foreach ($list['payment'] as $key => $value) {
