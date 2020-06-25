@@ -766,7 +766,16 @@ class SettingsTableSeeder extends Seeder
                     'value_text' => null,
                     'created_at' => date('Y-m-d H:i:s'),
                     'updated_at' => date('Y-m-d H:i:s'),
-                )
+                ),
+            85 =>
+                array(
+                    'id_setting' => 86,
+                    'key' => 'disburse_global_setting_time_to_sent',
+                    'value' => 4,
+                    'value_text' => null,
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
         ));
     }
 }
