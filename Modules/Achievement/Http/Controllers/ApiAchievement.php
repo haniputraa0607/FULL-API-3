@@ -101,8 +101,8 @@ class ApiAchievement extends Controller
     public function category(Request $request)
     {
         return [
-            'status'    => 'success',
-            'data'      => AchievementCategory::get()->toArray()
+            'status' => 'success',
+            'data' => AchievementCategory::get()->toArray(),
         ];
     }
 
@@ -125,30 +125,30 @@ class ApiAchievement extends Controller
 
         if (isset($request['id_achievement_group'])) {
             $request->validate([
-                'detail.*.name'             => 'required',
-                'detail.*.logo_badge'       => 'required'
+                'detail.*.name' => 'required',
+                'detail.*.logo_badge' => 'required',
             ]);
         } else {
             $request->validate([
-                'category.name'             => 'required',
-                'group.name'                => 'required',
-                'group.publish_start'       => 'required',
-                'group.date_start'          => 'required',
-                'group.description'         => 'required',
-                'rule_total'                => 'required',
-                'group.logo_badge_default'  => 'required',
-                'detail.*.name'             => 'required',
-                'detail.*.logo_badge'       => 'required'
+                'category.name' => 'required',
+                'group.name' => 'required',
+                'group.publish_start' => 'required',
+                'group.date_start' => 'required',
+                'group.description' => 'required',
+                'rule_total' => 'required',
+                'group.logo_badge_default' => 'required',
+                'detail.*.name' => 'required',
+                'detail.*.logo_badge' => 'required',
             ]);
 
             $upload = MyHelper::uploadPhotoStrict($post['group']['logo_badge_default'], $this->saveImage, 500, 500);
-            
+
             if (isset($upload['status']) && $upload['status'] == "success") {
                 $post['group']['logo_badge_default'] = $upload['path'];
             } else {
                 return response()->json([
-                    'status'   => 'fail',
-                    'messages' => ['Failed to upload image']
+                    'status' => 'fail',
+                    'messages' => ['Failed to upload image'],
                 ]);
             }
 
@@ -162,19 +162,19 @@ class ApiAchievement extends Controller
             } catch (\Exception $e) {
                 DB::rollBack();
                 return response()->json([
-                    'status'    => 'fail',
-                    'message'   => 'Get or Add Category Achievement Failed',
-                    'error'     => $e->getMessage()
+                    'status' => 'fail',
+                    'message' => 'Get or Add Category Achievement Failed',
+                    'error' => $e->getMessage(),
                 ]);
             }
 
-            $post['group']['publish_start']     = date('Y-m-d H:i', strtotime($post['group']['publish_start']));
-            $post['group']['date_start']        = date('Y-m-d H:i', strtotime($post['group']['date_start']));
+            $post['group']['publish_start'] = date('Y-m-d H:i', strtotime($post['group']['publish_start']));
+            $post['group']['date_start'] = date('Y-m-d H:i', strtotime($post['group']['date_start']));
             if (!is_null($post['group']['publish_end'])) {
-                $post['group']['publish_end']   = date('Y-m-d H:i', strtotime($post['group']['publish_end']));
+                $post['group']['publish_end'] = date('Y-m-d H:i', strtotime($post['group']['publish_end']));
             }
             if (!is_null($post['group']['date_end'])) {
-                $post['group']['date_end']      = date('Y-m-d H:i', strtotime($post['group']['date_end']));
+                $post['group']['date_end'] = date('Y-m-d H:i', strtotime($post['group']['date_end']));
             }
 
             try {
@@ -182,9 +182,9 @@ class ApiAchievement extends Controller
             } catch (\Exception $e) {
                 DB::rollBack();
                 return response()->json([
-                    'status'    => 'fail',
-                    'message'   => 'Add Achievement Group Failed',
-                    'error'     => $e->getMessage()
+                    'status' => 'fail',
+                    'message' => 'Add Achievement Group Failed',
+                    'error' => $e->getMessage(),
                 ]);
             }
         }
@@ -198,33 +198,33 @@ class ApiAchievement extends Controller
                         $value['logo_badge'] = $uploadDetail['path'];
                     } else {
                         return response()->json([
-                            'status'   => 'fail',
-                            'messages' => ['Failed to upload image']
+                            'status' => 'fail',
+                            'messages' => ['Failed to upload image'],
                         ]);
                     }
 
                     if (isset($request['id_achievement_group'])) {
-                        $value['id_achievement_group']   = MyHelper::decSlug($request['id_achievement_group']);
+                        $value['id_achievement_group'] = MyHelper::decSlug($request['id_achievement_group']);
                     } else {
-                        $value['id_achievement_group']   = MyHelper::decSlug($group->id_achievement_group);
+                        $value['id_achievement_group'] = MyHelper::decSlug($group->id_achievement_group);
                     }
 
                     switch ($post['rule_total']) {
                         case 'nominal_transaction':
-                            $value['trx_nominal']       = $value['value_total'];
-                            $value['id_product']        = $post['rule']['id_product'];
-                            $value['product_total']     = $post['rule']['product_total'];
-                            $value['id_outlet']         = $post['rule']['id_outlet'];
-                            $value['id_province']       = $post['rule']['id_province'];
+                            $value['trx_nominal'] = $value['value_total'];
+                            $value['id_product'] = $post['rule']['id_product'];
+                            $value['product_total'] = $post['rule']['product_total'];
+                            $value['id_outlet'] = $post['rule']['id_outlet'];
+                            $value['id_province'] = $post['rule']['id_province'];
                             unset($value['value_total']);
                             break;
                         case 'total_transaction':
-                            $value['trx_total']         = $value['value_total'];
-                            $value['trx_nominal']       = $post['rule']['trx_nominal'];
-                            $value['id_product']        = $post['rule']['id_product'];
-                            $value['product_total']     = $post['rule']['product_total'];
-                            $value['id_outlet']         = $post['rule']['id_outlet'];
-                            $value['id_province']       = $post['rule']['id_province'];
+                            $value['trx_total'] = $value['value_total'];
+                            $value['trx_nominal'] = $post['rule']['trx_nominal'];
+                            $value['id_product'] = $post['rule']['id_product'];
+                            $value['product_total'] = $post['rule']['product_total'];
+                            $value['id_outlet'] = $post['rule']['id_outlet'];
+                            $value['id_province'] = $post['rule']['id_province'];
                             unset($value['value_total']);
                             break;
                     }
@@ -234,9 +234,9 @@ class ApiAchievement extends Controller
             } catch (\Exception $e) {
                 DB::rollBack();
                 return response()->json([
-                    'status'    => 'fail',
-                    'message'   => 'Add Achievement Detail Failed',
-                    'error'     => $e->getMessage()
+                    'status' => 'fail',
+                    'message' => 'Add Achievement Detail Failed',
+                    'error' => $e->getMessage(),
                 ]);
             }
         }
@@ -252,15 +252,15 @@ class ApiAchievement extends Controller
 
         if (isset($request['id_achievement_group'])) {
             return response()->json([
-                'status'    => 'success',
-                'message'   => 'Add Achievement Success',
-                'data'      => $request['id_achievement_group']
+                'status' => 'success',
+                'message' => 'Add Achievement Success',
+                'data' => $request['id_achievement_group'],
             ]);
         } else {
             return response()->json([
-                'status'    => 'success',
-                'message'   => 'Add Achievement Success',
-                'data'      => $group->id_achievement_group
+                'status' => 'success',
+                'message' => 'Add Achievement Success',
+                'data' => $group->id_achievement_group,
             ]);
         }
     }
@@ -273,9 +273,9 @@ class ApiAchievement extends Controller
             $getTrxUser = Transaction::with('outlet.city.province', 'productTransaction')->where(['transactions.id_user' => $idUser, 'transactions.transaction_payment_status' => 'Completed'])->get()->toArray();
 
             if ($achievementPassed == $keyAch) {
-                $totalTrx       = 0;
-                $totalOutlet    = [];
-                $totalProvince  = [];
+                $totalTrx = 0;
+                $totalOutlet = [];
+                $totalProvince = [];
                 foreach ($getTrxUser as $user) {
                     $trxNominalStatus = false;
                     if (!is_null($achievement['trx_nominal'])) {
@@ -298,40 +298,40 @@ class ApiAchievement extends Controller
                                     if (!is_null($achievement['product_total'])) {
                                         if ((int) $achievement['product_total'] <= $product['transaction_product_qty']) {
                                             AchievementProductLog::updateOrCreate([
-                                                'id_achievement_group'      => $achievement['id_achievement_group'],
-                                                'id_achievement_detail'     => $achievement['id_achievement_detail'],
-                                                'id_user'                   => $idUser,
-                                                'id_product'                => $product['id_product'],
-                                                'product_total'             => $achievement['transaction_product_qty'],
-                                                'id_transaction'            => $user['id_transaction']
+                                                'id_achievement_group' => $achievement['id_achievement_group'],
+                                                'id_achievement_detail' => $achievement['id_achievement_detail'],
+                                                'id_user' => $idUser,
+                                                'id_product' => $product['id_product'],
+                                                'product_total' => $achievement['transaction_product_qty'],
+                                                'id_transaction' => $user['id_transaction'],
                                             ], [
-                                                'id_achievement_group'      => $achievement['id_achievement_group'],
-                                                'id_achievement_detail'     => $achievement['id_achievement_detail'],
-                                                'id_user'                   => $idUser,
-                                                'id_product'                => $product['id_product'],
-                                                'product_total'             => $achievement['transaction_product_qty'],
-                                                'id_transaction'            => $user['id_transaction'],
-                                                'json_rule'                 => json_encode([
-                                                    'id_product'            => $achievement['id_product'],
-                                                    'product_total'         => $achievement['product_total'],
-                                                    'trx_nominal'           => $achievement['trx_nominal'],
-                                                    'trx_total'             => $achievement['trx_total'],
-                                                    'id_outlet'             => $achievement['id_outlet'],
-                                                    'different_outlet'      => $achievement['different_outlet'],
-                                                    'id_province'           => $achievement['id_province'],
-                                                    'different_province'    => $achievement['different_province']
+                                                'id_achievement_group' => $achievement['id_achievement_group'],
+                                                'id_achievement_detail' => $achievement['id_achievement_detail'],
+                                                'id_user' => $idUser,
+                                                'id_product' => $product['id_product'],
+                                                'product_total' => $achievement['transaction_product_qty'],
+                                                'id_transaction' => $user['id_transaction'],
+                                                'json_rule' => json_encode([
+                                                    'id_product' => $achievement['id_product'],
+                                                    'product_total' => $achievement['product_total'],
+                                                    'trx_nominal' => $achievement['trx_nominal'],
+                                                    'trx_total' => $achievement['trx_total'],
+                                                    'id_outlet' => $achievement['id_outlet'],
+                                                    'different_outlet' => $achievement['different_outlet'],
+                                                    'id_province' => $achievement['id_province'],
+                                                    'different_province' => $achievement['different_province'],
                                                 ]),
-                                                'json_rule_enc'             => MyHelper::encrypt2019(json_encode([
-                                                    'id_product'            => $achievement['id_product'],
-                                                    'product_total'         => $achievement['product_total'],
-                                                    'trx_nominal'           => $achievement['trx_nominal'],
-                                                    'trx_total'             => $achievement['trx_total'],
-                                                    'id_outlet'             => $achievement['id_outlet'],
-                                                    'different_outlet'      => $achievement['different_outlet'],
-                                                    'id_province'           => $achievement['id_province'],
-                                                    'different_province'    => $achievement['different_province']
+                                                'json_rule_enc' => MyHelper::encrypt2019(json_encode([
+                                                    'id_product' => $achievement['id_product'],
+                                                    'product_total' => $achievement['product_total'],
+                                                    'trx_nominal' => $achievement['trx_nominal'],
+                                                    'trx_total' => $achievement['trx_total'],
+                                                    'id_outlet' => $achievement['id_outlet'],
+                                                    'different_outlet' => $achievement['different_outlet'],
+                                                    'id_province' => $achievement['id_province'],
+                                                    'different_province' => $achievement['different_province'],
                                                 ])),
-                                                'date'                      => date('Y-m-d H:i:s')
+                                                'date' => date('Y-m-d H:i:s'),
                                             ]);
                                             $trxTotalProductStatus = true;
                                             break;
@@ -341,38 +341,38 @@ class ApiAchievement extends Controller
                                         }
                                     } else {
                                         AchievementProductLog::updateOrCreate([
-                                            'id_achievement_group'      => $achievement['id_achievement_group'],
-                                            'id_achievement_detail'     => $achievement['id_achievement_detail'],
-                                            'id_user'                   => $idUser,
-                                            'id_product'                => $product['id_product'],
-                                            'id_transaction'            => $user['id_transaction']
+                                            'id_achievement_group' => $achievement['id_achievement_group'],
+                                            'id_achievement_detail' => $achievement['id_achievement_detail'],
+                                            'id_user' => $idUser,
+                                            'id_product' => $product['id_product'],
+                                            'id_transaction' => $user['id_transaction'],
                                         ], [
-                                            'id_achievement_group'      => $achievement['id_achievement_group'],
-                                            'id_achievement_detail'     => $achievement['id_achievement_detail'],
-                                            'id_user'                   => $idUser,
-                                            'id_product'                => $product['id_product'],
-                                            'id_transaction'            => $user['id_transaction'],
-                                            'json_rule'                 => json_encode([
-                                                'id_product'            => $achievement['id_product'],
-                                                'product_total'         => $achievement['product_total'],
-                                                'trx_nominal'           => $achievement['trx_nominal'],
-                                                'trx_total'             => $achievement['trx_total'],
-                                                'id_outlet'             => $achievement['id_outlet'],
-                                                'different_outlet'      => $achievement['different_outlet'],
-                                                'id_province'           => $achievement['id_province'],
-                                                'different_province'    => $achievement['different_province']
+                                            'id_achievement_group' => $achievement['id_achievement_group'],
+                                            'id_achievement_detail' => $achievement['id_achievement_detail'],
+                                            'id_user' => $idUser,
+                                            'id_product' => $product['id_product'],
+                                            'id_transaction' => $user['id_transaction'],
+                                            'json_rule' => json_encode([
+                                                'id_product' => $achievement['id_product'],
+                                                'product_total' => $achievement['product_total'],
+                                                'trx_nominal' => $achievement['trx_nominal'],
+                                                'trx_total' => $achievement['trx_total'],
+                                                'id_outlet' => $achievement['id_outlet'],
+                                                'different_outlet' => $achievement['different_outlet'],
+                                                'id_province' => $achievement['id_province'],
+                                                'different_province' => $achievement['different_province'],
                                             ]),
-                                            'json_rule_enc'             => MyHelper::encrypt2019(json_encode([
-                                                'id_product'            => $achievement['id_product'],
-                                                'product_total'         => $achievement['product_total'],
-                                                'trx_nominal'           => $achievement['trx_nominal'],
-                                                'trx_total'             => $achievement['trx_total'],
-                                                'id_outlet'             => $achievement['id_outlet'],
-                                                'different_outlet'      => $achievement['different_outlet'],
-                                                'id_province'           => $achievement['id_province'],
-                                                'different_province'    => $achievement['different_province']
+                                            'json_rule_enc' => MyHelper::encrypt2019(json_encode([
+                                                'id_product' => $achievement['id_product'],
+                                                'product_total' => $achievement['product_total'],
+                                                'trx_nominal' => $achievement['trx_nominal'],
+                                                'trx_total' => $achievement['trx_total'],
+                                                'id_outlet' => $achievement['id_outlet'],
+                                                'different_outlet' => $achievement['different_outlet'],
+                                                'id_province' => $achievement['id_province'],
+                                                'different_province' => $achievement['different_province'],
                                             ])),
-                                            'date'                      => date('Y-m-d H:i:s')
+                                            'date' => date('Y-m-d H:i:s'),
                                         ]);
                                         $trxTotalProductStatus = true;
                                         break;
@@ -394,38 +394,38 @@ class ApiAchievement extends Controller
                     if (!is_null($achievement['id_outlet'])) {
                         if ((int) $achievement['id_outlet'] == $user['id_outlet']) {
                             AchievementOutletLog::updateOrCreate([
-                                'id_achievement_group'      => $achievement['id_achievement_group'],
-                                'id_achievement_detail'     => $achievement['id_achievement_detail'],
-                                'id_user'                   => $idUser,
-                                'id_outlet'                 => $user['id_outlet'],
-                                'id_transaction'            => $user['id_transaction']
+                                'id_achievement_group' => $achievement['id_achievement_group'],
+                                'id_achievement_detail' => $achievement['id_achievement_detail'],
+                                'id_user' => $idUser,
+                                'id_outlet' => $user['id_outlet'],
+                                'id_transaction' => $user['id_transaction'],
                             ], [
-                                'id_achievement_group'      => $achievement['id_achievement_group'],
-                                'id_achievement_detail'     => $achievement['id_achievement_detail'],
-                                'id_user'                   => $idUser,
-                                'id_outlet'                 => $user['id_outlet'],
-                                'id_transaction'            => $user['id_transaction'],
-                                'json_rule'                 => json_encode([
-                                    'id_product'            => $achievement['id_product'],
-                                    'product_total'         => $achievement['product_total'],
-                                    'trx_nominal'           => $achievement['trx_nominal'],
-                                    'trx_total'             => $achievement['trx_total'],
-                                    'id_outlet'             => $achievement['id_outlet'],
-                                    'different_outlet'      => $achievement['different_outlet'],
-                                    'id_province'           => $achievement['id_province'],
-                                    'different_province'    => $achievement['different_province']
+                                'id_achievement_group' => $achievement['id_achievement_group'],
+                                'id_achievement_detail' => $achievement['id_achievement_detail'],
+                                'id_user' => $idUser,
+                                'id_outlet' => $user['id_outlet'],
+                                'id_transaction' => $user['id_transaction'],
+                                'json_rule' => json_encode([
+                                    'id_product' => $achievement['id_product'],
+                                    'product_total' => $achievement['product_total'],
+                                    'trx_nominal' => $achievement['trx_nominal'],
+                                    'trx_total' => $achievement['trx_total'],
+                                    'id_outlet' => $achievement['id_outlet'],
+                                    'different_outlet' => $achievement['different_outlet'],
+                                    'id_province' => $achievement['id_province'],
+                                    'different_province' => $achievement['different_province'],
                                 ]),
-                                'json_rule_enc'             => MyHelper::encrypt2019(json_encode([
-                                    'id_product'            => $achievement['id_product'],
-                                    'product_total'         => $achievement['product_total'],
-                                    'trx_nominal'           => $achievement['trx_nominal'],
-                                    'trx_total'             => $achievement['trx_total'],
-                                    'id_outlet'             => $achievement['id_outlet'],
-                                    'different_outlet'      => $achievement['different_outlet'],
-                                    'id_province'           => $achievement['id_province'],
-                                    'different_province'    => $achievement['different_province']
+                                'json_rule_enc' => MyHelper::encrypt2019(json_encode([
+                                    'id_product' => $achievement['id_product'],
+                                    'product_total' => $achievement['product_total'],
+                                    'trx_nominal' => $achievement['trx_nominal'],
+                                    'trx_total' => $achievement['trx_total'],
+                                    'id_outlet' => $achievement['id_outlet'],
+                                    'different_outlet' => $achievement['different_outlet'],
+                                    'id_province' => $achievement['id_province'],
+                                    'different_province' => $achievement['different_province'],
                                 ])),
-                                'date'                      => date('Y-m-d H:i:s')
+                                'date' => date('Y-m-d H:i:s'),
                             ]);
                             $trxOutletStatus = true;
                             break;
@@ -440,37 +440,37 @@ class ApiAchievement extends Controller
                     if (!is_null($achievement['id_province'])) {
                         if ((int) $achievement['id_province'] == $user['outlet']['city']['province']['id_province']) {
                             AchievementProvinceLog::updateOrCreate([
-                                'id_achievement_group'      => $achievement['id_achievement_group'],
-                                'id_achievement_detail'     => $achievement['id_achievement_detail'],
-                                'id_user'                   => $idUser,
-                                'id_transaction'            => $user['id_transaction'],
-                                'id_province'               => $user['outlet']['city']['province']['id_province']
+                                'id_achievement_group' => $achievement['id_achievement_group'],
+                                'id_achievement_detail' => $achievement['id_achievement_detail'],
+                                'id_user' => $idUser,
+                                'id_transaction' => $user['id_transaction'],
+                                'id_province' => $user['outlet']['city']['province']['id_province'],
                             ], [
-                                'id_achievement_detail'     => $achievement['id_achievement_detail'],
-                                'id_user'                   => $idUser,
-                                'id_transaction'            => $user['id_transaction'],
-                                'id_province'               => $user['outlet']['city']['province']['id_province'],
-                                'json_rule'                 => json_encode([
-                                    'id_product'            => $achievement['id_product'],
-                                    'product_total'         => $achievement['product_total'],
-                                    'trx_nominal'           => $achievement['trx_nominal'],
-                                    'trx_total'             => $achievement['trx_total'],
-                                    'id_outlet'             => $achievement['id_outlet'],
-                                    'different_outlet'      => $achievement['different_outlet'],
-                                    'id_province'           => $achievement['id_province'],
-                                    'different_province'    => $achievement['different_province']
+                                'id_achievement_detail' => $achievement['id_achievement_detail'],
+                                'id_user' => $idUser,
+                                'id_transaction' => $user['id_transaction'],
+                                'id_province' => $user['outlet']['city']['province']['id_province'],
+                                'json_rule' => json_encode([
+                                    'id_product' => $achievement['id_product'],
+                                    'product_total' => $achievement['product_total'],
+                                    'trx_nominal' => $achievement['trx_nominal'],
+                                    'trx_total' => $achievement['trx_total'],
+                                    'id_outlet' => $achievement['id_outlet'],
+                                    'different_outlet' => $achievement['different_outlet'],
+                                    'id_province' => $achievement['id_province'],
+                                    'different_province' => $achievement['different_province'],
                                 ]),
-                                'json_rule_enc'             => MyHelper::encrypt2019(json_encode([
-                                    'id_product'            => $achievement['id_product'],
-                                    'product_total'         => $achievement['product_total'],
-                                    'trx_nominal'           => $achievement['trx_nominal'],
-                                    'trx_total'             => $achievement['trx_total'],
-                                    'id_outlet'             => $achievement['id_outlet'],
-                                    'different_outlet'      => $achievement['different_outlet'],
-                                    'id_province'           => $achievement['id_province'],
-                                    'different_province'    => $achievement['different_province']
+                                'json_rule_enc' => MyHelper::encrypt2019(json_encode([
+                                    'id_product' => $achievement['id_product'],
+                                    'product_total' => $achievement['product_total'],
+                                    'trx_nominal' => $achievement['trx_nominal'],
+                                    'trx_total' => $achievement['trx_total'],
+                                    'id_outlet' => $achievement['id_outlet'],
+                                    'different_outlet' => $achievement['different_outlet'],
+                                    'id_province' => $achievement['id_province'],
+                                    'different_province' => $achievement['different_province'],
                                 ])),
-                                'date'                      => date('Y-m-d H:i:s')
+                                'date' => date('Y-m-d H:i:s'),
                             ]);
                             $trxProvinceStatus = true;
                             break;
@@ -485,39 +485,39 @@ class ApiAchievement extends Controller
                         $totalTrx = $totalTrx + 1;
                     }
 
-                    $totalOutlet[]      = $user['id_outlet'];
-                    $totalProvince[]    = $user['outlet']['city']['province']['id_province'];
+                    $totalOutlet[] = $user['id_outlet'];
+                    $totalProvince[] = $user['outlet']['city']['province']['id_province'];
                 }
 
                 if (!is_null($achievement['different_outlet'])) {
                     if (count(array_unique($totalOutlet)) >= (int) $achievement['different_outlet']) {
                         AchievementUserLog::updateOrCreate([
-                            'id_achievement_detail'     => $achievement['id_achievement_detail'],
-                            'id_user'                   => $idUser,
+                            'id_achievement_detail' => $achievement['id_achievement_detail'],
+                            'id_user' => $idUser,
                         ], [
-                            'id_achievement_detail'     => $achievement['id_achievement_detail'],
-                            'id_user'                   => $idUser,
-                            'json_rule'                 => json_encode([
-                                'id_product'            => $achievement['id_product'],
-                                'product_total'         => $achievement['product_total'],
-                                'trx_nominal'           => $achievement['trx_nominal'],
-                                'trx_total'             => $achievement['trx_total'],
-                                'id_outlet'             => $achievement['id_outlet'],
-                                'different_outlet'      => $achievement['different_outlet'],
-                                'id_province'           => $achievement['id_province'],
-                                'different_province'    => $achievement['different_province']
+                            'id_achievement_detail' => $achievement['id_achievement_detail'],
+                            'id_user' => $idUser,
+                            'json_rule' => json_encode([
+                                'id_product' => $achievement['id_product'],
+                                'product_total' => $achievement['product_total'],
+                                'trx_nominal' => $achievement['trx_nominal'],
+                                'trx_total' => $achievement['trx_total'],
+                                'id_outlet' => $achievement['id_outlet'],
+                                'different_outlet' => $achievement['different_outlet'],
+                                'id_province' => $achievement['id_province'],
+                                'different_province' => $achievement['different_province'],
                             ]),
-                            'json_rule_enc'             => MyHelper::encrypt2019(json_encode([
-                                'id_product'            => $achievement['id_product'],
-                                'product_total'         => $achievement['product_total'],
-                                'trx_nominal'           => $achievement['trx_nominal'],
-                                'trx_total'             => $achievement['trx_total'],
-                                'id_outlet'             => $achievement['id_outlet'],
-                                'different_outlet'      => $achievement['different_outlet'],
-                                'id_province'           => $achievement['id_province'],
-                                'different_province'    => $achievement['different_province']
+                            'json_rule_enc' => MyHelper::encrypt2019(json_encode([
+                                'id_product' => $achievement['id_product'],
+                                'product_total' => $achievement['product_total'],
+                                'trx_nominal' => $achievement['trx_nominal'],
+                                'trx_total' => $achievement['trx_total'],
+                                'id_outlet' => $achievement['id_outlet'],
+                                'different_outlet' => $achievement['different_outlet'],
+                                'id_province' => $achievement['id_province'],
+                                'different_province' => $achievement['different_province'],
                             ])),
-                            'date'                      => date('Y-m-d H:i:s')
+                            'date' => date('Y-m-d H:i:s'),
                         ]);
                         $achievementPassed = $achievementPassed + 1;
                         continue;
@@ -534,32 +534,32 @@ class ApiAchievement extends Controller
                 if (!is_null($achievement['different_province'])) {
                     if (count(array_unique($totalProvince)) >= (int) $achievement['different_province']) {
                         AchievementUserLog::updateOrCreate([
-                            'id_achievement_detail'     => $achievement['id_achievement_detail'],
-                            'id_user'                   => $idUser,
+                            'id_achievement_detail' => $achievement['id_achievement_detail'],
+                            'id_user' => $idUser,
                         ], [
-                            'id_achievement_detail'     => $achievement['id_achievement_detail'],
-                            'id_user'                   => $idUser,
-                            'json_rule'                 => json_encode([
-                                'id_product'            => $achievement['id_product'],
-                                'product_total'         => $achievement['product_total'],
-                                'trx_nominal'           => $achievement['trx_nominal'],
-                                'trx_total'             => $achievement['trx_total'],
-                                'id_outlet'             => $achievement['id_outlet'],
-                                'different_outlet'      => $achievement['different_outlet'],
-                                'id_province'           => $achievement['id_province'],
-                                'different_province'    => $achievement['different_province']
+                            'id_achievement_detail' => $achievement['id_achievement_detail'],
+                            'id_user' => $idUser,
+                            'json_rule' => json_encode([
+                                'id_product' => $achievement['id_product'],
+                                'product_total' => $achievement['product_total'],
+                                'trx_nominal' => $achievement['trx_nominal'],
+                                'trx_total' => $achievement['trx_total'],
+                                'id_outlet' => $achievement['id_outlet'],
+                                'different_outlet' => $achievement['different_outlet'],
+                                'id_province' => $achievement['id_province'],
+                                'different_province' => $achievement['different_province'],
                             ]),
-                            'json_rule_enc'             => MyHelper::encrypt2019(json_encode([
-                                'id_product'            => $achievement['id_product'],
-                                'product_total'         => $achievement['product_total'],
-                                'trx_nominal'           => $achievement['trx_nominal'],
-                                'trx_total'             => $achievement['trx_total'],
-                                'id_outlet'             => $achievement['id_outlet'],
-                                'different_outlet'      => $achievement['different_outlet'],
-                                'id_province'           => $achievement['id_province'],
-                                'different_province'    => $achievement['different_province']
+                            'json_rule_enc' => MyHelper::encrypt2019(json_encode([
+                                'id_product' => $achievement['id_product'],
+                                'product_total' => $achievement['product_total'],
+                                'trx_nominal' => $achievement['trx_nominal'],
+                                'trx_total' => $achievement['trx_total'],
+                                'id_outlet' => $achievement['id_outlet'],
+                                'different_outlet' => $achievement['different_outlet'],
+                                'id_province' => $achievement['id_province'],
+                                'different_province' => $achievement['different_province'],
                             ])),
-                            'date'                      => date('Y-m-d H:i:s')
+                            'date' => date('Y-m-d H:i:s'),
                         ]);
                         $achievementPassed = $achievementPassed + 1;
                         continue;
@@ -576,42 +576,42 @@ class ApiAchievement extends Controller
                 if (!is_null($achievement['trx_total'])) {
                     if ($totalTrx >= (int) $achievement['trx_total']) {
                         AchievementUserLog::updateOrCreate([
-                            'id_achievement_detail'     => $achievement['id_achievement_detail'],
-                            'id_user'                   => $idUser,
+                            'id_achievement_detail' => $achievement['id_achievement_detail'],
+                            'id_user' => $idUser,
                         ], [
-                            'id_achievement_detail'     => $achievement['id_achievement_detail'],
-                            'id_user'                   => $idUser,
-                            'json_rule'                 => json_encode([
-                                'id_product'            => $achievement['id_product'],
-                                'product_total'         => $achievement['product_total'],
-                                'trx_nominal'           => $achievement['trx_nominal'],
-                                'trx_total'             => $achievement['trx_total'],
-                                'id_outlet'             => $achievement['id_outlet'],
-                                'different_outlet'      => $achievement['different_outlet'],
-                                'id_province'           => $achievement['id_province'],
-                                'different_province'    => $achievement['different_province']
+                            'id_achievement_detail' => $achievement['id_achievement_detail'],
+                            'id_user' => $idUser,
+                            'json_rule' => json_encode([
+                                'id_product' => $achievement['id_product'],
+                                'product_total' => $achievement['product_total'],
+                                'trx_nominal' => $achievement['trx_nominal'],
+                                'trx_total' => $achievement['trx_total'],
+                                'id_outlet' => $achievement['id_outlet'],
+                                'different_outlet' => $achievement['different_outlet'],
+                                'id_province' => $achievement['id_province'],
+                                'different_province' => $achievement['different_province'],
                             ]),
-                            'json_rule_enc'             => MyHelper::encrypt2019(json_encode([
-                                'id_product'            => $achievement['id_product'],
-                                'product_total'         => $achievement['product_total'],
-                                'trx_nominal'           => $achievement['trx_nominal'],
-                                'trx_total'             => $achievement['trx_total'],
-                                'id_outlet'             => $achievement['id_outlet'],
-                                'different_outlet'      => $achievement['different_outlet'],
-                                'id_province'           => $achievement['id_province'],
-                                'different_province'    => $achievement['different_province']
+                            'json_rule_enc' => MyHelper::encrypt2019(json_encode([
+                                'id_product' => $achievement['id_product'],
+                                'product_total' => $achievement['product_total'],
+                                'trx_nominal' => $achievement['trx_nominal'],
+                                'trx_total' => $achievement['trx_total'],
+                                'id_outlet' => $achievement['id_outlet'],
+                                'different_outlet' => $achievement['different_outlet'],
+                                'id_province' => $achievement['id_province'],
+                                'different_province' => $achievement['different_province'],
                             ])),
-                            'date'                      => date('Y-m-d H:i:s')
+                            'date' => date('Y-m-d H:i:s'),
                         ]);
                         if ($rules == 'total_transaction') {
                             AchievementProgress::updateOrCreate([
-                                'id_achievement_detail'     => $achievement['id_achievement_detail'],
-                                'id_user'                   => $idUser,
+                                'id_achievement_detail' => $achievement['id_achievement_detail'],
+                                'id_user' => $idUser,
                             ], [
-                                'id_achievement_detail'     => $achievement['id_achievement_detail'],
-                                'id_user'                   => $idUser,
-                                'progress'                  => $achievement['trx_total'],
-                                'end_progress'              => $achievement['trx_total']
+                                'id_achievement_detail' => $achievement['id_achievement_detail'],
+                                'id_user' => $idUser,
+                                'progress' => $achievement['trx_total'],
+                                'end_progress' => $achievement['trx_total'],
                             ]);
                         }
                         $achievementPassed = $achievementPassed + 1;
@@ -619,13 +619,13 @@ class ApiAchievement extends Controller
                     } else {
                         if ($rules == 'total_transaction') {
                             AchievementProgress::updateOrCreate([
-                                'id_achievement_detail'     => $achievement['id_achievement_detail'],
-                                'id_user'                   => $idUser,
+                                'id_achievement_detail' => $achievement['id_achievement_detail'],
+                                'id_user' => $idUser,
                             ], [
-                                'id_achievement_detail'     => $achievement['id_achievement_detail'],
-                                'id_user'                   => $idUser,
-                                'progress'                  => $totalTrx,
-                                'end_progress'              => $achievement['trx_total']
+                                'id_achievement_detail' => $achievement['id_achievement_detail'],
+                                'id_user' => $idUser,
+                                'progress' => $totalTrx,
+                                'end_progress' => $achievement['trx_total'],
                             ]);
                         }
                         if ($achievementPassed - 1 < 0) {
@@ -646,32 +646,32 @@ class ApiAchievement extends Controller
 
         if ($achievement != null) {
             AchievementUser::updateOrCreate([
-                'id_achievement_detail'     => $achievement['id_achievement_detail'],
-                'id_user'                   => $idUser,
+                'id_achievement_detail' => $achievement['id_achievement_detail'],
+                'id_user' => $idUser,
             ], [
-                'id_achievement_detail'     => $achievement['id_achievement_detail'],
-                'id_user'                   => $idUser,
-                'json_rule'                 => json_encode([
-                    'id_product'            => $achievement['id_product'],
-                    'product_total'         => $achievement['product_total'],
-                    'trx_nominal'           => $achievement['trx_nominal'],
-                    'trx_total'             => $achievement['trx_total'],
-                    'id_outlet'             => $achievement['id_outlet'],
-                    'different_outlet'      => $achievement['different_outlet'],
-                    'id_province'           => $achievement['id_province'],
-                    'different_province'    => $achievement['different_province']
+                'id_achievement_detail' => $achievement['id_achievement_detail'],
+                'id_user' => $idUser,
+                'json_rule' => json_encode([
+                    'id_product' => $achievement['id_product'],
+                    'product_total' => $achievement['product_total'],
+                    'trx_nominal' => $achievement['trx_nominal'],
+                    'trx_total' => $achievement['trx_total'],
+                    'id_outlet' => $achievement['id_outlet'],
+                    'different_outlet' => $achievement['different_outlet'],
+                    'id_province' => $achievement['id_province'],
+                    'different_province' => $achievement['different_province'],
                 ]),
-                'json_rule_enc'             => MyHelper::encrypt2019(json_encode([
-                    'id_product'            => $achievement['id_product'],
-                    'product_total'         => $achievement['product_total'],
-                    'trx_nominal'           => $achievement['trx_nominal'],
-                    'trx_total'             => $achievement['trx_total'],
-                    'id_outlet'             => $achievement['id_outlet'],
-                    'different_outlet'      => $achievement['different_outlet'],
-                    'id_province'           => $achievement['id_province'],
-                    'different_province'    => $achievement['different_province']
+                'json_rule_enc' => MyHelper::encrypt2019(json_encode([
+                    'id_product' => $achievement['id_product'],
+                    'product_total' => $achievement['product_total'],
+                    'trx_nominal' => $achievement['trx_nominal'],
+                    'trx_total' => $achievement['trx_total'],
+                    'id_outlet' => $achievement['id_outlet'],
+                    'different_outlet' => $achievement['different_outlet'],
+                    'id_province' => $achievement['id_province'],
+                    'different_province' => $achievement['different_province'],
                 ])),
-                'date'                      => date('Y-m-d H:i:s')
+                'date' => date('Y-m-d H:i:s'),
             ]);
         }
 
@@ -696,26 +696,26 @@ class ApiAchievement extends Controller
     public function show(Request $request)
     {
         try {
-            $data['group']      = AchievementGroup::where('id_achievement_group', MyHelper::decSlug($request['id_achievement_group']))->first();
-            $data['category']   = AchievementCategory::select('name')->where('id_achievement_category', $data['group']->id_achievement_category)->first();
-            $data['detail']     = AchievementDetail::with('product', 'outlet', 'province')->where('id_achievement_group', MyHelper::decSlug($request['id_achievement_group']))->get()->toArray();
+            $data['group'] = AchievementGroup::where('id_achievement_group', MyHelper::decSlug($request['id_achievement_group']))->first();
+            $data['category'] = AchievementCategory::select('name')->where('id_achievement_category', $data['group']->id_achievement_category)->first();
+            $data['detail'] = AchievementDetail::with('product', 'outlet', 'province')->where('id_achievement_group', MyHelper::decSlug($request['id_achievement_group']))->get()->toArray();
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json([
-                'status'    => 'fail',
-                'message'   => 'Get Achievement Detail Failed',
-                'error'     => $e->getMessage()
+                'status' => 'fail',
+                'message' => 'Get Achievement Detail Failed',
+                'error' => $e->getMessage(),
             ]);
         }
 
-        $data['group']['logo_badge_default']    = env('STORAGE_URL_API') . $data['group']['logo_badge_default'];
+        $data['group']['logo_badge_default'] = env('STORAGE_URL_API') . $data['group']['logo_badge_default'];
         foreach ($data['detail'] as $key => $value) {
             $data['detail'][$key]['logo_badge'] = env('STORAGE_URL_API') . $value['logo_badge'];
         }
 
         return response()->json([
-            'status'    => 'success',
-            'data'      => $data
+            'status' => 'success',
+            'data' => $data,
         ]);
     }
 
@@ -746,8 +746,8 @@ class ApiAchievement extends Controller
                 $post['logo_badge'] = $uploadDetail['path'];
             } else {
                 return response()->json([
-                    'status'   => 'fail',
-                    'messages' => ['Failed to upload image']
+                    'status' => 'fail',
+                    'messages' => ['Failed to upload image'],
                 ]);
             }
         }
@@ -758,15 +758,15 @@ class ApiAchievement extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json([
-                'status'    => 'fail',
-                'message'   => 'Update Achievement Detail Failed',
-                'error'     => $e->getMessage()
+                'status' => 'fail',
+                'message' => 'Update Achievement Detail Failed',
+                'error' => $e->getMessage(),
             ]);
         }
         DB::commit();
 
         return response()->json([
-            'status'    => 'success'
+            'status' => 'success',
         ]);
     }
 
@@ -788,16 +788,16 @@ class ApiAchievement extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json([
-                'status'    => 'fail',
-                'message'   => 'Get Achievement Detail Failed',
-                'error'     => $e->getMessage()
+                'status' => 'fail',
+                'message' => 'Get Achievement Detail Failed',
+                'error' => $e->getMessage(),
             ]);
         }
 
         DB::commit();
 
         return response()->json([
-            'status'    => 'success'
+            'status' => 'success',
         ]);
     }
 
@@ -807,36 +807,32 @@ class ApiAchievement extends Controller
 
         foreach ($getAchievement as $keyCatAch => $category) {
             $result[$keyCatAch] = [
-                'id_achievement_category'   => $category['id_achievement_category'],
-                'name'                      => $category['name']
+                'id_achievement_category' => $category['id_achievement_category'],
+                'name' => $category['name'],
+                'description' => $category['description']
             ];
-            $result[$keyCatAch]['detail'] = [];
             foreach ($category['achievement_group'] as $keyAchGroup => $group) {
-                $getAchievementUser = AchievementUser::select('achievement_details.*', 'achievement_progress.*')
-                    ->join('achievement_details', 'achievement_users.id_achievement_detail', 'achievement_details.id_achievement_detail')
-                    ->join('achievement_progress', 'achievement_details.id_achievement_detail', 'achievement_progress.id_achievement_detail')
-                    ->join('achievement_groups', 'achievement_details.id_achievement_group', 'achievement_groups.id_achievement_group')
-                    ->where([
-                        'achievement_users.id_user'                 => Auth::user()->id,
-                        'achievement_groups.id_achievement_group'   => MyHelper::decSlug($group['id_achievement_group'])
-                    ])->orderBy('achievement_details.id_achievement_detail', 'DESC')->first();
+                $result[$keyCatAch]['achievement'][$keyAchGroup] = [
+                    'id_achievement_group' => MyHelper::decSlug($group['id_achievement_group']),
+                    'name' => $group['name'],
+                    'logo_achievement' => env('STORAGE_URL_API') . $group['logo_badge_default'],
+                    'description' => $group['description'],
+                ];
 
-                if ($getAchievementUser) {
-                    $result[$keyCatAch]['detail'][$keyAchGroup] = [
-                        'name'              => $group['name'],
-                        'logo_badge'        => env('STORAGE_URL_API') . $getAchievementUser->logo_badge,
-                        'description'       => $group['description'],
-                        'level'             => $getAchievementUser->name,
-                        'percentage_level'  => 1
+                $getAchievementDetail = AchievementDetail::where([
+                    'id_achievement_group' => MyHelper::decSlug($group['id_achievement_group']),
+                ])->get()->toArray();
+                foreach ($getAchievementDetail as $keyAchDetail => $detail) {
+                    $result[$keyCatAch]['achievement'][$keyAchGroup]['badge'][$keyAchDetail] = [
+                        'id_achievement_detail' => $detail['id_achievement_detail'],
+                        'name' => $detail['name'],
+                        'logo_badge' => env('STORAGE_URL_API') . $detail['logo_badge'],
                     ];
-                } else {
-                    $result[$keyCatAch]['detail'][$keyAchGroup] = [
-                        'name'              => $group['name'],
-                        'logo_badge'        => env('STORAGE_URL_API') . $group['logo_badge_default'],
-                        'description'       => $group['description'],
-                        'level'             => 'Belum Tercapai',
-                        'percentage_level'  => $getAchievementUser['progress'] / $getAchievementUser['end_progress']
-                    ];
+                    $getAchievementProgress = AchievementProgress::where([
+                        'id_user' => Auth::user()->id,
+                        'id_achievement_detail' => $detail['id_achievement_detail'],
+                    ])->first();
+                    $result[$keyCatAch]['achievement'][$keyAchGroup]['badge'][$keyAchDetail]['progress_percent'] = ($getAchievementProgress->progress == 0) ? 0 : $getAchievementProgress->progress / $getAchievementProgress->end_progress;
                 }
             }
         }
