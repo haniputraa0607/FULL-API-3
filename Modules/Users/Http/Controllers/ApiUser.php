@@ -880,7 +880,7 @@ class ApiUser extends Controller
             return response()->json([
                 'status' => 'success',
                 'result' => $data,
-                'messages' => ['Akun Anda telah diblokir karena menunjukkan aktivitas mencurigakan. Untuk informasi lebih lanjut harap hubungi customer service kami di hello@example.id']
+                'messages' => ['Akun Anda telah diblokir karena menunjukkan aktivitas mencurigakan. Untuk informasi lebih lanjut harap hubungi customer service kami di '.env('EMAIL_ADDRESS_ADMIN')]
             ]);
         }
 
@@ -948,12 +948,21 @@ class ApiUser extends Controller
                 $device_token = $request->json('device_token');
             }
 
+            //get setting to set expired time for otp, if setting not exist expired default is 30 minutes
+            $getSettingTimeExpired = Setting::where('key', 'setting_expired_otp')->first();
+            if($getSettingTimeExpired){
+                $dateOtpTimeExpired = date("Y-m-d H:i:s", strtotime("+".$getSettingTimeExpired['value']." minutes"));
+            }else{
+                $dateOtpTimeExpired = date("Y-m-d H:i:s", strtotime("+30 minutes"));
+            }
+
             $create = User::create([
                 'phone' => $phone,
                 'provider'         => $provider,
                 'password'        => bcrypt($pin),
                 'android_device' => $is_android,
-                'ios_device'     => $is_ios
+                'ios_device'     => $is_ios,
+                'otp_valid_time' => $dateOtpTimeExpired
             ]);
 
             if ($create) {
@@ -1109,6 +1118,11 @@ class ApiUser extends Controller
         $cekFraud = 0;
         if ($datauser) {
             if (Auth::attempt(['phone' => $phone, 'password' => $request->json('pin')])) {
+                /*first if --> check if otp have expired and the current time exceeds the expiration time*/
+                if(!is_null($datauser[0]['otp_valid_time']) && strtotime(date('Y-m-d H:i:s')) > strtotime($datauser[0]['otp_valid_time'])){
+                    return response()->json(['status' => 'fail', 'otp_check'=> 1, 'messages' => ['This OTP is expired, please re-request OTP from apps']]);
+                }
+
                 //untuk verifikasi admin panel
                 if ($request->json('admin_panel')) {
                     return ['status' => 'success'];
@@ -1199,12 +1213,12 @@ class ApiUser extends Controller
                             if ($data[0]['is_suspended'] == 1) {
                                 return response()->json([
                                     'status' => 'fail',
-                                    'messages' => ['Akun Anda telah diblokir karena menunjukkan aktivitas mencurigakan. Untuk informasi lebih lanjut harap hubungi customer service kami di hello@jiwa.app']
+                                    'messages' => ['Akun Anda telah diblokir karena menunjukkan aktivitas mencurigakan. Untuk informasi lebih lanjut harap hubungi customer service kami di '.env('EMAIL_ADDRESS_ADMIN')]
                                 ]);
                             } else {
                                 return response()->json([
                                     'status' => 'fail',
-                                    'messages' => ['Akun Anda tidak dapat login di device ini karena menunjukkan aktivitas mencurigakan. Untuk informasi lebih lanjut harap hubungi customer service kami di hello@jiwa.app']
+                                    'messages' => ['Akun Anda tidak dapat login di device ini karena menunjukkan aktivitas mencurigakan. Untuk informasi lebih lanjut harap hubungi customer service kami di '.env('EMAIL_ADDRESS_ADMIN')]
                                 ]);
                             }
                         }
@@ -1313,10 +1327,25 @@ class ApiUser extends Controller
             ->toArray();
 
         if ($data) {
+            //First check rule for request otp
+            $checkRuleRequest = MyHelper::checkRuleForRequestOTP($data);
+            if(isset($checkRuleRequest['status']) && $checkRuleRequest['status'] == 'fail'){
+                return response()->json($checkRuleRequest);
+            }
+
             $pinnya = rand(100000, 999999);
             $pin = bcrypt($pinnya);
             /*if($data[0]['phone_verified'] == 0){*/
-            $update = User::where('phone', '=', $phone)->update(['password' => $pin]);
+
+            //get setting to set expired time for otp, if setting not exist expired default is 30 minutes
+            $getSettingTimeExpired = Setting::where('key', 'setting_expired_otp')->first();
+            if($getSettingTimeExpired){
+                $dateOtpTimeExpired = date("Y-m-d H:i:s", strtotime("+".$getSettingTimeExpired['value']." minutes"));
+            }else{
+                $dateOtpTimeExpired = date("Y-m-d H:i:s", strtotime("+30 minutes"));
+            }
+
+            $update = User::where('phone', '=', $phone)->update(['password' => $pin, 'otp_valid_time' => $dateOtpTimeExpired]);
 
             $useragent = $_SERVER['HTTP_USER_AGENT'];
             if (stristr($_SERVER['HTTP_USER_AGENT'], 'iOS')) $useragent = 'iOS';
@@ -1407,9 +1436,24 @@ class ApiUser extends Controller
             ->toArray();
 
         if ($data) {
+            //First check rule for request otp
+            $checkRuleRequest = MyHelper::checkRuleForRequestOTP($data);
+            if(isset($checkRuleRequest['status']) && $checkRuleRequest['status'] == 'fail'){
+                return response()->json($checkRuleRequest);
+            }
+
             $pin = MyHelper::createRandomPIN(6, 'angka');
             $password = bcrypt($pin);
-            $update = User::where('id', '=', $data[0]['id'])->update(['password' => $password, 'phone_verified' => '0']);
+
+            //get setting to set expired time for otp, if setting not exist expired default is 30 minutes
+            $getSettingTimeExpired = Setting::where('key', 'setting_expired_otp')->first();
+            if($getSettingTimeExpired){
+                $dateOtpTimeExpired = date("Y-m-d H:i:s", strtotime("+".$getSettingTimeExpired['value']." minutes"));
+            }else{
+                $dateOtpTimeExpired = date("Y-m-d H:i:s", strtotime("+30 minutes"));
+            }
+
+            $update = User::where('id', '=', $data[0]['id'])->update(['password' => $password, 'phone_verified' => '0', 'otp_valid_time' => $dateOtpTimeExpired]);
 
             if (!empty($request->header('user-agent-view'))) {
                 $useragent = $request->header('user-agent-view');
@@ -1487,6 +1531,11 @@ class ApiUser extends Controller
             }
             if ($data[0]['phone_verified'] == 0) {
                 if (Auth::attempt(['phone' => $phone, 'password' => $request->json('pin')])) {
+                    /*first if --> check if otp have expired and the current time exceeds the expiration time*/
+                    if(!is_null($data[0]['otp_valid_time']) && strtotime(date('Y-m-d H:i:s')) > strtotime($data[0]['otp_valid_time'])){
+                        return response()->json(['status' => 'fail', 'otp_check'=> 1, 'messages' => ['This OTP is expired, please re-request OTP from apps']]);
+                    }
+
                     if (isset($post['device_id'])) {
                         if (!isset($post['device_type'])) {
                             if (!empty($request->header('user-agent-view'))) {
@@ -1524,12 +1573,12 @@ class ApiUser extends Controller
                                 if ($data[0]['is_suspended'] == 1) {
                                     return response()->json([
                                         'status' => 'fail',
-                                        'messages' => ['Akun Anda telah diblokir karena menunjukkan aktivitas mencurigakan. Untuk informasi lebih lanjut harap hubungi customer service kami di hello@jiwa.app']
+                                        'messages' => ['Akun Anda telah diblokir karena menunjukkan aktivitas mencurigakan. Untuk informasi lebih lanjut harap hubungi customer service kami di '.env('EMAIL_ADDRESS_ADMIN')]
                                     ]);
                                 } else {
                                     return response()->json([
                                         'status' => 'fail',
-                                        'messages' => ['Akun Anda tidak dapat di daftarkan karena menunjukkan aktivitas mencurigakan. Untuk informasi lebih lanjut harap hubungi customer service kami di hello@jiwa.app']
+                                        'messages' => ['Akun Anda tidak dapat di daftarkan karena menunjukkan aktivitas mencurigakan. Untuk informasi lebih lanjut harap hubungi customer service kami di '.env('EMAIL_ADDRESS_ADMIN')]
                                     ]);
                                 }
                             }
@@ -1597,6 +1646,15 @@ class ApiUser extends Controller
             ->toArray();
         if ($data) {
             if (Auth::attempt(['phone' => $phone, 'password' => $request->json('pin_old')])) {
+                /*first if --> check if otp have expired and the current time exceeds the expiration time
+                  second if --> when the current time does not exceed the expired time, then update otp_valid_time to NULL
+                */
+                if(!is_null($data[0]['otp_valid_time']) && strtotime(date('Y-m-d H:i:s')) > strtotime($data[0]['otp_valid_time'])){
+                    return response()->json(['status' => 'fail', 'otp_check'=> 1, 'messages' => ['This OTP is expired, please re-request OTP from apps']]);
+                }elseif(!is_null($data[0]['otp_valid_time'])){
+                    User::where('phone', $phone)->update(['otp_valid_time' => NULL]);
+                }
+
                 $pin     = bcrypt($request->json('pin_new'));
                 $update = User::where('id', '=', $data[0]['id'])->update(['password' => $pin, 'phone_verified' => '1', 'pin_changed' => '1']);
                 if (\Module::collections()->has('Autocrm')) {
@@ -3076,6 +3134,20 @@ class ApiUser extends Controller
                     'status'    => 'fail',
                     'messages'  => ['Email does not match']
                 ]);
+            }
+
+            if($user['email_verified'] == 1){
+                return response()->json([
+                    'status'    => 'fail',
+                    'messages'  => ['Your email already verified']
+                ]);
+            }
+
+            //Check rule for request email verify
+            $data[] = $user;
+            $checkRuleRequest = MyHelper::checkRuleForRequestEmailVerify($data);
+            if(isset($checkRuleRequest['status']) && $checkRuleRequest['status'] == 'fail'){
+                return response()->json($checkRuleRequest);
             }
             $phone = $user['phone'];
 
