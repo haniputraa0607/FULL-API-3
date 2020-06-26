@@ -1824,7 +1824,14 @@ class ApiSubscription extends Controller
     public function listCompleteSubscription(Request $request)
     {
     	$post = $request->json()->all();
-    	return MyHelper::checkGet(Subscription::whereDoesntHave('featured_subscriptions')->where('subscription_step_complete','1')->select($post['select']??'*')->get());
+    	return MyHelper::checkGet(
+    		Subscription::whereDoesntHave('featured_subscriptions')
+    		->where('subscription_step_complete','1')
+    		->where('subscription_end', '>', date('Y-m-d H:i:s'))
+           	->where('subscription_publish_end', '>', date('Y-m-d H:i:s'))
+    		->select($post['select']??'*')
+    		->get()
+    	);
     }
 
     protected function filterParticipate($query, $request,&$foreign='')
