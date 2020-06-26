@@ -805,14 +805,16 @@ class ApiAchievement extends Controller
     {
         $getAchievement = AchievementCategory::with('achievement_group')->get()->toArray();
 
+        $catProgress    = 0;
+        $catEndProgress = 0;
         foreach ($getAchievement as $keyCatAch => $category) {
-            $result[$keyCatAch] = [
+            $result['category'][$keyCatAch] = [
                 'id_achievement_category' => $category['id_achievement_category'],
                 'name' => $category['name'],
                 'description' => $category['description']
             ];
             foreach ($category['achievement_group'] as $keyAchGroup => $group) {
-                $result[$keyCatAch]['achievement'][$keyAchGroup] = [
+                $result['category'][$keyCatAch]['achievement'][$keyAchGroup] = [
                     'id_achievement_group' => MyHelper::decSlug($group['id_achievement_group']),
                     'name' => $group['name'],
                     'logo_achievement' => env('STORAGE_URL_API') . $group['logo_badge_default'],
@@ -822,8 +824,10 @@ class ApiAchievement extends Controller
                 $getAchievementDetail = AchievementDetail::where([
                     'id_achievement_group' => MyHelper::decSlug($group['id_achievement_group']),
                 ])->get()->toArray();
+                $achProgress    = 0;
+                $achEndProgress = 0;
                 foreach ($getAchievementDetail as $keyAchDetail => $detail) {
-                    $result[$keyCatAch]['achievement'][$keyAchGroup]['badge'][$keyAchDetail] = [
+                    $result['category'][$keyCatAch]['achievement'][$keyAchGroup]['badge'][$keyAchDetail] = [
                         'id_achievement_detail' => $detail['id_achievement_detail'],
                         'name' => $detail['name'],
                         'logo_badge' => env('STORAGE_URL_API') . $detail['logo_badge'],
@@ -832,10 +836,30 @@ class ApiAchievement extends Controller
                         'id_user' => Auth::user()->id,
                         'id_achievement_detail' => $detail['id_achievement_detail'],
                     ])->first();
-                    $result[$keyCatAch]['achievement'][$keyAchGroup]['badge'][$keyAchDetail]['progress_percent'] = ($getAchievementProgress->progress == 0) ? 0 : $getAchievementProgress->progress / $getAchievementProgress->end_progress;
+                    $badgePercentProgress = ($getAchievementProgress->progress == 0) ? 0 : $getAchievementProgress->progress / $getAchievementProgress->end_progress;
+                    $result['category'][$keyCatAch]['achievement'][$keyAchGroup]['badge'][$keyAchDetail]['progress']            = $getAchievementProgress->progress;
+                    $result['category'][$keyCatAch]['achievement'][$keyAchGroup]['badge'][$keyAchDetail]['end_progress']        = $getAchievementProgress->end_progress;
+                    $result['category'][$keyCatAch]['achievement'][$keyAchGroup]['badge'][$keyAchDetail]['progress_percent']    = $badgePercentProgress;
+
+                    if ($badgePercentProgress == 1) {
+                        $achProgress = $achProgress + 1;
+                    }
+                    $achEndProgress = $achEndProgress + 1;
                 }
+                $achPercentProgress = ($achProgress == 0) ? 0 : $achProgress / $achEndProgress;
+                $result['category'][$keyCatAch]['achievement'][$keyAchGroup]['progress']            = $achProgress;
+                $result['category'][$keyCatAch]['achievement'][$keyAchGroup]['end_progress']        = $achEndProgress;
+                $result['category'][$keyCatAch]['achievement'][$keyAchGroup]['progress_percent']    = $achPercentProgress;
+
+                if ($achPercentProgress > 0) {
+                    $catProgress = $catProgress + 1;
+                }
+                $catEndProgress = $catEndProgress + 1;
             }
         }
+        $result['progress']     = $catProgress;
+        $result['end_progress'] = $catEndProgress;
+
         return response()->json(MyHelper::checkGet($result));
     }
 }
