@@ -1582,4 +1582,36 @@ class ApiSetting extends Controller
             ]);
         }
     }
+
+    /* ============== Start Time Expired Setting ============== */
+    function timeExpired(){
+        $timeOtp = Setting::where('key', 'setting_expired_otp')->first();
+        $timeEmail = Setting::where('key', 'setting_expired_time_email_verify')->first();
+
+        $data = [];
+        if($timeOtp){
+            $data['expired_otp'] = $timeOtp['value'];
+        }
+
+        if($timeEmail){
+            $data['expired_time_email'] = $timeEmail['value'];
+        }
+
+        return response()->json(MyHelper::checkGet($data));
+    }
+
+    function updateTimeExpired(Request $request){
+        $post = $request->json()->all();
+
+        if(isset($post['expired_otp'])){
+            $update = Setting::where('key', 'setting_expired_otp')->update(['value' => $post['expired_otp']]);
+        }
+
+        if(isset($post['expired_time_email'])){
+            $update = Setting::where('key', 'setting_expired_time_email_verify')->update(['value' => $post['expired_time_email']]);
+        }
+
+        return response()->json(MyHelper::checkUpdate($update));
+    }
+    /* ============== End Time Expired Setting ============== */
 }

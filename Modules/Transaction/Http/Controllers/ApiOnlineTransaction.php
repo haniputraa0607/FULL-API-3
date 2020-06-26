@@ -2598,16 +2598,16 @@ class ApiOnlineTransaction extends Controller
             ];
             unset($availablePayment[$value['code']]);
         }
-        if ($request->show_all) {
-            foreach ($availablePayment as $code => $payment) {
-                $status = 0;
-                if (!$payment['status'] || !is_numeric($payment['status'])) {
-                    $var = explode(':',$payment['status']);
-                    if(($config[$var[0]]??false) != ($var[1]??true)) {
-                        continue;
-                    }
-                    $status = $last_status[$var[0]] ?? 0;
+        foreach ($availablePayment as $code => $payment) {
+            $status = 0;
+            if (!$payment['status'] || !is_numeric($payment['status'])) {
+                $var = explode(':',$payment['status']);
+                if(($config[$var[0]]??false) != ($var[1]??true)) {
+                    continue;
                 }
+                $status = (int) ($last_status[$var[0]] ?? 0);
+            }
+            if($request->show_all || $status) {
                 $payments[] = [
                     'code'            => $code,
                     'payment_gateway' => $payment['payment_gateway'],

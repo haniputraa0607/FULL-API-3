@@ -91,7 +91,9 @@ class Subscription extends Eloquent
 		'daily_usage_limit',
 		'new_purchase_after',
 		'is_all_outlet',
-		'subscription_step_complete'
+		'subscription_step_complete',
+        'charged_central',
+        'charged_outlet'
 	];
 
 	protected $appends  = [

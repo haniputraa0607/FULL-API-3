@@ -2592,6 +2592,7 @@ class ApiTransaction extends Controller
             return MyHelper::count_distance($latitude,$longitude,$a['latitude'],$a['longitude']) <=> MyHelper::count_distance($latitude,$longitude,$b['latitude'],$b['longitude']);
         });
 
+        $selected_address = null;
         foreach ($user_address as $key => $addr) {
             if ($addr['favorite']) {
                 $selected_address = $addr;
@@ -2617,6 +2618,100 @@ class ApiTransaction extends Controller
             $result = [
                 'default' => $selected_address,
                 'nearby' => $user_address
+            ];
+        }
+        return response()->json(MyHelper::checkGet($result));
+    }
+
+    public function getDefaultAddress (GetNearbyAddress $request) {
+        $id = $request->user()->id;
+        $distance = Setting::select('value')->where('key','history_address_max_distance')->pluck('value')->first()?:50;
+        $maxmin = MyHelper::getRadius($request->json('latitude'),$request->json('longitude'),$distance);
+        $latitude = $request->json('latitude');
+        $longitude = $request->json('longitude');
+
+        $maxmin = MyHelper::getRadius($latitude,$longitude,$distance);
+        $user_address = UserAddress::select('id_user_address','short_address','address','latitude','longitude','description','favorite')->where('id_user',$id)
+            ->whereBetween('latitude',[$maxmin['latitude']['min'],$maxmin['latitude']['max']])
+            ->whereBetween('longitude',[$maxmin['longitude']['min'],$maxmin['longitude']['max']])
+            ->take(10);
+
+        if($keyword = $request->json('keyword')){
+            $user_address->where(function($query) use ($keyword) {
+                $query->where('name',$keyword);
+                $query->orWhere('address',$keyword);
+                $query->orWhere('short_address',$keyword);
+            });
+        }
+
+        $user_address = $user_address->get()->toArray();
+
+        if (!$user_address) {
+            // get place from google maps . max 20
+            $param = [
+                'key'=>env('GMAPS_PLACE_KEY'),
+                'location'=>sprintf('%s,%s',$request->json('latitude'),$request->json('longitude')),
+                'rankby'=>'distance'
+            ];
+            if($request->json('keyword')){
+                $param['keyword'] = $request->json('keyword');
+            }
+            $gmaps = MyHelper::get('https://maps.googleapis.com/maps/api/place/nearbysearch/json?'.http_build_query($param));
+
+            if($gmaps['status'] === 'OK'){
+                $gmaps = $gmaps['results'];
+            }else{
+                return MyHelper::checkGet([]);
+            };
+
+            foreach ($gmaps as $key => &$gmap){
+                $coor = [
+                    'latitude' => number_format($gmap['geometry']['location']['lat'],8),
+                    'longitude' => number_format($gmap['geometry']['location']['lng'],8)
+                ];
+                $gmap = [
+                    'id_user_address' => 0,
+                    'short_address' => $gmap['name'],
+                    'address' => $gmap['vicinity'],
+                    'latitude' => $coor['latitude'],
+                    'longitude' => $coor['longitude'],
+                    'description' => '',
+                    'favorite' => 0
+                ];
+            }
+            // mix history and gmaps
+            $user_address = array_merge($user_address,$gmaps);
+        }
+
+        // reorder based on distance
+        usort($user_address,function(&$a,&$b) use ($latitude,$longitude){
+            return MyHelper::count_distance($latitude,$longitude,$a['latitude'],$a['longitude']) <=> MyHelper::count_distance($latitude,$longitude,$b['latitude'],$b['longitude']);
+        });
+
+        foreach ($user_address as $key => $addr) {
+            if ($addr['favorite']) {
+                $selected_address = $addr;
+                break;
+            }
+            if ($addr['id_user_address']) {
+                $selected_address = $addr;
+                continue;
+            }
+            if ($key == 0) {
+                $selected_address = $addr;
+            }
+        }
+
+        if(!$selected_address){
+            $selected_address = $user_address[0]??null;
+        }
+        // apply limit;
+        // $max_item = Setting::select('value')->where('key','history_address_max_item')->pluck('value')->first()?:10;
+        // $user_address = array_splice($user_address,0,$max_item);
+        $result = [];
+        if($user_address){
+            $result = [
+                'default' => $selected_address
             ];
         }
         return response()->json(MyHelper::checkGet($result));

@@ -403,9 +403,9 @@ use App\Lib\MyHelper;
     <div class="kotak-biasa" style="background-color: #FFFFFF;box-shadow: 0 0.7px 3.3px #eeeeee;">
         <div class="container" style="padding: 10px;margin-top: 10px;">
             <div class="text-center">
-                <div class="col-12 text-15px text-black-grey-light space-text WorkSans-Bold">{{ $data['outlet']['outlet_name'] }}</div>
+                <div class="col-12 text-15px text-black-grey-light space-text WorkSans-Bold"><b>{{ $data['outlet']['outlet_name'] }}</b></div>
                 <div class="col-12 text-11-7px text-grey-white space-nice text-center WorkSans">{{ $data['outlet']['outlet_address'] }}</div>
-                @if ($data['trasaction_type'] != 'Offline')
+                @if ($data['trasaction_type'] != 'Offline' && !isset($data['delivery_info']))
                     <div class="col-12 WorkSans-Bold text-14px space-text text-black-grey-light">Kode Pickup Anda</div>
                     @if(isset($data['detail']['order_id_qrcode']))
                         <div style="width: 135px;height: 135px;margin: 0 auto;" data-toggle="modal" data-target="#exampleModal">
@@ -454,12 +454,11 @@ use App\Lib\MyHelper;
     <div class="kotak-biasa" style="background-color: #FFFFFF;box-shadow: 0 0.7px 3.3px #eeeeee;">
         <div class="container" style="padding: 10px;margin-top: 10px;">
             <div class="row space-bottom">
-                <div class="col-4 text-black-grey-light text-14px WorkSans-Bold">Transaksi</div>
+                <div class="col-4 text-black-grey-light text-14px WorkSans-Bold"><b>Transaksi</b></div>
                 <div class="col-8 text-grey-white text-right text-medium-grey text-11-7px WorkSans">{{ date('d', strtotime($data['transaction_date'])) }} {{ $bulan[date('n', strtotime($data['transaction_date']))] }} {{ date('Y H:i', strtotime($data['transaction_date'])) }}</div>
             </div>
             <div class="row space-text">
-                <div class="col-4"></div>
-                <div class="col-8 text-right text-black-grey-light text-13-3px WorkSans-SemiBold">#{{ $data['transaction_receipt_number'] }}</div>
+                <div class="col-12 text-right text-black-grey-light text-13-3px WorkSans-SemiBold" style="text-align: right"><b>{{ $data['transaction_receipt_number'] }}</b></div>
             </div>
             <div class="kotak" style="margin: 0px;border-radius: 10px;">
                 @foreach ($data['product_transaction'] as $trx)
@@ -505,7 +504,7 @@ use App\Lib\MyHelper;
     <div class="kotak-biasa" style="background-color: #FFFFFF;box-shadow: 0 0.7px 3.3px #eeeeee;">
         <div class="container" style="padding: 10px;margin-top: 10px;">
             <div class="row space-bottom">
-                <div class="col-12 text-14px WorkSans-Bold text-black">Detail Pembayaran</div>
+                <div class="col-12 text-14px WorkSans-Bold text-black"><b>Detail Pembayaran</b></div>
             </div>
             <div class="kotak" style="margin: 0px;margin-top: 10px;border-radius: 10px;">
                 @foreach($data['payment_detail'] as $dt)
@@ -532,7 +531,7 @@ use App\Lib\MyHelper;
     <div class="kotak-biasa" style="background-color: #FFFFFF;box-shadow: 0 0.7px 3.3px #eeeeee;">
         <div class="container" style="padding: 10px;margin-top: 10px;">
             <div class="row space-bottom">
-                <div class="col-12 text-14px WorkSans-SemiBold text-black">Metode Pembayaran</div>
+                <div class="col-12 text-14px WorkSans-SemiBold text-black"><b>Metode Pembayaran</b></div>
             </div>
             <div class="kotak" style="margin: 0px;margin-top: 10px;border-radius: 10px;">
                 <div class="row">
@@ -554,16 +553,16 @@ use App\Lib\MyHelper;
         <div class="kotak-biasa" style="background-color: #FFFFFF;box-shadow: 0 0.7px 3.3px #eeeeee;">
             <div class="container" style="padding: 10px;margin-top: 10px;">
                 <div class="row space-bottom">
-                    <div class="col-12 text-14px WorkSans-Bold text-black">Status Pesanan</div>
+                    <div class="col-12 text-14px WorkSans-Bold text-black"><b>Status Pesanan</b></div>
                 </div>
                 <div class="kotak" style="margin: 0px;margin-top: 10px;border-radius: 10px;">
                     <?php
                     $i = 1;
                     $count = count($data['detail']['detail_status']);
                     foreach ($data['detail']['detail_status'] as $status){
-                        if($i == 1 ){
+                        if($i == $count ){
                             $html = '<div class="col-12 text-13-3px WorkSans-Medium text-black">';
-                            $html .= '<div class="round-grey bg-grey" style="border: 1px solid #aaaaaa;border-radius: 50%;width: 5px;height: 5px;display: inline-block;margin-right:3px;background-color: #aaaaaa"></div>';
+                            $html .= '<div class="round-green bg-green2" style="border: 1px solid #aaaaaa;border-radius: 50%;width: 5px;height: 5px;display: inline-block;margin-right:3px;background-color: #a6ba35"></div>';
                             $html .= $status['text'];
                             $html .= '</div>';
                             $html .= '<div class="inline vertical-top">';
@@ -575,7 +574,7 @@ use App\Lib\MyHelper;
                             echo $html;
                         }else{
                             $html = '<div class="col-12 text-13-3px WorkSans-Medium text-black">';
-                            $html .= '<div class="round-green bg-green2" style="border: 1px solid #aaaaaa;border-radius: 50%;width: 5px;height: 5px;display: inline-block;margin-right:3px;background-color: #a6ba35"></div>';
+                            $html .= '<div class="round-grey bg-grey" style="border: 1px solid #aaaaaa;border-radius: 50%;width: 5px;height: 5px;display: inline-block;margin-right:3px;background-color: #aaaaaa"></div>';
                             $html .= $status['text'];
                             $html .= '</div>';
                             $html .= '<div class="inline vertical-top">';
