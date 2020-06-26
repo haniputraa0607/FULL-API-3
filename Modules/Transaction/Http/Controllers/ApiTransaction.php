@@ -2665,6 +2665,10 @@ class ApiTransaction extends Controller
             };
 
             foreach ($gmaps as $key => &$gmap){
+                $coor = [
+                    'latitude' => number_format($gmap['geometry']['location']['lat'],8),
+                    'longitude' => number_format($gmap['geometry']['location']['lng'],8)
+                ];
                 $gmap = [
                     'id_user_address' => 0,
                     'short_address' => $gmap['name'],
