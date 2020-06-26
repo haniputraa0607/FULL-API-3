@@ -88,23 +88,12 @@ class ApiCronDealsController extends Controller
                 continue;
             }
             //reversal balance
-            $logBalance = LogBalance::where('id_reference', $singleTrx->id_deals_user)->where('source', 'Deals Balance')->where('balance', '<', 0)->get();
-            foreach ($logBalance as $logB) {
-                $reversal = app($this->balance)->addLogBalance($singleTrx->id_user, abs($logB['balance']), $singleTrx->id_deals_user, 'Deals Reversal', $singleTrx->voucher_price_point ?: $singleTrx->voucher_price_cash);
+            if($singleTrx->balance_nominal) {
+                $reversal = app($this->balance)->addLogBalance( $singleTrx->id_user, $singleTrx->balance_nominal, $singleTrx->id_deals_user, 'Claim Deals Failed', $singleTrx->voucher_price_point?:$singleTrx->voucher_price_cash);
                 if (!$reversal) {
                     DB::rollBack();
                     continue;
                 }
-                // $usere= User::where('id',$singleTrx->id_user)->first();
-                // $send = app($this->autocrm)->SendAutoCRM('Transaction Failed Point Refund', $usere->phone,
-                //     [
-                //         "outlet_name"       => $singleTrx->outlet_name->outlet_name,
-                //         "transaction_date"  => $singleTrx->transaction_date,
-                //         'id_transaction'    => $singleTrx->id_transaction,
-                //         'receipt_number'    => $singleTrx->transaction_receipt_number,
-                //         'received_point'    => (string) abs($logB['balance'])
-                //     ]
-                // );
             }
 
             $count++;
