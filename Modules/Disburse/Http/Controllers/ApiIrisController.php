@@ -253,9 +253,9 @@ class ApiIrisController extends Controller
                                 }
                             }
 
-                            $amount = $subTotal - ((floatval($percentFee) / 100) * $subTotal) - $totalFee - $nominalBalance - $totalChargedPromo - $totalChargedSubcriptionOutlet;
-                            $incomeCentral = ((floatval($percentFee) / 100) * $subTotal) + $totalFeeForCentral;
-                            $expenseCentral = $nominalBalanceCentral + $totalChargedPromoCentral + $totalChargedSubcriptionCentral;
+                            $amount = round($subTotal - ((floatval($percentFee) / 100) * $subTotal) - $totalFee - $nominalBalance - $totalChargedPromo - $totalChargedSubcriptionOutlet, 2);
+                            $incomeCentral = round(((floatval($percentFee) / 100) * $subTotal) + $totalFeeForCentral, 2);
+                            $expenseCentral = round($nominalBalanceCentral + $totalChargedPromoCentral + $totalChargedSubcriptionCentral, 2);
 
                             //set to send disburse per bank account
                             $checkAccount = array_search($data['beneficiary_account'], array_column($arrTmpDisburse, 'beneficiary_account'));
