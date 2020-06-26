@@ -72,6 +72,7 @@ Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scop
     Route::post('/shipping', 'ApiTransaction@getShippingFee');
     Route::any('/address', 'ApiTransaction@getAddress');
     Route::post('/address/nearby', 'ApiTransaction@getNearbyAddress');
+    Route::post('/address/default', 'ApiTransaction@getDefaultAddress');
     Route::post('/address/detail', 'ApiTransaction@detailAddress');
     Route::post('/address/add', 'ApiTransaction@addAddress');
     Route::post('/address/update', 'ApiTransaction@updateAddress');
