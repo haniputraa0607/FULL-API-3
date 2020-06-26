@@ -850,6 +850,7 @@ class ApiAchievement extends Controller
                 $result['category'][$keyCatAch]['achievement'][$keyAchGroup]['progress']            = $achProgress;
                 $result['category'][$keyCatAch]['achievement'][$keyAchGroup]['end_progress']        = $achEndProgress;
                 $result['category'][$keyCatAch]['achievement'][$keyAchGroup]['progress_percent']    = $achPercentProgress;
+                $result['category'][$keyCatAch]['achievement'][$keyAchGroup]['progress_text']       = $group['progress_text'];
 
                 if ($achPercentProgress > 0) {
                     $catProgress = $catProgress + 1;
