@@ -2011,6 +2011,22 @@ class FeaturesTableSeeder extends Seeder
                     'created_at' => '2018-05-10 08:00:00',
                     'updated_at' => '2018-05-10 08:00:00',
                 ),
+            250 =>
+                array(
+                    'id_feature' => 251,
+                    'feature_type' => 'Update',
+                    'feature_module' => 'Setting Time Expired OTP',
+                    'created_at' => '2018-05-10 08:00:00',
+                    'updated_at' => '2018-05-10 08:00:00',
+                ),
+            251 =>
+                array(
+                    'id_feature' => 252,
+                    'feature_type' => 'Update',
+                    'feature_module' => 'Setting Time Expired Email',
+                    'created_at' => '2018-05-10 08:00:00',
+                    'updated_at' => '2018-05-10 08:00:00',
+                ),
         ));
     }
 }
