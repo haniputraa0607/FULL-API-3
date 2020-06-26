@@ -770,24 +770,33 @@ class SettingsTableSeeder extends Seeder
             85 =>
                 array(
                     'id_setting' => 86,
+                    'key' => 'disburse_global_setting_time_to_sent',
+                    'value' => 4,
+                    'value_text' => null,
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
+           86 =>
+                array(
+                    'id_setting' => 87,
                     'key' => 'setting_expired_otp',
                     'value' => 30,
                     'value_text' => null,
                     'created_at' => date('Y-m-d H:i:s'),
                     'updated_at' => date('Y-m-d H:i:s'),
                 ),
-            86 =>
+            87 =>
                 array(
-                    'id_setting' => 87,
+                    'id_setting' => 88,
                     'key' => 'otp_rule_request',
                     'value' => null,
                     'value_text' => '{"hold_time": 60, "max_value_request": 20}',
                     'created_at' => date('Y-m-d H:i:s'),
                     'updated_at' => date('Y-m-d H:i:s'),
                 ),
-            87 =>
+            88 =>
                 array(
-                    'id_setting' => 88,
+                    'id_setting' => 89,
                     'key' => 'email_verify_rule_request',
                     'value' => null,
                     'value_text' => '{"hold_time": 60, "max_value_request": 20}',

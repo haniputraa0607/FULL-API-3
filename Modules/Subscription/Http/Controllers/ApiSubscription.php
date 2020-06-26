@@ -225,6 +225,14 @@ class ApiSubscription extends Controller
         if (isset($post['subscription_description'])) {
             $data['subscription_description'] = $post['subscription_description'];
         }
+
+        if (isset($post['charged_central'])) {
+            $data['charged_central'] = $post['charged_central'];
+        }
+
+        if (isset($post['charged_outlet'])) {
+            $data['charged_outlet'] = $post['charged_outlet'];
+        }
         return $data;
     }
 
@@ -762,7 +770,9 @@ class ApiSubscription extends Controller
                         'subscription_end',
                         'subscription_publish_start',
                         'subscription_publish_end',
-                        'subscription_image'
+                        'subscription_image',
+                        'charged_outlet',
+                        'charged_central'
                     )
                     ->first()
                     ->toArray();
@@ -1824,7 +1834,14 @@ class ApiSubscription extends Controller
     public function listCompleteSubscription(Request $request)
     {
     	$post = $request->json()->all();
-    	return MyHelper::checkGet(Subscription::whereDoesntHave('featured_subscriptions')->where('subscription_step_complete','1')->select($post['select']??'*')->get());
+    	return MyHelper::checkGet(
+    		Subscription::whereDoesntHave('featured_subscriptions')
+    		->where('subscription_step_complete','1')
+    		->where('subscription_end', '>', date('Y-m-d H:i:s'))
+           	->where('subscription_publish_end', '>', date('Y-m-d H:i:s'))
+    		->select($post['select']??'*')
+    		->get()
+    	);
     }
 
     protected function filterParticipate($query, $request,&$foreign='')

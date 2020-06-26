@@ -2081,6 +2081,14 @@ Detail: ".$link['short'],
             'amount'    => MyHelper::requestNumber($list['transaction_subtotal'],'_CURRENCY')
         ];
 
+        if ($list['trasaction_payment_type'] != 'Offline' && $list['transaction_pickup_go_send']) {
+            $result['payment_detail'][] = [
+                'name'      => 'Delivery',
+                'desc'      => $list['detail']['pickup_by'],
+                'amount'    => MyHelper::requestNumber($list['transaction_shipment_go_send'],'_CURRENCY')
+            ];
+        }
+
         $p = 0;
         if (!empty($list['transaction_vouchers'])) {
             foreach ($list['transaction_vouchers'] as $valueVoc) {

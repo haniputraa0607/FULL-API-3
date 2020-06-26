@@ -23,6 +23,8 @@ class DisburseOutletTransaction extends Model
         'charged_point_central',
         'charged_point_outlet',
         'charged_promo_central',
-        'charged_promo_outlet'
+        'charged_promo_outlet',
+        'charged_subscription_central',
+        'charged_subscription_outlet'
 	];
 }

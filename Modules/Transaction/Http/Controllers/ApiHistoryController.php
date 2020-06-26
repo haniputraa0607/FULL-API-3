@@ -996,7 +996,7 @@ class ApiHistoryController extends Controller
                 $dataList['date']    = date('d M Y H:i', strtotime($value['created_at']));
                 $dataList['outlet'] = 'Reversal';
                 $dataList['amount'] = number_format($value['balance'], 0, ',', '.');
-            } elseif ($value['source'] == 'Deals Reversal') {
+            } elseif ($value['source'] == 'Deals Reversal' || $value['source'] == 'Claim Deals Failed') {
                 $dataList['type']   = 'profile';
                 $dataList['id']      = $value['id_log_balance'];
                 $dataList['date']    = date('d M Y H:i', strtotime($value['created_at']));
