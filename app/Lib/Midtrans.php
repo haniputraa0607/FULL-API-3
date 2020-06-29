@@ -75,13 +75,14 @@ class Midtrans {
         if(!is_null($type) && !is_null($id)){
             $dataMidtrans['gopay'] = [
                 'enable_callback' => true,
-                'callback_url' => env('MIDTRANS_CALLBACK').'?type'.$type.'&order_id='.$id,
+                'callback_url' => env('MIDTRANS_CALLBACK').'?type='.$type.'&order_id='.$id,
+            ];
+        }else{
+            $dataMidtrans['gopay'] = [
+                'enable_callback' => true,
+                'callback_url' => env('MIDTRANS_CALLBACK').'?order_id='.$receipt,
             ];
         }
-        $dataMidtrans['gopay'] = [
-            'enable_callback' => true,
-            'callback_url' => env('MIDTRANS_CALLBACK').'?order_id='.$receipt,
-        ];
 
         $token = MyHelper::post($url, Self::bearer(), $dataMidtrans);
 
