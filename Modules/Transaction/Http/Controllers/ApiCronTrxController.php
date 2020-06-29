@@ -32,6 +32,7 @@ use App\Http\Models\Autocrm;
 use App\Http\Models\Setting;
 use App\Http\Models\LogPoint;
 use Modules\IPay88\Entities\TransactionPaymentIpay88;
+use Modules\OutletApp\Jobs\AchievementCheck;
 
 class ApiCronTrxController extends Controller
 {
@@ -389,6 +390,8 @@ class ApiCronTrxController extends Controller
         $dataTrx = TransactionPickup::whereIn('id_transaction', $idTrx)
                                     ->update(['taken_by_system_at' => date('Y-m-d 00:00:00')]);
 
+        AchievementCheck::dispatch(['id_transaction' => $idTrx])->onConnection('achievement');
+        
         return response()->json(['status' => 'success']);
     }
 
