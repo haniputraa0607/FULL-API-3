@@ -218,6 +218,14 @@ class ApiAchievement extends Controller
                             $value['id_province'] = $post['rule']['id_province'];
                             unset($value['value_total']);
                             break;
+                        case 'total_product':
+                            $value['product_total'] = $value['value_total'];
+                            $value['trx_nominal'] = $post['rule']['trx_nominal'];
+                            $value['id_product'] = $post['rule']['id_product'];
+                            $value['id_outlet'] = $post['rule']['id_outlet'];
+                            $value['id_province'] = $post['rule']['id_province'];
+                            unset($value['value_total']);
+                            break;
                         case 'total_transaction':
                             $value['trx_total'] = $value['value_total'];
                             $value['trx_nominal'] = $post['rule']['trx_nominal'];
@@ -227,8 +235,26 @@ class ApiAchievement extends Controller
                             $value['id_province'] = $post['rule']['id_province'];
                             unset($value['value_total']);
                             break;
+                        case 'total_outlet':
+                            $value['different_outlet'] = $value['value_total'];
+                            $value['trx_nominal'] = $post['rule']['trx_nominal'];
+                            $value['id_product'] = $post['rule']['id_product'];
+                            $value['product_total'] = $post['rule']['product_total'];
+                            $value['id_outlet'] = $post['rule']['id_outlet'];
+                            $value['id_province'] = $post['rule']['id_province'];
+                            unset($value['value_total']);
+                            break;
+                        case 'total_province':
+                            $value['different_province'] = $value['value_total'];
+                            $value['trx_nominal'] = $post['rule']['trx_nominal'];
+                            $value['id_product'] = $post['rule']['id_product'];
+                            $value['product_total'] = $post['rule']['product_total'];
+                            $value['id_outlet'] = $post['rule']['id_outlet'];
+                            $value['id_province'] = $post['rule']['id_province'];
+                            unset($value['value_total']);
+                            break;
                     }
-
+                    
                     $achievementDetail[$key] = AchievementDetail::create($value);
                 }
             } catch (\Exception $e) {
@@ -276,18 +302,9 @@ class ApiAchievement extends Controller
                 $totalTrx = 0;
                 $totalOutlet = [];
                 $totalProvince = [];
+                $totalSumProduct = 0;
+                $totalSumTrx = 0;
                 foreach ($getTrxUser as $user) {
-                    $trxNominalStatus = false;
-                    if (!is_null($achievement['trx_nominal'])) {
-                        if ((int) $achievement['trx_nominal'] <= $user['transaction_grandtotal']) {
-                            $trxNominalStatus = true;
-                        } else {
-                            $trxNominalStatus = false;
-                        }
-                    } else {
-                        $trxNominalStatus = true;
-                    }
-
                     $trxProductStatus = false;
                     $trxTotalProductStatus = false;
                     if (!is_null($achievement['id_product']) || !is_null($achievement['product_total'])) {
@@ -295,7 +312,7 @@ class ApiAchievement extends Controller
                             if (!is_null($achievement['id_product'])) {
                                 if ((int) $achievement['id_product'] == $product['id_product']) {
                                     $trxProductStatus = true;
-                                    if (!is_null($achievement['product_total'])) {
+                                    if (!is_null($achievement['product_total']) && $rules != 'total_product') {
                                         if ((int) $achievement['product_total'] <= $product['transaction_product_qty']) {
                                             AchievementProductLog::updateOrCreate([
                                                 'id_achievement_group' => $achievement['id_achievement_group'],
@@ -374,6 +391,7 @@ class ApiAchievement extends Controller
                                             ])),
                                             'date' => date('Y-m-d H:i:s'),
                                         ]);
+                                        $totalSumProduct = $totalSumProduct + $product['transaction_product_qty'];
                                         $trxTotalProductStatus = true;
                                         break;
                                     }
@@ -481,12 +499,123 @@ class ApiAchievement extends Controller
                         $trxProvinceStatus = true;
                     }
 
+                    $trxNominalStatus = false;
+                    if (!is_null($achievement['trx_nominal']) && $rules == 'nominal_transaction') {
+                        if ((int) $achievement['trx_nominal'] <= $user['transaction_grandtotal']) {
+                            $trxNominalStatus = true;
+                        } else {
+                            $trxNominalStatus = false;
+                        }
+                    } else {
+                        $totalSumTrx = $totalSumTrx + $user['transaction_grandtotal'];
+                        $trxNominalStatus = true;
+                    }
+
                     if ($trxNominalStatus == true && $trxProductStatus == true && $trxTotalProductStatus == true && $trxOutletStatus == true && $trxProvinceStatus == true) {
                         $totalTrx = $totalTrx + 1;
                     }
 
                     $totalOutlet[] = $user['id_outlet'];
                     $totalProvince[] = $user['outlet']['city']['province']['id_province'];
+                }
+
+                if ($rules == 'nominal_transaction') {
+                    if ($totalSumTrx >= (int) $achievement['trx_nominal']) {
+                        AchievementProgress::updateOrCreate([
+                            'id_achievement_detail' => $achievement['id_achievement_detail'],
+                            'id_user' => $idUser,
+                        ], [
+                            'id_achievement_detail' => $achievement['id_achievement_detail'],
+                            'id_user' => $idUser,
+                            'progress' => $achievement['trx_nominal'],
+                            'end_progress' => $achievement['trx_nominal'],
+                        ]);
+                        $achievementPassed = $achievementPassed + 1;
+                        continue;
+                    } else {
+                        AchievementProgress::updateOrCreate([
+                            'id_achievement_detail' => $achievement['id_achievement_detail'],
+                            'id_user' => $idUser,
+                        ], [
+                            'id_achievement_detail' => $achievement['id_achievement_detail'],
+                            'id_user' => $idUser,
+                            'progress' => $totalSumTrx,
+                            'end_progress' => $achievement['trx_nominal'],
+                        ]);
+                        if ($achievementPassed - 1 < 0) {
+                            $achievement = null;
+                        } else {
+                            $achievement = $detailAchievement[$achievementPassed - 1];
+                        }
+                        break;
+                    }
+                }
+
+                if ($rules == 'total_product') {
+                    if ($totalSumProduct >= (int) $achievement['product_total']) {
+                        AchievementProductLog::updateOrCreate([
+                            'id_achievement_group' => $achievement['id_achievement_group'],
+                            'id_achievement_detail' => $achievement['id_achievement_detail'],
+                            'id_user' => $idUser,
+                            'id_product' => $product['id_product'],
+                            'id_transaction' => $user['id_transaction'],
+                        ], [
+                            'id_achievement_group' => $achievement['id_achievement_group'],
+                            'id_achievement_detail' => $achievement['id_achievement_detail'],
+                            'id_user' => $idUser,
+                            'id_product' => $product['id_product'],
+                            'product_total' => $achievement['transaction_product_qty'],
+                            'id_transaction' => $user['id_transaction'],
+                            'json_rule' => json_encode([
+                                'id_product' => $achievement['id_product'],
+                                'product_total' => $achievement['product_total'],
+                                'trx_nominal' => $achievement['trx_nominal'],
+                                'trx_total' => $achievement['trx_total'],
+                                'id_outlet' => $achievement['id_outlet'],
+                                'different_outlet' => $achievement['different_outlet'],
+                                'id_province' => $achievement['id_province'],
+                                'different_province' => $achievement['different_province'],
+                            ]),
+                            'json_rule_enc' => MyHelper::encrypt2019(json_encode([
+                                'id_product' => $achievement['id_product'],
+                                'product_total' => $achievement['product_total'],
+                                'trx_nominal' => $achievement['trx_nominal'],
+                                'trx_total' => $achievement['trx_total'],
+                                'id_outlet' => $achievement['id_outlet'],
+                                'different_outlet' => $achievement['different_outlet'],
+                                'id_province' => $achievement['id_province'],
+                                'different_province' => $achievement['different_province'],
+                            ])),
+                            'date' => date('Y-m-d H:i:s'),
+                        ]);
+                        AchievementProgress::updateOrCreate([
+                            'id_achievement_detail' => $achievement['id_achievement_detail'],
+                            'id_user' => $idUser,
+                        ], [
+                            'id_achievement_detail' => $achievement['id_achievement_detail'],
+                            'id_user' => $idUser,
+                            'progress' => $achievement['different_outlet'],
+                            'end_progress' => $achievement['different_outlet'],
+                        ]);
+                        $achievementPassed = $achievementPassed + 1;
+                        continue;
+                    } else {
+                        AchievementProgress::updateOrCreate([
+                            'id_achievement_detail' => $achievement['id_achievement_detail'],
+                            'id_user' => $idUser,
+                        ], [
+                            'id_achievement_detail' => $achievement['id_achievement_detail'],
+                            'id_user' => $idUser,
+                            'progress' => $totalSumProduct,
+                            'end_progress' => $achievement['different_outlet'],
+                        ]);
+                        if ($achievementPassed - 1 < 0) {
+                            $achievement = null;
+                        } else {
+                            $achievement = $detailAchievement[$achievementPassed - 1];
+                        }
+                        break;
+                    }
                 }
 
                 if (!is_null($achievement['different_outlet'])) {
@@ -519,9 +648,31 @@ class ApiAchievement extends Controller
                             ])),
                             'date' => date('Y-m-d H:i:s'),
                         ]);
+                        if ($rules == 'total_outlet') {
+                            AchievementProgress::updateOrCreate([
+                                'id_achievement_detail' => $achievement['id_achievement_detail'],
+                                'id_user' => $idUser,
+                            ], [
+                                'id_achievement_detail' => $achievement['id_achievement_detail'],
+                                'id_user' => $idUser,
+                                'progress' => $achievement['different_outlet'],
+                                'end_progress' => $achievement['different_outlet'],
+                            ]);
+                        }
                         $achievementPassed = $achievementPassed + 1;
                         continue;
                     } else {
+                        if ($rules == 'total_outlet') {
+                            AchievementProgress::updateOrCreate([
+                                'id_achievement_detail' => $achievement['id_achievement_detail'],
+                                'id_user' => $idUser,
+                            ], [
+                                'id_achievement_detail' => $achievement['id_achievement_detail'],
+                                'id_user' => $idUser,
+                                'progress' => count(array_unique($totalOutlet)),
+                                'end_progress' => $achievement['different_outlet'],
+                            ]);
+                        }
                         if ($achievementPassed - 1 < 0) {
                             $achievement = null;
                         } else {
@@ -561,9 +712,31 @@ class ApiAchievement extends Controller
                             ])),
                             'date' => date('Y-m-d H:i:s'),
                         ]);
+                        if ($rules == 'total_province') {
+                            AchievementProgress::updateOrCreate([
+                                'id_achievement_detail' => $achievement['id_achievement_detail'],
+                                'id_user' => $idUser,
+                            ], [
+                                'id_achievement_detail' => $achievement['id_achievement_detail'],
+                                'id_user' => $idUser,
+                                'progress' => $achievement['different_outlet'],
+                                'end_progress' => $achievement['different_outlet'],
+                            ]);
+                        }
                         $achievementPassed = $achievementPassed + 1;
                         continue;
                     } else {
+                        if ($rules == 'total_province') {
+                            AchievementProgress::updateOrCreate([
+                                'id_achievement_detail' => $achievement['id_achievement_detail'],
+                                'id_user' => $idUser,
+                            ], [
+                                'id_achievement_detail' => $achievement['id_achievement_detail'],
+                                'id_user' => $idUser,
+                                'progress' => count(array_unique($totalProvince)),
+                                'end_progress' => $achievement['different_province'],
+                            ]);
+                        }
                         if ($achievementPassed - 1 < 0) {
                             $achievement = null;
                         } else {
@@ -836,11 +1009,34 @@ class ApiAchievement extends Controller
                         'id_user' => Auth::user()->id,
                         'id_achievement_detail' => $detail['id_achievement_detail'],
                     ])->first();
-                    $badgePercentProgress = ($getAchievementProgress->progress == 0) ? 0 : $getAchievementProgress->progress / $getAchievementProgress->end_progress;
-                    $result['category'][$keyCatAch]['achievement'][$keyAchGroup]['badge'][$keyAchDetail]['progress']            = $getAchievementProgress->progress;
-                    $result['category'][$keyCatAch]['achievement'][$keyAchGroup]['badge'][$keyAchDetail]['end_progress']        = $getAchievementProgress->end_progress;
-                    $result['category'][$keyCatAch]['achievement'][$keyAchGroup]['badge'][$keyAchDetail]['progress_percent']    = $badgePercentProgress;
 
+                    if ($getAchievementProgress) {
+                        $badgePercentProgress = ($getAchievementProgress->progress == 0) ? 0 : $getAchievementProgress->progress / $getAchievementProgress->end_progress;
+                        $result['category'][$keyCatAch]['achievement'][$keyAchGroup]['badge'][$keyAchDetail]['progress']            = $getAchievementProgress->progress;
+                        $result['category'][$keyCatAch]['achievement'][$keyAchGroup]['badge'][$keyAchDetail]['end_progress']        = $getAchievementProgress->end_progress;
+                        $result['category'][$keyCatAch]['achievement'][$keyAchGroup]['badge'][$keyAchDetail]['progress_percent']    = $badgePercentProgress;
+                    } else {
+                        $badgePercentProgress = 0;
+                        $result['category'][$keyCatAch]['achievement'][$keyAchGroup]['badge'][$keyAchDetail]['progress']            = 0;
+                        switch ($group['order_by']) {
+                            case 'nominal_transaction':
+                                $result['category'][$keyCatAch]['achievement'][$keyAchGroup]['badge'][$keyAchDetail]['end_progress']        = $detail['trx_nominal'];
+                                break;
+                            case 'total_product':
+                                $result['category'][$keyCatAch]['achievement'][$keyAchGroup]['badge'][$keyAchDetail]['end_progress']        = $detail['product_total'];
+                                break;
+                            case 'total_transaction':
+                                $result['category'][$keyCatAch]['achievement'][$keyAchGroup]['badge'][$keyAchDetail]['end_progress']        = $detail['trx_total'];
+                                break;
+                            case 'total_outlet':
+                                $result['category'][$keyCatAch]['achievement'][$keyAchGroup]['badge'][$keyAchDetail]['end_progress']        = $detail['different_outlet'];
+                                break;
+                            case 'total_province':
+                                $result['category'][$keyCatAch]['achievement'][$keyAchGroup]['badge'][$keyAchDetail]['end_progress']        = $detail['different_province'];
+                                break;
+                        }
+                        $result['category'][$keyCatAch]['achievement'][$keyAchGroup]['badge'][$keyAchDetail]['progress_percent']    = 0;
+                    }
                     if ($badgePercentProgress == 1) {
                         $achProgress = $achProgress + 1;
                     }
