@@ -2193,8 +2193,8 @@ class ApiTransaction extends Controller
                                 case 'Shopeepay':
                                     $shopeePay = TransactionPaymentShopeePay::find($mp['id_payment']);
                                     $payment['name']    = 'Shopee Pay';
-                                    $payment['amount']  = $shopeePay->amount;
-                                    $payment['reject']  = ($shopeePay->additional_info == '{}') ? '' : $shopeePay->additional_info; 
+                                    $payment['amount']  = $shopeePay->amount / 100;
+                                    $payment['reject']  = $shopeePay->err_reason?:'payment expired';
                                     $list['payment'][]  = $payment;
                                     break;
                                 case 'Offline':
@@ -2293,8 +2293,8 @@ class ApiTransaction extends Controller
                         if($dataPay['type'] == 'Shopeepay'){
                             $payShopee = TransactionPaymentShopeePay::find($dataPay['id_payment']);
                             $payment[$dataKey]['name']      = 'Shopee Pay';
-                            $payment[$dataKey]['amount']    = $payShopee->amount;
-                            $payment[$dataKey]['reject']    = ($payShopee->additional_info == '{}') ? '' : $payShopee->additional_info;
+                            $payment[$dataKey]['amount']    = $payShopee->amount / 100;
+                            $payment[$dataKey]['reject']    = $payShopee->err_reason?:'payment expired';
                         }else{
                             $dataPay = TransactionPaymentBalance::find($dataPay['id_payment']);
                             $payment[$dataKey]              = $dataPay;
@@ -2952,6 +2952,7 @@ class ApiTransaction extends Controller
         $id     = $request->json('id');
         $select = [];
         $data   = LogBalance::where('id_log_balance', $id)->first();
+        \Log::debug($data);
         // dd($data);
         $statusTrx = ['Online Transaction', 'Transaction', 'Transaction Failed', 'Rejected Order', 'Rejected Order Midtrans', 'Rejected Order Point', 'Rejected Order Ovo', 'Reversal'];
         if (in_array($data['source'], $statusTrx)) {

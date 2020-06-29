@@ -427,8 +427,8 @@ class ApiConfirm extends Controller
             }
 
             if (!$trx_shopeepay || !(($trx_shopeepay['status_code'] ?? 0) == 200 && ($trx_shopeepay['response']['debug_msg'] ?? '') == 'success' && ($trx_shopeepay['response']['errcode'] ?? 0) == 0)) {
-                DB::rollBack();
                 if ($paymentShopeepay->redirect_url_app && $paymentShopeepay->redirect_url_http) {
+                    // already confirmed
                     return [
                         'status' => 'success',
                         'result' => [
@@ -440,10 +440,97 @@ class ApiConfirm extends Controller
                         ],
                     ];
                 }
-                return response()->json([
-                    'status'   => 'fail',
-                    'messages' => $errors ?: [$trx_shopeepay['response']['debug_msg'] ?? 'Something went wrong'],
-                ]);
+                $dataMultiple = [
+                    'id_transaction' => $check['id_transaction'],
+                    'type'           => 'Shopeepay',
+                    'id_payment'     => $paymentShopeepay->id_transaction_payment_shopee_pay,
+                ];
+                // save multiple payment
+                $saveMultiple = TransactionMultiplePayment::updateOrCreate([
+                    'id_transaction' => $check['id_transaction'],
+                    'type'           => 'Shopeepay',
+                ], $dataMultiple);
+                if (!$saveMultiple) {
+                    DB::rollBack();
+                    return response()->json([
+                        'status'   => 'fail',
+                        'messages' => ['Failed create multiple transaction'],
+                    ]);
+                }
+                $errcode = $trx_shopeepay['response']['errcode']??null;
+                $paymentShopeepay->errcode = $errcode;
+                $paymentShopeepay->err_reason = app($this->shopeepay)->errcode[$errcode]??null;
+                $paymentShopeepay->save();
+                $trx = $check;
+                $update = $trx->update(['transaction_payment_status' => 'Cancelled', 'void_date' => date('Y-m-d H:i:s')]);
+                if (!$update) {
+                    DB::rollBack();
+                    return [
+                        'status'   => 'fail',
+                        'messages' => ['Failed update transaction status']
+                    ];
+                }
+                $trx->load('outlet_name');
+                // $send = app($this->notif)->notificationDenied($mid, $trx);
+
+                //return balance
+                $payBalance = TransactionMultiplePayment::where('id_transaction', $trx->id_transaction)->where('type', 'Balance')->first();
+                if (!empty($payBalance)) {
+                    $checkBalance = TransactionPaymentBalance::where('id_transaction_payment_balance', $payBalance['id_payment'])->first();
+                    if (!empty($checkBalance)) {
+                        $insertDataLogCash = app("Modules\Balance\Http\Controllers\BalanceController")->addLogBalance($trx['id_user'], $checkBalance['balance_nominal'], $trx['id_transaction'], 'Transaction Failed', $trx['transaction_grandtotal']);
+                        if (!$insertDataLogCash) {
+                            DB::rollBack();
+                            return response()->json([
+                                'status'    => 'fail',
+                                'messages'  => ['Insert Cashback Failed']
+                            ]);
+                        }
+                        $usere= User::where('id',$trx['id_user'])->first();
+                        $send = app($this->autocrm)->SendAutoCRM('Transaction Failed Point Refund', $usere->phone,
+                            [
+                                "outlet_name"       => $trx['outlet_name']['outlet_name']??'',
+                                "transaction_date"  => $trx['transaction_date'],
+                                'id_transaction'    => $trx['id_transaction'],
+                                'receipt_number'    => $trx['transaction_receipt_number'],
+                                'received_point'    => (string) $checkBalance['balance_nominal']
+                            ]
+                        );
+                        if($send != true){
+                            DB::rollBack();
+                            return response()->json([
+                                    'status' => 'fail',
+                                    'messages' => ['Failed Send notification to customer']
+                                ]);
+                        }
+                    }
+                }
+
+                // delete promo campaign report
+                if ($trx->id_promo_campaign_promo_code) 
+                {
+                    $update_promo_report = app($this->promo_campaign)->deleteReport($trx->id_transaction, $trx->id_promo_campaign_promo_code);
+                }
+
+                // return voucher
+                $update_voucher = app($this->voucher)->returnVoucher($trx->id_transaction);
+
+                if(!$update){
+                    DB::rollBack();
+                    return [
+                        'status'=>'fail',
+                        'messages' => ['Failed update payment status']
+                    ];
+                }
+                DB::commit();
+                return [
+                    'status' => 'success',
+                    'result' => [
+                        'redirect'                  => false,
+                        'id_transaction'            => $paymentShopeepay->id_transaction,
+                        'message'                   => $paymentShopeepay->err_reason,
+                    ],
+                ];
             }
             $paymentShopeepay->redirect_url_app  = $trx_shopeepay['response']['redirect_url_app'];
             $paymentShopeepay->redirect_url_http = $trx_shopeepay['response']['redirect_url_http'];
