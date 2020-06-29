@@ -12,14 +12,15 @@ class AchievementCheck implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
+    protected $data;
     /**
      * Create a new job instance.
      *
      * @return void
      */
-    public function __construct()
+    public function __construct($data)
     {
-        //
+        $this->data = $data;
     }
 
     /**
@@ -29,6 +30,6 @@ class AchievementCheck implements ShouldQueue
      */
     public function handle()
     {
-        //
+        dd($this->data);
     }
 }
