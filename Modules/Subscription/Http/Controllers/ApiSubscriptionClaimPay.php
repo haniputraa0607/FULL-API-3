@@ -425,7 +425,7 @@ class ApiSubscriptionClaimPay extends Controller
         else {
             $data['gross_amount'] = $grossAmount;
         }
-        $tembakMitrans = Midtrans::token($data['order_id'], $data['gross_amount']);
+        $tembakMitrans = Midtrans::token($data['order_id'], $data['gross_amount'], null, null, null, 'subscription', $voucher->id_subscription_user);
         $tembakMitrans['order_id'] = $data['order_id'];
         $tembakMitrans['gross_amount'] = $data['gross_amount'];
 
