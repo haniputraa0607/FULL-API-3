@@ -40,7 +40,7 @@ class ApiHome extends Controller
 		$this->point  = "Modules\Deals\Http\Controllers\ApiDealsClaim";
 		$this->autocrm  = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
         $this->setting_fraud = "Modules\SettingFraud\Http\Controllers\ApiFraud";
-		$this->endPoint  = env('STORAGE_URL_API');
+		$this->endPoint  = config('url.storage_url_api');
         $this->deals = "Modules\Deals\Http\Controllers\ApiDeals";
     }
 
@@ -85,7 +85,7 @@ class ApiHome extends Controller
 
         foreach ($banners as $key => $value) {
 
-            $item['image_url']  = env('STORAGE_URL_API').$value->image;
+            $item['image_url']  = config('url.storage_url_api').$value->image;
             $item['type']       = 'none';
             $item['id_news']    = $value->id_news;
             $item['news_title'] = "";
@@ -254,7 +254,7 @@ class ApiHome extends Controller
                     $greetingss2     = app($this->autocrm)->TextReplace($greetings[$greetingKey]['greeting2'], $user['phone']);
                     if (!empty($background)) {
 						$backgroundKey = array_rand($background, 1);
-						$background    = env('STORAGE_URL_API').$background[$backgroundKey]['picture'];
+						$background    = config('url.storage_url_api').$background[$backgroundKey]['picture'];
 					}
                 }
             }
@@ -298,7 +298,7 @@ class ApiHome extends Controller
 
                 $membership['webview_detail_membership'] = env('API_URL').'api/membership/web/view?data='.$base;
 				if(isset($membership['membership_image']))
-					$membership['membership_image'] = env('STORAGE_URL_API').$membership['membership_image'];
+					$membership['membership_image'] = config('url.storage_url_api').$membership['membership_image'];
 			} else {
 				$membership = null;
 			}
@@ -471,7 +471,7 @@ class ApiHome extends Controller
                 }
                 else {
                     $backgroundKey = array_rand($background, 1);
-                    $background    = env('STORAGE_URL_API').$background[$backgroundKey]['picture'];
+                    $background    = config('url.storage_url_api').$background[$backgroundKey]['picture'];
                 }
             }
 
@@ -685,7 +685,7 @@ class ApiHome extends Controller
         }
 
         if($retUser['id_card_image']??false){
-            $retUser['id_card_image'] = env('STORAGE_URL_API').$retUser['id_card_image'];
+            $retUser['id_card_image'] = config('url.storage_url_api').$retUser['id_card_image'];
         }
         array_walk_recursive($retUser, function(&$it,$ix){
             if($it==null&&!in_array($ix, ['city','membership'])){

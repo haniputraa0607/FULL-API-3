@@ -1951,7 +1951,7 @@ class ApiUser extends Controller
 
                 $urlIdCard = "";
                 if (!empty($datauser[0]['id_card_image']) && !is_null($datauser[0]['id_card_image'])) {
-                    $urlIdCard = env('STORAGE_URL_API') . $datauser[0]['id_card_image'];
+                    $urlIdCard = config('url.storage_url_api') . $datauser[0]['id_card_image'];
                 }
                 DB::commit();
                 $result = [
