@@ -223,6 +223,14 @@ class ApiEnquiries extends Controller
 		$id_enquiry = $post['id_enquiry'];
 		$check = Enquiry::where('id_enquiry', $id_enquiry)->first();
 
+		$aditionalVariabel = [
+            'enquiry_subject' => $check['enquiry_subject'],
+            'enquiry_message' => $check['enquiry_content'],
+            'enquiry_phone'   => $check['enquiry_phone'],
+            'enquiry_name'    => $check['enquiry_name'],
+            'enquiry_email'   => $check['enquiry_email'],
+            'visiting_time'   => isset($check['visiting_time'])?$check['visiting_time']:""];
+
 		if(isset($post['reply_email_subject']) && $post['reply_email_subject'] != ""){
 			if($check['reply_email_subject'] == null && $check['enquiry_email'] != null){
 				$to = $check['enquiry_email'];
@@ -230,8 +238,8 @@ class ApiEnquiries extends Controller
 					$name = $check['enquiry_name'];
 				else $name = "Customer";
 
-                $subject = app($this->autocrm)->TextReplace($post['reply_email_subject'], $check['enquiry_phone']);
-                $content = app($this->autocrm)->TextReplace($post['reply_email_content'], $check['enquiry_phone']);
+                $subject = app($this->autocrm)->TextReplace($post['reply_email_subject'], $check['enquiry_phone'], $aditionalVariabel);
+                $content = app($this->autocrm)->TextReplace($post['reply_email_content'], $check['enquiry_phone'], $aditionalVariabel);
 
 				// get setting email
 				$setting = array();
@@ -340,7 +348,7 @@ class ApiEnquiries extends Controller
 
 		if(isset($post['reply_sms_content'])){
 			if($check['reply_sms_content'] == null && $check['enquiry_phone'] != null){
-                $content = app($this->autocrm)->TextReplace($post['reply_sms_content'], $check['enquiry_phone']);
+                $content = app($this->autocrm)->TextReplace($post['reply_sms_content'], $check['enquiry_phone'], $aditionalVariabel);
 				$senddata = array(
 						'apikey' => env('SMS_KEY'),
 						'callbackurl' => env('APP_URL'),
@@ -413,8 +421,8 @@ class ApiEnquiries extends Controller
 					$deviceToken = array($check['enquiry_device_token']);
 
 
-                    $subject = app($this->autocrm)->TextReplace($post['reply_push_subject'], $check['enquiry_phone']);
-                    $content = app($this->autocrm)->TextReplace($post['reply_push_content'], $check['enquiry_phone']);
+                    $subject = app($this->autocrm)->TextReplace($post['reply_push_subject'], $check['enquiry_phone'], $aditionalVariabel);
+                    $content = app($this->autocrm)->TextReplace($post['reply_push_content'], $check['enquiry_phone'], $aditionalVariabel);
 
 					if (!empty($deviceToken)) {
 							$push = PushNotificationHelper::sendPush($deviceToken, $subject, $content, $image, $dataOptional);
