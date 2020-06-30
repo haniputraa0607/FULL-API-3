@@ -277,16 +277,29 @@ class ShopeePayController extends Controller
             DB::begintransaction();
             // is transaction success?
             if (($status['response']['payment_status'] ?? false) == '1') {
+                $update = $singleTrx->update(['transaction_payment_status' => 'Completed', 'completed_at' => date('Y-m-d H:i:s')]);
+                if ($update) {
+                    $userData               = User::where('id', $singleTrx['id_user'])->first();
+                    $config_fraud_use_queue = Configs::where('config_name', 'fraud use queue')->first()->is_active;
+
+                    if ($config_fraud_use_queue == 1) {
+                        FraudJob::dispatch($userData, $trx, 'transaction')->onConnection('fraudqueue');
+                    } else {
+                        $checkFraud = app($this->setting_fraud)->checkFraudTrxOnline($userData, $singleTrx);
+                    }
+                }
+                DB::commit();
+                continue;
                 // void transaction
-                $void_reference_id = null;
-                $void              = $this->void($singleTrx, 'trx', $errors, $void_reference_id);
-                if (!$void) {
-                    \Log::error('Failed void transaction ' . $singleTrx->transaction_receipt_number . ': ', $errors);
-                    continue;
-                }
-                if (($void['response']['errcode'] ?? 123) == 0) {
-                    $up = TransactionPaymentShopeePay::where('id_transaction', $singleTrx->id_transaction)->update(['void_reference_id' => $void_reference_id]);
-                }
+                // $void_reference_id = null;
+                // $void              = $this->void($singleTrx, 'trx', $errors, $void_reference_id);
+                // if (!$void) {
+                //     \Log::error('Failed void transaction ' . $singleTrx->transaction_receipt_number . ': ', $errors);
+                //     continue;
+                // }
+                // if (($void['response']['errcode'] ?? 123) == 0) {
+                //     $up = TransactionPaymentShopeePay::where('id_transaction', $singleTrx->id_transaction)->update(['void_reference_id' => $void_reference_id]);
+                // }
             }
 
             $singleTrx->transaction_payment_status = 'Cancelled';
@@ -375,16 +388,19 @@ class ShopeePayController extends Controller
             DB::begintransaction();
             // is transaction success?
             if (($status['response']['payment_status'] ?? false) == '1') {
+                $update = DealsUser::where('id_deals_user', $singleTrx->id_deals_user)->update(['paid_status' => 'Completed']);
+                DB::commit();
+                continue;
                 // void transaction
-                $void_reference_id = null;
-                $void              = $this->void($singleTrx->id_deals_user, 'deals', $errors, $void_reference_id);
-                if (!$void) {
-                    \Log::error('Failed void deals ' . $singleTrx->id_deals_user . ': ', $errors);
-                    continue;
-                }
-                if (($void['response']['errcode'] ?? 123) == 0) {
-                    $up = DealsPaymentShopeePay::where('id_deals_user', $singleTrx->id_deals_user)->update(['void_reference_id' => $void_reference_id]);
-                }
+                // $void_reference_id = null;
+                // $void              = $this->void($singleTrx->id_deals_user, 'deals', $errors, $void_reference_id);
+                // if (!$void) {
+                //     \Log::error('Failed void deals ' . $singleTrx->id_deals_user . ': ', $errors);
+                //     continue;
+                // }
+                // if (($void['response']['errcode'] ?? 123) == 0) {
+                //     $up = DealsPaymentShopeePay::where('id_deals_user', $singleTrx->id_deals_user)->update(['void_reference_id' => $void_reference_id]);
+                // }
             }
 
             $singleTrx->paid_status = 'Cancelled';
