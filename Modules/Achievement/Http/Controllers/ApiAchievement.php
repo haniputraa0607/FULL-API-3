@@ -319,14 +319,14 @@ class ApiAchievement extends Controller
                                                 'id_achievement_detail' => $achievement['id_achievement_detail'],
                                                 'id_user' => $idUser,
                                                 'id_product' => $product['id_product'],
-                                                'product_total' => $achievement['transaction_product_qty'],
+                                                'product_total' => $achievement['product_total'],
                                                 'id_transaction' => $user['id_transaction'],
                                             ], [
                                                 'id_achievement_group' => $achievement['id_achievement_group'],
                                                 'id_achievement_detail' => $achievement['id_achievement_detail'],
                                                 'id_user' => $idUser,
                                                 'id_product' => $product['id_product'],
-                                                'product_total' => $achievement['transaction_product_qty'],
+                                                'product_total' => $achievement['product_total'],
                                                 'id_transaction' => $user['id_transaction'],
                                                 'json_rule' => json_encode([
                                                     'id_product' => $achievement['id_product'],
