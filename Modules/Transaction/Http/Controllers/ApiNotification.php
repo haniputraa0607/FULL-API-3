@@ -538,6 +538,9 @@ class ApiNotification extends Controller {
 
     function savePoint($data)
     {
+        if ($data['user']['transaction_status_text'] != 'success') {
+            $updateUserTrx = User::where('id',$data['user']['id'])->update(['transaction_online' => $data['id_transaction'], 'transaction_status_text' => 'success']);
+        }
         if (!empty($data['user']['memberships'][0]['membership_name'])) {
             $level = $data['user']['memberships'][0]['membership_name'];
             $percentageP = $data['user']['memberships'][0]['benefit_point_multiplier'] / 100;
