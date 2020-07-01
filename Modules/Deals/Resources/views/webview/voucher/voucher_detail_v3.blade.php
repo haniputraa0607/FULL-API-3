@@ -238,7 +238,7 @@
 @stop
 
 @section('page-script')
-    <script type="text/javascript" src="{{ env('STORAGE_URL_VIEW') }}{{('assets/global/plugins/jquery.min.js') }}" type="text/javascript"></script>
+    <script type="text/javascript" src="{{ config('url.storage_url_view') }}{{('assets/global/plugins/jquery.min.js') }}" type="text/javascript"></script>
     <script type="text/javascript">
         $(document).ready(function() {
 

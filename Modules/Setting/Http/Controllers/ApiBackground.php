@@ -22,7 +22,7 @@ class ApiBackground extends Controller
 	function __construct() {
 		date_default_timezone_set('Asia/Jakarta');
 		$this->globalcontroller  = "App\Http\Controllers\Controller";
-		$this->endPoint  = env('STORAGE_URL_API');
+		$this->endPoint  = config('url.storage_url_api');
 		
 	}
 	function getBackground($when=null) {

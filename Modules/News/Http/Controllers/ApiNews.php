@@ -291,7 +291,7 @@ class ApiNews extends Controller
                 $send = app($this->autocrm)->SendAutoCRM('Create News', $request->user()->phone, [
                     'id_news' => $save->id_news,
                     'news_content' => $data['news_content_long'] ?? '',
-                    'news_image' => ($data['news_image_dalam'] ?? '') ? '<img src="' . env('STORAGE_URL_API') . $data['news_image_dalam'] . '" style="max-width: 100%"/>' : '',
+                    'news_image' => ($data['news_image_dalam'] ?? '') ? '<img src="' . config('url.storage_url_api') . $data['news_image_dalam'] . '" style="max-width: 100%"/>' : '',
                     'post_date' => ($data['news_post_date'] ?? '') ? date('d F Y H:i', strtotime($data['news_post_date'])) : '-',
                     'publish_date' => ($data['news_publish_date'] ?? '') ? date('d F Y H:i', strtotime($data['news_publish_date'])) : '-',
                     'expired_date' => ($data['news_expired_date'] ?? '') ? date('d F Y H:i', strtotime($data['news_expired_date'])) : '-',
@@ -387,7 +387,7 @@ class ApiNews extends Controller
                 $send = app($this->autocrm)->SendAutoCRM('Update News', $request->user()->phone, [
                     'id_news' => $request->json('id_news'),
                     'news_content' => $save['news_content_long'] ?? '',
-                    'news_image' => ($save['news_image_dalam'] ?? '') ? '<img src="' . env('STORAGE_URL_API') . $save['news_image_dalam'] . '" style="max-width: 100%"/>' : '',
+                    'news_image' => ($save['news_image_dalam'] ?? '') ? '<img src="' . config('url.storage_url_api') . $save['news_image_dalam'] . '" style="max-width: 100%"/>' : '',
                     'post_date' => ($save['news_post_date'] ?? '') ? date('d F Y H:i', strtotime($save['news_post_date'])) : '-',
                     'publish_date' => ($save['news_publish_date'] ?? '') ? date('d F Y H:i', strtotime($save['news_publish_date'])) : '-',
                     'expired_date' => ($save['news_expired_date'] ?? '') ? date('d F Y H:i', strtotime($save['news_expired_date'])) : '-',

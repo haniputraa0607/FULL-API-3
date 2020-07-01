@@ -245,10 +245,10 @@ class ApiUserFeedbackController extends Controller
             'transaction_date' => MyHelper::dateFormatInd($feedback->transaction_date,true,false),
             'transaction_time' => date('H:i',strtotime($feedback->transaction_date)),
             'transaction_receipt_number' => $feedback->transaction_receipt_number,
-            'rating_item_image' => $feedback->rating_item_image?(env('STORAGE_URL_API').$feedback->rating_item_image):null,
+            'rating_item_image' => $feedback->rating_item_image?(config('url.storage_url_api').$feedback->rating_item_image):null,
             'rating_item_text' => $feedback->text?:$feedback->rating_item_text,
             'notes' => $feedback->notes,
-            'uploaded_image' => $feedback->uploaded_image?(env('STORAGE_URL_API').$feedback->uploaded_image):null
+            'uploaded_image' => $feedback->uploaded_image?(config('url.storage_url_api').$feedback->uploaded_image):null
         ];
         return MyHelper::checkGet($response);
     }

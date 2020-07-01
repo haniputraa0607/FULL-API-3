@@ -151,10 +151,10 @@ class Subscription extends Eloquent
 	// ATTRIBUTE IMAGE URL
 	public function getUrlSubscriptionImageAttribute() {
 		if (empty($this->subscription_image)) {
-            return env('STORAGE_URL_API').'img/default.jpg';
+            return config('url.storage_url_api').'img/default.jpg';
         }
         else {
-            return env('STORAGE_URL_API').$this->subscription_image;
+            return config('url.storage_url_api').$this->subscription_image;
         }
 	}
 

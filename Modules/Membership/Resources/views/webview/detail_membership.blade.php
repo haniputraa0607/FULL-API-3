@@ -4,62 +4,62 @@
 		
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <meta http-equiv="X-UA-Compatible" content="ie=edge" />
-        <link rel="stylesheet" href="{{ env('STORAGE_URL_VIEW') }}{{ ('assets/css/bootstrap.min.css') }}" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+        <link rel="stylesheet" href="{{ config('url.storage_url_view') }}{{ ('assets/css/bootstrap.min.css') }}" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
         <title>Champ Membership</title>
         <style>
         @font-face {
             font-family: "WorkSans-Black";
             font-style: normal;
             font-weight: 400;
-            src: url('{{ env('STORAGE_URL_VIEW') }}{{ ('fonts/Work_Sans/WorkSans-Black.ttf') }}');
+            src: url('{{ config('url.storage_url_view') }}{{ ('fonts/Work_Sans/WorkSans-Black.ttf') }}');
         }
         @font-face {
             font-family: "WorkSans-Bold";
             font-style: normal;
             font-weight: 400;
-            src: url('{{ env('STORAGE_URL_VIEW') }}{{ ('fonts/Work_Sans/WorkSans-Bold.ttf') }}');
+            src: url('{{ config('url.storage_url_view') }}{{ ('fonts/Work_Sans/WorkSans-Bold.ttf') }}');
         }
         @font-face {
             font-family: "WorkSans-ExtraBold";
             font-style: normal;
             font-weight: 400;
-            src: url('{{ env('STORAGE_URL_VIEW') }}{{ ('fonts/Work_Sans/WorkSans-ExtraBold.ttf') }}');
+            src: url('{{ config('url.storage_url_view') }}{{ ('fonts/Work_Sans/WorkSans-ExtraBold.ttf') }}');
         }
         @font-face {
             font-family: "WorkSans-ExtraLight";
             font-style: normal;
             font-weight: 400;
-            src: url('{{ env('STORAGE_URL_VIEW') }}{{ ('fonts/Work_Sans/WorkSans-ExtraLight.ttf') }}');
+            src: url('{{ config('url.storage_url_view') }}{{ ('fonts/Work_Sans/WorkSans-ExtraLight.ttf') }}');
         }
         @font-face {
             font-family: "WorkSans-Light";
             font-style: normal;
             font-weight: 400;
-            src: url('{{ env('STORAGE_URL_VIEW') }}{{ ('fonts/Work_Sans/WorkSans-Light.ttf') }}');
+            src: url('{{ config('url.storage_url_view') }}{{ ('fonts/Work_Sans/WorkSans-Light.ttf') }}');
         }
         @font-face {
             font-family: "WorkSans-Medium";
             font-style: normal;
             font-weight: 400;
-            src: url('{{ env('STORAGE_URL_VIEW') }}{{ ('fonts/Work_Sans/WorkSans-Medium.ttf') }}');
+            src: url('{{ config('url.storage_url_view') }}{{ ('fonts/Work_Sans/WorkSans-Medium.ttf') }}');
         }
         @font-face {
             font-family: "WorkSans-Regular";
             font-style: normal;
             font-weight: 400;
-            src: url('{{ env('STORAGE_URL_VIEW') }}{{ ('fonts/Work_Sans/WorkSans-Regular.ttf') }}');
+            src: url('{{ config('url.storage_url_view') }}{{ ('fonts/Work_Sans/WorkSans-Regular.ttf') }}');
         }
         @font-face {
             font-family: "WorkSans-SemiBold";
             font-style: normal;
             font-weight: 400;
-            src: url('{{ env('STORAGE_URL_VIEW') }}{{ ('fonts/Work_Sans/WorkSans-SemiBold.ttf') }}');
+            src: url('{{ config('url.storage_url_view') }}{{ ('fonts/Work_Sans/WorkSans-SemiBold.ttf') }}');
         }
         @font-face {
             font-family: "WorkSans-Thin";
             font-style: normal;
             font-weight: 400;
-            src: url('{{ env('STORAGE_URL_VIEW') }}{{ ('fonts/Work_Sans/WorkSans-Thin.ttf') }}');
+            src: url('{{ config('url.storage_url_view') }}{{ ('fonts/Work_Sans/WorkSans-Thin.ttf') }}');
         }
         .WorkSans-Black{
             font-family: "WorkSans-Black";
@@ -317,13 +317,13 @@
                                 </div>
                                 @if (reset($result['all_membership']) != $member)
                                     <a style="left: -30px;" class="carousel-control-prev" href="#carouselExampleFade" role="button" data-slide="prev">
-                                        <img src="{{env('STORAGE_URL_VIEW').'img/membership/previous.png'}}" style="width: 33px;"/>
+                                        <img src="{{config('url.storage_url_view').'img/membership/previous.png'}}" style="width: 33px;"/>
                                         <span class="sr-only">Previous</span>
                                     </a>
                                 @endif
                                 @if (end($result['all_membership']) != $member)
                                     <a style="right: -30px;" class="carousel-control-next" href="#carouselExampleFade" role="button" data-slide="next">
-                                        <img src="{{env('STORAGE_URL_VIEW').'img/membership/next.png'}}" style="width: 33px;"/>
+                                        <img src="{{config('url.storage_url_view').'img/membership/next.png'}}" style="width: 33px;"/>
                                         <span class="sr-only">Next</span>
                                     </a>
                                 @endif
@@ -368,20 +368,20 @@
                                 <div class="card-body" style="display: flex;flex-wrap: wrap;">
                                     <div class="col-12 text-center">
                                             <p style="margin-bottom: 10px;"></p>
-                                        <img src="{{env('STORAGE_URL_VIEW').'img/membership/lock.png'}}" style="width: 40px;"/>
+                                        <img src="{{config('url.storage_url_view').'img/membership/lock.png'}}" style="width: 40px;"/>
                                         <p style="margin-bottom: 10px;"></p>
                                         <p style="font-size: 11.7px;">Naikan terus transaksi Anda untuk menuju <b>{{$member['membership_name']}}</b></p>
                                     </div>
                                 </div>
                                 @if (reset($result['all_membership']) != $member)
                                     <a style="left: -30px;" class="carousel-control-prev" href="#carouselExampleFade" role="button" data-slide="prev">
-                                        <img src="{{env('STORAGE_URL_VIEW').'img/membership/previous.png'}}" style="width: 33px;"/>
+                                        <img src="{{config('url.storage_url_view').'img/membership/previous.png'}}" style="width: 33px;"/>
                                         <span class="sr-only">Previous</span>
                                     </a>
                                 @endif
                                 @if (end($result['all_membership']) != $member)
                                     <a style="right: -30px;" class="carousel-control-next" href="#carouselExampleFade" role="button" data-slide="next">
-                                        <img src="{{env('STORAGE_URL_VIEW').'img/membership/next.png'}}" style="width: 33px;"/>
+                                        <img src="{{config('url.storage_url_view').'img/membership/next.png'}}" style="width: 33px;"/>
                                         <span class="sr-only">Next</span>
                                     </a>
                                 @endif
@@ -425,7 +425,7 @@
         </div>
 
         <script src="{{ env('API_URL') }}js/jquery.js"></script>
-        <script src="{{ env('STORAGE_URL_VIEW') }}{{ ('assets/js/bootstrap.min.js') }}" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
+        <script src="{{ config('url.storage_url_view') }}{{ ('assets/js/bootstrap.min.js') }}" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
         <script>
         $( document ).ready(function() {
             $(".ui-page").css("background-color", "#ffffff");

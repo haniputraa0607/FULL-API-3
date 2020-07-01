@@ -184,8 +184,8 @@
 								</div>
 							</div>
 						</div>
-						<img src="{{ env('STORAGE_URL_API').$deals['deals_voucher']['deal']['deals_image'] }}" alt="" style="width: 85px;position: absolute;border-radius: 50%;top: 14.5%;left: 6.5%;">
-						<img style="width:100%" height="130px" src="{{ env('STORAGE_URL_API')}}img/asset/bg_item_kupon_saya.png" alt="">
+						<img src="{{ config('url.storage_url_api').$deals['deals_voucher']['deal']['deals_image'] }}" alt="" style="width: 85px;position: absolute;border-radius: 50%;top: 14.5%;left: 6.5%;">
+						<img style="width:100%" height="130px" src="{{ config('url.storage_url_api')}}img/asset/bg_item_kupon_saya.png" alt="">
 					</div>
 				</div>
 

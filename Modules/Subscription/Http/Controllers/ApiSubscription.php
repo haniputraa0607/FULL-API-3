@@ -1442,10 +1442,10 @@ class ApiSubscription extends Controller
             }
             if ($subs) {
                 if (empty($subs['subscription']['subscription_image'])) {
-                    $subs['url_subscription_image'] = env('STORAGE_URL_API').'img/default.jpg';
+                    $subs['url_subscription_image'] = config('url.storage_url_api').'img/default.jpg';
                 }
                 else {
-                    $subs['url_subscription_image'] = env('STORAGE_URL_API').$subs['subscription']['subscription_image'];
+                    $subs['url_subscription_image'] = config('url.storage_url_api').$subs['subscription']['subscription_image'];
                 }
                 $subs['time_server'] = date('Y-m-d H:i:s');
                 $subs['time_to_end'] = strtotime($subs['subscription_expired_at'])-time();
@@ -1472,10 +1472,10 @@ class ApiSubscription extends Controller
                         $data[$key]['used_voucher']                 = $sub['used_voucher'];
                         $data[$key]['available_voucher']            = $sub['available_voucher'];
                         if (empty($sub['subscription']['subscription_image'])) {
-                            $data[$key]['url_subscription_image'] = env('STORAGE_URL_API').'img/default.jpg';
+                            $data[$key]['url_subscription_image'] = config('url.storage_url_api').'img/default.jpg';
                         }
                         else {
-                            $data[$key]['url_subscription_image'] = env('STORAGE_URL_API').$sub['subscription']['subscription_image'];
+                            $data[$key]['url_subscription_image'] = config('url.storage_url_api').$sub['subscription']['subscription_image'];
                         }
 
                         $data[$key]['time_to_end']                  = strtotime($sub['subscription']['subscription_expired_at'])-time();
@@ -1795,10 +1795,10 @@ class ApiSubscription extends Controller
                     $data[$key]['used_voucher']                 = $sub['used_voucher'];
                     $data[$key]['available_voucher']            = $sub['available_voucher'];
                     if (empty($sub['subscription']['subscription_image'])) {
-                        $data[$key]['url_subscription_image'] = env('STORAGE_URL_API').'img/default.jpg';
+                        $data[$key]['url_subscription_image'] = config('url.storage_url_api').'img/default.jpg';
                     }
                     else {
-                        $data[$key]['url_subscription_image'] = env('STORAGE_URL_API').$sub['subscription']['subscription_image'];
+                        $data[$key]['url_subscription_image'] = config('url.storage_url_api').$sub['subscription']['subscription_image'];
                     }
 
                     $data[$key]['time_to_end']                  = strtotime($sub['subscription']['subscription_expired_at'])-time();

@@ -60,7 +60,7 @@ class ApiDealsWebview extends Controller
         unset($deals['outlets']);
         $point = Auth::user()->balance;
 
-        $deals['deals_image'] = env('STORAGE_URL_API') . $deals['deals_image'];
+        $deals['deals_image'] = config('url.storage_url_api') . $deals['deals_image'];
         $response = [
             'status' => 'success',
             'result' =>

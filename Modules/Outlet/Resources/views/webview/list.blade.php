@@ -12,55 +12,55 @@
                 font-family: "WorkSans-Black";
                 font-style: normal;
                 font-weight: 400;
-                src: url('{{ env('STORAGE_URL_VIEW') }}{{ ('fonts/Work_Sans/WorkSans-Black.ttf') }}');
+                src: url('{{ config('url.storage_url_view') }}{{ ('fonts/Work_Sans/WorkSans-Black.ttf') }}');
         }
         @font-face {
                 font-family: "WorkSans-Bold";
                 font-style: normal;
                 font-weight: 400;
-                src: url('{{ env('STORAGE_URL_VIEW') }}{{ ('fonts/Work_Sans/WorkSans-Bold.ttf') }}');
+                src: url('{{ config('url.storage_url_view') }}{{ ('fonts/Work_Sans/WorkSans-Bold.ttf') }}');
         }
         @font-face {
                 font-family: "WorkSans-ExtraBold";
                 font-style: normal;
                 font-weight: 400;
-                src: url('{{ env('STORAGE_URL_VIEW') }}{{ ('fonts/Work_Sans/WorkSans-ExtraBold.ttf') }}');
+                src: url('{{ config('url.storage_url_view') }}{{ ('fonts/Work_Sans/WorkSans-ExtraBold.ttf') }}');
         }
         @font-face {
                 font-family: "WorkSans-ExtraLight";
                 font-style: normal;
                 font-weight: 400;
-                src: url('{{ env('STORAGE_URL_VIEW') }}{{ ('fonts/Work_Sans/WorkSans-ExtraLight.ttf') }}');
+                src: url('{{ config('url.storage_url_view') }}{{ ('fonts/Work_Sans/WorkSans-ExtraLight.ttf') }}');
         }
         @font-face {
                 font-family: "WorkSans-Light";
                 font-style: normal;
                 font-weight: 400;
-                src: url('{{ env('STORAGE_URL_VIEW') }}{{ ('fonts/Work_Sans/WorkSans-Light.ttf') }}');
+                src: url('{{ config('url.storage_url_view') }}{{ ('fonts/Work_Sans/WorkSans-Light.ttf') }}');
         }
         @font-face {
                 font-family: "WorkSans-Medium";
                 font-style: normal;
                 font-weight: 400;
-                src: url('{{ env('STORAGE_URL_VIEW') }}{{ ('fonts/Work_Sans/WorkSans-Medium.ttf') }}');
+                src: url('{{ config('url.storage_url_view') }}{{ ('fonts/Work_Sans/WorkSans-Medium.ttf') }}');
         }
         @font-face {
                 font-family: "WorkSans-Regular";
                 font-style: normal;
                 font-weight: 400;
-                src: url('{{ env('STORAGE_URL_VIEW') }}{{ ('fonts/Work_Sans/WorkSans-Regular.ttf') }}');
+                src: url('{{ config('url.storage_url_view') }}{{ ('fonts/Work_Sans/WorkSans-Regular.ttf') }}');
         }
         @font-face {
                 font-family: "WorkSans-SemiBold";
                 font-style: normal;
                 font-weight: 400;
-                src: url('{{ env('STORAGE_URL_VIEW') }}{{ ('fonts/Work_Sans/WorkSans-SemiBold.ttf') }}');
+                src: url('{{ config('url.storage_url_view') }}{{ ('fonts/Work_Sans/WorkSans-SemiBold.ttf') }}');
         }
         @font-face {
                 font-family: "WorkSans-Thin";
                 font-style: normal;
                 font-weight: 400;
-                src: url('{{ env('STORAGE_URL_VIEW') }}{{ ('fonts/Work_Sans/WorkSans-Thin.ttf') }}');
+                src: url('{{ config('url.storage_url_view') }}{{ ('fonts/Work_Sans/WorkSans-Thin.ttf') }}');
         }
         .WorkSans-Black{
             font-family: "WorkSans-Black";
@@ -309,8 +309,8 @@
 	p { margin: 0 0 0.0001pt; }
 
     </style>
-        <link rel="stylesheet" href="{{ env('STORAGE_URL_VIEW') }}{{ ('assets/css/owl.carousel.min.css') }}">
-        <link rel="stylesheet" href="{{ env('STORAGE_URL_VIEW') }}{{ ('assets/css/owl.theme.default.min.css') }}">
+        <link rel="stylesheet" href="{{ config('url.storage_url_view') }}{{ ('assets/css/owl.carousel.min.css') }}">
+        <link rel="stylesheet" href="{{ config('url.storage_url_view') }}{{ ('assets/css/owl.theme.default.min.css') }}">
   </head>
   <body>
 

@@ -68,7 +68,7 @@ class Favorite extends Model
 			'product_name' => $product->product_name,
 			'product_code' => $product->product_code,
 			'product_description' => $product->product_description,
-			'url_product_photo' => optional($product->photos[0] ?? null)->url_product_photo ?: env('STORAGE_URL_API') . 'img/product/item/default.png',
+			'url_product_photo' => optional($product->photos[0] ?? null)->url_product_photo ?: config('url.storage_url_api') . 'img/product/item/default.png',
 			'price' => $this->getProductPrice($id_outlet, $id_product)
 		];
 	}

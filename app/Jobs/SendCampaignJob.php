@@ -283,8 +283,8 @@ class SendCampaignJob implements ShouldQueue
                     $dataOptional          = [];
                     $image = null;
                     if (isset($campaign['campaign_push_image']) && $campaign['campaign_push_image'] != null) {
-                        $dataOptional['image'] = env('STORAGE_URL_API').$campaign['campaign_push_image'];
-                        $image = env('STORAGE_URL_API').$campaign['campaign_push_image'];
+                        $dataOptional['image'] = config('url.storage_url_api').$campaign['campaign_push_image'];
+                        $image = config('url.storage_url_api').$campaign['campaign_push_image'];
                     }
 
                     if (isset($campaign['campaign_push_clickto']) && $campaign['campaign_push_clickto'] != null) {

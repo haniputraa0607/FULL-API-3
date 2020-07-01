@@ -36,7 +36,7 @@ class ApiEnquiries extends Controller
 		date_default_timezone_set('Asia/Jakarta');
 		$this->autocrm = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
 		$this->rajasms = new classMaskingJson();
-		$this->endPoint = env('STORAGE_URL_API');
+		$this->endPoint = config('url.storage_url_api');
 	}
     /* Cek inputan */
     function cekInputan($post = []) {
@@ -380,8 +380,8 @@ class ApiEnquiries extends Controller
 					}
 
 					if (isset($post['reply_push_image']) && $post['reply_push_image'] != null) {
-						$dataOptional['image'] = env('STORAGE_URL_API').$post['reply_push_image'];
-						$image = env('STORAGE_URL_API').$post['reply_push_image'];
+						$dataOptional['image'] = config('url.storage_url_api').$post['reply_push_image'];
+						$image = config('url.storage_url_api').$post['reply_push_image'];
 					}
 
 					if (isset($post['reply_push_clickto']) && $post['reply_push_clickto'] != null) {

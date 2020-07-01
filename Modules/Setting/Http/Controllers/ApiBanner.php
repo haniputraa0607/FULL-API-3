@@ -28,7 +28,7 @@ class ApiBanner extends Controller
 
         // add full url to collection
         $banners = $banners->map(function ($banner, $key) {
-            $banner->image_url = env('STORAGE_URL_API').$banner->image;
+            $banner->image_url = config('url.storage_url_api').$banner->image;
             return $banner;
         });
         $banners->all();

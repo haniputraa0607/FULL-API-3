@@ -8,43 +8,43 @@
     <!-- Bootstrap CSS -->
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css" integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous">
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
-    <link href="{{ env('STORAGE_URL_VIEW') }}{{('css/slide.css') }}" rel="stylesheet">
+    <link href="{{ config('url.storage_url_view') }}{{('css/slide.css') }}" rel="stylesheet">
     <style type="text/css">
          @font-face {
                 font-family: "GoogleSans-Bold";
                 font-style: normal;
                 font-weight: 400;
-                src: url('{{ env('STORAGE_URL_VIEW') }}{{ ('/fonts/GoogleSans-Bold.ttf') }}');
+                src: url('{{ config('url.storage_url_view') }}{{ ('/fonts/GoogleSans-Bold.ttf') }}');
         }
         @font-face {
                 font-family: "GoogleSans-BoldItalic";
                 font-style: normal;
                 font-weight: 400;
-                src: url('{{ env('STORAGE_URL_VIEW') }}{{ ('/fonts/GoogleSans-BoldItalic.ttf') }}');
+                src: url('{{ config('url.storage_url_view') }}{{ ('/fonts/GoogleSans-BoldItalic.ttf') }}');
         }
         @font-face {
                 font-family: "GoogleSans-Italic";
                 font-style: normal;
                 font-weight: 400;
-                src: url('{{ env('STORAGE_URL_VIEW') }}{{ ('/fonts/GoogleSans-Italic.ttf') }}');
+                src: url('{{ config('url.storage_url_view') }}{{ ('/fonts/GoogleSans-Italic.ttf') }}');
         }
         @font-face {
                 font-family: "GoogleSans-Medium";
                 font-style: normal;
                 font-weight: 400;
-                src: url('{{ env('STORAGE_URL_VIEW') }}{{ ('/fonts/GoogleSans-Medium.ttf') }}');
+                src: url('{{ config('url.storage_url_view') }}{{ ('/fonts/GoogleSans-Medium.ttf') }}');
         }
         @font-face {
                 font-family: "GoogleSans-MediumItalic";
                 font-style: normal;
                 font-weight: 400;
-                src: url('{{ env('STORAGE_URL_VIEW') }}{{ ('/fonts/GoogleSans-MediumItalic.ttf') }}');
+                src: url('{{ config('url.storage_url_view') }}{{ ('/fonts/GoogleSans-MediumItalic.ttf') }}');
         }
         @font-face {
                 font-family: "GoogleSans";
                 font-style: normal;
                 font-weight: 400;
-                src: url('{{ env('STORAGE_URL_VIEW') }}{{ ('/fonts/GoogleSans-Regular.ttf') }}');
+                src: url('{{ config('url.storage_url_view') }}{{ ('/fonts/GoogleSans-Regular.ttf') }}');
         }
         .GoogleSans{
             font-family: "GoogleSans";

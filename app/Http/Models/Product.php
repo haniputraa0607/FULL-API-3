@@ -55,7 +55,7 @@ class Product extends Model
 		'position'
 	];
 	public function getPhotoAttribute() {
-		return env('STORAGE_URL_API').($this->photos[0]['product_photo']??'img/product/item/default.png');
+		return config('url.storage_url_api').($this->photos[0]['product_photo']??'img/product/item/default.png');
 	}
 	public function product_category()
 	{
