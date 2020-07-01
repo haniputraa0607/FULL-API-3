@@ -193,12 +193,12 @@ class ApiPromo extends Controller
 		$update['webview_url_v2'] = "";
 		if ($source == 'deals')
 		{
-			$update['webview_url'] = env('API_URL') ."api/webview/voucher/". $id_promo;
-			$update['webview_url_v2'] = env('API_URL') ."api/webview/voucher/v2/". $id_promo;
+			$update['webview_url'] = config('url.api_url') ."api/webview/voucher/". $id_promo;
+			$update['webview_url_v2'] = config('url.api_url') ."api/webview/voucher/v2/". $id_promo;
 		}
 		elseif($source == 'subscription')
 		{
-			$update['webview_url'] = env('API_URL') ."api/webview/mysubscription/". $query['id_subscription_user'];
+			$update['webview_url'] = config('url.api_url') ."api/webview/mysubscription/". $query['id_subscription_user'];
 		}
 
 		return $update;

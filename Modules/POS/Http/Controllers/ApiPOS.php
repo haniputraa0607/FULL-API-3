@@ -1054,7 +1054,7 @@ class ApiPOS extends Controller
     public function syncMenuReturn(reqMenu $request)
     {
         // call function syncMenu
-        $url = env('API_URL') . 'api/v1/pos/menu/sync';
+        $url = config('url.api_url') . 'api/v1/pos/menu/sync';
         $syncMenu = MyHelper::post($url, MyHelper::getBearerToken(), $request->json()->all());
 
         // return sesuai api raptor

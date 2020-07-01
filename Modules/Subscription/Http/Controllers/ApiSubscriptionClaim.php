@@ -185,7 +185,7 @@ class ApiSubscriptionClaim extends Controller
                                     'id_subscription_user'=>$voucher->id_subscription_user,
                                     'id_subscription'=>$dataSubs->id_subscription,
                                     'paid_status'=>$voucher->paid_status,
-                                    'webview_success'=>env('API_URL').'api/webview/subscription/success/'.$voucher->id_subscription_user
+                                    'webview_success'=>config('url.api_url').'api/webview/subscription/success/'.$voucher->id_subscription_user
                                 ];
                                 if ($return['paid_status'] == 'Completed') {
                                     $return['title'] = 'Success';

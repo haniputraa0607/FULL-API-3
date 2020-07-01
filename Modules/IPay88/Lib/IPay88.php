@@ -123,8 +123,8 @@ class IPay88
 				'UserEmail' => $trx->user->email,
 				'UserContact' => $payment_ipay->user_contact?:$trx->user->phone,
 				'Remark' => '',
-				'ResponseURL' => env('API_URL').'api/ipay88/detail/trx',
-				'BackendURL' => env('API_URL').'api/ipay88/notif/trx',
+				'ResponseURL' => config('url.api_url').'api/ipay88/detail/trx',
+				'BackendURL' => config('url.api_url').'api/ipay88/notif/trx',
 				'xfield1' => ''
 			];
 		}elseif($type == 'deals'){
@@ -146,8 +146,8 @@ class IPay88
 				'UserEmail' => $deals_user->user->email,
 				'UserContact' => $payment_ipay->user_contact?:$deals_user->user->phone,
 				'Remark' => '',
-				'ResponseURL' => env('API_URL').'api/ipay88/detail/deals',
-				'BackendURL' => env('API_URL').'api/ipay88/notif/deals',
+				'ResponseURL' => config('url.api_url').'api/ipay88/detail/deals',
+				'BackendURL' => config('url.api_url').'api/ipay88/notif/deals',
 				'xfield1' => ''
 			];
 		}elseif($type == 'subscription'){

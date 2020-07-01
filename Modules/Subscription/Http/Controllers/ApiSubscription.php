@@ -1077,7 +1077,7 @@ class ApiSubscription extends Controller
         // if subs detail, add webview url & btn text
         if ($request->json('id_subscription') && !empty($subs)) {
             //url webview
-            $subs[0]['webview_url'] = env('APP_URL') . "api/webview/subscription/" . $subs[0]['id_subscription'];
+            $subs[0]['webview_url'] = config('url.app_url') . "api/webview/subscription/" . $subs[0]['id_subscription'];
             // text tombol beli
             $subs[0]['button_text'] = $subs[0]['subscription_price_type']=='free'?'Ambil':'Tukar';
             $subs[0]['button_status'] = 0;
@@ -1442,14 +1442,14 @@ class ApiSubscription extends Controller
             }
             if ($subs) {
                 if (empty($subs['subscription']['subscription_image'])) {
-                    $subs['url_subscription_image'] = env('STORAGE_URL_API').'img/default.jpg';
+                    $subs['url_subscription_image'] = config('url.storage_url_api').'img/default.jpg';
                 }
                 else {
-                    $subs['url_subscription_image'] = env('STORAGE_URL_API').$subs['subscription']['subscription_image'];
+                    $subs['url_subscription_image'] = config('url.storage_url_api').$subs['subscription']['subscription_image'];
                 }
                 $subs['time_server'] = date('Y-m-d H:i:s');
                 $subs['time_to_end'] = strtotime($subs['subscription_expired_at'])-time();
-                $subs['url_webview'] = env('APP_API_URL') ."api/webview/mysubscription/". $subs['id_subscription_user'];
+                $subs['url_webview'] = config('url.app_api_url') ."api/webview/mysubscription/". $subs['id_subscription_user'];
             }
             $data = $subs;
         }
@@ -1472,14 +1472,14 @@ class ApiSubscription extends Controller
                         $data[$key]['used_voucher']                 = $sub['used_voucher'];
                         $data[$key]['available_voucher']            = $sub['available_voucher'];
                         if (empty($sub['subscription']['subscription_image'])) {
-                            $data[$key]['url_subscription_image'] = env('STORAGE_URL_API').'img/default.jpg';
+                            $data[$key]['url_subscription_image'] = config('url.storage_url_api').'img/default.jpg';
                         }
                         else {
-                            $data[$key]['url_subscription_image'] = env('STORAGE_URL_API').$sub['subscription']['subscription_image'];
+                            $data[$key]['url_subscription_image'] = config('url.storage_url_api').$sub['subscription']['subscription_image'];
                         }
 
                         $data[$key]['time_to_end']                  = strtotime($sub['subscription']['subscription_expired_at'])-time();
-                        $data[$key]['url_webview']                  = env('APP_API_URL') ."api/webview/mysubscription/". $sub['id_subscription_user'];
+                        $data[$key]['url_webview']                  = config('url.app_api_url') ."api/webview/mysubscription/". $sub['id_subscription_user'];
                         $data[$key]['time_server']                  = date('Y-m-d H:i:s');
                     }
                 }
@@ -1795,14 +1795,14 @@ class ApiSubscription extends Controller
                     $data[$key]['used_voucher']                 = $sub['used_voucher'];
                     $data[$key]['available_voucher']            = $sub['available_voucher'];
                     if (empty($sub['subscription']['subscription_image'])) {
-                        $data[$key]['url_subscription_image'] = env('STORAGE_URL_API').'img/default.jpg';
+                        $data[$key]['url_subscription_image'] = config('url.storage_url_api').'img/default.jpg';
                     }
                     else {
-                        $data[$key]['url_subscription_image'] = env('STORAGE_URL_API').$sub['subscription']['subscription_image'];
+                        $data[$key]['url_subscription_image'] = config('url.storage_url_api').$sub['subscription']['subscription_image'];
                     }
 
                     $data[$key]['time_to_end']                  = strtotime($sub['subscription']['subscription_expired_at'])-time();
-                    $data[$key]['url_webview']                  = env('APP_API_URL') ."api/webview/mysubscription/". $sub['id_subscription_user'];
+                    $data[$key]['url_webview']                  = config('url.app_api_url') ."api/webview/mysubscription/". $sub['id_subscription_user'];
                     $data[$key]['time_server']                  = date('Y-m-d H:i:s');
 
                     if ($sub['subscription_expired_at'] < date('Y-m-d H:i:s') || $sub['available_voucher'] === 0) {

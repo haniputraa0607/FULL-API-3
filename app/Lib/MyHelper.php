@@ -2247,7 +2247,7 @@ class MyHelper{
 	}
 
 	public static function postCURLWithBearer($url, $data, $bearer) {
-		$uri = env('APP_API_URL');
+		$uri = config('url.app_api_url');
         $ch = curl_init($uri.$url);
         $data = json_encode($data);
 		curl_setopt($ch, CURLOPT_POSTFIELDS, $data);

@@ -208,7 +208,7 @@ class ApiBrandController extends Controller
         }
         //get default image
         if($inactive_image=Setting::where('key','inactive_image_brand')->pluck('value')->first()){
-            $inactive_image=env('STORAGE_URL_API').$inactive_image;
+            $inactive_image=config('url.storage_url_api').$inactive_image;
         }else{
             $inactive_image='';
         }
