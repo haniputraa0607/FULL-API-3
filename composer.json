@@ -13,6 +13,7 @@
         "fideloper/proxy": "^4.0",
         "fruitcake/laravel-cors": "^1.0",
         "intervention/image": "^2.5",
+        "aliyuncs/oss-sdk-php": "~2.0",
         "jacobcyl/ali-oss-storage": "2.1",
         "laravel/framework": "5.8.*",
         "laravel/passport": "^7.4",
