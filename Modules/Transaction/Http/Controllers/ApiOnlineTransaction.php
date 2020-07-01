@@ -852,8 +852,11 @@ class ApiOnlineTransaction extends Controller
             ]);
         }
 
-        $user->transaction_online = 1;
-        $user->save();
+        if (!$user->transaction_online) {
+            $user->transaction_online = $insertTransaction->id_transaction;
+            $user->transaction_online_status = 'Pending';
+            $user->save();
+        }
 
         $insertTransaction['transaction_receipt_number'] = $receipt;
 
