@@ -202,7 +202,7 @@ class SendCampaignJob implements ShouldQueue
             case 'sms':
                 $senddata = array(
                     'apikey' => env('SMS_KEY'),
-                    'callbackurl' => env('APP_URL'),
+                    'callbackurl' => config('url.app_url'),
                     'datapacket'=>array()
                 );
 
@@ -232,7 +232,7 @@ class SendCampaignJob implements ShouldQueue
 						case 'RajaSMS':
 							$senddata = array(
 								'apikey' => env('SMS_KEY'),
-								'callbackurl' => env('APP_URL'),
+								'callbackurl' => config('url.app_url'),
 								'datapacket'=>array()
 							);
 
@@ -247,7 +247,7 @@ class SendCampaignJob implements ShouldQueue
 						default:
 							$senddata = array(
 								'apikey' => env('SMS_KEY'),
-								'callbackurl' => env('APP_URL'),
+								'callbackurl' => config('url.app_url'),
 								'datapacket'=>array()
 							);
 
@@ -351,7 +351,7 @@ class SendCampaignJob implements ShouldQueue
                             $dataOptional['news_title'] = $news->news_title;
                             $dataOptional['title'] = $news->news_title;
                         }
-                        $dataOptional['url'] = env('APP_URL').'news/webview/'.$campaign['campaign_push_id_reference'];
+                        $dataOptional['url'] = config('url.app_url').'news/webview/'.$campaign['campaign_push_id_reference'];
                     }
                     elseif($campaign['campaign_push_clickto'] == 'Order' && $campaign['campaign_push_id_reference'] != null){
                         $outlet = Outlet::find($campaign['campaign_push_id_reference']);

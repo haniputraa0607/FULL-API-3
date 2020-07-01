@@ -658,7 +658,7 @@ class ApiOutletApp extends Controller
                     'date'           => $list->transaction_date,
                     'reject_at'      => $list->reject_at,
                     'id_transaction' => $list->id_transaction,
-                    'url'            => env('API_URL') . '/transaction/web/view/outletapp?data=' . $base,
+                    'url'            => config('url.api_url') . '/transaction/web/view/outletapp?data=' . $base,
                 ],
             ];
 

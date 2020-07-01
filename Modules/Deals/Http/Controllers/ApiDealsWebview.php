@@ -248,7 +248,7 @@ class ApiDealsWebview extends Controller
         $response = [
             'status' => 'success',
             'result' => [
-                'webview_url' => env('APP_URL') ."webview/voucher/". $id_deals_user,
+                'webview_url' => config('url.app_url') ."webview/voucher/". $id_deals_user,
                 'button_text' => 'INVALIDATE'
             ]
         ];

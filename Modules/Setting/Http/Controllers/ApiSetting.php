@@ -1092,7 +1092,7 @@ class ApiSetting extends Controller
 
         return response()->json([
             'status' => 'success',
-            'url' => env('API_URL').'api/setting/faq/webview'
+            'url' => config('url.api_url').'api/setting/faq/webview'
         ]);
     }
 
@@ -1105,7 +1105,7 @@ class ApiSetting extends Controller
 
         return response()->json([
             'status' => 'success',
-            'url' => env('API_URL').'api/setting/webview/'.$post['key']
+            'url' => config('url.api_url').'api/setting/webview/'.$post['key']
         ]);
 
     }

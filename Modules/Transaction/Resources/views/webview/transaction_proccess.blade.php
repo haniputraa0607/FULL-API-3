@@ -576,7 +576,7 @@
     </div>
 
     <input type="hidden" id="payment" value="{{ json_encode($data['data_payment']) }}">
-    <input type="hidden" id="url" value="{{ env('APP_URL') }}">
+    <input type="hidden" id="url" value="{{ config('url.app_url') }}">
     {{ csrf_field() }}
 
     <!-- Optional JavaScript -->

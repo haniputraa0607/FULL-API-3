@@ -35,7 +35,7 @@ class CheckScopes extends AddCustomProvider
                 return response()->json([
                     'status' => 'fail',
                     'messages' => [$message],
-                    'maintenance' => env('API_URL') ."api/maintenance-mode",
+                    'maintenance' => config('url.api_url') ."api/maintenance-mode",
                     'data_maintenance' => [
                         'url_image' => $url_image,
                         'text' => $message

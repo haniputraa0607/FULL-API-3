@@ -292,7 +292,7 @@ class ApiAutoCrm extends Controller
 						case 'RajaSMS':
 							$senddata = array(
 								'apikey' => env('SMS_KEY'),
-								'callbackurl' => env('APP_URL'),
+								'callbackurl' => config('url.app_url'),
 								'datapacket'=>array()
 							);
 
@@ -314,7 +314,7 @@ class ApiAutoCrm extends Controller
 						default:
 							$senddata = array(
 								'apikey' => env('SMS_KEY'),
-								'callbackurl' => env('APP_URL'),
+								'callbackurl' => config('url.app_url'),
 								'datapacket'=>array()
 							);
 

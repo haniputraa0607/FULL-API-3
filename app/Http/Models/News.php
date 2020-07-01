@@ -62,7 +62,7 @@ class News extends Model
 	];
 
 	public function getUrlWebviewAttribute() {
-		return env('API_URL') ."news/webview/". $this->id_news;
+		return config('url.api_url') ."news/webview/". $this->id_news;
 	}
 
 	public function getUrlFormAttribute() {
@@ -70,7 +70,7 @@ class News extends Model
             return null;
         }
         else {
-            return env('APP_URL').'/news_form/'.$this->id_news.'/form';
+            return config('url.app_url').'/news_form/'.$this->id_news.'/form';
         }
 	}
 

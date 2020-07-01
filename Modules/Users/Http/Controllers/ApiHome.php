@@ -99,17 +99,17 @@ class ApiHome extends Controller
                 $item['type']       = 'news';
                 $item['news_title'] = $value->news->news_title;
                 // if news, generate webview news detail url
-                $item['url']        = env('API_URL') .'news/webview/'. $value->id_news;
+                $item['url']        = config('url.api_url') .'news/webview/'. $value->id_news;
             }elseif ($value->type == 'gofood') {
                 $item['type']       = 'gofood';
                 $item['id_news'] = 99999999;
                 $item['news_title'] = "GO-FOOD";
-                $item['url']     = env('APP_URL').'outlet/webview/gofood/list';
+                $item['url']     = config('url.app_url').'outlet/webview/gofood/list';
             }elseif ($value->type == 'referral') {
                 $item['type']       = 'referral';
                 $item['id_news'] = 999999999;
                 $item['news_title'] = "Referral";
-                $item['url']     = env('API_URL') . 'api/referral/webview';
+                $item['url']     = config('url.api_url') . 'api/referral/webview';
             }
             array_push($array, $item);
         }
@@ -296,7 +296,7 @@ class ApiHome extends Controller
                 $encode = json_encode($dataEncode);
                 $base = base64_encode($encode);
 
-                $membership['webview_detail_membership'] = env('API_URL').'api/membership/web/view?data='.$base;
+                $membership['webview_detail_membership'] = config('url.api_url').'api/membership/web/view?data='.$base;
 				if(isset($membership['membership_image']))
 					$membership['membership_image'] = config('url.storage_url_api').$membership['membership_image'];
 			} else {
@@ -320,7 +320,7 @@ class ApiHome extends Controller
             // webview: user profile form
             $webview_url = "";
             $popup_text = "";
-            $webview_link = env('APP_URL') . 'webview/complete-profile';
+            $webview_link = config('url.app_url') . 'webview/complete-profile';
 
             // check user profile completeness (if there is null data)
             if ($user->id_city=="" || $user->gender=="" || $user->birthday=="") {
@@ -673,7 +673,7 @@ class ApiHome extends Controller
             $encode = json_encode($dataEncode);
             $base = base64_encode($encode);
 
-            $membership['webview_detail_membership'] = env('API_URL').'api/membership/web/view?data='.$base;
+            $membership['webview_detail_membership'] = config('url.api_url').'api/membership/web/view?data='.$base;
         } else {
             $membership = null;
         }

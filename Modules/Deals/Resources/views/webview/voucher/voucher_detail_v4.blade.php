@@ -5,7 +5,7 @@
 @extends('webview.main')
 
 @section('css')
-	<link rel="stylesheet" href="{{env('API_URL')}}css/voucher.css">
+	<link rel="stylesheet" href="{{config('url.api_url')}}css/voucher.css">
 	<style type="text/css">
     	p{
     		margin-top: 0px !important;
@@ -363,7 +363,7 @@
 @stop
 
 @section('page-script')
-	<script src="{{env('API_URL')}}js/jquery.js"></script>
-	<script src="{{env('API_URL')}}js/popper.js"></script>
-    <script src="{{env('API_URL')}}js/voucher.js"></script>
+	<script src="{{config('url.api_url')}}js/jquery.js"></script>
+	<script src="{{config('url.api_url')}}js/popper.js"></script>
+    <script src="{{config('url.api_url')}}js/voucher.js"></script>
 @stop

@@ -424,7 +424,7 @@
             </div>
         </div>
 
-        <script src="{{ env('API_URL') }}js/jquery.js"></script>
+        <script src="{{ config('url.api_url') }}js/jquery.js"></script>
         <script src="{{ config('url.storage_url_view') }}{{ ('assets/js/bootstrap.min.js') }}" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
         <script>
         $( document ).ready(function() {

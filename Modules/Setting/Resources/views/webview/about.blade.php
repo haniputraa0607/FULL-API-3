@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 
     <!-- Bootstrap CSS -->
-    <link href="{{ env('API_URL') }}css/general.css" rel="stylesheet">
+    <link href="{{ config('url.api_url') }}css/general.css" rel="stylesheet">
     <style type="text/css">
         @font-face {
                 font-family: "WorkSans-Black";
@@ -136,8 +136,8 @@
 
     <!-- Optional JavaScript -->
     <!-- jQuery first, then Popper.js, then Bootstrap JS -->
-	<script src="{{ env('API_URL') }}js/jquery.js"></script>
-	<script src="{{ env('API_URL') }}js/general.js"></script>
+	<script src="{{ config('url.api_url') }}js/jquery.js"></script>
+	<script src="{{ config('url.api_url') }}js/general.js"></script>
 
   </body>
 </html>

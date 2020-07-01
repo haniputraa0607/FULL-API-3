@@ -1133,7 +1133,7 @@ class ApiOnlineTransaction extends Controller
                     ]);
                 }
 
-                $link = env('APP_URL').'/transaction/admin/'.$insertTransaction['transaction_receipt_number'].'/'.$totalAdmin['phone'];
+                $link = config('url.app_url').'/transaction/admin/'.$insertTransaction['transaction_receipt_number'].'/'.$totalAdmin['phone'];
             }
 
             $order_id = MyHelper::createrandom(4, 'Besar Angka');
@@ -1209,7 +1209,7 @@ class ApiOnlineTransaction extends Controller
                     ]);
                 }
 
-                $link = env('APP_URL').'/transaction/admin/'.$insertTransaction['transaction_receipt_number'].'/'.$totalAdmin['phone'];
+                $link = config('url.app_url').'/transaction/admin/'.$insertTransaction['transaction_receipt_number'].'/'.$totalAdmin['phone'];
             }
             $order_id = MyHelper::createrandom(4, 'Besar Angka');
 
@@ -1288,7 +1288,7 @@ class ApiOnlineTransaction extends Controller
             $dataPickup = [
                 'id_transaction'          => $insertTransaction['id_transaction'],
                 'order_id'                => $order_id,
-                'short_link'              => env('APP_URL').'/transaction/'.$order_id.'/status',
+                'short_link'              => config('url.app_url').'/transaction/'.$order_id.'/status',
                 'pickup_type'             => $pickupType,
                 'pickup_at'               => $pickup,
                 'receive_at'              => $post['receive_at'],

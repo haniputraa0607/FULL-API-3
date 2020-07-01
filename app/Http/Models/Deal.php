@@ -116,7 +116,7 @@ class Deal extends Model
 	protected $appends  = ['url_deals_image', 'deals_status', 'deals_voucher_price_type', 'deals_voucher_price_pretty', 'url_webview'];
 
 	public function getUrlWebviewAttribute() {
-		return env('API_URL') ."api/webview/deals/". $this->id_deals ."/". $this->deals_type;
+		return config('url.api_url') ."api/webview/deals/". $this->id_deals ."/". $this->deals_type;
 	}
 
 	public function getDealsVoucherPriceTypeAttribute() {

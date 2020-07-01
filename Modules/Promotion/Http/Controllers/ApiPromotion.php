@@ -1722,7 +1722,7 @@ class ApiPromotion extends Controller
 		if(!empty($user['phone'])){
 			$senddata = array(
 				'apikey' => env('SMS_KEY'),
-				'callbackurl' => env('APP_URL'),
+				'callbackurl' => config('url.app_url'),
 				'datapacket'=>array()
 			);
 
@@ -1762,7 +1762,7 @@ class ApiPromotion extends Controller
 				case 'RajaSMS':
 					$senddata = array(
 						'apikey' => env('SMS_KEY'),
-						'callbackurl' => env('APP_URL'),
+						'callbackurl' => config('url.app_url'),
 						'datapacket'=>array()
 					);
 
@@ -1777,7 +1777,7 @@ class ApiPromotion extends Controller
 				default:
 					$senddata = array(
 						'apikey' => env('SMS_KEY'),
-						'callbackurl' => env('APP_URL'),
+						'callbackurl' => config('url.app_url'),
 						'datapacket'=>array()
 					);
 
@@ -1837,7 +1837,7 @@ class ApiPromotion extends Controller
 					if($news){
 						$dataOptional['news_title'] = $news->news_title;
 					}
-					$dataOptional['url'] = env('APP_URL').'news/webview/'.$promotionContent['promotion_push_id_reference'];
+					$dataOptional['url'] = config('url.app_url').'news/webview/'.$promotionContent['promotion_push_id_reference'];
 				}
 
 				if($promotionContent['promotion_push_clickto']  == 'Order' && $promotionContent['promotion_push_id_reference'] != null){

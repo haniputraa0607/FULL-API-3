@@ -5,7 +5,7 @@
 @extends('webview.main')
 
 @section('css')
-<link href="{{ env('API_URL') }}css/deals.css" rel="stylesheet" type="text/css" />
+<link href="{{ config('url.api_url') }}css/deals.css" rel="stylesheet" type="text/css" />
 	<style type="text/css">
     	p{
     		margin-top: 0px !important;

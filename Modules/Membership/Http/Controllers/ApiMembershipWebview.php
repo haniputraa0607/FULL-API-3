@@ -279,7 +279,7 @@ class ApiMembershipWebview extends Controller
 	// 		$send = [
 	// 			'status' => 'success',
 	// 			'result' => [
-	// 				'url'              => env('API_URL').'api/membership/web/view?data='.$base
+	// 				'url'              => config('url.api_url').'api/membership/web/view?data='.$base
 	// 			],
 	// 		];
 	// 		return response()->json($send);

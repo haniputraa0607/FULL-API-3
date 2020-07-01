@@ -345,7 +345,7 @@ class ApiEnquiries extends Controller
 			if($check['reply_sms_content'] == null && $check['enquiry_phone'] != null){
 				$senddata = array(
 						'apikey' => env('SMS_KEY'),
-						'callbackurl' => env('APP_URL'),
+						'callbackurl' => config('url.app_url'),
 						'datapacket'=>array()
 					);
 				array_push($senddata['datapacket'],array(

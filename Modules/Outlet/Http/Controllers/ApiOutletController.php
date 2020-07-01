@@ -560,7 +560,7 @@ class ApiOutletController extends Controller
         }
 
         $loopdata = array_map(function($var) use ($post){
-            $var['url']=env('API_URL').'api/outlet/webview/'.$var['id_outlet'];
+            $var['url']=config('url.api_url').'api/outlet/webview/'.$var['id_outlet'];
             if(($post['latitude']??false)&&($post['longitude']??false)){
                 $var['distance']=number_format((float)$this->distance($post['latitude'], $post['longitude'], $var['outlet_latitude'], $var['outlet_longitude'], "K"), 2, '.', '').' km';
             }
@@ -614,7 +614,7 @@ class ApiOutletController extends Controller
                 $jaraknya = number_format((float)$this->distance($latitude, $longitude, $outlet[0]['outlet_latitude'], $outlet[0]['outlet_longitude'], "K"), 2, '.', '');
                 $outlet[0]['distance'] = $jaraknya." km";
 
-                $outlet[0]['url'] = env('API_URL').'api/outlet/webview/'.$post['id_outlet'];
+                $outlet[0]['url'] = config('url.api_url').'api/outlet/webview/'.$post['id_outlet'];
 
                 if(isset($outlet[0]['holidays'])) unset($outlet[0]['holidays']);
             }
@@ -1145,7 +1145,7 @@ class ApiOutletController extends Controller
             $urutan = $this->geoJson($urutan);
         }
 
-        $geojson_file_url = env('API_URL') . 'files/stations.geojson' . '?';
+        $geojson_file_url = config('url.api_url') . 'files/stations.geojson' . '?';
 
         if($urutan && !empty($urutan)) return ['status' => 'success', 'result' => $urutan, 'url'=>$geojson_file_url];
         else if(empty($urutan)) return ['status' => 'fail', 'messages' => ['empty']];
@@ -2018,7 +2018,7 @@ class ApiOutletController extends Controller
             if(count($outlet) > 0){
                 $loopdata=&$outlet;
                 $loopdata = array_map(function($var) use ($post){
-                    $var['url']=env('API_URL').'api/outlet/webview/'.$var['id_outlet'];
+                    $var['url']=config('url.api_url').'api/outlet/webview/'.$var['id_outlet'];
                     if(($post['latitude']??false)&&($post['longitude']??false)){
                         $var['distance']=number_format((float)$this->distance($post['latitude'], $post['longitude'], $var['outlet_latitude'], $var['outlet_longitude'], "K"), 2, '.', '').' km';
                     }

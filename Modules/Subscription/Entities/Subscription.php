@@ -105,7 +105,7 @@ class Subscription extends Eloquent
 	];
 
 	public function getUrlWebviewAttribute() {
-		return env('APP_API_URL') ."api/webview/subscription/". $this->id_subscription;
+		return config('url.app_api_url') ."api/webview/subscription/". $this->id_subscription;
 	}
 
 	public function getSubscriptionPricePrettyAttribute() {
