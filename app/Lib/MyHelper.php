@@ -2751,12 +2751,8 @@ class MyHelper{
 	        	// find other pending transaction
 	        	$id_pending_trx = Transaction::select('id_transaction')->where('id_user',$trx['id_user'])->where('transaction_payment_status','Pending')->where('id_transaction', '<>', $trx['id_transaction'])->pluck('id_transaction')->first();
 	        	if ($id_pending_trx) {
-			        \Log::debug($id_pending_trx);
 	        		$user->update(['transaction_online' => $id_pending_trx, 'transaction_online_status' => 'pending']);
 	        	} else {
-        \Log::debug($user);
-        \Log::debug($trx);
-        \Log::debug($status);
 	        		$user->update(['transaction_online' => null, 'transaction_online_status' => null]);
 	        	}
 	        };
