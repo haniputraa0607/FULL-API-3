@@ -95,6 +95,8 @@ class ApiCronTrxController extends Controller
 
             DB::begintransaction();
 
+            MyHelper::updateFlagTransactionOnline($singleTrx, 'cancel', $user);
+
             $singleTrx->transaction_payment_status = 'Cancelled';
             $singleTrx->void_date = $now;
             $singleTrx->save();
@@ -365,6 +367,7 @@ class ApiCronTrxController extends Controller
 
             $use_referral = optional(optional($newTrx->promo_campaign_promo_code)->promo_campaign)->promo_type == 'Referral';
 
+            MyHelper::updateFlagTransactionOnline($newTrx, 'success', $newTrx->user);
             if ((!in_array('Balance', $column) || $use_referral) && $newTrx->user) {
 
                 $promo_source = null;

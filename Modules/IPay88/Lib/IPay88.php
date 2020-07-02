@@ -343,6 +343,7 @@ class IPay88
             			break;
 
             		case '0':
+			            MyHelper::updateFlagTransactionOnline($trx, 'cancel', $trx->user);
 	                    $update = $trx->update(['transaction_payment_status'=>'Cancelled','void_date'=>date('Y-m-d H:i:s')]);
 		                $trx->load('outlet_name');
 		                // $send = app($this->notif)->notificationDenied($mid, $trx);
