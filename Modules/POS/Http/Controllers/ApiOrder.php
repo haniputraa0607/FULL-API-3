@@ -489,6 +489,7 @@ class ApiOrder extends Controller
             $newTrx = Transaction::with('user.memberships', 'outlet', 'productTransaction', 'transaction_vouchers')->where('id_transaction', $order->id_transaction)->first();
             $checkType = TransactionMultiplePayment::where('id_transaction', $order->id_transaction)->get()->toArray();
             $column = array_column($checkType, 'type');
+            MyHelper::updateFlagTransactionOnline($newTrx, 'success', $newTrx->user);
 
             if (!in_array('Balance', $column)) {
 
