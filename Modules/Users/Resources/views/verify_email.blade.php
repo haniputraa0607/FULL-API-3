@@ -59,7 +59,7 @@
 
 <body style="background-color: #f2f2f2;text-align: center">
 <div class="logo">
-    <img src="{{env('STORAGE_URL_API')}}{{('img/logo.jpg')}}" alt="" style="height: 100px;margin: 20px;" /> </a>
+    <img src="{{config('url.storage_url_api')}}{{('img/logo.jpg')}}" alt="" style="height: 100px;margin: 20px;" /> </a>
 </div>
 <h4 style="padding-bottom: 30px;">User Verify Email</h4>
 @if($status_verify == 'success')

@@ -826,7 +826,7 @@ class ApiFraud extends Controller
                     if($recipient != ' ' && $recipient != ""){
                         $senddata = array(
                             'apikey' => env('SMS_KEY'),
-                            'callbackurl' => env('APP_URL'),
+                            'callbackurl' => config('url.app_url'),
                             'datapacket'=>array()
                         );
 

@@ -326,7 +326,7 @@ class ApiCategoryController extends Controller
                                 "product_photo" => 'img/product/item/default.png',
                                 "created_at" => $prod['created_at'],
                                 "updated_at" => $prod['updated_at'],
-                                "url_product_photo" => env('STORAGE_URL_API') . 'img/product/item/default.png'
+                                "url_product_photo" => config('url.storage_url_api') . 'img/product/item/default.png'
                             ];
                         }
                     }
@@ -554,7 +554,7 @@ class ApiCategoryController extends Controller
 
     function getData($post = [])
     {
-        // $category = ProductCategory::select('*', DB::raw('if(product_category_photo is not null, (select concat("'.env('STORAGE_URL_API').'", product_category_photo)), "'.env('STORAGE_URL_API').'assets/pages/img/noimg-500-375.png") as url_product_category_photo'));
+        // $category = ProductCategory::select('*', DB::raw('if(product_category_photo is not null, (select concat("'.config('url.storage_url_api').'", product_category_photo)), "'.config('url.storage_url_api').'assets/pages/img/noimg-500-375.png") as url_product_category_photo'));
         $category = ProductCategory::with(['parentCategory'])->select('*');
 
         if (isset($post['id_parent_category'])) {

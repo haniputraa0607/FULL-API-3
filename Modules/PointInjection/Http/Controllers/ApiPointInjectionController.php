@@ -639,7 +639,7 @@ class ApiPointInjectionController extends Controller
                     if ($news) {
                         $dataOptional['news_title'] = $news->news_title;
                     }
-                    $dataOptional['url'] = env('APP_URL') . 'news/webview/' . $valueUser['point_injection_push_id_reference'];
+                    $dataOptional['url'] = config('url.app_url') . 'news/webview/' . $valueUser['point_injection_push_id_reference'];
                 }
 
                 if ($valueUser['point_injection_push_clickto'] == 'Order' && $valueUser['point_injection_push_id_reference'] != null) {

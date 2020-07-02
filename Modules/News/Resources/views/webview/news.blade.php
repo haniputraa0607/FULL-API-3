@@ -3,61 +3,61 @@
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-        <link href="{{ env('API_URL') }}css/general.css" rel="stylesheet">
+        <link href="{{ config('url.api_url') }}css/general.css" rel="stylesheet">
         <style type="text/css">
         @font-face {
                 font-family: "WorkSans-Black";
                 font-style: normal;
                 font-weight: 400;
-                src: url('{{ env('STORAGE_URL_VIEW') }}{{ ('fonts/Work_Sans/WorkSans-Black.ttf') }}');
+                src: url('{{ config('url.storage_url_view') }}{{ ('fonts/Work_Sans/WorkSans-Black.ttf') }}');
         }
         @font-face {
                 font-family: "WorkSans-Bold";
                 font-style: normal;
                 font-weight: 400;
-                src: url('{{ env('STORAGE_URL_VIEW') }}{{ ('fonts/Work_Sans/WorkSans-Bold.ttf') }}');
+                src: url('{{ config('url.storage_url_view') }}{{ ('fonts/Work_Sans/WorkSans-Bold.ttf') }}');
         }
         @font-face {
                 font-family: "WorkSans-ExtraBold";
                 font-style: normal;
                 font-weight: 400;
-                src: url('{{ env('STORAGE_URL_VIEW') }}{{ ('fonts/Work_Sans/WorkSans-ExtraBold.ttf') }}');
+                src: url('{{ config('url.storage_url_view') }}{{ ('fonts/Work_Sans/WorkSans-ExtraBold.ttf') }}');
         }
         @font-face {
                 font-family: "WorkSans-ExtraLight";
                 font-style: normal;
                 font-weight: 400;
-                src: url('{{ env('STORAGE_URL_VIEW') }}{{ ('fonts/Work_Sans/WorkSans-ExtraLight.ttf') }}');
+                src: url('{{ config('url.storage_url_view') }}{{ ('fonts/Work_Sans/WorkSans-ExtraLight.ttf') }}');
         }
         @font-face {
                 font-family: "WorkSans-Light";
                 font-style: normal;
                 font-weight: 400;
-                src: url('{{ env('STORAGE_URL_VIEW') }}{{ ('fonts/Work_Sans/WorkSans-Light.ttf') }}');
+                src: url('{{ config('url.storage_url_view') }}{{ ('fonts/Work_Sans/WorkSans-Light.ttf') }}');
         }
         @font-face {
                 font-family: "WorkSans-Medium";
                 font-style: normal;
                 font-weight: 400;
-                src: url('{{ env('STORAGE_URL_VIEW') }}{{ ('fonts/Work_Sans/WorkSans-Medium.ttf') }}');
+                src: url('{{ config('url.storage_url_view') }}{{ ('fonts/Work_Sans/WorkSans-Medium.ttf') }}');
         }
         @font-face {
                 font-family: "WorkSans-Regular";
                 font-style: normal;
                 font-weight: 400;
-                src: url('{{ env('STORAGE_URL_VIEW') }}{{ ('fonts/Work_Sans/WorkSans-Regular.ttf') }}');
+                src: url('{{ config('url.storage_url_view') }}{{ ('fonts/Work_Sans/WorkSans-Regular.ttf') }}');
         }
         @font-face {
                 font-family: "WorkSans-SemiBold";
                 font-style: normal;
                 font-weight: 400;
-                src: url('{{ env('STORAGE_URL_VIEW') }}{{ ('fonts/Work_Sans/WorkSans-SemiBold.ttf') }}');
+                src: url('{{ config('url.storage_url_view') }}{{ ('fonts/Work_Sans/WorkSans-SemiBold.ttf') }}');
         }
         @font-face {
                 font-family: "WorkSans-Thin";
                 font-style: normal;
                 font-weight: 400;
-                src: url('{{ env('STORAGE_URL_VIEW') }}{{ ('fonts/Work_Sans/WorkSans-Thin.ttf') }}');
+                src: url('{{ config('url.storage_url_view') }}{{ ('fonts/Work_Sans/WorkSans-Thin.ttf') }}');
         }
         .WorkSans-Black{
             font-family: "WorkSans-Black";
@@ -321,8 +321,8 @@
         }
         </style>
 
-<link rel="stylesheet" href="{{ env('API_URL') }}css/owl.carousel.css">
-<link rel="stylesheet" href="{{ env('API_URL') }}css/owl.theme.default.css">
+<link rel="stylesheet" href="{{ config('url.api_url') }}css/owl.carousel.css">
+<link rel="stylesheet" href="{{ config('url.api_url') }}css/owl.theme.default.css">
     </head>
     {{-- <body> --}}
         @php
@@ -494,13 +494,13 @@
         @endif
 
         {{ csrf_field() }}
-        <script src="{{ env('API_URL') }}js/jquery.js"></script>
-        <script src="{{ env('API_URL') }}js/popper.js"></script>
-        <script src="{{ env('API_URL') }}js/general.js"></script>
+        <script src="{{ config('url.api_url') }}js/jquery.js"></script>
+        <script src="{{ config('url.api_url') }}js/popper.js"></script>
+        <script src="{{ config('url.api_url') }}js/general.js"></script>
         <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCOHBNv3Td9_zb_7uW-AJDU6DHFYk-8e9Y&v=3.exp&signed_in=true&libraries=places"></script>
-        <script src="{{ env('API_URL') }}js/pace.js"></script>
+        <script src="{{ config('url.api_url') }}js/pace.js"></script>
 
-        <script src="{{ env('API_URL') }}js/owl.carousel.js"></script>
+        <script src="{{ config('url.api_url') }}js/owl.carousel.js"></script>
         <script>
             $(document).ready(function(){
                 $("#frame1").contents().find(".ytp-chrome-top-buttons").attr("style","display:none");

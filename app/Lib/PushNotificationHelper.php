@@ -35,7 +35,7 @@ class PushNotificationHelper{
     function __construct() {
         date_default_timezone_set('Asia/Jakarta');        
         $this->autocrm  = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
-        $this->endPoint  = env('STORAGE_URL_API');
+        $this->endPoint  = config('url.storage_url_api');
     }
 
     public static function saveQueue($id_user, $subject, $message, $inbox=null, $data) {

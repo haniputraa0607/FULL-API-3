@@ -5,7 +5,7 @@
 @extends('webview.main')
 
 @section('css')
-<link href="{{ env('API_URL') }}css/deals.css" rel="stylesheet" type="text/css" />
+<link href="{{ config('url.api_url') }}css/deals.css" rel="stylesheet" type="text/css" />
 	<style type="text/css">
     	p{
     		margin-top: 0px !important;
@@ -244,8 +244,8 @@
 
 @section('page-script')
 	
-		<script src="{{ env('API_URL') }}js/jquery.js"></script>
-		<script src="{{ env('API_URL') }}js/deals.js"></script>
+		<script src="{{ config('url.api_url') }}js/jquery.js"></script>
+		<script src="{{ config('url.api_url') }}js/deals.js"></script>
 		@if(!empty($deals))
         <script type="text/javascript">
             @php $month = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', "Juli", 'Agustus', 'September', 'Oktober', 'November', 'Desember']; @endphp

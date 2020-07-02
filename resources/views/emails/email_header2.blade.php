@@ -1,7 +1,7 @@
 <head>
     <link href="https://fonts.googleapis.com/css?family=Open+Sans|Source+Sans+Pro" rel="stylesheet">
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css" integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous">
-    <link href="{{ env('STORAGE_URL_VIEW') }}{{('css/slide.css') }}" rel="stylesheet">
+    <link href="{{ config('url.storage_url_view') }}{{('css/slide.css') }}" rel="stylesheet">
     <style type="text/css">
         .kotak {
             margin : 10px;
@@ -415,22 +415,22 @@
                                             @if(isset($setting) && $setting['email_logo'] != null)
                                                 <td id="logoheader_center" style="border-collapse:collapse;border-spacing:0;color:#000;font-family:'Arial',sans-serif;line-height:1.5;margin:0;padding-top:40px;text-align:center" width="33%">
                                                     @if($setting['email_logo_position'] == 'left')
-                                                        <img class="CToWUd" id="detail_logo_center" @if(stristr($setting['email_logo'], 'http')) src="{{$setting['email_logo']}}" @else src="{{env('STORAGE_URL_API')}}{{$setting['email_logo']}}" @endif style="border:0 none;line-height:100%;outline:none;text-decoration:none;margin-bottom: -60px;" alt="" height="75px">
+                                                        <img class="CToWUd" id="detail_logo_center" @if(stristr($setting['email_logo'], 'http')) src="{{$setting['email_logo']}}" @else src="{{config('url.storage_url_api')}}{{$setting['email_logo']}}" @endif style="border:0 none;line-height:100%;outline:none;text-decoration:none;margin-bottom: -60px;" alt="" height="75px">
                                                     @endif
                                                 </td>
                                                 <td id="logoheader_center" style="border-collapse:collapse;border-spacing:0;color:#000;font-family:'Arial',sans-serif;line-height:1.5;margin:0;padding-top:40px;text-align:center" width="33%">
                                                     @if($setting['email_logo_position'] == 'center')
-                                                        <img class="CToWUd" id="detail_logo_center" @if(stristr($setting['email_logo'], 'http')) src="{{$setting['email_logo']}}" @else src="{{env('STORAGE_URL_API')}}{{$setting['email_logo']}}" @endif style="border:0 none;line-height:100%;outline:none;text-decoration:none;margin-bottom: -60px;" alt="" height="75px">
+                                                        <img class="CToWUd" id="detail_logo_center" @if(stristr($setting['email_logo'], 'http')) src="{{$setting['email_logo']}}" @else src="{{config('url.storage_url_api')}}{{$setting['email_logo']}}" @endif style="border:0 none;line-height:100%;outline:none;text-decoration:none;margin-bottom: -60px;" alt="" height="75px">
                                                     @endif
                                                 </td>
                                                 <td id="logoheader_center" style="border-collapse:collapse;border-spacing:0;color:#000;font-family:'Arial',sans-serif;line-height:1.5;margin:0;padding-top:40px;text-align:center" width="33%">
                                                     @if($setting['email_logo_position'] == 'right')
-                                                        <img class="CToWUd" id="detail_logo_center" @if(stristr($setting['email_logo'], 'http')) src="{{$setting['email_logo']}}" @else src="{{env('STORAGE_URL_API')}}{{$setting['email_logo']}}" @endif style="border:0 none;line-height:100%;outline:none;text-decoration:none;margin-bottom: -60px;" alt="" height="75px">
+                                                        <img class="CToWUd" id="detail_logo_center" @if(stristr($setting['email_logo'], 'http')) src="{{$setting['email_logo']}}" @else src="{{config('url.storage_url_api')}}{{$setting['email_logo']}}" @endif style="border:0 none;line-height:100%;outline:none;text-decoration:none;margin-bottom: -60px;" alt="" height="75px">
                                                     @endif
                                                 </td>
                                             @else
                                                 <td id="logoheader_center" style="border-collapse:collapse;border-spacing:0;color:#000;font-family:'Arial',sans-serif;line-height:1.5;margin:0;padding-top:40px;text-align:center" width="100%">
-                                                    <img class="CToWUd" id="detail_logo_center" @if(stristr($setting['email_logo'], 'http')) src="{{$setting['email_logo']}}" @else src="{{env('STORAGE_URL_API')}}{{('img/logo.jpg')}}" @endif style="border:0 none;line-height:100%;outline:none;text-decoration:none;margin-bottom: -60px;" alt="" height="75px">
+                                                    <img class="CToWUd" id="detail_logo_center" @if(stristr($setting['email_logo'], 'http')) src="{{$setting['email_logo']}}" @else src="{{config('url.storage_url_api')}}{{('img/logo.jpg')}}" @endif style="border:0 none;line-height:100%;outline:none;text-decoration:none;margin-bottom: -60px;" alt="" height="75px">
                                                 </td>
                                             @endif
                                         </tr>

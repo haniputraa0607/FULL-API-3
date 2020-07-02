@@ -881,9 +881,9 @@ class ApiAchievement extends Controller
             ]);
         }
 
-        $data['group']['logo_badge_default'] = env('STORAGE_URL_API') . $data['group']['logo_badge_default'];
+        $data['group']['logo_badge_default'] = config('url.storage_url_api') . $data['group']['logo_badge_default'];
         foreach ($data['detail'] as $key => $value) {
-            $data['detail'][$key]['logo_badge'] = env('STORAGE_URL_API') . $value['logo_badge'];
+            $data['detail'][$key]['logo_badge'] = config('url.storage_url_api') . $value['logo_badge'];
         }
 
         return response()->json([
@@ -990,7 +990,7 @@ class ApiAchievement extends Controller
                 $result['category'][$keyCatAch]['achievement'][$keyAchGroup] = [
                     'id_achievement_group' => MyHelper::decSlug($group['id_achievement_group']),
                     'name' => $group['name'],
-                    'logo_achievement' => env('STORAGE_URL_API') . $group['logo_badge_default'],
+                    'logo_achievement' => config('url.storage_url_api') . $group['logo_badge_default'],
                     'description' => $group['description'],
                 ];
 
@@ -1003,7 +1003,7 @@ class ApiAchievement extends Controller
                     $result['category'][$keyCatAch]['achievement'][$keyAchGroup]['badge'][$keyAchDetail] = [
                         'id_achievement_detail' => $detail['id_achievement_detail'],
                         'name' => $detail['name'],
-                        'logo_badge' => env('STORAGE_URL_API') . $detail['logo_badge'],
+                        'logo_badge' => config('url.storage_url_api') . $detail['logo_badge'],
                     ];
                     $getAchievementProgress = AchievementProgress::where([
                         'id_user' => Auth::user()->id,
