@@ -121,7 +121,7 @@ class Controller extends BaseController
             $result = [
                 'status' => 'success',
                 'result' => [
-                    'pathinfo' => env('STORAGE_URL_API').$upload['path'],
+                    'pathinfo' => config('url.storage_url_api').$upload['path'],
                     'path' => $upload['path']
                 ]
             ];
@@ -157,9 +157,9 @@ class Controller extends BaseController
             $data['status'] = $get['value'];
             $data['message'] = $dt['message'];
             if($dt['image'] != ""){
-                $data['image'] = env('STORAGE_URL_API').$dt['image'];
+                $data['image'] = config('url.storage_url_api').$dt['image'];
             }else{
-                $data['image'] = env('STORAGE_URL_API').'img/maintenance/default.png';
+                $data['image'] = config('url.storage_url_api').'img/maintenance/default.png';
             }
         }
         return view('webview.maintenance_mode', $data);

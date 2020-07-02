@@ -458,7 +458,7 @@ class ApiPromotion extends Controller
 							if(count($contentOld) > 0){
 								foreach($contentOld as $old){
 									if($old['content_type'] == 'image' || $old['content_type'] == 'file'){
-										MyHelper::deletePhoto(str_replace(env('STORAGE_URL_API'), '', $old['content']));
+										MyHelper::deletePhoto(str_replace(config('url.storage_url_api'), '', $old['content']));
 									}
 								}
 
@@ -483,7 +483,7 @@ class ApiPromotion extends Controller
 								if($content['id_whatsapp_content']){
 									$waContent = WhatsappContent::find($content['id_whatsapp_content']);
 									if($waContent && ($waContent->content_type == 'image' || $waContent->content_type == 'file')){
-										MyHelper::deletePhoto(str_replace(env('STORAGE_URL_API'), '', $waContent->content));
+										MyHelper::deletePhoto(str_replace(config('url.storage_url_api'), '', $waContent->content));
 									}
 								}
 
@@ -495,7 +495,7 @@ class ApiPromotion extends Controller
 									//upload file
 									$upload = MyHelper::uploadPhoto($content['content'], $path = 'whatsapp/img/promotion/');
 									if ($upload['status'] == "success") {
-										$content['content'] = env('STORAGE_URL_API').$upload['path'];
+										$content['content'] = config('url.storage_url_api').$upload['path'];
 									} else{
 										DB::rollBack();
 										$result = [
@@ -519,7 +519,7 @@ class ApiPromotion extends Controller
 
 									$upload = MyHelper::uploadFile($content['content'], $path = 'whatsapp/file/promotion/', $content['content_file_ext'], $content['content_file_name']);
 									if ($upload['status'] == "success") {
-										$content['content'] = env('STORAGE_URL_API').$upload['path'];
+										$content['content'] = config('url.storage_url_api').$upload['path'];
 									} else{
 										DB::rollBack();
 										$result = [
@@ -1003,7 +1003,7 @@ class ApiPromotion extends Controller
 						if(count($contentOld) > 0){
 							foreach($contentOld as $old){
 								if($old['content_type'] == 'image' || $old['content_type'] == 'file'){
-									MyHelper::deletePhoto(str_replace(env('STORAGE_URL_API'), '', $old['content']));
+									MyHelper::deletePhoto(str_replace(config('url.storage_url_api'), '', $old['content']));
 								}
 							}
 
@@ -1028,7 +1028,7 @@ class ApiPromotion extends Controller
 							if($content['id_whatsapp_content']){
 								$waContent = WhatsappContent::find($content['id_whatsapp_content']);
 								if($waContent && ($waContent->content_type == 'image' || $waContent->content_type == 'file')){
-									MyHelper::deletePhoto(str_replace(env('STORAGE_URL_API'), '', $waContent->content));
+									MyHelper::deletePhoto(str_replace(config('url.storage_url_api'), '', $waContent->content));
 								}
 							}
 
@@ -1040,7 +1040,7 @@ class ApiPromotion extends Controller
 								//upload file
 								$upload = MyHelper::uploadPhoto($content['content'], $path = 'whatsapp/img/promotion/');
 								if ($upload['status'] == "success") {
-									$content['content'] = env('STORAGE_URL_API').$upload['path'];
+									$content['content'] = config('url.storage_url_api').$upload['path'];
 								} else{
 									DB::rollBack();
 									$result = [
@@ -1064,7 +1064,7 @@ class ApiPromotion extends Controller
 
 								$upload = MyHelper::uploadFile($content['content'], $path = 'whatsapp/file/promotion/', $content['content_file_ext'], $content['content_file_name']);
 								if ($upload['status'] == "success") {
-									$content['content'] = env('STORAGE_URL_API').$upload['path'];
+									$content['content'] = config('url.storage_url_api').$upload['path'];
 								} else{
 									DB::rollBack();
 									$result = [
@@ -1722,7 +1722,7 @@ class ApiPromotion extends Controller
 		if(!empty($user['phone'])){
 			$senddata = array(
 				'apikey' => env('SMS_KEY'),
-				'callbackurl' => env('APP_URL'),
+				'callbackurl' => config('url.app_url'),
 				'datapacket'=>array()
 			);
 
@@ -1762,7 +1762,7 @@ class ApiPromotion extends Controller
 				case 'RajaSMS':
 					$senddata = array(
 						'apikey' => env('SMS_KEY'),
-						'callbackurl' => env('APP_URL'),
+						'callbackurl' => config('url.app_url'),
 						'datapacket'=>array()
 					);
 
@@ -1777,7 +1777,7 @@ class ApiPromotion extends Controller
 				default:
 					$senddata = array(
 						'apikey' => env('SMS_KEY'),
-						'callbackurl' => env('APP_URL'),
+						'callbackurl' => config('url.app_url'),
 						'datapacket'=>array()
 					);
 
@@ -1837,7 +1837,7 @@ class ApiPromotion extends Controller
 					if($news){
 						$dataOptional['news_title'] = $news->news_title;
 					}
-					$dataOptional['url'] = env('APP_URL').'news/webview/'.$promotionContent['promotion_push_id_reference'];
+					$dataOptional['url'] = config('url.app_url').'news/webview/'.$promotionContent['promotion_push_id_reference'];
 				}
 
 				if($promotionContent['promotion_push_clickto']  == 'Order' && $promotionContent['promotion_push_id_reference'] != null){
@@ -2063,7 +2063,7 @@ class ApiPromotion extends Controller
 
 		$emailLogo = Setting::where('key', 'email_logo')->first();
 		if($emailLogo){
-			$imagenya = env('STORAGE_URL_API').$emailLogo->value;
+			$imagenya = config('url.storage_url_api').$emailLogo->value;
 		}
 		$img = Image::make($imagenya);
 		$response = $img->response('png');

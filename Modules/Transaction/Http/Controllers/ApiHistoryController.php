@@ -602,7 +602,7 @@ class ApiHistoryController extends Controller
             $feedback = UserFeedback::select('rating_items.image', 'text', 'rating_item_text')->where('id_transaction', $value['id_transaction'])->leftJoin('rating_items', 'rating_items.rating_value', '=', 'user_feedbacks.rating_value')->first();
             $dataList['rate_status'] = $feedback ? 1 : 0;
             $dataList['feedback_detail'] = $feedback ? [
-                'rating_item_image' => $feedback->image ? (env('STORAGE_URL_API') . $feedback->image) : null,
+                'rating_item_image' => $feedback->image ? (config('url.storage_url_api') . $feedback->image) : null,
                 'rating_item_text' => $feedback->text ?: $feedback->rating_item_text,
             ] : null;
             $dataList['display_review'] = ($value['transaction_payment_status'] == 'Completed' && !empty($value['taken_at'] . $value['taken_by_system_at'])) ? 1 : 0;

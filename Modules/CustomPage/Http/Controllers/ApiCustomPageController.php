@@ -356,9 +356,9 @@ class ApiCustomPageController extends Controller
         $result = [];
         if ($dataMerge) {
             foreach ($dataMerge as $key => $value) {
-                $result[$key]['url']            = env("API_URL") . 'api/custom-page/webview/' . $value['id_custom_page'];
+                $result[$key]['url']            = config('url.api_url') . 'api/custom-page/webview/' . $value['id_custom_page'];
                 $result[$key]['title']          = $value['custom_page_title'];
-                $result[$key]['icon_image']     = env("STORAGE_URL_API") . $value['custom_page_icon_image'];
+                $result[$key]['icon_image']     = config('url.storage_url_api') . $value['custom_page_icon_image'];
             }
         }
 

@@ -95,7 +95,7 @@ class ApiTutorial extends Controller
         
         if ($data->value_text != 'null') {
             foreach (json_decode($data->value_text, true) as $key => $value) {
-                $list['image'][$key] = env('STORAGE_URL_API') . $value;
+                $list['image'][$key] = config('url.storage_url_api') . $value;
             }
         } else {
             $list['image'] = [];
@@ -126,7 +126,7 @@ class ApiTutorial extends Controller
         
             if ($data->value_text != 'null') {
                 foreach (json_decode($data->value_text, true) as $key => $value) {
-                    $list['image'][$key] = env('STORAGE_URL_API') . $value;
+                    $list['image'][$key] = config('url.storage_url_api') . $value;
                 }
             } else {
                 $list['image'] = [];

@@ -28,7 +28,7 @@ class ApiBanner extends Controller
 
         // add full url to collection
         $banners = $banners->map(function ($banner, $key) {
-            $banner->image_url = env('STORAGE_URL_API').$banner->image;
+            $banner->image_url = config('url.storage_url_api').$banner->image;
             return $banner;
         });
         $banners->all();
@@ -71,7 +71,7 @@ class ApiBanner extends Controller
         }
         $post['position'] = $last_position + 1;
 
-        $deep_url = env('APP_URL').'outlet/webview/gofood/list';
+        $deep_url = config('url.app_url').'outlet/webview/gofood/list';
 
         if ($post['type'] == 'gofood') {
             $post['url'] = $deep_url;
@@ -140,7 +140,7 @@ class ApiBanner extends Controller
             $delete = MyHelper::deletePhoto($banner->image);
         }
 
-        $deep_url = env('APP_URL').'outlet/webview/gofood/list';
+        $deep_url = config('url.app_url').'outlet/webview/gofood/list';
 
         if ($post['type'] == 'gofood') {
             $post['url'] = $deep_url;
