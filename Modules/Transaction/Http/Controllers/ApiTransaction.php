@@ -1828,16 +1828,16 @@ class ApiTransaction extends Controller
                     $result['transaction_status_text'] = 'ORDER SELESAI';
                 } elseif($list['detail']['taken_at'] != null) {
                     $result['transaction_status'] = 2;
-                    $result['transaction_status_text'] = 'ORDER SUDAH DIAMBIL';
+                    $result['transaction_status_text'] = 'Pesanan telah diambil';
                 } elseif($list['detail']['ready_at'] != null) {
                     $result['transaction_status'] = 3;
-                    $result['transaction_status_text'] = 'ORDER SUDAH SIAP';
+                    $result['transaction_status_text'] = 'Pesanan sudah siap diambil';
                 } elseif($list['detail']['receive_at'] != null) {
                     $result['transaction_status'] = 4;
-                    $result['transaction_status_text'] = 'ORDER SEDANG DIPROSES';
+                    $result['transaction_status_text'] = 'Pesanan diterima. Order sedang dipersiapkan';
                 } else {
                     $result['transaction_status'] = 5;
-                    $result['transaction_status_text'] = 'ORDER PENDING';
+                    $result['transaction_status_text'] = 'Pesanan masuk. Menunggu jilid untuk menerima order';
                 }
                 if ($list['transaction_pickup_go_send']) {
                     // $result['transaction_status'] = 5;
@@ -1858,7 +1858,7 @@ class ApiTransaction extends Controller
                         case 'finding driver':
                         case 'confirmed':
                             $result['delivery_info']['delivery_status'] = 'Sedang mencari driver';
-                            $result['transaction_status_text']          = 'SEDANG MENCARI DRIVER';
+                            $result['transaction_status_text']          = 'Pesanan sudah siap dan menunggu pick up';
                             break;
                         case 'driver allocated':
                         case 'allocated':
@@ -1890,7 +1890,7 @@ class ApiTransaction extends Controller
                         case 'enroute drop':
                         case 'out_for_delivery':
                             $result['delivery_info']['delivery_status'] = 'Driver mengantarkan pesanan';
-                            $result['transaction_status_text']          = 'PROSES PENGANTARAN';
+                            $result['transaction_status_text']          = 'Pesanan sudah di pick up oleh driver dan sedang menuju lokasi #temansejiwa';
                             $result['transaction_status']               = 3;
                             $result['delivery_info']['driver']          = [
                                 'driver_id'         => $list['transaction_pickup_go_send']['driver_id']?:'',
@@ -1905,7 +1905,7 @@ class ApiTransaction extends Controller
                         case 'completed':
                         case 'delivered':
                             $result['transaction_status'] = 2;
-                            $result['transaction_status_text']          = 'ORDER SUDAH DIAMBIL';
+                            $result['transaction_status_text']          = 'Pesanan telah selesai dan diterima';
                             $result['delivery_info']['delivery_status'] = 'Pesanan sudah diterima Customer';
                             $result['delivery_info']['driver']          = [
                                 'driver_id'         => $list['transaction_pickup_go_send']['driver_id']?:'',
@@ -2025,13 +2025,13 @@ class ApiTransaction extends Controller
                     }
                     if ($list['detail']['taken_at'] != null) {
                         $statusOrder[] = [
-                        'text'  => 'Pesanan Anda sudah diambil',
+                        'text'  => 'Pesanan telah diambil',
                         'date'  => $list['detail']['taken_at']
                     ];
                     }
                     if ($list['detail']['ready_at'] != null) {
                         $statusOrder[] = [
-                        'text'  => 'Pesanan Anda sudah siap ',
+                        'text'  => 'Pesanan sudah siap diambil',
                         'date'  => $list['detail']['ready_at']
                     ];
                     }
@@ -2041,14 +2041,14 @@ class ApiTransaction extends Controller
                                 case 'finding driver':
                                 case 'confirmed':
                                     $statusOrder[] = [
-                                        'text'  => 'Sedang mencari driver',
+                                        'text'  => 'Pesanan sudah siap dan menunggu pick up',
                                         'date'  => $valueGosend['created_at']
                                     ];
                                     break;
                                 case 'driver allocated':
                                 case 'allocated':
                                     $statusOrder[] = [
-                                        'text'  => 'Driver ditemukan',
+                                        'text'  => 'Pesanan sudah di pick up oleh driver dan sedang menuju lokasi #temansejiwa',
                                         'date'  => $valueGosend['created_at']
                                     ];
                                     break;
@@ -2069,7 +2069,7 @@ class ApiTransaction extends Controller
                                 case 'completed':
                                 case 'delivered':
                                     $statusOrder[] = [
-                                        'text'  => 'Pesanan sudah diterima Customer',
+                                        'text'  => 'Pesanan telah selesai dan diterim',
                                         'date'  => $valueGosend['created_at']
                                     ];
                                     break;
@@ -2091,12 +2091,12 @@ class ApiTransaction extends Controller
                     }
                     if ($list['detail']['receive_at'] != null) {
                         $statusOrder[] = [
-                        'text'  => 'Pesanan Anda sudah diterima',
+                        'text'  => 'Pesanan diterima. Order sedang dipersiapkan',
                         'date'  => $list['detail']['receive_at']
                     ];
                     }
                     $statusOrder[] = [
-                        'text'  => 'Pesanan Anda menunggu konfirmasi',
+                        'text'  => 'Pesanan masuk. Menunggu jilid untuk menerima order',
                         'date'  => $list['transaction_date']
                     ];
                 }
