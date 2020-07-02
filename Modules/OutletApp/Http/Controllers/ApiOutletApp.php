@@ -790,6 +790,7 @@ class ApiOutletApp extends Controller
             $column    = array_column($checkType, 'type');
             
             $use_referral = optional(optional($newTrx->promo_campaign_promo_code)->promo_campaign)->promo_type == 'Referral';
+            MyHelper::updateFlagTransactionOnline($newTrx, 'success', $newTrx->user);
 
             if (!in_array('Balance', $column) || $use_referral) {
 

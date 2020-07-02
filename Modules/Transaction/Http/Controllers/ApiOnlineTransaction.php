@@ -852,8 +852,7 @@ class ApiOnlineTransaction extends Controller
             ]);
         }
 
-        $user->transaction_online = 1;
-        $user->save();
+        MyHelper::updateFlagTransactionOnline($insertTransaction, 'pending', $user);
 
         $insertTransaction['transaction_receipt_number'] = $receipt;
 

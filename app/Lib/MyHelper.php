@@ -11,7 +11,7 @@ use Storage;
 use App\Http\Models\Notification;
 use App\Http\Models\Store;
 use App\Http\Models\User;
-use App\Http\Models\Transaksi;
+use App\Http\Models\Transaction;
 use App\Http\Models\ProductVariant;
 use App\Http\Models\LogPoint;
 use App\Http\Models\TransactionPaymentManual;
@@ -2723,5 +2723,45 @@ class MyHelper{
             $createFile = MyHelper::createFile($contentFile, 'json', 'emailverify/', $data_user[0]['id']);
             return true;
         }
+    }
+
+    /**
+     * update flag transaction online (flag ini digunakan untuk menandai user pernah transaksi online atau belum (digunakan di referral))
+     * @param  array/model 	$trx 	 	  	Transacction model
+     * @param  string 		$status 		"pending" / "cancel" / "success"
+     * @param  model 		$user   		User model or leave it empty
+     * @return boolean
+     */
+    public static function updateFlagTransactionOnline($trx, $status = 'pending', $user = null)
+    {
+    	if (!$user) {
+	        $user = User::where('id',$trx['id_user'])->first();
+    	}
+    	if ($status == 'success') {
+    		if ($user['transaction_online_status'] == 'success') {
+    			return true;
+    		}
+    		if ($user['transaction_online'] != $trx['id_transaction']) {
+	    		$user->update(['transaction_online' => $trx['id_transaction'], 'transaction_online_status' => 'success']);
+    			return true;
+    		}
+    	} elseif ($status == 'cancel') {
+	        // check flag transaction_online == id_transaction
+	        if($user['transaction_online'] == $trx['id_transaction']) {
+	        	// find other pending transaction
+	        	$id_pending_trx = Transaction::select('id_transaction')->where('id_user',$trx['id_user'])->where('transaction_payment_status','Pending')->where('id_transaction', '<>', $trx['id_transaction'])->pluck('id_transaction')->first();
+	        	if ($id_pending_trx) {
+	        		$user->update(['transaction_online' => $id_pending_trx, 'transaction_online_status' => 'pending']);
+	        	} else {
+	        		$user->update(['transaction_online' => null, 'transaction_online_status' => null]);
+	        	}
+	        };
+	        return true;
+    	} else {
+    		if (!$user['transaction_online']) {
+	    		$user->update(['transaction_online' => $trx['id_transaction'], 'transaction_online_status' => 'pending']);
+    		}
+    	}
+    	return true;
     }
 }
