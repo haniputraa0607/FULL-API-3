@@ -110,6 +110,11 @@ class ApiHome extends Controller
                 $item['id_news'] = 999999999;
                 $item['news_title'] = "Referral";
                 $item['url']     = config('url.api_url') . 'api/referral/webview';
+            }elseif ($value->type == 'order') {
+                $item['type']       = 'order';
+                $item['id_news'] = null;
+                $item['news_title'] = null;
+                $item['url']     = null;
             }
             array_push($array, $item);
         }
