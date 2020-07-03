@@ -809,8 +809,8 @@ class ApiAchievement extends Controller
                         ], [
                             'id_achievement_detail' => $achievement['id_achievement_detail'],
                             'id_user' => $idUser,
-                            'progress' => $achievement['different_outlet'],
-                            'end_progress' => $achievement['different_outlet'],
+                            'progress' => $achievement['product_total'],
+                            'end_progress' => $achievement['product_total'],
                         ]);
                         $achievementPassed = $achievementPassed + 1;
                         continue;
@@ -822,7 +822,7 @@ class ApiAchievement extends Controller
                             'id_achievement_detail' => $achievement['id_achievement_detail'],
                             'id_user' => $idUser,
                             'progress' => $totalSumProduct,
-                            'end_progress' => $achievement['different_outlet'],
+                            'end_progress' => $achievement['product_total'],
                         ]);
                         if ($achievementPassed - 1 < 0) {
                             $achievement = null;
@@ -934,8 +934,8 @@ class ApiAchievement extends Controller
                             ], [
                                 'id_achievement_detail' => $achievement['id_achievement_detail'],
                                 'id_user' => $idUser,
-                                'progress' => $achievement['different_outlet'],
-                                'end_progress' => $achievement['different_outlet'],
+                                'progress' => $achievement['different_province'],
+                                'end_progress' => $achievement['different_province'],
                             ]);
                         }
                         $achievementPassed = $achievementPassed + 1;
