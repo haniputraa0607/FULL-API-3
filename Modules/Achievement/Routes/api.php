@@ -21,7 +21,15 @@ Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scop
     Route::any('detail/update', 'ApiAchievement@update');
     Route::any('destroy', 'ApiAchievement@destroy');
     Route::group(['prefix' => 'report'], function () {
-        Route::any('user-achivement', 'ApiAchievement@reportUser');
+        /*Report Achievement*/
+        Route::any('/', 'ApiAchievement@reportAchievement');
+        Route::any('detail', 'ApiAchievement@reportDetailAchievement');
+        Route::any('list/user-achievement', 'ApiAchievement@listUserAchivement');
+
+        /*Report Achievement User*/
+        Route::any('user-achievement', 'ApiAchievement@reportUser');
+        Route::any('user-achievement/detail', 'ApiAchievement@reportDetailUser');
+        Route::any('user-achievement/detail-badge', 'ApiAchievement@reportDetailBadgeUser');
         Route::any('list-achivement', 'ApiAchievement@reportAch');
         Route::any('membership-achivement', 'ApiAchievement@reportMembership');
     });
