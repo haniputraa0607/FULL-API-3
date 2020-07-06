@@ -411,58 +411,57 @@ class ApiAutoCrm extends Controller
                         //======set id reference and type
                         $dataOptional['type'] = $crm['autocrm_push_clickto'];
                         if ($crm['autocrm_push_clickto'] == "No Action") {
-                            $dataOptional['type'] = '';
+                            $dataOptional['type'] = 'Default';
                             $dataOptional['id_reference'] = 0;
                         }elseif ($crm['autocrm_push_clickto'] == "News") {
                             if (isset($variables['id_news'])) {
-                                $dataOptional['type'] = 'Detail News';
                                 $dataOptional['id_reference'] = $variables['id_news'];
                             } else {
-                                $dataOptional['type'] = 'List News';
                                 $dataOptional['id_reference'] = 0;
                             }
                         }elseif ($crm['autocrm_push_clickto'] == 'History Transaction') {
                             if (isset($variables['id_transaction'])) {
-                                $dataOptional['type'] = 'Detail History Transaction';
                                 $dataOptional['id_reference'] = $variables['id_transaction'];
                             } else {
-                                $dataOptional['type'] = 'List History Transaction';
                                 $dataOptional['id_reference'] = 0;
                             }
                         }elseif ($crm['autocrm_push_clickto'] == 'History Point') {
                             if (isset($variables['id_log_balance'])) {
-                                $dataOptional['type'] = 'Detail History Point';
                                 $dataOptional['id_reference'] = $variables['id_log_balance'];
                             } else {
-                                $dataOptional['type'] = 'List History Point';
                                 $dataOptional['id_reference'] = 0;
                             }
                         }elseif ($crm['autocrm_push_clickto'] == 'Voucher') {
                             if (isset($variables['id_deals_user'])) {
-                                $dataOptional['type'] = 'Detail Voucher';
                                 $dataOptional['id_reference'] = $variables['id_deals'];
                             } else{
-                                $dataOptional['type'] = 'List Voucher';
                                 $dataOptional['id_reference'] = 0;
                             }
                         }elseif ($crm['autocrm_push_clickto'] == 'Deals') {
                             if (isset($variables['id_deals'])) {
-                                $dataOptional['type'] = 'Detail Deals';
                                 $dataOptional['id_reference'] = $variables['id_deals'];
                             }else{
-                                $dataOptional['type'] = 'List Deals';
+                                $dataOptional['id_reference'] = 0;
+                            }
+                        }elseif ($crm['autocrm_push_clickto'] == 'Outlet') {
+                            if (isset($variables['id_outlet'])) {
+                                $dataOptional['id_reference'] = $variables['id_outlet'];
+                            }else{
+                                $dataOptional['id_reference'] = 0;
+                            }
+                        }elseif ($crm['autocrm_push_clickto'] == 'Order') {
+                            if (isset($variables['id_outlet'])) {
+                                $dataOptional['id_reference'] = $variables['id_outlet'];
+                            }else{
                                 $dataOptional['id_reference'] = 0;
                             }
                         }elseif ($crm['autocrm_push_clickto'] == 'Subscription') {
                             if (isset($variables['id_subscription'])) {
-                                $dataOptional['type'] = 'Detail Subscription';
                                 $dataOptional['id_reference'] = $variables['id_subscription'];
                             }else{
-                                $dataOptional['type'] = 'List Subscription';
                                 $dataOptional['id_reference'] = 0;
                             }
                         }elseif ($crm['autocrm_push_clickto'] == 'Home') {
-                            $dataOptional['type'] = 'Home';
                             $dataOptional['id_reference'] = 0;
                         }elseif ($crm['autocrm_push_clickto'] == 'Logout') {
                             //delete token
@@ -546,58 +545,45 @@ class ApiAutoCrm extends Controller
                     //===== set id reference and click to
                     if ($crm['autocrm_inbox_clickto'] == "News") {
                         if (isset($variables['id_news'])) {
-                            $inbox['inboxes_clickto'] = 'Detail News';
                             $inbox['inboxes_id_reference'] = $variables['id_news'];
                         } else {
-                            $inbox['inboxes_clickto'] = 'List News';
                             $inbox['inboxes_id_reference'] = 0;
                         }
                     }
                     elseif ($crm['autocrm_inbox_clickto'] == 'History Transaction') {
                         if (isset($variables['id_transaction'])) {
-                            $inbox['inboxes_clickto'] = 'Detail History Transaction';
                             $inbox['inboxes_id_reference'] = $variables['id_transaction'];
                         } else {
-                            $inbox['inboxes_clickto'] = 'List History Transaction';
                             $inbox['inboxes_id_reference'] = 0;
                         }
                     } elseif ($crm['autocrm_inbox_clickto'] == 'History Point') {
                         if (isset($variables['id_log_balance'])) {
-                            $inbox['inboxes_clickto'] = 'Detail History Point';
                             $inbox['inboxes_id_reference'] = $variables['id_log_balance'];
                         } else {
-                            $inbox['inboxes_clickto'] = 'List History Point';
                             $inbox['inboxes_id_reference'] = 0;
                         }
                     } elseif ($crm['autocrm_inbox_clickto'] == 'Voucher') {
                         if (isset($variables['id_deals_user'])) {
-                            $inbox['inboxes_clickto'] = 'Detail Voucher';
                             $inbox['inboxes_id_reference'] = $variables['id_deals'];
                         } else{
-                            $inbox['inboxes_clickto'] = 'List Voucher';
                             $inbox['inboxes_id_reference'] = 0;
                         }
                     }elseif ($crm['autocrm_inbox_clickto'] == 'Deals') {
                         if (isset($variables['id_deals'])) {
-                            $inbox['inboxes_clickto'] = 'Detail Deals';
                             $inbox['inboxes_id_reference'] = $variables['id_deals'];
                         }else{
-                            $inbox['inboxes_clickto'] = 'List Deals';
                             $inbox['inboxes_id_reference'] = 0;
                         }
                     }elseif ($crm['autocrm_inbox_clickto'] == 'Subscription') {
                         if (isset($variables['id_subscription'])) {
-                            $inbox['inboxes_clickto'] = 'Detail Subscription';
                             $inbox['inboxes_id_reference'] = $variables['id_subscription'];
                         }else{
-                            $inbox['inboxes_clickto'] = 'List Subscription';
                             $inbox['inboxes_id_reference'] = 0;
                         }
                     }elseif ($crm['autocrm_inbox_clickto'] == 'Home') {
-                        $inbox['inboxes_clickto'] = 'Home';
                         $inbox['inboxes_id_reference'] = 0;
                     }else{
-                        $inbox['inboxes_clickto'] = '';
+                        $inbox['inboxes_clickto'] = 'Default';
                         $inbox['inboxes_id_reference'] = 0;
                     }
 

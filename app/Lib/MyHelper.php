@@ -2621,7 +2621,7 @@ class MyHelper{
                 return [
                     'status'=>'fail',
                     'otp_check'=> 1,
-                    'messages'=> ["Can't request OTP, please request again after ".$holdTime." seconds"]
+                    'messages'=> ["Can't request OTP, please request again after ".floor($holdTime/60)." minutes"]
                 ];
             } elseif($count > $maxValueRequest){
                 $updateFlag = User::where('id', $data_user[0]['id'])->update(['otp_request_status' => 'Can Not Request']);
@@ -2695,7 +2695,7 @@ class MyHelper{
                 return [
                     'status'=>'fail',
                     'email_verify_check'=> 1,
-                    'messages'=> ["Can't request email verify, please request again after ".$holdTime." seconds"]
+                    'messages'=> ["Can't request email verify, please request again after ".floor($holdTime/60)." minutes"]
                 ];
             } elseif($count > $maxValueRequest){
                 $updateFlag = User::where('id', $data_user[0]['id'])->update(['email_verify_request_status' => 'Can Not Request']);
