@@ -139,7 +139,7 @@ class PushNotificationHelper{
 
         $dataOptional['title']             = $subject;
         $dataOptional['body']              = $messages;
-
+        $dataOptional['push_notif_local']  = $dataOptional['push_notif_local'] ?? 0;
         $dataBuilder->addData($dataOptional);
 
         // build semua
