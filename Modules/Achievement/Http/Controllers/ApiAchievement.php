@@ -100,6 +100,11 @@ class ApiAchievement extends Controller
         if(isset($post['id_achievement_group']) && !empty($post['id_achievement_group'])) {
             $id = $post['id_achievement_group'];
 
+            $length = 10;
+            if(isset($post['length'])){
+                $length = (int)$post['length'];
+            }
+
             $getDataListUser = AchievementUser::join('users', 'users.id', 'achievement_users.id_user')
                 ->groupBy('id_user')
                 ->whereIn('achievement_users.id_achievement_detail', function ($sub) use($id){
@@ -108,11 +113,13 @@ class ApiAchievement extends Controller
                         ->join('achievement_groups', 'achievement_groups.id_achievement_group', 'achievement_details.id_achievement_group')
                         ->where('achievement_groups.id_achievement_group', MyHelper::decSlug($id));
                 })
-                ->select('users.*', 'achievement_users.id_user')
+                ->select('users.name as 0', 'users.phone as 1', 'users.email as 2',
+                    'users.phone as 3', 'users.phone as 4', 'users.phone as 5', 'achievement_users.id_user')
                 ->with(['achievement_detail'=>function ($que) use($id){
                     $que->join('achievement_groups', 'achievement_groups.id_achievement_group', 'achievement_details.id_achievement_group')
-                        ->where('achievement_groups.id_achievement_group', MyHelper::decSlug($id));
-                }])->get()->toArray();
+                        ->where('achievement_groups.id_achievement_group', MyHelper::decSlug($id))
+                        ->select('achievement_details.*', 'achievement_users.*');
+                }])->paginate($length);
 
             return response()->json(MyHelper::checkGet($getDataListUser));
         }else{
