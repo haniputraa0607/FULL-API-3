@@ -1549,7 +1549,10 @@ class ApiDeals extends Controller
 
 
         for ($i=$start; $i < $end; $i++) {
-            $deals[$i]['time_to_end']=strtotime($deals[$i]['deals_end'])-time();
+            $deals[$i]['time_to_end']		= strtotime($deals[$i]['deals_end'])-time();
+            $deals[$i]['deals_start_indo']	= MyHelper::dateFormatInd($deals[$i]['deals_start'], false);
+            $deals[$i]['deals_end_indo']	= MyHelper::dateFormatInd($deals[$i]['deals_end'], false);
+            $deals[$i]['time_server_indo']  = MyHelper::dateFormatInd(date('Y-m-d H:i:s'), false);
             array_push($resultData, $deals[$i]);
         }
 

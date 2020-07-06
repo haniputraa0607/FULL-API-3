@@ -26,7 +26,15 @@ class ApiSubscriptionWebview extends Controller
     public function subscriptionDetail(Request $request)
     {
         // return url webview and button text for mobile (native button)
-        $subs = Subscription::with('outlets', 'subscription_content.subscription_content_details')->find($request->get('id_subscription'));
+        $subs = Subscription::with([
+        			'outlets', 
+        			'subscription_content' => function($q){
+        				$q->where('is_active',1);
+        			},
+        			'subscription_content.subscription_content_details'
+        		])
+        		->find($request->get('id_subscription'));
+
         $user = $request->user();
         $curBalance = (int) $user->balance??0;
 
@@ -47,7 +55,12 @@ class ApiSubscriptionWebview extends Controller
             'subscription_voucher_total'    => $subs['subscription_voucher_total'],
             'button_text'                   => 'BELI',
             'button_status'                 => 0,
-            'user_point'					=> Auth()->user()->balance
+            'user_point'					=> Auth()->user()->balance,
+            'subscription_start_indo'       	=> MyHelper::dateFormatInd($subs['subscription_start'], false),
+            'subscription_end_indo'             => MyHelper::dateFormatInd($subs['subscription_end'], false),
+            'subscription_publish_start_indo'   => MyHelper::dateFormatInd($subs['subscription_publish_start'], false),
+            'subscription_publish_end_indo'     => MyHelper::dateFormatInd($subs['subscription_publish_end'], false),
+            'time_server_indo'              	=> MyHelper::dateFormatInd(date('Y-m-d H:i:s'), false)
         ];
 
         //text konfirmasi pembelian
