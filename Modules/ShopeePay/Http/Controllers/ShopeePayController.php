@@ -274,33 +274,49 @@ class ShopeePayController extends Controller
                 \Log::error('Failed get shopeepay status transaction ' . $singleTrx->transaction_receipt_number . ': ', $errors);
                 continue;
             }
-            DB::begintransaction();
             // is transaction success?
-            if (($status['response']['payment_status'] ?? false) == '1') {
+            $payment_status = ($status['response']['payment_status'] ?? false);
+            if ($payment_status == '1') {
+                if (($status['response']['transaction_list'][0]['amount'] ?? false) != $singleTrx->amount) {
+                    // void transaction
+                    $void_reference_id = null;
+                    $void              = $this->void($singleTrx, 'trx', $errors, $void_reference_id);
+                    if (!$void) {
+                        \Log::error('Failed void transaction ' . $singleTrx->transaction_receipt_number . ': ', $errors);
+                        continue;
+                    }
+                    DB::begintransaction();
+                    if (($void['response']['errcode'] ?? 123) == 0) {
+                        $up = TransactionPaymentShopeePay::where('id_transaction', $singleTrx->id_transaction)->update(['void_reference_id' => $void_reference_id, 'errcode' => 0, 'err_reason' => 'invalid payment amount']);
+                    }
+                    DB::commit();
+                    goto cancel;
+                }
+                DB::begintransaction();
                 $update = $singleTrx->update(['transaction_payment_status' => 'Completed', 'completed_at' => date('Y-m-d H:i:s')]);
                 if ($update) {
                     $userData               = User::where('id', $singleTrx['id_user'])->first();
                     $config_fraud_use_queue = Configs::where('config_name', 'fraud use queue')->first()->is_active;
 
                     if ($config_fraud_use_queue == 1) {
-                        FraudJob::dispatch($userData, $trx, 'transaction')->onConnection('fraudqueue');
+                        FraudJob::dispatch($userData, $singleTrx, 'transaction')->onConnection('fraudqueue');
                     } else {
                         $checkFraud = app($this->setting_fraud)->checkFraudTrxOnline($userData, $singleTrx);
                     }
                 }
                 DB::commit();
+                $singleTrx->load('outlet');
+                $singleTrx->load('productTransaction');
+
+                $mid = [
+                    'order_id'     => $singleTrx['transaction_receipt_number'],
+                    'gross_amount' => ($singleTrx['amount'] / 100),
+                ];
+                $send = app($this->notif)->notification($mid, $singleTrx);
+
                 continue;
-                // void transaction
-                // $void_reference_id = null;
-                // $void              = $this->void($singleTrx, 'trx', $errors, $void_reference_id);
-                // if (!$void) {
-                //     \Log::error('Failed void transaction ' . $singleTrx->transaction_receipt_number . ': ', $errors);
-                //     continue;
-                // }
-                // if (($void['response']['errcode'] ?? 123) == 0) {
-                //     $up = TransactionPaymentShopeePay::where('id_transaction', $singleTrx->id_transaction)->update(['void_reference_id' => $void_reference_id]);
-                // }
             }
+            cancel:
 
             $singleTrx->transaction_payment_status = 'Cancelled';
             $singleTrx->void_date                  = $now;
@@ -388,6 +404,21 @@ class ShopeePayController extends Controller
             DB::begintransaction();
             // is transaction success?
             if (($status['response']['payment_status'] ?? false) == '1') {
+                if (($status['response']['transaction_list'][0]['amount'] ?? false) != $singleTrx->amount) {
+                    // void transaction
+                    $void_reference_id = null;
+                    $void              = $this->void($singleTrx, 'deals', $errors, $void_reference_id);
+                    if (!$void) {
+                        \Log::error('Failed void transaction ' . $singleTrx->id_deals_user . ': ', $errors);
+                        continue;
+                    }
+                    DB::begintransaction();
+                    if (($void['response']['errcode'] ?? 123) == 0) {
+                        $up = DealsPaymentShopeePay::where('id_deals_user', $singleTrx->id_deals_user)->update(['void_reference_id' => $void_reference_id, 'errcode' => 0, 'err_reason' => 'invalid payment amount']);
+                    }
+                    DB::commit();
+                    goto cancel;
+                }
                 $update = DealsUser::where('id_deals_user', $singleTrx->id_deals_user)->update(['paid_status' => 'Completed']);
                 DB::commit();
                 continue;
@@ -402,7 +433,7 @@ class ShopeePayController extends Controller
                 //     $up = DealsPaymentShopeePay::where('id_deals_user', $singleTrx->id_deals_user)->update(['void_reference_id' => $void_reference_id]);
                 // }
             }
-
+            cancel:
             $singleTrx->paid_status = 'Cancelled';
             $singleTrx->save();
 
@@ -638,6 +669,30 @@ class ShopeePayController extends Controller
          *         "errcode": 0,
          *         "debug_msg": "success",
          *         "payment_status": 2
+         *     }
+         * }
+         * {
+         *     "status_code": 200,
+         *     "response": {
+         *         "request_id": "15935727183361",
+         *         "errcode": 0,
+         *         "debug_msg": "success",
+         *         "payment_status": 1,
+         *         "transaction_list": [
+         *             {
+         *                 "reference_id": "TRX-200611USFSQR",
+         *                 "amount": 100,
+         *                 "create_time": 1591868316,
+         *                 "update_time": 1591868316,
+         *                 "transaction_sn": "026341292124407454",
+         *                 "status": 3,
+         *                 "transaction_type": 13,
+         *                 "merchant_ext_id": "1234",
+         *                 "terminal_id": "",
+         *                 "user_id_hash": "6d65274e5cba19a063ae6e8923e04c877aa228df95c77e87fb81c398800727a0",
+         *                 "store_ext_id": "M000"
+         *             }
+         *         ]
          *     }
          * }
          */
