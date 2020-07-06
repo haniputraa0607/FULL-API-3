@@ -401,7 +401,7 @@ class ApiAutoCrm extends Controller
 			if($crm['autocrm_push_toogle'] == 1 && !$forward_only){
 				if(!empty($user['phone'])){
 					try {
-						$dataOptional          = [];
+						$dataOptional          = $variables['data_optional'] ?? [];
 						$image = null;
 						if (isset($crm['autocrm_push_image']) && $crm['autocrm_push_image'] != null) {
 							$dataOptional['image'] = config('url.storage_url_api').$crm['autocrm_push_image'];

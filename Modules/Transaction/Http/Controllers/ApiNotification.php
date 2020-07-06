@@ -520,6 +520,26 @@ class ApiNotification extends Controller {
 
         $title = 'Sukses';
 
+        $trxPickup = TransactionPickup::where('id_transaction', $trx['id_transaction'])->first();
+        $dataOptional = [];
+        $setting_msg = json_decode(MyHelper::setting('transaction_set_time_notif_message','value_text'), true);
+
+        if($trxPickup && $trxPickup->pickup_type == 'set time') {
+            $replacer = [
+                ['%name%', '%outlet_name%', '%receipt_number%', '%order_id%'],
+                [$name, $outlet, $receipt, $mid['order_id']],
+            ];
+            $dataOptional = [
+                'push_notif_local' => 1,
+                'title_5mnt'       => str_replace($replacer[0], $replacer[1], $setting_msg['title_5mnt'] ?? '5 menit Pesananmu siap lho'),
+                'msg_5mnt'         => str_replace($replacer[0], $replacer[1], $setting_msg['msg_5mnt'] ?? 'hai %name%, siap - siap ke outlet %outlet_name% yuk. Pesananmu akan siap 5 menit lagi nih.'),
+                'title_15mnt'      => str_replace($replacer[0], $replacer[1], $setting_msg['title_15mnt'] ?? '15 menit Pesananmu siap lho'),
+                'msg_15mnt'        => str_replace($replacer[0], $replacer[1], $setting_msg['msg_15mnt'] ?? 'hai %name%, siap - siap ke outlet %outlet_name% yuk. Pesananmu akan siap 15 menit lagi nih.'),
+                'order_time'       => $trx['transaction_date'],
+            ];
+
+        }
+
         $send = app($this->autocrm)->SendAutoCRM('Transaction Success', $trx->user->phone, [
             'notif_type' => 'trx',
             'header_label' => $title,
@@ -530,7 +550,8 @@ class ApiNotification extends Controller {
             'order_id' => $mid['order_id'],
             'outlet_name' => $outlet,
             'detail' => $detail,
-            'id_reference' => $mid['order_id'].','.$trx['id_outlet']
+            'id_reference' => $mid['order_id'].','.$trx['id_outlet'],
+            'data_optional' => $dataOptional
         ]);
 
         return $send;
