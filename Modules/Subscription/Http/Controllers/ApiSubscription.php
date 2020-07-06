@@ -1630,18 +1630,25 @@ class ApiSubscription extends Controller
         for ($i=$start; $i < $end; $i++) {
             $subs[$i]['time_to_end']=strtotime($subs[$i]['subscription_end'])-time();
 
-            $list[$i]['id_subscription'] = $subs[$i]['id_subscription'];
-            $list[$i]['url_subscription_image'] = $subs[$i]['url_subscription_image'];
-            $list[$i]['time_to_end'] = $subs[$i]['time_to_end'];
-            $list[$i]['subscription_start'] = $subs[$i]['subscription_start'];
-            $list[$i]['subscription_publish_start'] = $subs[$i]['subscription_publish_start'];
-            $list[$i]['subscription_end'] = $subs[$i]['subscription_end'];
-            $list[$i]['subscription_publish_end'] = $subs[$i]['subscription_publish_end'];
-            $list[$i]['subscription_price_cash'] = $subs[$i]['subscription_price_cash'];
-            $list[$i]['subscription_price_point'] = $subs[$i]['subscription_price_point'];
-            $list[$i]['subscription_price_type'] = $subs[$i]['subscription_price_type'];
-            $list[$i]['subscription_price_pretty'] = $subs[$i]['subscription_price_pretty'];
-            $list[$i]['time_server'] = date('Y-m-d H:i:s');
+            $list[$i]['id_subscription'] 				= $subs[$i]['id_subscription'];
+            $list[$i]['url_subscription_image'] 		= $subs[$i]['url_subscription_image'];
+            $list[$i]['time_to_end'] 					= $subs[$i]['time_to_end'];
+            $list[$i]['subscription_start'] 			= $subs[$i]['subscription_start'];
+            $list[$i]['subscription_publish_start'] 	= $subs[$i]['subscription_publish_start'];
+            $list[$i]['subscription_end'] 				= $subs[$i]['subscription_end'];
+            $list[$i]['subscription_publish_end'] 		= $subs[$i]['subscription_publish_end'];
+
+            $list[$i]['subscription_start_indo'] 		= MyHelper::dateFormatInd($subs[$i]['subscription_start'], false);
+            $list[$i]['subscription_publish_start_indo']= MyHelper::dateFormatInd($subs[$i]['subscription_publish_start'], false);
+            $list[$i]['subscription_end_indo'] 			= MyHelper::dateFormatInd($subs[$i]['subscription_end'], false);
+            $list[$i]['subscription_publish_end_indo'] 	= MyHelper::dateFormatInd($subs[$i]['subscription_publish_end'], false);
+
+            $list[$i]['subscription_price_cash'] 		= $subs[$i]['subscription_price_cash'];
+            $list[$i]['subscription_price_point'] 		= $subs[$i]['subscription_price_point'];
+            $list[$i]['subscription_price_type'] 		= $subs[$i]['subscription_price_type'];
+            $list[$i]['subscription_price_pretty'] 		= $subs[$i]['subscription_price_pretty'];
+            $list[$i]['time_server'] 					= date('Y-m-d H:i:s');
+            $list[$i]['time_server_indo']  				= MyHelper::dateFormatInd(date('Y-m-d H:i:s'), false);
             array_push($resultData, $subs[$i]);
             array_push($listData, $list[$i]);
         }

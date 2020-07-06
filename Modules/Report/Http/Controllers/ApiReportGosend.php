@@ -42,7 +42,8 @@ class ApiReportGosend extends Controller
             ->whereNull('transaction_pickups.reject_at');
 
         if(isset($post['export']) && $post['export'] == 1){
-            $data->select('outlets.outlet_name as Oultet Name', 'outlets.outlet_code as Oultet Code', 'transactions.transaction_receipt_number as Receipt Number',
+            $data->select('outlets.outlet_name as Oultet Name', 'outlets.outlet_code as Oultet Code', 'transactions.transaction_date as Transactin Date',
+                'transactions.transaction_receipt_number as Receipt Number',
                 'transaction_pickups.order_id as Order ID',
                 DB::raw('FORMAT(transactions.transaction_grandtotal, 0) as "Grand Total"'),
                 DB::raw('FORMAT(transactions.transaction_shipment_go_send, 0) as "Price GoSend"'),
@@ -76,6 +77,11 @@ class ApiReportGosend extends Controller
         }
 
         if(isset($post['conditions']) && !empty($post['conditions'])){
+            $checkFilterStatus = array_search('status', array_column($post['conditions'], 'subject'));
+            if($checkFilterStatus === false){
+                $data->where('transaction_pickup_go_sends.latest_status', 'delivered');
+            }
+
             $rule = 'and';
             if(isset($post['rule'])){
                 $rule = $post['rule'];
@@ -244,6 +250,8 @@ class ApiReportGosend extends Controller
                     }
                 });
             }
+        }else{
+            $data->where('transaction_pickup_go_sends.latest_status', 'delivered');
         }
 
         if(isset($post['export']) && $post['export'] == 1){
