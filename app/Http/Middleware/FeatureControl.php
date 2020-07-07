@@ -22,7 +22,7 @@ class FeatureControl
     if (!$granted) {
         return response()->json(['error' => 'Unauthenticated action'], 403);
     } else {
-      $next($request);
+        return $next($request);
     }
   }
 }

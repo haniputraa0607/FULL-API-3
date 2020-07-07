@@ -56,11 +56,11 @@ class ApiSubscriptionWebview extends Controller
             'button_text'                   => 'BELI',
             'button_status'                 => 0,
             'user_point'					=> Auth()->user()->balance,
-            'subscription_start_indo'       	=> MyHelper::dateFormatInd($subs['subscription_start'], false),
-            'subscription_end_indo'             => MyHelper::dateFormatInd($subs['subscription_end'], false),
-            'subscription_publish_start_indo'   => MyHelper::dateFormatInd($subs['subscription_publish_start'], false),
-            'subscription_publish_end_indo'     => MyHelper::dateFormatInd($subs['subscription_publish_end'], false),
-            'time_server_indo'              	=> MyHelper::dateFormatInd(date('Y-m-d H:i:s'), false)
+            'subscription_start_indo'       	=> MyHelper::dateFormatInd($subs['subscription_start'], false, false).' pukul '.date('H:i', strtotime($subs['subscription_start'])),
+            'subscription_end_indo'             => MyHelper::dateFormatInd($subs['subscription_end'], false, false).' pukul '.date('H:i', strtotime($subs['subscription_end'])),
+            'subscription_publish_start_indo'   => MyHelper::dateFormatInd($subs['subscription_publish_start'], false, false).' pukul '.date('H:i', strtotime($subs['subscription_publish_start'])),
+            'subscription_publish_end_indo'     => MyHelper::dateFormatInd($subs['subscription_publish_end'], false, false).' pukul '.date('H:i', strtotime($subs['subscription_publish_end'])),
+            'time_server_indo'              	=> MyHelper::dateFormatInd(date('Y-m-d H:i:s'), false, false).' pukul '.date('H:i')
         ];
 
         //text konfirmasi pembelian
@@ -194,9 +194,14 @@ class ApiSubscriptionWebview extends Controller
             'subscription_end'              => date('Y-m-d H:i:s', strtotime($subs['subscription']['subscription_end'])),
             'subscription_publish_start'    => date('Y-m-d H:i:s', strtotime($subs['subscription']['subscription_publish_start'])),
             'subscription_publish_end'      => date('Y-m-d H:i:s', strtotime($subs['subscription']['subscription_publish_end'])),
-            'subscription_voucher_total'    => $subs['subscription']['subscription_voucher_total']
+            'subscription_voucher_total'    => $subs['subscription']['subscription_voucher_total'],
+            'subscription_start_indo'            => MyHelper::dateFormatInd($subs['subscription']['subscription_start'], false, false).' pukul '.date('H:i', strtotime($subs['subscription']['subscription_start'])),
+            'subscription_end_indo'              => MyHelper::dateFormatInd($subs['subscription']['subscription_end'], false, false).' pukul '.date('H:i', strtotime($subs['subscription']['subscription_end'])),
+            'subscription_publish_start_indo'    => MyHelper::dateFormatInd($subs['subscription']['subscription_publish_start'], false, false).' pukul '.date('H:i', strtotime($subs['subscription']['subscription_publish_start'])),
+            'subscription_publish_end_indo'      => MyHelper::dateFormatInd($subs['subscription']['subscription_publish_end'], false, false).' pukul '.date('H:i', strtotime($subs['subscription']['subscription_publish_end'])),
         ];
         $result['time_server'] = date('Y-m-d H:i:s');
+        $result['time_server_indo'] = MyHelper::dateFormatInd(date('Y-m-d H:i:s'), false, false).' pukul '.date('H:i');
 
         $result['subscription_voucher_used'] = 0;
         $voucher = [];
