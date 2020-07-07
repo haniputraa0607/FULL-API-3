@@ -1638,17 +1638,17 @@ class ApiSubscription extends Controller
             $list[$i]['subscription_end'] 				= $subs[$i]['subscription_end'];
             $list[$i]['subscription_publish_end'] 		= $subs[$i]['subscription_publish_end'];
 
-            $list[$i]['subscription_start_indo'] 		= MyHelper::dateFormatInd($subs[$i]['subscription_start'], false);
-            $list[$i]['subscription_publish_start_indo']= MyHelper::dateFormatInd($subs[$i]['subscription_publish_start'], false);
-            $list[$i]['subscription_end_indo'] 			= MyHelper::dateFormatInd($subs[$i]['subscription_end'], false);
-            $list[$i]['subscription_publish_end_indo'] 	= MyHelper::dateFormatInd($subs[$i]['subscription_publish_end'], false);
+            $list[$i]['subscription_start_indo'] 		= MyHelper::dateFormatInd($subs[$i]['subscription_start'], false, false).' pukul '.date('H:i', strtotime($subs[$i]['subscription_start']));
+            $list[$i]['subscription_publish_start_indo']= MyHelper::dateFormatInd($subs[$i]['subscription_publish_start'], false, false).' pukul '.date('H:i', strtotime($subs[$i]['subscription_publish_start']));
+            $list[$i]['subscription_end_indo'] 			= MyHelper::dateFormatInd($subs[$i]['subscription_end'], false, false).' pukul '.date('H:i', strtotime($subs[$i]['subscription_end']));
+            $list[$i]['subscription_publish_end_indo'] 	= MyHelper::dateFormatInd($subs[$i]['subscription_publish_end'], false, false).' pukul '.date('H:i', strtotime($subs[$i]['subscription_publish_end']));
 
             $list[$i]['subscription_price_cash'] 		= $subs[$i]['subscription_price_cash'];
             $list[$i]['subscription_price_point'] 		= $subs[$i]['subscription_price_point'];
             $list[$i]['subscription_price_type'] 		= $subs[$i]['subscription_price_type'];
             $list[$i]['subscription_price_pretty'] 		= $subs[$i]['subscription_price_pretty'];
             $list[$i]['time_server'] 					= date('Y-m-d H:i:s');
-            $list[$i]['time_server_indo']  				= MyHelper::dateFormatInd(date('Y-m-d H:i:s'), false);
+            $list[$i]['time_server_indo']  				= MyHelper::dateFormatInd(date('Y-m-d H:i:s'), false, false).' pukul '.date('H:i');
             array_push($resultData, $subs[$i]);
             array_push($listData, $list[$i]);
         }
@@ -1816,6 +1816,10 @@ class ApiSubscription extends Controller
 	            		$sub['is_used'] = 0;
 	            	}
                     $data[$key]['is_used']                  	= $sub['is_used'];
+                    $data[$key]['subscription_end_indo']             = MyHelper::dateFormatInd($sub['subscription']['subscription_end'], false, false).' pukul '.date('H:i', strtotime($sub['subscription']['subscription_end']));
+                    $data[$key]['subscription_publish_end_indo']     = MyHelper::dateFormatInd($sub['subscription']['subscription_publish_end'], false, false).' pukul '.date('H:i', strtotime($sub['subscription']['subscription_publish_end']));
+                    $data[$key]['time_server_indo']                  = MyHelper::dateFormatInd(date('Y-m-d H:i:s'), false, false).' pukul '.date('H:i');
+                    $data[$key]['subscription_expired_at_indo']      = MyHelper::dateFormatInd($sub['subscription_expired_at'], false, false).' pukul '.date('H:i', strtotime($sub['subscription_expired_at']));
                 }
             }
         }
