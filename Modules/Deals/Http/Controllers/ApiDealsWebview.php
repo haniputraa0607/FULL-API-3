@@ -104,9 +104,9 @@ class ApiDealsWebview extends Controller
             'payment_message'               => 'Are you sure want to claim Free Voucher Offline x Online Limited voucher ?',
             'payment_success_message'       => 'Claim Voucher Success ! Do you want to use it now ?',
             'user_point'                    => Auth()->user()->balance,
-            'deals_start_indo'              => MyHelper::dateFormatInd($deals['deals_start'], false),
-            'deals_end_indo'                => MyHelper::dateFormatInd($deals['deals_end'], false),
-            'time_server_indo'              => MyHelper::dateFormatInd(date('Y-m-d H:i:s'), false)
+            'deals_start_indo'              => MyHelper::dateFormatInd($deals['deals_start'], false, false).' pukul '.date('H:i', strtotime($deals['deals_start'])),
+            'deals_end_indo'                => MyHelper::dateFormatInd($deals['deals_end'], false, false).' pukul '.date('H:i', strtotime($deals['deals_end'])),
+            'time_server_indo'              => MyHelper::dateFormatInd(date('Y-m-d H:i:s'), false, false).' pukul '.date('H:i', strtotime(date('Y-m-d H:i:s')))
         ];
         if ($deals['deals_voucher_price_cash'] != "") {
             $result['deals_price'] = MyHelper::requestNumber($deals['deals_voucher_price_cash'], '_CURRENCY');

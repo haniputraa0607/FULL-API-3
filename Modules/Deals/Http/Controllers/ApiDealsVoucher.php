@@ -917,7 +917,8 @@ class ApiDealsVoucher extends Controller
                 'status_redeem'=>($var['redeemed_at']??false)?1:0,
                 'label'=>$var['label'],
                 'status_text'=>$var['status_text'],
-                'is_used'=>$var['is_used']
+                'is_used'=>$var['is_used'],
+                'voucher_expired_at_indo'=> MyHelper::dateFormatInd($var['voucher_expired_at'], false, false).' pukul '.date('H:i', strtotime($var['voucher_expired_at']))
             ];
         },$voucher);
         $result['current_page'] = $current_page;
