@@ -28,7 +28,9 @@ class Feature extends Model
 
 	protected $fillable = [
 		'feature_type',
-		'feature_module'
+		'feature_module',
+        'show_hide',
+        'order'
 	];
 
 	public function users()
