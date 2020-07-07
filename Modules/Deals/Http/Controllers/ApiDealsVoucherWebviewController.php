@@ -122,6 +122,7 @@ class ApiDealsVoucherWebviewController extends Controller
                 $data['deals_voucher']['deal']['deals_title'],
                 'will be used on the next transaction'
             ],
+            'voucher_expired_indo' 	=> MyHelper::dateFormatInd($data['voucher_expired_at'], false, false).' pukul '.date('H:i', strtotime($data['voucher_expired_at']))
         ];
 
         

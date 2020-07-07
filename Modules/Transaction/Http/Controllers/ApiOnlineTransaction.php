@@ -2379,13 +2379,32 @@ class ApiOnlineTransaction extends Controller
         }
 
         $user = User::where('id', $trx['id_user'])->first();
-
         if (!empty($outletToken)) {
             if(env('PUSH_NOTIF_OUTLET') == 'fcm'){
                 $tokens = $outletToken->pluck('token')->toArray();
                 if(!empty($tokens)){
                     $subject = $type.' - Rp. '.number_format($trx['transaction_grandtotal'], 0, ',', '.').' - '.$totalSemua.' pcs - '.$detail['order_id'].' - '.$user['name'];
-                    $push = PushNotificationHelper::sendPush($tokens, $subject, $stringBody, null, ['type' => 'trx', 'id_reference'=> $id_trx]);
+                    $dataPush = ['type' => 'trx', 'id_reference'=> $id_trx];
+                    if ($detail['pickup_type'] == 'set time') {
+                        $replacer = [
+                            ['%name%', '%receipt_number%', '%order_id%'],
+                            [$user->name, $trx->receipt_number, $detail['order_id']],
+                        ];
+                        $setting_msg = json_decode(MyHelper::setting('transaction_set_time_notif_message_outlet','value_text'), true);
+                        $dataPush += [
+                            'push_notif_local' => 1,
+                            'title_5mnt'       => str_replace($replacer[0], $replacer[1], $setting_msg['title_5mnt'] ?? 'Pesanan %order_id% akan diambil 5 menit lagi'),
+                            'msg_5mnt'         => str_replace($replacer[0], $replacer[1], $setting_msg['msg_5mnt'] ?? 'Pesanan %order_id% atas nama %name% akan diambil 5 menit lagi nih, segera disiapkan ya !'),
+                            'title_15mnt'       => str_replace($replacer[0], $replacer[1], $setting_msg['title_5mnt'] ?? 'Pesanan %order_id% akan diambil 15 menit lagi'),
+                            'msg_15mnt'         => str_replace($replacer[0], $replacer[1], $setting_msg['msg_5mnt'] ?? 'Pesanan %order_id% atas nama %name% akan diambil 15 menit lagi nih, segera disiapkan ya !'),
+                            'pickup_time'       => $detail->pickup_at,
+                        ];
+                    } else {
+                        $dataPush += [
+                            'push_notif_local' => 0
+                        ];                        
+                    }
+                    $push = PushNotificationHelper::sendPush($tokens, $subject, $stringBody, null, $dataPush);
                 }
             }else{
                 $dataArraySend = [];
@@ -2397,7 +2416,25 @@ class ApiOnlineTransaction extends Controller
                         'body'  => $stringBody,
                         'data'  => ['order_id' => $detail['order_id']]
                     ];
-
+                    if ($detail['pickup_type'] == 'set time') {
+                        $replacer = [
+                            ['%name%', '%receipt_number%', '%order_id%'],
+                            [$user->name, $trx->receipt_number, $detail['order_id']],
+                        ];
+                        $setting_msg = json_decode(MyHelper::setting('transaction_set_time_notif_message_outlet','value_text'), true);
+                        $dataOutletSend += [
+                            'push_notif_local' => 1,
+                            'title_5mnt'       => str_replace($replacer[0], $replacer[1], $setting_msg['title_5mnt'] ?? 'Pesanan %order_id% akan diambil 5 menit lagi'),
+                            'msg_5mnt'         => str_replace($replacer[0], $replacer[1], $setting_msg['msg_5mnt'] ?? 'Pesanan %order_id% atas nama %name% akan diambil 5 menit lagi nih, segera disiapkan ya !'),
+                            'title_15mnt'       => str_replace($replacer[0], $replacer[1], $setting_msg['title_5mnt'] ?? 'Pesanan %order_id% akan diambil 15 menit lagi'),
+                            'msg_15mnt'         => str_replace($replacer[0], $replacer[1], $setting_msg['msg_5mnt'] ?? 'Pesanan %order_id% atas nama %name% akan diambil 15 menit lagi nih, segera disiapkan ya !'),
+                            'pickup_time'       => $detail->pickup_at,
+                        ];
+                    }else {
+                        $dataOutletSend += [
+                            'push_notif_local' => 0
+                        ];
+                    }
                     array_push($dataArraySend, $dataOutletSend);
 
                 }
