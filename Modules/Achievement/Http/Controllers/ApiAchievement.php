@@ -1258,9 +1258,13 @@ class ApiAchievement extends Controller
      * @param Request $request
      * @return Response
      */
-    public function store(Request $request)
+    public function detailAjax(Request $request)
     {
-        //
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Add Achievement Success',
+            'data' => AchievementGroup::where('id_achievement_group', MyHelper::decSlug($request['id_achievement_group']))->first(),
+        ]);
     }
 
     /**
@@ -1340,6 +1344,43 @@ class ApiAchievement extends Controller
         }
         DB::commit();
 
+        return response()->json([
+            'status' => 'success',
+        ]);
+    }
+
+    public function updateAch(Request $request)
+    {
+        $post = $request->json()->all();
+
+        if (isset($post['group']['logo_badge_default'])) {
+            $uploadDetail = MyHelper::uploadPhotoStrict($post['group']['logo_badge_default'], $this->saveImageDetail, 500, 500);
+
+            if (isset($uploadDetail['status']) && $uploadDetail['status'] == "success") {
+                $post['group']['logo_badge_default'] = $uploadDetail['path'];
+            } else {
+                return response()->json([
+                    'status' => 'fail',
+                    'messages' => ['Failed to upload image'],
+                ]);
+            }
+        }
+        
+        $post['group']['id_achievement_category'] = $post['category']['name'];
+
+        DB::beginTransaction();
+        try {
+            AchievementGroup::where('id_achievement_group', MyHelper::decSlug($post['id_achievement_group']))->update($post['group']);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'status' => 'fail',
+                'message' => 'Update Achievement Failed',
+                'error' => $e->getMessage(),
+            ]);
+        }
+        DB::commit();
+        
         return response()->json([
             'status' => 'success',
         ]);
