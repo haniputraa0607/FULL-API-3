@@ -812,6 +812,15 @@ class SettingsTableSeeder extends Seeder
                     'created_at' => date('Y-m-d H:i:s'),
                     'updated_at' => date('Y-m-d H:i:s'),
                 ),
+            90 =>
+                array(
+                    'id_setting' => 91,
+                    'key' => 'transaction_set_time_notif_message_outlet',
+                    'value' => null,
+                    'value_text' => '{"title_5mnt": "Pesanan %order_id% akan diambil 5 menit lagi", "msg_5mnt": "Pesanan %order_id% atas nama %name% akan diambil 5 menit lagi nih, segera disiapkan ya !","title_15mnt": "Pesanan %order_id% akan diambil 15 menit lagi", "msg_15mnt": "Pesanan %order_id% atas nama %name% akan diambil 15 menit lagi nih, segera disiapkan ya !"}',
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
         ));
     }
 }
