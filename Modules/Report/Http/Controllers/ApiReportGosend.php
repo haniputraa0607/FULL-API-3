@@ -228,7 +228,6 @@ class ApiReportGosend extends Controller
             $data = $data->where('transaction_pickup_go_sends.latest_status', 'delivered');
         }
 
-        $sum = $data->select(DB::raw('SUM(transactions.transaction_shipment_go_send) as total_price_go_send'))->first();
         if(isset($post['export']) && $post['export'] == 1){
             $data = $data->select('outlets.outlet_name as Oultet Name', 'outlets.outlet_code as Oultet Code', 'transactions.transaction_date as Transactin Date',
                 'transactions.transaction_receipt_number as Receipt Number',
@@ -251,22 +250,25 @@ class ApiReportGosend extends Controller
                         ELSE "-"
                     END
                 ) as "Status"'))->get()->toArray();
-        }else{
-            $data = $data->select('outlets.outlet_name', 'outlets.outlet_code', 'transactions.*', 'transaction_pickup_go_sends.*', 'transaction_pickups.order_id')->paginate(20);
-        }
 
-        if($data){
-            $result = [
-                'status' => 'success',
-                'result' => [
-                    'data' => $data,
-                    'sum' => $sum
-                ]
-            ];
-
-            return response()->json($result);
-        }else{
             return response()->json(MyHelper::checkGet($data));
+        }else{
+            $sum = $data->select(DB::raw('SUM(transactions.transaction_shipment_go_send) as total_price_go_send'))->first();
+            $data = $data->select('outlets.outlet_name', 'outlets.outlet_code', 'transactions.*', 'transaction_pickup_go_sends.*', 'transaction_pickups.order_id')->paginate(20);
+
+            if($data){
+                $result = [
+                    'status' => 'success',
+                    'result' => [
+                        'data' => $data,
+                        'sum' => $sum
+                    ]
+                ];
+
+                return response()->json($result);
+            }else{
+                return response()->json(MyHelper::checkGet($data));
+            }
         }
 
     }

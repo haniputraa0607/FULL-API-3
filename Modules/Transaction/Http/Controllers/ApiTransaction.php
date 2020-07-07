@@ -1828,16 +1828,16 @@ class ApiTransaction extends Controller
                     $result['transaction_status_text'] = 'ORDER SELESAI';
                 } elseif($list['detail']['taken_at'] != null) {
                     $result['transaction_status'] = 2;
-                    $result['transaction_status_text'] = 'Pesanan telah diambil';
+                    $result['transaction_status_text'] = 'PESANAN TELAH DIAMBIL';
                 } elseif($list['detail']['ready_at'] != null) {
                     $result['transaction_status'] = 3;
-                    $result['transaction_status_text'] = 'Pesanan sudah siap diambil';
+                    $result['transaction_status_text'] = 'PESANAN SUDAH SIAP DIAMBIL';
                 } elseif($list['detail']['receive_at'] != null) {
                     $result['transaction_status'] = 4;
-                    $result['transaction_status_text'] = 'Pesanan diterima. Order sedang dipersiapkan';
+                    $result['transaction_status_text'] = 'PESANAN DITERIMA. ORDER SEDANG DIPERSIAPKAN';
                 } else {
                     $result['transaction_status'] = 5;
-                    $result['transaction_status_text'] = 'Pesanan masuk. Menunggu jilid untuk menerima order';
+                    $result['transaction_status_text'] = 'PESANAN MASUK. MENUNGGU JILID UNTUK MENERIMA ORDER';
                 }
                 if ($list['transaction_pickup_go_send']) {
                     // $result['transaction_status'] = 5;
@@ -1858,7 +1858,7 @@ class ApiTransaction extends Controller
                         case 'finding driver':
                         case 'confirmed':
                             $result['delivery_info']['delivery_status'] = 'Sedang mencari driver';
-                            $result['transaction_status_text']          = 'Pesanan sudah siap dan menunggu pick up';
+                            $result['transaction_status_text']          = 'PESANAN SUDAH SIAP DAN MENUNGGU PICK UP';
                             break;
                         case 'driver allocated':
                         case 'allocated':
@@ -1890,7 +1890,7 @@ class ApiTransaction extends Controller
                         case 'enroute drop':
                         case 'out_for_delivery':
                             $result['delivery_info']['delivery_status'] = 'Driver mengantarkan pesanan';
-                            $result['transaction_status_text']          = 'Pesanan sudah di pick up oleh driver dan sedang menuju lokasi #temansejiwa';
+                            $result['transaction_status_text']          = 'PESANAN SUDAH DI PICK UP OLEH DRIVER DAN SEDANG MENUJU LOKASI #TEMANSEJIWA';
                             $result['transaction_status']               = 3;
                             $result['delivery_info']['driver']          = [
                                 'driver_id'         => $list['transaction_pickup_go_send']['driver_id']?:'',
@@ -1905,7 +1905,7 @@ class ApiTransaction extends Controller
                         case 'completed':
                         case 'delivered':
                             $result['transaction_status'] = 2;
-                            $result['transaction_status_text']          = 'Pesanan telah selesai dan diterima';
+                            $result['transaction_status_text']          = 'PESANAN TELAH SELESAI DAN DITERIMA';
                             $result['delivery_info']['delivery_status'] = 'Pesanan sudah diterima Customer';
                             $result['delivery_info']['driver']          = [
                                 'driver_id'         => $list['transaction_pickup_go_send']['driver_id']?:'',
