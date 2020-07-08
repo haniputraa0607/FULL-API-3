@@ -568,9 +568,12 @@ class ApiOutletController extends Controller
         }, $loopdata);
 
         // promo code
-		foreach ($outlet as $key => $value) {
-			$outlet[$key]['is_promo'] = 0;
-		}
+        if(!isset($post['qrcode'])){
+            foreach ($outlet as $key => $value) {
+                $outlet[$key]['is_promo'] = 0;
+            }
+        }
+
         if (isset($post['promo_code'])) {
         	$code=PromoCampaignPromoCode::where('promo_code',$request->promo_code)
 	                ->join('promo_campaigns', 'promo_campaigns.id_promo_campaign', '=', 'promo_campaign_promo_codes.id_promo_campaign')
