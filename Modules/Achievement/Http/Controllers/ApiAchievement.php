@@ -714,6 +714,7 @@ class ApiAchievement extends Controller
                             if (!is_null($achievement['id_product'])) {
                                 if ((int) $achievement['id_product'] == $product['id_product']) {
                                     $trxProductStatus = true;
+                                    $totalSumProduct = $totalSumProduct + $product['transaction_product_qty'];
                                     if (!is_null($achievement['product_total']) && $rules != 'total_product') {
                                         if ((int) $achievement['product_total'] <= $product['transaction_product_qty']) {
                                             AchievementProductLog::updateOrCreate([
@@ -793,7 +794,6 @@ class ApiAchievement extends Controller
                                             ])),
                                             'date' => date('Y-m-d H:i:s'),
                                         ]);
-                                        $totalSumProduct = $totalSumProduct + $product['transaction_product_qty'];
                                         $trxTotalProductStatus = true;
                                         break;
                                     }
