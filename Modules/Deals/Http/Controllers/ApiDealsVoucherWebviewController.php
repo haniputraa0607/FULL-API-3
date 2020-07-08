@@ -102,7 +102,7 @@ class ApiDealsVoucherWebviewController extends Controller
             'deals_image'           => $data['deals_voucher']['deal']['deals_image'],
             'deals_title'           => $data['deals_voucher']['deal']['deals_title'],
             'deals_second_title'    => $data['deals_voucher']['deal']['deals_second_title'],
-            'deals_description'    => $data['deals_voucher']['deal']['deals_description'],
+            'deals_description'   	=> $data['deals_voucher']['deal']['deals_description'],
             'custom_outlet_text'    => $data['deals_voucher']['deal']['custom_outlet_text'],
             'id_deals_voucher'      => $data['id_deals_voucher'],
             'id_deals_user'         => $data['id_deals_user'],
@@ -122,7 +122,8 @@ class ApiDealsVoucherWebviewController extends Controller
                 $data['deals_voucher']['deal']['deals_title'],
                 'will be used on the next transaction'
             ],
-            'voucher_expired_indo' 	=> MyHelper::dateFormatInd($data['voucher_expired_at'], false, false).' pukul '.date('H:i', strtotime($data['voucher_expired_at']))
+            'voucher_expired_indo' 	=> MyHelper::dateFormatInd($data['voucher_expired_at'], false, false),
+            'voucher_expired_time_indo' => 'pukul '.date('H:i', strtotime($data['voucher_expired_at']))
         ];
 
         

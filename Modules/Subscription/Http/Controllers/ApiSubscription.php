@@ -1797,7 +1797,7 @@ class ApiSubscription extends Controller
                     $data[$key]['id_subscription_user']         = $sub['id_subscription_user'];
                     $data[$key]['subscription_end']             = date('Y-m-d H:i:s', strtotime($sub['subscription']['subscription_end']));
                     $data[$key]['subscription_publish_end']     = date('Y-m-d H:i:s', strtotime($sub['subscription']['subscription_publish_end']));
-                    $data[$key]['subscription_expired_at']      = $sub['subscription_expired_at'];
+                    $data[$key]['subscription_expired_at']      = date('Y-m-d H:i:s', strtotime($sub['subscription_expired_at']));
                     $data[$key]['subscription_voucher_total']   = $sub['subscription']['subscription_voucher_total'];
                     $data[$key]['used_voucher']                 = $sub['used_voucher'];
                     $data[$key]['available_voucher']            = $sub['available_voucher'];
@@ -1819,7 +1819,8 @@ class ApiSubscription extends Controller
                     $data[$key]['subscription_end_indo']             = MyHelper::dateFormatInd($sub['subscription']['subscription_end'], false, false).' pukul '.date('H:i', strtotime($sub['subscription']['subscription_end']));
                     $data[$key]['subscription_publish_end_indo']     = MyHelper::dateFormatInd($sub['subscription']['subscription_publish_end'], false, false).' pukul '.date('H:i', strtotime($sub['subscription']['subscription_publish_end']));
                     $data[$key]['time_server_indo']                  = MyHelper::dateFormatInd(date('Y-m-d H:i:s'), false, false).' pukul '.date('H:i');
-                    $data[$key]['subscription_expired_at_indo']      = MyHelper::dateFormatInd($sub['subscription_expired_at'], false, false).' pukul '.date('H:i', strtotime($sub['subscription_expired_at']));
+                    $data[$key]['subscription_expired_at_indo']      = MyHelper::dateFormatInd($sub['subscription_expired_at'], false, false);
+                    $data[$key]['subscription_expired_at_time_indo'] = 'pukul '.date('H:i', strtotime($sub['subscription_expired_at']));
                 }
             }
         }
