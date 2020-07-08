@@ -26,12 +26,24 @@ class ApiSubscriptionWebview extends Controller
     public function subscriptionDetail(Request $request)
     {
         // return url webview and button text for mobile (native button)
-        $subs = Subscription::with('outlets', 'subscription_content.subscription_content_details')->find($request->get('id_subscription'));
+
+        $subs = Subscription::with([
+        			'outlets.city', 
+        			'subscription_content' => function($q){
+        				$q->where('is_active',1);
+        			},
+        			'subscription_content.subscription_content_details'
+        		])
+        		->find($request->get('id_subscription'))
+        		->toArray();
+
+        $subs = $this->renderOutletCity($subs);
+
         $user = $request->user();
         $curBalance = (int) $user->balance??0;
 
         $result = [
-            'id_subscription_user'          => $subs['id_subscription_user'],
+            'id_subscription_user'          => $subs['id_subscription_user']??null,
             'subscription_title'            => $subs['subscription_title'],
             'subscription_sub_title'        => $subs['subscription_sub_title'],
             'subscription_description'      => $subs['subscription_description'],
@@ -168,8 +180,11 @@ class ApiSubscriptionWebview extends Controller
             return abort(404);
         }
 
-        $subs = SubscriptionUser::with('subscription.outlets', 'subscription_user_vouchers', 'subscription.subscription_content.subscription_content_details')->where('id_subscription_user', $request->id_subscription_user)->first()->toArray();
+        $subs = SubscriptionUser::with('subscription.outlets.city', 'subscription_user_vouchers', 'subscription.subscription_content.subscription_content_details')->where('id_subscription_user', $request->id_subscription_user)->first()->toArray();
         
+        $subs_outlet = $this->renderOutletCity($subs['subscription']);
+        $subs['subscription']['outlet_by_city'] = $subs_outlet['outlet_by_city']??[];
+
         $result = [
             'id_subscription_user'          => $subs['id_subscription_user'],
             'id_subscription'               => $subs['subscription']['id_subscription'],
@@ -288,5 +303,48 @@ class ApiSubscriptionWebview extends Controller
         ];
         return response()->json($response);
     }*/
+
+    public function renderOutletCity($subs)
+    {
+    	$value = $subs;
+    	if (!empty($value['outlets'])) {
+            // ambil kotanya dulu
+    		// return $value['outlets'];
+            $kota = array_column($value['outlets'], 'city');
+            $kota = array_values(array_map("unserialize", array_unique(array_map("serialize", $kota))));
+    		// return [$kota];
+
+            // jika ada pencarian kota
+            if (!empty($city)) {
+                $cariKota = array_search($city, array_column($kota, 'id_city'));
+
+                if (is_integer($cariKota)) {
+                    $markerCity = 1;
+                }
+            }
+
+            foreach ($kota as $k => $v) {
+                if ($v) {
+
+                    $kota[$k]['outlet'] = [];
+
+                    foreach ($value['outlets'] as $outlet) {
+                        if ($v['id_city'] == $outlet['id_city']) {
+                            unset($outlet['pivot']);
+                            unset($outlet['city']);
+
+                            array_push($kota[$k]['outlet'], $outlet);
+                        }
+                    }
+                } else {
+                    unset($kota[$k]);
+                }
+            }
+
+            $subs['outlet_by_city'] = $kota;
+        }
+
+        return $subs;
+    }
     
 }
