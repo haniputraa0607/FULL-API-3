@@ -206,6 +206,9 @@ class ApiSubscriptionWebview extends Controller
             'subscription_end_indo'              => MyHelper::dateFormatInd($subs['subscription']['subscription_end'], false, false).' pukul '.date('H:i', strtotime($subs['subscription']['subscription_end'])),
             'subscription_publish_start_indo'    => MyHelper::dateFormatInd($subs['subscription']['subscription_publish_start'], false, false).' pukul '.date('H:i', strtotime($subs['subscription']['subscription_publish_start'])),
             'subscription_publish_end_indo'      => MyHelper::dateFormatInd($subs['subscription']['subscription_publish_end'], false, false).' pukul '.date('H:i', strtotime($subs['subscription']['subscription_publish_end'])),
+            'subscription_expired'      		 => date('Y-m-d H:i:s', strtotime($subs['subscription_expired_at'])),
+            'subscription_expired_indo'     => MyHelper::dateFormatInd($subs['subscription_expired_at'], false, false),
+            'subscription_expired_time_indo'     => 'pukul '.date('H:i', strtotime($subs['subscription_expired_at'])),
         ];
         $result['time_server'] = date('Y-m-d H:i:s');
         $result['time_server_indo'] = MyHelper::dateFormatInd(date('Y-m-d H:i:s'), false, false).' pukul '.date('H:i');
