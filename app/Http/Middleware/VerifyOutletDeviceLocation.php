@@ -27,7 +27,7 @@ class VerifyOutletDeviceLocation
         if(!$request->has('device_latitude'))
             array_push($error_message_list, 'please provide device_latitude');
         if(!empty($error_message_list)){
-            $error_message = implode(', ', $error_message);
+            $error_message = implode(', ', $error_message_list);
             return response()->json(['error' => 'Unauthenticated: '.$error_message.'.'], 401);
         }
         $device_id = $request->get('device_id');
@@ -36,9 +36,11 @@ class VerifyOutletDeviceLocation
 
         // check for token
         $token = $request->bearerToken();
-        $outletToken = OutletToken::where('token', $token)->first()->toArray();
+        $outletToken = OutletToken::where('token', $token)->first();
         if(empty($outletToken))
             return response()->json(['error' => 'Unauthenticated: invalid token.'], 401);
+        else
+            $outletToken = $outletToken->toArray();
 
         // check if device_id match the token
         if($device_id != $outletToken['device_id'])
@@ -46,7 +48,7 @@ class VerifyOutletDeviceLocation
         
         // check for the distance
         $outlet = Outlet::where('id_outlet', $outletToken['id_outlet'])->first()->toArray();
-        $distance = MyHelper::getDistance((float)$device_latitude, (float)$device_longitude, $outlet['outlet_latitude'], $outlet['outlet_longitude']);
+        $distance = MyHelper::getDistance((double)$device_latitude, (double)$device_longitude, (double)$outlet['outlet_latitude'], (double)$outlet['outlet_longitude']);
         if($distance > 100)
             return response()->json(['error' => 'Unauthenticated: the device is too far from the outlet.'], 401);
         
