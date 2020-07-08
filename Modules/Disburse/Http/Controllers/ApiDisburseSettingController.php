@@ -77,8 +77,8 @@ class ApiDisburseSettingController extends Controller
             if($bankAccount){
                 $delete = true;
                 $dtToInsert = [];
-                $getDataBankOutlet = BankAccountOutlet::count();
                 if(isset($post['outlets']) && $post['outlets'] == 'all'){
+                    $getDataBankOutlet = BankAccountOutlet::count();
                     if($getDataBankOutlet > 0){
                         $delete = BankAccountOutlet::whereNotNull('id_outlet')->delete();
                     }
@@ -91,6 +91,7 @@ class ApiDisburseSettingController extends Controller
                         ];
                     }
                 }elseif (isset($post['outlets'])){
+                    $getDataBankOutlet = BankAccountOutlet::whereIn('id_outlet', $post['id_outlet'])->count();
                     if($getDataBankOutlet > 0) {
                         $delete = BankAccountOutlet::whereIn('id_outlet', $post['id_outlet'])->delete();
                     }
@@ -269,8 +270,7 @@ class ApiDisburseSettingController extends Controller
         $update = MDR::where('id_mdr', $post['id_mdr'])->update([
                                         'mdr' => $post['mdr'],
                                         'mdr_central' => $post['mdr_central'],
-                                        'percent_type' => $post['percent_type'],
-                                        'days_to_sent' =>  $post['days_to_sent']??NULL]);
+                                        'percent_type' => $post['percent_type']]);
         return response()->json(MyHelper::checkUpdate($update));
     }
 
@@ -405,6 +405,17 @@ class ApiDisburseSettingController extends Controller
             return response()->json(MyHelper::checkUpdate($update));
         }else{
             $setting = Setting::where('key', 'disburse_auto_approve_setting')->first();
+            return response()->json(MyHelper::checkGet($setting));
+        }
+    }
+
+    function settingTimeToSent(Request $request){
+        $post = $request->json()->all();
+        if($post){
+            $update = Setting::where('key', 'disburse_global_setting_time_to_sent')->update($post);
+            return response()->json(MyHelper::checkUpdate($update));
+        }else{
+            $setting = Setting::where('key', 'disburse_global_setting_time_to_sent')->first();
             return response()->json(MyHelper::checkGet($setting));
         }
     }

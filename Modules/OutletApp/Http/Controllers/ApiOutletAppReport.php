@@ -82,6 +82,7 @@ class ApiOutletAppReport extends Controller
     	elseif( $post['date'] == date("Y-m-d") )
     	{
     		$post['date'] = date("Y-m-d");
+    		// $post['date'] = "2020-06-09";
     		$outlet = Outlet::where('id_outlet','=',$post['id_outlet'])->first();
 
     		$daily_trx = DB::select(DB::raw('
@@ -98,10 +99,16 @@ class ApiOutletAppReport extends Controller
                     (select TIME(MAX(transaction_date))) as last_trx_time,
                     (select count(DISTINCT transactions.id_transaction)) as trx_count,
                     (select AVG(transaction_grandtotal)) as trx_average,
-                    (select SUM(transaction_products.transaction_product_qty)) as trx_total_item,
+                    (select SUM(trans_p.trx_total_item)) as trx_total_item,
                     (select DATE(transaction_date)) as trx_date
                     FROM transactions
-                    LEFT JOIN transaction_products ON transaction_products.id_transaction = transactions.id_transaction
+                    LEFT JOIN (
+                    	select 
+	                    	transaction_products.id_transaction, SUM(transaction_products.transaction_product_qty) trx_total_item
+	                    	FROM transaction_products 
+	                    	GROUP BY transaction_products.id_transaction
+	                ) trans_p
+                    	ON (transactions.id_transaction = trans_p.id_transaction) 
                     LEFT JOIN transaction_pickups ON transaction_pickups.id_transaction = transactions.id_transaction
                     WHERE transaction_date BETWEEN "'. date('Y-m-d', strtotime($post['date'])) .' 00:00:00"
                     AND "'. date('Y-m-d', strtotime($post['date'])) .' 23:59:59"
@@ -113,23 +120,7 @@ class ApiOutletAppReport extends Controller
 
     		$daily_trx = json_decode(json_encode($daily_trx), true);
 
-    		$getTransactions = Transaction::whereDate('transactions.created_at', $post['date'])
-    			->where('id_outlet','=',$post['id_outlet'])
-	            ->whereNotNull('transactions.id_user')
-	            ->where('transactions.transaction_payment_status', 'Completed')
-	            ->whereNull('transaction_pickups.reject_at')
-	            ->groupBy('transactions.id_transaction', 'transactions.id_outlet')
-	            ->select(
-	            	'transactions.id_transaction',
-	            	'transactions.id_outlet',
-	            	'transactions.id_user',
-	            	'transactions.transaction_date',
-	            	'transactions.trasaction_payment_type'
-	            )
-	            ->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
-	            ->get()->toArray();
-
-				$date = $post['date'];
+			$date = $post['date'];
 		
 			//midtrans
 				$dataPaymentMidtrans = TransactionPaymentMidtran::join('transactions', 'transactions.id_transaction', 'transaction_payment_midtrans.id_transaction')
@@ -431,6 +422,7 @@ class ApiOutletAppReport extends Controller
     	$post = $request->json()->all();
     	$post['id_outlet'] = auth()->user()->id_outlet;
 
+    	$result = [];
     	$data = [
     		'product' 	=> null,
     		'modifier'	=> null,
@@ -443,14 +435,34 @@ class ApiOutletAppReport extends Controller
     			$data['product'] = $product;
     		}
     	}
+
     	if ($request->modifier) {
     		$modifier = $this->brandModifier($post['id_outlet'], $post['date']);
     		if ($modifier) {
     			$data['modifier'] = $modifier;
     		}
     	}
+
+    	if ($data['product'] && $data['modifier']) {
+    		$result = $data['product'];
+    		foreach ($result as $key => $value) {
+
+				$mod_key = array_search($value['id_brand'], array_column($data['modifier'], 'id_brand'));
+
+				if($mod_key !== false){
+					$result[$mod_key]['modifier'] = $data['modifier'][$mod_key]['modifier'];
+				}
+			}
+    	}
+    	elseif ($data['product']) {
+    		$result = $data['product'];
+		}
+		elseif ($data['modifier']) {
+			$result = $data['modifier'];
+		}
+
 		
-		return response()->json(MyHelper::checkGet($data));
+		return response()->json(MyHelper::checkGet($result));
     }
 
     function brandItem($outlet,$date)

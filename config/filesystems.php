@@ -51,7 +51,7 @@ return [
         'public' => [
             'driver' => 'local',
             'root' => storage_path('app/public'),
-            'url' => env('APP_URL').'/storage',
+            'url' => env('APP_URL') . '/storage',
             'visibility' => 'public',
         ],
 
@@ -81,6 +81,28 @@ return [
             'root' => public_path('files'),
         ],
 
+        'oss' => [
+            'driver'        => 'oss',
+            'access_id'     => env('ALI_ACCESS_ID'),
+            'access_key'    => env('ALI_ACCESS_KEY'),
+            'bucket'        => env('ALI_BUCKET_API'), // ini disesuaikan mau write di bucket api atau view untuk config yg ini
+            'endpoint'      => env('ALI_ENDPOINT'), // OSS Extranet node or custom external domain name
+            //'endpoint_internal' => '<internal endpoint [OSS Intranet node] as：oss-cn-shenzhen-internal.aliyuncs.com>', // v2.0.4 New configuration attribute, if it is empty, the default endpoint configuration is used (because the internal network upload is a little unresolved, please do not use the intranet node to upload for the time being, it is in communication with Alibaba Technology)
+            'cdnDomain'     => '', // if is CName is true, getUrl will determine whether cdn Domain is set to determine the returned URL，If cdnDomain is not set，Then use endpoint to generate url，Otherwise use cdn
+            'ssl'           => true, // true to use 'https://' and false to use 'http://'. default is false,
+            'isCName'       => false, // Whether to use a custom domain name,true: Then Storage.url()Will use custom CDN or domain name to generate file url， false: Then use an external node to generate the url
+            'debug'         => true
+        ],
+
+        'gcs' => [
+            'driver' => 'gcs',
+            'project_id' => env('GOOGLE_CLOUD_PROJECT_ID', 'your-project-id'),
+            'key_file' => base_path() . env('GOOGLE_CLOUD_KEY_FILE', null), // optional: /path/to/service-account.json
+            'bucket' => env('GOOGLE_CLOUD_STORAGE_BUCKET', 'your-bucket'),
+            'path_prefix' => env('GOOGLE_CLOUD_STORAGE_PATH_PREFIX', null), // optional: /default/path/to/apply/in/bucket
+            'storage_api_uri' => env('GOOGLE_CLOUD_STORAGE_API_URI', null), // see: Public URLs below
+            'visibility' => 'public', // optional: public|private
+        ],
     ],
 
 ];

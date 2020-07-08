@@ -22,15 +22,25 @@ class ApiDealsWebview extends Controller
     // deals detail webview
     public function dealsDetail(Request $request)
     {
-        $deals = Deal::with('brand', 'outlets.city', 'deals_content.deals_content_details')->where('id_deals', $request->id_deals)->get()->toArray()[0];
+        $deals = Deal::with([
+        			'brand', 
+        			'outlets.city', 
+        			'deals_content' => function($q){
+        				$q->where('is_active',1);
+        			},
+        			'deals_content.deals_content_details'
+        		])
+        		->where('id_deals', $request->id_deals)
+        		->get()
+        		->toArray()[0];
 
         $deals['outlet_by_city'] = [];
 
-        if($deals['is_all_outlet'] == 1){
+        if ($deals['is_all_outlet'] == 1) {
             $outlets = Outlet::join('brand_outlet', 'outlets.id_outlet', '=', 'brand_outlet.id_outlet')
-                        ->join('deals', 'deals.id_brand', '=', 'brand_outlet.id_brand')
-                        ->where('deals.id_deals', $deals['id_deals'])
-                        ->select('outlets.*')->with('city')->get()->toArray();
+                ->join('deals', 'deals.id_brand', '=', 'brand_outlet.id_brand')
+                ->where('deals.id_deals', $deals['id_deals'])
+                ->select('outlets.*')->with('city')->get()->toArray();
             $deals['outlets'] = $outlets;
         }
 
@@ -60,11 +70,11 @@ class ApiDealsWebview extends Controller
         unset($deals['outlets']);
         $point = Auth::user()->balance;
 
-        $deals['deals_image'] = env('S3_URL_API') . $deals['deals_image'];
+        $deals['deals_image'] = config('url.storage_url_api') . $deals['deals_image'];
         $response = [
             'status' => 'success',
             'result' =>
-                $deals
+            $deals
         ];
         $response['button_text'] = 'BELI';
 
@@ -73,10 +83,10 @@ class ApiDealsWebview extends Controller
             'deals_type'                    => $deals['deals_type'],
             'deals_status'                  => $deals['deals_status'],
             'deals_voucher_type'            => $deals['deals_voucher_price_type'],
-            'deals_voucher_is_use_point'    => (($deals['deals_voucher_price_cash'] - $point) <= 0) ? MyHelper::requestNumber($deals['deals_voucher_price_cash'],'_POINT') : MyHelper::requestNumber($point,'_POINT'),
-            'deals_voucher_use_point'       => (($deals['deals_voucher_price_cash'] - $point) <= 0) ? MyHelper::requestNumber(0,'_POINT') : MyHelper::requestNumber($deals['deals_voucher_price_cash'] - $point,'_POINT'),
-            'deals_voucher_point_now'       => MyHelper::requestNumber($point,'_POINT'),
-            'deals_voucher_avaliable_point' => (($point - $deals['deals_voucher_price_cash']) <= 0) ? MyHelper::requestNumber(0,'_POINT') : MyHelper::requestNumber($point - $deals['deals_voucher_price_cash'],'_POINT'),
+            'deals_voucher_is_use_point'    => (($deals['deals_voucher_price_cash'] - $point) <= 0) ? MyHelper::requestNumber($deals['deals_voucher_price_cash'], '_POINT') : MyHelper::requestNumber($point, '_POINT'),
+            'deals_voucher_use_point'       => (($deals['deals_voucher_price_cash'] - $point) <= 0) ? MyHelper::requestNumber(0, '_POINT') : MyHelper::requestNumber($deals['deals_voucher_price_cash'] - $point, '_POINT'),
+            'deals_voucher_point_now'       => MyHelper::requestNumber($point, '_POINT'),
+            'deals_voucher_avaliable_point' => (($point - $deals['deals_voucher_price_cash']) <= 0) ? MyHelper::requestNumber(0, '_POINT') : MyHelper::requestNumber($point - $deals['deals_voucher_price_cash'], '_POINT'),
             'deals_voucher_point_success'   => (($deals['deals_voucher_price_cash'] - $point) <= 0) ? 'enable' : 'disable',
             'deals_voucher_price_pretty'    => $deals['deals_voucher_price_pretty'],
             'deals_image'                   => $deals['deals_image'],
@@ -93,12 +103,15 @@ class ApiDealsWebview extends Controller
             'button_text'                   => 'Get',
             'payment_message'               => 'Are you sure want to claim Free Voucher Offline x Online Limited voucher ?',
             'payment_success_message'       => 'Claim Voucher Success ! Do you want to use it now ?',
-            'user_point'					=> Auth()->user()->balance
+            'user_point'                    => Auth()->user()->balance,
+            'deals_start_indo'              => MyHelper::dateFormatInd($deals['deals_start'], false, false).' pukul '.date('H:i', strtotime($deals['deals_start'])),
+            'deals_end_indo'                => MyHelper::dateFormatInd($deals['deals_end'], false, false).' pukul '.date('H:i', strtotime($deals['deals_end'])),
+            'time_server_indo'              => MyHelper::dateFormatInd(date('Y-m-d H:i:s'), false, false).' pukul '.date('H:i', strtotime(date('Y-m-d H:i:s')))
         ];
         if ($deals['deals_voucher_price_cash'] != "") {
             $result['deals_price'] = MyHelper::requestNumber($deals['deals_voucher_price_cash'], '_CURRENCY');
         } elseif ($deals['deals_voucher_price_point']) {
-            $result['deals_price'] = MyHelper::requestNumber($deals['deals_voucher_price_point'],'_POINT') . " points";
+            $result['deals_price'] = MyHelper::requestNumber($deals['deals_voucher_price_point'], '_POINT') . " points";
         } else {
             $result['deals_price'] = "Free";
         }
@@ -121,9 +134,9 @@ class ApiDealsWebview extends Controller
         $result['deals_content'][$i]['brand'] = $deals['brand']['name_brand'];
         $result['deals_content'][$i]['brand_logo'] = $deals['brand']['logo_brand'];
 
-        if($deals['custom_outlet_text'] != null){
+        if ($deals['custom_outlet_text'] != null) {
             $result['deals_content'][$i]['detail_available'] = $deals['custom_outlet_text'];
-        }else{
+        } else {
             foreach ($deals['outlet_by_city'] as $keyCity => $valueCity) {
                 if (isset($valueCity['city_name'])) {
                     $result['deals_content'][$i]['detail_available'][$keyCity]['city'] = $valueCity['city_name'];
@@ -165,12 +178,12 @@ class ApiDealsWebview extends Controller
             $data['deals'] = $action['result'];
         }
 
-        usort($data['deals'][0]['outlet_by_city'], function($a, $b) {
+        usort($data['deals'][0]['outlet_by_city'], function ($a, $b) {
             return $a['city_name'] <=> $b['city_name'];
         });
 
         for ($i = 0; $i < count($data['deals'][0]['outlet_by_city']); $i++) {
-            usort($data['deals'][0]['outlet_by_city'][$i]['outlet'] ,function($a, $b) {
+            usort($data['deals'][0]['outlet_by_city'][$i]['outlet'], function ($a, $b) {
                 return $a['outlet_name'] <=> $b['outlet_name'];
             });
         }
@@ -213,7 +226,7 @@ class ApiDealsWebview extends Controller
         $post['id_deals_user'] = $request->id_deals_user;
 
         $dealsUser = DealsUser::with('dealVoucher.deal')->where('id_deals_user', $request->id_deals_user)->get()->toArray()[0];
-        
+
         $result = [
             'id_deals_user'             => $dealsUser['id_deals_user'],
             'header_title'              => 'Horayy!',
@@ -223,17 +236,17 @@ class ApiDealsWebview extends Controller
             'deals_image'               => $dealsUser['deal_voucher']['deal']['url_deals_image'],
             'voucher_expired_at'        => 'Valid until ' . date('d F Y', strtotime($dealsUser['voucher_expired_at'])),
             'claimed_at'                => date('d M Y H:i', strtotime($dealsUser['claimed_at'])),
-            'transaction_id'            => strtotime($dealsUser['claimed_at']).$dealsUser['id_deals_user'],
-            'balance'                   => number_format($dealsUser['balance_nominal'],0,",",".").' points',
+            'transaction_id'            => strtotime($dealsUser['claimed_at']) . $dealsUser['id_deals_user'],
+            'balance'                   => number_format($dealsUser['balance_nominal'], 0, ",", ".") . ' points',
             'use_point'                 => (!is_null($dealsUser['balance_nominal'])) ? 1 : 0
         ];
 
         if ($dealsUser['voucher_price_point'] != null) {
-            $result['price']        = number_format($dealsUser['voucher_price_point'],0,",",".").' points';
-            $result['balance']      = number_format($dealsUser['voucher_price_point'],0,",",".").' points';
+            $result['price']        = number_format($dealsUser['voucher_price_point'], 0, ",", ".") . ' points';
+            $result['balance']      = number_format($dealsUser['voucher_price_point'], 0, ",", ".") . ' points';
             $result['use_point']    = 1;
         } elseif ($dealsUser['voucher_price_cash'] != null) {
-            $result['price'] = number_format($dealsUser['voucher_price_cash'],0,",",".");
+            $result['price'] = number_format($dealsUser['voucher_price_cash'], 0, ",", ".");
         } else {
             $result['price'] = 'Free';
         }
@@ -248,11 +261,10 @@ class ApiDealsWebview extends Controller
         $response = [
             'status' => 'success',
             'result' => [
-                'webview_url' => env('APP_URL') ."webview/voucher/". $id_deals_user,
+                'webview_url' => config('url.app_url') ."webview/voucher/". $id_deals_user,
                 'button_text' => 'INVALIDATE'
             ]
         ];
         return response()->json($response);
     }*/
-
 }

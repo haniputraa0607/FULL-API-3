@@ -94,7 +94,7 @@ class ApiDealsVoucherWebviewController extends Controller
             });
         }
 
-        $voucher['deals_voucher']['deal']['deals_image'] = env('S3_URL_API') . $voucher['deals_voucher']['deal']['deals_image'];
+        $voucher['deals_voucher']['deal']['deals_image'] = config('url.storage_url_api') . $voucher['deals_voucher']['deal']['deals_image'];
 
         $data = $voucher;
         
@@ -122,6 +122,7 @@ class ApiDealsVoucherWebviewController extends Controller
                 $data['deals_voucher']['deal']['deals_title'],
                 'will be used on the next transaction'
             ],
+            'voucher_expired_indo' 	=> MyHelper::dateFormatInd($data['voucher_expired_at'], false, false).' pukul '.date('H:i', strtotime($data['voucher_expired_at']))
         ];
 
         

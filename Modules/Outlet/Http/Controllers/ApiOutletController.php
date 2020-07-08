@@ -560,7 +560,7 @@ class ApiOutletController extends Controller
         }
 
         $loopdata = array_map(function($var) use ($post){
-            $var['url']=env('API_URL').'api/outlet/webview/'.$var['id_outlet'];
+            $var['url']=config('url.api_url').'api/outlet/webview/'.$var['id_outlet'];
             if(($post['latitude']??false)&&($post['longitude']??false)){
                 $var['distance']=number_format((float)$this->distance($post['latitude'], $post['longitude'], $var['outlet_latitude'], $var['outlet_longitude'], "K"), 2, '.', '').' km';
             }
@@ -614,7 +614,7 @@ class ApiOutletController extends Controller
                 $jaraknya = number_format((float)$this->distance($latitude, $longitude, $outlet[0]['outlet_latitude'], $outlet[0]['outlet_longitude'], "K"), 2, '.', '');
                 $outlet[0]['distance'] = $jaraknya." km";
 
-                $outlet[0]['url'] = env('API_URL').'api/outlet/webview/'.$post['id_outlet'];
+                $outlet[0]['url'] = config('url.api_url').'api/outlet/webview/'.$post['id_outlet'];
 
                 if(isset($outlet[0]['holidays'])) unset($outlet[0]['holidays']);
             }
@@ -1145,7 +1145,7 @@ class ApiOutletController extends Controller
             $urutan = $this->geoJson($urutan);
         }
 
-        $geojson_file_url = env('API_URL') . 'files/stations.geojson' . '?';
+        $geojson_file_url = config('url.api_url') . 'files/stations.geojson' . '?';
 
         if($urutan && !empty($urutan)) return ['status' => 'success', 'result' => $urutan, 'url'=>$geojson_file_url];
         else if(empty($urutan)) return ['status' => 'fail', 'messages' => ['empty']];
@@ -1164,26 +1164,24 @@ class ApiOutletController extends Controller
             if($outlet['today']['is_closed'] == '1'){
                 $outlet['today']['status'] = 'closed';
             }else{
-                if($outlet['today']['open'] != "00:00" && $outlet['today']['close'] != "00:00"){
-                    if($outlet['today']['open'] && date('H:i:01') < date('H:i', strtotime($outlet['today']['open']))){
-                        $outlet['today']['status'] = 'closed';
-                    }elseif($outlet['today']['close'] && date('H:i') > date('H:i', strtotime('-'.$processing.' minutes', strtotime($outlet['today']['close'])))){
-                        $outlet['today']['status'] = 'closed';
-                    }else{
-                        $holiday = Holiday::join('outlet_holidays', 'holidays.id_holiday', 'outlet_holidays.id_holiday')->join('date_holidays', 'holidays.id_holiday', 'date_holidays.id_holiday')
-                        ->where('id_outlet', $outlet['id_outlet'])->whereDay('date_holidays.date', date('d'))->whereMonth('date_holidays.date', date('m'))->get();
-                        if(count($holiday) > 0){
-                            foreach($holiday as $i => $holi){
-                                if($holi['yearly'] == '0'){
-                                    if($holi['date'] == date('Y-m-d')){
-                                        $outlet['today']['status'] = 'closed';
-                                    }
-                                }else{
+                if($outlet['today']['open'] && date('H:i:01') < date('H:i', strtotime($outlet['today']['open']))){
+                    $outlet['today']['status'] = 'closed';
+                }elseif($outlet['today']['close'] && date('H:i') > date('H:i', strtotime('-'.$processing.' minutes', strtotime($outlet['today']['close'])))){
+                    $outlet['today']['status'] = 'closed';
+                }else{
+                    $holiday = Holiday::join('outlet_holidays', 'holidays.id_holiday', 'outlet_holidays.id_holiday')->join('date_holidays', 'holidays.id_holiday', 'date_holidays.id_holiday')
+                    ->where('id_outlet', $outlet['id_outlet'])->whereDay('date_holidays.date', date('d'))->whereMonth('date_holidays.date', date('m'))->get();
+                    if(count($holiday) > 0){
+                        foreach($holiday as $i => $holi){
+                            if($holi['yearly'] == '0'){
+                                if($holi['date'] == date('Y-m-d')){
                                     $outlet['today']['status'] = 'closed';
                                 }
+                            }else{
+                                $outlet['today']['status'] = 'closed';
                             }
-
                         }
+
                     }
                 }
             }
@@ -2020,7 +2018,7 @@ class ApiOutletController extends Controller
             if(count($outlet) > 0){
                 $loopdata=&$outlet;
                 $loopdata = array_map(function($var) use ($post){
-                    $var['url']=env('API_URL').'api/outlet/webview/'.$var['id_outlet'];
+                    $var['url']=config('url.api_url').'api/outlet/webview/'.$var['id_outlet'];
                     if(($post['latitude']??false)&&($post['longitude']??false)){
                         $var['distance']=number_format((float)$this->distance($post['latitude'], $post['longitude'], $var['outlet_latitude'], $var['outlet_longitude'], "K"), 2, '.', '').' km';
                     }
@@ -2289,8 +2287,69 @@ class ApiOutletController extends Controller
 
     function listUserFranchise(Request $request){
         $post = $request->json()->all();
-        $list = UserFranchise::paginate(20);
+        $list = UserFranchise::orderBy('created_at');
 
+        if(isset($post['conditions']) && !empty($post['conditions'])){
+            $rule = 'and';
+            if(isset($post['rule'])){
+                $rule = $post['rule'];
+            }
+
+            if($rule == 'and'){
+                foreach ($post['conditions'] as $row){
+                    if(isset($row['subject'])){
+
+                        if($row['subject'] == 'phone'){
+                            if($row['operator'] == '='){
+                                $list->where('phone', $row['parameter']);
+                            }else{
+                                $list->where('phone', 'like', '%'.$row['parameter'].'%');
+                            }
+                        }
+
+                        if($row['subject'] == 'email'){
+                            if($row['operator'] == '='){
+                                $list->where('email', $row['parameter']);
+                            }else{
+                                $list->where('email', 'like', '%'.$row['parameter'].'%');
+                            }
+                        }
+
+                        if($row['subject'] == 'user_status'){
+                            $list->where('user_franchise_type', $row['operator']);
+                        }
+                    }
+                }
+            }else{
+                $list->where(function ($subquery) use ($post){
+                    foreach ($post['conditions'] as $row){
+                        if(isset($row['subject'])){
+                            if($row['subject'] == 'phone'){
+                                if($row['operator'] == '='){
+                                    $subquery->orWhere('phone', $row['parameter']);
+                                }else{
+                                    $subquery->orWhere('phone', 'like', '%'.$row['parameter'].'%');
+                                }
+                            }
+
+                            if($row['subject'] == 'email'){
+                                if($row['operator'] == '='){
+                                    $subquery->orWhere('email', $row['parameter']);
+                                }else{
+                                    $subquery->orWhere('email', 'like', '%'.$row['parameter'].'%');
+                                }
+                            }
+
+                            if($row['subject'] == 'user_status'){
+                                $subquery->orWhere('user_franchise_type', $row['operator']);
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        $list = $list->paginate(25);
         return response()->json(MyHelper::checkGet($list));
     }
 
@@ -2310,6 +2369,31 @@ class ApiOutletController extends Controller
             'list_outlet' => $listOutlet
         ];
         return response()->json($result);
+    }
+
+    function setPasswordDefaultUserFranchise(Request $request){
+        $post = $request->json()->all();
+
+        if(isset($post['phone']) && !empty($post['phone'])){
+            if($post['password'] == $post['re_type_password']){
+                $data = [
+                    'password' => bcrypt($post['password']),
+                    'password_default_plain_text' => MyHelper::encrypt2019($post['password'])
+                ];
+
+                $update = UserFranchise::where('phone', $post['phone'])->update($data);
+
+                if($update){
+                    return response()->json(['status' => 'success']);
+                }else{
+                    return response()->json(['status' => 'fail', 'message' => 'Failed update password']);
+                }
+            }else{
+                return response()->json(['status' => 'fail', 'message' => 'Password does not match']);
+            }
+        }else{
+            return response()->json(['status' => 'fail' , 'messages' => ['Incompleted data']]);
+        }
     }
 
     public function sendNotifIncompleteOutlet(...$id_outlets)

@@ -657,7 +657,7 @@ class ApiDisburseController extends Controller
         $data = Disburse::join('disburse_outlet', 'disburse.id_disburse', 'disburse_outlet.id_disburse')
             ->join('outlets', 'outlets.id_outlet', 'disburse_outlet.id_outlet')
             ->leftJoin('bank_name', 'bank_name.bank_code', 'disburse.beneficiary_bank_name')
-            ->select('disburse_outlet.id_disburse_outlet as 0', DB::raw("CONCAT (outlets.outlet_code, ' - ',outlets.outlet_name) as '1'"), DB::raw("DATE_FORMAT(disburse.created_at, '%d %b %Y %H:%i') as '2'"), DB::raw('FORMAT(disburse.disburse_nominal,0) as "3"'), 'disburse.disburse_status',
+            ->select('disburse_outlet.id_disburse_outlet as 0', DB::raw("CONCAT (outlets.outlet_code, ' - ',outlets.outlet_name) as '1'"), DB::raw("DATE_FORMAT(disburse.created_at, '%d %b %Y %H:%i') as '2'"), DB::raw('FORMAT(disburse.disburse_nominal,2) as "3"'), 'disburse.disburse_status',
                 'bank_name.bank_name as 4', 'disburse.beneficiary_account_number as 5', 'disburse.beneficiary_name as 6', 'disburse.updated_at', 'bank_name.bank_code')->orderBy('disburse.created_at','desc');
 
         if($status != 'all'){
@@ -742,7 +742,7 @@ class ApiDisburseController extends Controller
             return response()->json(['status' => 'fail', 'message' => 'Current pin does not match']);
         }else{
             $update = UserFranchise::where('id_user_franchise', $post['id_user_franchise'])->update([
-                'password' => bcrypt($post['pin'])
+                'password' => bcrypt($post['pin']), 'password_default_plain_text' => NULL
             ]);
 
             if($update){

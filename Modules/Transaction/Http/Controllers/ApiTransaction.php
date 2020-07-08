@@ -7,6 +7,7 @@ use Illuminate\Pagination\Paginator;
 use App\Http\Models\Transaction;
 use App\Http\Models\TransactionProduct;
 use App\Http\Models\TransactionPayment;
+use App\Http\Models\TransactionPickupGoSend;
 use App\Http\Models\Province;
 use App\Http\Models\City;
 use App\Http\Models\User;
@@ -39,6 +40,7 @@ use Modules\IPay88\Entities\DealsPaymentIpay88;
 use App\Http\Models\UserTrxProduct;
 use Modules\Brand\Entities\Brand;
 use Modules\Product\Entities\ProductGlobalPrice;
+use Modules\Product\Entities\ProductSpecialPrice;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -1302,7 +1304,8 @@ class ApiTransaction extends Controller
             $key = 'pickup order';
             $delivery = true;
         }
-        $list = Transaction::join('transaction_pickups','transaction_pickups.id_transaction','=','transactions.id_transaction')
+        $list = Transaction::leftJoin('outlets','outlets.id_outlet','=','transactions.id_outlet')
+            ->join('transaction_pickups','transaction_pickups.id_transaction','=','transactions.id_transaction')
             ->leftJoin('transaction_pickup_go_sends','transaction_pickups.id_transaction_pickup','=','transaction_pickup_go_sends.id_transaction_pickup')
             ->orderBy('transactions.id_transaction', 'DESC')->with('user', 'productTransaction.product.product_category')->where('trasaction_type', ucwords($key))->where('transactions.transaction_date', '>=', $start)->where('transactions.transaction_date', '<=', $end);
         if($delivery){
@@ -1334,7 +1337,9 @@ class ApiTransaction extends Controller
                               'transaction_products.*',
                               'users.*',
                               'products.*',
-                              'product_categories.*')
+                              'product_categories.*',
+                              'outlets.outlet_code', 'outlets.outlet_name')
+                    ->leftJoin('outlets','outlets.id_outlet','=','transactions.id_outlet')
                     ->leftJoin('transaction_pickup_go_sends','transaction_pickups.id_transaction_pickup','=','transaction_pickup_go_sends.id_transaction_pickup')
                     ->leftJoin('transaction_products','transactions.id_transaction','=','transaction_products.id_transaction')
                     ->leftJoin('users','transactions.id_user','=','users.id')
@@ -1364,6 +1369,15 @@ class ApiTransaction extends Controller
                         $var = 'products.'.$con['subject'];
                     } elseif ($con['subject'] == 'product_category') {
                         $var = 'product_categories.product_category_name';
+                    }
+
+                    if ($con['subject'] == 'outlet_code' || $con['subject'] == 'outlet_name') {
+                        $var = 'outlets.'.$con['subject'];
+                        if ($post['rule'] == 'and') {
+                            $query = $query->where($var, $con['operator'], $con['parameter']);
+                        } else {
+                            $query = $query->orWhere($var, $con['operator'], $con['parameter']);
+                        }
                     }
 
                     if ($con['subject'] == 'receipt' || $con['subject'] == 'name' || $con['subject'] == 'phone' || $con['subject'] == 'email' || $con['subject'] == 'product_name' || $con['subject'] == 'product_code' || $con['subject'] == 'product_category') {
@@ -1814,16 +1828,16 @@ class ApiTransaction extends Controller
                     $result['transaction_status_text'] = 'ORDER SELESAI';
                 } elseif($list['detail']['taken_at'] != null) {
                     $result['transaction_status'] = 2;
-                    $result['transaction_status_text'] = 'ORDER SUDAH DIAMBIL';
+                    $result['transaction_status_text'] = 'PESANAN TELAH DIAMBIL';
                 } elseif($list['detail']['ready_at'] != null) {
                     $result['transaction_status'] = 3;
-                    $result['transaction_status_text'] = 'ORDER SUDAH SIAP';
+                    $result['transaction_status_text'] = 'PESANAN SUDAH SIAP DIAMBIL';
                 } elseif($list['detail']['receive_at'] != null) {
                     $result['transaction_status'] = 4;
-                    $result['transaction_status_text'] = 'ORDER SEDANG DIPROSES';
+                    $result['transaction_status_text'] = 'PESANAN DITERIMA. ORDER SEDANG DIPERSIAPKAN';
                 } else {
                     $result['transaction_status'] = 5;
-                    $result['transaction_status_text'] = 'ORDER PENDING';
+                    $result['transaction_status_text'] = 'PESANAN MASUK. MENUNGGU JILID UNTUK MENERIMA ORDER';
                 }
                 if ($list['transaction_pickup_go_send']) {
                     // $result['transaction_status'] = 5;
@@ -1831,7 +1845,7 @@ class ApiTransaction extends Controller
                         'driver' => null,
                         'delivery_status' => '',
                         'delivery_address' => $list['transaction_pickup_go_send']['destination_address']?:'',
-                        'delivery_address_note' => $list['transaction_pickup_go_send']['destination_note']?:'',
+                        'delivery_address_note' => $list['transaction_pickup_go_send']['destination_note'] ?: '',
                         'booking_status' => 0,
                         'cancelable' => 1,
                         'go_send_order_no' => $list['transaction_pickup_go_send']['go_send_order_no']?:'',
@@ -1844,18 +1858,19 @@ class ApiTransaction extends Controller
                         case 'finding driver':
                         case 'confirmed':
                             $result['delivery_info']['delivery_status'] = 'Sedang mencari driver';
-                            $result['transaction_status_text']          = 'SEDANG MENCARI DRIVER';
+                            $result['transaction_status_text']          = 'PESANAN SUDAH SIAP DAN MENUNGGU PICK UP';
                             break;
                         case 'driver allocated':
                         case 'allocated':
                             $result['delivery_info']['delivery_status'] = 'Driver ditemukan';
                             $result['transaction_status_text']          = 'DRIVER DITEMUKAN';
                             $result['delivery_info']['driver']          = [
-                                'driver_id'      => $list['transaction_pickup_go_send']['driver_id']?:'',
-                                'driver_name'    => $list['transaction_pickup_go_send']['driver_name']?:'',
-                                'driver_phone'   => $list['transaction_pickup_go_send']['driver_phone']?:'',
-                                'driver_photo'   => $list['transaction_pickup_go_send']['driver_photo']?:'',
-                                'vehicle_number' => $list['transaction_pickup_go_send']['vehicle_number']?:'',
+                                'driver_id'         => $list['transaction_pickup_go_send']['driver_id']?:'',
+                                'driver_name'       => $list['transaction_pickup_go_send']['driver_name']?:'',
+                                'driver_phone'      => $list['transaction_pickup_go_send']['driver_phone']?:'',
+                                'driver_whatsapp'   => env('URL_WA') . $list['transaction_pickup_go_send']['driver_phone']?:'',
+                                'driver_photo'      => $list['transaction_pickup_go_send']['driver_photo']?:'',
+                                'vehicle_number'    => $list['transaction_pickup_go_send']['vehicle_number']?:'',
                             ];
                             break;
                         case 'enroute pickup':
@@ -1863,38 +1878,42 @@ class ApiTransaction extends Controller
                             $result['delivery_info']['delivery_status'] = 'Driver dalam perjalanan menuju Outlet';
                             $result['transaction_status_text']          = 'DRIVER SEDANG MENUJU OUTLET';
                             $result['delivery_info']['driver']          = [
-                                'driver_id'      => $list['transaction_pickup_go_send']['driver_id']?:'',
-                                'driver_name'    => $list['transaction_pickup_go_send']['driver_name']?:'',
-                                'driver_phone'   => $list['transaction_pickup_go_send']['driver_phone']?:'',
-                                'driver_photo'   => $list['transaction_pickup_go_send']['driver_photo']?:'',
-                                'vehicle_number' => $list['transaction_pickup_go_send']['vehicle_number']?:'',
+                                'driver_id'         => $list['transaction_pickup_go_send']['driver_id']?:'',
+                                'driver_name'       => $list['transaction_pickup_go_send']['driver_name']?:'',
+                                'driver_phone'      => $list['transaction_pickup_go_send']['driver_phone']?:'',
+                                'driver_whatsapp'   => env('URL_WA') . $list['transaction_pickup_go_send']['driver_phone']?:'',
+                                'driver_photo'      => $list['transaction_pickup_go_send']['driver_photo']?:'',
+                                'vehicle_number'    => $list['transaction_pickup_go_send']['vehicle_number']?:'',
                             ];
                             $result['delivery_info']['cancelable'] = 1;
                             break;
                         case 'enroute drop':
                         case 'out_for_delivery':
                             $result['delivery_info']['delivery_status'] = 'Driver mengantarkan pesanan';
-                            $result['transaction_status_text']          = 'PROSES PENGANTARAN';
+                            $result['transaction_status_text']          = 'PESANAN SUDAH DI PICK UP OLEH DRIVER DAN SEDANG MENUJU LOKASI #TEMANSEJIWA';
+                            $result['transaction_status']               = 3;
                             $result['delivery_info']['driver']          = [
-                                'driver_id'      => $list['transaction_pickup_go_send']['driver_id']?:'',
-                                'driver_name'    => $list['transaction_pickup_go_send']['driver_name']?:'',
-                                'driver_phone'   => $list['transaction_pickup_go_send']['driver_phone']?:'',
-                                'driver_photo'   => $list['transaction_pickup_go_send']['driver_photo']?:'',
-                                'vehicle_number' => $list['transaction_pickup_go_send']['vehicle_number']?:'',
+                                'driver_id'         => $list['transaction_pickup_go_send']['driver_id']?:'',
+                                'driver_name'       => $list['transaction_pickup_go_send']['driver_name']?:'',
+                                'driver_phone'      => $list['transaction_pickup_go_send']['driver_phone']?:'',
+                                'driver_whatsapp'   => env('URL_WA') . $list['transaction_pickup_go_send']['driver_phone']?:'',
+                                'driver_photo'      => $list['transaction_pickup_go_send']['driver_photo']?:'',
+                                'vehicle_number'    => $list['transaction_pickup_go_send']['vehicle_number']?:'',
                             ];
                             $result['delivery_info']['cancelable'] = 0;
                             break;
                         case 'completed':
                         case 'delivered':
                             $result['transaction_status'] = 2;
-                            $result['transaction_status_text']          = 'ORDER SUDAH DIAMBIL';
+                            $result['transaction_status_text']          = 'PESANAN TELAH SELESAI DAN DITERIMA';
                             $result['delivery_info']['delivery_status'] = 'Pesanan sudah diterima Customer';
                             $result['delivery_info']['driver']          = [
-                                'driver_id'      => $list['transaction_pickup_go_send']['driver_id']?:'',
-                                'driver_name'    => $list['transaction_pickup_go_send']['driver_name']?:'',
-                                'driver_phone'   => $list['transaction_pickup_go_send']['driver_phone']?:'',
-                                'driver_photo'   => $list['transaction_pickup_go_send']['driver_photo']?:'',
-                                'vehicle_number' => $list['transaction_pickup_go_send']['vehicle_number']?:'',
+                                'driver_id'         => $list['transaction_pickup_go_send']['driver_id']?:'',
+                                'driver_name'       => $list['transaction_pickup_go_send']['driver_name']?:'',
+                                'driver_phone'      => $list['transaction_pickup_go_send']['driver_phone']?:'',
+                                'driver_whatsapp'   => env('URL_WA') . $list['transaction_pickup_go_send']['driver_phone']?:'',
+                                'driver_photo'      => $list['transaction_pickup_go_send']['driver_photo']?:'',
+                                'vehicle_number'    => $list['transaction_pickup_go_send']['vehicle_number']?:'',
                             ];
                             $result['delivery_info']['cancelable'] = 0;
                             break;
@@ -2006,13 +2025,13 @@ class ApiTransaction extends Controller
                     }
                     if ($list['detail']['taken_at'] != null) {
                         $statusOrder[] = [
-                        'text'  => 'Pesanan Anda sudah diambil',
+                        'text'  => 'Pesanan telah diambil',
                         'date'  => $list['detail']['taken_at']
                     ];
                     }
                     if ($list['detail']['ready_at'] != null) {
                         $statusOrder[] = [
-                        'text'  => 'Pesanan Anda sudah siap ',
+                        'text'  => 'Pesanan sudah siap diambil',
                         'date'  => $list['detail']['ready_at']
                     ];
                     }
@@ -2022,14 +2041,14 @@ class ApiTransaction extends Controller
                                 case 'finding driver':
                                 case 'confirmed':
                                     $statusOrder[] = [
-                                        'text'  => 'Sedang mencari driver',
+                                        'text'  => 'Pesanan sudah siap dan menunggu pick up',
                                         'date'  => $valueGosend['created_at']
                                     ];
                                     break;
                                 case 'driver allocated':
                                 case 'allocated':
                                     $statusOrder[] = [
-                                        'text'  => 'Driver ditemukan',
+                                        'text'  => 'Pesanan sudah di pick up oleh driver dan sedang menuju lokasi #temansejiwa',
                                         'date'  => $valueGosend['created_at']
                                     ];
                                     break;
@@ -2050,7 +2069,7 @@ class ApiTransaction extends Controller
                                 case 'completed':
                                 case 'delivered':
                                     $statusOrder[] = [
-                                        'text'  => 'Pesanan sudah diterima Customer',
+                                        'text'  => 'Pesanan telah selesai dan diterim',
                                         'date'  => $valueGosend['created_at']
                                     ];
                                     break;
@@ -2072,12 +2091,12 @@ class ApiTransaction extends Controller
                     }
                     if ($list['detail']['receive_at'] != null) {
                         $statusOrder[] = [
-                        'text'  => 'Pesanan Anda sudah diterima',
+                        'text'  => 'Pesanan diterima. Order sedang dipersiapkan',
                         'date'  => $list['detail']['receive_at']
                     ];
                     }
                     $statusOrder[] = [
-                        'text'  => 'Pesanan Anda menunggu konfirmasi',
+                        'text'  => 'Pesanan masuk. Menunggu jilid untuk menerima order',
                         'date'  => $list['transaction_date']
                     ];
                 }
@@ -2179,8 +2198,10 @@ class ApiTransaction extends Controller
     public function transactionDetailTrx(Request $request) {
         $trid = $request->json('id_transaction');
         $rn = $request->json('request_number');
-        $trx = Transaction::select('id_transaction','id_outlet')->where([
-            'id_transaction' => $trid,
+        $trx = Transaction::join('transaction_pickups', 'transaction_pickups.id_transaction', '=', 'transactions.id_transaction')
+        ->join('outlets', 'outlets.id_outlet', '=', 'transactions.id_outlet')
+        ->select('transactions.id_transaction', 'transactions.id_user', 'transactions.id_outlet', 'outlets.outlet_code', 'pickup_by', 'pickup_type', 'pickup_at', 'id_transaction_pickup')->where([
+            'transactions.id_transaction' => $trid,
             'id_user' => $request->user()->id
         ])->first();
         if(!$trx){
@@ -2201,13 +2222,14 @@ class ApiTransaction extends Controller
             transaction_product_qty as qty,
             products.product_name,
             products.product_code,
-            transaction_products.transaction_product_note as note
+            transaction_products.transaction_product_note as note,
+            transaction_products.transaction_product_price
             '))
         ->join('products','products.id_product','=','transaction_products.id_product')
         ->join('outlets','outlets.id_outlet','=','transaction_products.id_outlet')
         ->where(['id_transaction'=>$id_transaction])
         ->with(['modifiers'=>function($query){
-                    $query->select('id_transaction_product','product_modifiers.code','transaction_product_modifiers.id_product_modifier','qty','product_modifiers.text')->join('product_modifiers','product_modifiers.id_product_modifier','=','transaction_product_modifiers.id_product_modifier');
+                    $query->select('id_transaction_product','product_modifiers.code','transaction_product_modifiers.id_product_modifier','qty','product_modifiers.text', 'transaction_product_modifier_price')->join('product_modifiers','product_modifiers.id_product_modifier','=','transaction_product_modifiers.id_product_modifier');
                 }])->get()->toArray();
         if(!$pts){
             return MyHelper::checkGet($pts);
@@ -2216,30 +2238,68 @@ class ApiTransaction extends Controller
         $total_mod_price = 0;
         foreach ($pts as &$pt) {
             if ($pt['outlet_different_price']) {
-                $pt['product_price'] = ProductPrice::select('product_price')->where([
+                $pt['product_price'] = ProductSpecialPrice::select('product_special_price')->where([
                     'id_outlet' => $pt['id_outlet'],
                     'id_product' => $pt['id_product']
-                ])->pluck('product_price')->first()?:0;
+                ])->pluck('product_special_price')->first()?:$pt['transaction_product_price'];
             } else {
-                $pt['product_price'] = ProductGlobalPrice::select('product_global_price')->where('id_product',$pt['id_product'])->pluck('product_global_price')->first()?:0;
+                $pt['product_price'] = ProductGlobalPrice::select('product_global_price')->where('id_product',$pt['id_product'])->pluck('product_global_price')->first()?:$pt['transaction_product_price'];
             }
             foreach ($pt['modifiers'] as &$modifier) {
                 if ($pt['outlet_different_price']) {
                     $price = ProductModifierPrice::select('product_modifier_price')->where([
                         'id_product_modifier'=>$modifier['id_product_modifier'],
                         'id_outlet' => $id_outlet
-                    ])->pluck('product_modifier_price')->first();
+                    ])->pluck('product_modifier_price')->first()?:$modifier['transaction_product_modifier_price'];
                 } else {
-                    $price = ProductModifierGlobalPrice::select('product_modifier_price')->where('id_product_modifier', $modifier['id_product_modifier'])->pluck('product_modifier_price')->first();
+                    $price = ProductModifierGlobalPrice::select('product_modifier_price')->where('id_product_modifier', $modifier['id_product_modifier'])->pluck('product_modifier_price')->first()?:$modifier['transaction_product_modifier_price'];
                 }
                 $total_mod_price+=$price*$modifier['qty'];
                 $modifier['product_modifier_price'] = MyHelper::requestNumber($price,$rn);
+                unset($modifier['transaction_product_modifier_price']);
             }
-            $pt['product_price_total'] = MyHelper::requestNumber($total_mod_price + $pt['product_price'],$rn);
+            $pt['product_price_total'] = MyHelper::requestNumber(($total_mod_price + $pt['product_price'])*$pt['qty'],$rn);
             $pt['product_price'] = MyHelper::requestNumber($pt['product_price'],$rn);
             $pt['note'] = $pt['note']?:'';
+            unset($pt['transaction_product_price']);
         }
-        return MyHelper::checkGet($pts);
+        $result = [
+            'id_outlet' => $trx->id_outlet,
+            'outlet_code' => $trx->outlet_code,
+            'item' => $pts
+        ];
+        if ($trx->pickup_by == 'Customer') {
+            $result += [
+                'transaction_type' => 'Pickup Order',
+                'pickup_type' => $trx->pickup_type
+            ];
+            if ($trx->pickup_type == 'set time') {
+                $result += [
+                    'pickup_at' => date('H:i',strtotime($trx->pickup_at))
+                ];
+            }
+        } else {
+            $address = TransactionPickupGoSend::where('id_transaction_pickup',$trx->id_transaction_pickup)->first();
+            $result += [
+                'transaction_type' => 'GO-SEND',
+                'destination' => [
+                    'name' => $address->destination_address_name?:$address->destination_short_address,
+                    'short_address' => $address->destination_short_address,
+                    'address' => $address->destination_address,
+                    'description' => $address->destination_note,
+                    'latitude' => $address->destination_latitude,
+                    'longitude' => $address->destination_longitude,
+                ]
+            ];
+            if (!$result['destination']['name']) {
+                $ua = UserAddress::where(['id_user' => $trx->id_user, 'latitude'=>$address->destination_latitude, 'longitude' => $address->destination_longitude])->first();
+                if ($ua) {
+                    $result['destination']['name'] = $ua->name?:$ua->short_address;
+                    $result['destination']['short_address'] = $ua->short_address;
+                }
+            }
+        }
+        return MyHelper::checkGet($result);
     }
 
     public function transactionPointDetail(Request $request) {
@@ -2483,7 +2543,7 @@ class ApiTransaction extends Controller
         };
 
         $maxmin = MyHelper::getRadius($latitude,$longitude,$distance);
-        $user_address = UserAddress::select('id_user_address','short_address','address','latitude','longitude','description')->where('id_user',$id)
+        $user_address = UserAddress::select('id_user_address','short_address','address','latitude','longitude','description','favorite')->where('id_user',$id)
             ->whereBetween('latitude',[$maxmin['latitude']['min'],$maxmin['latitude']['max']])
             ->whereBetween('longitude',[$maxmin['longitude']['min'],$maxmin['longitude']['max']])
             ->take(10);
@@ -2519,11 +2579,10 @@ class ApiTransaction extends Controller
                 'address' => $gmap['vicinity'],
                 'latitude' => $coor['latitude'],
                 'longitude' => $coor['longitude'],
-                'description' => ''
+                'description' => '',
+                'favorite' => 0
             ];
         }
-
-        $selected_address = $user_address[0]??null;
 
         // mix history and gmaps
         $user_address = array_merge($user_address,$gmaps);
@@ -2532,6 +2591,21 @@ class ApiTransaction extends Controller
         usort($user_address,function(&$a,&$b) use ($latitude,$longitude){
             return MyHelper::count_distance($latitude,$longitude,$a['latitude'],$a['longitude']) <=> MyHelper::count_distance($latitude,$longitude,$b['latitude'],$b['longitude']);
         });
+
+        $selected_address = null;
+        foreach ($user_address as $key => $addr) {
+            if ($addr['favorite']) {
+                $selected_address = $addr;
+                break;
+            }
+            if ($addr['id_user_address']) {
+                $selected_address = $addr;
+                continue;
+            }
+            if ($key == 0) {
+                $selected_address = $addr;
+            }
+        }
 
         if(!$selected_address){
             $selected_address = $user_address[0]??null;
@@ -2544,6 +2618,100 @@ class ApiTransaction extends Controller
             $result = [
                 'default' => $selected_address,
                 'nearby' => $user_address
+            ];
+        }
+        return response()->json(MyHelper::checkGet($result));
+    }
+
+    public function getDefaultAddress (GetNearbyAddress $request) {
+        $id = $request->user()->id;
+        $distance = Setting::select('value')->where('key','history_address_max_distance')->pluck('value')->first()?:50;
+        $maxmin = MyHelper::getRadius($request->json('latitude'),$request->json('longitude'),$distance);
+        $latitude = $request->json('latitude');
+        $longitude = $request->json('longitude');
+
+        $maxmin = MyHelper::getRadius($latitude,$longitude,$distance);
+        $user_address = UserAddress::select('id_user_address','short_address','address','latitude','longitude','description','favorite')->where('id_user',$id)
+            ->whereBetween('latitude',[$maxmin['latitude']['min'],$maxmin['latitude']['max']])
+            ->whereBetween('longitude',[$maxmin['longitude']['min'],$maxmin['longitude']['max']])
+            ->take(10);
+
+        if($keyword = $request->json('keyword')){
+            $user_address->where(function($query) use ($keyword) {
+                $query->where('name',$keyword);
+                $query->orWhere('address',$keyword);
+                $query->orWhere('short_address',$keyword);
+            });
+        }
+
+        $user_address = $user_address->get()->toArray();
+
+        if (!$user_address) {
+            // get place from google maps . max 20
+            $param = [
+                'key'=>env('GMAPS_PLACE_KEY'),
+                'location'=>sprintf('%s,%s',$request->json('latitude'),$request->json('longitude')),
+                'rankby'=>'distance'
+            ];
+            if($request->json('keyword')){
+                $param['keyword'] = $request->json('keyword');
+            }
+            $gmaps = MyHelper::get('https://maps.googleapis.com/maps/api/place/nearbysearch/json?'.http_build_query($param));
+
+            if($gmaps['status'] === 'OK'){
+                $gmaps = $gmaps['results'];
+            }else{
+                return MyHelper::checkGet([]);
+            };
+
+            foreach ($gmaps as $key => &$gmap){
+                $coor = [
+                    'latitude' => number_format($gmap['geometry']['location']['lat'],8),
+                    'longitude' => number_format($gmap['geometry']['location']['lng'],8)
+                ];
+                $gmap = [
+                    'id_user_address' => 0,
+                    'short_address' => $gmap['name'],
+                    'address' => $gmap['vicinity'],
+                    'latitude' => $coor['latitude'],
+                    'longitude' => $coor['longitude'],
+                    'description' => '',
+                    'favorite' => 0
+                ];
+            }
+            // mix history and gmaps
+            $user_address = array_merge($user_address,$gmaps);
+        }
+
+        // reorder based on distance
+        usort($user_address,function(&$a,&$b) use ($latitude,$longitude){
+            return MyHelper::count_distance($latitude,$longitude,$a['latitude'],$a['longitude']) <=> MyHelper::count_distance($latitude,$longitude,$b['latitude'],$b['longitude']);
+        });
+
+        foreach ($user_address as $key => $addr) {
+            if ($addr['favorite']) {
+                $selected_address = $addr;
+                break;
+            }
+            if ($addr['id_user_address']) {
+                $selected_address = $addr;
+                continue;
+            }
+            if ($key == 0) {
+                $selected_address = $addr;
+            }
+        }
+
+        if(!$selected_address){
+            $selected_address = $user_address[0]??null;
+        }
+        // apply limit;
+        // $max_item = Setting::select('value')->where('key','history_address_max_item')->pluck('value')->first()?:10;
+        // $user_address = array_splice($user_address,0,$max_item);
+        $result = [];
+        if($user_address){
+            $result = [
+                'default' => $selected_address
             ];
         }
         return response()->json(MyHelper::checkGet($result));
@@ -2724,6 +2892,8 @@ class ApiTransaction extends Controller
                 'messages'  => ['Transaction not found !!']
             ]);
         }
+
+        MyHelper::updateFlagTransactionOnline($transaction, 'cancel');
 
         $transaction->void_date = date('Y-m-d H:i:s');
         $transaction->save();

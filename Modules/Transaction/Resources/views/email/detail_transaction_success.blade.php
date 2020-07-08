@@ -1,67 +1,67 @@
 <!doctype html>
 <html lang="en">
-  <head>
+<head>
     <!-- Required meta tags -->
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 
     <!-- Bootstrap CSS -->
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css" integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous">
-    <link href="{{ env('S3_URL_VIEW') }}{{('css/slide.css') }}" rel="stylesheet">
+    <link href="{{ config('url.storage_url_view') }}{{('css/slide.css') }}" rel="stylesheet">
     <style type="text/css">
         @font-face {
-                font-family: "WorkSans-Black";
-                font-style: normal;
-                font-weight: 400;
-                src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/Work_Sans/WorkSans-Black.ttf') }}');
+            font-family: "WorkSans-Black";
+            font-style: normal;
+            font-weight: 400;
+            src: url('{{ config('url.storage_url_view') }}{{ ('fonts/Work_Sans/WorkSans-Black.ttf') }}');
         }
         @font-face {
-                font-family: "WorkSans-Bold";
-                font-style: normal;
-                font-weight: 400;
-                src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/Work_Sans/WorkSans-Bold.ttf') }}');
+            font-family: "WorkSans-Bold";
+            font-style: normal;
+            font-weight: 400;
+            src: url('{{ config('url.storage_url_view') }}{{ ('fonts/Work_Sans/WorkSans-Bold.ttf') }}');
         }
         @font-face {
-                font-family: "WorkSans-ExtraBold";
-                font-style: normal;
-                font-weight: 400;
-                src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/Work_Sans/WorkSans-ExtraBold.ttf') }}');
+            font-family: "WorkSans-ExtraBold";
+            font-style: normal;
+            font-weight: 400;
+            src: url('{{ config('url.storage_url_view') }}{{ ('fonts/Work_Sans/WorkSans-ExtraBold.ttf') }}');
         }
         @font-face {
-                font-family: "WorkSans-ExtraLight";
-                font-style: normal;
-                font-weight: 400;
-                src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/Work_Sans/WorkSans-ExtraLight.ttf') }}');
+            font-family: "WorkSans-ExtraLight";
+            font-style: normal;
+            font-weight: 400;
+            src: url('{{ config('url.storage_url_view') }}{{ ('fonts/Work_Sans/WorkSans-ExtraLight.ttf') }}');
         }
         @font-face {
-                font-family: "WorkSans-Light";
-                font-style: normal;
-                font-weight: 400;
-                src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/Work_Sans/WorkSans-Light.ttf') }}');
+            font-family: "WorkSans-Light";
+            font-style: normal;
+            font-weight: 400;
+            src: url('{{ config('url.storage_url_view') }}{{ ('fonts/Work_Sans/WorkSans-Light.ttf') }}');
         }
         @font-face {
-                font-family: "WorkSans-Medium";
-                font-style: normal;
-                font-weight: 400;
-                src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/Work_Sans/WorkSans-Medium.ttf') }}');
+            font-family: "WorkSans-Medium";
+            font-style: normal;
+            font-weight: 400;
+            src: url('{{ config('url.storage_url_view') }}{{ ('fonts/Work_Sans/WorkSans-Medium.ttf') }}');
         }
         @font-face {
-                font-family: "WorkSans-Regular";
-                font-style: normal;
-                font-weight: 400;
-                src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/Work_Sans/WorkSans-Regular.ttf') }}');
+            font-family: "WorkSans-Regular";
+            font-style: normal;
+            font-weight: 400;
+            src: url('{{ config('url.storage_url_view') }}{{ ('fonts/Work_Sans/WorkSans-Regular.ttf') }}');
         }
         @font-face {
-                font-family: "WorkSans-SemiBold";
-                font-style: normal;
-                font-weight: 400;
-                src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/Work_Sans/WorkSans-SemiBold.ttf') }}');
+            font-family: "WorkSans-SemiBold";
+            font-style: normal;
+            font-weight: 400;
+            src: url('{{ config('url.storage_url_view') }}{{ ('fonts/Work_Sans/WorkSans-SemiBold.ttf') }}');
         }
         @font-face {
-                font-family: "WorkSans-Thin";
-                font-style: normal;
-                font-weight: 400;
-                src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/Work_Sans/WorkSans-Thin.ttf') }}');
+            font-family: "WorkSans-Thin";
+            font-style: normal;
+            font-weight: 400;
+            src: url('{{ config('url.storage_url_view') }}{{ ('fonts/Work_Sans/WorkSans-Thin.ttf') }}');
         }
         .WorkSans-Black{
             font-family: "WorkSans-Black";
@@ -123,8 +123,8 @@
         }
 
         .kotak-inside {
-        	padding-left: 25px;
-        	padding-right: 25px
+            padding-left: 25px;
+            padding-right: 25px
         }
 
         body {
@@ -152,15 +152,15 @@
         }
 
         .space-nice {
-        	padding-bottom: 20px;
+            padding-bottom: 20px;
         }
 
         .space-bottom-big {
-        	padding-bottom: 25px;
+            padding-bottom: 25px;
         }
 
         .space-top {
-        	padding-top: 5px;
+            padding-top: 5px;
         }
 
         .line-bottom {
@@ -393,81 +393,59 @@
         }
 
     </style>
-  </head>
-  @php $bulan = ['','Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember']; @endphp
-  <?php
-    use App\Lib\MyHelper;
- ?>
-  <body style="background:#ffffff;max-width: 480px; margin: auto">
-  <div class="@if(isset($data['admin'])) body-admin @endif">
-    @if(isset($data['detail']['pickup_by']) && $data['detail']['pickup_by'] == 'GO-SEND')
-        <div class="kotak-biasa">
-            <div class="container">
-                <div class="text-center">
-                    <div class="col-12 WorkSans text-15px space-nice text-grey">Detail Pengiriman</div>
-                    <div class="col-12 text-red text-21-7px space-bottom WorkSans-Medium">GO-SEND</div>
-                    <div class="col-12 text-16-7px text-black space-bottom WorkSans">
-                        {{ $data['detail']['transaction_pickup_go_send']['destination_name'] }}
-                        <br>
-                        {{ $data['detail']['transaction_pickup_go_send']['destination_phone'] }}
-                    </div>
-                    <div class="kotak-inside col-12">
-                        <div class="col-12 text-13-3px text-grey-white space-nice text-center WorkSans">{{ $data['detail']['transaction_pickup_go_send']['destination_address'] }}</div>
-                    </div>
-                    <div class="col-12 text-15px space-bottom text-black WorkSans">Map</div>
-                    <div class="col-12 space-bottom-big">
-                        <div class="container">
-                            <div id="map"></div>
+</head>
+@php $bulan = ['','Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember']; @endphp
+<?php
+use App\Lib\MyHelper;
+?>
+<body style="background:#ffffff;max-width: 480px; margin: auto">
+<div class="@if(isset($data['admin'])) body-admin @endif">
+    <div class="kotak-biasa" style="background-color: #FFFFFF;box-shadow: 0 0.7px 3.3px #eeeeee;">
+        <div class="container" style="padding: 10px;margin-top: 10px;">
+            <div class="text-center">
+                <div class="col-12 text-15px text-black-grey-light space-text WorkSans-Bold"><b>{{ $data['outlet']['outlet_name'] }}</b></div>
+                <div class="col-12 text-11-7px text-grey-white space-nice text-center WorkSans">{{ $data['outlet']['outlet_address'] }}</div>
+                @if ($data['trasaction_type'] != 'Offline' && !isset($data['delivery_info']))
+                    <div class="col-12 WorkSans-Bold text-14px space-text text-black-grey-light">Kode Pickup Anda</div>
+                    @if(isset($data['detail']['order_id_qrcode']))
+                        <div style="width: 135px;height: 135px;margin: 0 auto;" data-toggle="modal" data-target="#exampleModal">
+                            <div class="col-12 text-14-3px space-top"><img class="img-responsive" style="display: block; max-width: 100%; padding-top: 10px" src="{{ $data['detail']['order_id_qrcode'] }}"></div>
                         </div>
-                    </div>
-                </div>
+                        <div class="col-12 text-black-grey-light text-20px WorkSans-SemiBold" style="margin-top: 8%;">{{ $data['detail']['order_id'] }}</div>
+                    @endif
+                @endif
             </div>
         </div>
-    @else
+    </div>
+    @if(isset($data['detail']['order_id_qrcode']))
         <div class="kotak-biasa" style="background-color: #FFFFFF;box-shadow: 0 0.7px 3.3px #eeeeee;">
             <div class="container" style="padding: 10px;margin-top: 10px;">
                 <div class="text-center">
-                    <div class="col-12 text-15px text-black-grey-light space-text WorkSans-Bold">{{ $data['outlet']['outlet_name'] }}</div>
-                    <div class="col-12 text-11-7px text-grey-white space-nice text-center WorkSans">{{ $data['outlet']['outlet_address'] }}</div>
-                    @if ($data['trasaction_type'] != 'Offline')
-                        <div class="col-12 WorkSans-Bold text-14px space-text text-black-grey-light">Kode Pickup Anda</div>
-                        @if(isset($data['detail']['order_id_qrcode']))
-                            <div style="width: 135px;height: 135px;margin: 0 auto;" data-toggle="modal" data-target="#exampleModal">
-                                <div class="col-12 text-14-3px space-top"><img class="img-responsive" style="display: block; max-width: 100%; padding-top: 10px" src="{{ $data['detail']['order_id_qrcode'] }}"></div>
-                            </div>
-                            <div class="col-12 text-black-grey-light text-20px WorkSans-SemiBold" style="margin-top: 8%;">{{ $data['detail']['order_id'] }}</div>
-                        @endif
-                    @endif
-                </div>
-            </div>
-        </div>
-    @endif
-    @if ($data['trasaction_type'] != 'Pickup Order')
-        <div class="kotak-biasa" style="background-color: #FFFFFF;box-shadow: 0 0.7px 3.3px #eeeeee;">
-            <div class="container" style="padding: 10px;margin-top: 10px;">
-                <div class="text-center">
-                    @if(isset($data['admin']))
-                        <div class="col-12 text-16-7px text-black space-text WorkSans">{{ strtoupper($data['user']['name']) }}</div>
-                        <div class="col-12 text-16-7px text-black WorkSans space-nice">{{ $data['user']['phone'] }}</div>
-                    @endif
-                    <div class="col-12 text-13-3px space-nice text-black-grey-light WorkSans-Medium" style="padding-bottom: 10px;">
+                    <div class="col-12 text-13px space-text text-medium-grey WorkSans-Regular">
                         @if ($data['detail']['pickup_type'] == 'set time')
                             Pesanan Anda akan siap pada
                         @else
                             Pesanan Anda akan diproses pada
                         @endif
                     </div>
-                    <div class="col-12 text-14px space-text text-black-grey-light WorkSans-SemiBold" style="padding-bottom: 20px;">{{ date('d', strtotime($data['transaction_date'])) }} {{ $bulan[date('n', strtotime($data['transaction_date']))] }} {{ date('Y', strtotime($data['transaction_date'])) }}</div>
-                    <div class="col-12 text-15px space-nice text-black-grey-light WorkSans-Bold" style="padding-bottom: 8.3px;">PICK UP</div>
-                    <div class="col-12 text-21-7px WorkSans-Bold" style="color: #a6ba35;">
-                        @if ($data['detail']['pickup_type'] == 'set time')
-                            @if(isset($data['detail']['pickup_time'])){{ date('H:i', strtotime($data['detail']['pickup_time'])) }}@endif
-                        @elseif($data['detail']['pickup_type'] == 'at arrival')
-                            SAAT KEDATANGAN
-                        @else
-                            SAAT INI
-                        @endif
-                    </div>
+                    <div class="col-12 text-13-3px" style="padding-bottom: 25px;color: #000000">{{ date('d', strtotime($data['transaction_date'])) }} {{ $bulan[date('n', strtotime($data['transaction_date']))] }} {{ date('Y', strtotime($data['transaction_date'])) }}</div>
+                    @if(isset($data['delivery_info']))
+                        <div class="col-12 text-14px"><b>DELIVERY</b></div>
+                        <div class="col-12 text-12px WorkSans-Regular" style="color: #707070;">
+                            @if(isset($data['delivery_info']['delivery_address'])) {{ $data['delivery_info']['delivery_address'] }} @endif
+                        </div>
+                    @else
+                        <div class="col-12 text-14px"><b>PICK UP</b></div>
+                        <div class="col-12 text-14px WorkSans-Bold" style="color: #a6ba35;">
+                            @if ($data['detail']['pickup_type'] == 'set time')
+                                {{ date('H:i', strtotime($data['detail']['pickup_at'])) }}
+                            @elseif($data['detail']['pickup_type'] == 'at arrival')
+                                SAAT KEDATANGAN
+                            @else
+                                SAAT INI
+                            @endif
+                        </div>
+                    @endif
                 </div>
             </div>
         </div>
@@ -476,12 +454,11 @@
     <div class="kotak-biasa" style="background-color: #FFFFFF;box-shadow: 0 0.7px 3.3px #eeeeee;">
         <div class="container" style="padding: 10px;margin-top: 10px;">
             <div class="row space-bottom">
-                <div class="col-4 text-black-grey-light text-14px WorkSans-Bold">Transaksi</div>
+                <div class="col-4 text-black-grey-light text-14px WorkSans-Bold"><b>Transaksi</b></div>
                 <div class="col-8 text-grey-white text-right text-medium-grey text-11-7px WorkSans">{{ date('d', strtotime($data['transaction_date'])) }} {{ $bulan[date('n', strtotime($data['transaction_date']))] }} {{ date('Y H:i', strtotime($data['transaction_date'])) }}</div>
             </div>
             <div class="row space-text">
-                <div class="col-4"></div>
-                <div class="col-8 text-right text-black-grey-light text-13-3px WorkSans-SemiBold">#{{ $data['transaction_receipt_number'] }}</div>
+                <div class="col-12 text-right text-black-grey-light text-13-3px WorkSans-SemiBold" style="text-align: right"><b>{{ $data['transaction_receipt_number'] }}</b></div>
             </div>
             <div class="kotak" style="margin: 0px;border-radius: 10px;">
                 @foreach ($data['product_transaction'] as $trx)
@@ -495,7 +472,7 @@
                         <div class="row">
                             <div class="col-2 text-13-3px WorkSans-SemiBold text-black">{{$prod['transaction_product_qty']}}x</div>
                             <div class="col-6 text-14px WorkSans-SemiBold text-black" style="margin-left:-100px;margin-right: 50px;">{{$prod['product']['product_name']}}</div>
-                            <div class="col-4 text-13-3px text-right WorkSans-SemiBold text-black">{{ str_replace(',', '.', number_format(explode('.',$prod['transaction_product_subtotal'])[0])) }}</div>
+                            <div class="col-4 text-13-3px text-right WorkSans-SemiBold text-black">{{ $prod['transaction_product_subtotal'] }}</div>
                         </div>
                         @if(isset($prod['product']['product_modifiers']))
                             @foreach($prod['product']['product_modifiers'] as $mod)
@@ -505,6 +482,13 @@
                                     <div class="col-4 text-13-3px text-right WorkSans-SemiBold text-black"></div>
                                 </div>
                             @endforeach
+                        @endif
+                        @if(isset($prod['transaction_product_note']))
+                            <div class="row">
+                                <div class="col-2 text-13-3px WorkSans-SemiBold text-black"></div>
+                                <div class="col-6 text-14px WorkSans-SemiBold text-black" style="margin-left:-100px;margin-right: 50px;color: darkgrey;font-size: 11px;">{{$prod['transaction_product_note']}}</div>
+                                <div class="col-4 text-13-3px text-right WorkSans-SemiBold text-black"></div>
+                            </div>
                         @endif
                     @endforeach
                     @if ($trx != end($data['product_transaction']))
@@ -520,16 +504,16 @@
     <div class="kotak-biasa" style="background-color: #FFFFFF;box-shadow: 0 0.7px 3.3px #eeeeee;">
         <div class="container" style="padding: 10px;margin-top: 10px;">
             <div class="row space-bottom">
-                <div class="col-12 text-14px WorkSans-Bold text-black">Detail Pembayaran</div>
+                <div class="col-12 text-14px WorkSans-Bold text-black"><b>Detail Pembayaran</b></div>
             </div>
             <div class="kotak" style="margin: 0px;margin-top: 10px;border-radius: 10px;">
                 @foreach($data['payment_detail'] as $dt)
                     <div class="row">
                         <div class="col-6 text-13-3px WorkSans-SemiBold text-black ">{{$dt['name']}} ({{$dt['desc']}})</div>
                         @if(is_numeric(strpos(strtolower($dt['name']), 'discount')))
-                            <div class="col-6 text-13-3px text-right WorkSans-SemiBold text-black" style="color:#a6ba35;">{{ str_replace(',', '.', number_format($dt['amount'])) }}</div>
+                            <div class="col-6 text-13-3px text-right WorkSans-SemiBold text-black" style="color:#a6ba35;">{{ $dt['amount'] }}</div>
                         @else
-                            <div class="col-6 text-13-3px text-right WorkSans-SemiBold text-black">{{ str_replace(',', '.', number_format($dt['amount'])) }}</div>
+                            <div class="col-6 text-13-3px text-right WorkSans-SemiBold text-black">{{ $dt['amount'] }}</div>
                         @endif
 
                     </div>
@@ -538,11 +522,7 @@
             <div style="margin: 0px;margin-top: 10px;padding: 10px;background: #f0f3f7;">
                 <div class="row">
                     <div class="col-6 text-13-3px WorkSans-SemiBold text-black ">Grand Total</div>
-                    @if(isset($data['balance']))
-                    <div class="col-6 text-13-3px text-right WorkSans-SemiBold text-black">{{ str_replace(',', '.', number_format($data['transaction_grandtotal'] - $data['balance'])) }}</div>
-                    @else
-                    <div class="col-6 text-13-3px text-right WorkSans-SemiBold text-black">{{ str_replace(',', '.', number_format($data['transaction_grandtotal'])) }}</div>
-                    @endif
+                    <div class="col-6 text-13-3px text-right WorkSans-SemiBold text-black">{{$data['transaction_grandtotal']}}</div>
                 </div>
             </div>
         </div>
@@ -551,13 +531,18 @@
     <div class="kotak-biasa" style="background-color: #FFFFFF;box-shadow: 0 0.7px 3.3px #eeeeee;">
         <div class="container" style="padding: 10px;margin-top: 10px;">
             <div class="row space-bottom">
-                <div class="col-12 text-14px WorkSans-SemiBold text-black">Metode Pembayaran</div>
+                <div class="col-12 text-14px WorkSans-SemiBold text-black"><b>Metode Pembayaran</b></div>
             </div>
             <div class="kotak" style="margin: 0px;margin-top: 10px;border-radius: 10px;">
                 <div class="row">
                     @foreach($data['transaction_payment'] as $dt)
-                        <div class="col-6 text-13-3px WorkSans-SemiBold text-black ">{{$dt['name']}}</div>
-                        <div class="col-6 text-13-3px text-right WorkSans-SemiBold text-black">{{ str_replace(',', '.', number_format(explode('.',$dt['amount'])[0])) }}</div>
+                        @if($dt['name'] == 'Balance')
+                            <div class="col-6 text-13-3px WorkSans-SemiBold text-black ">Jiwa Poin</div>
+                            <div class="col-6 text-13-3px text-right WorkSans-SemiBold" style="color: #ff0000">{{ $dt['amount'] }}</div>
+                        @else
+                            <div class="col-6 text-13-3px WorkSans-SemiBold text-black ">{{$dt['name']}}</div>
+                            <div class="col-6 text-13-3px text-right WorkSans-SemiBold text-black">{{ $dt['amount'] }}</div>
+                        @endif
                     @endforeach
                 </div>
             </div>
@@ -565,50 +550,50 @@
     </div>
 
     @if ($data['trasaction_type'] != 'Offline')
-    <div class="kotak-biasa" style="background-color: #FFFFFF;box-shadow: 0 0.7px 3.3px #eeeeee;">
-        <div class="container" style="padding: 10px;margin-top: 10px;">
-            <div class="row space-bottom">
-                <div class="col-12 text-14px WorkSans-Bold text-black">Status Pesanan</div>
-            </div>
-            <div class="kotak" style="margin: 0px;margin-top: 10px;border-radius: 10px;">
-                <?php
-                $i = 1;
-                $count = count($data['detail']['detail_status']);
-                foreach ($data['detail']['detail_status'] as $status){
-                    if($i == 1 ){
-                        $html = '<div class="col-12 text-13-3px WorkSans-Medium text-black">';
-                        $html .= '<div class="round-grey bg-grey" style="border: 1px solid #aaaaaa;border-radius: 50%;width: 5px;height: 5px;display: inline-block;margin-right:3px;background-color: #aaaaaa"></div>';
-                        $html .= $status['text'];
-                        $html .= '</div>';
-                        $html .= '<div class="inline vertical-top">';
-                        $html .= '<div class="col-12 text-11-7px WorkSans text-black space-bottom" style="margin-left: 10%">';
-                        $html .= $status['date'];
-                        $html .= '</div>';
-                        $html .= '</div>';
+        <div class="kotak-biasa" style="background-color: #FFFFFF;box-shadow: 0 0.7px 3.3px #eeeeee;">
+            <div class="container" style="padding: 10px;margin-top: 10px;">
+                <div class="row space-bottom">
+                    <div class="col-12 text-14px WorkSans-Bold text-black"><b>Status Pesanan</b></div>
+                </div>
+                <div class="kotak" style="margin: 0px;margin-top: 10px;border-radius: 10px;">
+                    <?php
+                    $i = 1;
+                    $count = count($data['detail']['detail_status']);
+                    foreach ($data['detail']['detail_status'] as $status){
+                        if($i == $count ){
+                            $html = '<div class="col-12 text-13-3px WorkSans-Medium text-black">';
+                            $html .= '<div class="round-green bg-green2" style="border: 1px solid #aaaaaa;border-radius: 50%;width: 5px;height: 5px;display: inline-block;margin-right:3px;background-color: #a6ba35"></div>';
+                            $html .= $status['text'];
+                            $html .= '</div>';
+                            $html .= '<div class="inline vertical-top">';
+                            $html .= '<div class="col-12 text-11-7px WorkSans text-black space-bottom" style="margin-left: 10%">';
+                            $html .= $status['date'];
+                            $html .= '</div>';
+                            $html .= '</div>';
 
-                        echo $html;
-                    }else{
-                        $html = '<div class="col-12 text-13-3px WorkSans-Medium text-black">';
-                        $html .= '<div class="round-green bg-green2" style="border: 1px solid #aaaaaa;border-radius: 50%;width: 5px;height: 5px;display: inline-block;margin-right:3px;background-color: #a6ba35"></div>';
-                        $html .= $status['text'];
-                        $html .= '</div>';
-                        $html .= '<div class="inline vertical-top">';
-                        $html .= '<div class="col-12 text-11-7px WorkSans text-black space-bottom" style="margin-left: 10%">';
-                        $html .= $status['date'];
-                        $html .= '</div>';
-                        $html .= '</div>';
+                            echo $html;
+                        }else{
+                            $html = '<div class="col-12 text-13-3px WorkSans-Medium text-black">';
+                            $html .= '<div class="round-grey bg-grey" style="border: 1px solid #aaaaaa;border-radius: 50%;width: 5px;height: 5px;display: inline-block;margin-right:3px;background-color: #aaaaaa"></div>';
+                            $html .= $status['text'];
+                            $html .= '</div>';
+                            $html .= '<div class="inline vertical-top">';
+                            $html .= '<div class="col-12 text-11-7px WorkSans text-black space-bottom" style="margin-left: 10%">';
+                            $html .= $status['date'];
+                            $html .= '</div>';
+                            $html .= '</div>';
 
-                        echo $html;
+                            echo $html;
+                        }
+                        $i++;
                     }
-                    $i++;
-                }
-                ?>
+                    ?>
+                </div>
             </div>
         </div>
-    </div>
     @endif
 
-    <!-- Optional JavaScript -->
+<!-- Optional JavaScript -->
     <!-- jQuery first, then Popper.js, then Bootstrap JS -->
     <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49" crossorigin="anonymous"></script>
@@ -617,25 +602,25 @@
 
     @if(isset($data['detail']['pickup_by']) && $data['detail']['pickup_by'] == 'GO-SEND')
 
-    <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCOHBNv3Td9_zb_7uW-AJDU6DHFYk-8e9Y&callback=initMap">
-    </script>
+        <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCOHBNv3Td9_zb_7uW-AJDU6DHFYk-8e9Y&callback=initMap">
+        </script>
 
-    <script>
-        // Initialize and add the map
-        function initMap() {
-            // The location of Uluru
-            var uluru = {lat: parseFloat("{{$data['detail']['transaction_pickup_go_send']['destination_latitude']}}"), lng: parseFloat("{{$data['detail']['transaction_pickup_go_send']['destination_longitude']}}")};
-            // The map, centered at Uluru
-            var map = new google.maps.Map(
-                document.getElementById('map'), {
-                    zoom: 15,
-                    center: uluru,
-                    disableDefaultUI: true
-                });
-            // The marker, positioned at Uluru
-            var marker = new google.maps.Marker({position: uluru, map: map});
-        }
-    </script>
+        <script>
+            // Initialize and add the map
+            function initMap() {
+                // The location of Uluru
+                var uluru = {lat: parseFloat("{{$data['detail']['transaction_pickup_go_send']['destination_latitude']}}"), lng: parseFloat("{{$data['detail']['transaction_pickup_go_send']['destination_longitude']}}")};
+                // The map, centered at Uluru
+                var map = new google.maps.Map(
+                    document.getElementById('map'), {
+                        zoom: 15,
+                        center: uluru,
+                        disableDefaultUI: true
+                    });
+                // The marker, positioned at Uluru
+                var marker = new google.maps.Marker({position: uluru, map: map});
+            }
+        </script>
     @endif
 
     <script>
@@ -660,6 +645,6 @@
             });
         });
     </script>
-    </div>
-  </body>
+</div>
+</body>
 </html>

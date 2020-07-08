@@ -70,7 +70,7 @@ class Enquiry extends Model
 
 	public function getUrlEnquiryPhotoAttribute() {
 	    if (!empty($this->enquiry_photo)) {
-	        return env('S3_URL_API').$this->enquiry_photo;
+	        return config('url.storage_url_api').$this->enquiry_photo;
 	    }
 	}
 

@@ -344,6 +344,7 @@ class ApiSettingTransactionV2 extends Controller
                 }
             }
             if (empty($productPrice)) {
+                continue;
                 DB::rollback();
                 return response()->json([
                     'status' => 'fail',

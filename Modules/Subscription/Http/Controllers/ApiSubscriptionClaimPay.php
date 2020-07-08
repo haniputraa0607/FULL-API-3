@@ -303,7 +303,7 @@ class ApiSubscriptionClaimPay extends Controller
                     return [
                         'status'    => 'success',
                         'result'    => [
-                            'url'  => env('API_URL').'api/ipay88/pay?'.http_build_query([
+                            'url'  => config('url.api_url').'api/ipay88/pay?'.http_build_query([
                                 'type' => 'subscription',
                                 'id_reference' => $voucher->id_subscription_user,
                                 'payment_id' => $request->json('payment_id')?:''
@@ -351,7 +351,7 @@ class ApiSubscriptionClaimPay extends Controller
                     elseif($result['paid_status'] == 'Completed'){
                         $result['title'] = 'Success';
                     }
-                    $result['webview_success'] = env('API_URL').'api/webview/subscription/success/'.$return['result']['voucher']['id_subscription_user'];
+                    $result['webview_success'] = config('url.api_url').'api/webview/subscription/success/'.$return['result']['voucher']['id_subscription_user'];
                     unset($return['result']);
                     $result['cancel_message'] = 'Are you sure you want to cancel this transaction?';
                     $return['result'] = $result;
@@ -425,7 +425,7 @@ class ApiSubscriptionClaimPay extends Controller
         else {
             $data['gross_amount'] = $grossAmount;
         }
-        $tembakMitrans = Midtrans::token($data['order_id'], $data['gross_amount']);
+        $tembakMitrans = Midtrans::token($data['order_id'], $data['gross_amount'], null, null, null, 'subscription', $voucher->id_subscription_user);
         $tembakMitrans['order_id'] = $data['order_id'];
         $tembakMitrans['gross_amount'] = $data['gross_amount'];
 

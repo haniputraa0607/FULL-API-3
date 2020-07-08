@@ -91,7 +91,9 @@ class Subscription extends Eloquent
 		'daily_usage_limit',
 		'new_purchase_after',
 		'is_all_outlet',
-		'subscription_step_complete'
+		'subscription_step_complete',
+        'charged_central',
+        'charged_outlet'
 	];
 
 	protected $appends  = [
@@ -103,7 +105,7 @@ class Subscription extends Eloquent
 	];
 
 	public function getUrlWebviewAttribute() {
-		return env('APP_API_URL') ."api/webview/subscription/". $this->id_subscription;
+		return config('url.app_api_url') ."api/webview/subscription/". $this->id_subscription;
 	}
 
 	public function getSubscriptionPricePrettyAttribute() {
@@ -149,10 +151,10 @@ class Subscription extends Eloquent
 	// ATTRIBUTE IMAGE URL
 	public function getUrlSubscriptionImageAttribute() {
 		if (empty($this->subscription_image)) {
-            return env('S3_URL_API').'img/default.jpg';
+            return config('url.storage_url_api').'img/default.jpg';
         }
         else {
-            return env('S3_URL_API').$this->subscription_image;
+            return config('url.storage_url_api').$this->subscription_image;
         }
 	}
 

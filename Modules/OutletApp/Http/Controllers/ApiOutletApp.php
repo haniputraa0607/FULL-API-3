@@ -44,6 +44,7 @@ use Modules\OutletApp\Http\Requests\ProductSoldOut;
 use Modules\OutletApp\Http\Requests\UpdateToken;
 use Modules\Outlet\Entities\OutletScheduleUpdate;
 use Modules\OutletApp\Jobs\AchievementCheck;
+use Modules\Product\Entities\ProductDetail;
 use Modules\Product\Entities\ProductStockStatusUpdate;
 use Modules\SettingFraud\Entities\FraudDetectionLogTransactionDay;
 use Modules\SettingFraud\Entities\FraudDetectionLogTransactionWeek;
@@ -108,11 +109,38 @@ class ApiOutletApp extends Controller
             ->where('transaction_payment_status', 'Completed')
             ->where('trasaction_type', 'Pickup Order')
             ->whereNull('void_date')
-            ->groupBy('transaction_products.id_transaction')
-            ->orderBy('pickup_at', 'ASC')
-            ->orderBy('transaction_date', 'ASC')
-            ->orderBy('transactions.id_transaction', 'ASC');
+            ->groupBy('transaction_products.id_transaction');
+        switch ($post['sort']??'') {
+            case 'oldest':
+                $list->orderBy('transaction_date','ASC')->orderBy('transactions.id_transaction','ASC');
+                break;
 
+            case 'newest':
+                $list->orderBy('transaction_date','DESC')->orderBy('transactions.id_transaction','DESC');
+                break;
+            
+            case 'shortest_pickup_time':
+                $list->orderBy('pickup_at','ASC')->orderBy('transactions.id_transaction','ASC');
+                break;
+
+            case 'longest_pickup_time':
+                $list->orderBy('pickup_at','DESC')->orderBy('transactions.id_transaction','DESC');
+                break;
+            
+            case 'shortest_delivery_time':
+                $list->orderBy('pickup_at','ASC')->orderBy('transactions.id_transaction','ASC');
+                break;
+
+            case 'longest_delivery_time':
+                $list->orderBy('pickup_at','DESC')->orderBy('transactions.id_transaction','DESC');
+                break;
+            
+            default:
+                $list->orderBy('pickup_at', 'ASC')
+                ->orderBy('transaction_date', 'ASC')
+                ->orderBy('transactions.id_transaction', 'ASC');
+                break;
+        }
         //untuk search
         if (isset($post['search_order_id'])) {
             $list = $list->where('order_id', 'LIKE', '%' . $post['search_order_id'] . '%');
@@ -208,6 +236,14 @@ class ApiOutletApp extends Controller
 
         $result['completed']['count'] = count($listCompleted);
         $result['completed']['data']  = $listCompleted;
+
+        $result['unpaid']['count'] = Transaction::join('transaction_pickups','transaction_pickups.id_transaction','=','transactions.id_transaction')
+            ->where('transaction_payment_status', 'Pending')
+            ->whereNull('taken_at')
+            ->whereNull('taken_by_system_at')
+            ->whereNull('reject_at')
+            ->whereDate('transaction_date',date('Y-m-d'))
+            ->count();
 
         if (isset($post['status'])) {
             if ($post['status'] == 'Pending') {
@@ -622,7 +658,7 @@ class ApiOutletApp extends Controller
                     'date'           => $list->transaction_date,
                     'reject_at'      => $list->reject_at,
                     'id_transaction' => $list->id_transaction,
-                    'url'            => env('API_URL') . '/transaction/web/view/outletapp?data=' . $base,
+                    'url'            => config('url.api_url') . '/transaction/web/view/outletapp?data=' . $base,
                 ],
             ];
 
@@ -754,6 +790,7 @@ class ApiOutletApp extends Controller
             $column    = array_column($checkType, 'type');
             
             $use_referral = optional(optional($newTrx->promo_campaign_promo_code)->promo_campaign)->promo_type == 'Referral';
+            MyHelper::updateFlagTransactionOnline($newTrx, 'success', $newTrx->user);
 
             if (!in_array('Balance', $column) || $use_referral) {
 
@@ -916,9 +953,9 @@ class ApiOutletApp extends Controller
         $updated     = 0;
         $date_time   = date('Y-m-d H:i:s');
         if ($post['sold_out']) {
-            $found = ProductPrice::where('id_outlet', $outlet['id_outlet'])
+            $found = ProductDetail::where('id_outlet', $outlet['id_outlet'])
                 ->whereIn('id_product', $post['sold_out'])
-                ->where('product_stock_status', '<>', 'Sold Out');
+                ->where('product_detail_stock_status', '<>', 'Sold Out');
             $x = $found->get()->toArray();
             foreach ($x as $product) {
                 $create = ProductStockStatusUpdate::create([
@@ -933,12 +970,12 @@ class ApiOutletApp extends Controller
                     'id_outlet_app_otp' => null,
                 ]);
             }
-            $updated += $found->update(['product_stock_status' => 'Sold Out']);
+            $updated += $found->update(['product_detail_stock_status' => 'Sold Out']);
         }
         if ($post['available']) {
-            $found = ProductPrice::where('id_outlet', $outlet['id_outlet'])
+            $found = ProductDetail::where('id_outlet', $outlet['id_outlet'])
                 ->whereIn('id_product', $post['available'])
-                ->where('product_stock_status', '<>', 'Available');
+                ->where('product_detail_stock_status', '<>', 'Available');
             $x = $found->get()->toArray();
             foreach ($x as $product) {
                 $create = ProductStockStatusUpdate::create([
@@ -953,7 +990,7 @@ class ApiOutletApp extends Controller
                     'id_outlet_app_otp' => null,
                 ]);
             }
-            $updated += $found->update(['product_stock_status' => 'Available']);
+            $updated += $found->update(['product_detail_stock_status' => 'Available']);
         }
         return [
             'status' => 'success',
@@ -969,29 +1006,43 @@ class ApiOutletApp extends Controller
     {
         $outlet = $request->user();
         $sub    = BrandProduct::select('id_brand', 'id_product', 'id_product_category')->distinct();
-        $data   = DB::query()->fromSub($sub, 'brand_product')->select(\DB::raw('brand_product.id_brand,brand_product.id_product_category,count(*) as total_product,sum(case product_stock_status when "Sold Out" then 1 else 0 end) total_sold_out,product_category_name'))
+        $data   = DB::query()->fromSub($sub, 'brand_product')->select(\DB::raw('brand_product.id_brand,brand_product.id_product_category,count(*) as total_product,sum(case product_detail_stock_status when "Sold Out" then 1 else 0 end) total_sold_out,product_category_name'))
             ->join('product_categories', 'product_categories.id_product_category', '=', 'brand_product.id_product_category')
             ->join('products', function ($query) {
                 $query->on('brand_product.id_product', '=', 'products.id_product')
                     ->groupBy('products.id_product');
             })
         // product availbale in outlet
-            ->join('product_prices', 'product_prices.id_product', '=', 'products.id_product')
-            ->where('product_prices.id_outlet', '=', $outlet['id_outlet'])
-        // brand produk ada di outlet
-            ->whereColumn('brand_outlet.id_outlet', '=', 'product_prices.id_outlet')
-            ->join('brand_outlet', 'brand_outlet.id_brand', '=', 'brand_product.id_brand')
+            ->join('product_detail', function($join) use ($outlet) {
+                $join->on('product_detail.id_product', '=', 'products.id_product')
+                    ->where('product_detail.id_outlet', '=', $outlet['id_outlet']);
+            })
             ->where(function ($query) {
-                $query->where('product_prices.product_visibility', '=', 'Visible')
+                $query->where('product_detail.product_detail_visibility', '=', 'Visible')
                     ->orWhere(function ($q) {
-                        $q->whereNull('product_prices.product_visibility')
+                        $q->whereNull('product_detail.product_detail_visibility')
                             ->where('products.product_visibility', 'Visible');
                     });
             })
-            ->where('product_prices.product_status', '=', 'Active')
-            ->whereNotNull('product_prices.product_price')
-            ->groupBy('brand_product.id_brand', 'brand_product.id_product_category')
+            ->where('product_detail.product_detail_status', '=', 'Active')
+        // brand produk ada di outlet
+            ->join('brand_outlet', function($join) {
+                $join->on('brand_outlet.id_brand', '=', 'brand_product.id_brand')
+                    ->whereColumn('brand_outlet.id_outlet', '=', 'product_detail.id_outlet');
+            });
+        if ($outlet['outlet_different_price']) {
+            $data->join('product_special_price', function($join) use ($outlet) {
+                $join->on('product_special_price.id_product', '=', 'products.id_product')
+                    ->where('product_special_price.id_outlet', $outlet['id_outlet']);
+            })->whereNotNull('product_special_price.product_special_price');
+        } else {
+            $data->join('product_global_price', 'product_global_price.id_product', '=', 'products.id_product')
+                ->whereNotNull('product_global_price.product_global_price');
+        }
+        $data = $data->groupBy('brand_product.id_brand', 'brand_product.id_product_category')
+            ->orderByRaw('CASE WHEN product_category_order IS NULL OR product_category_order = 0 THEN 1 ELSE 0 END')
             ->orderBy('product_category_order')
+            ->orderBy('product_categories.id_product_category')
             ->get()->toArray();
         $result = MyHelper::groupIt($data, 'id_brand', null, function ($key, &$val) {
             $brand = Brand::select('id_brand', 'name_brand', 'order_brand')
@@ -1018,40 +1069,54 @@ class ApiOutletApp extends Controller
         $outlet            = $request->user();
         $post              = $request->json()->all();
         $post['id_outlet'] = $outlet['id_outlet'];
-        $products          =Product::select([
-            'products.id_product', 'products.product_code', 'products.product_name',
-            DB::raw('(CASE
-                        WHEN (select product_detail.product_detail_stock_status from product_detail  where product_detail.id_product = products.id_product AND product_detail.id_outlet = '.$post['id_outlet'].' ) 
-                        is NULL THEN "Available"
-                        ELSE (select product_detail.product_detail_stock_status from product_detail  where product_detail.id_product = products.id_product AND product_detail.id_outlet = '.$post['id_outlet'].' )
-                    END) as product_stock_status'),
+        $products          = Product::select([
+            'products.id_product', 'products.product_code', 'products.product_name', 'product_detail.product_detail_stock_status as product_stock_status',
         ])
-            ->join('brand_product','brand_product.id_product','=','products.id_product')
-            ->leftJoin('product_global_price','product_global_price.id_product','=','products.id_product')
-            // brand produk ada di outlet
-            ->where('brand_product.id_brand', '=', $post['id_brand'])
-            ->where('brand_product.id_product_category', '=', $post['id_product_category'])
-            ->where('brand_outlet.id_outlet','=',$post['id_outlet'])
-            ->join('brand_outlet','brand_outlet.id_brand','=','brand_product.id_brand')
-            ->whereRaw('products.id_product in (CASE
-                        WHEN (select product_detail.id_product from product_detail  where product_detail.id_product = products.id_product AND product_detail.id_outlet = '.$post['id_outlet'].' )
-                        is NULL AND products.product_visibility = "Visible" THEN products.id_product
-                        WHEN (select product_detail.id_product from product_detail  where product_detail.product_detail_visibility = "" AND product_detail.id_product = products.id_product AND product_detail.id_outlet = '.$post['id_outlet'].' )
-                        is NOT NULL AND products.product_visibility = "Visible" THEN products.id_product
-                        ELSE (select product_detail.id_product from product_detail  where product_detail.product_detail_visibility = "Visible" AND product_detail.id_product = products.id_product AND product_detail.id_outlet = '.$post['id_outlet'].' )
-                    END)')
-            ->whereRaw('products.id_product in (CASE
-                        WHEN (select product_detail.id_product from product_detail  where product_detail.id_product = products.id_product AND product_detail.id_outlet = '.$post['id_outlet'].' )
-                        is NULL THEN products.id_product
-                        ELSE (select product_detail.id_product from product_detail  where product_detail.product_detail_status = "Active" AND product_detail.id_product = products.id_product AND product_detail.id_outlet = '.$post['id_outlet'].' )
-                    END)')
-            ->where(function ($query) use ($post){
-                $query->WhereRaw('(select product_special_price.product_special_price from product_special_price  where product_special_price.id_product = products.id_product AND product_special_price.id_outlet = '.$post['id_outlet'].' ) is NOT NULL');
-                $query->orWhereRaw('(select product_global_price.product_global_price from product_global_price  where product_global_price.id_product = products.id_product) is NOT NULL');
+
+        // join brand product
+            ->join('brand_product', function($join) use ($post) {
+                $join->on('brand_product.id_product', '=', 'products.id_product')
+                    ->where('brand_product.id_brand', '=', $post['id_brand'])
+                    ->where('brand_product.id_product_category', '=', $post['id_product_category']);
             })
-            ->groupBy('products.id_product')
+
+        // brand produk ada di outlet
+            ->join('brand_outlet', function($join) use ($post) {
+                $join->on('brand_outlet.id_brand', '=', 'brand_product.id_brand')
+                    ->where('brand_outlet.id_outlet', '=', $post['id_outlet']);
+            })
+
+        // product available (active & visible)
+            ->join('product_detail', function($join) use ($post) {
+                $join->on('product_detail.id_product', '=', 'products.id_product')
+                    ->where('product_detail.id_outlet', '=', $post['id_outlet']);
+            })
+            ->where(function ($query) {
+                $query->where('product_detail.product_detail_visibility', '=', 'Visible')
+                    ->orWhere(function ($q) {
+                        $q->whereNull('product_detail.product_detail_visibility')
+                            ->where('products.product_visibility', 'Visible');
+                    });
+            })
+            ->where('product_detail.product_detail_status', '=', 'Active');
+
+        // has product price
+        if ($outlet->outlet_different_price) {
+            $products->join('product_special_price', function($join) use ($post) {
+                $join->on('product_special_price.id_product', '=', 'products.id_product')
+                    ->where('product_special_price.id_outlet', '=', $post['id_outlet']);
+            })->whereNotNull('product_special_price.product_special_price');
+        } else{
+            $products->join('product_global_price', 'products.id_product', '=', 'product_global_price.id_product')
+                ->whereNotNull('product_global_price.product_global_price');
+        }
+
+        // group by and order
+        $products->groupBy('products.id_product')
             ->orderBy('products.position')
             ->orderBy('products.id_product');
+
+        // build response
         if ($request->page) {
             $data = $products->paginate()->toArray();
             if (empty($data['data'])) {
@@ -1268,6 +1333,9 @@ class ApiOutletApp extends Controller
                 }
             }
 
+            $user = User::where('id', $order['id_user'])->first()->toArray();
+            $rejectBalance = false;
+
             //refund ke balance
             // if($order['trasaction_payment_type'] == "Midtrans"){
             $multiple = TransactionMultiplePayment::where('id_transaction', $order->id_transaction)->get()->toArray();
@@ -1284,6 +1352,7 @@ class ApiOutletApp extends Controller
                                     'messages' => ['Insert Cashback Failed'],
                                 ]);
                             }
+                            $rejectBalance = true;
                         }
                     } elseif ($pay['type'] == 'Ovo') {
                         $payOvo = TransactionPaymentOvo::find($pay['id_payment']);
@@ -1310,6 +1379,7 @@ class ApiOutletApp extends Controller
                                         'messages' => ['Insert Cashback Failed'],
                                     ]);
                                 }
+                                $rejectBalance = true;
                             }
                         }
                     } elseif (strtolower($pay['type']) == 'ipay88') {
@@ -1323,6 +1393,7 @@ class ApiOutletApp extends Controller
                                     'messages' => ['Insert Cashback Failed'],
                                 ]);
                             }
+                            $rejectBalance = true;
                         }
                     } else {
                         $point = 0;
@@ -1343,26 +1414,11 @@ class ApiOutletApp extends Controller
                                         'messages'  => ['Insert Cashback Failed']
                                     ]);
                                 }
+                                $rejectBalance = true;
                             }
                         }
                     }
-                    $user = User::where('id', $order['id_user'])->first()->toArray();
-                    $send = app($this->autocrm)->SendAutoCRM('Rejected Order Point Refund', $user['phone'],
-                        [
-                            'outlet_name'      => $outlet['outlet_name'],
-                            'id_transaction'   => $order['id_transaction'],
-                            'transaction_date' => $order['transaction_date'],
-                            'receipt_number'   => $order['transaction_receipt_number'],
-                            'received_point'   => (string) $point,
-                        ]
-                    );
-                    if ($send != true) {
-                        DB::rollback();
-                        return response()->json([
-                            'status'   => 'fail',
-                            'messages' => ['Failed Send notification to customer'],
-                        ]);
-                    }
+
                 }
             } else {
                 $payMidtrans = TransactionPaymentMidtran::where('id_transaction', $order['id_transaction'])->first();
@@ -1385,6 +1441,7 @@ class ApiOutletApp extends Controller
                                 'messages'  => ['Insert Cashback Failed']
                             ]);
                         }
+                        $rejectBalance = true;
                     }
                 } elseif ($payOvo) {
                     if(Configs::select('is_active')->where('config_name','refund ovo')->pluck('is_active')->first()){
@@ -1409,6 +1466,7 @@ class ApiOutletApp extends Controller
                                 'messages' => ['Insert Cashback Failed'],
                             ]);
                         }
+                        $rejectBalance = true;
                     }
                 } elseif ($payIpay) {
                     $refund = app($this->balance)->addLogBalance($order['id_user'], $point = ($payIpay['amount']/100), $order['id_transaction'], 'Rejected Order', $order['transaction_grandtotal']);
@@ -1419,6 +1477,7 @@ class ApiOutletApp extends Controller
                             'messages' => ['Insert Cashback Failed'],
                         ]);
                     }
+                    $rejectBalance = true;
                 } else {
                     $payBalance = TransactionPaymentBalance::where('id_transaction', $order['id_transaction'])->first();
                     if ($payBalance) {
@@ -1430,32 +1489,37 @@ class ApiOutletApp extends Controller
                                 'messages' => ['Insert Cashback Failed'],
                             ]);
                         }
+                        $rejectBalance = true;
                     }
                 }
-                //send notif to customer
-                $user = User::where('id', $order['id_user'])->first()->toArray();
-                $send = app($this->autocrm)->SendAutoCRM('Rejected Order Point Refund', $user['phone'],
-                    [
-                        "outlet_name"      => $outlet['outlet_name'],
-                        "transaction_date" => $order['transaction_date'],
-                        'id_transaction'   => $order['id_transaction'],
-                        'receipt_number'   => $order['transaction_receipt_number'],
-                        'received_point'   => (string) $point,
-                    ]
-                );
-                if ($send != true) {
-                    DB::rollback();
-                    return response()->json([
-                        'status'   => 'fail',
-                        'messages' => ['Failed Send notification to customer'],
-                    ]);
-                }
+                
+            }
+            // }
 
-                $send = app($this->autocrm)->SendAutoCRM('Order Reject', $user['phone'], [
+            //send notif to customer
+            $send = app($this->autocrm)->SendAutoCRM('Order Reject', $user['phone'], [
+                "outlet_name"      => $outlet['outlet_name'],
+                "id_reference"     => $order->transaction_receipt_number . ',' . $order->id_outlet,
+                "transaction_date" => $order->transaction_date,
+                'id_transaction'   => $order->id_transaction,
+            ]);
+            if ($send != true) {
+                DB::rollback();
+                return response()->json([
+                    'status'   => 'fail',
+                    'messages' => ['Failed Send notification to customer'],
+                ]);
+            }
+
+            //send notif point refund
+            if($rejectBalance = true){
+                $send = app($this->autocrm)->SendAutoCRM('Rejected Order Point Refund', $user['phone'],
+                [
                     "outlet_name"      => $outlet['outlet_name'],
-                    "id_reference"     => $order->transaction_receipt_number . ',' . $order->id_outlet,
-                    "transaction_date" => $order->transaction_date,
-                    'id_transaction'   => $order->id_transaction,
+                    "transaction_date" => $order['transaction_date'],
+                    'id_transaction'   => $order['id_transaction'],
+                    'receipt_number'   => $order['transaction_receipt_number'],
+                    'received_point'   => (string) $point,
                 ]);
                 if ($send != true) {
                     DB::rollback();
@@ -1465,7 +1529,6 @@ class ApiOutletApp extends Controller
                     ]);
                 }
             }
-            // }
 
             $checkMembership = app($this->membership)->calculateMembership($user['phone']);
 
@@ -1538,7 +1601,7 @@ class ApiOutletApp extends Controller
         $trx_type       = $request->json('trx_type');
         $keyword        = $request->json('search_order_id');
         $perpage        = $request->json('perpage');
-        $request_number = $request->json('request_number') ?: 'thousand';
+        $request_number = $request->json('request_number') ?: 'thousand_id';
         $data           = Transaction::select(\DB::raw('transactions.id_transaction,order_id,DATE_FORMAT(transaction_date, "%Y-%m-%d") as trx_date,DATE_FORMAT(transaction_date, "%H:%i") as trx_time,transaction_receipt_number,count(*) as total_products,transaction_grandtotal'))
             ->where('transactions.id_outlet', $request->user()->id_outlet)
             ->where('trasaction_type', 'Pickup Order')
@@ -1579,6 +1642,37 @@ class ApiOutletApp extends Controller
         if ($keyword) {
             $data->where('order_id', 'like', "%$keyword%");
         }
+        switch ($request->sort) {
+            case 'oldest':
+                $data->orderBy('transaction_date','ASC')->orderBy('transactions.id_transaction','ASC');
+                break;
+
+            case 'newest':
+                $data->orderBy('transaction_date','DESC')->orderBy('transactions.id_transaction','DESC');
+                break;
+            
+            case 'shortest_pickup_time':
+                $data->orderBy('pickup_at','ASC')->orderBy('transactions.id_transaction','ASC');
+                break;
+
+            case 'longest_pickup_time':
+                $data->orderBy('pickup_at','DESC')->orderBy('transactions.id_transaction','DESC');
+                break;
+            
+            case 'shortest_delivery_time':
+                $data->orderBy('pickup_at','ASC')->orderBy('transactions.id_transaction','ASC');
+                break;
+
+            case 'longest_delivery_time':
+                $data->orderBy('pickup_at','DESC')->orderBy('transactions.id_transaction','DESC');
+                break;
+            
+            default:
+                $data->orderBy('pickup_at', 'ASC')
+                ->orderBy('transaction_date', 'ASC')
+                ->orderBy('transactions.id_transaction', 'ASC');
+                break;
+        }
 
         if ($request->page) {
             $return = $data->paginate($perpage ?: 15)->toArray();
@@ -1604,7 +1698,7 @@ class ApiOutletApp extends Controller
     {
         $outlet = $request->user();
         $date   = $request->json('date') ?: date('Y-m-d');
-        $data   = ProductStockStatusUpdate::distinct()->select(\DB::raw('id_product_stock_status_update,brand_product.id_brand,CONCAT(user_type,",",COALESCE(id_user,""),",",COALESCE(user_name,"")) as user,DATE_FORMAT(date_time, "%H:%i") as time,product_name,new_status as old_status,new_status,new_status as to_available'))
+        $data   = ProductStockStatusUpdate::distinct()->select(\DB::raw('id_product_stock_status_update,brand_product.id_brand,CONCAT(COALESCE(user_type,""),",",COALESCE(id_user,""),",",COALESCE(user_name,"")) as user,DATE_FORMAT(date_time, "%H:%i") as time,product_name,new_status as old_status,new_status,new_status as to_available'))
             ->join('products', 'products.id_product', '=', 'product_stock_status_updates.id_product')
             ->join('brand_product', 'products.id_product', '=', 'brand_product.id_product')
             ->where('id_outlet', $outlet->id_outlet)
@@ -1622,7 +1716,7 @@ class ApiOutletApp extends Controller
                 $result[$id_brand]['name_brand'] = Brand::select('name_brand')->where('id_brand', $id_brand)->pluck('name_brand')->first();
             }
             $result[$id_brand]['updates'][] = [
-                'name'    => $name,
+                'name'    => $name?:$outlet['outlet_name'],
                 'time'    => $time,
                 'summary' => array_map(function ($vrb) {
                     return [
@@ -2389,6 +2483,7 @@ class ApiOutletApp extends Controller
                     case 'out_for_delivery':
                         $result['delivery_info']['delivery_status'] = 'Driver mengantarkan pesanan';
                         $result['transaction_status_text']          = 'PROSES PENGANTARAN';
+                        $result['transaction_status']               = 3;
                         $result['delivery_info']['driver']          = [
                             'driver_id'      => $list['transaction_pickup_go_send']['driver_id']?:'',
                             'driver_name'    => $list['transaction_pickup_go_send']['driver_name']?:'',

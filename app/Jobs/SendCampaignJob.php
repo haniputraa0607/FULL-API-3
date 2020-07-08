@@ -202,7 +202,7 @@ class SendCampaignJob implements ShouldQueue
             case 'sms':
                 $senddata = array(
                     'apikey' => env('SMS_KEY'),
-                    'callbackurl' => env('APP_URL'),
+                    'callbackurl' => config('url.app_url'),
                     'datapacket'=>array()
                 );
 
@@ -232,7 +232,7 @@ class SendCampaignJob implements ShouldQueue
 						case 'RajaSMS':
 							$senddata = array(
 								'apikey' => env('SMS_KEY'),
-								'callbackurl' => env('APP_URL'),
+								'callbackurl' => config('url.app_url'),
 								'datapacket'=>array()
 							);
 
@@ -247,7 +247,7 @@ class SendCampaignJob implements ShouldQueue
 						default:
 							$senddata = array(
 								'apikey' => env('SMS_KEY'),
-								'callbackurl' => env('APP_URL'),
+								'callbackurl' => config('url.app_url'),
 								'datapacket'=>array()
 							);
 
@@ -283,50 +283,13 @@ class SendCampaignJob implements ShouldQueue
                     $dataOptional          = [];
                     $image = null;
                     if (isset($campaign['campaign_push_image']) && $campaign['campaign_push_image'] != null) {
-                        $dataOptional['image'] = env('S3_URL_API').$campaign['campaign_push_image'];
-                        $image = env('S3_URL_API').$campaign['campaign_push_image'];
+                        $dataOptional['image'] = config('url.storage_url_api').$campaign['campaign_push_image'];
+                        $image = config('url.storage_url_api').$campaign['campaign_push_image'];
                     }
 
                     if (isset($campaign['campaign_push_clickto']) && $campaign['campaign_push_clickto'] != null) {
                         $dataOptional['type'] = $campaign['campaign_push_clickto'];
-                    }elseif ($campaign['campaign_push_clickto'] == "News") {
-                        if (!empty($campaign['campaign_push_id_reference'])) {
-                            $dataOptional['type'] = 'Detail News';
-                        } else {
-                            $dataOptional['type'] = 'List News';
-                        }
-                    }
-                    elseif ($campaign['campaign_push_clickto'] == 'History Transaction') {
-                        if (!empty($campaign['campaign_push_id_reference'])) {
-                            $dataOptional['type'] = 'Detail History Transaction';
-                        } else {
-                            $dataOptional['type'] = 'List History Transaction';
-                        }
-                    } elseif ($campaign['campaign_push_clickto'] == 'History Point') {
-                        if (!empty($campaign['campaign_push_id_reference'])) {
-                            $dataOptional['type'] = 'Detail History Point';
-                        } else {
-                            $dataOptional['type'] = 'List History Point';
-                        }
-                    } elseif ($campaign['campaign_push_clickto'] == 'Voucher') {
-                        if (!empty($campaign['campaign_push_id_reference'])) {
-                            $dataOptional['type'] = 'Detail Voucher';
-                        } else{
-                            $dataOptional['type'] = 'List Voucher';
-                        }
-                    }elseif ($campaign['campaign_push_clickto'] == 'Deals') {
-                        if (!empty($campaign['campaign_push_id_reference'])) {
-                            $dataOptional['type'] = 'Detail Deals';
-                        }else{
-                            $dataOptional['type'] = 'List Deals';
-                        }
-                    }elseif ($campaign['campaign_push_clickto'] == 'Subscription') {
-                        if (!empty($campaign['campaign_push_id_reference'])) {
-                            $dataOptional['type'] = 'Detail Subscription';
-                        }else{
-                            $dataOptional['type'] = 'List Subscription';
-                        }
-                    }else {
+                    } else {
                         $dataOptional['type'] = 'Home';
                     }
 
@@ -351,7 +314,7 @@ class SendCampaignJob implements ShouldQueue
                             $dataOptional['news_title'] = $news->news_title;
                             $dataOptional['title'] = $news->news_title;
                         }
-                        $dataOptional['url'] = env('APP_URL').'news/webview/'.$campaign['campaign_push_id_reference'];
+                        $dataOptional['url'] = config('url.app_url').'news/webview/'.$campaign['campaign_push_id_reference'];
                     }
                     elseif($campaign['campaign_push_clickto'] == 'Order' && $campaign['campaign_push_id_reference'] != null){
                         $outlet = Outlet::find($campaign['campaign_push_id_reference']);
@@ -428,47 +391,8 @@ class SendCampaignJob implements ShouldQueue
                         $inbox['inboxes_id_reference'] = 0;
                     }
 
-                    if ($campaign['campaign_inbox_clickto'] == "News") {
-                        if (!empty($campaign['campaign_inbox_id_reference'])) {
-                            $inbox['inboxes_clickto'] = 'Detail News';
-                        } else {
-                            $inbox['inboxes_clickto'] = 'List News';
-                        }
-                    }
-                    elseif ($campaign['campaign_inbox_clickto'] == 'History Transaction') {
-                        if (!empty($campaign['campaign_inbox_id_reference'])) {
-                            $inbox['inboxes_clickto'] = 'Detail History Transaction';
-                        } else {
-                            $inbox['inboxes_clickto'] = 'List History Transaction';
-                        }
-                    } elseif ($campaign['campaign_inbox_clickto'] == 'History Point') {
-                        if (!empty($campaign['campaign_inbox_id_reference'])) {
-                            $inbox['inboxes_clickto'] = 'Detail History Point';
-                        } else {
-                            $inbox['inboxes_clickto'] = 'List History Point';
-                        }
-                    } elseif ($campaign['campaign_inbox_clickto'] == 'Voucher') {
-                        if (!empty($campaign['campaign_inbox_id_reference'])) {
-                            $inbox['inboxes_clickto'] = 'Detail Voucher';
-                        } else{
-                            $inbox['inboxes_clickto'] = 'List Voucher';
-                        }
-                    }elseif ($campaign['campaign_inbox_clickto'] == 'Deals') {
-                        if (!empty($campaign['campaign_inbox_id_reference'])) {
-                            $inbox['inboxes_clickto'] = 'Detail Deals';
-                        }else{
-                            $inbox['inboxes_clickto'] = 'List Deals';
-                        }
-                    }elseif ($campaign['campaign_inbox_clickto'] == 'Subscription') {
-                        if (!empty($campaign['campaign_inbox_id_reference'])) {
-                            $dataOptional['inboxes_clickto'] = 'Detail Subscription';
-                        }else{
-                            $dataOptional['inboxes_clickto'] = 'List Subscription';
-                        }
-                    }elseif ($campaign['campaign_inbox_clickto'] == 'Home') {
-                        $inbox['inboxes_clickto'] = 'Home';
-                    }else{
-                        $inbox['inboxes_clickto'] = '';
+                    if($campaign['campaign_inbox_clickto'] == 'No Action' || !empty($campaign['campaign_inbox_clickto'])){
+                        $inbox['inboxes_clickto'] = 'Default';
                     }
 
                     $inbox['inboxes_send_at'] = date("Y-m-d H:i:s");

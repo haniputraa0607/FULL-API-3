@@ -8,7 +8,7 @@ use App\Http\Models\Notification;
 use App\Http\Models\Store;
 use App\Http\Models\User;
 use App\Http\Models\UserDevice;
-use App\Http\Models\Transaksi;
+use App\Http\Models\Transaction;
 use App\Http\Models\ProductVariant;
 
 use App\Http\Requests;
@@ -35,7 +35,7 @@ class PushNotificationHelper{
     function __construct() {
         date_default_timezone_set('Asia/Jakarta');        
         $this->autocrm  = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
-        $this->endPoint  = env('S3_URL_API');
+        $this->endPoint  = config('url.storage_url_api');
     }
 
     public static function saveQueue($id_user, $subject, $message, $inbox=null, $data) {
@@ -139,7 +139,7 @@ class PushNotificationHelper{
 
         $dataOptional['title']             = $subject;
         $dataOptional['body']              = $messages;
-
+        $dataOptional['push_notif_local']  = $dataOptional['push_notif_local'] ?? 0;
         $dataBuilder->addData($dataOptional);
 
         // build semua

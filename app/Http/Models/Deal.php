@@ -116,7 +116,7 @@ class Deal extends Model
 	protected $appends  = ['url_deals_image', 'deals_status', 'deals_voucher_price_type', 'deals_voucher_price_pretty', 'url_webview'];
 
 	public function getUrlWebviewAttribute() {
-		return env('API_URL') ."api/webview/deals/". $this->id_deals ."/". $this->deals_type;
+		return config('url.api_url') ."api/webview/deals/". $this->id_deals ."/". $this->deals_type;
 	}
 
 	public function getDealsVoucherPriceTypeAttribute() {
@@ -159,10 +159,10 @@ class Deal extends Model
 	// ATTRIBUTE IMAGE URL
 	public function getUrlDealsImageAttribute() {
 		if (empty($this->deals_image)) {
-            return env('S3_URL_API').'img/default.jpg';
+            return config('url.storage_url_api').'img/default.jpg';
         }
         else {
-            return env('S3_URL_API').$this->deals_image;
+            return config('url.storage_url_api').$this->deals_image;
         }
 	}
 

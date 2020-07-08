@@ -61,7 +61,7 @@ class ApiSetting extends Controller
 
     function __construct() {
         date_default_timezone_set('Asia/Jakarta');
-        $this->endPoint = env('S3_URL_API');
+        $this->endPoint = config('url.storage_url_api');
 		$this->autocrm  = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
     }
     public function emailUpdate(Request $request) {
@@ -1092,7 +1092,7 @@ class ApiSetting extends Controller
 
         return response()->json([
             'status' => 'success',
-            'url' => env('API_URL').'api/setting/faq/webview'
+            'url' => config('url.api_url').'api/setting/faq/webview'
         ]);
     }
 
@@ -1105,7 +1105,7 @@ class ApiSetting extends Controller
 
         return response()->json([
             'status' => 'success',
-            'url' => env('API_URL').'api/setting/webview/'.$post['key']
+            'url' => config('url.api_url').'api/setting/webview/'.$post['key']
         ]);
 
     }
@@ -1246,17 +1246,17 @@ class ApiSetting extends Controller
             foreach ($menuOther as $key=>$value){
                 $val = (array)$value;
                 if($val['icon'] != ''){
-                    $menuOther[$key]->icon = env('S3_URL_API').$val['icon'];
+                    $menuOther[$key]->icon = config('url.storage_url_api').$val['icon'];
                 }
             }
 
             foreach ($menuMain as $key=>$value){
                 $val = (array)$value;
                 if($val['icon1'] != ''){
-                    $menuMain[$key]->icon1 = env('S3_URL_API').$val['icon1'];
+                    $menuMain[$key]->icon1 = config('url.storage_url_api').$val['icon1'];
                 }
                 if($val['icon2'] != ''){
-                    $menuMain[$key]->icon2 = env('S3_URL_API').$val['icon2'];
+                    $menuMain[$key]->icon2 = config('url.storage_url_api').$val['icon2'];
                 }
             }
 
@@ -1519,7 +1519,7 @@ class ApiSetting extends Controller
             $newDt['status'] = $data['value'];
             $newDt['message'] = $dt['message'];
             if($dt['image'] != ""){
-                $newDt['image'] = env('S3_URL_API').$dt['image'];
+                $newDt['image'] = config('url.storage_url_api').$dt['image'];
             }else{
                 $newDt['image'] = "";
             }
@@ -1582,4 +1582,36 @@ class ApiSetting extends Controller
             ]);
         }
     }
+
+    /* ============== Start Time Expired Setting ============== */
+    function timeExpired(){
+        $timeOtp = Setting::where('key', 'setting_expired_otp')->first();
+        $timeEmail = Setting::where('key', 'setting_expired_time_email_verify')->first();
+
+        $data = [];
+        if($timeOtp){
+            $data['expired_otp'] = $timeOtp['value'];
+        }
+
+        if($timeEmail){
+            $data['expired_time_email'] = $timeEmail['value'];
+        }
+
+        return response()->json(MyHelper::checkGet($data));
+    }
+
+    function updateTimeExpired(Request $request){
+        $post = $request->json()->all();
+
+        if(isset($post['expired_otp'])){
+            $update = Setting::where('key', 'setting_expired_otp')->update(['value' => $post['expired_otp']]);
+        }
+
+        if(isset($post['expired_time_email'])){
+            $update = Setting::where('key', 'setting_expired_time_email_verify')->update(['value' => $post['expired_time_email']]);
+        }
+
+        return response()->json(MyHelper::checkUpdate($update));
+    }
+    /* ============== End Time Expired Setting ============== */
 }

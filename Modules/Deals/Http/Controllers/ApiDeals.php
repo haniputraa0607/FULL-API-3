@@ -311,7 +311,13 @@ class ApiDeals extends Controller
                     $dt = 'Welcome Voucher';
                     break;
             }
-            $send = app($this->autocrm)->SendAutoCRM('Create '.$dt, $request->user()->phone, $request->json()->all(),null,true);
+            $deals = $save->toArray();
+            $send = app($this->autocrm)->SendAutoCRM('Create '.$dt, $request->user()->phone, [
+                'voucher_type' => $deals['deals_voucher_type']?:'',
+                'promo_id_type' => $deals['deals_promo_id_type']?:'',
+                'promo_id' => $deals['deals_promo_id']?:'',
+                'detail' => view('deals::emails.detail',['detail'=>$deals])->render()
+            ]+$deals,null,true);
         } else {
             DB::rollback();
         }
@@ -321,8 +327,20 @@ class ApiDeals extends Controller
 
     /* LIST */
     function listDeal(ListDeal $request) {
-        if($request->json('forSelect2')){
-            return MyHelper::checkGet(Deal::select('id_deals','deals_title')->where('deals_type','Deals')->whereDoesntHave('featured_deals')->get());
+        
+        if($request->json('forSelect2'))
+        {
+            $deals = Deal::select('id_deals','deals_title')
+            		->where('deals_type','Deals')
+            		->whereDoesntHave('featured_deals');
+
+            if ($request->json('featured')) {
+            	$deals = $deals->where('deals_end', '>', date('Y-m-d H:i:s'))
+            			->where('deals_publish_end', '>', date('Y-m-d H:i:s'))
+            			->where('step_complete', '=', 1);
+            }
+
+            return MyHelper::checkGet($deals->get());
         }
 
         // return $request->json()->all();
@@ -528,7 +546,7 @@ class ApiDeals extends Controller
         // if deals detail, add webview url & btn text
         if ($request->json('id_deals') && !empty($deals)) {
             //url webview
-            $deals[0]['webview_url'] = env('APP_URL') . "webview/deals/" . $deals[0]['id_deals'] . "/" . $deals[0]['deals_type'];
+            $deals[0]['webview_url'] = config('url.app_url') . "webview/deals/" . $deals[0]['id_deals'] . "/" . $deals[0]['deals_type'];
             // text tombol beli
             $deals[0]['button_status'] = 0;
             //text konfirmasi pembelian
@@ -1041,7 +1059,13 @@ class ApiDeals extends Controller
                     $dt = 'Welcome Voucher';
                     break;
             }
-            $send = app($this->autocrm)->SendAutoCRM('Update '.$dt, $request->user()->phone, $request->json()->all(),null,true);
+            $deals = Deal::where('id_deals',$request->json('id_deals'))->first()->toArray();
+            $send = app($this->autocrm)->SendAutoCRM('Update '.$dt, $request->user()->phone, [
+                'voucher_type' => $deals['deals_voucher_type']?:'',
+                'promo_id_type' => $deals['deals_promo_id_type']?:'',
+                'promo_id' => $deals['deals_promo_id']?:'',
+                'detail' => view('deals::emails.detail',['detail'=>$deals])->render()
+            ]+$deals,null,true);
 	        return response()->json(MyHelper::checkUpdate($save));
         } else {
             DB::rollback();
@@ -1525,7 +1549,10 @@ class ApiDeals extends Controller
 
 
         for ($i=$start; $i < $end; $i++) {
-            $deals[$i]['time_to_end']=strtotime($deals[$i]['deals_end'])-time();
+            $deals[$i]['time_to_end']		= strtotime($deals[$i]['deals_end'])-time();
+            $deals[$i]['deals_start_indo']	= MyHelper::dateFormatInd($deals[$i]['deals_start'], false, false).' pukul '.date('H:i', strtotime($deals[$i]['deals_start']));
+            $deals[$i]['deals_end_indo']	= MyHelper::dateFormatInd($deals[$i]['deals_end'], false, false).' pukul '.date('H:i', strtotime($deals[$i]['deals_end']));
+            $deals[$i]['time_server_indo']  = MyHelper::dateFormatInd(date('Y-m-d H:i:s'), false, false).' pukul '.date('H:i', strtotime(date('Y-m-d H:i:s')));
             array_push($resultData, $deals[$i]);
         }
 
@@ -1616,12 +1643,23 @@ class ApiDeals extends Controller
 	    	}
     	}
 
-    	if ( empty($deals['deals_content']) ) {
+    	if ( empty($deals['deals_content']) || empty($deals['deals_description']) ) {
     		$step = 3;
 	    	$errors = 'Deals not complete';
     		return false;
     	}
 
     	return true;
+    }
+
+    /* list of deals that haven't ended yet */
+    function listActiveDeals(Request $request){
+        $post = $request->json()->all();
+        $deals = Deal::where('deals_end', '>=', date('Y-m-d H:i:s'))->where('deals_type', 'Deals');
+        if(isset($post['select'])){
+            $deals = $deals->select($post['select']);
+        }
+        $deals = $deals->get();
+        return response()->json(MyHelper::checkGet($deals));
     }
 }

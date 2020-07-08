@@ -137,7 +137,7 @@ class ApiHistoryController extends Controller
         return response()->json($result);
     }
 
-    public function historyTrx(Request $request,$mode='group')
+    public function historyTrx(Request $request, $mode = 'group')
     {
 
         $post = $request->json()->all();
@@ -186,10 +186,10 @@ class ApiHistoryController extends Controller
             $post['cancel'] = null;
         }
 
-        if( $post['cancel'] == null && $post['pending'] == null && $post['completed'] == null){
+        if ($post['cancel'] == null && $post['pending'] == null && $post['completed'] == null) {
             $post['completed'] = 1;
         }
-        
+
         if (!isset($post['buy_voucher'])) {
             $post['buy_voucher'] = null;
         }
@@ -200,7 +200,7 @@ class ApiHistoryController extends Controller
         $transaction = $this->transaction($post, $id);
         $voucher = $this->voucher($post, $id);
 
-        if (!is_null($post['sort']??null)) {
+        if (!is_null($post['sort'] ?? null)) {
             $order = $post['sort'];
         }
 
@@ -213,13 +213,13 @@ class ApiHistoryController extends Controller
         $merge = array_merge($transaction, $voucher);
         if (count($merge) > 0) {
             $sortTrx = $this->sorting($merge, $order, $page);
-            if($mode=='group'){
-                $sortTrx['data'] = $this->groupIt($sortTrx['data'],'date',function($key,&$val){
-                    $explode = explode(' ',$key);
+            if ($mode == 'group') {
+                $sortTrx['data'] = $this->groupIt($sortTrx['data'], 'date', function ($key, &$val) {
+                    $explode = explode(' ', $key);
                     $val['time'] = $explode[1];
                     return $explode[0];
-                },function($key){
-                    return MyHelper::dateFormatInd($key,true,false,false);
+                }, function ($key) {
+                    return MyHelper::dateFormatInd($key, true, false, false);
                 });
             }
             $check = MyHelper::checkGet($sortTrx);
@@ -235,14 +235,14 @@ class ApiHistoryController extends Controller
             $result = MyHelper::checkGet($result);
         } else {
 
-            if(
+            if (
                 $request->json('date_start') ||
                 $request->json('date_end') ||
                 $request->json('outlet') ||
                 $request->json('brand')
-            ){
+            ) {
                 $resultMessage = 'Data tidak ditemukan';
-            }else{
+            } else {
                 $resultMessage = 'Belum ada transaksi';
             }
 
@@ -253,7 +253,7 @@ class ApiHistoryController extends Controller
         return response()->json($result);
     }
 
-    public function historyTrxOnGoing(Request $request,$mode='group')
+    public function historyTrxOnGoing(Request $request, $mode = 'group')
     {
 
         $post = $request->json()->all();
@@ -280,13 +280,13 @@ class ApiHistoryController extends Controller
 
         if (count($transaction) > 0) {
             $sortTrx = $this->sorting($transaction, $order, $page);
-            if($mode=='group'){
-                $sortTrx['data'] = $this->groupIt($sortTrx['data'],'date',function($key,&$val){
-                    $explode = explode(' ',$key);
-                    $val['time'] = substr($explode[1],0,5);
+            if ($mode == 'group') {
+                $sortTrx['data'] = $this->groupIt($sortTrx['data'], 'date', function ($key, &$val) {
+                    $explode = explode(' ', $key);
+                    $val['time'] = substr($explode[1], 0, 5);
                     return $explode[0];
-                },function($key){
-                    return MyHelper::dateFormatInd($key,true,false,false);
+                }, function ($key) {
+                    return MyHelper::dateFormatInd($key, true, false, false);
                 });
             }
             $check = MyHelper::checkGet($sortTrx);
@@ -368,7 +368,7 @@ class ApiHistoryController extends Controller
         return response()->json($result);
     }
 
-    public function historyBalance(Request $request,$mode='group')
+    public function historyBalance(Request $request, $mode = 'group')
     {
         $post = $request->json()->all();
         $id = $request->user()->id;
@@ -415,13 +415,13 @@ class ApiHistoryController extends Controller
 
         if (count($balance) > 0) {
             $sortBalance = $this->sorting($balance, $order, $page);
-            if($mode=='group'){
-                $sortBalance['data'] = $this->groupIt($sortBalance['data'],'date',function($key,&$val){
-                    $explode = explode(' ',$key);
-                    $val['time'] = substr($explode[1],0,5);
+            if ($mode == 'group') {
+                $sortBalance['data'] = $this->groupIt($sortBalance['data'], 'date', function ($key, &$val) {
+                    $explode = explode(' ', $key);
+                    $val['time'] = substr($explode[1], 0, 5);
                     return $explode[0];
-                },function($key){
-                    return MyHelper::dateFormatInd($key,true,false,false);
+                }, function ($key) {
+                    return MyHelper::dateFormatInd($key, true, false, false);
                 });
             }
             $check = MyHelper::checkGet($sortBalance);
@@ -435,16 +435,16 @@ class ApiHistoryController extends Controller
             }
             $result = MyHelper::checkGet($result);
         } else {
-            if(
+            if (
                 $request->json('date_start') ||
                 $request->json('date_end') ||
                 $request->json('outlet') ||
                 $request->json('brand') ||
                 $request->json('use_point') ||
                 $request->json('earn_point')
-            ){
+            ) {
                 $resultMessage = 'Data tidak ditemukan';
-            }else{
+            } else {
                 $resultMessage = 'Kamu belum memiliki point saat ini';
             }
 
@@ -464,7 +464,7 @@ class ApiHistoryController extends Controller
 
         if ($order == 'new') {
             array_multisort($date, SORT_DESC, $data);
-        }elseif ($order == 'old') {
+        } elseif ($order == 'old') {
             array_multisort($date, SORT_ASC, $data);
         }
 
@@ -495,16 +495,16 @@ class ApiHistoryController extends Controller
     {
         $transaction = Transaction::select(\DB::raw('*,sum(transaction_products.transaction_product_qty) as sum_qty'))->distinct('transactions.*')
             ->join('outlets', 'transactions.id_outlet', '=', 'outlets.id_outlet')
-            ->join('transaction_pickups','transaction_pickups.id_transaction','=','transactions.id_transaction')
+            ->join('transaction_pickups', 'transaction_pickups.id_transaction', '=', 'transactions.id_transaction')
             ->leftJoin('transaction_products', 'transactions.id_transaction', '=', 'transaction_products.id_transaction')
             ->where('transactions.id_user', $id)
             ->with('outlet', 'logTopup')
             ->orderBy('transaction_date', 'DESC')
             ->groupBy('transactions.id_transaction');
-        if ($post['brand']??false) {
-            $transaction->join('brand_outlet', function($join) use ($post) {
+        if ($post['brand'] ?? false) {
+            $transaction->join('brand_outlet', function ($join) use ($post) {
                 $join->on('outlets.id_outlet', '=', 'brand_outlet.id_outlet');
-                $join->where('brand_outlet.id_brand','=',$post['brand']);
+                $join->where('brand_outlet.id_brand', '=', $post['brand']);
             });
         }
         if (isset($post['outlet']) || isset($post['brand'])) {
@@ -586,27 +586,27 @@ class ApiHistoryController extends Controller
             $dataList['type'] = 'trx';
             $dataList['id'] = $value['id_transaction'];
             $dataList['date']    = date('Y-m-d H:i', strtotime($value['transaction_date']));
-            $dataList['date_v2']    = MyHelper::indonesian_date_v2($value['transaction_date'],'d F Y H:i');
+            $dataList['date_v2']    = MyHelper::indonesian_date_v2($value['transaction_date'], 'd F Y H:i');
             $dataList['id_outlet'] = $value['outlet']['id_outlet'];
             $dataList['outlet_code'] = $value['outlet']['outlet_code'];
             $dataList['outlet'] = $value['outlet']['outlet_name'];
             $dataList['amount'] = MyHelper::requestNumber($value['transaction_grandtotal'], '_CURRENCY');
-            $dataList['cashback'] = MyHelper::requestNumber($value['transaction_cashback_earned'],'_POINT');
-            $dataList['subtitle'] = $value['sum_qty'].($value['sum_qty']>1?' items':' item');
+            $dataList['cashback'] = MyHelper::requestNumber($value['transaction_cashback_earned'], '_POINT');
+            $dataList['subtitle'] = $value['sum_qty'] . ($value['sum_qty'] > 1 ? ' items' : ' item');
             $dataList['item_total'] = (int) $value['sum_qty'];
             if ($dataList['cashback'] >= 0) {
                 $dataList['status_point'] = 1;
             } else {
                 $dataList['status_point'] = 0;
             }
-            $feedback = UserFeedback::select('rating_items.image','text','rating_item_text')->where('id_transaction',$value['id_transaction'])->leftJoin('rating_items','rating_items.rating_value','=','user_feedbacks.rating_value')->first();
-            $dataList['rate_status'] = $feedback?1:0;
-            $dataList['feedback_detail'] = $feedback?[
-                'rating_item_image' => $feedback->image?(env('S3_URL_API').$feedback->image):null,
-                'rating_item_text' => $feedback->text?:$feedback->rating_item_text,
-            ]:null;
-            $dataList['display_review'] = ($value['transaction_payment_status'] == 'Completed' && !empty($value['taken_at'].$value['taken_by_system_at']))?1:0;
-            $dataList['button_reorder'] = ($value['transaction_payment_status'] == 'Completed')?1:0;
+            $feedback = UserFeedback::select('rating_items.image', 'text', 'rating_item_text')->where('id_transaction', $value['id_transaction'])->leftJoin('rating_items', 'rating_items.rating_value', '=', 'user_feedbacks.rating_value')->first();
+            $dataList['rate_status'] = $feedback ? 1 : 0;
+            $dataList['feedback_detail'] = $feedback ? [
+                'rating_item_image' => $feedback->image ? (config('url.storage_url_api') . $feedback->image) : null,
+                'rating_item_text' => $feedback->text ?: $feedback->rating_item_text,
+            ] : null;
+            $dataList['display_review'] = ($value['transaction_payment_status'] == 'Completed' && !empty($value['taken_at'] . $value['taken_by_system_at'])) ? 1 : 0;
+            $dataList['button_reorder'] = ($value['transaction_payment_status'] == 'Completed') ? 1 : 0;
             $listTransaction[] = $dataList;
         }
 
@@ -619,14 +619,14 @@ class ApiHistoryController extends Controller
             ->leftJoin('transaction_products', 'transactions.id_transaction', '=', 'transaction_products.id_transaction')
             ->with('outlet')
             ->where('transaction_payment_status', 'Completed')
-            ->where(function($q) {
+            ->where(function ($q) {
                 $q->where(function ($q2) {
-                    $q2->where('pickup_by','Customer')
+                    $q2->where('pickup_by', 'Customer')
                         ->whereNull('taken_at');
                 })->orWhere(function ($q2) {
-                        $q2->where('pickup_by','<>','Customer')
-                            ->whereNull('arrived_at');
-                    });
+                    $q2->where('pickup_by', '<>', 'Customer')
+                        ->whereNull('arrived_at');
+                });
             })
             ->whereDate('transaction_date', date('Y-m-d'))
             ->whereNull('reject_at')
@@ -639,9 +639,9 @@ class ApiHistoryController extends Controller
 
         foreach ($transaction as $key => $value) {
             $dataList['type'] = 'trx';
-            $dataList['id'] = $value['id_transaction'] ;
+            $dataList['id'] = $value['id_transaction'];
             $dataList['date']    = date('Y-m-d H:i:s', strtotime($value['transaction_date']));
-            $dataList['date_v2']    = MyHelper::indonesian_date_v2($value['transaction_date'],'d F Y H:i');
+            $dataList['date_v2']    = MyHelper::indonesian_date_v2($value['transaction_date'], 'd F Y H:i');
             $dataList['outlet'] = $value['outlet']['outlet_name'];
             $dataList['outlet_code'] = $value['outlet']['outlet_code'];
             $dataList['amount'] = number_format($value['transaction_grandtotal'], 0, ',', '.');
@@ -653,7 +653,7 @@ class ApiHistoryController extends Controller
             } else {
                 $dataList['status'] = "Pesanan Menunggu Konfirmasi";
             }
-            $dataList['subtitle'] = $value['sum_qty'].($value['sum_qty']>1?' items':' item');
+            $dataList['subtitle'] = $value['sum_qty'] . ($value['sum_qty'] > 1 ? ' items' : ' item');
             $dataList['item_total'] = (int) $value['sum_qty'];
 
             $listTransaction[] = $dataList;
@@ -699,7 +699,11 @@ class ApiHistoryController extends Controller
             }
         });
 
-        $voucher = $voucher->whereNotNull('voucher_price_cash')->where('id_user', $id);
+        $voucher = $voucher->whereNotNull('voucher_price_cash')->where('id_user', $id)
+            ->where(function ($query) {
+                $query->whereColumn('balance_nominal', '<', 'voucher_price_cash')
+                    ->orWhereNull('balance_nominal');
+            });
 
         $voucher = $voucher->get()->toArray();
         $dataVoucher = [];
@@ -746,10 +750,9 @@ class ApiHistoryController extends Controller
                 $dataList['outlet']      = $trx['outlet']['outlet_name'];
                 $dataList['amount']     = $value['point'];
                 $log[$key]['online']     = 1;
-
             }
 
-            $dataList['date_v2']    = MyHelper::indonesian_date_v2($data['date'],'d F Y H:i');
+            $dataList['date_v2']    = MyHelper::indonesian_date_v2($data['date'], 'd F Y H:i');
             $listPoint[$key] = $dataList;
 
             if (!is_null($post['date_start']) && !is_null($post['date_end'])) {
@@ -762,9 +765,12 @@ class ApiHistoryController extends Controller
                 }
             }
 
-            if (!is_null($post['use_point']) && !is_null($post['earn_point']) && !is_null($post['online_order']) && !is_null($post['offline_order']) && !is_null($post['voucher'])) { }
+            if (!is_null($post['use_point']) && !is_null($post['earn_point']) && !is_null($post['online_order']) && !is_null($post['offline_order']) && !is_null($post['voucher'])) {
+            }
 
-            if (!is_null($post['use_point']) && !is_null($post['earn_point'])) { } elseif (is_null($post['use_point']) && is_null($post['earn_point'])) { } else {
+            if (!is_null($post['use_point']) && !is_null($post['earn_point'])) {
+            } elseif (is_null($post['use_point']) && is_null($post['earn_point'])) {
+            } else {
                 if (!is_null($post['use_point'])) {
                     if ($value['source'] == 'Transaction') {
                         unset($listPoint[$key]);
@@ -781,7 +787,9 @@ class ApiHistoryController extends Controller
             }
 
 
-            if (!is_null($post['online_order']) && !is_null($post['offline_order']) && !is_null($post['voucher'])) { } elseif (is_null($post['online_order']) && is_null($post['offline_order']) && is_null($post['voucher'])) { } else {
+            if (!is_null($post['online_order']) && !is_null($post['offline_order']) && !is_null($post['voucher'])) {
+            } elseif (is_null($post['online_order']) && is_null($post['offline_order']) && is_null($post['voucher'])) {
+            } else {
                 if (!is_null($post['online_order'])) {
                     if (is_null($post['voucher'])) {
                         if ($listPoint[$key]['type'] == 'voucher') {
@@ -882,29 +890,29 @@ class ApiHistoryController extends Controller
             }
         });
 
-        // if (!is_null($post['online_order']) || !is_null($post['offline_order'])) {
-        //     $log->leftJoin('transactions', 'transactions.id_transaction', 'log_balances.id_reference')
-        //         ->where(function ($query) use ($post) {
-        //             if (!is_null($post['online_order'])) {
-        //                 $query->orWhere(function ($queryLog) {
-        //                     $queryLog->whereIn('source', ['Transaction', 'Transaction Failed', 'Rejected Order', 'Rejected Order Midtrans', 'Rejected Order Point', 'Rejected Order Ovo', 'Reversal'])
-        //                         ->where('trasaction_type', '!=', 'Offline');
-        //                 });
-        //             }
-        //             if (!is_null($post['offline_order'])) {
-        //                 $query->orWhere(function ($queryLog) {
-        //                     $queryLog->where('source', 'Transaction')
-        //                         ->where('trasaction_type', '=', 'Offline');
-        //                 });
-        //             }
-        //         });
-        // }
+        if (!is_null($post['online_order']) || !is_null($post['offline_order'])) {
+            $log->leftJoin('transactions', 'transactions.id_transaction', 'log_balances.id_reference')
+                ->where(function ($query) use ($post) {
+                    if (!is_null($post['online_order'])) {
+                        $query->orWhere(function ($queryLog) {
+                            $queryLog->whereIn('source', ['Transaction', 'Transaction Failed', 'Rejected Order', 'Rejected Order Midtrans', 'Rejected Order Point', 'Rejected Order Ovo', 'Reversal'])
+                                ->where('trasaction_type', '!=', 'Offline');
+                        });
+                    }
+                    if (!is_null($post['offline_order'])) {
+                        $query->orWhere(function ($queryLog) {
+                            $queryLog->where('source', 'Transaction')
+                                ->where('trasaction_type', '=', 'Offline');
+                        });
+                    }
+                });
+        }
 
-        // if (!is_null($post['voucher'])) {
-        //     $query->orWhere(function ($queryLog) {
-        //         $queryLog->where('source', 'Deals Balance');
-        //     });
-        // }
+        if (!is_null($post['voucher'])) {
+            $log->orWhere(function ($queryLog) {
+                $queryLog->where('source', 'Deals Balance');
+            });
+        }
 
         $log = $log->get();
 
@@ -939,7 +947,6 @@ class ApiHistoryController extends Controller
                     } else {
                         $dataList['amount'] = '+ ' . number_format($value['balance'], 0, ',', '.');
                     }
-
                 } else {
                     if ($value['balance'] < 0) {
                         $dataList['type']    = 'balance';
@@ -951,7 +958,6 @@ class ApiHistoryController extends Controller
                         } else {
                             $dataList['amount'] = '+ ' . number_format($value['balance'], 0, ',', '.');
                         }
-
                     } else {
                         $dataList['type']    = 'profile';
                         $dataList['id']      = $value['id_log_balance'];
@@ -962,7 +968,6 @@ class ApiHistoryController extends Controller
                         } else {
                             $dataList['amount'] = '+ ' . number_format($value['balance'], 0, ',', '.');
                         }
-
                     }
                 }
             } elseif ($value['source'] == 'Voucher' || $value['source'] == 'Deals Balance') {
@@ -978,14 +983,25 @@ class ApiHistoryController extends Controller
 
             } elseif ($value['source'] == 'Subscription Balance') {
                 $dataSubscription = SubscriptionUser::where('id_subscription_user', $value['id_reference'])->first();
-                if($dataSubscription){
+                if ($dataSubscription) {
                     $dataList['type']   = 'subscription';
                     $dataList['id']      = $value['id_log_balance'];
                     $dataList['date']   = date('Y-m-d H:i:s', strtotime($dataSubscription['bought_at']));
                     $dataList['outlet'] = 'Buy a Subscription';
                     $dataList['amount'] = '- ' . ltrim(number_format($value['balance'], 0, ',', '.'), '-');
-
                 }
+            } elseif ($value['source'] == 'Subscription Reversal') {
+                $dataList['type']   = 'profile';
+                $dataList['id']      = $value['id_log_balance'];
+                $dataList['date']    = date('d M Y H:i', strtotime($value['created_at']));
+                $dataList['outlet'] = 'Reversal';
+                $dataList['amount'] = number_format($value['balance'], 0, ',', '.');
+            } elseif ($value['source'] == 'Deals Reversal' || $value['source'] == 'Claim Deals Failed') {
+                $dataList['type']   = 'profile';
+                $dataList['id']      = $value['id_log_balance'];
+                $dataList['date']    = date('d M Y H:i', strtotime($value['created_at']));
+                $dataList['outlet'] = 'Reversal';
+                $dataList['amount'] = number_format($value['balance'], 0, ',', '.');
             } elseif ($value['source'] == 'Reversal Duplicate') {
                 continue;
             } elseif ($value['source'] == 'Point Injection') {
@@ -1000,31 +1016,27 @@ class ApiHistoryController extends Controller
                 $dataList['id']      = $value['id_log_balance'];
                 $dataList['date']    = date('Y-m-d H:i:s', strtotime($value['created_at']));
                 $dataList['amount'] = '+ ' . number_format($value['balance'], 0, ',', '.');
-
-            } elseif($value['source'] == 'Balance Reset') {
+            } elseif ($value['source'] == 'Balance Reset') {
                 $dataList['type']   = 'profile';
                 $dataList['id']      = $value['id_log_balance'];
                 $dataList['date']    = date('Y-m-d H:i:s', strtotime($value['created_at']));
                 $dataList['outlet'] = 'Point Expired';
                 $dataList['amount'] = number_format($value['balance'], 0, ',', '.');
-
-            } elseif($value['source'] == 'Referral Bonus') {
+            } elseif ($value['source'] == 'Referral Bonus') {
                 $dataList['type']   = 'profile';
                 $dataList['id']      = $value['id_log_balance'];
                 $dataList['date']    = date('d M Y H:i', strtotime($value['created_at']));
                 $dataList['outlet'] = 'Referral Bonus';
                 $dataList['amount'] = MyHelper::requestNumber($value['balance'], '_POINT');
-
             } else {
                 $dataList['type']   = 'profile';
                 $dataList['id']      = $value['id_log_balance'];
                 $dataList['date']    = date('Y-m-d H:i:s', strtotime($value['created_at']));
                 $dataList['outlet'] = 'Welcome Point';
                 $dataList['amount'] = '+ ' . number_format($value['balance'], 0, ',', '.');
-
             }
 
-            $dataList['date_v2'] = MyHelper::indonesian_date_v2($dataList['date'],'d F Y H:i');
+            $dataList['date_v2'] = MyHelper::indonesian_date_v2($dataList['date'], 'd F Y H:i');
             $listBalance[$key] = $dataList;
 
             if (isset($post['date_start']) && !is_null($post['date_start']) && isset($post['date_end']) && !is_null($post['date_end'])) {
@@ -1082,20 +1094,21 @@ class ApiHistoryController extends Controller
      * @param  function     $modifier     function to modify key value
      * @return array                      grouped array
      */
-    public function groupIt($array,$col,$col_modifier=null,$key_modifier=null) {
-        $newArray=[];
+    public function groupIt($array, $col, $col_modifier = null, $key_modifier = null)
+    {
+        $newArray = [];
         foreach ($array as $value) {
-            if($col_modifier!==null){
-                $key = $col_modifier($value[$col],$value);
-            }else{
+            if ($col_modifier !== null) {
+                $key = $col_modifier($value[$col], $value);
+            } else {
                 $key = $value[$col];
             }
-            $newArray[$key][]=$value;
+            $newArray[$key][] = $value;
         }
-        if($key_modifier!==null){
+        if ($key_modifier !== null) {
             foreach ($newArray as $key => $value) {
-                $new_key=$key_modifier($key,$value);
-                $newArray[$new_key]=$value;
+                $new_key = $key_modifier($key, $value);
+                $newArray[$new_key] = $value;
                 unset($newArray[$key]);
             }
         }
@@ -1122,17 +1135,17 @@ class ApiHistoryController extends Controller
 
 
         if (is_null($post['online_order']) || is_null($post['offline_order']) || is_null($post['voucher'])) {
-            if($post['online_order']){
+            if ($post['online_order']) {
                 $log->where('source', 'Online Transaction');
             }
 
-            if(isset($post['offline_order']) && $post['offline_order']){
+            if (isset($post['offline_order']) && $post['offline_order']) {
                 $log->where('source', 'Offline Transaction');
             }
 
-            if(isset($post['voucher']) && $post['voucher'] && $post['online_order']){
+            if (isset($post['voucher']) && $post['voucher'] && $post['online_order']) {
                 $log->where('source', '!=', 'Offline Transaction');
-            }elseif(isset($post['voucher']) && $post['voucher'] && $post['offline_order']){
+            } elseif (isset($post['voucher']) && $post['voucher'] && $post['offline_order']) {
                 $log->where('source', '!=', 'Online Transaction');
             }
         }
@@ -1199,7 +1212,7 @@ class ApiHistoryController extends Controller
                 $listBalance[$key] = $dataList;
             } elseif ($value['source'] == 'Subscription Balance') {
                 $dataSubscription = SubscriptionUser::where('id_subscription_user', $value['id_reference'])->first();
-                if($dataSubscription){
+                if ($dataSubscription) {
                     $dataList['type']   = 'subscription';
                     $dataList['id']      = $value['id_log_balance'];
                     $dataList['date']   = date('Y-m-d H:i:s', strtotime($dataSubscription['bought_at']));
@@ -1224,7 +1237,7 @@ class ApiHistoryController extends Controller
                 $dataList['amount'] = '+ ' . number_format($value['balance'], 0, ',', '.');
 
                 $listBalance[$key] = $dataList;
-            } elseif($value['source'] == 'Balance Reset') {
+            } elseif ($value['source'] == 'Balance Reset') {
                 $dataList['type']   = 'profile';
                 $dataList['id']      = $value['id_log_balance'];
                 $dataList['date']    = date('Y-m-d H:i:s', strtotime($value['created_at']));
@@ -1282,10 +1295,10 @@ class ApiHistoryController extends Controller
             $page = $request->get('page');
         }
 
-        if($request->get('sort')){
-            if($request->get('sort') == 'new'){
+        if ($request->get('sort')) {
+            if ($request->get('sort') == 'new') {
                 $order = 'new';
-            }elseif($request->get('sort') == 'old'){
+            } elseif ($request->get('sort') == 'old') {
                 $order = 'old';
             }
         }
@@ -1305,16 +1318,16 @@ class ApiHistoryController extends Controller
             }
             $result = MyHelper::checkGet($result);
         } else {
-            if(
+            if (
                 $request->json('date_start') ||
                 $request->json('date_end') ||
                 $request->json('outlet') ||
                 $request->json('brand') ||
                 $request->json('use_point') ||
                 $request->json('earn_point')
-            ){
+            ) {
                 $resultMessage = 'Data tidak ditemukan';
-            }else{
+            } else {
                 $resultMessage = 'Kamu belum memiliki point saat ini';
             }
 

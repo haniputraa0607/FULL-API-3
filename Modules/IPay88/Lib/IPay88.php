@@ -12,6 +12,7 @@ use App\Http\Models\TransactionMultiplePayment;
 use App\Http\Models\TransactionPaymentBalance;
 use App\Http\Models\DealsUser;
 use App\Http\Models\Deal;
+use App\Http\Models\DealsVoucher;
 use Modules\Subscription\Entities\SubscriptionUser;
 use Modules\Subscription\Entities\Subscription;
 use App\Http\Models\User;
@@ -20,7 +21,6 @@ use Modules\IPay88\Entities\LogIpay88;
 use Modules\IPay88\Entities\TransactionPaymentIpay88;
 use Modules\IPay88\Entities\DealsPaymentIpay88;
 use Modules\IPay88\Entities\SubscriptionPaymentIpay88;
-
 use App\Lib\MyHelper;
 /**
  * IPay88 Payment Integration Class
@@ -34,6 +34,8 @@ class IPay88
 		$this->promo_campaign = "Modules\PromoCampaign\Http\Controllers\ApiPromoCampaign";
 		$this->voucher  = "Modules\Deals\Http\Controllers\ApiDealsVoucher";
         $this->trx = "Modules\Transaction\Http\Controllers\ApiOnlineTransaction";
+        $this->setting_fraud = "Modules\SettingFraud\Http\Controllers\ApiFraud";
+        $this->deals_claim   = "Modules\Deals\Http\Controllers\ApiDealsClaim";
 
 		$this->posting_url = ENV('IPAY88_POSTING_URL');
 		$this->requery_url = ENV('IPAY88_REQUERY_URL');
@@ -121,8 +123,8 @@ class IPay88
 				'UserEmail' => $trx->user->email,
 				'UserContact' => $payment_ipay->user_contact?:$trx->user->phone,
 				'Remark' => '',
-				'ResponseURL' => env('API_URL').'api/ipay88/detail/trx',
-				'BackendURL' => env('API_URL').'api/ipay88/notif/trx',
+				'ResponseURL' => config('url.api_url').'api/ipay88/detail/trx',
+				'BackendURL' => config('url.api_url').'api/ipay88/notif/trx',
 				'xfield1' => ''
 			];
 		}elseif($type == 'deals'){
@@ -144,8 +146,8 @@ class IPay88
 				'UserEmail' => $deals_user->user->email,
 				'UserContact' => $payment_ipay->user_contact?:$deals_user->user->phone,
 				'Remark' => '',
-				'ResponseURL' => env('API_URL').'api/ipay88/detail/deals',
-				'BackendURL' => env('API_URL').'api/ipay88/notif/deals',
+				'ResponseURL' => config('url.api_url').'api/ipay88/detail/deals',
+				'BackendURL' => config('url.api_url').'api/ipay88/notif/deals',
 				'xfield1' => ''
 			];
 		}elseif($type == 'subscription'){
@@ -341,6 +343,7 @@ class IPay88
             			break;
 
             		case '0':
+			            MyHelper::updateFlagTransactionOnline($trx, 'cancel', $trx->user);
 	                    $update = $trx->update(['transaction_payment_status'=>'Cancelled','void_date'=>date('Y-m-d H:i:s')]);
 		                $trx->load('outlet_name');
 		                // $send = app($this->notif)->notificationDenied($mid, $trx);
@@ -402,8 +405,15 @@ class IPay88
                 break;
 
             case 'deals':
-    			$deals_user = DealsUser::with('userMid')->where('id_deals_user',$model->id_deals_user)->first();
-    			$deals = Deal::where('id_deals',$model->id_deals)->first();
+    			$amount = 0;
+            	if(is_numeric($model)){
+	            	$id_deals_user = $model;
+            	} else {
+            		$id_deals_user = $model->id_deals_user;
+            		$amount = $model->amount / 100;
+            	}
+    			$deals_user = DealsUser::join('deals_vouchers', 'deals_vouchers.id_deals_voucher', '=', 'deals_users.id_deals_voucher')->with('userMid')->where('id_deals_user',$id_deals_user)->first();
+    			$deals = Deal::where('id_deals',$deals_user->id_deals)->first();
             	switch ($data['Status']) {
             		case '1':
 	                    $update = $deals_user->update(['paid_status'=>'Completed']);
@@ -447,6 +457,26 @@ class IPay88
 			                }
 			            }
 	                    $update = $deals_user->update(['paid_status'=>'Cancelled']);
+			            // revert back deals data
+			            if ($deals) {
+			                $up1 = $deals->update(['deals_total_claimed' => $deals->deals_total_claimed - 1]);
+			                if (!$up1) {
+			                    DB::rollBack();
+		                        return [
+		                            'status'=>'fail',
+		                            'messages' => ['Failed update total claimed']
+		                        ];
+			                }
+			            }
+			            $up2 = DealsVoucher::where('id_deals_voucher', $deals_user->id_deals_voucher)->update(['deals_voucher_status' => 'Available']);
+			            if (!$up2) {
+			                DB::rollBack();
+	                        return [
+	                            'status'=>'fail',
+	                            'messages' => ['Failed update voucher status']
+	                        ];
+			            }
+			            // $del = app($this->deals_claim)->checkUserClaimed($user, $deals_user->id_deals, true);
 	                    if(!$update){
 		                    DB::rollBack();
 	                        return [
@@ -515,7 +545,23 @@ class IPay88
 		                        ]
 		                    );
 			            }
-	                    $update = $subscription_user->update(['paid_status'=>'Cancelled']);
+	                    $update = $subscription_user->update(['paid_status'=>'Cancelled', 'void_date' => date('Y-m-d H:i:s')]);
+			            // revert back deals data
+			            if ($subscription) {
+			                $up1 = $subscription->update(['subscription_bought' => $subscription->subscription_bought - 1]);
+			                if (!$up1) {
+			                    DB::rollBack();
+		                        return [
+		                            'status'=>'fail',
+		                            'messages' => ['Failed update subscription bought']
+		                        ];
+			                }
+			            }
+			            // $up2 = SubscriptionUserVoucher::where('id_subscription_user_voucher', $singleTrx->id_subscription_user_voucher)->delete();
+			            // if (!$up2) {
+			            //     DB::rollBack();
+			            //     continue;
+			            // }
 	                    if(!$update){
 		                    DB::rollBack();
 	                        return [

@@ -32,6 +32,7 @@ use App\Http\Models\Autocrm;
 use App\Http\Models\Setting;
 use App\Http\Models\LogPoint;
 use Modules\IPay88\Entities\TransactionPaymentIpay88;
+use Modules\OutletApp\Jobs\AchievementCheck;
 
 class ApiCronTrxController extends Controller
 {
@@ -93,6 +94,8 @@ class ApiCronTrxController extends Controller
             // }
 
             DB::begintransaction();
+
+            MyHelper::updateFlagTransactionOnline($singleTrx, 'cancel', $user);
 
             $singleTrx->transaction_payment_status = 'Cancelled';
             $singleTrx->void_date = $now;
@@ -364,6 +367,7 @@ class ApiCronTrxController extends Controller
 
             $use_referral = optional(optional($newTrx->promo_campaign_promo_code)->promo_campaign)->promo_type == 'Referral';
 
+            MyHelper::updateFlagTransactionOnline($newTrx, 'success', $newTrx->user);
             if ((!in_array('Balance', $column) || $use_referral) && $newTrx->user) {
 
                 $promo_source = null;
@@ -389,6 +393,8 @@ class ApiCronTrxController extends Controller
         $dataTrx = TransactionPickup::whereIn('id_transaction', $idTrx)
                                     ->update(['taken_by_system_at' => date('Y-m-d 00:00:00')]);
 
+        AchievementCheck::dispatch(['id_transaction' => $idTrx])->onConnection('achievement');
+        
         return response()->json(['status' => 'success']);
     }
 

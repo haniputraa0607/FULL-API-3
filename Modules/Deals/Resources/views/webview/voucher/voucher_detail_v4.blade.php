@@ -5,7 +5,7 @@
 @extends('webview.main')
 
 @section('css')
-	<link rel="stylesheet" href="{{env('API_URL')}}css/voucher.css">
+	<link rel="stylesheet" href="{{config('url.api_url')}}css/voucher.css">
 	<style type="text/css">
     	p{
     		margin-top: 0px !important;
@@ -301,8 +301,8 @@
 								</div>
 							</div>
 						</div>
-						<img src="{{ env('S3_URL_API').$voucher['deal_voucher']['deal']['deals_image'] }}" alt="" style="width: 85px;position: absolute;border-radius: 50%;top: 14.5%;left: 6.5%;">
-						<img style="width:100%" height="130px" src="{{ env('S3_URL_API')}}img/asset/bg_item_kupon_saya.png" alt="">
+						<img src="{{ config('url.storage_url_api').$voucher['deal_voucher']['deal']['deals_image'] }}" alt="" style="width: 85px;position: absolute;border-radius: 50%;top: 14.5%;left: 6.5%;">
+						<img style="width:100%" height="130px" src="{{ config('url.storage_url_api')}}img/asset/bg_item_kupon_saya.png" alt="">
 					</div>
 				</div>
 
@@ -363,7 +363,7 @@
 @stop
 
 @section('page-script')
-	<script src="{{env('API_URL')}}js/jquery.js"></script>
-	<script src="{{env('API_URL')}}js/popper.js"></script>
-    <script src="{{env('API_URL')}}js/voucher.js"></script>
+	<script src="{{config('url.api_url')}}js/jquery.js"></script>
+	<script src="{{config('url.api_url')}}js/popper.js"></script>
+    <script src="{{config('url.api_url')}}js/voucher.js"></script>
 @stop

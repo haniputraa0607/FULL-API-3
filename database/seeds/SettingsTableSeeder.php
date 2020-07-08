@@ -758,6 +758,69 @@ class SettingsTableSeeder extends Seeder
                     'created_at' => date('Y-m-d H:i:s'),
                     'updated_at' => date('Y-m-d H:i:s'),
                 ),
+            84 =>
+                array(
+                    'id_setting' => 85,
+                    'key' => 'setting_expired_time_email_verify',
+                    'value' => 30,
+                    'value_text' => null,
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
+            85 =>
+                array(
+                    'id_setting' => 86,
+                    'key' => 'disburse_global_setting_time_to_sent',
+                    'value' => 4,
+                    'value_text' => null,
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
+           86 =>
+                array(
+                    'id_setting' => 87,
+                    'key' => 'setting_expired_otp',
+                    'value' => 30,
+                    'value_text' => null,
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
+            87 =>
+                array(
+                    'id_setting' => 88,
+                    'key' => 'otp_rule_request',
+                    'value' => null,
+                    'value_text' => '{"hold_time": 60, "max_value_request": 20}',
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
+            88 =>
+                array(
+                    'id_setting' => 89,
+                    'key' => 'email_verify_rule_request',
+                    'value' => null,
+                    'value_text' => '{"hold_time": 60, "max_value_request": 20}',
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
+            89 =>
+                array(
+                    'id_setting' => 90,
+                    'key' => 'transaction_set_time_notif_message',
+                    'value' => null,
+                    'value_text' => '{"title_5mnt": "5 menit Pesananmu siap lho", "msg_5mnt": "hai %name%, siap - siap ke outlet %outlet_name% yuk. Pesananmu akan siap 5 menit lagi nih.","title_15mnt": "15 menit Pesananmu siap lho", "msg_15mnt": "hai %name%, siap - siap ke outlet %outlet_name% yuk. Pesananmu akan siap 15 menit lagi nih."}',
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
+            90 =>
+                array(
+                    'id_setting' => 91,
+                    'key' => 'transaction_set_time_notif_message_outlet',
+                    'value' => null,
+                    'value_text' => '{"title_5mnt": "Pesanan %order_id% akan diambil 5 menit lagi", "msg_5mnt": "Pesanan %order_id% atas nama %name% akan diambil 5 menit lagi nih, segera disiapkan ya !","title_15mnt": "Pesanan %order_id% akan diambil 15 menit lagi", "msg_15mnt": "Pesanan %order_id% atas nama %name% akan diambil 15 menit lagi nih, segera disiapkan ya !"}',
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
         ));
     }
 }

@@ -58,6 +58,9 @@ Route::group(['prefix' => 'disburse'], function () {
         //approver
         Route::any('setting/approver', 'ApiDisburseSettingController@settingApproverPayouts');
 
+        //time to sent disburse
+        Route::any('setting/time-to-sent', 'ApiDisburseSettingController@settingTimeToSent');
+
         Route::any('update-status', 'ApiDisburseController@updateStatusDisburse');
     });
 

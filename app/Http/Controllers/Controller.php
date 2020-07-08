@@ -48,7 +48,7 @@ class Controller extends BaseController
 	
 	function getFeature(Request $request){
 	
-		$checkFeature = Feature::get()->toArray();
+		$checkFeature = Feature::where('show_hide', 1)->orderBy('order', 'asc')->get()->toArray();
 		$result = [
 			'status'  => 'success',
 			'result'  => $checkFeature
@@ -58,7 +58,7 @@ class Controller extends BaseController
 	
 	function getFeatureModule(Request $request){
 	
-		$checkFeature = Feature::select('feature_module')->groupBy('feature_module')->get()->toArray();
+		$checkFeature = Feature::select('feature_module')->where('show_hide', 1)->orderBy('order', 'asc')->groupBy('feature_module')->get()->toArray();
 		$result = [
 			'status'  => 'success',
 			'result'  => $checkFeature
@@ -121,7 +121,7 @@ class Controller extends BaseController
             $result = [
                 'status' => 'success',
                 'result' => [
-                    'pathinfo' => env('S3_URL_API').$upload['path'],
+                    'pathinfo' => config('url.storage_url_api').$upload['path'],
                     'path' => $upload['path']
                 ]
             ];
@@ -157,9 +157,9 @@ class Controller extends BaseController
             $data['status'] = $get['value'];
             $data['message'] = $dt['message'];
             if($dt['image'] != ""){
-                $data['image'] = env('S3_URL_API').$dt['image'];
+                $data['image'] = config('url.storage_url_api').$dt['image'];
             }else{
-                $data['image'] = env('S3_URL_API').'img/maintenance/default.png';
+                $data['image'] = config('url.storage_url_api').'img/maintenance/default.png';
             }
         }
         return view('webview.maintenance_mode', $data);

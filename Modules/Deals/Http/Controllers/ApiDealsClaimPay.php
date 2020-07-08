@@ -310,7 +310,7 @@ class ApiDealsClaimPay extends Controller
                     return [
                         'status'    => 'success',
                         'result'    => [
-                            'url'  => env('API_URL').'api/ipay88/pay?'.http_build_query([
+                            'url'  => config('url.api_url').'api/ipay88/pay?'.http_build_query([
                                 'type' => 'deals',
                                 'id_reference' => $voucher->id_deals_user,
                                 'payment_id' => $request->json('payment_id')?:''
@@ -379,7 +379,7 @@ class ApiDealsClaimPay extends Controller
                     }else{
                         $result['redirect'] = false;
                     }
-                    $result['webview_later'] = env('API_URL').'api/webview/mydeals/'.$return['result']['voucher']['id_deals_user'];
+                    $result['webview_later'] = config('url.api_url').'api/webview/mydeals/'.$return['result']['voucher']['id_deals_user'];
                     unset($return['result']);
                     $result['cancel_message'] = 'Are you sure you want to cancel this transaction?';
                     $return['result'] = $result;
@@ -474,7 +474,7 @@ class ApiDealsClaimPay extends Controller
             $data['gross_amount'] = $grossAmount;
         }
 
-        $tembakMitrans = Midtrans::token($data['order_id'], $data['gross_amount']);
+        $tembakMitrans = Midtrans::token($data['order_id'], $data['gross_amount'], null, null, null, 'deals', $voucher->id_deals_user);
         $tembakMitrans['order_id'] = $data['order_id'];
         $tembakMitrans['gross_amount'] = $data['gross_amount'];
 
@@ -811,7 +811,7 @@ class ApiDealsClaimPay extends Controller
         $voucher = DealsUser::select('id_deals_user','paid_status')->where('id_deals_user',$request->json('id_deals_user'))->first()->toArray();
         if($voucher['paid_status'] == 'Completed'){
             $voucher['message'] = Setting::where('key', 'payment_success_messages')->pluck('value_text')->first()??'Apakah kamu ingin menggunakan Voucher sekarang?';
-            $voucher['url_webview'] = env('API_URL').'api/webview/mydeals/'.$voucher['id_deals_user'];
+            $voucher['url_webview'] = config('url.api_url').'api/webview/mydeals/'.$voucher['id_deals_user'];
         }elseif($voucher['paid_status'] == 'Cancelled'){
             $voucher['message'] = Setting::where('key', 'payment_ovo_fail_messages')->pluck('value_text')->first()??'Transaksi Gagal';
         }

@@ -229,14 +229,14 @@ class ApiConfirm extends Controller
                     'shipping_address'    => $dataShipping
                 );
 
-                $connectMidtrans = Midtrans::token($check['transaction_receipt_number'], $countGrandTotal, $dataUser, $dataShipping, $dataDetailProduct);
+                $connectMidtrans = Midtrans::token($check['transaction_receipt_number'], $countGrandTotal, $dataUser, $dataShipping, $dataDetailProduct, 'trx', $check['transaction_receipt_number']);
             } else {
                 $dataMidtrans = array(
                     'transaction_details' => $transaction_details,
                     'customer_details'    => $dataUser,
                 );
 
-                $connectMidtrans = Midtrans::token($check['transaction_receipt_number'], $countGrandTotal, $dataUser, $ship=null, $dataDetailProduct);
+                $connectMidtrans = Midtrans::token($check['transaction_receipt_number'], $countGrandTotal, $dataUser, $ship=null, $dataDetailProduct, 'trx', $check['transaction_receipt_number']);
             }
 
             if (empty($connectMidtrans['token'])) {
@@ -389,7 +389,7 @@ class ApiConfirm extends Controller
             return [
                 'status'    => 'success',
                 'result'    => [
-                    'url'  => env('API_URL').'api/ipay88/pay?'.http_build_query([
+                    'url'  => config('url.api_url').'api/ipay88/pay?'.http_build_query([
                         'type' => 'trx',
                         'id_reference' => $check['id_transaction'],
                         'payment_id' => $request->payment_id?:''
@@ -752,6 +752,7 @@ class ApiConfirm extends Controller
 
                     $update = TransactionPaymentOvo::where('id_transaction', $trx['id_transaction'])->update($dataUpdate);
 
+                    MyHelper::updateFlagTransactionOnline($trx, 'cancel');
                     $updatePaymentStatus = Transaction::where('id_transaction', $trx['id_transaction'])->update(['transaction_payment_status' => 'Cancelled', 'void_date' => date('Y-m-d H:i:s')]);
 
                     if ($trx->id_promo_campaign_promo_code) {
