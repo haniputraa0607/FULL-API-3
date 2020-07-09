@@ -13,6 +13,11 @@ use Illuminate\Http\Request;
 |
 */
 
-Route::middleware('auth:api')->get('/transactionnoteformat', function (Request $request) {
-    return $request->user();
+Route::group(['middleware' => [], 'prefix' => 'transaction-note-format'], function() {
+    Route::get('header', 'ApiTransactionNoteFormatController@getHeaderPlain');
+    Route::get('header/{outletId}', 'ApiTransactionNoteFormatController@getHeader');
+    Route::post('header', 'ApiTransactionNoteFormatController@setHeader');
+    Route::get('footer', 'ApiTransactionNoteFormatController@getFooterPlain');
+    Route::get('footer/{outletId}', 'ApiTransactionNoteFormatController@getFooter');
+    Route::post('footer', 'ApiTransactionNoteFormatController@setFooter');
 });
