@@ -1,6 +1,6 @@
 <?php
 
-Route::group(['middleware' => ['auth:outlet-app', 'outlet_device_location', 'log_activities_outlet_apps'], 'prefix' => 'api/outletapp', 'namespace' => 'Modules\OutletApp\Http\Controllers'], function()
+Route::group(['middleware' => ['auth:outlet-app', 'log_activities_outlet_apps'], 'prefix' => 'api/outletapp', 'namespace' => 'Modules\OutletApp\Http\Controllers'], function()
 {
     Route::any('/update-token', 'ApiOutletApp@updateToken');
     Route::any('/delete-token', 'ApiOutletApp@deleteToken');
