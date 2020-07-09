@@ -1640,6 +1640,7 @@ class ApiOnlineTransaction extends Controller
      */
     public function checkTransaction(CheckTransaction $request) {
         $post = $request->json()->all();
+        $post['item'] = $this->mergeProducts($post['item']);
         $grandTotal = app($this->setting_trx)->grandTotal();
         $user = $request->user();
         //Check Outlet
@@ -2683,5 +2684,42 @@ class ApiOnlineTransaction extends Controller
         }
         $update = Setting::updateOrCreate(['key' => 'active_payment_methods'], ['value_text' => json_encode($payments)]);
         return MyHelper::checkUpdate($update);
+    }
+
+    public function mergeProducts($items)
+    {
+        $new_items = [];
+        $item_qtys = [];
+
+        // create unique array
+        foreach ($items as $item) {
+            $new_item = [
+                'bonus' => $item['bonus'],
+                'id_brand' => $item['id_brand'],
+                'id_product_group' => $item['id_product_group'],
+                'note' => $item['note'],
+                'variants' => $item['variants'],
+                'modifiers' => array_map(function($i){
+                        return [
+                            'id_product_modifier' => $i['id_product_modifier'],
+                            'qty' => $i['qty']
+                        ];
+                    },$item['modifiers']??[]),
+            ];
+            usort($new_item['modifiers'],function($a, $b) { return $a['id_product_modifier'] <=> $b['id_product_modifier']; });
+            $pos = array_search($new_item, $new_items);
+            if($pos === false) {
+                $new_items[] = $new_item;
+                $item_qtys[] = $item['qty'];
+            } else {
+                $item_qtys[$pos] += $item['qty'];
+            }
+        }
+        // update qty
+        foreach ($new_items as $key => &$value) {
+            $value['qty'] = $item_qtys[$key];
+        }
+
+        return $new_items;
     }
 }
