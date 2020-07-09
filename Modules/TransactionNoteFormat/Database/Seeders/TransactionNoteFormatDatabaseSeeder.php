@@ -1,11 +1,11 @@
 <?php
 
-namespace Modules\TransactionNote\Database\Seeders;
+namespace Modules\TransactionNoteFormat\Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use Illuminate\Database\Eloquent\Model;
 
-class TransactionNoteDatabaseSeeder extends Seeder
+class TransactionNoteFormatDatabaseSeeder extends Seeder
 {
     /**
      * Run the database seeds.

@@ -13,6 +13,6 @@ use Illuminate\Http\Request;
 |
 */
 
-Route::middleware('auth:api')->get('/transactionnote', function (Request $request) {
+Route::middleware('auth:api')->get('/transactionnoteformat', function (Request $request) {
     return $request->user();
 });

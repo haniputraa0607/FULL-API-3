@@ -1,11 +1,11 @@
 <?php
 
-namespace Modules\TransactionNote\Providers;
+namespace Modules\TransactionNoteFormat\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Database\Eloquent\Factory;
 
-class TransactionNoteServiceProvider extends ServiceProvider
+class TransactionNoteFormatServiceProvider extends ServiceProvider
 {
     /**
      * Boot the application events.
@@ -39,10 +39,10 @@ class TransactionNoteServiceProvider extends ServiceProvider
     protected function registerConfig()
     {
         $this->publishes([
-            __DIR__.'/../Config/config.php' => config_path('transactionnote.php'),
+            __DIR__.'/../Config/config.php' => config_path('transactionnoteformat.php'),
         ], 'config');
         $this->mergeConfigFrom(
-            __DIR__.'/../Config/config.php', 'transactionnote'
+            __DIR__.'/../Config/config.php', 'transactionnoteformat'
         );
     }
 
@@ -53,7 +53,7 @@ class TransactionNoteServiceProvider extends ServiceProvider
      */
     public function registerViews()
     {
-        $viewPath = resource_path('views/modules/transactionnote');
+        $viewPath = resource_path('views/modules/transactionnoteformat');
 
         $sourcePath = __DIR__.'/../Resources/views';
 
@@ -62,8 +62,8 @@ class TransactionNoteServiceProvider extends ServiceProvider
         ],'views');
 
         $this->loadViewsFrom(array_merge(array_map(function ($path) {
-            return $path . '/modules/transactionnote';
-        }, \Config::get('view.paths')), [$sourcePath]), 'transactionnote');
+            return $path . '/modules/transactionnoteformat';
+        }, \Config::get('view.paths')), [$sourcePath]), 'transactionnoteformat');
     }
 
     /**
@@ -73,12 +73,12 @@ class TransactionNoteServiceProvider extends ServiceProvider
      */
     public function registerTranslations()
     {
-        $langPath = resource_path('lang/modules/transactionnote');
+        $langPath = resource_path('lang/modules/transactionnoteformat');
 
         if (is_dir($langPath)) {
-            $this->loadTranslationsFrom($langPath, 'transactionnote');
+            $this->loadTranslationsFrom($langPath, 'transactionnoteformat');
         } else {
-            $this->loadTranslationsFrom(__DIR__ .'/../Resources/lang', 'transactionnote');
+            $this->loadTranslationsFrom(__DIR__ .'/../Resources/lang', 'transactionnoteformat');
         }
     }
 

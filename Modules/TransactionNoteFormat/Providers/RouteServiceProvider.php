@@ -1,6 +1,6 @@
 <?php
 
-namespace Modules\TransactionNote\Providers;
+namespace Modules\TransactionNoteFormat\Providers;
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Foundation\Support\Providers\RouteServiceProvider as ServiceProvider;
@@ -12,7 +12,7 @@ class RouteServiceProvider extends ServiceProvider
      *
      * @var string
      */
-    protected $moduleNamespace = 'Modules\TransactionNote\Http\Controllers';
+    protected $moduleNamespace = 'Modules\TransactionNoteFormat\Http\Controllers';
 
     /**
      * Called before routes are registered.

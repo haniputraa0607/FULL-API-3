@@ -1,12 +1,12 @@
 <?php
 
-namespace Modules\TransactionNote\Http\Controllers;
+namespace Modules\TransactionNoteFormat\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
 
-class TransactionNoteController extends Controller
+class TransactionNoteFormatController extends Controller
 {
     /**
      * Display a listing of the resource.
@@ -14,7 +14,7 @@ class TransactionNoteController extends Controller
      */
     public function index()
     {
-        return view('transactionnote::index');
+        return view('transactionnoteformat::index');
     }
 
     /**
@@ -23,7 +23,7 @@ class TransactionNoteController extends Controller
      */
     public function create()
     {
-        return view('transactionnote::create');
+        return view('transactionnoteformat::create');
     }
 
     /**
@@ -43,7 +43,7 @@ class TransactionNoteController extends Controller
      */
     public function show($id)
     {
-        return view('transactionnote::show');
+        return view('transactionnoteformat::show');
     }
 
     /**
@@ -53,7 +53,7 @@ class TransactionNoteController extends Controller
      */
     public function edit($id)
     {
-        return view('transactionnote::edit');
+        return view('transactionnoteformat::edit');
     }
 
     /**

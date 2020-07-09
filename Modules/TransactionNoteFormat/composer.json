@@ -1,5 +1,5 @@
 {
-    "name": "nwidart/transactionnote",
+    "name": "nwidart/transactionnoteformat",
     "description": "",
     "authors": [
         {
@@ -10,7 +10,7 @@
     "extra": {
         "laravel": {
             "providers": [
-                "Modules\\TransactionNote\\Providers\\TransactionNoteServiceProvider"
+                "Modules\\TransactionNoteFormat\\Providers\\TransactionNoteFormatServiceProvider"
             ],
             "aliases": {
                 
@@ -19,7 +19,7 @@
     },
     "autoload": {
         "psr-4": {
-            "Modules\\TransactionNote\\": ""
+            "Modules\\TransactionNoteFormat\\": ""
         }
     }
 }

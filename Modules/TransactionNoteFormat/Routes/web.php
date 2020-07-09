@@ -11,6 +11,6 @@
 |
 */
 
-Route::prefix('transactionnote')->group(function() {
-    Route::get('/', 'TransactionNoteController@index');
+Route::prefix('transactionnoteformat')->group(function() {
+    Route::get('/', 'TransactionNoteFormatController@index');
 });
