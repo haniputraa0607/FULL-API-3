@@ -31,7 +31,7 @@ class AccessTokenController extends PassportAccessTokenController
                     if($user){
                         //check if user already suspended
                         if($user->is_suspended == '1'){
-                            return response()->json(['status' => 'fail', 'messages' => 'Akun Anda telah diblokir karena menunjukkan aktivitas mencurigakan. Untuk informasi lebih lanjut harap hubungi customer service kami di '.env('EMAIL_ADDRESS_ADMIN')]);
+                            return response()->json(['status' => 'fail', 'messages' => 'Akun Anda telah diblokir karena menunjukkan aktivitas mencurigakan. Untuk informasi lebih lanjut harap hubungi customer service kami di '.config('configs.EMAIL_ADDRESS_ADMIN')]);
                         }
 
                         //check if otp have expired and the current time exceeds the expiration time
