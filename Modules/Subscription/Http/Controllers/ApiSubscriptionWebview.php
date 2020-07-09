@@ -281,8 +281,13 @@ class ApiSubscriptionWebview extends Controller
             'subscription_header_text'          => 'Terima kasih telah membeli',
             'url_subscription_image'            => $subs['subscription']['url_subscription_image'],
             'bought_at'                         => date('Y-m-d H:i:s', strtotime($subs['bought_at'])),
+            'bought_at_indo'                    => MyHelper::dateFormatInd($subs['bought_at'], false, false),
+            'bought_at_time_indo'               => 'pukul '.date('H:i', strtotime($subs['bought_at'])),
             'subscription_user_receipt_number'  => $subs['subscription_user_receipt_number'],
-            'balance_nominal'                   => $subs['balance_nominal']
+            'balance_nominal'                   => $subs['balance_nominal'],
+            'expired_at'                        => date('Y-m-d H:i:s', strtotime($subs['subscription_expired_at'])),
+            'expired_at_indo'                   => MyHelper::dateFormatInd($subs['subscription_expired_at'], false, false),
+            'expired_at_time_indo'              => 'pukul '.date('H:i', strtotime($subs['subscription_expired_at'])),
         ];
 
         if ($subs['subscription_price_cash'] == 'Free') {
