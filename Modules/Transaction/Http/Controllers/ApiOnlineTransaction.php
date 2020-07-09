@@ -2690,6 +2690,7 @@ class ApiOnlineTransaction extends Controller
     {
         $new_items = [];
         $item_qtys = [];
+        $id_custom = [];
 
         // create unique array
         foreach ($items as $item) {
@@ -2710,6 +2711,7 @@ class ApiOnlineTransaction extends Controller
             if($pos === false) {
                 $new_items[] = $new_item;
                 $item_qtys[] = $item['qty'];
+                $id_custom[] = $item['id_custom']??0;
             } else {
                 $item_qtys[$pos] += $item['qty'];
             }
@@ -2717,6 +2719,7 @@ class ApiOnlineTransaction extends Controller
         // update qty
         foreach ($new_items as $key => &$value) {
             $value['qty'] = $item_qtys[$key];
+            $value['id_custom'] = $id_custom[$key];
         }
 
         return $new_items;
