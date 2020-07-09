@@ -238,7 +238,11 @@ class ApiDealsWebview extends Controller
             'claimed_at'                => date('d M Y H:i', strtotime($dealsUser['claimed_at'])),
             'transaction_id'            => strtotime($dealsUser['claimed_at']) . $dealsUser['id_deals_user'],
             'balance'                   => number_format($dealsUser['balance_nominal'], 0, ",", ".") . ' points',
-            'use_point'                 => (!is_null($dealsUser['balance_nominal'])) ? 1 : 0
+            'use_point'                 => (!is_null($dealsUser['balance_nominal'])) ? 1 : 0 ,
+            'voucher_expired_at_indo'   => MyHelper::dateFormatInd($dealsUser['voucher_expired_at'], false, false),
+            'voucher_expired_at_time_indo' => 'pukul '.date('H:i', strtotime($dealsUser['voucher_expired_at'])),
+            'claimed_at_indo'           => MyHelper::dateFormatInd($dealsUser['claimed_at'], false, false),
+            'claimed_at_time_indo'      => 'pukul '.date('H:i', strtotime($dealsUser['claimed_at']))
         ];
 
         if ($dealsUser['voucher_price_point'] != null) {

@@ -41,13 +41,193 @@ class ApiAchievement extends Controller
 
     function reportAchievement(Request $request){
         $post = $request->json()->all();
-        $data = AchievementGroup::leftJoin('achievement_categories', 'achievement_groups.id_achievement_category', '=', 'achievement_categories.id_achievement_category')
-            ->select('achievement_groups.id_achievement_group', 'achievement_categories.name as category_name', 'achievement_groups.name',
+        $data = AchievementGroup::leftJoin('achievement_categories', 'achievement_groups.id_achievement_category', '=', 'achievement_categories.id_achievement_category');
+
+        if(isset($post['date_start']) && !empty($post['date_start']) &&
+            isset($post['date_end']) && !empty($post['date_end'])) {
+            $start_date = date('Y-m-d', strtotime($post['date_start']));
+            $end_date = date('Y-m-d', strtotime($post['date_end']));
+
+            $data = $data->select('achievement_groups.id_achievement_group', 'achievement_categories.name as category_name', 'achievement_groups.name',
+                'achievement_groups.description', 'date_start', 'date_end', 'publish_start', 'publish_end',
+                DB::raw("(SELECT GROUP_CONCAT(ad.name SEPARATOR ', ') FROM achievement_details ad WHERE ad.id_achievement_group = achievement_groups.id_achievement_group) as achievement_badge"),
+                DB::raw("(SELECT COUNT(DISTINCT au.id_user) from achievement_users au 
+                join achievement_details ad2 on ad2.id_achievement_detail = au.id_achievement_detail
+                where ad2.id_achievement_group = achievement_groups.id_achievement_group and
+                DATE(au.date) >= '".$start_date."' and DATE(au.date) <= '".$end_date."') as total_user"));
+
+            $data = $data->where(function($query) use($start_date, $end_date){
+                $query->orWhereRaw('(DATE(date_start) >= "'.$start_date.'" AND DATE(date_start) <= "'.$end_date.'")')
+                    ->orWhereRaw('(DATE(date_end) >= "'.$start_date.'" AND DATE(date_start) <= "'.$end_date.'")')
+                    ->orWhereRaw('date_end is null');
+            });
+        }else{
+            $data = $data->select('achievement_groups.id_achievement_group', 'achievement_categories.name as category_name', 'achievement_groups.name',
                 'achievement_groups.description', 'date_start', 'date_end', 'publish_start', 'publish_end',
                 DB::raw("(SELECT GROUP_CONCAT(ad.name SEPARATOR ', ') FROM achievement_details ad WHERE ad.id_achievement_group = achievement_groups.id_achievement_group) as achievement_badge"),
                 DB::raw("(SELECT COUNT(DISTINCT au.id_user) from achievement_users au 
                 join achievement_details ad2 on ad2.id_achievement_detail = au.id_achievement_detail
                 where ad2.id_achievement_group = achievement_groups.id_achievement_group) as total_user"));
+        }
+
+        if(isset($post['conditions']) && !empty($post['conditions'])){
+            $rule = 'and';
+            if(isset($post['rule'])){
+                $rule = $post['rule'];
+            }
+
+            if($rule == 'and'){
+                foreach ($post['conditions'] as $row){
+                    if(isset($row['subject'])){
+                        if($row['subject'] == 'achievement_name' && !empty($row['parameter'])){
+                            if($row['operator'] == '='){
+                                $data->where('achievement_groups.name', $row['parameter']);
+                            }else{
+                                $data->where('achievement_groups.name', 'like', '%'.$row['parameter'].'%');
+                            }
+                        }
+
+                        if($row['subject'] == 'rule_achievement'){
+                            $data->whereIn('achievement_groups.id_achievement_group', function ($sub) use ($row){
+                                $sub->select('a_detail.id_achievement_group')->from('achievement_details as a_detail');
+
+                                if($row['operator'] == 'product'){
+                                    $sub->where(function($q){
+                                        $q->whereNotNull('id_product')->orWhereNotNull('product_total');
+                                    });
+                                }
+
+                                if($row['operator'] == 'outlet'){
+                                    $sub->where(function($q){
+                                        $q->whereNotNull('id_outlet')->orWhereNotNull('different_outlet');
+                                    });
+                                }
+
+                                if($row['operator'] == 'province'){
+                                    $sub->where(function($q){
+                                        $q->whereNotNull('id_province')->orWhereNotNull('different_province');
+                                    });
+                                }
+
+                                if($row['operator'] == 'trx_nominal'){
+                                    $sub->whereNotNull('trx_nominal');
+                                }
+
+                                if($row['operator'] == 'trx_total'){
+                                    $sub->whereNotNull('trx_total');
+                                }
+                            });
+                        }
+
+                        if($row['subject'] == 'badge_name' && !empty($row['parameter'])){
+                            $data->whereIn('achievement_groups.id_achievement_group', function ($sub) use ($row){
+                                $sub->select('a_detail.id_achievement_group')->from('achievement_details as a_detail');
+
+                                if($row['operator'] == '='){
+                                    $sub->where('a_detail.name', $row['parameter']);
+                                }else{
+                                    $sub->where('a_detail.name', 'like', '%'.$row['parameter'].'%');
+                                }
+                            });
+                        }
+
+                        if($row['subject'] == 'number_of_user_badge' && !empty($row['parameter'])){
+                            $data->whereIn('achievement_groups.id_achievement_group', function ($sub) use ($row){
+                                $sub->select('a_detail.id_achievement_group')->from('achievement_users as a_users')
+                                    ->join('achievement_details as a_detail', 'a_users.id_achievement_detail', 'a_detail.id_achievement_detail')
+                                    ->groupBy('a_users.id_achievement_detail')
+                                    ->havingRaw('COUNT(a_users.id_user) '.$row['operator'].' '.$row['parameter']);
+                            });
+                        }
+
+                        if($row['subject'] == 'number_of_user_achievement' && !empty($row['parameter'])){
+                            $data->whereIn('achievement_groups.id_achievement_group', function ($sub) use ($row){
+                                $sub->select('a_detail.id_achievement_group')->from('achievement_users as a_users')
+                                    ->join('achievement_details as a_detail', 'a_users.id_achievement_detail', 'a_detail.id_achievement_detail')
+                                    ->groupBy('a_detail.id_achievement_group')
+                                    ->havingRaw('COUNT(DISTINCT a_users.id_user) '.$row['operator'].' '.$row['parameter']);
+                            });
+                        }
+                    }
+                }
+            }else{
+                $data->where(function ($subquery) use ($post){
+                    foreach ($post['conditions'] as $row){
+                        if(isset($row['subject']) && !empty($row['parameter'])){
+                            if($row['subject'] == 'achievement_name' && !empty($row['parameter'])){
+                                if($row['operator'] == '='){
+                                    $subquery->orWhere('achievement_groups.name', $row['parameter']);
+                                }else{
+                                    $subquery->orWhere('achievement_groups.name', 'like', '%'.$row['parameter'].'%');
+                                }
+                            }
+
+                            if($row['subject'] == 'badge_name' && !empty($row['parameter'])){
+                                $subquery->orWhereIn('achievement_groups.id_achievement_group', function ($sub) use ($row){
+                                    $sub->select('a_detail.id_achievement_group')->from('achievement_details as a_detail');
+
+                                    if($row['operator'] == '='){
+                                        $sub->where('a_detail.name', $row['parameter']);
+                                    }else{
+                                        $sub->where('a_detail.name', 'like', '%'.$row['parameter'].'%');
+                                    }
+                                });
+                            }
+
+                            if($row['subject'] == 'number_of_user_badge' && !empty($row['parameter'])){
+                                $subquery->orWhereIn('achievement_groups.id_achievement_group', function ($sub) use ($row){
+                                    $sub->select('a_detail.id_achievement_group')->from('achievement_users as a_users')
+                                        ->join('achievement_details as a_detail', 'a_users.id_achievement_detail', 'a_detail.id_achievement_detail')
+                                        ->groupBy('a_users.id_achievement_detail')
+                                        ->havingRaw('COUNT(a_users.id_user) '.$row['operator'].' '.$row['parameter']);
+                                });
+                            }
+
+                            if($row['subject'] == 'number_of_user_achievement' && !empty($row['parameter'])){
+                                $subquery->orWhereIn('achievement_groups.id_achievement_group', function ($sub) use ($row){
+                                    $sub->select('a_detail.id_achievement_group')->from('achievement_users as a_users')
+                                        ->join('achievement_details as a_detail', 'a_users.id_achievement_detail', 'a_detail.id_achievement_detail')
+                                        ->groupBy('a_detail.id_achievement_group')
+                                        ->havingRaw('COUNT(DISTINCT a_users.id_user) '.$row['operator'].' '.$row['parameter']);
+                                });
+                            }
+
+                            if($row['subject'] == 'rule_achievement'){
+                                $subquery->orWhereIn('achievement_groups.id_achievement_group', function ($sub) use ($row){
+                                    $sub->select('a_detail.id_achievement_group')->from('achievement_details as a_detail');
+
+                                    if($row['operator'] == 'product'){
+                                        $sub->where(function($q){
+                                            $q->whereNotNull('id_product')->orWhereNotNull('product_total');
+                                        });
+                                    }
+
+                                    if($row['operator'] == 'outlet'){
+                                        $sub->where(function($q){
+                                            $q->whereNotNull('id_outlet')->orWhereNotNull('different_outlet');
+                                        });
+                                    }
+
+                                    if($row['operator'] == 'province'){
+                                        $sub->where(function($q){
+                                            $q->whereNotNull('id_province')->orWhereNotNull('different_province');
+                                        });
+                                    }
+
+                                    if($row['operator'] == 'trx_nominal'){
+                                        $sub->whereNotNull('trx_nominal');
+                                    }
+
+                                    if($row['operator'] == 'trx_total'){
+                                        $sub->whereNotNull('trx_total');
+                                    }
+                                });
+                            }
+                        }
+                    }
+                });
+            }
+        }
 
         return response()->json(MyHelper::checkGet($data->paginate(30)));
     }
@@ -100,6 +280,11 @@ class ApiAchievement extends Controller
         if(isset($post['id_achievement_group']) && !empty($post['id_achievement_group'])) {
             $id = $post['id_achievement_group'];
 
+            $length = 8;
+            if(isset($post['length'])){
+                $length = (int)$post['length'];
+            }
+
             $getDataListUser = AchievementUser::join('users', 'users.id', 'achievement_users.id_user')
                 ->groupBy('id_user')
                 ->whereIn('achievement_users.id_achievement_detail', function ($sub) use($id){
@@ -108,11 +293,13 @@ class ApiAchievement extends Controller
                         ->join('achievement_groups', 'achievement_groups.id_achievement_group', 'achievement_details.id_achievement_group')
                         ->where('achievement_groups.id_achievement_group', MyHelper::decSlug($id));
                 })
-                ->select('users.*', 'achievement_users.id_user')
+                ->select('users.name as 0', 'users.phone as 1', 'users.email as 2',
+                    'users.phone as 3', 'users.phone as 4', 'users.phone as 5', 'achievement_users.id_user')
                 ->with(['achievement_detail'=>function ($que) use($id){
                     $que->join('achievement_groups', 'achievement_groups.id_achievement_group', 'achievement_details.id_achievement_group')
-                        ->where('achievement_groups.id_achievement_group', MyHelper::decSlug($id));
-                }])->get()->toArray();
+                        ->where('achievement_groups.id_achievement_group', MyHelper::decSlug($id))
+                        ->select('achievement_details.*', 'achievement_users.*');
+                }])->paginate($length);
 
             return response()->json(MyHelper::checkGet($getDataListUser));
         }else{
@@ -527,6 +714,7 @@ class ApiAchievement extends Controller
                             if (!is_null($achievement['id_product'])) {
                                 if ((int) $achievement['id_product'] == $product['id_product']) {
                                     $trxProductStatus = true;
+                                    $totalSumProduct = $totalSumProduct + $product['transaction_product_qty'];
                                     if (!is_null($achievement['product_total']) && $rules != 'total_product') {
                                         if ((int) $achievement['product_total'] <= $product['transaction_product_qty']) {
                                             AchievementProductLog::updateOrCreate([
@@ -606,7 +794,6 @@ class ApiAchievement extends Controller
                                             ])),
                                             'date' => date('Y-m-d H:i:s'),
                                         ]);
-                                        $totalSumProduct = $totalSumProduct + $product['transaction_product_qty'];
                                         $trxTotalProductStatus = true;
                                         break;
                                     }
@@ -1071,9 +1258,13 @@ class ApiAchievement extends Controller
      * @param Request $request
      * @return Response
      */
-    public function store(Request $request)
+    public function detailAjax(Request $request)
     {
-        //
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Add Achievement Success',
+            'data' => AchievementGroup::where('id_achievement_group', MyHelper::decSlug($request['id_achievement_group']))->first(),
+        ]);
     }
 
     /**
@@ -1153,6 +1344,43 @@ class ApiAchievement extends Controller
         }
         DB::commit();
 
+        return response()->json([
+            'status' => 'success',
+        ]);
+    }
+
+    public function updateAch(Request $request)
+    {
+        $post = $request->json()->all();
+
+        if (isset($post['group']['logo_badge_default'])) {
+            $uploadDetail = MyHelper::uploadPhotoStrict($post['group']['logo_badge_default'], $this->saveImageDetail, 500, 500);
+
+            if (isset($uploadDetail['status']) && $uploadDetail['status'] == "success") {
+                $post['group']['logo_badge_default'] = $uploadDetail['path'];
+            } else {
+                return response()->json([
+                    'status' => 'fail',
+                    'messages' => ['Failed to upload image'],
+                ]);
+            }
+        }
+        
+        $post['group']['id_achievement_category'] = $post['category']['name'];
+
+        DB::beginTransaction();
+        try {
+            AchievementGroup::where('id_achievement_group', MyHelper::decSlug($post['id_achievement_group']))->update($post['group']);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'status' => 'fail',
+                'message' => 'Update Achievement Failed',
+                'error' => $e->getMessage(),
+            ]);
+        }
+        DB::commit();
+        
         return response()->json([
             'status' => 'success',
         ]);
