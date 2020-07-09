@@ -2696,9 +2696,8 @@ class ApiOnlineTransaction extends Controller
             $new_item = [
                 'bonus' => $item['bonus'],
                 'id_brand' => $item['id_brand'],
-                'id_product_group' => $item['id_product_group'],
+                'id_product' => $item['id_product'],
                 'note' => $item['note'],
-                'variants' => $item['variants'],
                 'modifiers' => array_map(function($i){
                         return [
                             'id_product_modifier' => $i['id_product_modifier'],
