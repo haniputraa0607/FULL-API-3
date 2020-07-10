@@ -64,6 +64,7 @@ class ApiUser extends Controller
         $this->membership  = "Modules\Membership\Http\Controllers\ApiMembership";
         $this->inbox  = "Modules\InboxGlobal\Http\Controllers\ApiInbox";
         $this->setting_fraud = "Modules\SettingFraud\Http\Controllers\ApiFraud";
+        $this->deals = "Modules\Deals\Http\Controllers\ApiDeals";
     }
 
     function LogActivityFilter($rule = 'and', $conditions = null, $order_field = 'id', $order_method = 'asc', $skip = 0, $take = 999999999999)
@@ -891,7 +892,7 @@ class ApiUser extends Controller
                 'status' => 'success',
                 'result' => $data,
                 'otp_timer' => $holdTime,
-                'messages' => ['Akun Anda telah diblokir karena menunjukkan aktivitas mencurigakan. Untuk informasi lebih lanjut harap hubungi customer service kami di '.env('EMAIL_ADDRESS_ADMIN')]
+                'messages' => ['Akun Anda telah diblokir karena menunjukkan aktivitas mencurigakan. Untuk informasi lebih lanjut harap hubungi customer service kami di '.config('configs.EMAIL_ADDRESS_ADMIN')]
             ]);
         }
 
@@ -912,6 +913,7 @@ class ApiUser extends Controller
             return response()->json([
                 'status' => 'fail',
                 'otp_timer' => $holdTime,
+                'confirmation_message' => 'Anda akan mendaftar menggunakan nomor '.$phone.'. Apakah nomor telepon yang Anda masukkan sudah benar?',
                 'messages' => ['empty!']
             ]);
         }
@@ -1229,12 +1231,12 @@ class ApiUser extends Controller
                             if ($data[0]['is_suspended'] == 1) {
                                 return response()->json([
                                     'status' => 'fail',
-                                    'messages' => ['Akun Anda telah diblokir karena menunjukkan aktivitas mencurigakan. Untuk informasi lebih lanjut harap hubungi customer service kami di '.env('EMAIL_ADDRESS_ADMIN')]
+                                    'messages' => ['Akun Anda telah diblokir karena menunjukkan aktivitas mencurigakan. Untuk informasi lebih lanjut harap hubungi customer service kami di '.config('configs.EMAIL_ADDRESS_ADMIN')]
                                 ]);
                             } else {
                                 return response()->json([
                                     'status' => 'fail',
-                                    'messages' => ['Akun Anda tidak dapat login di device ini karena menunjukkan aktivitas mencurigakan. Untuk informasi lebih lanjut harap hubungi customer service kami di '.env('EMAIL_ADDRESS_ADMIN')]
+                                    'messages' => ['Akun Anda tidak dapat login di device ini karena menunjukkan aktivitas mencurigakan. Untuk informasi lebih lanjut harap hubungi customer service kami di '.config('configs.EMAIL_ADDRESS_ADMIN')]
                                 ]);
                             }
                         }
@@ -1589,12 +1591,12 @@ class ApiUser extends Controller
                                 if ($data[0]['is_suspended'] == 1) {
                                     return response()->json([
                                         'status' => 'fail',
-                                        'messages' => ['Akun Anda telah diblokir karena menunjukkan aktivitas mencurigakan. Untuk informasi lebih lanjut harap hubungi customer service kami di '.env('EMAIL_ADDRESS_ADMIN')]
+                                        'messages' => ['Akun Anda telah diblokir karena menunjukkan aktivitas mencurigakan. Untuk informasi lebih lanjut harap hubungi customer service kami di '.config('configs.EMAIL_ADDRESS_ADMIN')]
                                     ]);
                                 } else {
                                     return response()->json([
                                         'status' => 'fail',
-                                        'messages' => ['Akun Anda tidak dapat di daftarkan karena menunjukkan aktivitas mencurigakan. Untuk informasi lebih lanjut harap hubungi customer service kami di '.env('EMAIL_ADDRESS_ADMIN')]
+                                        'messages' => ['Akun Anda tidak dapat di daftarkan karena menunjukkan aktivitas mencurigakan. Untuk informasi lebih lanjut harap hubungi customer service kami di '.config('configs.EMAIL_ADDRESS_ADMIN')]
                                     ]);
                                 }
                             }
@@ -1812,6 +1814,14 @@ class ApiUser extends Controller
 
         if ($data) {
             // $pin_x = MyHelper::decryptkhususpassword($data[0]['pin_k'], md5($data[0]['id_user'], true));
+            if($request->json('email') != "" && $request->json('name') != "" &&
+                empty($data[0]['email']) && empty($data[0]['name'])){
+                $setting = Setting::where('key','welcome_voucher_setting')->first()->value;
+                if($setting == 1){
+                    $injectVoucher = app($this->deals)->injectWelcomeVoucher(['id' => $data[0]['id']], $data[0]['phone']);
+                }
+            }
+
             if ($request->json('email') != "") {
                 if (!filter_var($request->json('email'), FILTER_VALIDATE_EMAIL)) {
                     $result = [
