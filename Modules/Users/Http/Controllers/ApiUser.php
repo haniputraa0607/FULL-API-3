@@ -903,12 +903,22 @@ class ApiUser extends Controller
         }
 
         if($data){
-            return response()->json([
-                'status' => 'success',
-                'result' => $data,
-                'otp_timer' => $holdTime,
-                'messages' => null
-            ]);
+            if(isset($data[0]['phone_verified']) && $data[0]['phone_verified'] == '0'){
+                return response()->json([
+                    'status' => 'success',
+                    'result' => $data,
+                    'otp_timer' => $holdTime,
+                    'confirmation_message' => 'Anda akan mendaftar menggunakan nomor '.$phone.'. Apakah nomor telepon yang Anda masukkan sudah benar?',
+                    'messages' => null
+                ]);
+            }else{
+                return response()->json([
+                    'status' => 'success',
+                    'result' => $data,
+                    'otp_timer' => $holdTime,
+                    'messages' => null
+                ]);
+            }
         }else{
             return response()->json([
                 'status' => 'fail',
