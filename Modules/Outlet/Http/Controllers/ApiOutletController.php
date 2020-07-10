@@ -1657,8 +1657,8 @@ class ApiOutletController extends Controller
 
             DB::commit();
 
-            if($save??false) return ['status' => 'success', 'message' => $countImport.' data successfully imported. Failed save outlet : '.implode(",",$failedImport)];
-            else return ['status' => 'fail','messages' => ['failed to update data' , 'Failed save outlet : '.implode(",",$failedImport)]];
+            if($save??false) return ['status' => 'success', 'message' => $countImport.' data successfully imported. Failed save outlet : '.implode(", ",$failedImport)];
+            else return ['status' => 'fail','messages' => ['failed to update data' , 'Failed save outlet : '.implode(", ",$failedImport)]];
         }else{
             return response()->json([
                 'status'    => 'fail',
@@ -2154,13 +2154,9 @@ class ApiOutletController extends Controller
     }
 
     public function getAllCodeOutlet(Request $request){
-        $outlet = Outlet::get()->pluck('outlet_code');
+        $outlet = Outlet::select('outlet_code', 'id_outlet')->with('brands')->get()->toArray();
 
-        if($outlet){
-            return response()->json(['status' => 'success', 'result' => $outlet]);
-        }else{
-            return response()->json(['status' => 'fail', 'message' => 'empty']);
-        }
+        return response()->json(MyHelper::checkGet($outlet));
     }
 
     public function applyPromo($promo_post, $data_outlet, &$promo_error)
