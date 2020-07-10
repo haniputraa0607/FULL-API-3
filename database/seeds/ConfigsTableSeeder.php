@@ -1035,6 +1035,15 @@ class ConfigsTableSeeder extends Seeder
                     'created_at' => date('Y-m-d H:i:s'),
                     'updated_at' => date('Y-m-d H:i:s'),
                 ),
+            114 =>
+                array (
+                    'id_config' => 115,
+                    'config_name' => 'referral',
+                    'description' => '',
+                    'is_active' => 0,
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
         ));
     }
 }
