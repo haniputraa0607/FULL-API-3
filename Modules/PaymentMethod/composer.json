@@ -1,0 +1,25 @@
+{
+    "name": "nwidart/paymentmethod",
+    "description": "",
+    "authors": [
+        {
+            "name": "Nicolas Widart",
+            "email": "n.widart@gmail.com"
+        }
+    ],
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Modules\\PaymentMethod\\Providers\\PaymentMethodServiceProvider"
+            ],
+            "aliases": {
+                
+            }
+        }
+    },
+    "autoload": {
+        "psr-4": {
+            "Modules\\PaymentMethod\\": ""
+        }
+    }
+}
