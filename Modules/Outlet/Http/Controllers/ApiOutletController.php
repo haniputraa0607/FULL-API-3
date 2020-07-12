@@ -876,8 +876,71 @@ class ApiOutletController extends Controller
         return $allfeatures;
     }
 
-	/* Filter*/
-    function filter(Filter $request) {
+    function filter_distance($outlet, $location){
+        $processing = '0';
+        $settingTime = Setting::where('key', 'processing_time')->first();
+        if($settingTime && $settingTime->value){
+            $processing = $settingTime->value;
+        }
+
+        foreach ($outlet as $key => $value) {
+            $jaraknya =   number_format((float)$this->distance($location['latitude'], $location['longitude'], $value['outlet_latitude'], $value['outlet_longitude'], "K"), 2, '.', '');
+            settype($jaraknya, "float");
+
+            $outlet[$key]['distance'] = number_format($jaraknya, 2, '.', ',')." km";
+            $outlet[$key]['dist']     = (float) $jaraknya;
+
+            if($location['distance'] == "0-2km"){
+                if((float) $jaraknya < 0.01 || (float) $jaraknya > 2.00)
+                    unset($outlet[$key]);
+                    continue;
+            }
+
+            if($location['distance'] == "2-5km"){
+                if((float) $jaraknya < 2.00 || (float) $jaraknya > 5.00)
+                    unset($outlet[$key]);
+                    continue;
+            }
+
+            if($location['distance'] == ">5km"){
+                if((float) $jaraknya < 5.00)
+                    unset($outlet[$key]);
+                    continue;
+            }
+
+            if($location['id_city'] != "" && $location['id_city'] != $value['id_city']){
+                unset($outlet[$key]);
+                continue;
+            }
+            $outlet[$key] = $this->setAvailableOutlet($outlet[$key], $processing);
+        }
+
+        return $outlet;
+    }
+
+    function check_outlet($outlet, $post, &$promo_error){
+        // give all product flag is_promo = 0
+        foreach ($outlet as $key => $value) {
+            $outlet[$key]['is_promo'] = 0;
+        }
+        
+        $promo_data = $this->applyPromo($post, $outlet, $promo_error);
+        if ($promo_data) {
+            $outlet = $promo_data;
+        }
+
+        $outlet = $this->filter_distance($outlet, [
+            'latitude' => $post['latitude'], 
+            'longitude' => $post['longitude'],
+            'distance' => $post['distance'],
+            'id_city' => $post['id_city']
+        ]);
+
+        return $outlet;
+    }
+
+    /* Filter*/
+    function filter(Filter $request){
         $post=$request->except('_token');
         $latitude  = $request->json('latitude');
         $longitude = $request->json('longitude');
@@ -893,11 +956,10 @@ class ApiOutletController extends Controller
         $id_city = $request->json('id_city');
         $sort = $request->json('sort');
         $gofood = $request->json('gofood');
-        $grabfood = $request->json('grabfood');
+        $grabfood = $request->json('grabfood');  
 
-        // outlet
+        $product = Product::where('product_visibility', 'Visible')->select('id_product','product_name');
         $outlet = Outlet::with(['today'])->distinct('outlets.id_outlet')->select('outlets.id_outlet','outlets.outlet_name','outlets.outlet_phone','outlets.outlet_code','outlets.outlet_status','outlets.outlet_address','outlets.id_city','outlet_latitude','outlet_longitude')->with(['brands'=>function($query){$query->select('brands.id_brand','name_brand','logo_brand');}])->where('outlet_status', 'Active')->whereNotNull('id_city')->orderBy('outlet_name','asc');
-
         $outlet->whereHas('brands',function($query){
             $query->where('brand_active','1');
         });
@@ -916,6 +978,7 @@ class ApiOutletController extends Controller
 
         if($request->json('search') && $request->json('search') != ""){
             $outlet = $outlet->where('outlet_name', 'LIKE', '%'.$request->json('search').'%');
+            $product = $product->where('product_name', 'LIKE', '%'.$request->json('search').'%');
         }
 
         if ($gofood) {
@@ -927,69 +990,124 @@ class ApiOutletController extends Controller
         }
 
         $outlet = $outlet->get()->toArray();
+        $product = $product->get()->toArray();
 
+        // kondisi outlet dan product dapat => return outletnya saja
+        // kondisi cuma outlet yang dapat   => return outletnya saja
+        // kondisi cuma product yg dapat    => return outlet di dalamnya list product yg didapat
+        // kondisi tidak dapat apa-apa      => return data empty
+
+        $post['distance'] = $distance; 
+        $post['id_city'] = $id_city; 
 
         if (!empty($outlet)) {
-            $processing = '0';
-            $settingTime = Setting::where('key', 'processing_time')->first();
-            if($settingTime && $settingTime->value){
-                $processing = $settingTime->value;
-            }
-
-            // give all product flag is_promo = 0
-	        foreach ($outlet as $key => $value) {
-				$outlet[$key]['is_promo'] = 0;
-			}
-
-			$promo_data = $this->applyPromo($post, $outlet, $promo_error);
-
-	        if ($promo_data) {
-	        	$outlet = $promo_data;
-	        }
-
-            foreach ($outlet as $key => $value) {
-                $jaraknya =   number_format((float)$this->distance($latitude, $longitude, $value['outlet_latitude'], $value['outlet_longitude'], "K"), 2, '.', '');
-                settype($jaraknya, "float");
-
-                $outlet[$key]['distance'] = number_format($jaraknya, 2, '.', ',')." km";
-                $outlet[$key]['dist']     = (float) $jaraknya;
-
-				if($distance == "0-2km"){
-					if((float) $jaraknya < 0.01 || (float) $jaraknya > 2.00)
-                        unset($outlet[$key]);
-                        continue;
-				}
-
-				if($distance == "2-5km"){
-					if((float) $jaraknya < 2.00 || (float) $jaraknya > 5.00)
-                        unset($outlet[$key]);
-                        continue;
-				}
-
-				if($distance == ">5km"){
-					if((float) $jaraknya < 5.00)
-                        unset($outlet[$key]);
-                        continue;
-				}
-
-				if($id_city != "" && $id_city != $value['id_city']){
-                    unset($outlet[$key]);
-                    continue;
-                }
-
-                $outlet[$key] = $this->setAvailableOutlet($outlet[$key], $processing);;
-            }
+            // check outlet based on distance, check promo
+            $outlet = $this->check_outlet($outlet, $post, $promo_error);
+            
 			if($sort != 'Alphabetical'){
 				usort($outlet, function($a, $b) {
 					return $a['dist'] <=>  $b['dist'];
 				});
-			}
+            }
+            
 			$urutan = array();
 			if($outlet){
 				foreach($outlet as $o){
 					array_push($urutan, $o);
 				}
             }
+
+        } elseif(!empty($product)){
+            // Retrieve Data Outlet + Product + Product Price
+            $data = [];
+            $id_outlet = [];
+            foreach($product as $key => $item){
+                $product_prices = ProductPrice::select('product_price', 'product_price_base', 'product_price_tax', 'product_prices.id_product', 'product_prices.id_outlet','product_prices.product_visibility', 'product_prices.product_status', 'product_prices.product_stock_status', 'product_prices.max_order')
+                ->with([
+                    'product',
+                    'outlet'=>function($query) use($gofood, $grabfood){
+                        $query->with([
+                                'today',
+                                'brands'=>function($query){
+                                    $query->select('brands.id_brand','brand_active','name_brand','logo_brand');
+                                }
+                            ])
+                            ->select('outlets.id_outlet','outlets.outlet_name','outlets.outlet_phone','outlets.outlet_code','outlets.outlet_status','outlets.outlet_address','id_city','outlet_latitude','outlet_longitude')
+                            ->where('outlet_status', 'Active')
+                            ->whereNotNull('id_city')
+                            ->whereHas('brands',function($query){
+                                $query->where('brand_active','1');
+                            });
+
+                        if ($gofood) {
+                            $query = $query->whereNotNull('deep_link_gojek');
+                        }
+                
+                        if ($grabfood) {
+                            $query = $query->whereNotNull('deep_link_grab');
+                        }
+                    }
+                ])
+                ->where('id_product',$item['id_product'])
+                ->where('product_status', 'Active')
+                ->where('product_visibility', 'Visible')
+                // ->where('product_stock_status', 'Available')
+                ->whereNotNull('product_price')
+                ->get()->toArray();
+                
+                foreach($product_prices as $key => $value){
+                    if(isset($value['outlet'])){
+                        $data[] =  $value;
+                        $id_outlet[] = $value['id_outlet'];
+                    }
+                }
+            }
+
+            //Re-arrange Responses & Determine Distance & Availability of each Outlets
+            $id_outlet = array_unique($id_outlet);
+            $count_outlet = sizeof($id_outlet);
+            $outlets = [];
+            for($i=0;  $i<$count_outlet; $i++){
+                foreach($data as $key => $outlet){
+                    if($outlet['id_outlet'] == $id_outlet[$i]){
+                        $outlets[] = $outlet['outlet'];
+                        $products = [];
+                        $index_product = 0;
+                        foreach($data as $key => $item){
+                            if($item['id_outlet'] == $id_outlet[$i]){
+                                $products[] = $item['product'];
+                                $products[$index_product]['product_price'] = $item['product_price'];
+                                $products[$index_product]['product_price_base'] = $item['product_price_base'];
+                                $products[$index_product]['product_price_tax'] = $item['product_price_tax'];
+                                $products[$index_product]['product_stock_status'] = $item['product_stock_status'];
+                                $products[$index_product]['max_order'] = $item['max_order'];
+
+                                $index_product++;
+                            }
+                        }
+                        $outlets[$i]['products'] = $products;
+                        unset($id_outlet[$i]);
+                        break;
+                    }
+                }
+            }
+            
+            // check outlet based on distance, check promo 
+            $outlets = $this->check_outlet($outlets, $post, $promo_error);
+
+            if($sort != 'Alphabetical'){
+				usort($outlets, function($a, $b) {
+					return $a['dist'] <=>  $b['dist'];
+				});
+            }
+            
+			$urutan = array();
+			if($outlets){
+				foreach($outlets as $o){
+					array_push($urutan, $o);
+				}
+            }
+            
         } else {
             if($countAll){
                 if($request->json('search')){
@@ -1000,10 +1118,6 @@ class ApiOutletController extends Controller
                 return response()->json(['status' => 'fail', 'messages' => ['There is no open store','at this moment']]);
             }
         }
-
-        // if (!isset($request['page'])) {
-        //     $request['page'] = 1;
-        // }
 
         if(isset($request['page']) && $request['page'] > 0){
             $page = $request['page'];
