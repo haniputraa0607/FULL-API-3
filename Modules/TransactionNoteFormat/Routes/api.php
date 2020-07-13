@@ -13,11 +13,9 @@ use Illuminate\Http\Request;
 |
 */
 
-Route::group(['middleware' => [], 'prefix' => 'transaction-note-format'], function() {
-    Route::get('header', 'ApiTransactionNoteFormatController@getHeaderPlain');
-    Route::get('header/{outletId}', 'ApiTransactionNoteFormatController@getHeader');
-    Route::post('header', 'ApiTransactionNoteFormatController@setHeader');
-    Route::get('footer', 'ApiTransactionNoteFormatController@getFooterPlain');
-    Route::get('footer/{outletId}', 'ApiTransactionNoteFormatController@getFooter');
-    Route::post('footer', 'ApiTransactionNoteFormatController@setFooter');
+Route::group(['prefix' => 'transaction-note-format'], function() {
+    Route::get('/{format_type}', 'ApiTransactionNoteFormatController@getPlain');
+    Route::get('/{format_type}/{id_outlet}', 'ApiTransactionNoteFormatController@get');
+    Route::post('/{format_type}', 'ApiTransactionNoteFormatController@set')
+        ->middleware('auth:api', 'log_activities', 'user_agent', 'scopes:be');
 });
