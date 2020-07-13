@@ -574,10 +574,6 @@ class ApiHome extends Controller
                 return response()->json(['status' => 'fail', 'messages' => ['Send notification failed']]);
             }
 
-            $setting = Setting::where('key','welcome_voucher_setting')->first()->value;
-            if($setting == 1){
-                $injectVoucher = app($this->deals)->injectWelcomeVoucher(['id' => $user['id']], $user['phone']);
-            }
             $user->first_login=1;
             $user->save();
         }

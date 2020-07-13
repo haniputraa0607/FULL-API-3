@@ -357,7 +357,7 @@ class SettingsTableSeeder extends Seeder
                 'id_setting' => 39,
                 'key' => 'text_menu_other',
                 'value' => NULL,
-                'value_text' => '{"menu1":{"text_menu":"Profile","text_header":"Profile","icon":""},"menu2":{"text_menu":"Membership","text_header":"Membership","icon":""},"menu3":{"text_menu":"Outlet","text_header":"Outlet","icon":""},"menu4":{"text_menu":"Kabar","text_header":"Kabar","icon":""},"menu5":{"text_menu":"Tentang","text_header":"Tentang","icon":""},"menu6":{"text_menu":"FAQ","text_header":"FAQ","icon":""},"menu7":{"text_menu":"Ketentuan","text_header":"Ketentuan","icon":""},"menu8":{"text_menu":"Kontak","text_header":"Kontak","icon":""}}',
+                'value_text' => '{"menu1":{"text_menu":"Profile","text_header":"Profile","icon":""},"menu2":{"text_menu":"Membership","text_header":"Membership","icon":""},"menu3":{"text_menu":"Outlet","text_header":"Outlet","icon":""},"menu4":{"text_menu":"Kabar","text_header":"Kabar","icon":""},"menu5":{"text_menu":"Lokasi Favorit","text_header":"LOKASI FAVORIT","icon":""},"menu6":{"text_menu":"Tentang","text_header":"Tentang","icon":""},"menu7":{"text_menu":"FAQ","text_header":"FAQ","icon":""},"menu8":{"text_menu":"Ketentuan","text_header":"Ketentuan","icon":""},"menu9":{"text_menu":"Kontak","text_header":"Kontak","icon":""}}',
                 'created_at' => '2019-10-08 09:04:01',
                 'updated_at' => '2019-10-08 09:04:02',
             ),

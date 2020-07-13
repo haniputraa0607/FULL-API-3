@@ -27,6 +27,7 @@ use Modules\Subscription\Http\Requests\Step1Subscription;
 use Modules\Subscription\Http\Requests\Step2Subscription;
 use Modules\Subscription\Http\Requests\Step3Subscription;
 use Modules\Subscription\Http\Requests\DetailSubscription;
+use Modules\Subscription\Http\Requests\DeleteSubscription;
 use DB;
 
 class ApiSubscription extends Controller
@@ -1910,5 +1911,41 @@ class ApiSubscription extends Controller
         $data = Subscription::where('subscription_publish_end', '>=', date('Y-m-d H:i:s'))
                 ->select('id_subscription', 'subscription_title')->get()->toArray();
         return response()->json(MyHelper::checkGet($data));
+    }
+
+    function delete(DeleteSubscription $request)
+    {
+        DB::beginTransaction();
+        $post = $request->json()->all();
+        $check = Subscription::where('id_subscription','=',$post['id_subscription'])->where('subscription_bought','>',0)->first();
+
+        if (!$check) {
+            // delete image first
+            $this->deleteImage($check);
+
+            $delete = Subscription::where('id_subscription','=',$post['id_subscription'])->delete();
+
+            if ($delete) {
+                DB::commit();
+            } else {
+                DB::rollback();
+            }
+
+            return response()->json(MyHelper::checkDelete($delete));
+        } else {
+            return response()->json([
+                'status'   => 'fail',
+                'messages' => ['Subscription already claimed.']
+            ]);
+        }
+    }
+
+    function deleteImage($subscription)
+    {
+        if (!empty($subscription->subscription_image)) {
+            $delete = MyHelper::deletePhoto($subscription->subscription_image);
+        }
+
+        return true;
     }
 }
