@@ -302,8 +302,8 @@ class PromoCampaignTools{
 
 				// get min max required for error message
 				$promo_rules=$promo[$source.'_tier_discount_rules'];
-				$min_qty = 1;
-				$max_qty = 1;
+				$min_qty = null;
+				$max_qty = null;
 				foreach ($promo_rules as $rule) {
 					if($min_qty===null||$rule->min_qty<$min_qty){
 						$min_qty=$rule->min_qty;
@@ -414,19 +414,19 @@ class PromoCampaignTools{
 				}
 
 				$promo_rules=$promo[$source.'_buyxgety_rules'];
-				$min_qty=1;
-				$max_qty=1;
+				$min_qty=null;
+				$max_qty=null;
 				// get min max for error message
 				foreach ($promo_rules as $rule) {
 
 					if($min_qty===null||$rule->min_qty_requirement<$min_qty){
-						$min_qty=$min_qty;
+						$min_qty=$rule->min_qty_requirement;
 					}
 					if($max_qty===null||$rule->max_qty_requirement>$max_qty){
-						$max_qty=$max_qty;
+						$max_qty=$rule->max_qty_requirement;
 					}
 				}
-
+// dd($promo_rules, $min_qty, $max_qty);
 				// promo product not available in cart?
 				if(!in_array($promo_product->id_product, array_column($trxs, 'id_product'))){
 					$minmax=$min_qty!=$max_qty?"$min_qty - $max_qty":$min_qty;
