@@ -2047,6 +2047,7 @@ class ApiUser extends Controller
                 $data[$type] = 1;
             }
 
+
             $check = UserOutlet::where('phone', $data['phone'])
                 ->where('id_outlet', $data['id_outlet'])
                 ->first();
@@ -2058,6 +2059,7 @@ class ApiUser extends Controller
                 $query = UserOutlet::create($data);
             }
         }
+        $delete = UserOutlet::where('phone', $data['phone'])->whereNotIn('id_outlet', $post['id_outlet'])->delete();
         return response()->json(MyHelper::checkCreate($query));
     }
 
@@ -2065,7 +2067,7 @@ class ApiUser extends Controller
     {
         $post = $request->json()->all();
         $query = UserOutlet::where('phone', $post['phone'])
-            ->where('id_outlet', $post['id_outlet'])
+            // ->where('id_outlet', $post['id_outlet'])
             ->delete();
         return response()->json(MyHelper::checkDelete($query));
     }
@@ -2075,15 +2077,32 @@ class ApiUser extends Controller
         $check = UserOutlet::join('outlets', 'outlets.id_outlet', '=', 'user_outlets.id_outlet')
             ->get()
             ->toArray();
-        return response()->json(MyHelper::checkGet($check));
+        $user_outlets = [];
+        foreach ($check as $user) {
+            $outlet = [
+                'outlet_code'   => $user['outlet_code'],
+                'outlet_name'   => $user['outlet_name'],
+                'id_outlet'     => $user['id_outlet'],
+            ];
+            if($user_outlets[$user['phone']]?? false) {
+                $user_outlets[$user['phone']]['outlets'][] = $outlet;
+            } else {
+                $user['outlets'] = [
+                    $outlet
+                ];
+                $user_outlets[$user['phone']] = $user;
+            }
+        }
+        return response()->json(MyHelper::checkGet(array_values($user_outlets)));
     }
 
     function detailAdminOutlet(Request $request)
     {
         $post = $request->json()->all();
         $check = UserOutlet::join('outlets', 'outlets.id_outlet', '=', 'user_outlets.id_outlet')
+            ->select('user_outlets.*',\DB::raw('GROUP_CONCAT(outlets.id_outlet) as outlets'))
             ->where('user_outlets.phone', '=', $post['phone'])
-            ->where('user_outlets.id_outlet', '=', $post['id_outlet'])
+            ->groupBy('phone')
             ->first();
         return response()->json(MyHelper::checkGet($check));
     }
