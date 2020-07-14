@@ -2902,8 +2902,29 @@ class ApiOutletApp extends Controller
     }
 
     public function listPaymentMethod(Request $request){
-        $outlet = $request->user();
+        $id_outlet = $request->user()['id_outlet'];
 
-        return MyHelper::checkGet($outlet);
+        //get all payment method
+        $payment_method = PaymentMethod::select('id_payment_method', 'id_payment_method_category', 'payment_method_name', 'status')
+        ->with(['payment_method_category' => function($query){
+            $query->select('id_payment_method_category','payment_method_category_name');
+        }])->get()->toArray();
+
+        //get all payment method outlet
+        $payment_method_outlet = PaymentMethodOutlet::where('id_outlet', $id_outlet)->get()->toArray();
+
+        //update status outlet
+            foreach($payment_method as $key => $value){
+                foreach($payment_method_outlet as $key2 => $value){
+                    if($payment_method_outlet[$key2]['id_outlet'] == $id_outlet && $payment_method_outlet[$key2]['id_payment_method'] == $payment_method[$key]['id_payment_method']){
+                        $payment_method[$key]['status'] = $payment_method_outlet[$key2]['status'];
+                        break;
+                    }
+                }
+                $payment_method[$key]['payment_method_category'] =  $payment_method[$key]['payment_method_category']['payment_method_category_name'];
+            }
+        
+
+        return MyHelper::checkGet($payment_method);
     }
 }

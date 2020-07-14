@@ -124,8 +124,9 @@ class PaymentMethodController extends Controller
             //modified status of outlet
             foreach($outlets as $key => $outlet){
                 foreach($outlet_payments as $outlet_payment){
-                    if($outlets[$key]['id_outlet'] == $outlet_payment->id_outlet && $id = $outlet_payment->id_payment_method){
+                    if($outlets[$key]['id_outlet'] == $outlet_payment->id_outlet){
                         $outlets[$key]['status'] = $outlet_payment->status;
+                        break;
                     }
                 }
             }
