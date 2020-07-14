@@ -18,6 +18,9 @@ class VerifyOutletDeviceLocation
      */
     public function handle($request, Closure $next)
     {
+        $checkDeviceLocation = env('CHECK_DEVICE_LOCATION', false);
+        if(!$checkDeviceLocation) return $next($request);
+
         // initiate parameters
         $error_message_list = [];
         if(!$request->has('device_id'))
