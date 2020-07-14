@@ -2695,7 +2695,7 @@ class ApiOnlineTransaction extends Controller
         // create unique array
         foreach ($items as $item) {
             $new_item = [
-                'bonus' => $item['bonus'],
+                'bonus' => isset($item['bonus'])?$item['bonus']:'0',
                 'id_brand' => $item['id_brand'],
                 'id_product' => $item['id_product'],
                 'note' => $item['note'],
