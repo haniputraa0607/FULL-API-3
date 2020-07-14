@@ -24,6 +24,8 @@ use App\Http\Models\TransactionPickup;
 use App\Http\Models\TransactionPickupGoSend;
 use App\Http\Models\User;
 use App\Http\Models\UserOutlet;
+use App\Http\Models\PaymentMethod;
+use App\Http\Models\PaymentMethodOutlet;
 use App\Lib\GoSend;
 use App\Lib\Midtrans;
 use App\Lib\Ovo;
@@ -2897,5 +2899,11 @@ class ApiOutletApp extends Controller
             return MyHelper::checkDelete($delete);
         }
         return MyHelper::checkGet([], 'Holiday not found');
+    }
+
+    public function listPaymentMethod(Request $request){
+        $outlet = $request->user();
+
+        return MyHelper::checkGet($outlet);
     }
 }

@@ -5,7 +5,7 @@ namespace Modules\PaymentMethod\Database\Seeders;
 use Illuminate\Database\Seeder;
 use Illuminate\Database\Eloquent\Model;
 
-class PaymentMethodDatabaseSeeder extends Seeder
+class PaymentMethodCategorySeederTableSeeder extends Seeder
 {
     /**
      * Run the database seeds.
@@ -16,7 +16,9 @@ class PaymentMethodDatabaseSeeder extends Seeder
     {
         Model::unguard();
 
-        $this->call(PaymentMethodCategorySeederTableSeeder::class);
-        $this->call(PaymentMethodSeederTableSeeder::class);
+        \DB::table('payment_method_categories')->insert(array(
+            0 => ['payment_method_category_name' => 'Cash'],
+            1 => ['payment_method_category_name' => 'E-Wallet']
+        ));
     }
 }
