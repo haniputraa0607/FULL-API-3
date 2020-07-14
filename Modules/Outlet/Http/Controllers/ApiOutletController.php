@@ -22,6 +22,9 @@ use App\Http\Models\Setting;
 use App\Http\Models\OauthAccessToken;
 use App\Http\Models\Product;
 use App\Http\Models\ProductPrice;
+use Modules\Product\Entities\ProductDetail;
+use Modules\Product\Entities\ProductGlobalPrice;
+use Modules\Product\Entities\ProductSpecialPrice;
 use Modules\Disburse\Entities\UserFranchise;
 use Modules\Disburse\Entities\UserFranchiseOultet;
 use Modules\Outlet\Entities\OutletScheduleUpdate;
@@ -958,7 +961,7 @@ class ApiOutletController extends Controller
         $gofood = $request->json('gofood');
         $grabfood = $request->json('grabfood');  
 
-        $product = Product::where('product_visibility', 'Visible')->select('id_product','product_name');
+        $product = Product::with(['global_price', 'product_special_price'])->where('product_visibility', 'Visible')->select('id_product','product_name', 'product_code', 'id_product_category','product_description','product_video','product_allow_sync', 'position');
         $outlet = Outlet::with(['today'])->distinct('outlets.id_outlet')->select('outlets.id_outlet','outlets.outlet_name','outlets.outlet_phone','outlets.outlet_code','outlets.outlet_status','outlets.outlet_address','outlets.id_city','outlet_latitude','outlet_longitude')->with(['brands'=>function($query){$query->select('brands.id_brand','name_brand','logo_brand');}])->where('outlet_status', 'Active')->whereNotNull('id_city')->orderBy('outlet_name','asc');
         $outlet->whereHas('brands',function($query){
             $query->where('brand_active','1');
@@ -976,21 +979,24 @@ class ApiOutletController extends Controller
             });
         }
 
-        if($request->json('search') && $request->json('search') != ""){
-            $outlet = $outlet->where('outlet_name', 'LIKE', '%'.$request->json('search').'%');
-            $product = $product->where('product_name', 'LIKE', '%'.$request->json('search').'%');
-        }
-
         if ($gofood) {
             $outlet = $outlet->whereNotNull('deep_link_gojek');
         }
-
+        
         if ($grabfood) {
             $outlet = $outlet->whereNotNull('deep_link_grab');
         }
+        
+        if($request->json('search') && $request->json('search') != ""){
+            $search_outlet = clone $outlet;
+            $search_product = clone $product;
 
-        $outlet = $outlet->get()->toArray();
-        $product = $product->get()->toArray();
+            $search_outlet = $search_outlet->where('outlet_name', 'LIKE', '%'.$request->json('search').'%')->get()->toArray();
+            $search_product = $search_product->where('product_name', 'LIKE', '%'.$request->json('search').'%')->get()->toArray();
+        }else{
+            $search_outlet =  $outlet->get()->toArray();
+            $search_product =  $product->get()->toArray();
+        }
 
         // kondisi outlet dan product dapat => return outletnya saja
         // kondisi cuma outlet yang dapat   => return outletnya saja
@@ -1000,98 +1006,83 @@ class ApiOutletController extends Controller
         $post['distance'] = $distance; 
         $post['id_city'] = $id_city; 
 
-        if (!empty($outlet)) {
+        if (!empty($search_outlet)) {
             // check outlet based on distance, check promo
-            $outlet = $this->check_outlet($outlet, $post, $promo_error);
+            $search_outlet = $this->check_outlet($search_outlet, $post, $promo_error);
             
 			if($sort != 'Alphabetical'){
-				usort($outlet, function($a, $b) {
+				usort($search_outlet, function($a, $b) {
 					return $a['dist'] <=>  $b['dist'];
 				});
             }
             
 			$urutan = array();
-			if($outlet){
-				foreach($outlet as $o){
+			if($search_outlet){
+				foreach($search_outlet as $o){
 					array_push($urutan, $o);
 				}
             }
 
-        } elseif(!empty($product)){
-            // Retrieve Data Outlet + Product + Product Price
-            $data = [];
-            $id_outlet = [];
-            foreach($product as $key => $item){
-                $product_prices = ProductPrice::select('product_price', 'product_price_base', 'product_price_tax', 'product_prices.id_product', 'product_prices.id_outlet','product_prices.product_visibility', 'product_prices.product_status', 'product_prices.product_stock_status', 'product_prices.max_order')
-                ->with([
-                    'product',
-                    'outlet'=>function($query) use($gofood, $grabfood){
-                        $query->with([
-                                'today',
-                                'brands'=>function($query){
-                                    $query->select('brands.id_brand','brand_active','name_brand','logo_brand');
+        } elseif(!empty($search_product)){
+
+            $outlets = $outlet->get()->toArray();
+            //loop through selected outlets
+            foreach($outlets as $key_outlet => $outlet){
+                //assign product to outlets
+                $count_product = 0;
+                foreach($search_product as $key_product => $product){
+                    if(!empty($product['global_price'])){
+                        // if product has global price, assign product to outlet
+                        $product_detail = ProductDetail::where('id_outlet', $outlet['id_outlet'])->where('id_product', $product['id_product'])->first();
+                        if($product_detail){
+                            // if product and outlet exist in product detail
+                            // check visibility in product detail
+                            if($product_detail['product_detail_visibility'] == 'Visible'){
+                                $outlets[$key_outlet]['product'][$count_product] = $product;
+                                $outlets[$key_outlet]['product'][$count_product]['product_price'] = $outlets[$key_outlet]['product'][$count_product]['global_price'][0]['product_global_price'] ?? null;
+                                
+                                if(!empty($product['product_special_price'])){
+                                    // if outlet and product exist in product special price
+                                    // use special price instead of global price
+                                    foreach($product['product_special_price'] as $special_price){
+                                        if($special_price['id_outlet'] == $outlets[$key_outlet]['id_outlet']){
+                                            $outlets[$key_outlet]['product'][$count_product]['product_price'] = $special_price['product_special_price'];
+                                            break;
+                                        }
+                                    }
                                 }
-                            ])
-                            ->select('outlets.id_outlet','outlets.outlet_name','outlets.outlet_phone','outlets.outlet_code','outlets.outlet_status','outlets.outlet_address','id_city','outlet_latitude','outlet_longitude')
-                            ->where('outlet_status', 'Active')
-                            ->whereNotNull('id_city')
-                            ->whereHas('brands',function($query){
-                                $query->where('brand_active','1');
-                            });
+                                
+                                unset($outlets[$key_outlet]['product'][$count_product]['global_price']);
+                                unset($outlets[$key_outlet]['product'][$count_product]['product_special_price']);
 
-                        if ($gofood) {
-                            $query = $query->whereNotNull('deep_link_gojek');
-                        }
-                
-                        if ($grabfood) {
-                            $query = $query->whereNotNull('deep_link_grab');
-                        }
-                    }
-                ])
-                ->where('id_product',$item['id_product'])
-                ->where('product_status', 'Active')
-                ->where('product_visibility', 'Visible')
-                // ->where('product_stock_status', 'Available')
-                ->whereNotNull('product_price')
-                ->get()->toArray();
-                
-                foreach($product_prices as $key => $value){
-                    if(isset($value['outlet'])){
-                        $data[] =  $value;
-                        $id_outlet[] = $value['id_outlet'];
-                    }
-                }
-            }
-
-            //Re-arrange Responses & Determine Distance & Availability of each Outlets
-            $id_outlet = array_unique($id_outlet);
-            $count_outlet = sizeof($id_outlet);
-            $outlets = [];
-            for($i=0;  $i<$count_outlet; $i++){
-                foreach($data as $key => $outlet){
-                    if($outlet['id_outlet'] == $id_outlet[$i]){
-                        $outlets[] = $outlet['outlet'];
-                        $products = [];
-                        $index_product = 0;
-                        foreach($data as $key => $item){
-                            if($item['id_outlet'] == $id_outlet[$i]){
-                                $products[] = $item['product'];
-                                $products[$index_product]['product_price'] = $item['product_price'];
-                                $products[$index_product]['product_price_base'] = $item['product_price_base'];
-                                $products[$index_product]['product_price_tax'] = $item['product_price_tax'];
-                                $products[$index_product]['product_stock_status'] = $item['product_stock_status'];
-                                $products[$index_product]['max_order'] = $item['max_order'];
-
-                                $index_product++;
+                                $count_product++;
                             }
+                            
+                        }else{
+                            // still use default visibility
+                            $outlets[$key_outlet]['product'][$count_product] = $product;
+                            $outlets[$key_outlet]['product'][$count_product]['product_price'] = $outlets[$key_outlet]['product'][$count_product]['global_price'][0]['product_global_price'] ?? null;
+                            
+                            if(!empty($product['product_special_price'])){
+                                // if outlet and product exist in product special price
+                                // use special price instead of global price
+                                foreach($product['product_special_price'] as $special_price){
+                                    if($special_price['id_outlet'] == $outlets[$key_outlet]['id_outlet']){
+                                        $outlets[$key_outlet]['product'][$count_product]['product_price'] = $special_price['product_special_price'];
+                                        break;
+                                    }
+                                }
+                            }
+                            
+                            unset($outlets[$key_outlet]['product'][$count_product]['global_price']);
+                            unset($outlets[$key_outlet]['product'][$count_product]['product_special_price']);
+
+                            $count_product++;
                         }
-                        $outlets[$i]['products'] = $products;
-                        unset($id_outlet[$i]);
-                        break;
                     }
                 }
             }
-            
+
             // check outlet based on distance, check promo 
             $outlets = $this->check_outlet($outlets, $post, $promo_error);
 
