@@ -2536,9 +2536,11 @@ class ApiUser extends Controller
     {
 
         if ($log_type == 'apps') {
-            $log = LogActivitiesApps::where('id_log_activities_apps', MyHelper::decSlug($id))->first();
+            // $log = LogActivitiesApps::where('id_log_activities_apps', MyHelper::decSlug($id))->first();
+            $log = LogActivitiesApps::where('id_log_activities_apps', $id)->first();
         } else {
-            $log = LogActivitiesBE::where('id_log_activities_be', MyHelper::decSlug($id))->first();
+            // $log = LogActivitiesBE::where('id_log_activities_be', MyHelper::decSlug($id))->first();
+            $log = LogActivitiesBE::where('id_log_activities_be', $id)->first();
         }
         if ($log) {
             $log->user      = MyHelper::decrypt2019($log->user);
