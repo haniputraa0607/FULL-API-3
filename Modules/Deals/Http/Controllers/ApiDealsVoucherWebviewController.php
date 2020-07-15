@@ -141,7 +141,7 @@ class ApiDealsVoucherWebviewController extends Controller
         }
 
         $result['deals_content'][$i]['is_outlet'] = 1;
-        $result['deals_content'][$i]['title'] = 'Available at';
+        $result['deals_content'][$i]['title'] = 'Berlaku di';
         $result['deals_content'][$i]['brand'] = $data['deals_voucher']['deal']['brand']['name_brand'];
         $result['deals_content'][$i]['brand_logo'] = $data['deals_voucher']['deal']['brand']['logo_brand'];
 
