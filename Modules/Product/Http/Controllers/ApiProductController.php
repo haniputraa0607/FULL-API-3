@@ -94,7 +94,15 @@ class ApiProductController extends Controller
     		$data['product_order'] = $post['product_order'];
     	}
         if (isset($post['product_brands'])) {
-            $data['product_brands'] = $post['product_brands'];
+            if(($post['product_brands'][0]??false) == '*') {
+                $data['product_brands'] = Brand::select('id_brand')->pluck('id_brand')->toArray();
+            } else {
+                $data['product_brands'] = $post['product_brands'];
+            }
+        }
+
+        if($type == 'create' && !($data['product_brands']??false) && ($data['id_product_category']??false)){
+            $data['product_brands'] = ['0'];
         }
 
         // search position
@@ -1009,20 +1017,21 @@ class ApiProductController extends Controller
 		if($save){
 			$listOutlet = Outlet::get()->toArray();
 			foreach($listOutlet as $outlet){
-				$data = [];
-				$data['id_product'] = $save->id_product;
-				$data['id_outlet'] = $outlet['id_outlet'];
-				$data['product_price'] = null;
+				$dataPrice = [];
+				$dataPrice['id_product'] = $save->id_product;
+				$dataPrice['id_outlet'] = $outlet['id_outlet'];
+				$dataPrice['product_price'] = null;
 				// $data['product_visibility'] = 'Visible';
 
-                ProductPrice::create($data);
+                ProductPrice::create($dataPrice);
             }
 
             if(is_array($brands=$data['product_brands']??false)){
                 foreach ($brands as $id_brand) {
                     BrandProduct::create([
                         'id_product'=>$save['id_product'],
-                        'id_brand'=>$id_brand
+                        'id_brand'=>$id_brand,
+                        'id_product_category' => $data['id_product_category']
                     ]);
                 }
             }
@@ -1048,6 +1057,10 @@ class ApiProductController extends Controller
                 $dataPhoto['product_photo_order'] = $this->cekUrutanPhoto($save['id_product']);
                 $save                             = ProductPhoto::create($dataPhoto);
             }
+            if(isset($post['product_global_price'])){
+                ProductGlobalPrice::updateOrCreate(['id_product' => $save['id_product']],
+                    ['product_global_price' => str_replace(".","",$post['product_global_price'])]);
+            }
 
 		}
 
@@ -1062,19 +1075,22 @@ class ApiProductController extends Controller
 
     	// check data
         DB::beginTransaction();
-        if(is_array($brands=$post['product_brands']??false)){
-            if(in_array('*', $post['product_brands'])){
-                $brands=Brand::select('id_brand')->get()->toArray();
-                $brands=array_column($brands, 'id_brand');
-            }
-            BrandProduct::where('id_product',$request->json('id_product'))->delete();
-            foreach ($brands as $id_brand) {
-                BrandProduct::create([
-                    'id_product'=>$request->json('id_product'),
-                    'id_brand'=>$id_brand,
-                    'id_product_category'=>$request->json('id_product_category')
-                ]);
-            }
+        $brands=$post['product_brands']??false;
+        if(!$brands){
+            $brands = ['0'];
+            $post['product_brands'] = ['0'];
+        }
+        if(in_array('*', $post['product_brands'])){
+            $brands=Brand::select('id_brand')->get()->toArray();
+            $brands=array_column($brands, 'id_brand');
+        }
+        BrandProduct::where('id_product',$request->json('id_product'))->delete();
+        foreach ($brands as $id_brand) {
+            BrandProduct::create([
+                'id_product'=>$request->json('id_product'),
+                'id_brand'=>$id_brand,
+                'id_product_category'=>$request->json('id_product_category')
+            ]);
         }
         unset($post['product_brands']);
         // promo_category
