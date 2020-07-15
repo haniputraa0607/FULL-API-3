@@ -2531,6 +2531,16 @@ class FeaturesTableSeeder extends Seeder
                     'created_at' => '2018-05-10 08:00:00',
                     'updated_at' => '2018-05-10 08:00:00',
                 ),
+            252 =>
+                array(
+                    'id_feature' => 253,
+                    'feature_type' => 'Report',
+                    'feature_module' => 'Report Payment',
+                    'show_hide' => 1,
+                    'order' => 106,
+                    'created_at' => '2018-05-10 08:00:00',
+                    'updated_at' => '2018-05-10 08:00:00',
+                ),
         ));
     }
 }
