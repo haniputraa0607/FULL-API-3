@@ -53,12 +53,29 @@ class ApiReportPayment extends Controller
 
         $data = TransactionPaymentMidtran::join('transactions', 'transactions.id_transaction', 'transaction_payment_midtrans.id_transaction')
             ->join('users', 'users.id', 'transactions.id_user')
-            ->unionAll($deals)
-            ->unionAll($subscription)
             ->selectRaw("payment_type,  transactions.id_transaction AS id_report, transactions.trasaction_type AS trx_type, transactions.transaction_receipt_number AS receipt_number, 'Transaction' AS type, transaction_payment_midtrans.created_at, transactions.`transaction_grandtotal` AS grand_total, gross_amount, users.name, users.phone, users.email")
-            ->orderBy('created_at', 'desc')
-            ->paginate(30);
+            ->orderBy('created_at', 'desc');
 
+        if(isset($post['date_start']) && !empty($post['date_start']) &&
+            isset($post['date_end']) && !empty($post['date_end'])){
+            $start_date = date('Y-m-d', strtotime($post['date_start']));
+            $end_date = date('Y-m-d', strtotime($post['date_end']));
+
+            $deals = $data->whereDate('deals_payment_midtrans.created_at', '>=', $start_date)
+                ->whereDate('deals_payment_midtrans.created_at', '<=', $end_date);
+            $subscription = $data->whereDate('subscription_payment_midtrans.created_at', '>=', $start_date)
+                ->whereDate('subscription_payment_midtrans.created_at', '<=', $end_date);
+            $data = $data->whereDate('transaction_payment_midtrans.created_at', '>=', $start_date)
+                ->whereDate('transaction_payment_midtrans.created_at', '<=', $end_date);
+        }
+
+        $data = $data->unionAll($deals)->unionAll($subscription);
+
+        if(isset($post['export']) && $post['export'] == 1){
+            $data = $data->get()->toArray();
+        }else{
+            $data = $data->paginate(30);
+        }
         return response()->json(MyHelper::checkGet($data));
     }
 
@@ -77,8 +94,13 @@ class ApiReportPayment extends Controller
             ->unionAll($deals)
             ->unionAll($subscription)
             ->selectRaw("transaction_payment_ipay88s.payment_method as payment_type,  transactions.id_transaction AS id_report, transactions.trasaction_type AS trx_type, transactions.transaction_receipt_number AS receipt_number, 'Transaction' AS type, transaction_payment_ipay88s.created_at, transactions.`transaction_grandtotal` AS grand_total, amount as gross_amount, users.name, users.phone, users.email")
-            ->orderBy('created_at', 'desc')
-            ->paginate(30);
+            ->orderBy('created_at', 'desc');
+
+        if(isset($post['export']) && $post['export'] == 1){
+            $data = $data->get()->toArray();
+        }else{
+            $data = $data->paginate(30);
+        }
 
         return response()->json(MyHelper::checkGet($data));
     }
