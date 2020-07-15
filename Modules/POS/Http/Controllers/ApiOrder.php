@@ -912,7 +912,7 @@ class ApiOrder extends Controller
                             $payMidtrans = TransactionPaymentMidtran::find($pay['id_payment']);
                             $point = 0;
                             if ($payMidtrans) {
-                                if(Configs::select('is_active')->where('config_name','refund midtrans')->pluck('is_active')->first()){
+                                if(MyHelper::setting('refund_midtrans')){
                                     $refund = Midtrans::refund($order['transaction_receipt_number'],['reason' => $post['reason']??'']);
                                     if ($refund['status'] != 'success') {
                                         DB::rollback();
@@ -953,7 +953,7 @@ class ApiOrder extends Controller
                     $payIpay     = TransactionPaymentIpay88::where('id_transaction', $order['id_transaction'])->first();
                     if($payMidtrans){
                         $point = 0;
-                        if(Configs::select('is_active')->where('config_name','refund midtrans')->pluck('is_active')->first()){
+                        if(MyHelper::setting('refund_midtrans')){
                             $refund = Midtrans::refund($order['transaction_receipt_number'],['reason' => $post['reason']??'']);
                             if ($refund['status'] != 'success') {
                                 DB::rollback();
