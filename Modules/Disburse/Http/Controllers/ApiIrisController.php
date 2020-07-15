@@ -434,21 +434,23 @@ class ApiIrisController extends Controller
                         'disburse_nominal as amount', 'notes', 'reference_no as ref')
                     ->get()->toArray();
 
-                $sendToIris = MyHelper::connectIris('Payouts', 'POST','api/v1/payouts', ['payouts' => $dataRetry]);
+                if(!empty($dataRetry)){
+                    $sendToIris = MyHelper::connectIris('Payouts', 'POST','api/v1/payouts', ['payouts' => $dataRetry]);
 
-                if(isset($sendToIris['status']) && $sendToIris['status'] == 'success'){
-                    if(isset($sendToIris['response']['payouts']) && !empty($sendToIris['response']['payouts'])){
-                        $a=0;
-                        $return = $sendToIris['response']['payouts'];
-                        foreach ($dataRetry as $val){
-                            $getData = Disburse::where('reference_no', $val['ref'])->first();
-                            $oldRefNo = $getData['old_reference_no'].','.$getData['reference_no'];
-                            $oldRefNo = ltrim($oldRefNo,",");
-                            $count = $getData['count_retry'] + 1;
-                            $update = Disburse::where('id_disburse', $getData['id_disburse'])
-                                ->update(['old_reference_no' => $oldRefNo, 'reference_no' => $return[$a]['reference_no'],
-                                    'count_retry' => $count, 'disburse_status' => $arrStatus[ $return[$a]['status']]]);
-                            $a++;
+                    if(isset($sendToIris['status']) && $sendToIris['status'] == 'success'){
+                        if(isset($sendToIris['response']['payouts']) && !empty($sendToIris['response']['payouts'])){
+                            $a=0;
+                            $return = $sendToIris['response']['payouts'];
+                            foreach ($dataRetry as $val){
+                                $getData = Disburse::where('reference_no', $val['ref'])->first();
+                                $oldRefNo = $getData['old_reference_no'].','.$getData['reference_no'];
+                                $oldRefNo = ltrim($oldRefNo,",");
+                                $count = $getData['count_retry'] + 1;
+                                $update = Disburse::where('id_disburse', $getData['id_disburse'])
+                                    ->update(['old_reference_no' => $oldRefNo, 'reference_no' => $return[$a]['reference_no'],
+                                        'count_retry' => $count, 'disburse_status' => $arrStatus[ $return[$a]['status']]]);
+                                $a++;
+                            }
                         }
                     }
                 }
@@ -460,6 +462,9 @@ class ApiIrisController extends Controller
                         ->pluck('reference_no');
                     if(!empty($getDataToApprove)){
                         $sendApprover = MyHelper::connectIris('Approver', 'POST','api/v1/payouts/approve', ['reference_nos' => $getDataToApprove], 1);
+                        if(isset($sendApprover['status']) && $sendApprover['status'] == 'fail'){
+                            $getDataToApprove = Disburse::whereIn('reference_no', $getDataToApprove)->update(['disburse_status' => 'Fail', 'error_message' => implode(',',$sendApprover['response']['errors'])]);
+                        }
                     }
                 }
             }

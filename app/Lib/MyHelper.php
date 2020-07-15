@@ -2549,18 +2549,23 @@ class MyHelper{
                 'subject' => $subject,
                 'request_header'=> json_encode($header),
                 'request' => $jsonBody,
-                'request_url' => $urlApi,
-                'response' => json_encode($e)
+                'request_url' => $urlApi
             ];
-            LogIRIS::create($dataLog);
+
             try{
                 if($e->getResponse()){
                     $response = $e->getResponse()->getBody()->getContents();
+                    $dataLog['response'] = $response;
+                    LogIRIS::create($dataLog);
                     return ['status' => 'fail', 'response' => json_decode($response, true)];
                 }
+                $dataLog['response'] = 'Check your internet connection.';
+                LogIRIS::create($dataLog);
                 return ['status' => 'fail', 'response' => ['Check your internet connection.']];
             }
             catch(Exception $e){
+                $dataLog['response'] = 'Check your internet connection.';
+                LogIRIS::create($dataLog);
                 return ['status' => 'fail', 'response' => ['Check your internet connection.']];
             }
         }
