@@ -117,7 +117,15 @@ class ApiIrisController extends Controller
                     'rejected' => 'Rejected'
                 ];
 
-                if(!empty($getData)){
+                $checkBalance = MyHelper::connectIris('Balance', 'GET','api/v1/balance', []);
+                $balance = 0;
+                if(isset($checkBalance['status']) && $checkBalance['status'] == 'success'){
+                    $balance = $checkBalance['response']['balance'];
+                }
+
+                if(!empty($getData) && $balance > 0){
+                    $tmpBalance = 0;
+
                     DB::beginTransaction();
 
                     try{
@@ -269,6 +277,12 @@ class ApiIrisController extends Controller
                                 $amount = round($subTotal - ((floatval($percentFee) / 100) * $subTotal) - $totalFee - $nominalBalance - $totalChargedPromo - $totalChargedSubcriptionOutlet, 2);
                                 $incomeCentral = round(((floatval($percentFee) / 100) * $subTotal) + $totalFeeForCentral, 2);
                                 $expenseCentral = round($nominalBalanceCentral + $totalChargedPromoCentral + $totalChargedSubcriptionCentral, 2);
+
+                                //check balance
+                                $tmpBalance = $tmpBalance + $amount;//for check balance
+                                if($tmpBalance > $balance){
+                                    break;
+                                }
 
                                 //set to send disburse per bank account
                                 $checkAccount = array_search($data['beneficiary_account'], array_column($arrTmpDisburse, 'beneficiary_account'));
@@ -427,29 +441,31 @@ class ApiIrisController extends Controller
                 }
 
                 //proses retry failed disburse
-                $dataRetry = Disburse::join('bank_accounts', 'bank_accounts.id_bank_account', 'disburse.id_bank_account')
-                    ->leftJoin('bank_name', 'bank_name.id_bank_name', 'bank_accounts.id_bank_name')
-                    ->where('disburse_status', 'Retry From Failed')
-                    ->select('bank_accounts.beneficiary_name', 'bank_accounts.beneficiary_account', 'bank_name.bank_code as beneficiary_bank', 'bank_accounts.beneficiary_email',
-                        'disburse_nominal as amount', 'notes', 'reference_no as ref')
-                    ->get()->toArray();
+                if($balance > 0){
+                    $dataRetry = Disburse::join('bank_accounts', 'bank_accounts.id_bank_account', 'disburse.id_bank_account')
+                        ->leftJoin('bank_name', 'bank_name.id_bank_name', 'bank_accounts.id_bank_name')
+                        ->where('disburse_status', 'Retry From Failed')
+                        ->select('bank_accounts.beneficiary_name', 'bank_accounts.beneficiary_account', 'bank_name.bank_code as beneficiary_bank', 'bank_accounts.beneficiary_email',
+                            'disburse_nominal as amount', 'notes', 'reference_no as ref')
+                        ->get()->toArray();
 
-                if(!empty($dataRetry)){
-                    $sendToIris = MyHelper::connectIris('Payouts', 'POST','api/v1/payouts', ['payouts' => $dataRetry]);
+                    if(!empty($dataRetry)){
+                        $sendToIris = MyHelper::connectIris('Payouts', 'POST','api/v1/payouts', ['payouts' => $dataRetry]);
 
-                    if(isset($sendToIris['status']) && $sendToIris['status'] == 'success'){
-                        if(isset($sendToIris['response']['payouts']) && !empty($sendToIris['response']['payouts'])){
-                            $a=0;
-                            $return = $sendToIris['response']['payouts'];
-                            foreach ($dataRetry as $val){
-                                $getData = Disburse::where('reference_no', $val['ref'])->first();
-                                $oldRefNo = $getData['old_reference_no'].','.$getData['reference_no'];
-                                $oldRefNo = ltrim($oldRefNo,",");
-                                $count = $getData['count_retry'] + 1;
-                                $update = Disburse::where('id_disburse', $getData['id_disburse'])
-                                    ->update(['old_reference_no' => $oldRefNo, 'reference_no' => $return[$a]['reference_no'],
-                                        'count_retry' => $count, 'disburse_status' => $arrStatus[ $return[$a]['status']]]);
-                                $a++;
+                        if(isset($sendToIris['status']) && $sendToIris['status'] == 'success'){
+                            if(isset($sendToIris['response']['payouts']) && !empty($sendToIris['response']['payouts'])){
+                                $a=0;
+                                $return = $sendToIris['response']['payouts'];
+                                foreach ($dataRetry as $val){
+                                    $getData = Disburse::where('reference_no', $val['ref'])->first();
+                                    $oldRefNo = $getData['old_reference_no'].','.$getData['reference_no'];
+                                    $oldRefNo = ltrim($oldRefNo,",");
+                                    $count = $getData['count_retry'] + 1;
+                                    $update = Disburse::where('id_disburse', $getData['id_disburse'])
+                                        ->update(['old_reference_no' => $oldRefNo, 'reference_no' => $return[$a]['reference_no'],
+                                            'count_retry' => $count, 'disburse_status' => $arrStatus[ $return[$a]['status']]]);
+                                    $a++;
+                                }
                             }
                         }
                     }
@@ -460,7 +476,7 @@ class ApiIrisController extends Controller
                 if($settingApprover && $settingApprover['value'] == 1){
                     $getDataToApprove = Disburse::where('disburse_status', 'Queued')
                         ->pluck('reference_no');
-                    if(!empty($getDataToApprove)){
+                    if(count($getDataToApprove) > 0){
                         $sendApprover = MyHelper::connectIris('Approver', 'POST','api/v1/payouts/approve', ['reference_nos' => $getDataToApprove], 1);
                         if(isset($sendApprover['status']) && $sendApprover['status'] == 'fail'){
                             $getDataToApprove = Disburse::whereIn('reference_no', $getDataToApprove)->update(['disburse_status' => 'Fail', 'error_message' => implode(',',$sendApprover['response']['errors'])]);
@@ -469,7 +485,6 @@ class ApiIrisController extends Controller
                 }
             }
         }
-
         return 'succes';
     }
 
