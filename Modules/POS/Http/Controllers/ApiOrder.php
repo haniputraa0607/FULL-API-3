@@ -596,7 +596,7 @@ class ApiOrder extends Controller
         if($pickup){
             //send notif to customer
             $user = User::find($order->id_user);
-            $send = app($this->autocrm)->SendAutoCRM('Order Taken', $user['phone'], [
+            $send = app($this->autocrm)->SendAutoCRM($order->pickup_by == 'Customer'?'Order Taken':'Order Taken By Driver', $user['phone'], [
                 "outlet_name" => $outlet['outlet_name'], 
                 "id_reference" => $order->transaction_receipt_number.','.$order->id_outlet, 
                 'id_transaction' => $order->id_transaction, 
