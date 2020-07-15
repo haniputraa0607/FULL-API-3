@@ -86,6 +86,10 @@ class PromoCampaignTools{
 			return false;
 		}
 		$discount=0;
+
+		/*
+		* dikomen karena sekarang belum digunakan
+		* 
 		// add product discount if exist
 		foreach ($trxs as  $id_trx => &$trx) {
 			$product=Product::with(['product_prices' => function($q) use ($id_outlet){ 
@@ -107,6 +111,7 @@ class PromoCampaignTools{
 				$trx['new_price']=($product_price*$trx['qty'])-$product_discount;
 			}
 		}
+		*/
 
 		//get all modifier in array
 		$mod = [];
@@ -247,7 +252,8 @@ class PromoCampaignTools{
 						//is product available
 						if(!$product){
 							// product not available
-							$errors[]='Product with id '.$trx['id_product'].' could not be found';
+							// $errors[]='Product with id '.$trx['id_product'].' could not be found';
+							$errors[]='Produk tidak ditemukan';
 							continue;
 						}
 						// add discount
@@ -261,7 +267,7 @@ class PromoCampaignTools{
 							//is product available
 							if(!$product){
 								// product not available
-								// $errors[]='Product with id '.$trx['id_product'].' could not be found';
+								$errors[]='Produk tidak ditemukan';
 								continue;
 							}
 							// add discount
@@ -595,7 +601,8 @@ class PromoCampaignTools{
 						//is product available
 						if(!$product){
 							// product not available
-							$errors[]='Product with id '.$trx['id_product'].' could not be found';
+							// $errors[]='Product with id '.$trx['id_product'].' could not be found';
+							$errors[]='Produk tidak ditemukan';
 							continue;
 						}
 						// add discount
@@ -947,8 +954,20 @@ class PromoCampaignTools{
     	return true;
     }
 
-    function checkOutletRule($id_outlet, $rule, $outlet = null)
+    function checkOutletRule($id_outlet, $rule, $outlet = null, $id_brand = null)
     {
+    	if (isset($id_brand)) {
+    		$outlet_list = Outlet::where('id_outlet',$id_outlet)
+    						->whereHas('brands', function($q) use ($id_brand){
+    							$q->where('brand_outlet.id_brand', $id_brand);
+    						})
+    						->first();
+
+    		if (!$outlet_list) {
+    			return false;
+    		}
+
+    	}
         if ($rule == '1') 
         {
             return true;
@@ -1019,7 +1038,7 @@ class PromoCampaignTools{
         	$promo = $promo->toArray();
         	if ( ($promo[$source.'_product_discount_rules']['is_all_product']??false) == 1) 
 	        {
-	        	$product = ['*'];
+	        	$product = null;
 	        }
 	        elseif ( !empty($promo[$source.'_product_discount']) )
 	        {
@@ -1043,7 +1062,7 @@ class PromoCampaignTools{
 	        }
 	        return $product;
         }else{
-        	return 'empty';
+        	return null;
         }
     }
 
