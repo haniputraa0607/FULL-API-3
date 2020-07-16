@@ -131,14 +131,14 @@ class ApiSubscriptionUse extends Controller
     	}
 
     	// check outlet
-    	if ( empty($subs['subscription_user']['subscription']['is_all_outlet']) ) {
-    		$pct = new PromoCampaignTools;
-    		$check_outlet = $pct->checkOutletRule($id_outlet, 0, $subs['subscription_user']['subscription']['outlets_active']);
-			
-			if ( !$check_outlet ) {
-	    		$errors[] = 'Cannot use subscription at this outlet';
-	    		return 0;
-	    	}
+    	// if ( empty($subs['subscription_user']['subscription']['is_all_outlet']) ) {
+    	// }
+		$pct = new PromoCampaignTools;
+		$check_outlet = $pct->checkOutletRule($id_outlet, $subs['subscription_user']['subscription']['is_all_outlet'], $subs['subscription_user']['subscription']['outlets_active'], $subs['subscription_user']['subscription']['id_brand']);
+
+		if ( !$check_outlet ) {
+    		$errors[] = 'Cannot use subscription at this outlet';
+    		return 0;
     	}
 
     	// check product
