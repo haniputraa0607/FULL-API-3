@@ -6,6 +6,7 @@ use App\Http\Models\Configs;
 use App\Http\Models\DateHoliday;
 use App\Http\Models\Holiday;
 use App\Http\Models\LogBalance;
+use App\Http\Models\Outlet;
 use App\Http\Models\OutletHoliday;
 use App\Http\Models\OutletSchedule;
 use App\Http\Models\OutletToken;
@@ -51,6 +52,7 @@ use Modules\SettingFraud\Entities\FraudDetectionLogTransactionWeek;
 use Modules\Shift\Entities\Shift;
 use Modules\Shift\Entities\UserOutletApp;
 use Modules\Transaction\Http\Requests\TransactionDetail;
+use Carbon\Carbon;
 
 class ApiOutletApp extends Controller
 {
@@ -2901,32 +2903,136 @@ class ApiOutletApp extends Controller
         return MyHelper::checkGet([], 'Holiday not found');
     }
 
+    public function isOperational($id_outlet){
+        $outlet_schedule = Outlet::with(['today' => function($query){$query->where('is_closed', 0);}])->where('id_outlet', $id_outlet)->first()['today'];
+        
+        if($outlet_schedule == null) 
+            return ['status' => false, 'message' => 'Outlet is close or not found.']; 
+        
+        $spare_time['open'] = (int) Setting::where('key', 'spare_open_time')->value('value') ?? 0;
+        $spare_time['close'] = (int) Setting::where('key', 'spare_close_time')->value('value') ?? 0;
+        
+        $real_time['open']  = date('H:i', strtotime('-'.$spare_time['open'].' minutes', strtotime($outlet_schedule['open'])));
+        $real_time['close'] = date('H:i', strtotime('+'.$spare_time['close'].' minutes', strtotime($outlet_schedule['close'])));
+        
+        /* Carbon test */
+        // $knownDate = Carbon::createFromTime(22,16,0,'Asia/Jakarta');
+        // Carbon::setTestNow($knownDate);
+        // $dummyTime = strtotime(Carbon::now()->toTimeString());
+
+        // if($dummyTime < strtotime($real_time['open']) || $dummyTime > strtotime($real_time['close']))
+        //     return ['status' => false, 'message' => 'This is not operational time'];
+        /* End Carbon Test */
+
+        if(strtotime(date('H:i')) < strtotime($real_time['open']) || strtotime(date('H:i')) > strtotime($real_time['close']))
+            return ['status' => false, 'message' => 'This is not operational time'];
+    
+        return ['status' => true];
+    }
+
     public function start_shift(Request $request){
-        $post = $request->all();
-
-        $user = $request->user();
-
-        $cash_start = $post['cash_start'];
-
-        //save 
-        $save = Shift::create([
-            'id_outlet' => $user['id_outlet'],
-            'open_time' => date('Y-m-d H:i:s'),
-            'cash_start' => $cash_start
+        
+        // validate request
+        $validateRequest = $request->validate([
+            'cash_start' => 'required|numeric'
         ]);
 
-        if($save){
-            return response()->json(['status' => 'success', 'id_shift' => $save->id]);
+        $post = $request->all();
+        $user = $request->user(); // later change to user outletapp, instead of outlet
+
+        /* Check if operational time is set true */
+        $is_operational = $this->isOperational($user['id_outlet']);
+        if(!$is_operational['status']){
+            return response()->json(['status' => 'fail', 'message' => $is_operational['message']]);
         }
-        
-        return response()->json(['status' => 'fail']);
+
+        // find existing shift outlet today
+        // later change to id_user_outletapp, instead of id_outlet
+        $outlet_shift = Shift::where('id_outlet', $user['id_outlet'])->whereDate('created_at', date('Y-m-d'));
+        $is_outlet_shift_exist_on_curdate = (clone $outlet_shift )->first();
+        $is_outlet_shift_closed = (clone $outlet_shift )->whereNotNull('close_time')->first();
+
+        // if this shift is not exist on curdate, continue process to running shift
+        if(!$is_outlet_shift_exist_on_curdate){
+            // get this outlet schedule
+            $cash_start = $post['cash_start'];
+            $open_time = date('Y-m-d H:i:s');
+
+            //save shift
+            $save = Shift::create([
+                'id_outlet' => $user['id_outlet'],
+                'open_time' => $open_time,
+                'cash_start' => $cash_start
+            ]);
     
+            if($save){
+                return response()->json(['status' => 'success', 'message' => 'Shift started at '.$open_time, 'id_shift' => $save->id]);
+            }
+            return response()->json(['status' => 'fail', 'message' => 'Failed to create new shift']);
+        }
+
+        if($is_outlet_shift_closed){
+            return response()->json(['status' => 'fail', 'message' => 'Shift have been ended by this user outlet', 'id_shift' => $is_outlet_shift_closed['id_shift']]);
+        }
+        return response()->json(['status' => 'fail', 'message' => 'Shift already running', 'id_shift' => $is_outlet_shift_exist_on_curdate['id_shift']]);
     }
 
     public function end_shift(Request $request){
-        $post = $request->all();
+        
+        // validate request
+        $validateRequest = $request->validate([
+            'cash_end' => 'required|numeric',
+            'id_shift' => 'required'
+        ]);
 
+        $post = $request->all();
         $cash_end = $post['cash_end'];
-        $id_shift = $post['id_shift'];  
+        $id_shift = $post['id_shift'];
+
+        $user = $request->user(); // later change to user outletapp, instead of outlet
+
+        /* Check if operational time is set true */
+        $is_operational = $this->isOperational($user['id_outlet']);
+        if(!$is_operational['status']){
+            return response()->json(['status' => 'fail', 'message' => $is_operational['message']]);
+        }
+ 
+        // search for id shift which running today
+        // later change to id_user_outletapp, instead of id_outlet
+        $shift = Shift::where('id_shift', $id_shift);
+
+        $is_outlet_shift_opened_by_this_user_outlet = (clone $shift)->where('id_outlet', $user['id_outlet'])->first();
+        $is_outlet_shift_opened_on_curdate = (clone $shift)->whereDate('created_at', date('Y-m-d'))->first();
+        $is_outlet_shift_not_closed = (clone $shift)->whereNull('close_time')->first();
+
+        // check if shift is really exist in current user outlet 
+        if($is_outlet_shift_opened_by_this_user_outlet){
+
+            // check if shift is really exist on current day
+            if($is_outlet_shift_opened_on_curdate){
+
+                // check if shift is not yet closed
+                if($is_outlet_shift_not_closed){
+                    
+                    $close_time = date('Y-m-d H:i:s');
+                    $cash_start = $shift->first()['cash_start'];
+                    $cash_difference = $cash_end - $cash_start;
+        
+                    $update = Shift::where('id_shift', $id_shift)->update([
+                        'cash_end' => $cash_end,
+                        'close_time' => $close_time,
+                        'cash_difference' => $cash_difference 
+                    ]);
+        
+                    if($update){
+                        return response()->json(['status' => 'success', 'message' => 'Shift ended at '.$close_time]);
+                    }
+                    return response()->json(['status' => 'fail', 'message' => 'Failed to update current shift']);
+                }
+                return response()->json(['status' => 'fail', 'message' => 'Shift have been ended by this user outlet']);
+            }
+            return response()->json(['status' => 'fail', 'message' => 'Shift is not yet started by this user outlet']);
+        }
+        return response()->json(['status' => 'fail', 'message' => 'Shift is not owned by this user outlet']);
     }
 }
