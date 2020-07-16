@@ -28,6 +28,7 @@ use App\Lib\classTexterSMS;
 use App\Lib\classMaskingJson;
 use App\Lib\classJatisSMS;
 use App\Lib\apiwha;
+use App\Lib\ValueFirst;
 use Validator;
 use Hash;
 use DB;
@@ -310,6 +311,23 @@ class ApiAutoCrm extends Controller
 
 							$this->rajasms->setData($senddata);
 							$send = $this->rajasms->send();
+							break;
+						case 'ValueFirst':
+							if($crm['autocrm_title'] == 'Pin Sent' || $crm['autocrm_title'] == 'Pin Forgot'){
+								if($useragent && $useragent == "Android"){
+									$crm['autocrm_sms_content'] = '<#> '.$crm['autocrm_sms_content'].' '.ENV('HASH_KEY_'.ENV('HASH_KEY_TYPE'));
+								}
+								$content 	= $this->TextReplace($crm['autocrm_sms_content'], $user['phone'], $variables);
+							} else {
+								$content 	= $this->TextReplace($crm['autocrm_sms_content'], $user['phone'], $variables);
+							}
+
+							$sendData = [
+								'to' => trim($user['phone']),
+								'text' => $content
+							];
+
+							ValueFirst::create()->send($sendData);
 							break;
 						default:
 							$senddata = array(

@@ -196,4 +196,8 @@ class Outlet extends Authenticatable
 
 		return $this->belongsTo(OutletSchedule::class, 'id_outlet', 'id_outlet')->where('day', $hari_ini);
 	}
+
+	public function payment_method_outlet(){
+        return $this->hasMany(\App\Http\Models\PaymentMethodOutlet::class, 'id_outlet');
+    }
 }

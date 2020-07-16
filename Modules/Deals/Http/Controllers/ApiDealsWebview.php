@@ -24,6 +24,9 @@ class ApiDealsWebview extends Controller
     {
         $deals = Deal::with([
         			'brand', 
+        			'outlets' => function($q) {
+        				$q->where('outlet_status', 'Active');
+        			},
         			'outlets.city', 
         			'deals_content' => function($q){
         				$q->where('is_active',1);
@@ -40,6 +43,7 @@ class ApiDealsWebview extends Controller
             $outlets = Outlet::join('brand_outlet', 'outlets.id_outlet', '=', 'brand_outlet.id_outlet')
                 ->join('deals', 'deals.id_brand', '=', 'brand_outlet.id_brand')
                 ->where('deals.id_deals', $deals['id_deals'])
+                ->where('outlet_status','Active')
                 ->select('outlets.*')->with('city')->get()->toArray();
             $deals['outlets'] = $outlets;
         }

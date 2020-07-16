@@ -48,13 +48,14 @@ class ApiDealsVoucherWebviewController extends Controller
         $post['used'] = 0;
 
         // $action = MyHelper::postCURLWithBearer('api/voucher/me?log_save=0', $post, $bearer);
-        $voucher = DealsUser::with(['deals_voucher', 'deals_voucher.deal', 'deals_voucher.deal.brand', 'deals_voucher.deal.deals_content', 'deals_voucher.deal.deals_content.deals_content_details', 'deals_voucher.deal.outlets.city', 'deals_voucher.deal.outlets.city'])
+        $voucher = DealsUser::with(['deals_voucher', 'deals_voucher.deal', 'deals_voucher.deal.brand', 'deals_voucher.deal.deals_content', 'deals_voucher.deal.deals_content.deals_content_details', 'deals_voucher.deal.outlets' => function($q) {$q->where('outlet_status', 'Active');}, 'deals_voucher.deal.outlets.city'])
         ->where('id_deals_user', $request->id_deals_user)->get()->toArray()[0];
 
         if($voucher['deals_voucher']['deal']['is_all_outlet'] == 1){
             $outlets = Outlet::join('brand_outlet', 'outlets.id_outlet', '=', 'brand_outlet.id_outlet')
                 ->join('deals', 'deals.id_brand', '=', 'brand_outlet.id_brand')
                 ->where('deals.id_deals', $voucher['deals_voucher']['deal']['id_deals'])
+                ->where('outlet_status', 'Active')
                 ->select('outlets.*')->with('city')->get()->toArray();
             $voucher['deals_voucher']['deal']['outlets'] = $outlets;
         }
