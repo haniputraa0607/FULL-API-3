@@ -32,9 +32,10 @@ class Controller extends BaseController
 		$user = json_decode($request->user(), true);
 
 		if($user['level'] == 'Super Admin'){
-			$checkFeature = Feature::select('id_feature')->get()->toArray();
+			$checkFeature = Feature::select('id_feature')->where('show_hide', 1)->get()->toArray();
 		}else{
 			$checkFeature = UserFeature::join('features', 'features.id_feature', '=', 'user_features.id_feature')
+                            ->where('features.show_hide', 1)
 							->where('user_features.id_user', '=', $user['id'])
 							->select('features.id_feature')->get()->toArray();
 		}

@@ -58,4 +58,5 @@ Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scop
     Route::post('participate-ajax', ['middleware' => 'feature_control:175', 'uses' => 'ApiSubscription@participateAjax']);
     Route::post('trx', ['middleware' => 'feature_control:177', 'uses' => 'ApiSubscription@transaction']);
     Route::post('delete', 'ApiSubscription@delete');
+    Route::post('update-complete', ['middleware' => 'feature_control:175', 'uses' => 'ApiSubscription@updateComplete']);
 });

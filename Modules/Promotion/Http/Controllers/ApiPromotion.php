@@ -33,6 +33,7 @@ use App\Lib\MyHelper;
 use App\Lib\PushNotificationHelper;
 use App\Lib\classMaskingJson;
 use App\Lib\classJatisSMS;
+use App\Lib\ValueFirst;
 use App\Lib\apiwha;
 use Validator;
 use Hash;
@@ -1774,6 +1775,14 @@ class ApiPromotion extends Controller
 					$this->rajasms->setData($senddata);
 					$send = $this->rajasms->send();
 					break;
+                case 'ValueFirst':
+                    $sendData = [
+                        'to' => trim($user['phone']),
+                        'text' => $content
+                    ];
+
+                    ValueFirst::create()->send($sendData);
+                    break;
 				default:
 					$senddata = array(
 						'apikey' => env('SMS_KEY'),
