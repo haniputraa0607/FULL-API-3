@@ -108,6 +108,12 @@ class ValueFirst
         if (!($data['text'] ?? false)) {
             return false;
         }
+        if(substr($data['to'], 0, 1) == '0'){
+            $phone = '62'.substr($data['to'],1);
+        }else{
+            $phone = $data['to'];
+        }
+        $data['to'] 	 = $phone;
         $data['from']    = $this->masking_number ?? 'VFIRST';
         $data['dir-url'] = $this->dir_url;
         $data['udh']     = 0;

@@ -27,6 +27,7 @@ use App\Http\Models\OauthAccessToken;
 use App\Lib\PushNotificationHelper;
 use App\Lib\classMaskingJson;
 use App\Lib\classJatisSMS;
+use App\Lib\ValueFirst;
 use DB;
 use Mail;
 
@@ -244,6 +245,14 @@ class SendCampaignJob implements ShouldQueue
 							$this->rajasms->setData($senddata);
 							$send = $this->rajasms->send();
 							break;
+                        case 'ValueFirst':
+                            $sendData = [
+                                'to' => trim($receipient),
+                                'text' => $content
+                            ];
+
+                            ValueFirst::create()->send($sendData);
+                            break;
 						default:
 							$senddata = array(
 								'apikey' => env('SMS_KEY'),
