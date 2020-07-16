@@ -36,7 +36,7 @@ class ApiSubscriptionUse extends Controller
         $this->promo_campaign       = "Modules\PromoCampaign\Http\Controllers\ApiPromoCampaign";
     }
 
-    public function checkSubscription($id_subscription_user=null, $outlet=null, $product=null, $product_detail=null, $active=null, $id_subscription_user_voucher=null)
+    public function checkSubscription($id_subscription_user=null, $outlet=null, $product=null, $product_detail=null, $active=null, $id_subscription_user_voucher=null, $brand=null)
     {
     	if (!empty($id_subscription_user_voucher)) 
     	{
@@ -60,6 +60,12 @@ class ApiSubscriptionUse extends Controller
     	if (!empty($product)) {
     		$subs = $subs->with(
     			'subscription_user.subscription.subscription_products'
+    		);
+    	}
+
+    	if (!empty($brand)) {
+    		$subs = $subs->with(
+    			'subscription_user.subscription.brand'
     		);
     	}
 

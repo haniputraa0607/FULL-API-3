@@ -28,6 +28,9 @@ class ApiSubscriptionWebview extends Controller
         // return url webview and button text for mobile (native button)
 
         $subs = Subscription::with([
+        			'outlets' => function($q) {
+        				$q->where('outlet_status', 'Active');
+        			},
         			'outlets.city', 
         			'subscription_content' => function($q){
         				$q->where('is_active',1);
@@ -185,7 +188,7 @@ class ApiSubscriptionWebview extends Controller
             return abort(404);
         }
 
-        $subs = SubscriptionUser::with('subscription.outlets.city', 'subscription_user_vouchers', 'subscription.subscription_content.subscription_content_details')->where('id_subscription_user', $request->id_subscription_user)->first()->toArray();
+        $subs = SubscriptionUser::with(['subscription.outlets' => function($q) {$q->where('outlet_status', 'Active');}, 'subscription.outlets.city', 'subscription_user_vouchers', 'subscription.subscription_content.subscription_content_details'])->where('id_subscription_user', $request->id_subscription_user)->first()->toArray();
         
         $subs_outlet = $this->renderOutletCity($subs['subscription']);
         $subs['subscription']['outlet_by_city'] = $subs_outlet['outlet_by_city']??[];
