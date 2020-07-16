@@ -188,7 +188,11 @@ class ApiPromo extends Controller
 			DB::rollback();
 		}
 
+		if (is_numeric($update)) {
+			$update = 1;
+		}
 		$update = MyHelper::checkUpdate($update);
+
 		$update['webview_url'] = "";
 		$update['webview_url_v2'] = "";
 		if ($source == 'deals')
@@ -198,7 +202,9 @@ class ApiPromo extends Controller
 		}
 		elseif($source == 'subscription')
 		{
-			$update['webview_url'] = config('url.api_url') ."api/webview/mysubscription/". $query['id_subscription_user'];
+			if ($id_promo) {
+				$update['webview_url'] = config('url.api_url') ."api/webview/mysubscription/". $id_promo;
+			}
 		}
 
 		return $update;

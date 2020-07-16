@@ -1011,7 +1011,9 @@ class ApiUser extends Controller
                     [
                         'pin' => $pin,
                         'useragent' => $useragent,
-                        'now' => date('Y-m-d H:i:s')
+                        'now' => date('Y-m-d H:i:s'),
+                        'date_sent' => date('d-m-y H:i:s'),
+                        'expired_time' => (string) MyHelper::setting('setting_expired_otp','value', 30),
                     ],
                     $useragent
                 );
@@ -1388,7 +1390,9 @@ class ApiUser extends Controller
                     [
                         'pin' => $pinnya,
                         'useragent' => $useragent,
-                        'now' => date('Y-m-d H:i:s')
+                        'now' => date('Y-m-d H:i:s'),
+                        'date_sent' => date('d-m-y H:i:s'),
+                        'expired_time' => (string) MyHelper::setting('setting_expired_otp','value', 30),
                     ],
                     $useragent
                 );
@@ -1499,7 +1503,9 @@ class ApiUser extends Controller
                 [
                     'pin' => $pin,
                     'useragent' => $useragent,
-                    'now' => date('Y-m-d H:i:s')
+                    'now' => date('Y-m-d H:i:s'),
+                    'date_sent' => date('d-m-y H:i:s'),
+                    'expired_time' => (string) MyHelper::setting('setting_expired_otp','value', 30),
                 ],
                 $useragent
             );
@@ -1793,7 +1799,9 @@ class ApiUser extends Controller
                         [
                             'pin' => $pin,
                             'useragent' => $useragent,
-                            'now' => date('Y-m-d H:i:s')
+                            'now' => date('Y-m-d H:i:s'),
+                            'date_sent' => date('d-m-y H:i:s'),
+                            'expired_time' => (string) MyHelper::setting('setting_expired_otp','value', 30),
                         ],
                         $useragent
                     );
@@ -2047,6 +2055,7 @@ class ApiUser extends Controller
                 $data[$type] = 1;
             }
 
+
             $check = UserOutlet::where('phone', $data['phone'])
                 ->where('id_outlet', $data['id_outlet'])
                 ->first();
@@ -2058,6 +2067,7 @@ class ApiUser extends Controller
                 $query = UserOutlet::create($data);
             }
         }
+        $delete = UserOutlet::where('phone', $data['phone'])->whereNotIn('id_outlet', $post['id_outlet'])->delete();
         return response()->json(MyHelper::checkCreate($query));
     }
 
@@ -2065,7 +2075,7 @@ class ApiUser extends Controller
     {
         $post = $request->json()->all();
         $query = UserOutlet::where('phone', $post['phone'])
-            ->where('id_outlet', $post['id_outlet'])
+            // ->where('id_outlet', $post['id_outlet'])
             ->delete();
         return response()->json(MyHelper::checkDelete($query));
     }
@@ -2075,15 +2085,32 @@ class ApiUser extends Controller
         $check = UserOutlet::join('outlets', 'outlets.id_outlet', '=', 'user_outlets.id_outlet')
             ->get()
             ->toArray();
-        return response()->json(MyHelper::checkGet($check));
+        $user_outlets = [];
+        foreach ($check as $user) {
+            $outlet = [
+                'outlet_code'   => $user['outlet_code'],
+                'outlet_name'   => $user['outlet_name'],
+                'id_outlet'     => $user['id_outlet'],
+            ];
+            if($user_outlets[$user['phone']]?? false) {
+                $user_outlets[$user['phone']]['outlets'][] = $outlet;
+            } else {
+                $user['outlets'] = [
+                    $outlet
+                ];
+                $user_outlets[$user['phone']] = $user;
+            }
+        }
+        return response()->json(MyHelper::checkGet(array_values($user_outlets)));
     }
 
     function detailAdminOutlet(Request $request)
     {
         $post = $request->json()->all();
         $check = UserOutlet::join('outlets', 'outlets.id_outlet', '=', 'user_outlets.id_outlet')
+            ->select('user_outlets.*',\DB::raw('GROUP_CONCAT(outlets.id_outlet) as outlets'))
             ->where('user_outlets.phone', '=', $post['phone'])
-            ->where('user_outlets.id_outlet', '=', $post['id_outlet'])
+            ->groupBy('phone')
             ->first();
         return response()->json(MyHelper::checkGet($check));
     }
@@ -2536,9 +2563,11 @@ class ApiUser extends Controller
     {
 
         if ($log_type == 'apps') {
-            $log = LogActivitiesApps::where('id_log_activities_apps', MyHelper::decSlug($id))->first();
+            // $log = LogActivitiesApps::where('id_log_activities_apps', MyHelper::decSlug($id))->first();
+            $log = LogActivitiesApps::where('id_log_activities_apps', $id)->first();
         } else {
-            $log = LogActivitiesBE::where('id_log_activities_be', MyHelper::decSlug($id))->first();
+            // $log = LogActivitiesBE::where('id_log_activities_be', MyHelper::decSlug($id))->first();
+            $log = LogActivitiesBE::where('id_log_activities_be', $id)->first();
         }
         if ($log) {
             $log->user      = MyHelper::decrypt2019($log->user);

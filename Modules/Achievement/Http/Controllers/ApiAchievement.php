@@ -966,7 +966,7 @@ class ApiAchievement extends Controller
                             'id_achievement_detail' => $achievement['id_achievement_detail'],
                             'id_user' => $idUser,
                             'id_product' => $product['id_product'],
-                            'product_total' => $achievement['transaction_product_qty'],
+                            'product_total' => $achievement['product_total'],
                             'id_transaction' => $user['id_transaction'],
                             'json_rule' => json_encode([
                                 'id_product' => $achievement['id_product'],
@@ -1423,78 +1423,82 @@ class ApiAchievement extends Controller
 
         $catProgress    = 0;
         $catEndProgress = 0;
-        foreach ($getAchievement as $keyCatAch => $category) {
-            $result['category'][$keyCatAch] = [
-                'id_achievement_category' => $category['id_achievement_category'],
-                'name' => $category['name'],
-                'description' => $category['description']
-            ];
-            foreach ($category['achievement_group'] as $keyAchGroup => $group) {
-                $result['category'][$keyCatAch]['achievement'][$keyAchGroup] = [
-                    'id_achievement_group' => MyHelper::decSlug($group['id_achievement_group']),
-                    'name' => $group['name'],
-                    'logo_achievement' => config('url.storage_url_api') . $group['logo_badge_default'],
-                    'description' => $group['description'],
+        $kA             = 0;
+        foreach ($getAchievement as $category) {
+            if (count($category['achievement_group']) > 0) {
+                $result['category'][$kA] = [
+                    'id_achievement_category' => $category['id_achievement_category'],
+                    'name' => $category['name'],
+                    'description' => $category['description']
                 ];
-
-                $getAchievementDetail = AchievementDetail::where([
-                    'id_achievement_group' => MyHelper::decSlug($group['id_achievement_group']),
-                ])->get()->toArray();
-                $achProgress    = 0;
-                $achEndProgress = 0;
-                foreach ($getAchievementDetail as $keyAchDetail => $detail) {
-                    $result['category'][$keyCatAch]['achievement'][$keyAchGroup]['badge'][$keyAchDetail] = [
-                        'id_achievement_detail' => $detail['id_achievement_detail'],
-                        'name' => $detail['name'],
-                        'logo_badge' => config('url.storage_url_api') . $detail['logo_badge'],
+                foreach ($category['achievement_group'] as $keyAchGroup => $group) {
+                    $result['category'][$kA]['achievement'][$keyAchGroup] = [
+                        'id_achievement_group' => MyHelper::decSlug($group['id_achievement_group']),
+                        'name' => $group['name'],
+                        'logo_achievement' => config('url.storage_url_api') . $group['logo_badge_default'],
+                        'description' => $group['description'],
                     ];
-                    $getAchievementProgress = AchievementProgress::where([
-                        'id_user' => Auth::user()->id,
-                        'id_achievement_detail' => $detail['id_achievement_detail'],
-                    ])->first();
 
-                    if ($getAchievementProgress) {
-                        $badgePercentProgress = ($getAchievementProgress->progress == 0) ? 0 : $getAchievementProgress->progress / $getAchievementProgress->end_progress;
-                        $result['category'][$keyCatAch]['achievement'][$keyAchGroup]['badge'][$keyAchDetail]['progress']            = $getAchievementProgress->progress;
-                        $result['category'][$keyCatAch]['achievement'][$keyAchGroup]['badge'][$keyAchDetail]['end_progress']        = $getAchievementProgress->end_progress;
-                        $result['category'][$keyCatAch]['achievement'][$keyAchGroup]['badge'][$keyAchDetail]['progress_percent']    = $badgePercentProgress;
-                    } else {
-                        $badgePercentProgress = 0;
-                        $result['category'][$keyCatAch]['achievement'][$keyAchGroup]['badge'][$keyAchDetail]['progress']            = 0;
-                        switch ($group['order_by']) {
-                            case 'nominal_transaction':
-                                $result['category'][$keyCatAch]['achievement'][$keyAchGroup]['badge'][$keyAchDetail]['end_progress']        = $detail['trx_nominal'];
-                                break;
-                            case 'total_product':
-                                $result['category'][$keyCatAch]['achievement'][$keyAchGroup]['badge'][$keyAchDetail]['end_progress']        = $detail['product_total'];
-                                break;
-                            case 'total_transaction':
-                                $result['category'][$keyCatAch]['achievement'][$keyAchGroup]['badge'][$keyAchDetail]['end_progress']        = $detail['trx_total'];
-                                break;
-                            case 'total_outlet':
-                                $result['category'][$keyCatAch]['achievement'][$keyAchGroup]['badge'][$keyAchDetail]['end_progress']        = $detail['different_outlet'];
-                                break;
-                            case 'total_province':
-                                $result['category'][$keyCatAch]['achievement'][$keyAchGroup]['badge'][$keyAchDetail]['end_progress']        = $detail['different_province'];
-                                break;
+                    $getAchievementDetail = AchievementDetail::where([
+                        'id_achievement_group' => MyHelper::decSlug($group['id_achievement_group']),
+                    ])->get()->toArray();
+                    $achProgress    = 0;
+                    $achEndProgress = 0;
+                    foreach ($getAchievementDetail as $keyAchDetail => $detail) {
+                        $result['category'][$kA]['achievement'][$keyAchGroup]['badge'][$keyAchDetail] = [
+                            'id_achievement_detail' => $detail['id_achievement_detail'],
+                            'name' => $detail['name'],
+                            'logo_badge' => config('url.storage_url_api') . $detail['logo_badge'],
+                        ];
+                        $getAchievementProgress = AchievementProgress::where([
+                            'id_user' => Auth::user()->id,
+                            'id_achievement_detail' => $detail['id_achievement_detail'],
+                        ])->first();
+
+                        if ($getAchievementProgress) {
+                            $badgePercentProgress = ($getAchievementProgress->progress == 0) ? 0 : $getAchievementProgress->progress / $getAchievementProgress->end_progress;
+                            $result['category'][$kA]['achievement'][$keyAchGroup]['badge'][$keyAchDetail]['progress']            = $getAchievementProgress->progress;
+                            $result['category'][$kA]['achievement'][$keyAchGroup]['badge'][$keyAchDetail]['end_progress']        = $getAchievementProgress->end_progress;
+                            $result['category'][$kA]['achievement'][$keyAchGroup]['badge'][$keyAchDetail]['progress_percent']    = $badgePercentProgress;
+                        } else {
+                            $badgePercentProgress = 0;
+                            $result['category'][$kA]['achievement'][$keyAchGroup]['badge'][$keyAchDetail]['progress']            = 0;
+                            switch ($group['order_by']) {
+                                case 'nominal_transaction':
+                                    $result['category'][$kA]['achievement'][$keyAchGroup]['badge'][$keyAchDetail]['end_progress']        = $detail['trx_nominal'];
+                                    break;
+                                case 'total_product':
+                                    $result['category'][$kA]['achievement'][$keyAchGroup]['badge'][$keyAchDetail]['end_progress']        = $detail['product_total'];
+                                    break;
+                                case 'total_transaction':
+                                    $result['category'][$kA]['achievement'][$keyAchGroup]['badge'][$keyAchDetail]['end_progress']        = $detail['trx_total'];
+                                    break;
+                                case 'total_outlet':
+                                    $result['category'][$kA]['achievement'][$keyAchGroup]['badge'][$keyAchDetail]['end_progress']        = $detail['different_outlet'];
+                                    break;
+                                case 'total_province':
+                                    $result['category'][$kA]['achievement'][$keyAchGroup]['badge'][$keyAchDetail]['end_progress']        = $detail['different_province'];
+                                    break;
+                            }
+                            $result['category'][$kA]['achievement'][$keyAchGroup]['badge'][$keyAchDetail]['progress_percent']    = 0;
                         }
-                        $result['category'][$keyCatAch]['achievement'][$keyAchGroup]['badge'][$keyAchDetail]['progress_percent']    = 0;
+                        if ($badgePercentProgress == 1) {
+                            $achProgress = $achProgress + 1;
+                        }
+                        $achEndProgress = $achEndProgress + 1;
                     }
-                    if ($badgePercentProgress == 1) {
-                        $achProgress = $achProgress + 1;
-                    }
-                    $achEndProgress = $achEndProgress + 1;
-                }
-                $achPercentProgress = ($achProgress == 0) ? 0 : $achProgress / $achEndProgress;
-                $result['category'][$keyCatAch]['achievement'][$keyAchGroup]['progress']            = $achProgress;
-                $result['category'][$keyCatAch]['achievement'][$keyAchGroup]['end_progress']        = $achEndProgress;
-                $result['category'][$keyCatAch]['achievement'][$keyAchGroup]['progress_percent']    = $achPercentProgress;
-                $result['category'][$keyCatAch]['achievement'][$keyAchGroup]['progress_text']       = $group['progress_text'];
+                    $achPercentProgress = ($achProgress == 0) ? 0 : $achProgress / $achEndProgress;
+                    $result['category'][$kA]['achievement'][$keyAchGroup]['progress']            = $achProgress;
+                    $result['category'][$kA]['achievement'][$keyAchGroup]['end_progress']        = $achEndProgress;
+                    $result['category'][$kA]['achievement'][$keyAchGroup]['progress_percent']    = $achPercentProgress;
+                    $result['category'][$kA]['achievement'][$keyAchGroup]['progress_text']       = $group['progress_text'];
 
-                if ($achPercentProgress > 0) {
-                    $catProgress = $catProgress + 1;
+                    if ($achPercentProgress > 0) {
+                        $catProgress = $catProgress + 1;
+                    }
+                    $catEndProgress = $catEndProgress + 1;
                 }
-                $catEndProgress = $catEndProgress + 1;
+                $kA++;
             }
         }
         $result['progress']     = $catProgress;
