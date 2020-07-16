@@ -686,12 +686,15 @@ class ApiCategoryController extends Controller
             if (!empty($post['promo_code'])) {
                 $code = app($this->promo_campaign)->checkPromoCode($post['promo_code'], null, 1);
                 $source = 'promo_campaign';
+                $id_brand = $code->id_brand;
             } elseif (!empty($post['id_deals_user'])) {
                 $code = app($this->promo_campaign)->checkVoucher($post['id_deals_user'], null, 1);
                 $source = 'deals';
+                $id_brand = $code->dealVoucher->deals->id_brand;
             } elseif (!empty($post['id_subscription_user'])) {
                 $code = app($this->subscription_use)->checkSubscription($post['id_subscription_user'], null, 1);
                 $source = 'subscription';
+                $id_brand = $code->subscription_user->subscription->id_brand;
             }
 
             if (!$code) {
@@ -707,25 +710,38 @@ class ApiCategoryController extends Controller
 
                 $applied_product = app($this->promo_campaign)->getProduct($source, ($code['promo_campaign'] ?? $code['deal_voucher']['deals'] ?? $code['subscription_user']['subscription']))['applied_product'] ?? [];
 
-                if ($applied_product == '*') {
+                if ($applied_product == '*') { // all product
                     foreach ($products as $key => $value) {
-                        $products[$key]['is_promo'] = 1;
+
+                    	$check = in_array($id_brand, array_column($value->brand_category->toArray(), 'id_brand'));
+
+                    	if ($check || !isset($id_brand)) {
+                        	$products[$key]['is_promo'] = 1;
+                    	}
                     }
                 } else {
-                    if (isset($applied_product[0])) {
+                    if (isset($applied_product[0])) { // tier || buy x get y
                         foreach ($applied_product as $key => $value) {
                             foreach ($products as $key2 => $value2) {
                                 if ($value2['id_product'] == $value['id_product']) {
-                                    $products[$key2]['is_promo'] = 1;
-                                    break;
+                                	$check = in_array($id_brand, array_column($value2->brand_category->toArray(), 'id_brand'));
+
+                    				if ($check || !isset($id_brand)) {
+	                                    $products[$key2]['is_promo'] = 1;
+	                                    break;
+	                                }
                                 }
                             }
                         }
-                    } elseif (isset($applied_product['id_product'])) {
+                    } elseif (isset($applied_product['id_product'])) { // selected product discount
                         foreach ($products as $key2 => $value2) {
                             if ($value2['id_product'] == $applied_product['id_product']) {
-                                $products[$key2]['is_promo'] = 1;
-                                break;
+                            	$check = in_array($id_brand, array_column($value2->brand_category->toArray(), 'id_brand'));
+
+                    			if ($check || !isset($id_brand)) {
+	                                $products[$key2]['is_promo'] = 1;
+	                                break;
+	                            }
                             }
                         }
                     }
