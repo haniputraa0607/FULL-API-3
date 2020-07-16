@@ -1814,6 +1814,7 @@ class ApiPromoCampaign extends Controller
 	        }
 
 	    	$query = $code;
+	    	$id_brand = $query['id_brand'];
 	    	$source = 'promo_campaign';
         }
         elseif (!$request->promo_code && $request->id_deals_user && !$request->id_subscription_user) 
@@ -1861,6 +1862,7 @@ class ApiPromoCampaign extends Controller
 
         	$deals = $deals->toArray();
 	    	$query = $deals['deal_voucher'];
+	    	$id_brand = $query['deals']['id_brand'];
 	    	$source = 'deals';
         }
         elseif (!$request->promo_code && !$request->id_deals_user && $request->id_subscription_user) 
@@ -1908,7 +1910,7 @@ class ApiPromoCampaign extends Controller
 
         // check outlet
 		if (isset($id_outlet)) {
-			if (!$pct->checkOutletRule($id_outlet, $query[$source]['is_all_outlet']??0,$query[$source][$source.'_outlets']??$query[$source]['outlets_active'])) {
+			if (!$pct->checkOutletRule($id_outlet, $query[$source]['is_all_outlet']??0,$query[$source][$source.'_outlets']??$query[$source]['outlets_active'], $id_brand??null)) {
 					return [
 	                'status'=>'fail',
 	                'messages'=>['Promo tidak berlaku di outlet ini']

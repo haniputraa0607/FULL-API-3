@@ -129,7 +129,7 @@ class PushNotificationHelper{
         // $notificationBuilder = new PayloadNotificationBuilder("");
         $notificationBuilder = new CustomPayloadNotificationBuilder($subject);
         $notificationBuilder->setBody($messages)
-                            ->setSound('default')
+                            ->setSound('fcmnotif.mp3')
                             ->setClickAction('Home');
         if($image){
             $notificationBuilder->setImage($image);
