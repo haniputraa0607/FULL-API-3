@@ -4,7 +4,7 @@ namespace App\Lib;
 use App\Http\Models\Setting;
 
 /**
- *
+ * Integration with ValueFirst Payment Gateway
  */
 class ValueFirst
 {
@@ -28,18 +28,33 @@ class ValueFirst
         self::$obj           = $this;
     }
 
+    /**
+     * Magic method. Any non exist property, will be referred to the ENV variable, with the VALUEFIRST_ prefix
+     * @param  String $key key
+     * @return String      Value
+     */
     public function __get($key)
     {
         return env('VALUEFIRST_' . strtoupper($key));
     }
 
+    /**
+     * Get Sequence number of request, and save update to database
+     * @return String current sequence number
+     */
     public function getSEQ()
     {
         $seq = MyHelper::setting('value_first_seq') ?: 1;
         Setting::updateOrCreate(['key' => 'value_first_seq'], ['value' => ($seq + 1)]);
-        return $seq;
+        return (string) $seq;
     }
 
+    /**
+     * Send sms
+     * @param  Array       $data    array of recipient phone number ('08xx'/'628xx' are both accepted) and the message.
+     *                              ex. ['to'=> '08xxxxxxxxxx', 'text'=> 'Hello world']
+     * @return Boolean              True/False
+     */
     public function send($data)
     {
         if (!$this->validate($data)) {
@@ -100,6 +115,11 @@ class ValueFirst
         }
     }
 
+    /**
+     * Validate given parameter, and add more env based parameter
+     * @param  Array    $data   ['to'=> '08xxxxxxxxxx', 'text'=> 'Hello world'], passed as reference, directly updated 
+     * @return Boolean          True/False
+     */
     public function validate(&$data)
     {
         if (!is_numeric($data['to'] ?? false)) {
