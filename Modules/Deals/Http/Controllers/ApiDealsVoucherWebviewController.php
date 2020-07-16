@@ -108,9 +108,9 @@ class ApiDealsVoucherWebviewController extends Controller
             'id_deals_user'         => $data['id_deals_user'],
             'voucher_expired'       => date('d F Y', strtotime($data['voucher_expired_at'])),
             'is_used'               => $data['is_used'],
-            'btn_used'              => 'Use Later',
+            'btn_used'              => 'Gunakan Nanti',
             'is_online'             => $data['deals_voucher']['deal']['is_online'],
-            'btn_online'            => 'Use Voucher',
+            'btn_online'            => 'Gunakan Voucher',
             'is_offline'            => $data['deals_voucher']['deal']['is_offline'],
             'btn_offline'           => 'Redeem to Cashier',
             'header_online_voucher' => 'Online Transaction',
@@ -141,7 +141,7 @@ class ApiDealsVoucherWebviewController extends Controller
         }
 
         $result['deals_content'][$i]['is_outlet'] = 1;
-        $result['deals_content'][$i]['title'] = 'Available at';
+        $result['deals_content'][$i]['title'] = 'Berlaku di';
         $result['deals_content'][$i]['brand'] = $data['deals_voucher']['deal']['brand']['name_brand'];
         $result['deals_content'][$i]['brand_logo'] = $data['deals_voucher']['deal']['brand']['logo_brand'];
 
