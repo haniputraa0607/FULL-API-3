@@ -51,7 +51,7 @@ class ApiReportPayment extends Controller
             ->join('users', 'users.id', 'subscription_users.id_user')
             ->selectRaw("payment_type, subscription_payment_midtrans.id_subscription AS id_report, NULL AS trx_type, NULL AS receipt_number, 'Subscription' AS type, subscription_payment_midtrans.created_at, subscription_users.`subscription_price_cash` AS grand_total, gross_amount, users.name, users.phone, users.email");
 
-        $data = TransactionPaymentMidtran::join('transactions', 'transactions.id_transaction', 'transaction_payment_midtrans.id_transaction')
+        $trx = TransactionPaymentMidtran::join('transactions', 'transactions.id_transaction', 'transaction_payment_midtrans.id_transaction')
             ->join('users', 'users.id', 'transactions.id_user')
             ->selectRaw("payment_type,  transactions.id_transaction AS id_report, transactions.trasaction_type AS trx_type, transactions.transaction_receipt_number AS receipt_number, 'Transaction' AS type, transaction_payment_midtrans.created_at, transactions.`transaction_grandtotal` AS grand_total, gross_amount, users.name, users.phone, users.email")
             ->orderBy('created_at', 'desc');
@@ -61,15 +61,289 @@ class ApiReportPayment extends Controller
             $start_date = date('Y-m-d', strtotime($post['date_start']));
             $end_date = date('Y-m-d', strtotime($post['date_end']));
 
-            $deals = $data->whereDate('deals_payment_midtrans.created_at', '>=', $start_date)
+            $deals = $deals->whereDate('deals_payment_midtrans.created_at', '>=', $start_date)
                 ->whereDate('deals_payment_midtrans.created_at', '<=', $end_date);
-            $subscription = $data->whereDate('subscription_payment_midtrans.created_at', '>=', $start_date)
+            $subscription = $subscription->whereDate('subscription_payment_midtrans.created_at', '>=', $start_date)
                 ->whereDate('subscription_payment_midtrans.created_at', '<=', $end_date);
-            $data = $data->whereDate('transaction_payment_midtrans.created_at', '>=', $start_date)
+            $trx = $trx->whereDate('transaction_payment_midtrans.created_at', '>=', $start_date)
                 ->whereDate('transaction_payment_midtrans.created_at', '<=', $end_date);
         }
 
-        $data = $data->unionAll($deals)->unionAll($subscription);
+        $unionWithDeals = 1;
+        $unionWithSubscription = 1;
+        $unionWithTrx = 1;
+
+        if(isset($post['conditions']) && !empty($post['conditions'])){
+            $checkFilterStatus = array_search('status', array_column($post['conditions'], 'subject'));
+            if($checkFilterStatus === false){
+                $deals = $deals->where('deals_users.paid_status', 'Completed');
+                $subscription = $subscription->where('subscription_users.paid_status', 'Completed');
+                $trx = $trx->where('transactions.transaction_payment_status', 'Completed');
+            }
+
+            $rule = 'and';
+            if(isset($post['rule'])){
+                $rule = $post['rule'];
+            }
+
+            if($rule == 'and'){
+                foreach ($post['conditions'] as $row){
+                    if(isset($row['subject'])){
+                        if($row['subject'] == 'status'){
+                            $deals = $deals->where('deals_users.paid_status', $row['operator']);
+                            $subscription = $subscription->where('subscription_users.paid_status', $row['operator']);
+                            $trx = $trx->where('transactions.transaction_payment_status', $row['operator']);
+                        }
+
+                        if($row['subject'] == 'type'){
+                            if($row['operator'] == 'Deals'){
+                                $unionWithSubscription = 0;
+                                $unionWithTrx = 0;
+                            }elseif($row['operator'] == 'Subscription'){
+                                $unionWithDeals = 0;
+                                $unionWithTrx = 0;
+                            }elseif($row['operator'] == 'Transaction'){
+                                $unionWithDeals = 0;
+                                $unionWithSubscription = 0;
+                            }
+                        }
+
+                        if($row['subject'] == 'name'){
+                            if($row['operator'] == '='){
+                                $deals = $deals->where('users.name', $row['parameter']);
+                                $subscription = $subscription->where('users.name', $row['parameter']);
+                                $trx = $trx->where('users.name', $row['parameter']);
+                            }else{
+                                $deals = $deals->where('users.name', 'like', '%'.$row['parameter'].'%');
+                                $subscription = $subscription->where('users.name', 'like', '%'.$row['parameter'].'%');
+                                $trx = $trx->where('users.name', 'like', '%'.$row['parameter'].'%');
+                            }
+                        }
+
+                        if($row['subject'] == 'phone'){
+                            if($row['operator'] == '='){
+                                $deals = $deals->where('users.phone', $row['parameter']);
+                                $subscription = $subscription->where('users.phone', $row['parameter']);
+                                $trx = $trx->where('users.phone', $row['parameter']);
+                            }else{
+                                $deals = $deals->where('users.phone', 'like', '%'.$row['parameter'].'%');
+                                $subscription = $subscription->where('users.phone', 'like', '%'.$row['parameter'].'%');
+                                $trx = $trx->where('users.phone', 'like', '%'.$row['parameter'].'%');
+                            }
+                        }
+
+                        if($row['subject'] == 'grandtotal'){
+                            $deals = $deals->where('deals_users.voucher_price_cash',$row['operator'] ,$row['parameter']);
+                            $subscription = $subscription->where('subscription_users.subscription_price_cash',$row['operator'] ,$row['parameter']);
+                            $trx = $trx->where('transactions.transaction_grandtotal',$row['operator'] ,$row['parameter']);
+                        }
+
+                        if($row['subject'] == 'amount'){
+                            $deals = $deals->where('gross_amount',$row['operator'] ,$row['parameter']);
+                            $subscription = $subscription->where('gross_amount',$row['operator'] ,$row['parameter']);
+                            $trx = $trx->where('gross_amount',$row['operator'] ,$row['parameter']);
+                        }
+
+                        if($row['subject'] == 'transaction_receipt_number'){
+                            $unionWithDeals = 0;
+                            $unionWithSubscription = 0;
+                            if($row['operator'] == '='){
+                                $trx = $trx->where('transactions.transaction_receipt_number',$row['parameter']);
+                            }else{
+                                $trx = $trx->where('transactions.transaction_receipt_number', 'like', '%'.$row['parameter'].'%');
+                            }
+                        }
+                    }
+                }
+            }else{
+                $unionWithDeals = 0;
+                $unionWithSubscription = 0;
+                $unionWithTrx = 0;
+
+                $arrSubject = array_column($post['conditions'], 'subject');
+                $arrSubjectUnique = array_unique($arrSubject);
+                if(in_array('transaction_receipt_number', $arrSubjectUnique) && count($arrSubject) == 1){
+                    $unionWithTrx = 1;
+
+                    $trx = $trx->where(function ($subquery) use ($post){
+                        foreach ($post['conditions'] as $row){
+                            if(isset($row['subject'])){
+                                if($row['subject'] == 'status'){
+                                    $subquery = $subquery->orWhere('transactions.transaction_payment_status', $row['operator']);
+                                }
+
+                                if($row['subject'] == 'name'){
+                                    if($row['operator'] == '='){
+                                        $subquery = $subquery->orWhere('users.name', $row['parameter']);
+                                    }else{
+                                        $subquery = $subquery->orWhere('users.name', 'like', '%'.$row['parameter'].'%');
+                                    }
+                                }
+
+                                if($row['subject'] == 'phone'){
+                                    if($row['operator'] == '='){
+                                        $subquery = $subquery->orWhere('users.phone', $row['parameter']);
+                                    }else{
+                                        $subquery = $subquery->orWhere('users.phone', 'like', '%'.$row['parameter'].'%');
+                                    }
+                                }
+
+                                if($row['subject'] == 'grandtotal'){
+                                    $subquery = $subquery->orWhere('transactions.transaction_grandtotal',$row['operator'] ,$row['parameter']);
+                                }
+
+                                if($row['subject'] == 'amount'){
+                                    $subquery = $subquery->orWhere('gross_amount',$row['operator'] ,$row['parameter']);
+                                }
+
+                                if($row['subject'] == 'transaction_receipt_number'){
+                                    if($row['operator'] == '='){
+                                        $subquery = $subquery->orWhere('transactions.transaction_receipt_number',$row['parameter']);
+                                    }else{
+                                        $subquery = $subquery->orWhere('transactions.transaction_receipt_number', 'like', '%'.$row['parameter'].'%');
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }else{
+                    $unionWithDeals = 1;
+                    $unionWithSubscription = 1;
+                    $unionWithTrx = 1;
+
+                    $deals = $deals->where(function ($subquery) use ($post){
+                        foreach ($post['conditions'] as $row){
+                            if(isset($row['subject'])){
+                                if($row['subject'] == 'status'){
+                                    $subquery = $subquery->orWhere('deals_users.paid_status', $row['operator']);
+                                }
+
+                                if($row['subject'] == 'name'){
+                                    if($row['operator'] == '='){
+                                        $subquery = $subquery->orWhere('users.name', $row['parameter']);
+                                    }else{
+                                        $subquery = $subquery->orWhere('users.name', 'like', '%'.$row['parameter'].'%');
+                                    }
+                                }
+
+                                if($row['subject'] == 'phone'){
+                                    if($row['operator'] == '='){
+                                        $subquery = $subquery->orWhere('users.phone', $row['parameter']);
+                                    }else{
+                                        $subquery = $subquery->orWhere('users.phone', 'like', '%'.$row['parameter'].'%');
+                                    }
+                                }
+
+                                if($row['subject'] == 'grandtotal'){
+                                    $subquery = $subquery->orWhere('transactions.voucher_price_cash',$row['operator'] ,$row['parameter']);
+                                }
+
+                                if($row['subject'] == 'amount'){
+                                    $subquery = $subquery->orWhere('gross_amount',$row['operator'] ,$row['parameter']);
+                                }
+                            }
+                        }
+                    });
+
+                    $subscription = $subscription->where(function ($subquery) use ($post){
+                        foreach ($post['conditions'] as $row){
+                            if(isset($row['subject'])){
+                                if($row['subject'] == 'status'){
+                                    $subquery = $subquery->orWhere('deals_users.paid_status', $row['operator']);
+                                }
+
+                                if($row['subject'] == 'name'){
+                                    if($row['operator'] == '='){
+                                        $subquery = $subquery->orWhere('users.name', $row['parameter']);
+                                    }else{
+                                        $subquery = $subquery->orWhere('users.name', 'like', '%'.$row['parameter'].'%');
+                                    }
+                                }
+
+                                if($row['subject'] == 'phone'){
+                                    if($row['operator'] == '='){
+                                        $subquery = $subquery->orWhere('users.phone', $row['parameter']);
+                                    }else{
+                                        $subquery = $subquery->orWhere('users.phone', 'like', '%'.$row['parameter'].'%');
+                                    }
+                                }
+
+                                if($row['subject'] == 'grandtotal'){
+                                    $subquery = $subquery->orWhere('subscription_users.subscription_price_cash',$row['operator'] ,$row['parameter']);
+                                }
+
+                                if($row['subject'] == 'amount'){
+                                    $subquery = $subquery->orWhere('gross_amount',$row['operator'] ,$row['parameter']);
+                                }
+                            }
+                        }
+                    });
+
+                    $trx = $trx->where(function ($subquery) use ($post){
+                        foreach ($post['conditions'] as $row){
+                            if(isset($row['subject'])){
+                                if($row['subject'] == 'status'){
+                                    $subquery = $subquery->orWhere('transactions.transaction_payment_status', $row['operator']);
+                                }
+
+                                if($row['subject'] == 'name'){
+                                    if($row['operator'] == '='){
+                                        $subquery = $subquery->orWhere('users.name', $row['parameter']);
+                                    }else{
+                                        $subquery = $subquery->orWhere('users.name', 'like', '%'.$row['parameter'].'%');
+                                    }
+                                }
+
+                                if($row['subject'] == 'phone'){
+                                    if($row['operator'] == '='){
+                                        $subquery = $subquery->orWhere('users.phone', $row['parameter']);
+                                    }else{
+                                        $subquery = $subquery->orWhere('users.phone', 'like', '%'.$row['parameter'].'%');
+                                    }
+                                }
+
+                                if($row['subject'] == 'grandtotal'){
+                                    $subquery = $subquery->orWhere('transactions.transaction_grandtotal',$row['operator'] ,$row['parameter']);
+                                }
+
+                                if($row['subject'] == 'amount'){
+                                    $subquery = $subquery->orWhere('gross_amount',$row['operator'] ,$row['parameter']);
+                                }
+
+                                if($row['subject'] == 'transaction_receipt_number'){
+                                    if($row['operator'] == '='){
+                                        $subquery = $subquery->orWhere('transactions.transaction_receipt_number',$row['parameter']);
+                                    }else{
+                                        $subquery = $subquery->orWhere('transactions.transaction_receipt_number', 'like', '%'.$row['parameter'].'%');
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+            }
+        }else{
+            $deals = $deals->where('deals_users.paid_status', 'Completed');
+            $subscription = $subscription->where('subscription_users.paid_status', 'Completed');
+            $trx = $trx->where('transactions.transaction_payment_status', 'Completed');
+        }
+
+        //union by type user choose
+        if($unionWithTrx == 1 && $unionWithDeals == 1 && $unionWithSubscription == 1){
+            $data = $trx->unionAll($deals)->unionAll($subscription);
+        }elseif($unionWithTrx == 1 && $unionWithDeals == 1 && $unionWithSubscription == 0){
+            $data = $trx->unionAll($deals);
+        }elseif($unionWithTrx == 1 && $unionWithDeals == 0 && $unionWithSubscription == 0){
+            $data = $trx;
+        }elseif($unionWithTrx == 0 && $unionWithDeals == 1 && $unionWithSubscription == 1){
+            $data = $deals->unionAll($subscription);
+        }elseif($unionWithTrx == 0 && $unionWithDeals == 1 && $unionWithSubscription == 0){
+            $data = $deals;
+        }elseif($unionWithTrx == 1 && $unionWithDeals == 0 && $unionWithSubscription == 1){
+            $data = $trx->unionAll($subscription);
+        }elseif($unionWithTrx == 0 && $unionWithDeals == 0 && $unionWithSubscription == 1){
+            $data = $subscription;
+        }
 
         if(isset($post['export']) && $post['export'] == 1){
             $data = $data->get()->toArray();
