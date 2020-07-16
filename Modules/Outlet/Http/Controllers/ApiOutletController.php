@@ -876,7 +876,7 @@ class ApiOutletController extends Controller
         return $allfeatures;
     }
 
-	/* Filter*/
+    /* Filter*/
     function filter(Filter $request) {
         $post=$request->except('_token');
         $latitude  = $request->json('latitude');
