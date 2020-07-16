@@ -680,7 +680,7 @@ class SettingsTableSeeder extends Seeder
                 array(
                     'id_setting' => 76,
                     'key' => 'promo_error_cancel_button',
-                    'value' => 'cancel',
+                    'value' => 'hapus promo',
                     'value_text' => null,
                     'created_at' => date('Y-m-d H:i:s'),
                     'updated_at' => date('Y-m-d H:i:s'),

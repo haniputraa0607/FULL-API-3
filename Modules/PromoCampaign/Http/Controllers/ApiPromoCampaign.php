@@ -2254,7 +2254,7 @@ class ApiPromoCampaign extends Controller
 	        	$result['button_ok'] = $data['promo_error_ok_button_v2']??'Ok';
 	    	}
 	    	$result['title'] = $data['promo_error_title']??'Promo tidak berlaku';
-	        $result['button_cancel'] = $data['promo_error_cancel_button']??'Tidak';
+	        $result['button_cancel'] = $data['promo_error_cancel_button']??'Hapus promo';
 	        $result['product_label'] = "";
 	        $result['product'] = null;
 
