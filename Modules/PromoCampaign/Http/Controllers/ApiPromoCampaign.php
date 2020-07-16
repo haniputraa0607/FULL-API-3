@@ -1892,7 +1892,9 @@ class ApiPromoCampaign extends Controller
 
         	$subs = $subs->toArray();
 	    	$query = $subs['subscription_user'];
+	    	$id_brand = $subs['subscription_user']['subscription']['id_brand'];
 	    	$source = 'subscription';
+
         }
         else
         {
