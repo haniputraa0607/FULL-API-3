@@ -1011,7 +1011,9 @@ class ApiUser extends Controller
                     [
                         'pin' => $pin,
                         'useragent' => $useragent,
-                        'now' => date('Y-m-d H:i:s')
+                        'now' => date('Y-m-d H:i:s'),
+                        'date_sent' => date('d-m-y H:i:s'),
+                        'expired_time' => (string) MyHelper::setting('setting_expired_otp','value', 30),
                     ],
                     $useragent
                 );
@@ -1388,7 +1390,9 @@ class ApiUser extends Controller
                     [
                         'pin' => $pinnya,
                         'useragent' => $useragent,
-                        'now' => date('Y-m-d H:i:s')
+                        'now' => date('Y-m-d H:i:s'),
+                        'date_sent' => date('d-m-y H:i:s'),
+                        'expired_time' => (string) MyHelper::setting('setting_expired_otp','value', 30),
                     ],
                     $useragent
                 );
@@ -1499,7 +1503,9 @@ class ApiUser extends Controller
                 [
                     'pin' => $pin,
                     'useragent' => $useragent,
-                    'now' => date('Y-m-d H:i:s')
+                    'now' => date('Y-m-d H:i:s'),
+                    'date_sent' => date('d-m-y H:i:s'),
+                    'expired_time' => (string) MyHelper::setting('setting_expired_otp','value', 30),
                 ],
                 $useragent
             );
@@ -1793,7 +1799,9 @@ class ApiUser extends Controller
                         [
                             'pin' => $pin,
                             'useragent' => $useragent,
-                            'now' => date('Y-m-d H:i:s')
+                            'now' => date('Y-m-d H:i:s'),
+                            'date_sent' => date('d-m-y H:i:s'),
+                            'expired_time' => (string) MyHelper::setting('setting_expired_otp','value', 30),
                         ],
                         $useragent
                     );
