@@ -1096,18 +1096,13 @@ class PromoCampaignTools{
 
     public function getOneProduct($id_outlet, $id_product, $brand=null)
     {
-    	$product = Product::join('product_prices','product_prices.id_product','=','products.id_product')
-	                ->where('product_prices.id_outlet','=',$id_outlet)
-	                ->where('products.id_product','=',$id_product)
-	                ->where(function($query){
-	                    $query->where('product_prices.product_visibility','=','Visible')
-	                            ->orWhere(function($q){
-	                                $q->whereNull('product_prices.product_visibility')
-	                                ->where('products.product_visibility', 'Visible');
-	                            });
-	                })
-	                ->where('product_prices.product_status','=','Active')
-	                ->whereNotNull('product_prices.product_price');
+	    $product = Product::where('id_product',$id_product)
+			        ->whereHas('brand_category')
+			        ->whereRaw('products.id_product in (CASE
+			                    WHEN (select product_detail.id_product from product_detail  where product_detail.id_product = products.id_product AND product_detail.id_outlet = '.$id_outlet.' )
+			                    is NULL THEN products.id_product
+			                    ELSE (select product_detail.id_product from product_detail  where product_detail.product_detail_status = "Active" AND product_detail.id_product = products.id_product AND product_detail.id_outlet = '.$id_outlet.' )
+			                END)');
 
 		if (!empty($brand)) {
 
