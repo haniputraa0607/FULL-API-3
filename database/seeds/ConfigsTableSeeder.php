@@ -1044,6 +1044,15 @@ class ConfigsTableSeeder extends Seeder
                     'created_at' => date('Y-m-d H:i:s'),
                     'updated_at' => date('Y-m-d H:i:s'),
                 ),
+            115 =>
+                array (
+                    'id_config' => 116,
+                    'config_name' => 'offline payment method',
+                    'description' => '',
+                    'is_active' => 0,
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
         ));
     }
 }

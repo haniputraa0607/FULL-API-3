@@ -7,6 +7,8 @@ Route::group(['prefix' => 'api/outlet', 'middleware' => ['log_activities', 'auth
     Route::any('list/gofood', 'ApiOutletGofoodController@listOutletGofood');
     Route::any('filter', 'ApiOutletController@filter');
     Route::any('filter/gofood', 'ApiOutletController@filter');
+    /* New API for filter outlet + product */
+    Route::any('filter_product_outlet', 'ApiOutletController@filterProductOutlet');
 
     /*WEBVIEW*/
     Route::any('webview/{id}', 'ApiOutletWebview@detailWebview');

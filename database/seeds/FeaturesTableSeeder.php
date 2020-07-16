@@ -2531,6 +2531,86 @@ class FeaturesTableSeeder extends Seeder
                     'created_at' => '2018-05-10 08:00:00',
                     'updated_at' => '2018-05-10 08:00:00',
                 ),
+            252 =>
+                array(
+                    'id_feature' => 253,
+                    'feature_type' => 'Create',
+                    'feature_module' => 'Payment Method',
+                    'show_hide' => 1,
+                    'order' => 106,
+                    'created_at' => '2018-05-10 08:00:00',
+                    'updated_at' => '2018-05-10 08:00:00',
+                ),
+            253 =>
+                array(
+                    'id_feature' => 254,
+                    'feature_type' => 'List',
+                    'feature_module' => 'Payment Method',
+                    'show_hide' => 1,
+                    'order' => 106,
+                    'created_at' => '2018-05-10 08:00:00',
+                    'updated_at' => '2018-05-10 08:00:00',
+                ),
+            254 =>
+                array(
+                    'id_feature' => 255,
+                    'feature_type' => 'Update',
+                    'feature_module' => 'Payment Method',
+                    'show_hide' => 1,
+                    'order' => 106,
+                    'created_at' => '2018-05-10 08:00:00',
+                    'updated_at' => '2018-05-10 08:00:00',
+                ),
+            255 =>
+                array(
+                    'id_feature' => 256,
+                    'feature_type' => 'Delete',
+                    'feature_module' => 'Payment Method',
+                    'show_hide' => 1,
+                    'order' => 106,
+                    'created_at' => '2018-05-10 08:00:00',
+                    'updated_at' => '2018-05-10 08:00:00',
+                ),
+            256 =>
+                array(
+                    'id_feature' => 257,
+                    'feature_type' => 'Create',
+                    'feature_module' => 'Payment Method Category',
+                    'show_hide' => 1,
+                    'order' => 106,
+                    'created_at' => '2018-05-10 08:00:00',
+                    'updated_at' => '2018-05-10 08:00:00',
+                ),
+            257 =>
+                array(
+                    'id_feature' => 258,
+                    'feature_type' => 'List',
+                    'feature_module' => 'Payment Method Category',
+                    'show_hide' => 1,
+                    'order' => 106,
+                    'created_at' => '2018-05-10 08:00:00',
+                    'updated_at' => '2018-05-10 08:00:00',
+                ),
+            258 =>
+                array(
+                    'id_feature' => 259,
+                    'feature_type' => 'Update',
+                    'feature_module' => 'Payment Method Category',
+                    'show_hide' => 1,
+                    'order' => 106,
+                    'created_at' => '2018-05-10 08:00:00',
+                    'updated_at' => '2018-05-10 08:00:00',
+                ),
+            259 =>
+                array(
+                    'id_feature' => 260,
+                    'feature_type' => 'Delete',
+                    'feature_module' => 'Payment Method Category',
+                    'show_hide' => 1,
+                    'order' => 106,
+                    'created_at' => '2018-05-10 08:00:00',
+                    'updated_at' => '2018-05-10 08:00:00',
+                ),
         ));
     }
 }
