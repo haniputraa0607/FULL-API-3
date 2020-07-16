@@ -32,6 +32,8 @@ Route::group(['middleware' => ['auth:outlet-app', 'outlet_device_location', 'log
     Route::post('cancel-delivery', 'ApiOutletApp@cancelDelivery');
     Route::post('refresh-delivery-status', 'ApiOutletApp@refreshDeliveryStatus');
     Route::post('transaction/detail', 'ApiOutletApp@transactionDetail');
+    Route::post('shift/start', 'ApiOutletApp@start_shift');
+    Route::post('shift/end', 'ApiOutletApp@end_shift');
 });
 
 Route::group(['prefix' => 'api/outletapp', 'middleware' => 'log_activities_outlet_apps', 'namespace' => 'Modules\OutletApp\Http\Controllers'], function()

@@ -48,6 +48,8 @@ use Modules\Product\Entities\ProductDetail;
 use Modules\Product\Entities\ProductStockStatusUpdate;
 use Modules\SettingFraud\Entities\FraudDetectionLogTransactionDay;
 use Modules\SettingFraud\Entities\FraudDetectionLogTransactionWeek;
+use Modules\Shift\Entities\Shift;
+use Modules\Shift\Entities\UserOutletApp;
 use Modules\Transaction\Http\Requests\TransactionDetail;
 
 class ApiOutletApp extends Controller
@@ -2897,5 +2899,34 @@ class ApiOutletApp extends Controller
             return MyHelper::checkDelete($delete);
         }
         return MyHelper::checkGet([], 'Holiday not found');
+    }
+
+    public function start_shift(Request $request){
+        $post = $request->all();
+
+        $user = $request->user();
+
+        $cash_start = $post['cash_start'];
+
+        //save 
+        $save = Shift::create([
+            'id_outlet' => $user['id_outlet'],
+            'open_time' => date('Y-m-d H:i:s'),
+            'cash_start' => $cash_start
+        ]);
+
+        if($save){
+            return response()->json(['status' => 'success', 'id_shift' => $save->id]);
+        }
+        
+        return response()->json(['status' => 'fail']);
+    
+    }
+
+    public function end_shift(Request $request){
+        $post = $request->all();
+
+        $cash_end = $post['cash_end'];
+        $id_shift = $post['id_shift'];  
     }
 }
