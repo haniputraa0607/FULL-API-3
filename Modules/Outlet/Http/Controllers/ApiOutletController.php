@@ -943,7 +943,7 @@ class ApiOutletController extends Controller
     }
 
     /* Filter*/
-    function filter(Filter $request){
+    function filterProductOutlet(Filter $request){
         $post=$request->except('_token');
         $latitude  = $request->json('latitude');
         $longitude = $request->json('longitude');
@@ -1109,6 +1109,172 @@ class ApiOutletController extends Controller
                 return response()->json(['status' => 'fail', 'messages' => ['There is no open store','at this moment']]);
             }
         }
+
+        if(isset($request['page']) && $request['page'] > 0){
+            $page = $request['page'];
+            $next_page = $page + 1;
+
+            $dataOutlet = $urutan;
+            $urutan = [];
+
+            $pagingOutlet = $this->pagingOutlet($dataOutlet, $page);
+            if (isset($pagingOutlet['data']) && count($pagingOutlet['data']) > 0) {
+                $urutan['current_page']  = $page;
+                $urutan['data']          = $pagingOutlet['data'];
+                $urutan['total']         = count($dataOutlet);
+                $urutan['total_promo']	 = app($this->promo)->availablePromo();
+                $urutan['next_page_url'] = null;
+
+                if ($pagingOutlet['status'] == true) {
+                    $urutan['next_page_url'] = ENV('APP_API_URL').'api/outlet/filter?page='.$next_page;
+                }
+                $urutan['promo_error']   = $promo_error;
+            } else {
+                if($countAll){
+                    return response()->json(['status' => 'fail', 'messages' => ['empty']]);
+                }else{
+                    return response()->json(['status' => 'fail', 'messages' => ['There is no open store','at this moment']]);
+                }
+            }
+        }
+        if(!$urutan){
+            if($countAll){
+                return response()->json(['status' => 'fail', 'messages' => ['empty']]);
+            }else{
+                return response()->json(['status' => 'fail', 'messages' => ['There is no open store','at this moment']]);
+            }
+        }
+        return response()->json(MyHelper::checkGet($urutan));
+    }
+
+    /* Filter*/
+    function filter(Filter $request) {
+        $post=$request->except('_token');
+        $latitude  = $request->json('latitude');
+        $longitude = $request->json('longitude');
+
+        if(!isset($latitude) || !isset($longitude)){
+            return response()->json([
+                'status' => 'fail',
+                'messages' => ['Pastikan pengaturan lokasi pada smartphone terhubung']
+            ]);
+        }
+
+        $distance = $request->json('distance');
+        $id_city = $request->json('id_city');
+        $sort = $request->json('sort');
+        $gofood = $request->json('gofood');
+        $grabfood = $request->json('grabfood');
+
+        // outlet
+        $outlet = Outlet::with(['today'])->distinct('outlets.id_outlet')->select('outlets.id_outlet','outlets.outlet_name','outlets.outlet_phone','outlets.outlet_code','outlets.outlet_status','outlets.outlet_address','outlets.id_city','outlet_latitude','outlet_longitude')->with(['brands'=>function($query){$query->select('brands.id_brand','name_brand','logo_brand');}])->where('outlet_status', 'Active')->whereNotNull('id_city')->orderBy('outlet_name','asc');
+
+        $outlet->whereHas('brands',function($query){
+            $query->where('brand_active','1');
+        });
+
+        $countAll=$outlet->count();
+
+        if(is_array($post['id_brand']??false)&&$post['id_brand']){
+            $outlet->leftJoin('brand_outlet','outlets.id_outlet','brand_outlet.id_outlet');
+            $id_brands=$post['id_brand'];
+            $outlet->where(function($query) use ($id_brands){
+                foreach ($id_brands as $id_brand) {
+                    $query->orWhere('brand_outlet.id_brand',$id_brand);
+                }
+            });
+        }
+
+        if($request->json('search') && $request->json('search') != ""){
+            $outlet = $outlet->where('outlet_name', 'LIKE', '%'.$request->json('search').'%');
+        }
+
+        if ($gofood) {
+            $outlet = $outlet->whereNotNull('deep_link_gojek');
+        }
+
+        if ($grabfood) {
+            $outlet = $outlet->whereNotNull('deep_link_grab');
+        }
+
+        $outlet = $outlet->get()->toArray();
+
+
+        if (!empty($outlet)) {
+            $processing = '0';
+            $settingTime = Setting::where('key', 'processing_time')->first();
+            if($settingTime && $settingTime->value){
+                $processing = $settingTime->value;
+            }
+
+            // give all product flag is_promo = 0
+	        foreach ($outlet as $key => $value) {
+				$outlet[$key]['is_promo'] = 0;
+			}
+
+			$promo_data = $this->applyPromo($post, $outlet, $promo_error);
+
+	        if ($promo_data) {
+	        	$outlet = $promo_data;
+	        }
+
+            foreach ($outlet as $key => $value) {
+                $jaraknya =   number_format((float)$this->distance($latitude, $longitude, $value['outlet_latitude'], $value['outlet_longitude'], "K"), 2, '.', '');
+                settype($jaraknya, "float");
+
+                $outlet[$key]['distance'] = number_format($jaraknya, 2, '.', ',')." km";
+                $outlet[$key]['dist']     = (float) $jaraknya;
+
+				if($distance == "0-2km"){
+					if((float) $jaraknya < 0.01 || (float) $jaraknya > 2.00)
+                        unset($outlet[$key]);
+                        continue;
+				}
+
+				if($distance == "2-5km"){
+					if((float) $jaraknya < 2.00 || (float) $jaraknya > 5.00)
+                        unset($outlet[$key]);
+                        continue;
+				}
+
+				if($distance == ">5km"){
+					if((float) $jaraknya < 5.00)
+                        unset($outlet[$key]);
+                        continue;
+				}
+
+				if($id_city != "" && $id_city != $value['id_city']){
+                    unset($outlet[$key]);
+                    continue;
+                }
+
+                $outlet[$key] = $this->setAvailableOutlet($outlet[$key], $processing);;
+            }
+			if($sort != 'Alphabetical'){
+				usort($outlet, function($a, $b) {
+					return $a['dist'] <=>  $b['dist'];
+				});
+			}
+			$urutan = array();
+			if($outlet){
+				foreach($outlet as $o){
+					array_push($urutan, $o);
+				}
+            }
+        } else {
+            if($countAll){
+                if($request->json('search')){
+                    return response()->json(['status' => 'fail', 'messages' => ['Data tidak ditemukan']]);
+                }
+                return response()->json(['status' => 'fail', 'messages' => ['empty']]);
+            }else{
+                return response()->json(['status' => 'fail', 'messages' => ['There is no open store','at this moment']]);
+            }
+        }
+
+        // if (!isset($request['page'])) {
+        //     $request['page'] = 1;
+        // }
 
         if(isset($request['page']) && $request['page'] > 0){
             $page = $request['page'];
