@@ -1146,7 +1146,7 @@ class ApiOutletController extends Controller
         }
         return response()->json(MyHelper::checkGet($urutan));
     }
-
+  
     /* Filter*/
     function filter(Filter $request) {
         $post=$request->except('_token');
