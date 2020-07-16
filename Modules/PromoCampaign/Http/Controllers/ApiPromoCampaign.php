@@ -1761,6 +1761,7 @@ class ApiPromoCampaign extends Controller
 	                } )
 	                ->with([
 						'promo_campaign.promo_campaign_outlets',
+						'promo_campaign.brand',
 						'promo_campaign.promo_campaign_product_discount.product' => function($q) {
 							$q->select('id_product', 'id_product_category', 'product_code', 'product_name');
 						},
@@ -1824,6 +1825,7 @@ class ApiPromoCampaign extends Controller
         			->whereNull('used_at')
         			->with([  
                         'dealVoucher.deals.outlets_active',
+                        'dealVoucher.deals.brand',
                         'dealVoucher.deals.deals_product_discount.product' => function($q) {
 							$q->select('id_product', 'id_product_category', 'product_code', 'product_name');
 						}, 
@@ -1867,7 +1869,7 @@ class ApiPromoCampaign extends Controller
         }
         elseif (!$request->promo_code && !$request->id_deals_user && $request->id_subscription_user) 
         {
-        	$subs = app($this->subscription)->checkSubscription($request->id_subscription_user, 1, 1);
+        	$subs = app($this->subscription)->checkSubscription($request->id_subscription_user, 1, 1, null, null, null, 1);
 
         	if(!$subs){
 	            return [
@@ -2046,6 +2048,8 @@ class ApiPromoCampaign extends Controller
 
     public function getPromoDescription($source, $query, $product)
     {
+    	$brand = $query['brand']['name_brand']??null;
+
     	if ($source == 'subscription') 
     	{
     		if ( !empty($query['subscription_voucher_percent']) ) 
@@ -2058,16 +2062,16 @@ class ApiPromoCampaign extends Controller
     		}
 
         	if ( !empty($query['subscription_voucher_percent']) ) {
-        		$discount = ($query['subscription_voucher_percent']??0).' %';
+        		$discount = ($query['subscription_voucher_percent']??0).'%';
         	}else{
         		$discount = 'Rp '.number_format($query['subscription_voucher_nominal']??0);
         	}
 
-        	$key = 'description_product_discount_no_qty';
-    		$key_null = 'Anda berhak mendapatkan potongan %discount% untuk pembelian %product%.';
+        	$key = $brand ? 'description_product_discount_brand_no_qty' : 'description_product_discount_no_qty';
+    		$key_null = $brand ? 'Anda berhak mendapatkan potongan %discount% untuk pembelian %product% di %brand%.' : 'Anda berhak mendapatkan potongan %discount% untuk pembelian %product%.';
     		$desc = Setting::where('key', '=', $key)->first()['value']??$key_null;
 
-    		$desc = MyHelper::simpleReplace($desc,['discount'=>$discount, 'product'=>$product]);
+    		$desc = MyHelper::simpleReplace($desc,['discount'=>$discount, 'product'=>$product, 'brand'=>$brand]);
     	}
     	else
     	{
@@ -2077,22 +2081,22 @@ class ApiPromoCampaign extends Controller
 	        	$qty = $query[$source.'_product_discount_rules']['max_product']??0;
 
 	        	if ($discount == 'Percent') {
-	        		$discount = ($query[$source.'_product_discount_rules']['discount_value']??0).' %';
+	        		$discount = ($query[$source.'_product_discount_rules']['discount_value']??0).'%';
 	        	}else{
 	        		$discount = 'Rp '.number_format($query[$source.'_product_discount_rules']['discount_value']??0);
 	        	}
 
 	        	if ( empty($qty) ) {
-        			$key = 'description_product_discount_no_qty';
-    				$key_null = 'Anda berhak mendapatkan potongan %discount% untuk pembelian %product%.';
+        			$key = 'description_product_discount_brand_no_qty';
+    				$key_null = 'Anda berhak mendapatkan potongan %discount% untuk pembelian %product% di %brand%.';
 	        	}else{
-	        		$key = 'description_product_discount';
-	    			$key_null = 'Anda berhak mendapatkan potongan %discount% untuk pembelian %product%. Maksimal %qty% buah untuk setiap produk.';
+	        		$key = 'description_product_discount_brand';
+	    			$key_null = 'Anda berhak mendapatkan potongan %discount% untuk pembelian %product%. Maksimal %qty% buah untuk setiap produk di %brand%.';
 	        	}
 
 	    		$desc = Setting::where('key', '=', $key)->first()['value']??$key_null;
 
-	    		$desc = MyHelper::simpleReplace($desc,['discount'=>$discount, 'product'=>$product, 'qty'=>$qty,]);
+	    		$desc = MyHelper::simpleReplace($desc,['discount'=>$discount, 'product'=>$product, 'qty'=>$qty, 'brand'=>$brand]);
 	    	}
 	    	elseif ($query['promo_type'] == 'Tier discount') 
 	    	{
@@ -2110,12 +2114,12 @@ class ApiPromoCampaign extends Controller
 						$max_qty=$max_req;
 					}
 	    		}
-	    		$key = 'description_tier_discount';
-	    		$key_null = 'Anda berhak mendapatkan potongan setelah melakukan pembelian %product% sebanyak %minmax%';
+	    		$key = 'description_tier_discount_brand';
+	    		$key_null = 'Anda berhak mendapatkan potongan setelah melakukan pembelian %product% sebanyak %minmax% di %brand%.';
 	    		$minmax=$min_qty!=$max_qty?"$min_qty - $max_qty":$min_qty;
-	    		$desc = Setting::where('key', '=', 'description_tier_discount')->first()['value']??$key_null;
+	    		$desc = Setting::where('key', '=', $key)->first()['value']??$key_null;
 
-	    		$desc = MyHelper::simpleReplace($desc,['product'=>$product, 'minmax'=>$minmax]);
+	    		$desc = MyHelper::simpleReplace($desc,['product'=>$product, 'minmax'=>$minmax, 'brand'=>$brand]);
 	    	}
 	    	elseif ($query['promo_type'] == 'Buy X Get Y') 
 	    	{
@@ -2132,12 +2136,12 @@ class ApiPromoCampaign extends Controller
 						$max_qty=$max_req;
 					}
 	    		}
-	    		$key = 'description_buyxgety_discount';
-	    		$key_null = 'Anda berhak mendapatkan potongan setelah melakukan pembelian %product% sebanyak %min% - %max%';
+	    		$key = 'description_buyxgety_discount_brand';
+	    		$key_null = 'Anda berhak mendapatkan potongan setelah melakukan pembelian %product% sebanyak %min% - %max% di %brand.';
 	    		$minmax=$min_qty!=$max_qty?"$min_qty - $max_qty":$min_qty;
-	    		$desc = Setting::where('key', '=', 'description_buyxgety_discount')->first()['value']??$key_null;
+	    		$desc = Setting::where('key', '=', $key)->first()['value']??$key_null;
 
-	    		$desc = MyHelper::simpleReplace($desc,['product'=>$product, 'minmax'=>$minmax]);
+	    		$desc = MyHelper::simpleReplace($desc,['product'=>$product, 'minmax'=>$minmax, 'brand'=>$brand]);
 	    	}
 	    	else
 	    	{
