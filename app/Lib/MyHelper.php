@@ -1531,6 +1531,63 @@ class MyHelper{
 		}
 	}
 
+	public static function getWithTimeout($url, $bearer=null, $post = [], $header=null, $timeout = 65){
+		$client = new Client;
+
+		$content = array(
+			'headers' => [
+				'Accept'        => 'application/json'
+			]
+		);
+
+		// if null bearer
+		if (!is_null($bearer)) {
+			$content['headers']['Authorization'] = $bearer;
+		}
+
+		if(!is_null($header)){
+			if(is_array($header)){
+				foreach($header as $key => $dataHeader){
+					$content['headers'][$key] = $dataHeader;
+				}
+			}
+		}
+
+		if ($post) {
+			$params = http_build_query($post);
+			if (strpos($url,'?')) {
+				$url .= '&' . $params;
+			} else {
+				$url .= '?' . $params;
+			}
+		}
+		$content['timeout']=$timeout;
+
+		try {
+			$response = $client->get($url, $content);
+			// return plain response if json_decode fail because response is plain text
+			$return = json_decode($response->getBody()->getContents(), true)?:$response->getBody()->__toString();
+			return [
+				'status_code' => $response->getStatusCode(),
+				'response' => $return
+			];
+		}catch (\GuzzleHttp\Exception\RequestException $e) {
+			try{
+				if($e->getResponse()){
+					$response = $e->getResponse()->getBody()->getContents();
+					$return = json_decode($response, true);
+					return [
+						'status_code' => $e->getResponse()->getStatusCode(),
+						'response' => $return
+					];
+				}
+				else  return ['status' => 'fail', 'messages' => [0 => 'Check your internet connection.']];
+			}
+			catch(Exception $e){
+				return ['status' => 'fail', 'messages' => [0 => 'Check your internet connection.']];
+			}
+		}
+	}
 
     public static function getBearerToken() {
 		$headers = null;
@@ -2549,18 +2606,23 @@ class MyHelper{
                 'subject' => $subject,
                 'request_header'=> json_encode($header),
                 'request' => $jsonBody,
-                'request_url' => $urlApi,
-                'response' => json_encode($e)
+                'request_url' => $urlApi
             ];
-            LogIRIS::create($dataLog);
+
             try{
                 if($e->getResponse()){
                     $response = $e->getResponse()->getBody()->getContents();
+                    $dataLog['response'] = $response;
+                    LogIRIS::create($dataLog);
                     return ['status' => 'fail', 'response' => json_decode($response, true)];
                 }
+                $dataLog['response'] = 'Check your internet connection.';
+                LogIRIS::create($dataLog);
                 return ['status' => 'fail', 'response' => ['Check your internet connection.']];
             }
             catch(Exception $e){
+                $dataLog['response'] = 'Check your internet connection.';
+                LogIRIS::create($dataLog);
                 return ['status' => 'fail', 'response' => ['Check your internet connection.']];
             }
         }

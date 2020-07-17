@@ -13,6 +13,8 @@ use Illuminate\Routing\Controller;
 use App\Lib\MyHelper;
 use Validator;
 use App\Lib\classMaskingJson;
+use App\Lib\classJatisSMS;
+use App\Lib\ValueFirst;
 use Hash;
 use App\Lib\PushNotificationHelper;
 use DB;
@@ -36,6 +38,7 @@ class ApiEnquiries extends Controller
 		date_default_timezone_set('Asia/Jakarta');
 		$this->autocrm = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
 		$this->rajasms = new classMaskingJson();
+		$this->jatissms = new classJatisSMS();
 		$this->endPoint = config('url.storage_url_api');
 	}
     /* Cek inputan */
@@ -349,19 +352,49 @@ class ApiEnquiries extends Controller
 		if(isset($post['reply_sms_content'])){
 			if($check['reply_sms_content'] == null && $check['enquiry_phone'] != null){
                 $content = app($this->autocrm)->TextReplace($post['reply_sms_content'], $check['enquiry_phone'], $aditionalVariabel);
-				$senddata = array(
-						'apikey' => env('SMS_KEY'),
-						'callbackurl' => config('url.app_url'),
-						'datapacket'=>array()
-					);
-				array_push($senddata['datapacket'],array(
-									'number' => trim($check['enquiry_phone']),
-									'message' => urlencode(stripslashes(utf8_encode($content))),
-									'sendingdatetime' => ""));
+				switch (env('SMS_GATEWAY')) {
+					case 'Jatis':
+						$senddata = [
+							'userid'	=> env('SMS_USER'),
+							'password'	=> env('SMS_PASSWORD'),
+							'msisdn'	=> '62'.substr($check['enquiry_phone'],1),
+							'sender'	=> env('SMS_SENDER'),
+							'division'	=> env('SMS_DIVISION'),
+							'batchname'	=> env('SMS_BATCHNAME'),
+                            'uploadby'	=> env('SMS_UPLOADBY'),
+                            'channel'   => env('SMS_CHANNEL')
+						];
 
-				$this->rajasms->setData($senddata);
+                        $senddata['message'] = $content;
 
-				$send = $this->rajasms->send();
+						$this->jatissms->setData($senddata);
+						$send = $this->jatissms->send();
+
+						break;
+                    case 'ValueFirst':
+                        $sendData = [
+                            'to' => trim($check['enquiry_phone']),
+                            'text' => $content
+                        ];
+
+                        ValueFirst::create()->send($sendData);
+                        break;
+					default:
+						$senddata = array(
+								'apikey' => env('SMS_KEY'),
+								'callbackurl' => config('url.app_url'),
+								'datapacket'=>array()
+							);
+						array_push($senddata['datapacket'],array(
+											'number' => trim($check['enquiry_phone']),
+											'message' => urlencode(stripslashes(utf8_encode($content))),
+											'sendingdatetime' => ""));
+
+						$this->rajasms->setData($senddata);
+
+						$send = $this->rajasms->send();
+						break;
+				}
 			}
 		}
 

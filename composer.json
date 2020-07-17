@@ -28,6 +28,7 @@
         "rap2hpoutre/fast-excel": "^2.0",
         "smartins/passport-multiauth": "^4.1",
         "spatie/laravel-backup": "^6.7",
+        "stephenlake/php-google-holidays": "^1.0",
         "superbalist/laravel-google-cloud-storage": "^2.2"
     },
     "require-dev": {

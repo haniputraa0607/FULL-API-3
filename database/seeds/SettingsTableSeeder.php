@@ -680,7 +680,7 @@ class SettingsTableSeeder extends Seeder
                 array(
                     'id_setting' => 76,
                     'key' => 'promo_error_cancel_button',
-                    'value' => 'cancel',
+                    'value' => 'hapus promo',
                     'value_text' => null,
                     'created_at' => date('Y-m-d H:i:s'),
                     'updated_at' => date('Y-m-d H:i:s'),
@@ -818,6 +818,42 @@ class SettingsTableSeeder extends Seeder
                     'key' => 'transaction_set_time_notif_message_outlet',
                     'value' => null,
                     'value_text' => '{"title_5mnt": "Pesanan %order_id% akan diambil 5 menit lagi", "msg_5mnt": "Pesanan %order_id% atas nama %name% akan diambil 5 menit lagi nih, segera disiapkan ya !","title_15mnt": "Pesanan %order_id% akan diambil 15 menit lagi", "msg_15mnt": "Pesanan %order_id% atas nama %name% akan diambil 15 menit lagi nih, segera disiapkan ya !"}',
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
+            91 =>
+                array(
+                    'id_setting' => 92,
+                    'key' => 'description_product_discount_brand',
+                    'value' => 'Anda berhak mendapatkan potongan %discount% untuk pembelian %product%. Maksimal %qty% buah untuk setiap produk di %brand%',
+                    'value_text' => null,
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
+            92 =>
+                array(
+                    'id_setting' => 93,
+                    'key' => 'description_tier_discount_brand',
+                    'value' => 'Anda berhak mendapatkan potongan setelah melakukan pembelian %product% sebanyak %minmax% di %brand%',
+                    'value_text' => null,
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
+            93 =>
+                array(
+                    'id_setting' => 94,
+                    'key' => 'description_buyxgety_discount_brand',
+                    'value' => 'Anda berhak mendapatkan potongan setelah melakukan pembelian %product% sebanyak %minmax% di %brand%',
+                    'value_text' => null,
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
+            94 =>
+                array(
+                    'id_setting' => 95,
+                    'key' => 'description_product_discount_brand_no_qty',
+                    'value' => 'Anda berhak mendapatkan potongan %discount% untuk pembelian %product% di %brand%',
+                    'value_text' => null,
                     'created_at' => date('Y-m-d H:i:s'),
                     'updated_at' => date('Y-m-d H:i:s'),
                 ),

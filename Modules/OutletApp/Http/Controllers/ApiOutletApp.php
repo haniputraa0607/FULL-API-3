@@ -24,6 +24,8 @@ use App\Http\Models\TransactionPickup;
 use App\Http\Models\TransactionPickupGoSend;
 use App\Http\Models\User;
 use App\Http\Models\UserOutlet;
+use App\Http\Models\PaymentMethod;
+use App\Http\Models\PaymentMethodOutlet;
 use App\Lib\GoSend;
 use App\Lib\Midtrans;
 use App\Lib\Ovo;
@@ -2897,5 +2899,32 @@ class ApiOutletApp extends Controller
             return MyHelper::checkDelete($delete);
         }
         return MyHelper::checkGet([], 'Holiday not found');
+    }
+
+    public function listPaymentMethod(Request $request){
+        $id_outlet = $request->user()['id_outlet'];
+
+        //get all payment method
+        $payment_method = PaymentMethod::select('id_payment_method', 'id_payment_method_category', 'payment_method_name', 'status')
+        ->with(['payment_method_category' => function($query){
+            $query->select('id_payment_method_category','payment_method_category_name');
+        }])->get()->toArray();
+
+        //get all payment method outlet
+        $payment_method_outlet = PaymentMethodOutlet::where('id_outlet', $id_outlet)->get()->toArray();
+
+        //update status outlet
+            foreach($payment_method as $key => $value){
+                foreach($payment_method_outlet as $key2 => $value){
+                    if($payment_method_outlet[$key2]['id_outlet'] == $id_outlet && $payment_method_outlet[$key2]['id_payment_method'] == $payment_method[$key]['id_payment_method']){
+                        $payment_method[$key]['status'] = $payment_method_outlet[$key2]['status'];
+                        break;
+                    }
+                }
+                $payment_method[$key]['payment_method_category'] =  $payment_method[$key]['payment_method_category']['payment_method_category_name'];
+            }
+        
+
+        return MyHelper::checkGet($payment_method);
     }
 }
