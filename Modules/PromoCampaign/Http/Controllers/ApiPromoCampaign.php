@@ -2102,8 +2102,8 @@ class ApiPromoCampaign extends Controller
 	    	}
 	    	elseif ($query['promo_type'] == 'Tier discount') 
 	    	{
-	    		$min_qty = 1;
-	    		$max_qty = 1;
+	    		$min_qty = null;
+	    		$max_qty = null;
 
 	    		foreach ($query[$source.'_tier_discount_rules'] as $key => $rule) {
 					$min_req=$rule['min_qty'];
@@ -2125,8 +2125,8 @@ class ApiPromoCampaign extends Controller
 	    	}
 	    	elseif ($query['promo_type'] == 'Buy X Get Y') 
 	    	{
-	    		$min_qty = 1;
-	    		$max_qty = 1;
+	    		$min_qty = null;
+	    		$max_qty = null;
 	    		foreach ($query[$source.'_buyxgety_rules'] as $key => $rule) {
 					$min_req=$rule['min_qty_requirement'];
 					$max_req=$rule['max_qty_requirement'];
@@ -2155,7 +2155,7 @@ class ApiPromoCampaign extends Controller
     	return $desc;
     }
 
-    public function checkPromoCode($promo_code, $outlet=null, $product=null, $id_promo_campaign_promo_code=null)
+    public function checkPromoCode($promo_code, $outlet=null, $product=null, $id_promo_campaign_promo_code=null, $brand=null)
     {
     	if (!empty($id_promo_campaign_promo_code))
     	{
@@ -2189,12 +2189,16 @@ class ApiPromoCampaign extends Controller
 				]);
 	    }
 
+	    if (!empty($brand)) {
+		    $code = $code->with(['promo_campaign.brand']);
+	    }
+
 	    $code = $code->first();
 
         return $code;
     }
 
-	public function checkVoucher($id_deals_user=null, $outlet=null, $product=null)
+	public function checkVoucher($id_deals_user=null, $outlet=null, $product=null, $brand=null)
     {
     	$deals = new DealsUser;
 
@@ -2231,6 +2235,10 @@ class ApiPromoCampaign extends Controller
                     'dealVoucher.deals.deals_tier_discount_rules', 
                     'dealVoucher.deals.deals_buyxgety_rules'
                 ]);
+	    }
+
+	    if (!empty($brand)) {
+        	$deals = $deals->with(['dealVoucher.deals.brand']);
 	    }
 
 	    $deals = $deals->first();
