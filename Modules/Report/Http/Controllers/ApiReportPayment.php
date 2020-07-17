@@ -17,6 +17,7 @@ use App\Http\Models\Reservation;
 use App\Http\Models\LogActivitiesApps;
 use App\Http\Models\Product;
 
+use App\Jobs\ExportJob;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
@@ -24,6 +25,7 @@ use Illuminate\Routing\Controller;
 use Modules\IPay88\Entities\DealsPaymentIpay88;
 use Modules\IPay88\Entities\SubscriptionPaymentIpay88;
 use Modules\IPay88\Entities\TransactionPaymentIpay88;
+use Modules\Report\Entities\ExportQueue;
 use Modules\Report\Http\Requests\DetailReport;
 
 use App\Lib\MyHelper;
@@ -44,16 +46,23 @@ class ApiReportPayment extends Controller
     public function getReportMidtrans(Request $request){
         $post = $request->json()->all();
 
+        $filter = $this->filterMidtrans($post);
+
+        $data = $filter->paginate(30);
+        return response()->json(MyHelper::checkGet($data));
+    }
+
+    public function filterMidtrans($post){
         $deals = DealsPaymentMidtran::join('deals_users', 'deals_users.id_deals_user', 'deals_payment_midtrans.id_deals_user')
-            ->join('users', 'users.id', 'deals_users.id_user')
-            ->selectRaw("payment_type, deals_payment_midtrans.id_deals AS id_report, NULL AS trx_type, NULL AS receipt_number, 'Deals' AS type, deals_payment_midtrans.created_at, deals_users.`voucher_price_cash` AS grand_total, gross_amount, users.name, users.phone, users.email");
+            ->leftJoin('users', 'users.id', 'deals_users.id_user')
+            ->selectRaw("deals_users.paid_status as payment_status, payment_type, deals_payment_midtrans.id_deals AS id_report, NULL AS trx_type, NULL AS receipt_number, 'Deals' AS type, deals_payment_midtrans.created_at, deals_users.`voucher_price_cash` AS grand_total, gross_amount, users.name, users.phone, users.email");
         $subscription = SubscriptionPaymentMidtran::join('subscription_users', 'subscription_users.id_subscription_user', 'subscription_payment_midtrans.id_subscription_user')
-            ->join('users', 'users.id', 'subscription_users.id_user')
-            ->selectRaw("payment_type, subscription_payment_midtrans.id_subscription AS id_report, NULL AS trx_type, NULL AS receipt_number, 'Subscription' AS type, subscription_payment_midtrans.created_at, subscription_users.`subscription_price_cash` AS grand_total, gross_amount, users.name, users.phone, users.email");
+            ->leftJoin('users', 'users.id', 'subscription_users.id_user')
+            ->selectRaw("subscription_users.paid_status as payment_status, payment_type, subscription_payment_midtrans.id_subscription AS id_report, NULL AS trx_type, NULL AS receipt_number, 'Subscription' AS type, subscription_payment_midtrans.created_at, subscription_users.`subscription_price_cash` AS grand_total, gross_amount, users.name, users.phone, users.email");
 
         $trx = TransactionPaymentMidtran::join('transactions', 'transactions.id_transaction', 'transaction_payment_midtrans.id_transaction')
-            ->join('users', 'users.id', 'transactions.id_user')
-            ->selectRaw("payment_type,  transactions.id_transaction AS id_report, transactions.trasaction_type AS trx_type, transactions.transaction_receipt_number AS receipt_number, 'Transaction' AS type, transaction_payment_midtrans.created_at, transactions.`transaction_grandtotal` AS grand_total, gross_amount, users.name, users.phone, users.email")
+            ->leftJoin('users', 'users.id', 'transactions.id_user')
+            ->selectRaw("transactions.transaction_payment_status as payment_status, payment_type,  transactions.id_transaction AS id_report, transactions.trasaction_type AS trx_type, transactions.transaction_receipt_number AS receipt_number, 'Transaction' AS type, transaction_payment_midtrans.created_at, transactions.`transaction_grandtotal` AS grand_total, gross_amount, users.name, users.phone, users.email")
             ->orderBy('created_at', 'desc');
 
         if(isset($post['date_start']) && !empty($post['date_start']) &&
@@ -88,6 +97,9 @@ class ApiReportPayment extends Controller
 
             if($rule == 'and'){
                 foreach ($post['conditions'] as $row){
+                    if(is_object($row)){
+                        $row = (array)$row;
+                    }
                     if(isset($row['subject'])){
                         if($row['subject'] == 'status'){
                             $deals = $deals->where('deals_users.paid_status', $row['operator']);
@@ -162,11 +174,18 @@ class ApiReportPayment extends Controller
 
                 $arrSubject = array_column($post['conditions'], 'subject');
                 $arrSubjectUnique = array_unique($arrSubject);
+
+                $arrOperator = array_column($post['conditions'], 'operator');
+                $arrOperatorUnique = array_unique($arrOperator);
+
                 if(in_array('transaction_receipt_number', $arrSubjectUnique) && count($arrSubject) == 1){
                     $unionWithTrx = 1;
 
                     $trx = $trx->where(function ($subquery) use ($post){
                         foreach ($post['conditions'] as $row){
+                            if(is_object($row)){
+                                $row = (array)$row;
+                            }
                             if(isset($row['subject'])){
                                 if($row['subject'] == 'status'){
                                     $subquery = $subquery->orWhere('transactions.transaction_payment_status', $row['operator']);
@@ -207,12 +226,21 @@ class ApiReportPayment extends Controller
                         }
                     });
                 }else{
-                    $unionWithDeals = 1;
-                    $unionWithSubscription = 1;
-                    $unionWithTrx = 1;
+                    if(in_array('Deals', $arrOperatorUnique))$unionWithDeals = 1;
+                    if(in_array('Subscription', $arrOperatorUnique))$unionWithSubscription = 1;
+                    if(in_array('Transaction', $arrOperatorUnique))$unionWithTrx = 1;
+                    if(in_array('transaction_receipt_number', $arrSubjectUnique))$unionWithTrx = 1;
+                    if(!in_array('Deals', $arrOperatorUnique) && !in_array('Subscription', $arrOperatorUnique) && !in_array('Transaction', $arrOperatorUnique)){
+                        $unionWithDeals = 1;
+                        $unionWithSubscription = 1;
+                        $unionWithTrx = 1;
+                    }
 
                     $deals = $deals->where(function ($subquery) use ($post){
                         foreach ($post['conditions'] as $row){
+                            if(is_object($row)){
+                                $row = (array)$row;
+                            }
                             if(isset($row['subject'])){
                                 if($row['subject'] == 'status'){
                                     $subquery = $subquery->orWhere('deals_users.paid_status', $row['operator']);
@@ -247,9 +275,12 @@ class ApiReportPayment extends Controller
 
                     $subscription = $subscription->where(function ($subquery) use ($post){
                         foreach ($post['conditions'] as $row){
+                            if(is_object($row)){
+                                $row = (array)$row;
+                            }
                             if(isset($row['subject'])){
                                 if($row['subject'] == 'status'){
-                                    $subquery = $subquery->orWhere('deals_users.paid_status', $row['operator']);
+                                    $subquery = $subquery->orWhere('subscription_users.paid_status', $row['operator']);
                                 }
 
                                 if($row['subject'] == 'name'){
@@ -281,6 +312,9 @@ class ApiReportPayment extends Controller
 
                     $trx = $trx->where(function ($subquery) use ($post){
                         foreach ($post['conditions'] as $row){
+                            if(is_object($row)){
+                                $row = (array)$row;
+                            }
                             if(isset($row['subject'])){
                                 if($row['subject'] == 'status'){
                                     $subquery = $subquery->orWhere('transactions.transaction_payment_status', $row['operator']);
@@ -345,37 +379,424 @@ class ApiReportPayment extends Controller
             $data = $subscription;
         }
 
-        if(isset($post['export']) && $post['export'] == 1){
-            $data = $data->get()->toArray();
-        }else{
-            $data = $data->paginate(30);
-        }
-        return response()->json(MyHelper::checkGet($data));
+        return $data;
     }
 
     public function getReportIpay88(Request $request){
         $post = $request->json()->all();
 
-        $deals = DealsPaymentIpay88::join('deals_users', 'deals_users.id_deals_user', 'deals_payment_ipay88s.id_deals_user')
-            ->join('users', 'users.id', 'deals_users.id_user')
-            ->selectRaw("deals_payment_ipay88s.payment_method as payment_type, deals_payment_ipay88s.id_deals AS id_report, NULL AS trx_type, NULL AS receipt_number, 'Deals' AS type, deals_payment_ipay88s.created_at, deals_users.`voucher_price_cash` AS grand_total, amount as gross_amount, users.name, users.phone, users.email");
-        $subscription = SubscriptionPaymentIpay88::join('subscription_users', 'subscription_users.id_subscription_user', 'subscription_payment_ipay88s.id_subscription_user')
-            ->join('users', 'users.id', 'subscription_users.id_user')
-            ->selectRaw("subscription_payment_ipay88s.payment_method as payment_type, subscription_payment_ipay88s.id_subscription AS id_report, NULL AS trx_type, NULL AS receipt_number, 'Subscription' AS type, subscription_payment_ipay88s.created_at, subscription_users.`subscription_price_cash` AS grand_total, amount as gross_amount, users.name, users.phone, users.email");
+        $filter = $this->filterIpay88($post);
 
-        $data = TransactionPaymentIpay88::join('transactions', 'transactions.id_transaction', 'transaction_payment_ipay88s.id_transaction')
-            ->join('users', 'users.id', 'transactions.id_user')
-            ->unionAll($deals)
-            ->unionAll($subscription)
-            ->selectRaw("transaction_payment_ipay88s.payment_method as payment_type,  transactions.id_transaction AS id_report, transactions.trasaction_type AS trx_type, transactions.transaction_receipt_number AS receipt_number, 'Transaction' AS type, transaction_payment_ipay88s.created_at, transactions.`transaction_grandtotal` AS grand_total, amount as gross_amount, users.name, users.phone, users.email")
+        $data = $filter->paginate(30);
+        return response()->json(MyHelper::checkGet($data));
+    }
+
+    public function filterIpay88($post){
+
+        $deals = DealsPaymentIpay88::join('deals_users', 'deals_users.id_deals_user', 'deals_payment_ipay88s.id_deals_user')
+            ->leftJoin('users', 'users.id', 'deals_users.id_user')
+            ->selectRaw("deals_users.paid_status as payment_status, deals_payment_ipay88s.payment_method as payment_type, deals_payment_ipay88s.id_deals AS id_report, NULL AS trx_type, NULL AS receipt_number, 'Deals' AS type, deals_payment_ipay88s.created_at, deals_users.`voucher_price_cash` AS grand_total, amount as gross_amount, users.name, users.phone, users.email");
+        $subscription = SubscriptionPaymentIpay88::join('subscription_users', 'subscription_users.id_subscription_user', 'subscription_payment_ipay88s.id_subscription_user')
+            ->leftJoin('users', 'users.id', 'subscription_users.id_user')
+            ->selectRaw("subscription_users.paid_status as payment_status, subscription_payment_ipay88s.payment_method as payment_type, subscription_payment_ipay88s.id_subscription AS id_report, NULL AS trx_type, NULL AS receipt_number, 'Subscription' AS type, subscription_payment_ipay88s.created_at, subscription_users.`subscription_price_cash` AS grand_total, amount as gross_amount, users.name, users.phone, users.email");
+        $trx = TransactionPaymentIpay88::join('transactions', 'transactions.id_transaction', 'transaction_payment_ipay88s.id_transaction')
+            ->leftJoin('users', 'users.id', 'transactions.id_user')
+            ->selectRaw("transactions.transaction_payment_status as payment_status, transaction_payment_ipay88s.payment_method as payment_type,  transactions.id_transaction AS id_report, transactions.trasaction_type AS trx_type, transactions.transaction_receipt_number AS receipt_number, 'Transaction' AS type, transaction_payment_ipay88s.created_at, transactions.`transaction_grandtotal` AS grand_total, amount as gross_amount, users.name, users.phone, users.email")
             ->orderBy('created_at', 'desc');
 
-        if(isset($post['export']) && $post['export'] == 1){
-            $data = $data->get()->toArray();
-        }else{
-            $data = $data->paginate(30);
+        if(isset($post['date_start']) && !empty($post['date_start']) &&
+            isset($post['date_end']) && !empty($post['date_end'])){
+            $start_date = date('Y-m-d', strtotime($post['date_start']));
+            $end_date = date('Y-m-d', strtotime($post['date_end']));
+
+            $deals = $deals->whereDate('deals_payment_ipay88s.created_at', '>=', $start_date)
+                ->whereDate('deals_payment_ipay88s.created_at', '<=', $end_date);
+            $subscription = $subscription->whereDate('subscription_payment_ipay88s.created_at', '>=', $start_date)
+                ->whereDate('subscription_payment_ipay88s.created_at', '<=', $end_date);
+            $trx = $trx->whereDate('transaction_payment_ipay88s.created_at', '>=', $start_date)
+                ->whereDate('transaction_payment_ipay88s.created_at', '<=', $end_date);
         }
 
-        return response()->json(MyHelper::checkGet($data));
+        $unionWithDeals = 1;
+        $unionWithSubscription = 1;
+        $unionWithTrx = 1;
+
+        if(isset($post['conditions']) && !empty($post['conditions'])){
+            $checkFilterStatus = array_search('status', array_column($post['conditions'], 'subject'));
+            if($checkFilterStatus === false){
+                $deals = $deals->where('deals_users.paid_status', 'Completed');
+                $subscription = $subscription->where('subscription_users.paid_status', 'Completed');
+                $trx = $trx->where('transactions.transaction_payment_status', 'Completed');
+            }
+
+            $rule = 'and';
+            if(isset($post['rule'])){
+                $rule = $post['rule'];
+            }
+
+            if($rule == 'and'){
+                foreach ($post['conditions'] as $row){
+                    if(is_object($row)){
+                        $row = (array)$row;
+                    }
+                    if(isset($row['subject'])){
+                        if($row['subject'] == 'status'){
+                            $deals = $deals->where('deals_users.paid_status', $row['operator']);
+                            $subscription = $subscription->where('subscription_users.paid_status', $row['operator']);
+                            $trx = $trx->where('transactions.transaction_payment_status', $row['operator']);
+                        }
+
+                        if($row['subject'] == 'type'){
+                            if($row['operator'] == 'Deals'){
+                                $unionWithSubscription = 0;
+                                $unionWithTrx = 0;
+                            }elseif($row['operator'] == 'Subscription'){
+                                $unionWithDeals = 0;
+                                $unionWithTrx = 0;
+                            }elseif($row['operator'] == 'Transaction'){
+                                $unionWithDeals = 0;
+                                $unionWithSubscription = 0;
+                            }
+                        }
+
+                        if($row['subject'] == 'name'){
+                            if($row['operator'] == '='){
+                                $deals = $deals->where('users.name', $row['parameter']);
+                                $subscription = $subscription->where('users.name', $row['parameter']);
+                                $trx = $trx->where('users.name', $row['parameter']);
+                            }else{
+                                $deals = $deals->where('users.name', 'like', '%'.$row['parameter'].'%');
+                                $subscription = $subscription->where('users.name', 'like', '%'.$row['parameter'].'%');
+                                $trx = $trx->where('users.name', 'like', '%'.$row['parameter'].'%');
+                            }
+                        }
+
+                        if($row['subject'] == 'phone'){
+                            if($row['operator'] == '='){
+                                $deals = $deals->where('users.phone', $row['parameter']);
+                                $subscription = $subscription->where('users.phone', $row['parameter']);
+                                $trx = $trx->where('users.phone', $row['parameter']);
+                            }else{
+                                $deals = $deals->where('users.phone', 'like', '%'.$row['parameter'].'%');
+                                $subscription = $subscription->where('users.phone', 'like', '%'.$row['parameter'].'%');
+                                $trx = $trx->where('users.phone', 'like', '%'.$row['parameter'].'%');
+                            }
+                        }
+
+                        if($row['subject'] == 'grandtotal'){
+                            $deals = $deals->where('deals_users.voucher_price_cash',$row['operator'] ,$row['parameter']);
+                            $subscription = $subscription->where('subscription_users.subscription_price_cash',$row['operator'] ,$row['parameter']);
+                            $trx = $trx->where('transactions.transaction_grandtotal',$row['operator'] ,$row['parameter']);
+                        }
+
+                        if($row['subject'] == 'amount'){
+                            $deals = $deals->whereRaw('(amount/100) '. $row['operator'].' '.$row['parameter']);
+                            $subscription = $subscription->whereRaw('(amount/100) '. $row['operator'].' '.$row['parameter']);
+                            $trx = $trx->whereRaw('(amount/100) '. $row['operator'].' '.$row['parameter']);
+                        }
+
+                        if($row['subject'] == 'transaction_receipt_number'){
+                            $unionWithDeals = 0;
+                            $unionWithSubscription = 0;
+                            if($row['operator'] == '='){
+                                $trx = $trx->where('transactions.transaction_receipt_number',$row['parameter']);
+                            }else{
+                                $trx = $trx->where('transactions.transaction_receipt_number', 'like', '%'.$row['parameter'].'%');
+                            }
+                        }
+                    }
+                }
+            }else{
+                $unionWithDeals = 0;
+                $unionWithSubscription = 0;
+                $unionWithTrx = 0;
+
+                $arrSubject = array_column($post['conditions'], 'subject');
+                $arrSubjectUnique = array_unique($arrSubject);
+
+                $arrOperator = array_column($post['conditions'], 'operator');
+                $arrOperatorUnique = array_unique($arrOperator);
+
+                if(in_array('transaction_receipt_number', $arrSubjectUnique) && count($arrSubject) == 1){
+                    $unionWithTrx = 1;
+
+                    $trx = $trx->where(function ($subquery) use ($post){
+                        foreach ($post['conditions'] as $row){
+                            if(is_object($row)){
+                                $row = (array)$row;
+                            }
+                            if(isset($row['subject'])){
+                                if($row['subject'] == 'status'){
+                                    $subquery = $subquery->orWhere('transactions.transaction_payment_status', $row['operator']);
+                                }
+
+                                if($row['subject'] == 'name'){
+                                    if($row['operator'] == '='){
+                                        $subquery = $subquery->orWhere('users.name', $row['parameter']);
+                                    }else{
+                                        $subquery = $subquery->orWhere('users.name', 'like', '%'.$row['parameter'].'%');
+                                    }
+                                }
+
+                                if($row['subject'] == 'phone'){
+                                    if($row['operator'] == '='){
+                                        $subquery = $subquery->orWhere('users.phone', $row['parameter']);
+                                    }else{
+                                        $subquery = $subquery->orWhere('users.phone', 'like', '%'.$row['parameter'].'%');
+                                    }
+                                }
+
+                                if($row['subject'] == 'grandtotal'){
+                                    $subquery = $subquery->orWhere('transactions.transaction_grandtotal',$row['operator'] ,$row['parameter']);
+                                }
+
+                                if($row['subject'] == 'amount'){
+                                    $subquery = $subquery->orWhereRaw('(amount/100) '.$row['operator'].' '.$row['parameter']);
+                                }
+
+                                if($row['subject'] == 'transaction_receipt_number'){
+                                    if($row['operator'] == '='){
+                                        $subquery = $subquery->orWhere('transactions.transaction_receipt_number',$row['parameter']);
+                                    }else{
+                                        $subquery = $subquery->orWhere('transactions.transaction_receipt_number', 'like', '%'.$row['parameter'].'%');
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }else{
+                    if(in_array('Deals', $arrOperatorUnique))$unionWithDeals = 1;
+                    if(in_array('Subscription', $arrOperatorUnique))$unionWithSubscription = 1;
+                    if(in_array('Transaction', $arrOperatorUnique))$unionWithTrx = 1;
+                    if(in_array('transaction_receipt_number', $arrSubjectUnique))$unionWithTrx = 1;
+                    if(!in_array('Deals', $arrOperatorUnique) && !in_array('Subscription', $arrOperatorUnique) && !in_array('Transaction', $arrOperatorUnique)){
+                        $unionWithDeals = 1;
+                        $unionWithSubscription = 1;
+                        $unionWithTrx = 1;
+                    }
+
+                    $deals = $deals->where(function ($subquery) use ($post){
+                        foreach ($post['conditions'] as $row){
+                            if(is_object($row)){
+                                $row = (array)$row;
+                            }
+                            if(isset($row['subject'])){
+                                if($row['subject'] == 'status'){
+                                    $subquery = $subquery->orWhere('deals_users.paid_status', $row['operator']);
+                                }
+
+                                if($row['subject'] == 'name'){
+                                    if($row['operator'] == '='){
+                                        $subquery = $subquery->orWhere('users.name', $row['parameter']);
+                                    }else{
+                                        $subquery = $subquery->orWhere('users.name', 'like', '%'.$row['parameter'].'%');
+                                    }
+                                }
+
+                                if($row['subject'] == 'phone'){
+                                    if($row['operator'] == '='){
+                                        $subquery = $subquery->orWhere('users.phone', $row['parameter']);
+                                    }else{
+                                        $subquery = $subquery->orWhere('users.phone', 'like', '%'.$row['parameter'].'%');
+                                    }
+                                }
+
+                                if($row['subject'] == 'grandtotal'){
+                                    $subquery = $subquery->orWhere('transactions.voucher_price_cash',$row['operator'] ,$row['parameter']);
+                                }
+
+                                if($row['subject'] == 'amount'){
+                                    $subquery = $subquery->orWhereRaw('(amount/100) '.$row['operator'].' '.$row['parameter']);
+                                }
+                            }
+                        }
+                    });
+
+                    $subscription = $subscription->where(function ($subquery) use ($post){
+                        foreach ($post['conditions'] as $row){
+                            if(is_object($row)){
+                                $row = (array)$row;
+                            }
+                            if(isset($row['subject'])){
+                                if($row['subject'] == 'status'){
+                                    $subquery = $subquery->orWhere('subscription_users.paid_status', $row['operator']);
+                                }
+
+                                if($row['subject'] == 'name'){
+                                    if($row['operator'] == '='){
+                                        $subquery = $subquery->orWhere('users.name', $row['parameter']);
+                                    }else{
+                                        $subquery = $subquery->orWhere('users.name', 'like', '%'.$row['parameter'].'%');
+                                    }
+                                }
+
+                                if($row['subject'] == 'phone'){
+                                    if($row['operator'] == '='){
+                                        $subquery = $subquery->orWhere('users.phone', $row['parameter']);
+                                    }else{
+                                        $subquery = $subquery->orWhere('users.phone', 'like', '%'.$row['parameter'].'%');
+                                    }
+                                }
+
+                                if($row['subject'] == 'grandtotal'){
+                                    $subquery = $subquery->orWhere('subscription_users.subscription_price_cash',$row['operator'] ,$row['parameter']);
+                                }
+
+                                if($row['subject'] == 'amount'){
+                                    $subquery = $subquery->orWhere('amount',$row['operator'] ,$row['parameter']);
+                                }
+                            }
+                        }
+                    });
+
+                    $trx = $trx->where(function ($subquery) use ($post){
+                        foreach ($post['conditions'] as $row){
+                            if(is_object($row)){
+                                $row = (array)$row;
+                            }
+                            if(isset($row['subject'])){
+                                if($row['subject'] == 'status'){
+                                    $subquery = $subquery->orWhere('transactions.transaction_payment_status', $row['operator']);
+                                }
+
+                                if($row['subject'] == 'name'){
+                                    if($row['operator'] == '='){
+                                        $subquery = $subquery->orWhere('users.name', $row['parameter']);
+                                    }else{
+                                        $subquery = $subquery->orWhere('users.name', 'like', '%'.$row['parameter'].'%');
+                                    }
+                                }
+
+                                if($row['subject'] == 'phone'){
+                                    if($row['operator'] == '='){
+                                        $subquery = $subquery->orWhere('users.phone', $row['parameter']);
+                                    }else{
+                                        $subquery = $subquery->orWhere('users.phone', 'like', '%'.$row['parameter'].'%');
+                                    }
+                                }
+
+                                if($row['subject'] == 'grandtotal'){
+                                    $subquery = $subquery->orWhere('transactions.transaction_grandtotal',$row['operator'] ,$row['parameter']);
+                                }
+
+                                if($row['subject'] == 'amount'){
+                                    $subquery = $subquery->orWhereRaw('(amount/100) '.$row['operator'].' '.$row['parameter']);
+                                }
+
+                                if($row['subject'] == 'transaction_receipt_number'){
+                                    if($row['operator'] == '='){
+                                        $subquery = $subquery->orWhere('transactions.transaction_receipt_number',$row['parameter']);
+                                    }else{
+                                        $subquery = $subquery->orWhere('transactions.transaction_receipt_number', 'like', '%'.$row['parameter'].'%');
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+            }
+        }else{
+            $deals = $deals->where('deals_users.paid_status', 'Completed');
+            $subscription = $subscription->where('subscription_users.paid_status', 'Completed');
+            $trx = $trx->where('transactions.transaction_payment_status', 'Completed');
+        }
+
+        //union by type user choose
+        if($unionWithTrx == 1 && $unionWithDeals == 1 && $unionWithSubscription == 1){
+            $data = $trx->unionAll($deals)->unionAll($subscription);
+        }elseif($unionWithTrx == 1 && $unionWithDeals == 1 && $unionWithSubscription == 0){
+            $data = $trx->unionAll($deals);
+        }elseif($unionWithTrx == 1 && $unionWithDeals == 0 && $unionWithSubscription == 0){
+            $data = $trx;
+        }elseif($unionWithTrx == 0 && $unionWithDeals == 1 && $unionWithSubscription == 1){
+            $data = $deals->unionAll($subscription);
+        }elseif($unionWithTrx == 0 && $unionWithDeals == 1 && $unionWithSubscription == 0){
+            $data = $deals;
+        }elseif($unionWithTrx == 1 && $unionWithDeals == 0 && $unionWithSubscription == 1){
+            $data = $trx->unionAll($subscription);
+        }elseif($unionWithTrx == 0 && $unionWithDeals == 0 && $unionWithSubscription == 1){
+            $data = $subscription;
+        }
+
+        return $data;
+    }
+
+    public function exportExcel($filter){
+        if(isset($filter['type']) == 'ipay88'){
+            $data = $this->filterIpay88($filter);
+        }elseif (isset($filter['type']) == 'midtrans'){
+            $data = $this->filterMidtrans($filter);
+        }
+
+        foreach ($data->cursor() as $val) {
+            yield [
+                'Date' => date('d M Y H:i', strtotime($val['created_at'])),
+                'Status' => $val['payment_status'],
+                'Type' => $val['type'],
+                'Payment Type' => $val['payment_type'],
+                'Grand Total' => $val['grand_total'],
+                'Payment Amount' => $val['gross_amount']/10,
+                'User Name' => $val['name'],
+                'User Phone' => $val['phone'],
+                'User Email' => $val['email'],
+                'Receipt Number' => $val['receipt_number']
+            ];
+        }
+    }
+
+    public function export(Request $request){
+        $post = $request->json()->all();
+
+        $insertToQueue = [
+            'id_user' => $post['id_user'],
+            'filter' => json_encode($post),
+            'report_type' => 'Payment',
+            'status_export' => 'Running'
+        ];
+
+        $create = ExportQueue::create($insertToQueue);
+        if($create){
+            ExportJob::dispatch($create)->allOnConnection('database');
+        }
+        return response()->json(MyHelper::checkCreate($create));
+    }
+
+    public function listExport(Request $request){
+        $post = $request->json()->all();
+
+        $list = ExportQueue::orderBy('created_at', 'desc');
+        if(isset($post['id_user']) && !empty($post['id_user'])){
+            $id_user = $post['id_user'];
+            $list = $list->where('id_user', $id_user);
+        }
+
+        $list = $list->paginate(30);
+        return response()->json(MyHelper::checkGet($list));
+    }
+
+    function actionExport(Request $request){
+        $post = $request->json()->all();
+        $action = $post['action'];
+        $id_export_queue = $post['id_export_queue'];
+
+        if($action == 'download'){
+            $data = ExportQueue::where('id_export_queue', $id_export_queue)->first();
+            if(!empty($data)){
+                $data['url_export'] = config('url.storage_url_api').$data['url_export'];
+            }
+            return response()->json(MyHelper::checkGet($data));
+        }elseif($action == 'deleted'){
+            $data = ExportQueue::where('id_export_queue', $id_export_queue)->first();
+            $file = public_path().'/'.$data['url_export'];
+            $delete = File::delete($file);
+
+            if($delete){
+                $update = ExportQueue::where('id_export_queue', $id_export_queue)->update(['status_export' => 'Deleted']);
+                return response()->json(MyHelper::checkUpdate($update));
+            }else{
+                return response()->json(MyHelper::checkDelete($file));
+            }
+
+        }
     }
 }
