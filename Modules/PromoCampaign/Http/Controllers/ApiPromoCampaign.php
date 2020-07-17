@@ -2102,8 +2102,8 @@ class ApiPromoCampaign extends Controller
 	    	}
 	    	elseif ($query['promo_type'] == 'Tier discount') 
 	    	{
-	    		$min_qty = 1;
-	    		$max_qty = 1;
+	    		$min_qty = null;
+	    		$max_qty = null;
 
 	    		foreach ($query[$source.'_tier_discount_rules'] as $key => $rule) {
 					$min_req=$rule['min_qty'];
@@ -2125,8 +2125,8 @@ class ApiPromoCampaign extends Controller
 	    	}
 	    	elseif ($query['promo_type'] == 'Buy X Get Y') 
 	    	{
-	    		$min_qty = 1;
-	    		$max_qty = 1;
+	    		$min_qty = null;
+	    		$max_qty = null;
 	    		foreach ($query[$source.'_buyxgety_rules'] as $key => $rule) {
 					$min_req=$rule['min_qty_requirement'];
 					$max_req=$rule['max_qty_requirement'];
