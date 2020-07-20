@@ -1843,7 +1843,7 @@ class ApiTransaction extends Controller
                     unset($result['detail']['order_id']);
                     unset($result['detail']['pickup_time']);
                     $result['transaction_status'] = 0;
-                    $result['transaction_status_text'] = 'ORDER ANDA DIBATALKAN';
+                    $result['transaction_status_text'] = 'PESANAN TELAH DIBATALKAN';
                 } elseif (isset($list['transaction_payment_status']) && $list['transaction_payment_status'] == 'Pending') {
                     unset($result['detail']['order_id_qrcode']);
                     unset($result['detail']['order_id']);
@@ -1855,7 +1855,7 @@ class ApiTransaction extends Controller
                     unset($result['detail']['order_id']);
                     unset($result['detail']['pickup_time']);
                     $result['transaction_status'] = 0;
-                    $result['transaction_status_text'] = 'ORDER ANDA DITOLAK';
+                    $result['transaction_status_text'] = 'PESANAN DITOLAK';
                 } elseif($list['detail']['taken_by_system_at'] != null) {
                     $result['transaction_status'] = 1;
                     $result['transaction_status_text'] = 'ORDER SELESAI';
@@ -1896,7 +1896,7 @@ class ApiTransaction extends Controller
                         case 'driver allocated':
                         case 'allocated':
                             $result['delivery_info']['delivery_status'] = 'Driver ditemukan';
-                            $result['transaction_status_text']          = 'DRIVER DITEMUKAN';
+                            $result['transaction_status_text']          = 'DRIVER DITEMUKAN DAN SEDANG MENUJU OUTLET';
                             $result['delivery_info']['driver']          = [
                                 'driver_id'         => $list['transaction_pickup_go_send']['driver_id']?:'',
                                 'driver_name'       => $list['transaction_pickup_go_send']['driver_name']?:'',
@@ -1952,7 +1952,7 @@ class ApiTransaction extends Controller
                             break;
                         case 'cancelled':
                             $result['delivery_info']['booking_status'] = 0;
-                            $result['transaction_status_text']         = 'PENGANTARAN DIBATALKAN';
+                            $result['transaction_status_text']         = 'PENGANTARAN PESANAN TELAH DIBATALKAN';
                             $result['delivery_info']['delivery_status'] = 'Pengantaran dibatalkan';
                             $result['delivery_info']['cancelable']     = 0;
                             break;
@@ -2033,7 +2033,7 @@ class ApiTransaction extends Controller
             if ($list['trasaction_payment_type'] != 'Offline') {
                 if ($list['transaction_payment_status'] == 'Cancelled') {
                     $statusOrder[] = [
-                    'text'  => 'Pesanan Anda dibatalkan karena pembayaran gagal',
+                    'text'  => 'Pesanan telah dibatalkan karena pembayaran gagal',
                     'date'  => $list['void_date']
                 ];
                 } 
@@ -2102,13 +2102,13 @@ class ApiTransaction extends Controller
                                 case 'completed':
                                 case 'delivered':
                                     $statusOrder[] = [
-                                        'text'  => 'Pesanan telah selesai dan diterim',
+                                        'text'  => 'Pesanan telah selesai dan diterima',
                                         'date'  => $valueGosend['created_at']
                                     ];
                                     break;
                                 case 'cancelled':
                                     $statusOrder[] = [
-                                        'text'  => 'Pengantaran dibatalkan',
+                                        'text'  => 'Pengantaran pesanan telah dibatalkan',
                                         'date'  => $valueGosend['created_at']
                                     ];
                                     break;
@@ -2146,6 +2146,7 @@ class ApiTransaction extends Controller
                         'date'  => date('d F Y H:i', strtotime($status['date']))
                     ];
                     if ($status['text'] == 'Order rejected') {
+                        $result['detail']['detail_status'][$keyStatus]['text'] = 'Pesanan telah ditolak karena '.strtolower($list['detail']['reject_reason']);
                         $result['detail']['detail_status'][$keyStatus]['reason'] = $list['detail']['reject_reason'];
                     }
                 }
