@@ -1337,6 +1337,7 @@ class ApiTransaction extends Controller
             $delivery = true;
         }
         $query = Transaction::join('transaction_pickups','transaction_pickups.id_transaction','=','transactions.id_transaction')->select('transactions.*',
+                              'transaction_pickups.*',
                               'transaction_pickup_go_sends.*',
                               'transaction_products.*',
                               'users.*',
@@ -1375,15 +1376,6 @@ class ApiTransaction extends Controller
                         $var = 'products.'.$con['subject'];
                     } elseif ($con['subject'] == 'product_category') {
                         $var = 'product_categories.product_category_name';
-                    }
-
-                    if (in_array($con['subject'], ['id_outlet', 'id_product'])) {
-                        $var = $con['subject'] == 'id_outlet'? 'outlets.id_outlet' : 'products.id_product';
-                        if ($post['rule'] == 'and') {
-                            $query = $query->where($var, '=', $con['operator']);
-                        } else {
-                            $query = $query->orWhere($var, '=', $con['operator']);
-                        }
                     }
 
                     if (in_array($con['subject'], ['outlet_code', 'outlet_name'])) {
@@ -1441,11 +1433,30 @@ class ApiTransaction extends Controller
                         }
                     }
 
-                    if ($con['subject'] == 'status' || $con['subject'] == 'courier') {
-                        if ($con['subject'] == 'status') {
-                            $var = 'transactions.transaction_payment_status';
-                        } else {
-                            $var = 'transactions.transaction_courier';
+                    if (in_array($con['subject'], ['status', 'courier', 'id_outlet', 'id_product', 'pickup_by'])) {
+                        switch ($con['subject']) {
+                            case 'status':
+                                $var = 'transactions.transaction_payment_status';
+                                break;
+
+                            case 'courier':
+                                $var = 'transactions.transaction_courier';
+                                break;
+
+                            case 'id_product':
+                                $var = 'products.id_product';
+                                break;
+
+                            case 'id_outlet':
+                                $var = 'outlets.id_outlet';
+                                break;
+
+                            case 'pickup_by':
+                                $var = 'transaction_pickups.pickup_by';
+                                break;
+
+                            default:
+                                continue;
                         }
 
                         if ($post['rule'] == 'and') {
