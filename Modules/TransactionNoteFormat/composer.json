@@ -1,0 +1,25 @@
+{
+    "name": "nwidart/transactionnoteformat",
+    "description": "",
+    "authors": [
+        {
+            "name": "Nicolas Widart",
+            "email": "n.widart@gmail.com"
+        }
+    ],
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Modules\\TransactionNoteFormat\\Providers\\TransactionNoteFormatServiceProvider"
+            ],
+            "aliases": {
+                
+            }
+        }
+    },
+    "autoload": {
+        "psr-4": {
+            "Modules\\TransactionNoteFormat\\": ""
+        }
+    }
+}

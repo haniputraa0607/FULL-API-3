@@ -4,9 +4,9 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 
-        <script src="{{ env('S3_URL_VIEW') }}{{('assets/global/plugins/pace/pace.min.js') }}" type="text/javascript"></script>
-        <link href="{{ env('S3_URL_VIEW') }}{{('assets/webview/css/pace-flash.css') }}" rel="stylesheet" type="text/css" />
-        <link rel="stylesheet" href="{{ env('S3_URL_VIEW') }}{{('assets/global/plugins/bootstrap/bootstrap-4.1.3/css/bootstrap.min.css') }}">
+        <script src="{{ config('url.storage_url_view') }}{{('assets/global/plugins/pace/pace.min.js') }}" type="text/javascript"></script>
+        <link href="{{ config('url.storage_url_view') }}{{('assets/webview/css/pace-flash.css') }}" rel="stylesheet" type="text/css" />
+        <link rel="stylesheet" href="{{ config('url.storage_url_view') }}{{('assets/global/plugins/bootstrap/bootstrap-4.1.3/css/bootstrap.min.css') }}">
 
         <style type="text/css">
             @font-face {
@@ -17,14 +17,14 @@
                 font-family: 'Seravek Light';
                 font-style: normal;
                 font-weight: 400;
-                src: url('{{env("S3_URL_VIEW") }}{{("assets/fonts/Seravek-Light.ttf")}}') format('truetype');
+                src: url('{{config('url.storage_url_view') }}{{("assets/fonts/Seravek-Light.ttf")}}') format('truetype');
             }
 
             @font-face {
                 font-family: 'Seravek Medium';
                 font-style: normal;
                 font-weight: 400;
-                src: url('{{env("S3_URL_VIEW") }}{{("assets/fonts/Seravek-Medium.ttf")}}') format('truetype');
+                src: url('{{config('url.storage_url_view') }}{{("assets/fonts/Seravek-Medium.ttf")}}') format('truetype');
             }
 
             .seravek-light-font {
@@ -297,9 +297,9 @@
             </div>
         @endif
 
-        <script type="text/javascript" src="{{ env('S3_URL_VIEW') }}{{('assets/global/plugins/jquery.min.js') }}" type="text/javascript"></script>
+        <script type="text/javascript" src="{{ config('url.storage_url_view') }}{{('assets/global/plugins/jquery.min.js') }}" type="text/javascript"></script>
 
-        <script src="{{ env('S3_URL_VIEW') }}{{('assets/global/plugins/bootstrap/bootstrap-4.1.3/js/bootstrap.min.js') }}"></script>
+        <script src="{{ config('url.storage_url_view') }}{{('assets/global/plugins/bootstrap/bootstrap-4.1.3/js/bootstrap.min.js') }}"></script>
         <script type="text/javascript">
             $(document).ready(function() {
 

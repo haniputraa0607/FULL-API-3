@@ -17,6 +17,27 @@ class ApiVersion extends Controller
 {
     public function index(VersionList $request)
     {
+        /*Start check status maintenance mode for apps*/
+        $getMaintenance = Setting::where('key', 'maintenance_mode')->first();
+        if($getMaintenance && $getMaintenance['value'] == 1){
+            $dt = (array)json_decode($getMaintenance['value_text']);
+            $message = $dt['message'];
+            if($dt['image'] != ""){
+                $url_image = config('url.storage_url_api').$dt['image'];
+            }else{
+                $url_image = config('url.storage_url_api').'img/maintenance/default.png';
+            }
+            return response()->json([
+                'status' => 'fail',
+                'messages' => [$message],
+                'maintenance' => config('url.api_url') ."api/maintenance-mode",
+                'data_maintenance' => [
+                    'url_image' => $url_image,
+                    'text' => $message
+                ]
+            ], 200);
+        }
+        /*=======================End====================*/
         $post = $request->json()->all();
         $dbSetting = Setting::where('key', 'like', 'version_%')->get()->toArray();
         $dbDevice = Version::select('app_type', 'app_version')->orderBy('app_version', 'desc')->where('rules', '1')->get()->toArray();
@@ -112,13 +133,16 @@ class ApiVersion extends Controller
         $android = Version::select('app_type', 'app_version', 'rules')->orderBy('app_version', 'desc')->where('app_type', 'Android')->get()->toArray();
         $ios = Version::select('app_type', 'app_version', 'rules')->orderBy('app_version', 'desc')->where('app_type', 'IOS')->get()->toArray();
         $outlet = Version::select('app_type', 'app_version', 'rules')->orderBy('app_version', 'desc')->where('app_type', 'OutletApp')->get()->toArray();
+
         $result = [];
         foreach ($display as $data) {
             $result[$data['key']] = $data['value'];
         }
+
         $result['Android'] = $android;
         $result['IOS'] = $ios;
         $result['OutletApp'] = $outlet;
+
         return response()->json(MyHelper::checkGet($result));
     }
 

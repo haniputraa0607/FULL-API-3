@@ -62,6 +62,7 @@ class ApiHiddenDeals extends Controller
                     DB::rollback();
                     return response()->json(MyHelper::checkCreate($claim));
                 }
+                $send = app($this->autocrm)->SendAutoCRM('Create Inject Voucher', $request->user()->phone, $post,null,true);
             }
             else {
                 DB::rollback();
@@ -148,6 +149,9 @@ class ApiHiddenDeals extends Controller
             return response()->json(MyHelper::checkGet($deals));
         }
         else {
+        	if ($deals['step_complete'] != 1) {
+            	return response()->json(['status' => 'fail', 'messages' => 'Deals is not complete']);
+        	}
             $countUser = 0;
             $countVoucher = 0;
             foreach($users as $datauser){
@@ -156,7 +160,11 @@ class ApiHiddenDeals extends Controller
                    $amount = $post['amount'];    
                 }
 
-                $user = $this->cekUser($datauser['phone'], $request->json('id_deals'));
+                if($datauser['phone']??false){
+                    $user = $this->cekUser($datauser['phone'], $request->json('id_deals'));
+                }else{
+                    $user = '';
+                }
                 if (!empty($user)) {
                     $first_deal=null;
                     for($i = 1; $i<= $amount; $i++){
@@ -196,43 +204,33 @@ class ApiHiddenDeals extends Controller
                         }
                         // WITH VOUCHER
                         else {
-                            DB::rollback();
-                            return response()->json([
-                                'status'   => 'fail',
-                                'messages' => ['Voucher is not free.']
-                            ]);
-                            // $voucher = $this->checkVoucherRegistered($deals->id_deals);
+                            // DB::rollback();
+                            // return response()->json([
+                            //     'status'   => 'fail',
+                            //     'messages' => ['Voucher is not free.']
+                            // ]);
+                            $voucher = $this->checkVoucherRegistered($deals->id_deals);
         
-                            // if ($voucher) {
-                            //     // BATAS
-                            //     $batas = $this->limit($voucher, $user);
+                            if ($voucher) {
+                                // BATAS
+                                $batas = $this->limit($voucher, $user);
         
-                            //     // UPDATE DEALS
-                            //     $updateDeals = Deal::where('id_deals', $deals->id_deals)->update([
-                            //         'deals_total_claimed' => $deals->deals_total_claimed + $batas,
-                            //         // 'deals_total_voucher' => $batas + $deals->deals_total_voucher
-                            //     ]);
-        
-                            //     if ($updateDeals) {
-                            //         $claim = $this->claimedWithVoucher($deals, $user, $voucher);
-        
-                            //         if (!$claim) {
-                            //             DB::rollback();
-                            //             return response()->json(MyHelper::checkUpdate($claim));
-                            //         }
-                            //     }
-                            //     else {
-                            //         DB::rollback();
-                            //         return response()->json(MyHelper::checkUpdate($updateDeals));
-                            //     }
-                            // }
-                            // else {
-                            //     DB::rollback();
-                            //     return response()->json([
-                            //         'status'   => 'fail',
-                            //         'messages' => ['Voucher is empty']
-                            //     ]);
-                            // }                  
+                                $claim = $this->claimedWithVoucher($deals, $user, $voucher);
+    
+                                if (!$claim) {
+                                    DB::rollback();
+                                    return response()->json(MyHelper::checkUpdate($claim));
+                                }
+
+                                $countVoucher++;
+                            }
+                            else {
+                                DB::rollback();
+                                return response()->json([
+                                    'status'   => 'fail',
+                                    'messages' => ['Voucher is empty']
+                                ]);
+                            }
                         }
                     }
                     // else {
@@ -243,10 +241,12 @@ class ApiHiddenDeals extends Controller
                     //     ]);
                     // }
                     
-                    $autocrm = app($this->autocrm)->SendAutoCRM('Receive Hidden Deals', $datauser['phone'],
+                    $autocrm = app($this->autocrm)->SendAutoCRM('Receive Inject Voucher', $datauser['phone'],
                         [
                             'deals_title'      => $deals->deals_title,
-                            'id_deals_user'    => $first_deal->id_deals_user
+                            'id_deals_user'    => $first_deal['id_deals_user'],
+                            'id_deals'         => $deals->id_deals,
+                            'id_brand'         => $deals->id_brand
                         ]
                     );
                     $countUser++;

@@ -62,4 +62,30 @@ class LogBalance extends Model
 	{
 		return $this->belongsTo(\App\Http\Models\Transaction::class, 'id_reference')->select('id_transaction', 'transaction_receipt_number', 'trasaction_type');
 	}
+
+	public function transaction()
+	{
+		return $this->belongsTo(\App\Http\Models\Transaction::class, 'id_reference', 'id_transaction');
+	}
+
+	public function pointInjection()
+	{
+		return $this->belongsTo(\Modules\PointInjection\Entities\PointInjection::class, 'id_reference', 'id_point_injection');
+	}
+
+	public function getGetReferenceAttribute() {
+
+        if( $this->source == 'Transaction' || $this->source == 'Rejected Order' || $this->source == 'Rejected Order Midtrans' || $this->source == 'Rejected Order Point' || $this->source == 'Reversal' || $this->source == 'Online Transaction')
+        {
+        	$this->load(['transaction' => function($q){
+        		$q->select('id_transaction', 'transaction_receipt_number', 'trasaction_type');
+        	}]);
+        } 
+        elseif( $this->source == 'Point Injection' )
+        {
+        	$this->load(['pointInjection' => function($q){
+        		$q->select('id_point_injection', 'title');
+        	}]);
+        }
+    }
 }

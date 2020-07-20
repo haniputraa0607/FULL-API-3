@@ -16,7 +16,7 @@ class ConfirmPayment extends FormRequest
     public function rules()
     {
         return [
-            'payment_type'             => 'required|in:Midtrans,Manual,Balance',
+            'payment_type'             => 'required|in:Midtrans,Manual,Balance,Ovo,Ipay88',
             'id'                       => 'required|string',
             'id_manual_payment_method' => 'nullable|integer',
             'id_bank_method'           => 'required_if:payment_type,Manual|integer',
@@ -30,6 +30,7 @@ class ConfirmPayment extends FormRequest
             'payment_account_number'   => 'required_if:payment_type,Manual|numeric',
             'payment_account_name'     => 'required_if:payment_type,Manual|string',
             'payment_receipt_image'    => 'required_if:payment_type,Manual',
+            'payment_detail'           => 'nullable|sometimes|string'
         ];
     }
 

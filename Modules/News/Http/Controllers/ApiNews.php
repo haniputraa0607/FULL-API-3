@@ -29,7 +29,8 @@ use Modules\News\Http\Requests\DeleteRelation;
 
 class ApiNews extends Controller
 {
-    function __construct() {
+    function __construct()
+    {
         date_default_timezone_set('Asia/Jakarta');
         $this->autocrm = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
     }
@@ -38,7 +39,8 @@ class ApiNews extends Controller
     public $endPoint  = "http://localhost/crmsys-api/public/";
 
     /* Cek inputan */
-    function cekInputan($post = []) {
+    function cekInputan($post = [])
+    {
 
         $data = [];
 
@@ -69,8 +71,7 @@ class ApiNews extends Controller
 
             if (isset($upload['status']) && $upload['status'] == "success") {
                 $data['news_image_luar'] = $upload['path'];
-            }
-            else {
+            } else {
                 $result = [
                     'error'    => 1,
                     'status'   => 'fail',
@@ -86,8 +87,7 @@ class ApiNews extends Controller
 
             if (isset($upload['status']) && $upload['status'] == "success") {
                 $data['news_image_dalam'] = $upload['path'];
-            }
-            else {
+            } else {
                 $result = [
                     'error'    => 1,
                     'status'   => 'fail',
@@ -96,7 +96,6 @@ class ApiNews extends Controller
 
                 return $result;
             }
-
         }
 
         if (isset($post['news_post_date'])) {
@@ -113,113 +112,97 @@ class ApiNews extends Controller
 
         if (isset($post['news_video_text'])) {
             $data['news_video_text'] = $post['news_video_text'];
-        }
-        else {
+        } else {
             $data['news_video_text'] = null;
         }
 
         if (isset($post['news_video'])) {
             $data['news_video'] = $post['news_video'];
-        }
-        else {
+        } else {
             $data['news_video'] = null;
         }
 
         if (isset($post['news_event_date_start'])) {
             $data['news_event_date_start'] = $post['news_event_date_start'];
-        }
-        else {
+        } else {
             $data['news_event_date_start'] = null;
         }
 
-		if (isset($post['news_button_form_text'])) {
+        if (isset($post['news_button_form_text'])) {
             $data['news_button_form_text'] = $post['news_button_form_text'];
-        }
-        else {
+        } else {
             $data['news_button_form_text'] = null;
         }
 
-		 if (isset($post['news_button_form_expired'])) {
+        if (isset($post['news_button_form_expired'])) {
             $data['news_button_form_expired'] = $post['news_button_form_expired'];
-        }
-        else {
+        } else {
             $data['news_button_form_expired'] = null;
         }
 
         if (isset($post['news_event_date_end'])) {
             $data['news_event_date_end'] = $post['news_event_date_end'];
-        }
-        else {
+        } else {
             $data['news_event_date_end'] = null;
         }
 
         if (isset($post['news_event_time_start'])) {
             $data['news_event_time_start'] = $post['news_event_time_start'];
-        }
-        else {
+        } else {
             $data['news_event_time_start'] = null;
         }
 
         if (isset($post['news_event_time_end'])) {
             $data['news_event_time_end'] = $post['news_event_time_end'];
-        }
-        else {
+        } else {
             $data['news_event_time_end'] = null;
         }
 
         if (isset($post['news_event_location_name'])) {
             $data['news_event_location_name'] = $post['news_event_location_name'];
-        }
-        else {
+        } else {
             $data['news_event_location_name'] = null;
         }
 
         if (isset($post['news_event_location_phone'])) {
             $data['news_event_location_phone'] = $post['news_event_location_phone'];
-        }
-        else {
+        } else {
             $data['news_event_location_phone'] = null;
         }
 
         if (isset($post['news_event_location_address'])) {
             $data['news_event_location_address'] = $post['news_event_location_address'];
-        }
-        else {
+        } else {
             $data['news_event_location_address'] = null;
         }
 
         if (isset($post['news_event_location_map'])) {
             $data['news_event_location_map'] = $post['news_event_location_map'];
-        }
-        else {
+        } else {
             $data['news_event_location_map'] = null;
         }
 
         if (isset($post['news_event_latitude'])) {
             $data['news_event_latitude'] = $post['news_event_latitude'];
-        }
-        else {
+        } else {
             $data['news_event_latitude'] = null;
         }
 
         if (isset($post['news_event_longitude'])) {
             $data['news_event_longitude'] = $post['news_event_longitude'];
-        }
-        else {
+        } else {
             $data['news_event_longitude'] = null;
         }
 
         if (isset($post['news_outlet_text'])) {
             $data['news_outlet_text'] = $post['news_outlet_text'];
-        }
-        else {
+        } else {
             $data['news_outlet_text'] = null;
         }
 
         if (isset($post['news_product_text'])) {
             $data['news_product_text'] = $post['news_product_text'];
-        }
-        else {
+        } else {
             $data['news_product_text'] = null;
         }
 
@@ -227,10 +210,9 @@ class ApiNews extends Controller
             $data['news_form_success_message'] = $post['news_form_success_message'];
         }
 
-		if (isset($post['customform'])) {
+        if (isset($post['customform'])) {
             $data['customform'] = $post['customform'];
-        }
-        else {
+        } else {
             $data['customform'] = null;
         }
 
@@ -244,204 +226,228 @@ class ApiNews extends Controller
     }
 
     /* Create News */
-    function create(Create $request) {
-            // data news
-            $post = $request->json()->all();
-            if(isset($request->news_video)){
-                $post['news_video']='';
-                foreach ($request->news_video as $vid_url) {
-                    $youtube = MyHelper::parseYoutube($vid_url);
-                    if($youtube['status'] == 'success'){
-                        $post['news_video'].= $youtube['data'].';';
-                    }else{
-                        return response()->json([
-                            'status'   => 'fail',
-                            'messages' => ['url youtube not valid.']
-                        ]);
+    function create(Create $request)
+    {
+        // data news
+        $post = $request->json()->all();
+        if (isset($request->news_video)) {
+            $post['news_video'] = '';
+            foreach ($request->news_video as $vid_url) {
+                $youtube = MyHelper::parseYoutube($vid_url);
+                if ($youtube['status'] == 'success') {
+                    $post['news_video'] .= $youtube['data'] . ';';
+                } else {
+                    return response()->json([
+                        'status'   => 'fail',
+                        'messages' => ['url youtube not valid.']
+                    ]);
+                }
+            }
+            $post['news_video'] = trim($post['news_video'], ';');
+        }
+
+        $data = $this->cekInputan($post);
+
+        if (isset($data['error'])) {
+            unset($data['error']);
+            return response()->json($data);
+        }
+        // dd($data);
+
+        // pengecekan apakah slugnya udah ada atau belum
+        if ($this->cekSlug("", $data['news_slug'])) {
+            $customform = $data['customform'];
+            unset($data['customform']);
+
+            DB::beginTransaction();
+
+            $save = News::create($data);
+            // jika ada custom form
+            if (!empty($customform)) {
+                foreach ($customform as $key => $form) {
+                    $dataForm = [];
+                    $dataForm['id_news'] = $save->id_news;
+                    $dataForm['form_input_types'] = $form['form_input_types'];
+                    if ($form['form_input_options'] != "")
+                        $dataForm['form_input_options'] = $form['form_input_options'];
+                    else
+                        $dataForm['form_input_options'] = null;
+
+                    $dataForm['form_input_label'] = $form['form_input_label'];
+                    $dataForm['form_input_autofill'] = $form['form_input_autofill'];
+                    $dataForm['is_required'] = $form['is_required'];
+                    $dataForm['is_unique'] = $form['is_unique'];
+                    $dataForm['position'] = $key + 1;
+
+                    $saveForm = NewsFormStructure::create($dataForm);
+
+                    if (!($save && $saveForm)) {
+                        DB::rollback();
                     }
                 }
-                $post['news_video']=trim($post['news_video'],';');
             }
-
-            $data = $this->cekInputan($post);
-
-            if (isset($data['error'])) {
-                unset($data['error']);
-                return response()->json($data);
+            DB::commit();
+            if ($save) {
+                $send = app($this->autocrm)->SendAutoCRM('Create News', $request->user()->phone, [
+                    'id_news' => $save->id_news,
+                    'news_content' => $data['news_content_long'] ?? '',
+                    'news_image' => ($data['news_image_dalam'] ?? '') ? '<img src="' . config('url.storage_url_api') . $data['news_image_dalam'] . '" style="max-width: 100%"/>' : '',
+                    'post_date' => ($data['news_post_date'] ?? '') ? date('d F Y H:i', strtotime($data['news_post_date'])) : '-',
+                    'publish_date' => ($data['news_publish_date'] ?? '') ? date('d F Y H:i', strtotime($data['news_publish_date'])) : '-',
+                    'expired_date' => ($data['news_expired_date'] ?? '') ? date('d F Y H:i', strtotime($data['news_expired_date'])) : '-',
+                    'detail' => view('news::emails.detail', ['news' => [$data]])->render()
+                ] + $data, null, true);
             }
-            // dd($data);
-
-            // pengecekan apakah slugnya udah ada atau belum
-            if ( $this->cekSlug("", $data['news_slug']) ) {
-                $customform = $data['customform'];
-                unset($data['customform']);
-
-                DB::beginTransaction();
-
-                $save = News::create($data);
-                // jika ada custom form
-                if(!empty($customform)){
-                    foreach($customform as $key => $form){
-                        $dataForm = [];
-                        $dataForm['id_news'] = $save->id_news;
-                        $dataForm['form_input_types'] = $form['form_input_types'];
-                        if($form['form_input_options'] != "")
-                            $dataForm['form_input_options'] = $form['form_input_options'];
-                        else
-                            $dataForm['form_input_options'] = null;
-
-                        $dataForm['form_input_label'] = $form['form_input_label'];
-                        $dataForm['form_input_autofill'] = $form['form_input_autofill'];
-                        $dataForm['is_required'] = $form['is_required'];
-                        $dataForm['is_unique'] = $form['is_unique'];
-                        $dataForm['position'] = $key + 1;
-
-                        $saveForm = NewsFormStructure::create($dataForm);
-
-                        if ( !($save && $saveForm) ) {
-                            DB::rollback();
-                        }
-                    }
-                }
-                DB::commit();
-
-                return response()->json(MyHelper::checkCreate($save));
-            }
-            else {
-                return response()->json([
-                    'status'   => 'fail',
-                    'messages' => ['slug already used another news.']
-                ]);
-            }
-            // $save = News::create($data);
-
             return response()->json(MyHelper::checkCreate($save));
+        } else {
+            return response()->json([
+                'status'   => 'fail',
+                'messages' => ['slug already used another news.']
+            ]);
+        }
+        // $save = News::create($data);
+
+        return response()->json(MyHelper::checkCreate($save));
     }
 
     /* Upadate News */
-    function update(Update $request) {
-            // info news
-            $post = $request->json()->all();
-            if($request->news_video&&is_array($request->news_video)&&$request->news_video[0]){
-                $post['news_video']='';
-                foreach ($request->news_video as $vid_url) {
-                    $youtube = MyHelper::parseYoutube($vid_url);
-                    if($youtube['status'] == 'success'){
-                        $post['news_video'].= $youtube['data'].';';
-                    }else{
-                        return response()->json([
-                            'status'   => 'fail',
-                            'messages' => ['url youtube not valid.']
-                        ]);
-                    }
+    function update(Update $request)
+    {
+        // info news
+        $post = $request->json()->all();
+        if ($request->news_video && is_array($request->news_video) && $request->news_video[0]) {
+            $post['news_video'] = '';
+            foreach ($request->news_video as $vid_url) {
+                $youtube = MyHelper::parseYoutube($vid_url);
+                if ($youtube['status'] == 'success') {
+                    $post['news_video'] .= $youtube['data'] . ';';
+                } else {
+                    return response()->json([
+                        'status'   => 'fail',
+                        'messages' => ['url youtube not valid.']
+                    ]);
                 }
-                $post['news_video']=trim($post['news_video'],';');
-            }else{
-                $post['news_video']=null;
             }
-            $dataNews = News::where('id_news', $request->json('id_news'))->get()->toArray();
+            $post['news_video'] = trim($post['news_video'], ';');
+        } else {
+            $post['news_video'] = null;
+        }
+        $dataNews = News::where('id_news', $request->json('id_news'))->get()->toArray();
 
-            if (empty($dataNews)) {
-                return response()->json(MyHelper::checkGet($dataNews));
+        if (empty($dataNews)) {
+            return response()->json(MyHelper::checkGet($dataNews));
+        }
+        // data news
+        $data = $this->cekInputan($post);
+
+        if (isset($data['error'])) {
+            unset($data['error']);
+            return response()->json($data);
+        }
+
+        // pengecekan apakah slugnya udah ada atau belum
+        if ($this->cekSlug($request->json('id_news'), $request->json('news_slug'))) {
+            $customform = $data['customform'];
+            unset($data['customform']);
+
+            if (!isset($data['news_expired_date'])) {
+                $data['news_expired_date'] = null;
             }
-            // data news
-            $data = $this->cekInputan($post);
+            $save = News::where('id_news', $request->json('id_news'))->first();
+            $save->update($data);
 
-            if (isset($data['error'])) {
-                unset($data['error']);
-                return response()->json($data);
+            // jika ada upload file
+            if (isset($data['news_image_luar'])) {
+                MyHelper::deletePhoto($dataNews[0]['news_image_luar']);
             }
-
-            // pengecekan apakah slugnya udah ada atau belum
-            if ($this->cekSlug($request->json('id_news'), $request->json('news_slug'))) {
-                $customform = $data['customform'];
-				unset($data['customform']);
-
-                if(!isset($data['news_expired_date'])){
-                    $data['news_expired_date']=null;
+            if (isset($data['news_image_dalam'])) {
+                MyHelper::deletePhoto($dataNews[0]['news_image_dalam']);
+            }
+            // jika ada upload
+            if (!empty($customform)) {
+                $clear = NewsFormStructure::where('id_news', $request->json('id_news'))->delete();
+                foreach ($customform as $key => $form) {
+                    $dataForm = [];
+                    $dataForm['id_news'] = $request->json('id_news');
+                    $dataForm['form_input_types'] = $form['form_input_types'];
+                    if ($form['form_input_options'] != "")
+                        $dataForm['form_input_options'] = $form['form_input_options'];
+                    else
+                        $dataForm['form_input_options'] = null;
+                    $dataForm['form_input_label'] = $form['form_input_label'];
+                    $dataForm['form_input_autofill'] = $form['form_input_autofill'];
+                    $dataForm['is_required'] = $form['is_required'];
+                    $dataForm['is_unique'] = $form['is_unique'];
+                    $dataForm['position'] = $key + 1;
+                    $saveForm = NewsFormStructure::create($dataForm);
                 }
-                $save = News::where('id_news', $request->json('id_news'))->update($data);
-
-                // jika ada upload file
-                if (isset($data['news_image_luar'])) {
-                    MyHelper::deletePhoto($dataNews[0]['news_image_luar']);
-                }
-                if (isset($data['news_image_dalam'])) {
-                    MyHelper::deletePhoto($dataNews[0]['news_image_dalam']);
-                }
-                // jika ada upload
-				if(!empty($customform)){
-					$clear = NewsFormStructure::where('id_news', $request->json('id_news'))->delete();
-					foreach($customform as $key => $form){
-						$dataForm = [];
-						$dataForm['id_news'] = $request->json('id_news');
-						$dataForm['form_input_types'] = $form['form_input_types'];
-						if($form['form_input_options'] != "")
-							$dataForm['form_input_options'] = $form['form_input_options'];
-						else
-							$dataForm['form_input_options'] = null;
-                        $dataForm['form_input_label'] = $form['form_input_label'];
-                        $dataForm['form_input_autofill'] = $form['form_input_autofill'];
-                        $dataForm['is_required'] = $form['is_required'];
-                        $dataForm['is_unique'] = $form['is_unique'];
-						$dataForm['position'] = $key + 1;
-						$saveForm = NewsFormStructure::create($dataForm);
-					}
-				}
-                return response()->json(MyHelper::checkUpdate($save));
             }
-            else {
-                return response()->json([
-                    'status'   => 'fail',
-                    'messages' => ['slug already used another news.']
-                ]);
+            if ($save) {
+                $data['news_image_dalam'] = $save['news_image_dalam'];
+                $send = app($this->autocrm)->SendAutoCRM('Update News', $request->user()->phone, [
+                    'id_news' => $request->json('id_news'),
+                    'news_content' => $save['news_content_long'] ?? '',
+                    'news_image' => ($save['news_image_dalam'] ?? '') ? '<img src="' . config('url.storage_url_api') . $save['news_image_dalam'] . '" style="max-width: 100%"/>' : '',
+                    'post_date' => ($save['news_post_date'] ?? '') ? date('d F Y H:i', strtotime($save['news_post_date'])) : '-',
+                    'publish_date' => ($save['news_publish_date'] ?? '') ? date('d F Y H:i', strtotime($save['news_publish_date'])) : '-',
+                    'expired_date' => ($save['news_expired_date'] ?? '') ? date('d F Y H:i', strtotime($save['news_expired_date'])) : '-',
+                    'detail' => view('news::emails.detail', ['news' => [$data]])->render()
+                ] + $data, null, true);
             }
+            return response()->json(MyHelper::checkUpdate($save));
+        } else {
+            return response()->json([
+                'status'   => 'fail',
+                'messages' => ['slug already used another news.']
+            ]);
+        }
     }
 
     /* Cek Slug when update */
-    function cekSlug($id_news=null, $slug) {
-        if($id_news=="")
+    function cekSlug($id_news = null, $slug)
+    {
+        if ($id_news == "")
             $cek = News::where('news_slug', $slug)->first();
         else
             $cek = News::where('news_slug', $slug)->select('id_news')->first();
 
         if (empty($cek)) {
             return true;
-        }
-        else {
-            if ($id_news!="" && $cek->id_news == $id_news) {
+        } else {
+            if ($id_news != "" && $cek->id_news == $id_news) {
                 return true;
-            }
-            else {
+            } else {
                 return false;
             }
         }
     }
 
     /* Delete News */
-    function delete(Request $request) {
-            // info news
-            $dataNews = News::where('id_news', $request->json('id_news'))->get()->toArray();
+    function delete(Request $request)
+    {
+        // info news
+        $dataNews = News::where('id_news', $request->json('id_news'))->get()->toArray();
 
-            if (empty($dataNews)) {
-                return response()->json(MyHelper::checkGet($dataNews));
-            }
+        if (empty($dataNews)) {
+            return response()->json(MyHelper::checkGet($dataNews));
+        }
 
-            // hapus semua relasi tablenya
-            $this->deleteRelationTable($request->json('id_news'));
+        // hapus semua relasi tablenya
+        $this->deleteRelationTable($request->json('id_news'));
 
-            // hapus newsnya
-            $delete = News::where('id_news', $request->json('id_news'))->delete();
+        // hapus newsnya
+        $delete = News::where('id_news', $request->json('id_news'))->delete();
 
-            // hapus filenya
-            MyHelper::deletePhoto($dataNews[0]['news_image_luar']);
-            MyHelper::deletePhoto($dataNews[0]['news_image_dalam']);
+        // hapus filenya
+        MyHelper::deletePhoto($dataNews[0]['news_image_luar']);
+        MyHelper::deletePhoto($dataNews[0]['news_image_dalam']);
 
-            return response()->json(MyHelper::checkDelete($delete));
+        return response()->json(MyHelper::checkDelete($delete));
     }
 
     /* Delete news di berbagai table */
-    function deleteRelationTable($id_news) {
+    function deleteRelationTable($id_news)
+    {
         $table = ['news_outlets', 'news_products', 'news_form_structures', 'news_form_datas', 'news_form_data_details'];
 
         foreach ($table as $value) {
@@ -452,24 +458,25 @@ class ApiNews extends Controller
     }
 
     /* Create Relasi Outlet Product */
-    function createRelation(CreateRelation $request) {
+    function createRelation(CreateRelation $request)
+    {
 
         $data['id_news'] = $request->json('id_news');
 
         switch ($request->json('type')) {
-            case 'outlet' :
+            case 'outlet':
                 $data['id_outlet'] = $request->json('id_outlet');
 
                 // save
                 $insert = NewsOutlet::insert($data);
-            break;
+                break;
 
-            case 'product' :
+            case 'product':
                 $data['id_product'] = $request->json('id_product');
 
                 // save
                 $insert = NewsProduct::insert($data);
-            break;
+                break;
 
             default:
                 return response()->json([
@@ -485,96 +492,96 @@ class ApiNews extends Controller
     }
 
     /* Delete Relasi Outlet */
-    function deleteRelation(DeleteRelation $request) {
+    function deleteRelation(DeleteRelation $request)
+    {
         $post = $request->json()->all();
 
         switch ($request->json('type')) {
-            case 'outlet' :
+            case 'outlet':
                 // delete
                 $delete = NewsOutlet::where('id_news', $request->json('id_news'))->delete();
-            break;
+                break;
 
-            case 'product' :
+            case 'product':
                 // delete
                 $delete = NewsProduct::where('id_news', $request->json('id_news'))->delete();
-            break;
+                break;
 
             default:
                 return response()->json([
                     'status'   => 'fail',
                     'messages' => ['type is not define.']
                 ]);
-            break;
+                break;
         }
 
         return response()->json(MyHelper::checkDelete($delete));
     }
 
     /* List */
-    function listNews(Request $request) {
-            $post = $request->json()->all();
+    function listNews(Request $request)
+    {
+        $post = $request->json()->all();
 
-            $news = News::with(['newsCategory'=>function($query){
-                $query->select('id_news_category','category_name');
-            }]);
+        $news = News::with(['newsCategory' => function ($query) {
+            $query->select('id_news_category', 'category_name');
+        }]);
 
-            if(!$request->json('admin')){
-                $news->whereHas('newsCategory');
-            }
+        if (!$request->json('admin')) {
+            $news->whereHas('newsCategory');
+        }
 
-            if(!isset($post['id_news'])){
-                $news->select('id_news','id_news_category','news_title','news_publish_date','news_expired_date','news_slug','news_content_short','news_image_luar','news_image_dalam');
-            }else{
-                $news->with('news_form_structures');
-            }
-            if (isset($post['id_news'])) {
-                $news->where('id_news', $post['id_news'])->with(['newsOutlet', 'newsProduct', 'newsOutlet.outlet.city', 'newsOutlet.outlet.photos', 'newsProduct.product.photos']);
-            }
+        if (!isset($post['id_news'])) {
+            $news->select('id_news', 'id_news_category', 'news_title', 'news_publish_date', 'news_expired_date', 'news_post_date', 'news_slug', 'news_content_short', 'news_image_luar', 'news_image_dalam');
+        } else {
+            $news->with('news_form_structures');
+        }
+        if (isset($post['id_news'])) {
+            $news->where('id_news', $post['id_news'])->with(['newsOutlet', 'newsProduct', 'newsOutlet.outlet.city', 'newsOutlet.outlet.photos', 'newsProduct.product.photos']);
+        }
 
-            if (isset($post['news_slug'])) {
-                $news->slug($post['news_slug'])->with(['newsOutlet', 'newsProduct', 'newsOutlet.outlet.city', 'newsOutlet.outlet.photos', 'newsProduct.product.photos']);
-            }
+        if (isset($post['news_slug'])) {
+            $news->slug($post['news_slug'])->with(['newsOutlet', 'newsProduct', 'newsOutlet.outlet.city', 'newsOutlet.outlet.photos', 'newsProduct.product.photos']);
+        }
 
-            if ($post['id_news_category']??false) {
-                $news->where('id_news_category',$post['id_news_category']);
-            }elseif(($post['id_news_category']??false)===0||($post['id_news_category']??false)==='0'){
-                $news->where('id_news_category',null);
-            }
+        if ($post['id_news_category'] ?? false) {
+            $news->where('id_news_category', $post['id_news_category']);
+        } elseif (($post['id_news_category'] ?? false) === 0 || ($post['id_news_category'] ?? false) === '0') {
+            $news->where('id_news_category', null);
+        }
 
-            if (isset($post['published'])) {
-                $now = date('Y-m-d');
-                $news->where('news_publish_date', '<=', $now);
-                $news->where(function ($query) use ($now) {
-                    $query->where('news_expired_date', '>=', $now)
-                        ->orWhere('news_expired_date', null);
-                });
-            }
-
-            if (isset($post['admin'])) {
-                $news = $news
-                ->select('*')->orderBy('news_post_date', 'DESC')->get()->toArray();
-            }
-            else {
-
-                if (!isset($post['id_news'])) {
-                    $news = $news->orderBy('news_post_date', 'DESC')->paginate(10)->toArray();
-                }
-                else {
-                    $news = $news->orderBy('news_post_date', 'DESC')->get()->toArray();
-                }
-            }
-            if(isset($news['data'])){
-                $updateNews=&$news['data'];
-            }else{
-                $updateNews=&$news;
-            }
-            array_walk($updateNews, function(&$newsItem) use ($post){
-                $newsItem['news_category']=$newsItem['news_category']?:['id_news_category'=>0,'category_name'=>'Uncategories'];
+        if (isset($post['published'])) {
+            $now = date('Y-m-d');
+            $news->where('news_publish_date', '<=', $now);
+            $news->where(function ($query) use ($now) {
+                $query->where('news_expired_date', '>=', $now)
+                    ->orWhere('news_expired_date', null);
             });
-            if(!$updateNews){
-                return response()->json(MyHelper::checkGet([], 'Belum ada berita'));
+        }
+
+        if (isset($post['admin'])) {
+            $news = $news
+                ->select('*')->orderBy('news_post_date', 'DESC')->get()->toArray();
+        } else {
+
+            if (!isset($post['id_news'])) {
+                $news = $news->orderBy('news_post_date', 'DESC')->paginate(10)->toArray();
+            } else {
+                $news = $news->orderBy('news_post_date', 'DESC')->get()->toArray();
             }
-            return response()->json(MyHelper::checkGet($news));
+        }
+        if (isset($news['data'])) {
+            $updateNews = &$news['data'];
+        } else {
+            $updateNews = &$news;
+        }
+        array_walk($updateNews, function (&$newsItem) use ($post) {
+            $newsItem['news_category'] = $newsItem['news_category'] ?: ['id_news_category' => 0, 'category_name' => 'Uncategories'];
+        });
+        if (!$updateNews) {
+            return response()->json(MyHelper::checkGet([], 'Belum ada berita'));
+        }
+        return response()->json(MyHelper::checkGet($news));
     }
 
     function webview(Request $request)
@@ -587,7 +594,7 @@ class ApiNews extends Controller
             return response()->json(['status' => 'fail', 'messages' => ['News not found']]);
         }
 
-        $news[0]['url'] = env('VIEW_URL').'/news/webview/'.$post['id_news'];
+        $news[0]['url'] = env('VIEW_URL') . '/news/webview/' . $post['id_news'];
 
         return response()->json(MyHelper::checkGet($news));
     }
@@ -614,61 +621,60 @@ class ApiNews extends Controller
         }
 
         DB::beginTransaction();
-            $newsFormData = NewsFormData::create([
-                'id_news' => $post['id_news'],
-                'id_user' => $id_user
-            ]);
+        $newsFormData = NewsFormData::create([
+            'id_news' => $post['id_news'],
+            'id_user' => $id_user
+        ]);
 
-            $id_news = $post['id_news'];
+        $id_news = $post['id_news'];
 
-            if ($newsFormData) {
-                foreach ($post['news_form'] as $key => $news_form) {
-                    $value = $this->checkCustomFormValue($news_form);
-                    if(!$value && $news_form['input_value']!=""){
-                        DB::rollback();
-                        return response()->json([
-                            'status'   => 'fail',
-                            'messages' => ['Fail to save data.'],
-                        ]);
-                    }
-
-                    // check unique
-                    if ($news_form['is_unique'] == 1) {
-                        $check = NewsFormDataDetail::where('id_news', $id_news)
-                            ->where('form_input_label', $news_form['input_label'])
-                            ->where('form_input_value', $news_form['input_value'])
-                            ->first();
-                        if ($check) {
-                            return response()->json([
-                                'status'   => 'fail',
-                                'messages' => ['Please check your input again.'],
-                                'is_unique'=> 1
-                            ]);
-                        }
-                    }
-                    $newsFormDataDetail = NewsFormDataDetail::create([
-                        'id_news_form_data' => $newsFormData->id_news_form_data,
-                        'id_news' => $id_news,
-                        'form_input_label' => $news_form['input_label'],
-                        'form_input_value' => $value
+        if ($newsFormData) {
+            foreach ($post['news_form'] as $key => $news_form) {
+                $value = $this->checkCustomFormValue($news_form);
+                if (!$value && $news_form['input_value'] != "") {
+                    DB::rollback();
+                    return response()->json([
+                        'status'   => 'fail',
+                        'messages' => ['Fail to save data.'],
                     ]);
+                }
 
-                    if ( !($newsFormData && $newsFormDataDetail) ) {
-                        DB::rollback();
-
+                // check unique
+                if ($news_form['is_unique'] == 1) {
+                    $check = NewsFormDataDetail::where('id_news', $id_news)
+                        ->where('form_input_label', $news_form['input_label'])
+                        ->where('form_input_value', $news_form['input_value'])
+                        ->first();
+                    if ($check) {
                         return response()->json([
                             'status'   => 'fail',
-                            'messages' => ['Fail to save data.']
+                            'messages' => ['Please check your input again.'],
+                            'is_unique' => 1
                         ]);
                     }
                 }
-            }
-            else {
-                return response()->json([
-                    'status'   => 'fail',
-                    'messages' => ['Fail to save data.']
+                $newsFormDataDetail = NewsFormDataDetail::create([
+                    'id_news_form_data' => $newsFormData->id_news_form_data,
+                    'id_news' => $id_news,
+                    'form_input_label' => $news_form['input_label'],
+                    'form_input_value' => $value
                 ]);
+
+                if (!($newsFormData && $newsFormDataDetail)) {
+                    DB::rollback();
+
+                    return response()->json([
+                        'status'   => 'fail',
+                        'messages' => ['Fail to save data.']
+                    ]);
+                }
             }
+        } else {
+            return response()->json([
+                'status'   => 'fail',
+                'messages' => ['Fail to save data.']
+            ]);
+        }
 
         DB::commit();
 
@@ -690,7 +696,7 @@ class ApiNews extends Controller
                 case 'Date':
                     $value = date('Y-m-d', strtotime($input_value));
                     break;
-                /*case 'Date & Time':
+                    /*case 'Date & Time':
                     $value = date('Y-m-d H:i', strtotime($input_value));
                     break;*/
                 case 'Multiple Choice':
@@ -723,22 +729,21 @@ class ApiNews extends Controller
         $ext = $request->file('news_form_file')->getClientOriginalExtension();
         $filename = $file->getClientOriginalName();
         $filename_only = explode('.', $filename)[0];
-        $new_filename = $filename_only ."-". date('Ymd-His') .".". $ext;
+        $new_filename = $filename_only . "-" . date('Ymd-His') . "." . $ext;
 
         $upload = $file->move($path, $new_filename);
 
         if ($upload) {
             $result = [
-                        'status'    => 'success',
-                        'filename'  => 'upload/news-custom-form/' . $new_filename
-                    ];
+                'status'    => 'success',
+                'filename'  => 'upload/news-custom-form/' . $new_filename
+            ];
             return response()->json($result);
-        }
-        else{
+        } else {
             $result = [
-                        'status'    => 'fail',
-                        'messages'  => ['Upload File Failed.']
-                    ];
+                'status'    => 'fail',
+                'messages'  => ['Upload File Failed.']
+            ];
             return response()->json($result);
         }
     }

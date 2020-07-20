@@ -2,6 +2,7 @@
 
 namespace Modules\Setting\Http\Controllers;
 
+use App\Http\Models\Configs;
 use App\Http\Models\Setting;
 use App\Http\Models\User;
 use App\Http\Models\LogPoint;
@@ -42,6 +43,9 @@ use Modules\Setting\Http\Requests\SettingEdit;
 use Modules\Setting\Http\Requests\SettingUpdate;
 use Modules\Setting\Http\Requests\DatePost;
 
+use App\Exports\DefaultExport;
+use Maatwebsite\Excel\Facades\Excel;
+
 use App\Lib\MyHelper;
 use Validator;
 use Hash;
@@ -57,7 +61,8 @@ class ApiSetting extends Controller
 
     function __construct() {
         date_default_timezone_set('Asia/Jakarta');
-        $this->endPoint = env('S3_URL_API');
+        $this->endPoint = config('url.storage_url_api');
+		$this->autocrm  = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
     }
     public function emailUpdate(Request $request) {
 		$data = $request->json()->all();
@@ -147,7 +152,7 @@ class ApiSetting extends Controller
 
     public function settingList(SettingList $request){
         $data = $request->json()->all();
-
+        
 		if(isset($data['key']))
         $setting = Setting::where('key', $data['key'])->first();
 
@@ -221,22 +226,27 @@ class ApiSetting extends Controller
     }
 
     public function cronPointReset(){
-        $user = User::get();
+        $user = User::select('id','name','phone')->orderBy('name');
 
         //point reset
         $setting = Setting::where('key', 'point_reset')->get();
-
+        $attachments = [];
         DB::beginTransaction();
         if($setting){
+            $userData = [];
             foreach($setting as $date){
                 if($date['value'] == date('d F')){
-                    foreach($user as $datauser){
+                    foreach($user->cursor() as $datauser){
                         $totalPoint = LogPoint::where('id_user', $datauser['id'])->sum('point');
                         if($totalPoint){
                             $dataLog = [
                                 'id_user'                     => $datauser['id'],
                                 'point'                       => -$totalPoint,
                                 'source'                      => 'Point Reset',
+                            ];
+                            $userData[] = [
+                                'User' => "{$datauser['name']} ({$datauser['phone']})",
+                                'Previous Point' => MyHelper::requestNumber($totalBalance,'_CURRENCY')
                             ];
 
                             $insertDataLog = LogPoint::create($dataLog);
@@ -262,6 +272,9 @@ class ApiSetting extends Controller
                     }
                 }
             }
+            if($userData){
+                $attachments[] = Excel::download(new DefaultExport($userData), 'point.xlsx')->getFile();
+            }
 
             DB::commit();
         }
@@ -271,9 +284,10 @@ class ApiSetting extends Controller
 
         DB::beginTransaction();
         if($setting){
+            $userData1 = [];
             foreach($setting as $date){
                 if($date['value'] == date('d F')){
-                    foreach($user as $datauser){
+                    foreach($user->cursor() as $datauser){
                         $totalBalance = LogBalance::where('id_user', $datauser['id'])->sum('balance');
                         if($totalBalance){
                             $dataLog = [
@@ -281,7 +295,10 @@ class ApiSetting extends Controller
                                 'balance'                       => -$totalBalance,
                                 'source'                      => 'Balance Reset',
                             ];
-
+                            $userData1[] = [
+                                'User' => "{$datauser['name']} ({$datauser['phone']})",
+                                'Previous Point' => MyHelper::requestNumber($totalBalance,'_CURRENCY')
+                            ];
                             $insertDataLog = LogBalance::create($dataLog);
                             if (!$insertDataLog) {
                                 DB::rollback();
@@ -306,12 +323,19 @@ class ApiSetting extends Controller
                 }
             }
 
+            if($userData){
+                $attachments[] = Excel::download(new DefaultExport($userData), 'point.xlsx')->getFile();
+            }
+            
             DB::commit();
 
-            return response()->json([
-                'status' => 'success'
-            ]);
         }
+
+        $send = app($this->autocrm)->SendAutoCRM('Report Point Reset', $user->first()->phone, ['datetime_reset' => date('d F Y H:i'), 'attachment' => $attachments],null,true);
+
+        return response()->json([
+            'status' => 'success'
+        ]);
 
     }
 
@@ -634,7 +658,7 @@ class ApiSetting extends Controller
     }
 
     public function faqList(FaqList $request) {
-        $faqList = Faq::orderBy('id_faq', 'ASC')->get()->toArray();
+        $faqList = Faq::orderBy('faq_number_list', 'ASC')->get()->toArray();
 
         return response()->json(MyHelper::checkGet($faqList));
     }
@@ -661,6 +685,30 @@ class ApiSetting extends Controller
         $delete = Faq::where('id_faq', $id)->delete();
 
         return response()->json(MyHelper::checkDelete($delete));
+    }
+
+    public function faqSortUpdate(Request $request) {
+        $id_faq = $request->json('id_faq');
+        $number_list = 0;
+
+        foreach ($id_faq as $dt){
+            $status = Faq::where('id_faq', $dt)->update(['faq_number_list' => $number_list + 1]);
+            if(!$status){
+                $result = [
+                    'status' => 'fail'
+                ];
+                return response()->json($result);
+            }
+            $number_list++;
+        }
+
+        if($status){
+            $result = [
+                'status' => 'success'
+            ];
+        }
+
+        return response()->json($result);
     }
 
     public function date(DatePost $request) {
@@ -1044,7 +1092,7 @@ class ApiSetting extends Controller
 
         return response()->json([
             'status' => 'success',
-            'url' => env('API_URL').'api/setting/faq/webview'
+            'url' => config('url.api_url').'api/setting/faq/webview'
         ]);
     }
 
@@ -1057,7 +1105,7 @@ class ApiSetting extends Controller
 
         return response()->json([
             'status' => 'success',
-            'url' => env('API_URL').'api/setting/webview/'.$post['key']
+            'url' => config('url.api_url').'api/setting/webview/'.$post['key']
         ]);
 
     }
@@ -1163,27 +1211,78 @@ class ApiSetting extends Controller
         }
     }
 
-    public function textMenuList(){
+    /* ============== Start Text Menu Setting ============== */
+    public function configsMenu(){
 
         try{
-            $textMenuHome = Setting::where('key', 'text_menu_home')->first()->value_text;
-            $textMenuAccount = Setting::where('key', 'text_menu_account')->first()->value_text;
-            $menuAccount = (array)json_decode($textMenuAccount);
-
-            foreach ($menuAccount as $key=>$value){
-                $val = (array)$value;
-                if($val['icon'] != ''){
-                    $menuAccount[$key]->icon = env('S3_URL_API').$val['icon'];
-                }
-            }
+            $mainMenu = Configs::where('config_name', 'icon main menu')->first();
+            $otherMenu = Configs::where('config_name', 'icon other menu')->first();
 
             $result = [
                 'status' => 'success',
                 'result' => [
-                    'text_menu_home' => json_decode($textMenuHome),
-                    'text_menu_account' => $menuAccount
+                    'config_main_menu' => $mainMenu,
+                    'config_other_menu' => $otherMenu
                 ]
             ];
+
+            return response()->json($result);
+
+        }catch(Exception $e){
+
+            return response()->json(['status' => 'fail', 'messages' => []]);
+        }
+    }
+
+    public function textMenuList(Request $request){
+        $post = $request->json()->all();
+
+        try{
+            $textMenuMain = Setting::where('key', 'text_menu_main')->first()->value_text;
+            $textMenuOther = Setting::where('key', 'text_menu_other')->first()->value_text;
+            $menuOther = (array)json_decode($textMenuOther);
+            $menuMain = (array)json_decode($textMenuMain);
+
+            foreach ($menuOther as $key=>$value){
+                $val = (array)$value;
+                if($val['icon'] != ''){
+                    $menuOther[$key]->icon = config('url.storage_url_api').$val['icon'];
+                }
+            }
+
+            foreach ($menuMain as $key=>$value){
+                $val = (array)$value;
+                if($val['icon1'] != ''){
+                    $menuMain[$key]->icon1 = config('url.storage_url_api').$val['icon1'];
+                }
+                if($val['icon2'] != ''){
+                    $menuMain[$key]->icon2 = config('url.storage_url_api').$val['icon2'];
+                }
+            }
+
+            if(!isset($post['webview'])){
+                $count = count($menuOther);
+                $row = $count / 2;
+                $arr1 = array_slice($menuOther,0,$row+1);
+                $arr2 = array_slice($menuOther,$row+1,$count);
+
+                $arr = [array_values($arr1), array_values($arr2)];
+                $result = [
+                    'status' => 'success',
+                    'result' => [
+                        'main_menu' => array_values($menuMain),
+                        'other_menu' => $arr
+                    ]
+                ];
+            }else{
+                $result = [
+                    'status' => 'success',
+                    'result' => [
+                        'main_menu' => $menuMain,
+                        'other_menu' => $menuOther
+                    ]
+                ];
+            }
 
             return response()->json($result);
 
@@ -1204,46 +1303,84 @@ class ApiSetting extends Controller
                 $menu = $post['data_menu'];
                 $arrFailedUploadImage = [];
 
-                if($category == 'menu-home'){
+                if($category == 'main-menu'){
+                    $getmainMenu = Setting::where('key', 'text_menu_main')->first()->value_text;
+                    $mainMenu = (array)json_decode($getmainMenu);
 
-                    $dataMenuForUpdate = [
-                        "home" => [
-                            "text_menu" => $menu['home_text_menu'],
-                            "text_header" => $menu['home_text_header']
-                        ],
-                        "deals" => [
-                            "text_menu" => $menu['deals_text_menu'],
-                            "text_header" => $menu['deals_text_header']
-                        ],
-                        "voucher" => [
-                            "text_menu" => $menu['voucher_text_menu'],
-                            "text_header" => $menu['voucher_text_header']
-                        ],
-                        "history" => [
-                            "text_menu" => $menu['history_text_menu'],
-                            "text_header" => $menu['history_text_header']
-                        ],
-                        "account" => [
-                            "text_menu" => $menu['account_text_menu'],
-                            "text_header" => $menu['account_text_header']
-                        ]
-                    ];
+                    foreach ($mainMenu as $key=>$value){
+                        $nameIcon1 = 'icon1_'.$key;
+                        $nameIcon2 = 'icon2_'.$key;
+                        $val = (array)$value;
 
-                    $update = Setting::where('key','text_menu_home')->update(['value_text' => json_encode($dataMenuForUpdate), 'updated_at' => date('Y-m-d H:i:s')]);
+                        $mainMenu[$key]->text_menu = $menu[$key.'_text_menu'];
+                        $mainMenu[$key]->text_header = $menu[$key.'_text_header'];
+                        if(isset($menu['images'][$nameIcon1])){
+                            if($val['icon1'] != ''){
+                                //Delete old icon
+                                MyHelper::deletePhoto($val['icon1']);
+                            }
+                            $imgEncode = $menu['images'][$nameIcon1];
+
+                            $decoded = base64_decode($imgEncode);
+                            $img    = Image::make($decoded);
+                            $width  = $img->width();
+                            $height = $img->height();
+
+                            if($width == $height){
+                                $upload = MyHelper::uploadPhoto($imgEncode, $path = 'img/icon/');
+
+                                if ($upload['status'] == "success") {
+                                    $mainMenu[$key]->icon1 = $upload['path'];
+                                } else {
+                                    array_push($arrFailedUploadImage, $key);
+                                }
+                            }else{
+                                array_push($arrFailedUploadImage, $key.'[dimensions not allowed]');
+                            }
+                        }
+
+                        if(isset($menu['images'][$nameIcon2])){
+                            if($val['icon2'] != ''){
+                                //Delete old icon
+                                MyHelper::deletePhoto($val['icon2']);
+                            }
+                            $imgEncode = $menu['images'][$nameIcon2];
+
+                            $decoded = base64_decode($imgEncode);
+                            $img    = Image::make($decoded);
+                            $width  = $img->width();
+                            $height = $img->height();
+
+                            if($width == $height){
+                                $upload = MyHelper::uploadPhoto($imgEncode, $path = 'img/icon/');
+
+                                if ($upload['status'] == "success") {
+                                    $mainMenu[$key]->icon2 = $upload['path'];
+                                } else {
+                                    array_push($arrFailedUploadImage, $key);
+                                }
+                            }else{
+                                array_push($arrFailedUploadImage, $key.'[dimensions not allowed]');
+                            }
+                        }
+                    }
+
+                    $update = Setting::where('key','text_menu_main')->update(['value_text' => json_encode($mainMenu), 'updated_at' => date('Y-m-d H:i:s')]);
 
                     if(!$update){
                         return response()->json(['status' => 'fail', 'messages' => ['There is an error']]);
                     }
-                }elseif($category == 'menu-account'){
-                    $textMenuAccount = Setting::where('key', 'text_menu_account')->first()->value_text;
-                    $menuAccount = (array)json_decode($textMenuAccount);
 
-                    foreach ($menuAccount as $key=>$value){
+                }elseif($category == 'other-menu'){
+                    $textOtherMenu = Setting::where('key', 'text_menu_other')->first()->value_text;
+                    $otherMenu = (array)json_decode($textOtherMenu);
+
+                    foreach ($otherMenu as $key=>$value){
                         $nameIcon = 'icon_'.$key;
                         $val = (array)$value;
 
-                        $menuAccount[$key]->text_menu = $menu[$key.'_text_menu'];
-                        $menuAccount[$key]->text_header = $menu[$key.'_text_header'];
+                        $otherMenu[$key]->text_menu = $menu[$key.'_text_menu'];
+                        $otherMenu[$key]->text_header = $menu[$key.'_text_header'];
                         if(isset($menu['images'][$nameIcon])){
                             if($val['icon'] != ''){
                                 //Delete old icon
@@ -1260,7 +1397,7 @@ class ApiSetting extends Controller
                                 $upload = MyHelper::uploadPhoto($imgEncode, $path = 'img/icon/');
 
                                 if ($upload['status'] == "success") {
-                                    $menuAccount[$key]->icon= $upload['path'];
+                                    $otherMenu[$key]->icon= $upload['path'];
                                 } else {
                                     array_push($arrFailedUploadImage, $key);
                                 }
@@ -1270,7 +1407,7 @@ class ApiSetting extends Controller
                         }
                     }
 
-                    $update = Setting::where('key','text_menu_account')->update(['value_text' => json_encode($menuAccount), 'updated_at' => date('Y-m-d H:i:s')]);
+                    $update = Setting::where('key','text_menu_other')->update(['value_text' => json_encode($otherMenu), 'updated_at' => date('Y-m-d H:i:s')]);
 
                     if(!$update){
                         return response()->json(['status' => 'fail', 'messages' => ['There is an error']]);
@@ -1294,6 +1431,8 @@ class ApiSetting extends Controller
             return response()->json(['status' => 'fail', 'messages' => ['Incomplated Input']]);
         }
     }
+
+    /* ============== End Text Menu Setting ============== */
 
     public function update(Request $request){
         if(($updates = $request->json('update'))&&is_array($updates)){
@@ -1329,4 +1468,150 @@ class ApiSetting extends Controller
             'messages'=>['No setting updated']
         ];        
     }
+
+    /* ============== Start Phone Setting ============== */
+    public function phoneSetting(Request $request){
+        $phoneSetting = Setting::where('key', 'phone_setting')->first()->value_text;
+
+        if($phoneSetting){
+            $result = [
+                'status' => 'success',
+                'result' => [
+                    'data' => json_decode($phoneSetting),
+                    'phone_code' => $codePhone = config('countrycode.country_code.'.env('COUNTRY_CODE').'.code'),
+                    'example_phone' => env('EXAMPLE_PHONE')
+                ]
+            ];
+
+            return response()->json($result);
+        }else{
+            return response()->json([
+                'status'=>'fail',
+                'messages'=>['Failed get phone setting']
+            ]);
+        }
+    }
+
+    public function updatePhoneSetting(Request $request){
+        $data = $request->json()->all();
+        if($data['max_length_number'] < $data['min_length_number']){
+            return response()->json(['status'=>'fail','message' => "Please input maximum above the minimum"]);
+        }
+
+        if($data['min_length_number'] > $data['max_length_number']){
+            return response()->json(['status'=>'fail','message' => "Please input minimum below the maximum"]);
+        }
+        $updatePhoneSetting = Setting::where('key', 'phone_setting')->update(['value_text' => json_encode($data)]);
+
+        if($updatePhoneSetting){
+            return response()->json(['status'=>'success']);
+        }else{
+            return response()->json(['status'=>'fail','message' => "Failed update"]);
+        }
+    }
+    /* ============== End Phone Setting ============== */
+
+    /* ============== Start Maintenance Mode Setting ============== */
+    function maintenanceMode(){
+        $data = Setting::where('key', 'maintenance_mode')->first();
+        if($data){
+            $dt = (array)json_decode($data['value_text']);
+            $newDt['status'] = $data['value'];
+            $newDt['message'] = $dt['message'];
+            if($dt['image'] != ""){
+                $newDt['image'] = config('url.storage_url_api').$dt['image'];
+            }else{
+                $newDt['image'] = "";
+            }
+            $data = $newDt;
+        }
+        return response()->json(MyHelper::checkGet($data));
+    }
+    function updateMaintenanceMode(Request $request){
+        $post = $request->json()->all();
+        if(isset($post['status']) && $post['status'] == 'on'){
+            $status = 1;
+        }else{
+            $status = 0;
+        }
+        $getData = Setting::where('key', 'maintenance_mode')->first();
+        $decode = (array)json_decode($getData['value_text']);
+        $valueText = ['message' => $post['message'], 'image' => $decode['image']];
+        $imageToUpload = "";
+        if(isset($post['image']) && !empty($post['image'])){
+            if($decode['image'] != ''){
+                //Delete old icon
+                MyHelper::deletePhoto($decode['image']);
+            }
+            $decoded = base64_decode($post['image']);
+            $img    = Image::make($decoded);
+            $width  = $img->width();
+            $height = $img->height();
+            if($width == $height){
+                $upload = MyHelper::uploadPhoto($post['image'], $path = 'img/maintenance/');
+                if ($upload['status'] == "success") {
+                    $valueText['image'] = $upload['path'];
+                }
+            }else{
+                return response()->json(['status' => 'fail', 'messages' => ['Dimensions not allowed']]);
+            }
+        }
+        $dataToUpdate = [
+            'value' => $status,
+            'value_text' => json_encode($valueText)
+        ];
+        $update = Setting::where('key', 'maintenance_mode')->update($dataToUpdate);
+        return response()->json(MyHelper::checkUpdate($update));
+    }
+    /* ============== End Maintenance Mode Setting ============== */
+
+    public function settingPhoneNumber() {
+        $phoneSetting = Setting::where('key', 'phone_setting')->first();
+
+        if($phoneSetting){
+            $result = [
+                'status' => 'success',
+                'result' => json_decode($phoneSetting['value_text'])
+            ];
+
+            return response()->json($result);
+        }else{
+            return response()->json([
+                'status'=>'fail',
+                'messages'=>['Failed get phone setting']
+            ]);
+        }
+    }
+
+    /* ============== Start Time Expired Setting ============== */
+    function timeExpired(){
+        $timeOtp = Setting::where('key', 'setting_expired_otp')->first();
+        $timeEmail = Setting::where('key', 'setting_expired_time_email_verify')->first();
+
+        $data = [];
+        if($timeOtp){
+            $data['expired_otp'] = $timeOtp['value'];
+        }
+
+        if($timeEmail){
+            $data['expired_time_email'] = $timeEmail['value'];
+        }
+
+        return response()->json(MyHelper::checkGet($data));
+    }
+
+    function updateTimeExpired(Request $request){
+        $post = $request->json()->all();
+
+        if(isset($post['expired_otp'])){
+            $update = Setting::where('key', 'setting_expired_otp')->update(['value' => $post['expired_otp']]);
+        }
+
+        if(isset($post['expired_time_email'])){
+            $update = Setting::where('key', 'setting_expired_time_email_verify')->update(['value' => $post['expired_time_email']]);
+        }
+
+        return response()->json(MyHelper::checkUpdate($update));
+    }
+    /* ============== End Time Expired Setting ============== */
 }

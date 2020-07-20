@@ -27,7 +27,7 @@ class ApiCustomPageController extends Controller
     public function index()
     {
         $customPage = CustomPage::orderBy('custom_page_order')->get()->toArray();
-
+        $nullOrZero = [];
         foreach ($customPage as $key => $value) {
             if ($value['custom_page_order'] == null || $value['custom_page_order'] == 0) {
                 $nullOrZero[] = $customPage[$key];
@@ -303,7 +303,7 @@ class ApiCustomPageController extends Controller
         }
 
         DB::commit();
-        return response()->json(['status'  => 'success', 'result' => ['id_custom_page' => $insertCustomPage['id_custom_page']]]);
+        return response()->json(['status'  => 'success', 'result' => ['id_custom_page' => $insertCustomPage['id_custom_page'], 'created_at' => $insertCustomPage['created_at']]]);
     }
 
     /**
@@ -335,7 +335,7 @@ class ApiCustomPageController extends Controller
     public function listCustomPage()
     {
         $customPage = CustomPage::orderBy('custom_page_order')->get()->toArray();
-
+        $nullOrZero = [];
         foreach ($customPage as $key => $value) {
             if ($value['custom_page_order'] == null || $value['custom_page_order'] == 0) {
                 $nullOrZero[] = $customPage[$key];
@@ -356,19 +356,34 @@ class ApiCustomPageController extends Controller
         $result = [];
         if ($dataMerge) {
             foreach ($dataMerge as $key => $value) {
-                $result[$key]['url']            = env("APP_URL") . 'custom-page/webview/' . $value['id_custom_page'];
+                $result[$key]['url']            = config('url.api_url') . 'api/custom-page/webview/' . $value['id_custom_page'];
                 $result[$key]['title']          = $value['custom_page_title'];
-                $result[$key]['icon_image']     = env("APP_API_URL") . $value['custom_page_icon_image'];
+                $result[$key]['icon_image']     = config('url.storage_url_api') . $value['custom_page_icon_image'];
             }
         }
 
         return response()->json(['status'  => 'success', 'result' => $result]);
     }
 
-    public function webviewCustomPage($id_custom_page)
+    public function webviewCustomPage(Request $request, $id_custom_page)
     {
+        $bearer = $request->header('Authorization');
+
+        if ($bearer == "") {
+            return view('error', ['msg' => 'Unauthenticated']);
+        }
+
         $customPage = CustomPage::with(['custom_page_image_header', 'custom_page_outlet.outlet', 'custom_page_product.product'])->where('id_custom_page', $id_custom_page)->first();
 
-        return response()->json(['status'  => 'success', 'result' => $customPage]);
+        if ($customPage) {
+            $data['result'] = $customPage;
+
+            $data['result']['custom_page_button_form_text_button'] = json_decode($customPage['custom_page_button_form_text'], true)['button'];
+            $data['result']['custom_page_button_form_text_value'] = json_decode($customPage['custom_page_button_form_text'], true)['value'];
+
+            return view('custompage::webview.information', $data);
+        } else {
+            return view('custompage::webview.information', ['result' => null]);
+        }
     }
 }

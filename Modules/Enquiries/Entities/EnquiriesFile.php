@@ -26,7 +26,7 @@ class EnquiriesFile extends Model
 
 	public function getUrlEnquiryFileAttribute() {
 	    if (!empty($this->enquiry_file)) {
-	        return env('S3_URL_API').$this->enquiry_file;
+	        return config('url.storage_url_api').$this->enquiry_file;
 	    }
 	}
 }

@@ -9,6 +9,7 @@ namespace App\Http\Models;
 
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Modules\Product\Entities\ProductDetail;
 use SMartins\PassportMultiauth\HasMultiAuthApiTokens;
 use Hash;
 
@@ -66,6 +67,7 @@ class Outlet extends Authenticatable
 	// ];
 
 	protected $fillable = [
+		'id_outlet_seed',
 		'outlet_code',
 		'outlet_pin',
 		'outlet_name',
@@ -79,9 +81,12 @@ class Outlet extends Authenticatable
 		'outlet_status',
 		'deep_link_gojek',
 		'deep_link_grab',
-		'big_order'
+		'big_order',
 		// 'outlet_open_hours',
 		// 'outlet_close_hours'
+		'status_franchise',
+        'outlet_special_status',
+        'outlet_special_fee'
 	];
 
 	protected $appends  = ['call', 'url'];
@@ -93,7 +98,7 @@ class Outlet extends Authenticatable
 
 	public function getUrlAttribute()
 	{
-		return env('VIEW_URL').'/outlet/webview/'.$this->id_outlet;
+		return config('url.api_url').'/api/outlet/webview/'.$this->id_outlet;
 	}
 
 	public function brands(){
@@ -134,6 +139,16 @@ class Outlet extends Authenticatable
 	{
 		return $this->hasMany(\App\Http\Models\ProductPrice::class, 'id_outlet');
 	}
+
+    public function product_special_price()
+    {
+        return $this->hasMany(\Modules\Product\Entities\ProductSpecialPrice::class, 'id_outlet');
+    }
+
+    public function product_detail()
+    {
+        return $this->hasMany(\Modules\Product\Entities\ProductDetail::class, 'id_outlet');
+    }
 
 	public function user_outlets()
 	{
@@ -181,4 +196,8 @@ class Outlet extends Authenticatable
 
 		return $this->belongsTo(OutletSchedule::class, 'id_outlet', 'id_outlet')->where('day', $hari_ini);
 	}
+
+	public function payment_method_outlet(){
+        return $this->hasMany(\App\Http\Models\PaymentMethodOutlet::class, 'id_outlet');
+    }
 }

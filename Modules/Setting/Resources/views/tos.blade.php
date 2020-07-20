@@ -14,13 +14,13 @@
                 font-family: "ProductSans-Medium";
                 font-style: normal;
                 font-weight: 400;
-                src: url('{{ env('S3_URL_VIEW') }}{{ ('/fonts/ProductSans-Medium.ttf') }}');
+                src: url('{{ config('url.storage_url_view') }}{{ ('/fonts/ProductSans-Medium.ttf') }}');
         }
         @font-face {
                 font-family: "ProductSans-Regular";
                 font-style: normal;
                 font-weight: 400;
-                src: url('{{ env('S3_URL_VIEW') }}{{ ('/fonts/ProductSans-Regular.ttf') }}');
+                src: url('{{ config('url.storage_url_view') }}{{ ('/fonts/ProductSans-Regular.ttf') }}');
         }
 		.ProductSans{
             font-family: "ProductSans-Regular";
@@ -121,9 +121,7 @@
     </div>
     <div class="kotak-full">
         <div class="container">
-            <div class="row">
-                <div class="col-12 text-14px ProductSans text-grey-white"><?php echo $value; ?></div>
-            </div>
+            <div class="col-12 text-14px ProductSans text-grey-white"><?php echo $value; ?></div>
         </div>
     </div>
 

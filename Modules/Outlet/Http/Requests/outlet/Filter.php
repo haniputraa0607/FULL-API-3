@@ -16,7 +16,8 @@ class Filter extends FormRequest
     public function rules()
     {
         return [
-            'sort'			=> 'in:Alphabetical,Nearest'
+            'sort'			=> 'in:Alphabetical,Nearest',
+            'promo_code'	=> 'nullable',
         ];
     }
 

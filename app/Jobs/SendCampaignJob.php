@@ -16,6 +16,7 @@ use App\Http\Models\CampaignSmsSent;
 use App\Http\Models\CampaignPushSent;
 use App\Http\Models\Outlet;
 use App\Http\Models\News;
+use App\Http\Models\Deal;
 use App\Http\Models\Setting;
 use App\Http\Models\OauthAccessToken;
 //use Modules\Campaign\Http\Requests\campaign_list;
@@ -25,8 +26,10 @@ use App\Http\Models\OauthAccessToken;
 
 use App\Lib\PushNotificationHelper;
 use App\Lib\classMaskingJson;
+use App\Lib\classJatisSMS;
+use App\Lib\ValueFirst;
 use DB;
-use Mailgun;
+use Mail;
 
 class SendCampaignJob implements ShouldQueue
 {
@@ -54,6 +57,7 @@ class SendCampaignJob implements ShouldQueue
         $userr     = "Modules\Users\Http\Controllers\ApiUser";
         $autocrm  = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
         $rajasms = new classMaskingJson();
+		$this->jatissms = new classJatisSMS();
         $campaign=$this->data['campaign'];
         $type=$this->data['type'];
         $recipient=$this->data['recipient'];
@@ -150,20 +154,18 @@ class SendCampaignJob implements ShouldQueue
                     );
 
                     try{
-                        Mailgun::send('emails.test', $data, function($message) use ($to,$subject,$name,$setting)
+                        Mail::send('emails.test', $data, function($message) use ($to,$subject,$name,$setting)
                         {
 
                             if(stristr($to, 'gmail.con')){
                                 $to = str_replace('gmail.con', 'gmail.com', $to);
                             }
 
-                            $message->to($to, $name)->subject($subject)
-                                            ->trackClicks(true)
-                                            ->trackOpens(true);
+                            $message->to($to, $name)->subject($subject);
                             if(!empty($setting['email_from']) && !empty($setting['email_sender'])){
-                                $message->from($setting['email_from'], $setting['email_sender']);
-                            }else if(!empty($setting['email_from'])){
-                                $message->from($setting['email_from']);
+                                $message->from($setting['email_sender'], $setting['email_from']);
+                            }else if(!empty($setting['email_sender'])){
+                                $message->from($setting['email_sender']);
                             }
 
                             if(!empty($setting['email_reply_to'])){
@@ -197,25 +199,76 @@ class SendCampaignJob implements ShouldQueue
 
                 }
                 break;
-            
+
             case 'sms':
                 $senddata = array(
                     'apikey' => env('SMS_KEY'),
-                    'callbackurl' => env('APP_URL'),
+                    'callbackurl' => config('url.app_url'),
                     'datapacket'=>array()
                 );
-    
-            
+
+
                 foreach($recipient as $key => $receipient){
                     $content    = app($autocrm)->TextReplace($campaign['campaign_sms_content'], $receipient);
 
-                    array_push($senddata['datapacket'],array(
-                            'number' => trim($receipient),
-                            'message' => urlencode(stripslashes(utf8_encode($content))),
-                            'sendingdatetime' => ""));
+                    switch (env('SMS_GATEWAY')) {
+						case 'Jatis':
+							$senddata = [
+								'userid'	=> env('SMS_USER'),
+								'password'	=> env('SMS_PASSWORD'),
+								'msisdn'	=> '62'.substr($receipient,1),
+								'sender'	=> env('SMS_SENDER'),
+								'division'	=> env('SMS_DIVISION'),
+								'batchname'	=> env('SMS_BATCHNAME'),
+                                'uploadby'	=> env('SMS_UPLOADBY'),
+                                'channel'   => env('SMS_CHANNEL')
+							];
 
-                    $rajasms->setData($senddata);
-                    $send = $rajasms->send();
+                            $senddata['message'] = $content;
+
+							$this->jatissms->setData($senddata);
+							$send = $this->jatissms->send();
+
+							break;
+						case 'RajaSMS':
+							$senddata = array(
+								'apikey' => env('SMS_KEY'),
+								'callbackurl' => config('url.app_url'),
+								'datapacket'=>array()
+							);
+
+                            array_push($senddata['datapacket'],array(
+                                'number' => trim($receipient),
+                                'message' => urlencode(stripslashes(utf8_encode($content))),
+                                'sendingdatetime' => ""));
+
+							$this->rajasms->setData($senddata);
+							$send = $this->rajasms->send();
+							break;
+                        case 'ValueFirst':
+                            $sendData = [
+                                'to' => trim($receipient),
+                                'text' => $content
+                            ];
+
+                            ValueFirst::create()->send($sendData);
+                            break;
+						default:
+							$senddata = array(
+								'apikey' => env('SMS_KEY'),
+								'callbackurl' => config('url.app_url'),
+								'datapacket'=>array()
+							);
+
+                            array_push($senddata['datapacket'],array(
+                                'number' => trim($receipient),
+                                'message' => urlencode(stripslashes(utf8_encode($content))),
+                                'sendingdatetime' => ""));
+
+							$this->rajasms->setData($senddata);
+							$send = $this->rajasms->send();
+							break;
+					}
 
                     $outbox = [];
                     $outbox['id_campaign'] = $campaign['id_campaign'];
@@ -239,8 +292,8 @@ class SendCampaignJob implements ShouldQueue
                     $dataOptional          = [];
                     $image = null;
                     if (isset($campaign['campaign_push_image']) && $campaign['campaign_push_image'] != null) {
-                        $dataOptional['image'] = env('S3_URL_API').$campaign['campaign_push_image'];
-                        $image = env('S3_URL_API').$campaign['campaign_push_image'];
+                        $dataOptional['image'] = config('url.storage_url_api').$campaign['campaign_push_image'];
+                        $image = config('url.storage_url_api').$campaign['campaign_push_image'];
                     }
 
                     if (isset($campaign['campaign_push_clickto']) && $campaign['campaign_push_clickto'] != null) {
@@ -268,14 +321,20 @@ class SendCampaignJob implements ShouldQueue
                         $news = News::find($campaign['campaign_push_id_reference']);
                         if($news){
                             $dataOptional['news_title'] = $news->news_title;
+                            $dataOptional['title'] = $news->news_title;
                         }
-                        $dataOptional['url'] = env('APP_URL').'news/webview/'.$campaign['campaign_push_id_reference'];
+                        $dataOptional['url'] = config('url.app_url').'news/webview/'.$campaign['campaign_push_id_reference'];
                     }
-
-                    if($campaign['campaign_push_clickto'] == 'Order' && $campaign['campaign_push_id_reference'] != null){
+                    elseif($campaign['campaign_push_clickto'] == 'Order' && $campaign['campaign_push_id_reference'] != null){
                         $outlet = Outlet::find($campaign['campaign_push_id_reference']);
                         if($outlet){
-                            $dataOptional['news_title'] = $outlet->outlet_name;
+                            $dataOptional['title'] = $outlet->outlet_name;
+                        }
+                    }
+                    elseif($campaign['campaign_push_clickto'] == 'Deals' && $campaign['campaign_push_id_reference'] != null){
+                        $deals = Deal::find($campaign['campaign_push_id_reference']);
+                        if($deals){
+                            $dataOptional['title'] = $deals->deals_title;
                         }
                     }
 
@@ -337,6 +396,12 @@ class SendCampaignJob implements ShouldQueue
 
                     if(!empty($campaign['campaign_inbox_id_reference'])){
                         $inbox['inboxes_id_reference'] = $campaign['campaign_inbox_id_reference'];
+                    }else{
+                        $inbox['inboxes_id_reference'] = 0;
+                    }
+
+                    if($campaign['campaign_inbox_clickto'] == 'No Action' || !empty($campaign['campaign_inbox_clickto'])){
+                        $inbox['inboxes_clickto'] = 'Default';
                     }
 
                     $inbox['inboxes_send_at'] = date("Y-m-d H:i:s");

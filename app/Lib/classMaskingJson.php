@@ -1,4 +1,4 @@
-<?php 
+<?php
 
 namespace App\Lib;
 
@@ -20,16 +20,18 @@ class classMaskingJson {
 		);
 		curl_setopt($curlHandle, CURLOPT_TIMEOUT, 5);
 		curl_setopt($curlHandle, CURLOPT_CONNECTTIMEOUT, 5);
-		
+
 		$hasil = curl_exec($curlHandle);
+		$curl_response = $hasil;
 		$curl_errno = curl_errno($curlHandle);
-		$curl_error = curl_error($curlHandle);	
+		$curl_error = curl_error($curlHandle);
 		$http_code  = curl_getinfo($curlHandle, CURLINFO_HTTP_CODE);
+		$curl_info=json_encode(curl_getinfo($curlHandle));
 		curl_close($curlHandle);
 		if ($curl_errno > 0) {
 			$senddata = array(
 			'sending_respon'=>array(
-				'globalstatus' => 90, 
+				'globalstatus' => 90,
 				'globalstatustext' => $curl_errno."|".$http_code)
 			);
 			$hasil=json_encode($senddata);
@@ -37,15 +39,32 @@ class classMaskingJson {
 			if ($http_code<>"200") {
 			$senddata = array(
 			'sending_respon'=>array(
-				'globalstatus' => 90, 
+				'globalstatus' => 90,
 				'globalstatustext' => $curl_errno."|".$http_code)
 			);
-			$hasil= json_encode($senddata);	
-			}	
+			$hasil= json_encode($senddata);
+			}
 		}
-		return $hasil;				
+
+        $phone = null;
+        if(isset($this->data['number'])){
+            if(substr($this->data['number'], 0, 2) == '62'){
+                $phone = '0'.substr($this->data['number'],2);
+            }else{
+                $phone = $this->data['number'];
+            }
+        }
+		$log=[
+			'request_body'=>$this->data,
+			'request_url'=>env('SMS_URL'),
+			'response'=>$curl_response,
+			'phone'=>$phone
+		];
+		MyHelper::logApiSMS($log);
+
+		return $hasil;
 	}
-	public function balance() {	
+	public function balance() {
 		$dt=json_encode($this->data);
 		$curlHandle = curl_init(env('SMS_URL')."/sms/api_sms_masking_balance_json.php");
 		curl_setopt($curlHandle, CURLOPT_CUSTOMREQUEST, "POST");
@@ -59,13 +78,13 @@ class classMaskingJson {
 		curl_setopt($curlHandle, CURLOPT_CONNECTTIMEOUT, 5);
 		$hasil = curl_exec($curlHandle);
 		$curl_errno = curl_errno($curlHandle);
-		$curl_error = curl_error($curlHandle);	
+		$curl_error = curl_error($curlHandle);
 		$http_code  = curl_getinfo($curlHandle, CURLINFO_HTTP_CODE);
 		curl_close($curlHandle);
 		if ($curl_errno > 0) {
 			$senddata = array(
 			'sending_respon'=>array(
-				'globalstatus' => 90, 
+				'globalstatus' => 90,
 				'globalstatustext' => $curl_errno."|".$http_code)
 			);
 			$hasil=json_encode($senddata);
@@ -73,12 +92,12 @@ class classMaskingJson {
 			if ($http_code<>"200") {
 			$senddata = array(
 			'sending_respon'=>array(
-				'globalstatus' => 90, 
+				'globalstatus' => 90,
 				'globalstatustext' => $curl_errno."|".$http_code)
 			);
-			$hasil= json_encode($senddata);	
-			}	
+			$hasil= json_encode($senddata);
+			}
 		}
-		return $hasil;		
+		return $hasil;
 	}
 }

@@ -26,6 +26,7 @@ class DailyReportTrxMenu extends Model
         'total_rec',
         'total_qty',
         'total_nominal',
+        'total_product_discount',
         'cust_male',
         'cust_female',
         'cust_android',
@@ -39,7 +40,9 @@ class DailyReportTrxMenu extends Model
         'cust_teens',
         'cust_young_adult',
         'cust_adult',
-        'cust_old'
+        'cust_old',
+        'product_name',
+        'id_brand'
     ];
 	
     public function product()
@@ -51,4 +54,9 @@ class DailyReportTrxMenu extends Model
     {
         return $this->belongsTo(Outlet::class, 'id_outlet', 'id_outlet');
     }
+
+    public function brand()
+    {
+		return $this->belongsTo(\Modules\Brand\Entities\Brand::class,'id_brand');
+	}
 }

@@ -19,13 +19,14 @@ class OutletAppServiceProvider extends ServiceProvider
      *
      * @return void
      */
-    public function boot()
+    public function boot(\Illuminate\Routing\Router $router)
     {
         $this->registerTranslations();
         $this->registerConfig();
         $this->registerViews();
         $this->registerFactories();
         $this->loadMigrationsFrom(__DIR__ . '/../Database/Migrations');
+        $router->aliasMiddleware('validateUserOutlet', \Modules\OutletApp\Http\Middleware\ValidateAccess::class);
     }
 
     /**

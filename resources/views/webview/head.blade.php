@@ -2,71 +2,91 @@
 	<title>{{ $title }}</title>
 	<meta charset="utf-8" />
     <meta content="width=device-width, initial-scale=1" name="viewport" />
-
-    <script src="{{ env('S3_URL_VIEW') }}{{ ('assets/global/plugins/pace/pace.min.js') }}" type="text/javascript"></script>
-    <link href="{{ env('S3_URL_VIEW') }}{{ ('assets/webview/css/pace-flash.css') }}" rel="stylesheet" type="text/css" />
-    <!-- BEGIN GLOBAL MANDATORY STYLES -->
-    <link href="{{ env('S3_URL_VIEW') }}{{ ('assets/global/plugins/bootstrap/css/bootstrap.min.css') }}" rel="stylesheet" type="text/css" />
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.10.2/css/all.min.css" rel="stylesheet" type="text/css" />
-    <!-- END GLOBAL MANDATORY STYLES -->
-
+    
     <!-- another css plugin -->
 	@yield('page-style-plugin')
 
     <style type="text/css">
         @font-face {
-                font-family: "Seravek";
+                font-family: "WorkSans-Black";
                 font-style: normal;
                 font-weight: 400;
-                src: url('{{ env('S3_URL_VIEW') }}{{ ('/fonts/Seravek.ttf') }}');
+                src: url('{{ config('url.storage_url_view') }}{{ ('fonts/Work_Sans/WorkSans-Black.ttf') }}');
         }
         @font-face {
-                font-family: "ProductSans-Bold";
+                font-family: "WorkSans-Bold";
                 font-style: normal;
                 font-weight: 400;
-                src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/ProductSans-Bold.ttf') }}');
+                src: url('{{ config('url.storage_url_view') }}{{ ('fonts/Work_Sans/WorkSans-Bold.ttf') }}');
         }
         @font-face {
-                font-family: "ProductSans-BoldItalic";
+                font-family: "WorkSans-ExtraBold";
                 font-style: normal;
                 font-weight: 400;
-                src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/ProductSans-BoldItalic.ttf') }}');
+                src: url('{{ config('url.storage_url_view') }}{{ ('fonts/Work_Sans/WorkSans-ExtraBold.ttf') }}');
         }
         @font-face {
-                font-family: "ProductSans-Italic";
+                font-family: "WorkSans-ExtraLight";
                 font-style: normal;
                 font-weight: 400;
-                src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/ProductSans-Italic.ttf') }}');
+                src: url('{{ config('url.storage_url_view') }}{{ ('fonts/Work_Sans/WorkSans-ExtraLight.ttf') }}');
         }
         @font-face {
-                font-family: "ProductSans-Regular";
+                font-family: "WorkSans-Light";
                 font-style: normal;
                 font-weight: 400;
-                src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/ProductSans-Regular.ttf') }}');
+                src: url('{{ config('url.storage_url_view') }}{{ ('fonts/Work_Sans/WorkSans-Light.ttf') }}');
         }
         @font-face {
-                font-family: "ProductSans-Medium";
+                font-family: "WorkSans-Medium";
                 font-style: normal;
                 font-weight: 400;
-                src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/ProductSans-Medium.ttf') }}');
+                src: url('{{ config('url.storage_url_view') }}{{ ('fonts/Work_Sans/WorkSans-Medium.ttf') }}');
         }
-        .Seravek{
-            font-family: "Seravek";
+        @font-face {
+                font-family: "WorkSans-Regular";
+                font-style: normal;
+                font-weight: 400;
+                src: url('{{ config('url.storage_url_view') }}{{ ('fonts/Work_Sans/WorkSans-Regular.ttf') }}');
         }
-        .ProductSans{
-            font-family: "ProductSans-Regular";
+        @font-face {
+                font-family: "WorkSans-SemiBold";
+                font-style: normal;
+                font-weight: 400;
+                src: url('{{ config('url.storage_url_view') }}{{ ('fonts/Work_Sans/WorkSans-SemiBold.ttf') }}');
         }
-        .ProductSans-Medium{
-            font-family: "ProductSans-Medium";
+        @font-face {
+                font-family: "WorkSans-Thin";
+                font-style: normal;
+                font-weight: 400;
+                src: url('{{ config('url.storage_url_view') }}{{ ('fonts/Work_Sans/WorkSans-Thin.ttf') }}');
         }
-        .ProductSans-Italic{
-            font-family: "ProductSans-Italic";
+        .WorkSans-Black{
+            font-family: "WorkSans-Black";
         }
-        .ProductSans-BoldItalic{
-            font-family: "ProductSans-BoldItalic";
+        .WorkSans-Bold{
+            font-family: "WorkSans-Bold";
         }
-        .ProductSans-Bold{
-            font-family: "ProductSans-Bold";
+        .WorkSans-ExtraBold{
+            font-family: "WorkSans-ExtraBold";
+        }
+        .WorkSans-ExtraLight{
+            font-family: "WorkSans-ExtraLight";
+        }
+        .WorkSans-Medium{
+            font-family: "WorkSans-Medium";
+        }
+        .WorkSans-Regular{
+            font-family: "WorkSans-Regular";
+        }
+        .WorkSans{
+            font-family: "WorkSans-Regular";
+        }
+        .WorkSans-SemiBold{
+            font-family: "WorkSans-SemiBold";
+        }
+        .WorkSans-Thin{
+            font-family: "WorkSans-Thin";
         }
         body{
             cursor: pointer;

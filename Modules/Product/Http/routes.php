@@ -1,101 +1,110 @@
 <?php
 
-Route::group(['prefix' => 'api/product','middleware' => 'log_activities', 'namespace' => 'Modules\Product\Http\Controllers'], function()
+Route::group(['prefix' => 'api/product','middleware' => ['log_activities','auth:api', 'scopes:apps'], 'namespace' => 'Modules\Product\Http\Controllers'], function()
 {
-    /**
-     * product
-     */
-    Route::group(['middleware' => 'auth:api'], function() {
-        Route::any('list', 'ApiProductController@listProduct');
-        Route::get('list/price/{id_outlet}', 'ApiProductController@listProductPriceByOutlet');
+    /* product */
+    Route::post('search', 'ApiCategoryController@search');
+    Route::any('list', 'ApiProductController@listProduct');
+    Route::post('detail', 'ApiProductController@detail');
+    Route::any('sync', 'ApiSyncProductController@sync');
+    Route::get('next/{id}', 'ApiProductController@getNextID');
 
-        /* Sync */
-        Route::any('sync', 'ApiSyncProductController@sync');
-    });
-
-    /**
-     * auth
-     */
-    Route::group(['middleware' => 'auth:api'], function() {
-        Route::get('next/{id}', 'ApiProductController@getNextID');
-        Route::post('category/assign', 'ApiProductController@categoryAssign');
-        Route::post('price/update', 'ApiProductController@priceUpdate');
-        Route::post('create', 'ApiProductController@create');
-        Route::post('update', 'ApiProductController@update');
-        Route::post('update/allow_sync', 'ApiProductController@updateAllowSync');
-        Route::post('update/visibility/global', 'ApiProductController@updateVisibility');
-        Route::post('update/visibility', 'ApiProductController@visibility');
-
-        /* product position */
-        Route::post('position/assign', 'ApiProductController@positionProductAssign');
-
-        Route::group(['middleware' => 'log_activities'], function() {
-            Route::post('delete', 'ApiProductController@delete');
-        });
-
-        Route::post('import', 'ApiProductController@import');
-
-        /**
-         * photo
-         */
-        Route::group(['prefix' => 'photo'], function() {
-            Route::post('create', 'ApiProductController@uploadPhotoProduct');
-            Route::post('update', 'ApiProductController@updatePhotoProduct');
-            Route::post('delete', 'ApiProductController@deletePhotoProduct');
-            Route::post('default', 'ApiProductController@photoDefault');
-        });
-
-        /* PRICES */
-        Route::post('prices', 'ApiProductController@productPrices');
-
-         /**
-         * tag
-         */
-        Route::group(['prefix' => 'tag'], function() {
-            Route::any('list', 'ApiTagController@list');
-            Route::post('create', 'ApiTagController@create');
-            Route::post('update', 'ApiTagController@update');
-            Route::post('delete', 'ApiTagController@delete');
-        });
-
-         /**
-         * product tag
-         */
-        Route::group(['prefix' => 'product-tag'], function() {
-            Route::post('create', 'ApiTagController@createProductTag');
-            Route::post('delete', 'ApiTagController@deleteProductTag');
-        });
-
-    });
-
-    /**
-     * category
-     */
-    Route::group(['prefix' => 'category', 'middleware' => 'auth:api'], function() {
+    /* category */
+    Route::group(['prefix' => 'category'], function() {
 
     	Route::any('list', 'ApiCategoryController@listCategory');
     	Route::any('list/tree', 'ApiCategoryController@listCategoryTree');
-        Route::post('position/assign', 'ApiCategoryController@positionCategoryAssign');
-        Route::get('all', 'ApiCategoryController@getAllCategory');
+    });
+//	Route::group(['prefix' => 'discount'], function() {
+//        Route::post('create', 'ApiDiskonProductController@create');
+//        Route::post('update', 'ApiDiskonProductController@update');
+//		Route::post('delete', 'ApiDiskonProductController@delete');
+//	});
+});
 
-    	/**
-    	 * auth
-    	 */
-    	Route::group(['middleware' => 'auth:api'], function() {
-    		Route::post('create', 'ApiCategoryController@create');
-    		Route::post('update', 'ApiCategoryController@update');
-    		Route::post('delete', 'ApiCategoryController@delete');
-    	});
+Route::group(['prefix' => 'api/product','middleware' => ['log_activities','auth:api', 'scopes:be'], 'namespace' => 'Modules\Product\Http\Controllers'], function()
+{
+    Route::any('be/list', 'ApiProductController@listProduct');
+    Route::any('be/list/image', 'ApiProductController@listProductImage');
+    Route::any('be/imageOverride', 'ApiProductController@imageOverride');
+    Route::post('category/assign', 'ApiProductController@categoryAssign');
+    Route::post('price/update', 'ApiProductController@priceUpdate');
+    Route::post('detail/update', 'ApiProductController@updateProductDetail');
+    Route::post('detail/update/price', 'ApiProductController@updatePriceDetail');
+    Route::post('create', 'ApiProductController@create');
+    Route::post('update', 'ApiProductController@update');
+    Route::post('update/allow_sync', 'ApiProductController@updateAllowSync');
+    Route::post('update/visibility/global', 'ApiProductController@updateVisibility');
+    Route::post('update/visibility', 'ApiProductController@visibility');
+    Route::post('position/assign', 'ApiProductController@positionProductAssign');//product position
+    Route::post('delete', 'ApiProductController@delete');
+    Route::post('import', 'ApiProductController@import');
+    Route::get('list/price/{id_outlet}', 'ApiProductController@listProductPriceByOutlet');
+    Route::get('list/product-detail/{id_outlet}', 'ApiProductController@listProductDetailByOutlet');
+    Route::post('export', 'ApiProductController@export');
+    Route::post('import', 'ApiProductController@import');
+    Route::post('ajax-product-brand', 'ApiProductController@ajaxProductBrand');
+
+    /* photo */
+    Route::group(['prefix' => 'photo'], function() {
+        Route::post('create', 'ApiProductController@uploadPhotoProduct');
+        Route::post('update', 'ApiProductController@updatePhotoProduct');
+        Route::post('createAjax', 'ApiProductController@uploadPhotoProductAjax');
+        Route::post('overrideAjax', 'ApiProductController@overrideAjax');
+        Route::post('delete', 'ApiProductController@deletePhotoProduct');
+        Route::post('default', 'ApiProductController@photoDefault');
     });
 
-    /**
-     * diskon
-     */
+    /* product modifier */
+    Route::group(['prefix' => 'modifier'], function() {
+        Route::any('/', 'ApiProductModifierController@index');
+        Route::get('type', 'ApiProductModifierController@listType');
+        Route::post('detail', 'ApiProductModifierController@show');
+        Route::post('create', 'ApiProductModifierController@store');
+        Route::post('update', 'ApiProductModifierController@update');
+        Route::post('delete', 'ApiProductModifierController@destroy');
+        Route::post('list-price', 'ApiProductModifierController@listPrice');
+        Route::post('update-price', 'ApiProductModifierController@updatePrice');
+        Route::post('list-detail', 'ApiProductModifierController@listDetail');
+        Route::post('update-detail', 'ApiProductModifierController@updateDetail');
+    });
 
-	Route::group(['prefix' => 'discount'], function() {
-        Route::post('create', 'ApiDiskonProductController@create');
-        Route::post('update', 'ApiDiskonProductController@update');
-		Route::post('delete', 'ApiDiskonProductController@delete');
-	});
+    Route::group(['prefix' => 'category'], function() {
+        Route::any('be/list', 'ApiCategoryController@listCategory');
+        Route::post('position/assign', 'ApiCategoryController@positionCategoryAssign');
+        Route::get('all', 'ApiCategoryController@getAllCategory');
+        Route::post('create', 'ApiCategoryController@create');
+        Route::post('update', 'ApiCategoryController@update');
+        Route::post('delete', 'ApiCategoryController@delete');
+    });
 
+    Route::group(['prefix' => 'promo-category'], function() {
+        Route::any('/', 'ApiPromoCategoryController@index')->middleware(['feature_control:236']);
+        Route::post('assign', 'ApiPromoCategoryController@assign')->middleware(['feature_control:239']);
+        Route::post('reorder', 'ApiPromoCategoryController@reorder')->middleware(['feature_control:239']);
+        Route::post('create', 'ApiPromoCategoryController@store')->middleware(['feature_control:238']);
+        Route::post('show', 'ApiPromoCategoryController@show')->middleware(['feature_control:237']);
+        Route::post('update', 'ApiPromoCategoryController@update')->middleware(['feature_control:239']);
+        Route::post('delete', 'ApiPromoCategoryController@destroy')->middleware(['feature_control:240']);
+    });
+
+    /* PRICES */
+    Route::post('prices', 'ApiProductController@productPrices');
+    Route::post('prices/all-product', 'ApiProductController@allProductPrices');
+    Route::post('outlet-detail', 'ApiProductController@productDetail');
+    Route::post('outlet-detail/all-product', 'ApiProductController@allProductDetail');
+
+    /* tag */
+    Route::group(['prefix' => 'tag'], function() {
+        Route::any('list', 'ApiTagController@list');
+        Route::post('create', 'ApiTagController@create');
+        Route::post('update', 'ApiTagController@update');
+        Route::post('delete', 'ApiTagController@delete');
+    });
+
+    /* product tag */
+    Route::group(['prefix' => 'product-tag'], function() {
+        Route::post('create', 'ApiTagController@createProductTag');
+        Route::post('delete', 'ApiTagController@deleteProductTag');
+    });
 });

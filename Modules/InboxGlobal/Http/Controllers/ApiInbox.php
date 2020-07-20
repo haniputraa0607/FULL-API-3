@@ -13,6 +13,7 @@ use App\Http\Models\InboxGlobalRule;
 use App\Http\Models\InboxGlobalRuleParent;
 use App\Http\Models\InboxGlobalRead;
 use App\Http\Models\News;
+use App\Http\Models\Setting;
 
 use Modules\InboxGlobal\Http\Requests\MarkedInbox;
 use Modules\InboxGlobal\Http\Requests\DeleteUserInbox;
@@ -36,7 +37,7 @@ class ApiInbox extends Controller
     	return MyHelper::checkDelete($delete);
     }
 
-    public function listInboxUser(Request $request){
+    public function listInboxUser(Request $request, $mode = false){
     	if(is_numeric($phone=$request->json('phone'))){
     		$user=User::where('phone',$phone)->first();
     	}else{
@@ -48,10 +49,11 @@ class ApiInbox extends Controller
 		$countUnread = 0;
 		$countInbox = 0;
 		$arrDate = [];
-
+		$max_date = date('Y-m-d',time() - ((Setting::select('value')->where('key','inbox_max_days')->pluck('value')->first()?:30) * 86400));
 		$globals = InboxGlobal::with('inbox_global_rule_parents', 'inbox_global_rule_parents.rules')
 								->where('inbox_global_start', '<=', $today)
 								->where('inbox_global_end', '>=', $today)
+								->whereDate('inbox_global_start','>',$max_date)
 								->get()
 								->toArray();
 
@@ -83,7 +85,7 @@ class ApiInbox extends Controller
 					$news = News::find($global['inbox_global_id_reference']);
 					if($news){
 						$content['news_title'] = $news->news_title;
-						$content['url'] = env('APP_URL').'news/webview/'.$news->id_news;
+						$content['url'] = config('url.app_url').'news/webview/'.$news->id_news;
 					}
 				}
 
@@ -109,21 +111,26 @@ class ApiInbox extends Controller
 					$countUnread++;
 				}
 
-				if(!in_array(date('Y-m-d', strtotime($content['created_at'])), $arrDate)){
-					$arrDate[] = date('Y-m-d', strtotime($content['created_at']));
-					$temp['created'] =  date('Y-m-d', strtotime($content['created_at']));
-					$temp['list'][0] =  $content;
-					$arrInbox[] = $temp;
+				if($mode == 'simple'){
+					$content['date_indo'] = MyHelper::dateFormatInd($content['created_at'],true,false,true);
+					$content['time'] = date('H:i',strtotime($content['created_at']));
+					$arrInbox[] = $content;
 				}else{
-					$position = array_search(date('Y-m-d', strtotime($content['created_at'])), $arrDate);
-					$arrInbox[$position]['list'][] = $content;
+					if(!in_array(date('Y-m-d', strtotime($content['created_at'])), $arrDate)){
+						$arrDate[] = date('Y-m-d', strtotime($content['created_at']));
+						$temp['created'] =  date('Y-m-d', strtotime($content['created_at']));
+						$temp['list'][0] =  $content;
+						$arrInbox[] = $temp;
+					}else{
+						$position = array_search(date('Y-m-d', strtotime($content['created_at'])), $arrDate);
+						$arrInbox[$position]['list'][] = $content;
+					}
 				}
-
 				$countInbox++;
 			}
 		}
 
-		$privates = UserInbox::where('id_user','=',$user['id'])->get()->toArray();
+		$privates = UserInbox::where('id_user','=',$user['id'])->whereDate('inboxes_send_at','>',$max_date)->get()->toArray();
 
 		foreach($privates as $private){
 			$content = [];
@@ -138,11 +145,15 @@ class ApiInbox extends Controller
 				$content['id_reference'] = 0;
 			}
 
+			if($content['clickto']=='Deals Detail'){
+				$content['id_brand'] = $private['id_brand'];
+			}
+
 			if($content['clickto'] == 'News'){
 				$news = News::find($private['inboxes_id_reference']);
 				if($news){
 					$content['news_title'] = $news->news_title;
-					$content['url'] = env('APP_URL').'news/webview/'.$news->id_news;
+					$content['url'] = config('url.app_url').'news/webview/'.$news->id_news;
 				}
 
 			}
@@ -167,34 +178,47 @@ class ApiInbox extends Controller
 			}else{
 				$content['status'] = 'read';
 			}
-
-			if(!in_array(date('Y-m-d', strtotime($content['created_at'])), $arrDate)){
-				$arrDate[] = date('Y-m-d', strtotime($content['created_at']));
-				$temp['created'] =  date('Y-m-d', strtotime($content['created_at']));
-				$temp['list'][0] =  $content;
-				$arrInbox[] = $temp;
+			if($mode == 'simple'){
+				$content['date_indo'] = MyHelper::dateFormatInd($content['created_at'],true,false,true);
+				$content['time'] = date('H:i',strtotime($content['created_at']));
+				$arrInbox[] = $content;
 			}else{
-				$position = array_search(date('Y-m-d', strtotime($content['created_at'])), $arrDate);
-				$arrInbox[$position]['list'][] = $content;
+				if(!in_array(date('Y-m-d', strtotime($content['created_at'])), $arrDate)){
+					$arrDate[] = date('Y-m-d', strtotime($content['created_at']));
+					$temp['created'] =  date('Y-m-d', strtotime($content['created_at']));
+					$temp['list'][0] =  $content;
+					$arrInbox[] = $temp;
+				}else{
+					$position = array_search(date('Y-m-d', strtotime($content['created_at'])), $arrDate);
+					$arrInbox[$position]['list'][] = $content;
+				}
 			}
 
 			$countInbox++;
 		}
 
 		if(isset($arrInbox) && !empty($arrInbox)) {
-			foreach ($arrInbox as $key => $value) {
-				usort($arrInbox[$key]['list'], function($a, $b){
+			if($mode == 'simple'){
+				usort($arrInbox, function($a, $b){
 					$t1 = strtotime($a['created_at']);
 					$t2 = strtotime($b['created_at']);
 					return $t2 - $t1;
 				});
-			}
+			}else{
+				foreach ($arrInbox as $key => $value) {
+					usort($arrInbox[$key]['list'], function($a, $b){
+						$t1 = strtotime($a['created_at']);
+						$t2 = strtotime($b['created_at']);
+						return $t2 - $t1;
+					});
+				}
 
-			usort($arrInbox, function($a, $b){
-				$t1 = strtotime($a['created']);
-				$t2 = strtotime($b['created']);
-				return $t2 - $t1;
-			});
+				usort($arrInbox, function($a, $b){
+					$t1 = strtotime($a['created']);
+					$t2 = strtotime($b['created']);
+					return $t2 - $t1;
+				});
+			}
 
 			$result = [
 					'status'  => 'success',
@@ -218,25 +242,25 @@ class ApiInbox extends Controller
 			$userInbox = UserInbox::where('id_user_inboxes', $post['id_inbox'])->first();
 			if(!empty($userInbox)){
 				$update = UserInbox::where('id_user_inboxes', $post['id_inbox'])->update(['read' => '1']);
-				if(!$update){
-					$result = [
-						'status'  => 'fail',
-						'messages'  => ['Failed marked inbox']
-					];
-				}else{
+				// if(!$update){
+				// 	$result = [
+				// 		'status'  => 'fail',
+				// 		'messages'  => ['Failed marked inbox']
+				// 	];
+				// }else{
 					$countUnread = $this->listInboxUnread( $user['id']);
 					$result = [
 						'status'  => 'success',
 						'result'  => ['count_unread' => $countUnread]
 					];
-				}
+				// }
 			}else{
 				$result = [
 					'status'  => 'fail',
 					'messages'  => ['Inbox not found']
 				];
 			}
-		}else{
+		}elseif($post['type'] == 'global'){
 			$inboxGlobal = InboxGlobal::where('id_inbox_global', $post['id_inbox'])->first();
 			if(!empty($inboxGlobal)){
 
@@ -264,6 +288,96 @@ class ApiInbox extends Controller
 				];
 			}
 
+		}elseif($post['type'] == 'multiple'){
+			if($post['inboxes']['global']??false){
+				foreach ($post['inboxes']['global'] as $id_inbox) {
+					$inboxGlobal = InboxGlobal::where('id_inbox_global', $id_inbox)->first();
+					if($inboxGlobal){
+						$inboxGlobalRead = InboxGlobalRead::where('id_inbox_global', $id_inbox)->where('id_user', $user['id'])->first();
+						if(empty($inboxGlobalRead)){
+							$create = InboxGlobalRead::create(['id_inbox_global' => $id_inbox, 'id_user' => $user['id']]);
+						}
+					}
+				}
+			}
+			if($post['inboxes']['private']){
+				$update = UserInbox::whereIn('id_user_inboxes', $post['inboxes']['private'])->where('id_user', $user['id'])->update(['read' => '1']);
+			}
+			$countUnread = $this->listInboxUnread( $user['id']);
+			$result = [
+				'status'  => 'success',
+				'result'  => ['count_unread' => $countUnread]
+			];
+		}
+		return response()->json($result);
+	}
+	/**
+	 * update status requested inbox to unread
+	 * @param  MarkedInbox $request [description]
+	 * @return Response               [description]
+	 */
+	public function unmarkInbox(MarkedInbox $request){
+		$user = $request->user();
+		$post = $request->json()->all();
+		if($post['type'] == 'private'){
+			$userInbox = UserInbox::where('id_user_inboxes', $post['id_inbox'])->first();
+			if(!empty($userInbox)){
+				$update = UserInbox::where('id_user_inboxes', $post['id_inbox'])->update(['read' => '0']);
+				// if(!$update){
+				// 	$result = [
+				// 		'status'  => 'fail',
+				// 		'messages'  => ['Failed marked inbox']
+				// 	];
+				// }else{
+					$countUnread = $this->listInboxUnread( $user['id']);
+					$result = [
+						'status'  => 'success',
+						'result'  => ['count_unread' => $countUnread]
+					];
+				// }
+			}else{
+				$result = [
+					'status'  => 'fail',
+					'messages'  => ['Inbox not found']
+				];
+			}
+		}elseif($post['type'] == 'global'){
+			$inboxGlobal = InboxGlobal::where('id_inbox_global', $post['id_inbox'])->first();
+			if(!empty($inboxGlobal)){
+
+				$delete = InboxGlobalRead::where('id_inbox_global', $post['id_inbox'])->where('id_user', $user['id'])->delete();
+				if($delete){
+					$countUnread = $this->listInboxUnread( $user['id']);
+					$result = [
+						'status'  => 'success',
+						'result'  => ['count_unread' => $countUnread]
+					];
+				}else{
+					$result = [
+						'status'  => 'fail',
+						'messages'  => ['Failed unread inbox']
+					];
+				}
+
+			}else{
+				$result = [
+					'status'  => 'fail',
+					'messages'  => ['Inbox not found']
+				];
+			}
+
+		}elseif($post['type'] == 'multiple'){
+			if($post['inboxes']['global']??false){
+				$delete = InboxGlobalRead::where('id_user',$user['id'])->whereIn('id_inbox_global',$post['inboxes']['global']);
+			}
+			if($post['inboxes']['private']){
+				$update = UserInbox::whereIn('id_user_inboxes', $post['inboxes']['private'])->where('id_user', $user['id'])->update(['read' => '0']);
+			}
+			$countUnread = $this->listInboxUnread( $user['id']);
+			$result = [
+				'status'  => 'success',
+				'result'  => ['count_unread' => $countUnread]
+			];
 		}
 		return response()->json($result);
 	}
@@ -273,12 +387,14 @@ class ApiInbox extends Controller
 
 		$today = date("Y-m-d H:i:s");
 		$countUnread = 0;
-
+        $setting_date = Setting::select('value')->where('key','inbox_max_days')->pluck('value')->first();
+        $max_date = date('Y-m-d',time() - ((is_numeric($setting_date)?$setting_date:30) * 86400));
 		$read = array_pluck(InboxGlobalRead::where('id_user', $user['id'])->get(), 'id_inbox_global');
 
 		$globals = InboxGlobal::with('inbox_global_rule_parents', 'inbox_global_rule_parents.rules')
 							->where('inbox_global_start', '<=', $today)
 							->where('inbox_global_end', '>=', $today)
+                            ->whereDate('inbox_global_start','>=',$max_date)
 							->get()
 							->toArray();
 
@@ -299,7 +415,7 @@ class ApiInbox extends Controller
 			}
 		}
 
-		$privates = UserInbox::where('id_user','=',$user['id'])->where('read', '0')->get();
+		$privates = UserInbox::where('id_user','=',$user['id'])->where('read', '0')->whereDate('inboxes_send_at','>=',$max_date)->get();
 
 
 		$countUnread = $countUnread + count($privates);

@@ -6,10 +6,89 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 
 	<!-- Bootstrap CSS -->
-	<link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css">
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css" integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous">
-    <link href="https://fonts.googleapis.com/css?family=Open+Sans|Questrial" rel="stylesheet">
-    <style type="text/css">
+    <link href="{{ config('url.api_url') }}css/general.css" rel="stylesheet">
+	<style type="text/css">
+		@font-face {
+                font-family: "WorkSans-Black";
+                font-style: normal;
+                font-weight: 400;
+                src: url('{{ config('url.storage_url_view') }}{{ ('fonts/Work_Sans/WorkSans-Black.ttf') }}');
+        }
+        @font-face {
+                font-family: "WorkSans-Bold";
+                font-style: normal;
+                font-weight: 400;
+                src: url('{{ config('url.storage_url_view') }}{{ ('fonts/Work_Sans/WorkSans-Bold.ttf') }}');
+        }
+        @font-face {
+                font-family: "WorkSans-ExtraBold";
+                font-style: normal;
+                font-weight: 400;
+                src: url('{{ config('url.storage_url_view') }}{{ ('fonts/Work_Sans/WorkSans-ExtraBold.ttf') }}');
+        }
+        @font-face {
+                font-family: "WorkSans-ExtraLight";
+                font-style: normal;
+                font-weight: 400;
+                src: url('{{ config('url.storage_url_view') }}{{ ('fonts/Work_Sans/WorkSans-ExtraLight.ttf') }}');
+        }
+        @font-face {
+                font-family: "WorkSans-Light";
+                font-style: normal;
+                font-weight: 400;
+                src: url('{{ config('url.storage_url_view') }}{{ ('fonts/Work_Sans/WorkSans-Light.ttf') }}');
+        }
+        @font-face {
+                font-family: "WorkSans-Medium";
+                font-style: normal;
+                font-weight: 400;
+                src: url('{{ config('url.storage_url_view') }}{{ ('fonts/Work_Sans/WorkSans-Medium.ttf') }}');
+        }
+        @font-face {
+                font-family: "WorkSans-Regular";
+                font-style: normal;
+                font-weight: 400;
+                src: url('{{ config('url.storage_url_view') }}{{ ('fonts/Work_Sans/WorkSans-Regular.ttf') }}');
+        }
+        @font-face {
+                font-family: "WorkSans-SemiBold";
+                font-style: normal;
+                font-weight: 400;
+                src: url('{{ config('url.storage_url_view') }}{{ ('fonts/Work_Sans/WorkSans-SemiBold.ttf') }}');
+        }
+        @font-face {
+                font-family: "WorkSans-Thin";
+                font-style: normal;
+                font-weight: 400;
+                src: url('{{ config('url.storage_url_view') }}{{ ('fonts/Work_Sans/WorkSans-Thin.ttf') }}');
+        }
+        .WorkSans-Black{
+            font-family: "WorkSans-Black";
+        }
+        .WorkSans-Bold{
+            font-family: "WorkSans-Bold";
+        }
+        .WorkSans-ExtraBold{
+            font-family: "WorkSans-ExtraBold";
+        }
+        .WorkSans-ExtraLight{
+            font-family: "WorkSans-ExtraLight";
+        }
+        .WorkSans-Medium{
+            font-family: "WorkSans-Medium";
+        }
+        .WorkSans-Regular{
+            font-family: "WorkSans-Regular";
+        }
+        .WorkSans{
+            font-family: "WorkSans-Regular";
+        }
+        .WorkSans-SemiBold{
+            font-family: "WorkSans-SemiBold";
+        }
+        .WorkSans-Thin{
+            font-family: "WorkSans-Thin";
+        }
         body {
             cursor: pointer;
         }
@@ -116,24 +195,6 @@
     	.text-grey-green {
     		color: rgba(4,154,74,1);
     	}
-		@font-face {
-                font-family: "ProductSans-Medium";
-                font-style: normal;
-                font-weight: 400;
-                src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/ProductSans-Medium.ttf') }}');
-        }
-        @font-face {
-                font-family: "ProductSans-Regular";
-                font-style: normal;
-                font-weight: 400;
-                src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/ProductSans-Regular.ttf') }}');
-        }
-		.ProductSans{
-            font-family: "ProductSans-Regular";
-        }
-        .ProductSans-MediumItalic{
-            font-family: "ProductSans-Medium";
-        }
 
     	.text-14-3px {
     		font-size: 14.3px;
@@ -245,39 +306,20 @@
 		transform: rotate(180deg);
 		transition: transform 0.25s linear;
 	}
+	p { margin: 0 0 0.0001pt; }
 
     </style>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/OwlCarousel2/2.3.4/assets/owl.carousel.min.css">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/OwlCarousel2/2.3.4/assets/owl.theme.default.min.css">
+        <link rel="stylesheet" href="{{ config('url.storage_url_view') }}{{ ('assets/css/owl.carousel.min.css') }}">
+        <link rel="stylesheet" href="{{ config('url.storage_url_view') }}{{ ('assets/css/owl.theme.default.min.css') }}">
   </head>
   <body>
 
-	<div class="kotak1" style="padding-top: 0px;">
+    <div class="kotak1" style='margin-bottom: 20px;'>
   		<div class="container">
-  		    <div class="ProductSans space-text" style="color: rgb(74, 0, 0); font-size: 12.7px; padding-bottom: 5px;">Alamat</div>
-			<hr style="margin: 0;">
-			<div class="ProductSans space-text" style="color: rgb(0, 0, 0); font-size: 12.7px; padding-bottom: 0;">{{$data[0]['outlet_address']}}</div>
-	   	</div>
-	</div>
-
-	<div class="kotak1">
-  		<div class="container">
-  		    <div class="ProductSans space-text" style="color: rgb(74, 0, 0); font-size: 12.7px; padding-bottom: 5px;">Nomor Telepon</div>
-			<hr style="margin: 0;">
-			<div class="ProductSans space-text" style="color: rgb(0, 0, 0); font-size: 12.7px; padding-bottom: 0;">{{$data[0]['outlet_phone']}}</div>
-	   	</div>
-  	</div>
-
-    <div class="kotak1" @if($data[0]['big_order'] == 0) style='margin-bottom: 220px;' @endif>
-  		<div class="container">
-  		    <div class="ProductSans space-text" id="testClick" style="color: rgb(74, 0, 0); font-size: 12.7px; padding-bottom: 5px;">Jam Operasional @if (!empty($data[0]['outlet_schedules']))<i style="color: rgb(74, 0, 0);" class="pull-right icon fa fa-angle-down"></i>@endif</div>
   			@php
   				$hari = date ("D");
 
 			switch($hari){
-				case 'Sun':
-					$hari_ini = "Minggu";
-				break;
 
 				case 'Mon':
 					$hari_ini = "Senin";
@@ -302,77 +344,38 @@
 				default:
 					$hari_ini = "Sabtu";
 				break;
+				
+				case 'Sun':
+					$hari_ini = "Minggu";
+				break;
 			}
 
 			@endphp
-			<hr style="margin: 0;">
-			<div class="row ProductSans">
-				<div class="col-8">
+			<div class="row WorkSans">
+				<div class="col-12">
 				    @if (!empty($data[0]['outlet_schedules']))
 						@foreach ($data[0]['outlet_schedules'] as $key => $val)
-						@if ($val['day'] == $hari_ini)
-							<div id="today" class="pull-left row space-sch">
-								<div style="@if ($val['day'] == $hari_ini) color: rgb(131, 112, 70); @else color: rgb(0, 0, 0); @endif font-size: 12.7px; padding-bottom: 0;" class="col-3 min-left">{{ $val['day'] }}</div>
-								<div style="@if ($val['day'] == $hari_ini) color: rgb(131, 112, 70); @else color: rgb(0, 0, 0); @endif font-size: 12.7px; padding-bottom: 0;" class="col-9">
-									@if($val['is_closed'] == '1')
-										TUTUP
-									@else
-										{{date('H.i', strtotime($val['open']))}} - {{date('H.i', strtotime($val['close']))}}
-									@endif
-								</div>
-							</div>
-							@endif
-						@endforeach
-						@foreach ($data[0]['outlet_schedules'] as $key => $val)
-						<div style="display: none;" class="pull-left anotherDay row space-sch">
-							<div style="@if ($val['day'] == $hari_ini) color: rgb(131, 112, 70); @else color: rgb(0, 0, 0); @endif font-size: 12.7px; padding-bottom: 0;" class="col-3 min-left">{{ $val['day'] }}</div>
-							<div style="@if ($val['day'] == $hari_ini) color: rgb(131, 112, 70); @else color: rgb(0, 0, 0); @endif font-size: 12.7px; padding-bottom: 0;" class="col-9">
-								@if($val['is_closed'] == '1')
-									TUTUP
-								@else
-									{{date('H.i', strtotime($val['open']))}} - {{date('H.i', strtotime($val['close']))}}
-								@endif
-							</div>
-							@if ($val['day'] == "Minggu")
+						<div style="@if ($val['day'] == $hari_ini) color: `#383b67; @else color: #AAAAAA; @endif font-size: 13.3px; padding-bottom: 3px;" class="WorkSans-Bold">{{ strtoupper($val['day']) }}</div>
+						<div style="@if ($val['day'] == $hari_ini) color: `#383b67; @else color: #AAAAAA; @endif font-size: 13.3px; padding-bottom: 0; padding-left: 5px;">
+							@if($val['is_closed'] == '1')
+								TUTUP
+							@else
+								{{date('H.i', strtotime($val['open']))}} - {{date('H.i', strtotime($val['close']))}}
 							@endif
 						</div>
+						<hr style="margin-bottom: 5px;margin-top: 5px; @if(end($data[0]['outlet_schedules']) == $val) display: none; @endif">
 						@endforeach
 					@else
-						<div class="ProductSans space-text" style="color: rgb(0, 0, 0); font-size: 12.7px; padding-bottom: 0;">Belum Tersedia</div>
+						<div class="WorkSans space-text" style="color: #AAAAAA; font-size: 11.7px; padding-bottom: 0;">Belum Tersedia</div>
 					@endif
 				</div>
 			</div>
 	   	</div>
   	</div>
 
-	@if($data[0]['big_order'] == 1)
-	<div class="kotak1" style='margin-bottom: 220px'>
-  		<div class="container">
-  		    <div class="ProductSans text-center space-text" style="color: rgb(0, 0, 0); font-size: 15px; padding-bottom: 5px;">Big Order Delivery Service</div>
-		  <div class="ProductSans space-text" style="color: rgb(102, 102, 102); font-size: 12.7px; padding-bottom: 0;">Khusus pemesanan diatas 50 pax, silahkan menghubungi <a style="color: rgb(128, 0, 0); text-decoration: underline;" href="#delivery_service">Call Center</a> kami untuk mendapatkan penawaran special</div>
-	   	</div>
-	</div>
-	@endif
-
     <!-- Optional JavaScript -->
     <!-- jQuery first, then Popper.js, then Bootstrap JS -->
-    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
-    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/js/bootstrap.min.js" integrity="sha384-ChfqqxuZUCnJSK3+MXmPNIyE6ZbWh2IMqE241rYiqJxyMiZ6OW/JmZQ5stwEULTy" crossorigin="anonymous"></script>
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCOHBNv3Td9_zb_7uW-AJDU6DHFYk-8e9Y&v=3.exp&signed_in=true&libraries=places"></script>
-	<script>
-	$(document).ready(function() {
-    	$("#testClick").click(function() {
-    		if($("#today").is(':visible')){
-    			$(".icon").addClass('open');
-    			$("#today").hide()
-    			$(".anotherDay").show(500)
-    		} else{
-    			$(".icon").removeClass('open');
-    			$("#today").show()
-    			$(".anotherDay").hide(500)
-    		}
-    	});
-	});
-	</script>
+	<script src="{{ config('url.api_url') }}js/jquery.js"></script>
+	<script src="{{ config('url.api_url') }}js/general.js"></script>
   </body>
 </html>

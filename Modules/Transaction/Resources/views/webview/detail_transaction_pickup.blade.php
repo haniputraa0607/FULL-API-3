@@ -7,73 +7,100 @@
 
     <!-- Bootstrap CSS -->
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css" integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous">
-    <link href="{{ env('S3_URL_VIEW') }}{{('css/slide.css') }}" rel="stylesheet">
+    <link href="{{ config('url.storage_url_view') }}{{('css/slide.css') }}" rel="stylesheet">
     <style type="text/css">
         @font-face {
-                font-family: "ProductSans-Bold";
+                font-family: "WorkSans-Black";
                 font-style: normal;
                 font-weight: 400;
-                src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/ProductSans-Regular.ttf') }}');
+                src: url('{{ config('url.storage_url_view') }}{{ ('fonts/Work_Sans/WorkSans-Black.ttf') }}');
         }
         @font-face {
-                font-family: "ProductSans-BoldItalic";
+                font-family: "WorkSans-Bold";
                 font-style: normal;
                 font-weight: 400;
-                src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/ProductSans-BoldItalic.ttf') }}');
+                src: url('{{ config('url.storage_url_view') }}{{ ('fonts/Work_Sans/WorkSans-Bold.ttf') }}');
         }
         @font-face {
-                font-family: "ProductSans-Italic";
+                font-family: "WorkSans-ExtraBold";
                 font-style: normal;
                 font-weight: 400;
-                src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/ProductSans-Italic.ttf') }}');
+                src: url('{{ config('url.storage_url_view') }}{{ ('fonts/Work_Sans/WorkSans-ExtraBold.ttf') }}');
         }
         @font-face {
-                font-family: "ProductSans-Medium";
+                font-family: "WorkSans-ExtraLight";
                 font-style: normal;
                 font-weight: 400;
-                src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/ProductSans-Medium.ttf') }}');
+                src: url('{{ config('url.storage_url_view') }}{{ ('fonts/Work_Sans/WorkSans-ExtraLight.ttf') }}');
         }
         @font-face {
-                font-family: "ProductSans-MediumItalic";
+                font-family: "WorkSans-Light";
                 font-style: normal;
                 font-weight: 400;
-                src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/ProductSans-MediumItalic.ttf') }}');
+                src: url('{{ config('url.storage_url_view') }}{{ ('fonts/Work_Sans/WorkSans-Light.ttf') }}');
         }
         @font-face {
-                font-family: "ProductSans-Regular";
+                font-family: "WorkSans-Medium";
                 font-style: normal;
                 font-weight: 400;
-                src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/ProductSans-Regular.ttf') }}');
+                src: url('{{ config('url.storage_url_view') }}{{ ('fonts/Work_Sans/WorkSans-Medium.ttf') }}');
         }
-        .ProductSans{
-            font-family: "ProductSans-Regular";
+        @font-face {
+                font-family: "WorkSans-Regular";
+                font-style: normal;
+                font-weight: 400;
+                src: url('{{ config('url.storage_url_view') }}{{ ('fonts/Work_Sans/WorkSans-Regular.ttf') }}');
         }
-        .ProductSans-MediumItalic{
-            font-family: "ProductSans-MediumItalic";
+        @font-face {
+                font-family: "WorkSans-SemiBold";
+                font-style: normal;
+                font-weight: 400;
+                src: url('{{ config('url.storage_url_view') }}{{ ('fonts/Work_Sans/WorkSans-SemiBold.ttf') }}');
         }
-        .ProductSans-Medium{
-            font-family: "ProductSans-Medium";
+        @font-face {
+                font-family: "WorkSans-Thin";
+                font-style: normal;
+                font-weight: 400;
+                src: url('{{ config('url.storage_url_view') }}{{ ('fonts/Work_Sans/WorkSans-Thin.ttf') }}');
         }
-        .ProductSans-Italic{
-            font-family: "ProductSans-Italic";
+        .WorkSans-Black{
+            font-family: "WorkSans-Black";
         }
-        .ProductSans-BoldItalic{
-            font-family: "ProductSans-BoldItalic";
+        .WorkSans-Bold{
+            font-family: "WorkSans-Bold";
         }
-        .ProductSans-Bold{
-            font-family: "ProductSans-Bold";
+        .WorkSans-ExtraBold{
+            font-family: "WorkSans-ExtraBold";
+        }
+        .WorkSans-ExtraLight{
+            font-family: "WorkSans-ExtraLight";
+        }
+        .WorkSans-Medium{
+            font-family: "WorkSans-Medium";
+        }
+        .WorkSans-Regular{
+            font-family: "WorkSans-Regular";
+        }
+        .WorkSans{
+            font-family: "WorkSans-Regular";
+        }
+        .WorkSans-SemiBold{
+            font-family: "WorkSans-SemiBold";
+        }
+        .WorkSans-Thin{
+            font-family: "WorkSans-Thin";
         }
 
         .kotak {
             margin : 10px;
             padding: 10px;
             /*margin-right: 15px;*/
-            -webkit-box-shadow: 0px 1px 3.3px 0px rgba(168,168,168,1);
-            -moz-box-shadow: 0px 1px 3.3px 0px rgba(168,168,168,1);
-            box-shadow: 0px 1px 3.3px 0px rgba(168,168,168,1);
+            -webkit-box-shadow: 0px 1.7px 3.3px 0px #eeeeee;
+            -moz-box-shadow: 0px 1.7px 3.3px 0px #eeeeee;
+            box-shadow: 0px 1.7px 3.3px 0px #eeeeee;
             /* border-radius: 3px; */
             background: #fff;
-            font-family: 'ProductSans';
+            font-family: 'WorkSans';
         }
 
         .kotak-qr {
@@ -113,7 +140,7 @@
         }
 
         .space-bottom {
-            padding-bottom: 15px;
+            padding-bottom: 5px;
         }
 
         .space-top-all {
@@ -158,7 +185,7 @@
         }
 
         .text-grey-white {
-            color: #666;
+            color: #707070;
         }
 
         .text-grey-light {
@@ -170,7 +197,7 @@
         }
 
         .text-black-grey-light{
-            color: #5f5f5f;
+            color: #333333;
         }
 
 
@@ -206,6 +233,9 @@
             color: #990003;
         }
 
+        .text-20px {
+            font-size: 20px;
+        }
         .text-21-7px {
             font-size: 21.7px;
         }
@@ -251,8 +281,21 @@
             margin-right:3px;
         }
 
+        .round-grey{
+            border: 1px solid #aaaaaa;
+            border-radius: 50%;
+            width: 7px;
+            height: 7px;
+            display: inline-block;
+            margin-right:3px;
+        }
+
         .bg-red{
             background: #990003;
+        }
+
+        .bg-grey{
+            background: #aaaaaa;
         }
 
         .round-white{
@@ -352,7 +395,7 @@
     </style>
   </head>
   @php $bulan = ['','Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember']; @endphp
-  <body style="@if(isset($data['admin'])) background:#fff @endif">
+  <body style="@if(isset($data['admin'])) background:#fff; @endif background:#F7F8FA;">
   <div class="@if(isset($data['admin'])) body-admin @endif">
 {{ csrf_field() }}
     <!-- Modal -->
@@ -373,41 +416,38 @@
     </div> -->
 
     @if ($data['trasaction_type'] != 'Offline')
-        <div class="kotak-full">
-            <div class="container">
+        @if(isset($data['detail']['pickup_by']) && $data['detail']['pickup_by'] == 'GO-SEND')
+            <div class="kotak-biasa">
+                <div class="container">
                 <div class="row text-center">
-                    <div class="col-12 text-16-7px text-red ProductSans-Medium">
+                    <div class="col-12 text-16-7px WorkSans-Bold" style="color: #FFFFFF;">
                         @if($data['detail']['reject_at'] != null)
-                            Pesanan Anda Ditolak
+                            PESANAN ANDA DITOLAK
                         @elseif($data['detail']['taken_at'] != null)
-                            Pesanan Sudah Diambil
+                            PESANAN SUDAH DIAMBIL
                         @elseif($data['detail']['ready_at'] != null)
-                            Pesanan Anda Sudah Siap
+                            PESANAN ANDA SUDAH SIAP
                         @elseif($data['detail']['receive_at'] != null)
-                            Pesanan Diterima
+                            PESANAN DITERIMA
                         @else
-                            Pesanan Anda Menunggu Konfirmasi
+                            PESANAN ANDA MENUNGGU KONFIRMASI
                         @endif
                     </div>
                 </div>
             </div>
-        </div>
-
-        @if(isset($data['detail']['pickup_by']) && $data['detail']['pickup_by'] == 'GO-SEND')
-            <div class="kotak-biasa">
                 <div class="container">
                     <div class="row text-center">
-                        <div class="col-12 ProductSans text-15px space-nice text-grey">Detail Pengiriman</div>
-                        <div class="col-12 text-red text-21-7px space-bottom ProductSans-Medium">GO-SEND</div>
-                        <div class="col-12 text-16-7px text-black space-bottom ProductSans">
+                        <div class="col-12 WorkSans text-15px space-nice text-grey">Detail Pengiriman</div>
+                        <div class="col-12 text-red text-21-7px space-bottom WorkSans-Medium">GO-SEND</div>
+                        <div class="col-12 text-16-7px text-black space-bottom WorkSans">
                             {{ $data['detail']['transaction_pickup_go_send']['destination_name'] }}
                             <br>
                             {{ $data['detail']['transaction_pickup_go_send']['destination_phone'] }}
                         </div>
                         <div class="kotak-inside col-12">
-                            <div class="col-12 text-13-3px text-grey-white space-nice text-center ProductSans">{{ $data['detail']['transaction_pickup_go_send']['destination_address'] }}</div>
+                            <div class="col-12 text-13-3px text-grey-white space-nice text-center WorkSans">{{ $data['detail']['transaction_pickup_go_send']['destination_address'] }}</div>
                         </div>
-                        <div class="col-12 text-15px space-bottom text-black ProductSans">Map</div>
+                        <div class="col-12 text-15px space-bottom text-black WorkSans">Map</div>
                         <div class="col-12 space-bottom-big">
                             <div class="container">
                                 <div id="map"></div>
@@ -417,49 +457,82 @@
                 </div>
             </div>
         @else
-            <div class="kotak-biasa">
-                <div class="container">
-                    <div class="row text-center">
-                        <div class="col-12 ProductSans text-15px space-text text-grey">Kode Pickup Anda</div>
-
-                        <div class="kotak-qr" data-toggle="modal" data-target="#exampleModal">
-                            <div class="col-12 text-14-3px space-top"><img class="img-responsive" style="display: block; max-width: 100%; padding-top: 10px" src="{{ $data['qr'] }}"></div>
+            <div class="kotak-biasa" style="background-color: #FFFFFF;box-shadow: 0 0.7px 3.3px #eeeeee;">
+                <div class="container" style="padding: 0px;">
+                    <div class="kotak-full" style="background-color: #EAB308;margin-bottom: 0px;box-shadow: 0 3.3px 6.7px #b3b3b3;">
+                        <div class="container">
+                            <div class="row text-center">
+                                <div class="col-12 text-16-7px WorkSans-Bold" style="color: #FFFFFF;">
+                                    @if($data['detail']['reject_at'] != null)
+                                        PESANAN ANDA DITOLAK
+                                    @elseif($data['detail']['taken_at'] != null)
+                                        PESANAN SUDAH DIAMBIL
+                                    @elseif($data['detail']['ready_at'] != null)
+                                        PESANAN ANDA SUDAH SIAP
+                                    @elseif($data['detail']['receive_at'] != null)
+                                        PESANAN DITERIMA
+                                    @else
+                                        PESANAN ANDA MENUNGGU KONFIRMASI
+                                    @endif
+                                </div>
+                            </div>
                         </div>
+                    </div>
+                    <div class="kotak-biasa" style="background-color: #FFFFFF;padding: 15px;margin-top: 10px;box-shadow: 0 0.7px 3.3px #eeeeee;">
+                        <div class="container">
+                            <div class="row text-center">
+                                <div class="col-12 text-15px text-black-grey-light space-text WorkSans-Bold">{{ $data['outlet']['outlet_name'] }}</div>
+                                <div class="kotak-inside col-12">
+                                    <div class="col-12 text-11-7px text-grey-white space-nice text-center WorkSans">{{ $data['outlet']['outlet_address'] }}</div>
+                                </div>
+                                <div class="col-12 WorkSans-Bold text-14px space-text text-black-grey-light">Kode Pickup Anda</div>
 
-                        <div class="col-12 text-red text-21-7px space-bottom space-top-all ProductSans-Medium">{{ $data['detail']['order_id'] }}</div>
-                        @if(isset($data['admin']))
-                        <div class="col-12 text-16-7px text-black space-text ProductSans">{{ strtoupper($data['user']['name']) }}</div>
-                        <div class="col-12 text-16-7px text-black ProductSans space-nice">{{ $data['user']['phone'] }}</div>
-                        @endif
-                        <div class="col-12 text-16-7px text-black space-text ProductSans">{{ $data['outlet']['outlet_name'] }}</div>
-                        <div class="kotak-inside col-12">
-                            <div class="col-12 text-13-3px text-grey-white space-nice text-center ProductSans">{{ $data['outlet']['outlet_address'] }}</div>
+                                <div style="width: 135px;height: 135px;margin: 0 auto;" data-toggle="modal" data-target="#exampleModal">
+                                    <div class="col-12 text-14-3px space-top"><img class="img-responsive" style="display: block; max-width: 100%; padding-top: 10px" src="{{ $data['qr'] }}"></div>
+                                </div>
+                                <div class="col-12 text-black-grey-light text-20px WorkSans-SemiBold">{{ $data['detail']['order_id'] }}</div>
+                            </div>
                         </div>
-                        @if ($data['detail']['pickup_type'] == 'set time')
-                            <div class="col-12 text-16-7px space-nice text-black ProductSans">Pesanan Anda akan siap pada</div>
-                        @else
-                            <div class="col-12 text-16-7px space-nice text-black ProductSans">Pesanan Anda akan diproses pada</div>
-                        @endif
-                            <div class="col-12 text-16-7px space-text text-red ProductSans-Medium">{{ date('d', strtotime($data['transaction_date'])) }} {{ $bulan[date('n', strtotime($data['transaction_date']))] }} {{ date('Y', strtotime($data['transaction_date'])) }}</div>
-                        @if ($data['detail']['pickup_type'] == 'set time')
-                            <div class="col-12 text-21-7px space-nice text-red ProductSans-Medium">{{ date('H:i', strtotime($data['detail']['pickup_at'])) }}</div>
-                        @elseif($data['detail']['pickup_type'] == 'at arrival')
-                            <div class="col-12 text-21-7px space-nice text-red ProductSans-Medium">Saat Kedatangan</div>
-                        @else
-                            <div class="col-12 text-21-7px space-nice text-red ProductSans-Medium">Saat Ini</div>
-                        @endif
                     </div>
                 </div>
             </div>
         @endif
+        <div class="kotak-biasa" style="background-color: #FFFFFF;padding: 15px;margin-top: 10px;box-shadow: 0 0.7px 3.3px #eeeeee;">
+            <div class="container">
+                <div class="row text-center">
+                    @if(isset($data['admin']))
+                    <div class="col-12 text-16-7px text-black space-text WorkSans">{{ strtoupper($data['user']['name']) }}</div>
+                    <div class="col-12 text-16-7px text-black WorkSans space-nice">{{ $data['user']['phone'] }}</div>
+                    @endif
+                        <div class="col-12 text-13-3px space-nice text-black-grey-light WorkSans-Medium" style="padding-bottom: 10px;">
+                            @if ($data['detail']['pickup_type'] == 'set time') 
+                                Pesanan Anda akan siap pada 
+                            @else 
+                                Pesanan Anda akan diproses pada 
+                            @endif
+                        </div>
+                        <div class="col-12 text-14px space-text text-black-grey-light WorkSans-SemiBold" style="padding-bottom: 20px;">{{ date('d', strtotime($data['transaction_date'])) }} {{ $bulan[date('n', strtotime($data['transaction_date']))] }} {{ date('Y', strtotime($data['transaction_date'])) }}</div>
+                        <div class="col-12 text-15px space-nice text-black-grey-light WorkSans-Bold" style="padding-bottom: 8.3px;">PICK UP</div>
+                        <div class="col-12 text-21-7px WorkSans-Bold" style="color: #a6ba35;">
+                            @if ($data['detail']['pickup_type'] == 'set time') 
+                                {{ date('H:i', strtotime($data['detail']['pickup_at'])) }} 
+                            @elseif($data['detail']['pickup_type'] == 'at arrival') 
+                                SAAT KEDATANGAN
+                            @else 
+                                SAAT INI
+                            @endif
+                        </div>
+                </div>
+            </div>
+        </div>
 
     @else
         @if(isset($data['admin']) && isset($data['user']['name']))
         <div class="kotak-biasa space-top-all">
             <div class="container">
                 <div class="row text-center">
-                    <div class="col-12 text-16-7px text-black space-text ProductSans">{{ strtoupper($data['user']['name']) }}</div>
-                    <div class="col-12 text-16-7px text-black ProductSans space-nice">{{ $data['user']['phone'] }}</div>
+                    <div class="col-12 text-16-7px text-black space-text WorkSans">{{ strtoupper($data['user']['name']) }}</div>
+                    <div class="col-12 text-16-7px text-black WorkSans space-nice">{{ $data['user']['phone'] }}</div>
 
                 </div>
             </div>
@@ -467,44 +540,91 @@
         @endif
     @endif
 
-    <div class="kotak">
-        <div class="container line-bottom">
-            <div class="row space-bottom">
-                <div class="col-6 text-grey-black text-14-3px ProductSans">{{ $data['outlet']['outlet_name'] }}</div>
-                <div class="col-6 text-right text-medium-grey text-13-3px ProductSans">{{ date('d', strtotime($data['transaction_date'])) }} {{ $bulan[date('n', strtotime($data['transaction_date']))] }} {{ date('Y H:i', strtotime($data['transaction_date'])) }}</div>
-            </div>
-            <div class="row space-text">
-                <div class="col-4"></div>
-                <div class="col-8 text-right text-medium-grey-black text-13-3px ProductSans">#{{ $data['transaction_receipt_number'] }}</div>
+    <div class="kotak-biasa" style="background-color: #FFFFFF;padding: 15px;margin-top: 10px;box-shadow: 0 0.7px 3.3px #eeeeee;">
+        <div class="row space-bottom">
+            <div class="col-4 text-black-grey-light text-14px WorkSans-Bold">Transaksi</div>
+            <div class="col-8 text-grey-white text-right text-medium-grey text-11-7px WorkSans">{{ date('d', strtotime($data['transaction_date'])) }} {{ $bulan[date('n', strtotime($data['transaction_date']))] }} {{ date('Y H:i', strtotime($data['transaction_date'])) }}</div>
+        </div>
+        <div class="row space-text">
+            <div class="col-4"></div>
+            <div class="col-8 text-right text-black-grey-light text-13-3px WorkSans-SemiBold">#{{ $data['transaction_receipt_number'] }}</div>
+        </div>
+        <div class="kotak" style="margin: 0px;border-radius: 10px;">
+            <div class="row">
+                @foreach ($data['product_transaction'] as $keyProduct => $itemProduct)
+                    <div class="col-2 text-14px WorkSans text-black">
+                        <div class="round-grey bg-grey" style="background: #aaaaaa;"></div>
+                    </div>
+                    <div class="col-10 text-14px WorkSans-SemiBold text-black" style="margin-left: -40px;margin-bottom: 10px;">{{$keyProduct}}</div>
+                    @foreach ($itemProduct as $item)
+                        <div class="col-2 text-13-3px WorkSans-SemiBold text-black">{{$item['transaction_product_qty']}}x</div>
+                        <div class="col-6 text-14px WorkSans-SemiBold text-black" style="margin-left: -30px;margin-right: 20px;">{{$item['product']['product_name']}}</div>
+                        <div class="col-4 text-13-3px text-right WorkSans-SemiBold text-black">{{ str_replace(',', '.', number_format(explode('.',$item['transaction_product_price'])[0])) }}</div>
+                    @endforeach
+                    @if ($itemProduct != end($data['product_transaction']))
+                        <div class="col-12">
+                            <hr style="border-top: 1px solid #eeeeee;">
+                        </div>
+                    @endif
+                    @if ($item['product']['product_discounts'] != [])
+                        <div class="col-2 text-13-3px WorkSans text-black">{{$item['transaction_product_qty']}}x</div>
+                        <div class="col-6 text-13-3px WorkSans text-black" style="margin-left: -20px;margin-right: 20px;">{{$item['product']['product_name']}}</div>
+                        <div class="col-4 text-13-3px text-right WorkSans text-black">{{ str_replace(',', '.', number_format($data['transaction_subtotal'])) }}</div>
+                    @endif
+                @endforeach
             </div>
         </div>
-        <div class="container">
+    </div>
+
+    <div class="kotak-biasa" style="background-color: #FFFFFF;padding: 15px;margin-top: 10px;box-shadow: 0 0.7px 3.3px #eeeeee;">
+        <div class="row space-bottom">
+            <div class="col-12 text-14px WorkSans-Bold text-black">Detail Pembayaran</div>
+        </div>
+        <div class="kotak" style="margin: 0px;margin-top: 10px;border-radius: 10px;">
             <div class="row">
-                <div class="col-12 text-13-3px text-grey-light ProductSans">
-                    Transaksi Anda
-                </div>
-
-                <div class="col-12 text-12-7px text-right"><hr></div>
-
-                <div class="col-6 text-13-3px ProductSans text-black ">Total Pembayaran</div>
+                <div class="col-6 text-13-3px WorkSans-SemiBold text-black ">Subtotal ({{$data['transaction_item_total']}} item)</div>
+                <div class="col-6 text-13-3px text-right WorkSans-SemiBold text-black">{{ str_replace(',', '.', number_format($data['transaction_subtotal'])) }}</div>
+            </div>
+        </div>
+        <div style="margin: 0px;margin-top: 10px;padding: 10px;background: #f0f3f7;">
+            <div class="row">
+                <div class="col-6 text-13-3px WorkSans-SemiBold text-black ">Grand Total</div>
                 @if(isset($data['balance']))
-                <div class="col-6 text-13-3px text-right ProductSans text-black">Rp {{ str_replace(',', '.', number_format($data['transaction_grandtotal'] - $data['balance'])) }}</div>
+                <div class="col-6 text-13-3px text-right WorkSans-SemiBold text-black">{{ str_replace(',', '.', number_format($data['transaction_grandtotal'] - $data['balance'])) }}</div>
                 @else
-                <div class="col-6 text-13-3px text-right ProductSans text-black">Rp {{ str_replace(',', '.', number_format($data['transaction_grandtotal'])) }}</div>
+                <div class="col-6 text-13-3px text-right WorkSans-SemiBold text-black">{{ str_replace(',', '.', number_format($data['transaction_grandtotal'])) }}</div>
+                @endif
+            </div>
+        </div>
+    </div>
+
+    <div class="kotak-biasa" style="background-color: #FFFFFF;padding: 15px;margin-top: 10px;box-shadow: 0 0.7px 3.3px #eeeeee;">
+        <div class="row space-bottom">
+            <div class="col-12 text-14px WorkSans-SemiBold text-black">Metode Pembayaran</div>
+        </div>
+        <div class="kotak" style="margin: 0px;margin-top: 10px;border-radius: 10px;">
+            <div class="row">
+                <div class="col-6 text-13-3px WorkSans-SemiBold text-black ">{{$data['trasaction_payment_type']}}</div>
+                @if(isset($data['balance']))
+                <div class="col-6 text-13-3px text-right WorkSans-SemiBold text-black">{{ str_replace(',', '.', number_format($data['transaction_grandtotal'] - $data['balance'])) }}</div>
+                @else
+                <div class="col-6 text-13-3px text-right WorkSans-SemiBold text-black">{{ str_replace(',', '.', number_format($data['transaction_grandtotal'])) }}</div>
                 @endif
             </div>
         </div>
     </div>
 
     @if ($data['trasaction_type'] != 'Offline')
-    <div class="kotak">
-        <div class="container">
+    <div class="kotak-biasa" style="background-color: #FFFFFF;padding: 15px;margin-top: 10px;">
+        <div class="row space-bottom">
+            <div class="col-12 text-14px WorkSans-Bold text-black">Status Pesanan</div>
+        </div>
+        <div class="kotak" style="margin: 0px;margin-top: 10px;border-radius: 10px;">
             <div class="row">
-                <div class="col-12 text-14-3px space-top text-red ProductSans">Status Pesanan <hr> </div>
                 @php $top = 5; $bg = true; @endphp
                 @if($data['detail']['reject_at'] != null)
-                    <div class="col-12 text-13-3px ProductSans text-black">
-                        <div class="round-red bg-red"></div>
+                    <div class="col-12 text-13-3px WorkSans-Medium text-black">
+                        <div class="round-grey bg-grey"></div>
                         Pesanan Anda ditolak
                     </div>
                     <div class="col-12 top-5px">
@@ -516,7 +636,7 @@
                             <div class="line-vertical text-grey-medium-light">|</div>
                         </div>
                         <div class="inline vertical-top">
-                            <div class="text-11-7px ProductSans text-black space-bottom">
+                            <div class="text-11-7px WorkSans text-black space-bottom">
                                 {{date('d', strtotime($data['detail']['reject_at']))}} {{$bulan[date('n', strtotime($data['detail']['reject_at']))]}} {{date('Y H:i', strtotime($data['detail']['reject_at']))}}
                             </div>
                         </div>
@@ -524,8 +644,8 @@
                     @php $top += 5; $bg = false; @endphp
                 @endif
                 @if($data['detail']['taken_at'] != null)
-                    <div class="col-12 text-13-3px ProductSans text-black top-{{$top}}px">
-                        <div class="round-red @if($bg) bg-red @endif"></div>
+                    <div class="col-12 text-13-3px WorkSans-Medium text-black top-{{$top}}px">
+                        <div class="round-grey @if($bg) bg-grey @endif"></div>
                         Pesanan Anda sudah diambil
                     </div>
                     @php $top += 5; $bg = false; @endphp
@@ -538,7 +658,7 @@
                             <div class="line-vertical text-grey-medium-light">|</div>
                         </div>
                         <div class="inline vertical-top">
-                            <div class="text-11-7px ProductSans text-black space-bottom">
+                            <div class="text-11-7px WorkSans text-black space-bottom">
                                 {{date('d F Y H:i', strtotime($data['detail']['taken_at']))}}
                             </div>
                         </div>
@@ -546,8 +666,8 @@
                     @php $top += 5; @endphp
                 @endif
                 @if($data['detail']['ready_at'] != null)
-                    <div class="col-12 text-13-3px ProductSans text-black top-{{$top}}px">
-                        <div class="round-red @if($bg) bg-red @endif"></div>
+                    <div class="col-12 text-13-3px WorkSans-Medium text-black top-{{$top}}px">
+                        <div class="round-grey @if($bg) bg-grey @endif"></div>
                         Pesanan Anda sudah siap
                     </div>
                     @php $top += 5; $bg = false; @endphp
@@ -560,7 +680,7 @@
                             <div class="line-vertical text-grey-medium-light">|</div>
                         </div>
                         <div class="inline vertical-top">
-                            <div class="text-11-7px ProductSans text-black space-bottom">
+                            <div class="text-11-7px WorkSans text-black space-bottom">
                                 {{date('d', strtotime($data['detail']['ready_at']))}} {{$bulan[date('n', strtotime($data['detail']['ready_at']))]}} {{date('Y H:i', strtotime($data['detail']['ready_at']))}}
                             </div>
                         </div>
@@ -568,8 +688,8 @@
                     @php $top += 5; @endphp
                 @endif
                 @if($data['detail']['receive_at'] != null)
-                    <div class="col-12 text-13-3px ProductSans text-black top-{{$top}}px">
-                        <div class="round-red @if($bg) bg-red @endif"></div>
+                    <div class="col-12 text-13-3px WorkSans-Medium text-black top-{{$top}}px">
+                        <div class="round-grey @if($bg) bg-grey @endif"></div>
                             Pesanan Anda sudah diterima
                     </div>
                     @php $top += 5; $bg = false; @endphp
@@ -582,18 +702,18 @@
                             <div class="line-vertical text-grey-medium-light">|</div>
                         </div>
                         <div class="inline vertical-top">
-                            <div class="text-11-7px ProductSans text-black space-bottom">
+                            <div class="text-11-7px WorkSans text-black space-bottom">
                                 {{date('d', strtotime($data['detail']['receive_at']))}} {{$bulan[date('n', strtotime($data['detail']['receive_at']))]}} {{date('Y H:i', strtotime($data['detail']['receive_at']))}}
                             </div>
                         </div>
                     </div>
                     @php $top += 5; @endphp
                 @endif
-                <div class="col-12 text-13-3px ProductSans text-black top-{{$top}}px">
-                    <div class="round-red @if($bg) bg-red @endif"></div>
+                <div class="col-12 text-13-3px WorkSans-Medium text-black top-{{$top}}px">
+                    <div class="round-grey @if($bg) bg-grey @endif"></div>
                     Pesanan Anda Menunggu Konfirmasi
                 </div>
-                <div class="col-12 text-11-7px ProductSans text-black space-bottom top-{{$top}}px">
+                <div class="col-12 text-11-7px WorkSans text-black space-bottom top-{{$top}}px">
                     <div class="round-white"></div>
                     {{date('d', strtotime($data['transaction_date']))}} {{$bulan[date('n', strtotime($data['transaction_date']))]}} {{date('Y H:i', strtotime($data['transaction_date']))}}
                 </div>

@@ -2,6 +2,7 @@
 
 namespace Modules\POS\Http\Controllers;
 
+use App\Jobs\FraudJob;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
@@ -26,6 +27,10 @@ use App\Http\Models\Product;
 use App\Http\Models\ProductPrice;
 use App\Http\Models\ProductPhoto;
 use App\Http\Models\ProductModifier;
+use App\Http\Models\ProductModifierDetail;
+use App\Http\Models\ProductModifierGlobalPrice;
+use App\Http\Models\ProductModifierPrice;
+use App\Http\Models\ProductModifierProduct;
 use App\Http\Models\Outlet;
 use App\Http\Models\Setting;
 use App\Http\Models\DealsUser;
@@ -35,12 +40,12 @@ use App\Http\Models\LogBalance;
 use App\Http\Models\SpecialMembership;
 use App\Http\Models\DealsVoucher;
 use App\Http\Models\Configs;
-use App\Http\Models\FraudSetting;
+use Modules\SettingFraud\Entities\FraudSetting;
 use App\Http\Models\LogBackendError;
 use App\Http\Models\SyncTransactionFaileds;
 use App\Http\Models\SyncTransactionQueues;
 use App\Lib\MyHelper;
-use Mailgun;
+use Mail;
 
 use Modules\POS\Http\Requests\reqMember;
 use Modules\POS\Http\Requests\reqVoucher;
@@ -54,11 +59,18 @@ use Modules\POS\Http\Requests\reqBulkMenu;
 use Modules\Brand\Entities\Brand;
 use Modules\Brand\Entities\BrandOutlet;
 use Modules\Brand\Entities\BrandProduct;
+use Modules\POS\Entities\SyncMenuRequest;
+use Modules\POS\Entities\SyncMenuResult;
 
 use Modules\POS\Http\Controllers\CheckVoucher;
 use Exception;
 
 use DB;
+use DateTime;
+use GuzzleHttp\Client;
+use Modules\Disburse\Entities\UserFranchisee;
+use Modules\Disburse\Entities\UserFranchiseeOultet;
+use Modules\POS\Jobs\SyncOutletSeed;
 
 class ApiPOS extends Controller
 {
@@ -69,7 +81,7 @@ class ApiPOS extends Controller
         $this->membership = "Modules\Membership\Http\Controllers\ApiMembership";
         $this->balance    = "Modules\Balance\Http\Controllers\BalanceController";
         $this->autocrm  = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
-        $this->setting_fraud = "Modules\SettingFraud\Http\Controllers\ApiSettingFraud";
+        $this->setting_fraud = "Modules\SettingFraud\Http\Controllers\ApiFraud";
 
         $this->pos = "Modules\POS\Http\Controllers\ApiPos";
     }
@@ -137,7 +149,7 @@ class ApiPOS extends Controller
                 $balance = TransactionPaymentBalance::where('id_transaction', $check['id_transaction'])->get();
                 if ($balance) {
                     foreach ($balance as $payBalance) {
-                        $pay['payment_type'] = 'Kenangan Points';
+                        $pay['payment_type'] = 'Points';
                         $pay['payment_nominal'] = (int) $payBalance['balance_nominal'];
                         $transactions['payments'][] = $pay;
                     }
@@ -156,7 +168,7 @@ class ApiPOS extends Controller
                     if ($payMulti['type'] == 'Balance') {
                         $balance = TransactionPaymentBalance::find($payMulti['id_payment']);
                         if ($balance) {
-                            $pay['payment_type'] = 'Kenangan Points';
+                            $pay['payment_type'] = 'Points';
                             $pay['payment_nominal'] = (int) $balance['balance_nominal'];
                             $transactions['payments'][] = $pay;
                         }
@@ -412,6 +424,58 @@ class ApiPOS extends Controller
 
     }
 
+    function getAuthSeed() {
+        $accurateAuth = new Client([
+            'base_uri'  => env('POS_URL'),
+        ]);
+        $getToken = $accurateAuth->post('auth', [
+            'headers'   => [
+                'Content-Type'  => 'application/x-www-form-urlencoded',
+                'Accept'        => 'application/json',
+            ],
+            'body' => http_build_query([
+                'key'       => env('POS_KEY'),
+                'secret'    => env('POS_SECRET'),
+            ])
+        ]);
+        $accurateToken = json_decode($getToken->getBody(), true);
+        return $accurateToken;
+    }
+
+    function getPerPageOutlet($bearer, $url = null) {
+        $accurateAuth = new Client([
+            'base_uri'  => env('POS_URL'),
+        ]);
+        $getToken = $accurateAuth->get('outlet' . $url, [
+            'headers'   => [
+                'Content-Type'  => 'application/json',
+                'Authorization' => $bearer,
+            ]
+        ]);
+        $outlet = json_decode($getToken->getBody(), true);
+        return $outlet;
+    }
+
+    public function syncOutletSeed() {
+        $auth = $this->getAuthSeed();
+
+        if ($auth['success'] == true) {
+            $outlet = $this->getPerPageOutlet('Bearer ' . $auth['result']['access_token']);
+            if ($outlet['status'] == 'success') {
+                SyncOutletSeed::dispatch($outlet['result']['data']);
+                if (!is_null($outlet['result']['next_page_url'])) {
+                    for ($i = 2; $i <= $outlet['result']['last_page']; $i++) {
+                        $outlet = $this->getPerPageOutlet('Bearer ' . $auth['result']['access_token'], '?page='.$i);
+                        SyncOutletSeed::dispatch($outlet['result']['data']);
+                    }
+                }
+            }
+        }
+        return [
+            'stuatus'   => 'success'
+        ];
+    }
+
     public function syncOutlet(reqOutlet $request)
     {
         $post = $request->json()->all();
@@ -521,19 +585,21 @@ class ApiPOS extends Controller
             ]
         ]);
     }
-
-    public function syncMenu(Request $request)
-    {
+    /**
+     * Synch menu for single outlet
+     * @param  Request $request laravel Request object
+     * @return array        status update
+     */
+    public function syncMenu(Request $request) {
         $post = $request->json()->all();
-
+        return $this->syncMenuProcess($post,'partial');
+    }
+    public function syncMenuProcess($data, $flag)
+    {
         $syncDatetime = date('d F Y h:i');
-
-        $api = $this->checkApi($post['api_key'], $post['api_secret']);
-        if ($api['status'] != 'success') {
-            return response()->json($api);
-        }
-
-        $outlet = Outlet::where('outlet_code', strtoupper($post['store_code']))->first();
+        $getBrand = Brand::pluck('code_brand')->toArray();
+        $getBrandList = Brand::select('id_brand', 'code_brand')->get()->toArray();
+        $outlet = Outlet::where('outlet_code', strtoupper($data['store_code']))->first();
         if ($outlet) {
             $countInsert = 0;
             $countUpdate = 0;
@@ -541,55 +607,107 @@ class ApiPOS extends Controller
             $updatedProduct = [];
             $insertedProduct = [];
             $failedProduct = [];
-
-            foreach ($post['menu'] as $key => $menu) {
-                dd($menu['brand_code']);
+            foreach ($data['menu'] as $key => $menu) {
+                if (!isset($menu['brand_code'])) {
+                    $failedProduct[] = 'fail to sync product ' . $menu['name'] . ', because brand_code not set';
+                    continue;
+                }
+                if (!isset($menu['plu_id'])) {
+                    $failedProduct[] = 'fail to sync product ' . $menu['name'] . ', because plu_id not set';
+                    continue;
+                }
+                if (!isset($menu['name'])) {
+                    $failedProduct[] = 'fail to sync product ' . $menu['name'] . ', because name not set';
+                    continue;
+                }
+                if (!isset($menu['category'])) {
+                    $failedProduct[] = 'fail to sync product ' . $menu['name'] . ', because category not set';
+                    continue;
+                }
+                if (!isset($menu['price'])) {
+                    $failedProduct[] = 'fail to sync product ' . $menu['name'] . ', because price not set';
+                    continue;
+                }
+                if (!isset($menu['price_base'])) {
+                    $failedProduct[] = 'fail to sync product ' . $menu['name'] . ', because price_base not set';
+                    continue;
+                }
+                if (!isset($menu['price_tax'])) {
+                    $failedProduct[] = 'fail to sync product ' . $menu['name'] . ', because price_tax not set';
+                    continue;
+                }
+                if (!isset($menu['status'])) {
+                    $failedProduct[] = 'fail to sync product ' . $menu['name'] . ', because status not set';
+                    continue;
+                }
+                $diffBrand = array_diff($menu['brand_code'], $getBrand);
+                if (!empty($diffBrand)) {
+                    $failedProduct[] = 'fail to sync product ' . $menu['name'] . ', because code brand ' . implode(', ', $diffBrand) . ' not found';
+                    continue;
+                }
                 if (isset($menu['plu_id']) && isset($menu['name'])) {
                     DB::beginTransaction();
                     $product = Product::where('product_code', $menu['plu_id'])->first();
-
-                    // return response()->json($menu);
                     // update product
                     if ($product) {
                         // cek allow sync, jika 0 product tidak di update
                         if ($product->product_allow_sync == '1') {
-
-                            foreach ($menu['brand_code'] as $valueBrand) {
-                                $brand = Brand::where('code_brand', $valueBrand)->first();
-                                if (!$brand) {
-                                    DB::rollBack();
-                                    $failedProduct[] = ['product_code' => $menu['plu_id'], 'product_name' => $menu['name']];
-                                }
+                            $cekBrandProduct = BrandProduct::join('brands', 'brands.id_brand', 'brand_product.id_brand')->where('id_product', $product->id_product)->pluck('code_brand')->toArray();
+                            // delete diff brand
+                            $deleteDiffBrand = array_diff($cekBrandProduct, $menu['brand_code']);
+                            if (!empty($deleteDiffBrand)) {
                                 try {
-                                    BrandProduct::create(
-                                        [
-                                            'id_product' => $product->id_product,
-                                            'id_brand'  => $brand->id_brand
-                                        ]
-                                    );
+                                    BrandProduct::join('brands', 'brands.id_brand', 'brand_product.id_brand')->where('id_product', $product->id_product)->whereIn('brand_product.id_brand', $deleteDiffBrand)->delete();
                                 } catch (\Exception $e) {
-                                    DB::rollBack();
-                                    LogBackendError::logExceptionMessage("ApiPOS/syncMenu=>" . $e->getMessage(), $e);
+                                    DB::rollback();
+                                    LogBackendError::logExceptionMessage("ApiPOS/syncProduct=>" . $e->getMessage(), $e);
+                                    $failedProduct[] = 'fail to sync, product ' . $menu['name'];
+                                    continue;
+                                }
+                            }
+                            $createDiffBrand = array_diff($menu['brand_code'], $cekBrandProduct);
+                            if (!empty($createDiffBrand)) {
+                                try {
+                                    $brandProduct = [];
+                                    foreach ($createDiffBrand as $menuBrand) {
+                                        $getIdBrand = $getBrandList[array_search($menuBrand, $getBrand)]['id_brand'];
+                                        $brandProduct[] = [
+                                            'id_product' => $product->id_product,
+                                            'id_brand' => $getIdBrand,
+                                            'created_at' => date('Y-m-d H:i:s'),
+                                            'updated_at' => date('Y-m-d H:i:s'),
+                                        ];
+                                    }
+                                    BrandProduct::insert($brandProduct);
+                                } catch (Exception $e) {
+                                    DB::rollback();
+                                    LogBackendError::logExceptionMessage("ApiPOS/syncProduct=>" . $e->getMessage(), $e);
+                                    $failedProduct[] = 'fail to sync, product ' . $menu['name'];
+                                    continue;
                                 }
                             }
                             // cek name pos, jika beda product tidak di update
                             if (empty($product->product_name_pos) || $product->product_name_pos == $menu['name']) {
                                 // update modifiers
                                 if (isset($menu['modifiers'])) {
+                                    ProductModifierProduct::where('id_product',$product['id_product'])->delete();
                                     foreach ($menu['modifiers'] as $mod) {
                                         $dataProductMod['type'] = $mod['type'];
                                         if (isset($mod['text']))
                                             $dataProductMod['text'] = $mod['text'];
                                         else
                                             $dataProductMod['text'] = null;
-
+                                        $dataProductMod['modifier_type'] = 'Specific';
                                         $updateProductMod = ProductModifier::updateOrCreate([
-                                            'id_product' => $product->id_product,
                                             'code'  => $mod['code']
                                         ], $dataProductMod);
+                                        $id_product_modifier = $updateProductMod['id_product_modifier'];
+                                        ProductModifierProduct::create([
+                                            'id_product_modifier' => $id_product_modifier,
+                                            'id_product' => $product['id_product']
+                                        ]);
                                     }
                                 }
-
                                 // update price
                                 $productPrice = ProductPrice::where('id_product', $product->id_product)->where('id_outlet', $outlet->id_outlet)->first();
                                 if ($productPrice) {
@@ -599,12 +717,10 @@ class ApiPOS extends Controller
                                     $oldPrice = null;
                                     $oldUpdatedAt = null;
                                 }
-
                                 $dataProductPrice['product_price'] = (int) round($menu['price']);
                                 $dataProductPrice['product_price_base'] = round($menu['price_base'], 2);
                                 $dataProductPrice['product_price_tax'] = round($menu['price_tax'], 2);
                                 $dataProductPrice['product_status'] = $menu['status'];
-
                                 try {
                                     $updateProductPrice = ProductPrice::updateOrCreate([
                                         'id_product' => $product->id_product,
@@ -615,53 +731,45 @@ class ApiPOS extends Controller
                                     LogBackendError::logExceptionMessage("ApiPOS/syncMenu=>" . $e->getMessage(), $e);
                                     $failedProduct[] = ['product_code' => $menu['plu_id'], 'product_name' => $menu['name']];
                                 }
-
                                 //upload photo
-                                $imageUpload = [];
-                                if (isset($menu['photo'])) {
-                                    foreach ($menu['photo'] as $photo) {
-                                        $image = file_get_contents($photo['url']);
-                                        $img = base64_encode($image);
-                                        if (!file_exists('img/product/item/')) {
-                                            mkdir('img/product/item/', 0777, true);
-                                        }
-
-                                        $upload = MyHelper::uploadPhotoStrict($img, 'img/product/item/', 300, 300);
-
-                                        if (isset($upload['status']) && $upload['status'] == "success") {
-                                            $orderPhoto = ProductPhoto::where('id_product', $product->id_product)->orderBy('product_photo_order', 'desc')->first();
-                                            if ($orderPhoto) {
-                                                $orderPhoto = $orderPhoto->product_photo_order + 1;
-                                            } else {
-                                                $orderPhoto = 1;
-                                            }
-                                            $dataPhoto['id_product'] = $product->id_product;
-                                            $dataPhoto['product_photo'] = $upload['path'];
-                                            $dataPhoto['product_photo_order'] = $orderPhoto;
-
-                                            try {
-                                                $photo = ProductPhoto::create($dataPhoto);
-                                            } catch (\Exception $e) {
-                                                DB::rollBack();
-                                                LogBackendError::logExceptionMessage("ApiPOS/syncMenu=>" . $e->getMessage(), $e);
-                                                $failedProduct[] = ['product_code' => $menu['plu_id'], 'product_name' => $menu['name']];
-                                            }
-
-                                            //add in array photo
-                                            $imageUpload[] = $photo['product_photo'];
-                                        } else {
-                                            DB::rollBack();
-                                            $failedProduct[] = ['product_code' => $menu['plu_id'], 'product_name' => $menu['name']];
-                                        }
-                                    }
-                                }
-
+                                // $imageUpload = [];
+                                // if (isset($menu['photo'])) {
+                                //     foreach ($menu['photo'] as $photo) {
+                                //         $image = file_get_contents($photo['url']);
+                                //         $img = base64_encode($image);
+                                //         if (!file_exists('img/product/item/')) {
+                                //             mkdir('img/product/item/', 0777, true);
+                                //         }
+                                //         $upload = MyHelper::uploadPhotoStrict($img, 'img/product/item/', 300, 300);
+                                //         if (isset($upload['status']) && $upload['status'] == "success") {
+                                //             $orderPhoto = ProductPhoto::where('id_product', $product->id_product)->orderBy('product_photo_order', 'desc')->first();
+                                //             if ($orderPhoto) {
+                                //                 $orderPhoto = $orderPhoto->product_photo_order + 1;
+                                //             } else {
+                                //                 $orderPhoto = 1;
+                                //             }
+                                //             $dataPhoto['id_product'] = $product->id_product;
+                                //             $dataPhoto['product_photo'] = $upload['path'];
+                                //             $dataPhoto['product_photo_order'] = $orderPhoto;
+                                //             try {
+                                //                 $photo = ProductPhoto::create($dataPhoto);
+                                //             } catch (\Exception $e) {
+                                //                 DB::rollBack();
+                                //                 LogBackendError::logExceptionMessage("ApiPOS/syncMenu=>" . $e->getMessage(), $e);
+                                //                 $failedProduct[] = ['product_code' => $menu['plu_id'], 'product_name' => $menu['name']];
+                                //             }
+                                //             //add in array photo
+                                //             $imageUpload[] = $photo['product_photo'];
+                                //         } else {
+                                //             DB::rollBack();
+                                //             $failedProduct[] = ['product_code' => $menu['plu_id'], 'product_name' => $menu['name']];
+                                //         }
+                                //     }
+                                // }
                                 $countUpdate++;
-
                                 // list updated product utk data log
                                 $newProductPrice = ProductPrice::where('id_product', $product->id_product)->where('id_outlet', $outlet->id_outlet)->first();
                                 $newUpdatedAt =  $newProductPrice->updated_at;
-
                                 $updateProd['id_product'] = $product['id_product'];
                                 $updateProd['plu_id'] = $product['product_code'];
                                 $updateProd['product_name'] = $product['product_name'];
@@ -669,15 +777,13 @@ class ApiPOS extends Controller
                                 $updateProd['new_price'] = (int) round($menu['price']);
                                 $updateProd['old_updated_at'] = $oldUpdatedAt;
                                 $updateProd['new_updated_at'] = $newUpdatedAt;
-                                if (count($imageUpload) > 0) {
-                                    $updateProd['new_photo'] = $imageUpload;
-                                }
-
+                                // if (count($imageUpload) > 0) {
+                                //     $updateProd['new_photo'] = $imageUpload;
+                                // }
                                 $updatedProduct[] = $updateProd;
                             } else {
                                 // Add product to rejected product
                                 $productPrice = ProductPrice::where('id_outlet', $outlet->id_outlet)->where('id_product', $product->id_product)->first();
-
                                 $dataBackend['plu_id'] = $product->product_code;
                                 $dataBackend['name'] = $product->product_name_pos;
                                 if (empty($productPrice)) {
@@ -685,7 +791,6 @@ class ApiPOS extends Controller
                                 } else {
                                     $dataBackend['price'] = number_format($productPrice->product_price, 0, ',', '.');
                                 }
-
                                 $dataRaptor['plu_id'] = $menu['plu_id'];
                                 $dataRaptor['name'] = $menu['name'];
                                 $dataRaptor['price'] = number_format($menu['price'], 0, ',', '.');
@@ -693,38 +798,18 @@ class ApiPOS extends Controller
                             }
                         }
                     }
-
                     // insert product
                     else {
                         $create = Product::create(['product_code' => $menu['plu_id'], 'product_name_pos' => $menu['name'], 'product_name' => $menu['name']]);
-                        foreach ($menu['brand_code'] as $valueBrand) {
-                            $brand = Brand::where('code_brand', $valueBrand)->first();
-                            if (!$brand) {
-                                DB::rollBack();
-                                $failedProduct[] = ['product_code' => $menu['plu_id'], 'product_name' => $menu['name']];
-                            }
-                            try {
-                                BrandProduct::create(
-                                    [
-                                        'id_product' => $create->id_product,
-                                        'id_brand'  => $brand->id_brand
-                                    ]
-                                );
-                            } catch (\Exception $e) {
-                                DB::rollBack();
-                                LogBackendError::logExceptionMessage("ApiPOS/syncMenu=>" . $e->getMessage(), $e);
-                            }
-                        }
                         if ($create) {
                             // update price
                             $dataProductPrice['product_price'] = (int) round($menu['price']);
                             $dataProductPrice['product_price_base'] = round($menu['price_base'], 2);
                             $dataProductPrice['product_price_tax'] = round($menu['price_tax'], 2);
                             $dataProductPrice['product_status'] = $menu['status'];
-
                             try {
                                 $updateProductPrice = ProductPrice::updateOrCreate([
-                                    'id_product' => $create->id_product,
+                                    'id_product' => $create['id_product'],
                                     'id_outlet'  => $outlet->id_outlet
                                 ], $dataProductPrice);
                             } catch (\Exception $e) {
@@ -732,81 +817,114 @@ class ApiPOS extends Controller
                                 LogBackendError::logExceptionMessage("ApiPOS/syncMenu=>" . $e->getMessage(), $e);
                                 $failedProduct[] = ['product_code' => $menu['plu_id'], 'product_name' => $menu['name']];
                             }
-
-                            $imageUpload = [];
-                            if (isset($menu['photo'])) {
-                                foreach ($menu['photo'] as $photo) {
-                                    $image = file_get_contents($photo['url']);
-                                    $img = base64_encode($image);
-                                    if (!file_exists('img/product/item/')) {
-                                        mkdir('img/product/item/', 0777, true);
-                                    }
-
-                                    $upload = MyHelper::uploadPhotoStrict($img, 'img/product/item/', 300, 300);
-
-                                    if (isset($upload['status']) && $upload['status'] == "success") {
-                                        $dataPhoto['id_product'] = $product->id_product;
-                                        $dataPhoto['product_photo'] = $upload['path'];
-                                        $dataPhoto['product_photo_order'] = 1;
-
-                                        try {
-                                            $photo = ProductPhoto::create($dataPhoto);
-                                        } catch (\Exception $e) {
-                                            DB::rollBack();
-                                            LogBackendError::logExceptionMessage("ApiPOS/syncMenu=>" . $e->getMessage(), $e);
-                                            $failedProduct[] = ['product_code' => $menu['plu_id'], 'product_name' => $menu['name']];
-                                        }
-
-                                        //add in array photo
-                                        $imageUpload[] = $photo['product_photo'];
-                                    } else {
-                                        DB::rollBack();
-                                        $failedProduct[] = ['product_code' => $menu['plu_id'], 'product_name' => $menu['name']];
-                                    }
+                            try {
+                                $brandProduct = [];
+                                foreach ($menu['brand_code'] as $valueBrand) {
+                                    $getIdBrand = $getBrandList[array_search($valueBrand, $getBrand)]['id_brand'];
+                                    $brandProduct[] = [
+                                        'id_product' => $create['id_product'],
+                                        'id_brand' => $getIdBrand,
+                                        'created_at' => date('Y-m-d H:i:s'),
+                                        'updated_at' => date('Y-m-d H:i:s'),
+                                    ];
                                 }
+                                BrandProduct::insert($brandProduct);
+                            } catch (Exception $e) {
+                                DB::rollback();
+                                LogBackendError::logExceptionMessage("ApiPOS/syncProduct=>" . $e->getMessage(), $e);
+                                $failedProduct[] = 'fail to sync, brand ' . $menu['name'];
+                                continue;
                             }
-
+                            // $imageUpload = [];
+                            // if (isset($menu['photo'])) {
+                            //     foreach ($menu['photo'] as $photo) {
+                            //         $image = file_get_contents($photo['url']);
+                            //         $img = base64_encode($image);
+                            //         if (!file_exists('img/product/item/')) {
+                            //             mkdir('img/product/item/', 0777, true);
+                            //         }
+                            //         $upload = MyHelper::uploadPhotoStrict($img, 'img/product/item/', 300, 300);
+                            //         if (isset($upload['status']) && $upload['status'] == "success") {
+                            //             $dataPhoto['id_product'] = $product->id_product;
+                            //             $dataPhoto['product_photo'] = $upload['path'];
+                            //             $dataPhoto['product_photo_order'] = 1;
+                            //             try {
+                            //                 $photo = ProductPhoto::create($dataPhoto);
+                            //             } catch (\Exception $e) {
+                            //                 DB::rollBack();
+                            //                 LogBackendError::logExceptionMessage("ApiPOS/syncMenu=>" . $e->getMessage(), $e);
+                            //                 $failedProduct[] = ['product_code' => $menu['plu_id'], 'product_name' => $menu['name']];
+                            //             }
+                            //             //add in array photo
+                            //             $imageUpload[] = $photo['product_photo'];
+                            //         } else {
+                            //             DB::rollBack();
+                            //             $failedProduct[] = ['product_code' => $menu['plu_id'], 'product_name' => $menu['name']];
+                            //         }
+                            //     }
+                            // }
                             $countInsert++;
-
                             // list new product utk data log
                             $insertProd['id_product'] = $create['id_product'];
                             $insertProd['plu_id'] = $create['product_code'];
                             $insertProd['product_name'] = $create['product_name'];
                             $insertProd['price'] = (int) round($menu['price']);
-                            if (count($imageUpload) > 0) {
-                                $updateProd['new_photo'] = $imageUpload;
-                            }
-
+                            // if (count($imageUpload) > 0) {
+                            //     $updateProd['new_photo'] = $imageUpload;
+                            // }
                             $insertedProduct[] = $insertProd;
                         }
                     }
                     DB::commit();
                 }
             }
-
-            // send email rejected product
-            if (count($rejectedProduct) > 0) {
-                $this->syncSendEmail($syncDatetime, $outlet->outlet_code, $outlet->outlet_name, $rejectedProduct, null);
+            if($modifier_prices = ($data['modifier']??false)){
+                foreach ($modifier_prices as $modifier) {
+                    $promod = ProductModifier::select('id_product_modifier')->where('code',$modifier['code'])->first();
+                    if(!$promod){
+                        continue;
+                    }
+                    $data_key = [
+                        'id_outlet' => $outlet->id_outlet,
+                        'id_product_modifier' => $promod->id_product_modifier
+                    ];
+                    $data_price = [];
+                    if(isset($modifier['price'])){
+                        $data_price['product_modifier_price'] = $modifier['price'];
+                    }
+                    if($modifier['status']??false){
+                        ProductModifierDetail::updateOrCreate(['id_product_modifier' => $promod->id_product_modifier], ['product_modifier_status' => $modifier['status']]);
+                    }
+                    if($outlet->outlet_different_price){
+                        ProductModifierPrice::updateOrCreate($data_key,$data_price);
+                    }else{
+                        ProductModifierGlobalPrice::updateOrCreate(['id_product_modifier' => $promod->id_product_modifier],['product_modifier_price' => $modifier['price']]);
+                    }
+                }
             }
-            if (count($failedProduct) > 0) {
-                $this->syncSendEmail($syncDatetime, $outlet->outlet_code, $outlet->outlet_name, null, $failedProduct);
+            if ($flag == 'partial') {
+                if (count($rejectedProduct) > 0) {
+                    $this->syncSendEmail($syncDatetime, $outlet->outlet_code, $outlet->outlet_name, $rejectedProduct, null);
+                }
+                if (count($failedProduct) > 0) {
+                    $this->syncSendEmail($syncDatetime, $outlet->outlet_code, $outlet->outlet_name, null, $failedProduct);
+                }
             }
-
             $hasil['new_product']['total'] = (string) $countInsert;
             $hasil['new_product']['list_product'] = $insertedProduct;
             $hasil['updated_product']['total'] = (string) $countUpdate;
             $hasil['updated_product']['list_product'] = $updatedProduct;
+            $hasil['rejected_product']['list_product'] = $rejectedProduct;
             $hasil['failed_product']['list_product'] = $failedProduct;
-
-            return response()->json([
+            return [
                 'status'    => 'success',
                 'result'  => $hasil,
-            ]);
+            ];
         } else {
-            return response()->json([
+            return [
                 'status'    => 'fail',
-                'messages'  => 'store_code isn\'t match'
-            ]);
+                'messages'  => ['store_code ' . $data['store_code'] . ' isn\'t match']
+            ];
         }
     }
 
@@ -816,9 +934,7 @@ class ApiPOS extends Controller
         if (!empty($emailSync) && $emailSync->value != null) {
             $emailSync = explode(',', $emailSync->value);
             foreach ($emailSync as $key => $to) {
-
                 $subject = 'Rejected product from menu sync raptor';
-
                 $content['sync_datetime'] = $syncDatetime;
                 $content['outlet_code'] = $outlet_code;
                 $content['outlet_name'] = $outlet_name;
@@ -830,7 +946,6 @@ class ApiPOS extends Controller
                     $content['total_failed'] = count($failedProduct);
                     $content['failed_menu'] = $failedProduct;
                 }
-
                 // get setting email
                 $setting = array();
                 $set = Setting::where('key', 'email_from')->first();
@@ -839,114 +954,95 @@ class ApiPOS extends Controller
                 } else {
                     $setting['email_from'] = null;
                 }
-
                 $set = Setting::where('key', 'email_sender')->first();
                 if (!empty($set)) {
                     $setting['email_sender'] = $set['value'];
                 } else {
                     $setting['email_sender'] = null;
                 }
-
                 $set = Setting::where('key', 'email_reply_to')->first();
                 if (!empty($set)) {
                     $setting['email_reply_to'] = $set['value'];
                 } else {
                     $setting['email_reply_to'] = null;
                 }
-
                 $set = Setting::where('key', 'email_reply_to_name')->first();
                 if (!empty($set)) {
                     $setting['email_reply_to_name'] = $set['value'];
                 } else {
                     $setting['email_reply_to_name'] = null;
                 }
-
                 $set = Setting::where('key', 'email_cc')->first();
                 if (!empty($set)) {
                     $setting['email_cc'] = $set['value'];
                 } else {
                     $setting['email_cc'] = null;
                 }
-
                 $set = Setting::where('key', 'email_cc_name')->first();
                 if (!empty($set)) {
                     $setting['email_cc_name'] = $set['value'];
                 } else {
                     $setting['email_cc_name'] = null;
                 }
-
                 $set = Setting::where('key', 'email_bcc')->first();
                 if (!empty($set)) {
                     $setting['email_bcc'] = $set['value'];
                 } else {
                     $setting['email_bcc'] = null;
                 }
-
                 $set = Setting::where('key', 'email_bcc_name')->first();
                 if (!empty($set)) {
                     $setting['email_bcc_name'] = $set['value'];
                 } else {
                     $setting['email_bcc_name'] = null;
                 }
-
                 $set = Setting::where('key', 'email_logo')->first();
                 if (!empty($set)) {
                     $setting['email_logo'] = $set['value'];
                 } else {
                     $setting['email_logo'] = null;
                 }
-
                 $set = Setting::where('key', 'email_logo_position')->first();
                 if (!empty($set)) {
                     $setting['email_logo_position'] = $set['value'];
                 } else {
                     $setting['email_logo_position'] = null;
                 }
-
                 $set = Setting::where('key', 'email_copyright')->first();
                 if (!empty($set)) {
                     $setting['email_copyright'] = $set['value'];
                 } else {
                     $setting['email_copyright'] = null;
                 }
-
                 $set = Setting::where('key', 'email_disclaimer')->first();
                 if (!empty($set)) {
                     $setting['email_disclaimer'] = $set['value'];
                 } else {
                     $setting['email_disclaimer'] = null;
                 }
-
                 $set = Setting::where('key', 'email_contact')->first();
                 if (!empty($set)) {
                     $setting['email_contact'] = $set['value'];
                 } else {
                     $setting['email_contact'] = null;
                 }
-
                 $data = array(
                     'content' => $content,
                     'setting' => $setting
                 );
-
-                Mailgun::send('pos::email_sync_menu', $data, function ($message) use ($to, $subject, $setting) {
-                    $message->to($to)->subject($subject)
-                        ->trackClicks(true)
-                        ->trackOpens(true);
-                    if (!empty($setting['email_from']) && !empty($setting['email_sender'])) {
-                        $message->from($setting['email_from'], $setting['email_sender']);
-                    } else if (!empty($setting['email_from'])) {
-                        $message->from($setting['email_from']);
+                Mail::send('pos::email_sync_menu', $data, function ($message) use ($to, $subject, $setting) {
+                    $message->to($to)->subject($subject);
+                    if(!empty($setting['email_from']) && !empty($setting['email_sender'])){
+                        $message->from($setting['email_sender'], $setting['email_from']);
+                    }else if(!empty($setting['email_sender'])){
+                        $message->from($setting['email_sender']);
                     }
-
                     if (!empty($setting['email_reply_to'])) {
                         $message->replyTo($setting['email_reply_to'], $setting['email_reply_to_name']);
                     }
-
                     if (!empty($setting['email_cc']) && !empty($setting['email_cc_name'])) {
                         $message->cc($setting['email_cc'], $setting['email_cc_name']);
                     }
-
                     if (!empty($setting['email_bcc']) && !empty($setting['email_bcc_name'])) {
                         $message->bcc($setting['email_bcc'], $setting['email_bcc_name']);
                     }
@@ -958,7 +1054,7 @@ class ApiPOS extends Controller
     public function syncMenuReturn(reqMenu $request)
     {
         // call function syncMenu
-        $url = env('API_URL') . 'api/v1/pos/menu/sync';
+        $url = config('url.api_url') . 'api/v1/pos/menu/sync';
         $syncMenu = MyHelper::post($url, MyHelper::getBearerToken(), $request->json()->all());
 
         // return sesuai api raptor
@@ -1001,6 +1097,7 @@ class ApiPOS extends Controller
             if($countTransaction <= $x){
                 $config['point']    = Configs::where('config_name', 'point')->first()->is_active;
                 $config['balance']  = Configs::where('config_name', 'balance')->first()->is_active;
+                $config['fraud_use_queue'] = Configs::where('config_name', 'fraud use queue')->first()->is_active;
                 $settingPoint       = Setting::where('key', 'point_conversion_value')->first()->value;
                 $transOriginal      = $post['transactions'];
 
@@ -1056,8 +1153,8 @@ class ApiPOS extends Controller
                 }
 
                 $countSettingCashback = TransactionSetting::get();
-                $fraudTrxDay = FraudSetting::where('parameter', 'LIKE', '%transactions in 1 day%')->first();
-                $fraudTrxWeek = FraudSetting::where('parameter', 'LIKE', '%transactions in 1 week%')->first();
+                $fraudTrxDay = FraudSetting::where('parameter', 'LIKE', '%transactions in 1 day%')->where('fraud_settings_status','Active')->first();
+                $fraudTrxWeek = FraudSetting::where('parameter', 'LIKE', '%transactions in 1 week%')->where('fraud_settings_status','Active')->first();
                 foreach ($post['transactions'] as $key => $trx) {
                     if(!empty($trx['date_time']) &&
                         isset($trx['total']) &&
@@ -1171,6 +1268,8 @@ class ApiPOS extends Controller
         try{
             if(!isset($trx['order_id'])){
                 if(count($trx['menu']) >= 0 && isset($trx['trx_id'])){
+                    $countTrxDay = 0;
+                    $countTrxWeek = 0;
 
                     $dataTrx = [
                             'id_outlet'                   => $outlet['id_outlet'],
@@ -1214,6 +1313,37 @@ class ApiPOS extends Controller
                             $dataTrx['membership_level']    = null;
                             $dataTrx['membership_promo_id'] = null;
                         }else{
+                            if($config['fraud_use_queue'] == 1){
+                                FraudJob::dispatch($user, $trx, 'transaction')->onConnection('fraudqueue');
+                            }else{
+                                //========= This process to check if user have fraud ============//
+                                $geCountTrxDay = Transaction::leftJoin('transaction_pickups', 'transaction_pickups.id_transaction', '=', 'transactions.id_transaction')
+                                    ->where('transactions.id_user',$user['id'])
+                                    ->whereRaw('DATE(transactions.transaction_date) = "'.date('Y-m-d', strtotime($trx['date_time'])).'"')
+                                    ->where('transactions.transaction_payment_status','Completed')
+                                    ->whereNull('transaction_pickups.reject_at')
+                                    ->count();
+
+                                $currentWeekNumber = date('W',strtotime($trx['date_time']));
+                                $currentYear = date('Y',strtotime($trx['date_time']));
+                                $dto = new DateTime();
+                                $dto->setISODate($currentYear,$currentWeekNumber);
+                                $start = $dto->format('Y-m-d');
+                                $dto->modify('+6 days');
+                                $end = $dto->format('Y-m-d');
+
+                                $geCountTrxWeek = Transaction::leftJoin('transaction_pickups', 'transaction_pickups.id_transaction', '=', 'transactions.id_transaction')
+                                    ->where('id_user',$user['id'])
+                                    ->where('transactions.transaction_payment_status','Completed')
+                                    ->whereNull('transaction_pickups.reject_at')
+                                    ->whereRaw('Date(transactions.transaction_date) BETWEEN "'.$start.'" AND "'.$end.'"')
+                                    ->count();
+
+                                $countTrxDay = $geCountTrxDay + 1;
+                                $countTrxWeek = $geCountTrxWeek + 1;
+                                //================================ End ================================//
+                            }
+
                             if (count($user['memberships']) > 0) {
                                 $dataTrx['membership_level']    = $user['memberships'][0]['membership_name'];
                                 $dataTrx['membership_promo_id'] = $user['memberships'][0]['benefit_promo_id'];
@@ -1229,6 +1359,7 @@ class ApiPOS extends Controller
                                                         ->where('deals_users.id_user', $user['id'])
                                                         ->whereNotNull('deals_users.used_at')
                                                         ->whereNull('transaction_vouchers.id_transaction_voucher')
+                                                        ->select('deals_vouchers.*')
                                                         ->first();
 
                                     if (empty($checkVoucher)) {
@@ -1268,7 +1399,11 @@ class ApiPOS extends Controller
                                     $cashback = floor(app($this->pos)->count('cashback', $data) * $percentageB);
 
                                     //count some trx user
-                                    $countUserTrx = Transaction::where('id_user', $user['id'])->count();
+                                    $countUserTrx = Transaction::leftJoin('transaction_pickups', 'transaction_pickups.id_transaction', '=', 'transactions.id_transaction')
+                                        ->where('id_user',$user['id'])
+                                        ->where('transactions.transaction_payment_status','Completed')
+                                        ->whereNull('transaction_pickups.reject_at')
+                                        ->count();
                                     if ($countUserTrx < count($countSettingCashback)) {
                                         $cashback = $cashback * $countSettingCashback[$countUserTrx]['cashback_percent'] / 100;
                                         if ($cashback > $countSettingCashback[$countUserTrx]['cashback_maximum']) {
@@ -1417,9 +1552,14 @@ class ApiPOS extends Controller
                                             'id_product' => $product['id_product'],
                                             'type' => $type,
                                             'code' => $mod['code'],
-                                            'text' => $text
+                                            'text' => $text,
+                                            'modifier_type' => 'Specific'
                                         ]);
                                         $id_product_modifier = $newModifier['id_product_modifier'];
+                                        ProductModifierProduct::create([
+                                            'id_product_modifier' => $id_product_modifier,
+                                            'id_product' => $product['id_product']
+                                        ]);
                                     }
                                     $dataProductMod['id_transaction_product'] = $createProduct['id_transaction_product'];
                                     $dataProductMod['id_transaction'] = $createTrx['id_transaction'];
@@ -1452,119 +1592,96 @@ class ApiPOS extends Controller
 
                     }
 
-                    if ($createTrx['transaction_point_earned']) {
-                        $dataLog = [
-                            'id_user'                     => $createTrx['id_user'],
-                            'point'                       => $createTrx['transaction_point_earned'],
-                            'id_reference'                => $createTrx['id_transaction'],
-                            'source'                      => 'Transaction',
-                            'grand_total'                 => $createTrx['transaction_grandtotal'],
-                            'point_conversion'            => $settingPoint,
-                            'membership_level'            => $level,
-                            'membership_point_percentage' => $percentageP * 100
-                        ];
+                    if (!empty($createTrx['id_user']) && $config['fraud_use_queue'] != 1) {
+                        if((($fraudTrxDay && $countTrxDay <= $fraudTrxDay['parameter_detail']) && ($fraudTrxWeek && $countTrxWeek <= $fraudTrxWeek['parameter_detail']))
+                            || (!$fraudTrxDay && !$fraudTrxWeek)){
+                            if ($createTrx['transaction_point_earned']) {
+                                $dataLog = [
+                                    'id_user'                     => $createTrx['id_user'],
+                                    'point'                       => $createTrx['transaction_point_earned'],
+                                    'id_reference'                => $createTrx['id_transaction'],
+                                    'source'                      => 'Transaction',
+                                    'grand_total'                 => $createTrx['transaction_grandtotal'],
+                                    'point_conversion'            => $settingPoint,
+                                    'membership_level'            => $level,
+                                    'membership_point_percentage' => $percentageP * 100
+                                ];
 
-                        $insertDataLog = LogPoint::updateOrCreate(['id_user' => $createTrx['id_user'], 'id_reference' => $createTrx['id_transaction']], $dataLog);
-                        if (!$insertDataLog) {
-                            DB::rollback();
-                            return [
-                                    'status'    => 'fail',
-                                    'messages'  => 'Insert Point Failed'
-                            ];
-                        }
+                                $insertDataLog = LogPoint::updateOrCreate(['id_user' => $createTrx['id_user'], 'id_reference' => $createTrx['id_transaction']], $dataLog);
+                                if (!$insertDataLog) {
+                                    DB::rollback();
+                                    return [
+                                        'status'    => 'fail',
+                                        'messages'  => 'Insert Point Failed'
+                                    ];
+                                }
 
-                        $pointValue = $insertDataLog->point;
+                                $pointValue = $insertDataLog->point;
 
-                        //update user point
-                        $user->points = $pointBefore + $pointValue;
-                        $user->update();
-                        if (!$user) {
-                            DB::rollback();
-                            return [
-                                    'status'    => 'fail',
-                                    'messages'  => 'Insert Point Failed'
-                            ];
-                        }
-                    }
+                                //update user point
+                                $user->points = $pointBefore + $pointValue;
+                                $user->update();
+                                if (!$user) {
+                                    DB::rollback();
+                                    return [
+                                        'status'    => 'fail',
+                                        'messages'  => 'Insert Point Failed'
+                                    ];
+                                }
+                            }
 
-                    if ($createTrx['transaction_cashback_earned']) {
+                            if ($createTrx['transaction_cashback_earned']) {
 
-                        $insertDataLogCash = app($this->balance)->addLogBalance($createTrx['id_user'], $createTrx['transaction_cashback_earned'], $createTrx['id_transaction'], 'Transaction', $createTrx['transaction_grandtotal']);
-                        if (!$insertDataLogCash) {
-                            DB::rollback();
-                            return [
-                                'status'    => 'fail',
-                                'messages'  => 'Insert Cashback Failed'
-                            ];
-                        }
-                        $usere= User::where('id',$createTrx['id_user'])->first();
-                        $send = app($this->autocrm)->SendAutoCRM('Transaction Point Achievement', $usere->phone,
-                            [
-                                "outlet_name"       => $outlet['outlet_name'],
-                                "transaction_date"  => $createTrx['transaction_date'],
-                                'id_transaction'    => $createTrx['id_transaction'],
-                                'receipt_number'    => $createTrx['transaction_receipt_number'],
-                                'received_point'    => (string) $createTrx['transaction_cashback_earned']
-                            ]
-                        );
-                        if($send != true){
-                            DB::rollback();
-                            return response()->json([
-                                    'status' => 'fail',
-                                    'messages' => 'Failed Send notification to customer'
+                                $insertDataLogCash = app($this->balance)->addLogBalance($createTrx['id_user'], $createTrx['transaction_cashback_earned'], $createTrx['id_transaction'], 'Offline Transaction', $createTrx['transaction_grandtotal']);
+                                if (!$insertDataLogCash) {
+                                    DB::rollback();
+                                    return [
+                                        'status'    => 'fail',
+                                        'messages'  => 'Insert Cashback Failed'
+                                    ];
+                                }
+                                $usere= User::where('id',$createTrx['id_user'])->first();
+                                $send = app($this->autocrm)->SendAutoCRM('Transaction Point Achievement', $usere->phone,
+                                    [
+                                        "outlet_name"       => $outlet['outlet_name'],
+                                        "transaction_date"  => $createTrx['transaction_date'],
+                                        'id_transaction'    => $createTrx['id_transaction'],
+                                        'receipt_number'    => $createTrx['transaction_receipt_number'],
+                                        'received_point'    => (string) $createTrx['transaction_cashback_earned']
+                                    ]
+                                );
+                                if($send != true){
+                                    DB::rollback();
+                                    return response()->json([
+                                        'status' => 'fail',
+                                        'messages' => 'Failed Send notification to customer'
+                                    ]);
+                                }
+                                $pointValue = $insertDataLogCash->balance;
+                            }
+
+                        }else{
+                            if($countTrxDay > $fraudTrxDay['parameter_detail'] && $fraudTrxDay){
+                                $fraudFlag = 'transaction day';
+                            }elseif($countTrxWeek > $fraudTrxWeek['parameter_detail'] && $fraudTrxWeek){
+                                $fraudFlag = 'transaction week';
+                            }else{
+                                $fraudFlag = NULL;
+                            }
+
+                            $updatePointCashback = Transaction::where('id_transaction', $createTrx['id_transaction'])
+                                ->update([
+                                    'transaction_point_earned' => NULL,
+                                    'transaction_cashback_earned' => NULL,
+                                    'fraud_flag' => $fraudFlag
                                 ]);
-                        }
-                        $pointValue = $insertDataLogCash->balance;
-                    }
 
-                    if (isset($user['phone'])) {
-                        $checkMembership = app($this->membership)->calculateMembership($user['phone']);
-
-                        //update count transaction
-                        if (date('Y-m-d', strtotime($createTrx['transaction_date'])) == date('Y-m-d')) {
-                            $updateCountTrx = User::where('id', $user['id'])->update([
-                                'count_transaction_day' => $user['count_transaction_day'] + 1,
-                            ]);
-
-                            if (!$updateCountTrx) {
+                            if(!$updatePointCashback){
                                 DB::rollback();
-                                return [
-                                    'status'    => 'fail',
-                                    'messages'  => 'Update User Count Transaction Failed'
-                                ];
-                            }
-
-                            $userData = User::find($user['id']);
-
-                            //cek fraud detection transaction per day
-                            if ($fraudTrxDay && $fraudTrxDay['parameter_detail'] != null) {
-                                if ($userData['count_transaction_day'] >= $fraudTrxDay['parameter_detail']) {
-                                    //send fraud detection to admin
-                                    $sendFraud = app($this->setting_fraud)->SendFraudDetection($fraudTrxDay['id_fraud_setting'], $userData, $createTrx['id_transaction'], null);
-                                }
-                            }
-                        }
-
-                        if (date('Y-m-d', strtotime($createTrx['transaction_date'])) >= date('Y-m-d', strtotime(' - 6 days')) && date('Y-m-d', strtotime($createTrx['transaction_date'])) <= date('Y-m-d')) {
-                            $updateCountTrx = User::where('id', $user['id'])->update([
-                                'count_transaction_week' => $user['count_transaction_week'] + 1,
-                            ]);
-
-                            if (!$updateCountTrx) {
-                                DB::rollback();
-                                return [
-                                    'status'    => 'fail',
-                                    'messages'  => 'Update User Count Transaction Failed'
-                                ];
-                            }
-
-                            $userData = User::find($user['id']);
-                            //cek fraud detection transaction per week (last 7 days)
-                            if ($fraudTrxWeek && $fraudTrxWeek['parameter_detail'] != null) {
-                                if ($userData['count_transaction_week'] >= $fraudTrxWeek['parameter_detail']) {
-                                    //send fraud detection to admin
-                                    $sendFraud = app($this->setting_fraud)->SendFraudDetection($fraudTrxWeek['id_fraud_setting'], $userData, $createTrx['id_transaction'], $lastDeviceId = null);
-                                }
+                                return response()->json([
+                                    'status' => 'fail',
+                                    'messages' => ['Failed update Point and Cashback']
+                                ]);
                             }
                         }
                     }
@@ -1573,6 +1690,19 @@ class ApiPOS extends Controller
                     foreach($trxVoucher as $dataTrxVoucher){
                         $dataTrxVoucher['id_transaction'] = $createTrx['id_transaction'];
                         $create = TransactionVoucher::create($dataTrxVoucher);
+                    }
+
+                    if (isset($user['phone']) && $config['fraud_use_queue'] != 1) {
+                        $checkMembership = app($this->membership)->calculateMembership($user['phone']);
+                        $userData = User::find($user['id']);
+                        //cek fraud detection transaction per day
+                        if ($fraudTrxDay) {
+                            $checkFraud = app($this->setting_fraud)->checkFraud($fraudTrxDay, $userData, null, $countTrxDay, $countTrxWeek, $trx['date_time'], 0, $trx['trx_id']);
+                        }
+                        //cek fraud detection transaction per week
+                        if ($fraudTrxWeek) {
+                            $checkFraud = app($this->setting_fraud)->checkFraud($fraudTrxWeek, $userData, null, $countTrxDay, $countTrxWeek, $trx['date_time'], 0, $trx['trx_id']);
+                        }
                     }
 
                     DB::commit();
@@ -2007,434 +2137,84 @@ class ApiPOS extends Controller
         return response()->json(MyHelper::checkGet($trx));
     }
 
-    public function syncOutletMenu(reqBulkMenu $request)
+    public function syncOutletMenu(Request $request)
     {
         $post = $request->json()->all();
-
-        $syncDatetime = date('d F Y h:i');
-
-        $apikey = Setting::where('key', 'api_key')->first()->value;
-        $apisecret = Setting::where('key', 'api_secret')->first()->value;
-        if ($post['api_key'] != $apikey) {
-            return response()->json([
-                'status'    => 'fail',
-                'messages'  => 'Api key doesn\'t match.'
-            ]);
+        $api = $this->checkApi($post['api_key'], $post['api_secret']);
+        if ($api['status'] != 'success') {
+            return response()->json($api);
         }
-        if ($post['api_secret'] != $apisecret) {
-            return response()->json([
-                'status'    => 'fail',
-                'messages'  => 'Api secret doesn\'t match.'
-            ]);
-        }
-
-        DB::beginTransaction();
-        $hasil = [];
-        $isReject = false;
-        foreach ($post['store'] as $dataoutlet) {
-            $outlet = Outlet::where('outlet_code', strtoupper($dataoutlet['store_code']))->first();
-            //update
-            if ($outlet) {
-                if (isset($dataoutlet['store_name'])) {
-                    $outlet->outlet_name = $dataoutlet['store_name'];
-                }
-                if (isset($dataoutlet['store_address'])) {
-                    $outlet->outlet_address = $dataoutlet['store_address'];
-                }
-                if (isset($dataoutlet['store_phone'])) {
-                    $outlet->outlet_phone = $dataoutlet['store_phone'];
-                }
-                $outlet->save();
-            }
-            //insert
-            else {
-                $dataInsert['outlet_code'] = strtoupper($dataoutlet['store_code']);
-                if (!isset($dataoutlet['store_name'])) {
-                    DB::rollback();
-                    return response()->json([
-                        'status'   => 'fail',
-                        'messages' => 'Store with code ' . $dataoutlet['store_code'] . ' not found.', 'Add store_name to create a new data store.'
-                    ]);
-                }
-                $dataInsert['outlet_name'] = $dataoutlet['store_name'];
-                if (isset($dataoutlet['store_address'])) {
-                    $outlet->outlet_address = $dataoutlet['store_address'];
-                }
-                if (isset($dataoutlet['store_phone'])) {
-                    $outlet->outlet_phone = $dataoutlet['store_phone'];
-                }
-                $dataInsert['outlet_status'] = 'Inactive';
-                $outlet = Outlet::create($dataInsert);
-            }
-
-            if (!$outlet) {
-                DB::rollback();
-                return response()->json([
-                    'status'   => 'fail',
-                    'messages' => 'fail to sync'
-                ]);
-            }
-
-            if ($outlet) {
-                $countInsert = 0;
-                $countUpdate = 0;
-                $rejectedProduct = [];
-                $updatedProduct = [];
-                $insertedProduct = [];
-
-                $idProduct = [];
-                foreach ($dataoutlet['menu'] as $key => $menu) {
-                    $product = Product::where('product_code', $menu['plu_id'])->first();
-                    // return response()->json($menu);
-                    // update product
-                    if ($product) {
-                        // cek allow sync, jika 0 product tidak di update
-                        if ($product->product_allow_sync == '1') {
-
-                            // cek name pos, jika beda product tidak di update
-                            if (empty($product->product_name_pos) || $product->product_name_pos == $menu['name']) {
-                                $update = $product->update(['product_name_pos' => $menu['name']]);
-                                if ($update) {
-                                    // update modifiers
-                                    if (isset($menu['modifiers'])) {
-                                        if (!empty($menu['modifiers'])) {
-                                            foreach ($menu['modifiers'] as $mod) {
-                                                $dataProductMod['type'] = $mod['type'];
-                                                if (isset($mod['text']))
-                                                    $dataProductMod['text'] = $mod['text'];
-                                                else
-                                                    $dataProductMod['text'] = null;
-
-                                                $updateProductMod = ProductModifier::updateOrCreate([
-                                                    'id_product' => $product->id_product,
-                                                    'code'  => $mod['code']
-                                                ], $dataProductMod);
-                                            }
-                                        }
-                                    }
-
-                                    // update price
-                                    $productPrice = ProductPrice::where('id_product', $product->id_product)->where('id_outlet', $outlet->id_outlet)->first();
-                                    if ($productPrice) {
-                                        $oldPrice =  $productPrice->product_price;
-                                        $oldUpdatedAt =  $productPrice->updated_at;
-                                    } else {
-                                        $oldPrice = null;
-                                        $oldUpdatedAt = null;
-                                    }
-
-                                    $dataProductPrice['product_price'] = (int) round($menu['price']);
-                                    $dataProductPrice['product_price_base'] = round($menu['price_base'], 2);
-                                    $dataProductPrice['product_price_tax'] = round($menu['price_tax'], 2);
-                                    $dataProductPrice['product_status'] = $menu['status'];
-
-                                    $updateProductPrice = ProductPrice::updateOrCreate([
-                                        'id_product' => $product->id_product,
-                                        'id_outlet'  => $outlet->id_outlet
-                                    ], $dataProductPrice);
-
-                                    if (!$updateProductPrice) {
-                                        DB::rollBack();
-                                        return response()->json([
-                                            'status'    => 'fail',
-                                            'messages'  => 'Something went wrong.'
-                                        ]);
-                                    } else {
-
-                                        //upload photo
-                                        $imageUpload = [];
-                                        if (isset($menu['photo'])) {
-                                            foreach ($menu['photo'] as $photo) {
-                                                $image = file_get_contents($photo['url']);
-                                                $img = base64_encode($image);
-                                                if (!file_exists('img/product/item/')) {
-                                                    mkdir('img/product/item/', 0777, true);
-                                                }
-
-                                                $upload = MyHelper::uploadPhotoStrict($img, 'img/product/item/', 300, 300);
-
-                                                if (isset($upload['status']) && $upload['status'] == "success") {
-                                                    $orderPhoto = ProductPhoto::where('id_product', $product->id_product)->orderBy('product_photo_order', 'desc')->first();
-                                                    if ($orderPhoto) {
-                                                        $orderPhoto = $orderPhoto->product_photo_order + 1;
-                                                    } else {
-                                                        $orderPhoto = 1;
-                                                    }
-                                                    $dataPhoto['id_product'] = $product->id_product;
-                                                    $dataPhoto['product_photo'] = $upload['path'];
-                                                    $dataPhoto['product_photo_order'] = $orderPhoto;
-
-                                                    $photo = ProductPhoto::create($dataPhoto);
-                                                    if (!$photo) {
-                                                        DB::rollBack();
-                                                        $result = [
-                                                            'status'   => 'fail',
-                                                            'messages' => 'fail upload image'
-                                                        ];
-
-                                                        return response()->json($result);
-                                                    }
-
-                                                    //add in array photo
-                                                    $imageUpload[] = $photo['product_photo'];
-                                                } else {
-                                                    DB::rollBack();
-                                                    $result = [
-                                                        'status'   => 'fail',
-                                                        'messages' => 'fail upload image'
-                                                    ];
-
-                                                    return response()->json($result);
-                                                }
-                                            }
-                                        }
-
-                                        $countUpdate++;
-
-                                        // list updated product utk data log
-                                        $newProductPrice = ProductPrice::where('id_product', $product->id_product)->where('id_outlet', $outlet->id_outlet)->first();
-                                        $newUpdatedAt =  $newProductPrice->updated_at;
-
-                                        $updateProd['id_product'] = $product['id_product'];
-                                        $updateProd['plu_id'] = $product['product_code'];
-                                        $updateProd['product_name'] = $product['product_name'];
-                                        $updateProd['old_price'] = $oldPrice;
-                                        $updateProd['new_price'] = (int) $menu['price'];
-                                        $updateProd['old_updated_at'] = $oldUpdatedAt;
-                                        $updateProd['new_updated_at'] = $newUpdatedAt;
-                                        if (count($imageUpload) > 0) {
-                                            $updateProd['new_photo'] = $imageUpload;
-                                        }
-
-                                        $updatedProduct[] = $updateProd;
-                                    }
-                                } else {
-                                    DB::rollBack();
-                                    return response()->json([
-                                        'status'    => 'fail',
-                                        'messages'  =>  'Something went wrong.'
-                                    ]);
-                                }
-                            } else {
-                                // Add product to rejected product
-                                $productPrice = ProductPrice::where('id_outlet', $outlet->id_outlet)->where('id_product', $product->id_product)->first();
-
-                                $dataBackend['plu_id'] = $product->product_code;
-                                $dataBackend['name'] = $product->product_name_pos;
-                                if (empty($productPrice)) {
-                                    $dataBackend['price'] = '';
-                                } else {
-                                    $dataBackend['price'] = number_format($productPrice->product_price, 0, ',', '.');
-                                }
-
-                                $dataRaptor['plu_id'] = $menu['plu_id'];
-                                $dataRaptor['name'] = $menu['name'];
-                                $dataRaptor['price'] = number_format($menu['price'], 0, ',', '.');
-                                array_push($rejectedProduct, ['backend' => $dataBackend, 'raptor' => $dataRaptor]);
-                                $isReject = true;
-                            }
-                        }
-                        array_push($idProduct, $product->id_product);
-                        // $idProduct[] = $product->id_product;
-                    }
-
-                    // insert product
-                    else {
-                        $create = Product::create(['product_code' => $menu['plu_id'], 'product_name_pos' => $menu['name'], 'product_name' => $menu['name']]);
-                        if ($create) {
-                            // update price
-                            $dataProductPrice['product_price'] = (int) round($menu['price']);
-                            $dataProductPrice['product_price_base'] = round($menu['price_base'], 2);
-                            $dataProductPrice['product_price_tax'] = round($menu['price_tax'], 2);
-                            $dataProductPrice['product_status'] = $menu['status'];
-
-                            $updateProductPrice = ProductPrice::updateOrCreate([
-                                'id_product' => $create->id_product,
-                                'id_outlet'  => $outlet->id_outlet
-                            ], $dataProductPrice);
-
-                            if (!$updateProductPrice) {
-                                DB::rollBack();
-                                return response()->json([
-                                    'status'    => 'fail',
-                                    'messages'  => 'Something went wrong.'
-                                ]);
-                            } else {
-
-                                //upload photo
-                                $imageUpload = [];
-                                if (isset($menu['photo'])) {
-                                    foreach ($menu['photo'] as $photo) {
-                                        $image = file_get_contents($photo['url']);
-                                        $img = base64_encode($image);
-                                        if (!file_exists('img/product/item/')) {
-                                            mkdir('img/product/item/', 0777, true);
-                                        }
-
-                                        $upload = MyHelper::uploadPhotoStrict($img, 'img/product/item/', 300, 300);
-
-                                        if (isset($upload['status']) && $upload['status'] == "success") {
-                                            $dataPhoto['id_product'] = $product->id_product;
-                                            $dataPhoto['product_photo'] = $upload['path'];
-                                            $dataPhoto['product_photo_order'] = 1;
-
-                                            $photo = ProductPhoto::create($dataPhoto);
-                                            if (!$photo) {
-                                                DB::rollBack();
-                                                $result = [
-                                                    'status'   => 'fail',
-                                                    'messages' => 'fail upload image'
-                                                ];
-
-                                                return response()->json($result);
-                                            }
-
-                                            //add in array photo
-                                            $imageUpload[] = $photo['product_photo'];
-                                        } else {
-                                            DB::rollBack();
-                                            $result = [
-                                                'status'   => 'fail',
-                                                'messages' => 'fail upload image'
-                                            ];
-
-                                            return response()->json($result);
-                                        }
-                                    }
-                                }
-
-                                $countInsert++;
-
-                                // list new product utk data log
-                                $insertProd['id_product'] = $create['id_product'];
-                                $insertProd['plu_id'] = $create['product_code'];
-                                $insertProd['product_name'] = $create['product_name'];
-                                $insertProd['price'] = (int) $menu['price'];
-                                if (count($imageUpload) > 0) {
-                                    $updateProd['new_photo'] = $imageUpload;
-                                }
-
-                                $insertedProduct[] = $insertProd;
-                            }
-
-                            array_push($idProduct, $create->id_product);
-                            // $idProduct = $create->id_product;
-                        }
-                    }
-                }
-
-                //update inactive
-                $inactive = ProductPrice::where('id_outlet', $outlet->id_outlet)->whereNotIn('id_product', $idProduct)->update(['product_status' => 'Inactive']);
-                $hasil[] = [
-                    "outlet"  => [
-                        "id_outlet" => $outlet->id_outlet,
-                        "outlet_code" => $outlet->outlet_code,
-                        "outlet_name" => $outlet->outlet_name
-                    ],
-                    "new_product" => [
-                        "total" => $countInsert,
-                        "list_product" => $insertedProduct
-                    ],
-                    "updated_product" => [
-                        "total" => $countUpdate,
-                        "list_product" => $updatedProduct
-                    ],
-                    "rejected_product" => [
-                        "total" => count($rejectedProduct),
-                        "list_product" => $rejectedProduct,
-                    ],
-                    "inactive_product" => $inactive
-                ];
+        $lastData = end($post['store']);
+        foreach ($post['store'] as $key => $value) {
+            $data[$key]['store_code']   = $value['store_code'];
+            if ($value == $lastData) {
+                $data[$key]['is_end']   = 1;
             } else {
-                DB::rollback();
-                return response()->json([
-                    'status'    => 'fail',
-                    'messages'  => 'store_code ' . $dataoutlet['store_code'] . ' isn\'t match'
-                ]);
+                $data[$key]['is_end']   = 0;
             }
+            $data[$key]['request']      = json_encode($value);
+            $data[$key]['created_at']   = date('Y-m-d H:i:s');
+            $data[$key]['updated_at']   = date('Y-m-d H:i:s');
         }
-
+        DB::beginTransaction();
+        try {
+            $insertRequest = SyncMenuRequest::insert($data);
+        } catch (\Exception $e) {
+            DB::rollback();
+            LogBackendError::logExceptionMessage("ApiPOS/syncOutletMenu=>" . $e->getMessage(), $e);
+        }
         DB::commit();
-
-        // send email rejected product
-        if ($isReject == true) {
-
-            $emailSync = Setting::where('key', 'email_sync_menu')->first();
-            if (!empty($emailSync) && $emailSync->value != null) {
-                $emailSync = explode(',', $emailSync->value);
-                foreach ($emailSync as $key => $to) {
-
-                    $subject = 'Rejected product from outlet menu sync raptor';
-
-                    $content['sync_datetime'] = $syncDatetime;
-                    $content['data'] = $hasil;
-
-                    // get setting email
-                    $getSetting = Setting::where('key', 'LIKE', 'email%')->get()->toArray();
-                    $setting = array();
-                    foreach ($getSetting as $key => $value) {
-                        $setting[$value['key']] = $value['value'];
-                    }
-
-                    $data = array(
-                        'content' => $content,
-                        'setting' => $setting
-                    );
-
-                    Mailgun::send('pos::email_sync_outlet_menu', $data, function ($message) use ($to, $subject, $setting) {
-                        $message->to($to)->subject($subject)
-                            ->trackClicks(true)
-                            ->trackOpens(true);
-                        if (!empty($setting['email_from']) && !empty($setting['email_sender'])) {
-                            $message->from($setting['email_from'], $setting['email_sender']);
-                        } else if (!empty($setting['email_from'])) {
-                            $message->from($setting['email_from']);
-                        }
-
-                        if (!empty($setting['email_reply_to'])) {
-                            $message->replyTo($setting['email_reply_to'], $setting['email_reply_to_name']);
-                        }
-
-                        if (!empty($setting['email_cc']) && !empty($setting['email_cc_name'])) {
-                            $message->cc($setting['email_cc'], $setting['email_cc_name']);
-                        }
-
-                        if (!empty($setting['email_bcc']) && !empty($setting['email_bcc_name'])) {
-                            $message->bcc($setting['email_bcc'], $setting['email_bcc_name']);
-                        }
-                    });
-                }
-            }
-        }
-
-        return response()->json([
-            'status'    => 'success',
-            'result'  => $hasil,
-        ]);
+        return response()->json(MyHelper::checkGet($insertRequest));
     }
 
-    public function syncOutletMenuReturn(reqBulkMenu $request)
+    public function syncOutletMenuCron(Request $request)
     {
-        // call function syncMenu
-        $url = env('API_URL') . 'api/v1/pos/outlet/menu/sync';
-        $syncMenu = MyHelper::post($url, MyHelper::getBearerToken(), $request->json()->all());
-
-        // return sesuai api raptor
-        if (isset($syncMenu['status']) && $syncMenu['status'] == 'success') {
-            $hasil = [];
-            foreach ($syncMenu['result'] as $result) {
-                $hasil[] = [
-                    "store_code" => $result['outlet']['outlet_code'],
-                    "inserted" => $result['new_product']['total'],
-                    "updated" => $result['updated_product']['total'],
-                    "rejected" => $result['rejected_product']['total']
-                ];
-            }
-            return response()->json([
-                'status'    => 'success',
-                'result'  => $hasil
-            ]);
+        $syncDatetime = date('d F Y h:i');
+        $getRequest = SyncMenuRequest::get()->first();
+        // is $getRequest null
+        if(!$getRequest){
+            return '';
         }
-        return $syncMenu;
+        $getRequest = $getRequest->toArray();
+        $getRequest['request'] = json_decode($getRequest['request'], true);
+        $syncMenu = $this->syncMenuProcess($getRequest['request'], 'bulk');
+        if ($syncMenu['status'] == 'success') {
+            SyncMenuResult::create(['result' => json_encode($syncMenu['result'])]);
+        } else {
+            SyncMenuResult::create(['result' => json_encode($syncMenu['messages'])]);
+        }
+        if ($getRequest['is_end'] == 1) {
+            $getResult = SyncMenuResult::pluck('result');
+            $totalReject    = 0;
+            $totalFailed    = 0;
+            $listFailed     = [];
+            $listRejected     = [];
+            foreach ($getResult as $value) {
+                $data[] = json_decode($value, true);
+                if (isset(json_decode($value, true)[0])) {
+                    $result['fail'][] = json_decode($value, true)[0];
+                }
+                if (isset(json_decode($value, true)['rejected_product'])) {
+                    $totalReject    = $totalReject + count(json_decode($value, true)['rejected_product']['list_product']);
+                    foreach (json_decode($value, true)['rejected_product']['list_product'] as $valueRejected) {
+                        array_push($listRejected, $valueRejected);
+                    }
+                }
+                if (isset(json_decode($value, true)['failed_product'])) {
+                    $totalFailed    = $totalFailed + count(json_decode($value, true)['failed_product']['list_product']);
+                    foreach (json_decode($value, true)['failed_product']['list_product'] as $valueFailed) {
+                        array_push($listFailed, $valueFailed);
+                    }
+                }
+            }
+
+            // if (count($listRejected) > 0) {
+            //     $this->syncSendEmail($syncDatetime, $outlet->outlet_code, $outlet->outlet_name, $rejectedProduct, null);
+            // }
+            // if (count($listFailed) > 0) {
+            //     $this->syncSendEmail($syncDatetime, $outlet->outlet_code, $outlet->outlet_name, null, $failedProduct);
+            // }
+        }
+        SyncMenuRequest::where('id', $getRequest['id'])->delete();
     }
 }

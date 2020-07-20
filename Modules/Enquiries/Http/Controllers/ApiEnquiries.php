@@ -13,11 +13,12 @@ use Illuminate\Routing\Controller;
 use App\Lib\MyHelper;
 use Validator;
 use App\Lib\classMaskingJson;
+use App\Lib\classJatisSMS;
+use App\Lib\ValueFirst;
 use Hash;
 use App\Lib\PushNotificationHelper;
 use DB;
 use Mail;
-use Mailgun;
 use File;
 
 use Modules\Enquiries\Http\Requests\Create;
@@ -37,7 +38,8 @@ class ApiEnquiries extends Controller
 		date_default_timezone_set('Asia/Jakarta');
 		$this->autocrm = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
 		$this->rajasms = new classMaskingJson();
-		$this->endPoint = env('S3_URL_API');
+		$this->jatissms = new classJatisSMS();
+		$this->endPoint = config('url.storage_url_api');
 	}
     /* Cek inputan */
     function cekInputan($post = []) {
@@ -103,10 +105,8 @@ class ApiEnquiries extends Controller
         	$dataUploadFile = [];
 
 			if (is_array($post['enquiry_file'])) {
-				foreach ($post['enquiry_file'] as $value) {
-					$ext = MyHelper::checkMime2Ext($value);
-
-					$upload = MyHelper::uploadFile($value, $this->saveFile, $ext);
+				for ($i=0; $i < count($post['enquiry_file']); $i++) {
+					$upload = MyHelper::uploadFile($post['enquiry_file'][$i], $this->saveFile, strtolower($post['ext'][$i]));
 
 					if (isset($upload['status']) && $upload['status'] == "success") {
 					    $data['enquiry_file'] = $upload['path'];
@@ -127,7 +127,7 @@ class ApiEnquiries extends Controller
 			else {
 				$ext = MyHelper::checkMime2Ext($post['enquiry_file']);
 
-				$upload = MyHelper::uploadFile($post['enquiry_file'], $this->saveFile, $ext);
+				$upload = MyHelper::uploadFile($post['enquiry_file'], $this->saveFile, $post['ext']);
 
 				if (isset($upload['status']) && $upload['status'] == "success") {
 				    $data['enquiry_file'] = $upload['path'];
@@ -226,6 +226,14 @@ class ApiEnquiries extends Controller
 		$id_enquiry = $post['id_enquiry'];
 		$check = Enquiry::where('id_enquiry', $id_enquiry)->first();
 
+		$aditionalVariabel = [
+            'enquiry_subject' => $check['enquiry_subject'],
+            'enquiry_message' => $check['enquiry_content'],
+            'enquiry_phone'   => $check['enquiry_phone'],
+            'enquiry_name'    => $check['enquiry_name'],
+            'enquiry_email'   => $check['enquiry_email'],
+            'visiting_time'   => isset($check['visiting_time'])?$check['visiting_time']:""];
+
 		if(isset($post['reply_email_subject']) && $post['reply_email_subject'] != ""){
 			if($check['reply_email_subject'] == null && $check['enquiry_email'] != null){
 				$to = $check['enquiry_email'];
@@ -233,11 +241,8 @@ class ApiEnquiries extends Controller
 					$name = $check['enquiry_name'];
 				else $name = "Customer";
 
-				$subject = $post['reply_email_subject'];
-				$content = $post['reply_email_content'];
-
-				/* $subject = $this->TextReplace($post['reply_email_subject'], $check['enquiry_phone']);
-				$content = $this->TextReplace($post['reply_email_content'], $check['enquiry_phone']); */
+                $subject = app($this->autocrm)->TextReplace($post['reply_email_subject'], $check['enquiry_phone'], $aditionalVariabel);
+                $content = app($this->autocrm)->TextReplace($post['reply_email_content'], $check['enquiry_phone'], $aditionalVariabel);
 
 				// get setting email
 				$setting = array();
@@ -320,15 +325,13 @@ class ApiEnquiries extends Controller
 					'setting' => $setting
 				);
 				// return $data;
-				Mailgun::send('emails.test', $data, function($message) use ($to,$subject,$name,$setting)
+				Mail::send('emails.test', $data, function($message) use ($to,$subject,$name,$setting)
 				{
-					$message->to($to, $name)->subject($subject)
-									->trackClicks(true)
-									->trackOpens(true);
+					$message->to($to, $name)->subject($subject);
 					if(!empty($setting['email_from']) && !empty($setting['email_sender'])){
-						$message->from($setting['email_from'], $setting['email_sender']);
-					}else if(!empty($setting['email_from'])){
-						$message->from($setting['email_from']);
+						$message->from($setting['email_sender'], $setting['email_from']);
+					}else if(!empty($setting['email_sender'])){
+						$message->from($setting['email_sender']);
 					}
 
 					if(!empty($setting['email_reply_to'])){
@@ -348,19 +351,50 @@ class ApiEnquiries extends Controller
 
 		if(isset($post['reply_sms_content'])){
 			if($check['reply_sms_content'] == null && $check['enquiry_phone'] != null){
-				$senddata = array(
-						'apikey' => env('SMS_KEY'),
-						'callbackurl' => env('APP_URL'),
-						'datapacket'=>array()
-					);
-				array_push($senddata['datapacket'],array(
-									'number' => trim($check['enquiry_phone']),
-									'message' => urlencode(stripslashes(utf8_encode($post['reply_sms_content']))),
-									'sendingdatetime' => ""));
+                $content = app($this->autocrm)->TextReplace($post['reply_sms_content'], $check['enquiry_phone'], $aditionalVariabel);
+				switch (env('SMS_GATEWAY')) {
+					case 'Jatis':
+						$senddata = [
+							'userid'	=> env('SMS_USER'),
+							'password'	=> env('SMS_PASSWORD'),
+							'msisdn'	=> '62'.substr($check['enquiry_phone'],1),
+							'sender'	=> env('SMS_SENDER'),
+							'division'	=> env('SMS_DIVISION'),
+							'batchname'	=> env('SMS_BATCHNAME'),
+                            'uploadby'	=> env('SMS_UPLOADBY'),
+                            'channel'   => env('SMS_CHANNEL')
+						];
 
-				$this->rajasms->setData($senddata);
+                        $senddata['message'] = $content;
 
-				$send = $this->rajasms->send();
+						$this->jatissms->setData($senddata);
+						$send = $this->jatissms->send();
+
+						break;
+                    case 'ValueFirst':
+                        $sendData = [
+                            'to' => trim($check['enquiry_phone']),
+                            'text' => $content
+                        ];
+
+                        ValueFirst::create()->send($sendData);
+                        break;
+					default:
+						$senddata = array(
+								'apikey' => env('SMS_KEY'),
+								'callbackurl' => config('url.app_url'),
+								'datapacket'=>array()
+							);
+						array_push($senddata['datapacket'],array(
+											'number' => trim($check['enquiry_phone']),
+											'message' => urlencode(stripslashes(utf8_encode($content))),
+											'sendingdatetime' => ""));
+
+						$this->rajasms->setData($senddata);
+
+						$send = $this->rajasms->send();
+						break;
+				}
 			}
 		}
 
@@ -385,8 +419,8 @@ class ApiEnquiries extends Controller
 					}
 
 					if (isset($post['reply_push_image']) && $post['reply_push_image'] != null) {
-						$dataOptional['image'] = env('S3_URL_API').$post['reply_push_image'];
-						$image = env('S3_URL_API').$post['reply_push_image'];
+						$dataOptional['image'] = config('url.storage_url_api').$post['reply_push_image'];
+						$image = config('url.storage_url_api').$post['reply_push_image'];
 					}
 
 					if (isset($post['reply_push_clickto']) && $post['reply_push_clickto'] != null) {
@@ -404,18 +438,24 @@ class ApiEnquiries extends Controller
 						$dataOptional['link'] = null;
 					}
 
-					if (isset($post['reply_push_id_reference']) && $post['reply_push_id_reference'] != null) {
-						$dataOptional['id_reference'] = (int)$post['reply_push_id_reference'];
-					} else{
-						$dataOptional['id_reference'] = 0;
-					}
+                    if (isset($post['reply_push_id_reference']) && $post['reply_push_id_reference'] != null) {
+                        if($dataOptional['type'] !== 'Home'){
+                            $dataOptional['type'] = 'Detail '.$dataOptional['type'];
+                        }
+                        $dataOptional['id_reference'] = (int)$post['reply_push_id_reference'];
+                    } else{
+                        if($dataOptional['type'] !== 'Home'){
+                            $dataOptional['type'] = 'List '.$dataOptional['type'];
+                        }
+                        $dataOptional['id_reference'] = 0;
+                    }
 					// return $dataOptional;
 
 					$deviceToken = array($check['enquiry_device_token']);
 
 
-					$subject = $post['reply_push_subject'];
-					$content = $post['reply_push_content'];
+                    $subject = app($this->autocrm)->TextReplace($post['reply_push_subject'], $check['enquiry_phone'], $aditionalVariabel);
+                    $content = app($this->autocrm)->TextReplace($post['reply_push_content'], $check['enquiry_phone'], $aditionalVariabel);
 
 					if (!empty($deviceToken)) {
 							$push = PushNotificationHelper::sendPush($deviceToken, $subject, $content, $image, $dataOptional);

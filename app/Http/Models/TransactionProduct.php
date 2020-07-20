@@ -43,13 +43,15 @@ class TransactionProduct extends Model
 		'id_transaction',
 		'id_product',
 		'id_outlet',
+		'id_brand',
 		'id_user',
 		'transaction_product_qty',
 		'transaction_product_price',
 		'transaction_product_price_base',
 		'transaction_product_price_tax',
 		'transaction_product_subtotal',
-		'transaction_product_note'
+		'transaction_product_note',
+		'transaction_product_discount'
 	];
 	
 	public function modifiers()

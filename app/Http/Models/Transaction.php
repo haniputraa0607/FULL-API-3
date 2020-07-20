@@ -61,6 +61,7 @@ class Transaction extends Model
 	protected $fillable = [
 		'id_user',
 		'id_outlet',
+		'id_promo_campaign_promo_code',
 		'transaction_receipt_number',
 		'transaction_notes',
 		'transaction_subtotal',
@@ -86,7 +87,9 @@ class Transaction extends Model
 		'id_deals_voucher',
 		'latitude',
 		'longitude',
-		'membership_promo_id'
+		'membership_promo_id',
+        'fraud_flag',
+        'cashback_insert_status'
 	];
 
 	public function user()
@@ -123,12 +126,22 @@ class Transaction extends Model
 		return $this->hasMany(\App\Http\Models\TransactionPaymentOvo::class, 'id_transaction');
 	}
 
+	public function transaction_payment_ipay88()
+	{
+		return $this->hasOne(\Modules\IPay88\Entities\TransactionPaymentIpay88::class, 'id_transaction');
+	}
+
+	public function transaction_payment_subscription()
+	{
+		return $this->hasOne(\Modules\Subscription\Entities\TransactionPaymentSubscription::class, 'id_transaction');
+	}
+
 	public function products()
 	{
 		return $this->belongsToMany(\App\Http\Models\Product::class, 'transaction_products', 'id_transaction', 'id_product')
 					->select('product_categories.*','products.*')
 					->leftJoin('product_categories', 'product_categories.id_product_category', '=', 'products.id_product_category')
-					->withPivot('id_transaction_product', 'transaction_product_qty', 'transaction_product_price', 'transaction_product_price_base', 'transaction_product_price_tax', 'transaction_product_subtotal', 'transaction_product_note')
+					->withPivot('id_transaction_product', 'transaction_product_qty', 'transaction_product_price', 'transaction_product_price_base', 'transaction_product_price_tax', 'transaction_product_subtotal', 'transaction_modifier_subtotal', 'transaction_product_discount', 'transaction_product_note')
 					->withTimestamps();
 	}
 
@@ -156,6 +169,12 @@ class Transaction extends Model
 		return $this->belongsTo(TransactionPickup::class, 'id_transaction', 'id_transaction');
     }
 
+    public function transaction_pickup_go_send()
+    {
+    	// make sure you have joined transaction_pickups before using this
+		return $this->belongsTo(TransactionPickupGoSend::class, 'id_transaction_pickup', 'id_transaction_pickup');
+    }
+
     public function logTopup() 
     {
     	return $this->belongsTo(LogTopup::class, 'id_transaction', 'transaction_reference');
@@ -170,4 +189,24 @@ class Transaction extends Model
 	{
 		return $this->hasMany(\App\Http\Models\TransactionVoucher::class, 'id_transaction', 'id_transaction');
 	}
+
+	public function promo_campaign_promo_code()
+	{
+		return $this->belongsTo(\Modules\PromoCampaign\Entities\PromoCampaignPromoCode::class, 'id_promo_campaign_promo_code', 'id_promo_campaign_promo_code');
+	}
+
+	public function pickup_gosend_update()
+	{
+		return $this->hasMany(\App\Http\Models\TransactionPickupGoSendUpdate::class, 'id_transaction', 'id_transaction')->orderBy('created_at','desc');
+	}
+    public function transaction_multiple_payment()
+    {
+        return $this->hasMany(\App\Http\Models\TransactionMultiplePayment::class, 'id_transaction');
+    }
+
+    public function promo_campaign()
+    {
+        return $this->belongsTo(\Modules\PromoCampaign\Entities\PromoCampaignPromoCode::class, 'id_promo_campaign_promo_code', 'id_promo_campaign_promo_code')
+            ->join('promo_campaigns', 'promo_campaigns.id_promo_campaign', 'promo_campaign_promo_codes.id_promo_campaign');
+    }
 }

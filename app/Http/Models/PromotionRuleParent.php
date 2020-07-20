@@ -26,6 +26,6 @@ class PromotionRuleParent extends Model
 	public function rules()
 	{
 		return $this->hasMany(\App\Http\Models\PromotionRule::class, 'id_promotion_rule_parent')
-					->select('id_promotion_rule','id_promotion_rule_parent','promotion_rule_subject as subject', 'promotion_rule_operator as operator', 'promotion_rule_param as parameter');
+					->select('id_promotion_rule','id_promotion_rule_parent','promotion_rule_subject as subject', 'promotion_rule_operator as operator', 'promotion_rule_param as parameter', 'promotion_rule_param_id as id');
 	}
 }

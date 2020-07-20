@@ -54,7 +54,9 @@ class Product extends Model
 		'product_visibility',
 		'position'
 	];
-
+	public function getPhotoAttribute() {
+		return config('url.storage_url_api').($this->photos[0]['product_photo']??'img/product/item/default.png');
+	}
 	public function product_category()
 	{
 		return $this->belongsTo(\App\Http\Models\ProductCategory::class, 'id_product_category');
@@ -62,7 +64,7 @@ class Product extends Model
 
 	 public function category()
     {
-        return $this->belongsTo(ProductCategory::class, 'id_product_category', 'id_product_category');
+        return $this->belongsToMany(ProductCategory::class,'brand_product', 'id_product', 'id_product_category');
     }
 
     public function photos() {
@@ -95,8 +97,13 @@ class Product extends Model
 
 	public function product_prices()
 	{
-		return $this->hasMany(\App\Http\Models\ProductPrice::class, 'id_product')->where('product_visibility', 'Visible');
+		return $this->hasMany(\App\Http\Models\ProductPrice::class, 'id_product');
 	}
+
+    public function product_detail()
+    {
+        return $this->hasMany(\Modules\Product\Entities\ProductDetail::class, 'id_product');
+    }
 
 	public function prices()
 	{
@@ -119,6 +126,22 @@ class Product extends Model
 	{
 		return $this->hasMany(\App\Http\Models\ProductPrice::class, 'id_product')->where('product_visibility', 'Hidden');
 	}
+
+    public function product_detail_hiddens()
+    {
+        return $this->hasMany(\Modules\Product\Entities\ProductDetail::class, 'id_product')->where('product_detail_visibility', 'Hidden');
+    }
+
+    public function global_price()
+    {
+        return $this->hasMany(\Modules\Product\Entities\ProductGlobalPrice::class, 'id_product');
+    }
+
+    public function product_special_price()
+    {
+        return $this->hasMany(\Modules\Product\Entities\ProductSpecialPrice::class, 'id_product');
+    }
+
 	public function all_prices()
 	{
 		return $this->hasMany(\App\Http\Models\ProductPrice::class, 'id_product');
@@ -127,4 +150,26 @@ class Product extends Model
     {
         return $this->belongsToMany(\Modules\Brand\Entities\Brand::class, 'brand_product','id_product','id_brand');
     }
+	public function brand_category()
+    {
+        return $this->hasMany(\Modules\Brand\Entities\BrandProduct::class, 'id_product','id_product')->select('id_brand','id_product_category','id_product');
+    }
+
+    public function modifiers(){
+        return $this->hasMany(ProductModifier::class, 'id_product','id_product');
+    }
+    
+    public function discountActive()
+    {
+        $now = date('Y-m-d');
+        $time = date('H:i:s');
+        $day = date('l');
+
+        return $this->hasMany(ProductDiscount::class, 'id_product', 'id_product')->where('discount_days', 'like', '%'.$day.'%')->where('discount_start', '<=', $now)->where('discount_end', '>=', $now)->where('discount_time_start', '<=', $time)->where('discount_time_end', '>=', $time);
+    }
+
+    public function product_promo_categories(){
+        return $this->belongsToMany(\Modules\Product\Entities\ProductPromoCategory::class,'product_product_promo_categories', 'id_product','id_product_promo_category')->withPivot('id_product','id_product_promo_category','position');
+    }
+    
 }

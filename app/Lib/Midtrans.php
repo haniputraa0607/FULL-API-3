@@ -7,7 +7,7 @@ use DB;
 use App\Http\Models\Notification;
 use App\Http\Models\Store;
 use App\Http\Models\User;
-use App\Http\Models\Transaksi;
+use App\Http\Models\Transaction;
 use App\Http\Models\ProductVariant;
 use App\Http\Models\LogPoint;
 
@@ -43,7 +43,7 @@ class Midtrans {
         // return 'Basic ' . base64_encode(env('MIDTRANS_SANDBOX_BEARER'));
     }
     
-    static function token($receipt, $grandTotal, $user=null, $shipping=null, $product=null) {
+    static function token($receipt, $grandTotal, $user=null, $shipping=null, $product=null, $type=null, $id=null) {
         // $url    = env('MIDTRANS_PRO');
         $url    = env('MIDTRANS_SANDBOX');
 
@@ -71,6 +71,18 @@ class Midtrans {
         $dataMidtrans['credit_card'] = [
             'secure' => true,
         ];
+
+        if(!is_null($type) && !is_null($id)){
+            $dataMidtrans['gopay'] = [
+                'enable_callback' => true,
+                'callback_url' => env('MIDTRANS_CALLBACK').'?type='.$type.'&order_id='.$id,
+            ];
+        }else{
+            $dataMidtrans['gopay'] = [
+                'enable_callback' => true,
+                'callback_url' => env('MIDTRANS_CALLBACK').'?order_id='.$receipt,
+            ];
+        }
 
         $token = MyHelper::post($url, Self::bearer(), $dataMidtrans);
 
@@ -128,6 +140,29 @@ class Midtrans {
 
         return $status;
     }
+    static function refund($order_id,$param = null)
+    {
+        // $url    = env('BASE_MIDTRANS_PRO').'/v2/'.$order_id.'/expire';
+        $url    = env('BASE_MIDTRANS_SANDBOX').'/v2/'.$order_id.'/refund';
+        $trx = Transaction::join('transaction_payment_midtrans','transaction_payment_midtrans.id_transaction', '=', 'transactions.id_transaction')->where('transaction_receipt_number',$order_id)->first();
+        if (!$trx) {
+            return ['status'=>'fail','messages'=>'Midtrans payment not found'];
+        }
+        if ($trx->transaction_status == 'capture') {
+            $url = env('BASE_MIDTRANS_SANDBOX').'/v2/'.$order_id.'/cancel';
+        } else {
+            $param['reason'] = 'Pengembalian dana';
+        }
+        if(!$param){
+            $param = [];
+        }
+        $status = MyHelper::post($url, Self::bearer(), $param);
+        return [
+            'status' => ($status['status_code']??false)==200?'success':'fail',
+            'messages' => [$status['status_message']??'Something went wrong','Refund failed']
+        ];
+    }
+
 
     // static function checkStatus($orderId) {
     //     $url = 'https://api.sandbox.midtrans.com/v2/'.$orderId.'/status';

@@ -5,6 +5,7 @@
 @extends('webview.main')
 
 @section('css')
+<link href="{{ config('url.api_url') }}css/deals.css" rel="stylesheet" type="text/css" />
 	<style type="text/css">
     	p{
     		margin-top: 0px !important;
@@ -117,80 +118,127 @@
 		 .image-4 {
          clip-path: polygon(30% 0, 100% 0, 100% 100%, 0 100%);
 		}
+        body {
+            background-color: #f8f9fb;
+        }
     </style>
 @stop
 
 @section('content')
 	<div class="deals-detail">
 		@if(!empty($deals))
-			<div class="col-md-4 col-md-offset-4">
-				<div style="background-color: rgb(255, 255, 255); padding: 10px;" class="text-center col-md-12 clearfix ProductSans">
-					<div class="title">
-						YEAY!
-					</div>
-					<div style="color: rgba(0, 0, 0, 0.7)">
-						Selamat kamu berhasil mendapatkan voucher
-					</div>
-				</div>
-
-				<div style="background-color: rgb(255, 255, 255);" class="col-md-12 clearfix ProductSans">
-					<div class="card">
-
-						<div class="container" style="padding-right: 0px;">
-							<div class="pull-left" style="margin-top: 10px;width: 60%;">
-								@php $bulan = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', "Jul", 'Agu', 'Sep', 'Okt', 'Nov', 'Des']; @endphp
-								<p style="font-size:13.5px; color:rgba(32, 32, 32)">{{$deals['deals_voucher']['deal']['deals_title']}}</p>
-								<br>
-								<p style="font-size:10px; color:rgba(170, 170, 170)">Masa berlaku hingga</p>
-								<p style="font-size:10px; color:rgba(170, 170, 170)">{{date('d', strtotime($deals['deals_voucher']['deal']['deals_end']))}} {{$bulan[date('m', strtotime($deals['deals_voucher']['deal']['deals_end']))-1]}} {{ date('Y', strtotime($deals['deals_voucher']['deal']['deals_end'])) }}</p>
-								<br>
+			<div class="col-md-4 col-md-offset-4" style="background-color: #f0f3f7;">
+				<div style="background-color: #f8f9fb;padding: 10px;box-shadow: 0 0.7px 3.3px #eeeeee;" class="col-md-12 clearfix WorkSans">
+					@switch($deals['paid_status'])
+						@case('Free')
+							<div class="text-center title WorkSans-SemiBold" style="color: #a6ba35;font-size: 20px;">
+								KLAIM BERHASIL
 							</div>
-							<div class="pull-right" style="width: 40%;">
-							    <svg height="100px" width="150px" class="pull-right" style="border-bottom-right-radius: 10px; border-top-right-radius: 10px;">
-                                    <pattern id="pattern" height="100%" width="100%" patternUnits="userSpaceOnUse" viewBox="0 0 1 1" preserveAspectRatio="xMidYMid slice">
-                                      <image height="1" width="1" xlink:href="{{ env('S3_URL_API').$deals['deals_voucher']['deal']['deals_image'] }}"  preserveAspectRatio="xMidYMid meet"></image>
-                                    </pattern>
-                                  <polygon points="30 0, 200 0, 200 100, 0 100" fill="url(#pattern)"></polygon>
-                                </svg>
+							<div class="text-center WorkSans-Medium" style="color: #333333;margin-top: 13.3px;">
+								Terima kasih telah mengklaim
+							</div>
+							@break
+						@case('Pending')
+							<div class="text-center title WorkSans-SemiBold" style="color: #E03A2C;font-size: 20px;">
+								MENUNGGU KONFIRMASI
+							</div>
+							<div class="text-center WorkSans-Medium" style="color: #333333;margin-top: 13.3px;">
+								Mohon tunggu pembayaran anda sedang dikonfirmasi
+							</div>
+							@break
+						@case('Paid')
+							<div class="text-center title WorkSans-SemiBold" style="color: #E03A2C;font-size: 20px;">
+								MENUNGGU KONFIRMASI
+							</div>
+							<div class="text-center WorkSans-Medium" style="color: #333333;margin-top: 13.3px;">
+								Mohon tunggu pembayaran anda sedang dikonfirmasi
+							</div>
+							@break
+						@case('Completed')
+							<div class="text-center title WorkSans-SemiBold" style="color: #a6ba35;font-size: 20px;">
+								PEMBELIAN BERHASIL
+							</div>
+							<div class="text-center WorkSans-Medium" style="color: #333333;margin-top: 13.3px;">
+								Terima kasih telah membeli
+							</div>
+							@break
+						@case('Cancelled')
+							<div class="text-center title WorkSans-SemiBold" style="color: #E03A2C;font-size: 20px;">
+								PEMBELIAN GAGAL
+							</div>
+							<div class="text-center WorkSans-Medium" style="color: #333333;margin-top: 13.3px;">
+								Pembelian dibatalkan
+							</div>
+							@break
+					@endswitch
+					<div style="position: relative;margin-top: 26.7px;">
+						<hr style="position:absolute;z-index: 1;border: none;border-left: 1px dashed #eeeeee;height: 98px;left: 36%;top: -5%;">
+						<div style="width: 56%;height: 100px;position: absolute;top: 10%;left: 40%;">
+							<div class="cotainer">
+								<div class="pull-left" style="margin-top: 10px;">
+									@php $bulan = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', "Juli", 'Agustus', 'September', 'Oktober', 'November', 'Desember']; @endphp
+									<p style="font-size: 15px;color: #333333;" class="WorkSans-SemiBold">{{$deals['deals_voucher']['deal']['deals_title']}}</p>
+									<p style="font-size: 13.3px;color: #333333;">{{$deals['deals_voucher']['deal']['deals_second_title']}}</p>
+									<div style="@if (isset($deals['deals_voucher']['deal']['deals_second_title'])) margin-top: 20px; @else margin-top: 38px; @endif"></div>
+									<p style="font-size: 10.7px;color: #707070;padding: 5px 10px;background-color: #f0f3f7;border-radius: 100px;">Kedaluwarsa {{date('d', strtotime($deals['deals_voucher']['deal']['deals_end']))}} {{$bulan[date('m', strtotime($deals['deals_voucher']['deal']['deals_end']))-1]}} {{ date('Y', strtotime($deals['deals_voucher']['deal']['deals_end'])) }}</p>
+								</div>
 							</div>
 						</div>
+						<img src="{{ config('url.storage_url_api').$deals['deals_voucher']['deal']['deals_image'] }}" alt="" style="width: 85px;position: absolute;border-radius: 50%;top: 14.5%;left: 6.5%;">
+						<img style="width:100%" height="130px" src="{{ config('url.storage_url_api')}}img/asset/bg_item_kupon_saya.png" alt="">
 					</div>
 				</div>
 
-				<br>
-
-				<div style="background-color: rgb(248, 249, 251);" class="title-wrapper col-md-12 clearfix ProductSans-Bold">
-					<div class="title" style="font-size: 15px; color: rgb(102, 102, 102);">Transaksi</div>
+				<div style="background-color: #f8f9fb;margin-top: 10px;" class="title-wrapper col-md-12 clearfix WorkSans-Bold">
+					<div class="title" style="font-size: 15px; color: #333333;">Transaksi</div>
 				</div>
 
-				<div style="padding-top: 0px; color: rgb(0, 0, 0); height: 50px;" class="description-wrapper ProductSans">
-					<div class="description pull-left">Tanggal</div>
-					<div class="description pull-right">{{date('d', strtotime($deals['claimed_at']))}} {{$bulan[date('m', strtotime($deals['claimed_at']))-1]}} {{ date('Y', strtotime($deals['claimed_at'])) }} {{date('H:i', strtotime($deals['claimed_at']))}}</div>
+				<div style="background-color: #f8f9fb;color: #333333;padding: 20px;padding-top: 10px;" class="row WorkSans">
+					<div class="col-4">
+						<p class="text-left WorkSans-SemiBold" style="font-size: 14px;">Tanggal</p>
+					</div>
+					<div class="col-8">
+						<p class="text-right WorkSans" style="font-size: 14px;color: #919292;">{{date('d', strtotime($deals['claimed_at']))}} {{$bulan[date('m', strtotime($deals['claimed_at']))-1]}} {{ date('Y', strtotime($deals['claimed_at'])) }} {{date('H:i', strtotime($deals['claimed_at']))}}</p>
+					</div>
 				</div>
 
-				<div style="padding-top: 0px; color: rgb(0, 0, 0); height: 50px;" class="description-wrapper ProductSans">
-					<div class="description pull-left">ID Transaksi</div>
-					<div class="description pull-right">{{strtotime($deals['claimed_at'])}}</div>
+				<div style="background-color: #f8f9fb;color: #333333;padding: 20px;padding-top: 0px;margin-top: -10px;" class="row WorkSans">
+					<div class="col-4">
+						<p class="text-left WorkSans-SemiBold" style="font-size: 14px;">ID Transaksi</p>
+					</div>
+					<div class="col-8">
+						<p class="text-right WorkSans" style="font-size: 14px;">{{strtotime($deals['claimed_at'])}}</p>
+					</div>
 				</div>
 
 				@php
 					if ($deals['voucher_price_point'] != null) {
-						$payment = number_format($deals['voucher_price_point']).' points';
+						$payment = number_format($deals['voucher_price_point'],0,",",".").' points';
 					} elseif ($deals['voucher_price_cash'] != null) {
-						$payment = number_format($deals['voucher_price_cash']).' points';
+						$payment = number_format($deals['voucher_price_cash'],0,",",".");
 					} else {
 						$payment = 'Gratis';
 					}
 				@endphp
-				<div style="padding-top: 0px; color: rgb(0, 0, 0); height: 50px;" class="description-wrapper ProductSans">
-					<div class="description pull-left">Total Pembayaran</div>
-					<div class="description pull-right">{{$payment}}</div>
-				</div>
-
-				<div style="padding-top: 0px; color: rgb(0, 0, 0); height: 70px; position: fixed; bottom: 10px; width: 100%;" class="description-wrapper ProductSans">
-					<a style="width:100%; background-color:rgb(74, 0, 0); color: rgb(241, 228, 178);" class="btn btn-lg ProductSans" href="#yes">Lihat Voucher</a>
+				<div style="background-color: #f8f9fb;color: #333333;padding: 20px;padding-top: 0px;margin-top: -5px;" class="row WorkSans">
+					<div class="col-12">
+						<hr style="margin: 0px;">
+					</div>
+					<div class="col-6" style="padding-top: 15px;">
+						<p class="text-left WorkSans-SemiBold" style="font-size: 14px;">Total Pembayaran</p>
+					</div>
+					<div class="col-6" style="padding-top: 15px;">
+						<p class="text-right WorkSans-SemiBold" style="font-size: 14px;@if ($payment == 'Gratis') color: #a6ba35; @else color: #333333; @endif">{{$payment}}</p>
+					</div>
 				</div>
 			</div>
+			@if ($deals['paid_status'] == 'Free' || $deals['paid_status'] == 'Completed')
+				<div style="background-color: #f8f9fb;color: #333333;padding: 20px;position: fixed; bottom: 30px;width: 104%;" class="row">
+					<div class="col-12">
+						<a style="width:100%; background-color: #383b67; color: #ffffff;" class="btn btn-lg WorkSans-Bold" href="#yes">Lihat Kupon</a>
+					</div>
+				</div>
+			@endif
 		@else
 			<div class="col-md-4 col-md-offset-4">
 				<h4 class="text-center" style="margin-top: 30px;">Deals is not found</h4>

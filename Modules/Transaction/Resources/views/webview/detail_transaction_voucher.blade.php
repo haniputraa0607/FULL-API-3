@@ -7,40 +7,104 @@
 
     <!-- Bootstrap CSS -->
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css" integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous">
-    <link href="{{ env('S3_URL_VIEW') }}{{('css/slide.css') }}" rel="stylesheet">
+    <link href="{{ config('url.storage_url_view') }}{{('css/slide.css') }}" rel="stylesheet">
     <style type="text/css">
-        @font-face {
-                font-family: "ProductSans-Bold";
+        
+		@font-face {
+                font-family: "WorkSans-Black";
                 font-style: normal;
                 font-weight: 400;
-                src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/ProductSans-Bold.ttf') }}');
+                src: url('{{ config('url.storage_url_view') }}{{ ('fonts/Work_Sans/WorkSans-Black.ttf') }}');
         }
         @font-face {
-                font-family: "ProductSans-Regular";
+                font-family: "WorkSans-Bold";
                 font-style: normal;
                 font-weight: 400;
-                src: url('{{ env('S3_URL_VIEW') }}{{ ('fonts/ProductSans-Regular.ttf') }}');
+                src: url('{{ config('url.storage_url_view') }}{{ ('fonts/Work_Sans/WorkSans-Bold.ttf') }}');
         }
-        .ProductSans{
-            font-family: "ProductSans-Regular";
+        @font-face {
+                font-family: "WorkSans-ExtraBold";
+                font-style: normal;
+                font-weight: 400;
+                src: url('{{ config('url.storage_url_view') }}{{ ('fonts/Work_Sans/WorkSans-ExtraBold.ttf') }}');
         }
-        .ProductSans-Bold{
-            font-family: "ProductSans-Bold";
+        @font-face {
+                font-family: "WorkSans-ExtraLight";
+                font-style: normal;
+                font-weight: 400;
+                src: url('{{ config('url.storage_url_view') }}{{ ('fonts/Work_Sans/WorkSans-ExtraLight.ttf') }}');
+        }
+        @font-face {
+                font-family: "WorkSans-Light";
+                font-style: normal;
+                font-weight: 400;
+                src: url('{{ config('url.storage_url_view') }}{{ ('fonts/Work_Sans/WorkSans-Light.ttf') }}');
+        }
+        @font-face {
+                font-family: "WorkSans-Medium";
+                font-style: normal;
+                font-weight: 400;
+                src: url('{{ config('url.storage_url_view') }}{{ ('fonts/Work_Sans/WorkSans-Medium.ttf') }}');
+        }
+        @font-face {
+                font-family: "WorkSans-Regular";
+                font-style: normal;
+                font-weight: 400;
+                src: url('{{ config('url.storage_url_view') }}{{ ('fonts/Work_Sans/WorkSans-Regular.ttf') }}');
+        }
+        @font-face {
+                font-family: "WorkSans-SemiBold";
+                font-style: normal;
+                font-weight: 400;
+                src: url('{{ config('url.storage_url_view') }}{{ ('fonts/Work_Sans/WorkSans-SemiBold.ttf') }}');
+        }
+        @font-face {
+                font-family: "WorkSans-Thin";
+                font-style: normal;
+                font-weight: 400;
+                src: url('{{ config('url.storage_url_view') }}{{ ('fonts/Work_Sans/WorkSans-Thin.ttf') }}');
+        }
+        .WorkSans-Black{
+            font-family: "WorkSans-Black";
+        }
+        .WorkSans-Bold{
+            font-family: "WorkSans-Bold";
+        }
+        .WorkSans-ExtraBold{
+            font-family: "WorkSans-ExtraBold";
+        }
+        .WorkSans-ExtraLight{
+            font-family: "WorkSans-ExtraLight";
+        }
+        .WorkSans-Medium{
+            font-family: "WorkSans-Medium";
+        }
+        .WorkSans-Regular{
+            font-family: "WorkSans-Regular";
+        }
+        .WorkSans{
+            font-family: "WorkSans-Regular";
+        }
+        .WorkSans-SemiBold{
+            font-family: "WorkSans-SemiBold";
+        }
+        .WorkSans-Thin{
+            font-family: "WorkSans-Thin";
         }
         .kotak {
-            margin : 10px;
-            padding: 10px;
-            /*margin-right: 15px;*/
-            -webkit-box-shadow: 0px 0px 21px 0px rgba(168,168,168,1);
-            -moz-box-shadow: 0px 0px 21px 0px rgba(168,168,168,1);
-            box-shadow: 0px 0px 21px 0px rgba(168,168,168,1);
-            border-radius: 3px;
-            background: #fff;
-            font-family: 'GoogleSans';
-        }
+    		margin : 10px;
+    		padding: 16.7px 11.7px;
+    		/*margin-right: 15px;*/
+            -webkit-box-shadow: 0px 1px 3.3px 0px #eeeeee;
+            -moz-box-shadow: 0px 1px 3.3px 0px #eeeeee;
+            box-shadow: 0px 1px 3.3px 0px #eeeeee;
+			/* border-radius: 3px; */
+			background: #fff;
+			border-radius: 10px;
+    	}
 
         body {
-            background: #fafafa;
+            background: #ffffff;
         }
 
         .completed {
@@ -88,7 +152,7 @@
         }
 
         .text-red {
-            color: #990003;
+            color: #de2e1f;
         }
 
         .text-medium-grey {
@@ -150,51 +214,21 @@
   </head>
   <body>
     {{ csrf_field() }}
-    @php
-        // print_r($data);die();
-    @endphp
+    <div class="col-6 text-black text-14-3px WorkSans-Bold" style="margin-top:10px">Tukar Voucher</div>
     <div class="kotak">
-        <div class="container line-bottom ProductSans">
-            <div class="row space-bottom">
-                <div class="col-6 text-grey-black text-14-3px">Tukar Voucher</div>
-                @php $bulan = ['', 'Januari', 'Februari','Maret','April','Mei','Juni','Juli','Agustus','September','November','Desember']; @endphp
-                <div class="col-6 text-right text-grey text-13-3px">{{ date('d', strtotime($data['date'])) }} {{$bulan[date('n', strtotime($data['date']))]}} {{date('Y H:i', strtotime($data['date'])) }}</div>
-            </div>
-            <div class="row space-text">
-                <div class="col-4"></div>
-                <div class="col-8 text-right text-black ProductSans-Bold text-13-3px">#TRX-{{ $data['voucher_hash_code'] }}</div>
-            </div>
-        </div>
-        <div class="container ProductSans">
-            <div class="row">
-                <div class="col-12 text-grey text-13-3px">Transaksi Anda</div>
-                <div class="col-12"><hr></div>
-            </div>
-            <div class="row">
-                <div class="col-6 text-black text-13-3px">{{ $data['deal_voucher']['deal']['deals_title'] }}</div>
-                <div class="col-6 text-right text-grey2 text-13-3px">@if (!empty($data['voucher_price_cash'])) Rp {{ str_replace(',', '.', number_format($data['voucher_price_cash'])) }} @else -{{ str_replace(',', '.', number_format($data['voucher_price_point'])) }} points @endif</div>
-            </div>
-            <div class="row">
-                @if($data['deal_voucher']['deal']['deals_second_title'])
-                <div class="col-6 text-black text-13-3px">{{ $data['deal_voucher']['deal']['deals_second_title'] }}</div>
-                @endif
-            </div>
-            <hr>
-            <div class="row">
-                <div class="col-6 text-black text-13-3px">Status</div>
-                <div class="col-6 text-right text-grey2 text-13-3px">@if (is_null($data['used_at'])) Belum Digunakan @else Digunakan @endif</div>
-            </div>
-            @if (!is_null($data['used_at'])) 
-            <hr>
-            <div class="row">
-                <div class="col-6 text-black text-13-3px">Tanggal Penggunaan</div>
-                <div class="col-6 text-right text-grey2 text-13-3px">{{ date('d', strtotime($data['used_at'])) }} {{$bulan[date('n', strtotime($data['used_at']))]}} {{date('Y H:i', strtotime($data['used_at'])) }}</div>
-            </div>
-            @endif
-        </div>
-    </div>
-
-
+		<div class="row">
+			<div class="col-4 text-black text-14-3px WorkSans-Bold">Transaksi</div>
+			<div class="col-8 text-right text-grey text-13-3px WorkSans">{{ date('d F Y', strtotime($data['date'])) }}</div>
+			<div class="col-12 text-right text-13-3px WorkSans-Bold" style="margin-top: 10px;">#VOC-{{ $data['deal_voucher']['voucher_code'] }}</div>
+		</div>
+        <div class="row" style="margin-top: 30px;">
+            <div class="col-6 text-13-3px text-black WorkSans-SemiBold">{{env('POINT_NAME', 'Points')}}</div>
+            <div class="col-6 text-right text-13-3px text-red WorkSans-Medium">{{ str_replace(',', '.', number_format($data['balance'])) }}</div>
+            <div class="col-12"><hr style="margin-bottom: 20px;margin-top: 16.7px;"></div>
+			<div class="col-6 text-13-3px text-black WorkSans-SemiBold">Total Pembayaran</div>
+			<div class="col-6 text-right text-13-3px text-dark-grey WorkSans-Medium">{{ str_replace(',', '.', number_format(abs($data['balance']))) }} poin</div>
+		</div>
+  	</div>
 
     <!-- Optional JavaScript -->
     <!-- jQuery first, then Popper.js, then Bootstrap JS -->

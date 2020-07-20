@@ -14,6 +14,7 @@ use App\Http\Models\DealsPaymentManual;
 use App\Http\Models\DealsPaymentMidtran;
 use App\Http\Models\DealsUser;
 use App\Http\Models\DealsVoucher;
+use App\Http\Models\Outlet;
 
 use Modules\Deals\Http\Requests\Deals\Voucher;
 
@@ -29,9 +30,19 @@ class ApiDealsInvalidate extends Controller
     /* INVALIDATE */
     function invalidate(Request $request)
     {
-        DB::beginTransaction();
 
         $fail['status'] = "fail";
+        // outlet_code empty?
+        if(!$request->json('outlet_code')){
+            $fail['messages']=['Kamu harus memasukkan kode outlet'];
+            return $fail;
+        }
+        // outlet not found?
+        if(Outlet::where('outlet_code',$request->json('outlet_code'))->count()<1){
+            $fail['messages']=['Kode outlet yang kamu masukkan tidak terdaftar'];
+            return $fail;
+        }
+        DB::beginTransaction();
 
         // CHECK OUTLET AND GET DEALS USER
         $deals = $this->outletAvailable($request->user(), $request->json('id_deals_user'), $request->json('outlet_code'));
@@ -75,8 +86,12 @@ class ApiDealsInvalidate extends Controller
                             // query lagi
                             $deals = $this->outletAvailable($request->user(), $request->json('id_deals_user'), $request->json('outlet_code'))->toArray();
 
+                            // generate qr code
+                            $deals['qr_code'] = $this->getQrCode($deals);
+
+
                             // add voucher invalidate success webview url
-                            $deals['webview_url'] = env('API_URL') ."api/webview/voucher/v2/". $deals['id_deals_user'];
+                            $deals['webview_url'] = config('url.api_url') ."api/webview/voucher/v2/". $deals['id_deals_user'];
 
                             // SEND NOTIFICATION
                             $send = app($this->autocrm)->SendAutoCRM('Redeem Voucher Success',
@@ -84,9 +99,13 @@ class ApiDealsInvalidate extends Controller
                                 [
                                     'redeemed_at'       => $deals['redeemed_at'],
                                     'id_deals_user'     => $deals['id_deals_user'],
+                                    'deals_title'       => $deals['deal_voucher']['deal']['deals_title'],
                                     'voucher_code'      => $deals['deal_voucher']['voucher_code'],
                                     'outlet_name'       => $deals['outlet_name'],
-                                    'outlet_code'       => $deals['outlet_code']
+                                    'outlet_code'       => $deals['outlet_code'],
+                                    'id_deals'          => $deals['deal_voucher']['deal']['id_deals'],
+                                    'id_brand'          => $deals['deal_voucher']['deal']['id_brand'],
+                                    'qr_code'			=> $deals['qr_code']
                                 ]);
 
                             // RETURN INFO REDEEM
@@ -110,10 +129,10 @@ class ApiDealsInvalidate extends Controller
             }
         }
         else {
-            $fail['messages'] = ['Kode outlet yang kamu masukkan tidak terdaftar'];
-            if(optional($deals)->id_outlet){
-                $fail['messages'] = ['Kode outlet yang kamu masukkan salah'];
-            }
+            // $fail['messages'] = ['Kode outlet yang kamu masukkan tidak terdaftar'];
+            // if(optional($deals)->id_outlet){
+            $fail['messages'] = ['Kode outlet yang kamu masukkan salah'];
+            // }
         }
 
         DB::rollback();
@@ -136,16 +155,40 @@ class ApiDealsInvalidate extends Controller
     /* CHECK OUTLET AVAILABLE */
     function outletAvailable($user, $id_deals_user, $outlet_code)
     {
-        $deals = DealsUser::join('deals_vouchers', 'deals_vouchers.id_deals_voucher', '=', 'deals_users.id_deals_voucher')
-        ->leftjoin('deals_outlets', 'deals_vouchers.id_deals', '=', 'deals_outlets.id_deals')
-        ->leftjoin('outlets as o2', 'o2.id_outlet', '=', 'deals_users.id_outlet')
-        ->leftjoin('outlets', 'outlets.id_outlet', '=', 'deals_outlets.id_outlet')
-        ->where('outlets.outlet_code', strtoupper($outlet_code))
-        ->where('id_user', $user->id)
-        ->where('id_deals_user', $id_deals_user)
-        ->addSelect(DB::raw('*,((deals_users.id_outlet is null) or deals_users.id_outlet = outlets.id_outlet) as status_outlet,o2.outlet_name as old_outlet_name,outlets.outlet_name as outlet_name,outlets.id_outlet as id_outlet'))
-        ->with('user', 'dealVoucher', 'dealVoucher.deal')
-        ->first();
+        $dataDeals = DealsUser::join('deals_vouchers', 'deals_vouchers.id_deals_voucher', '=', 'deals_users.id_deals_voucher')
+            ->join('deals', 'deals.id_deals', '=', 'deals_vouchers.id_deals')
+            ->where('id_deals_user', $id_deals_user)
+            ->select('deals.*')->first();
+
+        if(!empty($dataDeals)){
+            if($dataDeals['is_all_outlet'] == 1){
+                $deals = DealsUser::join('deals_vouchers', 'deals_vouchers.id_deals_voucher', '=', 'deals_users.id_deals_voucher')
+                    ->join('deals', 'deals.id_deals', '=', 'deals_vouchers.id_deals')
+                    ->join('brand_outlet', 'deals.id_brand', '=', 'brand_outlet.id_brand')
+                    ->join('outlets', 'outlets.id_outlet', '=', 'brand_outlet.id_outlet')
+                    ->where('outlets.outlet_code', strtoupper($outlet_code))
+                    ->where('outlets.outlet_status', 'Active')
+                    ->where('deals_users.id_user', $user->id)
+                    ->where('deals_users.id_deals_user', $id_deals_user)
+                    ->addSelect(DB::raw('*,deals_users.id_outlet as deals_user_outlet, deals_users.id_outlet as check_outlet_deals_user,((deals_users.id_outlet is null) or deals_users.id_outlet = outlets.id_outlet) as status_outlet,outlets.outlet_name as old_outlet_name,outlets.outlet_name as outlet_name,outlets.id_outlet as id_outlet'))
+                    ->with('user', 'dealVoucher', 'dealVoucher.deal')
+                    ->first();
+            }else{
+                $deals = DealsUser::join('deals_vouchers', 'deals_vouchers.id_deals_voucher', '=', 'deals_users.id_deals_voucher')
+                    ->leftjoin('deals_outlets', 'deals_vouchers.id_deals', '=', 'deals_outlets.id_deals')
+                    ->leftjoin('outlets as o2', 'o2.id_outlet', '=', 'deals_users.id_outlet')
+                    ->leftjoin('outlets', 'outlets.id_outlet', '=', 'deals_outlets.id_outlet')
+                    ->where('outlets.outlet_code', strtoupper($outlet_code))
+                    ->where('outlets.outlet_status', 'Active')
+                    ->where('id_user', $user->id)
+                    ->where('id_deals_user', $id_deals_user)
+                    ->addSelect(DB::raw('*,deals_users.id_outlet as deals_user_outlet, deals_users.id_outlet as check_outlet_deals_user,((deals_users.id_outlet is null) or deals_users.id_outlet = outlets.id_outlet) as status_outlet,o2.outlet_name as old_outlet_name,outlets.outlet_name as outlet_name,outlets.id_outlet as id_outlet'))
+                    ->with('user', 'dealVoucher', 'dealVoucher.deal')
+                    ->first();
+            }
+        }else{
+            $deals = [];
+        }
 
         return $deals;
     }
@@ -200,4 +243,19 @@ class ApiDealsInvalidate extends Controller
           return $deal;
     }
 
+    function getQrCode($datavoucher)
+    {
+    	preg_match("/chart.googleapis.com\/chart\?chl=(.*)&chs=250x250/", $datavoucher['voucher_hash'], $matches);
+
+    	// replace voucher_code with code from voucher_hash
+        if (isset($matches[1])) {
+            $qr = $matches[1];
+        }
+        else {
+            $voucherHash = $datavoucher['voucher_hash'];
+            $qr = str_replace("https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=",'',  $voucherHash);
+        }
+
+    	return $qr??null;
+    }
 }

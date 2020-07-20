@@ -18,9 +18,10 @@ use App\Http\Models\HomeBackground;
 use App\Http\Models\UsersMembership;
 use App\Http\Models\Transaction;
 use App\Http\Models\Banner;
-use App\Http\Models\FraudSetting;
+use Modules\SettingFraud\Entities\FraudSetting;
 use App\Http\Models\OauthAccessToken;
 use App\Http\Models\FeaturedDeal;
+use Modules\Subscription\Entities\FeaturedSubscription;
 
 use DB;
 use App\Lib\MyHelper;
@@ -38,8 +39,9 @@ class ApiHome extends Controller
 		$this->balance  = "Modules\Balance\Http\Controllers\BalanceController";
 		$this->point  = "Modules\Deals\Http\Controllers\ApiDealsClaim";
 		$this->autocrm  = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
-        $this->setting_fraud = "Modules\SettingFraud\Http\Controllers\ApiSettingFraud";
-		$this->endPoint  = env('S3_URL_API');
+        $this->setting_fraud = "Modules\SettingFraud\Http\Controllers\ApiFraud";
+		$this->endPoint  = config('url.storage_url_api');
+        $this->deals = "Modules\Deals\Http\Controllers\ApiDeals";
     }
 
 	public function homeNotLoggedIn(Request $request) {
@@ -69,7 +71,7 @@ class ApiHome extends Controller
     public function getBanner()
     {
         // banner
-        $banners = Banner::orderBy('position')->get();
+        $banners = Banner::orderBy('position')->where('banner_start', '<=', date('Y-m-d H:i:s'))->where('banner_end', '>=', date('Y-m-d H:i:s'))->get();
         $gofood = 0;
         $setting = Setting::where('key', 'banner-gofood')->first();
         if (!empty($setting)) {
@@ -83,23 +85,37 @@ class ApiHome extends Controller
 
         foreach ($banners as $key => $value) {
 
-            $item['image_url']  = env('S3_URL_API').$value->image;
+            $item['image_url']  = config('url.storage_url_api').$value->image;
+            $item['type']       = 'none';
             $item['id_news']    = $value->id_news;
             $item['news_title'] = "";
             $item['url']        = $value->url;
 
-            if ($value->id_news != "") {
+            if($item['url'] != null){
+                $item['type']       = 'link';
+            }
+
+            if ($value->id_news != "" && isset($value->news->news_title)) {
+                $item['type']       = 'news';
                 $item['news_title'] = $value->news->news_title;
                 // if news, generate webview news detail url
-                $item['url']        = env('APP_URL') .'news/webview/'. $value->id_news;
-            }
-
-            if ($value->type == 'gofood') {
+                $item['url']        = config('url.api_url') .'news/webview/'. $value->id_news;
+            }elseif ($value->type == 'gofood') {
+                $item['type']       = 'gofood';
                 $item['id_news'] = 99999999;
                 $item['news_title'] = "GO-FOOD";
-                $item['url']     = env('APP_URL').'outlet/webview/gofood/list';
+                $item['url']     = config('url.app_url').'outlet/webview/gofood/list';
+            }elseif ($value->type == 'referral') {
+                $item['type']       = 'referral';
+                $item['id_news'] = 999999999;
+                $item['news_title'] = "Referral";
+                $item['url']     = config('url.api_url') . 'api/referral/webview';
+            }elseif ($value->type == 'order') {
+                $item['type']       = 'order';
+                $item['id_news'] = null;
+                $item['news_title'] = null;
+                $item['url']     = null;
             }
-
             array_push($array, $item);
         }
 
@@ -243,7 +259,7 @@ class ApiHome extends Controller
                     $greetingss2     = app($this->autocrm)->TextReplace($greetings[$greetingKey]['greeting2'], $user['phone']);
                     if (!empty($background)) {
 						$backgroundKey = array_rand($background, 1);
-						$background    = env('S3_URL_API').$background[$backgroundKey]['picture'];
+						$background    = config('url.storage_url_api').$background[$backgroundKey]['picture'];
 					}
                 }
             }
@@ -285,9 +301,9 @@ class ApiHome extends Controller
                 $encode = json_encode($dataEncode);
                 $base = base64_encode($encode);
 
-                $membership['webview_detail_membership'] = env('API_URL').'api/membership/web/view?data='.$base;
+                $membership['webview_detail_membership'] = config('url.api_url').'api/membership/web/view?data='.$base;
 				if(isset($membership['membership_image']))
-					$membership['membership_image'] = env('S3_URL_API').$membership['membership_image'];
+					$membership['membership_image'] = config('url.storage_url_api').$membership['membership_image'];
 			} else {
 				$membership = null;
 			}
@@ -309,7 +325,7 @@ class ApiHome extends Controller
             // webview: user profile form
             $webview_url = "";
             $popup_text = "";
-            $webview_link = env('APP_URL') . 'webview/complete-profile';
+            $webview_link = config('url.app_url') . 'webview/complete-profile';
 
             // check user profile completeness (if there is null data)
             if ($user->id_city=="" || $user->gender=="" || $user->birthday=="") {
@@ -460,7 +476,7 @@ class ApiHome extends Controller
                 }
                 else {
                     $backgroundKey = array_rand($background, 1);
-                    $background    = env('S3_URL_API').$background[$backgroundKey]['picture'];
+                    $background    = config('url.storage_url_api').$background[$backgroundKey]['picture'];
                 }
             }
 
@@ -546,29 +562,21 @@ class ApiHome extends Controller
             ];
         }
 
-        //check fraud
-        if($user->new_login == '1'){
-            $deviceCus = UserDevice::where('device_type','=',$device_type)
-            ->where('device_id','=',$device_id)
-            // ->where('device_token','=',$device_token)
-            ->orderBy('id_device_user', 'ASC')
-            ->first();
-
-            $lastDevice = UserDevice::where('id_user','=',$user->id)->orderBy('id_device_user', 'desc')->first();
-            if($deviceCus && $deviceCus['id_user'] != $user->id){
-                // send notif fraud detection
-                $fraud = FraudSetting::where('parameter', 'LIKE', '%device ID%')->first();
-                if($fraud){
-                    $sendFraud = app($this->setting_fraud)->SendFraudDetection($fraud['id_fraud_setting'], $user, null, $lastDevice);
-                }
-            }
-        }
-
         return $result;
     }
 
     public function membership(Request $request){
         $user = $request->user();
+        if($user->first_login===0){
+            $send = app($this->autocrm)->SendAutoCRM('Login First Time', $user['phone']);
+            if (!$send) {
+                DB::rollback();
+                return response()->json(['status' => 'fail', 'messages' => ['Send notification failed']]);
+            }
+
+            $user->first_login=1;
+            $user->save();
+        }
         $user->load(['city','city.province']);
         $birthday = "";
         if ($user->birthday != "") {
@@ -666,7 +674,7 @@ class ApiHome extends Controller
             $encode = json_encode($dataEncode);
             $base = base64_encode($encode);
 
-            $membership['webview_detail_membership'] = env('API_URL').'api/membership/web/view?data='.$base;
+            $membership['webview_detail_membership'] = config('url.api_url').'api/membership/web/view?data='.$base;
         } else {
             $membership = null;
         }
@@ -676,16 +684,26 @@ class ApiHome extends Controller
         if($retUser['birthday']??false){
             $retUser['birthday']=date("d F Y", strtotime($retUser['birthday']));
         }
+
+        if($retUser['id_card_image']??false){
+            $retUser['id_card_image'] = config('url.storage_url_api').$retUser['id_card_image'];
+        }
         array_walk_recursive($retUser, function(&$it,$ix){
             if($it==null&&!in_array($ix, ['city','membership'])){
                 $it="";
             }
         });
-        $hidden=['password_k','created_at','updated_at','provider','phone_verified','email_verified','email_unsubscribed','level','points','rank','android_device','ios_device','is_suspended','balance','complete_profile','subtotal_transaction','count_transaction','id_membership','relationship'];
+        $hidden=['password_k','created_at','updated_at','provider','phone_verified','email_unsubscribed','level','points','rank','android_device','ios_device','is_suspended','balance','complete_profile','subtotal_transaction','count_transaction','id_membership','relationship'];
         foreach ($hidden as $hide) {
             unset($retUser[$hide]);
         }
 
+        // chek vote transaksi
+        $trx = Transaction::where([
+            ['id_user',$user->id],
+            ['show_rate_popup',1]
+        ])->orderBy('transaction_date')->first();
+        $rate_popup = $trx?$trx->transaction_receipt_number.','.$trx->id_transaction:null;
         $retUser['membership']=$membership;
         $result = [
             'status' => 'success',
@@ -694,7 +712,8 @@ class ApiHome extends Controller
                 'user_info'     => $retUser,
                 'qr_code'       => $qrCode??'',
                 'greeting'      => $greetingss??'',
-                'expired_qr'    => $expired??''
+                'expired_qr'    => $expired??'',
+                'rate_popup'    => $rate_popup
             ]
         ];
 
@@ -733,6 +752,10 @@ class ApiHome extends Controller
 
     public function featuredDeals(Request $request){
         $now=date('Y-m-d H-i-s');
+        $home_text = Setting::where('key','=','home_deals_title')->orWhere('key','=','home_deals_sub_title')->orderBy('id_setting')->get();
+        $text['title'] = $home_text[0]['value']??'Penawaran Spesial.';
+        $text['sub_title'] = $home_text[1]['value']??'Potongan menarik untuk setiap pembelian.';
+
         $deals=FeaturedDeal::select('id_featured_deals','id_deals')->with(['deals'=>function($query){
             $query->select('deals_title','deals_image','deals_total_voucher','deals_total_claimed','deals_publish_end','deals_start','deals_end','id_deals','deals_voucher_price_point','deals_voucher_price_cash','deals_voucher_type');
         }])
@@ -760,17 +783,93 @@ class ApiHome extends Controller
                 }else{
                     $value['deals']['percent_voucher'] = 100;
                 }
+                $value['deals']['show'] = 1;
                 $value['deals']['time_to_end']=strtotime($value['deals']['deals_end'])-time();
                 return $value;
             },$deals->toArray());
             foreach ($deals as $key => $value) {
-                if ($value['deals']['available_voucher'] == "0") {
+                if ($value['deals']['available_voucher'] == "0" && $value['deals']['deals_status'] != 'soon') {
                     unset($deals[$key]);
                 }
             }
+
+            $data_home['text'] = $text;
+            $data_home['featured_list'] = $deals;
             return [
                 'status'=>'success',
-                'result'=>$deals
+                'result'=>$data_home
+            ];
+        }else{
+            return [
+                'status' => 'fail',
+                'messages' => ['Something went wrong']
+            ];
+        }
+    }
+
+    public function featuredSubscription(Request $request){
+
+        $now=date('Y-m-d H-i-s');
+        $home_text = Setting::where('key','=','home_subscription_title')->orWhere('key','=','home_subscription_sub_title')->orderBy('id_setting')->get();
+        $text['title'] = $home_text[0]['value']??'Subscription';
+        $text['sub_title'] = $home_text[1]['value']??'Banyak untungnya kalo berlangganan';
+
+        $subs=featuredSubscription::select('id_featured_subscription','id_subscription')->with(['subscription'=>function($query){
+            $query->select('subscription_title','subscription_sub_title','subscription_image','subscription_total', 'subscription_voucher_total','subscription_bought','subscription_publish_start','subscription_publish_end','subscription_start','subscription_end','id_subscription','subscription_price_point','subscription_price_cash');
+        }])
+            ->whereHas('subscription',function($query){
+                $query->where('subscription_publish_end','>=',DB::raw('CURRENT_TIMESTAMP()'));
+                $query->where('subscription_publish_start','<=',DB::raw('CURRENT_TIMESTAMP()'));
+            })
+            ->orderBy('order')
+            ->where('date_start','<=',$now)
+            ->where('date_end','>=',$now)
+            ->get();
+
+        if($subs){
+            $subs=array_map(function($value){
+                if ( (empty($value['subscription']['subscription_price_point']) && empty($value['subscription']['subscription_price_cash'])) || empty($value['subscription']['subscription_total']) ) {
+                    $calc = '*';
+                }else{
+                    $calc = $value['subscription']['subscription_total'] - $value['subscription']['subscription_bought'];
+                }
+                $value['subscription']['available_subscription'] = (string) $calc;
+                if($calc&&is_numeric($calc)){
+                    $value['subscription']['percent_subscription'] = $calc*100/$value['subscription']['subscription_total'];
+                }else{
+                    $value['subscription']['percent_subscription'] = 100;
+                }
+                $value['subscription']['time_to_end']=strtotime($value['subscription']['subscription_end'])-time();
+                return $value;
+            },$subs->toArray());
+
+            $featuredList = [];
+            $tempList = [];
+            $i = 0;
+
+            foreach ($subs as $key => $value) {
+                if ($value['subscription']['available_subscription'] == "0" && isset($value['subscription']['total'])) {
+                    unset($subs[$key]);
+                }else{
+
+                    $featuredList[$i]['id_featured_subscription'] = $value['id_featured_subscription'];
+                    $featuredList[$i]['id_subscription'] = $value['id_subscription'];
+                    $featuredList[$i]['subscription_title'] = $value['subscription']['subscription_title'];
+                    $featuredList[$i]['subscription_sub_title'] = $value['subscription']['subscription_sub_title'];
+                    $featuredList[$i]['url_subscription_image'] = $value['subscription']['url_subscription_image'];
+                    $featuredList[$i]['time_to_end'] = $value['subscription']['time_to_end'];
+                    $featuredList[$i]['subscription_end'] = $value['subscription']['subscription_end'];
+                    $featuredList[$i]['subscription_publish_end'] = $value['subscription']['subscription_publish_end'];
+                    $featuredList[$i]['time_server'] = date('Y-m-d H:i:s');
+                    $i++;
+                }
+
+            }
+            $data_home['text'] = $text;
+            $data_home['featured_list'] = $featuredList;
+            return [
+                'status'=>'success',
+                'result'=> $data_home
             ];
         }else{
             return [

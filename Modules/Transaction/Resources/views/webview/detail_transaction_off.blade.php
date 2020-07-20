@@ -7,41 +7,41 @@
 
     <!-- Bootstrap CSS -->
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css" integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous">
-    <link href="{{ env('S3_URL_VIEW') }}{{('css/slide.css') }}" rel="stylesheet">
+    <link href="{{ config('url.storage_url_view') }}{{('css/slide.css') }}" rel="stylesheet">
     <style type="text/css">
         @font-face {
             font-family: 'Seravek';
             font-style: normal;
             font-weight: 400;
-            src: url('{{env("S3_URL_VIEW") }}{{("assets/fonts/Seravek.ttf")}}') format('truetype');
+            src: url('{{config('url.storage_url_view') }}{{("assets/fonts/Seravek.ttf")}}') format('truetype');
         }
 
         @font-face {
             font-family: 'Seravek Light';
             font-style: normal;
             font-weight: 400;
-            src: url('{{env("S3_URL_VIEW") }}{{("assets/fonts/Seravek-Light.ttf")}}') format('truetype');
+            src: url('{{config('url.storage_url_view') }}{{("assets/fonts/Seravek-Light.ttf")}}') format('truetype');
         }
 
         @font-face {
             font-family: 'Seravek Medium';
             font-style: normal;
             font-weight: 400;
-            src: url('{{env("S3_URL_VIEW") }}{{("assets/fonts/Seravek-Medium.ttf")}}') format('truetype');
+            src: url('{{config('url.storage_url_view') }}{{("assets/fonts/Seravek-Medium.ttf")}}') format('truetype');
         }
 
         @font-face {
             font-family: 'Seravek Italic';
             font-style: normal;
             font-weight: 400;
-            src: url('{{env("S3_URL_VIEW") }}{{("assets/fonts/Seravek-Italic.ttf")}}') format('truetype');
+            src: url('{{config('url.storage_url_view') }}{{("assets/fonts/Seravek-Italic.ttf")}}') format('truetype');
         }
 
         @font-face {
             font-family: 'Roboto Regular';
             font-style: normal;
             font-weight: 400;
-            src: url('{{env("S3_URL_VIEW") }}{{("assets/fonts/Roboto-Regular.ttf")}}') format('truetype');
+            src: url('{{config('url.storage_url_view') }}{{("assets/fonts/Roboto-Regular.ttf")}}') format('truetype');
         }
 
         .kotak {

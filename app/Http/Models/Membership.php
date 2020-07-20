@@ -57,14 +57,17 @@ class Membership extends Model
 		'min_total_value',
 		'min_total_count',
 		'min_total_balance',
+		'min_total_achievement',
 		'retain_days',
 		'retain_min_total_value',
 		'retain_min_total_count',
 		'retain_min_total_balance',
+		'retain_min_total_achievement',
 		'benefit_point_multiplier',
 		'benefit_cashback_multiplier',
 		'benefit_promo_id',
 		'benefit_discount',
+		'benefit_text',
 		'cashback_maximum'
 	];
 

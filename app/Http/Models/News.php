@@ -41,16 +41,16 @@ class News extends Model
 		'news_post_date',
 		'news_publish_date',
 		'news_expired_date',
-		'news_date_start',
-		'news_date_end',
-		'news_time_start',
-		'news_time_end',
-		'news_location_name',
-		'news_location_phone',
-		'news_location_address',
-		'news_location_map',
-		'news_latitude',
-		'news_longitude',
+		'news_event_date_start',
+		'news_event_date_end',
+		'news_event_time_start',
+		'news_event_time_end',
+		'news_event_location_name',
+		'news_event_location_phone',
+		'news_event_location_address',
+		'news_event_location_map',
+		'news_event_latitude',
+		'news_event_longitude',
 		'news_outlet_text',
 		'news_product_text',
 		'news_treatment_text',
@@ -62,7 +62,7 @@ class News extends Model
 	];
 
 	public function getUrlWebviewAttribute() {
-		return env('API_URL') ."news/webview/". $this->id_news;
+		return config('url.api_url') ."news/webview/". $this->id_news;
 	}
 
 	public function getUrlFormAttribute() {
@@ -70,7 +70,7 @@ class News extends Model
             return null;
         }
         else {
-            return env('APP_URL').'/news_form/'.$this->id_news.'/form';
+            return config('url.app_url').'/news_form/'.$this->id_news.'/form';
         }
 	}
 
@@ -86,19 +86,19 @@ class News extends Model
 
 	public function getUrlNewsImageLuarAttribute() {
 		if (empty($this->news_image_luar)) {
-            return env('S3_URL_API').'img/default.jpg';
+            return config('url.storage_url_api').'img/default.jpg';
         }
         else {
-            return env('S3_URL_API').$this->news_image_luar;
+            return config('url.storage_url_api').$this->news_image_luar;
         }
 	}
 
 	public function getUrlNewsImageDalamAttribute() {
 		if (empty($this->news_image_dalam)) {
-            return env('S3_URL_API').'img/default.jpg';
+            return config('url.storage_url_api').'img/default.jpg';
         }
         else {
-            return env('S3_URL_API').$this->news_image_dalam;
+            return config('url.storage_url_api').$this->news_image_dalam;
         }
 	}
 

@@ -12,6 +12,7 @@ use App\Http\Models\Province;
 use App\Http\Models\Level;
 use App\Http\Models\Configs;
 use App\Http\Models\Courier;
+use App\Http\Models\Setting;
 
 use Illuminate\Foundation\Bus\DispatchesJobs;
 use Illuminate\Routing\Controller as BaseController;
@@ -31,9 +32,10 @@ class Controller extends BaseController
 		$user = json_decode($request->user(), true);
 
 		if($user['level'] == 'Super Admin'){
-			$checkFeature = Feature::select('id_feature')->get()->toArray();
+			$checkFeature = Feature::select('id_feature')->where('show_hide', 1)->get()->toArray();
 		}else{
 			$checkFeature = UserFeature::join('features', 'features.id_feature', '=', 'user_features.id_feature')
+                            ->where('features.show_hide', 1)
 							->where('user_features.id_user', '=', $user['id'])
 							->select('features.id_feature')->get()->toArray();
 		}
@@ -47,7 +49,7 @@ class Controller extends BaseController
 	
 	function getFeature(Request $request){
 	
-		$checkFeature = Feature::get()->toArray();
+		$checkFeature = Feature::where('show_hide', 1)->orderBy('order', 'asc')->get()->toArray();
 		$result = [
 			'status'  => 'success',
 			'result'  => $checkFeature
@@ -57,7 +59,7 @@ class Controller extends BaseController
 	
 	function getFeatureModule(Request $request){
 	
-		$checkFeature = Feature::select('feature_module')->groupBy('feature_module')->get()->toArray();
+		$checkFeature = Feature::select('feature_module')->where('show_hide', 1)->orderBy('order', 'asc')->groupBy('feature_module')->get()->toArray();
 		$result = [
 			'status'  => 'success',
 			'result'  => $checkFeature
@@ -120,7 +122,7 @@ class Controller extends BaseController
             $result = [
                 'status' => 'success',
                 'result' => [
-                    'pathinfo' => url('/').'/'.$upload['path'],
+                    'pathinfo' => config('url.storage_url_api').$upload['path'],
                     'path' => $upload['path']
                 ]
             ];
@@ -147,5 +149,20 @@ class Controller extends BaseController
         }
 
         return response()->json($result);
+    }
+
+    function maintenance(){
+        $get = Setting::where('key', 'maintenance_mode')->first();
+        if($get){
+            $dt = (array)json_decode($get['value_text']);
+            $data['status'] = $get['value'];
+            $data['message'] = $dt['message'];
+            if($dt['image'] != ""){
+                $data['image'] = config('url.storage_url_api').$dt['image'];
+            }else{
+                $data['image'] = config('url.storage_url_api').'img/maintenance/default.png';
+            }
+        }
+        return view('webview.maintenance_mode', $data);
     }
 }

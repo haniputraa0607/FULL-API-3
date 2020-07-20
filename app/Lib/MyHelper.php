@@ -1,14 +1,17 @@
 <?php
 namespace App\Lib;
 
+use App\Http\Models\LogTopup;
+use App\Http\Models\Setting;
 use Image;
 use File;
 use DB;
+use Modules\Disburse\Entities\LogIRIS;
 use Storage;
 use App\Http\Models\Notification;
 use App\Http\Models\Store;
 use App\Http\Models\User;
-use App\Http\Models\Transaksi;
+use App\Http\Models\Transaction;
 use App\Http\Models\ProductVariant;
 use App\Http\Models\LogPoint;
 use App\Http\Models\TransactionPaymentManual;
@@ -23,6 +26,10 @@ use App\Http\Models\PromotionRuleParent;
 use App\Http\Models\InboxGlobalRule;
 use App\Http\Models\InboxGlobalRuleParent;
 use App\Http\Models\LogTopupManual;
+use App\Http\Models\LogApiSms;
+use Modules\Product\Entities\ProductStockStatusUpdate;
+use Modules\PointInjection\Entities\PointInjectionRule;
+use Modules\PointInjection\Entities\PointInjectionRuleParent;
 
 use App\Http\Requests;
 use Illuminate\Http\JsonResponse;
@@ -40,19 +47,11 @@ use LaravelFCM\Message\PayloadNotificationBuilder;
 use FCM;
 
 class MyHelper{
-	private static $config = array(
-		'digitdepan' => 7,
-		'digitbelakang' => 5,
-		'keyutama' => 'JSncajiopw32jk',
-		'secret_iv' => 'kkopIEnan5698gAN',
-		'ciphermode' => 'AES-256-CBC'
-	);
-
 	public static function  checkGet($data, $message = null){
 			if($data && !empty($data)) return ['status' => 'success', 'result' => $data];
 			else if(empty($data)) {
 				if($message == null){
-					$message = 'Maaf, halaman ini tidak tersedia';
+					$message = 'empty';
 				}
 				return ['status' => 'fail', 'messages' => [$message]];
 			}
@@ -213,11 +212,10 @@ class MyHelper{
 	}
 
 	public static function encryptkhusus($value) {
-		$config = static::$config;
 		if(!$value){return false;}
 		$skey = self::getkey();
-		$depan = substr($skey, 0, $config['digitdepan']);
-		$belakang = substr($skey, -$config['digitbelakang'], $config['digitbelakang']);
+		$depan = substr($skey, 0, config('configs.ENC_DD'));
+		$belakang = substr($skey, -config('configs.ENC_DB'), config('configs.ENC_DB'));
 		$text = serialize($value);
 		$iv_size = mcrypt_get_iv_size(MCRYPT_RIJNDAEL_256, MCRYPT_MODE_ECB);
 		$iv = mcrypt_create_iv($iv_size, MCRYPT_RAND);
@@ -226,11 +224,10 @@ class MyHelper{
 	}
 
 	public static function decryptkhusus($value) {
-		$config = static::$config;
 		if(!$value){return false;}
 		$skey = self::parsekey($value);
 		$jumlah = strlen($value);
-		$value = substr($value, $config['digitdepan'], $jumlah-$config['digitdepan']-$config['digitbelakang']);
+		$value = substr($value, config('configs.ENC_DD'), $jumlah-config('configs.ENC_DD')-config('configs.ENC_DB'));
 		$crypttext = self::safe_b64decode($value);
 		$iv_size = mcrypt_get_iv_size(MCRYPT_RIJNDAEL_256, MCRYPT_MODE_ECB);
 		$iv = mcrypt_create_iv($iv_size, MCRYPT_RAND);
@@ -261,55 +258,51 @@ class MyHelper{
 	}
 
 	public static function encryptkhususnew($value) {
-		$config = static::$config;
 		if(!$value){return false;}
 		$skey = self::getkey();
-		$depan = substr($skey, 0, $config['digitdepan']);
-		$belakang = substr($skey, -$config['digitbelakang'], $config['digitbelakang']);
-		$ivlen = openssl_cipher_iv_length($config['ciphermode']);
-		$iv = substr(hash('sha256', $config['secret_iv']), 0, $ivlen);
-		$crypttext = openssl_encrypt($value, $config['ciphermode'], $skey, 0, $iv);
+		$depan = substr($skey, 0, config('configs.ENC_DD'));
+		$belakang = substr($skey, -config('configs.ENC_DB'), config('configs.ENC_DB'));
+		$ivlen = openssl_cipher_iv_length(config('configs.ENC_CM'));
+		$iv = substr(hash('sha256', config('configs.ENC_SI')), 0, $ivlen);
+		$crypttext = openssl_encrypt($value, config('configs.ENC_CM'), $skey, 0, $iv);
 		return trim($depan . self::safe_b64encode($crypttext) . $belakang);
 	}
 
 	public static function decryptkhususnew($value) {
-		$config = static::$config;
 		if(!$value){return false;}
 		$skey = self::parsekey($value);
 		$jumlah = strlen($value);
-		$value = substr($value, $config['digitdepan'], $jumlah-$config['digitdepan']-$config['digitbelakang']);
+		$value = substr($value, config('configs.ENC_DD'), $jumlah-config('configs.ENC_DD')-config('configs.ENC_DB'));
 		$crypttext = self::safe_b64decode($value);
-		$ivlen = openssl_cipher_iv_length($config['ciphermode']);
-		$iv = substr(hash('sha256', $config['secret_iv']), 0, $ivlen);
-		$decrypttext = openssl_decrypt($crypttext, $config['ciphermode'], $skey, 0, $iv);
+		$ivlen = openssl_cipher_iv_length(config('configs.ENC_CM'));
+		$iv = substr(hash('sha256', config('configs.ENC_SI')), 0, $ivlen);
+		$decrypttext = openssl_decrypt($crypttext, config('configs.ENC_CM'), $skey, 0, $iv);
 		return trim($decrypttext);
 	}
 
 	// terbaru, cuma nambah serialize + unserialize sih biar support array
 	public static function encrypt2019($value) {
-		$config = static::$config;
 		if(!$value){return false;}
 		// biar support array
 		$text = serialize($value);
 		$skey = self::getkey();
-		$depan = substr($skey, 0, $config['digitdepan']);
-		$belakang = substr($skey, -$config['digitbelakang'], $config['digitbelakang']);
-		$ivlen = openssl_cipher_iv_length($config['ciphermode']);
-		$iv = substr(hash('sha256', $config['secret_iv']), 0, $ivlen);
-		$crypttext = openssl_encrypt($text, $config['ciphermode'], $skey, 0, $iv);
+		$depan = substr($skey, 0, config('configs.ENC_DD'));
+		$belakang = substr($skey, -config('configs.ENC_DB'), config('configs.ENC_DB'));
+		$ivlen = openssl_cipher_iv_length(config('configs.ENC_CM'));
+		$iv = substr(hash('sha256', config('configs.ENC_SI')), 0, $ivlen);
+		$crypttext = openssl_encrypt($text, config('configs.ENC_CM'), $skey, 0, $iv);
 		return trim($depan . self::safe_b64encode($crypttext) . $belakang);
 	}
 
 	public static function decrypt2019($value) {
-		$config = static::$config;
 		if(!$value){return false;}
 		$skey = self::parsekey($value);
 		$jumlah = strlen($value);
-		$value = substr($value, $config['digitdepan'], $jumlah-$config['digitdepan']-$config['digitbelakang']);
+		$value = substr($value, config('configs.ENC_DD'), $jumlah-config('configs.ENC_DD')-config('configs.ENC_DB'));
 		$crypttext = self::safe_b64decode($value);
-		$ivlen = openssl_cipher_iv_length($config['ciphermode']);
-		$iv = substr(hash('sha256', $config['secret_iv']), 0, $ivlen);
-		$decrypttext = openssl_decrypt($crypttext, $config['ciphermode'], $skey, 0, $iv);
+		$ivlen = openssl_cipher_iv_length(config('configs.ENC_CM'));
+		$iv = substr(hash('sha256', config('configs.ENC_SI')), 0, $ivlen);
+		$decrypttext = openssl_decrypt($crypttext, config('configs.ENC_CM'), $skey, 0, $iv);
 		// dikembalikan ke format array sewaktu return
 		return unserialize(trim($decrypttext));
 	}
@@ -346,6 +339,14 @@ class MyHelper{
 			return $pin;
 	}
 
+	public static function encPIN ($pin)
+	{
+		$firstRand 	= self::createrandom(env('ENC_FIRST_PIN', 4), null, '12356789');
+		$lastRand 	= self::createrandom(env('ENC_LAST_PIN', 3), null, '12356789');
+
+		return implode('', [$firstRand, $pin, $lastRand]);
+	}
+
 	public static function  getIPAddress() {
 			$ipAddress = $_SERVER['REMOTE_ADDR'];
 			if (array_key_exists('HTTP_X_FORWARDED_FOR', $_SERVER)) {
@@ -359,8 +360,10 @@ class MyHelper{
 			return $_SERVER['HTTP_USER_AGENT'];
 	}
 
-	public static function createrandom($digit, $custom = null) {
-		$chars = "abcdefghjkmnpqrstuvwxyzBCDEFGHJKLMNPQRSTUVWXYZ12356789";
+	public static function createrandom($digit, $custom = null, $chars = null) {
+		if ($chars == null) {
+			$chars = "abcdefghjkmnpqrstuvwxyzBCDEFGHJKLMNPQRSTUVWXYZ12356789";
+		}
 		if($custom != null){
 			if($custom == 'Angka')
 				$chars = "0123456789";
@@ -372,35 +375,112 @@ class MyHelper{
 				$chars = "abcdefghjkmnpqrstuvwxyz";
 			if($custom == 'Besar')
 				$chars = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+			if ($custom == 'PromoCode')
+                $chars = "ABCDEFGHJKLMNPQRTUVWXY23456789";
 		}
 		$i = 0;
 		$generatedstring = '';
+		$tmp = '';
 
 		while ($i < $digit) {
-			$num = rand() % strlen($chars);
-			$tmp = substr($chars, $num, 1);
+			$charsbaru = str_replace($tmp, "", $chars);
+			$num = rand() % strlen($charsbaru);
+			$tmp = substr($charsbaru, $num, 1);
 			$generatedstring = $generatedstring . $tmp;
 			$i++;
-			// supaya char yg sudah tergenerate tidak akan dipakai lagi
-			$chars = str_replace($tmp, "", $chars);
 		}
 
 		return $generatedstring;
 	}
 
+	public static function encSlug ($id)
+	{
+		// create random char awal 1-9
+		$randfirst = self::createrandom(1, null, '123456789');
+		// bikin switch case untuk char 1-9
+		switch($randfirst) {
+		  case 1: $firstRand  = self::createrandom(3, null, '123456789');
+		      $lastRand   = self::createrandom(4, null, '123456789');
+		      break;
+		  case 2: $firstRand  = self::createrandom(2, null, '123456789');
+		      $lastRand   = self::createrandom(3, null, '123456789');
+		      break;
+		  case 3: $firstRand  = self::createrandom(4, null, '123456789');
+		      $lastRand   = self::createrandom(4, null, '123456789');
+		      break;
+		  case 4: $firstRand  = self::createrandom(1, null, '123456789');
+		      $lastRand   = self::createrandom(4, null, '123456789');
+		      break;
+		  case 5: $firstRand  = self::createrandom(5, null, '123456789');
+		      $lastRand   = self::createrandom(1, null, '123456789');
+		      break;
+		  case 6: $firstRand  = self::createrandom(3, null, '123456789');
+		      $lastRand   = self::createrandom(3, null, '123456789');
+		      break;
+		  case 7: $firstRand  = self::createrandom(2, null, '123456789');
+		      $lastRand   = self::createrandom(4, null, '123456789');
+		      break;
+		  case 8: $firstRand  = self::createrandom(3, null, '123456789');
+		      $lastRand   = self::createrandom(2, null, '123456789');
+		      break;
+		  case 9: $firstRand  = self::createrandom(2, null, '123456789');
+		      $lastRand   = self::createrandom(2, null, '123456789');
+		      break;
+		}
+		// $firstRand   = self::createrandom(env('ENC_FIRST_SLUG', 4), null, '123456789');
+		// $lastRand  = self::createrandom(env('ENC_LAST_SLUG', 3), null, '123456789');
+		return $randfirst . implode('', [$firstRand, $id, $lastRand]);
+	}
+	public static function decSlug ($id)
+	{
+		// ambil char pertama
+		$randfirst = substr($id, 0, 1);
+		// hilangkan char pertama
+		$id = substr($id, 1);
+		// bikin switch case untuk char 1-9
+		switch($randfirst) {
+		  case 1: $firstString = substr($id, 3);
+		      $string = substr($firstString, 0, -4);
+		      break;
+		  case 2: $firstString = substr($id, 2);
+		      $string = substr($firstString, 0, -3);
+		      break;
+		  case 3: $firstString = substr($id, 4);
+		      $string = substr($firstString, 0, -4);
+		      break;
+		  case 4: $firstString = substr($id, 1);
+		      $string = substr($firstString, 0, -4);
+		      break;
+		  case 5: $firstString = substr($id, 5);
+		      $string = substr($firstString, 0, -1);
+		      break;
+		  case 6: $firstString = substr($id, 3);
+		      $string = substr($firstString, 0, -3);
+		      break;
+		  case 7: $firstString = substr($id, 2);
+		      $string = substr($firstString, 0, -4);
+		      break;
+		  case 8: $firstString = substr($id, 3);
+		      $string = substr($firstString, 0, -2);
+		      break;
+		  case 9: $firstString = substr($id, 2);
+		      $string = substr($firstString, 0, -2);
+		      break;
+		}
+		return $string;
+	}
+
 	public static function getkey() {
-		global $config;
-		$depan = self::createrandom($config['digitdepan']);
-		$belakang = self::createrandom($config['digitbelakang']);
-		$skey = $depan . $config['keyutama'] . $belakang;
+		$depan = self::createrandom(config('configs.ENC_DD'));
+		$belakang = self::createrandom(config('configs.ENC_DB'));
+		$skey = $depan . config('configs.ENC_FK') . $belakang;
 		return $skey;
 	}
 
 	public static function parsekey($value) {
-		global $config;
-		$depan = substr($value, 0, $config['digitdepan']);
-		$belakang = substr($value, -$config['digitbelakang'], $config['digitbelakang']);
-		$skey = $depan . $config['keyutama'] . $belakang;
+		$depan = substr($value, 0, config('configs.ENC_DD'));
+		$belakang = substr($value, -config('configs.ENC_DB'), config('configs.ENC_DB'));
+		$skey = $depan . config('configs.ENC_FK') . $belakang;
 		return $skey;
 	}
 
@@ -672,10 +752,10 @@ class MyHelper{
 				});
 			}
 
-			if(env('STORAGE') &&  env('STORAGE') == 's3'){
+			if(env('STORAGE')){
 				$resource = $img->stream()->detach();
 
-				$save = Storage::disk('s3')->put($upload, $resource, 'public');
+				$save = Storage::disk(env('STORAGE'))->put($upload, $resource, 'public');
 				if ($save) {
 						$result = [
 							'status' => 'success',
@@ -744,10 +824,10 @@ class MyHelper{
 				$constraint->aspectRatio();
 			});
 
-			if(env('STORAGE') &&  env('STORAGE') == 's3'){
+			if(env('STORAGE')){
 				$resource = $img->stream()->detach();
 
-				$save = Storage::disk('s3')->put($upload, $resource, 'public');
+				$save = Storage::disk(env('STORAGE'))->put($upload, $resource, 'public');
 				if ($save) {
 						$result = [
 							'status' => 'success',
@@ -875,10 +955,10 @@ class MyHelper{
 		$upload = $path.$pictName;
 
 		if($ext=='.gif'){
-			if(env('STORAGE') &&  env('STORAGE') == 's3'){
+			if(env('STORAGE')){
 				$resource = $decoded;
 
-				$save = Storage::disk('s3')->put($upload, $resource, 'public');
+				$save = Storage::disk(env('STORAGE'))->put($upload, $resource, 'public');
 				if ($save) {
 						$result = [
 							'status' => 'success',
@@ -891,6 +971,9 @@ class MyHelper{
 					];
 				}
 			}else{
+				if (!file_exists($path)) {
+					mkdir($path, 666, true);
+				}
 				if (file_put_contents($upload, $decoded)) {
 						$result = [
 							'status' => 'success',
@@ -970,10 +1053,10 @@ class MyHelper{
 
 			$img->crop($width, $height);
 
-			if(env('STORAGE') &&  env('STORAGE') == 's3'){
+			if(env('STORAGE')){
 				$resource = $img->stream()->detach();
 
-				$save = Storage::disk('s3')->put($upload, $resource, 'public');
+				$save = Storage::disk(env('STORAGE'))->put($upload, $resource, 'public');
 				if ($save) {
 						$result = [
 							'status' => 'success',
@@ -1017,8 +1100,8 @@ class MyHelper{
 		// path
 		$upload = $path.$pictName;
 
-		if(env('STORAGE') &&  env('STORAGE') == 's3'){
-			$save = Storage::disk('s3')->put($upload, 'public');
+		if(env('STORAGE')){
+			$save = Storage::disk(env('STORAGE'))->put($upload, $decoded, 'public');
 			if ($save) {
 					$result = [
 						'status' => 'success',
@@ -1049,9 +1132,9 @@ class MyHelper{
 	}
 
 	public static function deletePhoto($path) {
-		if(env('STORAGE') &&  env('STORAGE') == 's3'){
-			if(Storage::disk('s3')->exists($path)) {
-				if(Storage::disk('s3')->delete($path)){
+		if(env('STORAGE')){
+			if(Storage::disk(env('STORAGE'))->exists($path)) {
+				if(Storage::disk(env('STORAGE'))->delete($path)){
 					return true;
 				}
 				else {
@@ -1076,6 +1159,79 @@ class MyHelper{
 		}
 
 	}
+
+    public static function createFile($content, $ext="json", $path, $name=null) {
+        // kalo ada file
+        $decoded = json_encode($content);
+
+        // set picture name
+        if($name != null)
+            $pictName = $name.'.'.$ext;
+        else
+            $pictName = mt_rand(0, 1000).''.time().'.'.$ext;
+
+        // path
+        $upload = $path.$pictName;
+
+        if(env('STORAGE')){
+            $save = Storage::disk(env('STORAGE'))->put($upload, $decoded, 'public');
+            if ($save) {
+                $result = [
+                    'status' => 'success',
+                    'path'  => $upload
+                ];
+            }
+            else {
+                $result = [
+                    'status' => 'fail'
+                ];
+            }
+        }else{
+            $save = Storage::disk(env('STORAGE'))->put($upload, $decoded);
+            if ($save) {
+                $result = [
+                    'status' => 'success',
+                    'path'  => $upload
+                ];
+            }
+            else {
+                $result = [
+                    'status' => 'fail'
+                ];
+            }
+        }
+
+        return $result;
+    }
+
+    public static function deleteFile($path) {
+        if(env('STORAGE')){
+            if(Storage::disk(env('STORAGE'))->exists($path)) {
+                if(Storage::disk(env('STORAGE'))->delete($path)){
+                    return true;
+                }
+                else {
+                    return false;
+                }
+            }
+            else {
+                return true;
+            }
+        }else{
+            if (Storage::disk(env('STORAGE'))->exists($path)) {
+                if (Storage::disk(env('STORAGE'))->delete($path)) {
+                    return true;
+                }
+                else {
+                    return false;
+                }
+            }
+            else {
+                return true;
+            }
+        }
+
+    }
 
 	public static function sendNotification($id, $type){
 			return true;
@@ -1169,7 +1325,7 @@ class MyHelper{
 			}
 	}
 
-	public static function get($url, $bearer=null, $header=null){
+	public static function get($url, $bearer=null, $header=null,&$status_code=null,&$response_header=null){
 		$client = new Client;
 
 		$content = array(
@@ -1193,12 +1349,16 @@ class MyHelper{
 
 		try {
 			$response =  $client->request('GET', $url, $content);
+			$status_code = $response->getStatusCode();
+			$response_header = $response->getHeaders();
 			return json_decode($response->getBody(), true);
 		}
 		catch (\GuzzleHttp\Exception\RequestException $e) {
 			try{
 				if($e->getResponse()){
 						$response = $e->getResponse()->getBody()->getContents();
+						$response_header = $e->getResponse()->getHeaders();
+						$status_code = $e->getResponse()->getStatusCode();
 						return json_decode($response, true);
 				}
 				else return ['status' => 'fail', 'messages' => [0 => 'Check your internet connection.']];
@@ -1209,7 +1369,7 @@ class MyHelper{
 		}
 	}
 
-	public static function post($url, $bearer=null, $post, $form_type=0, $header=null){
+	public static function post($url, $bearer=null, $post, $form_type=0, $header=null,&$status_code = null,&$response_header = null){
 		$client = new Client;
 
 		$content = array(
@@ -1242,11 +1402,15 @@ class MyHelper{
 
 		try {
 			$response = $client->post($url, $content);
+			$status_code = $response->getStatusCode();
+			$response_header = $response->getHeaders();
 			return json_decode($response->getBody(), true);
 		}catch (\GuzzleHttp\Exception\RequestException $e) {
 			try{
 				if($e->getResponse()){
 					$response = $e->getResponse()->getBody()->getContents();
+					$status_code = $e->getResponse()->getStatusCode();
+					$response_header = $e->getResponse()->getHeaders();
 					return json_decode($response, true);
 				}
 				else  return ['status' => 'fail', 'messages' => [0 => 'Check your internet connection.']];
@@ -1257,7 +1421,7 @@ class MyHelper{
 		}
 	}
 
-	public static function post2($url, $bearer=null, $post, $form_type=0, $header=null){
+	public static function put($url, $bearer=null, $post, $form_type=0, $header=null,&$status_code = null,&$response_header = null){
 		$client = new Client;
 
 		$content = array(
@@ -1287,10 +1451,64 @@ class MyHelper{
 				}
 			}
 		}
-		$content['timeout']=65;
+
+		try {
+			$response = $client->put($url, $content);
+			$status_code = $response->getStatusCode();
+			$response_header = $response->getHeaders();
+			return json_decode($response->getBody(), true);
+		}catch (\GuzzleHttp\Exception\RequestException $e) {
+			try{
+				if($e->getResponse()){
+					$response = $e->getResponse()->getBody()->getContents();
+					$status_code = $e->getResponse()->getStatusCode();
+					$response_header = $e->getResponse()->getHeaders();
+					return json_decode($response, true);
+				}
+				else  return ['status' => 'fail', 'messages' => [0 => 'Check your internet connection.']];
+			}
+			catch(Exception $e){
+				return ['status' => 'fail', 'messages' => [0 => 'Check your internet connection.']];
+			}
+		}
+	}
+
+	public static function postWithTimeout($url, $bearer=null, $post, $form_type=0, $header=null, $timeout = 65){
+		$client = new Client;
+
+		$content = array(
+			'headers' => [
+				'Accept'        => 'application/json',
+				'Content-Type'  => 'application/json',
+			]
+		);
+
+		// if form_type = 0
+		if ($form_type == 0) {
+			$content['json'] = (array)$post;
+		}
+		else {
+			$content['form_params'] = $post;
+		}
+
+		// if null bearer
+		if (!is_null($bearer)) {
+			$content['headers']['Authorization'] = $bearer;
+		}
+
+		if(!is_null($header)){
+			if(is_array($header)){
+				foreach($header as $key => $dataHeader){
+					$content['headers'][$key] = $dataHeader;
+				}
+			}
+		}
+		$content['timeout']=$timeout;
+
 		try {
 			$response = $client->post($url, $content);
-			$return = json_decode($response->getBody(), true);
+			// return plain response if json_decode fail because response is plain text
+			$return = json_decode($response->getBody()->getContents(), true)?:$response->getBody()->__toString();
 			return [
 				'status_code' => $response->getStatusCode(),
 				'response' => $return
@@ -1313,6 +1531,63 @@ class MyHelper{
 		}
 	}
 
+	public static function getWithTimeout($url, $bearer=null, $post = [], $header=null, $timeout = 65){
+		$client = new Client;
+
+		$content = array(
+			'headers' => [
+				'Accept'        => 'application/json'
+			]
+		);
+
+		// if null bearer
+		if (!is_null($bearer)) {
+			$content['headers']['Authorization'] = $bearer;
+		}
+
+		if(!is_null($header)){
+			if(is_array($header)){
+				foreach($header as $key => $dataHeader){
+					$content['headers'][$key] = $dataHeader;
+				}
+			}
+		}
+
+		if ($post) {
+			$params = http_build_query($post);
+			if (strpos($url,'?')) {
+				$url .= '&' . $params;
+			} else {
+				$url .= '?' . $params;
+			}
+		}
+		$content['timeout']=$timeout;
+
+		try {
+			$response = $client->get($url, $content);
+			// return plain response if json_decode fail because response is plain text
+			$return = json_decode($response->getBody()->getContents(), true)?:$response->getBody()->__toString();
+			return [
+				'status_code' => $response->getStatusCode(),
+				'response' => $return
+			];
+		}catch (\GuzzleHttp\Exception\RequestException $e) {
+			try{
+				if($e->getResponse()){
+					$response = $e->getResponse()->getBody()->getContents();
+					$return = json_decode($response, true);
+					return [
+						'status_code' => $e->getResponse()->getStatusCode(),
+						'response' => $return
+					];
+				}
+				else  return ['status' => 'fail', 'messages' => [0 => 'Check your internet connection.']];
+			}
+			catch(Exception $e){
+				return ['status' => 'fail', 'messages' => [0 => 'Check your internet connection.']];
+			}
+		}
+	}
 
     public static function getBearerToken() {
 		$headers = null;
@@ -1707,6 +1982,15 @@ class MyHelper{
 				$deleteRuleParent = InboxGlobalRuleParent::where('id_'.$type, $id)->delete();
 			}
 		}
+		elseif ($type == 'point_injection') {
+			$deleteRuleParent = PointInjectionRuleParent::where('id_' . $type, $id)->get();
+			if (count($deleteRuleParent) > 0) {
+				foreach ($deleteRuleParent as $key => $value) {
+					$delete = PointInjectionRule::where('id_' . $type . '_rule_parent', $value['id_' . $type . '_rule_parent'])->delete();
+				}
+				$deleteRuleParent = PointInjectionRuleParent::where('id_' . $type, $id)->delete();
+			}
+		}
 
 		$operatorexception = ['gender',
 							'birthday_month',
@@ -1757,6 +2041,9 @@ class MyHelper{
 			elseif($type == 'inbox_global'){
 				$createRuleParent = InboxGlobalRuleParent::create($dataRuleParent);
 			}
+			elseif ($type == 'point_injection') {
+				$createRuleParent = PointInjectionRuleParent::create($dataRuleParent);
+			}
 
 			if(!$createRuleParent){
 				DB::rollBack();
@@ -1768,15 +2055,21 @@ class MyHelper{
 
 				if($row['subject'] == 'all_user'){
 					$condition[$type.'_rule_operator'] = "";
-				}elseif(in_array($row['subject'], $operatorexception)){
+				}elseif($row['subject'] == 'trx_product' || $row['subject'] == 'trx_outlet'){
+                    $condition[$type.'_rule_operator'] = $row['operatorSpecialCondition'];
+                }elseif(in_array($row['subject'], $operatorexception)){
 					$condition[$type.'_rule_operator'] = '=';
 				} else {
 					$condition[$type.'_rule_operator'] = $row['operator'];
 				}
 
+                $condition[$type.'_rule_param_id'] = NULL;
 				if($row['subject'] == 'all_user'){
 					$condition[$type.'_rule_param'] = "";
-				}elseif(in_array($row['subject'], $operatorexception)){
+				}elseif($row['subject'] == 'trx_product' || $row['subject'] == 'trx_outlet'){
+                    $condition[$type.'_rule_param'] = $row['parameterSpecialCondition'];
+                    $condition[$type.'_rule_param_id'] = $row['id'];
+                }elseif(in_array($row['subject'], $operatorexception)){
 					$condition[$type.'_rule_param'] = $row['operator'];
 				} else {
 					$condition[$type.'_rule_param'] = $row['parameter'];
@@ -1801,6 +2094,9 @@ class MyHelper{
 		elseif($type == 'inbox_global'){
 			$insert = InboxGlobalRule::insert($data_rule);
 		}
+		elseif ($type == 'point_injection') {
+			$insert = PointInjectionRule::insert($data_rule);
+		}
 
 		if($insert){
 			return ['status' => 'success', 'data' =>  $data_rule];
@@ -1809,7 +2105,19 @@ class MyHelper{
 			return ['status' => 'fail'];
 		}
 	}
-
+	public static function logApiSMS($arr){
+    	if(!is_array($arr)){return false;}
+		$trace=array_slice((new \Exception)->getTrace(),1,6);
+		$log=[
+		    'request_body'=>null,
+		    'request_url'=>null,
+		    'response'=>null,
+		    'phone'=>null
+		];
+		$log=array_merge($log,$arr);
+		array_walk($log, function(&$data){if(is_array($data)){$data=json_encode($data);}});
+		LogApiSms::create($log);
+    }
 	public static function cut_str($str, $left, $right) {
 		$str = substr ( stristr ( $str, $left ), strlen ( $left ) );
 		$leftLen = strlen ( stristr ( $str, $right ) );
@@ -1927,15 +2235,52 @@ class MyHelper{
 		return $result;
 	}
 
-	public static function dateFormatInd($date,$jam=true){
-		if($jam){
+	public static function dateFormatInd($date,$full=true,$clock=true,$hari=false){
+		if($hari){
+			$days = ['Minggu','Senin','Selasa','Rabu','Kamis','Jum\'at','Sabtu'];
+		}
+		if($full){
 			$bulan = ['','Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
 		}else{
 			$bulan = ['','Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
 		}
 
-		return date('d', strtotime($date)).' '.$bulan[date('n', strtotime($date))].' '.date('Y', strtotime($date)).' '.($jam?date('H:i', strtotime($date)):'');
+		return trim(($hari?$days[date('w', strtotime($date))].', ':'').date('d', strtotime($date)).' '.$bulan[date('n', strtotime($date))].' '.date('Y', strtotime($date)).($clock?date(' H:i', strtotime($date)):''));
 	}
+
+	public static function indonesian_date_v2($timestamp = '', $date_format = 'l, d F Y H:i') {
+		if (trim ($timestamp) == '')
+		{
+				$timestamp = time ();
+		}
+		elseif (!ctype_digit ($timestamp))
+		{
+			$timestamp = strtotime ($timestamp);
+		}
+		# remove S (st,nd,rd,th) there are no such things in indonesia :p
+		$date_format = preg_replace ("/S/", "", $date_format);
+		$pattern = array (
+			'/Mon[^day]/','/Tue[^sday]/','/Wed[^nesday]/','/Thu[^rsday]/',
+			'/Fri[^day]/','/Sat[^urday]/','/Sun[^day]/','/Monday/','/Tuesday/',
+			'/Wednesday/','/Thursday/','/Friday/','/Saturday/','/Sunday/',
+			'/Jan[^uary]/','/Feb[^ruary]/','/Mar[^ch]/','/Apr[^il]/','/May/',
+			'/Jun[^e]/','/Jul[^y]/','/Aug[^ust]/','/Sep[^tember]/','/Oct[^ober]/',
+			'/Nov[^ember]/','/Dec[^ember]/','/January/','/February/','/March/',
+			'/April/','/June/','/July/','/August/','/September/','/October/',
+			'/November/','/December/',
+		);
+		$replace = array ( 'Sen','Sel','Rab','Kam','Jum','Sab','Min',
+			'Senin','Selasa','Rabu','Kamis','Jumat','Sabtu','Minggu',
+			'Jan','Feb','Mar','Apr','Mei','Jun','Jul','Ags','Sep','Okt','Nov','Des',
+			'Januari','Februari','Maret','April','Juni','Juli','Agustus','Sepember',
+			'Oktober','November','Desember',
+		);
+		$date = date ($date_format, $timestamp);
+		$date = preg_replace ($pattern, $replace, $date);
+		$date = "{$date}";
+		return $date;
+	}
+
 	public static function isJoined($query, $table){
         $joins = $query->getQuery()->joins;
         if($joins == null) {
@@ -1957,9 +2302,9 @@ class MyHelper{
     	}
     	return $string;
 	}
-	
+
 	public static function postCURLWithBearer($url, $data, $bearer) {
-		$uri = env('APP_API_URL');
+		$uri = config('url.app_api_url');
         $ch = curl_init($uri.$url);
         $data = json_encode($data);
 		curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
@@ -1994,5 +2339,518 @@ class MyHelper{
 		else
 			$ipaddress = 'UNKNOWN';
 		return $ipaddress;
+	}
+
+    public static function count_distance($lat1, $lon1, $lat2, $lon2, $unit = 'K', $convert = false) {
+        $theta = $lon1 - $lon2;
+        $lat1=floatval($lat1);
+        $lat2=floatval($lat2);
+        $lon1=floatval($lon1);
+        $lon2=floatval($lon2);
+        $dist  = sin(deg2rad($lat1)) * sin(deg2rad($lat2)) +  cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * cos(deg2rad($theta));
+        $dist  = acos($dist);
+        $dist  = rad2deg($dist);
+        $miles = $dist * 60 * 1.1515;
+        $unit  = strtoupper($unit);
+
+        if ($unit == "K") {
+            $hasil = ($miles * 1.609344);
+        } else if ($unit == "N") {
+            $hasil = ($miles * 0.8684);
+        } else {
+            $hasil = $miles;
+        }
+
+        if($convert){
+        	return number_format((float)$hasil, 2, '.', '').' km';
+        }else{
+        	return $hasil;
+        }
+    }
+    /**
+     * Get max min latitude based on radius. Hanya perhitngan kasar,
+     * @param  Float  $lat    user latitude
+     * @param  Float  $lon    user longitude
+     * @param  Float  $radius    radius in meter
+     * @return Array    ['latitude'=>['max'=>xxx,'min'=>xxx],'longitude'=>['max'=>xxx,'min'=>xxx]]
+     */
+    public static function getRadius($lat, $lon, $radius) {
+        $distance = (float) $radius / 111319.5;
+        $result = [
+        	'latitude' => [
+        		'min' => $lat - $distance,
+        		'max' => $lat + $distance
+        	],
+        	'longitude' => [
+        		'min' => $lon - $distance,
+        		'max' => $lon + $distance
+        	],
+        ];
+        return $result;
+    }
+    /**
+     * Group some array based on a column
+     * @param  array        $array        data
+     * @param  string       $col          column as key for grouping
+     * @param  function     $modifier     function to modify key value
+     * @return array                      grouped array
+     */
+    public static function groupIt($array,$col,$col_modifier=null,$key_modifier=null) {
+        $newArray=[];
+        foreach ($array as $old => $value) {
+            if($col_modifier!==null){
+                $key = $col_modifier($value[$col],$value,$old);
+            }else{
+            	if(is_array($value)){
+	                $key = $value[$col];
+            	}else{
+	                $key = $value->$col;
+            	}
+            }
+            $newArray[$key][]=$value;
+        }
+        if($key_modifier!==null){
+        	$arrNew=[];
+            foreach ($newArray as $key => $value) {
+                $new_key=$key_modifier($key,$value);
+                $arrNew[$new_key]=$value;
+            }
+            $newArray = $arrNew;
+        }
+        return $newArray;
+    }
+
+	/**
+	* Convert csv string or file to PHP array
+	* @param  String  $string    String of csv content or path to csv file
+	* @param  boolean $isPath    Set to true if $string is csv's path, leave it false otherwise
+	* @param  String  $delimiter Set the delimiter of csv column
+	* @return Array          php array of the csv
+	*/
+	public static function csvToArray($string,$isPath=false,$delimiter=','){
+		if($isPath){
+			try{
+				$string=file_get_contents($string);
+			}catch(Exception $e){
+				return array();
+			}
+		}
+		$first=explode(PHP_EOL, $string);
+		$second=array_map(function($x) use ($delimiter){
+			return explode($delimiter,str_replace("\r", '', $x));
+		},$first);
+		return $second;
+	}
+
+	/**
+	 * Return int/float based on requested type
+	 * @param  numeric 		$number Number to convert, can be numeric string, integer or anything
+	 * @param  string 		$type   'int' , 'float' , 'double' or 'custom' for custom number format
+	 * @param  $custom 		parameter suplied for customize number
+	 * @return float/int    converted number
+	 */
+	public static function requestNumber($number,$type='int',$custom=[]) {
+		if($type === '_CURRENCY'){$type = env('CURRENCY_FORMAT');}
+		elseif($type === '_POINT'){$type = env('POINT_FORMAT');}
+		switch ($type) {
+			case 'int':
+				return (int) $number;
+				break;
+
+			case 'float':
+				return (float) $number;
+				break;
+
+			case 'double':
+				return (double) $number;
+				break;
+
+			case 'rupiah':
+				return 'Rp'.number_format($number,0,',','.');
+				break;
+
+			case 'dollar':
+				return '$'.number_format($number,2,'.',',');
+				break;
+
+			case 'thousand_id':
+				return number_format($number,0,',','.');
+				break;
+
+			case 'thousand_sg':
+				return number_format($number,2,'.',',');
+				break;
+
+			case 'custom':
+				return number_format($number,...$custom);
+				break;
+
+			case 'short':
+				if ($number < 1000) {
+				    // Anything less than a million
+				    $n_format = number_format($number,0);
+				} elseif ($number < 1000000) {
+				    // Anything less than a billion
+				    $n_format = number_format($number / 1000, 0) . 'K';
+				} elseif ($number < 1000000000) {
+				    // Anything less than a billion
+				    $n_format = number_format($number / 1000000, 0) . 'M';
+				} else {
+				    // At least a billion
+				    $n_format = number_format($number / 1000000000, 0) . 'B';
+				}
+				return $n_format;
+				break;
+
+			default:
+				return $number;
+				break;
+		}
+	}
+
+	/**
+	 * Create slug for resource based on id and created_at parameter
+	 * @param  String $id         id of resource
+	 * @param  String $created_at created_at value of item
+	 * @return String             slug result
+	 */
+	public static function createSlug($id,$created_at){
+		$combined = $id.'.'.$created_at;
+		$result = self::encrypt2019($combined);
+		return $result;
+	}
+
+	/**
+	 * get id and created at from slug
+	 * @param  String $slug given slug
+	 * @return Array       id and created at or empty array if invalid slug
+	 */
+	public static function explodeSlug($slug) {
+		$decripted = self::decrypt2019($slug);
+		$result = explode('.',$decripted);
+		if(!$result || (count($result) == 1 && empty($result[0]))){
+			return [];
+		}
+		return $result;
+	}
+
+    public static function phoneCheckFormat($phone) {
+        $phoneSetting = Setting::where('key', 'phone_setting')->first()->value_text;
+        $phoneSetting = json_decode($phoneSetting);
+        $codePhone = config('countrycode.country_code.'.env('COUNTRY_CODE').'.code');
+        $min = $phoneSetting->min_length_number;
+        $max = $phoneSetting->max_length_number;
+
+        if(substr($phone, 0, 1) == '0'){
+            $phone = $codePhone.substr($phone,1);
+        }elseif(substr($phone, 0, 2) == $codePhone){
+            $phone = $codePhone.substr($phone,2);
+        }elseif(substr($phone, 0, 3) == '+'.$codePhone){
+            $phone = $codePhone.substr($phone,3);
+        }else{
+            return [
+                'status' => 'fail',
+                'messages' => [$phoneSetting->message_failed]
+            ];
+        }
+
+        if(strlen($phone) >= $min && strlen($phone) <= $max){
+            return [
+                'status' => 'success',
+                'phone' => $phone
+            ];
+        }else{
+            return [
+                'status' => 'fail',
+                'messages' => [$phoneSetting->message_failed]
+            ];
+        }
+    }
+
+    public static function connectIris($subject, $method, $url, $body, $approver = null){
+        $baseUrl = env('URL_IRIS');
+        //$apiKey = MyHelper::decrypt2019(env('API_KEY_IRIS'));
+        $urlApi = $baseUrl.$url;
+        if($approver == 1){
+            $base64 = base64_encode(env('API_KEY_IRIS_APPROVER').':');
+        }else{
+            $base64 = base64_encode(env('API_KEY_IRIS').':');
+        }
+
+        $jsonBody = json_encode($body);
+
+        $header = [
+            'Content-Type'  => 'application/json',
+            'Accept' => 'application/json',
+            'Authorization' => 'Basic '.$base64
+        ];
+        $client = new Client([
+            'headers' => $header
+        ]);
+
+        try {
+            $output = $client->request($method, $urlApi, ['body' => $jsonBody]);
+            $output = json_decode($output->getBody(), true);
+
+            $dataLog= [
+                'subject' => $subject,
+                'request_header'=> json_encode($header),
+                'request' => $jsonBody,
+                'request_url' => $urlApi,
+                'response' => json_encode($output)
+            ];
+            LogIRIS::create($dataLog);
+            return ['status' => 'success', 'response' => $output];
+        }catch (\GuzzleHttp\Exception\RequestException $e) {
+            $dataLog= [
+                'subject' => $subject,
+                'request_header'=> json_encode($header),
+                'request' => $jsonBody,
+                'request_url' => $urlApi
+            ];
+
+            try{
+                if($e->getResponse()){
+                    $response = $e->getResponse()->getBody()->getContents();
+                    $dataLog['response'] = $response;
+                    LogIRIS::create($dataLog);
+                    return ['status' => 'fail', 'response' => json_decode($response, true)];
+                }
+                $dataLog['response'] = 'Check your internet connection.';
+                LogIRIS::create($dataLog);
+                return ['status' => 'fail', 'response' => ['Check your internet connection.']];
+            }
+            catch(Exception $e){
+                $dataLog['response'] = 'Check your internet connection.';
+                LogIRIS::create($dataLog);
+                return ['status' => 'fail', 'response' => ['Check your internet connection.']];
+            }
+        }
+    }
+    /**
+     * Get setting value from setting table
+     * @param string $key setting key
+     * @param string $column value column [value|value_text]
+     * @param string default value if setting not exist
+     * @return  string/array result
+     */
+    public static function setting($key,$column = 'value',$default = '')
+    {
+    	return Setting::select($column)->where('key',$key)->pluck($column)->first()??$default;
+    }
+
+    public static function checkRuleForRequestOTP($data_user){
+        //get setting rule for request otp
+        $setting = Setting::where('key', 'otp_rule_request')->first();
+        /*
+          note : hold time in seconds. if the user has requested otp exceeds the
+          maximum number then the user cannot make an otp request.
+        */
+
+        $holdTime = 60;//set default hold time if setting not exist
+        $maxValueRequest = 10;//set default max value for request if setting not exist
+        if($setting){
+            $setting = json_decode($setting['value_text']);
+            $holdTime = (int)$setting->hold_time;
+            $maxValueRequest = (int)$setting->max_value_request;
+        }
+        $folder1 = 'otp';
+        $file = $data_user[0]['id'].'.json';
+
+        //check flag first in database
+        if(isset($data_user[0]['otp_request_status']) && $data_user[0]['otp_request_status'] == 'Can Not Request'){
+            return [
+                'status'=>'fail',
+                'otp_check'=> 1,
+                'messages'=> ["OTP request has passed the limit, please contact our customer service at ".config('configs.EMAIL_ADDRESS_ADMIN')]
+            ];
+        }
+
+        //check folder
+        if(env('STORAGE') == 'local'){
+            if(!Storage::disk(env('STORAGE'))->exists($folder1)){
+                Storage::makeDirectory($folder1);
+            }
+        }
+
+        if(Storage::disk(env('STORAGE'))->exists($folder1.'/'.$file)){
+            $readContent = Storage::disk(env('STORAGE'))->get($folder1.'/'.$file);
+            $content = json_decode($readContent);
+            $currentTime = date('Y-m-d H:i:s');
+            $count = $content->count_request + 1;
+
+            if(strtotime($currentTime) < strtotime($content->available_request_time)){
+                return [
+                    'status'=>'fail',
+                    'otp_check'=> 1,
+                    'messages'=> ["Can't request OTP, please request again after ".floor($holdTime/60)." minutes"]
+                ];
+            } elseif($count > $maxValueRequest){
+                $updateFlag = User::where('id', $data_user[0]['id'])->update(['otp_request_status' => 'Can Not Request']);
+                MyHelper::deleteFile($folder1.'/'.$file);
+                return [
+                    'status'=>'fail',
+                    'otp_check'=> 1,
+                    'messages'=> ["OTP request has passed the limit, please contact our customer service at ".config('configs.EMAIL_ADDRESS_ADMIN')]
+                ];
+            } else{
+                $availebleTime = date('Y-m-d H:i:s',strtotime('+'.$holdTime.' seconds',strtotime(date('Y-m-d H:i:s'))));
+                $contentFile = [
+                    'available_request_time' => $availebleTime,
+                    'count_request' => 1 + $content->count_request
+                ];
+                $createFile = MyHelper::createFile($contentFile, 'json', 'otp/', $data_user[0]['id']);
+                return true;
+            }
+        }else{
+            $availebleTime = date('Y-m-d H:i:s',strtotime('+'.$holdTime.' seconds',strtotime(date('Y-m-d H:i:s'))));
+            $contentFile = [
+                'available_request_time' => $availebleTime,
+                'count_request' => 1
+            ];
+            $createFile = MyHelper::createFile($contentFile, 'json', 'otp/', $data_user[0]['id']);
+            return true;
+        }
+    }
+
+    public static function checkRuleForRequestEmailVerify($data_user){
+        //get setting rule for request email verify
+        $setting = Setting::where('key', 'email_verify_rule_request')->first();
+        /*
+          note : hold time in seconds. if the user has requested email verify exceeds the
+          maximum number then the user cannot make an email verify request.
+        */
+
+        $holdTime = 60;//set default hold time if setting not exist
+        $maxValueRequest = 10;//set default max value for request if setting not exist
+        if($setting){
+            $setting = json_decode($setting['value_text']);
+            $holdTime = (int)$setting->hold_time;
+            $maxValueRequest = (int)$setting->max_value_request;
+        }
+        $folder1 = 'emailverify';
+        $file = $data_user[0]['id'].'.json';
+
+        //check flag first in database
+        if(isset($data_user[0]['email_verify_request_status']) && $data_user[0]['email_verify_request_status'] == 'Can Not Request'){
+            return [
+                'status'=>'fail',
+                'email_verify_check'=> 1,
+                'messages'=> ["Email Verify request has passed the limit, please contact our customer service at ".config('configs.EMAIL_ADDRESS_ADMIN')]
+            ];
+        }
+
+        //check folder
+        if(env('STORAGE') == 'local'){
+            if(!Storage::disk(env('STORAGE'))->exists($folder1)){
+                Storage::makeDirectory($folder1);
+            }
+        }
+
+        if(Storage::disk(env('STORAGE'))->exists($folder1.'/'.$file)){
+            $readContent = Storage::disk(env('STORAGE'))->get($folder1.'/'.$file);
+            $content = json_decode($readContent);
+            $currentTime = date('Y-m-d H:i:s');
+            $count = $content->count_request + 1;
+
+            if(strtotime($currentTime) < strtotime($content->available_request_time)){
+                return [
+                    'status'=>'fail',
+                    'email_verify_check'=> 1,
+                    'messages'=> ["Can't request email verify, please request again after ".floor($holdTime/60)." minutes"]
+                ];
+            } elseif($count > $maxValueRequest){
+                $updateFlag = User::where('id', $data_user[0]['id'])->update(['email_verify_request_status' => 'Can Not Request']);
+                MyHelper::deleteFile($folder1.'/'.$file);
+                return [
+                    'status'=>'fail',
+                    'email_verify_check'=> 1,
+                    'messages'=> ["Email Verify request has passed the limit, please contact our customer service at ".config('configs.EMAIL_ADDRESS_ADMIN')]
+                ];
+            } else{
+                $availebleTime = date('Y-m-d H:i:s',strtotime('+'.$holdTime.' seconds',strtotime(date('Y-m-d H:i:s'))));
+                $contentFile = [
+                    'available_request_time' => $availebleTime,
+                    'count_request' => 1 + $content->count_request
+                ];
+                $createFile = MyHelper::createFile($contentFile, 'json', 'emailverify/', $data_user[0]['id']);
+                return true;
+            }
+        }else{
+            $availebleTime = date('Y-m-d H:i:s',strtotime('+'.$holdTime.' seconds',strtotime(date('Y-m-d H:i:s'))));
+            $contentFile = [
+                'available_request_time' => $availebleTime,
+                'count_request' => 1
+            ];
+            $createFile = MyHelper::createFile($contentFile, 'json', 'emailverify/', $data_user[0]['id']);
+            return true;
+        }
+    }
+
+    /**
+     * update flag transaction online (flag ini digunakan untuk menandai user pernah transaksi online atau belum (digunakan di referral))
+     * @param  array/model 	$trx 	 	  	Transacction model
+     * @param  string 		$status 		"pending" / "cancel" / "success"
+     * @param  model 		$user   		User model or leave it empty
+     * @return boolean
+     */
+    public static function updateFlagTransactionOnline($trx, $status = 'pending', $user = null)
+    {
+    	if (!$user) {
+	        $user = User::where('id',$trx['id_user'])->first();
+    	}
+    	if ($status == 'success') {
+    		if ($user['transaction_online_status'] == 'success') {
+    			return true;
+    		}
+    		if ($user['transaction_online'] != $trx['id_transaction']) {
+	    		$user->update(['transaction_online' => $trx['id_transaction'], 'transaction_online_status' => 'success']);
+    			return true;
+    		}
+    	} elseif ($status == 'cancel') {
+	        // check flag transaction_online == id_transaction
+	        if($user['transaction_online'] == $trx['id_transaction']) {
+	        	// find other pending transaction
+	        	$id_pending_trx = Transaction::select('id_transaction')->where('id_user',$trx['id_user'])->where('transaction_payment_status','Pending')->where('id_transaction', '<>', $trx['id_transaction'])->pluck('id_transaction')->first();
+	        	if ($id_pending_trx) {
+	        		$user->update(['transaction_online' => $id_pending_trx, 'transaction_online_status' => 'pending']);
+	        	} else {
+	        		$user->update(['transaction_online' => null, 'transaction_online_status' => null]);
+	        	}
+	        };
+	        return true;
+    	} else {
+    		if (!$user['transaction_online']) {
+	    		$user->update(['transaction_online' => $trx['id_transaction'], 'transaction_online_status' => 'pending']);
+    		}
+    	}
+    	return true;
+	}
+	
+	/**
+	 * Calculates the great-circle distance between two points, with
+	 * the Vincenty formula.
+	 * @param float $latitudeFrom Latitude of start point in [deg decimal]
+	 * @param float $longitudeFrom Longitude of start point in [deg decimal]
+	 * @param float $latitudeTo Latitude of target point in [deg decimal]
+	 * @param float $longitudeTo Longitude of target point in [deg decimal]
+	 * @param float $earthRadius Mean earth radius in [m]
+	 * @return float Distance between points in [m] (same as earthRadius)
+	 */
+	public static function getDistance($latitudeFrom, $longitudeFrom, $latitudeTo, $longitudeTo, $earthRadius = 6371000)
+	{
+		// convert from degrees to radians
+		$latFrom = deg2rad($latitudeFrom);
+		$lonFrom = deg2rad($longitudeFrom);
+		$latTo = deg2rad($latitudeTo);
+		$lonTo = deg2rad($longitudeTo);
+	
+		$lonDelta = $lonTo - $lonFrom;
+		$a = pow(cos($latTo) * sin($lonDelta), 2) +
+		pow(cos($latFrom) * sin($latTo) - sin($latFrom) * cos($latTo) * cos($lonDelta), 2);
+		$b = sin($latFrom) * sin($latTo) + cos($latFrom) * cos($latTo) * cos($lonDelta);
+	
+		$angle = atan2(sqrt($a), $b);
+		return $angle * $earthRadius;
 	}
 }

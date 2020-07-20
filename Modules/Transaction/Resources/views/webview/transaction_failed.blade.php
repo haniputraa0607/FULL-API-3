@@ -7,43 +7,43 @@
 
     <!-- Bootstrap CSS -->
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css" integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous">
-    <link href="{{ env('S3_URL_VIEW') }}{{('css/slide.css') }}" rel="stylesheet">
+    <link href="{{ config('url.storage_url_view') }}{{('css/slide.css') }}" rel="stylesheet">
     <style type="text/css">
         @font-face {
                 font-family: "GoogleSans-Bold";
                 font-style: normal;
                 font-weight: 400;
-                src: url('{{ env('S3_URL_VIEW') }}{{ ('/fonts/GoogleSans-Bold.ttf') }}');
+                src: url('{{ config('url.storage_url_view') }}{{ ('/fonts/GoogleSans-Bold.ttf') }}');
         }
         @font-face {
                 font-family: "GoogleSans-BoldItalic";
                 font-style: normal;
                 font-weight: 400;
-                src: url('{{ env('S3_URL_VIEW') }}{{ ('/fonts/GoogleSans-BoldItalic.ttf') }}');
+                src: url('{{ config('url.storage_url_view') }}{{ ('/fonts/GoogleSans-BoldItalic.ttf') }}');
         }
         @font-face {
                 font-family: "GoogleSans-Italic";
                 font-style: normal;
                 font-weight: 400;
-                src: url('{{ env('S3_URL_VIEW') }}{{ ('/fonts/GoogleSans-Italic.ttf') }}');
+                src: url('{{ config('url.storage_url_view') }}{{ ('/fonts/GoogleSans-Italic.ttf') }}');
         }
         @font-face {
                 font-family: "GoogleSans-Medium";
                 font-style: normal;
                 font-weight: 400;
-                src: url('{{ env('S3_URL_VIEW') }}{{ ('/fonts/GoogleSans-Medium.ttf') }}');
+                src: url('{{ config('url.storage_url_view') }}{{ ('/fonts/GoogleSans-Medium.ttf') }}');
         }
         @font-face {
                 font-family: "GoogleSans-MediumItalic";
                 font-style: normal;
                 font-weight: 400;
-                src: url('{{ env('S3_URL_VIEW') }}{{ ('/fonts/GoogleSans-MediumItalic.ttf') }}');
+                src: url('{{ config('url.storage_url_view') }}{{ ('/fonts/GoogleSans-MediumItalic.ttf') }}');
         }
         @font-face {
                 font-family: "GoogleSans";
                 font-style: normal;
                 font-weight: 400;
-                src: url('{{ env('S3_URL_VIEW') }}{{ ('/fonts/GoogleSans-Regular.ttf') }}');
+                src: url('{{ config('url.storage_url_view') }}{{ ('/fonts/GoogleSans-Regular.ttf') }}');
         }
         .GoogleSans{
             font-family: "GoogleSans";
@@ -475,7 +475,7 @@
                 @endif
 
                 @if(isset($data['balance']))
-                <div class="col-6 text-13-3px space-text GoogleSans">Kenangan Points</div>
+                <div class="col-6 text-13-3px space-text GoogleSans">Points</div>
                 <div class="col-6 text-13-3px text-right GoogleSans text-red">- {{ str_replace(',', '.', number_format(abs($data['balance']))) }}</div>
                 @endif
 
@@ -526,7 +526,7 @@
                         @else
                         <div class="col-6 text-13-3px GoogleSans text-black">
                             @if ($data['trasaction_payment_type'] == 'Balance')
-                                Kenangan Points
+                                Points
                             @elseif ($data['trasaction_payment_type'] == 'Midtrans')
                                 @if(isset($data['data_payment'][0]['payment_type']))
                                     {{ ucwords(str_replace('_', ' ', $data['data_payment'][0]['payment_type'])) }}

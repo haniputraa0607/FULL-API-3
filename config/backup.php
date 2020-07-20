@@ -1,26 +1,19 @@
 <?php
-
 return [
-
     'backup' => [
-
         /*
          * The name of this application. You can use this name to monitor
          * the backups.
          */
         'name' => env('APP_NAME', 'laravel-backup'),
-
         'source' => [
-
             'files' => [
-
                 /*
                  * The list of directories and files that will be included in the backup.
                  */
                 'include' => [
                     base_path(),
                 ],
-
                 /*
                  * These directories and files will be excluded from the backup.
                  *
@@ -28,15 +21,16 @@ return [
                  */
                 'exclude' => [
                     base_path('vendor'),
+                    base_path('public'),
+                    base_path('storage'),
+                    base_path('bootstrap'),
                     base_path('node_modules'),
                 ],
-
                 /*
                  * Determines if symlinks should be followed.
                  */
                 'follow_links' => false,
             ],
-
             /*
              * The names of the connections to the databases that should be backed up
              * MySQL, PostgreSQL, SQLite and Mongo databases are supported.
@@ -71,7 +65,6 @@ return [
                 'mysql',
             ],
         ],
-
         /*
          * The database dump can be compressed to decrease diskspace usage.
          *
@@ -84,32 +77,22 @@ return [
          * If you do not want any compressor at all, set it to null.
          */
         'database_dump_compressor' => null,
-
         'destination' => [
-
             /*
              * The filename prefix used for the backup zip file.
              */
-            'filename_prefix' => '',
-
+            'filename_prefix' => 'API-',
             /*
              * The disk names on which the backups will be stored.
              */
             'disks' => [
-                's3',
+                env('BACKUP_STORAGE', 's3_backup'),
             ],
         ],
-
         /*
          * The directory where the temporary files will be stored.
          */
         'temporary_directory' => storage_path('app/backup-temp'),
-    ],
-    'monitorBackups' => [
-        [
-            'name' => env('APP_URL'),
-            'disks' => ['s3'],
-        ],
     ],
     /*
      * You can get notified when specific events occur. Out of the box you can use 'mail' and 'slack'.
@@ -119,46 +102,36 @@ return [
      * the `Spatie\Backup\Events` classes.
      */
     'notifications' => [
-
         'notifications' => [
-            \Spatie\Backup\Notifications\Notifications\BackupHasFailed::class => ['mail'],
-            \Spatie\Backup\Notifications\Notifications\UnhealthyBackupWasFound::class => ['mail'],
-            \Spatie\Backup\Notifications\Notifications\CleanupHasFailed::class => ['mail'],
-            \Spatie\Backup\Notifications\Notifications\BackupWasSuccessful::class => ['mail'],
-            \Spatie\Backup\Notifications\Notifications\HealthyBackupWasFound::class => ['mail'],
-            \Spatie\Backup\Notifications\Notifications\CleanupWasSuccessful::class => ['mail'],
+            \Spatie\Backup\Notifications\Notifications\BackupHasFailed::class => [App\Backup\NotificationBackupHasFailed::class, 'slack'],
+            \Spatie\Backup\Notifications\Notifications\UnhealthyBackupWasFound::class => [],
+            \Spatie\Backup\Notifications\Notifications\CleanupHasFailed::class => [App\Backup\NotificationCleanupHasFailed::class, 'slack'],
+            \Spatie\Backup\Notifications\Notifications\BackupWasSuccessful::class => [],
+            \Spatie\Backup\Notifications\Notifications\HealthyBackupWasFound::class => [],
+            \Spatie\Backup\Notifications\Notifications\CleanupWasSuccessful::class => [],
         ],
-
         /*
          * Here you can specify the notifiable to which the notifications should be sent. The default
          * notifiable will use the variables specified in this config file.
          */
         'notifiable' => \Spatie\Backup\Notifications\Notifiable::class,
-
         'mail' => [
-            'to' => 'your@example.com',
-
+            'to' => env('BACKUP_MAIL_TO', 'hello@example.com'),
             'from' => [
-                'address' => env('MAIL_FROM_ADDRESS', 'hello@example.com'),
-                'name' => env('MAIL_FROM_NAME', 'Example'),
+                'address' => env('BACKUP_MAIL_FROM_ADDRESS', 'hello@example.com'),
+                'name' => env('BACKUP_MAIL_FROM_NAME', 'Example'),
             ],
         ],
-
         'slack' => [
-            'webhook_url' => '',
-
+            'webhook_url' => env('BACKUP_SLACK_URL', ''),
             /*
              * If this is set to null the default channel of the webhook will be used.
              */
-            'channel' => null,
-
-            'username' => null,
-
-            'icon' => null,
-
+            'channel' => env('BACKUP_SLACK_CHANNEL', null),
+            'username' => env('BACKUP_SLACK_USERNAME', null),
+            'icon' => env('BACKUP_SLACK_ICON', null),
         ],
     ],
-
     /*
      * Here you can specify which backups should be monitored.
      * If a backup does not meet the specified requirements the
@@ -167,13 +140,12 @@ return [
     'monitor_backups' => [
         [
             'name' => env('APP_NAME', 'laravel-backup'),
-            'disks' => ['local'],
+            'disks' => [env('BACKUP_STORAGE', 's3_backup')],
             'health_checks' => [
                 \Spatie\Backup\Tasks\Monitor\HealthChecks\MaximumAgeInDays::class => 1,
                 \Spatie\Backup\Tasks\Monitor\HealthChecks\MaximumStorageInMegabytes::class => 5000,
             ],
         ],
-
         /*
         [
             'name' => 'name of the second app',
@@ -185,7 +157,6 @@ return [
         ],
         */
     ],
-
     'cleanup' => [
         /*
          * The strategy that will be used to cleanup old backups. The default strategy
@@ -197,40 +168,32 @@ return [
          * delete the newest backup.
          */
         'strategy' => \Spatie\Backup\Tasks\Cleanup\Strategies\DefaultStrategy::class,
-
         'default_strategy' => [
-
             /*
              * The number of days for which backups must be kept.
              */
-            'keep_all_backups_for_days' => 7,
-
+            'keep_all_backups_for_days' => (int)env('BACKUP_KEEP_DAYS', '7'),
             /*
              * The number of days for which daily backups must be kept.
              */
-            'keep_daily_backups_for_days' => 16,
-
+            'keep_daily_backups_for_days' => (int)env('BACKUP_KEEP_DAILY', '16'),
             /*
              * The number of weeks for which one weekly backup must be kept.
              */
-            'keep_weekly_backups_for_weeks' => 8,
-
+            'keep_weekly_backups_for_weeks' => (int)env('BACKUP_KEEP_WEEKS', '8'),
             /*
              * The number of months for which one monthly backup must be kept.
              */
-            'keep_monthly_backups_for_months' => 4,
-
+            'keep_monthly_backups_for_months' => (int)env('BACKUP_KEEP_MONTHS', '4'),
             /*
              * The number of years for which one yearly backup must be kept.
              */
-            'keep_yearly_backups_for_years' => 2,
-
+            'keep_yearly_backups_for_years' => (int)env('BACKUP_KEEP_YEARS', '2'),
             /*
              * After cleaning up the backups remove the oldest backup until
              * this amount of megabytes has been reached.
              */
-            'delete_oldest_backups_when_using_more_megabytes_than' => 5000,
+            'delete_oldest_backups_when_using_more_megabytes_than' => (int)env('BACKUP_KEEP_AMOUNT', '5000'),
         ],
     ],
-
 ];

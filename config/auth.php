@@ -53,6 +53,10 @@ return [
             'driver' => 'passport',
             'provider' => 'quinos'
         ],
+        'user-franchise' => [
+            'driver' => 'passport',
+            'provider' => 'user-franchise'
+        ],
     ],
 
     /*
@@ -77,6 +81,10 @@ return [
             'driver' => 'eloquent',
             'model' => App\Http\Models\User::class,
         ],
+        'users-be' => [
+            'driver' => 'eloquent',
+            'model' => App\Http\Models\UserBE::class,
+        ],
 
         // 'users' => [
         //     'driver' => 'database',
@@ -90,6 +98,11 @@ return [
         'quinos' => [
             'driver' => 'eloquent',
             'model' => App\Http\Models\QuinosUser::class
+        ],
+
+        'user-franchise' => [
+            'driver' => 'eloquent',
+            'model' => \Modules\Disburse\Entities\UserFranchise::class
         ],
     ],
 

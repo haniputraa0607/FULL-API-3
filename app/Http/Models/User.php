@@ -11,6 +11,8 @@ use Laravel\Passport\HasApiTokens;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 
+use Modules\UserFeedback\Entities\UserFeedbackLog;
+
 class User extends Authenticatable
 {
 	protected $connection = 'mysql';
@@ -53,6 +55,7 @@ class User extends Authenticatable
 		'id_membership',
 		'email',
 		'password',
+        'id_card_image',
 		'id_city',
 		'gender',
 		'provider',
@@ -60,6 +63,7 @@ class User extends Authenticatable
 		'relationship',
 		'phone_verified',
 		'email_verified',
+        'email_verified_valid_time',
 		'level',
 		'points',
 		'balance',
@@ -82,7 +86,12 @@ class User extends Authenticatable
 		'first_pin_change',
 		'celebrate',
 		'job',
-		'address'
+		'address',
+        'email_verify_request_status',
+        'otp_request_status',
+        'otp_valid_time',
+        'transaction_online',
+        'transaction_online_status'
 	];
 
 	public function city()
@@ -189,5 +198,24 @@ class User extends Authenticatable
 	
     public function promotionSents() {
     	return $this->hasMany(PromotionSent::class, 'id_user', 'id')->orderBy('series_no', 'ASC');
+    }
+
+    public function favorites() {
+    	return $this->hasMany(\Modules\Favorite\Entities\Favorite::class, 'id_user');
+    }
+
+    public function log_popup()
+    {
+    	return $this->hasOne(UserFeedbackLog::class,'id_user');
+    }
+
+    public function referred_user()
+    {
+    	return $this->belongsToMany(User::class,'promo_campaign_referral_transactions','id_referrer','id_user');
+    }
+
+    public function referred_transaction()
+    {
+    	return $this->hasMany(\Modules\PromoCampaign\Entities\PromoCampaignReferralTransaction::class,'id_referrer','id');
     }
 }

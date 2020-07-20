@@ -5,8 +5,8 @@
 @extends('webview.main')
 
 @section('css')
-	<link href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" integrity="sha384-wvfXpqpZZVQGK6TAh5PVlGOfQNHSoD2xbE+QkPxCAFlNEevoEH3Sl0sibVcOQVnN" crossorigin="anonymous">
-    <style type="text/css">
+	<link rel="stylesheet" href="{{config('url.api_url')}}css/voucher.css">
+	<style type="text/css">
     	p{
     		margin-top: 0px !important;
     		margin-bottom: 0px !important;
@@ -178,6 +178,46 @@
 	    		width: auto;
 	    	}
         }
+		.tab-head{
+			padding-left: 0px !important;
+			padding-right: 0px !important;
+		}
+		.nav-item a:focus{
+			outline: unset;
+		}
+		.nav-item a:hover{
+			border: 1px solid #fff !important;
+		}
+		.nav-item a{
+			color: #707070 !important;
+		}
+		.nav-item .active{
+			color: #383b67 !important;
+			border:none !important;
+			border-bottom: 3px solid #383b67 !important;
+			border-radius: 3px;
+		}
+		.nav-item .active:hover{
+			border:none !important;
+			border-bottom: 3px solid #383b67 !important;
+		}
+		.nav-tabs{
+			border-bottom: 1px solid #f8f9fb;
+			overflow-x: auto;
+			overflow-y: hidden;
+			display: -webkit-box;
+			display: -moz-box;
+		}
+		.nav-tabs>li {
+			float:none;
+		}
+		.nav>li>a:focus, .nav>li>a:hover {
+			background-color: transparent;
+		}
+		::-webkit-scrollbar {
+			width: 0px;
+			background: transparent; /* make scrollbar transparent */
+		}
     </style>
 @stop
 
@@ -187,7 +227,7 @@
 			@php
 				$voucher = $voucher['data'][0];
 			@endphp
-			<div class="col-md-4 col-md-offset-4">
+			<div class="col-md-4 col-md-offset-4" style="background-color: #f8f9fb;">
 				<!-- Modal QR Code -->
 				@if(isset($voucher['redeemed_at']) && $voucher['redeemed_at'] != null || isset($voucher['used_at']) && $voucher['used_at'] == null)
 				<div style="background-color: rgb(255, 255, 255);" class="col-md-12 title-wrapper clearfix ProductSans">
@@ -208,9 +248,9 @@
 				<div style="background-color: rgb(255, 255, 255);" class="title-wrapper col-md-12 clearfix ProductSans">
 					<div class="title" style="padding-top: 0px; padding-bottom: 5px;">
 						@if (isset($voucher['deal_voucher']['deal']['deals_voucher_price_point']))
-							{{number_format($voucher['deal_voucher']['deal']['deals_voucher_price_point'])}} points
+							{{number_format($voucher['deal_voucher']['deal']['deals_voucher_price_point'],0,",",".")}} points
 						@elseif (isset($voucher['deal_voucher']['deal']['deals_voucher_price_cash']))
-							Rp {{number_format($voucher['deal_voucher']['deal']['deals_voucher_price_cash'])}}
+							{{number_format($voucher['deal_voucher']['deal']['deals_voucher_price_cash'],0,",",".")}}
 						@else
 							Gratis
 						@endif
@@ -246,93 +286,66 @@
 					</div>
 				</div>
 				@else
-				<img class="deals-img center-block" src="{{ $voucher['deal_voucher']['deal']['url_deals_image'] }}" alt="">
-
-				<div style="background-color: rgb(255, 255, 255);" class="title-wrapper col-md-12 clearfix ProductSans">
-					<div class="title">
-						{{ $voucher['deal_voucher']['deal']['deals_title'] }}
-						@if($voucher['deal_voucher']['deal']['deals_second_title'] != null)
-						<br>
-						{{ $voucher['deal_voucher']['deal']['deals_second_title'] }}
-						@endif
-					</div>
-				</div>
-
-				<hr style="margin-top: 0px; margin-bottom: 15px;">
-
-				<div style="background-color: rgb(255, 255, 255);" class="col-md-12 title-wrapper clearfix ProductSans">
-					@php $bulan = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', "Juli", 'Agustus', 'September', 'Oktober', 'November', 'Desember']; @endphp
-					<div style="margin-top: -15px; font-size: 13px;" class="fee text-right ProductSans"><i class="far fa-calendar"></i> Masa berlaku hingga {{date('d', strtotime($voucher['voucher_expired_at']))}} {{$bulan[date('m', strtotime($voucher['voucher_expired_at']))-1]}} {{ date('Y', strtotime($voucher['voucher_expired_at'])) }}</div>
-				</div>
-
-				<div style="background-color: rgb(255, 255, 255);" class="col-md-12 clearfix ProductSans">
-					<div class="card">
-						<div class="container" style="padding-top: 5px; padding-bottom: 5px; text-align: center;">
-							<div class="title">
-								<p style="color: rgb(102,102,102); font-size: 13px;">Berakhir dalam</p>
-								<div style="color: rgb(128,0,0);">
-									<div style="font-size: 16px;padding-bottom: 0px;" class="ProductSans-Bold" id="day">
-										<span id="daychild"></span>
-									</div>
-									<div style="font-size: 16px;" class="ProductSans" id="timer">
-										<span id="timerchild"></span>
-									</div>
+				<div style="background-color: #ffffff;padding: 10px;box-shadow: 0 0.7px 3.3px #eeeeee;height: 190px;" class="col-md-12 clearfix WorkSans">
+					<div id="test" style="width: 100%;height: 110px;position: absolute;background-color: #f8f9fb;left: 0;top: 32%;"></div>
+					<div style="position: relative;margin-top: 26.7px;">
+						<hr style="position:absolute;z-index: 1;border: none;border-left: 1px dashed #eeeeee;height: 98px;left: 36%;top: 3%;">
+						<div style="width: 56%;height: 100px;position: absolute;top: 10%;left: 40%;">
+							<div class="cotainer">
+								<div class="pull-left" style="margin-top: 10px;">
+									@php $bulan = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', "Juli", 'Agustus', 'September', 'Oktober', 'November', 'Desember']; @endphp
+									<p style="font-size: 15px;color: #333333;" 	class="WorkSans-Bold">{{$voucher['deal_voucher']['deal']['deals_title']}}</p>
+									<p style="font-size: 13.3px;color: #333333;">{{$voucher['deal_voucher']['deal']['deals_second_title']}}</p>
+									<div style="@if (isset($voucher['deal_voucher']['deal']['deals_second_title'])) margin-top: 20px; @else margin-top: 38px; @endif"></div>
+									<p style="font-size: 10.7px;color: #707070;padding: 5px 10px;background-color: #f0f3f7;border-radius: 100px;">Kedaluwarsa {{date('d', strtotime($voucher['deal_voucher']['deal']['deals_end']))}} {{$bulan[date('m', strtotime($voucher['deal_voucher']['deal']['deals_end']))-1]}} {{ date('Y', strtotime($voucher['deal_voucher']['deal']['deals_end'])) }}</p>
 								</div>
 							</div>
 						</div>
+						<img src="{{ config('url.storage_url_api').$voucher['deal_voucher']['deal']['deals_image'] }}" alt="" style="width: 85px;position: absolute;border-radius: 50%;top: 14.5%;left: 6.5%;">
+						<img style="width:100%" height="130px" src="{{ config('url.storage_url_api')}}img/asset/bg_item_kupon_saya.png" alt="">
 					</div>
 				</div>
 
-				@if($voucher['deal_voucher']['deal']['deals_description'] != "")
-				<div style="padding-top: 0px;" class="description-wrapper">
-					<div class="description">{!! $voucher['deal_voucher']['deal']['deals_description'] !!}</div>
-				</div>
-				@endif
-
-				<div id="showSK" style="background-color: rgb(248, 249, 251);" class="title-wrapper col-md-12 clearfix ProductSans-Bold">
-					<div class="title col-left" style="font-size: 15px; color: rgb(102, 102, 102);">Syarat & Ketentuan</div>
-					<div class="title" style="font-size: 15px; color: rgb(102, 102, 102);"><i class="fas fa-chevron-down"></i></i></div>
-				</div>
-
-				@if($voucher['deal_voucher']['deal']['deals_tos'] != "")
-				<div id="textSK" style="padding-top: 0px;" class="ProductSans description-wrapper">
-					<div class="description">{!! $voucher['deal_voucher']['deal']['deals_tos'] !!}</div>
-				</div>
-				@endif
-
-				<div id="showTP" style="background-color: rgb(248, 249, 251);" class="title-wrapper col-md-12 clearfix ProductSans-Bold">
-					<div class="title col-left" style="font-size: 15px; color: rgb(102, 102, 102);">Tempat Penukaran</div>
-					<div class="title" style="font-size: 15px; color: rgb(102, 102, 102);"><i class="fas fa-chevron-down"></i></div>
-				</div>
-
-				<div id="textTP" class="outlet-wrapper ProductSans" style="padding-top: 10px; margin-bottom: 40px;">
-					@if ($voucher['deal_voucher']['deal']['label_outlet'] == 'Some' || isset($voucher['redeemed_at']) && $voucher['redeemed_at'] != null)
-						<div class="outlet">
-							@if(isset($voucher['redeemed_at']) && $voucher['redeemed_at'] != null)
-								@if(isset($voucher['outlet_name']))
-								{{$voucher['outlet_name']}}
-								@endif
-							@else
-								@foreach($voucher['deal_voucher']['deal']['outlet_by_city'] as $key => $outlet_city)
-								@if(isset($outlet_city['city_name']))
-								<div class="outlet-city" style="color: rgb(0, 0, 0);">{{ $outlet_city['city_name'] }}</div>
-								<ul class="nav">
-									@foreach($outlet_city['outlet'] as $key => $outlet)
-									<li>- {{ $outlet['outlet_name'] }}</li>
-									@endforeach
-								</ul>
-								@endif
-								@endforeach
+				<div style="margin-top: 10px;box-shadow: 0 0.7px 3.3px #0f000000;background-color: #ffffff;">
+					<div class="col-12" style="padding: 10px 15px;">
+						<ul class="nav nav-tabs WorkSans-Bold" id="myTab" role="tablist" style="font-size: 14px;">
+							<li class="nav-item">
+								<a class="nav-link active" id="ketentuan-tab" data-toggle="tab" href="#ketentuan" role="tab" aria-controls="ketentuan" aria-selected="true">Ketentuan</a>
+							</li>
+							<li class="nav-item">
+								<a class="nav-link" id="howuse-tab" data-toggle="tab" href="#howuse" role="tab" aria-controls="howuse" aria-selected="false">Cara Pakai</a>
+							</li>
+							<li class="nav-item">
+								<a class="nav-link" id="outlet-tab" data-toggle="tab" href="#outlet" role="tab" aria-controls="outlet" aria-selected="false"> Berlaku di</a>
+							</li>
+						</ul>
+					</div>
+					<div class="tab-content mt-4 WorkSans-Regular" id="myTabContent" style="padding: 0 15px;padding-bottom: 5px;font-size: 11.7px;color: #707070;">
+						<div class="tab-pane fade show active" id="ketentuan" role="tabpanel" aria-labelledby="ketentuan-tab">
+							@if(isset($voucher['deal_voucher']['deal']['deals_tos']) && $voucher['deal_voucher']['deal']['deals_tos'] != "")
+							{!! $voucher['deal_voucher']['deal']['deals_tos'] !!}
 							@endif
 						</div>
-					@else
-						<div class="outlet" style="color: rgb(0, 0, 0);">TERSEDIA DI SEMUA OUTLET</div>
-					@endif
+						<div class="tab-pane fade" id="howuse" role="tabpanel" aria-labelledby="howuse-tab">
+							<p>Comming Soon</p>
+						</div>
+						<div class="tab-pane fade" id="outlet" role="tabpanel" aria-labelledby="outlet-tab">
+							@foreach($voucher['deal_voucher']['deal']['outlet_by_city'] as $key => $outlet_city)
+							<div class="outlet-city">{{ $outlet_city['city_name'] }}</div>
+							<ul class="nav">
+								@foreach($outlet_city['outlet'] as $key => $outlet)
+								<li>- {{ $outlet['outlet_name'] }}</li>
+								@endforeach
+							</ul>
+							@endforeach
+						</div>
+					</div>
+					<br>
 				</div>
 
 				@if(!isset($voucher['redeemed_at']) || $voucher['redeemed_at'] == null)
-					<center style="position: fixed; bottom: 0; width: 100%; background-color: rgb(255, 255, 255);">
-						<button style="outline:none; font-size:15px; margin-bottom: 15px; margin-top: 15px; background-color: rgb(74, 0, 0); color: rgb(241, 228, 178)" type="button" id="invalidate" class="btn ProductSans">{{$voucher['button_text']}}</button>
+					<center style="position: fixed; bottom: 0; width: 100%; background-color: #ffffff;">
+						<button style="outline:none; font-size:15px; margin-bottom: 15px; margin-top: 15px; background-color: #383b67; color: #ffffff" type="button" onclick="location.href='{{url()->current()}}#use_voucher'" id="invalidate" class="btn WorkSans-Bold">{{$voucher['button_text']}}</button>
 					</center>
 				@endif
 				@endif
@@ -350,175 +363,7 @@
 @stop
 
 @section('page-script')
-    <script type="text/javascript" src="{{ env('S3_URL_VIEW') }}{{('assets/global/plugins/jquery.min.js') }}" type="text/javascript"></script>
-	<script type="text/javascript">
-		@php $month = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', "Juli", 'Agustus', 'September', 'Oktober', 'November', 'Desember']; @endphp
-
-		// timer
-		var deals_end   = "{{ strtotime($voucher['voucher_expired_at']) }}";
-		var server_time = "{{ strtotime($voucher['deal_voucher']['deal']['time_server']) }}";
-		var timer_text;
-		var difference;
-
-		if (server_time <= deals_end) {
-			difference = deals_end - server_time;
-			document.getElementById('timer').classList.add("text-center");
-		}
-
-		var display_flag = 0;
-		this.interval = setInterval(() => {
-			daysDifference = Math.floor(difference/60/60/24);
-			if (daysDifference >= 0) {
-				document.getElementById('day').classList.add("text-center");
-				document.getElementById("day").innerHTML = " ";
-				document.getElementById("day").innerHTML += " ";
-				document.getElementById('day').innerHTML += daysDifference;
-				document.getElementById("day").innerHTML += " Hari";
-			}
-
-			if(difference >= 0) {
-				timer_text = timer(difference);
-				document.getElementById("timer").innerHTML = " ";
-				document.getElementById("timer").innerHTML += " ";
-				document.getElementById('timer').innerHTML += timer_text;
-
-				difference--;
-			}
-			else {
-				clearInterval(this.interval);
-			}
-
-			// if days then stop the timer
-			if (timer_text!=null && timer_text.includes("day")) {
-				clearInterval(this.interval);
-			}
-
-			// show timer
-			if (display_flag == 0) {
-				document.getElementById('timer');
-				display_flag = 1;
-			}
-		}, 1000); // 1 second
-
-		function timer(difference) {
-			if(difference === 0) {
-				return null;    // stop the function
-			}
-
-			var daysDifference, hoursDifference, minutesDifference, secondsDifference, timer;
-
-			// countdown
-			daysDifference = Math.floor(difference/60/60/24);
-			difference -= daysDifference*60*60*24;
-
-			hoursDifference = Math.floor(difference/60/60);
-			difference -= hoursDifference*60*60;
-			hoursDifference = ("0" + hoursDifference).slice(-2);
-
-			minutesDifference = Math.floor(difference/60);
-			difference -= minutesDifference*60;
-			minutesDifference = ("0" + minutesDifference).slice(-2);
-
-			secondsDifference = Math.floor(difference);
-
-			if (secondsDifference-1 < 0) {
-				secondsDifference = "00";
-			}
-			else {
-				secondsDifference = secondsDifference-1;
-				secondsDifference = ("0" + secondsDifference).slice(-2);
-			}
-
-			timer = hoursDifference + ":" + minutesDifference + ":" + secondsDifference;
-
-			return timer;
-		}
-	</script>
-	<script type="text/javascript">
-        $(document).ready(function() {
-			$('#textSK').hide();
-			$('#textTP').css('display','none');
-			$('#showTP').css('margin-bottom','20px');
-			$(document).on('click', '#showSK', function() {
-				$('#textSK').slideDown( "slow" );
-				$( "#showSK" ).replaceWith( '<div id="hideSK" style="background-color: rgb(248, 249, 251);" class="title-wrapper col-md-12 clearfix ProductSans-Bold"><div class="title col-left" style="font-size: 15px; color: rgb(102, 102, 102);">Syarat & Ketentuan</div><div class="title" style="font-size: 15px; color: rgb(102, 102, 102);"><i class="fas fa-chevron-up"></i></i></div></div>' );
-				if ($("#textTP").is(":visible")) {
-				    $('html, body').animate({scrollTop: ($(document).height()-$("#textTP").height())-250}, 'slow');
-				} else {
-				    $('html, body').animate({scrollTop: $(document).height()-220}, 'slow');
-				}
-			});
-			$(document).on('click', '#hideSK', function() {
-				$('#textSK').slideUp( "slow" );
-				$( "#hideSK" ).replaceWith( '<div id="showSK" style="background-color: rgb(248, 249, 251);" class="title-wrapper col-md-12 clearfix ProductSans-Bold"><div class="title col-left" style="font-size: 15px; color: rgb(102, 102, 102);">Syarat & Ketentuan</div><div class="title" style="font-size: 15px; color: rgb(102, 102, 102);"><i class="fas fa-chevron-down"></i></i></div></div>' );
-			});
-			$(document).on('click', '#showTP', function(e) {
-				$('#textTP').slideDown( "slow" );
-				$( "#showTP" ).replaceWith( '<div id="hideTP" style="background-color: rgb(248, 249, 251);" class="title-wrapper col-md-12 clearfix ProductSans-Bold"><div class="title col-left" style="font-size: 15px; color: rgb(102, 102, 102);">Tempat Penukaran</div><div class="title" style="font-size: 15px; color: rgb(102, 102, 102);"><i class="fas fa-chevron-up"></i></div></div>' );
-				$('html, body').animate({scrollTop: $(document).height()-160}, 'slow');
-			});
-			$(document).on('click', '#hideTP', function() {
-				$('#textTP').slideUp( "slow" );
-				$( "#hideTP" ).replaceWith( '<div id="showTP" style="background-color: rgb(248, 249, 251);" class="title-wrapper col-md-12 clearfix ProductSans-Bold"><div class="title col-left" style="font-size: 15px; color: rgb(102, 102, 102);">Tempat Penukaran</div><div class="title" style="font-size: 15px; color: rgb(102, 102, 102);"><i class="fas fa-chevron-down"></i></div></div>' );
-				$('#showTP').css('margin-bottom','20px');
-			});
-
-            $(document).on('click', '.deals-qr', function(e) {
-                e.preventDefault();
-                $('#qr-code-modal').fadeIn('fast');
-                $('.deals-detail').css({'height': '100vh', 'overflow-y':'scroll'});
-
-                // send flag to native
-                var url = window.location.href;
-                var result = url.replace("#true", "");
-                result = result.replace("#false", "");
-                result = result.replace("#", "");
-
-                window.location.href = result + '#true';
-            });
-
-            $(document).on('click', '#qr-code-modal', function() {
-                $('#qr-code-modal').fadeOut('fast');
-                $('.deals-detail').attr('style', '');
-
-                // send flag to native
-                var url = window.location.href;
-                var result = url.replace("#true", "");
-                result = result.replace("#false", "");
-                result = result.replace("#", "");
-
-                window.location.href = result + '#false';
-            });
-
-            $(document).on('click', '#invalidate', function() {
-                // send flag to native
-
-                var url_first = window.location.href;
-                var result_first = url_first.replace("#yes", "");
-                result_first = result_first.replace("#no", "");
-                result_first = result_first.replace("#", "");
-
-                window.location.href = result_first + '#yes';
-
-                // if (url == window.location.href+'#false') {
-                //     console.log('kosong atau false');
-                //     var result = url.replace("#true", "");
-                //     result = result.replace("#false", "");
-                //     result = result.replace("#", "");
-
-                //     window.location.href = result + '#true';
-                // } else {
-                //     console.log('true');
-                //     var result = url.replace("#true", "");
-                //     result = result.replace("#false", "");
-                //     result = result.replace("#", "");
-
-                //     window.location.href = result + '#false';
-                // }
-
-            });
-
-        });
-        // window.stop()
-    </script>
+	<script src="{{config('url.api_url')}}js/jquery.js"></script>
+	<script src="{{config('url.api_url')}}js/popper.js"></script>
+    <script src="{{config('url.api_url')}}js/voucher.js"></script>
 @stop
