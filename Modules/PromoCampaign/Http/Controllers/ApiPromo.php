@@ -97,7 +97,7 @@ class ApiPromo extends Controller
     	}
     	elseif ( $user_promo->promo_type == 'promo_campaign' )
     	{
-    		$promo = app($this->promo_campaign)->checkPromoCode(null, null, 1, $user_promo->id_reference, 1);
+    		$promo = app($this->promo_campaign)->checkPromoCode(null, 1, 1, $user_promo->id_reference, 1);
     		if ($promo) 
 			{
 				if ($promo->date_end < $datenow) {
