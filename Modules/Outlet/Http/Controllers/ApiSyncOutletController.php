@@ -86,6 +86,7 @@ class ApiSyncOutletController extends Controller
     /* SYNC */
     function sync(Sync $request) {
         $outlet = $request->json('outlet');
+        $data_pin = [];
 
         foreach ($outlet as $key => $value) {
             $value['id_city'] = $this->searchCity($value['city']);
@@ -94,6 +95,12 @@ class ApiSyncOutletController extends Controller
             $save = Outlet::updateOrCreate(['outlet_code' => $data['outlet_code']], $data);
 
             if ($save) {
+                $outlet = Outlet::where('id_outlet', $save['id_outlet'])->first();
+                if (empty($outlet->outlet_pin)) {
+                    $pin = MyHelper::createRandomPIN(6, 'angka');
+                    $outlet->update(['outlet_pin' => \Hash::make($pin)]);
+                    $data_pin[] = ['id_outlet' => $outlet->id_outlet, 'data' => $pin];
+                }
                 continue;
             }
             else {
@@ -104,6 +111,7 @@ class ApiSyncOutletController extends Controller
             }    
         }
 
+        MyHelper::updateOutletFile($data_pin);
         // return success
         return response()->json([
             'status' => 'success'
