@@ -77,6 +77,7 @@ Route::group(['prefix' => 'api/outlet', 'middleware' => ['log_activities', 'auth
     Route::post('max-order', 'ApiOutletController@listMaxOrder');
     Route::post('max-order/update', 'ApiOutletController@updateMaxOrder');
     Route::any('schedule/save', 'ApiOutletController@scheduleSave');
+    Route::get('export-pin', ['middleware' => 'feature_control:261', 'uses' =>'ApiOutletController@exportPin']);
 
     /*user franchise*/
     Route::any('list/user-franchise', 'ApiOutletController@listUserFranchise');
