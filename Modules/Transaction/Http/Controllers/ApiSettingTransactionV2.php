@@ -218,7 +218,7 @@ class ApiSettingTransactionV2 extends Controller
             //         }
             //     }
             // }
-            foreach ($data['item'] as $keyData => $valueData) {
+            foreach ($discount_promo['item']??$data['item'] as $keyData => $valueData) {
                 $this_discount=0;
                 if($discount_promo){
                     foreach ($discount_promo['item']??[] as $disc) {

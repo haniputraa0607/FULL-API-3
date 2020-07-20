@@ -71,7 +71,7 @@ class ApiIrisController extends Controller
     public function disburse(){
         $getSettingGlobalTimeToSent = Setting::where('key', 'disburse_global_setting_time_to_sent')->first();
 
-        if($getSettingGlobalTimeToSent && !empty($getSettingGlobalTimeToSent['value'])){
+        if($getSettingGlobalTimeToSent && $getSettingGlobalTimeToSent['value'] !== ""){
             /*
              -first check current date is holiday or not
              -today is holiday when return false
@@ -89,14 +89,17 @@ class ApiIrisController extends Controller
 
                 $getData = Transaction::leftJoin('disburse_outlet_transactions', 'disburse_outlet_transactions.id_transaction', 'transactions.id_transaction')
                     ->join('outlets', 'outlets.id_outlet', 'transactions.id_outlet')
+                    ->leftJoin('transaction_pickups', 'transaction_pickups.id_transaction', '=', 'transactions.id_transaction')
                     ->leftJoin('bank_account_outlets', 'bank_account_outlets.id_outlet', 'outlets.id_outlet')
                     ->leftJoin('bank_accounts', 'bank_accounts.id_bank_account', 'bank_account_outlets.id_bank_account')
                     ->leftJoin('bank_name', 'bank_name.id_bank_name', 'bank_accounts.id_bank_name')
                     ->where('transaction_payment_status', '=', 'Completed')
                     ->whereNull('disburse_outlet_transactions.id_disburse_transaction')
                     ->whereNotNull('bank_accounts.beneficiary_name')
+                    ->whereNull('transaction_pickups.reject_at')
+                    ->whereNotNull('transaction_pickups.taken_at')
                     ->whereDate('transactions.transaction_date', '<', $dateForQuery)
-                    ->select('transactions.transaction_date', 'transactions.id_outlet', 'transactions.id_transaction', 'transactions.transaction_subtotal',
+                    ->select('transaction_shipment_go_send', 'transactions.transaction_date', 'transactions.id_outlet', 'transactions.id_transaction', 'transactions.transaction_subtotal',
                         'transactions.transaction_grandtotal', 'transactions.transaction_discount', 'transactions.id_promo_campaign_promo_code',
                         'bank_name.bank_code', 'outlets.status_franchise', 'outlets.outlet_special_status', 'outlets.outlet_special_fee',
                         'bank_accounts.id_bank_account', 'bank_accounts.beneficiary_name', 'bank_accounts.beneficiary_account', 'bank_accounts.beneficiary_email', 'bank_accounts.beneficiary_alias')
@@ -150,6 +153,12 @@ class ApiIrisController extends Controller
                                 $nominalBalanceCentral = 0;
                                 $totalFeeForCentral = 0;
                                 $amount = 0;
+                                $amountMDR = 0 ;
+                                $transactionShipment = 0;
+                                if(!empty($data['transaction_shipment_go_send'])){
+                                    $transactionShipment = $data['transaction_shipment_go_send'];
+                                }
+
                                 $charged = NULL;
 
                                 if(empty($data['transaction_multiple_payment'])){
@@ -164,6 +173,7 @@ class ApiIrisController extends Controller
                                         }else{
                                             $payment = $midtrans['payment_type'];
                                         }
+                                        $amountMDR = $midtrans['gross_amount'];
                                         $keyMidtrans = array_search(strtoupper($payment), array_column($settingMDRAll, 'payment_name'));
                                         if($keyMidtrans !== false){
                                             $feePGCentral = $settingMDRAll[$keyMidtrans]['mdr_central'];
@@ -190,8 +200,10 @@ class ApiIrisController extends Controller
                                             $nominalBalanceCentral = $balanceNominal;
                                         }
                                     }elseif(strtolower($payments['type']) == 'ipay88'){
-                                        $ipay88 = TransactionPaymentIpay88::where('id_transaction', $data['id_transaction'])->first()->payment_method;
-                                        $keyipay88 = array_search(strtoupper($ipay88), array_column($settingMDRAll, 'payment_name'));
+                                        $ipay88 = TransactionPaymentIpay88::where('id_transaction', $data['id_transaction'])->first();
+                                        $amountMDR = $ipay88['amount']/100;
+                                        $method =  $ipay88['payment_method'];
+                                        $keyipay88 = array_search(strtoupper($method), array_column($settingMDRAll, 'payment_name'));
                                         if($keyipay88 !== false){
                                             $feePGCentral = $settingMDRAll[$keyipay88]['mdr_central'];
                                             $feePG = $settingMDRAll[$keyipay88]['mdr'];
@@ -201,6 +213,8 @@ class ApiIrisController extends Controller
                                             continue 2;
                                         }
                                     }elseif (strtolower($payments['type']) == 'ovo'){
+                                        $ovo = TransactionPaymentIpay88::where('id_transaction', $data['id_transaction'])->first();
+                                        $amountMDR = $ovo['amount']/100;
                                         $keyipayOvo = array_search('OVO', array_column($settingMDRAll, 'payment_name'));
                                         if($keyipayOvo !== false){
                                             $feePGCentral = $settingMDRAll[$keyipayOvo]['mdr_central'];
@@ -256,8 +270,8 @@ class ApiIrisController extends Controller
                                 }
 
                                 if($feePGType == 'Percent'){
-                                    $totalFee = $grandTotal * (($feePGCentral + $feePG) / 100);
-                                    $totalFeeForCentral = $grandTotal * ($feePGCentral/100);
+                                    $totalFee = $amountMDR * (($feePGCentral + $feePG) / 100);
+                                    $totalFeeForCentral = $amountMDR * ($feePGCentral/100);
                                 }else{
                                     $totalFee = $feePGCentral + $feePG;
                                     $totalFeeForCentral = $feePGCentral;
@@ -274,7 +288,7 @@ class ApiIrisController extends Controller
                                     }
                                 }
 
-                                $amount = round($subTotal - ((floatval($percentFee) / 100) * $subTotal) - $totalFee - $nominalBalance - $totalChargedPromo - $totalChargedSubcriptionOutlet, 2);
+                                $amount = round($subTotal - ((floatval($percentFee) / 100) * $subTotal) - $totalFee - $nominalBalance - $totalChargedPromo - $totalChargedSubcriptionOutlet - $transactionShipment, 2);
                                 $incomeCentral = round(((floatval($percentFee) / 100) * $subTotal) + $totalFeeForCentral, 2);
                                 $expenseCentral = round($nominalBalanceCentral + $totalChargedPromoCentral + $totalChargedSubcriptionCentral, 2);
 
@@ -324,7 +338,7 @@ class ApiIrisController extends Controller
                                                 'charged_point_central' => $feePointCentral,
                                                 'charged_point_outlet' => $feePointOutlet,
                                                 'charged_promo_central' => $feePromoCentral,
-                                                'charged_promo_outlet' => $feePromoCentral,
+                                                'charged_promo_outlet' => $feePromoOutlet,
                                                 'charged_subscription_central' => $feeSubcriptionCentral,
                                                 'charged_subscription_outlet' => $feeSubcriptionOutlet
                                             ]
@@ -347,7 +361,7 @@ class ApiIrisController extends Controller
                                         'charged_point_central' => $feePointCentral,
                                         'charged_point_outlet' => $feePointOutlet,
                                         'charged_promo_central' => $feePromoCentral,
-                                        'charged_promo_outlet' => $feePromoCentral,
+                                        'charged_promo_outlet' => $feePromoOutlet,
                                         'charged_subscription_central' => $feeSubcriptionCentral,
                                         'charged_subscription_outlet' => $feeSubcriptionOutlet
                                     ];
@@ -508,7 +522,7 @@ class ApiIrisController extends Controller
             $date = date('Y-m-d',strtotime('-'.$x.' days',strtotime($currentDate)));
             // if date is not sunday, saturday, and holiday then work date ++
             if(date('D', strtotime($date)) !== 'Sat' && date('D', strtotime($date)) !== 'Sun'
-            && array_search($date, $publicHoliday) === false){
+                && array_search($date, $publicHoliday) === false){
                 $getWorkDay++;
             }
             $x++;

@@ -84,7 +84,7 @@ class ApiPromo extends Controller
     	}
     	if ($user_promo->promo_type == 'deals')
     	{
-    		$promo = app($this->promo_campaign)->checkVoucher(null, null, 1);
+    		$promo = app($this->promo_campaign)->checkVoucher(null, null, 1, 1);
 
     		if ($promo) {
     			if ($promo->used_at) {
@@ -97,7 +97,7 @@ class ApiPromo extends Controller
     	}
     	elseif ( $user_promo->promo_type == 'promo_campaign' )
     	{
-    		$promo = app($this->promo_campaign)->checkPromoCode(null, null, 1, $user_promo->id_reference);
+    		$promo = app($this->promo_campaign)->checkPromoCode(null, null, 1, $user_promo->id_reference, 1);
     		if ($promo) 
 			{
 				if ($promo->date_end < $datenow) {
@@ -113,7 +113,7 @@ class ApiPromo extends Controller
     	}
     	elseif ( $user_promo->promo_type == 'subscription' )
     	{
-    		$promo = app($this->subscription_use)->checkSubscription(null, null, 1, 1, null, $user_promo->id_reference);
+    		$promo = app($this->subscription_use)->checkSubscription(null, null, 1, 1, null, $user_promo->id_reference, 1);
 
     		if ($promo) {
     			if ($promo->subscription_expired_at < $datenow) {
