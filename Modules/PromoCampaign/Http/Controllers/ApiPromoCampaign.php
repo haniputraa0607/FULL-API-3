@@ -761,16 +761,17 @@ class ApiPromoCampaign extends Controller
                 		$checkData[0]['code_type'] != $post['code_type'] || 
                 		$checkData[0]['prefix_code'] != $post['prefix_code'] || 
                 		$checkData[0]['number_last_code'] != $post['number_last_code'] || 
-                		$checkData[0]['promo_code'] != $post['promo_code'] || 
+                		($checkData[0]['promo_code']??null) != $post['promo_code'] || 
                 		$checkData[0]['total_coupon'] != $post['total_coupon'] ||
                 		$checkData[0]['id_brand'] != $post['id_brand']
                 	) 
                 {
                     $promo_code = $post['promo_code'];
 
-                    if ($post['code_type'] == 'Single') {
-                        unset($post['promo_code']);
-                    }
+                    unset($post['promo_code']);
+                    // if ($post['code_type'] == 'Single') {
+                    //     unset($post['promo_code']);
+                    // }
 
                     if (isset($post['promo_tag'])) {
                         $insertTag = $this->insertTag('update', $post['id_promo_campaign'], $post['promo_tag']);
@@ -805,9 +806,7 @@ class ApiPromoCampaign extends Controller
                 } 
                 else 
                 {
-                    if (isset($post['promo_code']) || $post['promo_code'] == null) {
-                        unset($post['promo_code']);
-                    }
+                    unset($post['promo_code']);
 
                     if (isset($post['promo_tag'])) {
                         $insertTag = $this->insertTag('update', $post['id_promo_campaign'], $post['promo_tag']);
@@ -2038,7 +2037,6 @@ class ApiPromoCampaign extends Controller
 	        	$applied_product = [];
 	        	$product = [];
 	        }
-
     	}
 
         $result = [
@@ -2185,7 +2183,16 @@ class ApiPromoCampaign extends Controller
 					'promo_campaign.promo_campaign_tier_discount_product',
 					'promo_campaign.promo_campaign_product_discount_rules',
 					'promo_campaign.promo_campaign_tier_discount_rules',
-					'promo_campaign.promo_campaign_buyxgety_rules'
+					'promo_campaign.promo_campaign_buyxgety_rules',
+					'promo_campaign.promo_campaign_product_discount.product' => function($q) {
+						$q->select('id_product', 'id_product_category', 'product_code', 'product_name');
+					},
+					'promo_campaign.promo_campaign_buyxgety_product_requirement.product' => function($q) {
+						$q->select('id_product', 'id_product_category', 'product_code', 'product_name');
+					},
+					'promo_campaign.promo_campaign_tier_discount_product.product' => function($q) {
+						$q->select('id_product', 'id_product_category', 'product_code', 'product_name');
+					},
 				]);
 	    }
 
@@ -2233,7 +2240,16 @@ class ApiPromoCampaign extends Controller
                     'dealVoucher.deals.deals_buyxgety_product_requirement', 
                     'dealVoucher.deals.deals_product_discount_rules', 
                     'dealVoucher.deals.deals_tier_discount_rules', 
-                    'dealVoucher.deals.deals_buyxgety_rules'
+                    'dealVoucher.deals.deals_buyxgety_rules',
+                    'dealVoucher.deals.deals_product_discount.product' => function($q) {
+						$q->select('id_product', 'id_product_category', 'product_code', 'product_name');
+					}, 
+                    'dealVoucher.deals.deals_tier_discount_product.product' => function($q) {
+						$q->select('id_product', 'id_product_category', 'product_code', 'product_name');
+					}, 
+                    'dealVoucher.deals.deals_buyxgety_product_requirement.product' => function($q) {
+						$q->select('id_product', 'id_product_category', 'product_code', 'product_name');
+					}
                 ]);
 	    }
 
