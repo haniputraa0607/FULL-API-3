@@ -121,7 +121,7 @@ class ApiDealsVoucherWebviewController extends Controller
             'button_text'           => 'Redeem',
             'popup_message'         => [
                 $data['deals_voucher']['deal']['deals_title'],
-                'will be used on the next transaction'
+                'akan digunakan pada transaksi selanjutnya'
             ],
             'voucher_expired_indo' 	=> MyHelper::dateFormatInd($data['voucher_expired_at'], false, false),
             'voucher_expired_time_indo' => 'pukul '.date('H:i', strtotime($data['voucher_expired_at']))
