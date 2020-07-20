@@ -17,7 +17,7 @@ class CreateExportQueuesTable extends Migration
             $table->bigIncrements('id_export_queue');
             $table->integer('id_user');
             $table->string('filter', 255)->nullable();
-            $table->enum('report_type', array('Payment'))->nullable();
+            $table->enum('report_type', array('Payment', 'Transaction'))->nullable();
             $table->string('url_export', 200)->nullable();
             $table->enum('status_export', array('Running', 'Ready', 'Deleted'))->nullable();
             $table->timestamps();

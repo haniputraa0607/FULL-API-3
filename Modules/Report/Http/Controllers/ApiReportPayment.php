@@ -25,6 +25,9 @@ use Illuminate\Routing\Controller;
 use Modules\IPay88\Entities\DealsPaymentIpay88;
 use Modules\IPay88\Entities\SubscriptionPaymentIpay88;
 use Modules\IPay88\Entities\TransactionPaymentIpay88;
+use Modules\Report\Entities\DailyReportPayment;
+use Modules\Report\Entities\DailyReportPaymentDeals;
+use Modules\Report\Entities\DailyReportPaymentSubcription;
 use Modules\Report\Entities\ExportQueue;
 use Modules\Report\Http\Requests\DetailReport;
 
@@ -35,7 +38,7 @@ use Validator;
 use Hash;
 use DB;
 use Mail;
-
+use File;
 
 class ApiReportPayment extends Controller
 {
@@ -48,8 +51,41 @@ class ApiReportPayment extends Controller
 
         $filter = $this->filterMidtrans($post);
 
-        $data = $filter->paginate(30);
-        return response()->json(MyHelper::checkGet($data));
+        if(isset($post['conditions']) && !empty($post['conditions'])){
+            $sum = $filter->sum('gross_amount');
+        }else{
+            $dealsSum = DailyReportPaymentDeals::where('payment_type', 'Midtrans');
+            $trxSum = DailyReportPayment::where('payment_type', 'Midtrans');
+            $subSum = DailyReportPaymentSubcription::where('payment_type', 'Midtrans');
+
+            if(isset($post['date_start']) && !empty($post['date_start']) &&
+                isset($post['date_end']) && !empty($post['date_end'])){
+                $start_date = date('Y-m-d', strtotime($post['date_start']));
+                $end_date = date('Y-m-d', strtotime($post['date_end']));
+
+                $dealsSum = $dealsSum->whereDate('date', '>=', $start_date)->whereDate('date', '<=', $end_date);
+                $trxSum = $trxSum->whereDate('trx_date', '>=', $start_date)->whereDate('trx_date', '<=', $end_date);
+                $subSum = $subSum->whereDate('date', '>=', $start_date)->whereDate('date', '<=', $end_date);
+            }
+
+            $sum = $dealsSum->sum('payment_nominal') + $trxSum->sum('trx_payment_nominal') + $subSum->sum('payment_nominal');
+        }
+
+        $data = $filter->orderBy('created_at', 'desc')->paginate(30);
+
+        if($data){
+            $result = [
+                'status' => 'success',
+                'result' => [
+                    'data' => $data,
+                    'sum' => $sum
+                ]
+            ];
+
+            return response()->json($result);
+        }else{
+            return response()->json(MyHelper::checkGet($data));
+        }
     }
 
     public function filterMidtrans($post){
@@ -62,8 +98,7 @@ class ApiReportPayment extends Controller
 
         $trx = TransactionPaymentMidtran::join('transactions', 'transactions.id_transaction', 'transaction_payment_midtrans.id_transaction')
             ->leftJoin('users', 'users.id', 'transactions.id_user')
-            ->selectRaw("transactions.transaction_payment_status as payment_status, payment_type,  transactions.id_transaction AS id_report, transactions.trasaction_type AS trx_type, transactions.transaction_receipt_number AS receipt_number, 'Transaction' AS type, transaction_payment_midtrans.created_at, transactions.`transaction_grandtotal` AS grand_total, gross_amount, users.name, users.phone, users.email")
-            ->orderBy('created_at', 'desc');
+            ->selectRaw("transactions.transaction_payment_status as payment_status, payment_type,  transactions.id_transaction AS id_report, transactions.trasaction_type AS trx_type, transactions.transaction_receipt_number AS receipt_number, 'Transaction' AS type, transaction_payment_midtrans.created_at, transactions.`transaction_grandtotal` AS grand_total, gross_amount, users.name, users.phone, users.email");
 
         if(isset($post['date_start']) && !empty($post['date_start']) &&
             isset($post['date_end']) && !empty($post['date_end'])){
@@ -387,8 +422,41 @@ class ApiReportPayment extends Controller
 
         $filter = $this->filterIpay88($post);
 
-        $data = $filter->paginate(30);
-        return response()->json(MyHelper::checkGet($data));
+        if(isset($post['conditions']) && !empty($post['conditions'])){
+            $sum = $filter->sum('gross_amount');
+        }else{
+            $dealsSum = DailyReportPaymentDeals::where('payment_type', 'Ipay88');
+            $trxSum = DailyReportPayment::where('payment_type', 'Ipay88');
+            $subSum = DailyReportPaymentSubcription::where('payment_type', 'Ipay88');
+
+            if(isset($post['date_start']) && !empty($post['date_start']) &&
+                isset($post['date_end']) && !empty($post['date_end'])){
+                $start_date = date('Y-m-d', strtotime($post['date_start']));
+                $end_date = date('Y-m-d', strtotime($post['date_end']));
+
+                $dealsSum = $dealsSum->whereDate('date', '>=', $start_date)->whereDate('date', '<=', $end_date);
+                $trxSum = $trxSum->whereDate('trx_date', '>=', $start_date)->whereDate('trx_date', '<=', $end_date);
+                $subSum = $subSum->whereDate('date', '>=', $start_date)->whereDate('date', '<=', $end_date);
+            }
+
+            $sum = $dealsSum->sum('payment_nominal') + $trxSum->sum('trx_payment_nominal') + $subSum->sum('payment_nominal');
+        }
+
+        $data = $filter->orderBy('created_at', 'desc')->paginate(30);
+
+        if($data){
+            $result = [
+                'status' => 'success',
+                'result' => [
+                    'data' => $data,
+                    'sum' => $sum
+                ]
+            ];
+
+            return response()->json($result);
+        }else{
+            return response()->json(MyHelper::checkGet($data));
+        }
     }
 
     public function filterIpay88($post){
@@ -722,81 +790,33 @@ class ApiReportPayment extends Controller
     }
 
     public function exportExcel($filter){
-        if(isset($filter['type']) == 'ipay88'){
-            $data = $this->filterIpay88($filter);
-        }elseif (isset($filter['type']) == 'midtrans'){
-            $data = $this->filterMidtrans($filter);
-        }
-
-        foreach ($data->cursor() as $val) {
-            yield [
-                'Date' => date('d M Y H:i', strtotime($val['created_at'])),
-                'Status' => $val['payment_status'],
-                'Type' => $val['type'],
-                'Payment Type' => $val['payment_type'],
-                'Grand Total' => $val['grand_total'],
-                'Payment Amount' => $val['gross_amount']/10,
-                'User Name' => $val['name'],
-                'User Phone' => $val['phone'],
-                'User Email' => $val['email'],
-                'Receipt Number' => $val['receipt_number']
-            ];
-        }
-    }
-
-    public function export(Request $request){
-        $post = $request->json()->all();
-
-        $insertToQueue = [
-            'id_user' => $post['id_user'],
-            'filter' => json_encode($post),
-            'report_type' => 'Payment',
-            'status_export' => 'Running'
-        ];
-
-        $create = ExportQueue::create($insertToQueue);
-        if($create){
-            ExportJob::dispatch($create)->allOnConnection('database');
-        }
-        return response()->json(MyHelper::checkCreate($create));
-    }
-
-    public function listExport(Request $request){
-        $post = $request->json()->all();
-
-        $list = ExportQueue::orderBy('created_at', 'desc');
-        if(isset($post['id_user']) && !empty($post['id_user'])){
-            $id_user = $post['id_user'];
-            $list = $list->where('id_user', $id_user);
-        }
-
-        $list = $list->paginate(30);
-        return response()->json(MyHelper::checkGet($list));
-    }
-
-    function actionExport(Request $request){
-        $post = $request->json()->all();
-        $action = $post['action'];
-        $id_export_queue = $post['id_export_queue'];
-
-        if($action == 'download'){
-            $data = ExportQueue::where('id_export_queue', $id_export_queue)->first();
-            if(!empty($data)){
-                $data['url_export'] = config('url.storage_url_api').$data['url_export'];
-            }
-            return response()->json(MyHelper::checkGet($data));
-        }elseif($action == 'deleted'){
-            $data = ExportQueue::where('id_export_queue', $id_export_queue)->first();
-            $file = public_path().'/'.$data['url_export'];
-            $delete = File::delete($file);
-
-            if($delete){
-                $update = ExportQueue::where('id_export_queue', $id_export_queue)->update(['status_export' => 'Deleted']);
-                return response()->json(MyHelper::checkUpdate($update));
-            }else{
-                return response()->json(MyHelper::checkDelete($file));
+        if(isset($filter['type'])){
+            if($filter['type'] == 'ipay88'){
+                $data = $this->filterIpay88($filter);
+            }elseif ($filter['type'] == 'midtrans'){
+                $data = $this->filterMidtrans($filter);
             }
 
+            foreach ($data->cursor() as $val) {
+                if($filter['type'] == 'ipay88'){
+                    $amount = (int)$val['gross_amount']/100;
+                }else{
+                    $amount = (int)$val['gross_amount'];
+                }
+
+                yield [
+                    'Date' => date('d M Y H:i', strtotime($val['created_at'])),
+                    'Status' => $val['payment_status'],
+                    'Type' => $val['type'],
+                    'Payment Type' => $val['payment_type'],
+                    'Grand Total' => $val['grand_total'],
+                    'Payment Amount' => $amount,
+                    'User Name' => $val['name'],
+                    'User Phone' => $val['phone'],
+                    'User Email' => $val['email'],
+                    'Receipt Number' => $val['receipt_number']
+                ];
+            }
         }
     }
 }

@@ -23,7 +23,7 @@ use Symfony\Component\HttpFoundation\Request;
 class ExportJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
-    protected $data,$payment;
+    protected $data,$payment,$trx;
     /**
      * Create a new job instance.
      *
@@ -32,6 +32,7 @@ class ExportJob implements ShouldQueue
     public function __construct($data)
     {
         $this->payment="Modules\Report\Http\Controllers\ApiReportPayment";
+        $this->trx="Modules\Transaction\Http\Controllers\ApiTransaction";
         $this->data=$data;
     }
 
@@ -48,6 +49,10 @@ class ExportJob implements ShouldQueue
             $filter = (array)json_decode($val['filter']);
             if($val['report_type'] == 'Payment'){
                 $generateExcel = app($this->payment)->exportExcel($filter);
+                $fileName = 'Report_'.str_replace(" ","", $val['report_payment']).'_'.$filter['type'];
+            }elseif ($val['report_type'] == 'Transaction'){
+                $generateExcel = app($this->trx)->exportTransaction($filter);
+                $fileName = 'Report_'.str_replace(" ","", $val['report_payment']);
             }
 
             if($generateExcel){
@@ -67,12 +72,12 @@ class ExportJob implements ShouldQueue
                     File::makeDirectory(public_path().'/'.$folder1.'/'.$folder2.'/'.$folder3);
                 }
 
-                $directory = $folder1.'/'.$folder2.'/'.$folder3.'/Report Payment '.$filter['type'].'-'.mt_rand(0, 1000).''.time().''.'.xlsx';
+                $directory = $folder1.'/'.$folder2.'/'.$folder3.'/'.$fileName.'-'.mt_rand(0, 1000).''.time().''.'.xlsx';
                 $store = (new FastExcel($generateExcel))->export(public_path().'/'.$directory);
 
-                if(env('STORAGE') != 'oss'){
+                if(config('configs.STORAGE') != 'local'){
                     $contents = File::get(public_path().'/'.$directory);
-                    $store = Storage::disk(env('STORAGE'))->put($directory,$contents, 'public');
+                    $store = Storage::disk(config('configs.STORAGE'))->put($directory,$contents, 'public');
                     if($store){
                         $delete = File::delete(public_path().'/'.$directory);
                     }

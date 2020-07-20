@@ -60,7 +60,9 @@ Route::group(['middleware' => ['api','log_activities', 'auth:api', 'user_agent',
     /* Report Payment */
     Route::any('payment/midtrans', 'ApiReportPayment@getReportMidtrans');
     Route::any('payment/ipay88', 'ApiReportPayment@getReportIpay88');
-    Route::any('payment/export/action', 'ApiReportPayment@actionExport');
-    Route::any('payment/export', 'ApiReportPayment@export');
-    Route::any('payment/list-export', 'ApiReportPayment@listExport');
+
+    /*Report Export*/
+    Route::any('export/action', 'ApiReportExport@actionExport');
+    Route::any('export/create', 'ApiReportExport@exportCreate');
+    Route::any('export/list', 'ApiReportExport@listExport');
 });

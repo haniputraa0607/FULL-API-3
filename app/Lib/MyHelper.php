@@ -1173,41 +1173,27 @@ class MyHelper{
         // path
         $upload = $path.$pictName;
 
-        if(env('STORAGE')){
-            $save = Storage::disk(env('STORAGE'))->put($upload, $decoded, 'public');
-            if ($save) {
-                $result = [
-                    'status' => 'success',
-                    'path'  => $upload
-                ];
-            }
-            else {
-                $result = [
-                    'status' => 'fail'
-                ];
-            }
-        }else{
-            $save = Storage::disk(env('STORAGE'))->put($upload, $decoded);
-            if ($save) {
-                $result = [
-                    'status' => 'success',
-                    'path'  => $upload
-                ];
-            }
-            else {
-                $result = [
-                    'status' => 'fail'
-                ];
-            }
+        $save = Storage::disk(config('configs.STORAGE'))->put($upload, $decoded);
+
+        if ($save) {
+            $result = [
+                'status' => 'success',
+                'path'  => $upload
+            ];
+        }
+        else {
+            $result = [
+                'status' => 'fail'
+            ];
         }
 
         return $result;
     }
 
-    public static function deleteFile($path) {
-        if(env('STORAGE')){
-            if(Storage::disk(env('STORAGE'))->exists($path)) {
-                if(Storage::disk(env('STORAGE'))->delete($path)){
+    public static function deleteFile($path, $type = 'storage') {
+        if($type == 'storage'){
+            if(Storage::disk(config('configs.STORAGE'))->exists($path)) {
+                if(Storage::disk(config('configs.STORAGE'))->delete($path)){
                     return true;
                 }
                 else {
@@ -1218,13 +1204,8 @@ class MyHelper{
                 return true;
             }
         }else{
-            if (Storage::disk(env('STORAGE'))->exists($path)) {
-                if (Storage::disk(env('STORAGE'))->delete($path)) {
-                    return true;
-                }
-                else {
-                    return false;
-                }
+            if (File::delete($path)) {
+                return true;
             }
             else {
                 return true;
