@@ -426,24 +426,24 @@ class ApiCronTrxController extends Controller
 
     public function autoReject()
     {
-        $minutes = (int) MyHelper::setting('auto_reject_time','value', 900);
+        $minutes = (int) MyHelper::setting('auto_reject_time','value', 15)*60;
         $max_time = date('Y-m-d H:i:s',time()-$minutes);
 
-        $trxs = TransactionPickup::select('id_transaction')->whereNull('receive_at')->whereNull('reject_at')->pluck('id_transaction');
+        $trxs = Transaction::join('transaction_pickups', 'transactions.id_transaction', 'transaction_pickups.id_transaction')->whereNull('receive_at')->whereNull('reject_at')->where('transaction_date','<',$max_time)->get();
+
+        $id_trxs = $trxs->pluck('id_transaction');
 
         DB::beginTransaction();
         $reason = 'auto reject order by system';
-        $pickup = TransactionPickup::whereIn('id_transaction', $trxs)->update([
+        $pickup = TransactionPickup::whereIn('id_transaction', $id_trxs)->update([
             'reject_at'     => date('Y-m-d H:i:s'),
             'reject_reason' => $reason,
         ]);
         if ($pickup) {
             $post = ['reason' => $reason, 'id_transaction' => 0];
             foreach ($trxs as $trx) {
-                $post['id_transaction'] = $trx;
-                $order = Transaction::join('transaction_pickups', 'transactions.id_transaction', 'transaction_pickups.id_transaction')
-                ->where('transactions.id_transaction', $trx)
-                ->first();
+                $post['id_transaction'] = $trx->id_transaction;
+                $order = $trx;
                 $outlet = Outlet::where('id_outlet',$order->id_outlet)->first();
                 $user = User::where('id', $order['id_user'])->first();
                 if(!$user || !$outlet) {
