@@ -896,7 +896,6 @@ class ApiSubscription extends Controller
         $user = $request->user();
         $curBalance = (int) $user->balance??0;
 
-        // return $post;
         if ($request->json('forSelect2')) {
             return MyHelper::checkGet($subs->with(['outlets', 'users'])->whereDoesntHave('featured_subscriptions')->get());
         }
@@ -939,6 +938,10 @@ class ApiSubscription extends Controller
 
         if ($request->json('publish')) {
             $subs = $subs->where('subscription_publish_end', '>=', date('Y-m-d H:i:s'));
+        }
+
+        if ($request->json('subscription_type')) {
+            $subs = $subs->where('subscription_type', '=', $request->json('subscription_type'));
         }
 
         if ($request->json('key_free')) {
