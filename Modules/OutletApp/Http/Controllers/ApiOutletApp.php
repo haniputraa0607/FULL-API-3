@@ -1540,8 +1540,6 @@ class ApiOutletApp extends Controller
                 }
             }
 
-            $checkMembership = app($this->membership)->calculateMembership($user['phone']);
-
         }
         DB::commit();
 
