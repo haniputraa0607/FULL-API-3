@@ -41,7 +41,7 @@ class BalanceController extends Controller
      * this function is created as a helper (for another controller),
      * not for api
     */
-    public function addLogBalance($id_user, $balance_nominal, $id_reference=null, $source=null, $grand_total=0)
+    public function addLogBalance($id_user, $balance_nominal, $id_reference=null, $source=null, $grand_total=0, $debug = false)
     {
         $user = User::with('memberships')->where('id', $id_user)->first();
 

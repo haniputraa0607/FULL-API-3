@@ -426,6 +426,7 @@ class ApiCronTrxController extends Controller
 
     public function autoReject()
     {
+        $log = MyHelper::logCron('Auto Reject Order');
         $minutes = (int) MyHelper::setting('auto_reject_time','value', 15)*60;
         $max_time = date('Y-m-d H:i:s',time()-$minutes);
 
@@ -500,6 +501,7 @@ class ApiCronTrxController extends Controller
                                 $refund = app($this->balance)->addLogBalance($order['id_user'], $point = $payBalance['balance_nominal'], $order['id_transaction'], 'Rejected Order Point', $order['transaction_grandtotal']);
                                 if ($refund == false) {
                                     DB::rollback();
+                                    $log->fail('Insert Cashback Failed #1');
                                     return response()->json([
                                         'status'   => 'fail',
                                         'messages' => ['Insert Cashback Failed'],
@@ -518,6 +520,7 @@ class ApiCronTrxController extends Controller
                                     $refund = Ovo::Void($transaction);
                                     if ($refund['status_code'] != '200') {
                                         DB::rollback();
+                                        $log->fail('Refund Ovo Failed #2');
                                         return response()->json([
                                             'status'   => 'fail',
                                             'messages' => ['Refund Ovo Failed'],
@@ -527,6 +530,7 @@ class ApiCronTrxController extends Controller
                                     $refund = app($this->balance)->addLogBalance($order['id_user'], $point = $payOvo['amount'], $order['id_transaction'], 'Rejected Order Ovo', $order['transaction_grandtotal']);
                                     if ($refund == false) {
                                         DB::rollback();
+                                        $log->fail('Insert Cashback Failed #3');
                                         return response()->json([
                                             'status'   => 'fail',
                                             'messages' => ['Insert Cashback Failed'],
@@ -541,6 +545,7 @@ class ApiCronTrxController extends Controller
                                 $refund = app($this->balance)->addLogBalance($order['id_user'], $point = ($payIpay['amount']/100), $order['id_transaction'], 'Rejected Order', $order['transaction_grandtotal']);
                                 if ($refund == false) {
                                     DB::rollback();
+                                    $log->fail('Insert Cashback Failed #4');
                                     return response()->json([
                                         'status'   => 'fail',
                                         'messages' => ['Insert Cashback Failed'],
@@ -556,12 +561,14 @@ class ApiCronTrxController extends Controller
                                     $refund = Midtrans::refund($order['transaction_receipt_number'],['reason' => $post['reason']??'']);
                                     if ($refund['status'] != 'success') {
                                         DB::rollback();
+                                        $log->fail('Refund Failed #5');
                                         return response()->json($refund);
                                     }
                                 } else {
                                     $refund = app($this->balance)->addLogBalance( $order['id_user'], $point = $payMidtrans['gross_amount'], $order['id_transaction'], 'Rejected Order Midtrans', $order['transaction_grandtotal']);
                                     if ($refund == false) {
                                         DB::rollback();
+                                        $log->fail('Insert Cashback Failed #6');
                                         return response()->json([
                                             'status'    => 'fail',
                                             'messages'  => ['Insert Cashback Failed']
@@ -583,12 +590,15 @@ class ApiCronTrxController extends Controller
                             $refund = Midtrans::refund($order['transaction_receipt_number'],['reason' => $post['reason']??'']);
                             if ($refund['status'] != 'success') {
                                 DB::rollback();
+                                $log->fail('Refund Failed #7');
                                 return response()->json($refund);
                             }
                         } else {
-                            $refund = app($this->balance)->addLogBalance( $order['id_user'], $point = $payMidtrans['gross_amount'], $order['id_transaction'], 'Rejected Order Midtrans', $order['transaction_grandtotal']);
+                            $refund = app($this->balance)->addLogBalance( $order['id_user'], $point = $payMidtrans['gross_amount'], $order['id_transaction'], 'Rejected Order Midtrans', $order['transaction_grandtotal'], true);
                             if ($refund == false) {
                                 DB::rollback();
+                                \Log::debug($order);
+                                $log->fail('Insert Cashback Failed #8');
                                 return response()->json([
                                     'status'    => 'fail',
                                     'messages'  => ['Insert Cashback Failed']
@@ -605,6 +615,7 @@ class ApiCronTrxController extends Controller
                             $refund = Ovo::Void($transaction);
                             if ($refund['status_code'] != '200') {
                                 DB::rollback();
+                                $log->fail('Refund Ovo Failed #9');
                                 return response()->json([
                                     'status'   => 'fail',
                                     'messages' => ['Refund Ovo Failed'],
@@ -614,6 +625,7 @@ class ApiCronTrxController extends Controller
                             $refund = app($this->balance)->addLogBalance($order['id_user'], $point = $payOvo['amount'], $order['id_transaction'], 'Rejected Order Ovo', $order['transaction_grandtotal']);
                             if ($refund == false) {
                                 DB::rollback();
+                                $log->fail('Insert Cashback Failed #10');
                                 return response()->json([
                                     'status'   => 'fail',
                                     'messages' => ['Insert Cashback Failed'],
@@ -625,6 +637,7 @@ class ApiCronTrxController extends Controller
                         $refund = app($this->balance)->addLogBalance($order['id_user'], $point = ($payIpay['amount']/100), $order['id_transaction'], 'Rejected Order', $order['transaction_grandtotal']);
                         if ($refund == false) {
                             DB::rollback();
+                            $log->fail('Insert Cashback Failed #11');
                             return response()->json([
                                 'status'   => 'fail',
                                 'messages' => ['Insert Cashback Failed'],
@@ -637,6 +650,7 @@ class ApiCronTrxController extends Controller
                             $refund = app($this->balance)->addLogBalance($order['id_user'], $point = $payBalance['balance_nominal'], $order['id_transaction'], 'Rejected Order Point', $order['transaction_grandtotal']);
                             if ($refund == false) {
                                 DB::rollback();
+                                $log->fail('Insert Cashback Failed #12');
                                 return response()->json([
                                     'status'   => 'fail',
                                     'messages' => ['Insert Cashback Failed'],
@@ -664,6 +678,7 @@ class ApiCronTrxController extends Controller
                 ]);
                 if ($send != true) {
                     DB::rollback();
+                    $log->fail('Failed send notification #13');
                     return response()->json([
                         'status'   => 'fail',
                         'messages' => ['Failed Send notification to customer'],
@@ -682,6 +697,7 @@ class ApiCronTrxController extends Controller
                     ]);
                     if ($send != true) {
                         DB::rollback();
+                        $log->fail('Failed send notification #14');
                         return response()->json([
                             'status'   => 'fail',
                             'messages' => ['Failed Send notification to customer'],
@@ -691,8 +707,10 @@ class ApiCronTrxController extends Controller
 
             }
             DB::commit();
+            $log->success();
         } else {
             DB::rollback();
+            $log->success();
         }
     }
 }
