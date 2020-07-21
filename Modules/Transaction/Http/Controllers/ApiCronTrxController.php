@@ -689,7 +689,6 @@ class ApiCronTrxController extends Controller
                     }
                 }
 
-                $checkMembership = app($this->membership)->calculateMembership($user['phone']);
             }
             DB::commit();
         } else {
