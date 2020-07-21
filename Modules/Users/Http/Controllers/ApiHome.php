@@ -77,7 +77,8 @@ class ApiHome extends Controller
             ->where(function($query) {
                 $query->where('time_start', "<=", date("H:i:s"))
                     ->where('time_end', ">=", date("H:i:s"))
-                    ->orWhereNull('time_start');
+                    ->orWhereNull('time_start')
+                    ->orWhereNull('time_end');
             })->get();
 
         $gofood = 0;
