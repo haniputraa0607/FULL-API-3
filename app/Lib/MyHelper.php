@@ -2834,4 +2834,53 @@ class MyHelper{
 		$angle = atan2(sqrt($a), $b);
 		return $angle * $earthRadius;
 	}
+
+	/**
+	 * Update data data_outlet.json
+	 * @param  array $data      data id_outlet and data to save, [['id_outlet' => xx, 'data' => 'xxxxxx'],['id_outlet' => xx, 'data' => 'xxxxxx']]
+	 * @return void
+	 */
+	public static function updateOutletFile($data)
+	{
+		$filename = 'data_outlet.json';
+        if (is_file($filename)) {
+            $filecontent = file_get_contents($filename);
+            $data_outlet = json_decode($filecontent,true)?:[];
+        } else {
+            $data_outlet = [];
+        }
+        foreach ($data as $item) {
+        	$data_outlet[$item['id_outlet']] = self::encrypt2019($item['data']);
+        }
+        try {
+	        file_put_contents($filename, json_encode($data_outlet));
+	    } catch (\Exception $e) {
+	    	\Log::error("Failed to save data outlet. Please save this data manually in the $filename file", $data_outlet);
+	    }
+	}
+
+	/**
+	 * Get outlet data from data_outlet.json
+	 * @param  integer $id_outlet      id_outlet, leave null for retrive all data
+	 * @return void
+	 */
+	public static function getOutletFile($id_outlet = null)
+	{
+		$filename = 'data_outlet.json';
+        if (is_file($filename)) {
+            $filecontent = file_get_contents($filename);
+            $data_outlet = json_decode($filecontent,true)?:[];
+        } else {
+            $data_outlet = [];
+        }
+
+        if($id_outlet) {
+        	$data = $data_outlet[$id_outlet] ?? null;
+        	return self::decrypt2019($data);
+        }
+
+        return array_map(function ($data) {
+        	return self::decrypt2019($data);
+        }, $data_outlet);
+	}
 }

@@ -68,6 +68,7 @@ class ApiNewsWebview extends Controller
         if ($news) {
             $news['news_image_dalam'] = config('url.storage_url_api').$news['news_image_dalam'];
             $news['news_video'] = (is_null($news['news_video'])) ? [] : explode(';', $news['news_video']);
+            $news['news_post_date_indo'] = (is_null($news['news_post_date'])) ? '' : MyHelper::indonesian_date_v2($news['news_post_date'], 'd F Y H:i');
             $totalOutletNews = count($news['news_outlet']);
 
             if (!empty($news['news_outlet'])) {

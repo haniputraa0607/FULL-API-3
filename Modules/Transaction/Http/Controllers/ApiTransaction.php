@@ -1307,11 +1307,15 @@ class ApiTransaction extends Controller
         $list = Transaction::leftJoin('outlets','outlets.id_outlet','=','transactions.id_outlet')
             ->join('transaction_pickups','transaction_pickups.id_transaction','=','transactions.id_transaction')
             ->leftJoin('transaction_pickup_go_sends','transaction_pickups.id_transaction_pickup','=','transaction_pickup_go_sends.id_transaction_pickup')
-            ->orderBy('transactions.id_transaction', 'DESC')->with('user', 'productTransaction.product.product_category')->where('trasaction_type', ucwords($key))->where('transactions.transaction_date', '>=', $start)->where('transactions.transaction_date', '<=', $end);
-        if($delivery){
-            $list->where('pickup_by','<>','Customer');
-        }else{
-            $list->where('pickup_by','Customer');
+            ->orderBy('transactions.id_transaction', 'DESC')->with('user', 'productTransaction.product.product_category')
+            ->where('transactions.transaction_date', '>=', $start)->where('transactions.transaction_date', '<=', $end);
+        if (strtolower($key) !== 'all') {
+            $list->where('trasaction_type', ucwords($key));
+            if($delivery){
+                $list->where('pickup_by','<>','Customer');
+            }else{
+                $list->where('pickup_by','Customer');
+            }            
         }
         $list = $list->paginate(10);
 
@@ -1333,6 +1337,7 @@ class ApiTransaction extends Controller
             $delivery = true;
         }
         $query = Transaction::join('transaction_pickups','transaction_pickups.id_transaction','=','transactions.id_transaction')->select('transactions.*',
+                              'transaction_pickups.*',
                               'transaction_pickup_go_sends.*',
                               'transaction_products.*',
                               'users.*',
@@ -1345,17 +1350,19 @@ class ApiTransaction extends Controller
                     ->leftJoin('users','transactions.id_user','=','users.id')
                     ->leftJoin('products','products.id_product','=','transaction_products.id_product')
                     ->leftJoin('product_categories','products.id_product_category','=','product_categories.id_product_category')
-                    ->where('trasaction_type', $post['key'])
                     ->whereDate('transactions.transaction_date', '>=', $start)
                     ->whereDate('transactions.transaction_date', '<=', $end)
                     ->with('user')
                     ->orderBy('transactions.id_transaction', 'DESC')
                     ->groupBy('transactions.id_transaction');
                     // ->orderBy('transactions.id_transaction', 'DESC');
-        if($delivery){
-            $query->where('pickup_by','<>','Customer');
-        }else{
-            $query->where('pickup_by','Customer');
+        if (strtolower($post['key']) !== 'all') {
+            $query->where('trasaction_type', $post['key']);
+            if($delivery){
+                $query->where('pickup_by','<>','Customer');
+            }else{
+                $query->where('pickup_by','Customer');
+            }
         }
         // return response()->json($query->get());
         if (isset($post['conditions'])) {
@@ -1371,16 +1378,23 @@ class ApiTransaction extends Controller
                         $var = 'product_categories.product_category_name';
                     }
 
-                    if ($con['subject'] == 'outlet_code' || $con['subject'] == 'outlet_name') {
+                    if (in_array($con['subject'], ['outlet_code', 'outlet_name'])) {
                         $var = 'outlets.'.$con['subject'];
                         if ($post['rule'] == 'and') {
-                            $query = $query->where($var, $con['operator'], $con['parameter']);
+                            if ($con['operator'] == 'like') {
+                                $query = $query->where($var, 'like', '%'.$con['parameter'].'%');
+                            } else {
+                                $query = $query->where($var, '=', $con['parameter']);
+                            }
                         } else {
-                            $query = $query->orWhere($var, $con['operator'], $con['parameter']);
+                            if ($con['operator'] == 'like') {
+                                $query = $query->orWhere($var, 'like', '%'.$con['parameter'].'%');
+                            } else {
+                                $query = $query->orWhere($var, '=', $con['parameter']);
+                            }
                         }
                     }
-
-                    if ($con['subject'] == 'receipt' || $con['subject'] == 'name' || $con['subject'] == 'phone' || $con['subject'] == 'email' || $con['subject'] == 'product_name' || $con['subject'] == 'product_code' || $con['subject'] == 'product_category') {
+                    if (in_array($con['subject'], ['receipt', 'name', 'phone', 'email', 'product_name', 'product_code', 'product_category'])) {
                         if ($post['rule'] == 'and') {
                             if ($con['operator'] == 'like') {
                                 $query = $query->where($var, 'like', '%'.$con['parameter'].'%');
@@ -1396,7 +1410,7 @@ class ApiTransaction extends Controller
                         }
                     }
 
-                    if ($con['subject'] == 'product_name' || $con['subject'] == 'product_code' || $con['subject'] == 'product_weight' || $con['subject'] == 'product_price') {
+                    if ($con['subject'] == 'product_weight' || $con['subject'] == 'product_price') {
                         $var = 'products.'.$con['subject'];
                         if ($post['rule'] == 'and') {
                             $query = $query->where($var, $con['operator'], $con['parameter']);
@@ -1419,11 +1433,30 @@ class ApiTransaction extends Controller
                         }
                     }
 
-                    if ($con['subject'] == 'status' || $con['subject'] == 'courier') {
-                        if ($con['subject'] == 'status') {
-                            $var = 'transactions.transaction_payment_status';
-                        } else {
-                            $var = 'transactions.transaction_courier';
+                    if (in_array($con['subject'], ['status', 'courier', 'id_outlet', 'id_product', 'pickup_by'])) {
+                        switch ($con['subject']) {
+                            case 'status':
+                                $var = 'transactions.transaction_payment_status';
+                                break;
+
+                            case 'courier':
+                                $var = 'transactions.transaction_courier';
+                                break;
+
+                            case 'id_product':
+                                $var = 'products.id_product';
+                                break;
+
+                            case 'id_outlet':
+                                $var = 'outlets.id_outlet';
+                                break;
+
+                            case 'pickup_by':
+                                $var = 'transaction_pickups.pickup_by';
+                                break;
+
+                            default:
+                                continue;
                         }
 
                         if ($post['rule'] == 'and') {
@@ -1959,7 +1992,7 @@ class ApiTransaction extends Controller
                     unset($result['detail']['order_id']);
                     unset($result['detail']['pickup_time']);
                     $result['transaction_status'] = 0;
-                    $result['transaction_status_text'] = 'ORDER ANDA DIBATALKAN';
+                    $result['transaction_status_text'] = 'PESANAN TELAH DIBATALKAN';
                 } elseif (isset($list['transaction_payment_status']) && $list['transaction_payment_status'] == 'Pending') {
                     unset($result['detail']['order_id_qrcode']);
                     unset($result['detail']['order_id']);
@@ -1971,7 +2004,7 @@ class ApiTransaction extends Controller
                     unset($result['detail']['order_id']);
                     unset($result['detail']['pickup_time']);
                     $result['transaction_status'] = 0;
-                    $result['transaction_status_text'] = 'ORDER ANDA DITOLAK';
+                    $result['transaction_status_text'] = 'PESANAN DITOLAK';
                 } elseif($list['detail']['taken_by_system_at'] != null) {
                     $result['transaction_status'] = 1;
                     $result['transaction_status_text'] = 'ORDER SELESAI';
@@ -2012,7 +2045,7 @@ class ApiTransaction extends Controller
                         case 'driver allocated':
                         case 'allocated':
                             $result['delivery_info']['delivery_status'] = 'Driver ditemukan';
-                            $result['transaction_status_text']          = 'DRIVER DITEMUKAN';
+                            $result['transaction_status_text']          = 'DRIVER DITEMUKAN DAN SEDANG MENUJU OUTLET';
                             $result['delivery_info']['driver']          = [
                                 'driver_id'         => $list['transaction_pickup_go_send']['driver_id']?:'',
                                 'driver_name'       => $list['transaction_pickup_go_send']['driver_name']?:'',
@@ -2068,7 +2101,7 @@ class ApiTransaction extends Controller
                             break;
                         case 'cancelled':
                             $result['delivery_info']['booking_status'] = 0;
-                            $result['transaction_status_text']         = 'PENGANTARAN DIBATALKAN';
+                            $result['transaction_status_text']         = 'PENGANTARAN PESANAN TELAH DIBATALKAN';
                             $result['delivery_info']['delivery_status'] = 'Pengantaran dibatalkan';
                             $result['delivery_info']['cancelable']     = 0;
                             break;
@@ -2149,7 +2182,7 @@ class ApiTransaction extends Controller
             if ($list['trasaction_payment_type'] != 'Offline') {
                 if ($list['transaction_payment_status'] == 'Cancelled') {
                     $statusOrder[] = [
-                    'text'  => 'Pesanan Anda dibatalkan karena pembayaran gagal',
+                    'text'  => 'Pesanan telah dibatalkan karena pembayaran gagal',
                     'date'  => $list['void_date']
                 ];
                 } 
@@ -2218,13 +2251,13 @@ class ApiTransaction extends Controller
                                 case 'completed':
                                 case 'delivered':
                                     $statusOrder[] = [
-                                        'text'  => 'Pesanan telah selesai dan diterim',
+                                        'text'  => 'Pesanan telah selesai dan diterima',
                                         'date'  => $valueGosend['created_at']
                                     ];
                                     break;
                                 case 'cancelled':
                                     $statusOrder[] = [
-                                        'text'  => 'Pengantaran dibatalkan',
+                                        'text'  => 'Pengantaran pesanan telah dibatalkan',
                                         'date'  => $valueGosend['created_at']
                                     ];
                                     break;
@@ -2262,6 +2295,7 @@ class ApiTransaction extends Controller
                         'date'  => date('d F Y H:i', strtotime($status['date']))
                     ];
                     if ($status['text'] == 'Order rejected') {
+                        $result['detail']['detail_status'][$keyStatus]['text'] = 'Pesanan telah ditolak karena '.strtolower($list['detail']['reject_reason']);
                         $result['detail']['detail_status'][$keyStatus]['reason'] = $list['detail']['reject_reason'];
                     }
                 }
