@@ -1456,7 +1456,7 @@ class ApiTransaction extends Controller
                                 break;
 
                             default:
-                                continue;
+                                continue 2;
                         }
 
                         if ($post['rule'] == 'and') {
@@ -1497,6 +1497,180 @@ class ApiTransaction extends Controller
         }
 
         return response()->json($result);
+    }
+
+    public function exportTransaction($filter) {
+        $post = $filter;
+
+        $delivery = false;
+        if(strtolower($post['key']) == 'delivery'){
+            $post['key'] = 'pickup order';
+            $delivery = true;
+        }
+
+        $query = Transaction::join('transaction_pickups','transaction_pickups.id_transaction','=','transactions.id_transaction')
+            ->select('transactions.*','users.*','outlets.outlet_code', 'outlets.outlet_name')
+            ->leftJoin('outlets','outlets.id_outlet','=','transactions.id_outlet')
+            ->leftJoin('users','transactions.id_user','=','users.id')
+            ->orderBy('transactions.id_transaction', 'DESC')
+            ->groupBy('transactions.id_transaction');
+
+        $query = $query->leftJoin('transaction_payment_midtrans', 'transactions.id_transaction', '=', 'transaction_payment_midtrans.id_transaction')
+            ->leftJoin('transaction_payment_ipay88s', 'transactions.id_transaction', '=', 'transaction_payment_ipay88s.id_transaction');
+
+        if(isset($post['date_start']) && !empty($post['date_start'])
+            && isset($post['date_end']) && !empty($post['date_end'])){
+            $start = date('Y-m-d', strtotime($post['date_start']));
+            $end = date('Y-m-d', strtotime($post['date_end']));
+        }else{
+            $start = date('Y-m-01 00:00:00');
+            $end = date('Y-m-d 23:59:59');
+        }
+
+        $query = $query->whereDate('transactions.transaction_date', '>=', $start)
+                ->whereDate('transactions.transaction_date', '<=', $end);
+
+        if (strtolower($post['key']) !== 'all') {
+            $query->where('trasaction_type', $post['key']);
+            if($delivery){
+                $query->where('pickup_by','<>','Customer');
+            }else{
+                $query->where('pickup_by','Customer');
+            }
+        }
+
+        if (isset($post['conditions'])) {
+            foreach ($post['conditions'] as $key => $con) {
+                if(is_object($con)){
+                    $con = (array)$con;
+                }
+                if (isset($con['subject'])) {
+                    if ($con['subject'] == 'receipt') {
+                        $var = 'transactions.transaction_receipt_number';
+                    } elseif ($con['subject'] == 'name' || $con['subject'] == 'phone' || $con['subject'] == 'email') {
+                        $var = 'users.'.$con['subject'];
+                    } elseif ($con['subject'] == 'product_name' || $con['subject'] == 'product_code') {
+                        $var = 'products.'.$con['subject'];
+                    } elseif ($con['subject'] == 'product_category') {
+                        $var = 'product_categories.product_category_name';
+                    }
+
+                    if (in_array($con['subject'], ['outlet_code', 'outlet_name'])) {
+                        $var = 'outlets.'.$con['subject'];
+                        if ($post['rule'] == 'and') {
+                            if ($con['operator'] == 'like') {
+                                $query = $query->where($var, 'like', '%'.$con['parameter'].'%');
+                            } else {
+                                $query = $query->where($var, '=', $con['parameter']);
+                            }
+                        } else {
+                            if ($con['operator'] == 'like') {
+                                $query = $query->orWhere($var, 'like', '%'.$con['parameter'].'%');
+                            } else {
+                                $query = $query->orWhere($var, '=', $con['parameter']);
+                            }
+                        }
+                    }
+                    if (in_array($con['subject'], ['receipt', 'name', 'phone', 'email', 'product_name', 'product_code', 'product_category'])) {
+                        if ($post['rule'] == 'and') {
+                            if ($con['operator'] == 'like') {
+                                $query = $query->where($var, 'like', '%'.$con['parameter'].'%');
+                            } else {
+                                $query = $query->where($var, '=', $con['parameter']);
+                            }
+                        } else {
+                            if ($con['operator'] == 'like') {
+                                $query = $query->orWhere($var, 'like', '%'.$con['parameter'].'%');
+                            } else {
+                                $query = $query->orWhere($var, '=', $con['parameter']);
+                            }
+                        }
+                    }
+
+                    if ($con['subject'] == 'product_weight' || $con['subject'] == 'product_price') {
+                        $var = 'products.'.$con['subject'];
+                        if ($post['rule'] == 'and') {
+                            $query = $query->where($var, $con['operator'], $con['parameter']);
+                        } else {
+                            $query = $query->orWhere($var, $con['operator'], $con['parameter']);
+                        }
+                    }
+
+                    if ($con['subject'] == 'grand_total' || $con['subject'] == 'product_tax') {
+                        if ($con['subject'] == 'grand_total') {
+                            $var = 'transactions.transaction_grandtotal';
+                        } else {
+                            $var = 'transactions.transaction_tax';
+                        }
+
+                        if ($post['rule'] == 'and') {
+                            $query = $query->where($var, $con['operator'], $con['parameter']);
+                        } else {
+                            $query = $query->orWhere($var, $con['operator'], $con['parameter']);
+                        }
+                    }
+
+                    if (in_array($con['subject'], ['status', 'courier', 'id_outlet', 'id_product', 'pickup_by'])) {
+                        switch ($con['subject']) {
+                            case 'status':
+                                $var = 'transactions.transaction_payment_status';
+                                break;
+
+                            case 'courier':
+                                $var = 'transactions.transaction_courier';
+                                break;
+
+                            case 'id_product':
+                                $var = 'products.id_product';
+                                break;
+
+                            case 'id_outlet':
+                                $var = 'outlets.id_outlet';
+                                break;
+
+                            case 'pickup_by':
+                                $var = 'transaction_pickups.pickup_by';
+                                break;
+
+                            default:
+                                continue 2;
+                        }
+
+                        if ($post['rule'] == 'and') {
+                            $query = $query->where($var, '=', $con['operator']);
+                        } else {
+                            $query = $query->orWhere($var, '=', $con['operator']);
+                        }
+                    }
+                }
+
+            }
+        }
+
+        foreach ($query->cursor() as $val) {
+            $payment = '';
+            if($val['trasaction_payment_type'] == 'Balance'){
+                $payment .= 'Point'.(!empty($val['payment_type']) ? ', '.$val['payment_type'] : '').(!empty($val['payment_method']) ? ', '.$val['payment_method'] : '');
+            }else{
+                $payment .= (!empty($val['payment_type']) ? $val['payment_type'] : '').(!empty($val['payment_method']) ? $val['payment_method'] : '');
+            }
+
+            yield [
+                'Name' => $val['name'],
+                'Phone' => $val['phone'],
+                'Email' => $val['email'],
+                'Transaction Date' => date('d M Y', strtotime($val['transaction_date'])),
+                'Transaction Time' => date('H:i', strtotime($val['transaction_date'])),
+                'Outlet Code' => $val['outlet_code'],
+                'Outlet Name' => $val['outlet_name'],
+                'Grand Total' => number_format($val['transaction_grandtotal']),
+                'Receipt number' => $val['transaction_receipt_number'],
+                'Point Received' => number_format($val['transaction_cashback_earned']),
+                'Payments' => $payment,
+                'Transaction Type' => (!empty($val['transaction_shipment_go_send']) ? 'Delivery' : $val['trasaction_type']),
+                'Delivery Fee' => number_format($val['transaction_shipment_go_send'])??'-'
+            ];
+        }
     }
 
     public function transactionDetail(TransactionDetail $request){
