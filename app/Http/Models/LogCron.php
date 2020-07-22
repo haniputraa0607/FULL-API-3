@@ -19,6 +19,9 @@ class LogCron extends Model
 
 	public function success($msg = null)
 	{
+		if (is_array($msg)) {
+			$msg = json_encode($msg);
+		}
 		$this->status = 'success';
 		$this->end_date = date('Y-m-d H:i:s');
 		$this->description = $msg;
@@ -27,6 +30,9 @@ class LogCron extends Model
 
 	public function fail($msg = null)
 	{
+		if (is_array($msg)) {
+			$msg = json_encode($msg);
+		}
 		$this->status = 'fail';
 		$this->end_date = date('Y-m-d H:i:s');
 		$this->description = $msg;

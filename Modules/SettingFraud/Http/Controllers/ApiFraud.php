@@ -1594,25 +1594,34 @@ class ApiFraud extends Controller
 
     /*=============== All Cron ===============*/
     public function fraudCron(){
-        //cron fraud in between
-        $fraudBetween = $this->cronFraudInBetween();
-        if (!$fraudBetween) {
-            return false;
-        }
+        $log = MyHelper::logCron('Fraud Cron');
+        try {
+          //cron fraud in between
+          $fraudBetween = $this->cronFraudInBetween();
+          if (!$fraudBetween) {
+              $log->fail('Failed to check fraud "Transaction in Between"');
+              return false;
+          }
 
-        //delete data from table daily check promo code
-        $deleteDailyPromoCode = $this->deleteDailyLogCheckPromo();
-        if (!$deleteDailyPromoCode) {
-            return false;
-        }
+          //delete data from table daily check promo code
+          $deleteDailyPromoCode = $this->deleteDailyLogCheckPromo();
+          if (!$deleteDailyPromoCode) {
+              $log->fail('Failed delete from table daily check promo code');
+              return false;
+          }
 
-        //delete data daily trx
-        $deleteDailyTrx = $this->deleteDailyTransactions();
-        if (!$deleteDailyTrx) {
-            return false;
-        }
+          //delete data daily trx
+          $deleteDailyTrx = $this->deleteDailyTransactions();
+          if (!$deleteDailyTrx) {
+              $log->fail('Failed delete daily transactions');
+              return false;
+          }
 
-        return true;
+          $log->success('success');
+          return true;
+        } catch (\Exception $e) {
+          $log->fail($e->getMessage());
+        }
     }
 
     public function cronFraudInBetween(){

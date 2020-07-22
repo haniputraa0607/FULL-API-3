@@ -75,114 +75,120 @@ class ApiTransactionSync extends Controller
     }
 
     public function transaction(){
-        $x = 10;
-        $getDataQueue = SyncTransactionQueues::Orderby('created_at', 'asc')->limit($x)->get()->toArray();
+        $log = MyHelper::logCron('Sync Transaction');
+        try {
+            $x = 10;
+            $getDataQueue = SyncTransactionQueues::Orderby('created_at', 'asc')->limit($x)->get()->toArray();
 
-        foreach($getDataQueue as $key => $trans){
-            $checkOutlet = Outlet::where('outlet_code', $trans['outlet_code'])->first();
+            foreach($getDataQueue as $key => $trans){
+                $checkOutlet = Outlet::where('outlet_code', $trans['outlet_code'])->first();
 
-            $config['point']    = Configs::where('config_name', 'point')->first()->is_active;
-            $config['balance']  = Configs::where('config_name', 'balance')->first()->is_active;
-            $settingPoint       = Setting::where('key', 'point_conversion_value')->first()->value;
-            $dataTrans = json_decode($trans['request_transaction']);
-            $countDataTrans = count($dataTrans);
-            $checkSuccess = 0;
-            $checkDuplicate = 0;
+                $config['point']    = Configs::where('config_name', 'point')->first()->is_active;
+                $config['balance']  = Configs::where('config_name', 'balance')->first()->is_active;
+                $settingPoint       = Setting::where('key', 'point_conversion_value')->first()->value;
+                $dataTrans = json_decode($trans['request_transaction']);
+                $countDataTrans = count($dataTrans);
+                $checkSuccess = 0;
+                $checkDuplicate = 0;
 
-            $receipt = array_column($dataTrans, 'trx_id');
-            $checkReceipt = Transaction::select('transaction_receipt_number', 'id_transaction')->where('id_outlet', $checkOutlet['id_outlet'])
-                                ->whereIn('transaction_receipt_number', $receipt)
-                                ->where('trasaction_type', 'Offline')
-                                ->get();
-            $convertTranscToArray = $checkReceipt->toArray();
-            $receiptExist = $checkReceipt->pluck('transaction_receipt_number')->toArray();
+                $receipt = array_column($dataTrans, 'trx_id');
+                $checkReceipt = Transaction::select('transaction_receipt_number', 'id_transaction')->where('id_outlet', $checkOutlet['id_outlet'])
+                                    ->whereIn('transaction_receipt_number', $receipt)
+                                    ->where('trasaction_type', 'Offline')
+                                    ->get();
+                $convertTranscToArray = $checkReceipt->toArray();
+                $receiptExist = $checkReceipt->pluck('transaction_receipt_number')->toArray();
 
-            $validReceipt = array_diff($receipt,$receiptExist);
+                $validReceipt = array_diff($receipt,$receiptExist);
 
-            $invalidReceipt = array_intersect($receipt,$receiptExist);
-            foreach($invalidReceipt as $key => $invalid){
-                $checkDuplicate++;
-                unset($dataTrans[$key]);
-            }
+                $invalidReceipt = array_intersect($receipt,$receiptExist);
+                foreach($invalidReceipt as $key => $invalid){
+                    $checkDuplicate++;
+                    unset($dataTrans[$key]);
+                }
 
-            //check possibility duplicate
-            $receiptDuplicate = Transaction::where('id_outlet', '!=', $checkOutlet['id_outlet'])
-                                ->whereIn('transaction_receipt_number', $validReceipt)
-                                ->where('trasaction_type', 'Offline')
-                                ->select('transaction_receipt_number')
-                                ->get()->pluck('transaction_receipt_number')->toArray();
-
-            $transactionDuplicate = TransactionDuplicate::where('id_outlet', '=', $checkOutlet['id_outlet'])
+                //check possibility duplicate
+                $receiptDuplicate = Transaction::where('id_outlet', '!=', $checkOutlet['id_outlet'])
                                     ->whereIn('transaction_receipt_number', $validReceipt)
+                                    ->where('trasaction_type', 'Offline')
                                     ->select('transaction_receipt_number')
                                     ->get()->pluck('transaction_receipt_number')->toArray();
 
-            $receiptDuplicate = array_intersect($receipt, $receiptDuplicate);
-            $contentDuplicate = [];
-            foreach($receiptDuplicate as $key => $receipt){
-                if(in_array($receipt, $transactionDuplicate)){
-                    $checkDuplicate++;
-                    unset($dataTrans[$key]);
-                }else{
-                    $duplicate = $this->processDuplicate($dataTrans[$key], $checkOutlet);
-                    if(isset($duplicate['status']) && $duplicate['status'] == 'duplicate'){
+                $transactionDuplicate = TransactionDuplicate::where('id_outlet', '=', $checkOutlet['id_outlet'])
+                                        ->whereIn('transaction_receipt_number', $validReceipt)
+                                        ->select('transaction_receipt_number')
+                                        ->get()->pluck('transaction_receipt_number')->toArray();
+
+                $receiptDuplicate = array_intersect($receipt, $receiptDuplicate);
+                $contentDuplicate = [];
+                foreach($receiptDuplicate as $key => $receipt){
+                    if(in_array($receipt, $transactionDuplicate)){
                         $checkDuplicate++;
-                        $data = [
-                            'trx' => $duplicate['trx'],
-                            'duplicate' =>$duplicate['duplicate']
-                        ];
-                        $contentDuplicate[] = $data;
                         unset($dataTrans[$key]);
+                    }else{
+                        $duplicate = $this->processDuplicate($dataTrans[$key], $checkOutlet);
+                        if(isset($duplicate['status']) && $duplicate['status'] == 'duplicate'){
+                            $checkDuplicate++;
+                            $data = [
+                                'trx' => $duplicate['trx'],
+                                'duplicate' =>$duplicate['duplicate']
+                            ];
+                            $contentDuplicate[] = $data;
+                            unset($dataTrans[$key]);
+                        }
                     }
                 }
-            }
 
-            $fraudTrxDay = FraudSetting::where('parameter', 'LIKE', '%transactions in 1 day%')->where('fraud_settings_status','Active')->first();
-            $fraudTrxWeek = FraudSetting::where('parameter', 'LIKE', '%transactions in 1 week%')->where('fraud_settings_status','Active')->first();
-            $countSettingCashback = TransactionSetting::get();
-            foreach ($dataTrans as $key => $trx) {
-                if(!empty($trx->date_time) &&
-                    isset($trx->total) && isset($trx->service) &&
-                    isset($trx->tax) && isset($trx->discount) && isset($trx->grand_total) &&
-                    isset($trx->menu)){
+                $fraudTrxDay = FraudSetting::where('parameter', 'LIKE', '%transactions in 1 day%')->where('fraud_settings_status','Active')->first();
+                $fraudTrxWeek = FraudSetting::where('parameter', 'LIKE', '%transactions in 1 week%')->where('fraud_settings_status','Active')->first();
+                $countSettingCashback = TransactionSetting::get();
+                foreach ($dataTrans as $key => $trx) {
+                    if(!empty($trx->date_time) &&
+                        isset($trx->total) && isset($trx->service) &&
+                        isset($trx->tax) && isset($trx->discount) && isset($trx->grand_total) &&
+                        isset($trx->menu)){
 
-                    $insertTrx = $this->insertTransaction($checkOutlet, $trx, $config, $settingPoint, $countSettingCashback, $fraudTrxDay, $fraudTrxWeek);
-                    if(isset($insertTrx['id_transaction'])){
-                            $checkSuccess++;
-                            $result[] = $insertTrx;
+                        $insertTrx = $this->insertTransaction($checkOutlet, $trx, $config, $settingPoint, $countSettingCashback, $fraudTrxDay, $fraudTrxWeek);
+                        if(isset($insertTrx['id_transaction'])){
+                                $checkSuccess++;
+                                $result[] = $insertTrx;
 
+                        }else{
+                            $data = [
+                                'outlet_code' => $trans['outlet_code'],
+                                'request' => json_encode($trx),
+                                'message_failed' => $insertTrx['messages'],
+                                'created_at' => date('Y-m-d H:i:s'),
+                                'updated_at' => date('Y-m-d H:i:s')
+                            ];
+                            SyncTransactionFaileds::create($data);
+                        }
                     }else{
+                        if(isset($trx->trx_id)){
+                            $id = $trx->trx_id;
+                        }else{
+                            $id = 'trx_id does not exist';
+                        }
                         $data = [
                             'outlet_code' => $trans['outlet_code'],
                             'request' => json_encode($trx),
-                            'message_failed' => $insertTrx['messages'],
+                            'message_failed' => 'There is an incomplete input in the transaction list',
                             'created_at' => date('Y-m-d H:i:s'),
                             'updated_at' => date('Y-m-d H:i:s')
                         ];
                         SyncTransactionFaileds::create($data);
                     }
-                }else{
-                    if(isset($trx->trx_id)){
-                        $id = $trx->trx_id;
-                    }else{
-                        $id = 'trx_id does not exist';
-                    }
-                    $data = [
-                        'outlet_code' => $trans['outlet_code'],
-                        'request' => json_encode($trx),
-                        'message_failed' => 'There is an incomplete input in the transaction list',
-                        'created_at' => date('Y-m-d H:i:s'),
-                        'updated_at' => date('Y-m-d H:i:s')
-                    ];
-                    SyncTransactionFaileds::create($data);
+                }
+
+                $newTranAndDuplicate = $checkSuccess + $checkDuplicate;
+                if($countDataTrans == $checkSuccess || $countDataTrans == $checkDuplicate ||
+                    $countDataTrans == $newTranAndDuplicate){
+                    SyncTransactionQueues::where('id_sync_transaction_queues', $trans['id_sync_transaction_queues'])->delete();
                 }
             }
-
-            $newTranAndDuplicate = $checkSuccess + $checkDuplicate;
-            if($countDataTrans == $checkSuccess || $countDataTrans == $checkDuplicate ||
-                $countDataTrans == $newTranAndDuplicate){
-                SyncTransactionQueues::where('id_sync_transaction_queues', $trans['id_sync_transaction_queues'])->delete();
-            }
+            $log->success();
+        } catch (\Exception $e) {
+            $log->fail($e->getMessage());
         }
     }
 
