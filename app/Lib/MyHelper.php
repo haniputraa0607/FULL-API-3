@@ -2885,8 +2885,10 @@ class MyHelper{
 	}
 
 	/**
-	* 
-	**/
+	 * Create cron's log
+	 * @param  string Cron Name cron name
+	 * @return Model           LogCron Eloquent Model
+	 */
 	public static function logCron($cronName)
 	{
 		$log = new \App\Http\Models\LogCron;
