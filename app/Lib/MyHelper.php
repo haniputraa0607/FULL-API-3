@@ -1190,8 +1190,8 @@ class MyHelper{
         return $result;
     }
 
-    public static function deleteFile($path, $type = 'storage') {
-        if($type == 'storage'){
+    public static function deleteFile($path) {
+        if(config('configs.STORAGE')){
             if(Storage::disk(config('configs.STORAGE'))->exists($path)) {
                 if(Storage::disk(config('configs.STORAGE'))->delete($path)){
                     return true;
@@ -1208,7 +1208,7 @@ class MyHelper{
                 return true;
             }
             else {
-                return true;
+                return false;
             }
         }
 
@@ -2842,7 +2842,7 @@ class MyHelper{
 	 */
 	public static function updateOutletFile($data)
 	{
-		$filename = 'data_outlet.json';
+		$filename = storage_path('data_outlet.json');
         if (is_file($filename)) {
             $filecontent = file_get_contents($filename);
             $data_outlet = json_decode($filecontent,true)?:[];
@@ -2866,7 +2866,7 @@ class MyHelper{
 	 */
 	public static function getOutletFile($id_outlet = null)
 	{
-		$filename = 'data_outlet.json';
+		$filename = storage_path('data_outlet.json');
         if (is_file($filename)) {
             $filecontent = file_get_contents($filename);
             $data_outlet = json_decode($filecontent,true)?:[];
@@ -2882,5 +2882,21 @@ class MyHelper{
         return array_map(function ($data) {
         	return self::decrypt2019($data);
         }, $data_outlet);
+	}
+
+	/**
+	 * Create cron's log
+	 * @param  string Cron Name cron name
+	 * @return Model           LogCron Eloquent Model
+	 */
+	public static function logCron($cronName)
+	{
+		$log = new \App\Http\Models\LogCron;
+		$log->cron = $cronName;
+		$log->status = 'onprocess';
+		$log->start_date = date('Y-m-d H:i:s');
+		$log->save();
+
+		return $log;
 	}
 }
