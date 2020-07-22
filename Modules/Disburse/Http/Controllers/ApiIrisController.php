@@ -128,39 +128,39 @@ class ApiIrisController extends Controller
                         $balance = $checkBalance['response']['balance'];
                     }
 
-                if(!empty($getData) && $balance > 0){
-                    $tmpBalance = 0;
+                    if(!empty($getData) && $balance > 0){
+                        $tmpBalance = 0;
 
-                    DB::beginTransaction();
+                        DB::beginTransaction();
 
-                    try{
-                        $arrTmp = [];
-                        $arrTmpDisburse = [];
-                        foreach ($getData as $data){
+                        try{
+                            $arrTmp = [];
+                            $arrTmpDisburse = [];
+                            foreach ($getData as $data){
 
-                            if(!is_null($data['beneficiary_account'])){
-                                $subTotal = $data['transaction_subtotal'];
-                                $grandTotal = $data['transaction_grandtotal'];
-                                $nominalFeeToCentral = $subTotal;
-                                $feePGCentral = 0;
-                                $feePG = 0;
-                                $feePGType = 'Percent';
-                                $feePointCentral = 0;
-                                $feePointOutlet = 0;
-                                $feePromoCentral = 0;
-                                $feeSubcriptionCentral = 0;
-                                $feeSubcriptionOutlet = 0;
-                                $feePromoOutlet = 0;
-                                $balanceNominal = 0;
-                                $nominalBalance = 0;
-                                $nominalBalanceCentral = 0;
-                                $totalFeeForCentral = 0;
-                                $amount = 0;
-                                $amountMDR = 0 ;
-                                $transactionShipment = 0;
-                                if(!empty($data['transaction_shipment_go_send'])){
-                                    $transactionShipment = $data['transaction_shipment_go_send'];
-                                }
+                                if(!is_null($data['beneficiary_account'])){
+                                    $subTotal = $data['transaction_subtotal'];
+                                    $grandTotal = $data['transaction_grandtotal'];
+                                    $nominalFeeToCentral = $subTotal;
+                                    $feePGCentral = 0;
+                                    $feePG = 0;
+                                    $feePGType = 'Percent';
+                                    $feePointCentral = 0;
+                                    $feePointOutlet = 0;
+                                    $feePromoCentral = 0;
+                                    $feeSubcriptionCentral = 0;
+                                    $feeSubcriptionOutlet = 0;
+                                    $feePromoOutlet = 0;
+                                    $balanceNominal = 0;
+                                    $nominalBalance = 0;
+                                    $nominalBalanceCentral = 0;
+                                    $totalFeeForCentral = 0;
+                                    $amount = 0;
+                                    $amountMDR = 0 ;
+                                    $transactionShipment = 0;
+                                    if(!empty($data['transaction_shipment_go_send'])){
+                                        $transactionShipment = $data['transaction_shipment_go_send'];
+                                    }
 
                                     $charged = NULL;
 
@@ -240,6 +240,7 @@ class ApiIrisController extends Controller
                                             ->where('subscription_user_vouchers.id_subscription_user_voucher', $data['transaction_payment_subscription']['id_subscription_user_voucher'])
                                             ->groupBy('subscriptions.id_subscription')->select('subscriptions.*')->first();
                                         if($getSubcription){
+                                            $nominalFeeToCentral = $subTotal - abs($data['transaction_payment_subscription']['subscription_nominal']);
                                             $feeSubcriptionCentral = $getSubcription['charged_central'];
                                             $feeSubcriptionOutlet = $getSubcription['charged_outlet'];
                                             if((int) $feeSubcriptionCentral !== 100){
@@ -255,6 +256,7 @@ class ApiIrisController extends Controller
                                         $getDeal = Deal::where('id_deals', $data['vouchers'][0]['id_deals'])->first();
                                         $feePromoCentral = $getDeal['charged_central'];
                                         $feePromoOutlet = $getDeal['charged_outlet'];
+                                        $nominalFeeToCentral = $subTotal - abs($data['transaction_discount']);
                                         if((int) $feePromoCentral !== 100){
                                             $totalChargedPromo = (abs($data['transaction_discount']) * ($feePromoOutlet / 100));
                                             $totalChargedPromoCentral = (abs($data['transaction_discount']) * ($feePromoCentral / 100));
@@ -262,6 +264,7 @@ class ApiIrisController extends Controller
                                             $totalChargedPromoCentral = $data['transaction_discount'];
                                         }
                                     }elseif (!empty($data['promo_campaign'])){
+                                        $nominalFeeToCentral = $subTotal - abs($data['transaction_discount']);
                                         $feePromoCentral = $data['promo_campaign']['charged_central'];
                                         $feePromoOutlet = $data['promo_campaign']['charged_outlet'];
                                         if((int) $feePromoCentral !== 100){
@@ -272,50 +275,13 @@ class ApiIrisController extends Controller
                                         }
                                     }
 
-                                $totalChargedPromo = 0;
-                                $totalChargedPromoCentral = 0;
-                                $totalChargedSubcriptionOutlet = 0;
-                                $totalChargedSubcriptionCentral = 0;
-                                if(!empty($data['transaction_payment_subscription'])){
-                                    $getSubcription = SubscriptionUserVoucher::join('subscription_users', 'subscription_users.id_subscription_user','subscription_user_vouchers.id_subscription_user')
-                                        ->join('subscriptions', 'subscriptions.id_subscription', 'subscription_users.id_subscription')
-                                        ->where('subscription_user_vouchers.id_subscription_user_voucher', $data['transaction_payment_subscription']['id_subscription_user_voucher'])
-                                        ->groupBy('subscriptions.id_subscription')->select('subscriptions.*')->first();
-                                    if($getSubcription){
-                                        $nominalFeeToCentral = $subTotal - abs($data['transaction_payment_subscription']['subscription_nominal']);
-                                        $feeSubcriptionCentral = $getSubcription['charged_central'];
-                                        $feeSubcriptionOutlet = $getSubcription['charged_outlet'];
-                                        if((int) $feeSubcriptionCentral !== 100){
-                                            $totalChargedSubcriptionOutlet = (abs($data['transaction_payment_subscription']['subscription_nominal']) * ($feeSubcriptionOutlet / 100));
-                                            $totalChargedSubcriptionCentral = (abs($data['transaction_payment_subscription']['subscription_nominal']) * ($feeSubcriptionCentral / 100));
-                                        }else{
-                                            $totalChargedSubcriptionCentral = $data['transaction_payment_subscription']['subscription_nominal'];
-                                        }
+                                    if($feePGType == 'Percent'){
+                                        $totalFee = $amountMDR * (($feePGCentral + $feePG) / 100);
+                                        $totalFeeForCentral = $amountMDR * ($feePGCentral/100);
                                     }else{
-                                        continue;
+                                        $totalFee = $feePGCentral + $feePG;
+                                        $totalFeeForCentral = $feePGCentral;
                                     }
-                                }elseif(!empty($data['vouchers'])){
-                                    $getDeal = Deal::where('id_deals', $data['vouchers'][0]['id_deals'])->first();
-                                    $feePromoCentral = $getDeal['charged_central'];
-                                    $feePromoOutlet = $getDeal['charged_outlet'];
-                                    $nominalFeeToCentral = $subTotal - abs($data['transaction_discount']);
-                                    if((int) $feePromoCentral !== 100){
-                                        $totalChargedPromo = (abs($data['transaction_discount']) * ($feePromoOutlet / 100));
-                                        $totalChargedPromoCentral = (abs($data['transaction_discount']) * ($feePromoCentral / 100));
-                                    }else{
-                                        $totalChargedPromoCentral = $data['transaction_discount'];
-                                    }
-                                }elseif (!empty($data['promo_campaign'])){
-                                    $nominalFeeToCentral = $subTotal - abs($data['transaction_discount']);
-                                    $feePromoCentral = $data['promo_campaign']['charged_central'];
-                                    $feePromoOutlet = $data['promo_campaign']['charged_outlet'];
-                                    if((int) $feePromoCentral !== 100){
-                                        $totalChargedPromo = (abs($data['transaction_discount']) * ($feePromoOutlet / 100));
-                                        $totalChargedPromoCentral = (abs($data['transaction_discount']) * ($feePromoCentral / 100));
-                                    }else{
-                                        $totalChargedPromoCentral = $data['transaction_discount'];
-                                    }
-                                }
 
                                     $percentFee = 0;
                                     if($data['outlet_special_status'] == 1){
@@ -328,14 +294,14 @@ class ApiIrisController extends Controller
                                         }
                                     }
 
-                                if($nominalFeeToCentral == 0){
-                                    $nominalFeeToCentral = $subTotal;
-                                }
+                                    if($nominalFeeToCentral == 0){
+                                        $nominalFeeToCentral = $subTotal;
+                                    }
 
-                                $feeItemForCentral = (floatval($percentFee) / 100) * $nominalFeeToCentral;
-                                $amount = round($subTotal - ((floatval($percentFee) / 100) * $nominalFeeToCentral) - $totalFee - $nominalBalance - $totalChargedPromo - $totalChargedSubcriptionOutlet, 2);
-                                $incomeCentral = round(((floatval($percentFee) / 100) * $nominalFeeToCentral) + $totalFeeForCentral, 2);
-                                $expenseCentral = round($nominalBalanceCentral + $totalChargedPromoCentral + $totalChargedSubcriptionCentral, 2);
+                                    $feeItemForCentral = (floatval($percentFee) / 100) * $nominalFeeToCentral;
+                                    $amount = round($subTotal - ((floatval($percentFee) / 100) * $nominalFeeToCentral) - $totalFee - $nominalBalance - $totalChargedPromo - $totalChargedSubcriptionOutlet, 2);
+                                    $incomeCentral = round(((floatval($percentFee) / 100) * $nominalFeeToCentral) + $totalFeeForCentral, 2);
+                                    $expenseCentral = round($nominalBalanceCentral + $totalChargedPromoCentral + $totalChargedSubcriptionCentral, 2);
 
                                     //check balance
                                     $tmpBalance = $tmpBalance + $amount;//for check balance
@@ -359,83 +325,83 @@ class ApiIrisController extends Controller
                                         $arrTmpDisburse[$checkAccount]['total_amount'] = $arrTmpDisburse[$checkAccount]['total_amount'] + $amount;
                                     }
 
-                                //set to disburse outlet and disburse outlet transaction
-                                $checkOultet = array_search($data['id_outlet'], array_column($arrTmp, 'id_outlet'));
+                                    //set to disburse outlet and disburse outlet transaction
+                                    $checkOultet = array_search($data['id_outlet'], array_column($arrTmp, 'id_outlet'));
 
-                                if($checkOultet === false){
-                                    $arrTmp[] = [
-                                        'beneficiary_account' => $data['beneficiary_account'],
-                                        'id_outlet' => $data['id_outlet'],
-                                        'total_amount' => $amount,
-                                        'total_income_central' => $incomeCentral,
-                                        'total_expense_central' => $expenseCentral,
-                                        'total_fee_item' => $feeItemForCentral,
-                                        'total_omset' => $grandTotal,
-                                        'total_discount' => $totalChargedPromo,
-                                        'total_delivery_price' => $transactionShipment,
-                                        'total_payment_charge' => $totalFee,
-                                        'total_point_use_expense' => $nominalBalance,
-                                        'total_subscription' => $totalChargedSubcriptionOutlet,
-                                        'transactions' => [
-                                            [
-                                                'id_transaction' => $data['id_transaction'],
-                                                'income_outlet'=> $amount,
-                                                'income_central'=> $incomeCentral,
-                                                'expense_central'=> $expenseCentral,
-                                                'fee_item' => $feeItemForCentral,
-                                                'discount' => $totalChargedPromo,
-                                                'payment_charge' => $totalFee,
-                                                'point_use_expense' => $nominalBalance,
-                                                'subscription' => $totalChargedSubcriptionOutlet,
-                                                'fee' => $percentFee,
-                                                'mdr' => $feePG,
-                                                'mdr_central' => $feePGCentral,
-                                                'mdr_charged' => $charged,
-                                                'mdr_type' => $feePGType,
-                                                'charged_point_central' => $feePointCentral,
-                                                'charged_point_outlet' => $feePointOutlet,
-                                                'charged_promo_central' => $feePromoCentral,
-                                                'charged_promo_outlet' => $feePromoOutlet,
-                                                'charged_subscription_central' => $feeSubcriptionCentral,
-                                                'charged_subscription_outlet' => $feeSubcriptionOutlet
+                                    if($checkOultet === false){
+                                        $arrTmp[] = [
+                                            'beneficiary_account' => $data['beneficiary_account'],
+                                            'id_outlet' => $data['id_outlet'],
+                                            'total_amount' => $amount,
+                                            'total_income_central' => $incomeCentral,
+                                            'total_expense_central' => $expenseCentral,
+                                            'total_fee_item' => $feeItemForCentral,
+                                            'total_omset' => $grandTotal,
+                                            'total_discount' => $totalChargedPromo,
+                                            'total_delivery_price' => $transactionShipment,
+                                            'total_payment_charge' => $totalFee,
+                                            'total_point_use_expense' => $nominalBalance,
+                                            'total_subscription' => $totalChargedSubcriptionOutlet,
+                                            'transactions' => [
+                                                [
+                                                    'id_transaction' => $data['id_transaction'],
+                                                    'income_outlet'=> $amount,
+                                                    'income_central'=> $incomeCentral,
+                                                    'expense_central'=> $expenseCentral,
+                                                    'fee_item' => $feeItemForCentral,
+                                                    'discount' => $totalChargedPromo,
+                                                    'payment_charge' => $totalFee,
+                                                    'point_use_expense' => $nominalBalance,
+                                                    'subscription' => $totalChargedSubcriptionOutlet,
+                                                    'fee' => $percentFee,
+                                                    'mdr' => $feePG,
+                                                    'mdr_central' => $feePGCentral,
+                                                    'mdr_charged' => $charged,
+                                                    'mdr_type' => $feePGType,
+                                                    'charged_point_central' => $feePointCentral,
+                                                    'charged_point_outlet' => $feePointOutlet,
+                                                    'charged_promo_central' => $feePromoCentral,
+                                                    'charged_promo_outlet' => $feePromoOutlet,
+                                                    'charged_subscription_central' => $feeSubcriptionCentral,
+                                                    'charged_subscription_outlet' => $feeSubcriptionOutlet
+                                                ]
                                             ]
-                                        ]
-                                    ];
-                                }else{
-                                    $arrTmp[$checkOultet]['total_amount'] = $arrTmp[$checkOultet]['total_amount'] + $amount;
-                                    $arrTmp[$checkOultet]['total_income_central'] = $arrTmp[$checkOultet]['total_income_central'] + $incomeCentral;
-                                    $arrTmp[$checkOultet]['total_expense_central'] = $arrTmp[$checkOultet]['total_expense_central'] + $expenseCentral;
-                                    $arrTmp[$checkOultet]['total_fee_item'] = $arrTmp[$checkOultet]['total_fee_item'] + $feeItemForCentral;
-                                    $arrTmp[$checkOultet]['total_omset'] = $arrTmp[$checkOultet]['total_omset'] + $grandTotal;
-                                    $arrTmp[$checkOultet]['total_discount'] = $arrTmp[$checkOultet]['total_discount'] + $totalChargedPromo;
-                                    $arrTmp[$checkOultet]['total_delivery_price'] = $arrTmp[$checkOultet]['total_delivery_price'] + $transactionShipment;
-                                    $arrTmp[$checkOultet]['total_payment_charge'] = $arrTmp[$checkOultet]['total_payment_charge'] + $totalFee;
-                                    $arrTmp[$checkOultet]['total_point_use_expense'] = $arrTmp[$checkOultet]['total_point_use_expense'] + $nominalBalance;
-                                    $arrTmp[$checkOultet]['total_subscription'] = $arrTmp[$checkOultet]['total_subscription'] + $totalChargedSubcriptionOutlet;
+                                        ];
+                                    }else{
+                                        $arrTmp[$checkOultet]['total_amount'] = $arrTmp[$checkOultet]['total_amount'] + $amount;
+                                        $arrTmp[$checkOultet]['total_income_central'] = $arrTmp[$checkOultet]['total_income_central'] + $incomeCentral;
+                                        $arrTmp[$checkOultet]['total_expense_central'] = $arrTmp[$checkOultet]['total_expense_central'] + $expenseCentral;
+                                        $arrTmp[$checkOultet]['total_fee_item'] = $arrTmp[$checkOultet]['total_fee_item'] + $feeItemForCentral;
+                                        $arrTmp[$checkOultet]['total_omset'] = $arrTmp[$checkOultet]['total_omset'] + $grandTotal;
+                                        $arrTmp[$checkOultet]['total_discount'] = $arrTmp[$checkOultet]['total_discount'] + $totalChargedPromo;
+                                        $arrTmp[$checkOultet]['total_delivery_price'] = $arrTmp[$checkOultet]['total_delivery_price'] + $transactionShipment;
+                                        $arrTmp[$checkOultet]['total_payment_charge'] = $arrTmp[$checkOultet]['total_payment_charge'] + $totalFee;
+                                        $arrTmp[$checkOultet]['total_point_use_expense'] = $arrTmp[$checkOultet]['total_point_use_expense'] + $nominalBalance;
+                                        $arrTmp[$checkOultet]['total_subscription'] = $arrTmp[$checkOultet]['total_subscription'] + $totalChargedSubcriptionOutlet;
 
-                                    $arrTmp[$checkOultet]['transactions'][] = [
-                                        'id_transaction' => $data['id_transaction'],
-                                        'income_outlet'=> $amount,
-                                        'income_central'=> $incomeCentral,
-                                        'expense_central'=> $expenseCentral,
-                                        'fee_item' => $feeItemForCentral,
-                                        'discount' => $totalChargedPromo,
-                                        'payment_charge' => $totalFee,
-                                        'point_use_expense' => $nominalBalance,
-                                        'subscription' => $totalChargedSubcriptionOutlet,
-                                        'fee' => $percentFee,
-                                        'mdr' => $feePG,
-                                        'mdr_central' => $feePGCentral,
-                                        'mdr_charged' => $charged,
-                                        'mdr_type' => $feePGType,
-                                        'charged_point_central' => $feePointCentral,
-                                        'charged_point_outlet' => $feePointOutlet,
-                                        'charged_promo_central' => $feePromoCentral,
-                                        'charged_promo_outlet' => $feePromoOutlet,
-                                        'charged_subscription_central' => $feeSubcriptionCentral,
-                                        'charged_subscription_outlet' => $feeSubcriptionOutlet
-                                    ];
-                                }
+                                        $arrTmp[$checkOultet]['transactions'][] = [
+                                            'id_transaction' => $data['id_transaction'],
+                                            'income_outlet'=> $amount,
+                                            'income_central'=> $incomeCentral,
+                                            'expense_central'=> $expenseCentral,
+                                            'fee_item' => $feeItemForCentral,
+                                            'discount' => $totalChargedPromo,
+                                            'payment_charge' => $totalFee,
+                                            'point_use_expense' => $nominalBalance,
+                                            'subscription' => $totalChargedSubcriptionOutlet,
+                                            'fee' => $percentFee,
+                                            'mdr' => $feePG,
+                                            'mdr_central' => $feePGCentral,
+                                            'mdr_charged' => $charged,
+                                            'mdr_type' => $feePGType,
+                                            'charged_point_central' => $feePointCentral,
+                                            'charged_point_outlet' => $feePointOutlet,
+                                            'charged_promo_central' => $feePromoCentral,
+                                            'charged_promo_outlet' => $feePromoOutlet,
+                                            'charged_subscription_central' => $feeSubcriptionCentral,
+                                            'charged_subscription_outlet' => $feeSubcriptionOutlet
+                                        ];
+                                    }
 
                                     $arrTmpIdTrx[] = $data['id_transaction'];
                                 }
@@ -454,61 +420,78 @@ class ApiIrisController extends Controller
                                     'notes' => 'Payment from apps '.date('d M Y'),
                                 ];
 
-                        foreach ($arrTmp as $val){
-                            $checkAccount = array_search($val['beneficiary_account'], array_column($dataToInsert, 'beneficiary_account_number'));
-                            if($checkAccount !== false){
-                                $dataToInsert[$checkAccount]['disburse_outlet'][] = [
-                                    'id_outlet' => $val['id_outlet'],
-                                    'disburse_nominal' => $val['total_amount'],
-                                    'total_income_central' => $val['total_income_central'],
-                                    'total_expense_central' => $val['total_expense_central'],
-                                    'total_fee_item' => $val['total_fee_item'],
-                                    'total_omset' => $val['total_omset'],
-                                    'total_discount' => $val['total_discount'],
-                                    'total_delivery_price' => $val['total_delivery_price'],
-                                    'total_payment_charge' => $val['total_payment_charge'],
-                                    'total_point_use_expense' => $val['total_point_use_expense'],
-                                    'total_subscription' => $val['total_subscription'],
-                                    'transactions' => $val['transactions']
+                                $dataToSend[] = $toSend;
+
+                                $dataToInsert[] = [
+                                    'disburse_nominal' => $value['total_amount'],
+                                    'id_bank_account' => $value['id_bank_account'],
+                                    'beneficiary_name' => $value['beneficiary_name'],
+                                    'beneficiary_bank_name' => $value['beneficiary_bank'],
+                                    'beneficiary_account_number' => $value['beneficiary_account'],
+                                    'beneficiary_email' => $value['beneficiary_email'],
+                                    'beneficiary_alias' => $value['beneficiary_alias'],
+                                    'notes' => 'Payment from apps '.date('d M Y'),
+                                    'request' => json_encode($toSend)
                                 ];
                             }
-                        }
-                        //$sendToIris = MyHelper::connectIris('Payouts', 'POST','api/v1/payouts', ['payouts' => $dataToSend]);
-                        $sendToIris = [
-                            'status' => 'success',
-                            'response' => [
-                                'payouts' => [
-                                    [
-                                        'status' => 'queued',
-                                        'reference_no' => 'asdasdadasd'
+
+                            foreach ($arrTmp as $val){
+                                $checkAccount = array_search($val['beneficiary_account'], array_column($dataToInsert, 'beneficiary_account_number'));
+                                if($checkAccount !== false){
+                                    $dataToInsert[$checkAccount]['disburse_outlet'][] = [
+                                        'id_outlet' => $val['id_outlet'],
+                                        'disburse_nominal' => $val['total_amount'],
+                                        'total_income_central' => $val['total_income_central'],
+                                        'total_expense_central' => $val['total_expense_central'],
+                                        'total_fee_item' => $val['total_fee_item'],
+                                        'total_omset' => $val['total_omset'],
+                                        'total_discount' => $val['total_discount'],
+                                        'total_delivery_price' => $val['total_delivery_price'],
+                                        'total_payment_charge' => $val['total_payment_charge'],
+                                        'total_point_use_expense' => $val['total_point_use_expense'],
+                                        'total_subscription' => $val['total_subscription'],
+                                        'transactions' => $val['transactions']
+                                    ];
+                                }
+                            }
+                            //$sendToIris = MyHelper::connectIris('Payouts', 'POST','api/v1/payouts', ['payouts' => $dataToSend]);
+                            $sendToIris = [
+                                'status' => 'success',
+                                'response' => [
+                                    'payouts' => [
+                                        [
+                                            'status' => 'queued',
+                                            'reference_no' => 'asdasdadasd'
+                                        ]
                                     ]
                                 ]
-                            ]
-                        ];
-                        if(isset($sendToIris['status']) && $sendToIris['status'] == 'success'){
-                            if(isset($sendToIris['response']['payouts']) && !empty($sendToIris['response']['payouts'])){
-                                $j = 0;
-                                foreach ($sendToIris['response']['payouts'] as $val){
-                                    $dataToInsert[$j]['response'] = json_encode($val);
-                                    $dataToInsert[$j]['reference_no'] = $val['reference_no'];
-                                    $dataToInsert[$j]['disburse_status'] = $arrStatus[$val['status']];
+                            ];
+                            if(isset($sendToIris['status']) && $sendToIris['status'] == 'success'){
+                                if(isset($sendToIris['response']['payouts']) && !empty($sendToIris['response']['payouts'])){
+                                    $j = 0;
+                                    foreach ($sendToIris['response']['payouts'] as $val){
+                                        $dataToInsert[$j]['response'] = json_encode($val);
+                                        $dataToInsert[$j]['reference_no'] = $val['reference_no'];
+                                        $dataToInsert[$j]['disburse_status'] = $arrStatus[$val['status']];
 
-                                    $insertToDisburseOutlet = $dataToInsert[$j]['disburse_outlet'];
-                                    unset($dataToInsert[$j]['disburse_outlet']);
+                                        $insertToDisburseOutlet = $dataToInsert[$j]['disburse_outlet'];
+                                        unset($dataToInsert[$j]['disburse_outlet']);
 
-                                    $insert = Disburse::create($dataToInsert[$j]);
+                                        $insert = Disburse::create($dataToInsert[$j]);
 
-                                    if($insert){
-                                        foreach ($insertToDisburseOutlet as $do){
-                                            $do['id_disburse'] = $insert['id_disburse'];
-                                            $disburseOutlet = DisburseOutlet::create($do);
-                                            if($disburseOutlet){
-                                                $insertToDisburseTransaction = $do['transactions'];
-                                                $count = count($insertToDisburseTransaction);
-                                                for($k=0;$k<$count;$k++){
-                                                    $insertToDisburseTransaction[$k]['id_disburse_outlet'] = $disburseOutlet['id_disburse_outlet'];
-                                                    $insertToDisburseTransaction[$k]['created_at'] = date('Y-m-d H:i:s');
-                                                    $insertToDisburseTransaction[$k]['updated_at'] = date('Y-m-d H:i:s');
+                                        if($insert){
+                                            foreach ($insertToDisburseOutlet as $do){
+                                                $do['id_disburse'] = $insert['id_disburse'];
+                                                $disburseOutlet = DisburseOutlet::create($do);
+                                                if($disburseOutlet){
+                                                    $insertToDisburseTransaction = $do['transactions'];
+                                                    $count = count($insertToDisburseTransaction);
+                                                    for($k=0;$k<$count;$k++){
+                                                        $insertToDisburseTransaction[$k]['id_disburse_outlet'] = $disburseOutlet['id_disburse_outlet'];
+                                                        $insertToDisburseTransaction[$k]['created_at'] = date('Y-m-d H:i:s');
+                                                        $insertToDisburseTransaction[$k]['updated_at'] = date('Y-m-d H:i:s');
+                                                    }
+                                                    DisburseOutletTransaction::insert($insertToDisburseTransaction);
                                                 }
                                             }
                                         }
@@ -519,7 +502,6 @@ class ApiIrisController extends Controller
                             DB::commit();
                         }catch (\Exception $e){
                             DB::rollback();
-                            $log->fail($e->getMessage());
                             return 'fail';
                         }
                     }
@@ -569,11 +551,12 @@ class ApiIrisController extends Controller
                     }
                 }
             }
+
             $log->success();
             return 'succes';
         } catch (\Exception $e) {
             $log->fail($e->getMessage());
-        }
+        };
     }
 
     public function getHoliday(){
