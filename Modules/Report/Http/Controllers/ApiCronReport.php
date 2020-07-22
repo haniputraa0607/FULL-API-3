@@ -70,58 +70,66 @@ class ApiCronReport extends Controller
     /* CRON */
     function transactionCron(Request $request) 
     {
-        DB::beginTransaction();
-        // CHECK TABLES
-        // if ($this->checkReportTable()) {
-        //     $date = date('Y-m-d', strtotime("-1 days"));
+        $log = MyHelper::logCron('Daily Transaction Report');
+        try {
+            DB::beginTransaction();
+            // CHECK TABLES
+            // if ($this->checkReportTable()) {
+            //     $date = date('Y-m-d', strtotime("-1 days"));
 
-        //     // CALCULATION
-        //     $calculation = $this->calculation($date);
+            //     // CALCULATION
+            //     $calculation = $this->calculation($date);
 
-        //     if (!$calculation) {
-        //         return response()->json([
-        //             'status'   => 'fail',
-        //             'messages' => 'Failed to update data.'
-        //         ]);
-        //     }
-        // }
-        // else {
-            // DATE START
-            $dateStart = $this->firstTrx();
-            // $dateStart = "2020-06-09";
+            //     if (!$calculation) {
+            //         return response()->json([
+            //             'status'   => 'fail',
+            //             'messages' => 'Failed to update data.'
+            //         ]);
+            //     }
+            // }
+            // else {
+                // DATE START
+                $dateStart = $this->firstTrx();
+                // $dateStart = "2020-06-09";
 
-            if ($dateStart) {
-                // UP TO YESTERDAY
-                while (strtotime($dateStart) < strtotime(date('Y-m-d'))) {
-                    // CALCULATION
-                    $calculation = $this->calculation($dateStart);
+                if ($dateStart) {
+                    // UP TO YESTERDAY
+                    while (strtotime($dateStart) < strtotime(date('Y-m-d'))) {
+                        // CALCULATION
+                        $calculation = $this->calculation($dateStart);
 
-                    if (!$calculation) {
-                        DB::rollback();
-                        return response()->json([
-                            'status'   => 'fail',
-                            'messages' => 'Failed to update data.'
-                        ]);
+                        if (!$calculation) {
+                            DB::rollback();
+                            $log->fail('Failed update data');
+                            return response()->json([
+                                'status'   => 'fail',
+                                'messages' => 'Failed to update data.'
+                            ]);
+                        }
+
+                        // INCREMENT
+                        $dateStart = date('Y-m-d', strtotime("+1 days", strtotime($dateStart)));
                     }
-
-                    // INCREMENT
-                    $dateStart = date('Y-m-d', strtotime("+1 days", strtotime($dateStart)));
                 }
-            }
-            else {
-                DB::rollback();
-                return response()->json([
-                    'status'   => 'fail',
-                    'messages' => 'Data transaction is empty.'
-                ]);
-            }
-        // }
+                else {
+                    DB::rollback();
+                    $log->success('Data transaction is empty');
+                    return response()->json([
+                        'status'   => 'fail',
+                        'messages' => 'Data transaction is empty.'
+                    ]);
+                }
+            // }
 
-        DB::commit();
-        // RETURN SUCCESS
-        return response()->json([
-            'status' => 'success'
-        ]);
+            DB::commit();
+            // RETURN SUCCESS
+            $log->success('success');
+            return response()->json([
+                'status' => 'success'
+            ]);
+        } catch (\Exception $e) {
+            $log->fail($e->getMessage());
+        }
     }
 
     /* CHECK TABLES */
