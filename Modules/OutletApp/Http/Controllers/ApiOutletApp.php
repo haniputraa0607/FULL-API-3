@@ -57,11 +57,13 @@ class ApiOutletApp extends Controller
     public function __construct()
     {
         date_default_timezone_set('Asia/Jakarta');
-        $this->autocrm    = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
-        $this->balance    = "Modules\Balance\Http\Controllers\BalanceController";
-        $this->getNotif   = "Modules\Transaction\Http\Controllers\ApiNotification";
-        $this->membership = "Modules\Membership\Http\Controllers\ApiMembership";
-        $this->trx        = "Modules\Transaction\Http\Controllers\ApiOnlineTransaction";
+        $this->autocrm          = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
+        $this->balance          = "Modules\Balance\Http\Controllers\BalanceController";
+        $this->getNotif         = "Modules\Transaction\Http\Controllers\ApiNotification";
+        $this->membership       = "Modules\Membership\Http\Controllers\ApiMembership";
+        $this->trx              = "Modules\Transaction\Http\Controllers\ApiOnlineTransaction";
+        $this->promo_campaign   = "Modules\PromoCampaign\Http\Controllers\ApiPromoCampaign";
+        $this->voucher          = "Modules\Deals\Http\Controllers\ApiDealsVoucher";
     }
 
     public function deleteToken(DeleteToken $request)
@@ -1497,7 +1499,13 @@ class ApiOutletApp extends Controller
                 
             }
             // }
-
+            // delete promo campaign report
+            if ($order->id_promo_campaign_promo_code)
+            {
+                $update_promo_report = app($this->promo_campaign)->deleteReport($order->id_transaction, $order->id_promo_campaign_promo_code);
+            }
+            // return voucher
+            $update_voucher = app($this->voucher)->returnVoucher($order->id_transaction);
             //send notif to customer
             $send = app($this->autocrm)->SendAutoCRM('Order Reject', $user['phone'], [
                 "outlet_name"      => $outlet['outlet_name'],
@@ -1531,8 +1539,6 @@ class ApiOutletApp extends Controller
                     ]);
                 }
             }
-
-            $checkMembership = app($this->membership)->calculateMembership($user['phone']);
 
         }
         DB::commit();

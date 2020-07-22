@@ -758,10 +758,8 @@ class ApiAchievement extends Controller
                                                     'date' => date('Y-m-d H:i:s'),
                                                 ]);
                                                 $trxTotalProductStatus = true;
-                                                break;
                                             } else {
                                                 $trxTotalProductStatus = false;
-                                                break;
                                             }
                                         } else {
                                             AchievementProductLog::updateOrCreate([
@@ -799,14 +797,12 @@ class ApiAchievement extends Controller
                                                 'date' => date('Y-m-d H:i:s'),
                                             ]);
                                             $trxTotalProductStatus = true;
-                                            break;
                                         }
                                     } else {
                                         $trxProductStatus = false;
                                     }
                                 } else {
                                     $trxProductStatus = true;
-                                    break;
                                 }
                             }
                         } else {
@@ -852,7 +848,6 @@ class ApiAchievement extends Controller
                                     'date' => date('Y-m-d H:i:s'),
                                 ]);
                                 $trxOutletStatus = true;
-                                break;
                             } else {
                                 $trxOutletStatus = false;
                             }
@@ -897,14 +892,13 @@ class ApiAchievement extends Controller
                                     'date' => date('Y-m-d H:i:s'),
                                 ]);
                                 $trxProvinceStatus = true;
-                                break;
                             } else {
                                 $trxProvinceStatus = false;
                             }
                         } else {
                             $trxProvinceStatus = true;
                         }
-    
+
                         $trxNominalStatus = false;
                         if (!is_null($achievement['trx_nominal']) && $rules == 'nominal_transaction') {
                             if ((int) $achievement['trx_nominal'] <= $user['transaction_grandtotal']) {
@@ -919,12 +913,11 @@ class ApiAchievement extends Controller
     
                         if ($trxNominalStatus == true && $trxProductStatus == true && $trxTotalProductStatus == true && $trxOutletStatus == true && $trxProvinceStatus == true) {
                             $totalTrx = $totalTrx + 1;
+                            $totalOutlet[] = $user['id_outlet'];
+                            $totalProvince[] = $user['outlet']['city']['province']['id_province'];
                         }
-    
-                        $totalOutlet[] = $user['id_outlet'];
-                        $totalProvince[] = $user['outlet']['city']['province']['id_province'];
                     }
-    
+
                     if ($rules == 'nominal_transaction') {
                         if ($totalSumTrx >= (int) $achievement['trx_nominal']) {
                             AchievementProgress::updateOrCreate([

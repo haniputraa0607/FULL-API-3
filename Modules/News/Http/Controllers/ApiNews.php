@@ -577,6 +577,7 @@ class ApiNews extends Controller
         }
         array_walk($updateNews, function (&$newsItem) use ($post) {
             $newsItem['news_category'] = $newsItem['news_category'] ?: ['id_news_category' => 0, 'category_name' => 'Uncategories'];
+            $newsItem['news_post_date_indo'] = (is_null($newsItem['news_post_date'])) ? '' : MyHelper::indonesian_date_v2($newsItem['news_post_date'], 'd F Y H:i');
         });
         if (!$updateNews) {
             return response()->json(MyHelper::checkGet([], 'Belum ada berita'));
