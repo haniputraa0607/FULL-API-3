@@ -2169,52 +2169,59 @@ class ApiPOS extends Controller
 
     public function syncOutletMenuCron(Request $request)
     {
-        $syncDatetime = date('d F Y h:i');
-        $getRequest = SyncMenuRequest::get()->first();
-        // is $getRequest null
-        if(!$getRequest){
-            return '';
-        }
-        $getRequest = $getRequest->toArray();
-        $getRequest['request'] = json_decode($getRequest['request'], true);
-        $syncMenu = $this->syncMenuProcess($getRequest['request'], 'bulk');
-        if ($syncMenu['status'] == 'success') {
-            SyncMenuResult::create(['result' => json_encode($syncMenu['result'])]);
-        } else {
-            SyncMenuResult::create(['result' => json_encode($syncMenu['messages'])]);
-        }
-        if ($getRequest['is_end'] == 1) {
-            $getResult = SyncMenuResult::pluck('result');
-            $totalReject    = 0;
-            $totalFailed    = 0;
-            $listFailed     = [];
-            $listRejected     = [];
-            foreach ($getResult as $value) {
-                $data[] = json_decode($value, true);
-                if (isset(json_decode($value, true)[0])) {
-                    $result['fail'][] = json_decode($value, true)[0];
-                }
-                if (isset(json_decode($value, true)['rejected_product'])) {
-                    $totalReject    = $totalReject + count(json_decode($value, true)['rejected_product']['list_product']);
-                    foreach (json_decode($value, true)['rejected_product']['list_product'] as $valueRejected) {
-                        array_push($listRejected, $valueRejected);
-                    }
-                }
-                if (isset(json_decode($value, true)['failed_product'])) {
-                    $totalFailed    = $totalFailed + count(json_decode($value, true)['failed_product']['list_product']);
-                    foreach (json_decode($value, true)['failed_product']['list_product'] as $valueFailed) {
-                        array_push($listFailed, $valueFailed);
-                    }
-                }
+        $log = MyHelper::logCron('Sync Outlet Menu');
+        try {
+            $syncDatetime = date('d F Y h:i');
+            $getRequest = SyncMenuRequest::get()->first();
+            // is $getRequest null
+            if(!$getRequest){
+                $log->success('empty synch menu request');
+                return '';
             }
+            $getRequest = $getRequest->toArray();
+            $getRequest['request'] = json_decode($getRequest['request'], true);
+            $syncMenu = $this->syncMenuProcess($getRequest['request'], 'bulk');
+            if ($syncMenu['status'] == 'success') {
+                SyncMenuResult::create(['result' => json_encode($syncMenu['result'])]);
+            } else {
+                SyncMenuResult::create(['result' => json_encode($syncMenu['messages'])]);
+            }
+            if ($getRequest['is_end'] == 1) {
+                $getResult = SyncMenuResult::pluck('result');
+                $totalReject    = 0;
+                $totalFailed    = 0;
+                $listFailed     = [];
+                $listRejected     = [];
+                foreach ($getResult as $value) {
+                    $data[] = json_decode($value, true);
+                    if (isset(json_decode($value, true)[0])) {
+                        $result['fail'][] = json_decode($value, true)[0];
+                    }
+                    if (isset(json_decode($value, true)['rejected_product'])) {
+                        $totalReject    = $totalReject + count(json_decode($value, true)['rejected_product']['list_product']);
+                        foreach (json_decode($value, true)['rejected_product']['list_product'] as $valueRejected) {
+                            array_push($listRejected, $valueRejected);
+                        }
+                    }
+                    if (isset(json_decode($value, true)['failed_product'])) {
+                        $totalFailed    = $totalFailed + count(json_decode($value, true)['failed_product']['list_product']);
+                        foreach (json_decode($value, true)['failed_product']['list_product'] as $valueFailed) {
+                            array_push($listFailed, $valueFailed);
+                        }
+                    }
+                }
 
-            // if (count($listRejected) > 0) {
-            //     $this->syncSendEmail($syncDatetime, $outlet->outlet_code, $outlet->outlet_name, $rejectedProduct, null);
-            // }
-            // if (count($listFailed) > 0) {
-            //     $this->syncSendEmail($syncDatetime, $outlet->outlet_code, $outlet->outlet_name, null, $failedProduct);
-            // }
+                // if (count($listRejected) > 0) {
+                //     $this->syncSendEmail($syncDatetime, $outlet->outlet_code, $outlet->outlet_name, $rejectedProduct, null);
+                // }
+                // if (count($listFailed) > 0) {
+                //     $this->syncSendEmail($syncDatetime, $outlet->outlet_code, $outlet->outlet_name, null, $failedProduct);
+                // }
+            }
+            SyncMenuRequest::where('id', $getRequest['id'])->delete();
+            $log->success();
+        } catch (\Exception $e) {
+            $log->fail($e->getMessage());
         }
-        SyncMenuRequest::where('id', $getRequest['id'])->delete();
     }
 }
