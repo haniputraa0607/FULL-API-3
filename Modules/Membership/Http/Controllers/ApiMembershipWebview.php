@@ -260,15 +260,13 @@ class ApiMembershipWebview extends Controller
 			$membershipUser['progress_max']	= $result['all_membership'][$indexNow + 1]['min_value'];
 
 			//wording membership
-			$membershipUser['description'][] = 'Lakukan transaksi Anda untuk menjadi';
-			$membershipUser['description'][] = strtoupper($result['all_membership'][$indexNow + 1]['membership_name']);
+			$membershipUser['description']= 'Lakukan transaksi Anda untuk menjadi <b>'.strtoupper($result['all_membership'][$indexNow + 1]['membership_name']).'</b>';
 		} else {
 			$membershipUser['progress_max_text']	= MyHelper::requestNumber($result['all_membership'][$indexNow]['min_value'],'_CURRENCY');
 			$membershipUser['progress_max']	= $result['all_membership'][$indexNow]['min_value'];
 
 			//wording membership
-			$membershipUser['description'][] = 'Lakukan transaksi Anda untuk menjadi';
-			$membershipUser['description'][] = strtoupper($result['all_membership'][$indexNow]['membership_name']);
+			$membershipUser['description'] = 'Selamat! Kamu sudah menjadi <b>'.$result['all_membership'][$indexNow]['membership_name'].'</b>. Silahkan nikmati berbagai keuntungannya ya!';
 		}
 
 		$result['user_membership']['user']	= $membershipUser;
