@@ -139,6 +139,7 @@ class ApiIrisController extends Controller
                             if(!is_null($data['beneficiary_account'])){
                                 $subTotal = $data['transaction_subtotal'];
                                 $grandTotal = $data['transaction_grandtotal'];
+                                $nominalFeeToCentral = $subTotal;
                                 $feePGCentral = 0;
                                 $feePG = 0;
                                 $feePGType = 'Percent';
@@ -237,6 +238,7 @@ class ApiIrisController extends Controller
                                         ->where('subscription_user_vouchers.id_subscription_user_voucher', $data['transaction_payment_subscription']['id_subscription_user_voucher'])
                                         ->groupBy('subscriptions.id_subscription')->select('subscriptions.*')->first();
                                     if($getSubcription){
+                                        $nominalFeeToCentral = $subTotal - abs($data['transaction_payment_subscription']['subscription_nominal']);
                                         $feeSubcriptionCentral = $getSubcription['charged_central'];
                                         $feeSubcriptionOutlet = $getSubcription['charged_outlet'];
                                         if((int) $feeSubcriptionCentral !== 100){
@@ -252,6 +254,7 @@ class ApiIrisController extends Controller
                                     $getDeal = Deal::where('id_deals', $data['vouchers'][0]['id_deals'])->first();
                                     $feePromoCentral = $getDeal['charged_central'];
                                     $feePromoOutlet = $getDeal['charged_outlet'];
+                                    $nominalFeeToCentral = $subTotal - abs($data['transaction_discount']);
                                     if((int) $feePromoCentral !== 100){
                                         $totalChargedPromo = (abs($data['transaction_discount']) * ($feePromoOutlet / 100));
                                         $totalChargedPromoCentral = (abs($data['transaction_discount']) * ($feePromoCentral / 100));
@@ -259,6 +262,7 @@ class ApiIrisController extends Controller
                                         $totalChargedPromoCentral = $data['transaction_discount'];
                                     }
                                 }elseif (!empty($data['promo_campaign'])){
+                                    $nominalFeeToCentral = $subTotal - abs($data['transaction_discount']);
                                     $feePromoCentral = $data['promo_campaign']['charged_central'];
                                     $feePromoOutlet = $data['promo_campaign']['charged_outlet'];
                                     if((int) $feePromoCentral !== 100){
@@ -288,8 +292,13 @@ class ApiIrisController extends Controller
                                     }
                                 }
 
-                                $amount = round($subTotal - ((floatval($percentFee) / 100) * $subTotal) - $totalFee - $nominalBalance - $totalChargedPromo - $totalChargedSubcriptionOutlet - $transactionShipment, 2);
-                                $incomeCentral = round(((floatval($percentFee) / 100) * $subTotal) + $totalFeeForCentral, 2);
+                                if($nominalFeeToCentral == 0){
+                                    $nominalFeeToCentral = $subTotal;
+                                }
+
+                                $feeItemForCentral = (floatval($percentFee) / 100) * $nominalFeeToCentral;
+                                $amount = round($subTotal - ((floatval($percentFee) / 100) * $nominalFeeToCentral) - $totalFee - $nominalBalance - $totalChargedPromo - $totalChargedSubcriptionOutlet, 2);
+                                $incomeCentral = round(((floatval($percentFee) / 100) * $nominalFeeToCentral) + $totalFeeForCentral, 2);
                                 $expenseCentral = round($nominalBalanceCentral + $totalChargedPromoCentral + $totalChargedSubcriptionCentral, 2);
 
                                 //check balance
@@ -324,12 +333,24 @@ class ApiIrisController extends Controller
                                         'total_amount' => $amount,
                                         'total_income_central' => $incomeCentral,
                                         'total_expense_central' => $expenseCentral,
+                                        'total_fee_item' => $feeItemForCentral,
+                                        'total_omset' => $grandTotal,
+                                        'total_discount' => $totalChargedPromo,
+                                        'total_delivery_price' => $transactionShipment,
+                                        'total_payment_charge' => $totalFee,
+                                        'total_point_use_expense' => $nominalBalance,
+                                        'total_subscription' => $totalChargedSubcriptionOutlet,
                                         'transactions' => [
                                             [
                                                 'id_transaction' => $data['id_transaction'],
                                                 'income_outlet'=> $amount,
                                                 'income_central'=> $incomeCentral,
                                                 'expense_central'=> $expenseCentral,
+                                                'fee_item' => $feeItemForCentral,
+                                                'discount' => $totalChargedPromo,
+                                                'payment_charge' => $totalFee,
+                                                'point_use_expense' => $nominalBalance,
+                                                'subscription' => $totalChargedSubcriptionOutlet,
                                                 'fee' => $percentFee,
                                                 'mdr' => $feePG,
                                                 'mdr_central' => $feePGCentral,
@@ -348,11 +369,24 @@ class ApiIrisController extends Controller
                                     $arrTmp[$checkOultet]['total_amount'] = $arrTmp[$checkOultet]['total_amount'] + $amount;
                                     $arrTmp[$checkOultet]['total_income_central'] = $arrTmp[$checkOultet]['total_income_central'] + $incomeCentral;
                                     $arrTmp[$checkOultet]['total_expense_central'] = $arrTmp[$checkOultet]['total_expense_central'] + $expenseCentral;
+                                    $arrTmp[$checkOultet]['total_fee_item'] = $arrTmp[$checkOultet]['total_fee_item'] + $feeItemForCentral;
+                                    $arrTmp[$checkOultet]['total_omset'] = $arrTmp[$checkOultet]['total_omset'] + $grandTotal;
+                                    $arrTmp[$checkOultet]['total_discount'] = $arrTmp[$checkOultet]['total_discount'] + $totalChargedPromo;
+                                    $arrTmp[$checkOultet]['total_delivery_price'] = $arrTmp[$checkOultet]['total_delivery_price'] + $transactionShipment;
+                                    $arrTmp[$checkOultet]['total_payment_charge'] = $arrTmp[$checkOultet]['total_payment_charge'] + $totalFee;
+                                    $arrTmp[$checkOultet]['total_point_use_expense'] = $arrTmp[$checkOultet]['total_point_use_expense'] + $nominalBalance;
+                                    $arrTmp[$checkOultet]['total_subscription'] = $arrTmp[$checkOultet]['total_subscription'] + $totalChargedSubcriptionOutlet;
+
                                     $arrTmp[$checkOultet]['transactions'][] = [
                                         'id_transaction' => $data['id_transaction'],
                                         'income_outlet'=> $amount,
                                         'income_central'=> $incomeCentral,
                                         'expense_central'=> $expenseCentral,
+                                        'fee_item' => $feeItemForCentral,
+                                        'discount' => $totalChargedPromo,
+                                        'payment_charge' => $totalFee,
+                                        'point_use_expense' => $nominalBalance,
+                                        'subscription' => $totalChargedSubcriptionOutlet,
                                         'fee' => $percentFee,
                                         'mdr' => $feePG,
                                         'mdr_central' => $feePGCentral,
@@ -407,13 +441,29 @@ class ApiIrisController extends Controller
                                     'disburse_nominal' => $val['total_amount'],
                                     'total_income_central' => $val['total_income_central'],
                                     'total_expense_central' => $val['total_expense_central'],
+                                    'total_fee_item' => $val['total_fee_item'],
+                                    'total_omset' => $val['total_omset'],
+                                    'total_discount' => $val['total_discount'],
+                                    'total_delivery_price' => $val['total_delivery_price'],
+                                    'total_payment_charge' => $val['total_payment_charge'],
+                                    'total_point_use_expense' => $val['total_point_use_expense'],
+                                    'total_subscription' => $val['total_subscription'],
                                     'transactions' => $val['transactions']
                                 ];
                             }
                         }
-
-                        $sendToIris = MyHelper::connectIris('Payouts', 'POST','api/v1/payouts', ['payouts' => $dataToSend]);
-
+                        //$sendToIris = MyHelper::connectIris('Payouts', 'POST','api/v1/payouts', ['payouts' => $dataToSend]);
+                        $sendToIris = [
+                            'status' => 'success',
+                            'response' => [
+                                'payouts' => [
+                                    [
+                                        'status' => 'queued',
+                                        'reference_no' => 'asdasdadasd'
+                                    ]
+                                ]
+                            ]
+                        ];
                         if(isset($sendToIris['status']) && $sendToIris['status'] == 'success'){
                             if(isset($sendToIris['response']['payouts']) && !empty($sendToIris['response']['payouts'])){
                                 $j = 0;

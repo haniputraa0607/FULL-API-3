@@ -1190,8 +1190,8 @@ class MyHelper{
         return $result;
     }
 
-    public static function deleteFile($path, $type = 'storage') {
-        if($type == 'storage'){
+    public static function deleteFile($path) {
+        if(config('configs.STORAGE')){
             if(Storage::disk(config('configs.STORAGE'))->exists($path)) {
                 if(Storage::disk(config('configs.STORAGE'))->delete($path)){
                     return true;
@@ -1208,7 +1208,7 @@ class MyHelper{
                 return true;
             }
             else {
-                return true;
+                return false;
             }
         }
 
