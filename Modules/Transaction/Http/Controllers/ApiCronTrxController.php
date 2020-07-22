@@ -594,10 +594,9 @@ class ApiCronTrxController extends Controller
                                 return response()->json($refund);
                             }
                         } else {
-                            $refund = app($this->balance)->addLogBalance( $order['id_user'], $point = $payMidtrans['gross_amount'], $order['id_transaction'], 'Rejected Order Midtrans', $order['transaction_grandtotal'], true);
+                            $refund = app($this->balance)->addLogBalance( $order['id_user'], $point = $payMidtrans['gross_amount'], $order['id_transaction'], 'Rejected Order Midtrans', $order['transaction_grandtotal']);
                             if ($refund == false) {
                                 DB::rollback();
-                                \Log::debug($order);
                                 $log->fail('Insert Cashback Failed #8');
                                 return response()->json([
                                     'status'    => 'fail',
