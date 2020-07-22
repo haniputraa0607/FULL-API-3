@@ -2842,7 +2842,7 @@ class MyHelper{
 	 */
 	public static function updateOutletFile($data)
 	{
-		$filename = 'data_outlet.json';
+		$filename = storage_path('data_outlet.json');
         if (is_file($filename)) {
             $filecontent = file_get_contents($filename);
             $data_outlet = json_decode($filecontent,true)?:[];
@@ -2866,7 +2866,7 @@ class MyHelper{
 	 */
 	public static function getOutletFile($id_outlet = null)
 	{
-		$filename = 'data_outlet.json';
+		$filename = storage_path('data_outlet.json');
         if (is_file($filename)) {
             $filecontent = file_get_contents($filename);
             $data_outlet = json_decode($filecontent,true)?:[];
