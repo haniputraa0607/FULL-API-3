@@ -17,7 +17,7 @@ class Shift extends Model
     ];
 
     public function outlet(){
-        return $this->belongsTo(App\Http\Models\Outlet::class, 'id_outlet');
+        return $this->belongsTo('App\Http\Models\Outlet', 'id_outlet');
     }
 
     public function user_outletapp(){

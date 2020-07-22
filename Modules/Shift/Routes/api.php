@@ -12,8 +12,6 @@ use Illuminate\Http\Request;
 | is assigned the "api" middleware group. Enjoy building your API!
 |
 */
-Route::group(['middleware' => ['auth:outlet-app', 'outlet_device_location', 'log_activities_outlet_apps'], 'prefix' => 'api/outletapp', 'namespace' => 'Modules\Shift\Http\Controllers'], function()
-{
-    Route::post('shift/start', 'ShiftController@start_shift');
-    Route::post('shift/end', 'ShiftController@end_shift');
+Route::group(['prefix' => 'report', 'middleware' => ['log_activities', 'auth:api', 'user_agent', 'scopes:be']], function () {
+    Route::post('shift/summary', 'ShiftController@index');
 });
