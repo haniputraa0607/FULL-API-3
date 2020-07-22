@@ -37,12 +37,12 @@ class AchievementCheck implements ShouldQueue
         $getUser = Transaction::where('id_transaction', $this->data['id_transaction'])->first();
 
         $getAchievement = AchievementDetail::select('achievement_details.*', 'achievement_groups.order_by')
-        ->join('achievement_groups', 'achievement_details.id_achievement_group', 'achievement_groups.id_achievement_group')
-        ->get()->toArray();
+            ->join('achievement_groups', 'achievement_details.id_achievement_group', 'achievement_groups.id_achievement_group')
+            ->get()->toArray();
 
         $data = [];
-        foreach ($getAchievement as $key => $value) {
-            $data[$value['order_by']][$key] = $value;
+        foreach ($getAchievement as $value) {
+            $data[$value['order_by']][] = $value;
         }
         foreach ($data as $keyD => $d) {
             ApiAchievement::checkAchievement($getUser->id_user, $d, $keyD);
