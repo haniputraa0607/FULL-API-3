@@ -16,6 +16,7 @@ class Step1Subscription extends FormRequest
     public function rules()
     {
         return [
+        	'subscription_type'         		=> 'required|in:welcome,subscription,inject',
             'subscription_title'                => 'required',
             'subscription_sub_title'            => '',
             'subscription_image'                => '',

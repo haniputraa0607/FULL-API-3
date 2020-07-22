@@ -38,7 +38,8 @@ class ListSubscription extends FormRequest
             'highest_point'             => 'nullable',
             'lowest_point'              => 'nullable',
             'highest_price'             => 'nullable',
-            'lowest_price'              => 'nullable'
+            'lowest_price'              => 'nullable',
+            'with_brand'				=> 'nullable'
 
         ];
     }

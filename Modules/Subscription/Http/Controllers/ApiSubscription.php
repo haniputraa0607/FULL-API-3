@@ -48,6 +48,10 @@ class ApiSubscription extends Controller
 
         $data = [];
 
+        if (isset($post['subscription_type'])) {
+        	$data['subscription_type'] = $post['subscription_type'];
+        }
+
         if (isset($post['id_subscription'])) {
             $data['id_subscription'] = $post['id_subscription'];
         }
@@ -909,6 +913,11 @@ class ApiSubscription extends Controller
         if ( empty($request->json('admin')) ) {
             $subs = $subs->whereNotNull('subscription_step_complete');
         }
+
+        if ( $request->json('with_brand') ) {
+            $subs = $subs->with('brand');
+        }
+
         if ($request->json('id_subscription')) {
             // add content for detail subscription
             $subs = $subs->where('id_subscription', '=', $request->json('id_subscription'))
