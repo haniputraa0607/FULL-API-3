@@ -258,10 +258,19 @@ class ApiMembershipWebview extends Controller
 		if (isset($allMembership[$indexNow + 1])) {
 			$membershipUser['progress_max_text']	= MyHelper::requestNumber($result['all_membership'][$indexNow + 1]['min_value'],'_CURRENCY');
 			$membershipUser['progress_max']	= $result['all_membership'][$indexNow + 1]['min_value'];
+
+			//wording membership
+			$membershipUser['description'][] = 'Lakukan transaksi Anda untuk menjadi';
+			$membershipUser['description'][] = strtoupper($result['all_membership'][$indexNow + 1]['membership_name']);
 		} else {
-			$membershipUser['progress_max_text']	= MyHelper::requestNumber(1500000,'_CURRENCY');
-			$membershipUser['progress_max']	= 1500000;
+			$membershipUser['progress_max_text']	= MyHelper::requestNumber($result['all_membership'][$indexNow]['min_value'],'_CURRENCY');
+			$membershipUser['progress_max']	= $result['all_membership'][$indexNow]['min_value'];
+
+			//wording membership
+			$membershipUser['description'][] = 'Lakukan transaksi Anda untuk menjadi';
+			$membershipUser['description'][] = strtoupper($result['all_membership'][$indexNow]['membership_name']);
 		}
+
 		$result['user_membership']['user']	= $membershipUser;
 
 		return response()->json(MyHelper::checkGet($result));
