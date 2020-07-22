@@ -437,6 +437,7 @@ class ApiCronTrxController extends Controller
         $reason = 'auto reject order by system';
         $pickup = TransactionPickup::whereIn('id_transaction', $id_trxs)->update([
             'reject_at'     => date('Y-m-d H:i:s'),
+            'reject_type'   => 'point',
             'reject_reason' => $reason,
         ]);
         if ($pickup) {
@@ -554,6 +555,9 @@ class ApiCronTrxController extends Controller
                             if ($payMidtrans) {
                                 if(MyHelper::setting('refund_midtrans')){
                                     $refund = Midtrans::refund($order['transaction_receipt_number'],['reason' => $post['reason']??'']);
+                                    TransactionPickup::where('id_transaction', $order->id_transaction)->update([
+                                        'reject_type'   => 'refund',
+                                    ]);
                                     if ($refund['status'] != 'success') {
                                         DB::rollback();
                                         return response()->json($refund);
@@ -581,6 +585,9 @@ class ApiCronTrxController extends Controller
                         $point = 0;
                         if(MyHelper::setting('refund_midtrans')){
                             $refund = Midtrans::refund($order['transaction_receipt_number'],['reason' => $post['reason']??'']);
+                            TransactionPickup::where('id_transaction', $order->id_transaction)->update([
+                                'reject_type'   => 'refund',
+                            ]);
                             if ($refund['status'] != 'success') {
                                 DB::rollback();
                                 return response()->json($refund);
@@ -603,6 +610,9 @@ class ApiCronTrxController extends Controller
                                 ->join('transactions','transactions.id_transaction','=','transaction_payment_ovos.id_transaction')
                                 ->first();
                             $refund = Ovo::Void($transaction);
+                            TransactionPickup::where('id_transaction', $order->id_transaction)->update([
+                                'reject_type'   => 'refund',
+                            ]);
                             if ($refund['status_code'] != '200') {
                                 DB::rollback();
                                 return response()->json([
