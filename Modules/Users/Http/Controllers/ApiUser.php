@@ -65,6 +65,7 @@ class ApiUser extends Controller
         $this->inbox  = "Modules\InboxGlobal\Http\Controllers\ApiInbox";
         $this->setting_fraud = "Modules\SettingFraud\Http\Controllers\ApiFraud";
         $this->deals = "Modules\Deals\Http\Controllers\ApiDeals";
+        $this->welcome_subscription = "Modules\Subscription\Http\Controllers\ApiWelcomeSubscription";
     }
 
     function LogActivityFilter($rule = 'and', $conditions = null, $order_field = 'id', $order_method = 'asc', $skip = 0, $take = 999999999999)
@@ -1834,9 +1835,16 @@ class ApiUser extends Controller
             // $pin_x = MyHelper::decryptkhususpassword($data[0]['pin_k'], md5($data[0]['id_user'], true));
             if($request->json('email') != "" && $request->json('name') != "" &&
                 empty($data[0]['email']) && empty($data[0]['name'])){
-                $setting = Setting::where('key','welcome_voucher_setting')->first()->value;
-                if($setting == 1){
+                $get_setting = Setting::whereIn('key',['welcome_voucher_setting', 'welcome_subscription_setting'])->get();
+				$setting = [];
+				foreach ($get_setting as $key => $value) {
+					$setting[$value['key']] = $value['value'];
+				}
+                if($setting['welcome_voucher_setting'] == 1){
                     $injectVoucher = app($this->deals)->injectWelcomeVoucher(['id' => $data[0]['id']], $data[0]['phone']);
+                }
+                if($setting['welcome_subscription_setting'] == 1){
+                    $inject_subscription = app($this->welcome_subscription)->injectWelcomeSubscription(['id' => $data[0]['id']], $data[0]['phone']);
                 }
             }
 

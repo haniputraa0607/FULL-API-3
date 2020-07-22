@@ -16,6 +16,18 @@ use DB;
 
 class ApiWelcomeSubscription extends Controller
 {
+	function __construct() {
+        date_default_timezone_set('Asia/Jakarta');
+
+        $this->subscription   		= "Modules\Subscription\Http\Controllers\ApiSubscription";
+        $this->subscription_voucher = "Modules\Subscription\Http\Controllers\ApiSubscriptionVoucher";
+        $this->subscription_claim   = "Modules\Subscription\Http\Controllers\ApiSubscriptionClaim";
+        $this->setting 				= "Modules\Transaction\Http\Controllers\ApiOnlineTransaction";
+        if(\Module::collections()->has('Autocrm')) {
+            $this->autocrm  = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
+        }
+    }
+
     function setting(Request $request){
         $setting = Setting::where('key', 'welcome_subscription_setting')->first();
         $configUseBrand = Configs::where('config_name', 'use brand')->first();
@@ -101,5 +113,24 @@ class ApiWelcomeSubscription extends Controller
         $updateStatus = Setting::where('key', 'welcome_subscription_setting')->update(['value' => $status]);
 
         return response()->json(MyHelper::checkUpdate($updateStatus));
+    }
+
+    function injectWelcomeSubscription($user, $phone){
+        $getSubs = SubscriptionWelcome::join('subscriptions', 'subscriptions.id_subscription', '=', 'subscription_welcomes.id_subscription')
+            ->select('subscriptions.*')->get();
+        $count = 0;
+        foreach ($getSubs as $val){
+            $generateUser = app($this->subscription_voucher)->autoClaimedAssign($val, $user);
+            $count++;
+            $dataSubs = Subscription::where('id_subscription', $val['id_subscription'])->first(); // get newest update of total claimed subscription
+            app($this->subscription_claim)->updateSubs($dataSubs);
+        }
+
+        $autocrm = app($this->autocrm)->SendAutoCRM('Receive Welcome Subscription', $phone,
+            [
+                'count_subscription'      => (string)$count
+            ]
+        );
+        return true;
     }
 }
