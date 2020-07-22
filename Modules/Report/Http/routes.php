@@ -51,10 +51,18 @@ Route::group(['middleware' => ['api','log_activities', 'auth:api', 'user_agent',
     Route::post('/compare/voucher', 'ApiCompareReport@getVoucherReport');
     // Route::post('/compare/reg', 'ApiCompareReport@getRegReport');
 
-    //Report Gosend
+    /* Report Gosend */
     Route::any('gosend', 'ApiReportGosend@getReport');
 
     /* Update Report Trx Total Item */
     Route::post('total-item', 'ApiCronUpdateReport@cronUpdate');
 
+    /* Report Payment */
+    Route::any('payment/midtrans', 'ApiReportPayment@getReportMidtrans');
+    Route::any('payment/ipay88', 'ApiReportPayment@getReportIpay88');
+
+    /*Report Export*/
+    Route::any('export/action', 'ApiReportExport@actionExport');
+    Route::any('export/create', 'ApiReportExport@exportCreate');
+    Route::any('export/list', 'ApiReportExport@listExport');
 });

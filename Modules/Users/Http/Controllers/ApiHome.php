@@ -71,7 +71,16 @@ class ApiHome extends Controller
     public function getBanner()
     {
         // banner
-        $banners = Banner::orderBy('position')->where('banner_start', '<=', date('Y-m-d H:i:s'))->where('banner_end', '>=', date('Y-m-d H:i:s'))->get();
+        $banners = Banner::orderBy('position')
+            ->where('banner_start', '<=', date('Y-m-d H:i:s'))
+            ->where('banner_end', '>=', date('Y-m-d H:i:s'))
+            ->where(function($query) {
+                $query->where('time_start', "<=", date("H:i:s"))
+                    ->where('time_end', ">=", date("H:i:s"))
+                    ->orWhereNull('time_start')
+                    ->orWhereNull('time_end');
+            })->get();
+
         $gofood = 0;
         $setting = Setting::where('key', 'banner-gofood')->first();
         if (!empty($setting)) {

@@ -28,6 +28,7 @@ use Modules\Subscription\Http\Requests\Step2Subscription;
 use Modules\Subscription\Http\Requests\Step3Subscription;
 use Modules\Subscription\Http\Requests\DetailSubscription;
 use Modules\Subscription\Http\Requests\DeleteSubscription;
+use Modules\Subscription\Http\Requests\UpdateCompleteSubscription;
 use DB;
 
 class ApiSubscription extends Controller
@@ -234,6 +235,8 @@ class ApiSubscription extends Controller
         if (isset($post['charged_outlet'])) {
             $data['charged_outlet'] = $post['charged_outlet'];
         }
+
+        $data['subscription_step_complete'] = 0;
         return $data;
     }
 
@@ -529,7 +532,6 @@ class ApiSubscription extends Controller
 
         // update description
         $data_subs['subscription_description'] = $post['subscription_description'];
-        $data_subs['subscription_step_complete'] = 1;
         $save = Subscription::where('id_subscription','=',$post['id_subscription'])->update($data_subs);
 
         if ($save) {
@@ -675,7 +677,7 @@ class ApiSubscription extends Controller
         }
 
         //update subscription
-        $new_data['subscription_step_complete'] = 1;
+        // $new_data['subscription_step_complete'] = 1;
         $save = Subscription::where('id_subscription', '=', $data['id_subscription'])->update($new_data);
 
         if ($save) {
@@ -1947,5 +1949,97 @@ class ApiSubscription extends Controller
         }
 
         return true;
+    }
+
+    function getSubscriptionData($id, $step)
+    {
+    	$data = Subscription::where('id_subscription','=',$id);
+
+    	if ($step == 'all') {
+    		
+            $data = $data->with([
+	                	'subscription_content',
+	                    'subscription_content.subscription_content_details',
+	                	'outlets' => function($q){
+	                        $q->select(
+	                            'outlets.id_outlet',
+	                            'outlet_code',
+	                            'outlet_name'
+	                        );
+	                    },
+	                    'products' => function($q){
+	                    	$q->select(
+	                    		'products.id_product',
+	                    		'product_code',
+	                    		'product_name'
+	                    	);
+	                    }
+	                ])
+	                ->first();
+    	}
+
+        return $data;
+    }
+
+    function updateComplete(UpdateCompleteSubscription $request)
+    {
+    	$post = $request->json()->all();
+
+    	$check = $this->checkComplete($post['id_subscription'], $step, $errors);
+
+		if ($check)
+		{
+			$update = Subscription::where('id_subscription','=',$post['id_subscription'])->update(['subscription_step_complete' => 1]);
+
+			if ($update)
+			{
+				return ['status' => 'success'];
+			}else{
+				return ['status'=> 'fail', 'messages' => ['Update deals failed']];
+			}
+		}
+		else
+		{
+			return [
+				'status'	=> 'fail',
+				'step' 		=> $step,
+				'messages' 	=> [$errors]
+			];
+		}
+    }
+
+    function checkComplete($id, &$step, &$errors)
+    {
+    	$subs = $this->getSubscriptionData($id, 'all');
+    	if (!$subs) {
+    		$errors = 'Subscription not found';
+    		return false;
+    	}
+
+    	$subs = $subs->toArray();
+
+		$step = 2;
+		$errors = 'Subscription not complete';
+
+		do {
+			if( !isset($subs['is_free']) && empty($subs['subscription_price_cash']) && empty($subs['subscription_price_point']) ) break;
+			if( !isset($subs['is_all_outlet']) ) break;
+			if( !isset($subs['subscription_voucher_expired']) && !isset($subs['subscription_voucher_duration']) ) break;
+			if( !isset($subs['subscription_voucher_total']) ) break;
+			if( empty($subs['subscription_voucher_nominal']) && empty($subs['subscription_voucher_percent']) ) break;
+
+			$step = null;
+			$errors = null;
+		} while (false);
+
+		if (!empty($step)) return false;
+
+    	if ( empty($subs['subscription_content']) || empty($subs['subscription_description']) ) {
+    		$step = 3;
+	    	$errors = 'Subscription not complete';
+    		return false;
+    	}
+
+    	return true;
     }
 }

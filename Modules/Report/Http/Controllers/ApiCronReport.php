@@ -2,6 +2,7 @@
 
 namespace Modules\Report\Http\Controllers;
 
+use App\Http\Models\DealsPaymentMidtran;
 use App\Http\Models\User;
 use App\Http\Models\Transaction;
 use App\Http\Models\TransactionProduct;
@@ -16,6 +17,8 @@ use App\Http\Models\MonthlyMembershipReport;
 
 use App\Http\Models\TransactionPaymentMidtran;
 use App\Http\Models\TransactionPaymentBalance;
+use Modules\IPay88\Entities\DealsPaymentIpay88;
+use Modules\IPay88\Entities\SubscriptionPaymentIpay88;
 use Modules\IPay88\Entities\TransactionPaymentIpay88;
 use App\Http\Models\TransactionPaymentOvo;
 use App\Http\Models\TransactionPaymentOffline;
@@ -26,6 +29,8 @@ use App\Http\Models\GlobalMonthlyReportTrxMenu;
 use App\Http\Models\GlobalDailyReportTrxMenu;
 
 use Modules\Report\Entities\DailyReportPayment;
+use Modules\Report\Entities\DailyReportPaymentDeals;
+use Modules\Report\Entities\DailyReportPaymentSubcription;
 use Modules\Report\Entities\GlobalDailyReportPayment;
 use Modules\Report\Entities\MonthlyReportPayment;
 use Modules\Report\Entities\GlobalMonthlyReportPayment;
@@ -45,6 +50,7 @@ use Illuminate\Routing\Controller;
 use Modules\Report\Http\Requests\DetailReport;
 
 use App\Lib\MyHelper;
+use Modules\Subscription\Entities\SubscriptionPaymentMidtran;
 use Validator;
 use DateTime;
 use Hash;
@@ -858,11 +864,48 @@ class ApiCronReport extends Controller
 		$delete = GlobalDailyReportPayment::where('trx_date', $date)->delete();
 
 		//midtrans
+            $dataPaymentDeals = DealsPaymentMidtran::join('deals_users', 'deals_users.id_deals_user', 'deals_payment_midtrans.id_deals_user')
+                ->select(
+                    DB::raw('DATE(deals_payment_midtrans.created_at) as date'),
+                    DB::raw('"Midtrans" as payment_type'),
+                    DB::raw('COUNT(deals_payment_midtrans.id_deals_user) as payment_count'),
+                    DB::raw('SUM(deals_payment_midtrans.gross_amount) as payment_nominal'),
+                    DB::raw("CONCAT_WS(' ', deals_payment_midtrans.payment_type, deals_payment_midtrans.bank) AS payment")
+                )
+                ->whereDate('deals_payment_midtrans.created_at', $date)
+                ->where('deals_users.paid_status', 'Completed')
+                ->groupBy('payment')
+                ->get()->toArray();
+
+            if($dataPaymentDeals){
+                //insert daily
+                $insertDailyDeals = DailyReportPaymentDeals::insert($dataPaymentDeals);
+            }
+
+            $dataPaymentSubcsription = SubscriptionPaymentMidtran::join('subscription_users', 'subscription_users.id_subscription_user', 'subscription_payment_midtrans.id_subscription_user')
+                ->select(
+                    DB::raw('DATE(subscription_payment_midtrans.created_at) as date'),
+                    DB::raw('"Midtrans" as payment_type'),
+                    DB::raw('COUNT(subscription_payment_midtrans.id_subscription_user) as payment_count'),
+                    DB::raw('SUM(subscription_payment_midtrans.gross_amount) as payment_nominal'),
+                    DB::raw("CONCAT_WS(' ', subscription_payment_midtrans.payment_type, subscription_payment_midtrans.bank) AS payment")
+                )
+                ->whereDate('subscription_payment_midtrans.created_at', $date)
+                ->where('subscription_users.paid_status', 'Completed')
+                ->groupBy('payment')
+                ->get()->toArray();
+
+            if($dataPaymentSubcsription){
+                //insert daily
+                $insertDailySubcsription = DailyReportPaymentSubcription::insert($dataPaymentSubcsription);
+            }
+
 			$dataPayment = TransactionPaymentMidtran::join('transactions', 'transactions.id_transaction', 'transaction_payment_midtrans.id_transaction')
 			->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
 			->select(
 				'transactions.id_outlet', 
-				DB::raw('DATE(transactions.transaction_date) as trx_date'), 
+				DB::raw('DATE(transactions.transaction_date) as trx_date'),
+                DB::raw('"Midtrans" as payment_type'),
 				DB::raw('COUNT(transactions.id_transaction) as trx_payment_count'), 
 				DB::raw('SUM(transaction_payment_midtrans.gross_amount) as trx_payment_nominal'), 
 				DB::raw("CONCAT_WS(' ', transaction_payment_midtrans.payment_type, transaction_payment_midtrans.bank) AS trx_payment")
@@ -940,11 +983,48 @@ class ApiCronReport extends Controller
 		//end ovo
 
 		//Ipay88
+            $dataPaymentDealsIpay88 = DealsPaymentIpay88::join('deals_users', 'deals_users.id_deals_user', 'deals_payment_ipay88s.id_deals_user')
+                ->select(
+                    DB::raw('DATE(deals_payment_ipay88s.created_at) as date'),
+                    DB::raw('"Ipay88" as payment_type'),
+                    DB::raw('COUNT(deals_payment_ipay88s.id_deals_user) as payment_count'),
+                    DB::raw('SUM(deals_payment_ipay88s.amount / 100) as payment_nominal'),
+                    DB::raw("deals_payment_ipay88s.payment_method AS payment")
+                )
+                ->whereDate('deals_payment_ipay88s.created_at', $date)
+                ->where('deals_users.paid_status', 'Completed')
+                ->groupBy('payment')
+                ->get()->toArray();
+
+            if($dataPaymentDealsIpay88){
+                //insert daily
+                $insertDailyDealsIpay88 = DailyReportPaymentDeals::insert($dataPaymentDealsIpay88);
+            }
+
+            $dataPaymentSubcsriptionIpay88 = SubscriptionPaymentIpay88::join('subscription_users', 'subscription_users.id_subscription_user', 'subscription_payment_ipay88s.id_subscription_user')
+                ->select(
+                    DB::raw('DATE(subscription_payment_ipay88s.created_at) as date'),
+                    DB::raw('"Ipay88" as payment_type'),
+                    DB::raw('COUNT(subscription_payment_ipay88s.id_subscription_user) as payment_count'),
+                    DB::raw('SUM(subscription_payment_ipay88s.amount / 100) as payment_nominal'),
+                    DB::raw("subscription_payment_ipay88s.payment_method AS payment")
+                )
+                ->whereDate('subscription_payment_ipay88s.created_at', $date)
+                ->where('subscription_users.paid_status', 'Completed')
+                ->groupBy('payment')
+                ->get()->toArray();
+
+            if($dataPaymentSubcsriptionIpay88){
+                //insert daily
+                $insertDailySubcsriptionIpay88 = DailyReportPaymentSubcription::insert($dataPaymentSubcsriptionIpay88);
+            }
+
 			$dataPayment = TransactionPaymentIpay88::join('transactions', 'transactions.id_transaction', 'transaction_payment_ipay88s.id_transaction')
 			->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
 			->select(
 				'transactions.id_outlet', 
-				DB::raw('DATE(transactions.transaction_date) as trx_date'), 
+				DB::raw('DATE(transactions.transaction_date) as trx_date'),
+                DB::raw('"Ipay88" as payment_type'),
 				DB::raw('COUNT(transactions.id_transaction) as trx_payment_count'), 
 				DB::raw('SUM(transaction_payment_ipay88s.amount / 100) as trx_payment_nominal'), 
 				DB::raw("transaction_payment_ipay88s.payment_method AS trx_payment")

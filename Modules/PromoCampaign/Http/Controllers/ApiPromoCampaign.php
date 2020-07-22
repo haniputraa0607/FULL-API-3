@@ -761,16 +761,17 @@ class ApiPromoCampaign extends Controller
                 		$checkData[0]['code_type'] != $post['code_type'] || 
                 		$checkData[0]['prefix_code'] != $post['prefix_code'] || 
                 		$checkData[0]['number_last_code'] != $post['number_last_code'] || 
-                		$checkData[0]['promo_code'] != $post['promo_code'] || 
+                		($checkData[0]['promo_code']??null) != $post['promo_code'] || 
                 		$checkData[0]['total_coupon'] != $post['total_coupon'] ||
                 		$checkData[0]['id_brand'] != $post['id_brand']
                 	) 
                 {
                     $promo_code = $post['promo_code'];
 
-                    if ($post['code_type'] == 'Single') {
-                        unset($post['promo_code']);
-                    }
+                    unset($post['promo_code']);
+                    // if ($post['code_type'] == 'Single') {
+                    //     unset($post['promo_code']);
+                    // }
 
                     if (isset($post['promo_tag'])) {
                         $insertTag = $this->insertTag('update', $post['id_promo_campaign'], $post['promo_tag']);
@@ -805,9 +806,7 @@ class ApiPromoCampaign extends Controller
                 } 
                 else 
                 {
-                    if (isset($post['promo_code']) || $post['promo_code'] == null) {
-                        unset($post['promo_code']);
-                    }
+                    unset($post['promo_code']);
 
                     if (isset($post['promo_tag'])) {
                         $insertTag = $this->insertTag('update', $post['id_promo_campaign'], $post['promo_tag']);
@@ -1761,6 +1760,7 @@ class ApiPromoCampaign extends Controller
 	                } )
 	                ->with([
 						'promo_campaign.promo_campaign_outlets',
+						'promo_campaign.brand',
 						'promo_campaign.promo_campaign_product_discount.product' => function($q) {
 							$q->select('id_product', 'id_product_category', 'product_code', 'product_name');
 						},
@@ -1824,6 +1824,7 @@ class ApiPromoCampaign extends Controller
         			->whereNull('used_at')
         			->with([  
                         'dealVoucher.deals.outlets_active',
+                        'dealVoucher.deals.brand',
                         'dealVoucher.deals.deals_product_discount.product' => function($q) {
 							$q->select('id_product', 'id_product_category', 'product_code', 'product_name');
 						}, 
@@ -1867,7 +1868,7 @@ class ApiPromoCampaign extends Controller
         }
         elseif (!$request->promo_code && !$request->id_deals_user && $request->id_subscription_user) 
         {
-        	$subs = app($this->subscription)->checkSubscription($request->id_subscription_user, 1, 1);
+        	$subs = app($this->subscription)->checkSubscription($request->id_subscription_user, 1, 1, null, null, null, 1);
 
         	if(!$subs){
 	            return [
@@ -1892,7 +1893,9 @@ class ApiPromoCampaign extends Controller
 
         	$subs = $subs->toArray();
 	    	$query = $subs['subscription_user'];
+	    	$id_brand = $subs['subscription_user']['subscription']['id_brand'];
 	    	$source = 'subscription';
+
         }
         else
         {
@@ -2034,7 +2037,6 @@ class ApiPromoCampaign extends Controller
 	        	$applied_product = [];
 	        	$product = [];
 	        }
-
     	}
 
         $result = [
@@ -2046,6 +2048,8 @@ class ApiPromoCampaign extends Controller
 
     public function getPromoDescription($source, $query, $product)
     {
+    	$brand = $query['brand']['name_brand']??null;
+
     	if ($source == 'subscription') 
     	{
     		if ( !empty($query['subscription_voucher_percent']) ) 
@@ -2058,16 +2062,16 @@ class ApiPromoCampaign extends Controller
     		}
 
         	if ( !empty($query['subscription_voucher_percent']) ) {
-        		$discount = ($query['subscription_voucher_percent']??0).' %';
+        		$discount = ($query['subscription_voucher_percent']??0).'%';
         	}else{
         		$discount = 'Rp '.number_format($query['subscription_voucher_nominal']??0);
         	}
 
-        	$key = 'description_product_discount_no_qty';
-    		$key_null = 'Anda berhak mendapatkan potongan %discount% untuk pembelian %product%.';
+        	$key = $brand ? 'description_product_discount_brand_no_qty' : 'description_product_discount_no_qty';
+    		$key_null = $brand ? 'Anda berhak mendapatkan potongan %discount% untuk pembelian %product% di %brand%.' : 'Anda berhak mendapatkan potongan %discount% untuk pembelian %product%.';
     		$desc = Setting::where('key', '=', $key)->first()['value']??$key_null;
 
-    		$desc = MyHelper::simpleReplace($desc,['discount'=>$discount, 'product'=>$product]);
+    		$desc = MyHelper::simpleReplace($desc,['discount'=>$discount, 'product'=>$product, 'brand'=>$brand]);
     	}
     	else
     	{
@@ -2077,27 +2081,27 @@ class ApiPromoCampaign extends Controller
 	        	$qty = $query[$source.'_product_discount_rules']['max_product']??0;
 
 	        	if ($discount == 'Percent') {
-	        		$discount = ($query[$source.'_product_discount_rules']['discount_value']??0).' %';
+	        		$discount = ($query[$source.'_product_discount_rules']['discount_value']??0).'%';
 	        	}else{
 	        		$discount = 'Rp '.number_format($query[$source.'_product_discount_rules']['discount_value']??0);
 	        	}
 
 	        	if ( empty($qty) ) {
-        			$key = 'description_product_discount_no_qty';
-    				$key_null = 'Anda berhak mendapatkan potongan %discount% untuk pembelian %product%.';
+        			$key = 'description_product_discount_brand_no_qty';
+    				$key_null = 'Anda berhak mendapatkan potongan %discount% untuk pembelian %product% di %brand%.';
 	        	}else{
-	        		$key = 'description_product_discount';
-	    			$key_null = 'Anda berhak mendapatkan potongan %discount% untuk pembelian %product%. Maksimal %qty% buah untuk setiap produk.';
+	        		$key = 'description_product_discount_brand';
+	    			$key_null = 'Anda berhak mendapatkan potongan %discount% untuk pembelian %product%. Maksimal %qty% buah untuk setiap produk di %brand%.';
 	        	}
 
 	    		$desc = Setting::where('key', '=', $key)->first()['value']??$key_null;
 
-	    		$desc = MyHelper::simpleReplace($desc,['discount'=>$discount, 'product'=>$product, 'qty'=>$qty,]);
+	    		$desc = MyHelper::simpleReplace($desc,['discount'=>$discount, 'product'=>$product, 'qty'=>$qty, 'brand'=>$brand]);
 	    	}
 	    	elseif ($query['promo_type'] == 'Tier discount') 
 	    	{
-	    		$min_qty = 1;
-	    		$max_qty = 1;
+	    		$min_qty = null;
+	    		$max_qty = null;
 
 	    		foreach ($query[$source.'_tier_discount_rules'] as $key => $rule) {
 					$min_req=$rule['min_qty'];
@@ -2110,17 +2114,17 @@ class ApiPromoCampaign extends Controller
 						$max_qty=$max_req;
 					}
 	    		}
-	    		$key = 'description_tier_discount';
-	    		$key_null = 'Anda berhak mendapatkan potongan setelah melakukan pembelian %product% sebanyak %minmax%';
+	    		$key = 'description_tier_discount_brand';
+	    		$key_null = 'Anda berhak mendapatkan potongan setelah melakukan pembelian %product% sebanyak %minmax% di %brand%.';
 	    		$minmax=$min_qty!=$max_qty?"$min_qty - $max_qty":$min_qty;
-	    		$desc = Setting::where('key', '=', 'description_tier_discount')->first()['value']??$key_null;
+	    		$desc = Setting::where('key', '=', $key)->first()['value']??$key_null;
 
-	    		$desc = MyHelper::simpleReplace($desc,['product'=>$product, 'minmax'=>$minmax]);
+	    		$desc = MyHelper::simpleReplace($desc,['product'=>$product, 'minmax'=>$minmax, 'brand'=>$brand]);
 	    	}
 	    	elseif ($query['promo_type'] == 'Buy X Get Y') 
 	    	{
-	    		$min_qty = 1;
-	    		$max_qty = 1;
+	    		$min_qty = null;
+	    		$max_qty = null;
 	    		foreach ($query[$source.'_buyxgety_rules'] as $key => $rule) {
 					$min_req=$rule['min_qty_requirement'];
 					$max_req=$rule['max_qty_requirement'];
@@ -2132,12 +2136,12 @@ class ApiPromoCampaign extends Controller
 						$max_qty=$max_req;
 					}
 	    		}
-	    		$key = 'description_buyxgety_discount';
-	    		$key_null = 'Anda berhak mendapatkan potongan setelah melakukan pembelian %product% sebanyak %min% - %max%';
+	    		$key = 'description_buyxgety_discount_brand';
+	    		$key_null = 'Anda berhak mendapatkan potongan setelah melakukan pembelian %product% sebanyak %min% - %max% di %brand.';
 	    		$minmax=$min_qty!=$max_qty?"$min_qty - $max_qty":$min_qty;
-	    		$desc = Setting::where('key', '=', 'description_buyxgety_discount')->first()['value']??$key_null;
+	    		$desc = Setting::where('key', '=', $key)->first()['value']??$key_null;
 
-	    		$desc = MyHelper::simpleReplace($desc,['product'=>$product, 'minmax'=>$minmax]);
+	    		$desc = MyHelper::simpleReplace($desc,['product'=>$product, 'minmax'=>$minmax, 'brand'=>$brand]);
 	    	}
 	    	else
 	    	{
@@ -2149,7 +2153,7 @@ class ApiPromoCampaign extends Controller
     	return $desc;
     }
 
-    public function checkPromoCode($promo_code, $outlet=null, $product=null, $id_promo_campaign_promo_code=null)
+    public function checkPromoCode($promo_code, $outlet=null, $product=null, $id_promo_campaign_promo_code=null, $brand=null)
     {
     	if (!empty($id_promo_campaign_promo_code))
     	{
@@ -2179,8 +2183,21 @@ class ApiPromoCampaign extends Controller
 					'promo_campaign.promo_campaign_tier_discount_product',
 					'promo_campaign.promo_campaign_product_discount_rules',
 					'promo_campaign.promo_campaign_tier_discount_rules',
-					'promo_campaign.promo_campaign_buyxgety_rules'
+					'promo_campaign.promo_campaign_buyxgety_rules',
+					'promo_campaign.promo_campaign_product_discount.product' => function($q) {
+						$q->select('id_product', 'id_product_category', 'product_code', 'product_name');
+					},
+					'promo_campaign.promo_campaign_buyxgety_product_requirement.product' => function($q) {
+						$q->select('id_product', 'id_product_category', 'product_code', 'product_name');
+					},
+					'promo_campaign.promo_campaign_tier_discount_product.product' => function($q) {
+						$q->select('id_product', 'id_product_category', 'product_code', 'product_name');
+					},
 				]);
+	    }
+
+	    if (!empty($brand)) {
+		    $code = $code->with(['promo_campaign.brand']);
 	    }
 
 	    $code = $code->first();
@@ -2188,7 +2205,7 @@ class ApiPromoCampaign extends Controller
         return $code;
     }
 
-	public function checkVoucher($id_deals_user=null, $outlet=null, $product=null)
+	public function checkVoucher($id_deals_user=null, $outlet=null, $product=null, $brand=null)
     {
     	$deals = new DealsUser;
 
@@ -2223,8 +2240,21 @@ class ApiPromoCampaign extends Controller
                     'dealVoucher.deals.deals_buyxgety_product_requirement', 
                     'dealVoucher.deals.deals_product_discount_rules', 
                     'dealVoucher.deals.deals_tier_discount_rules', 
-                    'dealVoucher.deals.deals_buyxgety_rules'
+                    'dealVoucher.deals.deals_buyxgety_rules',
+                    'dealVoucher.deals.deals_product_discount.product' => function($q) {
+						$q->select('id_product', 'id_product_category', 'product_code', 'product_name');
+					}, 
+                    'dealVoucher.deals.deals_tier_discount_product.product' => function($q) {
+						$q->select('id_product', 'id_product_category', 'product_code', 'product_name');
+					}, 
+                    'dealVoucher.deals.deals_buyxgety_product_requirement.product' => function($q) {
+						$q->select('id_product', 'id_product_category', 'product_code', 'product_name');
+					}
                 ]);
+	    }
+
+	    if (!empty($brand)) {
+        	$deals = $deals->with(['dealVoucher.deals.brand']);
 	    }
 
 	    $deals = $deals->first();
@@ -2252,7 +2282,7 @@ class ApiPromoCampaign extends Controller
 	        	$result['button_ok'] = $data['promo_error_ok_button_v2']??'Ok';
 	    	}
 	    	$result['title'] = $data['promo_error_title']??'Promo tidak berlaku';
-	        $result['button_cancel'] = $data['promo_error_cancel_button']??'Tidak';
+	        $result['button_cancel'] = $data['promo_error_cancel_button']??'Hapus promo';
 	        $result['product_label'] = "";
 	        $result['product'] = null;
 

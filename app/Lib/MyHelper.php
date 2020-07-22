@@ -1173,41 +1173,27 @@ class MyHelper{
         // path
         $upload = $path.$pictName;
 
-        if(env('STORAGE')){
-            $save = Storage::disk(env('STORAGE'))->put($upload, $decoded, 'public');
-            if ($save) {
-                $result = [
-                    'status' => 'success',
-                    'path'  => $upload
-                ];
-            }
-            else {
-                $result = [
-                    'status' => 'fail'
-                ];
-            }
-        }else{
-            $save = Storage::disk(env('STORAGE'))->put($upload, $decoded);
-            if ($save) {
-                $result = [
-                    'status' => 'success',
-                    'path'  => $upload
-                ];
-            }
-            else {
-                $result = [
-                    'status' => 'fail'
-                ];
-            }
+        $save = Storage::disk(config('configs.STORAGE'))->put($upload, $decoded);
+
+        if ($save) {
+            $result = [
+                'status' => 'success',
+                'path'  => $upload
+            ];
+        }
+        else {
+            $result = [
+                'status' => 'fail'
+            ];
         }
 
         return $result;
     }
 
-    public static function deleteFile($path) {
-        if(env('STORAGE')){
-            if(Storage::disk(env('STORAGE'))->exists($path)) {
-                if(Storage::disk(env('STORAGE'))->delete($path)){
+    public static function deleteFile($path, $type = 'storage') {
+        if($type == 'storage'){
+            if(Storage::disk(config('configs.STORAGE'))->exists($path)) {
+                if(Storage::disk(config('configs.STORAGE'))->delete($path)){
                     return true;
                 }
                 else {
@@ -1218,13 +1204,8 @@ class MyHelper{
                 return true;
             }
         }else{
-            if (Storage::disk(env('STORAGE'))->exists($path)) {
-                if (Storage::disk(env('STORAGE'))->delete($path)) {
-                    return true;
-                }
-                else {
-                    return false;
-                }
+            if (File::delete($path)) {
+                return true;
             }
             else {
                 return true;
@@ -1531,6 +1512,63 @@ class MyHelper{
 		}
 	}
 
+	public static function getWithTimeout($url, $bearer=null, $post = [], $header=null, $timeout = 65){
+		$client = new Client;
+
+		$content = array(
+			'headers' => [
+				'Accept'        => 'application/json'
+			]
+		);
+
+		// if null bearer
+		if (!is_null($bearer)) {
+			$content['headers']['Authorization'] = $bearer;
+		}
+
+		if(!is_null($header)){
+			if(is_array($header)){
+				foreach($header as $key => $dataHeader){
+					$content['headers'][$key] = $dataHeader;
+				}
+			}
+		}
+
+		if ($post) {
+			$params = http_build_query($post);
+			if (strpos($url,'?')) {
+				$url .= '&' . $params;
+			} else {
+				$url .= '?' . $params;
+			}
+		}
+		$content['timeout']=$timeout;
+
+		try {
+			$response = $client->get($url, $content);
+			// return plain response if json_decode fail because response is plain text
+			$return = json_decode($response->getBody()->getContents(), true)?:$response->getBody()->__toString();
+			return [
+				'status_code' => $response->getStatusCode(),
+				'response' => $return
+			];
+		}catch (\GuzzleHttp\Exception\RequestException $e) {
+			try{
+				if($e->getResponse()){
+					$response = $e->getResponse()->getBody()->getContents();
+					$return = json_decode($response, true);
+					return [
+						'status_code' => $e->getResponse()->getStatusCode(),
+						'response' => $return
+					];
+				}
+				else  return ['status' => 'fail', 'messages' => [0 => 'Check your internet connection.']];
+			}
+			catch(Exception $e){
+				return ['status' => 'fail', 'messages' => [0 => 'Check your internet connection.']];
+			}
+		}
+	}
 
     public static function getBearerToken() {
 		$headers = null;
@@ -2795,5 +2833,54 @@ class MyHelper{
 	
 		$angle = atan2(sqrt($a), $b);
 		return $angle * $earthRadius;
+	}
+
+	/**
+	 * Update data data_outlet.json
+	 * @param  array $data      data id_outlet and data to save, [['id_outlet' => xx, 'data' => 'xxxxxx'],['id_outlet' => xx, 'data' => 'xxxxxx']]
+	 * @return void
+	 */
+	public static function updateOutletFile($data)
+	{
+		$filename = 'data_outlet.json';
+        if (is_file($filename)) {
+            $filecontent = file_get_contents($filename);
+            $data_outlet = json_decode($filecontent,true)?:[];
+        } else {
+            $data_outlet = [];
+        }
+        foreach ($data as $item) {
+        	$data_outlet[$item['id_outlet']] = self::encrypt2019($item['data']);
+        }
+        try {
+	        file_put_contents($filename, json_encode($data_outlet));
+	    } catch (\Exception $e) {
+	    	\Log::error("Failed to save data outlet. Please save this data manually in the $filename file", $data_outlet);
+	    }
+	}
+
+	/**
+	 * Get outlet data from data_outlet.json
+	 * @param  integer $id_outlet      id_outlet, leave null for retrive all data
+	 * @return void
+	 */
+	public static function getOutletFile($id_outlet = null)
+	{
+		$filename = 'data_outlet.json';
+        if (is_file($filename)) {
+            $filecontent = file_get_contents($filename);
+            $data_outlet = json_decode($filecontent,true)?:[];
+        } else {
+            $data_outlet = [];
+        }
+
+        if($id_outlet) {
+        	$data = $data_outlet[$id_outlet] ?? null;
+        	return self::decrypt2019($data);
+        }
+
+        return array_map(function ($data) {
+        	return self::decrypt2019($data);
+        }, $data_outlet);
 	}
 }

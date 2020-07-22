@@ -23,6 +23,10 @@ use App\Jobs\CronBalance;
 
 use App\Http\Models\Transaction;
 use App\Http\Models\TransactionMultiplePayment;
+use App\Http\Models\TransactionPaymentBalance;
+use App\Http\Models\TransactionPaymentMidtran;
+use App\Http\Models\TransactionPaymentOffline;
+use App\Http\Models\TransactionPaymentOvo;
 use App\Http\Models\TransactionProduct;
 use App\Http\Models\TransactionPickup;
 use App\Http\Models\User;
@@ -31,8 +35,11 @@ use App\Http\Models\AutocrmEmailLog;
 use App\Http\Models\Autocrm;
 use App\Http\Models\Setting;
 use App\Http\Models\LogPoint;
+use App\Http\Models\Outlet;
 use Modules\IPay88\Entities\TransactionPaymentIpay88;
 use Modules\OutletApp\Jobs\AchievementCheck;
+use Modules\SettingFraud\Entities\FraudDetectionLogTransactionDay;
+use Modules\SettingFraud\Entities\FraudDetectionLogTransactionWeek;
 
 class ApiCronTrxController extends Controller
 {
@@ -47,6 +54,7 @@ class ApiCronTrxController extends Controller
         $this->promo_campaign = "Modules\PromoCampaign\Http\Controllers\ApiPromoCampaign";
         $this->getNotif = "Modules\Transaction\Http\Controllers\ApiNotification";
         $this->trx    = "Modules\Transaction\Http\Controllers\ApiOnlineTransaction";
+        $this->membership       = "Modules\Membership\Http\Controllers\ApiMembership";
     }
 
     public function cron(Request $request)
@@ -413,6 +421,278 @@ class ApiCronTrxController extends Controller
                 'Status' => '0',
                 'requery_response' => 'Cancelled by cron'
             ],false,false);
+        }
+    }
+
+    public function autoReject()
+    {
+        $minutes = (int) MyHelper::setting('auto_reject_time','value', 15)*60;
+        $max_time = date('Y-m-d H:i:s',time()-$minutes);
+
+        $trxs = Transaction::join('transaction_pickups', 'transactions.id_transaction', 'transaction_pickups.id_transaction')->whereNull('receive_at')->whereNull('reject_at')->where('transaction_date','<',$max_time)->get();
+
+        $id_trxs = $trxs->pluck('id_transaction');
+
+        DB::beginTransaction();
+        $reason = 'auto reject order by system';
+        $pickup = TransactionPickup::whereIn('id_transaction', $id_trxs)->update([
+            'reject_at'     => date('Y-m-d H:i:s'),
+            'reject_reason' => $reason,
+        ]);
+        if ($pickup) {
+            $post = ['reason' => $reason, 'id_transaction' => 0];
+            foreach ($trxs as $trx) {
+                $post['id_transaction'] = $trx->id_transaction;
+                $order = $trx;
+                $outlet = Outlet::where('id_outlet',$order->id_outlet)->first();
+                $user = User::where('id', $order['id_user'])->first();
+                if(!$user || !$outlet) {
+                    continue;
+                }
+                $user = $user->toArray();
+
+
+                $getLogFraudDay = FraudDetectionLogTransactionDay::whereRaw('Date(fraud_detection_date) ="' . date('Y-m-d', strtotime($order->transaction_date)) . '"')
+                    ->where('id_user', $order->id_user)
+                    ->first();
+                if ($getLogFraudDay) {
+                    $checkCount = $getLogFraudDay['count_transaction_day'] - 1;
+                    if ($checkCount <= 0) {
+                        $delLogTransactionDay = FraudDetectionLogTransactionDay::where('id_fraud_detection_log_transaction_day', $getLogFraudDay['id_fraud_detection_log_transaction_day'])
+                            ->delete();
+                    } else {
+                        $updateLogTransactionDay = FraudDetectionLogTransactionDay::where('id_fraud_detection_log_transaction_day', $getLogFraudDay['id_fraud_detection_log_transaction_day'])->update([
+                            'count_transaction_day' => $checkCount,
+                            'updated_at'            => date('Y-m-d H:i:s'),
+                        ]);
+                    }
+
+                }
+
+                $getLogFraudWeek = FraudDetectionLogTransactionWeek::where('fraud_detection_week', date('W', strtotime($order->transaction_date)))
+                    ->where('fraud_detection_week', date('Y', strtotime($order->transaction_date)))
+                    ->where('id_user', $order->id_user)
+                    ->first();
+                if ($getLogFraudWeek) {
+                    $checkCount = $getLogFraudWeek['count_transaction_week'] - 1;
+                    if ($checkCount <= 0) {
+                        $delLogTransactionWeek = FraudDetectionLogTransactionWeek::where('id_fraud_detection_log_transaction_week', $getLogFraudWeek['id_fraud_detection_log_transaction_week'])
+                            ->delete();
+                    } else {
+                        $updateLogTransactionWeek = FraudDetectionLogTransactionWeek::where('id_fraud_detection_log_transaction_week', $getLogFraudWeek['id_fraud_detection_log_transaction_week'])->update([
+                            'count_transaction_week' => $checkCount,
+                            'updated_at'             => date('Y-m-d H:i:s'),
+                        ]);
+                    }
+                }
+
+
+                $rejectBalance = false;
+                $point = 0;
+                //refund ke balance
+                // if($order['trasaction_payment_type'] == "Midtrans"){
+                $multiple = TransactionMultiplePayment::where('id_transaction', $order->id_transaction)->get()->toArray();
+                if ($multiple) {
+                    foreach ($multiple as $pay) {
+                        if ($pay['type'] == 'Balance') {
+                            $payBalance = TransactionPaymentBalance::find($pay['id_payment']);
+                            if ($payBalance) {
+                                $refund = app($this->balance)->addLogBalance($order['id_user'], $point = $payBalance['balance_nominal'], $order['id_transaction'], 'Rejected Order Point', $order['transaction_grandtotal']);
+                                if ($refund == false) {
+                                    DB::rollback();
+                                    return response()->json([
+                                        'status'   => 'fail',
+                                        'messages' => ['Insert Cashback Failed'],
+                                    ]);
+                                }
+                                $rejectBalance = true;
+                            }
+                        } elseif ($pay['type'] == 'Ovo') {
+                            $payOvo = TransactionPaymentOvo::find($pay['id_payment']);
+                            if ($payOvo) {
+                                if(Configs::select('is_active')->where('config_name','refund ovo')->pluck('is_active')->first()){
+                                    $point = 0;
+                                    $transaction = TransactionPaymentOvo::where('transaction_payment_ovos.id_transaction', $post['id_transaction'])
+                                        ->join('transactions','transactions.id_transaction','=','transaction_payment_ovos.id_transaction')
+                                        ->first();
+                                    $refund = Ovo::Void($transaction);
+                                    if ($refund['status_code'] != '200') {
+                                        DB::rollback();
+                                        return response()->json([
+                                            'status'   => 'fail',
+                                            'messages' => ['Refund Ovo Failed'],
+                                        ]);
+                                    }
+                                }else{
+                                    $refund = app($this->balance)->addLogBalance($order['id_user'], $point = $payOvo['amount'], $order['id_transaction'], 'Rejected Order Ovo', $order['transaction_grandtotal']);
+                                    if ($refund == false) {
+                                        DB::rollback();
+                                        return response()->json([
+                                            'status'   => 'fail',
+                                            'messages' => ['Insert Cashback Failed'],
+                                        ]);
+                                    }
+                                    $rejectBalance = true;
+                                }
+                            }
+                        } elseif (strtolower($pay['type']) == 'ipay88') {
+                            $payIpay = TransactionPaymentIpay88::find($pay['id_payment']);
+                            if ($payIpay) {
+                                $refund = app($this->balance)->addLogBalance($order['id_user'], $point = ($payIpay['amount']/100), $order['id_transaction'], 'Rejected Order', $order['transaction_grandtotal']);
+                                if ($refund == false) {
+                                    DB::rollback();
+                                    return response()->json([
+                                        'status'   => 'fail',
+                                        'messages' => ['Insert Cashback Failed'],
+                                    ]);
+                                }
+                                $rejectBalance = true;
+                            }
+                        } else {
+                            $point = 0;
+                            $payMidtrans = TransactionPaymentMidtran::find($pay['id_payment']);
+                            if ($payMidtrans) {
+                                if(MyHelper::setting('refund_midtrans')){
+                                    $refund = Midtrans::refund($order['transaction_receipt_number'],['reason' => $post['reason']??'']);
+                                    if ($refund['status'] != 'success') {
+                                        DB::rollback();
+                                        return response()->json($refund);
+                                    }
+                                } else {
+                                    $refund = app($this->balance)->addLogBalance( $order['id_user'], $point = $payMidtrans['gross_amount'], $order['id_transaction'], 'Rejected Order Midtrans', $order['transaction_grandtotal']);
+                                    if ($refund == false) {
+                                        DB::rollback();
+                                        return response()->json([
+                                            'status'    => 'fail',
+                                            'messages'  => ['Insert Cashback Failed']
+                                        ]);
+                                    }
+                                    $rejectBalance = true;
+                                }
+                            }
+                        }
+
+                    }
+                } else {
+                    $payMidtrans = TransactionPaymentMidtran::where('id_transaction', $order['id_transaction'])->first();
+                    $payOvo      = TransactionPaymentOvo::where('id_transaction', $order['id_transaction'])->first();
+                    $payIpay     = TransactionPaymentIpay88::where('id_transaction', $order['id_transaction'])->first();
+                    if ($payMidtrans) {
+                        $point = 0;
+                        if(MyHelper::setting('refund_midtrans')){
+                            $refund = Midtrans::refund($order['transaction_receipt_number'],['reason' => $post['reason']??'']);
+                            if ($refund['status'] != 'success') {
+                                DB::rollback();
+                                return response()->json($refund);
+                            }
+                        } else {
+                            $refund = app($this->balance)->addLogBalance( $order['id_user'], $point = $payMidtrans['gross_amount'], $order['id_transaction'], 'Rejected Order Midtrans', $order['transaction_grandtotal']);
+                            if ($refund == false) {
+                                DB::rollback();
+                                return response()->json([
+                                    'status'    => 'fail',
+                                    'messages'  => ['Insert Cashback Failed']
+                                ]);
+                            }
+                            $rejectBalance = true;
+                        }
+                    } elseif ($payOvo) {
+                        if(Configs::select('is_active')->where('config_name','refund ovo')->pluck('is_active')->first()){
+                            $point = 0;
+                            $transaction = TransactionPaymentOvo::where('transaction_payment_ovos.id_transaction', $post['id_transaction'])
+                                ->join('transactions','transactions.id_transaction','=','transaction_payment_ovos.id_transaction')
+                                ->first();
+                            $refund = Ovo::Void($transaction);
+                            if ($refund['status_code'] != '200') {
+                                DB::rollback();
+                                return response()->json([
+                                    'status'   => 'fail',
+                                    'messages' => ['Refund Ovo Failed'],
+                                ]);
+                            }
+                        }else{
+                            $refund = app($this->balance)->addLogBalance($order['id_user'], $point = $payOvo['amount'], $order['id_transaction'], 'Rejected Order Ovo', $order['transaction_grandtotal']);
+                            if ($refund == false) {
+                                DB::rollback();
+                                return response()->json([
+                                    'status'   => 'fail',
+                                    'messages' => ['Insert Cashback Failed'],
+                                ]);
+                            }
+                            $rejectBalance = true;
+                        }
+                    } elseif ($payIpay) {
+                        $refund = app($this->balance)->addLogBalance($order['id_user'], $point = ($payIpay['amount']/100), $order['id_transaction'], 'Rejected Order', $order['transaction_grandtotal']);
+                        if ($refund == false) {
+                            DB::rollback();
+                            return response()->json([
+                                'status'   => 'fail',
+                                'messages' => ['Insert Cashback Failed'],
+                            ]);
+                        }
+                        $rejectBalance = true;
+                    } else {
+                        $payBalance = TransactionPaymentBalance::where('id_transaction', $order['id_transaction'])->first();
+                        if ($payBalance) {
+                            $refund = app($this->balance)->addLogBalance($order['id_user'], $point = $payBalance['balance_nominal'], $order['id_transaction'], 'Rejected Order Point', $order['transaction_grandtotal']);
+                            if ($refund == false) {
+                                DB::rollback();
+                                return response()->json([
+                                    'status'   => 'fail',
+                                    'messages' => ['Insert Cashback Failed'],
+                                ]);
+                            }
+                            $rejectBalance = true;
+                        }
+                    }
+                    
+                }
+                // }
+                // delete promo campaign report
+                if ($order->id_promo_campaign_promo_code)
+                {
+                    $update_promo_report = app($this->promo_campaign)->deleteReport($order->id_transaction, $order->id_promo_campaign_promo_code);
+                }
+                // return voucher
+                $update_voucher = app($this->voucher)->returnVoucher($order->id_transaction);
+                //send notif to customer
+                $send = app($this->autocrm)->SendAutoCRM('Order Reject', $user['phone'], [
+                    "outlet_name"      => $outlet['outlet_name'],
+                    "id_reference"     => $order->transaction_receipt_number . ',' . $order->id_outlet,
+                    "transaction_date" => $order->transaction_date,
+                    'id_transaction'   => $order->id_transaction,
+                ]);
+                if ($send != true) {
+                    DB::rollback();
+                    return response()->json([
+                        'status'   => 'fail',
+                        'messages' => ['Failed Send notification to customer'],
+                    ]);
+                }
+
+                //send notif point refund
+                if($rejectBalance = true){
+                    $send = app($this->autocrm)->SendAutoCRM('Rejected Order Point Refund', $user['phone'],
+                    [
+                        "outlet_name"      => $outlet['outlet_name'],
+                        "transaction_date" => $order['transaction_date'],
+                        'id_transaction'   => $order['id_transaction'],
+                        'receipt_number'   => $order['transaction_receipt_number'],
+                        'received_point'   => (string) $point,
+                    ]);
+                    if ($send != true) {
+                        DB::rollback();
+                        return response()->json([
+                            'status'   => 'fail',
+                            'messages' => ['Failed Send notification to customer'],
+                        ]);
+                    }
+                }
+
+            }
+            DB::commit();
+        } else {
+            DB::rollback();
         }
     }
 }

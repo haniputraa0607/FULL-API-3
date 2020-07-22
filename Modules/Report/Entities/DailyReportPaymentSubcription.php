@@ -21,26 +21,20 @@ use Reliese\Database\Eloquent\Model as Eloquent;
  *
  * @package App\Http\Models
  */
-class DailyReportPayment extends Eloquent
+class DailyReportPaymentSubcription extends Eloquent
 {
-	protected $table = 'daily_report_payment';
-	protected $primaryKey = 'id_daily_report_payment';
-
-	protected $casts = [
-		'payment_count' => 'int',
-		'payment_total_nominal' => 'int'
-	];
+	protected $table = 'daily_report_payment_subscription';
+	protected $primaryKey = 'id_daily_report_payment_subscription';
 
 	protected $dates = [
-		'trx_date'
+		'date'
 	];
 
 	protected $fillable = [
-		'trx_date',
+		'date',
+		'payment',
         'payment_type',
-		'id_outlet',
-		'trx_payment',
-		'trx_payment_count',
-		'trx_payment_nominal'
+		'payment_count',
+		'payment_nominal'
 	];
 }

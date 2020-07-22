@@ -428,6 +428,10 @@ class ApiOutletController extends Controller
         $outlet->outlet_pin = $pin;
         $outlet->save();
 
+        $data_pin = [
+            ['id_outlet' => $post['id_outlet'], 'data' => $post['outlet_pin']]
+        ];
+        MyHelper::updateOutletFile($data_pin);
         //delete token
         $del = OauthAccessToken::join('oauth_access_token_providers', 'oauth_access_tokens.id', 'oauth_access_token_providers.oauth_access_token_id')
                                     ->where('oauth_access_tokens.user_id', $post['id_outlet'])->where('oauth_access_token_providers.provider', 'outlet-app')->delete();
@@ -1831,6 +1835,7 @@ class ApiOutletController extends Controller
     {
         $post = $request->json()->all();
         $dataimport = $post['data_import'];
+        $data_pin = [];
 
         if(!empty($dataimport) && count($dataimport)){
             $city = City::get();
@@ -1894,6 +1899,12 @@ class ApiOutletController extends Controller
                                     ]
                                 ]);
                             } else {
+                                $outlet = Outlet::where('id_outlet', $save['id_outlet'])->first();
+                                if (empty($outlet->outlet_pin)) {
+                                    $pin = MyHelper::createRandomPIN(6, 'angka');
+                                    $outlet->update(['outlet_pin' => \Hash::make($pin)]);
+                                    $data_pin[] = ['id_outlet' => $outlet->id_outlet, 'data' => $pin];
+                                }
                                 $day = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
 
                                 foreach ($day as $val){
@@ -1925,7 +1936,7 @@ class ApiOutletController extends Controller
                     }
                 }
             }
-
+            MyHelper::updateOutletFile($data_pin);
             DB::commit();
 
             if($save??false) return ['status' => 'success', 'message' => $countImport.' data successfully imported. Failed save outlet : '.implode(", ",$failedImport)];
@@ -2713,5 +2724,22 @@ class ApiOutletController extends Controller
     public function resetNotify()
     {
         Outlet::where('notify_admin',1)->update(['notify_admin'=>0]);
+    }
+
+    public function exportPin(Request $request)
+    {
+        $pin = MyHelper::getOutletFile();
+        $outlets = Outlet::select('id_outlet', 'outlet_code', 'outlet_name')->whereNotNull('outlet_pin')->whereIn('id_outlet',array_keys($pin))->get()->toArray();
+        foreach ($outlets as $key => &$outlet) {
+            $outlet['pin'] = $pin[$outlet['id_outlet']];
+        }
+        if (!$outlets) {
+            $outlets[] = [
+                'outlet_code' => null,
+                'outlet_name' => 'No saved Outlet PINs found',
+                'pin' => null
+            ];
+        }
+        return MyHelper::checkGet($outlets);
     }
 }

@@ -24,6 +24,9 @@ class ApiDealsWebview extends Controller
     {
         $deals = Deal::with([
         			'brand', 
+        			'outlets' => function($q) {
+        				$q->where('outlet_status', 'Active');
+        			},
         			'outlets.city', 
         			'deals_content' => function($q){
         				$q->where('is_active',1);
@@ -40,6 +43,7 @@ class ApiDealsWebview extends Controller
             $outlets = Outlet::join('brand_outlet', 'outlets.id_outlet', '=', 'brand_outlet.id_outlet')
                 ->join('deals', 'deals.id_brand', '=', 'brand_outlet.id_brand')
                 ->where('deals.id_deals', $deals['id_deals'])
+                ->where('outlet_status','Active')
                 ->select('outlets.*')->with('city')->get()->toArray();
             $deals['outlets'] = $outlets;
         }
@@ -97,12 +101,12 @@ class ApiDealsWebview extends Controller
             'deals_second_title'            => $deals['deals_second_title'],
             'deals_description'             => $deals['deals_description'],
             'custom_outlet_text'            => $deals['custom_outlet_text'],
-            'deals_button'                  => 'Claim',
+            'deals_button'                  => 'Beli',
             'time_server'                   => date('Y-m-d H:i:s'),
             'time_to_end'                   => strtotime($deals['deals_end']) - time(),
             'button_text'                   => 'Get',
-            'payment_message'               => 'Are you sure want to claim Free Voucher Offline x Online Limited voucher ?',
-            'payment_success_message'       => 'Claim Voucher Success ! Do you want to use it now ?',
+            // 'payment_message'               => 'Are you sure want to claim Free Voucher Offline x Online Limited voucher ?',
+            'payment_success_message'       => 'Beli Kupon Berhasil! Apakah Anda ingin menggunakannya sekarang?',
             'user_point'                    => Auth()->user()->balance,
             'deals_start_indo'              => MyHelper::dateFormatInd($deals['deals_start'], false, false).' pukul '.date('H:i', strtotime($deals['deals_start'])),
             'deals_end_indo'                => MyHelper::dateFormatInd($deals['deals_end'], false, false).' pukul '.date('H:i', strtotime($deals['deals_end'])),
@@ -110,10 +114,15 @@ class ApiDealsWebview extends Controller
         ];
         if ($deals['deals_voucher_price_cash'] != "") {
             $result['deals_price'] = MyHelper::requestNumber($deals['deals_voucher_price_cash'], '_CURRENCY');
+            $result['payment_message'] = 'Anda yakin ingin membeli kupon ini dengan Cash?';
         } elseif ($deals['deals_voucher_price_point']) {
             $result['deals_price'] = MyHelper::requestNumber($deals['deals_voucher_price_point'], '_POINT') . " points";
+            $result['payment_message'] = 'Anda yakin ingin membeli kupon ini dengan Jiwa Poin?';
         } else {
             $result['deals_price'] = "Free";
+            $result['payment_message'] = 'Anda akan mengklaim promo GRATIS ini?';
+            $result['deals_button'] = 'Klaim';
+            $result['payment_success_message'] = 'Klaim Kupon Berhasil! Apakah Anda ingin menggunakannya sekarang?';
         }
 
         $i = 0;
