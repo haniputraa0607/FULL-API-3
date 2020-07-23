@@ -247,9 +247,7 @@ class ApiDisburseController extends Controller
 
         $data = Disburse::join('disburse_outlet', 'disburse.id_disburse', 'disburse_outlet.id_disburse')
             ->join('outlets', 'outlets.id_outlet', 'disburse_outlet.id_outlet')
-            ->leftJoin('bank_name', 'bank_name.bank_code', 'disburse.beneficiary_bank_name')
-                ->select('disburse_outlet.id_disburse_outlet', 'outlets.outlet_name', 'outlets.outlet_code', 'disburse.id_disburse', 'disburse_outlet.disburse_nominal', 'disburse.disburse_status', 'disburse.beneficiary_account_number',
-                'disburse.beneficiary_name', 'disburse.created_at', 'disburse.updated_at', 'bank_name.bank_code', 'bank_name.bank_name', 'disburse.count_retry', 'disburse.error_message')->orderBy('disburse.created_at','desc');
+            ->leftJoin('bank_name', 'bank_name.bank_code', 'disburse.beneficiary_bank_name');
 
         if(isset($post['id_disburse']) && !is_null($post['id_disburse'])){
             $data->where('disburse.id_disburse', $post['id_disburse']);
@@ -373,7 +371,19 @@ class ApiDisburseController extends Controller
             }
         }
 
-        $data = $data->paginate(25);
+        if(isset($post['export']) && $post['export'] == 1){
+            $data = $data->selectRaw('DATE_FORMAT(disburse.created_at, "%d %M %Y %H:%i") as "Date", CONCAT(outlets.outlet_code, " - ", outlets.outlet_name) as "Outlet", FORMAT(disburse_outlet.disburse_nominal, 2) as "Nominal",
+                FORMAT(total_fee_item, 2) as "Total Fee Item", FORMAT(total_omset, 2) as "Total Grand Total", FORMAT(total_discount, 2) as "Total Discount Charge", FORMAT(total_delivery_price, 2) as "Total Delivery", FORMAT(total_payment_charge, 2) as "Total Payment Charge",
+                FORMAT(total_point_use_expense, 2) as "Total Point Use Charge", FORMAT(total_subscription, 2) as "Total Subscription Charge",
+                bank_name.bank_name as "Bank Name", CONCAT(" ",disburse.beneficiary_account_number) as "Account Number", disburse.beneficiary_name as "Recipient Name "')
+                ->get()->toArray();
+
+        }else{
+            $data = $data->select('disburse_outlet.id_disburse_outlet', 'outlets.outlet_name', 'outlets.outlet_code', 'disburse.id_disburse', 'disburse_outlet.disburse_nominal', 'disburse.disburse_status', 'disburse.beneficiary_account_number',
+                    'disburse.beneficiary_name', 'disburse.created_at', 'disburse.updated_at', 'bank_name.bank_code', 'bank_name.bank_name', 'disburse.count_retry', 'disburse.error_message')->orderBy('disburse.created_at','desc')
+                    ->paginate(25);
+        }
+
         return response()->json(MyHelper::checkGet($data));
     }
 
@@ -636,7 +646,13 @@ class ApiDisburseController extends Controller
         $data = Transaction::join('disburse_outlet_transactions', 'disburse_outlet_transactions.id_transaction', 'transactions.id_transaction')
             ->leftJoin('transaction_payment_balances', 'transaction_payment_balances.id_transaction', 'transactions.id_transaction')
             ->where('disburse_outlet_transactions.id_disburse_outlet', $id)
-            ->select('disburse_outlet_transactions.*', 'transactions.*', 'transaction_payment_balances.balance_nominal')->paginate(25);
+            ->select('disburse_outlet_transactions.*', 'transactions.*', 'transaction_payment_balances.balance_nominal');
+
+        if(isset($post['export']) && $post['export'] == 1){
+            $data = $data->get()->toArray();
+        }else{
+            $data = $data->paginate(25);
+        }
 
         $result = [
             'status' => 'success',

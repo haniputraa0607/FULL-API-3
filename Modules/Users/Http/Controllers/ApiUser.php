@@ -909,7 +909,7 @@ class ApiUser extends Controller
                     'status' => 'success',
                     'result' => $data,
                     'otp_timer' => $holdTime,
-                    'confirmation_message' => 'Anda akan mendaftar menggunakan nomor '.$phone.'. Apakah nomor telepon yang Anda masukkan sudah benar?',
+                    'confirmation_message' => 'Anda akan mendaftar menggunakan nomor <b>'.$phone.'</b>. Apakah nomor telepon yang Anda masukkan sudah benar?',
                     'messages' => null
                 ]);
             }else{
@@ -924,7 +924,7 @@ class ApiUser extends Controller
             return response()->json([
                 'status' => 'fail',
                 'otp_timer' => $holdTime,
-                'confirmation_message' => 'Anda akan mendaftar menggunakan nomor '.$phone.'. Apakah nomor telepon yang Anda masukkan sudah benar?',
+                'confirmation_message' => 'Anda akan mendaftar menggunakan nomor <b>'.$phone.'</b>. Apakah nomor telepon yang Anda masukkan sudah benar?',
                 'messages' => ['empty!']
             ]);
         }
