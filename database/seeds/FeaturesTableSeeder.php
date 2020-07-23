@@ -2641,6 +2641,56 @@ class FeaturesTableSeeder extends Seeder
                     'created_at' => '2018-05-10 08:00:00',
                     'updated_at' => '2018-05-10 08:00:00',
                 ),
+            263 =>
+                array(
+                    'id_feature' => 264,
+                    'feature_type' => 'List',
+                    'feature_module' => 'Welcome Subscription',
+                    'show_hide' => 1,
+                    'order' => 110,
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00'),
+                ),
+            264 =>
+                array(
+                    'id_feature' => 265,
+                    'feature_type' => 'Detail',
+                    'feature_module' => 'Welcome Subscription',
+                    'show_hide' => 1,
+                    'order' => 110,
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00'),
+                ),
+            265 =>
+                array(
+                    'id_feature' => 266,
+                    'feature_type' => 'Create',
+                    'feature_module' => 'Welcome Subscription',
+                    'show_hide' => 1,
+                    'order' => 110,
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00'),
+                ),
+            266 =>
+                array(
+                    'id_feature' => 267,
+                    'feature_type' => 'Update',
+                    'feature_module' => 'Welcome Subscription',
+                    'show_hide' => 1,
+                    'order' => 110,
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00'),
+                ),
+            267 =>
+                array(
+                    'id_feature' => 268,
+                    'feature_type' => 'Delete',
+                    'feature_module' => 'Welcome Subscription',
+                    'show_hide' => 1,
+                    'order' => 110,
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00'),
+                ),
         ));
     }
 }
