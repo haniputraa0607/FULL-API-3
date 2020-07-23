@@ -2723,7 +2723,13 @@ class ApiOutletController extends Controller
     }
     public function resetNotify()
     {
-        Outlet::where('notify_admin',1)->update(['notify_admin'=>0]);
+        $log = MyHelper::logCron('Reset Notify Flag');
+        try {
+            Outlet::where('notify_admin',1)->update(['notify_admin'=>0]);
+            $log->success();
+        } catch (\Exception $e) {
+            $log->fail($e->getMessage());
+        }
     }
 
     public function exportPin(Request $request)

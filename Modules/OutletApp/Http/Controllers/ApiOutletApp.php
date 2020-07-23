@@ -1367,6 +1367,9 @@ class ApiOutletApp extends Controller
                                 $transaction = TransactionPaymentOvo::where('transaction_payment_ovos.id_transaction', $post['id_transaction'])
                                     ->join('transactions','transactions.id_transaction','=','transaction_payment_ovos.id_transaction')
                                     ->first();
+                                TransactionPickup::where('id_transaction', $order->id_transaction)->update([
+                                    'reject_type'   => 'refund',
+                                ]);
                                 $refund = Ovo::Void($transaction);
                                 if ($refund['status_code'] != '200') {
                                     DB::rollback();
@@ -1436,15 +1439,15 @@ class ApiOutletApp extends Controller
                     $point = 0;
                     if(MyHelper::setting('refund_midtrans')){
                         $refund = Midtrans::refund($order['transaction_receipt_number'],['reason' => $post['reason']??'']);
+                        TransactionPickup::where('id_transaction', $order->id_transaction)->update([
+                            'reject_type'   => 'refund',
+                        ]);
                         if ($refund['status'] != 'success') {
                             DB::rollback();
                             return response()->json($refund);
                         }
                     } else {
                         $refund = app($this->balance)->addLogBalance( $order['id_user'], $point = $payMidtrans['gross_amount'], $order['id_transaction'], 'Rejected Order Midtrans', $order['transaction_grandtotal']);
-                        TransactionPickup::where('id_transaction', $order->id_transaction)->update([
-                            'reject_type'   => 'refund',
-                        ]);
                         if ($refund == false) {
                             DB::rollback();
                             return response()->json([
