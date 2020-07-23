@@ -48,6 +48,10 @@ class ApiSubscription extends Controller
 
         $data = [];
 
+        if (isset($post['subscription_type'])) {
+        	$data['subscription_type'] = $post['subscription_type'];
+        }
+
         if (isset($post['id_subscription'])) {
             $data['id_subscription'] = $post['id_subscription'];
         }
@@ -896,7 +900,6 @@ class ApiSubscription extends Controller
         $user = $request->user();
         $curBalance = (int) $user->balance??0;
 
-        // return $post;
         if ($request->json('forSelect2')) {
             return MyHelper::checkGet($subs->with(['outlets', 'users'])->whereDoesntHave('featured_subscriptions')->get());
         }
@@ -910,6 +913,11 @@ class ApiSubscription extends Controller
         if ( empty($request->json('admin')) ) {
             $subs = $subs->whereNotNull('subscription_step_complete');
         }
+
+        if ( $request->json('with_brand') ) {
+            $subs = $subs->with('brand');
+        }
+
         if ($request->json('id_subscription')) {
             // add content for detail subscription
             $subs = $subs->where('id_subscription', '=', $request->json('id_subscription'))
@@ -939,6 +947,10 @@ class ApiSubscription extends Controller
 
         if ($request->json('publish')) {
             $subs = $subs->where('subscription_publish_end', '>=', date('Y-m-d H:i:s'));
+        }
+
+        if ($request->json('subscription_type')) {
+            $subs = $subs->where('subscription_type', '=', $request->json('subscription_type'));
         }
 
         if ($request->json('key_free')) {

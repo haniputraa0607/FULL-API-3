@@ -91,14 +91,15 @@ class ApiReportPayment extends Controller
     public function filterMidtrans($post){
         $deals = DealsPaymentMidtran::join('deals_users', 'deals_users.id_deals_user', 'deals_payment_midtrans.id_deals_user')
             ->leftJoin('users', 'users.id', 'deals_users.id_user')
-            ->selectRaw("deals_users.paid_status as payment_status, payment_type, deals_payment_midtrans.id_deals AS id_report, NULL AS trx_type, NULL AS receipt_number, 'Deals' AS type, deals_payment_midtrans.created_at, deals_users.`voucher_price_cash` AS grand_total, gross_amount, users.name, users.phone, users.email");
+            ->selectRaw("NULL as reject_type, deals_users.paid_status as payment_status, payment_type, deals_payment_midtrans.id_deals AS id_report, NULL AS trx_type, NULL AS receipt_number, 'Deals' AS type, deals_payment_midtrans.created_at, deals_users.`voucher_price_cash` AS grand_total, gross_amount, users.name, users.phone, users.email");
         $subscription = SubscriptionPaymentMidtran::join('subscription_users', 'subscription_users.id_subscription_user', 'subscription_payment_midtrans.id_subscription_user')
             ->leftJoin('users', 'users.id', 'subscription_users.id_user')
-            ->selectRaw("subscription_users.paid_status as payment_status, payment_type, subscription_payment_midtrans.id_subscription AS id_report, NULL AS trx_type, NULL AS receipt_number, 'Subscription' AS type, subscription_payment_midtrans.created_at, subscription_users.`subscription_price_cash` AS grand_total, gross_amount, users.name, users.phone, users.email");
+            ->selectRaw("NULL as reject_type, subscription_users.paid_status as payment_status, payment_type, subscription_payment_midtrans.id_subscription AS id_report, NULL AS trx_type, NULL AS receipt_number, 'Subscription' AS type, subscription_payment_midtrans.created_at, subscription_users.`subscription_price_cash` AS grand_total, gross_amount, users.name, users.phone, users.email");
 
         $trx = TransactionPaymentMidtran::join('transactions', 'transactions.id_transaction', 'transaction_payment_midtrans.id_transaction')
             ->leftJoin('users', 'users.id', 'transactions.id_user')
-            ->selectRaw("transactions.transaction_payment_status as payment_status, payment_type,  transactions.id_transaction AS id_report, transactions.trasaction_type AS trx_type, transactions.transaction_receipt_number AS receipt_number, 'Transaction' AS type, transaction_payment_midtrans.created_at, transactions.`transaction_grandtotal` AS grand_total, gross_amount, users.name, users.phone, users.email");
+            ->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+            ->selectRaw("(CASE WHEN transaction_pickups.reject_type = 'point' THEN 'Reject To Point' ELSE 'Not Reject' END) as reject_type, transactions.transaction_payment_status as payment_status, payment_type,  transactions.id_transaction AS id_report, transactions.trasaction_type AS trx_type, transactions.transaction_receipt_number AS receipt_number, 'Transaction' AS type, transaction_payment_midtrans.created_at, transactions.`transaction_grandtotal` AS grand_total, gross_amount, users.name, users.phone, users.email");
 
         if(isset($post['date_start']) && !empty($post['date_start']) &&
             isset($post['date_end']) && !empty($post['date_end'])){
@@ -122,7 +123,11 @@ class ApiReportPayment extends Controller
             if($checkFilterStatus === false){
                 $deals = $deals->where('deals_users.paid_status', 'Completed');
                 $subscription = $subscription->where('subscription_users.paid_status', 'Completed');
-                $trx = $trx->where('transactions.transaction_payment_status', 'Completed');
+                $trx = $trx->where('transactions.transaction_payment_status', 'Completed')
+                    ->where(function ($q){
+                        $q->whereNull('transaction_pickups.reject_type')
+                            ->orWhere('transaction_pickups.reject_type', 'point');
+                    });
             }
 
             $rule = 'and';
@@ -198,6 +203,14 @@ class ApiReportPayment extends Controller
                                 $trx = $trx->where('transactions.transaction_receipt_number',$row['parameter']);
                             }else{
                                 $trx = $trx->where('transactions.transaction_receipt_number', 'like', '%'.$row['parameter'].'%');
+                            }
+                        }
+
+                        if($row['subject'] == 'reject_type'){
+                            if($row['operator'] == 0){
+                                $trx = $trx->whereNull('transaction_pickups.reject_at');
+                            }else{
+                                $trx = $trx->where('transaction_pickups.reject_type', 'point');
                             }
                         }
                     }
@@ -386,6 +399,14 @@ class ApiReportPayment extends Controller
                                         $subquery = $subquery->orWhere('transactions.transaction_receipt_number', 'like', '%'.$row['parameter'].'%');
                                     }
                                 }
+
+                                if($row['subject'] == 'reject_type'){
+                                    if($row['operator'] == 0){
+                                        $subquery = $subquery->orWhereNull('transaction_pickups.reject_at');
+                                    }else{
+                                        $subquery = $subquery->orWhere('transaction_pickups.reject_type', 'point');
+                                    }
+                                }
                             }
                         }
                     });
@@ -394,7 +415,11 @@ class ApiReportPayment extends Controller
         }else{
             $deals = $deals->where('deals_users.paid_status', 'Completed');
             $subscription = $subscription->where('subscription_users.paid_status', 'Completed');
-            $trx = $trx->where('transactions.transaction_payment_status', 'Completed');
+            $trx = $trx->where('transactions.transaction_payment_status', 'Completed')
+                    ->where(function ($q){
+                        $q->whereNull('transaction_pickups.reject_type')
+                            ->orWhere('transaction_pickups.reject_type', 'point');
+                    });
         }
 
         //union by type user choose
@@ -423,7 +448,7 @@ class ApiReportPayment extends Controller
         $filter = $this->filterIpay88($post);
 
         if(isset($post['conditions']) && !empty($post['conditions'])){
-            $sum = $filter->sum('gross_amount');
+            $sum = $filter->sum('amount');
         }else{
             $dealsSum = DailyReportPaymentDeals::where('payment_type', 'Ipay88');
             $trxSum = DailyReportPayment::where('payment_type', 'Ipay88');
@@ -463,13 +488,14 @@ class ApiReportPayment extends Controller
 
         $deals = DealsPaymentIpay88::join('deals_users', 'deals_users.id_deals_user', 'deals_payment_ipay88s.id_deals_user')
             ->leftJoin('users', 'users.id', 'deals_users.id_user')
-            ->selectRaw("deals_users.paid_status as payment_status, deals_payment_ipay88s.payment_method as payment_type, deals_payment_ipay88s.id_deals AS id_report, NULL AS trx_type, NULL AS receipt_number, 'Deals' AS type, deals_payment_ipay88s.created_at, deals_users.`voucher_price_cash` AS grand_total, (amount/100) as gross_amount, users.name, users.phone, users.email");
+            ->selectRaw("NULL as reject_type, deals_users.paid_status as payment_status, deals_payment_ipay88s.payment_method as payment_type, deals_payment_ipay88s.id_deals AS id_report, NULL AS trx_type, NULL AS receipt_number, 'Deals' AS type, deals_payment_ipay88s.created_at, deals_users.`voucher_price_cash` AS grand_total, (amount/100) as amount, users.name, users.phone, users.email");
         $subscription = SubscriptionPaymentIpay88::join('subscription_users', 'subscription_users.id_subscription_user', 'subscription_payment_ipay88s.id_subscription_user')
             ->leftJoin('users', 'users.id', 'subscription_users.id_user')
-            ->selectRaw("subscription_users.paid_status as payment_status, subscription_payment_ipay88s.payment_method as payment_type, subscription_payment_ipay88s.id_subscription AS id_report, NULL AS trx_type, NULL AS receipt_number, 'Subscription' AS type, subscription_payment_ipay88s.created_at, subscription_users.`subscription_price_cash` AS grand_total, (amount/100) as gross_amount, users.name, users.phone, users.email");
+            ->selectRaw("NULL as reject_type, subscription_users.paid_status as payment_status, subscription_payment_ipay88s.payment_method as payment_type, subscription_payment_ipay88s.id_subscription AS id_report, NULL AS trx_type, NULL AS receipt_number, 'Subscription' AS type, subscription_payment_ipay88s.created_at, subscription_users.`subscription_price_cash` AS grand_total, (amount/100) as amount, users.name, users.phone, users.email");
         $trx = TransactionPaymentIpay88::join('transactions', 'transactions.id_transaction', 'transaction_payment_ipay88s.id_transaction')
             ->leftJoin('users', 'users.id', 'transactions.id_user')
-            ->selectRaw("transactions.transaction_payment_status as payment_status, transaction_payment_ipay88s.payment_method as payment_type,  transactions.id_transaction AS id_report, transactions.trasaction_type AS trx_type, transactions.transaction_receipt_number AS receipt_number, 'Transaction' AS type, transaction_payment_ipay88s.created_at, transactions.`transaction_grandtotal` AS grand_total, (amount/100) as gross_amount, users.name, users.phone, users.email")
+            ->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+            ->selectRaw("(CASE WHEN transaction_pickups.reject_type = 'point' THEN 'Reject To Point' ELSE 'Not Reject' END) as reject_type, transactions.transaction_payment_status as payment_status, transaction_payment_ipay88s.payment_method as payment_type,  transactions.id_transaction AS id_report, transactions.trasaction_type AS trx_type, transactions.transaction_receipt_number AS receipt_number, 'Transaction' AS type, transaction_payment_ipay88s.created_at, transactions.`transaction_grandtotal` AS grand_total, (amount/100) as amount, users.name, users.phone, users.email")
             ->orderBy('created_at', 'desc');
 
         if(isset($post['date_start']) && !empty($post['date_start']) &&
@@ -494,7 +520,11 @@ class ApiReportPayment extends Controller
             if($checkFilterStatus === false){
                 $deals = $deals->where('deals_users.paid_status', 'Completed');
                 $subscription = $subscription->where('subscription_users.paid_status', 'Completed');
-                $trx = $trx->where('transactions.transaction_payment_status', 'Completed');
+                $trx = $trx->where('transactions.transaction_payment_status', 'Completed')
+                        ->where(function ($q){
+                            $q->whereNull('transaction_pickups.reject_type')
+                                ->orWhere('transaction_pickups.reject_type', 'point');
+                        });
             }
 
             $rule = 'and';
@@ -570,6 +600,14 @@ class ApiReportPayment extends Controller
                                 $trx = $trx->where('transactions.transaction_receipt_number',$row['parameter']);
                             }else{
                                 $trx = $trx->where('transactions.transaction_receipt_number', 'like', '%'.$row['parameter'].'%');
+                            }
+                        }
+
+                        if($row['subject'] == 'reject_type'){
+                            if($row['operator'] == 0){
+                                $trx = $trx->whereNull('transaction_pickups.reject_at');
+                            }else{
+                                $trx = $trx->where('transaction_pickups.reject_type', 'point');
                             }
                         }
                     }
@@ -758,6 +796,14 @@ class ApiReportPayment extends Controller
                                         $subquery = $subquery->orWhere('transactions.transaction_receipt_number', 'like', '%'.$row['parameter'].'%');
                                     }
                                 }
+
+                                if($row['subject'] == 'reject_type'){
+                                    if($row['operator'] == 0){
+                                        $subquery = $subquery->orWhereNull('transaction_pickups.reject_type');
+                                    }else{
+                                        $subquery = $subquery->orWhere('transaction_pickups.reject_type', 'point');
+                                    }
+                                }
                             }
                         }
                     });
@@ -766,7 +812,11 @@ class ApiReportPayment extends Controller
         }else{
             $deals = $deals->where('deals_users.paid_status', 'Completed');
             $subscription = $subscription->where('subscription_users.paid_status', 'Completed');
-            $trx = $trx->where('transactions.transaction_payment_status', 'Completed');
+            $trx = $trx->where('transactions.transaction_payment_status', 'Completed')
+                ->where(function ($q){
+                    $q->whereNull('transaction_pickups.reject_type')
+                        ->orWhere('transaction_pickups.reject_type', 'point');
+                });;
         }
 
         //union by type user choose
@@ -801,11 +851,12 @@ class ApiReportPayment extends Controller
 
                 yield [
                     'Date' => date('d M Y H:i', strtotime($val['created_at'])),
+                    'Reject type' => $val['reject_type'],
                     'Status' => $val['payment_status'],
                     'Type' => $val['type'],
                     'Payment Type' => $val['payment_type'],
                     'Grand Total' => $val['grand_total'],
-                    'Payment Amount' => (int)$val['gross_amount'],
+                    'Payment Amount' => (isset($val['gross_amount']) ? (int)$val['gross_amount']:(int)$val['amount']),
                     'User Name' => $val['name'],
                     'User Phone' => $val['phone'],
                     'User Email' => $val['email'],
