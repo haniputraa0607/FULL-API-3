@@ -260,7 +260,7 @@ class ApiMembershipWebview extends Controller
 			$membershipUser['progress_max']	= $result['all_membership'][$indexNow + 1]['min_value'];
 
 			//wording membership
-			$membershipUser['description']= 'Anda telah mengumpulkan '.$membershipUser['progress_now'].' badge, lengkapi '.$membershipUser['progress_max'].'lagi untuk menuju <b>'.strtoupper($result['all_membership'][$indexNow + 1]['membership_name']).'</b>';
+			$membershipUser['description']= 'Anda telah mengumpulkan '.$membershipUser['progress_now'].' badge, lengkapi '.$membershipUser['progress_max'].' badge lagi untuk menuju <b>'.strtoupper($result['all_membership'][$indexNow + 1]['membership_name']).'</b>';
 		} else {
 			$membershipUser['progress_max_text']	= MyHelper::requestNumber($result['all_membership'][$indexNow]['min_value'],'_CURRENCY');
 			$membershipUser['progress_max']	= $result['all_membership'][$indexNow]['min_value'];
