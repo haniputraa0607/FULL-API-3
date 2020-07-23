@@ -1822,7 +1822,7 @@ Message :
                     'autocrm_forward_email' => '',
                     'autocrm_forward_email_subject' => '',
                     'autocrm_forward_email_content' => '',
-                    'custom_text_replace'=>'%count_subscription%',
+                    'custom_text_replace'=>'%count_subscription%;',
                     'created_at' => date('Y-m-d H:i:s'),
                     'updated_at' => date('Y-m-d H:i:s'),
                 ),
