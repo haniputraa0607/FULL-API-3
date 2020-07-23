@@ -1,0 +1,14 @@
+{
+    "name": "KitchenDisplay",
+    "alias": "kitchendisplay",
+    "description": "",
+    "keywords": [],
+    "active": 1,
+    "order": 0,
+    "providers": [
+        "Modules\\KitchenDisplay\\Providers\\KitchenDisplayServiceProvider"
+    ],
+    "aliases": {},
+    "files": [],
+    "requires": []
+}
