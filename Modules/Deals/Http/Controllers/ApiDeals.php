@@ -1438,7 +1438,14 @@ class ApiDeals extends Controller
     function listDealV2(Request $request) {
         $deals = (new Deal)->newQuery();
         $deals->where('deals_type', '!=','WelcomeVoucher');
-        $deals->where('deals_publish_end', '>=', date('Y-m-d H:i:s'));
+        $deals->where( function($q) {
+        	$q->where('deals_publish_start', '<=', date('Y-m-d H:i:s'))
+        	->where('deals_publish_end', '>=', date('Y-m-d H:i:s'));
+        });
+        $deals->where( function($q) {
+        	$q->where('deals_voucher_type','Unlimited')
+        		->orWhereRaw('(deals.deals_total_voucher - deals.deals_total_claimed) > 0 ');
+        });
         $deals->where('step_complete', '=', 1);
 
         if ($request->json('id_outlet') && is_integer($request->json('id_outlet'))) {

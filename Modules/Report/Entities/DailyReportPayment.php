@@ -37,6 +37,7 @@ class DailyReportPayment extends Eloquent
 
 	protected $fillable = [
 		'trx_date',
+        'refund_with_point',
         'payment_type',
 		'id_outlet',
 		'trx_payment',

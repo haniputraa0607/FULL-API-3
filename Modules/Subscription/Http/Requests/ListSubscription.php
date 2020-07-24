@@ -18,7 +18,7 @@ class ListSubscription extends FormRequest
         return [
 
             'publish'                   => 'nullable',
-            'subscription_type'         => 'nullable|in:point,paid,free',
+            'subscription_type'         => 'nullable|in:point,paid,free,welcome,subscription,inject',
             'subscription_type_paid'    => 'nullable',
             'subscription_type_point'   => 'nullable',
             'subscription_type_free'    => 'nullable',
@@ -38,7 +38,8 @@ class ListSubscription extends FormRequest
             'highest_point'             => 'nullable',
             'lowest_point'              => 'nullable',
             'highest_price'             => 'nullable',
-            'lowest_price'              => 'nullable'
+            'lowest_price'              => 'nullable',
+            'with_brand'				=> 'nullable'
 
         ];
     }

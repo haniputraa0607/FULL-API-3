@@ -67,6 +67,7 @@ class ApiOutletAppReport extends Controller
 							DB::raw('FORMAT(trx_payment_nominal, 0, "de_DE") as trx_payment_nominal'), 
 							DB::raw('trx_payment')
 						)
+                        ->where('refund_with_point', '=', 0)
 						->where('id_outlet', '=', $post['id_outlet'])
 	    				->get();
 
