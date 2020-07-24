@@ -16,7 +16,7 @@ class AddMembershipCardToMembershipsTable extends Migration
         Schema::table('memberships', function (Blueprint $table) {
             $table->string('membership_card')->nullable()->after('membership_image');
         });
-        Schema::table('user_memberships', function (Blueprint $table) {
+        Schema::table('users_memberships', function (Blueprint $table) {
             $table->string('membership_card')->nullable()->after('membership_image');
         });
     }
@@ -31,7 +31,7 @@ class AddMembershipCardToMembershipsTable extends Migration
         Schema::table('memberships', function (Blueprint $table) {
             $table->dropColumn('membership_card');
         });
-        Schema::table('user_memberships', function (Blueprint $table) {
+        Schema::table('users_memberships', function (Blueprint $table) {
             $table->dropColumn('membership_card');
         });
     }
