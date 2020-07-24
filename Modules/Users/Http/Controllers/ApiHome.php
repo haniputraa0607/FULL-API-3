@@ -669,7 +669,7 @@ class ApiHome extends Controller
         $qrCode = 'https://chart.googleapis.com/chart?chl='.$qr.'&chs=250x250&cht=qr&chld=H%7C0';
         $qrCode = html_entity_decode($qrCode);
 
-        $membership = UsersMembership::select('memberships.membership_name')
+        $membership = UsersMembership::select('memberships.membership_name','memberships.membership_image')
                                     ->Join('memberships','memberships.id_membership','=','users_memberships.id_membership')
                                     ->where('id_user','=',$user->id)
                                     ->orderBy('id_log_membership','desc')
@@ -684,8 +684,10 @@ class ApiHome extends Controller
             $base = base64_encode($encode);
 
             $membership['webview_detail_membership'] = config('url.api_url').'api/membership/web/view?data='.$base;
+            $membership['membership_image'] = config('url.storage_url_api').$membership['membership_image'];
         } else {
             $membership = null;
+            $membership['membership_image'] = "";
         }
 
         $retUser=$user->toArray();

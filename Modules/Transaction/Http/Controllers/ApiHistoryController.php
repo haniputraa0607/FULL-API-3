@@ -197,8 +197,12 @@ class ApiHistoryController extends Controller
         $transaction = [];
         $voucher = [];
 
-        $transaction = $this->transaction($post, $id);
-        $voucher = $this->voucher($post, $id);
+        if($post['online_order'] == 1 || $post['offline_order'] == 1 || ($post['online_order'] == null && $post['offline_order'] == null && $post['voucher'] == null)) {
+            $transaction = $this->transaction($post, $id);
+        }
+        if($post['voucher'] == 1 || ($post['online_order'] == null && $post['offline_order'] == null && $post['voucher'] == null)){
+            $voucher = $this->voucher($post, $id);
+        }
 
         if (!is_null($post['sort'] ?? null)) {
             $order = $post['sort'];
@@ -397,11 +401,11 @@ class ApiHistoryController extends Controller
             $post['newest'] = null;
         }
 
-        if (!is_null($post['oldest'])) {
+        if ($post['sort'] == 'old') {
             $order = 'old';
         }
 
-        if (!is_null($post['newest'])) {
+        if ($post['sort'] == 'new') {
             $order = 'new';
         }
 
@@ -908,7 +912,9 @@ class ApiHistoryController extends Controller
                 });
         }
 
-        if (!is_null($post['voucher'])) {
+        if($post['voucher'] == 1 && $post['online_order'] == null && $post['offline_order'] == null){
+            $log->where('source', 'Deals Balance');
+        }elseif(!is_null($post['voucher'])){
             $log->orWhere(function ($queryLog) {
                 $queryLog->where('source', 'Deals Balance');
             });
