@@ -169,6 +169,7 @@ class ApiMembershipWebview extends Controller
 					unset($allMembership[$index]['updated_at']);
 					
 					$allMembership[$index]['membership_image'] = config('url.storage_url_api').$allMembership[$index]['membership_image'];
+					$allMembership[$index]['membership_card'] = config('url.storage_url_api').$allMembership[$index]['membership_card'];
 					// $allMembership[$index]['membership_bg_image'] = config('url.storage_url_api').$allMembership[$index]['membership_bg_image'];
 					$allMembership[$index]['membership_next_image'] = $allMembership[$index]['membership_next_image']?config('url.storage_url_api').$allMembership[$index]['membership_next_image']:null;
 					$allMembership[$index]['benefit_cashback_multiplier'] = $allMembership[$index]['benefit_cashback_multiplier'] * $settingCashback->value;
