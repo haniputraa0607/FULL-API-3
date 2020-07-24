@@ -109,6 +109,29 @@ class ApiMembership extends Controller
 						}
 					}
 
+					if (isset($membership['membership_card'])) {
+						if (!file_exists('img/membership/')) {
+							mkdir('img/membership/', 0777, true);
+						}
+
+						//delete photo
+						if($cur['membership_card']){
+							$deletephoto = MyHelper::deletePhoto($cur['membership_card']);
+						}
+						$upload = MyHelper::uploadPhotoStrict($membership['membership_card'], $path = 'img/membership/', 750, 375);
+
+						if ($upload['status'] == "success") {
+							$data['membership_card'] = $upload['path'];
+						} else{
+							DB::rollback();
+							$result = [
+									'status'	=> 'fail',
+									'messages'	=> ['Upload Membership Card failed.']
+								];
+							return response()->json($result);
+						}
+					}
+
 					if(!isset($membership['min_retain_value'])){
 						$membership['min_retain_value'] = null;
 					}
@@ -206,6 +229,9 @@ class ApiMembership extends Controller
 				if($cur['membership_next_image']){
 					$deletenextphoto = MyHelper::deletePhoto($cur['membership_next_image']);
 				}
+				if($cur['membership_card']){
+					$deleteCardPhoto = MyHelper::deletePhoto($cur['membership_card']);
+				}
 				$query = Membership::where('id_membership', $cur['id_membership'])->delete();
 			}
 		}
@@ -251,6 +277,24 @@ class ApiMembership extends Controller
 						$result = [
 								'status'	=> 'fail',
 								'messages'	=> ['Upload Membership Image failed.']
+							];
+						return response()->json($result);
+					}
+				}
+
+				if (isset($post['membership_card'])) {
+					if (!file_exists('img/membership/')) {
+						mkdir('img/membership/', 0777, true);
+					}
+					$upload = MyHelper::uploadPhotoStrict($post['membership_card'], $path = 'img/membership/', 750, 375);
+
+					if ($upload['status'] == "success") {
+						$post['membership_card'] = $upload['path'];
+					} else{
+						DB::rollback();
+						$result = [
+								'status'	=> 'fail',
+								'messages'	=> ['Upload Membership Card failed.']
 							];
 						return response()->json($result);
 					}
@@ -735,6 +779,7 @@ class ApiMembership extends Controller
 				$data['membership_name_color'] 			= $membership_baru['membership_name_color'];
 				$data['membership_image'] 				= $membership_baru['membership_image'];
 				$data['membership_next_image'] 			= $membership_baru['membership_next_image'];
+				$data['membership_card'] 				= $membership_baru['membership_card'];
 				$data['membership_type'] 				= $membership_baru['membership_type'];
 				$data['min_total_value'] 				= $membership_baru['min_total_value'];
 				$data['min_total_count'] 				= $membership_baru['min_total_count'];
@@ -852,6 +897,7 @@ class ApiMembership extends Controller
 				$data['membership_name_color'] 			= $membership_baru['membership_name_color'];
 				$data['membership_image'] 				= $membership_baru['membership_image'];
 				$data['membership_next_image'] 			= $membership_baru['membership_next_image'];
+				$data['membership_card'] 				= $membership_baru['membership_card'];
 				$data['membership_type'] 				= $membership_baru['membership_type'];
 				$data['min_total_value'] 				= $membership_baru['min_total_value'];
 				$data['min_total_count'] 				= $membership_baru['min_total_count'];
