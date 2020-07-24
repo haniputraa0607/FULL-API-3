@@ -286,7 +286,7 @@ class ApiMembership extends Controller
 					if (!file_exists('img/membership/')) {
 						mkdir('img/membership/', 0777, true);
 					}
-					$upload = MyHelper::uploadPhotoStrict($post['membership_card'], $path = 'img/membership/', 75, 75);
+					$upload = MyHelper::uploadPhotoStrict($post['membership_card'], $path = 'img/membership/', 750, 375);
 
 					if ($upload['status'] == "success") {
 						$post['membership_card'] = $upload['path'];
