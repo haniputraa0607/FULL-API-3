@@ -151,6 +151,13 @@ class ApiConfirm extends Controller
 
         if ($check['transaction_payment_subscription']) {
             $countGrandTotal -= $check['transaction_payment_subscription']['subscription_nominal'];
+            $dataDis = [
+                'id'       => null,
+                'price'    => -abs($check['transaction_payment_subscription']['subscription_nominal']),
+                'name'     => 'Subscription',
+                'quantity' => 1,
+            ];
+            array_push($dataDetailProduct, $dataDis);
         }
 
         $detailPayment = [
