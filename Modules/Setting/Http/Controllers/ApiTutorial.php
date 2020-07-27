@@ -52,7 +52,7 @@ class ApiTutorial extends Controller
                 if (explode('=', $value)[0] == 'value') {
                     $value_text[] = explode('=', $value)[1];
                 } else {
-                    $upload = MyHelper::uploadPhoto($value, $path = 'img/intro/', 1080);
+                    $upload = MyHelper::uploadPhotoStrict($value, $path = 'img/intro/', 1080, 1920);
                     if ($upload['status'] == "success") {
                         $value_text[] = $upload['path'];
                     } else {
