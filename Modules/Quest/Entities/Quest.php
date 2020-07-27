@@ -19,4 +19,8 @@ class Quest extends Model
         'publish_end',
         'description'
     ];
+    
+    public function getIdQuestAttribute($value) {
+        return \App\Lib\MyHelper::encSlug($value);
+    }
 }

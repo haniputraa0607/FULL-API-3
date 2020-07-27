@@ -40,7 +40,7 @@ class ApiHome extends Controller
 		$this->point  = "Modules\Deals\Http\Controllers\ApiDealsClaim";
 		$this->autocrm  = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
         $this->setting_fraud = "Modules\SettingFraud\Http\Controllers\ApiFraud";
-		$this->endPoint  = env('S3_URL_API');
+		$this->endPoint  = config('url.storage_url_api');
         $this->deals = "Modules\Deals\Http\Controllers\ApiDeals";
     }
 
@@ -71,7 +71,16 @@ class ApiHome extends Controller
     public function getBanner()
     {
         // banner
-        $banners = Banner::orderBy('position')->where('banner_start', '<=', date('Y-m-d H:i:s'))->where('banner_end', '>=', date('Y-m-d H:i:s'))->get();
+        $banners = Banner::orderBy('position')
+            ->where('banner_start', '<=', date('Y-m-d H:i:s'))
+            ->where('banner_end', '>=', date('Y-m-d H:i:s'))
+            ->where(function($query) {
+                $query->where('time_start', "<=", date("H:i:s"))
+                    ->where('time_end', ">=", date("H:i:s"))
+                    ->orWhereNull('time_start')
+                    ->orWhereNull('time_end');
+            })->get();
+
         $gofood = 0;
         $setting = Setting::where('key', 'banner-gofood')->first();
         if (!empty($setting)) {
@@ -85,7 +94,7 @@ class ApiHome extends Controller
 
         foreach ($banners as $key => $value) {
 
-            $item['image_url']  = env('S3_URL_API').$value->image;
+            $item['image_url']  = config('url.storage_url_api').$value->image;
             $item['type']       = 'none';
             $item['id_news']    = $value->id_news;
             $item['news_title'] = "";
@@ -99,17 +108,22 @@ class ApiHome extends Controller
                 $item['type']       = 'news';
                 $item['news_title'] = $value->news->news_title;
                 // if news, generate webview news detail url
-                $item['url']        = env('API_URL') .'news/webview/'. $value->id_news;
+                $item['url']        = config('url.api_url') .'news/webview/'. $value->id_news;
             }elseif ($value->type == 'gofood') {
                 $item['type']       = 'gofood';
                 $item['id_news'] = 99999999;
                 $item['news_title'] = "GO-FOOD";
-                $item['url']     = env('APP_URL').'outlet/webview/gofood/list';
+                $item['url']     = config('url.app_url').'outlet/webview/gofood/list';
             }elseif ($value->type == 'referral') {
                 $item['type']       = 'referral';
                 $item['id_news'] = 999999999;
                 $item['news_title'] = "Referral";
-                $item['url']     = env('API_URL') . 'api/referral/webview';
+                $item['url']     = config('url.api_url') . 'api/referral/webview';
+            }elseif ($value->type == 'order') {
+                $item['type']       = 'order';
+                $item['id_news'] = null;
+                $item['news_title'] = null;
+                $item['url']     = null;
             }
             array_push($array, $item);
         }
@@ -254,7 +268,7 @@ class ApiHome extends Controller
                     $greetingss2     = app($this->autocrm)->TextReplace($greetings[$greetingKey]['greeting2'], $user['phone']);
                     if (!empty($background)) {
 						$backgroundKey = array_rand($background, 1);
-						$background    = env('S3_URL_API').$background[$backgroundKey]['picture'];
+						$background    = config('url.storage_url_api').$background[$backgroundKey]['picture'];
 					}
                 }
             }
@@ -296,9 +310,9 @@ class ApiHome extends Controller
                 $encode = json_encode($dataEncode);
                 $base = base64_encode($encode);
 
-                $membership['webview_detail_membership'] = env('API_URL').'api/membership/web/view?data='.$base;
+                $membership['webview_detail_membership'] = config('url.api_url').'api/membership/web/view?data='.$base;
 				if(isset($membership['membership_image']))
-					$membership['membership_image'] = env('S3_URL_API').$membership['membership_image'];
+					$membership['membership_image'] = config('url.storage_url_api').$membership['membership_image'];
 			} else {
 				$membership = null;
 			}
@@ -320,7 +334,7 @@ class ApiHome extends Controller
             // webview: user profile form
             $webview_url = "";
             $popup_text = "";
-            $webview_link = env('APP_URL') . 'webview/complete-profile';
+            $webview_link = config('url.app_url') . 'webview/complete-profile';
 
             // check user profile completeness (if there is null data)
             if ($user->id_city=="" || $user->gender=="" || $user->birthday=="") {
@@ -471,7 +485,7 @@ class ApiHome extends Controller
                 }
                 else {
                     $backgroundKey = array_rand($background, 1);
-                    $background    = env('S3_URL_API').$background[$backgroundKey]['picture'];
+                    $background    = config('url.storage_url_api').$background[$backgroundKey]['picture'];
                 }
             }
 
@@ -569,10 +583,6 @@ class ApiHome extends Controller
                 return response()->json(['status' => 'fail', 'messages' => ['Send notification failed']]);
             }
 
-            $setting = Setting::where('key','welcome_voucher_setting')->first()->value;
-            if($setting == 1){
-                $injectVoucher = app($this->deals)->injectWelcomeVoucher(['id' => $user['id']], $user['phone']);
-            }
             $user->first_login=1;
             $user->save();
         }
@@ -659,7 +669,7 @@ class ApiHome extends Controller
         $qrCode = 'https://chart.googleapis.com/chart?chl='.$qr.'&chs=250x250&cht=qr&chld=H%7C0';
         $qrCode = html_entity_decode($qrCode);
 
-        $membership = UsersMembership::select('memberships.membership_name')
+        $membership = UsersMembership::select('memberships.membership_name','memberships.membership_image')
                                     ->Join('memberships','memberships.id_membership','=','users_memberships.id_membership')
                                     ->where('id_user','=',$user->id)
                                     ->orderBy('id_log_membership','desc')
@@ -673,9 +683,11 @@ class ApiHome extends Controller
             $encode = json_encode($dataEncode);
             $base = base64_encode($encode);
 
-            $membership['webview_detail_membership'] = env('API_URL').'api/membership/web/view?data='.$base;
+            $membership['webview_detail_membership'] = config('url.api_url').'api/membership/web/view?data='.$base;
+            $membership['membership_image'] = config('url.storage_url_api').$membership['membership_image'];
         } else {
             $membership = null;
+            $membership['membership_image'] = "";
         }
 
         $retUser=$user->toArray();
@@ -685,7 +697,7 @@ class ApiHome extends Controller
         }
 
         if($retUser['id_card_image']??false){
-            $retUser['id_card_image'] = env('S3_URL_API').$retUser['id_card_image'];
+            $retUser['id_card_image'] = config('url.storage_url_api').$retUser['id_card_image'];
         }
         array_walk_recursive($retUser, function(&$it,$ix){
             if($it==null&&!in_array($ix, ['city','membership'])){

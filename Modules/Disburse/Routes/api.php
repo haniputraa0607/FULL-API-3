@@ -25,9 +25,11 @@ Route::group(['prefix' => 'disburse'], function () {
         Route::any('setting/bank-name/edit/{id}', 'ApiDisburseSettingController@bankNameEdit');
 
         //settings bank
-        Route::any('setting/bank-account', 'ApiDisburseSettingController@updateBankAccount');
+        Route::any('setting/bank-account', 'ApiDisburseSettingController@addBankAccount');
+        Route::any('setting/edit-bank-account', 'ApiDisburseSettingController@editBankAccount');
         Route::any('setting/import-bank-account-outlet', 'ApiDisburseSettingController@importBankAccount');
         Route::any('bank', 'ApiDisburseSettingController@getBank');
+        Route::any('setting/list-bank-account', 'ApiDisburseSettingController@listBankAccount');
 
         //settings mdr
         Route::get('setting/mdr', 'ApiDisburseSettingController@getMdr');
@@ -40,6 +42,7 @@ Route::group(['prefix' => 'disburse'], function () {
 
         //disburse
         Route::post('list/trx', 'ApiDisburseController@listTrx');
+        Route::post('list/fail-action', 'ApiDisburseController@listDisburseFailAction');
         Route::post('list/{status}', 'ApiDisburseController@listDisburse');
         Route::post('list-datatable/{status}', 'ApiDisburseController@listDisburseDataTable');
         Route::post('detail/{id}', 'ApiDisburseController@detailDisburse');
@@ -54,6 +57,9 @@ Route::group(['prefix' => 'disburse'], function () {
 
         //approver
         Route::any('setting/approver', 'ApiDisburseSettingController@settingApproverPayouts');
+
+        //time to sent disburse
+        Route::any('setting/time-to-sent', 'ApiDisburseSettingController@settingTimeToSent');
 
         Route::any('update-status', 'ApiDisburseController@updateStatusDisburse');
     });

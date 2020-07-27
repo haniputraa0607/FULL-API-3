@@ -5,8 +5,8 @@
 @extends('webview.main')
 
 @section('css')
-    <link rel="stylesheet" href="{{ env('API_URL') }}css/referral.css">
-    <link rel="stylesheet" href="{{ env('API_URL') }}css/fontawesome.css">
+    <link rel="stylesheet" href="{{ config('url.api_url') }}css/referral.css">
+    <link rel="stylesheet" href="{{ config('url.api_url') }}css/fontawesome.css">
     <style>
         body {
             width: 100%;

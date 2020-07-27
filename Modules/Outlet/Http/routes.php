@@ -7,6 +7,8 @@ Route::group(['prefix' => 'api/outlet', 'middleware' => ['log_activities', 'auth
     Route::any('list/gofood', 'ApiOutletGofoodController@listOutletGofood');
     Route::any('filter', 'ApiOutletController@filter');
     Route::any('filter/gofood', 'ApiOutletController@filter');
+    /* New API for filter outlet + product */
+    Route::any('filter_product_outlet', 'ApiOutletController@filterProductOutlet');
 
     /*WEBVIEW*/
     Route::any('webview/{id}', 'ApiOutletWebview@detailWebview');
@@ -75,8 +77,10 @@ Route::group(['prefix' => 'api/outlet', 'middleware' => ['log_activities', 'auth
     Route::post('max-order', 'ApiOutletController@listMaxOrder');
     Route::post('max-order/update', 'ApiOutletController@updateMaxOrder');
     Route::any('schedule/save', 'ApiOutletController@scheduleSave');
+    Route::get('export-pin', ['middleware' => 'feature_control:261', 'uses' =>'ApiOutletController@exportPin']);
 
     /*user franchise*/
     Route::any('list/user-franchise', 'ApiOutletController@listUserFranchise');
     Route::any('detail/user-franchise', 'ApiOutletController@detailUserFranchise');
+    Route::post('user-franchise/set-password-default', 'ApiOutletController@setPasswordDefaultUserFranchise');
 });

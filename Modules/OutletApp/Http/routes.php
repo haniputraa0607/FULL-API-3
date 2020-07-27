@@ -1,6 +1,6 @@
 <?php
 
-Route::group(['middleware' => ['auth:outlet-app', 'log_activities_outlet_apps'], 'prefix' => 'api/outletapp', 'namespace' => 'Modules\OutletApp\Http\Controllers'], function()
+Route::group(['middleware' => ['auth:outlet-app', 'outlet_device_location', 'log_activities_outlet_apps'], 'prefix' => 'api/outletapp', 'namespace' => 'Modules\OutletApp\Http\Controllers'], function()
 {
     Route::any('/update-token', 'ApiOutletApp@updateToken');
     Route::any('/delete-token', 'ApiOutletApp@deleteToken');
@@ -25,12 +25,14 @@ Route::group(['middleware' => ['auth:outlet-app', 'log_activities_outlet_apps'],
     Route::post('report/summary', 'ApiOutletAppReport@summary');
     Route::post('report/transaction', 'ApiOutletAppReport@transactionList');
     Route::post('report/item', 'ApiOutletAppReport@itemList');
+    Route::post('report/item/all', 'ApiOutletAppReport@allItemList');
     Route::post('request_otp', 'ApiOutletApp@requestOTP');
     Route::post('stock_summary', 'ApiOutletApp@stockSummary');
     Route::post('book-delivery', 'ApiOutletApp@bookDelivery');
     Route::post('cancel-delivery', 'ApiOutletApp@cancelDelivery');
     Route::post('refresh-delivery-status', 'ApiOutletApp@refreshDeliveryStatus');
     Route::post('transaction/detail', 'ApiOutletApp@transactionDetail');
+    Route::get('payment-method', 'ApiOutletApp@listPaymentMethod');
 });
 
 Route::group(['prefix' => 'api/outletapp', 'middleware' => 'log_activities_outlet_apps', 'namespace' => 'Modules\OutletApp\Http\Controllers'], function()

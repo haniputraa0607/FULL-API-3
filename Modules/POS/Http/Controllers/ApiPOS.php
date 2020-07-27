@@ -2,6 +2,7 @@
 
 namespace Modules\POS\Http\Controllers;
 
+use App\Jobs\FraudJob;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
@@ -1053,7 +1054,7 @@ class ApiPOS extends Controller
     public function syncMenuReturn(reqMenu $request)
     {
         // call function syncMenu
-        $url = env('API_URL') . 'api/v1/pos/menu/sync';
+        $url = config('url.api_url') . 'api/v1/pos/menu/sync';
         $syncMenu = MyHelper::post($url, MyHelper::getBearerToken(), $request->json()->all());
 
         // return sesuai api raptor
@@ -1096,6 +1097,7 @@ class ApiPOS extends Controller
             if($countTransaction <= $x){
                 $config['point']    = Configs::where('config_name', 'point')->first()->is_active;
                 $config['balance']  = Configs::where('config_name', 'balance')->first()->is_active;
+                $config['fraud_use_queue'] = Configs::where('config_name', 'fraud use queue')->first()->is_active;
                 $settingPoint       = Setting::where('key', 'point_conversion_value')->first()->value;
                 $transOriginal      = $post['transactions'];
 
@@ -1311,32 +1313,36 @@ class ApiPOS extends Controller
                             $dataTrx['membership_level']    = null;
                             $dataTrx['membership_promo_id'] = null;
                         }else{
-                            //========= This process to check if user have fraud ============//
-                            $geCountTrxDay = Transaction::leftJoin('transaction_pickups', 'transaction_pickups.id_transaction', '=', 'transactions.id_transaction')
-                                ->where('transactions.id_user',$user['id'])
-                                ->whereRaw('DATE(transactions.transaction_date) = "'.date('Y-m-d', strtotime($trx['date_time'])).'"')
-                                ->where('transactions.transaction_payment_status','Completed')
-                                ->whereNull('transaction_pickups.reject_at')
-                                ->count();
+                            if($config['fraud_use_queue'] == 1){
+                                FraudJob::dispatch($user, $trx, 'transaction')->onConnection('fraudqueue');
+                            }else{
+                                //========= This process to check if user have fraud ============//
+                                $geCountTrxDay = Transaction::leftJoin('transaction_pickups', 'transaction_pickups.id_transaction', '=', 'transactions.id_transaction')
+                                    ->where('transactions.id_user',$user['id'])
+                                    ->whereRaw('DATE(transactions.transaction_date) = "'.date('Y-m-d', strtotime($trx['date_time'])).'"')
+                                    ->where('transactions.transaction_payment_status','Completed')
+                                    ->whereNull('transaction_pickups.reject_at')
+                                    ->count();
 
-                            $currentWeekNumber = date('W',strtotime($trx['date_time']));
-                            $currentYear = date('Y',strtotime($trx['date_time']));
-                            $dto = new DateTime();
-                            $dto->setISODate($currentYear,$currentWeekNumber);
-                            $start = $dto->format('Y-m-d');
-                            $dto->modify('+6 days');
-                            $end = $dto->format('Y-m-d');
+                                $currentWeekNumber = date('W',strtotime($trx['date_time']));
+                                $currentYear = date('Y',strtotime($trx['date_time']));
+                                $dto = new DateTime();
+                                $dto->setISODate($currentYear,$currentWeekNumber);
+                                $start = $dto->format('Y-m-d');
+                                $dto->modify('+6 days');
+                                $end = $dto->format('Y-m-d');
 
-                            $geCountTrxWeek = Transaction::leftJoin('transaction_pickups', 'transaction_pickups.id_transaction', '=', 'transactions.id_transaction')
-                                ->where('id_user',$user['id'])
-                                ->where('transactions.transaction_payment_status','Completed')
-                                ->whereNull('transaction_pickups.reject_at')
-                                ->whereRaw('Date(transactions.transaction_date) BETWEEN "'.$start.'" AND "'.$end.'"')
-                                ->count();
+                                $geCountTrxWeek = Transaction::leftJoin('transaction_pickups', 'transaction_pickups.id_transaction', '=', 'transactions.id_transaction')
+                                    ->where('id_user',$user['id'])
+                                    ->where('transactions.transaction_payment_status','Completed')
+                                    ->whereNull('transaction_pickups.reject_at')
+                                    ->whereRaw('Date(transactions.transaction_date) BETWEEN "'.$start.'" AND "'.$end.'"')
+                                    ->count();
 
-                            $countTrxDay = $geCountTrxDay + 1;
-                            $countTrxWeek = $geCountTrxWeek + 1;
-                            //================================ End ================================//
+                                $countTrxDay = $geCountTrxDay + 1;
+                                $countTrxWeek = $geCountTrxWeek + 1;
+                                //================================ End ================================//
+                            }
 
                             if (count($user['memberships']) > 0) {
                                 $dataTrx['membership_level']    = $user['memberships'][0]['membership_name'];
@@ -1586,95 +1592,97 @@ class ApiPOS extends Controller
 
                     }
 
-                    if((($fraudTrxDay && $countTrxDay <= $fraudTrxDay['parameter_detail']) && ($fraudTrxWeek && $countTrxWeek <= $fraudTrxWeek['parameter_detail']))
-                        || (!$fraudTrxDay && !$fraudTrxWeek)){
-                        if ($createTrx['transaction_point_earned']) {
-                            $dataLog = [
-                                'id_user'                     => $createTrx['id_user'],
-                                'point'                       => $createTrx['transaction_point_earned'],
-                                'id_reference'                => $createTrx['id_transaction'],
-                                'source'                      => 'Transaction',
-                                'grand_total'                 => $createTrx['transaction_grandtotal'],
-                                'point_conversion'            => $settingPoint,
-                                'membership_level'            => $level,
-                                'membership_point_percentage' => $percentageP * 100
-                            ];
-
-                            $insertDataLog = LogPoint::updateOrCreate(['id_user' => $createTrx['id_user'], 'id_reference' => $createTrx['id_transaction']], $dataLog);
-                            if (!$insertDataLog) {
-                                DB::rollback();
-                                return [
-                                    'status'    => 'fail',
-                                    'messages'  => 'Insert Point Failed'
+                    if (!empty($createTrx['id_user']) && $config['fraud_use_queue'] != 1) {
+                        if((($fraudTrxDay && $countTrxDay <= $fraudTrxDay['parameter_detail']) && ($fraudTrxWeek && $countTrxWeek <= $fraudTrxWeek['parameter_detail']))
+                            || (!$fraudTrxDay && !$fraudTrxWeek)){
+                            if ($createTrx['transaction_point_earned']) {
+                                $dataLog = [
+                                    'id_user'                     => $createTrx['id_user'],
+                                    'point'                       => $createTrx['transaction_point_earned'],
+                                    'id_reference'                => $createTrx['id_transaction'],
+                                    'source'                      => 'Transaction',
+                                    'grand_total'                 => $createTrx['transaction_grandtotal'],
+                                    'point_conversion'            => $settingPoint,
+                                    'membership_level'            => $level,
+                                    'membership_point_percentage' => $percentageP * 100
                                 ];
+
+                                $insertDataLog = LogPoint::updateOrCreate(['id_user' => $createTrx['id_user'], 'id_reference' => $createTrx['id_transaction']], $dataLog);
+                                if (!$insertDataLog) {
+                                    DB::rollback();
+                                    return [
+                                        'status'    => 'fail',
+                                        'messages'  => 'Insert Point Failed'
+                                    ];
+                                }
+
+                                $pointValue = $insertDataLog->point;
+
+                                //update user point
+                                $user->points = $pointBefore + $pointValue;
+                                $user->update();
+                                if (!$user) {
+                                    DB::rollback();
+                                    return [
+                                        'status'    => 'fail',
+                                        'messages'  => 'Insert Point Failed'
+                                    ];
+                                }
                             }
 
-                            $pointValue = $insertDataLog->point;
+                            if ($createTrx['transaction_cashback_earned']) {
 
-                            //update user point
-                            $user->points = $pointBefore + $pointValue;
-                            $user->update();
-                            if (!$user) {
-                                DB::rollback();
-                                return [
-                                    'status'    => 'fail',
-                                    'messages'  => 'Insert Point Failed'
-                                ];
+                                $insertDataLogCash = app($this->balance)->addLogBalance($createTrx['id_user'], $createTrx['transaction_cashback_earned'], $createTrx['id_transaction'], 'Offline Transaction', $createTrx['transaction_grandtotal']);
+                                if (!$insertDataLogCash) {
+                                    DB::rollback();
+                                    return [
+                                        'status'    => 'fail',
+                                        'messages'  => 'Insert Cashback Failed'
+                                    ];
+                                }
+                                $usere= User::where('id',$createTrx['id_user'])->first();
+                                $send = app($this->autocrm)->SendAutoCRM('Transaction Point Achievement', $usere->phone,
+                                    [
+                                        "outlet_name"       => $outlet['outlet_name'],
+                                        "transaction_date"  => $createTrx['transaction_date'],
+                                        'id_transaction'    => $createTrx['id_transaction'],
+                                        'receipt_number'    => $createTrx['transaction_receipt_number'],
+                                        'received_point'    => (string) $createTrx['transaction_cashback_earned']
+                                    ]
+                                );
+                                if($send != true){
+                                    DB::rollback();
+                                    return response()->json([
+                                        'status' => 'fail',
+                                        'messages' => 'Failed Send notification to customer'
+                                    ]);
+                                }
+                                $pointValue = $insertDataLogCash->balance;
                             }
-                        }
 
-                        if ($createTrx['transaction_cashback_earned']) {
-
-                            $insertDataLogCash = app($this->balance)->addLogBalance($createTrx['id_user'], $createTrx['transaction_cashback_earned'], $createTrx['id_transaction'], 'Offline Transaction', $createTrx['transaction_grandtotal']);
-                            if (!$insertDataLogCash) {
-                                DB::rollback();
-                                return [
-                                    'status'    => 'fail',
-                                    'messages'  => 'Insert Cashback Failed'
-                                ];
+                        }else{
+                            if($countTrxDay > $fraudTrxDay['parameter_detail'] && $fraudTrxDay){
+                                $fraudFlag = 'transaction day';
+                            }elseif($countTrxWeek > $fraudTrxWeek['parameter_detail'] && $fraudTrxWeek){
+                                $fraudFlag = 'transaction week';
+                            }else{
+                                $fraudFlag = NULL;
                             }
-                            $usere= User::where('id',$createTrx['id_user'])->first();
-                            $send = app($this->autocrm)->SendAutoCRM('Transaction Point Achievement', $usere->phone,
-                                [
-                                    "outlet_name"       => $outlet['outlet_name'],
-                                    "transaction_date"  => $createTrx['transaction_date'],
-                                    'id_transaction'    => $createTrx['id_transaction'],
-                                    'receipt_number'    => $createTrx['transaction_receipt_number'],
-                                    'received_point'    => (string) $createTrx['transaction_cashback_earned']
-                                ]
-                            );
-                            if($send != true){
+
+                            $updatePointCashback = Transaction::where('id_transaction', $createTrx['id_transaction'])
+                                ->update([
+                                    'transaction_point_earned' => NULL,
+                                    'transaction_cashback_earned' => NULL,
+                                    'fraud_flag' => $fraudFlag
+                                ]);
+
+                            if(!$updatePointCashback){
                                 DB::rollback();
                                 return response()->json([
                                     'status' => 'fail',
-                                    'messages' => 'Failed Send notification to customer'
+                                    'messages' => ['Failed update Point and Cashback']
                                 ]);
                             }
-                            $pointValue = $insertDataLogCash->balance;
-                        }
-
-                    }else{
-                        if($countTrxDay > $fraudTrxDay['parameter_detail'] && $fraudTrxDay){
-                            $fraudFlag = 'transaction day';
-                        }elseif($countTrxWeek > $fraudTrxWeek['parameter_detail'] && $fraudTrxWeek){
-                            $fraudFlag = 'transaction week';
-                        }else{
-                            $fraudFlag = NULL;
-                        }
-
-                        $updatePointCashback = Transaction::where('id_transaction', $createTrx['id_transaction'])
-                            ->update([
-                                'transaction_point_earned' => NULL,
-                                'transaction_cashback_earned' => NULL,
-                                'fraud_flag' => $fraudFlag
-                            ]);
-
-                        if(!$updatePointCashback){
-                            DB::rollback();
-                            return response()->json([
-                                'status' => 'fail',
-                                'messages' => ['Failed update Point and Cashback']
-                            ]);
                         }
                     }
 
@@ -1684,7 +1692,7 @@ class ApiPOS extends Controller
                         $create = TransactionVoucher::create($dataTrxVoucher);
                     }
 
-                    if (isset($user['phone'])) {
+                    if (isset($user['phone']) && $config['fraud_use_queue'] != 1) {
                         $checkMembership = app($this->membership)->calculateMembership($user['phone']);
                         $userData = User::find($user['id']);
                         //cek fraud detection transaction per day
@@ -2161,52 +2169,59 @@ class ApiPOS extends Controller
 
     public function syncOutletMenuCron(Request $request)
     {
-        $syncDatetime = date('d F Y h:i');
-        $getRequest = SyncMenuRequest::get()->first();
-        // is $getRequest null
-        if(!$getRequest){
-            return '';
-        }
-        $getRequest = $getRequest->toArray();
-        $getRequest['request'] = json_decode($getRequest['request'], true);
-        $syncMenu = $this->syncMenuProcess($getRequest['request'], 'bulk');
-        if ($syncMenu['status'] == 'success') {
-            SyncMenuResult::create(['result' => json_encode($syncMenu['result'])]);
-        } else {
-            SyncMenuResult::create(['result' => json_encode($syncMenu['messages'])]);
-        }
-        if ($getRequest['is_end'] == 1) {
-            $getResult = SyncMenuResult::pluck('result');
-            $totalReject    = 0;
-            $totalFailed    = 0;
-            $listFailed     = [];
-            $listRejected     = [];
-            foreach ($getResult as $value) {
-                $data[] = json_decode($value, true);
-                if (isset(json_decode($value, true)[0])) {
-                    $result['fail'][] = json_decode($value, true)[0];
-                }
-                if (isset(json_decode($value, true)['rejected_product'])) {
-                    $totalReject    = $totalReject + count(json_decode($value, true)['rejected_product']['list_product']);
-                    foreach (json_decode($value, true)['rejected_product']['list_product'] as $valueRejected) {
-                        array_push($listRejected, $valueRejected);
-                    }
-                }
-                if (isset(json_decode($value, true)['failed_product'])) {
-                    $totalFailed    = $totalFailed + count(json_decode($value, true)['failed_product']['list_product']);
-                    foreach (json_decode($value, true)['failed_product']['list_product'] as $valueFailed) {
-                        array_push($listFailed, $valueFailed);
-                    }
-                }
+        $log = MyHelper::logCron('Sync Outlet Menu');
+        try {
+            $syncDatetime = date('d F Y h:i');
+            $getRequest = SyncMenuRequest::get()->first();
+            // is $getRequest null
+            if(!$getRequest){
+                $log->success('empty synch menu request');
+                return '';
             }
+            $getRequest = $getRequest->toArray();
+            $getRequest['request'] = json_decode($getRequest['request'], true);
+            $syncMenu = $this->syncMenuProcess($getRequest['request'], 'bulk');
+            if ($syncMenu['status'] == 'success') {
+                SyncMenuResult::create(['result' => json_encode($syncMenu['result'])]);
+            } else {
+                SyncMenuResult::create(['result' => json_encode($syncMenu['messages'])]);
+            }
+            if ($getRequest['is_end'] == 1) {
+                $getResult = SyncMenuResult::pluck('result');
+                $totalReject    = 0;
+                $totalFailed    = 0;
+                $listFailed     = [];
+                $listRejected     = [];
+                foreach ($getResult as $value) {
+                    $data[] = json_decode($value, true);
+                    if (isset(json_decode($value, true)[0])) {
+                        $result['fail'][] = json_decode($value, true)[0];
+                    }
+                    if (isset(json_decode($value, true)['rejected_product'])) {
+                        $totalReject    = $totalReject + count(json_decode($value, true)['rejected_product']['list_product']);
+                        foreach (json_decode($value, true)['rejected_product']['list_product'] as $valueRejected) {
+                            array_push($listRejected, $valueRejected);
+                        }
+                    }
+                    if (isset(json_decode($value, true)['failed_product'])) {
+                        $totalFailed    = $totalFailed + count(json_decode($value, true)['failed_product']['list_product']);
+                        foreach (json_decode($value, true)['failed_product']['list_product'] as $valueFailed) {
+                            array_push($listFailed, $valueFailed);
+                        }
+                    }
+                }
 
-            // if (count($listRejected) > 0) {
-            //     $this->syncSendEmail($syncDatetime, $outlet->outlet_code, $outlet->outlet_name, $rejectedProduct, null);
-            // }
-            // if (count($listFailed) > 0) {
-            //     $this->syncSendEmail($syncDatetime, $outlet->outlet_code, $outlet->outlet_name, null, $failedProduct);
-            // }
+                // if (count($listRejected) > 0) {
+                //     $this->syncSendEmail($syncDatetime, $outlet->outlet_code, $outlet->outlet_name, $rejectedProduct, null);
+                // }
+                // if (count($listFailed) > 0) {
+                //     $this->syncSendEmail($syncDatetime, $outlet->outlet_code, $outlet->outlet_name, null, $failedProduct);
+                // }
+            }
+            SyncMenuRequest::where('id', $getRequest['id'])->delete();
+            $log->success();
+        } catch (\Exception $e) {
+            $log->fail($e->getMessage());
         }
-        SyncMenuRequest::where('id', $getRequest['id'])->delete();
     }
 }

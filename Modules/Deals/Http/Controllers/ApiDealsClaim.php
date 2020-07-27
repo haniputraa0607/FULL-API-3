@@ -210,7 +210,7 @@ class ApiDealsClaim extends Controller
                             'id_deals_user'=>$voucher['id_deals_user'],
                             'id_deals_voucher'=>$voucher['id_deals_voucher'],
                             'paid_status'=>$voucher['paid_status'],
-                            'webview_later'=>env('API_URL').'api/webview/mydeals/'.$voucher['id_deals_user']
+                            'webview_later'=>config('url.api_url').'api/webview/mydeals/'.$voucher['id_deals_user']
                         ];
                         return response()->json(MyHelper::checkCreate($return));
                         }
@@ -244,7 +244,7 @@ class ApiDealsClaim extends Controller
 
     /* CHEK USER ALREADY CLAIMED */
     function checkUserClaimed($user, $id_deals) {
-        $claimed = DealsUser::join('deals_vouchers', 'deals_vouchers.id_deals_voucher', '=', 'deals_users.id_deals_voucher')->where('id_user', $user->id)->where('deals_vouchers.id_deals', $id_deals)->get();
+        $claimed = DealsUser::join('deals_vouchers', 'deals_vouchers.id_deals_voucher', '=', 'deals_users.id_deals_voucher')->where('id_user', $user->id)->where('deals_vouchers.id_deals', $id_deals)->where('paid_status', '<>', 'Cancelled')->get();
 
         $checkLimit = Deal::where('id_deals', $id_deals)->first();
         if (empty($checkLimit)) {

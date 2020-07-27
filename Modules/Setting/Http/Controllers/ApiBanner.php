@@ -28,7 +28,7 @@ class ApiBanner extends Controller
 
         // add full url to collection
         $banners = $banners->map(function ($banner, $key) {
-            $banner->image_url = env('S3_URL_API').$banner->image;
+            $banner->image_url = config('url.storage_url_api').$banner->image;
             return $banner;
         });
         $banners->all();
@@ -39,47 +39,26 @@ class ApiBanner extends Controller
 
     public function create(Request $request)
     {
-        $validatedData = $request->validate([
+        $request->validate([
             'image' => 'required'
         ]);
 
-        $post = $request->json()->all();
-
-        // upload image
-        $path = "img/banner/";
-        if(!file_exists($path)){
-            mkdir($path, 0777, true);
+        try {
+            $banner = DB::transaction(function () use ($request) {
+                $banner = new Banner($request->except('image'));
+                $banner->storeImage($request->image);
+                $banner->setPosition();
+                $banner->save();
+                return $banner;
+            });
+        } catch (Exception $e) {
+            return response()->json([
+                'status' => 'fail',
+                'messages' => [ $e->getMessage() ]
+            ]);
         }
 
-        // img 4:3
-        $upload = MyHelper::uploadPhotoStrict($post['image'], $path, 750, 375);
-
-        if (isset($upload['status']) && $upload['status'] == "success") {
-            $post['image'] = $upload['path'];
-        }
-        else {
-            $result = [
-                'status'   => 'fail',
-                'messages' => ['Failed to upload image']
-            ];
-            return $result;
-        }
-
-        $last_position = Banner::max('position');
-        if ($last_position == null) {
-            $last_position = 0;
-        }
-        $post['position'] = $last_position + 1;
-
-        $deep_url = env('APP_URL').'outlet/webview/gofood/list';
-
-        if ($post['type'] == 'gofood') {
-            $post['url'] = $deep_url;
-        }
-
-        $create = Banner::create($post);
-
-        return response()->json(MyHelper::checkCreate($create));
+        return response()->json(MyHelper::checkCreate($banner));
     }
 
     // reorder position
@@ -140,7 +119,7 @@ class ApiBanner extends Controller
             $delete = MyHelper::deletePhoto($banner->image);
         }
 
-        $deep_url = env('APP_URL').'outlet/webview/gofood/list';
+        $deep_url = config('url.app_url').'outlet/webview/gofood/list';
 
         if ($post['type'] == 'gofood') {
             $post['url'] = $deep_url;

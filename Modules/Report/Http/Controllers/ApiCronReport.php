@@ -2,6 +2,7 @@
 
 namespace Modules\Report\Http\Controllers;
 
+use App\Http\Models\DealsPaymentMidtran;
 use App\Http\Models\User;
 use App\Http\Models\Transaction;
 use App\Http\Models\TransactionProduct;
@@ -14,15 +15,30 @@ use App\Http\Models\DailyReportTrxMenu;
 use App\Http\Models\DailyMembershipReport;
 use App\Http\Models\MonthlyMembershipReport;
 
+use App\Http\Models\TransactionPaymentMidtran;
+use App\Http\Models\TransactionPaymentBalance;
+use Modules\IPay88\Entities\DealsPaymentIpay88;
+use Modules\IPay88\Entities\SubscriptionPaymentIpay88;
+use Modules\IPay88\Entities\TransactionPaymentIpay88;
+use App\Http\Models\TransactionPaymentOvo;
+use App\Http\Models\TransactionPaymentOffline;
+
 use App\Http\Models\GlobalMonthlyReportTrx;
 use App\Http\Models\GlobalDailyReportTrx;
 use App\Http\Models\GlobalMonthlyReportTrxMenu;
 use App\Http\Models\GlobalDailyReportTrxMenu;
 
 use Modules\Report\Entities\DailyReportPayment;
+use Modules\Report\Entities\DailyReportPaymentDeals;
+use Modules\Report\Entities\DailyReportPaymentSubcription;
 use Modules\Report\Entities\GlobalDailyReportPayment;
 use Modules\Report\Entities\MonthlyReportPayment;
 use Modules\Report\Entities\GlobalMonthlyReportPayment;
+
+use Modules\Report\Entities\DailyReportTrxModifier;
+use Modules\Report\Entities\GlobalDailyReportTrxModifier;
+use Modules\Report\Entities\MonthlyReportTrxModifier;
+use Modules\Report\Entities\GlobalMonthlyReportTrxModifier;
 
 use App\Http\Models\DailyCustomerReportRegistration;
 use App\Http\Models\MonthlyCustomerReportRegistration;
@@ -34,6 +50,7 @@ use Illuminate\Routing\Controller;
 use Modules\Report\Http\Requests\DetailReport;
 
 use App\Lib\MyHelper;
+use Modules\Subscription\Entities\SubscriptionPaymentMidtran;
 use Validator;
 use DateTime;
 use Hash;
@@ -45,64 +62,74 @@ class ApiCronReport extends Controller
 {
     function __construct() 
     {
-        date_default_timezone_set('Asia/Jakarta');
+		date_default_timezone_set('Asia/Jakarta');
+		$this->month = '';
+		$this->year = '';
     }
 	
     /* CRON */
     function transactionCron(Request $request) 
     {
-        DB::beginTransaction();
-        // CHECK TABLES
-        // if ($this->checkReportTable()) {
-        //     $date = date('Y-m-d', strtotime("-1 days"));
+        $log = MyHelper::logCron('Daily Transaction Report');
+        try {
+            DB::beginTransaction();
+            // CHECK TABLES
+            // if ($this->checkReportTable()) {
+            //     $date = date('Y-m-d', strtotime("-1 days"));
 
-        //     // CALCULATION
-        //     $calculation = $this->calculation($date);
+            //     // CALCULATION
+            //     $calculation = $this->calculation($date);
 
-        //     if (!$calculation) {
-        //         return response()->json([
-        //             'status'   => 'fail',
-        //             'messages' => 'Failed to update data.'
-        //         ]);
-        //     }
-        // }
-        // else {
-            // DATE START
-            $dateStart = $this->firstTrx();
-            // $dateStart = "2020-02-24";
+            //     if (!$calculation) {
+            //         return response()->json([
+            //             'status'   => 'fail',
+            //             'messages' => 'Failed to update data.'
+            //         ]);
+            //     }
+            // }
+            // else {
+                // DATE START
+                $dateStart = $this->firstTrx();
+                // $dateStart = "2020-06-09";
 
-            if ($dateStart) {
-                // UP TO YESTERDAY
-                while (strtotime($dateStart) < strtotime(date('Y-m-d'))) {
-                    // CALCULATION
-                    $calculation = $this->calculation($dateStart);
+                if ($dateStart) {
+                    // UP TO YESTERDAY
+                    while (strtotime($dateStart) < strtotime(date('Y-m-d'))) {
+                        // CALCULATION
+                        $calculation = $this->calculation($dateStart);
 
-                    if (!$calculation) {
-                        DB::rollback();
-                        return response()->json([
-                            'status'   => 'fail',
-                            'messages' => 'Failed to update data.'
-                        ]);
+                        if (!$calculation) {
+                            DB::rollback();
+                            $log->fail('Failed update data');
+                            return response()->json([
+                                'status'   => 'fail',
+                                'messages' => 'Failed to update data.'
+                            ]);
+                        }
+
+                        // INCREMENT
+                        $dateStart = date('Y-m-d', strtotime("+1 days", strtotime($dateStart)));
                     }
-
-                    // INCREMENT
-                    $dateStart = date('Y-m-d', strtotime("+1 days", strtotime($dateStart)));
                 }
-            }
-            else {
-                DB::rollback();
-                return response()->json([
-                    'status'   => 'fail',
-                    'messages' => 'Data transaction is empty.'
-                ]);
-            }
-        // }
+                else {
+                    DB::rollback();
+                    $log->success('Data transaction is empty');
+                    return response()->json([
+                        'status'   => 'fail',
+                        'messages' => 'Data transaction is empty.'
+                    ]);
+                }
+            // }
 
-        DB::commit();
-        // RETURN SUCCESS
-        return response()->json([
-            'status' => 'success'
-        ]);
+            DB::commit();
+            // RETURN SUCCESS
+            $log->success('success');
+            return response()->json([
+                'status' => 'success'
+            ]);
+        } catch (\Exception $e) {
+            $log->fail($e->getMessage());
+        }
     }
 
     /* CHECK TABLES */
@@ -159,6 +186,10 @@ class ApiCronReport extends Controller
             if (!$this->dailyReportPayment($date)) {
                 return false;
             }
+            // MODIFIER
+            if (!$this->dailyReportModifier($daily, $date)) {
+                return false;
+            }
         }
 		
 		// TRANSACTION & PRODUCT MONTHLY
@@ -173,7 +204,18 @@ class ApiCronReport extends Controller
                 return false;
             }
 
-			if (!$this->monthlyReportPayment($date)) {
+			$month = date('m', strtotime($date));
+			$year = date('Y', strtotime($date));
+			if($month != $this->month || $year != $this->year){
+				$this->month = $month;
+				$this->year = $year;
+				if (!$this->monthlyReportPayment($month, $year)) {
+					return false;
+				}
+			}
+
+			// MODIFIER
+            if (!$this->monthlyReportModifier($monthly, $date)) {
                 return false;
             }
         }
@@ -309,20 +351,10 @@ class ApiCronReport extends Controller
 	/* CUSTOMER LEVEL MONTHLY REPORT */
     function customerLevelMonthlyReport($date) 
     {
-		$d1 = new DateTime($date);
-		$d2 = new DateTime(date('Y-m-d'));
-		$interval = date_diff($d1, $d2);
-		$diff = $interval->m + ($interval->y * 12);
-		
-		for($x = 0;$x <= $diff; $x++){
-			$start = date('Y-m-1', strtotime("+ ".$x." month", strtotime($date)));
-			if($x != $diff){
-				$end = date('Y-m-t', strtotime("+ ".$x." month", strtotime($date)));
-			} else {
-				$end = date('Y-m-d');
-			}
-			
-			$trans = DB::select(DB::raw('
+        $start = date('Y-m-1', strtotime("+0  month", strtotime($date)));
+        $end = date('Y-m-t', strtotime("+0 month", strtotime($date)));
+
+        $trans = DB::select(DB::raw('
 					SELECT COUNT(id), id_membership,
 					(select COUNT(users.id)) as cust_total,
 					(select SUM(Case When users.gender = \'Male\' Then 1 Else 0 End)) as cust_male, 
@@ -344,25 +376,25 @@ class ApiCronReport extends Controller
 					WHERE users.created_at BETWEEN "'. $start .' 00:00:00" AND "'. $end .' 23:59:59"
 					GROUP BY users.id_membership
 				'));
-			$trans = json_decode(json_encode($trans), true);
-			
-			if(!empty($trans[0]['cust_total'])){
-				foreach ($trans as $key => $value) {
-					$value['mem_month'] = date('n', strtotime($end));
-					$value['mem_year'] = date('Y', strtotime($end));
-					$save = MonthlyMembershipReport::updateOrCreate([
-							'mem_month'  => date('n', strtotime($end)),
-							'mem_year'  => date('Y', strtotime($end)),
-							'id_membership' => $value['id_membership']
-						], $value);
+        $trans = json_decode(json_encode($trans), true);
 
-					if (!$save) {
-						return false;
-					}
-				}
-				return $trans;
-			}
-		}
+        if(!empty($trans[0]['cust_total'])){
+            foreach ($trans as $key => $value) {
+                $value['mem_month'] = date('n', strtotime($end));
+                $value['mem_year'] = date('Y', strtotime($end));
+                $save = MonthlyMembershipReport::updateOrCreate([
+                    'mem_month'  => date('n', strtotime($end)),
+                    'mem_year'  => date('Y', strtotime($end)),
+                    'id_membership' => $value['id_membership']
+                ], $value);
+
+                if (!$save) {
+                    return false;
+                }
+            }
+            return $trans;
+        }
+
 		return true;
 	}
 	
@@ -421,22 +453,10 @@ class ApiCronReport extends Controller
 	/* NEW CUSTOMER REGISTRATION MONTHLY REPORT */
     function newCustomerRegistrationMonthlyReport($date) 
     {
-		$date = date('Y-m-d', strtotime("-1 month", strtotime($date)));
-		
-		$d1 = new DateTime($date);
-		$d2 = new DateTime(date('Y-m-d'));
-		$interval = date_diff($d1, $d2);
-		$diff = $interval->m + ($interval->y * 12);
-		// print_r(['diff' => $diff]);exit;
-		for($x = 0;$x <= $diff; $x++){
-			$start = date('Y-m-1', strtotime("+ ".$x." month", strtotime($date)));
-			if($x != $diff){
-				$end = date('Y-m-t', strtotime("+ ".$x." month", strtotime($date)));
-			} else {
-				$end = date('Y-m-d');
-			}
-			
-			$trans = DB::select(DB::raw('
+        $start = date('Y-m-1', strtotime("+0  month", strtotime($date)));
+        $end = date('Y-m-t', strtotime("+0 month", strtotime($date)));
+
+        $trans = DB::select(DB::raw('
 					SELECT (select COUNT(users.id)) as total,
 					(select SUM(Case When users.gender = \'Male\' Then 1 Else 0 End)) as cust_male, 
 					(select SUM(Case When users.gender = \'Female\' Then 1 Else 0 End)) as cust_female, 
@@ -457,25 +477,25 @@ class ApiCronReport extends Controller
 					AND "'. $end .' 23:59:59"
 					
 				'));
-			$trans = json_decode(json_encode($trans), true);
-			
-			if(!empty($trans[0]['total'])){
-				foreach ($trans as $key => $value) {
-					$value['reg_month'] = date('n', strtotime($end));
-					$value['reg_year'] = date('Y', strtotime($end));
+        $trans = json_decode(json_encode($trans), true);
 
-					$save = MonthlyCustomerReportRegistration::updateOrCreate([
-							'reg_month'  => date('n', strtotime($end)),
-							'reg_year'  => date('Y', strtotime($end))
-						], $value);
+        if(!empty($trans[0]['total'])){
+            foreach ($trans as $key => $value) {
+                $value['reg_month'] = date('n', strtotime($end));
+                $value['reg_year'] = date('Y', strtotime($end));
 
-					if (!$save) {
-						return false;
-					}
-				}
-				return $trans;
-			}
-		}
+                $save = MonthlyCustomerReportRegistration::updateOrCreate([
+                    'reg_month'  => date('n', strtotime($end)),
+                    'reg_year'  => date('Y', strtotime($end))
+                ], $value);
+
+                if (!$save) {
+                    return false;
+                }
+            }
+            return $trans;
+        }
+
 		return true;
 	}
 	
@@ -511,22 +531,25 @@ class ApiCronReport extends Controller
                     (select TIME(MAX(transaction_date))) as last_trx_time, 
                     (select count(transactions.id_transaction)) as trx_count, 
                     (select AVG(transaction_grandtotal)) as trx_average, 
-                    (select 
-                    	SUM(transaction_products.transaction_product_qty) 
-                    	FROM transaction_products 
-                    	WHERE transaction_products.id_outlet = transactions.id_outlet 
-                    ) as trx_total_item, 
+                    (select SUM(trans_p.trx_total_item)) as trx_total_item,
                     (select DATE(transaction_date)) as trx_date
                     FROM transactions 
                     LEFT JOIN users ON users.id = transactions.id_user 
                     LEFT JOIN transaction_pickups ON transaction_pickups.id_transaction = transactions.id_transaction 
+                    LEFT JOIN (
+                    	select 
+	                    	transaction_products.id_transaction, SUM(transaction_products.transaction_product_qty) trx_total_item
+	                    	FROM transaction_products 
+	                    	GROUP BY transaction_products.id_transaction
+	                ) trans_p
+                    	ON (transactions.id_transaction = trans_p.id_transaction) 
                     WHERE transaction_date BETWEEN "'. date('Y-m-d', strtotime($date)) .' 00:00:00" 
                     AND "'. date('Y-m-d', strtotime($date)) .' 23:59:59"
                     AND transaction_payment_status = "Completed"
                     AND transaction_pickups.reject_at IS NULL
                     GROUP BY transactions.id_outlet,trx_type
                 '));
-    	
+
         if ($trans) {
             $trans = json_decode(json_encode($trans), true);
 			$sum = array();
@@ -618,7 +641,7 @@ class ApiCronReport extends Controller
     {
         foreach ($outletAll as $outlet) {
              $product = DB::select(DB::raw('
-                        SELECT transaction_products.id_product, transactions.id_outlet, 
+                        SELECT transaction_products.id_product, transaction_products.id_brand, transactions.id_outlet, 
                         (select SUM(transaction_products.transaction_product_qty)) as total_qty, 
                         (select SUM(transaction_products.transaction_product_subtotal)) as total_nominal, 
                         (select SUM(transaction_products.transaction_product_discount)) as total_product_discount, 
@@ -649,7 +672,7 @@ class ApiCronReport extends Controller
                         AND transactions.id_outlet = "'. $outlet .'"
                         AND transaction_payment_status = "Completed"
                         AND transaction_pickups.reject_at IS NULL
-                        GROUP BY transaction_products.id_product
+                        GROUP BY transaction_products.id_product,transaction_products.id_brand
                         ORDER BY transaction_products.id_product ASC
                     '));
 
@@ -678,11 +701,12 @@ class ApiCronReport extends Controller
 					$sum[$value['id_product']]['cust_young_adult'] = $value['cust_young_adult'];
 					$sum[$value['id_product']]['cust_adult'] = $value['cust_adult'];
 					$sum[$value['id_product']]['cust_old'] = $value['cust_old'];
-					
+
                     $save = DailyReportTrxMenu::updateOrCreate([
                         'trx_date'   => date('Y-m-d', strtotime($value['trx_date'])), 
                         'id_product' => $value['id_product'],
-                        'id_outlet'  => $value['id_outlet']
+                        'id_outlet'  => $value['id_outlet'],
+                        'id_brand' 	 => $value['id_brand']
                     ], $value);
 					
 					$saveGlobal = GlobalDailyReportTrxMenu::updateOrCreate([
@@ -701,138 +725,586 @@ class ApiCronReport extends Controller
     }
 	
 	/* REPORT PAYMENT */
+    // function dailyReportPayment($date) 
+    // {
+    //     $date = date('Y-m-d', strtotime($date));
+
+    //     $getTransactions = Transaction::whereDate('transactions.transaction_date', $date)
+    //         ->whereNotNull('transactions.id_user')
+    //         ->where('transactions.transaction_payment_status', 'Completed')
+    //         ->whereNull('transaction_pickups.reject_at')
+    //         ->groupBy('transactions.id_transaction', 'transactions.id_outlet')
+    //         ->select(
+    //         	'transactions.id_transaction', 
+    //         	'transactions.id_outlet', 
+    //         	'transactions.id_user', 
+    //         	'transactions.transaction_date', 
+    //         	'transactions.trasaction_payment_type'
+    //         )
+    //         ->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+    //         ->get()->toArray();
+
+    //     $global = [];
+    //     foreach ($getTransactions as $dtTrx){
+    //         $total = 0;
+    //         $count = 0;
+    //         $is_offline = "";
+    //         $getTransactionPayment = [];
+    //         $trx_payment = $dtTrx['trasaction_payment_type'];
+
+    //         if($dtTrx['trasaction_payment_type'] == 'Manual')
+    //         {
+    //             $getTransactionPayment = Transaction::join('transaction_payment_manuals', 'transaction_payment_manuals.id_transaction', 'transactions.id_transaction')
+    //                 ->where('transactions.id_transaction', $dtTrx['id_transaction'])
+    //                 ->select(
+    //                 	'transaction_payment_manuals.payment_method as payment_type',
+    //                 	'transaction_payment_manuals.payment_bank as payment',
+    //                 	'transaction_payment_manuals.payment_nominal as trx_payment_nominal'
+    //                 )->get()->toArray();
+    //         }
+    //         elseif($dtTrx['trasaction_payment_type'] == 'Midtrans')
+    //         {
+    //             $getTransactionPayment = Transaction::join('transaction_payment_midtrans', 'transaction_payment_midtrans.id_transaction', 'transactions.id_transaction')
+    //                 ->where('transactions.id_transaction', $dtTrx['id_transaction'])
+    //                 ->select(
+    //                 	'transaction_payment_midtrans.payment_type as payment_type', 
+    //                 	'transaction_payment_midtrans.bank as payment', 
+    //                 	'transaction_payment_midtrans.gross_amount as trx_payment_nominal'
+    //                 )->get()->toArray();
+    //         }
+    //         elseif($dtTrx['trasaction_payment_type'] == 'Offline')
+    //         {
+    //             $getTransactionPayment = Transaction::join('transaction_payment_offlines', 'transaction_payment_offlines.id_transaction', 'transactions.id_transaction')
+    //                 ->where('transactions.id_transaction', $dtTrx['id_transaction'])
+    //                 ->where('payment_amount', '!=', 0)
+    //                 ->select(
+    //                 	'transaction_payment_offlines.payment_type as payment_type',
+    //                 	'transaction_payment_offlines.payment_bank as payment',
+    //                 	'transaction_payment_offlines.payment_amount as trx_payment_nominal'
+    //                 )->get()->toArray();
+
+    //             $is_offline = ' (Offline)';
+    //         }
+    //         elseif($dtTrx['trasaction_payment_type'] == 'Balance')
+    //         {
+    //             $getTransactionPayment = Transaction::join('transaction_payment_balances', 'transaction_payment_balances.id_transaction', 'transactions.id_transaction')
+    //                 ->where('transactions.id_transaction', $dtTrx['id_transaction'])
+    //                 ->where('balance_nominal', '!=', 0)
+    //                 ->select('transaction_payment_balances.balance_nominal AS trx_payment_nominal')->get()->toArray();
+
+    //             $trx_payment = 'Balance';
+    //         }
+    //         elseif($dtTrx['trasaction_payment_type'] == 'Ovo')
+    //         {
+    //             $getTransactionPayment = Transaction::join('transaction_payment_ovos', 'transaction_payment_ovos.id_transaction', 'transactions.id_transaction')
+    //                 ->where('transactions.id_transaction', $dtTrx['id_transaction'])
+    //                 ->where('amount', '!=', 0)
+    //                 ->select('transaction_payment_ovos.amount AS trx_payment_nominal')->get()->toArray();
+
+    //             $trx_payment = 'Ovo';
+    //         }
+
+    //         foreach ($getTransactionPayment as $dtPayment){
+
+    //         	if ( !empty($dtPayment['payment_type']) && !empty($dtPayment['payment'])) 
+    //         	{
+    //         		$trx_payment = $dtPayment['payment_type'].' '.$dtPayment['payment'].($is_offline??'');
+    //         	}
+    //         	else
+    //         	{
+    //         		$trx_payment = ($dtPayment['payment_type']??$dtPayment['payment']??$trx_payment).($is_offline??'');
+    //         	}
+
+    //             $getDaily = DailyReportPayment::where('id_outlet', $dtTrx['id_outlet'])
+    //                 ->where('trx_date', date('Y-m-d', strtotime($dtTrx['transaction_date'])))
+    //                 ->where('trx_payment', $trx_payment)->first();
+
+    //             $dataToInsert = [
+    //                 'id_outlet' => $dtTrx['id_outlet'],
+    //                 'trx_date' => date('Y-m-d', strtotime($dtTrx['transaction_date'])),
+    //                 'trx_payment_count' => 1,
+    //                 'trx_payment_nominal' => $dtPayment['trx_payment_nominal'],
+    //                 'trx_payment' => $trx_payment
+    //             ];
+
+    //             if($getDaily){
+    //                 $dataToInsert['trx_payment_count'] = $getDaily['trx_payment_count'] + 1;
+    //                 $dataToInsert['trx_payment_nominal'] = $getDaily['trx_payment_nominal'] + ($dtPayment['trx_payment_nominal']??0);
+    //                 DailyReportPayment::where('id_daily_report_payment', $getDaily['id_daily_report_payment'])
+    //                     ->update($dataToInsert);
+    //             }else{
+    //                 DailyReportPayment::create($dataToInsert);
+    //             }
+
+    //             $global_key = array_search($trx_payment, array_column($global, 'trx_payment'));
+
+    //             if ($global_key || $global_key === 0) 
+    //             {
+    //             	$global[$global_key]['trx_payment_count'] = $global[$global_key]['trx_payment_count'] + 1;
+    //             	$global[$global_key]['trx_payment_nominal'] = $global[$global_key]['trx_payment_nominal'] + $dtPayment['trx_payment_nominal'];
+    //             }
+    //             else
+    //             {
+    //             	$new_global['trx_payment'] = $trx_payment;
+    //             	$new_global['trx_payment_count'] = 1;
+    //             	$new_global['trx_payment_nominal'] = $dtPayment['trx_payment_nominal'];
+    //             	array_push($global, $new_global);
+
+	//                 $global_key = array_search($trx_payment, array_column($global, 'trx_payment'));
+    //             }
+
+	// 	        $saveGlobal = GlobalDailyReportPayment::updateOrCreate([
+	// 	            'trx_date'  => date('Y-m-d', strtotime($date)),
+	// 	            'trx_payment' => $trx_payment
+	// 	        ], $global[$global_key]);
+    //         }
+    //     }
+
+    //     return true;
+	// }
+	
     function dailyReportPayment($date) 
     {
-        $date = date('Y-m-d', strtotime($date));
+		$date = date('Y-m-d', strtotime($date));
+		
+		//delete report if there is already a report for the date
+		$delete = DailyReportPayment::where('trx_date', $date)->delete();
+		$delete = GlobalDailyReportPayment::where('trx_date', $date)->delete();
 
-        $getTransactions = Transaction::whereDate('transactions.transaction_date', $date)
-            ->whereNotNull('transactions.id_user')
-            ->where('transactions.transaction_payment_status', 'Completed')
+		//midtrans
+            $dataPaymentDeals = DealsPaymentMidtran::join('deals_users', 'deals_users.id_deals_user', 'deals_payment_midtrans.id_deals_user')
+                ->select(
+                    DB::raw('DATE(deals_payment_midtrans.created_at) as date'),
+                    DB::raw('"Midtrans" as payment_type'),
+                    DB::raw('COUNT(deals_payment_midtrans.id_deals_user) as payment_count'),
+                    DB::raw('SUM(deals_payment_midtrans.gross_amount) as payment_nominal'),
+                    DB::raw("CONCAT_WS(' ', deals_payment_midtrans.payment_type, deals_payment_midtrans.bank) AS payment")
+                )
+                ->whereDate('deals_payment_midtrans.created_at', $date)
+                ->where('deals_users.paid_status', 'Completed')
+                ->groupBy('payment')
+                ->get()->toArray();
+
+            if($dataPaymentDeals){
+                //insert daily
+                $insertDailyDeals = DailyReportPaymentDeals::insert($dataPaymentDeals);
+            }
+
+            $dataPaymentSubcsription = SubscriptionPaymentMidtran::join('subscription_users', 'subscription_users.id_subscription_user', 'subscription_payment_midtrans.id_subscription_user')
+                ->select(
+                    DB::raw('DATE(subscription_payment_midtrans.created_at) as date'),
+                    DB::raw('"Midtrans" as payment_type'),
+                    DB::raw('COUNT(subscription_payment_midtrans.id_subscription_user) as payment_count'),
+                    DB::raw('SUM(subscription_payment_midtrans.gross_amount) as payment_nominal'),
+                    DB::raw("CONCAT_WS(' ', subscription_payment_midtrans.payment_type, subscription_payment_midtrans.bank) AS payment")
+                )
+                ->whereDate('subscription_payment_midtrans.created_at', $date)
+                ->where('subscription_users.paid_status', 'Completed')
+                ->groupBy('payment')
+                ->get()->toArray();
+
+            if($dataPaymentSubcsription){
+                //insert daily
+                $insertDailySubcsription = DailyReportPaymentSubcription::insert($dataPaymentSubcsription);
+            }
+
+			$dataPayment = TransactionPaymentMidtran::join('transactions', 'transactions.id_transaction', 'transaction_payment_midtrans.id_transaction')
+			->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+			->select(
+				'transactions.id_outlet', 
+				DB::raw('DATE(transactions.transaction_date) as trx_date'),
+                DB::raw('0 as refund_with_point'),
+                DB::raw('"Midtrans" as payment_type'),
+				DB::raw('COUNT(transactions.id_transaction) as trx_payment_count'), 
+				DB::raw('SUM(transaction_payment_midtrans.gross_amount) as trx_payment_nominal'), 
+				DB::raw("CONCAT_WS(' ', transaction_payment_midtrans.payment_type, transaction_payment_midtrans.bank) AS trx_payment")
+			)
+			->whereDate('transactions.transaction_date', $date)
+			->where('transactions.transaction_payment_status', 'Completed')
             ->whereNull('transaction_pickups.reject_at')
-            ->groupBy('transactions.id_transaction', 'transactions.id_outlet')
-            ->select(
-            	'transactions.id_transaction', 
-            	'transactions.id_outlet', 
-            	'transactions.id_user', 
-            	'transactions.transaction_date', 
-            	'transactions.trasaction_payment_type'
-            )
-            ->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
-            ->get()->toArray();
+            ->whereNull('transaction_pickups.reject_type')
+			->groupBy('transactions.id_outlet', 'trx_payment')
+			->get()->toArray();
 
-        $global = [];
-        foreach ($getTransactions as $dtTrx){
-            $total = 0;
-            $count = 0;
-            $is_offline = "";
-            $getTransactionPayment = [];
-            $trx_payment = $dtTrx['trasaction_payment_type'];
+			if($dataPayment){
+				//insert daily
+				$insertDaily = DailyReportPayment::insert($dataPayment);
+			}
 
-            if($dtTrx['trasaction_payment_type'] == 'Manual')
-            {
-                $getTransactionPayment = Transaction::join('transaction_payment_manuals', 'transaction_payment_manuals.id_transaction', 'transactions.id_transaction')
-                    ->where('transactions.id_transaction', $dtTrx['id_transaction'])
-                    ->select(
-                    	'transaction_payment_manuals.payment_method as payment_type',
-                    	'transaction_payment_manuals.payment_bank as payment',
-                    	'transaction_payment_manuals.payment_nominal as trx_payment_nominal'
-                    )->get()->toArray();
-            }
-            elseif($dtTrx['trasaction_payment_type'] == 'Midtrans')
-            {
-                $getTransactionPayment = Transaction::join('transaction_payment_midtrans', 'transaction_payment_midtrans.id_transaction', 'transactions.id_transaction')
-                    ->where('transactions.id_transaction', $dtTrx['id_transaction'])
-                    ->select(
-                    	'transaction_payment_midtrans.payment_type as payment_type', 
-                    	'transaction_payment_midtrans.bank as payment', 
-                    	'transaction_payment_midtrans.gross_amount as trx_payment_nominal'
-                    )->get()->toArray();
-            }
-            elseif($dtTrx['trasaction_payment_type'] == 'Offline')
-            {
-                $getTransactionPayment = Transaction::join('transaction_payment_offlines', 'transaction_payment_offlines.id_transaction', 'transactions.id_transaction')
-                    ->where('transactions.id_transaction', $dtTrx['id_transaction'])
-                    ->where('payment_amount', '!=', 0)
-                    ->select(
-                    	'transaction_payment_offlines.payment_type as payment_type',
-                    	'transaction_payment_offlines.payment_bank as payment',
-                    	'transaction_payment_offlines.payment_amount as trx_payment_nominal'
-                    )->get()->toArray();
+            $dataPaymentRejectToPoint = TransactionPaymentMidtran::join('transactions', 'transactions.id_transaction', 'transaction_payment_midtrans.id_transaction')
+                ->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+                ->select(
+                    'transactions.id_outlet',
+                    DB::raw('DATE(transactions.transaction_date) as trx_date'),
+                    DB::raw('1 as refund_with_point'),
+                    DB::raw('"Midtrans" as payment_type'),
+                    DB::raw('COUNT(transactions.id_transaction) as trx_payment_count'),
+                    DB::raw('SUM(transaction_payment_midtrans.gross_amount) as trx_payment_nominal'),
+                    DB::raw("CONCAT_WS(' ', transaction_payment_midtrans.payment_type, transaction_payment_midtrans.bank) AS trx_payment")
+                )
+                ->whereDate('transactions.transaction_date', $date)
+                ->where('transactions.transaction_payment_status', 'Completed')
+                ->where('transaction_pickups.reject_type', 'point')
+                ->groupBy('transactions.id_outlet', 'trx_payment')
+                ->get()->toArray();
 
-                $is_offline = ' (Offline)';
-            }
-            elseif($dtTrx['trasaction_payment_type'] == 'Balance')
-            {
-                $getTransactionPayment = Transaction::join('transaction_payment_balances', 'transaction_payment_balances.id_transaction', 'transactions.id_transaction')
-                    ->where('transactions.id_transaction', $dtTrx['id_transaction'])
-                    ->where('balance_nominal', '!=', 0)
-                    ->select('transaction_payment_balances.balance_nominal AS trx_payment_nominal')->get()->toArray();
-
-                $trx_payment = 'Balance';
-            }
-            elseif($dtTrx['trasaction_payment_type'] == 'Ovo')
-            {
-                $getTransactionPayment = Transaction::join('transaction_payment_ovos', 'transaction_payment_ovos.id_transaction', 'transactions.id_transaction')
-                    ->where('transactions.id_transaction', $dtTrx['id_transaction'])
-                    ->where('amount', '!=', 0)
-                    ->select('transaction_payment_ovos.amount AS trx_payment_nominal')->get()->toArray();
-
-                $trx_payment = 'Ovo';
+            if($dataPaymentRejectToPoint){
+                //insert daily
+                $insertDailyPaymentRejectToPoint = DailyReportPayment::insert($dataPaymentRejectToPoint);
             }
 
-            foreach ($getTransactionPayment as $dtPayment){
+			$dataPaymentGlobal = TransactionPaymentMidtran::join('transactions', 'transactions.id_transaction', 'transaction_payment_midtrans.id_transaction')
+			->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+			->select(
+				DB::raw('DATE(transactions.transaction_date) as trx_date'), 
+				DB::raw('COUNT(transactions.id_transaction) as trx_payment_count'), 
+				DB::raw('SUM(transaction_payment_midtrans.gross_amount) as trx_payment_nominal'), 
+				DB::raw("CONCAT_WS(' ', transaction_payment_midtrans.payment_type, transaction_payment_midtrans.bank) AS trx_payment")
+			)
+			->whereDate('transactions.transaction_date', $date)
+			->where('transactions.transaction_payment_status', 'Completed')
+			->whereNull('transaction_pickups.reject_at')
+			->groupBy('trx_payment')
+			->get()->toArray();
 
-            	if ( !empty($dtPayment['payment_type']) && !empty($dtPayment['payment'])) 
-            	{
-            		$trx_payment = $dtPayment['payment_type'].' '.$dtPayment['payment'].($is_offline??'');
-            	}
-            	else
-            	{
-            		$trx_payment = ($dtPayment['payment_type']??$dtPayment['payment']??$trx_payment).($is_offline??'');
-            	}
+			if($dataPaymentGlobal){
+				//insert global
+				$insertGlobal = GlobalDailyReportPayment::insert($dataPaymentGlobal);
+			}
+		//end midtrans
 
-                $getDaily = DailyReportPayment::where('id_outlet', $dtTrx['id_outlet'])
-                    ->where('trx_date', date('Y-m-d', strtotime($dtTrx['transaction_date'])))
-                    ->where('trx_payment', $trx_payment)->first();
+		//ovo
+			$dataPayment = TransactionPaymentOvo::join('transactions', 'transactions.id_transaction', 'transaction_payment_ovos.id_transaction')
+			->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+			->select(
+				'transactions.id_outlet', 
+				DB::raw('DATE(transactions.transaction_date) as trx_date'),
+                DB::raw('0 as refund_with_point'),
+				DB::raw('COUNT(transactions.id_transaction) as trx_payment_count'), 
+				DB::raw('SUM(transaction_payment_ovos.amount) as trx_payment_nominal'), 
+				DB::raw("'OVO' as 'trx_payment'")
+			)
+			->whereDate('transactions.transaction_date', $date)
+			->where('transactions.transaction_payment_status', 'Completed')
+            ->whereNull('transaction_pickups.reject_at')
+            ->whereNull('transaction_pickups.reject_type')
+			->groupBy('transactions.id_outlet', 'trx_payment')
+			->get()->toArray();
 
-                $dataToInsert = [
-                    'id_outlet' => $dtTrx['id_outlet'],
-                    'trx_date' => date('Y-m-d', strtotime($dtTrx['transaction_date'])),
-                    'trx_payment_count' => 1,
-                    'trx_payment_nominal' => $dtPayment['trx_payment_nominal'],
-                    'trx_payment' => $trx_payment
-                ];
+			if($dataPayment){
+				//insert daily
+				$insertDaily = DailyReportPayment::insert($dataPayment);
+			}
 
-                if($getDaily){
-                    $dataToInsert['trx_payment_count'] = $getDaily['trx_payment_count'] + 1;
-                    $dataToInsert['trx_payment_nominal'] = $getDaily['trx_payment_nominal'] + ($dtPayment['trx_payment_nominal']??0);
-                    DailyReportPayment::where('id_daily_report_payment', $getDaily['id_daily_report_payment'])
-                        ->update($dataToInsert);
-                }else{
-                    DailyReportPayment::create($dataToInsert);
+            $dataPaymentRejectToPoint = TransactionPaymentOvo::join('transactions', 'transactions.id_transaction', 'transaction_payment_ovos.id_transaction')
+                ->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+                ->select(
+                    'transactions.id_outlet',
+                    DB::raw('DATE(transactions.transaction_date) as trx_date'),
+                    DB::raw('1 as refund_with_point'),
+                    DB::raw('COUNT(transactions.id_transaction) as trx_payment_count'),
+                    DB::raw('SUM(transaction_payment_ovos.amount) as trx_payment_nominal'),
+                    DB::raw("'OVO' as 'trx_payment'")
+                )
+                ->whereDate('transactions.transaction_date', $date)
+                ->where('transactions.transaction_payment_status', 'Completed')
+                ->where('transaction_pickups.reject_type', 'point')
+                ->groupBy('transactions.id_outlet', 'trx_payment')
+                ->get()->toArray();
+
+            if($dataPaymentRejectToPoint){
+                //insert daily
+                $insertDailyPaymentRejectToPoint = DailyReportPayment::insert($dataPaymentRejectToPoint);
+            }
+
+			$dataPaymentGlobal = TransactionPaymentOvo::join('transactions', 'transactions.id_transaction', 'transaction_payment_ovos.id_transaction')
+			->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+			->select(
+				DB::raw('DATE(transactions.transaction_date) as trx_date'), 
+				DB::raw('COUNT(transactions.id_transaction) as trx_payment_count'), 
+				DB::raw('SUM(transaction_payment_ovos.amount) as trx_payment_nominal'), 
+				DB::raw("'OVO' as 'trx_payment'")
+			)
+			->whereDate('transactions.transaction_date', $date)
+			->where('transactions.transaction_payment_status', 'Completed')
+			->whereNull('transaction_pickups.reject_at')
+			->groupBy('trx_payment')
+			->get()->toArray();
+
+			if($dataPaymentGlobal){
+				//insert global
+				$insertGlobal = GlobalDailyReportPayment::insert($dataPaymentGlobal);
+			}
+		//end ovo
+
+		//Ipay88
+            $dataPaymentDealsIpay88 = DealsPaymentIpay88::join('deals_users', 'deals_users.id_deals_user', 'deals_payment_ipay88s.id_deals_user')
+                ->select(
+                    DB::raw('DATE(deals_payment_ipay88s.created_at) as date'),
+                    DB::raw('"Ipay88" as payment_type'),
+                    DB::raw('COUNT(deals_payment_ipay88s.id_deals_user) as payment_count'),
+                    DB::raw('SUM(deals_payment_ipay88s.amount / 100) as payment_nominal'),
+                    DB::raw("deals_payment_ipay88s.payment_method AS payment")
+                )
+                ->whereDate('deals_payment_ipay88s.created_at', $date)
+                ->where('deals_users.paid_status', 'Completed')
+                ->groupBy('payment')
+                ->get()->toArray();
+
+            if($dataPaymentDealsIpay88){
+                //insert daily
+                $insertDailyDealsIpay88 = DailyReportPaymentDeals::insert($dataPaymentDealsIpay88);
+            }
+
+            $dataPaymentSubcsriptionIpay88 = SubscriptionPaymentIpay88::join('subscription_users', 'subscription_users.id_subscription_user', 'subscription_payment_ipay88s.id_subscription_user')
+                ->select(
+                    DB::raw('DATE(subscription_payment_ipay88s.created_at) as date'),
+                    DB::raw('"Ipay88" as payment_type'),
+                    DB::raw('COUNT(subscription_payment_ipay88s.id_subscription_user) as payment_count'),
+                    DB::raw('SUM(subscription_payment_ipay88s.amount / 100) as payment_nominal'),
+                    DB::raw("subscription_payment_ipay88s.payment_method AS payment")
+                )
+                ->whereDate('subscription_payment_ipay88s.created_at', $date)
+                ->where('subscription_users.paid_status', 'Completed')
+                ->groupBy('payment')
+                ->get()->toArray();
+
+            if($dataPaymentSubcsriptionIpay88){
+                //insert daily
+                $insertDailySubcsriptionIpay88 = DailyReportPaymentSubcription::insert($dataPaymentSubcsriptionIpay88);
+            }
+
+			$dataPayment = TransactionPaymentIpay88::join('transactions', 'transactions.id_transaction', 'transaction_payment_ipay88s.id_transaction')
+			->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+			->select(
+				'transactions.id_outlet', 
+				DB::raw('DATE(transactions.transaction_date) as trx_date'),
+                DB::raw('0 as refund_with_point'),
+                DB::raw('"Ipay88" as payment_type'),
+				DB::raw('COUNT(transactions.id_transaction) as trx_payment_count'), 
+				DB::raw('SUM(transaction_payment_ipay88s.amount / 100) as trx_payment_nominal'), 
+				DB::raw("transaction_payment_ipay88s.payment_method AS trx_payment")
+			)
+			->whereDate('transactions.transaction_date', $date)
+			->where('transactions.transaction_payment_status', 'Completed')
+            ->whereNull('transaction_pickups.reject_at')
+            ->whereNull('transaction_pickups.reject_type')
+			->groupBy('transactions.id_outlet', 'trx_payment')
+			->get()->toArray();
+
+			if($dataPayment){
+				//insert daily
+				$insertDaily = DailyReportPayment::insert($dataPayment);
+			}
+
+            $dataPaymentRejectToPoint = TransactionPaymentIpay88::join('transactions', 'transactions.id_transaction', 'transaction_payment_ipay88s.id_transaction')
+                ->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+                ->select(
+                    'transactions.id_outlet',
+                    DB::raw('DATE(transactions.transaction_date) as trx_date'),
+                    DB::raw('1 as refund_with_point'),
+                    DB::raw('"Ipay88" as payment_type'),
+                    DB::raw('COUNT(transactions.id_transaction) as trx_payment_count'),
+                    DB::raw('SUM(transaction_payment_ipay88s.amount / 100) as trx_payment_nominal'),
+                    DB::raw("transaction_payment_ipay88s.payment_method AS trx_payment")
+                )
+                ->whereDate('transactions.transaction_date', $date)
+                ->where('transactions.transaction_payment_status', 'Completed')
+                ->where('transaction_pickups.reject_type', 'point')
+                ->groupBy('transactions.id_outlet', 'trx_payment')
+                ->get()->toArray();
+
+            if($dataPaymentRejectToPoint){
+                //insert daily
+                $insertDaily = DailyReportPayment::insert($dataPaymentRejectToPoint);
+            }
+
+			$dataPaymentGlobal = TransactionPaymentIpay88::join('transactions', 'transactions.id_transaction', 'transaction_payment_ipay88s.id_transaction')
+			->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+			->select(
+				DB::raw('DATE(transactions.transaction_date) as trx_date'), 
+				DB::raw('COUNT(transactions.id_transaction) as trx_payment_count'), 
+				DB::raw('SUM(transaction_payment_ipay88s.amount / 100) as trx_payment_nominal'), 
+				DB::raw("transaction_payment_ipay88s.payment_method AS trx_payment")
+			)
+			->whereDate('transactions.transaction_date', $date)
+			->where('transactions.transaction_payment_status', 'Completed')
+			->whereNull('transaction_pickups.reject_at')
+			->groupBy('trx_payment')
+			->get()->toArray();
+
+			if($dataPaymentGlobal){
+				//insert global
+				$insertGlobal = GlobalDailyReportPayment::insert($dataPaymentGlobal);
+			}
+		//end Ipay88
+
+		//balance
+			$dataPayment = TransactionPaymentBalance::join('transactions', 'transactions.id_transaction', 'transaction_payment_balances.id_transaction')
+			->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+			->select(
+				'transactions.id_outlet', 
+				DB::raw('DATE(transactions.transaction_date) as trx_date'), 
+				DB::raw('COUNT(transactions.id_transaction) as trx_payment_count'), 
+				DB::raw('SUM(transaction_payment_balances.balance_nominal) as trx_payment_nominal'), 
+				DB::raw("'Jiwa Poin' AS trx_payment")
+			)
+			->whereDate('transactions.transaction_date', $date)
+			->where('transactions.transaction_payment_status', 'Completed')
+			->whereNull('transaction_pickups.reject_at')
+			->groupBy('transactions.id_outlet', 'trx_payment')
+			->get()->toArray();
+
+			if($dataPayment){
+				//insert daily
+				$insertDaily = DailyReportPayment::insert($dataPayment);
+			}
+
+			$dataPaymentGlobal = TransactionPaymentBalance::join('transactions', 'transactions.id_transaction', 'transaction_payment_balances.id_transaction')
+			->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+			->select(
+				DB::raw('DATE(transactions.transaction_date) as trx_date'), 
+				DB::raw('COUNT(transactions.id_transaction) as trx_payment_count'), 
+				DB::raw('SUM(transaction_payment_balances.balance_nominal) as trx_payment_nominal'), 
+				DB::raw("'Jiwa Poin' AS trx_payment")
+			)
+			->whereDate('transactions.transaction_date', $date)
+			->where('transactions.transaction_payment_status', 'Completed')
+			->whereNull('transaction_pickups.reject_at')
+			->groupBy('trx_payment')
+			->get()->toArray();
+
+			if($dataPaymentGlobal){
+				//insert global
+				$insertGlobal = GlobalDailyReportPayment::insert($dataPaymentGlobal);
+			}
+		//end balance
+
+		//offline
+			$dataPayment = TransactionPaymentOffline::join('transactions', 'transactions.id_transaction', 'transaction_payment_offlines.id_transaction')
+			->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+			->select(
+				'transactions.id_outlet', 
+				DB::raw('DATE(transactions.transaction_date) as trx_date'), 
+				DB::raw('COUNT(transactions.id_transaction) as trx_payment_count'), 
+				DB::raw('SUM(transaction_payment_offlines.payment_amount) as trx_payment_nominal'), 
+				DB::raw("CONCAT_WS(' ', transaction_payment_offlines.payment_type, transaction_payment_offlines.payment_bank, ' (Offline)') AS trx_payment")
+			)
+			->whereDate('transactions.transaction_date', $date)
+			->where('transactions.transaction_payment_status', 'Completed')
+			->whereNull('transaction_pickups.reject_at')
+			->groupBy('transactions.id_outlet', 'trx_payment')
+			->get()->toArray();
+
+			if($dataPayment){
+				//insert daily
+				$insertDaily = DailyReportPayment::insert($dataPayment);
+			}
+
+			$dataPaymentGlobal = TransactionPaymentOffline::join('transactions', 'transactions.id_transaction', 'transaction_payment_offlines.id_transaction')
+			->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+			->select(
+				DB::raw('DATE(transactions.transaction_date) as trx_date'), 
+				DB::raw('COUNT(transactions.id_transaction) as trx_payment_count'), 
+				DB::raw('SUM(transaction_payment_offlines.payment_amount) as trx_payment_nominal'), 
+				DB::raw("CONCAT_WS(' ', transaction_payment_offlines.payment_type, transaction_payment_offlines.payment_bank, ' (Offline)') AS trx_payment")
+			)
+			->whereDate('transactions.transaction_date', $date)
+			->where('transactions.transaction_payment_status', 'Completed')
+			->whereNull('transaction_pickups.reject_at')
+			->groupBy('trx_payment')
+			->get()->toArray();
+
+			if($dataPaymentGlobal){
+				//insert global
+				$insertGlobal = GlobalDailyReportPayment::insert($dataPaymentGlobal);
+			}
+		//end offline
+
+        return true;
+    }
+
+    /* REPORT MODIFIER */
+    function dailyReportModifier($outletAll, $date) 
+    {
+        foreach ($outletAll as $outlet) {
+             $modifier = DB::select(DB::raw('
+                        SELECT transaction_product_modifiers.id_product_modifier, transaction_products.id_brand, transactions.id_outlet, 
+                        (select SUM(transaction_product_modifiers.qty)) as total_qty, 
+                        (select SUM(transaction_product_modifiers.transaction_product_modifier_price)) as total_nominal, 
+                        (select count(transaction_product_modifiers.id_product_modifier)) as total_rec, 
+                        (select DATE(transactions.transaction_date)) as trx_date,
+						(select SUM(Case When users.gender = \'Male\' Then 1 Else 0 End)) as cust_male, 
+						(select SUM(Case When users.gender = \'Female\' Then 1 Else 0 End)) as cust_female, 
+						(select SUM(Case When users.android_device is not null Then 1 Else 0 End)) as cust_android, 
+						(select SUM(Case When users.ios_device is not null Then 1 Else 0 End)) as cust_ios, 
+						(select SUM(Case When users.provider = \'Telkomsel\' Then 1 Else 0 End)) as cust_telkomsel, 
+						(select SUM(Case When users.provider = \'XL\' Then 1 Else 0 End)) as cust_xl, 
+						(select SUM(Case When users.provider = \'Indosat\' Then 1 Else 0 End)) as cust_indosat, 
+						(select SUM(Case When users.provider = \'Tri\' Then 1 Else 0 End)) as cust_tri, 
+						(select SUM(Case When users.provider = \'Axis\' Then 1 Else 0 End)) as cust_axis, 
+						(select SUM(Case When users.provider = \'Smart\' Then 1 Else 0 End)) as cust_smart, 
+						(select product_modifiers.text) as text,
+						(select SUM(Case When floor(datediff (now(), users.birthday)/365) >= 11 && floor(datediff (now(), users.birthday)/365) <= 17 Then 1 Else 0 End)) as cust_teens, 
+						(select SUM(Case When floor(datediff (now(), users.birthday)/365) >= 18 && floor(datediff (now(), users.birthday)/365) <= 24 Then 1 Else 0 End)) as cust_young_adult, 
+						(select SUM(Case When floor(datediff (now(), users.birthday)/365) >= 25 && floor(datediff (now(), users.birthday)/365) <= 34 Then 1 Else 0 End)) as cust_adult,
+						(select SUM(Case When floor(datediff (now(), users.birthday)/365) >= 35 && floor(datediff (now(), users.birthday)/365) <= 100 Then 1 Else 0 End)) as cust_old
+                        FROM transaction_product_modifiers 
+                        INNER JOIN transactions ON transaction_product_modifiers.id_transaction = transactions.id_transaction 
+                        INNER JOIN transaction_products ON transaction_product_modifiers.id_transaction_product = transaction_products.id_transaction_product
+						LEFT JOIN users ON users.id = transactions.id_user
+						LEFT JOIN transaction_pickups ON transaction_pickups.id_transaction = transactions.id_transaction
+						LEFT JOIN product_modifiers ON product_modifiers.id_product_modifier = transaction_product_modifiers.id_product_modifier
+						WHERE transactions.transaction_date BETWEEN "'. date('Y-m-d', strtotime($date)) .' 00:00:00" 
+                        AND "'. date('Y-m-d', strtotime($date)) .' 23:59:59"
+                        AND transactions.id_outlet = "'. $outlet .'"
+                        AND transaction_payment_status = "Completed"
+                        AND transaction_pickups.reject_at IS NULL
+                        GROUP BY transaction_product_modifiers.id_product_modifier,transaction_products.id_brand
+                        ORDER BY transaction_product_modifiers.id_product_modifier ASC
+                    '));
+
+            if (!empty($modifier)) {
+                $modifier = json_decode(json_encode($modifier), true);
+                foreach ($modifier as $key => $value) {
+					// $sum = array();
+					$sum[$value['id_product_modifier']]['trx_date'] = $date;
+					$sum[$value['id_product_modifier']]['id_product_modifier'] = $value['id_product_modifier'];
+					$sum[$value['id_product_modifier']]['text'] = $value['text'];
+					$sum[$value['id_product_modifier']]['total_qty'] = ($sum[$value['id_product_modifier']]['total_qty']??0) + $value['total_qty'];
+					$sum[$value['id_product_modifier']]['total_nominal'] = ($sum[$value['id_product_modifier']]['total_nominal']??0) + $value['total_nominal'];
+					$sum[$value['id_product_modifier']]['total_rec'] = ($sum[$value['id_product_modifier']]['total_rec']??0) + $value['total_rec'];
+					$sum[$value['id_product_modifier']]['cust_male'] = $value['cust_male'];
+					$sum[$value['id_product_modifier']]['cust_female'] = $value['cust_female'];
+					$sum[$value['id_product_modifier']]['cust_android'] = $value['cust_android'];
+					$sum[$value['id_product_modifier']]['cust_ios'] = $value['cust_ios'];
+					$sum[$value['id_product_modifier']]['cust_telkomsel'] = $value['cust_telkomsel'];
+					$sum[$value['id_product_modifier']]['cust_xl'] = $value['cust_xl'];
+					$sum[$value['id_product_modifier']]['cust_indosat'] = $value['cust_indosat'];
+					$sum[$value['id_product_modifier']]['cust_tri'] = $value['cust_tri'];
+					$sum[$value['id_product_modifier']]['cust_axis'] = $value['cust_axis'];
+					$sum[$value['id_product_modifier']]['cust_smart'] = $value['cust_smart'];
+					$sum[$value['id_product_modifier']]['cust_teens'] = $value['cust_teens'];
+					$sum[$value['id_product_modifier']]['cust_young_adult'] = $value['cust_young_adult'];
+					$sum[$value['id_product_modifier']]['cust_adult'] = $value['cust_adult'];
+					$sum[$value['id_product_modifier']]['cust_old'] = $value['cust_old'];
+
+                    $save = DailyReportTrxModifier::updateOrCreate([
+                        'trx_date'   => date('Y-m-d', strtotime($value['trx_date'])), 
+                        'id_product_modifier' => $value['id_product_modifier'],
+                        'id_outlet'  => $value['id_outlet'],
+                        'id_brand' 	 => $value['id_brand']
+                    ], $value);
+					
+					$saveGlobal = GlobalDailyReportTrxModifier::updateOrCreate([
+                        'trx_date'   => date('Y-m-d', strtotime($value['trx_date'])), 
+                        'id_product_modifier' => $value['id_product_modifier']
+                    ], $sum[$value['id_product_modifier']]);
+					
+                    if (!$save) {
+                        return false;
+                    }
                 }
-
-                $global_key = array_search($trx_payment, array_column($global, 'trx_payment'));
-
-                if ($global_key || $global_key === 0) 
-                {
-                	$global[$global_key]['trx_payment_count'] = $global[$global_key]['trx_payment_count'] + 1;
-                	$global[$global_key]['trx_payment_nominal'] = $global[$global_key]['trx_payment_nominal'] + $dtPayment['trx_payment_nominal'];
-                }
-                else
-                {
-                	$new_global['trx_payment'] = $trx_payment;
-                	$new_global['trx_payment_count'] = 1;
-                	$new_global['trx_payment_nominal'] = $dtPayment['trx_payment_nominal'];
-                	array_push($global, $new_global);
-
-	                $global_key = array_search($trx_payment, array_column($global, 'trx_payment'));
-                }
-
-		        $saveGlobal = GlobalDailyReportPayment::updateOrCreate([
-		            'trx_date'  => date('Y-m-d', strtotime($date)),
-		            'trx_payment' => $trx_payment
-		        ], $global[$global_key]);
             }
         }
 
@@ -842,21 +1314,10 @@ class ApiCronReport extends Controller
 	/* NEW MONTHLY REPORT */
     function newMonthlyReport($date) 
     {
-		$d1 = new DateTime($date);
-		$d2 = new DateTime(date('Y-m-d'));
-		$interval = date_diff($d1, $d2);
-		$diff = $interval->m + ($interval->y * 12);
-		
-		for($x = 0;$x <= $diff; $x++){
-			$start = date('Y-m-1', strtotime("+ ".$x." month", strtotime($date)));
-			if($x != $diff){
-				$end = date('Y-m-t', strtotime("+ ".$x." month", strtotime($date)));
-			} else {
-				$end = date('Y-m-d');
-			}
+        $start = date('Y-m-1', strtotime("+0  month", strtotime($date)));
+        $end = date('Y-m-t', strtotime("+0 month", strtotime($date)));
 
-			// print_r(['start' => $start, 'end' => $end]);exit;
-			$trans = DB::select(DB::raw('
+        $trans = DB::select(DB::raw('
 						SELECT transactions.id_outlet, 
 						(select SUM(Case When users.gender = \'Male\' Then 1 Else 0 End)) as cust_male, 
 						(select SUM(Case When users.gender = \'Female\' Then 1 Else 0 End)) as cust_female, 
@@ -882,14 +1343,17 @@ class ApiCronReport extends Controller
 						(select SUM(transaction_cashback_earned)) as trx_cashback_earned, 
 						(select count(transactions.id_transaction)) as trx_count, 
 						(select AVG(transaction_grandtotal)) as trx_average,
-						(select 
-	                    	SUM(transaction_products.transaction_product_qty) 
-	                    	FROM transaction_products 
-	                    	WHERE transaction_products.id_outlet = transactions.id_outlet 
-	                    ) as trx_total_item 
+						(select SUM(trans_p.trx_total_item)) as trx_total_item
 						FROM transactions 
 						LEFT JOIN users ON users.id = transactions.id_user
 						LEFT JOIN transaction_pickups ON transaction_pickups.id_transaction = transactions.id_transaction 
+						LEFT JOIN (
+		                	select 
+		                    	transaction_products.id_transaction, SUM(transaction_products.transaction_product_qty) trx_total_item
+		                    	FROM transaction_products 
+		                    	GROUP BY transaction_products.id_transaction
+		                ) trans_p
+		                	ON (transactions.id_transaction = trans_p.id_transaction) 
 						WHERE transaction_date BETWEEN "'. $start .' 00:00:00" 
 						AND "'. $end .' 23:59:59"
 						AND transaction_payment_status = "Completed"
@@ -897,85 +1361,85 @@ class ApiCronReport extends Controller
 						GROUP BY transactions.id_outlet
 					'));
 
-			// print_r($trans);exit;
-			if ($trans) {
-				$trans = json_decode(json_encode($trans), true);
-				$sum = array();
-				$sum['trx_month'] = date('n', strtotime($end));
-				$sum['trx_year'] = date('Y', strtotime($end));
-				$sum['trx_subtotal'] = 0;
-				$sum['trx_tax'] = 0;
-				$sum['trx_shipment'] = 0;
-				$sum['trx_service'] = 0;
-				$sum['trx_discount'] = 0;
-				$sum['trx_grand'] = 0;
-				$sum['trx_point_earned'] = 0;
-				$sum['trx_cashback_earned'] = 0;
-				$sum['trx_count'] = 0;
-				$sum['trx_total_item'] = 0;
-				$sum['trx_average'] = 0;
-				$sum['cust_male'] = 0;
-				$sum['cust_female'] = 0;
-				$sum['cust_android'] = 0;
-				$sum['cust_ios'] = 0;
-				$sum['cust_telkomsel'] = 0;
-				$sum['cust_xl'] = 0;
-				$sum['cust_indosat'] = 0;
-				$sum['cust_tri'] = 0;
-				$sum['cust_axis'] = 0;
-				$sum['cust_smart'] = 0;
-				$sum['cust_teens'] = 0;
-				$sum['cust_young_adult'] = 0;
-				$sum['cust_adult'] = 0;
-				$sum['cust_old'] = 0;
-				
-				foreach ($trans as $key => $value) {
-					$value['trx_month'] = date('n', strtotime($end));
-					$value['trx_year'] = date('Y', strtotime($end));
-					$save = MonthlyReportTrx::updateOrCreate([
-						'trx_month' => $value['trx_month'],
-						'trx_year' => $value['trx_year'],
-						'id_outlet' => $value['id_outlet']
-					], $value);
+        // print_r($trans);exit;
+        if ($trans) {
+            $trans = json_decode(json_encode($trans), true);
+            $sum = array();
+            $sum['trx_month'] = date('n', strtotime($end));
+            $sum['trx_year'] = date('Y', strtotime($end));
+            $sum['trx_subtotal'] = 0;
+            $sum['trx_tax'] = 0;
+            $sum['trx_shipment'] = 0;
+            $sum['trx_service'] = 0;
+            $sum['trx_discount'] = 0;
+            $sum['trx_grand'] = 0;
+            $sum['trx_point_earned'] = 0;
+            $sum['trx_cashback_earned'] = 0;
+            $sum['trx_count'] = 0;
+            $sum['trx_total_item'] = 0;
+            $sum['trx_average'] = 0;
+            $sum['cust_male'] = 0;
+            $sum['cust_female'] = 0;
+            $sum['cust_android'] = 0;
+            $sum['cust_ios'] = 0;
+            $sum['cust_telkomsel'] = 0;
+            $sum['cust_xl'] = 0;
+            $sum['cust_indosat'] = 0;
+            $sum['cust_tri'] = 0;
+            $sum['cust_axis'] = 0;
+            $sum['cust_smart'] = 0;
+            $sum['cust_teens'] = 0;
+            $sum['cust_young_adult'] = 0;
+            $sum['cust_adult'] = 0;
+            $sum['cust_old'] = 0;
 
-					if (!$save) {
-						return false;
-					}
-					
-					$sum['trx_subtotal'] += $value['trx_subtotal'];
-					$sum['trx_tax'] += $value['trx_tax'];
-					$sum['trx_shipment'] += $value['trx_shipment'];
-					$sum['trx_service'] += $value['trx_service'];
-					$sum['trx_discount'] += $value['trx_discount'];
-					$sum['trx_grand'] += $value['trx_grand'];
-					$sum['trx_point_earned'] += $value['trx_point_earned'];
-					$sum['trx_cashback_earned'] += $value['trx_cashback_earned'];
-					$sum['trx_count'] += $value['trx_count'];
-					$sum['trx_total_item'] += $value['trx_total_item'];
-					$sum['trx_average'] += $value['trx_average'];
-					$sum['cust_male'] += $value['cust_male'];
-					$sum['cust_female'] += $value['cust_female'];
-					$sum['cust_android'] += $value['cust_android'];
-					$sum['cust_ios'] += $value['cust_ios'];
-					$sum['cust_telkomsel'] += $value['cust_telkomsel'];
-					$sum['cust_xl'] += $value['cust_xl'];
-					$sum['cust_indosat'] += $value['cust_indosat'];
-					$sum['cust_tri'] += $value['cust_tri'];
-					$sum['cust_axis'] += $value['cust_axis'];
-					$sum['cust_smart'] += $value['cust_smart'];
-					$sum['cust_teens'] += $value['cust_teens'];
-					$sum['cust_young_adult'] += $value['cust_young_adult'];
-					$sum['cust_adult'] += $value['cust_adult'];
-					$sum['cust_old'] += $value['cust_old'];
-				}
-				$saveGlobal = GlobalMonthlyReportTrx::updateOrCreate([
-						'trx_month'  => date('n', strtotime($end)),
-						'trx_year'  => date('Y', strtotime($end))
-					], $sum);
-					
-				return $trans;
-			}
-		}
+            foreach ($trans as $key => $value) {
+                $value['trx_month'] = date('n', strtotime($end));
+                $value['trx_year'] = date('Y', strtotime($end));
+                $save = MonthlyReportTrx::updateOrCreate([
+                    'trx_month' => $value['trx_month'],
+                    'trx_year' => $value['trx_year'],
+                    'id_outlet' => $value['id_outlet']
+                ], $value);
+
+                if (!$save) {
+                    return false;
+                }
+
+                $sum['trx_subtotal'] += $value['trx_subtotal'];
+                $sum['trx_tax'] += $value['trx_tax'];
+                $sum['trx_shipment'] += $value['trx_shipment'];
+                $sum['trx_service'] += $value['trx_service'];
+                $sum['trx_discount'] += $value['trx_discount'];
+                $sum['trx_grand'] += $value['trx_grand'];
+                $sum['trx_point_earned'] += $value['trx_point_earned'];
+                $sum['trx_cashback_earned'] += $value['trx_cashback_earned'];
+                $sum['trx_count'] += $value['trx_count'];
+                $sum['trx_total_item'] += $value['trx_total_item'];
+                $sum['trx_average'] += $value['trx_average'];
+                $sum['cust_male'] += $value['cust_male'];
+                $sum['cust_female'] += $value['cust_female'];
+                $sum['cust_android'] += $value['cust_android'];
+                $sum['cust_ios'] += $value['cust_ios'];
+                $sum['cust_telkomsel'] += $value['cust_telkomsel'];
+                $sum['cust_xl'] += $value['cust_xl'];
+                $sum['cust_indosat'] += $value['cust_indosat'];
+                $sum['cust_tri'] += $value['cust_tri'];
+                $sum['cust_axis'] += $value['cust_axis'];
+                $sum['cust_smart'] += $value['cust_smart'];
+                $sum['cust_teens'] += $value['cust_teens'];
+                $sum['cust_young_adult'] += $value['cust_young_adult'];
+                $sum['cust_adult'] += $value['cust_adult'];
+                $sum['cust_old'] += $value['cust_old'];
+            }
+            $saveGlobal = GlobalMonthlyReportTrx::updateOrCreate([
+                'trx_month'  => date('n', strtotime($end)),
+                'trx_year'  => date('Y', strtotime($end))
+            ], $sum);
+
+            return $trans;
+        }
+
         return true;
     }
 
@@ -988,7 +1452,7 @@ class ApiCronReport extends Controller
     	$sum = [];
         foreach ($outletAll as $outlet) {
             $product = DB::select(DB::raw('
-                        SELECT transaction_products.id_product, transactions.id_outlet, 
+                        SELECT transaction_products.id_product, transaction_products.id_brand, transactions.id_outlet, 
                         (select SUM(transaction_products.transaction_product_qty)) as total_qty, 
                         (select SUM(transaction_products.transaction_product_subtotal)) as total_nominal, 
                         (select SUM(transaction_products.transaction_product_discount)) as total_product_discount, 
@@ -1020,7 +1484,7 @@ class ApiCronReport extends Controller
                         AND transactions.id_outlet = "'. $outlet .'"
                         AND transaction_payment_status = "Completed"
                         AND transaction_pickups.reject_at IS NULL
-                        GROUP BY id_product
+                        GROUP BY id_product,id_brand
                         ORDER BY id_product ASC
                     '));
 
@@ -1055,7 +1519,8 @@ class ApiCronReport extends Controller
                         'trx_month'  => $value['trx_month'], 
                         'trx_year'   => $value['trx_year'], 
                         'id_product' => $value['id_product'],
-                        'id_outlet'  => $value['id_outlet']
+                        'id_outlet'  => $value['id_outlet'],
+                        'id_brand'  => $value['id_brand']
                     ], $value);
 
 					// $saveGlobal = GlobalMonthlyReportTrxMenu::updateOrCreate([
@@ -1129,148 +1594,505 @@ class ApiCronReport extends Controller
         return true;
     }
 
-    /* REPORT PAYMENT */
-    function monthlyReportPayment($date) 
-    {
-        $date = date('Y-m-d', strtotime($date));
+	/* REPORT PAYMENT */
+	//
+		// function monthlyReportPayment($date) 
+		// {
+		// 	$date = date('Y-m-d', strtotime($date));
 
-        $getTransactions = Transaction::whereDate('transactions.transaction_date', $date)
-            ->whereNotNull('transactions.id_user')
-            ->where('transactions.transaction_payment_status', 'Completed')
-            ->whereNull('transaction_pickups.reject_at')
-            ->groupBy('transactions.id_transaction', 'transactions.id_outlet')
-            ->select(
-            	'transactions.id_transaction', 
-            	'transactions.id_outlet', 
-            	'transactions.id_user', 
-            	'transactions.transaction_date', 
-            	'transactions.trasaction_payment_type'
-            )
-            ->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
-            ->get()->toArray();
+		// 	$getTransactions = Transaction::whereDate('transactions.transaction_date', $date)
+		// 		->whereNotNull('transactions.id_user')
+		// 		->where('transactions.transaction_payment_status', 'Completed')
+		// 		->whereNull('transaction_pickups.reject_at')
+		// 		->groupBy('transactions.id_transaction', 'transactions.id_outlet')
+		// 		->select(
+		// 			'transactions.id_transaction', 
+		// 			'transactions.id_outlet', 
+		// 			'transactions.id_user', 
+		// 			'transactions.transaction_date', 
+		// 			'transactions.trasaction_payment_type'
+		// 		)
+		// 		->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+		// 		->get()->toArray();
 
-        $global = [];
-        foreach ($getTransactions as $dtTrx){
-            $total = 0;
-            $count = 0;
-            $is_offline = "";
-            $getTransactionPayment = [];
-            $trx_payment = $dtTrx['trasaction_payment_type'];
+		// 	$global = [];
+		// 	foreach ($getTransactions as $dtTrx){
+		// 		$total = 0;
+		// 		$count = 0;
+		// 		$is_offline = "";
+		// 		$getTransactionPayment = [];
+		// 		$trx_payment = $dtTrx['trasaction_payment_type'];
 
-            if($dtTrx['trasaction_payment_type'] == 'Manual')
-            {
-                $getTransactionPayment = Transaction::join('transaction_payment_manuals', 'transaction_payment_manuals.id_transaction', 'transactions.id_transaction')
-                    ->where('transactions.id_transaction', $dtTrx['id_transaction'])
-                    ->select(
-                    	'transaction_payment_manuals.payment_method as payment_type',
-                    	'transaction_payment_manuals.payment_bank as payment',
-                    	'transaction_payment_manuals.payment_nominal as trx_payment_nominal'
-                    )->get()->toArray();
-            }
-            elseif($dtTrx['trasaction_payment_type'] == 'Midtrans')
-            {
-                $getTransactionPayment = Transaction::join('transaction_payment_midtrans', 'transaction_payment_midtrans.id_transaction', 'transactions.id_transaction')
-                    ->where('transactions.id_transaction', $dtTrx['id_transaction'])
-                    ->select(
-                    	'transaction_payment_midtrans.payment_type as payment_type', 
-                    	'transaction_payment_midtrans.bank as payment', 
-                    	'transaction_payment_midtrans.gross_amount as trx_payment_nominal'
-                    )->get()->toArray();
-            }
-            elseif($dtTrx['trasaction_payment_type'] == 'Offline')
-            {
-                $getTransactionPayment = Transaction::join('transaction_payment_offlines', 'transaction_payment_offlines.id_transaction', 'transactions.id_transaction')
-                    ->where('transactions.id_transaction', $dtTrx['id_transaction'])
-                    ->where('payment_amount', '!=', 0)
-                    ->select(
-                    	'transaction_payment_offlines.payment_type as payment_type',
-                    	'transaction_payment_offlines.payment_bank as payment',
-                    	'transaction_payment_offlines.payment_amount as trx_payment_nominal'
-                    )->get()->toArray();
-                $is_offline = ' (Offline)';
-            }
-            elseif($dtTrx['trasaction_payment_type'] == 'Balance')
-            {
-                $getTransactionPayment = Transaction::join('transaction_payment_balances', 'transaction_payment_balances.id_transaction', 'transactions.id_transaction')
-                    ->where('transactions.id_transaction', $dtTrx['id_transaction'])
-                    ->where('balance_nominal', '!=', 0)
-                    ->select('transaction_payment_balances.balance_nominal AS trx_payment_nominal')->get()->toArray();
+		// 		if($dtTrx['trasaction_payment_type'] == 'Manual')
+		// 		{
+		// 			$getTransactionPayment = Transaction::join('transaction_payment_manuals', 'transaction_payment_manuals.id_transaction', 'transactions.id_transaction')
+		// 				->where('transactions.id_transaction', $dtTrx['id_transaction'])
+		// 				->select(
+		// 					'transaction_payment_manuals.payment_method as payment_type',
+		// 					'transaction_payment_manuals.payment_bank as payment',
+		// 					'transaction_payment_manuals.payment_nominal as trx_payment_nominal'
+		// 				)->get()->toArray();
+		// 		}
+		// 		elseif($dtTrx['trasaction_payment_type'] == 'Midtrans')
+		// 		{
+		// 			$getTransactionPayment = Transaction::join('transaction_payment_midtrans', 'transaction_payment_midtrans.id_transaction', 'transactions.id_transaction')
+		// 				->where('transactions.id_transaction', $dtTrx['id_transaction'])
+		// 				->select(
+		// 					'transaction_payment_midtrans.payment_type as payment_type', 
+		// 					'transaction_payment_midtrans.bank as payment', 
+		// 					'transaction_payment_midtrans.gross_amount as trx_payment_nominal'
+		// 				)->get()->toArray();
+		// 		}
+		// 		elseif($dtTrx['trasaction_payment_type'] == 'Offline')
+		// 		{
+		// 			$getTransactionPayment = Transaction::join('transaction_payment_offlines', 'transaction_payment_offlines.id_transaction', 'transactions.id_transaction')
+		// 				->where('transactions.id_transaction', $dtTrx['id_transaction'])
+		// 				->where('payment_amount', '!=', 0)
+		// 				->select(
+		// 					'transaction_payment_offlines.payment_type as payment_type',
+		// 					'transaction_payment_offlines.payment_bank as payment',
+		// 					'transaction_payment_offlines.payment_amount as trx_payment_nominal'
+		// 				)->get()->toArray();
+		// 			$is_offline = ' (Offline)';
+		// 		}
+		// 		elseif($dtTrx['trasaction_payment_type'] == 'Balance')
+		// 		{
+		// 			$getTransactionPayment = Transaction::join('transaction_payment_balances', 'transaction_payment_balances.id_transaction', 'transactions.id_transaction')
+		// 				->where('transactions.id_transaction', $dtTrx['id_transaction'])
+		// 				->where('balance_nominal', '!=', 0)
+		// 				->select('transaction_payment_balances.balance_nominal AS trx_payment_nominal')->get()->toArray();
 
-                $trx_payment = 'Balance';
-            }
-            elseif($dtTrx['trasaction_payment_type'] == 'Ovo')
-            {
-                $getTransactionPayment = Transaction::join('transaction_payment_ovos', 'transaction_payment_ovos.id_transaction', 'transactions.id_transaction')
-                    ->where('transactions.id_transaction', $dtTrx['id_transaction'])
-                    ->where('amount', '!=', 0)
-                    ->select('transaction_payment_ovos.amount AS trx_payment_nominal')->get()->toArray();
+		// 			$trx_payment = 'Balance';
+		// 		}
+		// 		elseif($dtTrx['trasaction_payment_type'] == 'Ovo')
+		// 		{
+		// 			$getTransactionPayment = Transaction::join('transaction_payment_ovos', 'transaction_payment_ovos.id_transaction', 'transactions.id_transaction')
+		// 				->where('transactions.id_transaction', $dtTrx['id_transaction'])
+		// 				->where('amount', '!=', 0)
+		// 				->select('transaction_payment_ovos.amount AS trx_payment_nominal')->get()->toArray();
 
-                $trx_payment = 'Ovo';
-            }
+		// 			$trx_payment = 'Ovo';
+		// 		}
 
-            $month = date('m', strtotime($dtTrx['transaction_date']));
-            $year = date('Y', strtotime($dtTrx['transaction_date']));
+		// 		$month = date('m', strtotime($dtTrx['transaction_date']));
+		// 		$year = date('Y', strtotime($dtTrx['transaction_date']));
 
-            foreach ($getTransactionPayment as $dtPayment){
+		// 		foreach ($getTransactionPayment as $dtPayment){
 
-            	if ( !empty($dtPayment['payment_type']) && !empty($dtPayment['payment'])) 
-            	{
-            		$trx_payment = $dtPayment['payment_type'].' '.$dtPayment['payment'].($is_offline??'');
-            	}
-            	else
-            	{
-            		$trx_payment = ($dtPayment['payment_type']??$dtPayment['payment']??$trx_payment).($is_offline??'');
-            	}
+		// 			if ( !empty($dtPayment['payment_type']) && !empty($dtPayment['payment'])) 
+		// 			{
+		// 				$trx_payment = $dtPayment['payment_type'].' '.$dtPayment['payment'].($is_offline??'');
+		// 			}
+		// 			else
+		// 			{
+		// 				$trx_payment = ($dtPayment['payment_type']??$dtPayment['payment']??$trx_payment).($is_offline??'');
+		// 			}
 
-                $getMonthly = MonthlyReportPayment::where('id_outlet', $dtTrx['id_outlet'])
-                    ->where('trx_month', $month)
-                    ->where('trx_year', $year)
-                    ->where('trx_payment', $trx_payment)->first();
+		// 			$getMonthly = MonthlyReportPayment::where('id_outlet', $dtTrx['id_outlet'])
+		// 				->where('trx_month', $month)
+		// 				->where('trx_year', $year)
+		// 				->where('trx_payment', $trx_payment)->first();
 
-                $dataToInsert = [
-                    'id_outlet' => $dtTrx['id_outlet'],
-                    'trx_month' => $month,
-                    'trx_year' => $year,
-                    'trx_payment_count' => 1,
-                    'trx_payment_nominal' => $dtPayment['trx_payment_nominal'],
-                    'trx_payment' => $trx_payment
-                ];
+		// 			$dataToInsert = [
+		// 				'id_outlet' => $dtTrx['id_outlet'],
+		// 				'trx_month' => $month,
+		// 				'trx_year' => $year,
+		// 				'trx_payment_count' => 1,
+		// 				'trx_payment_nominal' => $dtPayment['trx_payment_nominal'],
+		// 				'trx_payment' => $trx_payment
+		// 			];
 
-                if($getMonthly){
-                    $dataToInsert['trx_payment_count'] = $getMonthly['trx_payment_count'] + 1;
-                    $dataToInsert['trx_payment_nominal'] = $getMonthly['trx_payment_nominal'] + ($dtPayment['trx_payment_nominal']??0);
-                    MonthlyReportPayment::where('id_monthly_report_payment', $getMonthly['id_monthly_report_payment'])
-                        ->update($dataToInsert);
-                }else{
-                    MonthlyReportPayment::create($dataToInsert);
-                }
+		// 			if($getMonthly){
+		// 				$dataToInsert['trx_payment_count'] = $getMonthly['trx_payment_count'] + 1;
+		// 				$dataToInsert['trx_payment_nominal'] = $getMonthly['trx_payment_nominal'] + ($dtPayment['trx_payment_nominal']??0);
+		// 				MonthlyReportPayment::where('id_monthly_report_payment', $getMonthly['id_monthly_report_payment'])
+		// 					->update($dataToInsert);
+		// 			}else{
+		// 				MonthlyReportPayment::create($dataToInsert);
+		// 			}
 
-                $global_key = array_search($trx_payment, array_column($global, 'trx_payment'));
+		// 			$global_key = array_search($trx_payment, array_column($global, 'trx_payment'));
 
-                if ($global_key || $global_key === 0) 
-                {
-                	$global[$global_key]['trx_payment_count'] = $global[$global_key]['trx_payment_count'] + 1;
-                	$global[$global_key]['trx_payment_nominal'] = $global[$global_key]['trx_payment_nominal'] + $dtPayment['trx_payment_nominal'];
-                }
-                else
-                {
-                	$new_global['trx_payment'] = $trx_payment;
-                	$new_global['trx_payment_count'] = 1;
-                	$new_global['trx_payment_nominal'] = $dtPayment['trx_payment_nominal'];
-                	array_push($global, $new_global);
+		// 			if ($global_key || $global_key === 0) 
+		// 			{
+		// 				$global[$global_key]['trx_payment_count'] = $global[$global_key]['trx_payment_count'] + 1;
+		// 				$global[$global_key]['trx_payment_nominal'] = $global[$global_key]['trx_payment_nominal'] + $dtPayment['trx_payment_nominal'];
+		// 			}
+		// 			else
+		// 			{
+		// 				$new_global['trx_payment'] = $trx_payment;
+		// 				$new_global['trx_payment_count'] = 1;
+		// 				$new_global['trx_payment_nominal'] = $dtPayment['trx_payment_nominal'];
+		// 				array_push($global, $new_global);
 
-	                $global_key = array_search($trx_payment, array_column($global, 'trx_payment'));
-                }
+		// 				$global_key = array_search($trx_payment, array_column($global, 'trx_payment'));
+		// 			}
 
-		        $saveGlobal = GlobalMonthlyReportPayment::updateOrCreate([
-		            'trx_month' => $month,
-                    'trx_year' => $year,
-		            'trx_payment' => $trx_payment
-		        ], $global[$global_key]);
-            }
-        }
-        
+		// 			$saveGlobal = GlobalMonthlyReportPayment::updateOrCreate([
+		// 				'trx_month' => $month,
+		// 				'trx_year' => $year,
+		// 				'trx_payment' => $trx_payment
+		// 			], $global[$global_key]);
+		// 		}
+		// 	}
+			
+		// 	return true;
+		// }
+	//
+	
+	function monthlyReportPayment($month, $year) 
+    {		
+		//delete report if there is already a report for the date
+		$delete = MonthlyReportPayment::whereMonth('trx_month', $month)->whereYear('trx_year', $year)->delete();
+		$delete = GlobalMonthlyReportPayment::whereMonth('trx_month', $month)->whereYear('trx_year', $year)->delete();
+
+		//midtrans
+			$dataPayment = TransactionPaymentMidtran::join('transactions', 'transactions.id_transaction', 'transaction_payment_midtrans.id_transaction')
+			->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+			->select(
+				'transactions.id_outlet', 
+				DB::raw('"'.$month.'" as trx_month'), 
+				DB::raw('"'.$year.'" as trx_year'),  
+				DB::raw('COUNT(transactions.id_transaction) as trx_payment_count'), 
+				DB::raw('SUM(transaction_payment_midtrans.gross_amount) as trx_payment_nominal'), 
+				DB::raw("CONCAT_WS(' ', transaction_payment_midtrans.payment_type, transaction_payment_midtrans.bank) AS trx_payment")
+			)
+			->whereMonth('transactions.transaction_date', $month)
+			->whereYear('transactions.transaction_date', $year)
+			->where('transactions.transaction_payment_status', 'Completed')
+			->whereNull('transaction_pickups.reject_at')
+			->groupBy('transactions.id_outlet', 'trx_payment', 'trx_month', 'trx_year')
+			->get()->toArray();
+
+			if($dataPayment){
+				//insert daily
+				$insertDaily = MonthlyReportPayment::insert($dataPayment);
+			}
+
+			$dataPaymentGlobal = TransactionPaymentMidtran::join('transactions', 'transactions.id_transaction', 'transaction_payment_midtrans.id_transaction')
+			->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+			->select(
+				DB::raw('"'.$month.'" as trx_month'), 
+				DB::raw('"'.$year.'" as trx_year'), 
+				DB::raw('COUNT(transactions.id_transaction) as trx_payment_count'), 
+				DB::raw('SUM(transaction_payment_midtrans.gross_amount) as trx_payment_nominal'), 
+				DB::raw("CONCAT_WS(' ', transaction_payment_midtrans.payment_type, transaction_payment_midtrans.bank) AS trx_payment")
+			)
+			->whereMonth('transactions.transaction_date', $month)
+			->whereYear('transactions.transaction_date', $year)
+			->where('transactions.transaction_payment_status', 'Completed')
+			->whereNull('transaction_pickups.reject_at')
+			->groupBy('trx_payment', 'trx_month', 'trx_year')
+			->get()->toArray();
+
+			if($dataPaymentGlobal){
+				//insert global
+				$insertGlobal = GlobalMonthlyReportPayment::insert($dataPaymentGlobal);
+			}
+		//end midtrans
+
+		//ovo
+			$dataPayment = TransactionPaymentOvo::join('transactions', 'transactions.id_transaction', 'transaction_payment_ovos.id_transaction')
+			->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+			->select(
+				'transactions.id_outlet', 
+				DB::raw('"'.$month.'" as trx_month'), 
+				DB::raw('"'.$year.'" as trx_year'), 
+				DB::raw('COUNT(transactions.id_transaction) as trx_payment_count'), 
+				DB::raw('SUM(transaction_payment_ovos.amount) as trx_payment_nominal'), 
+				DB::raw("'OVO' as 'trx_payment'")
+			)
+			->whereMonth('transactions.transaction_date', $month)
+			->whereYear('transactions.transaction_date', $year)
+			->where('transactions.transaction_payment_status', 'Completed')
+			->whereNull('transaction_pickups.reject_at')
+			->groupBy('transactions.id_outlet', 'trx_payment', 'trx_month', 'trx_year')
+			->get()->toArray();
+
+			if($dataPayment){
+				//insert daily
+				$insertDaily = MonthlyReportPayment::insert($dataPayment);
+			}
+
+			$dataPaymentGlobal = TransactionPaymentOvo::join('transactions', 'transactions.id_transaction', 'transaction_payment_ovos.id_transaction')
+			->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+			->select(
+				DB::raw('"'.$month.'" as trx_month'), 
+				DB::raw('"'.$year.'" as trx_year'), 
+				DB::raw('COUNT(transactions.id_transaction) as trx_payment_count'), 
+				DB::raw('SUM(transaction_payment_ovos.amount) as trx_payment_nominal'), 
+				DB::raw("'OVO' as 'trx_payment'")
+			)
+			->whereMonth('transactions.transaction_date', $month)
+			->whereYear('transactions.transaction_date', $year)
+			->where('transactions.transaction_payment_status', 'Completed')
+			->whereNull('transaction_pickups.reject_at')
+			->groupBy('trx_payment', 'trx_month', 'trx_year')
+			->get()->toArray();
+
+			if($dataPaymentGlobal){
+				//insert global
+				$insertGlobal = GlobalMonthlyReportPayment::insert($dataPaymentGlobal);
+			}
+		//end ovo
+
+		//Ipay88
+			$dataPayment = TransactionPaymentIpay88::join('transactions', 'transactions.id_transaction', 'transaction_payment_ipay88s.id_transaction')
+			->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+			->select(
+				'transactions.id_outlet', 
+				DB::raw('"'.$month.'" as trx_month'), 
+				DB::raw('"'.$year.'" as trx_year'),  
+				DB::raw('COUNT(transactions.id_transaction) as trx_payment_count'), 
+				DB::raw('SUM(transaction_payment_ipay88s.amount / 100) as trx_payment_nominal'), 
+				DB::raw("transaction_payment_ipay88s.payment_method AS trx_payment")
+			)
+			->whereMonth('transactions.transaction_date', $month)
+			->whereYear('transactions.transaction_date', $year)
+			->where('transactions.transaction_payment_status', 'Completed')
+			->whereNull('transaction_pickups.reject_at')
+			->groupBy('transactions.id_outlet', 'trx_payment', 'trx_month', 'trx_year')
+			->get()->toArray();
+
+			if($dataPayment){
+				//insert daily
+				$insertDaily = MonthlyReportPayment::insert($dataPayment);
+			}
+
+			$dataPaymentGlobal = TransactionPaymentIpay88::join('transactions', 'transactions.id_transaction', 'transaction_payment_ipay88s.id_transaction')
+			->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+			->select(
+				DB::raw('"'.$month.'" as trx_month'), 
+				DB::raw('"'.$year.'" as trx_year'), 
+				DB::raw('COUNT(transactions.id_transaction) as trx_payment_count'), 
+				DB::raw('SUM(transaction_payment_ipay88s.amount / 100) as trx_payment_nominal'), 
+				DB::raw("transaction_payment_ipay88s.payment_method AS trx_payment")
+			)
+			->whereMonth('transactions.transaction_date', $month)
+			->whereYear('transactions.transaction_date', $year)
+			->where('transactions.transaction_payment_status', 'Completed')
+			->whereNull('transaction_pickups.reject_at')
+			->groupBy('trx_payment', 'trx_month', 'trx_year')
+			->get()->toArray();
+
+			if($dataPaymentGlobal){
+				//insert global
+				$insertGlobal = GlobalMonthlyReportPayment::insert($dataPaymentGlobal);
+			}
+		//end Ipay88
+
+		//balance
+			$dataPayment = TransactionPaymentBalance::join('transactions', 'transactions.id_transaction', 'transaction_payment_balances.id_transaction')
+			->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+			->select(
+				'transactions.id_outlet', 
+				DB::raw('"'.$month.'" as trx_month'), 
+				DB::raw('"'.$year.'" as trx_year'), 
+				DB::raw('COUNT(transactions.id_transaction) as trx_payment_count'), 
+				DB::raw('SUM(transaction_payment_balances.balance_nominal) as trx_payment_nominal'), 
+				DB::raw("'Jiwa Poin' AS trx_payment")
+			)
+			->whereMonth('transactions.transaction_date', $month)
+			->whereYear('transactions.transaction_date', $year)
+			->where('transactions.transaction_payment_status', 'Completed')
+			->whereNull('transaction_pickups.reject_at')
+			->groupBy('transactions.id_outlet', 'trx_payment', 'trx_month', 'trx_year')
+			->get()->toArray();
+
+			if($dataPayment){
+				//insert daily
+				$insertDaily = MonthlyReportPayment::insert($dataPayment);
+			}
+
+			$dataPaymentGlobal = TransactionPaymentBalance::join('transactions', 'transactions.id_transaction', 'transaction_payment_balances.id_transaction')
+			->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+			->select(
+				DB::raw('"'.$month.'" as trx_month'), 
+				DB::raw('"'.$year.'" as trx_year'), 
+				DB::raw('COUNT(transactions.id_transaction) as trx_payment_count'), 
+				DB::raw('SUM(transaction_payment_balances.balance_nominal) as trx_payment_nominal'), 
+				DB::raw("'Jiwa Poin' AS trx_payment")
+			)
+			->whereMonth('transactions.transaction_date', $month)
+			->whereYear('transactions.transaction_date', $year)
+			->where('transactions.transaction_payment_status', 'Completed')
+			->whereNull('transaction_pickups.reject_at')
+			->groupBy('trx_payment', 'trx_month', 'trx_year')
+			->get()->toArray();
+
+			if($dataPaymentGlobal){
+				//insert global
+				$insertGlobal = GlobalMonthlyReportPayment::insert($dataPaymentGlobal);
+			}
+		//end balance
+
+		//offline
+			$dataPayment = TransactionPaymentOffline::join('transactions', 'transactions.id_transaction', 'transaction_payment_offlines.id_transaction')
+			->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+			->select(
+				'transactions.id_outlet', 
+				DB::raw('"'.$month.'" as trx_month'), 
+				DB::raw('"'.$year.'" as trx_year'), 
+				DB::raw('COUNT(transactions.id_transaction) as trx_payment_count'), 
+				DB::raw('SUM(transaction_payment_offlines.payment_amount) as trx_payment_nominal'), 
+				DB::raw("CONCAT_WS(' ', transaction_payment_offlines.payment_type, transaction_payment_offlines.payment_bank, ' (Offline)') AS trx_payment")
+			)
+			->whereMonth('transactions.transaction_date', $month)
+			->whereYear('transactions.transaction_date', $year)
+			->where('transactions.transaction_payment_status', 'Completed')
+			->whereNull('transaction_pickups.reject_at')
+			->groupBy('transactions.id_outlet', 'trx_payment')
+			->get()->toArray();
+
+			if($dataPayment){
+				//insert daily
+				$insertDaily = MonthlyReportPayment::insert($dataPayment);
+			}
+
+			$dataPaymentGlobal = TransactionPaymentOffline::join('transactions', 'transactions.id_transaction', 'transaction_payment_offlines.id_transaction')
+			->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+			->select(
+				DB::raw('"'.$month.'" as trx_month'), 
+				DB::raw('"'.$year.'" as trx_year'),  
+				DB::raw('COUNT(transactions.id_transaction) as trx_payment_count'), 
+				DB::raw('SUM(transaction_payment_offlines.payment_amount) as trx_payment_nominal'), 
+				DB::raw("CONCAT_WS(' ', transaction_payment_offlines.payment_type, transaction_payment_offlines.payment_bank, ' (Offline)') AS trx_payment")
+			)
+			->whereMonth('transactions.transaction_date', $month)
+			->whereYear('transactions.transaction_date', $year)
+			->where('transactions.transaction_payment_status', 'Completed')
+			->whereNull('transaction_pickups.reject_at')
+			->groupBy('trx_payment')
+			->get()->toArray();
+
+			if($dataPaymentGlobal){
+				//insert global
+				$insertGlobal = GlobalMonthlyReportPayment::insert($dataPaymentGlobal);
+			}
+		//end offline
+
         return true;
     }
     
+    /* REPORT MODIFIER */
+    function monthlyReportModifier($outletAll, $date) 
+    {
+        $month = date('n', strtotime($date));
+        $year = date('Y', strtotime($date));
+
+    	$sum = [];
+        foreach ($outletAll as $outlet) {
+            $modifier = DB::select(DB::raw('
+                        SELECT transaction_product_modifiers.id_product_modifier, transaction_products.id_brand, transactions.id_outlet, 
+                        (select SUM(transaction_product_modifiers.qty)) as total_qty, 
+                        (select SUM(transaction_product_modifiers.transaction_product_modifier_price)) as total_nominal, 
+                        (select count(transaction_product_modifiers.id_product_modifier)) as total_rec, 
+                        (select MONTH(transaction_date)) as trx_month,
+						(select YEAR(transaction_date)) as trx_year,
+						(select SUM(Case When users.gender = \'Male\' Then 1 Else 0 End)) as cust_male, 
+						(select SUM(Case When users.gender = \'Female\' Then 1 Else 0 End)) as cust_female, 
+						(select SUM(Case When users.android_device is not null Then 1 Else 0 End)) as cust_android, 
+						(select SUM(Case When users.ios_device is not null Then 1 Else 0 End)) as cust_ios, 
+						(select SUM(Case When users.provider = \'Telkomsel\' Then 1 Else 0 End)) as cust_telkomsel, 
+						(select SUM(Case When users.provider = \'XL\' Then 1 Else 0 End)) as cust_xl, 
+						(select SUM(Case When users.provider = \'Indosat\' Then 1 Else 0 End)) as cust_indosat, 
+						(select SUM(Case When users.provider = \'Tri\' Then 1 Else 0 End)) as cust_tri, 
+						(select SUM(Case When users.provider = \'Axis\' Then 1 Else 0 End)) as cust_axis, 
+						(select SUM(Case When users.provider = \'Smart\' Then 1 Else 0 End)) as cust_smart, 
+						(select product_modifiers.text) as text,
+						(select SUM(Case When floor(datediff (now(), users.birthday)/365) >= 11 && floor(datediff (now(), users.birthday)/365) <= 17 Then 1 Else 0 End)) as cust_teens, 
+						(select SUM(Case When floor(datediff (now(), users.birthday)/365) >= 18 && floor(datediff (now(), users.birthday)/365) <= 24 Then 1 Else 0 End)) as cust_young_adult, 
+						(select SUM(Case When floor(datediff (now(), users.birthday)/365) >= 25 && floor(datediff (now(), users.birthday)/365) <= 34 Then 1 Else 0 End)) as cust_adult,
+						(select SUM(Case When floor(datediff (now(), users.birthday)/365) >= 35 && floor(datediff (now(), users.birthday)/365) <= 100 Then 1 Else 0 End)) as cust_old
+                        FROM transaction_product_modifiers 
+                        INNER JOIN transactions ON transaction_product_modifiers.id_transaction = transactions.id_transaction 
+                        INNER JOIN transaction_products ON transaction_product_modifiers.id_transaction_product = transaction_products.id_transaction_product
+						LEFT JOIN users ON users.id = transactions.id_user
+						LEFT JOIN transaction_pickups ON transaction_pickups.id_transaction = transactions.id_transaction
+						LEFT JOIN product_modifiers ON product_modifiers.id_product_modifier = transaction_product_modifiers.id_product_modifier
+                        WHERE MONTH(transactions.transaction_date) = "'. $month .'" 
+                    	AND YEAR(transactions.transaction_date) ="'. $year .'"
+                        AND transactions.id_outlet = "'. $outlet .'"
+                        AND transaction_payment_status = "Completed"
+                        AND transaction_pickups.reject_at IS NULL
+                        GROUP BY transaction_product_modifiers.id_product_modifier,transaction_products.id_brand
+                        ORDER BY transaction_product_modifiers.id_product_modifier ASC
+                    '));
+
+            if (!empty($modifier)) {
+                $modifier = json_decode(json_encode($modifier), true);
+                foreach ($modifier as $key => $value) {
+					
+                    $save = MonthlyReportTrxModifier::updateOrCreate([
+                        'trx_month'  => $value['trx_month'], 
+                        'trx_year'   => $value['trx_year'], 
+                        'id_product_modifier' => $value['id_product_modifier'],
+                        'id_outlet'  => $value['id_outlet'],
+                        'id_brand'   => $value['id_brand']
+                    ], $value);
+
+                    if (!$save) {
+                        return false;
+                    }
+                }
+            }
+        }
+
+        // update global trx modifier
+        $modifier = DB::select(DB::raw('
+                    SELECT transaction_product_modifiers.id_product_modifier, 
+                    (select SUM(transaction_product_modifiers.qty)) as total_qty, 
+                    (select SUM(transaction_product_modifiers.transaction_product_modifier_price)) as total_nominal, 
+                    (select count(transaction_product_modifiers.id_product_modifier)) as total_rec, 
+                    (select MONTH(transaction_date)) as trx_month,
+					(select YEAR(transaction_date)) as trx_year,
+					(select SUM(Case When users.gender = \'Male\' Then 1 Else 0 End)) as cust_male, 
+					(select SUM(Case When users.gender = \'Female\' Then 1 Else 0 End)) as cust_female, 
+					(select SUM(Case When users.android_device is not null Then 1 Else 0 End)) as cust_android, 
+					(select SUM(Case When users.ios_device is not null Then 1 Else 0 End)) as cust_ios, 
+					(select SUM(Case When users.provider = \'Telkomsel\' Then 1 Else 0 End)) as cust_telkomsel, 
+					(select SUM(Case When users.provider = \'XL\' Then 1 Else 0 End)) as cust_xl, 
+					(select SUM(Case When users.provider = \'Indosat\' Then 1 Else 0 End)) as cust_indosat, 
+					(select SUM(Case When users.provider = \'Tri\' Then 1 Else 0 End)) as cust_tri, 
+					(select SUM(Case When users.provider = \'Axis\' Then 1 Else 0 End)) as cust_axis, 
+					(select SUM(Case When users.provider = \'Smart\' Then 1 Else 0 End)) as cust_smart, 
+					(select product_modifiers.text) as text,
+					(select SUM(Case When floor(datediff (now(), users.birthday)/365) >= 11 && floor(datediff (now(), users.birthday)/365) <= 17 Then 1 Else 0 End)) as cust_teens, 
+					(select SUM(Case When floor(datediff (now(), users.birthday)/365) >= 18 && floor(datediff (now(), users.birthday)/365) <= 24 Then 1 Else 0 End)) as cust_young_adult, 
+					(select SUM(Case When floor(datediff (now(), users.birthday)/365) >= 25 && floor(datediff (now(), users.birthday)/365) <= 34 Then 1 Else 0 End)) as cust_adult,
+					(select SUM(Case When floor(datediff (now(), users.birthday)/365) >= 35 && floor(datediff (now(), users.birthday)/365) <= 100 Then 1 Else 0 End)) as cust_old
+                    FROM transaction_product_modifiers 
+                    INNER JOIN transactions ON transaction_product_modifiers.id_transaction = transactions.id_transaction 
+                    INNER JOIN transaction_products ON transaction_product_modifiers.id_transaction_product = transaction_products.id_transaction_product
+					LEFT JOIN users ON users.id = transactions.id_user
+					LEFT JOIN transaction_pickups ON transaction_pickups.id_transaction = transactions.id_transaction
+					LEFT JOIN product_modifiers ON product_modifiers.id_product_modifier = transaction_product_modifiers.id_product_modifier
+                    WHERE MONTH(transactions.transaction_date) = "'. $month .'" 
+                    AND YEAR(transactions.transaction_date) ="'. $year .'"
+                    AND transaction_payment_status = "Completed"
+                    AND transaction_pickups.reject_at IS NULL
+                    GROUP BY transaction_product_modifiers.id_product_modifier
+                    ORDER BY transaction_product_modifiers.id_product_modifier ASC
+                '));
+
+        if (!empty($modifier)) {
+            $modifier = json_decode(json_encode($modifier), true);
+            $month = date('n', strtotime($date));
+            $year = date('Y', strtotime($date));
+            foreach ($modifier as $key => $value) {
+
+				$saveGlobal = GlobalMonthlyReportTrxModifier::updateOrCreate([
+                    'trx_month'  => $value['trx_month'], 
+                    'trx_year'   => $value['trx_year'], 
+                    'id_product_modifier' => $value['id_product_modifier']
+                ], $value);
+				
+                if (!$save) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
 }

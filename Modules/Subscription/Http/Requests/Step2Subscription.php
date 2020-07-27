@@ -16,8 +16,9 @@ class Step2Subscription extends FormRequest
     public function rules()
     {
         return [
+        	'subscription_type'         		=> 'required|in:welcome,subscription,inject',
             'id_subscription'                   => 'required',
-            'prices_by'                         => 'required',
+            'prices_by'                         => 'sometimes|required',
             'deals_voucher_price_point'         => '',
             'deals_voucher_price_cash'          => '',
             'id_outlet'                         => 'sometimes|array',
@@ -33,7 +34,7 @@ class Step2Subscription extends FormRequest
             'subscription_voucher_nominal'      => '',
             'subscription_voucher_percent_max'  => '',
             'subscription_minimal_transaction'  => '',
-            'purchase_limit'                    => 'required',
+            'purchase_limit'                    => 'sometimes|required',
             'new_purchase_after'                => '',
         ];
     }

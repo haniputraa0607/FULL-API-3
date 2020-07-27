@@ -357,7 +357,7 @@ class SettingsTableSeeder extends Seeder
                 'id_setting' => 39,
                 'key' => 'text_menu_other',
                 'value' => NULL,
-                'value_text' => '{"menu1":{"text_menu":"Profile","text_header":"Profile","icon":""},"menu2":{"text_menu":"Membership","text_header":"Membership","icon":""},"menu3":{"text_menu":"Outlet","text_header":"Outlet","icon":""},"menu4":{"text_menu":"Kabar","text_header":"Kabar","icon":""},"menu5":{"text_menu":"Tentang","text_header":"Tentang","icon":""},"menu6":{"text_menu":"FAQ","text_header":"FAQ","icon":""},"menu7":{"text_menu":"Ketentuan","text_header":"Ketentuan","icon":""},"menu8":{"text_menu":"Kontak","text_header":"Kontak","icon":""}}',
+                'value_text' => '{"menu1":{"text_menu":"Profile","text_header":"Profile","icon":""},"menu2":{"text_menu":"Membership","text_header":"Membership","icon":""},"menu3":{"text_menu":"Outlet","text_header":"Outlet","icon":""},"menu4":{"text_menu":"Kabar","text_header":"Kabar","icon":""},"menu5":{"text_menu":"Lokasi Favorit","text_header":"LOKASI FAVORIT","icon":""},"menu6":{"text_menu":"Tentang","text_header":"Tentang","icon":""},"menu7":{"text_menu":"FAQ","text_header":"FAQ","icon":""},"menu8":{"text_menu":"Ketentuan","text_header":"Ketentuan","icon":""},"menu9":{"text_menu":"Kontak","text_header":"Kontak","icon":""}}',
                 'created_at' => '2019-10-08 09:04:01',
                 'updated_at' => '2019-10-08 09:04:02',
             ),
@@ -680,7 +680,7 @@ class SettingsTableSeeder extends Seeder
                 array(
                     'id_setting' => 76,
                     'key' => 'promo_error_cancel_button',
-                    'value' => 'cancel',
+                    'value' => 'hapus promo',
                     'value_text' => null,
                     'created_at' => date('Y-m-d H:i:s'),
                     'updated_at' => date('Y-m-d H:i:s'),
@@ -755,6 +755,114 @@ class SettingsTableSeeder extends Seeder
                     'key' => 'disburse_auto_approve_setting',
                     'value' => 0,
                     'value_text' => null,
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
+            84 =>
+                array(
+                    'id_setting' => 85,
+                    'key' => 'setting_expired_time_email_verify',
+                    'value' => 30,
+                    'value_text' => null,
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
+            85 =>
+                array(
+                    'id_setting' => 86,
+                    'key' => 'disburse_global_setting_time_to_sent',
+                    'value' => 4,
+                    'value_text' => null,
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
+           86 =>
+                array(
+                    'id_setting' => 87,
+                    'key' => 'setting_expired_otp',
+                    'value' => 30,
+                    'value_text' => null,
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
+            87 =>
+                array(
+                    'id_setting' => 88,
+                    'key' => 'otp_rule_request',
+                    'value' => null,
+                    'value_text' => '{"hold_time": 60, "max_value_request": 20}',
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
+            88 =>
+                array(
+                    'id_setting' => 89,
+                    'key' => 'email_verify_rule_request',
+                    'value' => null,
+                    'value_text' => '{"hold_time": 60, "max_value_request": 20}',
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
+            89 =>
+                array(
+                    'id_setting' => 90,
+                    'key' => 'transaction_set_time_notif_message',
+                    'value' => null,
+                    'value_text' => '{"title_5mnt": "5 menit Pesananmu siap lho", "msg_5mnt": "hai %name%, siap - siap ke outlet %outlet_name% yuk. Pesananmu akan siap 5 menit lagi nih.","title_15mnt": "15 menit Pesananmu siap lho", "msg_15mnt": "hai %name%, siap - siap ke outlet %outlet_name% yuk. Pesananmu akan siap 15 menit lagi nih."}',
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
+            90 =>
+                array(
+                    'id_setting' => 91,
+                    'key' => 'transaction_set_time_notif_message_outlet',
+                    'value' => null,
+                    'value_text' => '{"title_5mnt": "Pesanan %order_id% akan diambil 5 menit lagi", "msg_5mnt": "Pesanan %order_id% atas nama %name% akan diambil 5 menit lagi nih, segera disiapkan ya !","title_15mnt": "Pesanan %order_id% akan diambil 15 menit lagi", "msg_15mnt": "Pesanan %order_id% atas nama %name% akan diambil 15 menit lagi nih, segera disiapkan ya !"}',
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
+            91 =>
+                array(
+                    'id_setting' => 92,
+                    'key' => 'description_product_discount_brand',
+                    'value' => 'Anda berhak mendapatkan potongan %discount% untuk pembelian %product%. Maksimal %qty% buah untuk setiap produk di %brand%',
+                    'value_text' => null,
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
+            92 =>
+                array(
+                    'id_setting' => 93,
+                    'key' => 'description_tier_discount_brand',
+                    'value' => 'Anda berhak mendapatkan potongan setelah melakukan pembelian %product% sebanyak %minmax% di %brand%',
+                    'value_text' => null,
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
+            93 =>
+                array(
+                    'id_setting' => 94,
+                    'key' => 'description_buyxgety_discount_brand',
+                    'value' => 'Anda berhak mendapatkan potongan setelah melakukan pembelian %product% sebanyak %minmax% di %brand%',
+                    'value_text' => null,
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
+            94 =>
+                array(
+                    'id_setting' => 95,
+                    'key' => 'description_product_discount_brand_no_qty',
+                    'value' => 'Anda berhak mendapatkan potongan %discount% untuk pembelian %product% di %brand%',
+                    'value_text' => null,
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
+            95 =>
+                array(
+                    'id_setting' => 96,
+                    'key' => 'welcome_subscription_setting',
+                    'value' => '1',
+                    'value_text' => NULL,
                     'created_at' => date('Y-m-d H:i:s'),
                     'updated_at' => date('Y-m-d H:i:s'),
                 ),

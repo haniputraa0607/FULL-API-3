@@ -23,6 +23,8 @@ class TransactionPickupGoSend extends Model
 		'destination_name',
 		'destination_phone',
 		'destination_address',
+		'destination_address_name',
+		'destination_short_address',
 		'destination_note',
 		'destination_latitude',
 		'destination_longitude',
@@ -45,5 +47,10 @@ class TransactionPickupGoSend extends Model
 	public function transaction_pickup()
 	{
 		return $this->belongsTo(\App\Http\Models\TransactionPickup::class, 'id_transaction_pickup');
+	}
+	
+	public function transaction_pickup_update()
+	{
+		return $this->hasMany(TransactionPickupGoSendUpdate::class, 'id_transaction_pickup_go_send')->orderBy('created_at', 'DESC')->orderBy('id_transaction_pickup_go_send_update', 'DESC');
 	}
 }

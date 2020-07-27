@@ -27,6 +27,8 @@ use Modules\Subscription\Http\Requests\Step1Subscription;
 use Modules\Subscription\Http\Requests\Step2Subscription;
 use Modules\Subscription\Http\Requests\Step3Subscription;
 use Modules\Subscription\Http\Requests\DetailSubscription;
+use Modules\Subscription\Http\Requests\DeleteSubscription;
+use Modules\Subscription\Http\Requests\UpdateCompleteSubscription;
 use DB;
 
 class ApiSubscription extends Controller
@@ -45,6 +47,10 @@ class ApiSubscription extends Controller
     {
 
         $data = [];
+
+        if (isset($post['subscription_type'])) {
+        	$data['subscription_type'] = $post['subscription_type'];
+        }
 
         if (isset($post['id_subscription'])) {
             $data['id_subscription'] = $post['id_subscription'];
@@ -225,6 +231,16 @@ class ApiSubscription extends Controller
         if (isset($post['subscription_description'])) {
             $data['subscription_description'] = $post['subscription_description'];
         }
+
+        if (isset($post['charged_central'])) {
+            $data['charged_central'] = $post['charged_central'];
+        }
+
+        if (isset($post['charged_outlet'])) {
+            $data['charged_outlet'] = $post['charged_outlet'];
+        }
+
+        $data['subscription_step_complete'] = 0;
         return $data;
     }
 
@@ -520,7 +536,6 @@ class ApiSubscription extends Controller
 
         // update description
         $data_subs['subscription_description'] = $post['subscription_description'];
-        $data_subs['subscription_step_complete'] = 1;
         $save = Subscription::where('id_subscription','=',$post['id_subscription'])->update($data_subs);
 
         if ($save) {
@@ -666,7 +681,7 @@ class ApiSubscription extends Controller
         }
 
         //update subscription
-        $new_data['subscription_step_complete'] = 1;
+        // $new_data['subscription_step_complete'] = 1;
         $save = Subscription::where('id_subscription', '=', $data['id_subscription'])->update($new_data);
 
         if ($save) {
@@ -762,7 +777,9 @@ class ApiSubscription extends Controller
                         'subscription_end',
                         'subscription_publish_start',
                         'subscription_publish_end',
-                        'subscription_image'
+                        'subscription_image',
+                        'charged_outlet',
+                        'charged_central'
                     )
                     ->first()
                     ->toArray();
@@ -883,7 +900,6 @@ class ApiSubscription extends Controller
         $user = $request->user();
         $curBalance = (int) $user->balance??0;
 
-        // return $post;
         if ($request->json('forSelect2')) {
             return MyHelper::checkGet($subs->with(['outlets', 'users'])->whereDoesntHave('featured_subscriptions')->get());
         }
@@ -897,6 +913,11 @@ class ApiSubscription extends Controller
         if ( empty($request->json('admin')) ) {
             $subs = $subs->whereNotNull('subscription_step_complete');
         }
+
+        if ( $request->json('with_brand') ) {
+            $subs = $subs->with('brand');
+        }
+
         if ($request->json('id_subscription')) {
             // add content for detail subscription
             $subs = $subs->where('id_subscription', '=', $request->json('id_subscription'))
@@ -926,6 +947,10 @@ class ApiSubscription extends Controller
 
         if ($request->json('publish')) {
             $subs = $subs->where('subscription_publish_end', '>=', date('Y-m-d H:i:s'));
+        }
+
+        if ($request->json('subscription_type')) {
+            $subs = $subs->where('subscription_type', '=', $request->json('subscription_type'));
         }
 
         if ($request->json('key_free')) {
@@ -1067,7 +1092,7 @@ class ApiSubscription extends Controller
         // if subs detail, add webview url & btn text
         if ($request->json('id_subscription') && !empty($subs)) {
             //url webview
-            $subs[0]['webview_url'] = env('APP_URL') . "api/webview/subscription/" . $subs[0]['id_subscription'];
+            $subs[0]['webview_url'] = config('url.app_url') . "api/webview/subscription/" . $subs[0]['id_subscription'];
             // text tombol beli
             $subs[0]['button_text'] = $subs[0]['subscription_price_type']=='free'?'Ambil':'Tukar';
             $subs[0]['button_status'] = 0;
@@ -1432,14 +1457,14 @@ class ApiSubscription extends Controller
             }
             if ($subs) {
                 if (empty($subs['subscription']['subscription_image'])) {
-                    $subs['url_subscription_image'] = env('S3_URL_API').'img/default.jpg';
+                    $subs['url_subscription_image'] = config('url.storage_url_api').'img/default.jpg';
                 }
                 else {
-                    $subs['url_subscription_image'] = env('S3_URL_API').$subs['subscription']['subscription_image'];
+                    $subs['url_subscription_image'] = config('url.storage_url_api').$subs['subscription']['subscription_image'];
                 }
                 $subs['time_server'] = date('Y-m-d H:i:s');
                 $subs['time_to_end'] = strtotime($subs['subscription_expired_at'])-time();
-                $subs['url_webview'] = env('APP_API_URL') ."api/webview/mysubscription/". $subs['id_subscription_user'];
+                $subs['url_webview'] = config('url.app_api_url') ."api/webview/mysubscription/". $subs['id_subscription_user'];
             }
             $data = $subs;
         }
@@ -1462,14 +1487,14 @@ class ApiSubscription extends Controller
                         $data[$key]['used_voucher']                 = $sub['used_voucher'];
                         $data[$key]['available_voucher']            = $sub['available_voucher'];
                         if (empty($sub['subscription']['subscription_image'])) {
-                            $data[$key]['url_subscription_image'] = env('S3_URL_API').'img/default.jpg';
+                            $data[$key]['url_subscription_image'] = config('url.storage_url_api').'img/default.jpg';
                         }
                         else {
-                            $data[$key]['url_subscription_image'] = env('S3_URL_API').$sub['subscription']['subscription_image'];
+                            $data[$key]['url_subscription_image'] = config('url.storage_url_api').$sub['subscription']['subscription_image'];
                         }
 
                         $data[$key]['time_to_end']                  = strtotime($sub['subscription']['subscription_expired_at'])-time();
-                        $data[$key]['url_webview']                  = env('APP_API_URL') ."api/webview/mysubscription/". $sub['id_subscription_user'];
+                        $data[$key]['url_webview']                  = config('url.app_api_url') ."api/webview/mysubscription/". $sub['id_subscription_user'];
                         $data[$key]['time_server']                  = date('Y-m-d H:i:s');
                     }
                 }
@@ -1620,18 +1645,25 @@ class ApiSubscription extends Controller
         for ($i=$start; $i < $end; $i++) {
             $subs[$i]['time_to_end']=strtotime($subs[$i]['subscription_end'])-time();
 
-            $list[$i]['id_subscription'] = $subs[$i]['id_subscription'];
-            $list[$i]['url_subscription_image'] = $subs[$i]['url_subscription_image'];
-            $list[$i]['time_to_end'] = $subs[$i]['time_to_end'];
-            $list[$i]['subscription_start'] = $subs[$i]['subscription_start'];
-            $list[$i]['subscription_publish_start'] = $subs[$i]['subscription_publish_start'];
-            $list[$i]['subscription_end'] = $subs[$i]['subscription_end'];
-            $list[$i]['subscription_publish_end'] = $subs[$i]['subscription_publish_end'];
-            $list[$i]['subscription_price_cash'] = $subs[$i]['subscription_price_cash'];
-            $list[$i]['subscription_price_point'] = $subs[$i]['subscription_price_point'];
-            $list[$i]['subscription_price_type'] = $subs[$i]['subscription_price_type'];
-            $list[$i]['subscription_price_pretty'] = $subs[$i]['subscription_price_pretty'];
-            $list[$i]['time_server'] = date('Y-m-d H:i:s');
+            $list[$i]['id_subscription'] 				= $subs[$i]['id_subscription'];
+            $list[$i]['url_subscription_image'] 		= $subs[$i]['url_subscription_image'];
+            $list[$i]['time_to_end'] 					= $subs[$i]['time_to_end'];
+            $list[$i]['subscription_start'] 			= $subs[$i]['subscription_start'];
+            $list[$i]['subscription_publish_start'] 	= $subs[$i]['subscription_publish_start'];
+            $list[$i]['subscription_end'] 				= $subs[$i]['subscription_end'];
+            $list[$i]['subscription_publish_end'] 		= $subs[$i]['subscription_publish_end'];
+
+            $list[$i]['subscription_start_indo'] 		= MyHelper::dateFormatInd($subs[$i]['subscription_start'], false, false).' pukul '.date('H:i', strtotime($subs[$i]['subscription_start']));
+            $list[$i]['subscription_publish_start_indo']= MyHelper::dateFormatInd($subs[$i]['subscription_publish_start'], false, false).' pukul '.date('H:i', strtotime($subs[$i]['subscription_publish_start']));
+            $list[$i]['subscription_end_indo'] 			= MyHelper::dateFormatInd($subs[$i]['subscription_end'], false, false).' pukul '.date('H:i', strtotime($subs[$i]['subscription_end']));
+            $list[$i]['subscription_publish_end_indo'] 	= MyHelper::dateFormatInd($subs[$i]['subscription_publish_end'], false, false).' pukul '.date('H:i', strtotime($subs[$i]['subscription_publish_end']));
+
+            $list[$i]['subscription_price_cash'] 		= $subs[$i]['subscription_price_cash'];
+            $list[$i]['subscription_price_point'] 		= $subs[$i]['subscription_price_point'];
+            $list[$i]['subscription_price_type'] 		= $subs[$i]['subscription_price_type'];
+            $list[$i]['subscription_price_pretty'] 		= $subs[$i]['subscription_price_pretty'];
+            $list[$i]['time_server'] 					= date('Y-m-d H:i:s');
+            $list[$i]['time_server_indo']  				= MyHelper::dateFormatInd(date('Y-m-d H:i:s'), false, false).' pukul '.date('H:i');
             array_push($resultData, $subs[$i]);
             array_push($listData, $list[$i]);
         }
@@ -1722,7 +1754,10 @@ class ApiSubscription extends Controller
             }])
             ->withCount(['subscription_user_vouchers as available_voucher' => function($q){
                 $q->whereNull('used_at');
-            }]);
+            }])
+            ->whereHas('subscription_user_vouchers', function($q){
+                $q->whereNull('used_at');
+            });
 
         //search by outlet
         if(isset($post['id_outlet']) && is_numeric($post['id_outlet'])){
@@ -1780,25 +1815,30 @@ class ApiSubscription extends Controller
                     $data[$key]['id_subscription_user']         = $sub['id_subscription_user'];
                     $data[$key]['subscription_end']             = date('Y-m-d H:i:s', strtotime($sub['subscription']['subscription_end']));
                     $data[$key]['subscription_publish_end']     = date('Y-m-d H:i:s', strtotime($sub['subscription']['subscription_publish_end']));
-                    $data[$key]['subscription_expired_at']      = $sub['subscription_expired_at'];
+                    $data[$key]['subscription_expired_at']      = date('Y-m-d H:i:s', strtotime($sub['subscription_expired_at']));
                     $data[$key]['subscription_voucher_total']   = $sub['subscription']['subscription_voucher_total'];
                     $data[$key]['used_voucher']                 = $sub['used_voucher'];
                     $data[$key]['available_voucher']            = $sub['available_voucher'];
                     if (empty($sub['subscription']['subscription_image'])) {
-                        $data[$key]['url_subscription_image'] = env('S3_URL_API').'img/default.jpg';
+                        $data[$key]['url_subscription_image'] = config('url.storage_url_api').'img/default.jpg';
                     }
                     else {
-                        $data[$key]['url_subscription_image'] = env('S3_URL_API').$sub['subscription']['subscription_image'];
+                        $data[$key]['url_subscription_image'] = config('url.storage_url_api').$sub['subscription']['subscription_image'];
                     }
 
                     $data[$key]['time_to_end']                  = strtotime($sub['subscription']['subscription_expired_at'])-time();
-                    $data[$key]['url_webview']                  = env('APP_API_URL') ."api/webview/mysubscription/". $sub['id_subscription_user'];
+                    $data[$key]['url_webview']                  = config('url.app_api_url') ."api/webview/mysubscription/". $sub['id_subscription_user'];
                     $data[$key]['time_server']                  = date('Y-m-d H:i:s');
 
                     if ($sub['subscription_expired_at'] < date('Y-m-d H:i:s') || $sub['available_voucher'] === 0) {
 	            		$sub['is_used'] = 0;
 	            	}
                     $data[$key]['is_used']                  	= $sub['is_used'];
+                    $data[$key]['subscription_end_indo']             = MyHelper::dateFormatInd($sub['subscription']['subscription_end'], false, false).' pukul '.date('H:i', strtotime($sub['subscription']['subscription_end']));
+                    $data[$key]['subscription_publish_end_indo']     = MyHelper::dateFormatInd($sub['subscription']['subscription_publish_end'], false, false).' pukul '.date('H:i', strtotime($sub['subscription']['subscription_publish_end']));
+                    $data[$key]['time_server_indo']                  = MyHelper::dateFormatInd(date('Y-m-d H:i:s'), false, false).' pukul '.date('H:i');
+                    $data[$key]['subscription_expired_at_indo']      = MyHelper::dateFormatInd($sub['subscription_expired_at'], false, false);
+                    $data[$key]['subscription_expired_at_time_indo'] = 'pukul '.date('H:i', strtotime($sub['subscription_expired_at']));
                 }
             }
         }
@@ -1824,7 +1864,14 @@ class ApiSubscription extends Controller
     public function listCompleteSubscription(Request $request)
     {
     	$post = $request->json()->all();
-    	return MyHelper::checkGet(Subscription::whereDoesntHave('featured_subscriptions')->where('subscription_step_complete','1')->select($post['select']??'*')->get());
+    	return MyHelper::checkGet(
+    		Subscription::whereDoesntHave('featured_subscriptions')
+    		->where('subscription_step_complete','1')
+    		->where('subscription_end', '>', date('Y-m-d H:i:s'))
+           	->where('subscription_publish_end', '>', date('Y-m-d H:i:s'))
+    		->select($post['select']??'*')
+    		->get()
+    	);
     }
 
     protected function filterParticipate($query, $request,&$foreign='')
@@ -1875,5 +1922,139 @@ class ApiSubscription extends Controller
             }
         });
         return ['filter' => $return, 'filter_operator' => $request->json('operator')];
+    }
+
+    function listSubscriptionAjax(){
+        $data = Subscription::where('subscription_publish_end', '>=', date('Y-m-d H:i:s'))
+                ->select('id_subscription', 'subscription_title')->get()->toArray();
+        return response()->json(MyHelper::checkGet($data));
+    }
+
+    function delete(DeleteSubscription $request)
+    {
+        DB::beginTransaction();
+        $post = $request->json()->all();
+        $check = Subscription::where('id_subscription','=',$post['id_subscription'])->where('subscription_bought','>',0)->first();
+
+        if (!$check) {
+            // delete image first
+            $this->deleteImage($check);
+
+            $delete = Subscription::where('id_subscription','=',$post['id_subscription'])->delete();
+
+            if ($delete) {
+                DB::commit();
+            } else {
+                DB::rollback();
+            }
+
+            return response()->json(MyHelper::checkDelete($delete));
+        } else {
+            return response()->json([
+                'status'   => 'fail',
+                'messages' => ['Subscription already claimed.']
+            ]);
+        }
+    }
+
+    function deleteImage($subscription)
+    {
+        if (!empty($subscription->subscription_image)) {
+            $delete = MyHelper::deletePhoto($subscription->subscription_image);
+        }
+
+        return true;
+    }
+
+    function getSubscriptionData($id, $step)
+    {
+    	$data = Subscription::where('id_subscription','=',$id);
+
+    	if ($step == 'all') {
+    		
+            $data = $data->with([
+	                	'subscription_content',
+	                    'subscription_content.subscription_content_details',
+	                	'outlets' => function($q){
+	                        $q->select(
+	                            'outlets.id_outlet',
+	                            'outlet_code',
+	                            'outlet_name'
+	                        );
+	                    },
+	                    'products' => function($q){
+	                    	$q->select(
+	                    		'products.id_product',
+	                    		'product_code',
+	                    		'product_name'
+	                    	);
+	                    }
+	                ])
+	                ->first();
+    	}
+
+        return $data;
+    }
+
+    function updateComplete(UpdateCompleteSubscription $request)
+    {
+    	$post = $request->json()->all();
+
+    	$check = $this->checkComplete($post['id_subscription'], $step, $errors);
+
+		if ($check)
+		{
+			$update = Subscription::where('id_subscription','=',$post['id_subscription'])->update(['subscription_step_complete' => 1]);
+
+			if ($update)
+			{
+				return ['status' => 'success'];
+			}else{
+				return ['status'=> 'fail', 'messages' => ['Update deals failed']];
+			}
+		}
+		else
+		{
+			return [
+				'status'	=> 'fail',
+				'step' 		=> $step,
+				'messages' 	=> [$errors]
+			];
+		}
+    }
+
+    function checkComplete($id, &$step, &$errors)
+    {
+    	$subs = $this->getSubscriptionData($id, 'all');
+    	if (!$subs) {
+    		$errors = 'Subscription not found';
+    		return false;
+    	}
+
+    	$subs = $subs->toArray();
+
+		$step = 2;
+		$errors = 'Subscription not complete';
+
+		do {
+			if( !isset($subs['is_free']) && empty($subs['subscription_price_cash']) && empty($subs['subscription_price_point']) ) break;
+			if( !isset($subs['is_all_outlet']) ) break;
+			if( !isset($subs['subscription_voucher_expired']) && !isset($subs['subscription_voucher_duration']) ) break;
+			if( !isset($subs['subscription_voucher_total']) ) break;
+			if( empty($subs['subscription_voucher_nominal']) && empty($subs['subscription_voucher_percent']) ) break;
+
+			$step = null;
+			$errors = null;
+		} while (false);
+
+		if (!empty($step)) return false;
+
+    	if ( empty($subs['subscription_content']) || empty($subs['subscription_description']) ) {
+    		$step = 3;
+	    	$errors = 'Subscription not complete';
+    		return false;
+    	}
+
+    	return true;
     }
 }

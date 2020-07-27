@@ -2,6 +2,8 @@
 
 namespace Modules\Transaction\Http\Controllers;
 
+use App\Http\Models\Configs;
+use App\Jobs\FraudJob;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
@@ -41,6 +43,7 @@ class ApiConfirm extends Controller
         $this->autocrm  = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
         $this->voucher  = "Modules\Deals\Http\Controllers\ApiDealsVoucher";
         $this->promo_campaign	= "Modules\PromoCampaign\Http\Controllers\ApiPromoCampaign";
+        $this->subscription  = "Modules\Subscription\Http\Controllers\ApiSubscriptionVoucher";
     }
 
     public function confirmTransaction(ConfirmPayment $request) {
@@ -149,6 +152,13 @@ class ApiConfirm extends Controller
 
         if ($check['transaction_payment_subscription']) {
             $countGrandTotal -= $check['transaction_payment_subscription']['subscription_nominal'];
+            $dataDis = [
+                'id'       => null,
+                'price'    => -abs($check['transaction_payment_subscription']['subscription_nominal']),
+                'name'     => 'Subscription',
+                'quantity' => 1,
+            ];
+            array_push($dataDetailProduct, $dataDis);
         }
 
         $detailPayment = [
@@ -227,14 +237,14 @@ class ApiConfirm extends Controller
                     'shipping_address'    => $dataShipping
                 );
 
-                $connectMidtrans = Midtrans::token($check['transaction_receipt_number'], $countGrandTotal, $dataUser, $dataShipping, $dataDetailProduct);
+                $connectMidtrans = Midtrans::token($check['transaction_receipt_number'], $countGrandTotal, $dataUser, $dataShipping, $dataDetailProduct, 'trx', $check['transaction_receipt_number']);
             } else {
                 $dataMidtrans = array(
                     'transaction_details' => $transaction_details,
                     'customer_details'    => $dataUser,
                 );
 
-                $connectMidtrans = Midtrans::token($check['transaction_receipt_number'], $countGrandTotal, $dataUser, $ship=null, $dataDetailProduct);
+                $connectMidtrans = Midtrans::token($check['transaction_receipt_number'], $countGrandTotal, $dataUser, $ship=null, $dataDetailProduct, 'trx', $check['transaction_receipt_number']);
             }
 
             if (empty($connectMidtrans['token'])) {
@@ -387,7 +397,7 @@ class ApiConfirm extends Controller
             return [
                 'status'    => 'success',
                 'result'    => [
-                    'url'  => env('API_URL').'api/ipay88/pay?'.http_build_query([
+                    'url'  => config('url.api_url').'api/ipay88/pay?'.http_build_query([
                         'type' => 'trx',
                         'id_reference' => $check['id_transaction'],
                         'payment_id' => $request->payment_id?:''
@@ -643,6 +653,14 @@ class ApiConfirm extends Controller
                             if($update){
                                 $updatePaymentStatus = Transaction::where('id_transaction', $trx['id_transaction'])->update(['transaction_payment_status' => 'Completed']);
                                 if($updatePaymentStatus){
+                                    $userData = User::where('id', $trx['id_user'])->first();
+                                    $config_fraud_use_queue = Configs::where('config_name', 'fraud use queue')->first()->is_active;
+
+                                    if($config_fraud_use_queue == 1){
+                                        FraudJob::dispatch($userData, $trx, 'transaction')->onConnection('fraudqueue');
+                                    }else {
+                                        $checkFraud = app($this->setting_fraud)->checkFraudTrxOnline($userData, $trx);
+                                    }
 
                                     $dataTrx = Transaction::with('user.memberships', 'outlet', 'productTransaction')
                                     ->where('id_transaction', $payment['id_transaction'])->first();
@@ -742,6 +760,7 @@ class ApiConfirm extends Controller
 
                     $update = TransactionPaymentOvo::where('id_transaction', $trx['id_transaction'])->update($dataUpdate);
 
+                    MyHelper::updateFlagTransactionOnline($trx, 'cancel');
                     $updatePaymentStatus = Transaction::where('id_transaction', $trx['id_transaction'])->update(['transaction_payment_status' => 'Cancelled', 'void_date' => date('Y-m-d H:i:s')]);
 
                     if ($trx->id_promo_campaign_promo_code) {
@@ -749,6 +768,9 @@ class ApiConfirm extends Controller
 		            }
 
                     $updateVoucher = app($this->voucher)->returnVoucher($trx['id_transaction']);
+
+                    // return subscription
+                    $update_subscription = app($this->subscription)->returnSubscription($trx['id_transaction']);
 
                     //return balance
                     $payBalance = TransactionMultiplePayment::where('id_transaction', $trx['id_transaction'])->where('type', 'Balance')->first();
@@ -865,6 +887,9 @@ class ApiConfirm extends Controller
         }
 
         $updateVoucher = app($this->voucher)->returnVoucher($trx->id_transaction);
+
+        // return subscription
+        $update_subscription = app($this->subscription)->returnSubscription($trx->id_transaction);
 
         //return balance
         $payBalance = TransactionMultiplePayment::where('id_transaction', $trx['id_transaction'])->where('type', 'Balance')->first();

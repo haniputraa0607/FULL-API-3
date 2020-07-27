@@ -62,7 +62,7 @@ class News extends Model
 	];
 
 	public function getUrlWebviewAttribute() {
-		return env('API_URL') ."news/webview/". $this->id_news;
+		return config('url.api_url') ."news/webview/". $this->id_news;
 	}
 
 	public function getUrlFormAttribute() {
@@ -70,7 +70,7 @@ class News extends Model
             return null;
         }
         else {
-            return env('APP_URL').'/news_form/'.$this->id_news.'/form';
+            return config('url.app_url').'/news_form/'.$this->id_news.'/form';
         }
 	}
 
@@ -86,19 +86,19 @@ class News extends Model
 
 	public function getUrlNewsImageLuarAttribute() {
 		if (empty($this->news_image_luar)) {
-            return env('S3_URL_API').'img/default.jpg';
+            return config('url.storage_url_api').'img/default.jpg';
         }
         else {
-            return env('S3_URL_API').$this->news_image_luar;
+            return config('url.storage_url_api').$this->news_image_luar;
         }
 	}
 
 	public function getUrlNewsImageDalamAttribute() {
 		if (empty($this->news_image_dalam)) {
-            return env('S3_URL_API').'img/default.jpg';
+            return config('url.storage_url_api').'img/default.jpg';
         }
         else {
-            return env('S3_URL_API').$this->news_image_dalam;
+            return config('url.storage_url_api').$this->news_image_dalam;
         }
 	}
 

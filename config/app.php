@@ -184,6 +184,8 @@ return [
         SMartins\PassportMultiauth\Providers\MultiauthServiceProvider::class,
         App\Providers\ValidatorServiceProvider::class,
         Fruitcake\Cors\CorsServiceProvider::class,
+        Jacobcyl\AliOSS\AliOssServiceProvider::class,
+        Superbalist\LaravelGoogleCloudStorage\GoogleCloudStorageServiceProvider::class,
         Arcanedev\LogViewer\LogViewerServiceProvider::class,
     ],
 

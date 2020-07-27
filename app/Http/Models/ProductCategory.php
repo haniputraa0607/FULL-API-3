@@ -66,10 +66,10 @@ protected $appends  = ['url_product_category_photo'];
 
     public function getUrlProductCategoryPhotoAttribute() {
         if (empty($this->product_category_photo)) {
-            return env('S3_URL_API').'img/default.jpg';
+            return config('url.storage_url_api').'img/default.jpg';
         }
         else {
-            return env('S3_URL_API').$this->product_category_photo;
+            return config('url.storage_url_api').$this->product_category_photo;
         }
     }
 

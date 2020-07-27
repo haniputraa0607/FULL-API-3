@@ -84,11 +84,6 @@ class Outlet extends Authenticatable
 		'big_order',
 		// 'outlet_open_hours',
 		// 'outlet_close_hours'
-        'id_bank_name',
-        'beneficiary_name',
-        'beneficiary_alias',
-        'beneficiary_account',
-		'beneficiary_email',
 		'status_franchise',
         'outlet_special_status',
         'outlet_special_fee'
@@ -103,7 +98,7 @@ class Outlet extends Authenticatable
 
 	public function getUrlAttribute()
 	{
-		return env('API_URL').'/api/outlet/webview/'.$this->id_outlet;
+		return config('url.api_url').'/api/outlet/webview/'.$this->id_outlet;
 	}
 
 	public function brands(){
@@ -201,4 +196,8 @@ class Outlet extends Authenticatable
 
 		return $this->belongsTo(OutletSchedule::class, 'id_outlet', 'id_outlet')->where('day', $hari_ini);
 	}
+
+	public function payment_method_outlet(){
+        return $this->hasMany(\App\Http\Models\PaymentMethodOutlet::class, 'id_outlet');
+    }
 }

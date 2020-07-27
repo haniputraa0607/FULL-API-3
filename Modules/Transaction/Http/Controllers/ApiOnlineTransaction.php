@@ -3,6 +3,7 @@
 namespace Modules\Transaction\Http\Controllers;
 
 use App\Http\Models\DailyTransactions;
+use App\Jobs\FraudJob;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
@@ -179,7 +180,7 @@ class ApiOnlineTransaction extends Controller
                 ]);
             }
 
-             if($outlet['today']['close'] && $outlet['today']['close'] != "00:00" && $outlet['today']['open'] && $outlet['today']['open'] != '00:00'){
+             if($outlet['today']['close'] && $outlet['today']['open']){
 
                 $settingTime = Setting::where('key', 'processing_time')->first();
                 if($settingTime && $settingTime->value){
@@ -232,6 +233,8 @@ class ApiOnlineTransaction extends Controller
                 'messages'  => ['Akun Anda telah diblokir karena menunjukkan aktivitas mencurigakan. Untuk informasi lebih lanjut harap hubungi customer service kami di hello@example.id']
             ]);
         }
+
+        $config_fraud_use_queue = Configs::where('config_name', 'fraud use queue')->first()->is_active;
 
         if (count($user['memberships']) > 0) {
             $post['membership_level']    = $user['memberships'][0]['membership_name'];
@@ -601,14 +604,14 @@ class ApiOnlineTransaction extends Controller
                 $dataAddressKeys = ['id_user_address'=>$dataAddress['id_user_address']];
             }else{
                 $dataAddressKeys = [
-                    'latitude' => $dataAddress['latitude'],
-                    'longitude' => $dataAddress['longitude']
+                    'latitude' => number_format($dataAddress['latitude'],8),
+                    'longitude' => number_format($dataAddress['longitude'],8)
                 ];
             }
             $dataAddressKeys['id_user'] = $user['id'];
             $addressx = UserAddress::where($dataAddressKeys)->first();
             if(!$addressx){
-                UserAddress::create($dataAddressKeys+$dataAddress);
+                $addressx = UserAddress::create($dataAddressKeys+$dataAddress);
             }elseif(!$addressx->favorite){
                 $addressx->update($dataAddress);
             }
@@ -759,15 +762,7 @@ class ApiOnlineTransaction extends Controller
                 ]);
             }
 
-            //======= Start Check Fraud Referral User =======//
-            $data = [
-                'id_user' => $insertTransaction['id_user'],
-                'referral_code' => $request->promo_code,
-                'referral_code_use_date' => $insertTransaction['transaction_date'],
-                'id_transaction' => $insertTransaction['id_transaction']
-            ];
-            app($this->setting_fraud)->fraudCheckReferralUser($data);
-            //======= End Check Fraud Referral User =======//
+            $promo_code_ref = $request->promo_code;
         }
 
         // add transaction voucher
@@ -808,6 +803,9 @@ class ApiOnlineTransaction extends Controller
 	        $insert_subs_data['subscription_nominal'] = $subscription_total;
 
 	        $insert_subs_trx = TransactionPaymentSubscription::create($insert_subs_data);
+	        $update_trx = Transaction::where('id_transaction', $insertTransaction['id_transaction'])->update([
+							            'id_subscription_user_voucher' => $data_subs->id_subscription_user_voucher
+							        ]);
 	        $update_subs_voucher = SubscriptionUserVoucher::where('id_subscription_user_voucher','=',$data_subs->id_subscription_user_voucher)
 	        						->update([
 	        							'used_at' => date('Y-m-d H:i:s'),
@@ -857,8 +855,7 @@ class ApiOnlineTransaction extends Controller
             ]);
         }
 
-        $user->transaction_online = 1;
-        $user->save();
+        MyHelper::updateFlagTransactionOnline($insertTransaction, 'pending', $user);
 
         $insertTransaction['transaction_receipt_number'] = $receipt;
 
@@ -892,21 +889,14 @@ class ApiOnlineTransaction extends Controller
 
             if($outlet['outlet_different_price']){
                 $checkPriceProduct = ProductSpecialPrice::where(['id_product' => $checkProduct['id_product'], 'id_outlet' => $post['id_outlet']])->first();
-                if(isset($checkPriceProduct['product_special_price'])){
-                    $productPrice = $checkPriceProduct['product_special_price'];
-                }else{
-                    $checkPriceProduct = ProductGlobalPrice::where(['id_product' => $checkProduct['id_product']])->first();
-
-                    if(isset($checkPriceProduct['product_global_price'])){
-                        $productPrice = $checkPriceProduct['product_global_price'];
-                    }else{
-                        DB::rollback();
-                        return response()->json([
-                            'status'    => 'fail',
-                            'messages'  => ['Product Price Not Valid']
-                        ]);
-                    }
+                if(!isset($checkPriceProduct['product_special_price'])){
+                    DB::rollback();
+                    return response()->json([
+                        'status'    => 'fail',
+                        'messages'  => ['Product Price Not Valid']
+                    ]);
                 }
+                $productPrice = $checkPriceProduct['product_special_price'];
             }else{
                 $checkPriceProduct = ProductGlobalPrice::where(['id_product' => $checkProduct['id_product']])->first();
 
@@ -1145,7 +1135,7 @@ class ApiOnlineTransaction extends Controller
                     ]);
                 }
 
-                $link = env('APP_URL').'/transaction/admin/'.$insertTransaction['transaction_receipt_number'].'/'.$totalAdmin['phone'];
+                $link = config('url.app_url').'/transaction/admin/'.$insertTransaction['transaction_receipt_number'].'/'.$totalAdmin['phone'];
             }
 
             $order_id = MyHelper::createrandom(4, 'Besar Angka');
@@ -1221,7 +1211,7 @@ class ApiOnlineTransaction extends Controller
                     ]);
                 }
 
-                $link = env('APP_URL').'/transaction/admin/'.$insertTransaction['transaction_receipt_number'].'/'.$totalAdmin['phone'];
+                $link = config('url.app_url').'/transaction/admin/'.$insertTransaction['transaction_receipt_number'].'/'.$totalAdmin['phone'];
             }
             $order_id = MyHelper::createrandom(4, 'Besar Angka');
 
@@ -1300,7 +1290,7 @@ class ApiOnlineTransaction extends Controller
             $dataPickup = [
                 'id_transaction'          => $insertTransaction['id_transaction'],
                 'order_id'                => $order_id,
-                'short_link'              => env('APP_URL').'/transaction/'.$order_id.'/status',
+                'short_link'              => config('url.app_url').'/transaction/'.$order_id.'/status',
                 'pickup_type'             => $pickupType,
                 'pickup_at'               => $pickup,
                 'receive_at'              => $post['receive_at'],
@@ -1336,10 +1326,12 @@ class ApiOnlineTransaction extends Controller
                 $dataGoSend['origin_address']        = $outlet['outlet_address'];
                 $dataGoSend['origin_latitude']       = $outlet['outlet_latitude'];
                 $dataGoSend['origin_longitude']      = $outlet['outlet_longitude'];
-                $dataGoSend['origin_note']           = 'Pickup Code: '.$order_id;
+                $dataGoSend['origin_note']           = "NOTE: mohon hubungi penerima terlebih dahulu untuk informasi \nPickup Code $order_id";
                 $dataGoSend['destination_name']      = $user['name'];
                 $dataGoSend['destination_phone']     = $user['phone'];
                 $dataGoSend['destination_address']   = $post['destination']['address'];
+                $dataGoSend['destination_short_address'] = $post['destination']['short_address'];
+                $dataGoSend['destination_address_name']   = $addressx->name;
                 $dataGoSend['destination_latitude']  = $post['destination']['latitude'];
                 $dataGoSend['destination_longitude'] = $post['destination']['longitude'];
 
@@ -1395,68 +1387,7 @@ class ApiOnlineTransaction extends Controller
             }
         }
 
-		$fraudTrxDay = FraudSetting::where('parameter', 'LIKE', '%transactions in 1 day%')->where('fraud_settings_status','Active')->first();
-		$fraudTrxWeek = FraudSetting::where('parameter', 'LIKE', '%transactions in 1 week%')->where('fraud_settings_status','Active')->first();
-
         if ($post['transaction_payment_status'] == 'Completed') {
-
-            //========= This process to check if user have fraud ============//
-            $geCountTrxDay = Transaction::leftJoin('transaction_pickups', 'transaction_pickups.id_transaction', '=', 'transactions.id_transaction')
-                ->where('transactions.id_user', $insertTransaction['id_user'])
-                ->whereRaw('DATE(transactions.transaction_date) = "'.date('Y-m-d', strtotime($post['transaction_date'])).'"')
-                ->where('transactions.transaction_payment_status','Completed')
-                ->whereNull('transaction_pickups.reject_at')
-                ->count();
-
-            $currentWeekNumber = date('W',strtotime($post['transaction_date']));
-            $currentYear = date('Y',strtotime($post['transaction_date']));
-            $dto = new DateTime();
-            $dto->setISODate($currentYear,$currentWeekNumber);
-            $start = $dto->format('Y-m-d');
-            $dto->modify('+6 days');
-            $end = $dto->format('Y-m-d');
-
-            $geCountTrxWeek = Transaction::leftJoin('transaction_pickups', 'transaction_pickups.id_transaction', '=', 'transactions.id_transaction')
-                ->where('id_user', $insertTransaction['id_user'])
-                ->where('transactions.transaction_payment_status','Completed')
-                ->whereNull('transaction_pickups.reject_at')
-                ->whereRaw('Date(transactions.transaction_date) BETWEEN "'.$start.'" AND "'.$end.'"')
-                ->count();
-
-            $countTrxDay = $geCountTrxDay + 1;
-            $countTrxWeek = $geCountTrxWeek + 1;
-            //================================ End ================================//
-
-
-
-            if((($fraudTrxDay && $countTrxDay <= $fraudTrxDay['parameter_detail']) && ($fraudTrxWeek && $countTrxWeek <= $fraudTrxWeek['parameter_detail']))
-                || (!$fraudTrxDay && !$fraudTrxWeek)){
-
-            }else{
-                if($countTrxDay > $fraudTrxDay['parameter_detail'] && $fraudTrxDay){
-                    $fraudFlag = 'transaction day';
-                }elseif($countTrxWeek > $fraudTrxWeek['parameter_detail'] && $fraudTrxWeek){
-                    $fraudFlag = 'transaction week';
-                }else{
-                    $fraudFlag = NULL;
-                }
-
-                $updatePointCashback = Transaction::where('id_transaction', $insertTransaction['id_transaction'])
-                    ->update([
-                        'transaction_point_earned' => NULL,
-                        'transaction_cashback_earned' => NULL,
-                        'fraud_flag' => $fraudFlag
-                    ]);
-
-                if(!$updatePointCashback){
-                    DB::rollback();
-                    return response()->json([
-                        'status' => 'fail',
-                        'messages' => ['Failed update Point and Cashback']
-                    ]);
-                }
-            }
-
             $checkMembership = app($this->membership)->calculateMembership($user['phone']);
             if (!$checkMembership) {
                 DB::rollback();
@@ -1484,25 +1415,24 @@ class ApiOnlineTransaction extends Controller
 
                 if($save['status'] == 'success'){
                     $checkFraudPoint = app($this->setting_fraud)->fraudTrxPoint($sumBalance, $user, ['id_outlet' => $insertTransaction['id_outlet']]);
+                    if(isset($checkFraudPoint['status'])){
+                        return response()->json($checkFraudPoint);
+                    }
                 }
 
                 if ($post['transaction_payment_status'] == 'Completed' || $save['type'] == 'no_topup') {
 
+                    if($config_fraud_use_queue == 1){
+                        FraudJob::dispatch($user, $insertTransaction, 'transaction')->onConnection('fraudqueue');
+                    }else {
+                        if($config_fraud_use_queue != 1){
+                            $checkFraud = app($this->setting_fraud)->checkFraudTrxOnline($user, $insertTransaction);
+                        }
+                    }
                     //inset pickup_at when pickup_type = right now
                     if($insertPickup['pickup_type'] == 'right now'){
                         $settingTime = Setting::where('key', 'processing_time')->first();
                         $updatePickup = TransactionPickup::where('id_transaction', $insertTransaction['id_transaction'])->update(['pickup_at' => date('Y-m-d H:i:s', strtotime('+ '.$settingTime['value'].'minutes'))]);
-                    }
-
-                    // Fraud Detection
-                    $userData = User::find($user['id']);
-
-                    if($fraudTrxDay){
-                        $checkFraud = app($this->setting_fraud)->checkFraud($fraudTrxDay, $userData, null, $countTrxDay, $countTrxWeek, $post['transaction_date'], 0, $insertTransaction['transaction_receipt_number']);
-                    }
-
-                    if($fraudTrxWeek){
-                        $checkFraud = app($this->setting_fraud)->checkFraud($fraudTrxWeek, $userData, null, $countTrxDay, $countTrxWeek, $post['transaction_date'], 0, $insertTransaction['transaction_receipt_number']);
                     }
                 }
 
@@ -1563,6 +1493,36 @@ class ApiOnlineTransaction extends Controller
 
                     // PromoCampaignTools::applyReferrerCashback($insertTransaction);
 
+                    /* Add daily Trx*/
+                    $dataDailyTrx = [
+                        'id_transaction'    => $insertTransaction['id_transaction'],
+                        'id_outlet'         => $outlet['id_outlet'],
+                        'transaction_date'  => date('Y-m-d H:i:s', strtotime($insertTransaction['transaction_date'])),
+                        'referral_code_use_date'=> date('Y-m-d H:i:s', strtotime($insertTransaction['transaction_date'])),
+                        'id_user'           => $user['id'],
+                        'referral_code'     => NULL
+                    ];
+                    $createDailyTrx = DailyTransactions::create($dataDailyTrx);
+
+                    /* Fraud Referral*/
+                    if($promo_code_ref){
+                        //======= Start Check Fraud Referral User =======//
+                        $data = [
+                            'id_user' => $insertTransaction['id_user'],
+                            'referral_code' => $promo_code_ref,
+                            'referral_code_use_date' => $insertTransaction['transaction_date'],
+                            'id_transaction' => $insertTransaction['id_transaction']
+                        ];
+                        if($config_fraud_use_queue == 1){
+                            FraudJob::dispatch($user, $data, 'referral user')->onConnection('fraudqueue');
+                            FraudJob::dispatch($user, $data, 'referral')->onConnection('fraudqueue');
+                        }else{
+                            app($this->setting_fraud)->fraudCheckReferralUser($data);
+                            app($this->setting_fraud)->fraudCheckReferral($data);
+                        }
+                        //======= End Check Fraud Referral User =======//
+                    }
+
                     DB::commit();
                     return response()->json([
                         'status'     => 'success',
@@ -1575,15 +1535,6 @@ class ApiOnlineTransaction extends Controller
 
             if ($post['payment_type'] == 'Midtrans') {
                 if ($post['transaction_payment_status'] == 'Completed') {
-                    $userData = User::find($user['id']);
-
-                    if($fraudTrxDay){
-                        $checkFraud = app($this->setting_fraud)->checkFraud($fraudTrxDay, $userData, null, $countTrxDay, $countTrxWeek, $post['transaction_date'], 0, $insertTransaction['transaction_receipt_number']);
-                    }
-
-                    if($fraudTrxWeek){
-                        $checkFraud = app($this->setting_fraud)->checkFraud($fraudTrxWeek, $userData, null, $countTrxDay, $countTrxWeek, $post['transaction_date'], 0, $insertTransaction['transaction_receipt_number']);
-                    }
                     //bank
                     $bank = ['BNI', 'Mandiri', 'BCA'];
                     $getBank = array_rand($bank);
@@ -1631,16 +1582,18 @@ class ApiOnlineTransaction extends Controller
         //    $savelocation = $this->saveLocation($post['latitude'], $post['longitude'], $insertTransaction['id_user'], $insertTransaction['id_transaction']);
         // }
 
-        /* Add to daily trasaction*/
+        /* Add daily Trx*/
         $dataDailyTrx = [
             'id_transaction'    => $insertTransaction['id_transaction'],
             'id_outlet'         => $outlet['id_outlet'],
             'transaction_date'  => date('Y-m-d H:i:s', strtotime($insertTransaction['transaction_date'])),
+            'referral_code_use_date'=> date('Y-m-d H:i:s', strtotime($insertTransaction['transaction_date'])),
             'id_user'           => $user['id'],
-            'referral_code'     => $promo_code_ref
+            'referral_code'     => NULL
         ];
         $createDailyTrx = DailyTransactions::create($dataDailyTrx);
 
+        /* Fraud Referral*/
         if($promo_code_ref){
             //======= Start Check Fraud Referral User =======//
             $data = [
@@ -1649,7 +1602,13 @@ class ApiOnlineTransaction extends Controller
                 'referral_code_use_date' => $insertTransaction['transaction_date'],
                 'id_transaction' => $insertTransaction['id_transaction']
             ];
-            app($this->setting_fraud)->fraudCheckReferralUser($data);
+            if($config_fraud_use_queue == 1){
+                FraudJob::dispatch($user, $data, 'referral user')->onConnection('fraudqueue');
+                FraudJob::dispatch($user, $data, 'referral')->onConnection('fraudqueue');
+            }else{
+                app($this->setting_fraud)->fraudCheckReferralUser($data);
+                app($this->setting_fraud)->fraudCheckReferral($data);
+            }
             //======= End Check Fraud Referral User =======//
         }
 
@@ -1684,6 +1643,7 @@ class ApiOnlineTransaction extends Controller
      */
     public function checkTransaction(CheckTransaction $request) {
         $post = $request->json()->all();
+        $post['item'] = $this->mergeProducts($post['item']);
         $grandTotal = app($this->setting_trx)->grandTotal();
         $user = $request->user();
         //Check Outlet
@@ -1786,6 +1746,8 @@ class ApiOnlineTransaction extends Controller
 
         $shippingGoSend = 0;
 
+        $error_msg=[];
+
         if(($post['type']??null) == 'GO-SEND'){
             if(!($outlet['outlet_latitude']&&$outlet['outlet_longitude']&&$outlet['outlet_phone']&&$outlet['outlet_address'])){
                 app($this->outlet)->sendNotifIncompleteOutlet($outlet['id_outlet']);
@@ -1808,10 +1770,7 @@ class ApiOnlineTransaction extends Controller
             $shippingGoSendx = GoSend::getPrice($coor_origin,$coor_destination);
             $shippingGoSend = $shippingGoSendx[GoSend::getShipmentMethod()]['price']['total_price']??null;
             if($shippingGoSend === null){
-                return [
-                    'status' => 'fail',
-                    'messages' => array_column($shippingGoSendx[GoSend::getShipmentMethod()]['errors']??[],'message')?:['Gagal menghitung ongkos kirim']
-                ];
+                $error_msg += array_column($shippingGoSendx[GoSend::getShipmentMethod()]['errors']??[],'message')?:['Gagal menghitung ongkos kirim'];
             }
             //cek free delivery
             // if($post['is_free'] == 'yes'){
@@ -1924,7 +1883,6 @@ class ApiOnlineTransaction extends Controller
         }
         // end check promo code & voucher
 
-        $error_msg=[];
         $tree = [];
         // check and group product
         $subtotal = 0;
@@ -1944,7 +1902,6 @@ class ApiOnlineTransaction extends Controller
                     'products.id_product','products.product_name','products.product_code','products.product_description',
                 DB::raw('(CASE
                         WHEN (select outlets.outlet_different_price from outlets  where outlets.id_outlet = '.$post['id_outlet'].' ) = 1 
-                        AND (select product_special_price.product_special_price from product_special_price  where product_special_price.id_product = products.id_product AND product_special_price.id_outlet = '.$post['id_outlet'].' ) is not null
                         THEN (select product_special_price.product_special_price from product_special_price  where product_special_price.id_product = products.id_product AND product_special_price.id_outlet = '.$post['id_outlet'].' )
                         ELSE product_global_price.product_global_price
                     END) as product_price'),
@@ -1992,6 +1949,7 @@ class ApiOnlineTransaction extends Controller
                         $query->select('product_promo_categories.id_product_promo_category','product_promo_category_name as product_category_name','product_promo_category_order as product_category_order');
                     },
                 ])
+            ->having('product_price','>',0)
             ->groupBy('products.id_product')
             ->orderBy('products.position')
             ->find($item['id_product']);
@@ -2105,6 +2063,7 @@ class ApiOnlineTransaction extends Controller
                 $tree[$product['id_brand']] = Brand::select('name_brand','id_brand')->find($product['id_brand'])->toArray();
             }
             $product['product_price_total'] = ($product['qty'] * ($product['product_price']+$mod_price));
+            $product['product_price'] = MyHelper::requestNumber($product['product_price']+$mod_price, '_CURRENCY');
             $tree[$product['id_brand']]['products'][]=$product;
             $subtotal += $product['product_price_total'];
             // return $product;
@@ -2424,13 +2383,32 @@ class ApiOnlineTransaction extends Controller
         }
 
         $user = User::where('id', $trx['id_user'])->first();
-
         if (!empty($outletToken)) {
             if(env('PUSH_NOTIF_OUTLET') == 'fcm'){
                 $tokens = $outletToken->pluck('token')->toArray();
                 if(!empty($tokens)){
                     $subject = $type.' - Rp. '.number_format($trx['transaction_grandtotal'], 0, ',', '.').' - '.$totalSemua.' pcs - '.$detail['order_id'].' - '.$user['name'];
-                    $push = PushNotificationHelper::sendPush($tokens, $subject, $stringBody, null, ['type' => 'trx', 'id_reference'=> $id_trx]);
+                    $dataPush = ['type' => 'trx', 'id_reference'=> $id_trx];
+                    if ($detail['pickup_type'] == 'set time') {
+                        $replacer = [
+                            ['%name%', '%receipt_number%', '%order_id%'],
+                            [$user->name, $trx->receipt_number, $detail['order_id']],
+                        ];
+                        $setting_msg = json_decode(MyHelper::setting('transaction_set_time_notif_message_outlet','value_text'), true);
+                        $dataPush += [
+                            'push_notif_local' => 1,
+                            'title_5mnt'       => str_replace($replacer[0], $replacer[1], $setting_msg['title_5mnt'] ?? 'Pesanan %order_id% akan diambil 5 menit lagi'),
+                            'msg_5mnt'         => str_replace($replacer[0], $replacer[1], $setting_msg['msg_5mnt'] ?? 'Pesanan %order_id% atas nama %name% akan diambil 5 menit lagi nih, segera disiapkan ya !'),
+                            'title_15mnt'       => str_replace($replacer[0], $replacer[1], $setting_msg['title_5mnt'] ?? 'Pesanan %order_id% akan diambil 15 menit lagi'),
+                            'msg_15mnt'         => str_replace($replacer[0], $replacer[1], $setting_msg['msg_5mnt'] ?? 'Pesanan %order_id% atas nama %name% akan diambil 15 menit lagi nih, segera disiapkan ya !'),
+                            'pickup_time'       => $detail->pickup_at,
+                        ];
+                    } else {
+                        $dataPush += [
+                            'push_notif_local' => 0
+                        ];                        
+                    }
+                    $push = PushNotificationHelper::sendPush($tokens, $subject, $stringBody, null, $dataPush);
                 }
             }else{
                 $dataArraySend = [];
@@ -2442,7 +2420,25 @@ class ApiOnlineTransaction extends Controller
                         'body'  => $stringBody,
                         'data'  => ['order_id' => $detail['order_id']]
                     ];
-
+                    if ($detail['pickup_type'] == 'set time') {
+                        $replacer = [
+                            ['%name%', '%receipt_number%', '%order_id%'],
+                            [$user->name, $trx->receipt_number, $detail['order_id']],
+                        ];
+                        $setting_msg = json_decode(MyHelper::setting('transaction_set_time_notif_message_outlet','value_text'), true);
+                        $dataOutletSend += [
+                            'push_notif_local' => 1,
+                            'title_5mnt'       => str_replace($replacer[0], $replacer[1], $setting_msg['title_5mnt'] ?? 'Pesanan %order_id% akan diambil 5 menit lagi'),
+                            'msg_5mnt'         => str_replace($replacer[0], $replacer[1], $setting_msg['msg_5mnt'] ?? 'Pesanan %order_id% atas nama %name% akan diambil 5 menit lagi nih, segera disiapkan ya !'),
+                            'title_15mnt'       => str_replace($replacer[0], $replacer[1], $setting_msg['title_5mnt'] ?? 'Pesanan %order_id% akan diambil 15 menit lagi'),
+                            'msg_15mnt'         => str_replace($replacer[0], $replacer[1], $setting_msg['msg_5mnt'] ?? 'Pesanan %order_id% atas nama %name% akan diambil 15 menit lagi nih, segera disiapkan ya !'),
+                            'pickup_time'       => $detail->pickup_at,
+                        ];
+                    }else {
+                        $dataOutletSend += [
+                            'push_notif_local' => 0
+                        ];
+                    }
                     array_push($dataArraySend, $dataOutletSend);
 
                 }
@@ -2606,5 +2602,129 @@ class ApiOnlineTransaction extends Controller
             'status'=>'fail',
             'messages' => $errors?:['Something went wrong']
         ];
+    }
+
+    public function availablePayment(Request $request)
+    {
+        $availablePayment = config('payment_method');
+
+        $setting  = json_decode(MyHelper::setting('active_payment_methods', 'value_text', '[]'), true) ?? [];
+        $payments = [];
+
+        $config = [
+            'credit_card_payment_gateway' => MyHelper::setting('credit_card_payment_gateway', 'value', 'Ipay88')
+        ];
+        $last_status = [];
+        foreach ($setting as $value) {
+            $payment = $availablePayment[$value['code'] ?? ''] ?? false;
+            if (!$payment || !($payment['status'] ?? false) || (!$request->show_all && !($value['status'] ?? false))) {
+                unset($availablePayment[$value['code']]);
+                continue;
+            }
+            if(!is_numeric($payment['status'])){
+                $var = explode(':',$payment['status']);
+                if(($config[$var[0]]??false) != ($var[1]??true)) {
+                    $last_status[$var[0]] = $value['status'];
+                    unset($availablePayment[$value['code']]);
+                    continue;
+                }
+            }
+            $payments[] = [
+                'code'            => $value['code'],
+                'payment_gateway' => $payment['payment_gateway'],
+                'payment_method'  => $payment['payment_method'],
+                'logo'            => $payment['logo'],
+                'text'            => $payment['text'],
+                'status'          => (int) $value['status'] ? 1 : 0
+            ];
+            unset($availablePayment[$value['code']]);
+        }
+        foreach ($availablePayment as $code => $payment) {
+            $status = 0;
+            if (!$payment['status'] || !is_numeric($payment['status'])) {
+                $var = explode(':',$payment['status']);
+                if(($config[$var[0]]??false) != ($var[1]??true)) {
+                    continue;
+                }
+                $status = (int) ($last_status[$var[0]] ?? 0);
+            }
+            if($request->show_all || $status) {
+                $payments[] = [
+                    'code'            => $code,
+                    'payment_gateway' => $payment['payment_gateway'],
+                    'payment_method'  => $payment['payment_method'],
+                    'logo'            => $payment['logo'],
+                    'text'            => $payment['text'],
+                    'status'          => $status
+                ];
+            }
+        }
+        return MyHelper::checkGet($payments);
+    }
+    /**
+     * update available payment
+     * @param
+     * {
+     *     payments: [
+     *         {'code': 'xxx', status: 1}
+     *     ]
+     * }
+     * @return [type]           [description]
+     */
+    public function availablePaymentUpdate(Request $request)
+    {
+        $availablePayment = config('payment_method');
+        foreach ($request->payments as $key => $value) {
+            $payment = $availablePayment[$value['code'] ?? ''] ?? false;
+            if (!$payment || !($payment['status'] ?? false)) {
+                continue;
+            }
+            $payments[] = [
+                'code'     => $value['code'],
+                'status'   => $value['status'] ?? 0,
+                'position' => $key + 1,
+            ];
+        }
+        $update = Setting::updateOrCreate(['key' => 'active_payment_methods'], ['value_text' => json_encode($payments)]);
+        return MyHelper::checkUpdate($update);
+    }
+
+    public function mergeProducts($items)
+    {
+        $new_items = [];
+        $item_qtys = [];
+        $id_custom = [];
+
+        // create unique array
+        foreach ($items as $item) {
+            $new_item = [
+                'bonus' => isset($item['bonus'])?$item['bonus']:'0',
+                'id_brand' => $item['id_brand'],
+                'id_product' => $item['id_product'],
+                'note' => $item['note'],
+                'modifiers' => array_map(function($i){
+                        return [
+                            'id_product_modifier' => $i['id_product_modifier'],
+                            'qty' => $i['qty']
+                        ];
+                    },$item['modifiers']??[]),
+            ];
+            usort($new_item['modifiers'],function($a, $b) { return $a['id_product_modifier'] <=> $b['id_product_modifier']; });
+            $pos = array_search($new_item, $new_items);
+            if($pos === false) {
+                $new_items[] = $new_item;
+                $item_qtys[] = $item['qty'];
+                $id_custom[] = $item['id_custom']??0;
+            } else {
+                $item_qtys[$pos] += $item['qty'];
+            }
+        }
+        // update qty
+        foreach ($new_items as $key => &$value) {
+            $value['qty'] = $item_qtys[$key];
+            $value['id_custom'] = $id_custom[$key];
+        }
+
+        return $new_items;
     }
 }

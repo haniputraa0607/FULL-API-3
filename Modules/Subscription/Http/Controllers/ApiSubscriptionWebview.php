@@ -26,12 +26,27 @@ class ApiSubscriptionWebview extends Controller
     public function subscriptionDetail(Request $request)
     {
         // return url webview and button text for mobile (native button)
-        $subs = Subscription::with('outlets', 'subscription_content.subscription_content_details')->find($request->get('id_subscription'));
+
+        $subs = Subscription::with([
+        			'outlets' => function($q) {
+        				$q->where('outlet_status', 'Active');
+        			},
+        			'outlets.city', 
+        			'subscription_content' => function($q){
+        				$q->where('is_active',1);
+        			},
+        			'subscription_content.subscription_content_details'
+        		])
+        		->find($request->get('id_subscription'))
+        		->toArray();
+
+        $subs = $this->renderOutletCity($subs);
+
         $user = $request->user();
         $curBalance = (int) $user->balance??0;
 
         $result = [
-            'id_subscription_user'          => $subs['id_subscription_user'],
+            'id_subscription_user'          => $subs['id_subscription_user']??null,
             'subscription_title'            => $subs['subscription_title'],
             'subscription_sub_title'        => $subs['subscription_sub_title'],
             'subscription_description'      => $subs['subscription_description'],
@@ -47,7 +62,12 @@ class ApiSubscriptionWebview extends Controller
             'subscription_voucher_total'    => $subs['subscription_voucher_total'],
             'button_text'                   => 'BELI',
             'button_status'                 => 0,
-            'user_point'					=> Auth()->user()->points
+            'user_point'					=> Auth()->user()->balance,
+            'subscription_start_indo'       	=> MyHelper::dateFormatInd($subs['subscription_start'], false, false).' pukul '.date('H:i', strtotime($subs['subscription_start'])),
+            'subscription_end_indo'             => MyHelper::dateFormatInd($subs['subscription_end'], false, false).' pukul '.date('H:i', strtotime($subs['subscription_end'])),
+            'subscription_publish_start_indo'   => MyHelper::dateFormatInd($subs['subscription_publish_start'], false, false).' pukul '.date('H:i', strtotime($subs['subscription_publish_start'])),
+            'subscription_publish_end_indo'     => MyHelper::dateFormatInd($subs['subscription_publish_end'], false, false).' pukul '.date('H:i', strtotime($subs['subscription_publish_end'])),
+            'time_server_indo'              	=> MyHelper::dateFormatInd(date('Y-m-d H:i:s'), false, false).' pukul '.date('H:i')
         ];
 
         //text konfirmasi pembelian
@@ -168,8 +188,11 @@ class ApiSubscriptionWebview extends Controller
             return abort(404);
         }
 
-        $subs = SubscriptionUser::with('subscription.outlets', 'subscription_user_vouchers', 'subscription.subscription_content.subscription_content_details')->where('id_subscription_user', $request->id_subscription_user)->first()->toArray();
+        $subs = SubscriptionUser::with(['subscription.outlets' => function($q) {$q->where('outlet_status', 'Active');}, 'subscription.outlets.city', 'subscription_user_vouchers', 'subscription.subscription_content.subscription_content_details'])->where('id_subscription_user', $request->id_subscription_user)->first()->toArray();
         
+        $subs_outlet = $this->renderOutletCity($subs['subscription']);
+        $subs['subscription']['outlet_by_city'] = $subs_outlet['outlet_by_city']??[];
+
         $result = [
             'id_subscription_user'          => $subs['id_subscription_user'],
             'id_subscription'               => $subs['subscription']['id_subscription'],
@@ -181,9 +204,17 @@ class ApiSubscriptionWebview extends Controller
             'subscription_end'              => date('Y-m-d H:i:s', strtotime($subs['subscription']['subscription_end'])),
             'subscription_publish_start'    => date('Y-m-d H:i:s', strtotime($subs['subscription']['subscription_publish_start'])),
             'subscription_publish_end'      => date('Y-m-d H:i:s', strtotime($subs['subscription']['subscription_publish_end'])),
-            'subscription_voucher_total'    => $subs['subscription']['subscription_voucher_total']
+            'subscription_voucher_total'    => $subs['subscription']['subscription_voucher_total'],
+            'subscription_start_indo'            => MyHelper::dateFormatInd($subs['subscription']['subscription_start'], false, false).' pukul '.date('H:i', strtotime($subs['subscription']['subscription_start'])),
+            'subscription_end_indo'              => MyHelper::dateFormatInd($subs['subscription']['subscription_end'], false, false).' pukul '.date('H:i', strtotime($subs['subscription']['subscription_end'])),
+            'subscription_publish_start_indo'    => MyHelper::dateFormatInd($subs['subscription']['subscription_publish_start'], false, false).' pukul '.date('H:i', strtotime($subs['subscription']['subscription_publish_start'])),
+            'subscription_publish_end_indo'      => MyHelper::dateFormatInd($subs['subscription']['subscription_publish_end'], false, false).' pukul '.date('H:i', strtotime($subs['subscription']['subscription_publish_end'])),
+            'subscription_expired'      		 => date('Y-m-d H:i:s', strtotime($subs['subscription_expired_at'])),
+            'subscription_expired_indo'     => MyHelper::dateFormatInd($subs['subscription_expired_at'], false, false),
+            'subscription_expired_time_indo'     => 'pukul '.date('H:i', strtotime($subs['subscription_expired_at'])),
         ];
         $result['time_server'] = date('Y-m-d H:i:s');
+        $result['time_server_indo'] = MyHelper::dateFormatInd(date('Y-m-d H:i:s'), false, false).' pukul '.date('H:i');
 
         $result['subscription_voucher_used'] = 0;
         $voucher = [];
@@ -253,8 +284,13 @@ class ApiSubscriptionWebview extends Controller
             'subscription_header_text'          => 'Terima kasih telah membeli',
             'url_subscription_image'            => $subs['subscription']['url_subscription_image'],
             'bought_at'                         => date('Y-m-d H:i:s', strtotime($subs['bought_at'])),
+            'bought_at_indo'                    => MyHelper::dateFormatInd($subs['bought_at'], false, false),
+            'bought_at_time_indo'               => 'pukul '.date('H:i', strtotime($subs['bought_at'])),
             'subscription_user_receipt_number'  => $subs['subscription_user_receipt_number'],
-            'balance_nominal'                   => $subs['balance_nominal']
+            'balance_nominal'                   => $subs['balance_nominal'],
+            'expired_at'                        => date('Y-m-d H:i:s', strtotime($subs['subscription_expired_at'])),
+            'expired_at_indo'                   => MyHelper::dateFormatInd($subs['subscription_expired_at'], false, false),
+            'expired_at_time_indo'              => 'pukul '.date('H:i', strtotime($subs['subscription_expired_at'])),
         ];
 
         if ($subs['subscription_price_cash'] == 'Free') {
@@ -282,11 +318,54 @@ class ApiSubscriptionWebview extends Controller
         $response = [
             'status' => 'success',
             'result' => [
-                'webview_url' => env('APP_URL') ."webview/voucher/". $id_deals_user,
+                'webview_url' => config('url.app_url') ."webview/voucher/". $id_deals_user,
                 'button_text' => 'INVALIDATE'
             ]
         ];
         return response()->json($response);
     }*/
+
+    public function renderOutletCity($subs)
+    {
+    	$value = $subs;
+    	if (!empty($value['outlets'])) {
+            // ambil kotanya dulu
+    		// return $value['outlets'];
+            $kota = array_column($value['outlets'], 'city');
+            $kota = array_values(array_map("unserialize", array_unique(array_map("serialize", $kota))));
+    		// return [$kota];
+
+            // jika ada pencarian kota
+            if (!empty($city)) {
+                $cariKota = array_search($city, array_column($kota, 'id_city'));
+
+                if (is_integer($cariKota)) {
+                    $markerCity = 1;
+                }
+            }
+
+            foreach ($kota as $k => $v) {
+                if ($v) {
+
+                    $kota[$k]['outlet'] = [];
+
+                    foreach ($value['outlets'] as $outlet) {
+                        if ($v['id_city'] == $outlet['id_city']) {
+                            unset($outlet['pivot']);
+                            unset($outlet['city']);
+
+                            array_push($kota[$k]['outlet'], $outlet);
+                        }
+                    }
+                } else {
+                    unset($kota[$k]);
+                }
+            }
+
+            $subs['outlet_by_city'] = $kota;
+        }
+
+        return $subs;
+    }
     
 }

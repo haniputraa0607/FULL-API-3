@@ -3,6 +3,7 @@
 Route::group(['middleware' => ['api', 'log_activities', 'user_agent'], 'prefix' => 'api/setting', 'namespace' => 'Modules\Setting\Http\Controllers'], function()
 {
     Route::get('/courier', 'ApiSetting@settingCourier');
+    Route::get('phone-number', 'ApiSetting@settingPhoneNumber');
 });
 
 Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scopes:apps'], 'prefix' => 'api/setting', 'namespace' => 'Modules\Setting\Http\Controllers'], function()
@@ -119,6 +120,10 @@ Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scop
     /* Maintenance Mode */
     Route::post('maintenance-mode/update', ['middleware' => 'feature_control:235', 'uses' => 'ApiSetting@updateMaintenanceMode']);
     Route::get('maintenance-mode', ['middleware' => 'feature_control:235', 'uses' => 'ApiSetting@maintenanceMode']);
+
+    /* Time Expired OTP and Email Verify */
+    Route::post('time-expired/update', ['uses' => 'ApiSetting@updateTimeExpired']);
+    Route::get('time-expired', ['uses' => 'ApiSetting@timeExpired']);
 
     Route::group(['middleware' => ['auth:api', 'scopes:be'], 'prefix' => 'dashboard'], function()
     {

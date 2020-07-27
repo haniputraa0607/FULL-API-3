@@ -40,10 +40,10 @@ class DealsPromotionTemplate extends Model
 	// ATTRIBUTE IMAGE URL
 	public function getUrlDealsImageAttribute() {
 		if (empty($this->deals_image)) {
-            return env('S3_URL_API').'img/default.jpg';
+            return config('url.storage_url_api').'img/default.jpg';
         }
         else {
-            return env('S3_URL_API').$this->deals_image;
+            return config('url.storage_url_api').$this->deals_image;
         }
 	}
 

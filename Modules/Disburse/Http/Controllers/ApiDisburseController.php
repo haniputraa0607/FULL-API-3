@@ -20,16 +20,16 @@ class ApiDisburseController extends Controller
 {
     public function dashboard(Request $request){
         $post = $request->json()->all();
-        $nominal_success = Disburse::where('disburse.disburse_status', 'Success');
-        $nominal_fail = Disburse::where('disburse.disburse_status', 'Fail');
+        $nominal_success = Disburse::join('disburse_outlet', 'disburse.id_disburse', 'disburse_outlet.id_disburse')->where('disburse.disburse_status', 'Success');
+        $nominal_fail = Disburse::join('disburse_outlet', 'disburse.id_disburse', 'disburse_outlet.id_disburse')->where('disburse.disburse_status', 'Fail');
         $nominal_trx = DailyReportTrx::where('trx_type', 'Online');
-        $income_central = Disburse::orderBy('disburse.created_at');
+        $income_central = Disburse::join('disburse_outlet', 'disburse.id_disburse', 'disburse_outlet.id_disburse')->where('disburse.disburse_status', 'Success')->orderBy('disburse.created_at');
 
         if(isset($post['id_outlet']) && !empty($post['id_outlet']) && $post['id_outlet'] != 'all'){
-            $nominal_success->where('disburse.id_outlet', $post['id_outlet']);
-            $nominal_fail->where('disburse.id_outlet', $post['id_outlet']);
+            $nominal_success->where('disburse_outlet.id_outlet', $post['id_outlet']);
+            $nominal_fail->where('disburse_outlet.id_outlet', $post['id_outlet']);
             $nominal_trx->where('daily_report_trx.id_outlet', $post['id_outlet']);
-            $income_central->where('disburse.id_outlet', $post['id_outlet']);
+            $income_central->where('disburse_outlet.id_outlet', $post['id_outlet']);
         }
 
         if(isset($post['fitler_date']) && $post['fitler_date'] == 'today'){
@@ -57,12 +57,12 @@ class ApiDisburseController extends Controller
         }
 
         if(isset($post['id_user_franchise']) && !empty($post['id_user_franchise'])){
-            $nominal_success->join('user_franchisee_outlet', 'user_franchisee_outlet.id_outlet', 'disburse.id_outlet')
-                ->where('user_franchisee_outlet.id_user_franchise', $post['id_user_franchise']);
-            $nominal_fail->join('user_franchisee_outlet', 'user_franchisee_outlet.id_outlet', 'disburse.id_outlet')
-                ->where('user_franchisee_outlet.id_user_franchise', $post['id_user_franchise']);
-            $nominal_trx->join('user_franchisee_outlet', 'user_franchisee_outlet.id_outlet', 'daily_report_trx.id_outlet')
-                ->where('user_franchisee_outlet.id_user_franchise', $post['id_user_franchise']);
+            $nominal_success->join('user_franchise_outlet', 'user_franchise_outlet.id_outlet', 'disburse_outlet.id_outlet')
+                ->where('user_franchise_outlet.id_user_franchise', $post['id_user_franchise']);
+            $nominal_fail->join('user_franchise_outlet', 'user_franchise_outlet.id_outlet', 'disburse_outlet.id_outlet')
+                ->where('user_franchise_outlet.id_user_franchise', $post['id_user_franchise']);
+            $nominal_trx->join('user_franchise_outlet', 'user_franchise_outlet.id_outlet', 'daily_report_trx.id_outlet')
+                ->where('user_franchise_outlet.id_user_franchise', $post['id_user_franchise']);
         }
 
         $nominal_success = $nominal_success->sum('disburse.disburse_nominal');
@@ -84,19 +84,22 @@ class ApiDisburseController extends Controller
     public function getOutlets(Request $request){
         $post = $request->json()->all();
 
-        $outlet = Outlet::leftJoin('bank_name', 'bank_name.id_bank_name', 'outlets.id_bank_name')
-                ->select('outlets.id_outlet', 'outlets.outlet_code', 'outlets.outlet_name', 'outlets.id_bank_name', 'outlets.status_franchise',
-                    'outlets.beneficiary_name', 'outlets.beneficiary_alias', 'outlets.beneficiary_account', 'outlets.beneficiary_email',
-                    'bank_name.bank_name', 'bank_name.bank_code', 'outlets.outlet_special_status', 'outlets.outlet_special_fee');
+        $outlet = Outlet::leftJoin('bank_account_outlets', 'bank_account_outlets.id_outlet', 'outlets.id_outlet')
+                ->leftJoin('bank_accounts', 'bank_accounts.id_bank_account', 'bank_account_outlets.id_bank_account')
+                ->leftJoin('bank_name', 'bank_name.id_bank_name', 'bank_accounts.id_bank_name');
 
-        if(isset($post['id_user_franchise']) && !empty($post['id_user_franchise'])){
-            $outlet->join('user_franchisee_outlet', 'outlets.id_outlet', 'user_franchisee_outlet.id_outlet')
-                ->where('user_franchisee_outlet.id_user_franchise', $post['id_user_franchise']);
+        if(isset($post['for'])){
+            $outlet->select('outlets.id_outlet', 'outlets.outlet_code', 'outlets.outlet_name');
+        }else{
+            $outlet->select('outlets.id_outlet', 'outlets.outlet_code', 'outlets.outlet_name', 'outlets.status_franchise', 'outlets.outlet_special_status', 'outlets.outlet_special_fee',
+                'bank_accounts.id_bank_name', 'bank_accounts.beneficiary_name', 'bank_accounts.beneficiary_alias', 'bank_accounts.beneficiary_account', 'bank_accounts.beneficiary_email',
+                'bank_name.bank_name', 'bank_name.bank_code');
         }
 
-//        if(isset($post['type']) && $post['type'] == 'add_bank_account'){
-//            $outlet->whereNull('outlets.beneficiary_account');
-//        }
+        if(isset($post['id_user_franchise']) && !empty($post['id_user_franchise'])){
+            $outlet->join('user_franchise_outlet', 'outlets.id_outlet', 'user_franchise_outlet.id_outlet')
+                ->where('user_franchise_outlet.id_user_franchise', $post['id_user_franchise']);
+        }
 
         if(isset($post['conditions']) && !empty($post['conditions'])){
             $rule = 'and';
@@ -133,33 +136,33 @@ class ApiDisburseController extends Controller
 
                         if($row['subject'] == 'beneficiary_name'){
                             if($row['operator'] == '='){
-                                $outlet->where('outlets.beneficiary_name', $row['parameter']);
+                                $outlet->where('bank_accounts.beneficiary_name', $row['parameter']);
                             }else{
-                                $outlet->where('outlets.beneficiary_name', 'like', '%'.$row['parameter'].'%');
+                                $outlet->where('bank_accounts.beneficiary_name', 'like', '%'.$row['parameter'].'%');
                             }
                         }
 
                         if($row['subject'] == 'beneficiary_alias'){
                             if($row['operator'] == '='){
-                                $outlet->where('outlets.beneficiary_alias', $row['parameter']);
+                                $outlet->where('bank_accounts.beneficiary_alias', $row['parameter']);
                             }else{
-                                $outlet->where('outlets.beneficiary_alias', 'like', '%'.$row['parameter'].'%');
+                                $outlet->where('bank_accounts.beneficiary_alias', 'like', '%'.$row['parameter'].'%');
                             }
                         }
 
                         if($row['subject'] == 'beneficiary_account'){
                             if($row['operator'] == '='){
-                                $outlet->where('outlets.beneficiary_account', $row['parameter']);
+                                $outlet->where('bank_accounts.beneficiary_account', $row['parameter']);
                             }else{
-                                $outlet->where('outlets.beneficiary_account', 'like', '%'.$row['parameter'].'%');
+                                $outlet->where('bank_accounts.beneficiary_account', 'like', '%'.$row['parameter'].'%');
                             }
                         }
 
                         if($row['subject'] == 'beneficiary_email'){
                             if($row['operator'] == '='){
-                                $outlet->where('outlets.beneficiary_email', $row['parameter']);
+                                $outlet->where('bank_accounts.beneficiary_email', $row['parameter']);
                             }else{
-                                $outlet->where('outlets.beneficiary_email', 'like', '%'.$row['parameter'].'%');
+                                $outlet->where('bank_accounts.beneficiary_email', 'like', '%'.$row['parameter'].'%');
                             }
                         }
 
@@ -195,33 +198,33 @@ class ApiDisburseController extends Controller
 
                             if($row['subject'] == 'beneficiary_name'){
                                 if($row['operator'] == '='){
-                                    $subquery->orWhere('outlets.beneficiary_name', $row['parameter']);
+                                    $subquery->orWhere('bank_accounts.beneficiary_name', $row['parameter']);
                                 }else{
-                                    $subquery->orWhere('outlets.beneficiary_name', 'like', '%'.$row['parameter'].'%');
+                                    $subquery->orWhere('bank_accounts.beneficiary_name', 'like', '%'.$row['parameter'].'%');
                                 }
                             }
 
                             if($row['subject'] == 'beneficiary_alias'){
                                 if($row['operator'] == '='){
-                                    $subquery->orWhere('outlets.beneficiary_alias', $row['parameter']);
+                                    $subquery->orWhere('bank_accounts.beneficiary_alias', $row['parameter']);
                                 }else{
-                                    $subquery->orWhere('outlets.beneficiary_alias', 'like', '%'.$row['parameter'].'%');
+                                    $subquery->orWhere('bank_accounts.beneficiary_alias', 'like', '%'.$row['parameter'].'%');
                                 }
                             }
 
                             if($row['subject'] == 'beneficiary_account'){
                                 if($row['operator'] == '='){
-                                    $subquery->orWhere('outlets.beneficiary_account', $row['parameter']);
+                                    $subquery->orWhere('bank_accounts.beneficiary_account', $row['parameter']);
                                 }else{
-                                    $subquery->orWhere('outlets.beneficiary_account', 'like', '%'.$row['parameter'].'%');
+                                    $subquery->orWhere('bank_accounts.beneficiary_account', 'like', '%'.$row['parameter'].'%');
                                 }
                             }
 
                             if($row['subject'] == 'beneficiary_email'){
                                 if($row['operator'] == '='){
-                                    $subquery->orWhere('outlets.beneficiary_email', $row['parameter']);
+                                    $subquery->orWhere('bank_accounts.beneficiary_email', $row['parameter']);
                                 }else{
-                                    $subquery->orWhere('outlets.beneficiary_email', 'like', '%'.$row['parameter'].'%');
+                                    $subquery->orWhere('bank_accounts.beneficiary_email', 'like', '%'.$row['parameter'].'%');
                                 }
                             }
                         }
@@ -242,18 +245,21 @@ class ApiDisburseController extends Controller
     function listDisburse(Request $request, $status){
         $post = $request->json()->all();
 
-        $data = Disburse::join('outlets', 'outlets.id_outlet', 'disburse.id_outlet')
-            ->join('bank_name', 'bank_name.id_bank_name', 'outlets.id_bank_name')
-                ->select('outlets.outlet_name', 'outlets.outlet_code', 'disburse.id_disburse', 'disburse.disburse_nominal', 'disburse.disburse_status', 'disburse.beneficiary_account_number',
-                'disburse.beneficiary_name', 'disburse.created_at', 'disburse.updated_at', 'bank_name.bank_code', 'bank_name.bank_name', 'disburse.count_retry')->orderBy('disburse.created_at','desc');
+        $data = Disburse::join('disburse_outlet', 'disburse.id_disburse', 'disburse_outlet.id_disburse')
+            ->join('outlets', 'outlets.id_outlet', 'disburse_outlet.id_outlet')
+            ->leftJoin('bank_name', 'bank_name.bank_code', 'disburse.beneficiary_bank_name');
+
+        if(isset($post['id_disburse']) && !is_null($post['id_disburse'])){
+            $data->where('disburse.id_disburse', $post['id_disburse']);
+        }
 
         if($status != 'all'){
             $data->where('disburse.disburse_status', ucfirst($status));
         }
 
         if(isset($post['id_user_franchise']) && !empty($post['id_user_franchise'])){
-            $data->join('user_franchisee_outlet', 'user_franchisee_outlet.id_outlet', 'disburse.id_outlet')
-                ->where('user_franchisee_outlet.id_user_franchise', $post['id_user_franchise']);
+            $data->join('user_franchise_outlet', 'user_franchise_outlet.id_outlet', 'disburse_outlet.id_outlet')
+                ->where('user_franchise_outlet.id_user_franchise', $post['id_user_franchise']);
         }
 
         if(isset($post['date_start']) && !empty($post['date_start']) &&
@@ -365,6 +371,182 @@ class ApiDisburseController extends Controller
             }
         }
 
+        if(isset($post['export']) && $post['export'] == 1){
+            $data = $data->selectRaw('DATE_FORMAT(disburse.created_at, "%d %M %Y %H:%i") as "Date", CONCAT(outlets.outlet_code, " - ", outlets.outlet_name) as "Outlet", FORMAT(disburse_outlet.disburse_nominal, 2) as "Nominal",
+                FORMAT(total_fee_item, 2) as "Total Fee Item", FORMAT(total_omset, 2) as "Total Grand Total", FORMAT(total_discount, 2) as "Total Discount Charge", FORMAT(total_delivery_price, 2) as "Total Delivery", FORMAT(total_payment_charge, 2) as "Total Payment Charge",
+                FORMAT(total_point_use_expense, 2) as "Total Point Use Charge", FORMAT(total_subscription, 2) as "Total Subscription Charge",
+                bank_name.bank_name as "Bank Name", CONCAT(" ",disburse.beneficiary_account_number) as "Account Number", disburse.beneficiary_name as "Recipient Name "')
+                ->get()->toArray();
+
+        }else{
+            $data = $data->select('disburse_outlet.id_disburse_outlet', 'outlets.outlet_name', 'outlets.outlet_code', 'disburse.id_disburse', 'disburse_outlet.disburse_nominal', 'disburse.disburse_status', 'disburse.beneficiary_account_number',
+                    'disburse.beneficiary_name', 'disburse.created_at', 'disburse.updated_at', 'bank_name.bank_code', 'bank_name.bank_name', 'disburse.count_retry', 'disburse.error_message')->orderBy('disburse.created_at','desc')
+                    ->paginate(25);
+        }
+
+        return response()->json(MyHelper::checkGet($data));
+    }
+
+    function listDisburseFailAction(Request $request){
+        $post = $request->json()->all();
+
+        $data = Disburse::leftJoin('bank_name', 'bank_name.bank_code', 'disburse.beneficiary_bank_name')
+            ->with(['disburse_outlet'])
+            ->where('disburse.disburse_status', 'Fail')
+            ->select('disburse.id_disburse', 'disburse.disburse_nominal', 'disburse.disburse_status', 'disburse.beneficiary_account_number',
+                'disburse.beneficiary_name', 'disburse.created_at', 'disburse.updated_at', 'bank_name.bank_code', 'bank_name.bank_name', 'disburse.count_retry', 'disburse.error_message')->orderBy('disburse.created_at','desc');
+
+        if(isset($post['id_user_franchise']) && !empty($post['id_user_franchise'])){
+            $data->whereIn('disburse.id_disburse', function ($query) use ($post){
+                $query->select('disburse_outlets.id_disburse')
+                    ->from('disburse_outlets')
+                    ->join('outlets', 'disburse_outlets.id_outlet', 'outlets.id_outlet')
+                    ->join('user_franchise_outlet', 'user_franchise_outlet.id_outlet', 'disburse_outlet.id_outlet')
+                    ->where('user_franchise_outlet.id_user_franchise', $post['id_user_franchise']);
+            });
+        }
+
+        if(isset($post['date_start']) && !empty($post['date_start']) &&
+            isset($post['date_end']) && !empty($post['date_end'])){
+            $start_date = date('Y-m-d', strtotime($post['date_start']));
+            $end_date = date('Y-m-d', strtotime($post['date_end']));
+
+            $data->whereDate('disburse.created_at', '>=', $start_date)
+                ->whereDate('disburse.created_at', '<=', $end_date);
+        }
+
+        if(isset($post['conditions']) && !empty($post['conditions'])){
+            $rule = 'and';
+            if(isset($post['rule'])){
+                $rule = $post['rule'];
+            }
+
+            if($rule == 'and'){
+                foreach ($post['conditions'] as $row){
+                    if(isset($row['subject'])){
+                        if($row['subject'] == 'bank_name'){
+                            $data->where('bank_name.id_bank_name', $row['operator']);
+                        }
+
+                        if($row['subject'] == 'outlet_code'){
+                            if($row['operator'] == '='){
+                                $data->whereIn('disburse.id_disburse', function ($query) use ($row){
+                                    $query->select('disburse_outlets.id_disburse')
+                                        ->from('disburse_outlets')
+                                        ->join('outlets', 'disburse_outlets.id_outlet', 'outlets.id_outlet')
+                                        ->where('outlets.outlet_code',$row['parameter']);
+                                });
+                            }else{
+                                $data->whereIn('disburse.id_disburse', function ($query) use ($row){
+                                    $query->select('disburse_outlets.id_disburse')
+                                        ->from('disburse_outlets')
+                                        ->join('outlets', 'disburse_outlets.id_outlet', 'outlets.id_outlet')
+                                        ->where('outlets.outlet_code', 'like', '%'.$row['parameter'].'%');
+                                });
+                            }
+                        }
+
+                        if($row['subject'] == 'outlet_name'){
+                            if($row['operator'] == '='){
+                                $data->whereIn('disburse.id_disburse', function ($query) use ($row){
+                                    $query->select('disburse_outlets.id_disburse')
+                                        ->from('disburse_outlets')
+                                        ->join('outlets', 'disburse_outlets.id_outlet', 'outlets.id_outlet')
+                                        ->where('outlets.outlet_name',$row['parameter']);
+                                });
+                            }else{
+                                $data->whereIn('disburse.id_disburse', function ($query) use ($row){
+                                    $query->select('disburse_outlets.id_disburse')
+                                        ->from('disburse_outlets')
+                                        ->join('outlets', 'disburse_outlets.id_outlet', 'outlets.id_outlet')
+                                        ->where('outlets.outlet_name', 'like', '%'.$row['parameter'].'%');
+                                });
+                            }
+                        }
+
+                        if($row['subject'] == 'account_number'){
+                            if($row['operator'] == '='){
+                                $data->where('disburse.beneficiary_account_number', $row['parameter']);
+                            }else{
+                                $data->where('disburse.beneficiary_account_number', 'like', '%'.$row['parameter'].'%');
+                            }
+                        }
+
+                        if($row['subject'] == 'recipient_name'){
+                            if($row['operator'] == '='){
+                                $data->where('disburse.beneficiary_name', $row['parameter']);
+                            }else{
+                                $data->where('disburse.beneficiary_name', 'like', '%'.$row['parameter'].'%');
+                            }
+                        }
+
+                    }
+                }
+            }else{
+                $data->where(function ($subquery) use ($post){
+                    foreach ($post['conditions'] as $row){
+                        if(isset($row['subject'])){
+                            if($row['subject'] == 'bank_name'){
+                                $subquery->orWhere('bank_name.id_bank_name', $row['operator']);
+                            }
+
+                            if($row['subject'] == 'outlet_code'){
+                                if($row['operator'] == '='){
+                                    $subquery->orWhereIn('disburse.id_disburse', function ($query) use ($row){
+                                        $query->select('disburse_outlets.id_disburse')
+                                            ->from('disburse_outlets')
+                                            ->join('outlets', 'disburse_outlets.id_outlet', 'outlets.id_outlet')
+                                            ->where('outlets.outlet_code',$row['parameter']);
+                                    });
+                                }else{
+                                    $subquery->orWhereIn('disburse.id_disburse', function ($query) use ($row){
+                                        $query->select('disburse_outlets.id_disburse')
+                                            ->from('disburse_outlets')
+                                            ->join('outlets', 'disburse_outlets.id_outlet', 'outlets.id_outlet')
+                                            ->where('outlets.outlet_code', 'like', '%'.$row['parameter'].'%');
+                                    });
+                                }
+                            }
+
+                            if($row['subject'] == 'outlet_name'){
+                                if($row['operator'] == '='){
+                                    $subquery->orWhereIn('disburse.id_disburse', function ($query) use ($row){
+                                        $query->select('disburse_outlets.id_disburse')
+                                            ->from('disburse_outlets')
+                                            ->join('outlets', 'disburse_outlets.id_outlet', 'outlets.id_outlet')
+                                            ->where('outlets.outlet_name',$row['parameter']);
+                                    });
+                                }else{
+                                    $subquery->orWhereIn('disburse.id_disburse', function ($query) use ($row){
+                                        $query->select('disburse_outlets.id_disburse')
+                                            ->from('disburse_outlets')
+                                            ->join('outlets', 'disburse_outlets.id_outlet', 'outlets.id_outlet')
+                                            ->where('outlets.outlet_name', 'like', '%'.$row['parameter'].'%');
+                                    });
+                                }
+                            }
+
+                            if($row['subject'] == 'account_number'){
+                                if($row['operator'] == '='){
+                                    $subquery->orWhere('disburse.beneficiary_account_number', $row['parameter']);
+                                }else{
+                                    $subquery->orWhere('disburse.beneficiary_account_number', 'like', '%'.$row['parameter'].'%');
+                                }
+                            }
+
+                            if($row['subject'] == 'recipient_name'){
+                                if($row['operator'] == '='){
+                                    $subquery->orWheree('disburse.beneficiary_name', $row['parameter']);
+                                }else{
+                                    $subquery->orWhere('disburse.beneficiary_name', 'like', '%'.$row['parameter'].'%');
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
         $data = $data->paginate(25);
         return response()->json(MyHelper::checkGet($data));
     }
@@ -373,10 +555,12 @@ class ApiDisburseController extends Controller
         $post = $request->json()->all();
 
         $data = Transaction::join('outlets', 'outlets.id_outlet', 'transactions.id_outlet')
-                ->leftJoin('disburse', 'transactions.id_disburse', 'disburse.id_disburse')
+                ->leftJoin('disburse_outlet_transactions', 'transactions.id_transaction', 'disburse_outlet_transactions.id_transaction')
+                ->leftJoin('disburse_outlet', 'disburse_outlet.id_disburse_outlet', 'disburse_outlet_transactions.id_disburse_outlet')
+                ->leftJoin('disburse', 'disburse.id_disburse', 'disburse_outlet.id_disburse')
                 ->where('transactions.transaction_payment_status', 'Completed')
                 ->where('transactions.trasaction_type', '!=', 'Offline')
-                ->select('disburse_status', 'transactions.*', 'outlets.outlet_name', 'outlets.outlet_code');
+                ->select('disburse.disburse_status', 'transactions.*', 'outlets.outlet_name', 'outlets.outlet_code');
 
         if(isset($post['date_start']) && !empty($post['date_start']) &&
             isset($post['date_end']) && !empty($post['date_end'])){
@@ -385,6 +569,11 @@ class ApiDisburseController extends Controller
 
             $data->whereDate('transactions.created_at', '>=', $start_date)
                 ->whereDate('transactions.created_at', '<=', $end_date);
+        }
+
+        if(isset($post['id_user_franchise']) && !empty($post['id_user_franchise'])){
+            $data->join('user_franchise_outlet', 'user_franchise_outlet.id_outlet', 'disburse_outlet.id_outlet')
+                ->where('user_franchise_outlet.id_user_franchise', $post['id_user_franchise']);
         }
 
         if(isset($post['conditions']) && !empty($post['conditions'])){
@@ -397,7 +586,7 @@ class ApiDisburseController extends Controller
                 foreach ($post['conditions'] as $row){
                     if(isset($row['subject'])){
                         if($row['subject'] == 'status'){
-                            if($row['operator'] == 'Pending'){
+                            if($row['operator'] == 'Unprocessed'){
                                 $data->whereNull('disburse.disburse_status');
                             }else{
                                 $data->where('disburse.disburse_status', $row['operator']);
@@ -420,7 +609,7 @@ class ApiDisburseController extends Controller
                     foreach ($post['conditions'] as $row){
                         if(isset($row['subject'])){
                             if($row['subject'] == 'status'){
-                                if($row['operator'] == 'Pending'){
+                                if($row['operator'] == 'Unprocessed'){
                                     $subquery->orWhereNull('disburse_status');
                                 }else{
                                     $subquery->orWhere('disburse_status', $row['operator']);
@@ -448,15 +637,22 @@ class ApiDisburseController extends Controller
     function detailDisburse(Request $request ,$id){
         $post = $request->json()->all();
 
-        $disburse = Disburse::join('outlets', 'outlets.id_outlet', 'disburse.id_outlet')
-            ->join('bank_name', 'bank_name.id_bank_name', 'outlets.id_bank_name')
-            ->where('disburse.id_disburse', $id)
-            ->select('outlets.outlet_name', 'outlets.outlet_code', 'disburse.id_disburse', 'disburse.disburse_nominal', 'disburse.disburse_status', 'disburse.beneficiary_account_number',
+        $disburse = Disburse::join('disburse_outlet', 'disburse.id_disburse', 'disburse_outlet.id_disburse')
+            ->join('outlets', 'outlets.id_outlet', 'disburse_outlet.id_outlet')
+            ->leftJoin('bank_name', 'bank_name.bank_code', 'disburse.beneficiary_bank_name')
+            ->where('disburse_outlet.id_disburse_outlet', $id)
+            ->select('disburse_outlet.id_disburse_outlet', 'outlets.outlet_name', 'outlets.outlet_code', 'disburse.id_disburse', 'disburse_outlet.disburse_nominal', 'disburse.disburse_status', 'disburse.beneficiary_account_number',
                 'disburse.beneficiary_name', 'disburse.created_at', 'disburse.updated_at', 'bank_name.bank_code', 'bank_name.bank_name')->first();
-        $data = Transaction::join('disburse_transactions', 'disburse_transactions.id_transaction', 'transactions.id_transaction')
+        $data = Transaction::join('disburse_outlet_transactions', 'disburse_outlet_transactions.id_transaction', 'transactions.id_transaction')
             ->leftJoin('transaction_payment_balances', 'transaction_payment_balances.id_transaction', 'transactions.id_transaction')
-            ->where('disburse_transactions.id_disburse', $id)
-            ->select('disburse_transactions.*', 'transactions.*', 'transaction_payment_balances.balance_nominal')->paginate(25);
+            ->where('disburse_outlet_transactions.id_disburse_outlet', $id)
+            ->select('disburse_outlet_transactions.*', 'transactions.*', 'transaction_payment_balances.balance_nominal');
+
+        if(isset($post['export']) && $post['export'] == 1){
+            $data = $data->get()->toArray();
+        }else{
+            $data = $data->paginate(25);
+        }
 
         $result = [
             'status' => 'success',
@@ -474,9 +670,10 @@ class ApiDisburseController extends Controller
         $start = $post['start'];
         $length = $post['length'];
 
-        $data = Disburse::join('outlets', 'outlets.id_outlet', 'disburse.id_outlet')
-            ->join('bank_name', 'bank_name.id_bank_name', 'outlets.id_bank_name')
-            ->select('disburse.id_disburse as 0', DB::raw("CONCAT (outlets.outlet_code, ' - ',outlets.outlet_name) as '1'"), DB::raw("DATE_FORMAT(disburse.created_at, '%d %b %Y %H:%i') as '2'"), DB::raw('FORMAT(disburse.disburse_nominal,0) as "3"'), 'disburse.disburse_status',
+        $data = Disburse::join('disburse_outlet', 'disburse.id_disburse', 'disburse_outlet.id_disburse')
+            ->join('outlets', 'outlets.id_outlet', 'disburse_outlet.id_outlet')
+            ->leftJoin('bank_name', 'bank_name.bank_code', 'disburse.beneficiary_bank_name')
+            ->select('disburse_outlet.id_disburse_outlet as 0', DB::raw("CONCAT (outlets.outlet_code, ' - ',outlets.outlet_name) as '1'"), DB::raw("DATE_FORMAT(disburse.created_at, '%d %b %Y %H:%i') as '2'"), DB::raw('FORMAT(disburse.disburse_nominal,2) as "3"'), 'disburse.disburse_status',
                 'bank_name.bank_name as 4', 'disburse.beneficiary_account_number as 5', 'disburse.beneficiary_name as 6', 'disburse.updated_at', 'bank_name.bank_code')->orderBy('disburse.created_at','desc');
 
         if($status != 'all'){
@@ -484,8 +681,8 @@ class ApiDisburseController extends Controller
         }
 
         if(isset($post['id_user_franchise']) && !empty($post['id_user_franchise'])){
-            $data->join('user_franchisee_outlet', 'user_franchisee_outlet.id_outlet', 'disburse.id_outlet')
-                ->where('user_franchisee_outlet.id_user_franchise', $post['id_user_franchise']);
+            $data->join('user_franchise_outlet', 'user_franchise_outlet.id_outlet', 'disburse_outlet.id_outlet')
+                ->where('user_franchise_outlet.id_user_franchise', $post['id_user_franchise']);
         }
 
         if(isset($post['fitler_date']) &&  $post['fitler_date']== 'today'){
@@ -502,7 +699,7 @@ class ApiDisburseController extends Controller
         }
 
         if(isset($post['id_outlet']) && !empty($post['id_outlet']) && $post['id_outlet'] != 'all'){
-            $data->where('disburse.id_outlet', $post['id_outlet']);
+            $data->where('disburse_outlet.id_outlet', $post['id_outlet']);
         }
 
         $total = $data->count();
@@ -561,7 +758,7 @@ class ApiDisburseController extends Controller
             return response()->json(['status' => 'fail', 'message' => 'Current pin does not match']);
         }else{
             $update = UserFranchise::where('id_user_franchise', $post['id_user_franchise'])->update([
-                'password' => bcrypt($post['pin'])
+                'password' => bcrypt($post['pin']), 'password_default_plain_text' => NULL
             ]);
 
             if($update){

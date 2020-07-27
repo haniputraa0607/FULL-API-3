@@ -185,7 +185,7 @@ class ApiSubscriptionClaim extends Controller
                                     'id_subscription_user'=>$voucher->id_subscription_user,
                                     'id_subscription'=>$dataSubs->id_subscription,
                                     'paid_status'=>$voucher->paid_status,
-                                    'webview_success'=>env('API_URL').'api/webview/subscription/success/'.$voucher->id_subscription_user
+                                    'webview_success'=>config('url.api_url').'api/webview/subscription/success/'.$voucher->id_subscription_user
                                 ];
                                 if ($return['paid_status'] == 'Completed') {
                                     $return['title'] = 'Success';
@@ -240,6 +240,7 @@ class ApiSubscriptionClaim extends Controller
         $subs_user = SubscriptionUser::join('subscription_user_vouchers', 'subscription_user_vouchers.id_subscription_user', '=', 'subscription_users.id_subscription_user')
         ->where('id_user', '=', $id_user)
         ->where('subscription_users.id_subscription', '=', $subs->id_subscription)
+        ->where('paid_status', '<>', 'Cancelled')
         ->orderBy('subscription_expired_at', 'DESC')
         ->groupBy('subscription_user_vouchers.id_subscription_user')
         ->get();

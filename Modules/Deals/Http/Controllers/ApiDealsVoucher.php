@@ -457,21 +457,21 @@ class ApiDealsVoucher extends Controller
         /*if (isset($post['used'])) {
             if ($post['used'] == 0) {
                 foreach($voucher as $index => $dataVou){
-                    $voucher[$index]['webview_url'] = env('APP_URL') ."webview/voucher/". $dataVou['id_deals_user'];
+                    $voucher[$index]['webview_url'] = config('url.app_url') ."webview/voucher/". $dataVou['id_deals_user'];
                     $voucher[$index]['button_text'] = 'INVALIDATE';
                 }
             }
             elseif ($post['used'] == 1) {
                 foreach($voucher as $index => $dataVou){
-                    $voucher[$index]['webview_url'] = env('APP_URL') ."webview/voucher/used/". $dataVou['id_deals_user'];
+                    $voucher[$index]['webview_url'] = config('url.app_url') ."webview/voucher/used/". $dataVou['id_deals_user'];
                 }
             }
         }*/
         if (!($post['used']??false)) {
 
                 foreach($voucher as $index => $dataVou){
-                    $voucher[$index]['webview_url'] = env('API_URL') ."api/webview/voucher/". $dataVou['id_deals_user'];
-                    $voucher[$index]['webview_url_v2'] = env('API_URL') ."api/webview/voucher/v2/". $dataVou['id_deals_user'];
+                    $voucher[$index]['webview_url'] = config('url.api_url') ."api/webview/voucher/". $dataVou['id_deals_user'];
+                    $voucher[$index]['webview_url_v2'] = config('url.api_url') ."api/webview/voucher/v2/". $dataVou['id_deals_user'];
                     $voucher[$index]['button_text'] = 'Gunakan';
                 }
 
@@ -680,8 +680,8 @@ class ApiDealsVoucher extends Controller
 			DB::rollback();
 		}
 		$deals_user = MyHelper::checkUpdate($deals_user);
-		$deals_user['webview_url'] = env('API_URL') ."api/webview/voucher/". $id_deals_user;
-		$deals_user['webview_url_v2'] = env('API_URL') ."api/webview/voucher/v2/". $id_deals_user;
+		$deals_user['webview_url'] = config('url.api_url') ."api/webview/voucher/". $id_deals_user;
+		$deals_user['webview_url_v2'] = config('url.api_url') ."api/webview/voucher/v2/". $id_deals_user;
 		return $deals_user;
 
     }
@@ -752,7 +752,7 @@ class ApiDealsVoucher extends Controller
     	if ($result['payment_status'] == 'Free') {
     		$result['payment_status'] = 'Completed';
     	}
-    	$result['webview_url'] = env('API_URL').'api/webview/mydeals/'.$post['id_deals_user'];
+    	$result['webview_url'] = config('url.api_url').'api/webview/mydeals/'.$post['id_deals_user'];
 
 		return response()->json(MyHelper::checkGet($result));
     }
@@ -896,8 +896,8 @@ class ApiDealsVoucher extends Controller
         if (!($post['used']??false)) {
 
             foreach($voucher as $index => $dataVou){
-                $voucher[$index]['webview_url'] = env('API_URL') ."api/webview/voucher/". $dataVou['id_deals_user'];
-                $voucher[$index]['webview_url_v2'] = env('API_URL') ."api/webview/voucher/v2/". $dataVou['id_deals_user'];
+                $voucher[$index]['webview_url'] = config('url.api_url') ."api/webview/voucher/". $dataVou['id_deals_user'];
+                $voucher[$index]['webview_url_v2'] = config('url.api_url') ."api/webview/voucher/v2/". $dataVou['id_deals_user'];
                 $voucher[$index]['button_text'] = 'Gunakan';
             }
 
@@ -917,7 +917,9 @@ class ApiDealsVoucher extends Controller
                 'status_redeem'=>($var['redeemed_at']??false)?1:0,
                 'label'=>$var['label'],
                 'status_text'=>$var['status_text'],
-                'is_used'=>$var['is_used']
+                'is_used'=>$var['is_used'],
+                'voucher_expired_at_indo'=> MyHelper::dateFormatInd($var['voucher_expired_at'], false, false),
+                'voucher_expired_at_time_indo'=> 'pukul '.date('H:i', strtotime($var['voucher_expired_at']))
             ];
         },$voucher);
         $result['current_page'] = $current_page;

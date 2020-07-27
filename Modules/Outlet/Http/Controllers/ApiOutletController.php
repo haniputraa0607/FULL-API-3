@@ -22,6 +22,9 @@ use App\Http\Models\Setting;
 use App\Http\Models\OauthAccessToken;
 use App\Http\Models\Product;
 use App\Http\Models\ProductPrice;
+use Modules\Product\Entities\ProductDetail;
+use Modules\Product\Entities\ProductGlobalPrice;
+use Modules\Product\Entities\ProductSpecialPrice;
 use Modules\Disburse\Entities\UserFranchise;
 use Modules\Disburse\Entities\UserFranchiseOultet;
 use Modules\Outlet\Entities\OutletScheduleUpdate;
@@ -425,6 +428,10 @@ class ApiOutletController extends Controller
         $outlet->outlet_pin = $pin;
         $outlet->save();
 
+        $data_pin = [
+            ['id_outlet' => $post['id_outlet'], 'data' => $post['outlet_pin']]
+        ];
+        MyHelper::updateOutletFile($data_pin);
         //delete token
         $del = OauthAccessToken::join('oauth_access_token_providers', 'oauth_access_tokens.id', 'oauth_access_token_providers.oauth_access_token_id')
                                     ->where('oauth_access_tokens.user_id', $post['id_outlet'])->where('oauth_access_token_providers.provider', 'outlet-app')->delete();
@@ -560,7 +567,7 @@ class ApiOutletController extends Controller
         }
 
         $loopdata = array_map(function($var) use ($post){
-            $var['url']=env('API_URL').'api/outlet/webview/'.$var['id_outlet'];
+            $var['url']=config('url.api_url').'api/outlet/webview/'.$var['id_outlet'];
             if(($post['latitude']??false)&&($post['longitude']??false)){
                 $var['distance']=number_format((float)$this->distance($post['latitude'], $post['longitude'], $var['outlet_latitude'], $var['outlet_longitude'], "K"), 2, '.', '').' km';
             }
@@ -568,9 +575,12 @@ class ApiOutletController extends Controller
         }, $loopdata);
 
         // promo code
-		foreach ($outlet as $key => $value) {
-			$outlet[$key]['is_promo'] = 0;
-		}
+        if(!isset($post['qrcode'])){
+            foreach ($outlet as $key => $value) {
+                $outlet[$key]['is_promo'] = 0;
+            }
+        }
+
         if (isset($post['promo_code'])) {
         	$code=PromoCampaignPromoCode::where('promo_code',$request->promo_code)
 	                ->join('promo_campaigns', 'promo_campaigns.id_promo_campaign', '=', 'promo_campaign_promo_codes.id_promo_campaign')
@@ -614,7 +624,7 @@ class ApiOutletController extends Controller
                 $jaraknya = number_format((float)$this->distance($latitude, $longitude, $outlet[0]['outlet_latitude'], $outlet[0]['outlet_longitude'], "K"), 2, '.', '');
                 $outlet[0]['distance'] = $jaraknya." km";
 
-                $outlet[0]['url'] = env('API_URL').'api/outlet/webview/'.$post['id_outlet'];
+                $outlet[0]['url'] = config('url.api_url').'api/outlet/webview/'.$post['id_outlet'];
 
                 if(isset($outlet[0]['holidays'])) unset($outlet[0]['holidays']);
             }
@@ -873,7 +883,275 @@ class ApiOutletController extends Controller
         return $allfeatures;
     }
 
-	/* Filter*/
+    function filter_distance($outlet, $location){
+        $processing = '0';
+        $settingTime = Setting::where('key', 'processing_time')->first();
+        if($settingTime && $settingTime->value){
+            $processing = $settingTime->value;
+        }
+
+        foreach ($outlet as $key => $value) {
+            $jaraknya =   number_format((float)$this->distance($location['latitude'], $location['longitude'], $value['outlet_latitude'], $value['outlet_longitude'], "K"), 2, '.', '');
+            settype($jaraknya, "float");
+
+            $outlet[$key]['distance'] = number_format($jaraknya, 2, '.', ',')." km";
+            $outlet[$key]['dist']     = (float) $jaraknya;
+
+            if($location['distance'] == "0-2km"){
+                if((float) $jaraknya < 0.01 || (float) $jaraknya > 2.00)
+                    unset($outlet[$key]);
+                    continue;
+            }
+
+            if($location['distance'] == "2-5km"){
+                if((float) $jaraknya < 2.00 || (float) $jaraknya > 5.00)
+                    unset($outlet[$key]);
+                    continue;
+            }
+
+            if($location['distance'] == ">5km"){
+                if((float) $jaraknya < 5.00)
+                    unset($outlet[$key]);
+                    continue;
+            }
+
+            if($location['id_city'] != "" && $location['id_city'] != $value['id_city']){
+                unset($outlet[$key]);
+                continue;
+            }
+            $outlet[$key] = $this->setAvailableOutlet($outlet[$key], $processing);
+        }
+
+        return $outlet;
+    }
+
+    function check_outlet($outlet, $post, &$promo_error){
+        // give all product flag is_promo = 0
+        foreach ($outlet as $key => $value) {
+            $outlet[$key]['is_promo'] = 0;
+        }
+        
+        $promo_data = $this->applyPromo($post, $outlet, $promo_error);
+        if ($promo_data) {
+            $outlet = $promo_data;
+        }
+
+        $outlet = $this->filter_distance($outlet, [
+            'latitude' => $post['latitude'], 
+            'longitude' => $post['longitude'],
+            'distance' => $post['distance'],
+            'id_city' => $post['id_city']
+        ]);
+
+        return $outlet;
+    }
+
+    /* Filter*/
+    function filterProductOutlet(Filter $request){
+        $post=$request->except('_token');
+        $latitude  = $request->json('latitude');
+        $longitude = $request->json('longitude');
+
+        if(!isset($latitude) || !isset($longitude)){
+            return response()->json([
+                'status' => 'fail',
+                'messages' => ['Pastikan pengaturan lokasi pada smartphone terhubung']
+            ]);
+        }
+
+        $distance = $request->json('distance');
+        $id_city = $request->json('id_city');
+        $sort = $request->json('sort');
+        $gofood = $request->json('gofood');
+        $grabfood = $request->json('grabfood');  
+
+        $product = Product::with(['global_price', 'product_special_price'])->where('product_visibility', 'Visible')->select('id_product','product_name', 'product_code', 'id_product_category','product_description','product_video','product_allow_sync', 'position');
+        $outlet = Outlet::with(['today'])->distinct('outlets.id_outlet')->select('outlets.id_outlet','outlets.outlet_name','outlets.outlet_phone','outlets.outlet_code','outlets.outlet_status','outlets.outlet_address','outlets.id_city','outlet_latitude','outlet_longitude')->with(['brands'=>function($query){$query->select('brands.id_brand','name_brand','logo_brand');}])->where('outlet_status', 'Active')->whereNotNull('id_city')->orderBy('outlet_name','asc');
+        $outlet->whereHas('brands',function($query){
+            $query->where('brand_active','1');
+        });
+
+        $countAll=$outlet->count();
+
+        if(is_array($post['id_brand']??false)&&$post['id_brand']){
+            $outlet->leftJoin('brand_outlet','outlets.id_outlet','brand_outlet.id_outlet');
+            $id_brands=$post['id_brand'];
+            $outlet->where(function($query) use ($id_brands){
+                foreach ($id_brands as $id_brand) {
+                    $query->orWhere('brand_outlet.id_brand',$id_brand);
+                }
+            });
+        }
+
+        if ($gofood) {
+            $outlet = $outlet->whereNotNull('deep_link_gojek');
+        }
+        
+        if ($grabfood) {
+            $outlet = $outlet->whereNotNull('deep_link_grab');
+        }
+        
+        if($request->json('search') && $request->json('search') != ""){
+            $search_outlet = clone $outlet;
+            $search_product = clone $product;
+
+            $search_outlet = $search_outlet->where('outlet_name', 'LIKE', '%'.$request->json('search').'%')->get()->toArray();
+            $search_product = $search_product->where('product_name', 'LIKE', '%'.$request->json('search').'%')->get()->toArray();
+        }else{
+            $search_outlet =  $outlet->get()->toArray();
+            $search_product =  $product->get()->toArray();
+        }
+
+        // kondisi outlet dan product dapat => return outletnya saja
+        // kondisi cuma outlet yang dapat   => return outletnya saja
+        // kondisi cuma product yg dapat    => return outlet di dalamnya list product yg didapat
+        // kondisi tidak dapat apa-apa      => return data empty
+
+        $post['distance'] = $distance; 
+        $post['id_city'] = $id_city; 
+
+        if (!empty($search_outlet)) {
+            // check outlet based on distance, check promo
+            $search_outlet = $this->check_outlet($search_outlet, $post, $promo_error);
+            
+			if($sort != 'Alphabetical'){
+				usort($search_outlet, function($a, $b) {
+					return $a['dist'] <=>  $b['dist'];
+				});
+            }
+            
+			$urutan = array();
+			if($search_outlet){
+				foreach($search_outlet as $o){
+					array_push($urutan, $o);
+				}
+            }
+
+        } elseif(!empty($search_product)){
+
+            $outlets = $outlet->get()->toArray();
+            //loop through selected outlets
+            foreach($outlets as $key_outlet => $outlet){
+                //assign product to outlets
+                $count_product = 0;
+                foreach($search_product as $key_product => $product){
+                    if(!empty($product['global_price'])){
+                        // if product has global price, assign product to outlet
+                        $product_detail = ProductDetail::where('id_outlet', $outlet['id_outlet'])->where('id_product', $product['id_product'])->first();
+                        if($product_detail){
+                            // if product and outlet exist in product detail
+                            // check visibility in product detail
+                            if($product_detail['product_detail_visibility'] == 'Visible'){
+                                $outlets[$key_outlet]['product'][$count_product] = $product;
+                                $outlets[$key_outlet]['product'][$count_product]['product_price'] = $outlets[$key_outlet]['product'][$count_product]['global_price'][0]['product_global_price'] ?? null;
+                                
+                                if(!empty($product['product_special_price'])){
+                                    // if outlet and product exist in product special price
+                                    // use special price instead of global price
+                                    foreach($product['product_special_price'] as $special_price){
+                                        if($special_price['id_outlet'] == $outlets[$key_outlet]['id_outlet']){
+                                            $outlets[$key_outlet]['product'][$count_product]['product_price'] = $special_price['product_special_price'];
+                                            break;
+                                        }
+                                    }
+                                }
+                                
+                                unset($outlets[$key_outlet]['product'][$count_product]['global_price']);
+                                unset($outlets[$key_outlet]['product'][$count_product]['product_special_price']);
+
+                                $count_product++;
+                            }
+                            
+                        }else{
+                            // still use default visibility
+                            $outlets[$key_outlet]['product'][$count_product] = $product;
+                            $outlets[$key_outlet]['product'][$count_product]['product_price'] = $outlets[$key_outlet]['product'][$count_product]['global_price'][0]['product_global_price'] ?? null;
+                            
+                            if(!empty($product['product_special_price'])){
+                                // if outlet and product exist in product special price
+                                // use special price instead of global price
+                                foreach($product['product_special_price'] as $special_price){
+                                    if($special_price['id_outlet'] == $outlets[$key_outlet]['id_outlet']){
+                                        $outlets[$key_outlet]['product'][$count_product]['product_price'] = $special_price['product_special_price'];
+                                        break;
+                                    }
+                                }
+                            }
+                            
+                            unset($outlets[$key_outlet]['product'][$count_product]['global_price']);
+                            unset($outlets[$key_outlet]['product'][$count_product]['product_special_price']);
+
+                            $count_product++;
+                        }
+                    }
+                }
+            }
+
+            // check outlet based on distance, check promo 
+            $outlets = $this->check_outlet($outlets, $post, $promo_error);
+
+            if($sort != 'Alphabetical'){
+				usort($outlets, function($a, $b) {
+					return $a['dist'] <=>  $b['dist'];
+				});
+            }
+            
+			$urutan = array();
+			if($outlets){
+				foreach($outlets as $o){
+					array_push($urutan, $o);
+				}
+            }
+            
+        } else {
+            if($countAll){
+                if($request->json('search')){
+                    return response()->json(['status' => 'fail', 'messages' => ['Data tidak ditemukan']]);
+                }
+                return response()->json(['status' => 'fail', 'messages' => ['empty']]);
+            }else{
+                return response()->json(['status' => 'fail', 'messages' => ['There is no open store','at this moment']]);
+            }
+        }
+
+        if(isset($request['page']) && $request['page'] > 0){
+            $page = $request['page'];
+            $next_page = $page + 1;
+
+            $dataOutlet = $urutan;
+            $urutan = [];
+
+            $pagingOutlet = $this->pagingOutlet($dataOutlet, $page);
+            if (isset($pagingOutlet['data']) && count($pagingOutlet['data']) > 0) {
+                $urutan['current_page']  = $page;
+                $urutan['data']          = $pagingOutlet['data'];
+                $urutan['total']         = count($dataOutlet);
+                $urutan['total_promo']	 = app($this->promo)->availablePromo();
+                $urutan['next_page_url'] = null;
+
+                if ($pagingOutlet['status'] == true) {
+                    $urutan['next_page_url'] = ENV('APP_API_URL').'api/outlet/filter?page='.$next_page;
+                }
+                $urutan['promo_error']   = $promo_error;
+            } else {
+                if($countAll){
+                    return response()->json(['status' => 'fail', 'messages' => ['empty']]);
+                }else{
+                    return response()->json(['status' => 'fail', 'messages' => ['There is no open store','at this moment']]);
+                }
+            }
+        }
+        if(!$urutan){
+            if($countAll){
+                return response()->json(['status' => 'fail', 'messages' => ['empty']]);
+            }else{
+                return response()->json(['status' => 'fail', 'messages' => ['There is no open store','at this moment']]);
+            }
+        }
+        return response()->json(MyHelper::checkGet($urutan));
+    }
+  
+    /* Filter*/
     function filter(Filter $request) {
         $post=$request->except('_token');
         $latitude  = $request->json('latitude');
@@ -1145,7 +1423,7 @@ class ApiOutletController extends Controller
             $urutan = $this->geoJson($urutan);
         }
 
-        $geojson_file_url = env('API_URL') . 'files/stations.geojson' . '?';
+        $geojson_file_url = config('url.api_url') . 'files/stations.geojson' . '?';
 
         if($urutan && !empty($urutan)) return ['status' => 'success', 'result' => $urutan, 'url'=>$geojson_file_url];
         else if(empty($urutan)) return ['status' => 'fail', 'messages' => ['empty']];
@@ -1164,26 +1442,24 @@ class ApiOutletController extends Controller
             if($outlet['today']['is_closed'] == '1'){
                 $outlet['today']['status'] = 'closed';
             }else{
-                if($outlet['today']['open'] != "00:00" && $outlet['today']['close'] != "00:00"){
-                    if($outlet['today']['open'] && date('H:i:01') < date('H:i', strtotime($outlet['today']['open']))){
-                        $outlet['today']['status'] = 'closed';
-                    }elseif($outlet['today']['close'] && date('H:i') > date('H:i', strtotime('-'.$processing.' minutes', strtotime($outlet['today']['close'])))){
-                        $outlet['today']['status'] = 'closed';
-                    }else{
-                        $holiday = Holiday::join('outlet_holidays', 'holidays.id_holiday', 'outlet_holidays.id_holiday')->join('date_holidays', 'holidays.id_holiday', 'date_holidays.id_holiday')
-                        ->where('id_outlet', $outlet['id_outlet'])->whereDay('date_holidays.date', date('d'))->whereMonth('date_holidays.date', date('m'))->get();
-                        if(count($holiday) > 0){
-                            foreach($holiday as $i => $holi){
-                                if($holi['yearly'] == '0'){
-                                    if($holi['date'] == date('Y-m-d')){
-                                        $outlet['today']['status'] = 'closed';
-                                    }
-                                }else{
+                if($outlet['today']['open'] && date('H:i:01') < date('H:i', strtotime($outlet['today']['open']))){
+                    $outlet['today']['status'] = 'closed';
+                }elseif($outlet['today']['close'] && date('H:i') > date('H:i', strtotime('-'.$processing.' minutes', strtotime($outlet['today']['close'])))){
+                    $outlet['today']['status'] = 'closed';
+                }else{
+                    $holiday = Holiday::join('outlet_holidays', 'holidays.id_holiday', 'outlet_holidays.id_holiday')->join('date_holidays', 'holidays.id_holiday', 'date_holidays.id_holiday')
+                    ->where('id_outlet', $outlet['id_outlet'])->whereDay('date_holidays.date', date('d'))->whereMonth('date_holidays.date', date('m'))->get();
+                    if(count($holiday) > 0){
+                        foreach($holiday as $i => $holi){
+                            if($holi['yearly'] == '0'){
+                                if($holi['date'] == date('Y-m-d')){
                                     $outlet['today']['status'] = 'closed';
                                 }
+                            }else{
+                                $outlet['today']['status'] = 'closed';
                             }
-
                         }
+
                     }
                 }
             }
@@ -1559,6 +1835,7 @@ class ApiOutletController extends Controller
     {
         $post = $request->json()->all();
         $dataimport = $post['data_import'];
+        $data_pin = [];
 
         if(!empty($dataimport) && count($dataimport)){
             $city = City::get();
@@ -1622,6 +1899,12 @@ class ApiOutletController extends Controller
                                     ]
                                 ]);
                             } else {
+                                $outlet = Outlet::where('id_outlet', $save['id_outlet'])->first();
+                                if (empty($outlet->outlet_pin)) {
+                                    $pin = MyHelper::createRandomPIN(6, 'angka');
+                                    $outlet->update(['outlet_pin' => \Hash::make($pin)]);
+                                    $data_pin[] = ['id_outlet' => $outlet->id_outlet, 'data' => $pin];
+                                }
                                 $day = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
 
                                 foreach ($day as $val){
@@ -1653,11 +1936,11 @@ class ApiOutletController extends Controller
                     }
                 }
             }
-
+            MyHelper::updateOutletFile($data_pin);
             DB::commit();
 
-            if($save??false) return ['status' => 'success', 'message' => $countImport.' data successfully imported. Failed save outlet : '.implode(",",$failedImport)];
-            else return ['status' => 'fail','messages' => ['failed to update data' , 'Failed save outlet : '.implode(",",$failedImport)]];
+            if($save??false) return ['status' => 'success', 'message' => $countImport.' data successfully imported. Failed save outlet : '.implode(", ",$failedImport)];
+            else return ['status' => 'fail','messages' => ['failed to update data' , 'Failed save outlet : '.implode(", ",$failedImport)]];
         }else{
             return response()->json([
                 'status'    => 'fail',
@@ -2020,7 +2303,7 @@ class ApiOutletController extends Controller
             if(count($outlet) > 0){
                 $loopdata=&$outlet;
                 $loopdata = array_map(function($var) use ($post){
-                    $var['url']=env('API_URL').'api/outlet/webview/'.$var['id_outlet'];
+                    $var['url']=config('url.api_url').'api/outlet/webview/'.$var['id_outlet'];
                     if(($post['latitude']??false)&&($post['longitude']??false)){
                         $var['distance']=number_format((float)$this->distance($post['latitude'], $post['longitude'], $var['outlet_latitude'], $var['outlet_longitude'], "K"), 2, '.', '').' km';
                     }
@@ -2153,13 +2436,9 @@ class ApiOutletController extends Controller
     }
 
     public function getAllCodeOutlet(Request $request){
-        $outlet = Outlet::get()->pluck('outlet_code');
+        $outlet = Outlet::select('outlet_code', 'id_outlet')->with('brands')->get()->toArray();
 
-        if($outlet){
-            return response()->json(['status' => 'success', 'result' => $outlet]);
-        }else{
-            return response()->json(['status' => 'fail', 'message' => 'empty']);
-        }
+        return response()->json(MyHelper::checkGet($outlet));
     }
 
     public function applyPromo($promo_post, $data_outlet, &$promo_error)
@@ -2289,8 +2568,69 @@ class ApiOutletController extends Controller
 
     function listUserFranchise(Request $request){
         $post = $request->json()->all();
-        $list = UserFranchise::paginate(20);
+        $list = UserFranchise::orderBy('created_at');
 
+        if(isset($post['conditions']) && !empty($post['conditions'])){
+            $rule = 'and';
+            if(isset($post['rule'])){
+                $rule = $post['rule'];
+            }
+
+            if($rule == 'and'){
+                foreach ($post['conditions'] as $row){
+                    if(isset($row['subject'])){
+
+                        if($row['subject'] == 'phone'){
+                            if($row['operator'] == '='){
+                                $list->where('phone', $row['parameter']);
+                            }else{
+                                $list->where('phone', 'like', '%'.$row['parameter'].'%');
+                            }
+                        }
+
+                        if($row['subject'] == 'email'){
+                            if($row['operator'] == '='){
+                                $list->where('email', $row['parameter']);
+                            }else{
+                                $list->where('email', 'like', '%'.$row['parameter'].'%');
+                            }
+                        }
+
+                        if($row['subject'] == 'user_status'){
+                            $list->where('user_franchise_type', $row['operator']);
+                        }
+                    }
+                }
+            }else{
+                $list->where(function ($subquery) use ($post){
+                    foreach ($post['conditions'] as $row){
+                        if(isset($row['subject'])){
+                            if($row['subject'] == 'phone'){
+                                if($row['operator'] == '='){
+                                    $subquery->orWhere('phone', $row['parameter']);
+                                }else{
+                                    $subquery->orWhere('phone', 'like', '%'.$row['parameter'].'%');
+                                }
+                            }
+
+                            if($row['subject'] == 'email'){
+                                if($row['operator'] == '='){
+                                    $subquery->orWhere('email', $row['parameter']);
+                                }else{
+                                    $subquery->orWhere('email', 'like', '%'.$row['parameter'].'%');
+                                }
+                            }
+
+                            if($row['subject'] == 'user_status'){
+                                $subquery->orWhere('user_franchise_type', $row['operator']);
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        $list = $list->paginate(25);
         return response()->json(MyHelper::checkGet($list));
     }
 
@@ -2310,6 +2650,31 @@ class ApiOutletController extends Controller
             'list_outlet' => $listOutlet
         ];
         return response()->json($result);
+    }
+
+    function setPasswordDefaultUserFranchise(Request $request){
+        $post = $request->json()->all();
+
+        if(isset($post['phone']) && !empty($post['phone'])){
+            if($post['password'] == $post['re_type_password']){
+                $data = [
+                    'password' => bcrypt($post['password']),
+                    'password_default_plain_text' => MyHelper::encrypt2019($post['password'])
+                ];
+
+                $update = UserFranchise::where('phone', $post['phone'])->update($data);
+
+                if($update){
+                    return response()->json(['status' => 'success']);
+                }else{
+                    return response()->json(['status' => 'fail', 'message' => 'Failed update password']);
+                }
+            }else{
+                return response()->json(['status' => 'fail', 'message' => 'Password does not match']);
+            }
+        }else{
+            return response()->json(['status' => 'fail' , 'messages' => ['Incompleted data']]);
+        }
     }
 
     public function sendNotifIncompleteOutlet(...$id_outlets)
@@ -2358,6 +2723,29 @@ class ApiOutletController extends Controller
     }
     public function resetNotify()
     {
-        Outlet::where('notify_admin',1)->update(['notify_admin'=>0]);
+        $log = MyHelper::logCron('Reset Notify Flag');
+        try {
+            Outlet::where('notify_admin',1)->update(['notify_admin'=>0]);
+            $log->success();
+        } catch (\Exception $e) {
+            $log->fail($e->getMessage());
+        }
+    }
+
+    public function exportPin(Request $request)
+    {
+        $pin = MyHelper::getOutletFile();
+        $outlets = Outlet::select('id_outlet', 'outlet_code', 'outlet_name')->whereNotNull('outlet_pin')->whereIn('id_outlet',array_keys($pin))->get()->toArray();
+        foreach ($outlets as $key => &$outlet) {
+            $outlet['pin'] = $pin[$outlet['id_outlet']];
+        }
+        if (!$outlets) {
+            $outlets[] = [
+                'outlet_code' => null,
+                'outlet_name' => 'No saved Outlet PINs found',
+                'pin' => null
+            ];
+        }
+        return MyHelper::checkGet($outlets);
     }
 }

@@ -62,6 +62,7 @@ class UsersMembership extends Model
 		'membership_name',
 		'membership_name_color',
 		'membership_image',
+		'membership_card',
 		'membership_type',
 		'min_total_value',
 		'min_total_count',

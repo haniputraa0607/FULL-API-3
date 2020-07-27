@@ -63,6 +63,7 @@ class User extends Authenticatable
 		'relationship',
 		'phone_verified',
 		'email_verified',
+        'email_verified_valid_time',
 		'level',
 		'points',
 		'balance',
@@ -85,7 +86,12 @@ class User extends Authenticatable
 		'first_pin_change',
 		'celebrate',
 		'job',
-		'address'
+		'address',
+        'email_verify_request_status',
+        'otp_request_status',
+        'otp_valid_time',
+        'transaction_online',
+        'transaction_online_status'
 	];
 
 	public function city()

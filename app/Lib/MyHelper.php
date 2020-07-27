@@ -11,7 +11,7 @@ use Storage;
 use App\Http\Models\Notification;
 use App\Http\Models\Store;
 use App\Http\Models\User;
-use App\Http\Models\Transaksi;
+use App\Http\Models\Transaction;
 use App\Http\Models\ProductVariant;
 use App\Http\Models\LogPoint;
 use App\Http\Models\TransactionPaymentManual;
@@ -214,8 +214,8 @@ class MyHelper{
 	public static function encryptkhusus($value) {
 		if(!$value){return false;}
 		$skey = self::getkey();
-		$depan = substr($skey, 0, env('ENC_DD'));
-		$belakang = substr($skey, -env('ENC_DB'), env('ENC_DB'));
+		$depan = substr($skey, 0, config('configs.ENC_DD'));
+		$belakang = substr($skey, -config('configs.ENC_DB'), config('configs.ENC_DB'));
 		$text = serialize($value);
 		$iv_size = mcrypt_get_iv_size(MCRYPT_RIJNDAEL_256, MCRYPT_MODE_ECB);
 		$iv = mcrypt_create_iv($iv_size, MCRYPT_RAND);
@@ -227,7 +227,7 @@ class MyHelper{
 		if(!$value){return false;}
 		$skey = self::parsekey($value);
 		$jumlah = strlen($value);
-		$value = substr($value, env('ENC_DD'), $jumlah-env('ENC_DD')-env('ENC_DB'));
+		$value = substr($value, config('configs.ENC_DD'), $jumlah-config('configs.ENC_DD')-config('configs.ENC_DB'));
 		$crypttext = self::safe_b64decode($value);
 		$iv_size = mcrypt_get_iv_size(MCRYPT_RIJNDAEL_256, MCRYPT_MODE_ECB);
 		$iv = mcrypt_create_iv($iv_size, MCRYPT_RAND);
@@ -260,11 +260,11 @@ class MyHelper{
 	public static function encryptkhususnew($value) {
 		if(!$value){return false;}
 		$skey = self::getkey();
-		$depan = substr($skey, 0, env('ENC_DD'));
-		$belakang = substr($skey, -env('ENC_DB'), env('ENC_DB'));
-		$ivlen = openssl_cipher_iv_length(env('ENC_CM'));
-		$iv = substr(hash('sha256', env('ENC_SI')), 0, $ivlen);
-		$crypttext = openssl_encrypt($value, env('ENC_CM'), $skey, 0, $iv);
+		$depan = substr($skey, 0, config('configs.ENC_DD'));
+		$belakang = substr($skey, -config('configs.ENC_DB'), config('configs.ENC_DB'));
+		$ivlen = openssl_cipher_iv_length(config('configs.ENC_CM'));
+		$iv = substr(hash('sha256', config('configs.ENC_SI')), 0, $ivlen);
+		$crypttext = openssl_encrypt($value, config('configs.ENC_CM'), $skey, 0, $iv);
 		return trim($depan . self::safe_b64encode($crypttext) . $belakang);
 	}
 
@@ -272,11 +272,11 @@ class MyHelper{
 		if(!$value){return false;}
 		$skey = self::parsekey($value);
 		$jumlah = strlen($value);
-		$value = substr($value, env('ENC_DD'), $jumlah-env('ENC_DD')-env('ENC_DB'));
+		$value = substr($value, config('configs.ENC_DD'), $jumlah-config('configs.ENC_DD')-config('configs.ENC_DB'));
 		$crypttext = self::safe_b64decode($value);
-		$ivlen = openssl_cipher_iv_length(env('ENC_CM'));
-		$iv = substr(hash('sha256', env('ENC_SI')), 0, $ivlen);
-		$decrypttext = openssl_decrypt($crypttext, env('ENC_CM'), $skey, 0, $iv);
+		$ivlen = openssl_cipher_iv_length(config('configs.ENC_CM'));
+		$iv = substr(hash('sha256', config('configs.ENC_SI')), 0, $ivlen);
+		$decrypttext = openssl_decrypt($crypttext, config('configs.ENC_CM'), $skey, 0, $iv);
 		return trim($decrypttext);
 	}
 
@@ -286,11 +286,11 @@ class MyHelper{
 		// biar support array
 		$text = serialize($value);
 		$skey = self::getkey();
-		$depan = substr($skey, 0, env('ENC_DD'));
-		$belakang = substr($skey, -env('ENC_DB'), env('ENC_DB'));
-		$ivlen = openssl_cipher_iv_length(env('ENC_CM'));
-		$iv = substr(hash('sha256', env('ENC_SI')), 0, $ivlen);
-		$crypttext = openssl_encrypt($text, env('ENC_CM'), $skey, 0, $iv);
+		$depan = substr($skey, 0, config('configs.ENC_DD'));
+		$belakang = substr($skey, -config('configs.ENC_DB'), config('configs.ENC_DB'));
+		$ivlen = openssl_cipher_iv_length(config('configs.ENC_CM'));
+		$iv = substr(hash('sha256', config('configs.ENC_SI')), 0, $ivlen);
+		$crypttext = openssl_encrypt($text, config('configs.ENC_CM'), $skey, 0, $iv);
 		return trim($depan . self::safe_b64encode($crypttext) . $belakang);
 	}
 
@@ -298,11 +298,11 @@ class MyHelper{
 		if(!$value){return false;}
 		$skey = self::parsekey($value);
 		$jumlah = strlen($value);
-		$value = substr($value, env('ENC_DD'), $jumlah-env('ENC_DD')-env('ENC_DB'));
+		$value = substr($value, config('configs.ENC_DD'), $jumlah-config('configs.ENC_DD')-config('configs.ENC_DB'));
 		$crypttext = self::safe_b64decode($value);
-		$ivlen = openssl_cipher_iv_length(env('ENC_CM'));
-		$iv = substr(hash('sha256', env('ENC_SI')), 0, $ivlen);
-		$decrypttext = openssl_decrypt($crypttext, env('ENC_CM'), $skey, 0, $iv);
+		$ivlen = openssl_cipher_iv_length(config('configs.ENC_CM'));
+		$iv = substr(hash('sha256', config('configs.ENC_SI')), 0, $ivlen);
+		$decrypttext = openssl_decrypt($crypttext, config('configs.ENC_CM'), $skey, 0, $iv);
 		// dikembalikan ke format array sewaktu return
 		return unserialize(trim($decrypttext));
 	}
@@ -471,16 +471,16 @@ class MyHelper{
 	}
 
 	public static function getkey() {
-		$depan = self::createrandom(env('ENC_DD'));
-		$belakang = self::createrandom(env('ENC_DB'));
-		$skey = $depan . env('ENC_FK') . $belakang;
+		$depan = self::createrandom(config('configs.ENC_DD'));
+		$belakang = self::createrandom(config('configs.ENC_DB'));
+		$skey = $depan . config('configs.ENC_FK') . $belakang;
 		return $skey;
 	}
 
 	public static function parsekey($value) {
-		$depan = substr($value, 0, env('ENC_DD'));
-		$belakang = substr($value, -env('ENC_DB'), env('ENC_DB'));
-		$skey = $depan . env('ENC_FK') . $belakang;
+		$depan = substr($value, 0, config('configs.ENC_DD'));
+		$belakang = substr($value, -config('configs.ENC_DB'), config('configs.ENC_DB'));
+		$skey = $depan . config('configs.ENC_FK') . $belakang;
 		return $skey;
 	}
 
@@ -752,10 +752,10 @@ class MyHelper{
 				});
 			}
 
-			if(env('STORAGE') &&  env('STORAGE') == 's3'){
+			if(env('STORAGE')){
 				$resource = $img->stream()->detach();
 
-				$save = Storage::disk('s3')->put($upload, $resource, 'public');
+				$save = Storage::disk(env('STORAGE'))->put($upload, $resource, 'public');
 				if ($save) {
 						$result = [
 							'status' => 'success',
@@ -824,10 +824,10 @@ class MyHelper{
 				$constraint->aspectRatio();
 			});
 
-			if(env('STORAGE') &&  env('STORAGE') == 's3'){
+			if(env('STORAGE')){
 				$resource = $img->stream()->detach();
 
-				$save = Storage::disk('s3')->put($upload, $resource, 'public');
+				$save = Storage::disk(env('STORAGE'))->put($upload, $resource, 'public');
 				if ($save) {
 						$result = [
 							'status' => 'success',
@@ -955,10 +955,10 @@ class MyHelper{
 		$upload = $path.$pictName;
 
 		if($ext=='.gif'){
-			if(env('STORAGE') &&  env('STORAGE') == 's3'){
+			if(env('STORAGE')){
 				$resource = $decoded;
 
-				$save = Storage::disk('s3')->put($upload, $resource, 'public');
+				$save = Storage::disk(env('STORAGE'))->put($upload, $resource, 'public');
 				if ($save) {
 						$result = [
 							'status' => 'success',
@@ -1053,10 +1053,10 @@ class MyHelper{
 
 			$img->crop($width, $height);
 
-			if(env('STORAGE') &&  env('STORAGE') == 's3'){
+			if(env('STORAGE')){
 				$resource = $img->stream()->detach();
 
-				$save = Storage::disk('s3')->put($upload, $resource, 'public');
+				$save = Storage::disk(env('STORAGE'))->put($upload, $resource, 'public');
 				if ($save) {
 						$result = [
 							'status' => 'success',
@@ -1100,8 +1100,8 @@ class MyHelper{
 		// path
 		$upload = $path.$pictName;
 
-		if(env('STORAGE') &&  env('STORAGE') == 's3'){
-			$save = Storage::disk('s3')->put($upload, $decoded, 'public');
+		if(env('STORAGE')){
+			$save = Storage::disk(env('STORAGE'))->put($upload, $decoded, 'public');
 			if ($save) {
 					$result = [
 						'status' => 'success',
@@ -1132,9 +1132,9 @@ class MyHelper{
 	}
 
 	public static function deletePhoto($path) {
-		if(env('STORAGE') &&  env('STORAGE') == 's3'){
-			if(Storage::disk('s3')->exists($path)) {
-				if(Storage::disk('s3')->delete($path)){
+		if(env('STORAGE')){
+			if(Storage::disk(env('STORAGE'))->exists($path)) {
+				if(Storage::disk(env('STORAGE'))->delete($path)){
 					return true;
 				}
 				else {
@@ -1173,41 +1173,27 @@ class MyHelper{
         // path
         $upload = $path.$pictName;
 
-        if(env('STORAGE') &&  env('STORAGE') == 's3'){
-            $save = Storage::disk('s3')->put($upload, $decoded, 'public');
-            if ($save) {
-                $result = [
-                    'status' => 'success',
-                    'path'  => $upload
-                ];
-            }
-            else {
-                $result = [
-                    'status' => 'fail'
-                ];
-            }
-        }else{
-            $save = Storage::disk(env('STORAGE'))->put($upload, $decoded);
-            if ($save) {
-                $result = [
-                    'status' => 'success',
-                    'path'  => $upload
-                ];
-            }
-            else {
-                $result = [
-                    'status' => 'fail'
-                ];
-            }
+        $save = Storage::disk(config('configs.STORAGE'))->put($upload, $decoded);
+
+        if ($save) {
+            $result = [
+                'status' => 'success',
+                'path'  => $upload
+            ];
+        }
+        else {
+            $result = [
+                'status' => 'fail'
+            ];
         }
 
         return $result;
     }
 
     public static function deleteFile($path) {
-        if(env('STORAGE') &&  env('STORAGE') == 's3'){
-            if(Storage::disk('s3')->exists($path)) {
-                if(Storage::disk('s3')->delete($path)){
+        if(config('configs.STORAGE')){
+            if(Storage::disk(config('configs.STORAGE'))->exists($path)) {
+                if(Storage::disk(config('configs.STORAGE'))->delete($path)){
                     return true;
                 }
                 else {
@@ -1218,16 +1204,11 @@ class MyHelper{
                 return true;
             }
         }else{
-            if (Storage::disk(env('STORAGE'))->exists($path)) {
-                if (Storage::disk(env('STORAGE'))->delete($path)) {
-                    return true;
-                }
-                else {
-                    return false;
-                }
+            if (File::delete($path)) {
+                return true;
             }
             else {
-                return true;
+                return false;
             }
         }
 
@@ -1531,6 +1512,63 @@ class MyHelper{
 		}
 	}
 
+	public static function getWithTimeout($url, $bearer=null, $post = [], $header=null, $timeout = 65){
+		$client = new Client;
+
+		$content = array(
+			'headers' => [
+				'Accept'        => 'application/json'
+			]
+		);
+
+		// if null bearer
+		if (!is_null($bearer)) {
+			$content['headers']['Authorization'] = $bearer;
+		}
+
+		if(!is_null($header)){
+			if(is_array($header)){
+				foreach($header as $key => $dataHeader){
+					$content['headers'][$key] = $dataHeader;
+				}
+			}
+		}
+
+		if ($post) {
+			$params = http_build_query($post);
+			if (strpos($url,'?')) {
+				$url .= '&' . $params;
+			} else {
+				$url .= '?' . $params;
+			}
+		}
+		$content['timeout']=$timeout;
+
+		try {
+			$response = $client->get($url, $content);
+			// return plain response if json_decode fail because response is plain text
+			$return = json_decode($response->getBody()->getContents(), true)?:$response->getBody()->__toString();
+			return [
+				'status_code' => $response->getStatusCode(),
+				'response' => $return
+			];
+		}catch (\GuzzleHttp\Exception\RequestException $e) {
+			try{
+				if($e->getResponse()){
+					$response = $e->getResponse()->getBody()->getContents();
+					$return = json_decode($response, true);
+					return [
+						'status_code' => $e->getResponse()->getStatusCode(),
+						'response' => $return
+					];
+				}
+				else  return ['status' => 'fail', 'messages' => [0 => 'Check your internet connection.']];
+			}
+			catch(Exception $e){
+				return ['status' => 'fail', 'messages' => [0 => 'Check your internet connection.']];
+			}
+		}
+	}
 
     public static function getBearerToken() {
 		$headers = null;
@@ -2247,7 +2285,7 @@ class MyHelper{
 	}
 
 	public static function postCURLWithBearer($url, $data, $bearer) {
-		$uri = env('APP_API_URL');
+		$uri = config('url.app_api_url');
         $ch = curl_init($uri.$url);
         $data = json_encode($data);
 		curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
@@ -2549,18 +2587,23 @@ class MyHelper{
                 'subject' => $subject,
                 'request_header'=> json_encode($header),
                 'request' => $jsonBody,
-                'request_url' => $urlApi,
-                'response' => json_encode($e)
+                'request_url' => $urlApi
             ];
-            LogIRIS::create($dataLog);
+
             try{
                 if($e->getResponse()){
                     $response = $e->getResponse()->getBody()->getContents();
+                    $dataLog['response'] = $response;
+                    LogIRIS::create($dataLog);
                     return ['status' => 'fail', 'response' => json_decode($response, true)];
                 }
+                $dataLog['response'] = 'Check your internet connection.';
+                LogIRIS::create($dataLog);
                 return ['status' => 'fail', 'response' => ['Check your internet connection.']];
             }
             catch(Exception $e){
+                $dataLog['response'] = 'Check your internet connection.';
+                LogIRIS::create($dataLog);
                 return ['status' => 'fail', 'response' => ['Check your internet connection.']];
             }
         }
@@ -2576,4 +2619,284 @@ class MyHelper{
     {
     	return Setting::select($column)->where('key',$key)->pluck($column)->first()??$default;
     }
+
+    public static function checkRuleForRequestOTP($data_user){
+        //get setting rule for request otp
+        $setting = Setting::where('key', 'otp_rule_request')->first();
+        /*
+          note : hold time in seconds. if the user has requested otp exceeds the
+          maximum number then the user cannot make an otp request.
+        */
+
+        $holdTime = 60;//set default hold time if setting not exist
+        $maxValueRequest = 10;//set default max value for request if setting not exist
+        if($setting){
+            $setting = json_decode($setting['value_text']);
+            $holdTime = (int)$setting->hold_time;
+            $maxValueRequest = (int)$setting->max_value_request;
+        }
+        $folder1 = 'otp';
+        $file = $data_user[0]['id'].'.json';
+
+        //check flag first in database
+        if(isset($data_user[0]['otp_request_status']) && $data_user[0]['otp_request_status'] == 'Can Not Request'){
+            return [
+                'status'=>'fail',
+                'otp_check'=> 1,
+                'messages'=> ["OTP request has passed the limit, please contact our customer service at ".config('configs.EMAIL_ADDRESS_ADMIN')]
+            ];
+        }
+
+        //check folder
+        if(env('STORAGE') == 'local'){
+            if(!Storage::disk(env('STORAGE'))->exists($folder1)){
+                Storage::makeDirectory($folder1);
+            }
+        }
+
+        if(Storage::disk(env('STORAGE'))->exists($folder1.'/'.$file)){
+            $readContent = Storage::disk(env('STORAGE'))->get($folder1.'/'.$file);
+            $content = json_decode($readContent);
+            $currentTime = date('Y-m-d H:i:s');
+            $count = $content->count_request + 1;
+
+            if(strtotime($currentTime) < strtotime($content->available_request_time)){
+                return [
+                    'status'=>'fail',
+                    'otp_check'=> 1,
+                    'messages'=> ["Can't request OTP, please request again after ".floor($holdTime/60)." minutes"]
+                ];
+            } elseif($count > $maxValueRequest){
+                $updateFlag = User::where('id', $data_user[0]['id'])->update(['otp_request_status' => 'Can Not Request']);
+                MyHelper::deleteFile($folder1.'/'.$file);
+                return [
+                    'status'=>'fail',
+                    'otp_check'=> 1,
+                    'messages'=> ["OTP request has passed the limit, please contact our customer service at ".config('configs.EMAIL_ADDRESS_ADMIN')]
+                ];
+            } else{
+                $availebleTime = date('Y-m-d H:i:s',strtotime('+'.$holdTime.' seconds',strtotime(date('Y-m-d H:i:s'))));
+                $contentFile = [
+                    'available_request_time' => $availebleTime,
+                    'count_request' => 1 + $content->count_request
+                ];
+                $createFile = MyHelper::createFile($contentFile, 'json', 'otp/', $data_user[0]['id']);
+                return true;
+            }
+        }else{
+            $availebleTime = date('Y-m-d H:i:s',strtotime('+'.$holdTime.' seconds',strtotime(date('Y-m-d H:i:s'))));
+            $contentFile = [
+                'available_request_time' => $availebleTime,
+                'count_request' => 1
+            ];
+            $createFile = MyHelper::createFile($contentFile, 'json', 'otp/', $data_user[0]['id']);
+            return true;
+        }
+    }
+
+    public static function checkRuleForRequestEmailVerify($data_user){
+        //get setting rule for request email verify
+        $setting = Setting::where('key', 'email_verify_rule_request')->first();
+        /*
+          note : hold time in seconds. if the user has requested email verify exceeds the
+          maximum number then the user cannot make an email verify request.
+        */
+
+        $holdTime = 60;//set default hold time if setting not exist
+        $maxValueRequest = 10;//set default max value for request if setting not exist
+        if($setting){
+            $setting = json_decode($setting['value_text']);
+            $holdTime = (int)$setting->hold_time;
+            $maxValueRequest = (int)$setting->max_value_request;
+        }
+        $folder1 = 'emailverify';
+        $file = $data_user[0]['id'].'.json';
+
+        //check flag first in database
+        if(isset($data_user[0]['email_verify_request_status']) && $data_user[0]['email_verify_request_status'] == 'Can Not Request'){
+            return [
+                'status'=>'fail',
+                'email_verify_check'=> 1,
+                'messages'=> ["Email Verify request has passed the limit, please contact our customer service at ".config('configs.EMAIL_ADDRESS_ADMIN')]
+            ];
+        }
+
+        //check folder
+        if(env('STORAGE') == 'local'){
+            if(!Storage::disk(env('STORAGE'))->exists($folder1)){
+                Storage::makeDirectory($folder1);
+            }
+        }
+
+        if(Storage::disk(env('STORAGE'))->exists($folder1.'/'.$file)){
+            $readContent = Storage::disk(env('STORAGE'))->get($folder1.'/'.$file);
+            $content = json_decode($readContent);
+            $currentTime = date('Y-m-d H:i:s');
+            $count = $content->count_request + 1;
+
+            if(strtotime($currentTime) < strtotime($content->available_request_time)){
+                return [
+                    'status'=>'fail',
+                    'email_verify_check'=> 1,
+                    'messages'=> ["Can't request email verify, please request again after ".floor($holdTime/60)." minutes"]
+                ];
+            } elseif($count > $maxValueRequest){
+                $updateFlag = User::where('id', $data_user[0]['id'])->update(['email_verify_request_status' => 'Can Not Request']);
+                MyHelper::deleteFile($folder1.'/'.$file);
+                return [
+                    'status'=>'fail',
+                    'email_verify_check'=> 1,
+                    'messages'=> ["Email Verify request has passed the limit, please contact our customer service at ".config('configs.EMAIL_ADDRESS_ADMIN')]
+                ];
+            } else{
+                $availebleTime = date('Y-m-d H:i:s',strtotime('+'.$holdTime.' seconds',strtotime(date('Y-m-d H:i:s'))));
+                $contentFile = [
+                    'available_request_time' => $availebleTime,
+                    'count_request' => 1 + $content->count_request
+                ];
+                $createFile = MyHelper::createFile($contentFile, 'json', 'emailverify/', $data_user[0]['id']);
+                return true;
+            }
+        }else{
+            $availebleTime = date('Y-m-d H:i:s',strtotime('+'.$holdTime.' seconds',strtotime(date('Y-m-d H:i:s'))));
+            $contentFile = [
+                'available_request_time' => $availebleTime,
+                'count_request' => 1
+            ];
+            $createFile = MyHelper::createFile($contentFile, 'json', 'emailverify/', $data_user[0]['id']);
+            return true;
+        }
+    }
+
+    /**
+     * update flag transaction online (flag ini digunakan untuk menandai user pernah transaksi online atau belum (digunakan di referral))
+     * @param  array/model 	$trx 	 	  	Transacction model
+     * @param  string 		$status 		"pending" / "cancel" / "success"
+     * @param  model 		$user   		User model or leave it empty
+     * @return boolean
+     */
+    public static function updateFlagTransactionOnline($trx, $status = 'pending', $user = null)
+    {
+    	if (!$user) {
+	        $user = User::where('id',$trx['id_user'])->first();
+    	}
+    	if ($status == 'success') {
+    		if ($user['transaction_online_status'] == 'success') {
+    			return true;
+    		}
+    		if ($user['transaction_online'] != $trx['id_transaction']) {
+	    		$user->update(['transaction_online' => $trx['id_transaction'], 'transaction_online_status' => 'success']);
+    			return true;
+    		}
+    	} elseif ($status == 'cancel') {
+	        // check flag transaction_online == id_transaction
+	        if($user['transaction_online'] == $trx['id_transaction']) {
+	        	// find other pending transaction
+	        	$id_pending_trx = Transaction::select('id_transaction')->where('id_user',$trx['id_user'])->where('transaction_payment_status','Pending')->where('id_transaction', '<>', $trx['id_transaction'])->pluck('id_transaction')->first();
+	        	if ($id_pending_trx) {
+	        		$user->update(['transaction_online' => $id_pending_trx, 'transaction_online_status' => 'pending']);
+	        	} else {
+	        		$user->update(['transaction_online' => null, 'transaction_online_status' => null]);
+	        	}
+	        };
+	        return true;
+    	} else {
+    		if (!$user['transaction_online']) {
+	    		$user->update(['transaction_online' => $trx['id_transaction'], 'transaction_online_status' => 'pending']);
+    		}
+    	}
+    	return true;
+	}
+	
+	/**
+	 * Calculates the great-circle distance between two points, with
+	 * the Vincenty formula.
+	 * @param float $latitudeFrom Latitude of start point in [deg decimal]
+	 * @param float $longitudeFrom Longitude of start point in [deg decimal]
+	 * @param float $latitudeTo Latitude of target point in [deg decimal]
+	 * @param float $longitudeTo Longitude of target point in [deg decimal]
+	 * @param float $earthRadius Mean earth radius in [m]
+	 * @return float Distance between points in [m] (same as earthRadius)
+	 */
+	public static function getDistance($latitudeFrom, $longitudeFrom, $latitudeTo, $longitudeTo, $earthRadius = 6371000)
+	{
+		// convert from degrees to radians
+		$latFrom = deg2rad($latitudeFrom);
+		$lonFrom = deg2rad($longitudeFrom);
+		$latTo = deg2rad($latitudeTo);
+		$lonTo = deg2rad($longitudeTo);
+	
+		$lonDelta = $lonTo - $lonFrom;
+		$a = pow(cos($latTo) * sin($lonDelta), 2) +
+		pow(cos($latFrom) * sin($latTo) - sin($latFrom) * cos($latTo) * cos($lonDelta), 2);
+		$b = sin($latFrom) * sin($latTo) + cos($latFrom) * cos($latTo) * cos($lonDelta);
+	
+		$angle = atan2(sqrt($a), $b);
+		return $angle * $earthRadius;
+	}
+
+	/**
+	 * Update data data_outlet.json
+	 * @param  array $data      data id_outlet and data to save, [['id_outlet' => xx, 'data' => 'xxxxxx'],['id_outlet' => xx, 'data' => 'xxxxxx']]
+	 * @return void
+	 */
+	public static function updateOutletFile($data)
+	{
+		$filename = storage_path('data_outlet.json');
+        if (is_file($filename)) {
+            $filecontent = file_get_contents($filename);
+            $data_outlet = json_decode($filecontent,true)?:[];
+        } else {
+            $data_outlet = [];
+        }
+        foreach ($data as $item) {
+        	$data_outlet[$item['id_outlet']] = self::encrypt2019($item['data']);
+        }
+        try {
+	        file_put_contents($filename, json_encode($data_outlet));
+	    } catch (\Exception $e) {
+	    	\Log::error("Failed to save data outlet. Please save this data manually in the $filename file", $data_outlet);
+	    }
+	}
+
+	/**
+	 * Get outlet data from data_outlet.json
+	 * @param  integer $id_outlet      id_outlet, leave null for retrive all data
+	 * @return void
+	 */
+	public static function getOutletFile($id_outlet = null)
+	{
+		$filename = storage_path('data_outlet.json');
+        if (is_file($filename)) {
+            $filecontent = file_get_contents($filename);
+            $data_outlet = json_decode($filecontent,true)?:[];
+        } else {
+            $data_outlet = [];
+        }
+
+        if($id_outlet) {
+        	$data = $data_outlet[$id_outlet] ?? null;
+        	return self::decrypt2019($data);
+        }
+
+        return array_map(function ($data) {
+        	return self::decrypt2019($data);
+        }, $data_outlet);
+	}
+
+	/**
+	 * Create cron's log
+	 * @param  string Cron Name cron name
+	 * @return Model           LogCron Eloquent Model
+	 */
+	public static function logCron($cronName)
+	{
+		$log = new \App\Http\Models\LogCron;
+		$log->cron = $cronName;
+		$log->status = 'onprocess';
+		$log->start_date = date('Y-m-d H:i:s');
+		$log->save();
+
+		return $log;
+	}
 }

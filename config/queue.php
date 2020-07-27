@@ -48,6 +48,13 @@ return [
             'retry_after' => 90,
         ],
 
+        'fraudqueue' => [
+            'driver' => 'database',
+            'table' => 'fraud_queue',
+            'queue' => 'fraudqueue',
+            'retry_after' => 90,
+        ],
+
         'beanstalkd' => [
             'driver' => 'beanstalkd',
             'host' => 'localhost',

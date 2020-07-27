@@ -55,10 +55,28 @@ class Kernel extends ConsoleKernel
         $schedule->call('Modules\Transaction\Http\Controllers\ApiCronTrxController@checkSchedule')->dailyAt('02:00');
 
         /**
-         * cancel all pending transaction that have been more than 1 x 24 hours
+         * cancel all pending transaction that have been more than 15 minutes
          * run every hour
          */
         $schedule->call('Modules\Transaction\Http\Controllers\ApiCronTrxController@cron')->cron('*/15 * * * *');
+
+        /**
+         * reject all transactions that outlets do not receive within a certain timeframe
+         * run every minute
+         */
+        $schedule->call('Modules\Transaction\Http\Controllers\ApiCronTrxController@autoReject')->cron('* * * * *');
+
+        /**
+         * cancel all pending deals that have been more than 15 minutes
+         * run every hour
+         */
+        $schedule->call('Modules\Deals\Http\Controllers\ApiCronDealsController@cancel')->cron('*/1 * * * *');
+
+        /**
+         * cancel all pending subscription that have been more than 15 minutes
+         * run every hour
+         */
+        $schedule->call('Modules\Subscription\Http\Controllers\ApiCronSubscriptionController@cancel')->cron('*/1 * * * *');
 
         /**
          * update all pickup transaction that have been more than 1 x 24 hours

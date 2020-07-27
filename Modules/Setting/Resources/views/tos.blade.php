@@ -14,13 +14,13 @@
                 font-family: "ProductSans-Medium";
                 font-style: normal;
                 font-weight: 400;
-                src: url('{{ env('S3_URL_VIEW') }}{{ ('/fonts/ProductSans-Medium.ttf') }}');
+                src: url('{{ config('url.storage_url_view') }}{{ ('/fonts/ProductSans-Medium.ttf') }}');
         }
         @font-face {
                 font-family: "ProductSans-Regular";
                 font-style: normal;
                 font-weight: 400;
-                src: url('{{ env('S3_URL_VIEW') }}{{ ('/fonts/ProductSans-Regular.ttf') }}');
+                src: url('{{ config('url.storage_url_view') }}{{ ('/fonts/ProductSans-Regular.ttf') }}');
         }
 		.ProductSans{
             font-family: "ProductSans-Regular";

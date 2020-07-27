@@ -29,8 +29,14 @@ class AccessTokenController extends PassportAccessTokenController
                 if(Auth::attempt(['phone' => $request->getParsedBody()['username'], 'password' => $request->getParsedBody()['password']])){
                     $user = User::where('phone', $request->getParsedBody()['username'])->first();
                     if($user){
+                        //check if user already suspended
                         if($user->is_suspended == '1'){
-                            return response()->json(['status' => 'fail', 'messages' => 'Akun Anda telah diblokir karena menunjukkan aktivitas mencurigakan. Untuk informasi lebih lanjut harap hubungi customer service kami di suarapelanggan@champ-group.com']);
+                            return response()->json(['status' => 'fail', 'messages' => 'Akun Anda telah diblokir karena menunjukkan aktivitas mencurigakan. Untuk informasi lebih lanjut harap hubungi customer service kami di '.config('configs.EMAIL_ADDRESS_ADMIN')]);
+                        }
+
+                        //check if otp have expired and the current time exceeds the expiration time
+                        if(!is_null($user->otp_valid_time) && strtotime(date('Y-m-d H:i:s')) > strtotime($user->otp_valid_time)){
+                            return response()->json(['status' => 'fail', 'messages' => 'This OTP is expired, please re-request OTP from apps']);
                         }
 
                         if(isset($request->getParsedBody()['scope'])){

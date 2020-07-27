@@ -48,13 +48,14 @@ class ApiDealsVoucherWebviewController extends Controller
         $post['used'] = 0;
 
         // $action = MyHelper::postCURLWithBearer('api/voucher/me?log_save=0', $post, $bearer);
-        $voucher = DealsUser::with(['deals_voucher', 'deals_voucher.deal', 'deals_voucher.deal.brand', 'deals_voucher.deal.deals_content', 'deals_voucher.deal.deals_content.deals_content_details', 'deals_voucher.deal.outlets.city', 'deals_voucher.deal.outlets.city'])
+        $voucher = DealsUser::with(['deals_voucher', 'deals_voucher.deal', 'deals_voucher.deal.brand', 'deals_voucher.deal.deals_content', 'deals_voucher.deal.deals_content.deals_content_details', 'deals_voucher.deal.outlets' => function($q) {$q->where('outlet_status', 'Active');}, 'deals_voucher.deal.outlets.city'])
         ->where('id_deals_user', $request->id_deals_user)->get()->toArray()[0];
 
         if($voucher['deals_voucher']['deal']['is_all_outlet'] == 1){
             $outlets = Outlet::join('brand_outlet', 'outlets.id_outlet', '=', 'brand_outlet.id_outlet')
                 ->join('deals', 'deals.id_brand', '=', 'brand_outlet.id_brand')
                 ->where('deals.id_deals', $voucher['deals_voucher']['deal']['id_deals'])
+                ->where('outlet_status', 'Active')
                 ->select('outlets.*')->with('city')->get()->toArray();
             $voucher['deals_voucher']['deal']['outlets'] = $outlets;
         }
@@ -94,7 +95,7 @@ class ApiDealsVoucherWebviewController extends Controller
             });
         }
 
-        $voucher['deals_voucher']['deal']['deals_image'] = env('S3_URL_API') . $voucher['deals_voucher']['deal']['deals_image'];
+        $voucher['deals_voucher']['deal']['deals_image'] = config('url.storage_url_api') . $voucher['deals_voucher']['deal']['deals_image'];
 
         $data = $voucher;
         
@@ -102,15 +103,15 @@ class ApiDealsVoucherWebviewController extends Controller
             'deals_image'           => $data['deals_voucher']['deal']['deals_image'],
             'deals_title'           => $data['deals_voucher']['deal']['deals_title'],
             'deals_second_title'    => $data['deals_voucher']['deal']['deals_second_title'],
-            'deals_description'    => $data['deals_voucher']['deal']['deals_description'],
+            'deals_description'   	=> $data['deals_voucher']['deal']['deals_description'],
             'custom_outlet_text'    => $data['deals_voucher']['deal']['custom_outlet_text'],
             'id_deals_voucher'      => $data['id_deals_voucher'],
             'id_deals_user'         => $data['id_deals_user'],
             'voucher_expired'       => date('d F Y', strtotime($data['voucher_expired_at'])),
             'is_used'               => $data['is_used'],
-            'btn_used'              => 'Use Later',
+            'btn_used'              => 'Gunakan Nanti',
             'is_online'             => $data['deals_voucher']['deal']['is_online'],
-            'btn_online'            => 'Use Voucher',
+            'btn_online'            => 'Gunakan Voucher',
             'is_offline'            => $data['deals_voucher']['deal']['is_offline'],
             'btn_offline'           => 'Redeem to Cashier',
             'header_online_voucher' => 'Online Transaction',
@@ -120,8 +121,10 @@ class ApiDealsVoucherWebviewController extends Controller
             'button_text'           => 'Redeem',
             'popup_message'         => [
                 $data['deals_voucher']['deal']['deals_title'],
-                'will be used on the next transaction'
+                'akan digunakan pada transaksi selanjutnya'
             ],
+            'voucher_expired_indo' 	=> MyHelper::dateFormatInd($data['voucher_expired_at'], false, false),
+            'voucher_expired_time_indo' => 'pukul '.date('H:i', strtotime($data['voucher_expired_at']))
         ];
 
         
@@ -139,7 +142,7 @@ class ApiDealsVoucherWebviewController extends Controller
         }
 
         $result['deals_content'][$i]['is_outlet'] = 1;
-        $result['deals_content'][$i]['title'] = 'Available at';
+        $result['deals_content'][$i]['title'] = 'Berlaku di';
         $result['deals_content'][$i]['brand'] = $data['deals_voucher']['deal']['brand']['name_brand'];
         $result['deals_content'][$i]['brand_logo'] = $data['deals_voucher']['deal']['brand']['logo_brand'];
 

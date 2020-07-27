@@ -43,7 +43,7 @@ class Midtrans {
         // return 'Basic ' . base64_encode(env('MIDTRANS_SANDBOX_BEARER'));
     }
     
-    static function token($receipt, $grandTotal, $user=null, $shipping=null, $product=null) {
+    static function token($receipt, $grandTotal, $user=null, $shipping=null, $product=null, $type=null, $id=null) {
         // $url    = env('MIDTRANS_PRO');
         $url    = env('MIDTRANS_SANDBOX');
 
@@ -71,6 +71,18 @@ class Midtrans {
         $dataMidtrans['credit_card'] = [
             'secure' => true,
         ];
+
+        if(!is_null($type) && !is_null($id)){
+            $dataMidtrans['gopay'] = [
+                'enable_callback' => true,
+                'callback_url' => env('MIDTRANS_CALLBACK').'?type='.$type.'&order_id='.$id,
+            ];
+        }else{
+            $dataMidtrans['gopay'] = [
+                'enable_callback' => true,
+                'callback_url' => env('MIDTRANS_CALLBACK').'?order_id='.$receipt,
+            ];
+        }
 
         $token = MyHelper::post($url, Self::bearer(), $dataMidtrans);
 
@@ -138,6 +150,8 @@ class Midtrans {
         }
         if ($trx->transaction_status == 'capture') {
             $url = env('BASE_MIDTRANS_SANDBOX').'/v2/'.$order_id.'/cancel';
+        } else {
+            $param['reason'] = 'Pengembalian dana';
         }
         if(!$param){
             $param = [];

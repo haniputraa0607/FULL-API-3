@@ -85,7 +85,7 @@ class ApiInbox extends Controller
 					$news = News::find($global['inbox_global_id_reference']);
 					if($news){
 						$content['news_title'] = $news->news_title;
-						$content['url'] = env('APP_URL').'news/webview/'.$news->id_news;
+						$content['url'] = config('url.app_url').'news/webview/'.$news->id_news;
 					}
 				}
 
@@ -153,7 +153,7 @@ class ApiInbox extends Controller
 				$news = News::find($private['inboxes_id_reference']);
 				if($news){
 					$content['news_title'] = $news->news_title;
-					$content['url'] = env('APP_URL').'news/webview/'.$news->id_news;
+					$content['url'] = config('url.app_url').'news/webview/'.$news->id_news;
 				}
 
 			}

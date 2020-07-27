@@ -66,8 +66,9 @@ class ApiNewsWebview extends Controller
         $totalProductNews = 0;
         
         if ($news) {
-            $news['news_image_dalam'] = env('S3_URL_API').$news['news_image_dalam'];
+            $news['news_image_dalam'] = config('url.storage_url_api').$news['news_image_dalam'];
             $news['news_video'] = (is_null($news['news_video'])) ? [] : explode(';', $news['news_video']);
+            $news['news_post_date_indo'] = (is_null($news['news_post_date'])) ? '' : MyHelper::indonesian_date_v2($news['news_post_date'], 'd F Y H:i');
             $totalOutletNews = count($news['news_outlet']);
 
             if (!empty($news['news_outlet'])) {
@@ -84,7 +85,7 @@ class ApiNewsWebview extends Controller
                 unset($news['news_product']);
                 foreach ($newsProduct as $keyProduct => $valProduct) {
                     $news['news_product'][$keyProduct]['product_name']  = $valProduct['product']['product_name'];
-                    $news['news_product'][$keyProduct]['product_image'] = env('S3_URL_API').($valProduct['product']['photos'][0]['product_photo']??'img/product/item/default.png');
+                    $news['news_product'][$keyProduct]['product_image'] = config('url.storage_url_api').($valProduct['product']['photos'][0]['product_photo']??'img/product/item/default.png');
                 }
             }
             

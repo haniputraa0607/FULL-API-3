@@ -66,16 +66,16 @@ class ApiMembershipWebview extends Controller
 				$result['user_badge'][] = [
 					'id_achievement_group'		=> MyHelper::decSlug($userAch['id_achievement_group']),
 					'name_group'				=> $userAch['name_group'],
-					'logo_badge_default'		=> env('S3_URL_API').$userAch['logo_badge_default'],
+					'logo_badge_default'		=> config('url.storage_url_api').$userAch['logo_badge_default'],
 					'description'				=> $userAch['description'],
 					'name_badge'				=> $userAch['name_badge'],
-					'logo_badge'				=> env('S3_URL_API').$userAch['logo_badge']
+					'logo_badge'				=> config('url.storage_url_api').$userAch['logo_badge']
 				];
 			}
 		}
-		// $result['user_membership']['membership_bg_image'] = env('S3_URL_API') . $result['user_membership']->membership->membership_bg_image;
+		// $result['user_membership']['membership_bg_image'] = config('url.storage_url_api') . $result['user_membership']->membership->membership_bg_image;
 		// $result['user_membership']['membership_background_card_color'] = $result['user_membership']->membership->membership_background_card_color;
-		// $result['user_membership']['membership_background_card_pattern'] = (is_null($result['user_membership']->membership->membership_background_card_pattern)) ? null : env('S3_URL_API') . $result['user_membership']->membership->membership_background_card_pattern;
+		// $result['user_membership']['membership_background_card_pattern'] = (is_null($result['user_membership']->membership->membership_background_card_pattern)) ? null : config('url.storage_url_api') . $result['user_membership']->membership->membership_background_card_pattern;
 		// $result['user_membership']['membership_text_color'] = $result['user_membership']->membership->membership_text_color;
 
 		unset($result['user_membership']['membership']);
@@ -98,9 +98,10 @@ class ApiMembershipWebview extends Controller
 		$nextTrxType = '';
 		if(count($allMembership) > 0){
 			if($result['user_membership']){
-				$result['user_membership']['membership_image'] = env('S3_URL_API') . $result['user_membership']['membership_image'];
+				$result['user_membership']['membership_image'] = config('url.storage_url_api') . $result['user_membership']['membership_image'];
+				$result['user_membership']['membership_card'] = config('url.storage_url_api') . $result['user_membership']['membership_card'];
 				foreach($allMembership as $index => $dataMembership){
-					$allMembership[$index]['benefit_text']=json_decode($dataMembership['benefit_text'],true)[0]??[];
+					$allMembership[$index]['benefit_text']=json_decode($dataMembership['benefit_text'],true)[0]??"";
 					switch ($dataMembership['membership_type']) {
 						case 'count':
 							$allMembership[$index]['min_value'] 		= $dataMembership['min_total_count'];
@@ -110,7 +111,7 @@ class ApiMembershipWebview extends Controller
 									$nextTrx = $dataMembership['min_total_count'];
 									$nextTrxType = 'count';
 									$nextMembershipName = $dataMembership['membership_name'];
-									// $nextMembershipImage =  env('S3_URL_API') . $dataMembership['membership_image'];
+									// $nextMembershipImage =  config('url.storage_url_api') . $dataMembership['membership_image'];
 								}
 							}
 							break;
@@ -122,7 +123,7 @@ class ApiMembershipWebview extends Controller
 									$nextTrx = $dataMembership['min_total_value'];
 									$nextTrxType = 'value';
 									$nextMembershipName = $dataMembership['membership_name'];
-									// $nextMembershipImage =  env('S3_URL_API') . $dataMembership['membership_image'];
+									// $nextMembershipImage =  config('url.storage_url_api') . $dataMembership['membership_image'];
 								}
 							}
 							break;
@@ -134,7 +135,7 @@ class ApiMembershipWebview extends Controller
 									$nextTrx = $dataMembership['min_total_balance'];
 									$nextTrxType = 'balance';
 									$nextMembershipName = $dataMembership['membership_name'];
-									// $nextMembershipImage =  env('S3_URL_API') . $dataMembership['membership_image'];
+									// $nextMembershipImage =  config('url.storage_url_api') . $dataMembership['membership_image'];
 								}
 							}
 							break;
@@ -146,7 +147,7 @@ class ApiMembershipWebview extends Controller
 									$nextTrx = $dataMembership['min_total_achievement'];
 									$nextTrxType = 'achievement';
 									$nextMembershipName = $dataMembership['membership_name'];
-									// $nextMembershipImage =  env('S3_URL_API') . $dataMembership['membership_image'];
+									// $nextMembershipImage =  config('url.storage_url_api') . $dataMembership['membership_image'];
 								}
 							}
 							break;
@@ -167,15 +168,16 @@ class ApiMembershipWebview extends Controller
 					unset($allMembership[$index]['created_at']);
 					unset($allMembership[$index]['updated_at']);
 					
-					$allMembership[$index]['membership_image'] = env('S3_URL_API').$allMembership[$index]['membership_image'];
-					// $allMembership[$index]['membership_bg_image'] = env('S3_URL_API').$allMembership[$index]['membership_bg_image'];
-					$allMembership[$index]['membership_next_image'] = $allMembership[$index]['membership_next_image']?env('S3_URL_API').$allMembership[$index]['membership_next_image']:null;
+					$allMembership[$index]['membership_image'] = config('url.storage_url_api').$allMembership[$index]['membership_image'];
+					$allMembership[$index]['membership_card'] = config('url.storage_url_api').$allMembership[$index]['membership_card'];
+					// $allMembership[$index]['membership_bg_image'] = config('url.storage_url_api').$allMembership[$index]['membership_bg_image'];
+					$allMembership[$index]['membership_next_image'] = $allMembership[$index]['membership_next_image']?config('url.storage_url_api').$allMembership[$index]['membership_next_image']:null;
 					$allMembership[$index]['benefit_cashback_multiplier'] = $allMembership[$index]['benefit_cashback_multiplier'] * $settingCashback->value;
 				}
 			}else{
 				$membershipUser = User::find($post['id_user']);
 				$nextMembershipName = $allMembership[0]['membership_name'];
-				// $nextMembershipImage = env('S3_URL_API') . $allMembership[0]['membership_image'];
+				// $nextMembershipImage = config('url.storage_url_api') . $allMembership[0]['membership_image'];
 				if($allMembership[0]['membership_type'] == 'count'){
 					$nextTrx = $allMembership[0]['min_total_count'];
 					$nextTrxType = 'count';
@@ -185,7 +187,8 @@ class ApiMembershipWebview extends Controller
 					$nextTrxType = 'value';
 				}
 				foreach($allMembership as $j => $dataMember){
-					$allMembership[$j]['membership_image'] = env('S3_URL_API').$allMembership[$j]['membership_image'];
+					$allMembership[$j]['membership_image'] = config('url.storage_url_api').$allMembership[$j]['membership_image'];
+					$allMembership[$j]['membership_card'] = config('url.storage_url_api').$allMembership[$j]['membership_card'];
 					$allMembership[$j]['benefit_cashback_multiplier'] = $allMembership[$j]['benefit_cashback_multiplier'] * $settingCashback->value;
 				}
 			}
@@ -258,10 +261,17 @@ class ApiMembershipWebview extends Controller
 		if (isset($allMembership[$indexNow + 1])) {
 			$membershipUser['progress_max_text']	= MyHelper::requestNumber($result['all_membership'][$indexNow + 1]['min_value'],'_CURRENCY');
 			$membershipUser['progress_max']	= $result['all_membership'][$indexNow + 1]['min_value'];
+
+			//wording membership
+			$membershipUser['description']= 'Anda telah mengumpulkan '.$membershipUser['progress_now'].' badge, lengkapi '.$membershipUser['progress_max'].' badge lagi untuk menuju <b>'.strtoupper($result['all_membership'][$indexNow + 1]['membership_name']).'</b>';
 		} else {
-			$membershipUser['progress_max_text']	= MyHelper::requestNumber(1500000,'_CURRENCY');
-			$membershipUser['progress_max']	= 1500000;
+			$membershipUser['progress_max_text']	= MyHelper::requestNumber($result['all_membership'][$indexNow]['min_value'],'_CURRENCY');
+			$membershipUser['progress_max']	= $result['all_membership'][$indexNow]['min_value'];
+
+			//wording membership
+			$membershipUser['description'] = 'Selamat! Kamu sudah menjadi <b>'.$result['all_membership'][$indexNow]['membership_name'].'</b>. Silahkan nikmati berbagai keuntungannya ya!';
 		}
+
 		$result['user_membership']['user']	= $membershipUser;
 
 		return response()->json(MyHelper::checkGet($result));
@@ -279,7 +289,7 @@ class ApiMembershipWebview extends Controller
 	// 		$send = [
 	// 			'status' => 'success',
 	// 			'result' => [
-	// 				'url'              => env('API_URL').'api/membership/web/view?data='.$base
+	// 				'url'              => config('url.api_url').'api/membership/web/view?data='.$base
 	// 			],
 	// 		];
 	// 		return response()->json($send);
@@ -336,8 +346,8 @@ class ApiMembershipWebview extends Controller
 	// 						}
 	// 					}
 	// 				}
-	// 				$allMembership[$index]['membership_image'] = env('S3_URL_API').$allMembership[$index]['membership_image'];
-	// 				$allMembership[$index]['membership_next_image'] = $allMembership[$index]['membership_next_image']?env('S3_URL_API').$allMembership[$index]['membership_next_image']:null;
+	// 				$allMembership[$index]['membership_image'] = config('url.storage_url_api').$allMembership[$index]['membership_image'];
+	// 				$allMembership[$index]['membership_next_image'] = $allMembership[$index]['membership_next_image']?config('url.storage_url_api').$allMembership[$index]['membership_next_image']:null;
 	// 				$allMembership[$index]['benefit_cashback_multiplier'] = $allMembership[$index]['benefit_cashback_multiplier'] * $settingCashback->value;
 	// 			}
 	// 		}else{
@@ -353,7 +363,7 @@ class ApiMembershipWebview extends Controller
 	// 				$nextTrxType = 'value';
 	// 			}
 	// 			foreach($allMembership as $j => $dataMember){
-	// 				$allMembership[$j]['membership_image'] = env('S3_URL_API').$allMembership[$j]['membership_image'];
+	// 				$allMembership[$j]['membership_image'] = config('url.storage_url_api').$allMembership[$j]['membership_image'];
 	// 				$allMembership[$j]['benefit_cashback_multiplier'] = $allMembership[$j]['benefit_cashback_multiplier'] * $settingCashback->value;
 	// 			}
 	// 		}

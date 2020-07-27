@@ -13,6 +13,8 @@ use Modules\Favorite\Http\Requests\CreateRequest;
 use App\Http\Models\Setting;
 use App\Http\Models\Outlet;
 use App\Http\Models\ProductModifierPrice;
+use App\Http\Models\ProductModifierGlobalPrice;
+
 
 use App\Lib\MyHelper;
 
@@ -52,8 +54,8 @@ class ApiFavoriteController extends Controller
         $latitude = $request->json('latitude');
         $longitude = $request->json('longitude');
         $nf = $request->json('number_format')?:'float';
-        $favorite = Favorite::where('id_user',$user->id);
-        $select = ['id_favorite','favorites.id_outlet','favorites.id_product','id_brand','id_user','notes'];
+        $favorite = Favorite::where('id_user',$user->id)->join('outlets', 'outlets.id_outlet', 'favorites.id_outlet');
+        $select = ['id_favorite','favorites.id_outlet','outlet_different_price','favorites.id_product','id_brand','id_user','notes'];
         $with = [
             'modifiers'=>function($query){
                 $query->select('product_modifiers.id_product_modifier','type','code','text','favorite_modifiers.qty');
@@ -96,15 +98,21 @@ class ApiFavoriteController extends Controller
                 $data = $favorite->select($select)->with($with)->get()->toArray();
                 $datax = &$data;
             }
+            // filter has price only
+            $datax = array_filter($datax, function($x) { return $x['product']['price'];});
             if(count($datax)>=1){
                 $datax = MyHelper::groupIt($datax,'id_outlet',function($key,&$val) use ($nf,$data, $request){
                     $total_price = $val['product']['price'];
                     $val['product']['price']=MyHelper::requestNumber($val['product']['price'],$nf);
                     foreach ($val['modifiers'] as &$modifier) {
-                        $price = ProductModifierPrice::select('product_modifier_price')->where([
-                            'id_product_modifier' => $modifier['id_product_modifier'],
-                            'id_outlet' => $val['id_outlet']
-                        ])->pluck('product_modifier_price')->first();
+                        if($val['outlet_different_price']){
+                            $price = ProductModifierPrice::select('product_modifier_price')->where([
+                                'id_product_modifier' => $modifier['id_product_modifier'],
+                                'id_outlet' => $val['id_outlet']
+                            ])->pluck('product_modifier_price')->first();                            
+                        }else{
+                            $price = ProductModifierGlobalPrice::select('product_modifier_price')->where('id_product_modifier', $modifier['id_product_modifier'])->pluck('product_modifier_price')->first();
+                        }
                         $modifier['product_modifier_price'] = MyHelper::requestNumber($price,$nf);
                         $total_price+=$price*$modifier['qty'];
                     }

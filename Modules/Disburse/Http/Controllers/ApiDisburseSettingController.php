@@ -10,6 +10,8 @@ use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
 
 use App\Lib\MyHelper;
+use Modules\Disburse\Entities\BankAccount;
+use Modules\Disburse\Entities\BankAccountOutlet;
 use Modules\Disburse\Entities\BankName;
 use Modules\Disburse\Entities\MDR;
 use DB;
@@ -45,7 +47,7 @@ class ApiDisburseSettingController extends Controller
         return response()->json(MyHelper::checkGet($bank));
     }
 
-    public function updateBankAccount(Request $request){
+    public function addBankAccount(Request $request){
         $post = $request->json()->all();
 
         $dt = [
@@ -60,27 +62,129 @@ class ApiDisburseSettingController extends Controller
         $validationAccount = MyHelper::connectIris('Account Validation' ,'GET','api/v1/account_validation?bank='.$bankCode.'&account='.$post['beneficiary_account'], [], []);
 
         if(isset($validationAccount['status']) && $validationAccount['status'] == 'success' && isset($validationAccount['response']['account_name'])){
-            if(isset($post['outlet_code'])){
-                $update = Outlet::where('outlets.outlet_code', $post['outlet_code'])->update($dt);
-            }elseif(isset($post['outlets']) && $post['outlets'] == 'all'){
-                if(!empty($post['id_user_franchise'])){
-                    $update = Outlet::join('user_franchise_outlet', 'outlets.id_outlet', 'user_franchise_outlet.id_outlet')
-                        ->whereNull('outlets.beneficiary_account')
-                        ->where('user_franchise_outlet.id_user_franchise', $post['id_user_franchise'])
-                        ->update($dt);
-                }else{
-                    $update = Outlet::whereNull('outlets.beneficiary_account')
-                        ->update($dt);
-                }
-            }elseif(isset($post['outlets'])){
-                $update = Outlet::whereIn('id_outlet', $post['id_outlet'])
-                    ->update($dt);
+            /*Step
+            1.Add to table bank account first
+            2.Check outlet type "all" or "specific outlet"
+            3.Insert to table bank account outlet base on type outlet
+            */
+            DB::beginTransaction();
+
+            $bankAccount = BankAccount::where('beneficiary_account', $dt['beneficiary_account'])->first();//check account number is already exist or not
+            if(!$bankAccount){
+                $bankAccount = BankAccount::create($dt);
             }
-            return response()->json(MyHelper::checkUpdate($update));
+
+            if($bankAccount){
+                $delete = true;
+                $dtToInsert = [];
+                if(isset($post['outlets']) && $post['outlets'] == 'all'){
+                    $getDataBankOutlet = BankAccountOutlet::count();
+                    if($getDataBankOutlet > 0){
+                        $delete = BankAccountOutlet::whereNotNull('id_outlet')->delete();
+                    }
+
+                    $dtOutlet = Outlet::pluck('id_outlet');//get all outlet
+                    foreach ($dtOutlet as $val){
+                        $dtToInsert[] = [
+                            'id_bank_account' => $bankAccount['id_bank_account'],
+                            'id_outlet' => $val
+                        ];
+                    }
+                }elseif (isset($post['outlets'])){
+                    $getDataBankOutlet = BankAccountOutlet::whereIn('id_outlet', $post['id_outlet'])->count();
+                    if($getDataBankOutlet > 0) {
+                        $delete = BankAccountOutlet::whereIn('id_outlet', $post['id_outlet'])->delete();
+                    }
+
+                    foreach ($post['id_outlet'] as $val){
+                        $dtToInsert[] = [
+                            'id_bank_account' => $bankAccount['id_bank_account'],
+                            'id_outlet' => $val
+                        ];
+                    }
+                }
+
+                if($delete){
+                    $insertBankAccountOutlet = BankAccountOutlet::insert($dtToInsert);
+                    if($insertBankAccountOutlet){
+                        DB::commit();
+                        return response()->json(['status' => 'success']);
+                    }else{
+                        DB::rollBack();
+                        return response()->json(['status' => 'fail', 'message' => 'failed insert bank account outlet']);
+                    }
+                }else{
+                    DB::rollBack();
+                    return response()->json(['status' => 'fail', 'message' => 'failed delete bank account outlet']);
+                }
+            }else{
+                DB::rollBack();
+                return response()->json(['status' => 'fail', 'message' => 'failed insert bank account']);
+            }
         }else{
             return response()->json(['status' => 'fail', 'message' => 'validation account failed']);
         }
 
+    }
+
+    function editBankAccount(Request $request){
+        $post = $request->json()->all();
+
+        $dt = [
+            'id_bank_name' => $post['id_bank_name'],
+            'beneficiary_name' => $post['beneficiary_name'],
+            'beneficiary_alias' => $post['beneficiary_alias'],
+            'beneficiary_account' => $post['beneficiary_account'],
+            'beneficiary_email' => $post['beneficiary_email']
+        ];
+        $bankCode = BankName::where('id_bank_name', $post['id_bank_name'])->first()->bank_code;
+
+        $validationAccount = MyHelper::connectIris('Account Validation' ,'GET','api/v1/account_validation?bank='.$bankCode.'&account='.$post['beneficiary_account'], [], []);
+
+        if(isset($validationAccount['status']) && $validationAccount['status'] == 'success' && isset($validationAccount['response']['account_name'])){
+            $bankAccount = BankAccount::where('beneficiary_account', $dt['beneficiary_account'])->first();//check account number is already exist or not
+            if($bankAccount && $bankAccount['beneficiary_account'] != $post['beneficiary_account_number']){
+                return response()->json(['status' => 'fail', 'message' => 'bank account already exist']);
+            }else{
+                $getOldBankAccount = BankAccount::where('beneficiary_account', $post['beneficiary_account_number'])->first();
+                $bankAccount = BankAccount::where('beneficiary_account', $post['beneficiary_account_number'])->update($dt);
+                if($bankAccount){
+
+                    if (isset($post['id_outlet'])){
+                        $delete = true;
+                        $getDataBankOutlet = BankAccountOutlet::whereIn('id_outlet', $post['id_outlet'])->orWhere('id_bank_account',$getOldBankAccount['id_bank_account'])->count();
+                        if($getDataBankOutlet > 0){
+                            $delete = BankAccountOutlet::whereIn('id_outlet', $post['id_outlet'])->orWhere('id_bank_account',$getOldBankAccount['id_bank_account'])->delete();
+                        }
+
+                        foreach ($post['id_outlet'] as $val){
+                            $dtToInsert[] = [
+                                'id_bank_account' => $getOldBankAccount['id_bank_account'],
+                                'id_outlet' => $val
+                            ];
+                        }
+                    }
+
+                    if($delete){
+                        $insertBankAccountOutlet = BankAccountOutlet::insert($dtToInsert);
+                        if($insertBankAccountOutlet){
+                            DB::commit();
+                            return response()->json(['status' => 'success']);
+                        }else{
+                            DB::rollBack();
+                            return response()->json(['status' => 'fail', 'message' => 'failed insert bank account outlet']);
+                        }
+                    }else{
+                        DB::rollBack();
+                        return response()->json(['status' => 'fail', 'message' => 'failed delete bank account outlet']);
+                    }
+                }else{
+                    response()->json(['status' => 'fail', 'message' => 'failed insert data']);
+                }
+            }
+        }else{
+            return response()->json(['status' => 'fail', 'message' => 'validation account failed']);
+        }
     }
 
     function importBankAccount(Request $request){
@@ -93,6 +197,7 @@ class ApiDisburseSettingController extends Controller
             foreach ($post['data_import'] as $val){
                 $val = (array)$val;
                 $searchBankCode = array_search($val['bank_code'], array_column($listBank, 'bank_code'));
+                $val['beneficiary_account'] = preg_replace("/[^0-9]/", "",$val['beneficiary_account']);
                 if($searchBankCode !== false){
                     $dt = [
                         'id_bank_name' => $listBank[$searchBankCode]['id_bank_name'],
@@ -101,8 +206,29 @@ class ApiDisburseSettingController extends Controller
                         'beneficiary_account' => $val['beneficiary_account'],
                         'beneficiary_email' => $val['beneficiary_email']
                     ];
-                    $update = Outlet::where('outlet_code', $val['outlet_code'])
-                        ->update($dt);
+
+                    $check = BankAccount::where('beneficiary_account', $val['beneficiary_account'])->first();//check account number is already exist or not
+                    $outlet = Outlet::where('outlet_code', $val['outlet_code'])->first();//get Outlet
+                    if($check){
+                        if($outlet){
+                            $delete = BankAccountOutlet::where('id_outlet', $outlet['id_outlet'])->delete();
+                            $dtInsertToBankOutlet = [
+                                'id_outlet' => $outlet['id_outlet'],
+                                'id_bank_account' => $check['id_bank_account']
+                            ];
+                            $update = BankAccountOutlet::updateOrCreate($dtInsertToBankOutlet, $dtInsertToBankOutlet);
+                        }
+                    }else{
+                        $addBankAccount = BankAccount::create($dt);
+                        if($outlet){
+                            $delete = BankAccountOutlet::where('id_outlet', $outlet['id_outlet'])->delete();
+                            $dtInsertToBankOutlet = [
+                                'id_outlet' => $outlet['id_outlet'],
+                                'id_bank_account' => $addBankAccount['id_bank_account']
+                            ];
+                            $update = BankAccountOutlet::updateOrCreate($dtInsertToBankOutlet, $dtInsertToBankOutlet);
+                        }
+                    }
 
                     if(!$update){
                         $arrFailed[] = $val['outlet_code'].'-'.$val['outlet_name'];
@@ -144,8 +270,7 @@ class ApiDisburseSettingController extends Controller
         $update = MDR::where('id_mdr', $post['id_mdr'])->update([
                                         'mdr' => $post['mdr'],
                                         'mdr_central' => $post['mdr_central'],
-                                        'percent_type' => $post['percent_type'],
-                                        'days_to_sent' =>  $post['days_to_sent']??NULL]);
+                                        'percent_type' => $post['percent_type']]);
         return response()->json(MyHelper::checkUpdate($update));
     }
 
@@ -284,4 +409,186 @@ class ApiDisburseSettingController extends Controller
         }
     }
 
+    function settingTimeToSent(Request $request){
+        $post = $request->json()->all();
+        if($post){
+            $update = Setting::where('key', 'disburse_global_setting_time_to_sent')->update($post);
+            return response()->json(MyHelper::checkUpdate($update));
+        }else{
+            $setting = Setting::where('key', 'disburse_global_setting_time_to_sent')->first();
+            return response()->json(MyHelper::checkGet($setting));
+        }
+    }
+
+    function listBankAccount(Request $request){
+        $post = $request->json()->all();
+
+        $outlet = BankAccount::leftJoin('bank_name', 'bank_name.id_bank_name', 'bank_accounts.id_bank_name')
+            ->select('bank_accounts.id_bank_account', 'bank_accounts.id_bank_name', 'bank_accounts.beneficiary_name', 'bank_accounts.beneficiary_alias', 'bank_accounts.beneficiary_account', 'bank_accounts.beneficiary_email',
+                'bank_name.bank_name', 'bank_name.bank_code')->with(['bank_account_outlet']);
+
+        if(isset($post['conditions']) && !empty($post['conditions'])){
+            $rule = 'and';
+            if(isset($post['rule'])){
+                $rule = $post['rule'];
+            }
+
+            if($rule == 'and'){
+                foreach ($post['conditions'] as $row){
+                    if(isset($row['subject'])){
+                        if($row['subject'] == 'outlet_code'){
+                            if($row['operator'] == '='){
+                                $outlet->whereIn('bank_accounts.id_bank_account', function ($query) use ($row){
+                                    $query->select('bank_account_outlets.id_bank_account')
+                                        ->from('bank_account_outlets')
+                                        ->join('outlets', 'bank_account_outlets.id_outlet', 'outlets.id_outlet')
+                                        ->where('outlets.outlet_code',$row['parameter']);
+                                });
+                            }else{
+                                $outlet->whereIn('bank_accounts.id_bank_account', function ($query) use ($row){
+                                    $query->select('bank_account_outlets.id_bank_account')
+                                        ->from('bank_account_outlets')
+                                        ->join('outlets', 'bank_account_outlets.id_outlet', 'outlets.id_outlet')
+                                        ->where('outlets.outlet_code', 'like', '%'.$row['parameter'].'%');
+                                });
+                            }
+                        }
+
+                        if($row['subject'] == 'outlet_name'){
+                            if($row['operator'] == '='){
+                                $outlet->whereIn('bank_accounts.id_bank_account', function ($query) use ($row){
+                                    $query->select('bank_account_outlets.id_bank_account')
+                                        ->from('bank_account_outlets')
+                                        ->join('outlets', 'bank_account_outlets.id_outlet', 'outlets.id_outlet')
+                                        ->where('outlets.outlet_name',$row['parameter']);
+                                });
+                            }else{
+                                $outlet->whereIn('bank_accounts.id_bank_account', function ($query) use ($row){
+                                    $query->select('bank_account_outlets.id_bank_account')
+                                        ->from('bank_account_outlets')
+                                        ->join('outlets', 'bank_account_outlets.id_outlet', 'outlets.id_outlet')
+                                        ->where('outlets.outlet_name', 'like', '%'.$row['parameter'].'%');
+                                });
+                            }
+                        }
+
+                        if($row['subject'] == 'beneficiary_name'){
+                            if($row['operator'] == '='){
+                                $outlet->where('bank_accounts.beneficiary_name', $row['parameter']);
+                            }else{
+                                $outlet->where('bank_accounts.beneficiary_name', 'like', '%'.$row['parameter'].'%');
+                            }
+                        }
+
+                        if($row['subject'] == 'beneficiary_alias'){
+                            if($row['operator'] == '='){
+                                $outlet->where('bank_accounts.beneficiary_alias', $row['parameter']);
+                            }else{
+                                $outlet->where('bank_accounts.beneficiary_alias', 'like', '%'.$row['parameter'].'%');
+                            }
+                        }
+
+                        if($row['subject'] == 'beneficiary_account'){
+                            if($row['operator'] == '='){
+                                $outlet->where('bank_accounts.beneficiary_account', $row['parameter']);
+                            }else{
+                                $outlet->where('bank_accounts.beneficiary_account', 'like', '%'.$row['parameter'].'%');
+                            }
+                        }
+
+                        if($row['subject'] == 'beneficiary_email'){
+                            if($row['operator'] == '='){
+                                $outlet->where('bank_accounts.beneficiary_email', $row['parameter']);
+                            }else{
+                                $outlet->where('bank_accounts.beneficiary_email', 'like', '%'.$row['parameter'].'%');
+                            }
+                        }
+
+                    }
+                }
+            }else{
+                $outlet->where(function ($subquery) use ($post){
+                    foreach ($post['conditions'] as $row){
+                        if(isset($row['subject'])){
+                            if($row['subject'] == 'outlet_code'){
+                                if($row['operator'] == '='){
+                                    $subquery->orWhereIn('bank_accounts.id_bank_account', function ($q) use ($row){
+                                        $q->select('bank_account_outlets.id_bank_account')
+                                            ->from('bank_account_outlets')
+                                            ->join('outlets', 'bank_account_outlets.id_outlet', 'outlets.id_outlet')
+                                            ->where('outlets.outlet_code',$row['parameter']);
+                                    });
+                                }else{
+                                    $subquery->orWhereIn('bank_accounts.id_bank_account', function ($q) use ($row){
+                                        $q->select('bank_account_outlets.id_bank_account')
+                                            ->from('bank_account_outlets')
+                                            ->join('outlets', 'bank_account_outlets.id_outlet', 'outlets.id_outlet')
+                                            ->where('outlets.outlet_code','like', '%'.$row['parameter'].'%');
+                                    });
+                                }
+                            }
+
+                            if($row['subject'] == 'outlet_name'){
+                                if($row['operator'] == '='){
+                                    $subquery->orWhereIn('bank_accounts.id_bank_account', function ($q) use ($row){
+                                        $q->select('bank_account_outlets.id_bank_account')
+                                            ->from('bank_account_outlets')
+                                            ->join('outlets', 'bank_account_outlets.id_outlet', 'outlets.id_outlet')
+                                            ->where('outlets.outlet_name',$row['parameter']);
+                                    });
+                                }else{
+                                    $subquery->orWhereIn('bank_accounts.id_bank_account', function ($q) use ($row){
+                                        $q->select('bank_account_outlets.id_bank_account')
+                                            ->from('bank_account_outlets')
+                                            ->join('outlets', 'bank_account_outlets.id_outlet', 'outlets.id_outlet')
+                                            ->where('outlets.outlet_name','like', '%'.$row['parameter'].'%');
+                                    });
+                                }
+                            }
+
+                            if($row['subject'] == 'beneficiary_name'){
+                                if($row['operator'] == '='){
+                                    $subquery->orWhere('bank_accounts.beneficiary_name', $row['parameter']);
+                                }else{
+                                    $subquery->orWhere('bank_accounts.beneficiary_name', 'like', '%'.$row['parameter'].'%');
+                                }
+                            }
+
+                            if($row['subject'] == 'beneficiary_alias'){
+                                if($row['operator'] == '='){
+                                    $subquery->orWhere('bank_accounts.beneficiary_alias', $row['parameter']);
+                                }else{
+                                    $subquery->orWhere('bank_accounts.beneficiary_alias', 'like', '%'.$row['parameter'].'%');
+                                }
+                            }
+
+                            if($row['subject'] == 'beneficiary_account'){
+                                if($row['operator'] == '='){
+                                    $subquery->orWhere('bank_accounts.beneficiary_account', $row['parameter']);
+                                }else{
+                                    $subquery->orWhere('bank_accounts.beneficiary_account', 'like', '%'.$row['parameter'].'%');
+                                }
+                            }
+
+                            if($row['subject'] == 'beneficiary_email'){
+                                if($row['operator'] == '='){
+                                    $subquery->orWhere('bank_accounts.beneficiary_email', $row['parameter']);
+                                }else{
+                                    $subquery->orWhere('bank_accounts.beneficiary_email', 'like', '%'.$row['parameter'].'%');
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        if(isset($post['page'])){
+            $outlet = $outlet->paginate(25);
+        }else{
+            $outlet = $outlet->get()->toArray();
+        }
+
+        return response()->json(MyHelper::checkGet($outlet));
+    }
 }

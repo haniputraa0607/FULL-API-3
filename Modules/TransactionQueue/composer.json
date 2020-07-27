@@ -1,0 +1,25 @@
+{
+    "name": "nwidart/transactionqueue",
+    "description": "",
+    "authors": [
+        {
+            "name": "Nicolas Widart",
+            "email": "n.widart@gmail.com"
+        }
+    ],
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Modules\\TransactionQueue\\Providers\\TransactionQueueServiceProvider"
+            ],
+            "aliases": {
+                
+            }
+        }
+    },
+    "autoload": {
+        "psr-4": {
+            "Modules\\TransactionQueue\\": ""
+        }
+    }
+}

@@ -17,14 +17,14 @@ class RatingItem extends Model
     public function getImageAttribute($value)
     {
         if($value){
-            return env('S3_URL_API').$value;
+            return config('url.storage_url_api').$value;
         }
         return '';
     }
     public function getImageSelectedAttribute($value)
     {
         if($value){
-            return env('S3_URL_API').$value;
+            return config('url.storage_url_api').$value;
         }
         return '';
     }
