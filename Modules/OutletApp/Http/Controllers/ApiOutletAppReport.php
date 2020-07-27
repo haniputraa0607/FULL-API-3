@@ -34,6 +34,7 @@ use App\Http\Models\TransactionPaymentBalance;
 use Modules\IPay88\Entities\TransactionPaymentIpay88;
 use App\Http\Models\TransactionPaymentOvo;
 use App\Http\Models\TransactionPaymentOffline;
+use Modules\Subscription\Entities\TransactionPaymentSubscription;
 
 use Modules\Brand\Entities\Brand;
 
@@ -219,7 +220,28 @@ class ApiOutletAppReport extends Controller
 				$daily_payment = array_merge($daily_payment, $dataPaymentOffline);
 	
 			//end offline
-			
+
+			/*
+			//subscription
+				$dataPaymentSubscription = TransactionPaymentSubscription::join('transactions', 'transactions.id_transaction', 'transaction_payment_subscriptions.id_transaction')
+				->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+				->select(
+					DB::raw('FORMAT(COUNT(transactions.id_transaction), 0, "de_DE") as trx_payment_count'), 
+					DB::raw('FORMAT(SUM(transaction_payment_subscriptions.subscription_nominal), 0, "de_DE") as trx_payment_nominal'), 
+					DB::raw("'Subscription' AS trx_payment")
+				)
+				->where('transactions.id_outlet', $post['id_outlet'])
+				->whereDate('transactions.transaction_date', $date)
+				->where('transactions.transaction_payment_status', 'Completed')
+				->whereNull('transaction_pickups.reject_at')
+				->groupBy('transactions.id_outlet', 'trx_payment')
+				->get()->toArray();
+				
+				// merge from midtrans, ovo, ipay
+				$daily_payment = array_merge($daily_payment, $dataPaymentSubscription);
+	
+			//end subscription
+			*/
 
 	        if ( empty($outlet) ) {
     			return response()->json(MyHelper::checkGet(null));
