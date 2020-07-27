@@ -64,6 +64,7 @@ class ApiOutletApp extends Controller
         $this->trx              = "Modules\Transaction\Http\Controllers\ApiOnlineTransaction";
         $this->promo_campaign   = "Modules\PromoCampaign\Http\Controllers\ApiPromoCampaign";
         $this->voucher          = "Modules\Deals\Http\Controllers\ApiDealsVoucher";
+        $this->subscription     = "Modules\Subscription\Http\Controllers\ApiSubscriptionVoucher";
     }
 
     public function deleteToken(DeleteToken $request)
@@ -1519,6 +1520,10 @@ class ApiOutletApp extends Controller
             }
             // return voucher
             $update_voucher = app($this->voucher)->returnVoucher($order->id_transaction);
+
+            // return subscription
+            $update_subscription = app($this->subscription)->returnSubscription($order->id_transaction);
+
             //send notif to customer
             $send = app($this->autocrm)->SendAutoCRM('Order Reject', $user['phone'], [
                 "outlet_name"      => $outlet['outlet_name'],
