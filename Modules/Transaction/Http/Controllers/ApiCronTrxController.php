@@ -422,7 +422,8 @@ class ApiCronTrxController extends Controller
                                         ->update(['taken_by_system_at' => date('Y-m-d 00:00:00')]);
 
             AchievementCheck::dispatch(['id_transaction' => $idTrx])->onConnection('achievement');
-            
+            DisburseJob::dispatch(['id_transaction' => $idTrx])->onConnection('disbursequeue');
+
             $log->success('success');
             return response()->json(['status' => 'success']);
         } catch (\Exception $e) {
