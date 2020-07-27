@@ -803,9 +803,6 @@ class ApiOnlineTransaction extends Controller
 	        $insert_subs_data['subscription_nominal'] = $subscription_total;
 
 	        $insert_subs_trx = TransactionPaymentSubscription::create($insert_subs_data);
-	        $update_trx = Transaction::where('id_transaction', $insertTransaction['id_transaction'])->update([
-							            'id_subscription_user_voucher' => $data_subs->id_subscription_user_voucher
-							        ]);
 	        $update_subs_voucher = SubscriptionUserVoucher::where('id_subscription_user_voucher','=',$data_subs->id_subscription_user_voucher)
 	        						->update([
 	        							'used_at' => date('Y-m-d H:i:s'),
