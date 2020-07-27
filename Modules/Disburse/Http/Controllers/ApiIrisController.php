@@ -454,18 +454,8 @@ class ApiIrisController extends Controller
                                     ];
                                 }
                             }
-                            //$sendToIris = MyHelper::connectIris('Payouts', 'POST','api/v1/payouts', ['payouts' => $dataToSend]);
-                            $sendToIris = [
-                                'status' => 'success',
-                                'response' => [
-                                    'payouts' => [
-                                        [
-                                            'status' => 'queued',
-                                            'reference_no' => 'asdasdadasd'
-                                        ]
-                                    ]
-                                ]
-                            ];
+                            $sendToIris = MyHelper::connectIris('Payouts', 'POST','api/v1/payouts', ['payouts' => $dataToSend]);
+
                             if(isset($sendToIris['status']) && $sendToIris['status'] == 'success'){
                                 if(isset($sendToIris['response']['payouts']) && !empty($sendToIris['response']['payouts'])){
                                     $j = 0;
