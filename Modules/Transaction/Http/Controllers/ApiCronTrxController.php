@@ -55,6 +55,7 @@ class ApiCronTrxController extends Controller
         $this->getNotif = "Modules\Transaction\Http\Controllers\ApiNotification";
         $this->trx    = "Modules\Transaction\Http\Controllers\ApiOnlineTransaction";
         $this->membership       = "Modules\Membership\Http\Controllers\ApiMembership";
+        $this->subscription  = "Modules\Subscription\Http\Controllers\ApiSubscriptionVoucher";
     }
 
     public function cron(Request $request)
@@ -147,6 +148,9 @@ class ApiCronTrxController extends Controller
 
                 // return voucher
                 $update_voucher = app($this->voucher)->returnVoucher($singleTrx->id_transaction);
+
+                // return subscription
+                $update_subscription = app($this->subscription)->returnSubscription($singleTrx->id_transaction);
 
                 if (!$update_voucher) {
                 	DB::rollback();
@@ -665,6 +669,9 @@ class ApiCronTrxController extends Controller
                 }
                 // return voucher
                 $update_voucher = app($this->voucher)->returnVoucher($order->id_transaction);
+
+                // return subscription
+                $update_subscription = app($this->subscription)->returnSubscription($order->id_transaction);
 
                 //reject order
                 $pickup = TransactionPickup::where('id_transaction', $order->id_transaction)->update([
