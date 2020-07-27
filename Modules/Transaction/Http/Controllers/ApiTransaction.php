@@ -1698,6 +1698,7 @@ class ApiTransaction extends Controller
                 'transaction_vouchers.deals_voucher.deal',
                 'promo_campaign_promo_code.promo_campaign',
                 'transaction_pickup_go_send.transaction_pickup_update',
+                'transaction_payment_subscription.subscription_user_voucher',
                 'outlet.city')->first();
             if(!$list){
                 return MyHelper::checkGet([],'empty');
@@ -2198,6 +2199,17 @@ class ApiTransaction extends Controller
                     'desc'          => $list['promo_campaign_promo_code']['promo_code'],
                     "is_discount"   => 1,
                     'amount'        => MyHelper::requestNumber($discount,'_CURRENCY')
+                ];
+            }
+
+			if (!empty($list['transaction_payment_subscription'])) {
+				$result['promo']['code'][$p++]   = $list['transaction_payment_subscription']['subscription_user_voucher']['voucher_code'];
+				$subs_discount = $list['transaction_payment_subscription']['subscription_nominal'];
+                $result['payment_detail'][] = [
+                    'name'          => 'Discount',
+                    'desc'          => $list['transaction_payment_subscription']['subscription_user_voucher']['voucher_code'],
+                    "is_discount"   => 1,
+                    'amount'        => MyHelper::requestNumber($subs_discount,'_CURRENCY')
                 ];
             }
 
