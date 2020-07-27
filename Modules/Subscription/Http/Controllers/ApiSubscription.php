@@ -1754,7 +1754,10 @@ class ApiSubscription extends Controller
             }])
             ->withCount(['subscription_user_vouchers as available_voucher' => function($q){
                 $q->whereNull('used_at');
-            }]);
+            }])
+            ->whereHas('subscription_user_vouchers', function($q){
+                $q->whereNull('used_at');
+            });
 
         //search by outlet
         if(isset($post['id_outlet']) && is_numeric($post['id_outlet'])){
