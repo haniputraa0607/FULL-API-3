@@ -43,6 +43,7 @@ class ApiConfirm extends Controller
         $this->autocrm  = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
         $this->voucher  = "Modules\Deals\Http\Controllers\ApiDealsVoucher";
         $this->promo_campaign	= "Modules\PromoCampaign\Http\Controllers\ApiPromoCampaign";
+        $this->subscription  = "Modules\Subscription\Http\Controllers\ApiSubscriptionVoucher";
     }
 
     public function confirmTransaction(ConfirmPayment $request) {
@@ -761,6 +762,9 @@ class ApiConfirm extends Controller
 
                     $updateVoucher = app($this->voucher)->returnVoucher($trx['id_transaction']);
 
+                    // return subscription
+                    $update_subscription = app($this->subscription)->returnSubscription($trx['id_transaction']);
+
                     //return balance
                     $payBalance = TransactionMultiplePayment::where('id_transaction', $trx['id_transaction'])->where('type', 'Balance')->first();
                     if (!empty($payBalance)) {
@@ -876,6 +880,9 @@ class ApiConfirm extends Controller
         }
 
         $updateVoucher = app($this->voucher)->returnVoucher($trx->id_transaction);
+
+        // return subscription
+        $update_subscription = app($this->subscription)->returnSubscription($trx->id_transaction);
 
         //return balance
         $payBalance = TransactionMultiplePayment::where('id_transaction', $trx['id_transaction'])->where('type', 'Balance')->first();
