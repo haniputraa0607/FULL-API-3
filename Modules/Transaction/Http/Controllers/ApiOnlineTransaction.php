@@ -2151,6 +2151,7 @@ class ApiOnlineTransaction extends Controller
             'outlet_code' => $outlet['outlet_code'],
             'outlet_name' => $outlet['outlet_name'],
             'outlet_address' => $outlet['outlet_address'],
+            'delivery_order' => $outlet['delivery_order'],
             'today' => $outlet['today']
         ];
         $result['item'] = array_values($tree);
