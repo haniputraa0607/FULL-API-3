@@ -19,16 +19,17 @@ class Step1PromoCampaignRequest extends FormRequest
             'campaign_name'         => 'required',
             'promo_title'           => 'required',
             'promo_tag.*'           => 'nullable',
-            'date_start'            => 'required',
+            'date_start'            => 'required_unless:used_code_update,1',
             'date_end'              => 'required',
             'id_promo_campaign'     => 'nullable',
 
-            'code_type'             => 'required',
+            'code_type'             => 'required_unless:used_code_update,1',
             // 'promo_code'            => 'sometimes|required_if:code_type,==,single|max:15|regex:/^[abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789]+$/u',
             // 'prefix_code'           => 'sometimes|required_if:code_type,==,multiple|max:15|regex:/^[abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789]+$/u',
             // 'number_last_code'      => 'sometimes|required_if:code_type,==,multiple|max:2',
-            'limitation_usage'      => 'required',
-            'total_coupon'          => 'required'
+            'limitation_usage'      => 'required_unless:used_code_update,1',
+            'total_coupon'          => 'required_unless:used_code_update,1',
+            'used_code_update'		=> 'nullable'
         ];
     }
 
