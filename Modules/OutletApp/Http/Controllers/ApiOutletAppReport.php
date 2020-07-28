@@ -260,7 +260,7 @@ class ApiOutletAppReport extends Controller
 
     	$data['outlet_name'] 	= $daily_trx['outlet']['outlet_name']??$outlet['outlet_name'];
     	$data['outlet_address'] = $daily_trx['outlet']['outlet_address']??$outlet['outlet_address'];
-	    $data['transaction_date'] = date("d F Y", strtotime($post['date']));
+	    $data['transaction_date'] = MyHelper::dateFormatInd($post['date'], true, false);
 	    $data['time_server'] 	= date("H:i");
 
     	if ($daily_trx) {
