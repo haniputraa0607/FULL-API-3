@@ -131,7 +131,7 @@ class ApiOnlineTransaction extends Controller
             $outlet = optional();
         }
 
-        if($post['type'] != 'Pickup' && !$outlet->delivery_order) {
+        if($post['type'] != 'Pickup Order' && !$outlet->delivery_order) {
             DB::rollback();
             return response()->json([
                 'status'    => 'fail',
@@ -1753,7 +1753,7 @@ class ApiOnlineTransaction extends Controller
 
         $error_msg=[];
 
-        if($post['type'] != 'Pickup' && !$outlet->delivery_order) {
+        if($post['type'] != 'Pickup Order' && !$outlet->delivery_order) {
             $error_msg[] = 'Maaf, Outlet ini tidak support untuk delivery order';
         }
 
