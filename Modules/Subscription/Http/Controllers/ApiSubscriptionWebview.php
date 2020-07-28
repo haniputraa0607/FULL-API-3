@@ -222,6 +222,8 @@ class ApiSubscriptionWebview extends Controller
             if (!is_null($value['used_at'])) {
                 $getTrx = Transaction::select(DB::raw('transactions.*,sum(transaction_products.transaction_product_qty) item_total'))->leftJoin('transaction_products','transactions.id_transaction','=','transaction_products.id_transaction')->with('outlet')->where('transactions.id_transaction', $value['id_transaction'])->groupBy('transactions.id_transaction')->first();
                 $voucher[$key]['used_at']    = $value['used_at'];
+                $voucher[$key]['used_at_indo']    = MyHelper::dateFormatInd($value['used_at'], false, false);
+                $voucher[$key]['used_at_indo_time']    = 'pukul '.date('H:i', strtotime($value['used_at']));
                 if (is_null($getTrx->outlet)) {
                     $voucher[$key]['outlet']     = '-';
                     $voucher[$key]['item']       = '-';
