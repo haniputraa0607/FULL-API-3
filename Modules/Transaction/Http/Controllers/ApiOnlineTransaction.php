@@ -131,6 +131,14 @@ class ApiOnlineTransaction extends Controller
             $outlet = optional();
         }
 
+        if($post['type'] != 'Pickup' && !$outlet->delivery_order) {
+            DB::rollback();
+            return response()->json([
+                'status'    => 'fail',
+                'messages'  => ['Maaf, Outlet ini tidak support untuk delivery order']
+                ]);
+        }
+
         $issetDate = false;
         if (isset($post['transaction_date'])) {
             $issetDate = true;
@@ -1744,6 +1752,10 @@ class ApiOnlineTransaction extends Controller
         $shippingGoSend = 0;
 
         $error_msg=[];
+
+        if($post['type'] != 'Pickup' && !$outlet->delivery_order) {
+            $error_msg[] = 'Maaf, Outlet ini tidak support untuk delivery order';
+        }
 
         if(($post['type']??null) == 'GO-SEND'){
             if(!($outlet['outlet_latitude']&&$outlet['outlet_longitude']&&$outlet['outlet_phone']&&$outlet['outlet_address'])){
