@@ -2572,6 +2572,7 @@ class ApiOutletApp extends Controller
                 $result['product_transaction'][$keynya]['product'][$keyProduct]['transaction_product_note']      = $valueProduct['transaction_product_note'];
                 $result['product_transaction'][$keynya]['product'][$keyProduct]['transaction_product_discount']  = $valueProduct['transaction_product_discount'];
                 $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_name']       = $valueProduct['product']['product_name'];
+                $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_price']      = MyHelper::requestNumber($valueProduct['transaction_product_price'], '_CURRENCY');
                 $discount                                                                                        = $discount + $valueProduct['transaction_product_discount'];
                 foreach ($valueProduct['modifiers'] as $keyMod => $valueMod) {
                     $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_modifiers'][$keyMod]['product_modifier_name']  = $valueMod['text'];
