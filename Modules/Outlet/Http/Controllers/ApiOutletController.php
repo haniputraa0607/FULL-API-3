@@ -140,6 +140,12 @@ class ApiOutletController extends Controller
             $data['delivery_order'] = 0;
         }
 
+        if (isset($post['status_franchise'])) {
+            $data['status_franchise'] = $post['status_franchise'];
+        }else{
+            $data['status_franchise'] = 0;
+        }
+
         return $data;
     }
 
@@ -1767,6 +1773,10 @@ class ApiOutletController extends Controller
                 'outlets.outlet_email as email',
                 'outlets.outlet_latitude as latitude',
                 'outlets.outlet_longitude as longitude',
+                DB::raw('(CASE
+                            WHEN status_franchise = 1 THEN "Franchise"
+                            ELSE "Not Franchise"
+                        END) as "status_franchise"'),
                 'outlets.deep_link_gojek as deep_link_gojek',
                 'outlets.deep_link_grab as deep_link_grab'
             )->with('brands')->join('cities', 'outlets.id_city', '=', 'cities.id_city');
@@ -1883,6 +1893,7 @@ class ApiOutletController extends Controller
                             'outlet_email' => $value['email']??'',
                             'outlet_latitude' => $value['latitude']??'',
                             'outlet_longitude' => $value['longitude']??'',
+                            'status_franchise' => ($value['status_franchise'] == 'Franchise' ? 1 : 0),
                             'deep_link_gojek' => $value['deep_link_gojek']??'',
                             'deep_link_grab' => $value['deep_link_grab']??'',
                             'id_city' => $id_city[$search]??null
