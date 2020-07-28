@@ -134,10 +134,10 @@ class ApiOutletController extends Controller
         if (isset($post['deep_link_grab'])) {
             $data['deep_link_grab'] = $post['deep_link_grab'];
         }
-        if (isset($post['big_order'])) {
-            $data['big_order'] = $post['big_order'];
+        if (isset($post['delivery_order'])) {
+            $data['delivery_order'] = $post['delivery_order'];
         }else{
-            $data['big_order'] = 0;
+            $data['delivery_order'] = 0;
         }
 
         return $data;
@@ -2236,7 +2236,7 @@ class ApiOutletController extends Controller
         $outlet = Outlet::with(['today','brands'=>function($query){
                     $query->where([['brand_active',1],['brand_visibility',1]]);
                     $query->select('brands.id_brand','name_brand');
-                }])->select('id_outlet','outlet_code','outlet_name','outlet_address','outlet_latitude','outlet_longitude','outlet_phone','outlet_status')->find($request->json('id_outlet'));
+                }])->select('id_outlet','outlet_code','outlet_name','outlet_address','outlet_latitude','outlet_longitude','outlet_phone','outlet_status','delivery_order')->find($request->json('id_outlet'));
         if(!$outlet){
             return MyHelper::checkGet([]);
         }
