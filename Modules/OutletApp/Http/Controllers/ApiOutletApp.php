@@ -2116,6 +2116,7 @@ class ApiOutletApp extends Controller
             'transaction_payment_offlines',
             'transaction_vouchers.deals_voucher.deal',
             'promo_campaign_promo_code.promo_campaign',
+            'transaction_payment_subscription.subscription_user_voucher.subscription_user.subscription',
             'transaction_pickup_go_send',
             'outlet.city')->first();
         if (!$list) {
@@ -2598,8 +2599,10 @@ class ApiOutletApp extends Controller
         }
 
         $p = 0;
+        $result['promo_name'] = null;
         if (!empty($list['transaction_vouchers'])) {
             foreach ($list['transaction_vouchers'] as $valueVoc) {
+        		$result['promo_name'] = $valueVoc['deals_voucher']['deal']['deals_title'];
                 $result['promo']['code'][$p++] = $valueVoc['deals_voucher']['voucher_code'];
                 $result['payment_detail'][]    = [
                     'name'        => 'Discount',
@@ -2611,12 +2614,25 @@ class ApiOutletApp extends Controller
         }
 
         if (!empty($list['promo_campaign_promo_code'])) {
+        	$result['promo_name'] = $list['promo_campaign_promo_code']['promo_campaign']['promo_title'];
             $result['promo']['code'][$p++] = $list['promo_campaign_promo_code']['promo_code'];
             $result['payment_detail'][]    = [
                 'name'        => 'Discount',
                 'desc'        => $list['promo_campaign_promo_code']['promo_code'],
                 "is_discount" => 1,
                 'amount'      => MyHelper::requestNumber($discount, '_CURRENCY'),
+            ];
+        }
+
+        if (!empty($list['transaction_payment_subscription'])) {
+        	$result['promo_name'] = $list['transaction_payment_subscription']['subscription_user_voucher']['subscription_user']['subscription']['subscription_title'];
+			$result['promo']['code'][$p++]   = $list['transaction_payment_subscription']['subscription_user_voucher']['voucher_code'];
+			$subs_discount = $list['transaction_payment_subscription']['subscription_nominal'];
+            $result['payment_detail'][] = [
+                'name'          => 'Discount',
+                'desc'          => $list['transaction_payment_subscription']['subscription_user_voucher']['voucher_code'],
+                "is_discount"   => 1,
+                'amount'        => MyHelper::requestNumber($subs_discount,'_CURRENCY')
             ];
         }
 
