@@ -15,37 +15,39 @@ class Step2PromoCampaignRequest extends FormRequest
      */
     public function rules()
     {
-        if($this->json('promo_type')=='Product Discount'){
-            $rules=[
-                'filter_product'    => 'required',
-                'max_product'       => 'nullable',
-                'discount_type'     => 'required',
-                'discount_value'    => 'required'
-            ];
-        }elseif ($this->json('promo_type')=='Tier discount') {
-            $rules=[
-                'product'               => 'required',
-                'discount_type'         => 'required',
-                'promo_rule'                  => 'required',
-                'promo_rule.*.min_qty'        => 'required|numeric|min:1',
-                'promo_rule.*.max_qty'        => 'required|numeric|min:1',
-                'promo_rule.*.discount_value' => 'required|numeric|min:1'
-            ];
-            if($this->json('discount_type')=='Percent'){
-                $rules['promo_rule.*.discount_value'] = 'required|numeric|min:1|max:100';
-            }
-        }elseif ($this->json('promo_type')=='Buy X Get Y') {
-            $rules=[
-                'product'                           => 'required',
-                'promo_rule'                              => 'required',
-                'promo_rule.*.min_qty_requirement'        => 'required|numeric|min:1',
-                'promo_rule.*.max_qty_requirement'        => 'required|numeric|min:1',
-                // 'promo_rule.*.benefit_qty'                => 'required|numeric|min:0',
-                'promo_rule.*.benefit_id_product'         => 'required',
-                'promo_rule.*.discount_percent'           => 'nullable|numeric|min:1|max:100',
-                'promo_rule.*.discount_nominal'           => 'nullable|numeric'
-            ];
-        }
+    	if (!$this->json('used_code_update')) {
+	        if($this->json('promo_type')=='Product Discount'){
+	            $rules=[
+	                'filter_product'    => 'required',
+	                'max_product'       => 'nullable',
+	                'discount_type'     => 'required',
+	                'discount_value'    => 'required'
+	            ];
+	        }elseif ($this->json('promo_type')=='Tier discount') {
+	            $rules=[
+	                'product'               => 'required',
+	                'discount_type'         => 'required',
+	                'promo_rule'                  => 'required',
+	                'promo_rule.*.min_qty'        => 'required|numeric|min:1',
+	                'promo_rule.*.max_qty'        => 'required|numeric|min:1',
+	                'promo_rule.*.discount_value' => 'required|numeric|min:1'
+	            ];
+	            if($this->json('discount_type')=='Percent'){
+	                $rules['promo_rule.*.discount_value'] = 'required|numeric|min:1|max:100';
+	            }
+	        }elseif ($this->json('promo_type')=='Buy X Get Y') {
+	            $rules=[
+	                'product'                           => 'required',
+	                'promo_rule'                              => 'required',
+	                'promo_rule.*.min_qty_requirement'        => 'required|numeric|min:1',
+	                'promo_rule.*.max_qty_requirement'        => 'required|numeric|min:1',
+	                // 'promo_rule.*.benefit_qty'                => 'required|numeric|min:0',
+	                'promo_rule.*.benefit_id_product'         => 'required',
+	                'promo_rule.*.discount_percent'           => 'nullable|numeric|min:1|max:100',
+	                'promo_rule.*.discount_nominal'           => 'nullable|numeric'
+	            ];
+	        }
+    	}
 
         if (!$this->json('id_deals')){
         	$rules['filter_user'] = 'required';
