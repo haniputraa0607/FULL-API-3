@@ -701,7 +701,8 @@ class ApiAchievement extends Controller
             foreach ($detailAchievement as $achievement) {
                 switch ($rules) {
                     case 'nominal_transaction':
-                        $sumTrx = Transaction::select(DB::raw('COALESCE(SUM(transactions.transaction_grandtotal), 0) as total'));
+                        $sumTrx = Transaction::select(DB::raw('COALESCE(SUM(transactions.transaction_grandtotal), 0) as total'))
+                        ->where('transactions.id_user', $idUser);
 
                         if (!is_null($achievement['id_product'])) {
                             $sumTrx = $sumTrx->join('transaction_products', 'transactions.id_transaction', 'transaction_products.id_transaction')
@@ -745,7 +746,9 @@ class ApiAchievement extends Controller
                         }
                         break;
                     case 'total_transaction':
-                        $countTrx = Transaction::select(DB::raw('COALESCE(COUNT(transactions.id_transaction), 0) as total'));
+                        $countTrx = Transaction::select(DB::raw('COALESCE(COUNT(transactions.id_transaction), 0) as total'))
+                        ->where('transactions.id_user', $idUser);
+
                         if (!is_null($achievement['trx_nominal'])) {
                             $countTrx = $countTrx->where('transactions.transaction_grandtotal', '>=', $achievement['trx_nominal']);
                         }
@@ -790,7 +793,9 @@ class ApiAchievement extends Controller
                         break;
                     case 'total_product':
                         $sumProd = Transaction::select(DB::raw('COALESCE(SUM(transaction_products.transaction_product_qty), 0) as total'))
+                        ->where('transactions.id_user', $idUser)
                         ->join('transaction_products', 'transactions.id_transaction', 'transaction_products.id_transaction');
+
                         if (!is_null($achievement['trx_nominal'])) {
                             $sumProd = $sumProd->where('transactions.transaction_grandtotal', '>=', $achievement['trx_nominal']);
                         }
@@ -832,7 +837,9 @@ class ApiAchievement extends Controller
                         }
                         break;
                     case 'total_outlet':
-                        $countOutlet = Transaction::select(DB::raw('COALESCE(COUNT(DISTINCT transactions.id_outlet), 0) as total'));
+                        $countOutlet = Transaction::select(DB::raw('COALESCE(COUNT(DISTINCT transactions.id_outlet), 0) as total'))
+                        ->where('transactions.id_user', $idUser);
+
                         if (!is_null($achievement['trx_nominal'])) {
                             $countOutlet = $countOutlet->where('transactions.transaction_grandtotal', '>=', $achievement['trx_nominal']);
                         }
@@ -875,6 +882,7 @@ class ApiAchievement extends Controller
                         break;
                     case 'total_province':
                         $countProvince = Transaction::select(DB::raw('COALESCE(COUNT(DISTINCT cities.id_province), 0) as total'))
+                        ->where('transactions.id_user', $idUser)
                         ->join('outlets', 'transactions.id_outlet', 'outlets.id_outlet')
                         ->join('cities', 'outlets.id_city', 'cities.id_city');
     
