@@ -919,6 +919,7 @@ class ApiOutletApp extends Controller
             }
 
             AchievementCheck::dispatch(['id_transaction' => $order->id_transaction])->onConnection('achievement');
+            DisburseJob::dispatch(['id_transaction' => $order->id_transaction])->onConnection('disbursequeue');
 
             DB::commit();
         }
