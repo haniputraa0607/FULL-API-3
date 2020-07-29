@@ -35,9 +35,15 @@ class ApiSubscriptionWebview extends Controller
         			'subscription_content' => function($q){
         				$q->where('is_active',1);
         			},
-        			'subscription_content.subscription_content_details'
+        			'subscription_content.subscription_content_details',
+        			'brand'
         		])
         		->find($request->get('id_subscription'))
+        		->append(
+					'subscription_voucher_benefit_pretty',
+					'subscription_voucher_max_benefit_pretty',
+					'subscription_minimal_transaction_pretty'
+				)
         		->toArray();
 
         $subs = $this->renderOutletCity($subs);
@@ -107,11 +113,13 @@ class ApiSubscriptionWebview extends Controller
         }
 
         $i = 0;
+        $content_key = $this->replaceText($subs);
         foreach ($subs['subscription_content'] as $keyContent => $valueContent) {
             if (!empty($valueContent['subscription_content_details'])) {
                 $result['subscription_content'][$keyContent]['title'] = $valueContent['title'];
                 foreach ($valueContent['subscription_content_details'] as $key => $value) {
-                    $result['subscription_content'][$keyContent]['detail'][$key] = $value['content'];
+                	$content = MyHelper::simpleReplace($value['content'],$content_key);
+                    $result['subscription_content'][$keyContent]['detail'][$key] = $content;
                     // $content[$key] = '<li>'.$value['content'].'</li>';
                 }
                 // $result['deals_content'][$keyContent]['detail'] = '<ul style="color:#707070;">'.implode('', $content).'</ul>';
@@ -188,8 +196,24 @@ class ApiSubscriptionWebview extends Controller
             return abort(404);
         }
 
-        $subs = SubscriptionUser::with(['subscription.outlets' => function($q) {$q->where('outlet_status', 'Active');}, 'subscription.outlets.city', 'subscription_user_vouchers', 'subscription.subscription_content.subscription_content_details'])->where('id_subscription_user', $request->id_subscription_user)->first()->toArray();
-        
+        $subs = SubscriptionUser::with([
+						'subscription.outlets' => function($q) {
+							$q->where('outlet_status', 'Active');
+						}, 
+						'subscription.outlets.city', 
+						'subscription.brand', 
+						'subscription_user_vouchers', 
+						'subscription.subscription_content.subscription_content_details'
+					])
+        			->where('id_subscription_user', $request->id_subscription_user)
+        			->first();
+        $subs->subscription = $subs->subscription->append(
+								'subscription_voucher_benefit_pretty',
+								'subscription_voucher_max_benefit_pretty',
+								'subscription_minimal_transaction_pretty'
+							);
+        $subs = $subs->toArray();
+
         $subs_outlet = $this->renderOutletCity($subs['subscription']);
         $subs['subscription']['outlet_by_city'] = $subs_outlet['outlet_by_city']??[];
 
@@ -238,11 +262,13 @@ class ApiSubscriptionWebview extends Controller
         $result['subscription_content'][$i]['title']            = 'Voucher';
         $result['subscription_content'][$i]['detail_voucher']   = $voucher;
         $i++;
+        $content_key = $this->replaceText($subs['subscription']);
         foreach ($subs['subscription']['subscription_content'] as $keyContent => $valueContent) {
             if (!empty($valueContent['subscription_content_details'])) {
                 $result['subscription_content'][$i]['title'] = $valueContent['title'];
                 foreach ($valueContent['subscription_content_details'] as $key => $value) {
-                    $result['subscription_content'][$i]['detail'][$key] = $value['content'];
+                	$content = MyHelper::simpleReplace($value['content'],$content_key);
+                    $result['subscription_content'][$i]['detail'][$key] = $content;
                     // $content[$key] = '<li>'.$value['content'].'</li>';
                 }
                 // $result['deals_content'][$keyContent]['detail'] = '<ul style="color:#707070;">'.implode('', $content).'</ul>';
@@ -368,6 +394,23 @@ class ApiSubscriptionWebview extends Controller
         }
 
         return $subs;
+    }
+
+
+    function replaceText($subs)
+    {
+    	$text = [
+    		'title' => $subs['subscription_title']??null,
+    		'price' => $subs['subscription_price_pretty']??null,
+    		'brand' => $subs['brand']['name_brand']??null,
+    		'benefit' => $subs['subscription_voucher_benefit_pretty']??null,
+    		'max_benefit' => $subs['subscription_voucher_max_benefit_pretty']??null,
+    		'min_transaction' => $subs['subscription_minimal_transaction_pretty']??null,
+    		'voucher_expired' => !empty($subs['subscription_voucher_expired']) ? MyHelper::dateFormatInd($subs['subscription_voucher_expired'], false, false).' pukul '.date('H:i', strtotime($subs['subscription_voucher_expired'])) : null,
+    		'daily_usage_limit' => $subs['daily_usage_limit']??null
+    	];
+
+    	return $text;
     }
     
 }

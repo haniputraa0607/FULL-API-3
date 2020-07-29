@@ -52,7 +52,11 @@ class ExportJob implements ShouldQueue
                 $fileName = 'Report_'.str_replace(" ","", $val['report_payment']).'_'.$filter['type'];
             }elseif ($val['report_type'] == 'Transaction'){
                 $generateExcel = app($this->trx)->exportTransaction($filter);
-                $fileName = 'Report_'.str_replace(" ","", $val['report_payment']);
+                if(isset($filter['detail'])){
+                    $fileName = 'Report_Detail_'.str_replace(" ","", $val['report_payment']);
+                }else{
+                    $fileName = 'Report_'.str_replace(" ","", $val['report_payment']);
+                }
             }
 
             if($generateExcel){

@@ -347,6 +347,7 @@ class ApiIrisController extends Controller
 
         $data = Transaction::where('id_transaction', $id_transaction)
             ->join('outlets', 'outlets.id_outlet', 'transactions.id_outlet')
+            ->with(['transaction_multiple_payment', 'vouchers', 'promo_campaign', 'transaction_payment_subscription'])
             ->first();
         $subTotal = $data['transaction_subtotal'];
         $grandTotal = $data['transaction_grandtotal'];
@@ -378,11 +379,7 @@ class ApiIrisController extends Controller
 
                 if(strtolower($payments['type']) == 'midtrans'){
                     $midtrans = TransactionPaymentMidtran::where('id_transaction', $data['id_transaction'])->first();
-                    if(!is_null($midtrans['payment_type'])){
-                        $payment = $midtrans['payment_type'];
-                    }else{
-                        $payment = $midtrans['payment_type'];
-                    }
+                    $payment = $midtrans['payment_type'];
                     $amountMDR = $midtrans['gross_amount'];
                     $keyMidtrans = array_search(strtoupper($payment), array_column($settingMDRAll, 'payment_name'));
                     if($keyMidtrans !== false){
