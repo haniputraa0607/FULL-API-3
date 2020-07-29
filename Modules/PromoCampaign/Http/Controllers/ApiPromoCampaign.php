@@ -676,10 +676,13 @@ class ApiPromoCampaign extends Controller
     public function step1(Step1PromoCampaignRequest $request)
     {
         $post = $request->json()->all();
+
+        if (isset($post['used_code_update'])) {
+        	return $this->usedCodeUpdate($request, 'step1');
+        }
+
         $user = $request->user();
-
         $post['prefix_code'] = strtoupper($post['prefix_code']);
-
         $post['date_start'] = $this->generateDate($post['date_start']);
         $post['date_end']   = $this->generateDate($post['date_end']);
 
@@ -944,6 +947,10 @@ class ApiPromoCampaign extends Controller
     {
         $post = $request->json()->all();
         $user = $request->user();
+        if (isset($post['used_code_update'])) {
+        	return $this->usedCodeUpdate($request, 'step2');
+        }
+
         if (!empty($post['id_deals'])) {
         	$source = 'deals';
         	$table = new Deal;
@@ -1034,9 +1041,71 @@ class ApiPromoCampaign extends Controller
         	$createFilterProduct = $this->deleteAllProductRule($source, $id_post);
         }
 
-// return $createFilterProduct;
         DB::commit();
         return response()->json($createFilterProduct);
+    }
+
+    public function usedCodeUpdate($request, $step)
+    {
+    	DB::beginTransaction();
+    	switch ($step) {
+    		case 'step1':
+    			$data = [
+    				'last_updated_by' 	=> $request->user()->id,
+    				'campaign_name' 	=> $request->campaign_name,
+    				'promo_title' 		=> $request->promo_title,
+    				'date_end' 			=> $this->generateDate($request->date_end)
+    			];
+
+    			$update = PromoCampaign::where('id_promo_campaign', $request->id_promo_campaign)->update($data);
+
+    			if ($update) {
+	    			if (isset($request->promo_tag)) {
+	                    $update = $this->insertTag('update', $request->id_promo_campaign, $request->promo_tag);
+	                }
+	                else{
+	                	$update = PromoCampaignHaveTag::where('id_promo_campaign', '=', $request->id_promo_campaign)->delete();
+	                }
+    			}
+
+    			break;
+    		
+    		case 'step2':
+    			$data =[
+    				'last_updated_by' 	=> $request->user()->id,
+    				'user_type' 		=> $request->filter_user,
+    				'specific_user' 	=> $request->specific_user
+    			];
+
+    			$update = PromoCampaign::where('id_promo_campaign', $request->id_promo_campaign)->update($data);
+
+    			if ($update) {
+	    			if ($request->filter_outlet == 'All Outlet') {
+			            $update = $this->createOutletFilter('all_outlet', 1, $request->id_promo_campaign, null);
+			        } 
+			        elseif ($request->filter_outlet == 'Selected') {
+			            $update = $this->createOutletFilter('selected', 0, $request->id_promo_campaign, $request->multiple_outlet);
+			        } 
+			        else {
+			            $update = false;
+			        }
+    			}
+
+    			break;
+
+    		default:
+    			$update = false;
+    			break;
+    	}
+
+    	if ($update) {
+    		DB::commit();
+    	}
+    	else{
+    		DB::rollBack();
+    	}
+
+    	return MyHelper::checkUpdate($update);
     }
 
     function createOutletFilter($parameter, $operator, $id_promo_campaign, $outlet)
@@ -1389,6 +1458,9 @@ class ApiPromoCampaign extends Controller
 
     function generateDate($date)
     {
+    	if (!isset($date)) {
+    		return null;
+    	}
         $datetimearr    = explode(' - ', $date);
 
         $datearr        = explode(' ', $datetimearr[0]);
@@ -1542,12 +1614,15 @@ class ApiPromoCampaign extends Controller
         $user = $request->user();
 
         $promoCampaign = PromoCampaign::with([
-                            'promo_campaign_have_tags.promo_campaign_tag'
+                            'promo_campaign_have_tags.promo_campaign_tag',
+                            'promo_campaign_reports' => function($q) {
+                            	$q->first();
+                            }
                         ])
                         ->where('id_promo_campaign', '=', $post['id_promo_campaign'])->first();
 
         if (!empty($promoCampaign) && $promoCampaign['code_type'] == 'Single') {
-            $promoCampaign = $promoCampaign->with('promo_campaign_promo_codes', 'promo_campaign_have_tags.promo_campaign_tag')->where('id_promo_campaign', '=', $post['id_promo_campaign'])->first();
+            $promoCampaign = $promoCampaign->load(['promo_campaign_promo_codes' => function($q){ $q->first(); }]);
         }
         
         if (isset($promoCampaign)) {
@@ -1587,7 +1662,9 @@ class ApiPromoCampaign extends Controller
                             'promo_campaign_buyxgety_rules',
                             'outlets',
                             'brand',
-                            'promo_campaign_reports'
+                            'promo_campaign_reports' => function($q) {
+                            	$q->first();
+                            }
                         ])
                         ->where('id_promo_campaign', '=', $post['id_promo_campaign'])
                         ->first();

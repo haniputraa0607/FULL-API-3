@@ -131,6 +131,14 @@ class ApiOnlineTransaction extends Controller
             $outlet = optional();
         }
 
+        if($post['type'] != 'Pickup Order' && !$outlet->delivery_order) {
+            DB::rollback();
+            return response()->json([
+                'status'    => 'fail',
+                'messages'  => ['Maaf, Outlet ini tidak support untuk delivery order']
+                ]);
+        }
+
         $issetDate = false;
         if (isset($post['transaction_date'])) {
             $issetDate = true;
@@ -786,7 +794,7 @@ class ApiOnlineTransaction extends Controller
         // add payment subscription
         if ( $request->json('id_subscription_user') )
         {
-        	$subscription_total = app($this->subscription_use)->calculate($request->id_subscription_user, $insertTransaction['transaction_grandtotal'], $insertTransaction['transaction_subtotal'], $post['item'], $post['id_outlet'], $subs_error, $errorProduct, $subs_product, $subs_applied_product);
+        	$subscription_total = app($this->subscription_use)->calculate($request->id_subscription_user, $insertTransaction['transaction_subtotal'], $insertTransaction['transaction_subtotal'], $post['item'], $post['id_outlet'], $subs_error, $errorProduct, $subs_product, $subs_applied_product);
 
 	        if (!empty($subs_error)) {
 	        	DB::rollback();
@@ -1745,6 +1753,10 @@ class ApiOnlineTransaction extends Controller
 
         $error_msg=[];
 
+        if($post['type'] != 'Pickup Order' && !$outlet->delivery_order) {
+            $error_msg[] = 'Maaf, Outlet ini tidak support untuk delivery order';
+        }
+
         if(($post['type']??null) == 'GO-SEND'){
             if(!($outlet['outlet_latitude']&&$outlet['outlet_longitude']&&$outlet['outlet_phone']&&$outlet['outlet_address'])){
                 app($this->outlet)->sendNotifIncompleteOutlet($outlet['id_outlet']);
@@ -2139,6 +2151,7 @@ class ApiOnlineTransaction extends Controller
             'outlet_code' => $outlet['outlet_code'],
             'outlet_name' => $outlet['outlet_name'],
             'outlet_address' => $outlet['outlet_address'],
+            'delivery_order' => $outlet['delivery_order'],
             'today' => $outlet['today']
         ];
         $result['item'] = array_values($tree);
@@ -2157,7 +2170,7 @@ class ApiOnlineTransaction extends Controller
         if ($request->id_subscription_user && !$request->promo_code && !$request->id_deals_user)
         {
         	$promo_source = 'subscription';
-	        $result['subscription'] = app($this->subscription_use)->calculate($request->id_subscription_user, $result['grandtotal'], $result['subtotal'], $post['item'], $post['id_outlet'], $subs_error, $errorProduct, $subs_product, $subs_applied_product);
+	        $result['subscription'] = app($this->subscription_use)->calculate($request->id_subscription_user, $result['subtotal'], $result['subtotal'], $post['item'], $post['id_outlet'], $subs_error, $errorProduct, $subs_product, $subs_applied_product);
 	        if (!empty($subs_error)) {
 	        	$error = $subs_error;
 	        	$promo_error = app($this->promo_campaign)->promoError('transaction', $error, null, $errorProduct);

@@ -1754,7 +1754,10 @@ class ApiSubscription extends Controller
             }])
             ->withCount(['subscription_user_vouchers as available_voucher' => function($q){
                 $q->whereNull('used_at');
-            }]);
+            }])
+            ->whereHas('subscription_user_vouchers', function($q){
+                $q->whereNull('used_at');
+            });
 
         //search by outlet
         if(isset($post['id_outlet']) && is_numeric($post['id_outlet'])){
@@ -2053,5 +2056,45 @@ class ApiSubscription extends Controller
     	}
 
     	return true;
+    }
+
+    function textReplace(Request $request)
+    {
+		$text_replace = [];
+		$data_subs = Subscription::where('id_subscription', $request->id_subscription)
+					->with('brand','products')
+					->first()
+					->append(
+						'subscription_voucher_benefit_pretty',
+						'subscription_voucher_max_benefit_pretty',
+						'subscription_minimal_transaction_pretty'
+					);
+
+		if ($data_subs->subscription_title) {
+			$text_replace[] = ['keyword' => '%title%', 'reference' => 'subscription_title'];
+		}
+		if ($data_subs->subscription_price_pretty) {
+			$text_replace[] = ['keyword' => '%price%', 'reference' => 'subscription_price_pretty'];
+		}
+		if ($data_subs->brand->name_brand) {
+			$text_replace[] = ['keyword' => '%brand%', 'reference' => 'name_brand'];
+		}
+		if ($data_subs->subscription_voucher_benefit_pretty) {
+			$text_replace[] = ['keyword' => '%benefit%', 'reference' => 'subscription_voucher_benefit_pretty'];
+		}
+		if ($data_subs->subscription_voucher_max_benefit_pretty) {
+			$text_replace[] = ['keyword' => '%max_benefit%', 'reference' => 'subscription_voucher_max_benefit_pretty'];
+		}
+		if ($data_subs->subscription_minimal_transaction) {
+			$text_replace[] = ['keyword' => '%min_transaction%', 'reference' => 'subscription_minimal_transaction_pretty'];
+		}
+		if ($data_subs->subscription_voucher_expired) {
+			$text_replace[] = ['keyword' => '%voucher_expired%', 'reference' => 'subscription_voucher_expired'];
+		}
+		if ($data_subs->daily_usage_limit) {
+			$text_replace[] = ['keyword' => '%daily_usage_limit%', 'reference' => 'daily_usage_limit'];
+		}		
+		
+		return MyHelper::checkGet($text_replace);
     }
 }

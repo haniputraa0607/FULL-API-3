@@ -40,6 +40,7 @@ use Modules\IPay88\Entities\TransactionPaymentIpay88;
 use Modules\OutletApp\Jobs\AchievementCheck;
 use Modules\SettingFraud\Entities\FraudDetectionLogTransactionDay;
 use Modules\SettingFraud\Entities\FraudDetectionLogTransactionWeek;
+use App\Jobs\DisburseJob;
 
 class ApiCronTrxController extends Controller
 {
@@ -55,6 +56,7 @@ class ApiCronTrxController extends Controller
         $this->getNotif = "Modules\Transaction\Http\Controllers\ApiNotification";
         $this->trx    = "Modules\Transaction\Http\Controllers\ApiOnlineTransaction";
         $this->membership       = "Modules\Membership\Http\Controllers\ApiMembership";
+        $this->subscription  = "Modules\Subscription\Http\Controllers\ApiSubscriptionVoucher";
     }
 
     public function cron(Request $request)
@@ -147,6 +149,9 @@ class ApiCronTrxController extends Controller
 
                 // return voucher
                 $update_voucher = app($this->voucher)->returnVoucher($singleTrx->id_transaction);
+
+                // return subscription
+                $update_subscription = app($this->subscription)->returnSubscription($singleTrx->id_transaction);
 
                 if (!$update_voucher) {
                 	DB::rollback();
@@ -418,7 +423,8 @@ class ApiCronTrxController extends Controller
                                         ->update(['taken_by_system_at' => date('Y-m-d 00:00:00')]);
 
             AchievementCheck::dispatch(['id_transaction' => $idTrx])->onConnection('achievement');
-            
+            DisburseJob::dispatch(['id_transaction' => $idTrx])->onConnection('disbursequeue');
+
             $log->success('success');
             return response()->json(['status' => 'success']);
         } catch (\Exception $e) {
@@ -665,6 +671,9 @@ class ApiCronTrxController extends Controller
                 }
                 // return voucher
                 $update_voucher = app($this->voucher)->returnVoucher($order->id_transaction);
+
+                // return subscription
+                $update_subscription = app($this->subscription)->returnSubscription($order->id_transaction);
 
                 //reject order
                 $pickup = TransactionPickup::where('id_transaction', $order->id_transaction)->update([

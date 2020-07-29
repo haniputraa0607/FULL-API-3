@@ -36,6 +36,7 @@ class IPay88
         $this->trx = "Modules\Transaction\Http\Controllers\ApiOnlineTransaction";
         $this->setting_fraud = "Modules\SettingFraud\Http\Controllers\ApiFraud";
         $this->deals_claim   = "Modules\Deals\Http\Controllers\ApiDealsClaim";
+        $this->subscription  = "Modules\Subscription\Http\Controllers\ApiSubscriptionVoucher";
 
 		$this->posting_url = ENV('IPAY88_POSTING_URL');
 		$this->requery_url = ENV('IPAY88_REQUERY_URL');
@@ -391,6 +392,9 @@ class IPay88
 
 			            // return voucher
 			            $update_voucher = app($this->voucher)->returnVoucher($trx->id_transaction);
+
+			            // return subscription
+			            $update_subscription = app($this->subscription)->returnSubscription($trx->id_transaction);
 
 	                    if(!$update){
 		                    DB::rollBack();

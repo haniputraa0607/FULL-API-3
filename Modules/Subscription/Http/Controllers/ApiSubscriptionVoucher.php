@@ -15,6 +15,7 @@ use Modules\Subscription\Entities\FeaturedSubscription;
 use Modules\Subscription\Entities\SubscriptionOutlet;
 use Modules\Subscription\Entities\SubscriptionUser;
 use Modules\Subscription\Entities\SubscriptionUserVoucher;
+use Modules\Subscription\Entities\TransactionPaymentSubscription;
 use App\Http\Models\Outlet;
 use App\Http\Models\Setting;
 
@@ -122,5 +123,23 @@ class ApiSubscriptionVoucher extends Controller
         $updateSubs = SubscriptionUser::where('id_subscription_user', '=', $id_subscription_user)->update(['subscription_user_receipt_number' => $subs_receipt]);
 
         return $updateSubs;
+    }
+
+    /**
+     * Return voucher for failed or rejected order
+     * @param  integer $id_transaction Transaction id from id_transaction column
+     * @return boolean        true/false
+     */
+    public function returnSubscription($id_transaction)
+    {
+        /**
+         * TransactionPaymentSubscription -> ini konsepnya sama kayak promo campaign report jadi dihapus
+         * SubscriptionUserVoucher -> ini kolom used_at sama id_trx jadiin kosong
+         */
+        TransactionPaymentSubscription::where('id_transaction',$id_transaction)->delete();
+        SubscriptionUserVoucher::where('id_transaction',$id_transaction)->update([
+            'used_at' => null,
+            'id_transaction' => null
+        ]);
     }
 }

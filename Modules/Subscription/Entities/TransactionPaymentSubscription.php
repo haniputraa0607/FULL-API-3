@@ -37,7 +37,8 @@ class TransactionPaymentSubscription extends Eloquent
 	protected $fillable = [
 		'id_transaction',
 		'id_subscription_user_voucher',
-		'subscription_nominal'
+		'subscription_nominal',
+		'status'
 	];
 
 	public function subscription_user_voucher()

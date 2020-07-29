@@ -99,6 +99,7 @@ class ApiMembershipWebview extends Controller
 		if(count($allMembership) > 0){
 			if($result['user_membership']){
 				$result['user_membership']['membership_image'] = config('url.storage_url_api') . $result['user_membership']['membership_image'];
+				$result['user_membership']['membership_card'] = config('url.storage_url_api') . $result['user_membership']['membership_card'];
 				foreach($allMembership as $index => $dataMembership){
 					$allMembership[$index]['benefit_text']=json_decode($dataMembership['benefit_text'],true)[0]??"";
 					switch ($dataMembership['membership_type']) {
@@ -168,6 +169,7 @@ class ApiMembershipWebview extends Controller
 					unset($allMembership[$index]['updated_at']);
 					
 					$allMembership[$index]['membership_image'] = config('url.storage_url_api').$allMembership[$index]['membership_image'];
+					$allMembership[$index]['membership_card'] = config('url.storage_url_api').$allMembership[$index]['membership_card'];
 					// $allMembership[$index]['membership_bg_image'] = config('url.storage_url_api').$allMembership[$index]['membership_bg_image'];
 					$allMembership[$index]['membership_next_image'] = $allMembership[$index]['membership_next_image']?config('url.storage_url_api').$allMembership[$index]['membership_next_image']:null;
 					$allMembership[$index]['benefit_cashback_multiplier'] = $allMembership[$index]['benefit_cashback_multiplier'] * $settingCashback->value;
@@ -186,6 +188,7 @@ class ApiMembershipWebview extends Controller
 				}
 				foreach($allMembership as $j => $dataMember){
 					$allMembership[$j]['membership_image'] = config('url.storage_url_api').$allMembership[$j]['membership_image'];
+					$allMembership[$j]['membership_card'] = config('url.storage_url_api').$allMembership[$j]['membership_card'];
 					$allMembership[$j]['benefit_cashback_multiplier'] = $allMembership[$j]['benefit_cashback_multiplier'] * $settingCashback->value;
 				}
 			}

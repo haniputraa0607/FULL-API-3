@@ -67,6 +67,7 @@ class ApiNotification extends Controller {
         $this->oauth_secret  = env('OUTLET_OAUTH_SECRET');
         $this->voucher  = "Modules\Deals\Http\Controllers\ApiDealsVoucher";
         $this->promo_campaign	= "Modules\PromoCampaign\Http\Controllers\ApiPromoCampaign";
+        $this->subscription  = "Modules\Subscription\Http\Controllers\ApiSubscriptionVoucher";
     }
 
     /* RECEIVE NOTIFICATION */
@@ -916,6 +917,10 @@ Detail: ".$link['short'],
             if (!$update_voucher) {
             	return false;
             }
+
+            // return subscription
+            $update_subscription = app($this->subscription)->returnSubscription($trx->id_transaction);
+
         }
 
         return true;
