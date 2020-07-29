@@ -1777,8 +1777,10 @@ class ApiOutletController extends Controller
                             WHEN status_franchise = 1 THEN "Franchise"
                             ELSE "Not Franchise"
                         END) as "status_franchise"'),
-                'outlets.deep_link_gojek as deep_link_gojek',
-                'outlets.deep_link_grab as deep_link_grab'
+                DB::raw('(CASE
+                            WHEN delivery_order = 1 THEN "Active"
+                            ELSE "Inactive"
+                        END) as "delivery"')
             )->with('brands')->join('cities', 'outlets.id_city', '=', 'cities.id_city');
 
             foreach ($brand as $bran) {
@@ -1894,6 +1896,7 @@ class ApiOutletController extends Controller
                             'outlet_latitude' => $value['latitude']??'',
                             'outlet_longitude' => $value['longitude']??'',
                             'status_franchise' => ($value['status_franchise'] == 'Franchise' ? 1 : 0),
+                            'delivery_order' => ($value['delivery'] == 'Active' ? 1 : 0),
                             'deep_link_gojek' => $value['deep_link_gojek']??'',
                             'deep_link_grab' => $value['deep_link_grab']??'',
                             'id_city' => $id_city[$search]??null
@@ -1903,12 +1906,6 @@ class ApiOutletController extends Controller
 
                             if(empty($save)){
                                 DB::rollBack();
-                                return response()->json([
-                                    'status'    => 'fail',
-                                    'messages'      => [
-                                        'Data city not found.'
-                                    ]
-                                ]);
                             } else {
                                 $outlet = Outlet::where('id_outlet', $save['id_outlet'])->first();
                                 if (empty($outlet->outlet_pin)) {
@@ -1940,18 +1937,21 @@ class ApiOutletController extends Controller
                                 $countImport++;
                             }
                         }else{
-                            $failedImport[] = $value['code'];
+                            $failedImport[] = $value['code'].': Outlet Code Not Found';
                         }
                     }else{
-                        $failedImport[] = $value['code'];
+                        $failedImport[] = $value['code'].': City '.$value['city'].' not found';
                     }
                 }
             }
             MyHelper::updateOutletFile($data_pin);
             DB::commit();
 
-            if($save??false) return ['status' => 'success', 'message' => $countImport.' data successfully imported. Failed save outlet : '.implode(", ",$failedImport)];
-            else return ['status' => 'fail','messages' => ['failed to update data' , 'Failed save outlet : '.implode(", ",$failedImport)]];
+            if(count($failedImport) > 0){
+                return ['status' => 'fail','messages' => [$failedImport]];
+            }else{
+                return ['status' => 'success', 'message' => $countImport.' data successfully imported'];
+            }
         }else{
             return response()->json([
                 'status'    => 'fail',
