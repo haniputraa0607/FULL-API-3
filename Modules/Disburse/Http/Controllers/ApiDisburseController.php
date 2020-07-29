@@ -363,9 +363,9 @@ class ApiDisburseController extends Controller
         }
 
         if(isset($post['export']) && $post['export'] == 1){
-            $data = $data->selectRaw('DATE_FORMAT(disburse.created_at, "%d %M %Y %H:%i") as "Date", CONCAT(outlets.outlet_code, " - ", outlets.outlet_name) as "Outlet", FORMAT(disburse_outlet.disburse_nominal, 2) as "Nominal",
-                FORMAT(total_fee_item, 2) as "Total Fee Item", FORMAT(total_omset, 2) as "Total Grand Total", FORMAT(total_discount, 2) as "Total Discount Charge", FORMAT(total_delivery_price, 2) as "Total Delivery", FORMAT(total_payment_charge, 2) as "Total Payment Charge",
-                FORMAT(total_point_use_expense, 2) as "Total Point Use Charge", FORMAT(total_subscription, 2) as "Total Subscription Charge",
+            $data = $data->selectRaw('DATE_FORMAT(disburse.created_at, "%d %M %Y %H:%i") as "Date", CONCAT(outlets.outlet_code, " - ", outlets.outlet_name) as "Outlet", disburse_outlet.disburse_nominal as "Nominal",
+                total_fee_item as "Total Fee Item", total_omset as "Total Grand Total", total_discount as "Total Discount Charge", total_payment_charge as "Total Payment Charge",
+                total_point_use_expense as "Total Point Use Charge", total_subscription as "Total Subscription Charge", total_delivery_price as "Total Delivery",
                 bank_name.bank_name as "Bank Name", CONCAT(" ",disburse.beneficiary_account_number) as "Account Number", disburse.beneficiary_name as "Recipient Name "')
                 ->get()->toArray();
 

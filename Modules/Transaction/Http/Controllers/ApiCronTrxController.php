@@ -40,6 +40,7 @@ use Modules\IPay88\Entities\TransactionPaymentIpay88;
 use Modules\OutletApp\Jobs\AchievementCheck;
 use Modules\SettingFraud\Entities\FraudDetectionLogTransactionDay;
 use Modules\SettingFraud\Entities\FraudDetectionLogTransactionWeek;
+use App\Jobs\DisburseJob;
 
 class ApiCronTrxController extends Controller
 {
