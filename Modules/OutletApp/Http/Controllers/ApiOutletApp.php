@@ -2432,6 +2432,13 @@ class ApiOutletApp extends Controller
                 'pickup_date'     => date('d F Y', strtotime($list['detail']['pickup_at'])),
                 'pickup_time'     => ($list['detail']['pickup_type'] == 'right now') ? 'RIGHT NOW' : date('H : i', strtotime($list['detail']['pickup_at'])),
             ];
+
+        	if (empty($list['detail']['pickup_at'])) {
+        		$proc_time = Setting::where('key', 'processing_time')->first();
+        		$pickup_at = date('H:i', strtotime('+'.$proc_time->value.' minutes', strtotime($list['transaction_date'])));
+        	}
+        	$result['detail']['pickup_at'] = !empty($list['detail']['pickup_at']) ? date('H:i', strtotime($list['detail']['pickup_at'])) : $pickup_at;
+
             if (isset($list['transaction_payment_status']) && $list['transaction_payment_status'] == 'Cancelled') {
                 $result['transaction_status']      = 0;
                 $result['transaction_status_text'] = 'ORDER ANDA DIBATALKAN';
