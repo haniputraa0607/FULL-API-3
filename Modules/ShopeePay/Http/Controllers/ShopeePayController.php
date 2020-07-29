@@ -245,23 +245,29 @@ class ShopeePayController extends Controller
      */
     public function cronCancel()
     {
-        $now     = date('Y-m-d H:i:s');
-        $expired = date('Y-m-d H:i:s', time() - $this->validity_period);
+        $log = MyHelper::logCron('Cancel Transaction Shopeepay');
+        try {
+            $now     = date('Y-m-d H:i:s');
+            $expired = date('Y-m-d H:i:s', time() - $this->validity_period);
+            $limit_check = $this->limit_check ?: 60;
+            $check_success = $this->validity_period > $limit_check ? date('Y-m-d H:i:s', time() - $limit_check) : $expired;
 
-        $getTrx = Transaction::where('transaction_payment_status', 'Pending')
-            ->join('transaction_payment_shopee_pays', 'transactions.id_transaction', '=', 'transaction_payment_shopee_pays.id_transaction')
-            ->where('transaction_date', '<=', $expired)
-            ->whereIn('trasaction_payment_type', ['Shopeepay', 'Balance'])
-            ->get();
+            // ambil semua transaksi yang perlu di cek
+            $getTrx = Transaction::where('transaction_payment_status', 'Pending')
+                ->join('transaction_payment_shopee_pays', 'transactions.id_transaction', '=', 'transaction_payment_shopee_pays.id_transaction')
+                // ->where('transaction_date', '<=', $expired)
+                ->where('transaction_date', '<=', $check_success)
+                ->whereIn('trasaction_payment_type', ['Shopeepay', 'Balance'])
+                ->get();
 
-        $count = 0;
-        foreach ($getTrx as $key => $singleTrx) {
-            $singleTrx->load('outlet_name');
+            $count = 0;
+            foreach ($getTrx as $key => $singleTrx) {
+                $singleTrx->load('outlet_name');
 
-            $productTrx = TransactionProduct::where('id_transaction', $singleTrx->id_transaction)->get();
-            if (empty($productTrx)) {
-                continue;
-            }
+                $productTrx = TransactionProduct::where('id_transaction', $singleTrx->id_transaction)->get();
+                if (empty($productTrx)) {
+                    continue;
+                }
 
             $user = User::where('id', $singleTrx->id_user)->first();
             if (empty($user)) {
@@ -304,9 +310,14 @@ class ShopeePayController extends Controller
                         $checkFraud = app($this->setting_fraud)->checkFraudTrxOnline($userData, $singleTrx);
                     }
                 }
-                DB::commit();
-                $singleTrx->load('outlet');
-                $singleTrx->load('productTransaction');
+
+                // hanya cancel yang sudah expired
+                if ($singleTrx['transaction_date'] > $expired) {
+                    continue;
+                }
+
+                cancel:
+                MyHelper::updateFlagTransactionOnline($singleTrx, 'cancel', $user);
 
                 $mid = [
                     'order_id'     => $singleTrx['transaction_receipt_number'],
@@ -376,13 +387,20 @@ class ShopeePayController extends Controller
      */
     public function cronCancelDeals()
     {
-        $now     = date('Y-m-d H:i:s');
-        $expired = date('Y-m-d H:i:s', time() - $this->validity_period);
+        $log = MyHelper::logCron('Cancel Deals Shopeepay');
+        try {
+            $now     = date('Y-m-d H:i:s');
+            $expired = date('Y-m-d H:i:s', time() - $this->validity_period);
+            $limit_check = $this->limit_check ?: 60;
+            $check_success = $this->validity_period > $limit_check ? date('Y-m-d H:i:s', time() - $limit_check) : $expired;
 
-        $getTrx = DealsUser::where('paid_status', 'Pending')
-            ->join('deals_payment_shopee_pays', 'deals_users.id_deals_user', '=', 'deals_payment_shopee_pays.id_deals_user')
-            ->where('payment_method', 'Shopeepay')
-            ->where('claimed_at', '<=', $expired)->get();
+            // ambil semua transaksi yang perlu di cek
+            $getTrx = DealsUser::where('paid_status', 'Pending')
+                ->join('deals_payment_shopee_pays', 'deals_users.id_deals_user', '=', 'deals_payment_shopee_pays.id_deals_user')
+                ->where('payment_method', 'Shopeepay')
+                // ->where('claimed_at', '<=', $expired)
+                ->where('claimed_at', '<=', $check_success)
+                ->get();
 
         if (empty($getTrx)) {
             return response()->json(['empty']);
@@ -419,28 +437,15 @@ class ShopeePayController extends Controller
                     DB::commit();
                     goto cancel;
                 }
-                $update = DealsUser::where('id_deals_user', $singleTrx->id_deals_user)->update(['paid_status' => 'Completed']);
-                DB::commit();
-                continue;
-                // void transaction
-                // $void_reference_id = null;
-                // $void              = $this->void($singleTrx->id_deals_user, 'deals', $errors, $void_reference_id);
-                // if (!$void) {
-                //     \Log::error('Failed void deals ' . $singleTrx->id_deals_user . ': ', $errors);
-                //     continue;
-                // }
-                // if (($void['response']['errcode'] ?? 123) == 0) {
-                //     $up = DealsPaymentShopeePay::where('id_deals_user', $singleTrx->id_deals_user)->update(['void_reference_id' => $void_reference_id]);
-                // }
-            }
-            cancel:
-            $singleTrx->paid_status = 'Cancelled';
-            $singleTrx->save();
 
-            if (!$singleTrx) {
-                DB::rollBack();
-                continue;
-            }
+                // hanya cancel yang sudah expired
+                if ($singleTrx['claimed_at'] > $expired) {
+                    continue;
+                }
+
+                cancel:
+                $singleTrx->paid_status = 'Cancelled';
+                $singleTrx->save();
 
             // revert back deals data
             $deals = Deal::where('id_deals', $singleTrx->id_deals)->first();
