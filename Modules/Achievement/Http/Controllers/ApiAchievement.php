@@ -709,7 +709,7 @@ class ApiAchievement extends Controller
                             $sumTrx = $sumTrx->join('transaction_products', 'transactions.id_transaction', 'transaction_products.id_transaction')
                             ->where('transaction_products.id_product', $achievement['id_product']);
                             if (!is_null($achievement['product_total'])) {
-                                $sumTrx = $sumTrx->where('transaction_products.transaction_product_qty', $achievement['product_total']);
+                                $sumTrx = $sumTrx->where('transaction_products.transaction_product_qty','>=', $achievement['product_total']);
                             }
                             $sumTrx = $sumTrx->groupBy('transaction_products.id_product');
                         }
@@ -787,7 +787,7 @@ class ApiAchievement extends Controller
                             $countTrx = $countTrx->join('transaction_products', 'transactions.id_transaction', 'transaction_products.id_transaction')
                             ->where('transaction_products.id_product', $achievement['id_product']);
                             if (!is_null($achievement['product_total'])) {
-                                $countTrx = $countTrx->where('transaction_products.transaction_product_qty', $achievement['product_total']);
+                                $countTrx = $countTrx->where('transaction_products.transaction_product_qty','>=', $achievement['product_total']);
                             }
                         }
                         if (!is_null($achievement['id_outlet'])) {
@@ -944,7 +944,7 @@ class ApiAchievement extends Controller
                             $countOutlet = $countOutlet->join('transaction_products', 'transactions.id_transaction', 'transaction_products.id_transaction')
                             ->where('transaction_products.id_product', $achievement['id_product']);
                             if (!is_null($achievement['product_total'])) {
-                                $countOutlet = $countOutlet->where('transaction_products.transaction_product_qty', $achievement['product_total']);
+                                $countOutlet = $countOutlet->where('transaction_products.transaction_product_qty', '>=', $achievement['product_total']);
                             }
                         }
 
@@ -1018,7 +1018,7 @@ class ApiAchievement extends Controller
                             $countProvince = $countProvince->join('transaction_products', 'transactions.id_transaction', 'transaction_products.id_transaction')
                             ->where('transaction_products.id_product', $achievement['id_product']);
                             if (!is_null($achievement['product_total'])) {
-                                $countProvince = $countProvince->where('transaction_products.transaction_product_qty', $achievement['product_total']);
+                                $countProvince = $countProvince->where('transaction_products.transaction_product_qty','>=', $achievement['product_total']);
                             }
                         }
     
@@ -1400,7 +1400,7 @@ class ApiAchievement extends Controller
                         $catProgress = $catProgress + 1;
                     }
                     $catEndProgress = $catEndProgress + 1;
-                    
+
                     if ($achPercentProgress > 0) {
                         $totalProgress = $totalProgress + 1;
                     }
