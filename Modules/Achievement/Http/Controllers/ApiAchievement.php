@@ -722,13 +722,7 @@ class ApiAchievement extends Controller
                             ->where('cities.id_province', $achievement['id_province']);
                         }
 
-                        $sumTrx = $sumTrx->first();
-
-                        if ($sumTrx) {
-                            $sumTrx = $sumTrx->total;
-                        } else {
-                            $sumTrx = 0;
-                        }
+                        $sumTrx = $sumTrx->first()->total;
 
                         if ((int) $sumTrx >= (int) $achievement['trx_nominal']) {
                             AchievementProgress::updateOrCreate([
@@ -752,7 +746,7 @@ class ApiAchievement extends Controller
                             ->orderBy('achievement_details.id_achievement_detail', 'DESC')->first();
 
                             if ($ach_progress) {
-                                if ($ach_progress->total == 0) {
+                                if ((int) $ach_progress->total == 0) {
                                     AchievementProgress::updateOrCreate([
                                         'id_achievement_detail' => $achievement['id_achievement_detail'],
                                         'id_user' => $idUser,
@@ -798,14 +792,7 @@ class ApiAchievement extends Controller
                             ->join('cities', 'outlets.id_city', 'cities.id_city')
                             ->where('cities.id_province', $achievement['id_province']);
                         }
-                        
-                        $countTrx = $countTrx->first();
-
-                        if ($countTrx) {
-                            $countTrx = $countTrx->total;
-                        } else {
-                            $countTrx = 0;
-                        }
+                        $countTrx = $countTrx->first()->total;
     
                         if ((int) $countTrx >= (int) $achievement['trx_total']) {
                             AchievementProgress::updateOrCreate([
@@ -829,7 +816,7 @@ class ApiAchievement extends Controller
                             ->orderBy('achievement_details.id_achievement_detail', 'DESC')->first();
                             
                             if ($ach_progress) {
-                                if ($ach_progress->total <= 0) {
+                                if ((int) $ach_progress->total == 0) {
                                     AchievementProgress::updateOrCreate([
                                         'id_achievement_detail' => $achievement['id_achievement_detail'],
                                         'id_user' => $idUser,
@@ -873,14 +860,8 @@ class ApiAchievement extends Controller
                             $sumProd = $sumProd->where('transaction_products.id_product', $achievement['id_product'])
                             ->groupBy('transaction_products.id_product');
                         }
-    
-                        $sumProd = $sumProd->first();
 
-                        if ($sumProd) {
-                            $sumProd = $sumProd->total;
-                        } else {
-                            $sumProd = 0;
-                        }
+                        $sumProd = $sumProd->first()->total;
     
                         if ((int) $sumProd >= (int) $achievement['product_total']) {
                             AchievementProgress::updateOrCreate([
@@ -904,7 +885,7 @@ class ApiAchievement extends Controller
                             ->orderBy('achievement_details.id_achievement_detail', 'DESC')->first();
 
                             if ($ach_progress) {
-                                if ($ach_progress->total == 0) {
+                                if ((int) $ach_progress->total == 0) {
                                     AchievementProgress::updateOrCreate([
                                         'id_achievement_detail' => $achievement['id_achievement_detail'],
                                         'id_user' => $idUser,
@@ -948,14 +929,8 @@ class ApiAchievement extends Controller
                             }
                         }
 
-                        $countOutlet = $countOutlet->first();
-
-                        if ($countOutlet) {
-                            $countOutlet = $countOutlet->total;
-                        } else {
-                            $countOutlet = 0;
-                        }
-
+                        $countOutlet = $countOutlet->first()->total;
+                        
                         if ((int) $countOutlet >= (int) $achievement['trx_total']) {
                             AchievementProgress::updateOrCreate([
                                 'id_achievement_detail' => $achievement['id_achievement_detail'],
@@ -978,7 +953,7 @@ class ApiAchievement extends Controller
                             ->orderBy('achievement_details.id_achievement_detail', 'DESC')->first();
 
                             if ($ach_progress) {
-                                if ($ach_progress->total == 0) {
+                                if ((int) $ach_progress->total == 0) {
                                     AchievementProgress::updateOrCreate([
                                         'id_achievement_detail' => $achievement['id_achievement_detail'],
                                         'id_user' => $idUser,
@@ -1022,14 +997,8 @@ class ApiAchievement extends Controller
                             }
                         }
     
-                        $countProvince = $countProvince->first();
+                        $countProvince = $countProvince->first()->total;
     
-                        if ($countProvince) {
-                            $countProvince = $countProvince->total;
-                        } else {
-                            $countProvince = 0;
-                        }
-
                         if ((int) $countProvince >= (int) $achievement['trx_total']) {
                             AchievementProgress::updateOrCreate([
                                 'id_achievement_detail' => $achievement['id_achievement_detail'],
@@ -1052,7 +1021,7 @@ class ApiAchievement extends Controller
                             ->orderBy('achievement_details.id_achievement_detail', 'DESC')->first();
 
                             if ($ach_progress) {
-                                if ($ach_progress->total == 0) {
+                                if ((int) $ach_progress->total == 0) {
                                     AchievementProgress::updateOrCreate([
                                         'id_achievement_detail' => $achievement['id_achievement_detail'],
                                         'id_user' => $idUser,
@@ -1089,7 +1058,7 @@ class ApiAchievement extends Controller
                 ->orderBy('achievement_details.id_achievement_detail', 'DESC')->first();
 
                 if ($ach_progress) {
-                    if ($ach_progress->total == 0) {
+                    if ((int) $ach_progress->total == 0) {
                         AchievementUser::updateOrCreate([
                             'id_achievement_detail' => $achievement['id_achievement_detail'],
                             'id_user' => $idUser,

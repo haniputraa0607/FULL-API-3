@@ -127,8 +127,9 @@ class ApiSubscriptionWebview extends Controller
             }
         }
 
+        $i = !empty($keyContent) ? $keyContent+1 : $i;
         $result['subscription_content'][$i]['is_outlet']    = 1;
-        $result['subscription_content'][$i]['title']        = 'Berlaku di';
+        $result['subscription_content'][$i]['title']        = 'Tempat Penukaran';
 
         if ($subs['is_all_outlet'] == true) {
             $result['subscription_content'][$i]['detail'][] = 'Berlaku untuk semua outlet';
@@ -203,7 +204,10 @@ class ApiSubscriptionWebview extends Controller
 						'subscription.outlets.city', 
 						'subscription.brand', 
 						'subscription_user_vouchers', 
-						'subscription.subscription_content.subscription_content_details'
+						'subscription.subscription_content' => function($q){
+	        				$q->where('is_active',1);
+	        			},
+						'subscription.subscription_content.subscription_content_details',
 					])
         			->where('id_subscription_user', $request->id_subscription_user)
         			->first();
@@ -276,8 +280,9 @@ class ApiSubscriptionWebview extends Controller
             }
         }
 
+        $i = !empty($keyContent) ? $keyContent+1 : $i;
         $result['subscription_content'][$i]['is_outlet']    = 1;
-        $result['subscription_content'][$i]['title']        = 'Berlaku di';
+        $result['subscription_content'][$i]['title']        = 'Tempat Penukaran';
 
         if ($subs['subscription']['is_all_outlet'] == true) {
             $result['subscription_content'][$i]['detail'][] = 'Berlaku untuk semua outlet';
