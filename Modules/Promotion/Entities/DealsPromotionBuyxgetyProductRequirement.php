@@ -30,7 +30,7 @@ class DealsPromotionBuyxgetyProductRequirement extends Eloquent
 	protected $primaryKey = 'id_deals_buyxgety_product';
 
 	protected $appends  = [
-		'get_product'
+		// 'get_product'
 	];
 
 	protected $casts = [

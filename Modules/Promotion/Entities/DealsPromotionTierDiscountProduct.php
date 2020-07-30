@@ -30,7 +30,7 @@ class DealsPromotionTierDiscountProduct extends Eloquent
 	protected $primaryKey = 'id_deals_tier_discount_products';
 
 	protected $appends  = [
-		'get_product'
+		// 'get_product'
 	];
 	
 	protected $casts = [

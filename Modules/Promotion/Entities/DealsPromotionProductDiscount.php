@@ -30,7 +30,7 @@ class DealsPromotionProductDiscount extends Eloquent
 	protected $primaryKey = 'id_deals_product_discount';
 
 	protected $appends  = [
-		'get_product'
+		// 'get_product'
 	];
 	
 	protected $casts = [
