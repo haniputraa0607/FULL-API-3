@@ -731,7 +731,14 @@ class ApiOutletApp extends Controller
                     'messages' => ['Failed Send notification to customer'],
                 ]);
             }
-
+            $result = $this->bookGoSend($order);
+            if (($result['status']??false) != 'success') {
+                DB::rollback();
+                return response()->json([
+                    'status'   => 'fail',
+                    'messages' => $result['messages']??['Failed to order GO-SEND'],
+                ]);
+            }
             DB::commit();
         }
 
@@ -1274,10 +1281,22 @@ class ApiOutletApp extends Controller
         }
 
         if ($order->ready_at) {
-            return response()->json([
-                'status'   => 'fail',
-                'messages' => ['Order Has Been Ready'],
-            ]);
+            if ($order->picked_by == 'Customer') {
+                return response()->json([
+                    'status'   => 'fail',
+                    'messages' => ['Order Has Been Ready'],
+                ]);
+            } else {
+                $pickup_gosend = TransactionPickupGoSend::where('id_transaction_pickup', $order->id_transaction_pickup)->first();
+                if(!in_array($pickup_gosend['latest_status']??false, ['no_driver', 'rejected', 'cancelled'])) {
+                    return response()->json([
+                        'status'   => 'fail',
+                        'messages' => ['Order Has Been Ready'],
+                    ]);
+                } else {
+                    goto reject;
+                }
+            }
         }
 
         if ($order->taken_at) {
@@ -1287,6 +1306,7 @@ class ApiOutletApp extends Controller
             ]);
         }
 
+        reject:
         if ($order->reject_at) {
             return response()->json([
                 'status'   => 'fail',
