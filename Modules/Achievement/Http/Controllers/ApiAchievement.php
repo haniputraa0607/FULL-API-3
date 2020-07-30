@@ -722,7 +722,13 @@ class ApiAchievement extends Controller
                             ->where('cities.id_province', $achievement['id_province']);
                         }
 
-                        $sumTrx = $sumTrx->first()->total;
+                        $sumTrx = $sumTrx->first();
+
+                        if ($sumTrx) {
+                            $sumTrx = $sumTrx->total;
+                        } else {
+                            $sumTrx = 0;
+                        }
 
                         if ((int) $sumTrx >= (int) $achievement['trx_nominal']) {
                             AchievementProgress::updateOrCreate([
@@ -792,8 +798,15 @@ class ApiAchievement extends Controller
                             ->join('cities', 'outlets.id_city', 'cities.id_city')
                             ->where('cities.id_province', $achievement['id_province']);
                         }
-                        $countTrx = $countTrx->first()->total;
-    
+
+                        $countTrx = $countTrx->first();
+
+                        if ($countTrx) {
+                            $countTrx = $countTrx->total;
+                        } else {
+                            $countTrx = 0;
+                        }
+
                         if ((int) $countTrx >= (int) $achievement['trx_total']) {
                             AchievementProgress::updateOrCreate([
                                 'id_achievement_detail' => $achievement['id_achievement_detail'],
@@ -861,7 +874,13 @@ class ApiAchievement extends Controller
                             ->groupBy('transaction_products.id_product');
                         }
 
-                        $sumProd = $sumProd->first()->total;
+                        $sumProd = $sumProd->first();
+
+                        if ($sumProd) {
+                            $sumProd = $sumProd->total;
+                        } else {
+                            $sumProd = 0;
+                        }
     
                         if ((int) $sumProd >= (int) $achievement['product_total']) {
                             AchievementProgress::updateOrCreate([
@@ -929,8 +948,14 @@ class ApiAchievement extends Controller
                             }
                         }
 
-                        $countOutlet = $countOutlet->first()->total;
-                        
+                        $countOutlet = $countOutlet->first();
+
+                        if ($countOutlet) {
+                            $countOutlet = $countOutlet->total;
+                        } else {
+                            $countOutlet = 0;
+                        }
+    
                         if ((int) $countOutlet >= (int) $achievement['trx_total']) {
                             AchievementProgress::updateOrCreate([
                                 'id_achievement_detail' => $achievement['id_achievement_detail'],
@@ -997,7 +1022,13 @@ class ApiAchievement extends Controller
                             }
                         }
     
-                        $countProvince = $countProvince->first()->total;
+                        $countProvince = $countProvince->first();
+
+                        if ($countProvince) {
+                            $countProvince = $countProvince->total;
+                        } else {
+                            $countProvince = 0;
+                        }
     
                         if ((int) $countProvince >= (int) $achievement['trx_total']) {
                             AchievementProgress::updateOrCreate([
