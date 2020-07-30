@@ -956,15 +956,15 @@ class ApiAchievement extends Controller
                             $countOutlet = 0;
                         }
     
-                        if ((int) $countOutlet >= (int) $achievement['trx_total']) {
+                        if ((int) $countOutlet >= (int) $achievement['different_outlet']) {
                             AchievementProgress::updateOrCreate([
                                 'id_achievement_detail' => $achievement['id_achievement_detail'],
                                 'id_user' => $idUser,
                             ], [
                                 'id_achievement_detail' => $achievement['id_achievement_detail'],
                                 'id_user' => $idUser,
-                                'progress' => $achievement['trx_total'],
-                                'end_progress' => $achievement['trx_total'],
+                                'progress' => $achievement['different_outlet'],
+                                'end_progress' => $achievement['different_outlet'],
                             ]);
                         } else {
                             $ach_progress = AchievementGroup::select(DB::raw('SUM(achievement_progress.end_progress - achievement_progress.progress) as total'))
@@ -986,7 +986,7 @@ class ApiAchievement extends Controller
                                         'id_achievement_detail' => $achievement['id_achievement_detail'],
                                         'id_user' => $idUser,
                                         'progress' => (int) $countOutlet,
-                                        'end_progress' => $achievement['trx_total'],
+                                        'end_progress' => $achievement['different_outlet'],
                                     ]);
                                 }
                             } else {
@@ -997,7 +997,7 @@ class ApiAchievement extends Controller
                                     'id_achievement_detail' => $achievement['id_achievement_detail'],
                                     'id_user' => $idUser,
                                     'progress' => (int) $countOutlet,
-                                    'end_progress' => $achievement['trx_total'],
+                                    'end_progress' => $achievement['different_outlet'],
                                 ]);
                             }
                         }
@@ -1030,15 +1030,15 @@ class ApiAchievement extends Controller
                             $countProvince = 0;
                         }
     
-                        if ((int) $countProvince >= (int) $achievement['trx_total']) {
+                        if ((int) $countProvince >= (int) $achievement['different_province']) {
                             AchievementProgress::updateOrCreate([
                                 'id_achievement_detail' => $achievement['id_achievement_detail'],
                                 'id_user' => $idUser,
                             ], [
                                 'id_achievement_detail' => $achievement['id_achievement_detail'],
                                 'id_user' => $idUser,
-                                'progress' => $achievement['trx_total'],
-                                'end_progress' => $achievement['trx_total'],
+                                'progress' => $achievement['different_province'],
+                                'end_progress' => $achievement['different_province'],
                             ]);
                         } else {
                             $ach_progress = AchievementGroup::select(DB::raw('SUM(achievement_progress.end_progress - achievement_progress.progress) as total'))
@@ -1060,7 +1060,7 @@ class ApiAchievement extends Controller
                                         'id_achievement_detail' => $achievement['id_achievement_detail'],
                                         'id_user' => $idUser,
                                         'progress' => (int) $countProvince,
-                                        'end_progress' => $achievement['trx_total'],
+                                        'end_progress' => $achievement['different_province'],
                                     ]);
                                 }
                             } else {
@@ -1071,7 +1071,7 @@ class ApiAchievement extends Controller
                                     'id_achievement_detail' => $achievement['id_achievement_detail'],
                                     'id_user' => $idUser,
                                     'progress' => (int) $countProvince,
-                                    'end_progress' => $achievement['trx_total'],
+                                    'end_progress' => $achievement['different_province'],
                                 ]);
                             }
                         }
