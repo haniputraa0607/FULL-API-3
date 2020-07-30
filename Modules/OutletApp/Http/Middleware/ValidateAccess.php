@@ -22,7 +22,7 @@ class ValidateAccess
         $errors = ['Something went wrong'];
         $validator = $validator ?: MyHelper::setting('outlet_apps_access_feature','value','otp');
         if ($validator == 'off') {
-            $request->merge(['validator' => null,'user_outlet' => ['id_user' => null, 'user_type' => null, 'name' => null, 'email' => null]]);
+            $request->merge(['validator' => null,'user_outlet' => ['id_user' => null, 'user_type' => null, 'name' => null, 'email' => null], 'outlet_app_otps' => optional()]);
             return $next($request);
         } elseif ($validator == 'seeds') {
             $validate = $this->getUserSeed($feature,$request,$request->user(),$errors);
@@ -91,6 +91,6 @@ class ValidateAccess
             }
         }
 
-        return $user?['user'=>$user,'otp'=>null]:$user;
+        return $user?['user'=>$user,'otp'=>optional()]:$user;
     }
 }

@@ -1610,8 +1610,8 @@ class ApiOutletApp extends Controller
                     'id_user'            => $user_outlet['id_user'],
                     'id_outlet_app_otp'  => $otp->id_outlet_app_otp,
                     'user_type'          => $user_outlet['user_type'],
-                    'user_name'          => $user_outlet['name'],
-                    'user_email'         => $user_outlet['email'],
+                    'user_name'          => $user_outlet['name']??'',
+                    'user_email'         => $user_outlet['email']??'',
                     'date_time'          => $date_time,
                     'old_data'           => $old_data ? json_encode($old_data) : null,
                     'new_data'           => json_encode($new_data),
@@ -2633,13 +2633,9 @@ class ApiOutletApp extends Controller
 
         if (!empty($list['transaction_payment_subscription'])) {
         	$result['promo_name'] = $list['transaction_payment_subscription']['subscription_user_voucher']['subscription_user']['subscription']['subscription_title'];
-			$result['promo']['code'][$p++]   = $list['transaction_payment_subscription']['subscription_user_voucher']['voucher_code'];
-			$subs_discount = $list['transaction_payment_subscription']['subscription_nominal'];
-            $result['payment_detail'][] = [
-                'name'          => 'Discount',
-                'desc'          => $list['transaction_payment_subscription']['subscription_user_voucher']['voucher_code'],
-                "is_discount"   => 1,
-                'amount'        => MyHelper::requestNumber($subs_discount,'_CURRENCY')
+            $list['payment'][] = [
+                'name'      => 'Subscription',
+                'amount'    => $list['transaction_payment_subscription']['subscription_nominal']
             ];
         }
 
