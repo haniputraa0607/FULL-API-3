@@ -55,6 +55,13 @@ return [
             'retry_after' => 90,
         ],
 
+        'disbursequeue' => [
+            'driver' => 'database',
+            'table' => 'disburse_queue',
+            'queue' => 'disbursequeue',
+            'retry_after' => 90,
+        ],
+
         'beanstalkd' => [
             'driver' => 'beanstalkd',
             'host' => 'localhost',

@@ -120,6 +120,33 @@ class Subscription extends Eloquent
         return $pretty;
 	}
 
+	public function getSubscriptionVoucherBenefitPrettyAttribute() {
+	    $pretty = null;
+		if ($this->subscription_voucher_nominal) {
+            $pretty = MyHelper::requestNumber($this->subscription_voucher_nominal,'_CURRENCY');
+        }
+        elseif ($this->subscription_voucher_percent) {
+            $pretty = $this->subscription_voucher_percent.'%';
+        }
+        return $pretty;
+	}
+
+	public function getSubscriptionVoucherMaxBenefitPrettyAttribute() {
+	    $pretty = null;
+	    if ($this->subscription_voucher_percent_max) {
+            $pretty = MyHelper::requestNumber($this->subscription_voucher_percent_max,'_CURRENCY');
+        }
+        return $pretty;
+	}
+
+	public function getSubscriptionMinimalTransactionPrettyAttribute() {
+	    $pretty = null;
+	    if ($this->subscription_minimal_transaction) {
+            $pretty = MyHelper::requestNumber($this->subscription_minimal_transaction,'_CURRENCY');
+        }
+        return $pretty;
+	}
+
 	public function getSubscriptionPriceTypeAttribute() {
 	    $type = "free";
 	    // if ($this->subscription_price_point && $this->subscription_price_cash) {

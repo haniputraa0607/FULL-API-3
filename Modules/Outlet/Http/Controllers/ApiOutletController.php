@@ -134,10 +134,16 @@ class ApiOutletController extends Controller
         if (isset($post['deep_link_grab'])) {
             $data['deep_link_grab'] = $post['deep_link_grab'];
         }
-        if (isset($post['big_order'])) {
-            $data['big_order'] = $post['big_order'];
+        if (isset($post['delivery_order'])) {
+            $data['delivery_order'] = $post['delivery_order'];
         }else{
-            $data['big_order'] = 0;
+            $data['delivery_order'] = 0;
+        }
+
+        if (isset($post['status_franchise'])) {
+            $data['status_franchise'] = $post['status_franchise'];
+        }else{
+            $data['status_franchise'] = 0;
         }
 
         return $data;
@@ -1767,8 +1773,14 @@ class ApiOutletController extends Controller
                 'outlets.outlet_email as email',
                 'outlets.outlet_latitude as latitude',
                 'outlets.outlet_longitude as longitude',
-                'outlets.deep_link_gojek as deep_link_gojek',
-                'outlets.deep_link_grab as deep_link_grab'
+                DB::raw('(CASE
+                            WHEN status_franchise = 1 THEN "Franchise"
+                            ELSE "Not Franchise"
+                        END) as "status_franchise"'),
+                DB::raw('(CASE
+                            WHEN delivery_order = 1 THEN "Active"
+                            ELSE "Inactive"
+                        END) as "delivery"')
             )->with('brands')->join('cities', 'outlets.id_city', '=', 'cities.id_city');
 
             foreach ($brand as $bran) {
@@ -1883,6 +1895,8 @@ class ApiOutletController extends Controller
                             'outlet_email' => $value['email']??'',
                             'outlet_latitude' => $value['latitude']??'',
                             'outlet_longitude' => $value['longitude']??'',
+                            'status_franchise' => ($value['status_franchise'] == 'Franchise' ? 1 : 0),
+                            'delivery_order' => ($value['delivery'] == 'Active' ? 1 : 0),
                             'deep_link_gojek' => $value['deep_link_gojek']??'',
                             'deep_link_grab' => $value['deep_link_grab']??'',
                             'id_city' => $id_city[$search]??null
@@ -1892,12 +1906,6 @@ class ApiOutletController extends Controller
 
                             if(empty($save)){
                                 DB::rollBack();
-                                return response()->json([
-                                    'status'    => 'fail',
-                                    'messages'      => [
-                                        'Data city not found.'
-                                    ]
-                                ]);
                             } else {
                                 $outlet = Outlet::where('id_outlet', $save['id_outlet'])->first();
                                 if (empty($outlet->outlet_pin)) {
@@ -1929,18 +1937,21 @@ class ApiOutletController extends Controller
                                 $countImport++;
                             }
                         }else{
-                            $failedImport[] = $value['code'];
+                            $failedImport[] = $value['code'].': Outlet Code Not Found';
                         }
                     }else{
-                        $failedImport[] = $value['code'];
+                        $failedImport[] = $value['code'].': City '.$value['city'].' not found';
                     }
                 }
             }
             MyHelper::updateOutletFile($data_pin);
             DB::commit();
 
-            if($save??false) return ['status' => 'success', 'message' => $countImport.' data successfully imported. Failed save outlet : '.implode(", ",$failedImport)];
-            else return ['status' => 'fail','messages' => ['failed to update data' , 'Failed save outlet : '.implode(", ",$failedImport)]];
+            if(count($failedImport) > 0){
+                return ['status' => 'fail','messages' => [$failedImport]];
+            }else{
+                return ['status' => 'success', 'message' => $countImport.' data successfully imported'];
+            }
         }else{
             return response()->json([
                 'status'    => 'fail',
@@ -2236,7 +2247,7 @@ class ApiOutletController extends Controller
         $outlet = Outlet::with(['today','brands'=>function($query){
                     $query->where([['brand_active',1],['brand_visibility',1]]);
                     $query->select('brands.id_brand','name_brand');
-                }])->select('id_outlet','outlet_code','outlet_name','outlet_address','outlet_latitude','outlet_longitude','outlet_phone','outlet_status')->find($request->json('id_outlet'));
+                }])->select('id_outlet','outlet_code','outlet_name','outlet_address','outlet_latitude','outlet_longitude','outlet_phone','outlet_status','delivery_order')->find($request->json('id_outlet'));
         if(!$outlet){
             return MyHelper::checkGet([]);
         }

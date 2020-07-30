@@ -834,7 +834,7 @@ class ApiHistoryController extends Controller
 
     public function balance($post, $id)
     {
-        $log = LogBalance::where('log_balances.id_user', $id);
+        $log = LogBalance::where('log_balances.id_user', $id)->where('balance','!=',0);
 
         if (isset($post['outlet']) || isset($post['brand'])) {
             $log->where(function ($query) use ($post) {
@@ -1124,7 +1124,7 @@ class ApiHistoryController extends Controller
     /*============================= Start Filter & Sort V2 ================================*/
     public function balanceV2($post, $id)
     {
-        $log = LogBalance::where('log_balances.id_user', $id);
+        $log = LogBalance::where('log_balances.id_user', $id)->where('balance','!=',0);
 
         $log->where(function ($query) use ($post) {
             if (!is_null($post['use_point'])) {

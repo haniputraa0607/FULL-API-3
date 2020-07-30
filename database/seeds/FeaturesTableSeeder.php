@@ -2691,6 +2691,26 @@ class FeaturesTableSeeder extends Seeder
                     'created_at' => date('Y-m-d H:00:00'),
                     'updated_at' => date('Y-m-d H:00:00'),
                 ),
+            268 =>
+                array(
+                    'id_feature' => 269,
+                    'feature_type' => 'Update',
+                    'feature_module' => 'Start Deals',
+                    'show_hide' => 1,
+                    'order' => 111,
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00'),
+                ),
+            269 =>
+                array(
+                    'id_feature' => 270,
+                    'feature_type' => 'Update',
+                    'feature_module' => 'Start Subscription',
+                    'show_hide' => 1,
+                    'order' => 112,
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00'),
+                ),
         ));
     }
 }
