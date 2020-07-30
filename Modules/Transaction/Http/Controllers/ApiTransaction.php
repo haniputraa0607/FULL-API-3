@@ -2313,15 +2313,11 @@ class ApiTransaction extends Controller
             }
 
 			if (!empty($list['transaction_payment_subscription'])) {
-				$result['promo']['code'][$p++]   = $list['transaction_payment_subscription']['subscription_user_voucher']['voucher_code'];
-				$subs_discount = $list['transaction_payment_subscription']['subscription_nominal'];
-                $result['payment_detail'][] = [
-                    'name'          => 'Discount',
-                    'desc'          => $list['transaction_payment_subscription']['subscription_user_voucher']['voucher_code'],
-                    "is_discount"   => 1,
-                    'amount'        => MyHelper::requestNumber($subs_discount,'_CURRENCY')
-                ];
-            }
+	            $list['payment'][] = [
+	                'name'      => 'Subscription',
+	                'amount'    => $list['transaction_payment_subscription']['subscription_nominal']
+	            ];
+	        }
 
             $result['promo']['discount'] = $discount;
             $result['promo']['discount'] = MyHelper::requestNumber($discount,'_CURRENCY');
