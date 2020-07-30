@@ -1322,7 +1322,9 @@ class ApiAchievement extends Controller
     {
         $getAchievement = AchievementCategory::with('achievement_group')->get()->toArray();
 
-        $kA             = 0;
+        $totalProgress      = 0;
+        $totalEndProgress   = 0;
+        $kA                 = 0;
         foreach ($getAchievement as $category) {
             if (count($category['achievement_group']) > 0) {
                 $result['category'][$kA] = [
@@ -1398,6 +1400,11 @@ class ApiAchievement extends Controller
                         $catProgress = $catProgress + 1;
                     }
                     $catEndProgress = $catEndProgress + 1;
+                    
+                    if ($achPercentProgress > 0) {
+                        $totalProgress = $totalProgress + 1;
+                    }
+                    $totalEndProgress = $totalEndProgress + 1;
                 }
                 $result['category'][$kA]['progress']     = $catProgress;
                 $result['category'][$kA]['end_progress'] = $catEndProgress;
@@ -1405,6 +1412,8 @@ class ApiAchievement extends Controller
             }
         }
 
+        $result['progress']     = $catProgress;
+        $result['end_progress'] = $catEndProgress;
         return response()->json(MyHelper::checkGet($result));
     }
 }
