@@ -138,7 +138,8 @@ class ApiDealsWebview extends Controller
             }
         }
 
-        $result['deals_content'][$i]['title'] = 'Berlaku di';
+        $i = !empty($keyContent) ? $keyContent+1 : $i;
+        $result['deals_content'][$i]['title'] = 'Tempat Penukaran';
         $result['deals_content'][$i]['is_outlet'] = 1;
         $result['deals_content'][$i]['brand'] = $deals['brand']['name_brand'];
         $result['deals_content'][$i]['brand_logo'] = $deals['brand']['logo_brand'];
