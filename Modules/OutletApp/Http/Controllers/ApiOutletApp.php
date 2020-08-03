@@ -734,7 +734,7 @@ class ApiOutletApp extends Controller
             }
             $result = ['status' => 'success'];
 
-            if($pickup->pickup_by != 'Customer') {
+            if($order->pickup_by != 'Customer') {
                 $result = $this->bookGoSend($order);
             }
 
