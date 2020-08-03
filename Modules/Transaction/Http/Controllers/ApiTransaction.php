@@ -2481,7 +2481,7 @@ class ApiTransaction extends Controller
                 foreach ($statusOrder as $keyStatus => $status) {
                     $result['detail']['detail_status'][$keyStatus] = [
                         'text'  => $status['text'],
-                        'date'  => date('d F Y H:i', strtotime($status['date']))
+                        'date'  => MyHelper::dateFormatInd($status['date'])
                     ];
                     if ($status['text'] == 'Order rejected') {
                         $result['detail']['detail_status'][$keyStatus]['text'] = 'Pesanan telah ditolak karena '.strtolower($list['detail']['reject_reason']);
