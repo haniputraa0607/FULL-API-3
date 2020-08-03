@@ -929,7 +929,7 @@ class ApiProductController extends Controller
         }
 
         if(isset($post['admin_list'])){
-            $product = $product->withCount('product_detail')->withCount('product_detail_hiddens');
+            $product = $product->withCount('product_detail')->withCount('product_detail_hiddens')->with(['brands']);
         }
 
         if(isset($post['pagination'])){

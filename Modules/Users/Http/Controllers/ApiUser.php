@@ -1971,16 +1971,18 @@ class ApiUser extends Controller
                         /* add cashback */
                         $balance_nominal = $complete_profile_cashback;
                         // add log balance & update user balance
-                        $balanceController = new BalanceController();
-                        $addLogBalance = $balanceController->addLogBalance($datauser[0]['id'], $balance_nominal, null, "Welcome Point", 0);
-
-                        if (!$addLogBalance) {
-                            DB::rollback();
-                            return [
-                                'status' => 'fail',
-                                'messages' => 'Failed to save data'
-                            ];
+                        if ($balance_nominal != 0) {
+	                        $balanceController = new BalanceController();
+	                        $addLogBalance = $balanceController->addLogBalance($datauser[0]['id'], $balance_nominal, null, "Welcome Point", 0);
+	                        if (!$addLogBalance) {
+	                            DB::rollback();
+	                            return [
+	                                'status' => 'fail',
+	                                'messages' => 'Failed to save data'
+	                            ];
+	                        }
                         }
+
                         if ($balance_nominal ?? false) {
                             $send   = app($this->autocrm)->SendAutoCRM(
                                 'Complete User Profile Point Bonus',

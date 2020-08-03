@@ -31,6 +31,7 @@ use App\Lib\Midtrans;
 use App\Lib\Ovo;
 use App\Lib\MyHelper;
 use App\Lib\PushNotificationHelper;
+use App\Jobs\DisburseJob;
 use DB;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -730,7 +731,14 @@ class ApiOutletApp extends Controller
                     'messages' => ['Failed Send notification to customer'],
                 ]);
             }
-
+            $result = $this->bookGoSend($order);
+            if (($result['status']??false) != 'success') {
+                DB::rollback();
+                return response()->json([
+                    'status'   => 'fail',
+                    'messages' => $result['messages']??['Failed to order GO-SEND'],
+                ]);
+            }
             DB::commit();
         }
 
@@ -919,6 +927,7 @@ class ApiOutletApp extends Controller
             }
 
             AchievementCheck::dispatch(['id_transaction' => $order->id_transaction])->onConnection('achievement');
+            DisburseJob::dispatch(['id_transaction' => $order->id_transaction])->onConnection('disbursequeue');
 
             DB::commit();
         }
@@ -1272,10 +1281,22 @@ class ApiOutletApp extends Controller
         }
 
         if ($order->ready_at) {
-            return response()->json([
-                'status'   => 'fail',
-                'messages' => ['Order Has Been Ready'],
-            ]);
+            if ($order->picked_by == 'Customer') {
+                return response()->json([
+                    'status'   => 'fail',
+                    'messages' => ['Order Has Been Ready'],
+                ]);
+            } else {
+                $pickup_gosend = TransactionPickupGoSend::where('id_transaction_pickup', $order->id_transaction_pickup)->first();
+                if(!in_array($pickup_gosend['latest_status']??false, ['no_driver', 'rejected', 'cancelled'])) {
+                    return response()->json([
+                        'status'   => 'fail',
+                        'messages' => ['Order Has Been Ready'],
+                    ]);
+                } else {
+                    goto reject;
+                }
+            }
         }
 
         if ($order->taken_at) {
@@ -1285,6 +1306,7 @@ class ApiOutletApp extends Controller
             ]);
         }
 
+        reject:
         if ($order->reject_at) {
             return response()->json([
                 'status'   => 'fail',
@@ -1608,8 +1630,8 @@ class ApiOutletApp extends Controller
                     'id_user'            => $user_outlet['id_user'],
                     'id_outlet_app_otp'  => $otp->id_outlet_app_otp,
                     'user_type'          => $user_outlet['user_type'],
-                    'user_name'          => $user_outlet['name'],
-                    'user_email'         => $user_outlet['email'],
+                    'user_name'          => $user_outlet['name']??'',
+                    'user_email'         => $user_outlet['email']??'',
                     'date_time'          => $date_time,
                     'old_data'           => $old_data ? json_encode($old_data) : null,
                     'new_data'           => json_encode($new_data),
@@ -2114,6 +2136,7 @@ class ApiOutletApp extends Controller
             'transaction_payment_offlines',
             'transaction_vouchers.deals_voucher.deal',
             'promo_campaign_promo_code.promo_campaign',
+            'transaction_payment_subscription.subscription_user_voucher.subscription_user.subscription',
             'transaction_pickup_go_send',
             'outlet.city')->first();
         if (!$list) {
@@ -2429,6 +2452,13 @@ class ApiOutletApp extends Controller
                 'pickup_date'     => date('d F Y', strtotime($list['detail']['pickup_at'])),
                 'pickup_time'     => ($list['detail']['pickup_type'] == 'right now') ? 'RIGHT NOW' : date('H : i', strtotime($list['detail']['pickup_at'])),
             ];
+
+        	if (empty($list['detail']['pickup_at'])) {
+        		$proc_time = Setting::where('key', 'processing_time')->first();
+        		$pickup_at = date('H:i', strtotime('+'.$proc_time->value.' minutes', strtotime($list['transaction_date'])));
+        	}
+        	$result['detail']['pickup_at'] = !empty($list['detail']['pickup_at']) ? date('H:i', strtotime($list['detail']['pickup_at'])) : $pickup_at;
+
             if (isset($list['transaction_payment_status']) && $list['transaction_payment_status'] == 'Cancelled') {
                 $result['transaction_status']      = 0;
                 $result['transaction_status_text'] = 'ORDER ANDA DIBATALKAN';
@@ -2571,6 +2601,7 @@ class ApiOutletApp extends Controller
                 $result['product_transaction'][$keynya]['product'][$keyProduct]['transaction_product_note']      = $valueProduct['transaction_product_note'];
                 $result['product_transaction'][$keynya]['product'][$keyProduct]['transaction_product_discount']  = $valueProduct['transaction_product_discount'];
                 $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_name']       = $valueProduct['product']['product_name'];
+                $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_price']      = MyHelper::requestNumber($valueProduct['transaction_product_price'], '_CURRENCY');
                 $discount                                                                                        = $discount + $valueProduct['transaction_product_discount'];
                 foreach ($valueProduct['modifiers'] as $keyMod => $valueMod) {
                     $result['product_transaction'][$keynya]['product'][$keyProduct]['product']['product_modifiers'][$keyMod]['product_modifier_name']  = $valueMod['text'];
@@ -2595,8 +2626,10 @@ class ApiOutletApp extends Controller
         }
 
         $p = 0;
+        $result['promo_name'] = null;
         if (!empty($list['transaction_vouchers'])) {
             foreach ($list['transaction_vouchers'] as $valueVoc) {
+        		$result['promo_name'] = $valueVoc['deals_voucher']['deal']['deals_title'];
                 $result['promo']['code'][$p++] = $valueVoc['deals_voucher']['voucher_code'];
                 $result['payment_detail'][]    = [
                     'name'        => 'Discount',
@@ -2608,12 +2641,21 @@ class ApiOutletApp extends Controller
         }
 
         if (!empty($list['promo_campaign_promo_code'])) {
+        	$result['promo_name'] = $list['promo_campaign_promo_code']['promo_campaign']['promo_title'];
             $result['promo']['code'][$p++] = $list['promo_campaign_promo_code']['promo_code'];
             $result['payment_detail'][]    = [
                 'name'        => 'Discount',
                 'desc'        => $list['promo_campaign_promo_code']['promo_code'],
                 "is_discount" => 1,
                 'amount'      => MyHelper::requestNumber($discount, '_CURRENCY'),
+            ];
+        }
+
+        if (!empty($list['transaction_payment_subscription'])) {
+        	$result['promo_name'] = $list['transaction_payment_subscription']['subscription_user_voucher']['subscription_user']['subscription']['subscription_title'];
+            $list['payment'][] = [
+                'name'      => 'Subscription',
+                'amount'    => $list['transaction_payment_subscription']['subscription_nominal']
             ];
         }
 

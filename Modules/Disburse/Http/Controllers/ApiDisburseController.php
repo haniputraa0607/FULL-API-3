@@ -20,23 +20,20 @@ class ApiDisburseController extends Controller
 {
     public function dashboard(Request $request){
         $post = $request->json()->all();
-        $nominal_success = Disburse::join('disburse_outlet', 'disburse.id_disburse', 'disburse_outlet.id_disburse')->where('disburse.disburse_status', 'Success');
+        $nominal = Disburse::join('disburse_outlet', 'disburse.id_disburse', 'disburse_outlet.id_disburse')->where('disburse.disburse_status', 'Success');
         $nominal_fail = Disburse::join('disburse_outlet', 'disburse.id_disburse', 'disburse_outlet.id_disburse')->where('disburse.disburse_status', 'Fail');
-        $nominal_trx = DailyReportTrx::where('trx_type', 'Online');
         $income_central = Disburse::join('disburse_outlet', 'disburse.id_disburse', 'disburse_outlet.id_disburse')->where('disburse.disburse_status', 'Success')->orderBy('disburse.created_at');
 
         if(isset($post['id_outlet']) && !empty($post['id_outlet']) && $post['id_outlet'] != 'all'){
-            $nominal_success->where('disburse_outlet.id_outlet', $post['id_outlet']);
+            $nominal->where('disburse_outlet.id_outlet', $post['id_outlet']);
             $nominal_fail->where('disburse_outlet.id_outlet', $post['id_outlet']);
-            $nominal_trx->where('daily_report_trx.id_outlet', $post['id_outlet']);
             $income_central->where('disburse_outlet.id_outlet', $post['id_outlet']);
         }
 
         if(isset($post['fitler_date']) && $post['fitler_date'] == 'today'){
 
-            $nominal_success->whereDate('disburse.created_at', date('Y-m-d'));
+            $nominal->whereDate('disburse.created_at', date('Y-m-d'));
             $nominal_fail->whereDate('disburse.created_at', date('Y-m-d'));
-            $nominal_trx->whereDate('daily_report_trx.trx_date', date('Y-m-d'));
             $income_central->where('disburse.created_at', date('Y-m-d'));
 
         }elseif(isset($post['fitler_date']) && $post['fitler_date'] == 'specific_date'){
@@ -45,36 +42,30 @@ class ApiDisburseController extends Controller
                 $start_date = date('Y-m-d', strtotime($post['start_date']));
                 $end_date = date('Y-m-d', strtotime($post['end_date']));
 
-                $nominal_success->whereDate('disburse.created_at', '>=', $start_date)
+                $nominal->whereDate('disburse.created_at', '>=', $start_date)
                     ->whereDate('disburse.created_at', '<=', $end_date);
                 $nominal_fail->whereDate('disburse.created_at', '>=', $start_date)
                     ->whereDate('disburse.created_at', '<=', $end_date);
-                $nominal_trx->whereDate('daily_report_trx.trx_date', '>=', $start_date)
-                    ->whereDate('daily_report_trx.trx_date', '<=', $end_date);
                 $income_central->whereDate('disburse.created_at', '>=', $start_date)
                     ->whereDate('disburse.created_at', '<=', $end_date);
             }
         }
 
         if(isset($post['id_user_franchise']) && !empty($post['id_user_franchise'])){
-            $nominal_success->join('user_franchise_outlet', 'user_franchise_outlet.id_outlet', 'disburse_outlet.id_outlet')
+            $nominal->join('user_franchise_outlet', 'user_franchise_outlet.id_outlet', 'disburse_outlet.id_outlet')
                 ->where('user_franchise_outlet.id_user_franchise', $post['id_user_franchise']);
             $nominal_fail->join('user_franchise_outlet', 'user_franchise_outlet.id_outlet', 'disburse_outlet.id_outlet')
                 ->where('user_franchise_outlet.id_user_franchise', $post['id_user_franchise']);
-            $nominal_trx->join('user_franchise_outlet', 'user_franchise_outlet.id_outlet', 'daily_report_trx.id_outlet')
-                ->where('user_franchise_outlet.id_user_franchise', $post['id_user_franchise']);
         }
 
-        $nominal_success = $nominal_success->sum('disburse.disburse_nominal');
-        $nominal_fail = $nominal_fail->sum('disburse.disburse_nominal');
-        $nominal_trx = $nominal_trx->sum('trx_grand');
+        $nominal = $nominal->selectRaw('SUM(disburse_outlet.disburse_nominal) as "nom_success", SUM(disburse_outlet.total_fee_item) as "nom_item", SUM(disburse_outlet.total_omset) as "nom_grandtotal", SUM(disburse_outlet.total_expense_central) as "nom_expense_central", SUM(disburse_outlet.total_delivery_price) as "nom_delivery"')->first();
+        $nominal_fail = $nominal_fail->sum('disburse_outlet.disburse_nominal');
         $income_central = $income_central->sum('total_income_central');
         $result = [
             'status' => 'success',
             'result' => [
-                'nominal_success' => $nominal_success,
+                'nominal' => $nominal,
                 'nominal_fail' => $nominal_fail,
-                'nominal_trx' => $nominal_trx,
                 'income_central' => $income_central
             ]
         ];
@@ -372,9 +363,9 @@ class ApiDisburseController extends Controller
         }
 
         if(isset($post['export']) && $post['export'] == 1){
-            $data = $data->selectRaw('DATE_FORMAT(disburse.created_at, "%d %M %Y %H:%i") as "Date", CONCAT(outlets.outlet_code, " - ", outlets.outlet_name) as "Outlet", FORMAT(disburse_outlet.disburse_nominal, 2) as "Nominal",
-                FORMAT(total_fee_item, 2) as "Total Fee Item", FORMAT(total_omset, 2) as "Total Grand Total", FORMAT(total_discount, 2) as "Total Discount Charge", FORMAT(total_delivery_price, 2) as "Total Delivery", FORMAT(total_payment_charge, 2) as "Total Payment Charge",
-                FORMAT(total_point_use_expense, 2) as "Total Point Use Charge", FORMAT(total_subscription, 2) as "Total Subscription Charge",
+            $data = $data->selectRaw('DATE_FORMAT(disburse.created_at, "%d %M %Y %H:%i") as "Date", CONCAT(outlets.outlet_code, " - ", outlets.outlet_name) as "Outlet", disburse_outlet.disburse_nominal as "Nominal",
+                total_fee_item as "Total Fee Item", total_omset as "Total Grand Total", total_discount as "Total Discount Charge", total_payment_charge as "Total Payment Charge",
+                total_point_use_expense as "Total Point Use Charge", total_subscription as "Total Subscription Charge", total_delivery_price as "Total Delivery",
                 bank_name.bank_name as "Bank Name", CONCAT(" ",disburse.beneficiary_account_number) as "Account Number", disburse.beneficiary_name as "Recipient Name "')
                 ->get()->toArray();
 

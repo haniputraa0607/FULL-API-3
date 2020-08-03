@@ -19,6 +19,7 @@ class AchievementGroup extends Model
         'publish_start',
         'publish_end',
         'description',
+        'progress_text',
         'order_by',
         'status',
         'is_calculate'

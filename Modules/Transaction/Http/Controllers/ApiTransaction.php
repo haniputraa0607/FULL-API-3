@@ -2,8 +2,8 @@
 
 namespace Modules\Transaction\Http\Controllers;
 
+use App\Http\Models\TransactionProductModifier;
 use Illuminate\Pagination\Paginator;
-
 use App\Http\Models\Transaction;
 use App\Http\Models\TransactionProduct;
 use App\Http\Models\TransactionPayment;
@@ -25,6 +25,7 @@ use App\Http\Models\ManualPaymentTutorial;
 use App\Http\Models\TransactionPaymentManual;
 use App\Http\Models\TransactionPaymentOffline;
 use App\Http\Models\TransactionPaymentBalance;
+use Modules\Disburse\Entities\MDR;
 use Modules\IPay88\Entities\TransactionPaymentIpay88;
 use App\Http\Models\TransactionMultiplePayment;
 use App\Http\Models\Outlet;
@@ -1433,6 +1434,52 @@ class ApiTransaction extends Controller
                         }
                     }
 
+                    if ($con['subject'] == 'transaction_status') {
+                        if ($post['rule'] == 'and') {
+                            if($con['operator'] == 'taken_by_driver'){
+                                $query = $query->whereNotNull('transaction_pickups.taken_at')
+                                    ->whereNotIn('transaction_pickups.pickup_by', ['Customer']);
+                            }elseif ($con['operator'] == 'taken_by_customer'){
+                                $query = $query->whereNotNull('transaction_pickups.taken_at')
+                                    ->where('transaction_pickups.pickup_by', 'Customer');
+                            }elseif($con['operator'] == 'receive_at'){
+                                $query = $query->whereNotNull('transaction_pickups.receive_at')
+                                    ->whereNull('transaction_pickups.ready_at')
+                                    ->whereNull('transaction_pickups.taken_at');
+                            }elseif($con['operator'] == 'ready_at'){
+                                $query = $query->whereNotNull('transaction_pickups.ready_at')
+                                    ->whereNull('transaction_pickups.taken_at');
+                            }else{
+                                $query = $query->whereNotNull('transaction_pickups.'.$con['operator']);
+                            }
+                        } else {
+                            if($con['operator'] == 'taken_by_driver'){
+                                $query = $query->orWhere(function ($q){
+                                    $q->whereNotNull('transaction_pickups.taken_at')
+                                        ->whereNotIn('transaction_pickups.pickup_by', ['Customer']);
+                                });
+                            }elseif ($con['operator'] == 'taken_by_customer'){
+                                $query = $query->orWhere(function ($q){
+                                    $q->whereNotNull('transaction_pickups.taken_at')
+                                        ->where('transaction_pickups.pickup_by', 'Customer');
+                                });
+                            }elseif($con['operator'] == 'receive_at'){
+                                $query = $query->orWhere(function ($q){
+                                    $q->whereNotNull('transaction_pickups.receive_at')
+                                        ->whereNull('transaction_pickups.ready_at')
+                                        ->whereNull('transaction_pickups.taken_at');
+                                });
+                            }elseif($con['operator'] == 'ready_at'){
+                                $query = $query->orWhere(function ($q) {
+                                    $q->whereNotNull('transaction_pickups.ready_at')
+                                        ->whereNull('transaction_pickups.taken_at');
+                                });
+                            }else{
+                                $query = $query->orWhereNotNull('transaction_pickups.'.$con['operator']);
+                            }
+                        }
+                    }
+
                     if (in_array($con['subject'], ['status', 'courier', 'id_outlet', 'id_product', 'pickup_by'])) {
                         switch ($con['subject']) {
                             case 'status':
@@ -1509,14 +1556,26 @@ class ApiTransaction extends Controller
         }
 
         $query = Transaction::join('transaction_pickups','transaction_pickups.id_transaction','=','transactions.id_transaction')
-            ->select('transactions.*','users.*','outlets.outlet_code', 'outlets.outlet_name')
+            ->select('transactions.*','users.*','outlets.outlet_code', 'outlets.outlet_name', 'payment_type', 'payment_method', 'transaction_payment_midtrans.gross_amount', 'transaction_payment_ipay88s.amount')
             ->leftJoin('outlets','outlets.id_outlet','=','transactions.id_outlet')
             ->leftJoin('users','transactions.id_user','=','users.id')
-            ->orderBy('transactions.id_transaction', 'DESC')
-            ->groupBy('transactions.id_transaction');
+            ->orderBy('transactions.id_transaction', 'DESC');
 
         $query = $query->leftJoin('transaction_payment_midtrans', 'transactions.id_transaction', '=', 'transaction_payment_midtrans.id_transaction')
             ->leftJoin('transaction_payment_ipay88s', 'transactions.id_transaction', '=', 'transaction_payment_ipay88s.id_transaction');
+
+        $settingMDRAll = [];
+        if(isset($post['detail']) && $post['detail'] == 1){
+            $settingMDRAll = MDR::get()->toArray();
+            $query->join('transaction_products','transaction_products.id_transaction','=','transactions.id_transaction')
+                ->join('products', 'products.id_product', 'transaction_products.id_product')
+                ->join('brands', 'brands.id_brand', 'transaction_products.id_brand')
+                ->leftJoin('product_categories','products.id_product_category','=','product_categories.id_product_category')
+                ->join('cities', 'cities.id_city', 'outlets.id_city')
+                ->join('provinces', 'cities.id_province', 'provinces.id_province')
+                ->addSelect('transaction_pickups.*', 'transaction_products.*', 'products.product_code', 'products.product_name', 'product_categories.product_category_name',
+                    'brands.name_brand', 'cities.city_name', 'provinces.province_name');
+        }
 
         if(isset($post['date_start']) && !empty($post['date_start'])
             && isset($post['date_end']) && !empty($post['date_end'])){
@@ -1647,29 +1706,126 @@ class ApiTransaction extends Controller
             }
         }
 
+        $forCheck = '';
         foreach ($query->cursor() as $val) {
             $payment = '';
             if($val['trasaction_payment_type'] == 'Balance'){
-                $payment .= 'Point'.(!empty($val['payment_type']) ? ', '.$val['payment_type'] : '').(!empty($val['payment_method']) ? ', '.$val['payment_method'] : '');
+                $payment .= 'Jiwa Point'.(!empty($val['payment_type']) ? ', '.$val['payment_type'] : '').(!empty($val['payment_method']) ? ', '.$val['payment_method'] : '');
             }else{
                 $payment .= (!empty($val['payment_type']) ? $val['payment_type'] : '').(!empty($val['payment_method']) ? $val['payment_method'] : '');
             }
 
-            yield [
-                'Name' => $val['name'],
-                'Phone' => $val['phone'],
-                'Email' => $val['email'],
-                'Transaction Date' => date('d M Y', strtotime($val['transaction_date'])),
-                'Transaction Time' => date('H:i', strtotime($val['transaction_date'])),
-                'Outlet Code' => $val['outlet_code'],
-                'Outlet Name' => $val['outlet_name'],
-                'Grand Total' => number_format($val['transaction_grandtotal']),
-                'Receipt number' => $val['transaction_receipt_number'],
-                'Point Received' => number_format($val['transaction_cashback_earned']),
-                'Payments' => $payment,
-                'Transaction Type' => (!empty($val['transaction_shipment_go_send']) ? 'Delivery' : $val['trasaction_type']),
-                'Delivery Fee' => number_format($val['transaction_shipment_go_send'])??'-'
-            ];
+            if(isset($post['detail']) && $post['detail'] == 1){
+                $totalFeePG = 0;
+                if($val['gross_amount'] > 0 ){
+                    $keyMidtrans = array_search(strtoupper($val['payment_type']), array_column($settingMDRAll, 'payment_name'));
+                    if($keyMidtrans !== false){
+                        $feePGCentral = $settingMDRAll[$keyMidtrans]['mdr_central'];
+                        $feePG = $settingMDRAll[$keyMidtrans]['mdr'];
+                        $feePGType = $settingMDRAll[$keyMidtrans]['percent_type'];
+
+                        if($feePGType == 'Percent'){
+                            $totalFeePG = $val['gross_amount'] * (($feePGCentral + $feePG) / 100);
+                        }else{
+                            $totalFeePG = $feePGCentral + $feePG;
+                        }
+                    }
+                }
+                if($val['amount'] > 0 ){
+                    $keyipay88 = array_search(strtoupper($val['payment_method']), array_column($settingMDRAll, 'payment_name'));
+                    if($keyipay88 !== false){
+                        $feePGCentral = $settingMDRAll[$keyipay88]['mdr_central'];
+                        $feePG = $settingMDRAll[$keyipay88]['mdr'];
+                        $feePGType = $settingMDRAll[$keyipay88]['percent_type'];
+                        $amountMDR = $val['amount'] /100;
+                        if($feePGType == 'Percent'){
+                            $totalFeePG = $amountMDR * (($feePGCentral + $feePG) / 100);
+                        }else{
+                            $totalFeePG = $feePGCentral + $feePG;
+                        }
+                    }
+                }
+                $mod = TransactionProductModifier::join('product_modifiers', 'product_modifiers.id_product_modifier', 'transaction_product_modifiers.id_product_modifier')
+                        ->where('transaction_product_modifiers.id_transaction_product', $val['id_transaction_product'])
+                        ->select('product_modifiers.text')->get()->toArray();
+
+                if($forCheck != $val['transaction_receipt_number']){
+                    $dt = [
+                        'Name' => $val['name'],
+                        'Phone' => $val['phone'],
+                        'Date of birth' => ($val['birthday'] == null ? '' : date('d M Y', strtotime($val['birthday']))),
+                        'Outlet Code' => $val['outlet_code'],
+                        'Outlet Name' => $val['outlet_name'],
+                        'Province' => $val['province_name'],
+                        'City' => $val['city_name'],
+                        'Receipt number' => $val['transaction_receipt_number'],
+                        'Transaction Date' => date('d M Y', strtotime($val['transaction_date'])),
+                        'Transaction Time' => date('H:i:s', strtotime($val['transaction_date'])),
+                        'Category' => $val['product_category_name'],
+                        'Brand' => $val['name_brand'],
+                        'Items' => $val['product_code'].'-'.$val['product_name'],
+                        'Modifier' => implode(",", array_column($mod, 'text')),
+                        'Gross Sales' => $val['transaction_grandtotal'],
+                        'Net Sales' => $val['transaction_product_subtotal'],
+                        'Discounts' => $val['transaction_product_discount'],
+                        'Sales Type' => (!empty($val['transaction_shipment_go_send']) ? 'Delivery' : $val['trasaction_type']),
+                        'Ready Time' =>  ($val['ready_at'] == null ? '' : date('d M Y H:i:s', strtotime($val['ready_at']))),
+                        'Received Time' =>  ($val['received_at'] == null ? '' : date('d M Y H:i:s', strtotime($val['received_at']))),
+                        'Taken Time' =>  ($val['taken_at'] == null ? '' : date('d M Y H:i:s', strtotime($val['taken_at']))),
+                        'Arrived Time' =>  ($val['arrived_at'] == null ? '' : date('d M Y H:i:s', strtotime($val['arrived_at']))),
+                        'Delivery Fee' => $val['transaction_shipment_go_send']??'0',
+                        'Payments' => $payment,
+                        'Fee Payment Gateway' => $totalFeePG
+                    ];
+                }else{
+                    $dt = [
+                        'Name' => '',
+                        'Phone' => '',
+                        'Date of birth' => '',
+                        'Outlet Code' => '',
+                        'Outlet Name' => '',
+                        'Province' => '',
+                        'City' => '',
+                        'Receipt number' => '',
+                        'Transaction Date' => '',
+                        'Transaction Time' => '',
+                        'Category' => $val['product_category_name'],
+                        'Brand' => $val['name_brand'],
+                        'Items' => $val['product_code'].'-'.$val['product_name'],
+                        'Modifier' => implode(",", array_column($mod, 'text')),
+                        'Gross Sales' => '',
+                        'Net Sales' => $val['transaction_product_subtotal'],
+                        'Discounts' => $val['transaction_product_discount'],
+                        'Sales Type' => '',
+                        'Ready Time' =>  '',
+                        'Received Time' =>  '',
+                        'Taken Time' =>  '',
+                        'Arrived Time' =>  '',
+                        'Delivery Fee' => '',
+                        'Payments' => '',
+                        'Fee Payment Gateway' => ''
+                    ];
+                }
+                $forCheck = $val['transaction_receipt_number'];
+            }else{
+                $dt = [
+                    'Name' => $val['name'],
+                    'Phone' => $val['phone'],
+                    'Email' => $val['email'],
+                    'Transaction Date' => date('d M Y', strtotime($val['transaction_date'])),
+                    'Transaction Time' => date('H:i', strtotime($val['transaction_date'])),
+                    'Outlet Code' => $val['outlet_code'],
+                    'Outlet Name' => $val['outlet_name'],
+                    'Grand Total' => number_format($val['transaction_grandtotal']),
+                    'Receipt number' => $val['transaction_receipt_number'],
+                    'Point Received' => number_format($val['transaction_cashback_earned']),
+                    'Payments' => $payment,
+                    'Transaction Type' => (!empty($val['transaction_shipment_go_send']) ? 'Delivery' : $val['trasaction_type']),
+                    'Delivery Fee' => number_format($val['transaction_shipment_go_send'])??'-'
+                ];
+            }
+
+            yield $dt;
         }
     }
 
@@ -1698,6 +1854,7 @@ class ApiTransaction extends Controller
                 'transaction_vouchers.deals_voucher.deal',
                 'promo_campaign_promo_code.promo_campaign',
                 'transaction_pickup_go_send.transaction_pickup_update',
+                'transaction_payment_subscription.subscription_user_voucher',
                 'outlet.city')->first();
             if(!$list){
                 return MyHelper::checkGet([],'empty');
@@ -2200,6 +2357,13 @@ class ApiTransaction extends Controller
                     'amount'        => MyHelper::requestNumber($discount,'_CURRENCY')
                 ];
             }
+
+			if (!empty($list['transaction_payment_subscription'])) {
+	            $list['payment'][] = [
+	                'name'      => 'Subscription',
+	                'amount'    => $list['transaction_payment_subscription']['subscription_nominal']
+	            ];
+	        }
 
             $result['promo']['discount'] = $discount;
             $result['promo']['discount'] = MyHelper::requestNumber($discount,'_CURRENCY');
