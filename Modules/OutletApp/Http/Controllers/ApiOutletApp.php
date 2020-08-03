@@ -2677,43 +2677,44 @@ class ApiOutletApp extends Controller
             if ($list['transaction_payment_status'] == 'Cancelled') {
                 $result['detail']['detail_status'][] = [
                     'text' => 'Your order has been canceled',
-                    'date' => date('d F Y H:i', strtotime($list['void_date'])),
+                    'date' => MyHelper::dateFormatInd($list['void_date'])
                 ];
             }
             if ($list['detail']['reject_at'] != null) {
                 $result['detail']['detail_status'][] = [
                     'text'   => 'Order rejected',
-                    'date'   => date('d F Y H:i', strtotime($list['detail']['reject_at'])),
+                    'date' => MyHelper::dateFormatInd($list['detail']['reject_at']),
                     'reason' => $list['detail']['reject_reason'],
                 ];
             }
             if ($list['detail']['taken_by_system_at'] != null) {
                 $result['detail']['detail_status'][] = [
                     'text' => 'Your order has been done by system',
-                    'date' => date('d F Y H:i', strtotime($list['detail']['taken_by_system_at'])),
+                    'date' => MyHelper::dateFormatInd($list['detail']['taken_by_system_at'])
                 ];
             }
             if ($list['detail']['taken_at'] != null) {
                 $result['detail']['detail_status'][] = [
                     'text' => 'Your order has been taken',
-                    'date' => date('d F Y H:i', strtotime($list['detail']['taken_at'])),
+                    'date' => MyHelper::dateFormatInd($list['detail']['taken_at'])
+
                 ];
             }
             if ($list['detail']['ready_at'] != null) {
                 $result['detail']['detail_status'][] = [
                     'text' => 'Your order is ready ',
-                    'date' => date('d F Y H:i', strtotime($list['detail']['ready_at'])),
+                    'date' => MyHelper::dateFormatInd($list['detail']['ready_at'])
                 ];
             }
             if ($list['detail']['receive_at'] != null) {
                 $result['detail']['detail_status'][] = [
                     'text' => 'Your order has been received',
-                    'date' => date('d F Y H:i', strtotime($list['detail']['receive_at'])),
+                    'date' => MyHelper::dateFormatInd($list['detail']['receive_at'])
                 ];
             }
             $result['detail']['detail_status'][] = [
                 'text' => 'Your order awaits confirmation ',
-                'date' => date('d F Y H:i', strtotime($list['transaction_date'])),
+                'date' => MyHelper::dateFormatInd($list['transaction_date'])
             ];
         }
 
