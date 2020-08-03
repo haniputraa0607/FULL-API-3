@@ -714,7 +714,7 @@ class ApiHistoryController extends Controller
         foreach ($voucher as $key => $value) {
             $dataVoucher[$key]['type'] = 'voucher';
             $dataVoucher[$key]['id'] = $value['id_deals_user'];
-            $dataVoucher[$key]['date'] = $value['claimed_at'];
+            $dataVoucher[$key]['date'] = MyHelper::dateFormatInd($value['claimed_at'], true, true, false);
             $dataVoucher[$key]['outlet'] = 'Tukar Voucher';
             $dataVoucher[$key]['amount'] = number_format($value['voucher_price_cash'] - $value['balance_nominal'], 0, ',', '.');
         }
