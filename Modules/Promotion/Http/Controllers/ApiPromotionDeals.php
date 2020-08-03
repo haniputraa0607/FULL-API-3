@@ -208,7 +208,6 @@ class ApiPromotionDeals extends Controller
 		$dataDeals['deals_image'] 			= $dealsTemplate['deals_image'];
 		$dataDeals['charged_central'] 		= $dealsTemplate['charged_central'];
         $dataDeals['charged_outlet'] 		= $dealsTemplate['charged_outlet'];
-		// $dataDeals['deals_warning_image'] 	= $dealsTemplate['deals_warning_image'];
 		$dataDeals['user_limit'] 			= $dealsTemplate['user_limit'];
 		$dataDeals['promo_type'] 			= $dealsTemplate['promo_type'];
 		$dataDeals['is_online'] 			= $dealsTemplate['is_online'];
@@ -216,7 +215,6 @@ class ApiPromotionDeals extends Controller
 		$dataDeals['is_offline'] 			= $dealsTemplate['is_offline'];
 		$dataDeals['step_complete'] 		= 1;
 		$dataDeals['custom_outlet_text'] 	= $dealsTemplate['custom_outlet_text'];
-		// $dataDeals['product_type'] 			= $dealsTemplate['product_type'];
 
 		if ($post['duration'][$key] == 'duration') {
 			$dataDeals['deals_voucher_duration'] = $post['deals_voucher_expiry_duration'][$key];
@@ -449,7 +447,6 @@ class ApiPromotionDeals extends Controller
     		foreach ($product_rule as $key => $value) {
     			$product[] = [
     				'id_deals'		=> $id_deals,
-    				// 'product_type'	=> $value['product_type'],
     				'id_product' 	=> $value['id_product'],
     				'created_at' 	=> date('Y-m-d H:i:s'),
         			'updated_at' 	=> date('Y-m-d H:i:s')
@@ -466,7 +463,6 @@ class ApiPromotionDeals extends Controller
     	$product_rule 	= $query->deals_promotion_tier_discount_product;
 
     	$rule['id_deals'] 		= $id_deals;
-		// $rule['product_type'] 	= $product_rule['product_type'];
 		$rule['id_product'] 		= $product_rule['id_product'];
 		$rule['id_product_category'] = $product_rule['id_product_category'];
 
@@ -494,7 +490,6 @@ class ApiPromotionDeals extends Controller
     	$product_rule 	= $query->deals_promotion_buyxgety_product_requirement;
 
     	$rule['id_deals'] 		= $id_deals;
-		// $rule['product_type'] 	= $product_rule['product_type'];
 		$rule['id_product'] 	= $product_rule['id_product'];
 		$rule['id_product_category'] 	= $product_rule['id_product_category'];
 
