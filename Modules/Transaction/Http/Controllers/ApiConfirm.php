@@ -792,7 +792,8 @@ class ApiConfirm extends Controller
                                     "transaction_date"  => $trx['transaction_date'],
                                     'receipt_number'    => $trx['transaction_receipt_number'],
                                     'id_transaction'    => $trx['id_transaction'],
-                                    'received_point'    => (string) $checkBalance['balance_nominal']
+                                    'received_point'    => (string) $checkBalance['balance_nominal'],
+                                    'order_id'          => $trx['order_id']??'',
                                 ]
                             );
                             if($send != true){
@@ -911,7 +912,8 @@ class ApiConfirm extends Controller
                         "transaction_date"  => $trx['transaction_date'],
                         'id_transaction'    => $trx['id_transaction'],
                         'receipt_number'    => $trx['transaction_receipt_number'],
-                        'received_point'    => (string) $checkBalance['balance_nominal']
+                        'received_point'    => (string) $checkBalance['balance_nominal'],
+                        'order_id'          => $trx['order_id'] ?? '',
                     ]
                 );
                 if($send != true){
