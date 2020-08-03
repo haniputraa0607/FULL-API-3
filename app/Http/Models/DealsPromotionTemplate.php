@@ -57,6 +57,8 @@ class DealsPromotionTemplate extends Model
 		'is_offline',
 		'step_complete',
 		'custom_outlet_text',
+		'charged_central',
+        'charged_outlet',
 		'product_type',
 		'deals_list_outlet',
 		'id_brand'
