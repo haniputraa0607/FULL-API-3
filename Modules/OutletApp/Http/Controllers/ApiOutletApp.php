@@ -732,7 +732,12 @@ class ApiOutletApp extends Controller
                     'messages' => ['Failed Send notification to customer'],
                 ]);
             }
-            $result = $this->bookGoSend($order);
+            $result = ['status' => 'success'];
+
+            if($pickup->pickup_by != 'Customer') {
+                $result = $this->bookGoSend($order);
+            }
+
             if (($result['status']??false) != 'success') {
                 DB::rollback();
                 return response()->json([
