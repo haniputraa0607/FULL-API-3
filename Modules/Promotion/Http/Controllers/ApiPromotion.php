@@ -128,7 +128,7 @@ class ApiPromotion extends Controller
 					$data['schedule_everyday'] = 'Yes';
 				}
 
-				if (isset($post['use_periode'])) {
+				if (isset($post['use_periode']) && isset($post['date_start']) && isset($post['date_end']) ) {
 					$data['date_start'] = date('Y-m-d H:i:s', strtotime($post['date_start']));
 					$data['date_end'] 	= date('Y-m-d H:i:s', strtotime($post['date_end']));
 				}
