@@ -2677,7 +2677,7 @@ class ApiOutletApp extends Controller
             if ($list['transaction_payment_status'] == 'Cancelled') {
                 $result['detail']['detail_status'][] = [
                     'text' => 'Your order has been canceled',
-                    'date' => MyHelper::dateFormatInd($list['detail']['void_date'])
+                    'date' => MyHelper::dateFormatInd($list['void_date'])
                 ];
             }
             if ($list['detail']['reject_at'] != null) {
