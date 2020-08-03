@@ -294,6 +294,7 @@ class IPay88
                     'order_id' => $trx['transaction_receipt_number'],
                     'gross_amount' => $amount
                 ];
+				$detailTrx = TransactionPickup::where('id_transaction', $id_transaction)->first();
             	switch ($data['Status']) {
             		case '1':
 	                    $update = $trx->update(['transaction_payment_status'=>'Completed','completed_at'=>date('Y-m-d H:i:s')]);
@@ -307,7 +308,6 @@ class IPay88
 
 	                    //inset pickup_at when pickup_type = right now
 						if($trx['trasaction_type'] == 'Pickup Order'){
-							$detailTrx = TransactionPickup::where('id_transaction', $id_transaction)->first();
 							if($detailTrx['pickup_type'] == 'right now'){
 								$settingTime = Setting::where('key', 'processing_time')->first();
 								if($settingTime && isset($settingTime['value'])){
@@ -372,7 +372,8 @@ class IPay88
 				                        "transaction_date"  => $trx['transaction_date'],
 				                        'id_transaction'    => $trx['id_transaction'],
 				                        'receipt_number'    => $trx['transaction_receipt_number'],
-				                        'received_point'    => (string) $checkBalance['balance_nominal']
+				                        'received_point'    => (string) $checkBalance['balance_nominal'],
+				                        'order_id' 			=> $detailTrx->order_id,
 				                    ]
 				                );
 				                if($send != true){

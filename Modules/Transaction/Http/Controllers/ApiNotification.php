@@ -256,7 +256,8 @@ class ApiNotification extends Controller {
                                         "transaction_date"  => $newTrx['transaction_date'],
                                         'id_transaction'    => $newTrx['id_transaction'],
                                         'receipt_number'    => $newTrx['transaction_receipt_number'],
-                                        'received_point'    => (string) $checkBalance['balance_nominal']
+                                        'received_point'    => (string) $checkBalance['balance_nominal'],
+                                        'order_id'          => $newTrx['detail']['order_id'] ?? '',
                                     ]
                                 );
                                 if($send != true){

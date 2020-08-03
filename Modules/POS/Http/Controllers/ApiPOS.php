@@ -219,7 +219,8 @@ class ApiPOS extends Controller
                 "outlet_name" => $outlet['outlet_name'],
                 "id_reference" => $check['transaction_receipt_number'] . ',' . $outlet['id_outlet'],
                 'id_transaction' => $check['id_transaction'],
-                "transaction_date" => $check['transaction_date']
+                "transaction_date" => $check['transaction_date'],
+                'order_id'         => $trxPickup->order_id??'',
             ]);
 
             return response()->json(['status' => 'success', 'result' => $transactions]);
@@ -1641,13 +1642,15 @@ class ApiPOS extends Controller
                                     ];
                                 }
                                 $usere= User::where('id',$createTrx['id_user'])->first();
+                                $order_id = TransactionPickup::select('order_id')->where('id_transaction', $createTrx['id_transaction'])->pluck('order_id')->first();
                                 $send = app($this->autocrm)->SendAutoCRM('Transaction Point Achievement', $usere->phone,
                                     [
                                         "outlet_name"       => $outlet['outlet_name'],
                                         "transaction_date"  => $createTrx['transaction_date'],
                                         'id_transaction'    => $createTrx['id_transaction'],
                                         'receipt_number'    => $createTrx['transaction_receipt_number'],
-                                        'received_point'    => (string) $createTrx['transaction_cashback_earned']
+                                        'received_point'    => (string) $createTrx['transaction_cashback_earned'],
+                                        'order_id'          => $order_id??'',
                                     ]
                                 );
                                 if($send != true){

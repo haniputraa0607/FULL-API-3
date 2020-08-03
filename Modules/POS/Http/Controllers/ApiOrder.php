@@ -397,7 +397,8 @@ class ApiOrder extends Controller
                 "outlet_name" => $outlet['outlet_name'], 
                 "id_reference" => $order->transaction_receipt_number.','.$order->id_outlet, 
                 'id_transaction' => $order->id_transaction, 
-                "transaction_date" => $order->transaction_date
+                "transaction_date" => $order->transaction_date,
+                'order_id'         => $order->order_id,
             ]);
             if($send != true){
                 DB::rollback();
@@ -476,7 +477,8 @@ class ApiOrder extends Controller
                 "outlet_name" => $outlet['outlet_name'], 
                 "id_reference" => $order->transaction_receipt_number.','.$order->id_outlet,  
                 'id_transaction' => $order->id_transaction, 
-                "transaction_date" => $order->transaction_date
+                "transaction_date" => $order->transaction_date,
+                'order_id'         => $order->order_id,
             ]);
             if($send != true){
                 // DB::rollback();
@@ -600,7 +602,8 @@ class ApiOrder extends Controller
                 "outlet_name" => $outlet['outlet_name'], 
                 "id_reference" => $order->transaction_receipt_number.','.$order->id_outlet, 
                 'id_transaction' => $order->id_transaction, 
-                "transaction_date" => $order->transaction_date
+                "transaction_date" => $order->transaction_date,
+                'order_id'         => $order->order_id,
             ]);
             if($send != true){
                 DB::rollback();
@@ -936,7 +939,8 @@ class ApiOrder extends Controller
                                 "transaction_date"  => $order['transaction_date'],
                                 'id_transaction'    => $order['id_transaction'], 
                                 'receipt_number'    => $order['transaction_receipt_number'],
-                                'received_point'    => (string) $point
+                                'received_point'    => (string) $point,
+                                'order_id'          => $order['order_id'] ?? '',
                             ]
                         );
                         if($send != true){
@@ -1022,7 +1026,8 @@ class ApiOrder extends Controller
                             "transaction_date"  => $order->transaction_date,
                             'id_transaction'    => $order->id_transaction, 
                             'receipt_number'    => $order->transaction_receipt_number,
-                            'received_point'    => (string) $point
+                            'received_point'    => (string) $point,
+                            'order_id'          => $order->order_id,
                         ]
                     );
                     if($send != true){
@@ -1041,7 +1046,8 @@ class ApiOrder extends Controller
                 "outlet_name" => $outlet['outlet_name'], 
                 "id_reference" => $order->transaction_receipt_number.','.$order->id_outlet, 
                 'id_transaction' => $order->id_transaction, 
-                "transaction_date" => $order->transaction_date
+                "transaction_date" => $order->transaction_date,
+                'order_id'         => $order->order_id,
             ]);
             if($send != true){
                 DB::rollback();
