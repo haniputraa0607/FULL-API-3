@@ -127,6 +127,11 @@ class ApiPromotion extends Controller
 				if($post['recurring_rule'] == 'everyday'){
 					$data['schedule_everyday'] = 'Yes';
 				}
+
+				if (isset($post['use_periode'])) {
+					$data['date_start'] = date('Y-m-d H:i:s', strtotime($post['date_start']));
+					$data['date_end'] 	= date('Y-m-d H:i:s', strtotime($post['date_end']));
+				}
 			}
 
 			$data['schedule_time'] = $post['schedule_time'];
@@ -318,7 +323,7 @@ class ApiPromotion extends Controller
 				$data 							= [];
 				$data['id_promotion']			= $id_promotion;
 				$data['promotion_series_days']	= $post['promotion_series_days'][$key];
-				$data['send_deals_expired'] 	= $post['send_deals_expired'][0];
+				$data['send_deals_expired'] 	= $post['send_deals_expired'][0]??0;
 
 				if(isset($post['promotion_channel'][$key]) && in_array('deals', $post['promotion_channel'][$key])){
 					//get deals template
@@ -686,7 +691,7 @@ class ApiPromotion extends Controller
 			$data 							= [];
 			$data['id_promotion']			= $id_promotion;
 			$data['promotion_series_days']	= 0;
-			$data['send_deals_expired'] 	= $post['send_deals_expired'][0];
+			$data['send_deals_expired'] 	= $post['send_deals_expired'][0]??0;
 
 			if(isset($post['promotion_channel'][0]) && in_array('deals', $post['promotion_channel'][0])){
 				//get deals template
@@ -1109,6 +1114,16 @@ class ApiPromotion extends Controller
 											->orWhere('schedule_everyday', '=', 'Yes');
 										})
 										->where(function ($query) {
+											$query->where(function ($q) {
+												$q->whereNull('date_start')
+													->whereNull('date_end');
+											})
+											->orWhere(function ($q) {
+												$q->where('date_start', '<', date('Y-m-d H:i:s'))
+													->where('date_end', '>', date('Y-m-d H:i:s'));
+											});
+										})
+										->where(function ($query) {
 											$query->whereHas('contents', function($q) {
 												$q->where('send_deals_expired', '1')
 													->orWhereDoesntHave('deals', function($q2) {
@@ -1117,8 +1132,6 @@ class ApiPromotion extends Controller
 											});
 										})
 										->get();
-										// return $promotions;
-
 			}
 
 			foreach ($promotions as $key => $promotion) {
@@ -1138,6 +1151,16 @@ class ApiPromotion extends Controller
 											->where('promotion_schedules.schedule_time', '<=', $timeNow)
 											->where('promotion_schedules.schedule_time', '>=', $timeNow2)
 											->where(function ($query) {
+												$query->where(function ($q) {
+													$q->whereNull('date_start')
+														->whereNull('date_end');
+												})
+												->orWhere(function ($q) {
+													$q->where('date_start', '<', date('Y-m-d H:i:s'))
+														->where('date_end', '>', date('Y-m-d H:i:s'));
+												});
+											})
+											->where(function ($query) {
 												$query->whereHas('contents', function($q) {
 													$q->where('send_deals_expired', '1')
 														->orWhereDoesntHave('deals', function($q2) {
@@ -1146,7 +1169,7 @@ class ApiPromotion extends Controller
 												});
 											})
 											->get();
-				// return $promotionSeries;
+
 				$promotion_type = 'series';
 				foreach ($promotionSeries as $promotion) {
 					GeneratePromotionRecipient::dispatch($promotion, $promotion_type)->allOnConnection('database');
