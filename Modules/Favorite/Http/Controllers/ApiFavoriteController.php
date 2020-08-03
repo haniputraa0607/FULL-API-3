@@ -54,7 +54,7 @@ class ApiFavoriteController extends Controller
         $latitude = $request->json('latitude');
         $longitude = $request->json('longitude');
         $nf = $request->json('number_format')?:'float';
-        $favorite = Favorite::where('id_user',$user->id)->join('outlets', 'outlets.id_outlet', 'favorites.id_outlet');
+        $favorite = Favorite::where('id_user',$user->id)->join('outlets', 'outlets.id_outlet', 'favorites.id_outlet')->where('outlets.outlet_status','Active');
         $select = ['id_favorite','favorites.id_outlet','outlet_different_price','favorites.id_product','id_brand','id_user','notes'];
         $with = [
             'modifiers'=>function($query){
