@@ -283,6 +283,7 @@ class GoSend
                     'outlet_code'     => $outlet->outlet_code,
                     'outlet_name'     => $outlet->outlet_name,
                     'delivery_status' => $replacer[$delivery_status] ?? $delivery_status,
+                    'order_id'        => $trx_pickup->order_id,
                 ]
             );
             TransactionPickupGoSendUpdate::create($dataUpdate);

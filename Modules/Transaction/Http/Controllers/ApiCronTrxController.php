@@ -126,6 +126,7 @@ class ApiCronTrxController extends Controller
     	            	DB::rollback();
     	            	continue;
     	            }
+                    $order_id = TransactionPickup::select('order_id')->where('id_transaction', $singleTrx->id_transaction)->pluck('order_id')->first();
                     $usere= User::where('id',$singleTrx->id_user)->first();
                     $send = app($this->autocrm)->SendAutoCRM('Transaction Failed Point Refund', $usere->phone,
                         [
@@ -133,7 +134,8 @@ class ApiCronTrxController extends Controller
                             "transaction_date"  => $singleTrx->transaction_date,
                             'id_transaction'    => $singleTrx->id_transaction,
                             'receipt_number'    => $singleTrx->transaction_receipt_number,
-                            'received_point'    => (string) abs($logB['balance'])
+                            'received_point'    => (string) abs($logB['balance']),
+                            'order_id'          => $order_id,
                         ]
                     );
                 }
@@ -696,6 +698,7 @@ class ApiCronTrxController extends Controller
                     "id_reference"     => $order->transaction_receipt_number . ',' . $order->id_outlet,
                     "transaction_date" => $order->transaction_date,
                     'id_transaction'   => $order->id_transaction,
+                    'order_id'         => $order->order_id,
                 ]);
                 if ($send != true) {
                     DB::rollback();
@@ -712,6 +715,7 @@ class ApiCronTrxController extends Controller
                         'id_transaction'   => $order['id_transaction'],
                         'receipt_number'   => $order['transaction_receipt_number'],
                         'received_point'   => (string) $point,
+                        'order_id'         => $order->order_id,
                     ]);
                     if ($send != true) {
                         DB::rollback();
