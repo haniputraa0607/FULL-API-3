@@ -34,9 +34,3 @@ Route::group(['prefix' => 'api/promotion', 'namespace' => 'Modules\Promotion\Htt
 {
     Route::get('display_logo/{hash}', 'ApiPromotion@displayLogo');
 });
-
-Route::group(['prefix' => 'api/promotion', 'namespace' => 'Modules\Promotion\Http\Controllers'], function()
-{
-    Route::get('generate-recipient', 'ApiPromotion@addPromotionQueue');
-    Route::get('send-promotion', 'ApiPromotion@sendPromotion');
-});
