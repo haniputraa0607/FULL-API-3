@@ -196,6 +196,10 @@ class User extends Authenticatable
     	return $this->hasMany(LogPoint::class, 'id_user', 'id')->orderBy('created_at', 'DESC')->where('source', '=', 'voucher');
 	}
 	
+	public function promotion_queue() {
+    	return $this->hasMany(PromotionQueue::class, 'id_user', 'id');
+    }
+    
     public function promotionSents() {
     	return $this->hasMany(PromotionSent::class, 'id_user', 'id')->orderBy('series_no', 'ASC');
     }

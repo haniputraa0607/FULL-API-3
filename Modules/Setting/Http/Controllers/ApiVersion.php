@@ -94,7 +94,7 @@ class ApiVersion extends Controller
                 $setting['version_text_alert_mobile'] = str_replace('%version_app%', $versionRec['app_version'], $setting['version_text_alert_mobile']);
                 return response()->json([
                     'status' => 'fail',
-                    'image' => env('AWS_URL') . $setting['version_image_mobile'],
+                    'image' => config('url.storage_url_api') . $setting['version_image_mobile'],
                     'text' => $setting['version_text_alert_mobile'],
                     'button_text' => $setting['version_text_button_mobile'],
                     'button_url' => $setting['version_appstore']
@@ -116,7 +116,7 @@ class ApiVersion extends Controller
                 $setting['version_text_alert_outlet'] = str_replace('%version_app%', $versionRec['app_version'], $setting['version_text_alert_outlet']);
                 return response()->json([
                     'status' => 'fail',
-                    'image' => env('AWS_URL') . $setting['version_image_outlet'],
+                    'image' => config('url.storage_url_api') . $setting['version_image_outlet'],
                     'text' => $setting['version_text_alert_outlet'],
                     'button_text' => $setting['version_text_button_outlet'],
                     'button_url' => $setting['version_outletstore']
