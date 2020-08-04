@@ -8,6 +8,7 @@ use App\Http\Models\LogPoint;
 use App\Http\Models\Outlet;
 use App\Http\Models\Setting;
 use App\Http\Models\Transaction;
+use App\Http\Models\TransactionPickup;
 use App\Http\Models\TransactionSetting;
 use App\Http\Models\User;
 use Illuminate\Bus\Queueable;
@@ -185,6 +186,7 @@ class FraudJob implements ShouldQueue
                                 ];
                             }
                             $usere = User::where('id', $dataTrx['id_user'])->first();
+                            $order_id = TransactionPickup::select('order_id')->where('id_transaction', $dataTrx['id_transaction'])->pluck('order_id')->first();
                             $send = app('Modules\Autocrm\Http\Controllers\ApiAutoCrm')->SendAutoCRM(
                                 'Transaction Point Achievement',
                                 $usere->phone,
@@ -193,7 +195,8 @@ class FraudJob implements ShouldQueue
                                     "transaction_date"  => $dataTrx['transaction_date'],
                                     'id_transaction'    => $dataTrx['id_transaction'],
                                     'receipt_number'    => $dataTrx['transaction_receipt_number'],
-                                    'received_point'    => (string) $dataTrx['transaction_cashback_earned']
+                                    'received_point'    => (string) $dataTrx['transaction_cashback_earned'],
+                                    'order_id'          => $order_id??'',
                                 ]
                             );
                             if ($send != true) {

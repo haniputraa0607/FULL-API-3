@@ -26,6 +26,13 @@ use Modules\Deals\Entities\DealsTierDiscountRule;
 use Modules\Deals\Entities\DealsBuyxgetyProductRequirement;
 use Modules\Deals\Entities\DealsBuyxgetyRule;
 
+use Modules\Promotion\Entities\DealsPromotionProductDiscount;
+use Modules\Promotion\Entities\DealsPromotionProductDiscountRule;
+use Modules\Promotion\Entities\DealsPromotionTierDiscountProduct;
+use Modules\Promotion\Entities\DealsPromotionTierDiscountRule;
+use Modules\Promotion\Entities\DealsPromotionBuyxgetyProductRequirement;
+use Modules\Promotion\Entities\DealsPromotionBuyxgetyRule;
+
 use App\Http\Models\User;
 use App\Http\Models\Campaign;
 use App\Http\Models\Outlet;
@@ -36,6 +43,7 @@ use App\Http\Models\Voucher;
 use App\Http\Models\Treatment;
 use App\Http\Models\Deal;
 use App\Http\Models\DealsUser;
+use App\Http\Models\DealsPromotionTemplate;
 
 use Modules\PromoCampaign\Http\Requests\Step1PromoCampaignRequest;
 use Modules\PromoCampaign\Http\Requests\Step2PromoCampaignRequest;
@@ -946,42 +954,55 @@ class ApiPromoCampaign extends Controller
     public function step2(Step2PromoCampaignRequest $request)
     {
         $post = $request->json()->all();
+        $post['promo_type'] = $post['promo_type']??null;
         $user = $request->user();
         if (isset($post['used_code_update'])) {
         	return $this->usedCodeUpdate($request, 'step2');
         }
 
         if (!empty($post['id_deals'])) {
-        	$source = 'deals';
-        	$table = new Deal;
-        	$id_table = 'id_deals';
-        	$id_post = $post['id_deals'];
-        	$error_message = 'Deals';
+        	if ( $post['deals_type'] != 'Promotion' ) {
+        		$source = 'deals';
+	        	$table = new Deal;
+	        	$id_table = 'id_deals';
+	        	$id_post = $post['id_deals'];
+	        	$error_message = 'Deals';
+	        	$warning_image = 'deals';
+        	}else {
+	        	$source = 'deals_promotion';
+	        	$table = new DealsPromotionTemplate;
+	        	$id_table = 'id_deals_promotion_template';
+	        	$id_post = $post['id_deals'];
+	        	$error_message = 'Deals';
+	        	$warning_image = 'deals';
+	        }
         }else{
         	$source = 'promo_campaign';
         	$table = new PromoCampaign;
         	$id_table = 'id_promo_campaign';
         	$id_post = $post['id_promo_campaign'];
+	        $warning_image = 'promo_campaign';
         	$error_message = 'Deals';
         }
 
         DB::beginTransaction();
         $dataPromoCampaign['promo_type'] = $post['promo_type'];
         if ($source == 'promo_campaign') {
+        	$saveImagePath = 'img/promo-campaign/warning-image/';
         	$dataPromoCampaign['step_complete'] = 1;
 	        $dataPromoCampaign['last_updated_by'] = $user['id'];
 	        $dataPromoCampaign['user_type'] = $post['filter_user'];
 	        $dataPromoCampaign['specific_user'] = $post['specific_user']??null;
 
-	        if ($post['filter_outlet'] == 'All Outlet') 
+	        if ($post['filter_outlet'] == 'All Outlet')
 	        {
 	            $createFilterOutlet = $this->createOutletFilter('all_outlet', 1, $post['id_promo_campaign'], null);
-	        } 
-	        elseif ($post['filter_outlet'] == 'Selected') 
+	        }
+	        elseif ($post['filter_outlet'] == 'Selected')
 	        {
 	            $createFilterOutlet = $this->createOutletFilter('selected', 0, $post['id_promo_campaign'], $post['multiple_outlet']);
-	        } 
-	        else 
+	        }
+	        else
 	        {
 	            $createFilterOutlet = [
 	                'status'  => 'fail',
@@ -993,9 +1014,23 @@ class ApiPromoCampaign extends Controller
         }
         else
         {
+        	$saveImagePath = 'img/deals/warning-image/';
         	$dataPromoCampaign['deals_promo_id_type']	= $post['deals_promo_id_type']??null;
-        	$dataPromoCampaign['deals_promo_id']	= $post['deals_promo_id']??null;
+        	$dataPromoCampaign['deals_promo_id']		= $dataPromoCampaign['deals_promo_id_type'] == 'nominal' ? $post['deals_promo_id_nominal'] : ($post['deals_promo_id_promoid']??null);
+        	$dataPromoCampaign['last_updated_by'] 		= auth()->user()->id;
+        	$dataPromoCampaign['step_complete']			= 0;
         }
+
+		$image = $table::where($id_table, $id_post)->first();
+
+		if (!empty($post['id_deals'])) {
+			if (!empty($image['deals_total_claimed']) ) {
+				return [
+	                'status'  => 'fail',
+	                'message' => 'Cannot update deals because someone has already claimed a voucher'
+	            ];
+			}
+		}
 
         $update = $table::where($id_table, $id_post)->update($dataPromoCampaign);
 
@@ -1014,6 +1049,7 @@ class ApiPromoCampaign extends Controller
                 return response()->json($createFilterProduct);
             }
         } elseif ($post['promo_type'] == 'Tier discount') {
+
             try {
                 $createFilterProduct = $this->createPromoTierDiscount($id_post, array($post['product']), $post['discount_type'], $post['promo_rule'], $source, $table, $id_table);
             } catch (Exception $e) {
@@ -1039,6 +1075,16 @@ class ApiPromoCampaign extends Controller
             }
         }else {
         	$createFilterProduct = $this->deleteAllProductRule($source, $id_post);
+        	if ($createFilterProduct) {
+    	    	$createFilterProduct = ['status' => 'success'];
+    	    }else{
+    	    	$createFilterProduct = [
+                    'status'  => 'fail',
+                    'messages' => 'Create Promo Type Failed'
+                ];
+                DB::rollBack();
+                return response()->json($createFilterProduct);
+    	    }
         }
 
         DB::commit();
@@ -1176,6 +1222,17 @@ class ApiPromoCampaign extends Controller
 		        DealsBuyxgetyProductRequirement::where('id_deals', '=', $id_post)->delete();
 
 	    	}
+	    	elseif ($source == 'deals_promotion')
+	    	{
+	    		DealsPromotionProductDiscountRule::where('id_deals', '=', $id_post)->delete();
+		        DealsPromotionTierDiscountRule::where('id_deals', '=', $id_post)->delete();
+		        DealsPromotionBuyxgetyRule::where('id_deals', '=', $id_post)->delete();
+
+		        DealsPromotionTierDiscountProduct::where('id_deals', '=', $id_post)->delete();
+		        DealsPromotionProductDiscount::where('id_deals', '=', $id_post)->delete();
+		        DealsPromotionBuyxgetyProductRequirement::where('id_deals', '=', $id_post)->delete();
+
+	    	}
 
 	    	return true;
     	} catch (Exception $e) {
@@ -1225,6 +1282,12 @@ class ApiPromoCampaign extends Controller
     	{
 	        $table_product_discount_rule = new DealsProductDiscountRule;
 	        $table_product_discount = new DealsProductDiscount;
+    	}
+    	elseif ($source == 'deals_promotion')
+    	{
+    		$table_product_discount_rule = new DealsPromotionProductDiscountRule;
+	        $table_product_discount = new DealsPromotionProductDiscount;
+	        $id_table = 'id_deals';
     	}
 
     	if ($discount_type == 'Nominal') {
@@ -1312,6 +1375,12 @@ class ApiPromoCampaign extends Controller
 	        $table_tier_discount_rule = new DealsTierDiscountRule;
 	        $table_tier_discount_product = new DealsTierDiscountProduct;
     	}
+    	elseif ($source == 'deals_promotion')
+    	{
+    		$table_tier_discount_rule = new DealsPromotionTierDiscountRule;
+	        $table_tier_discount_product = new DealsPromotionTierDiscountProduct;
+	        $id_table = 'id_deals';
+    	}
 
     	if ($discount_type == 'Nominal') {
         	$is_nominal = 1;
@@ -1395,6 +1464,12 @@ class ApiPromoCampaign extends Controller
 	        $table_buyxgety_discount_rule = new DealsBuyxgetyRule;
 	        $table_buyxgety_discount_product = new DealsBuyxgetyProductRequirement;
     	}
+    	elseif ($source == 'deals_promotion')
+    	{
+	        $table_buyxgety_discount_rule = new DealsPromotionBuyxgetyRule;
+	        $table_buyxgety_discount_product = new DealsPromotionBuyxgetyProductRequirement;
+	        $id_table = 'id_deals';
+    	}
 
         $data = [];
         foreach ($rules as $key => $rule) {
@@ -1435,7 +1510,7 @@ class ApiPromoCampaign extends Controller
             }
 
         }
-// return $data;
+
         $dataProduct['id_product']           = $product;
         $dataProduct[$id_table]    			 = $id_post;
         $dataProduct['created_at']           = date('Y-m-d H:i:s');

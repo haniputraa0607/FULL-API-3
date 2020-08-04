@@ -244,6 +244,9 @@ class GoSend
             'no_driver' => 'Driver not found',
             'on_hold' => 'On Hold'
         ];
+
+        $ref_status2 = array_flip($ref_status);
+
         if (!$found) {
             $trx_pickup = TransactionPickup::where('id_transaction', $dataUpdate['id_transaction'])->first();
             if ($dataUpdate['status'] == 'Completed') {
@@ -261,13 +264,26 @@ class GoSend
                 'order_id' => $trx_pickup->order_id
             ];
             app("Modules\OutletApp\Http\Controllers\ApiOutletApp")->outletNotif($dataPush,$outlet->id_outlet);
+
+            $delivery_status = ($ref_status2[$dataUpdate['status']] ?? $dataUpdate['status']);
+
+            $replacer = [
+                'confirmed'             => 'Pesanan nomor ('.$dataUpdate['go_send_order_no'].') sudah diterima dan sedang diproses oleh jilid',
+                'out_for_pickup'        => 'Tunggu sebentar ya, driver mu sedang menuju ke jilid',
+                'out_for_delivery'      => 'Menu favoritmu sedang diantar oleh driver',
+                'cancelled'             => 'Maaf, pesananmu tidak dapat diambil oleh jilid',
+                'delivered'             => 'Pesananmu sudah sampai! Selamat menikmati',
+                'no_driver'             => 'Belum berhasil menemukan driver',
+            ];
+
             $autocrm = app("Modules\Autocrm\Http\Controllers\ApiAutoCrm")->SendAutoCRM('Delivery Status Update', $phone,
                 [
                     'id_reference'    => $dataUpdate['id_transaction'],
                     'receipt_number'  => $trx->transaction_receipt_number,
                     'outlet_code'     => $outlet->outlet_code,
                     'outlet_name'     => $outlet->outlet_name,
-                    'delivery_status' => ($ref_status[$dataUpdate['status']] ?? $dataUpdate['status']),
+                    'delivery_status' => $replacer[$delivery_status] ?? $delivery_status,
+                    'order_id'        => $trx_pickup->order_id,
                 ]
             );
             TransactionPickupGoSendUpdate::create($dataUpdate);

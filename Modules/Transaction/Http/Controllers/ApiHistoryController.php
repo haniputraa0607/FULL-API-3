@@ -714,7 +714,8 @@ class ApiHistoryController extends Controller
         foreach ($voucher as $key => $value) {
             $dataVoucher[$key]['type'] = 'voucher';
             $dataVoucher[$key]['id'] = $value['id_deals_user'];
-            $dataVoucher[$key]['date'] = $value['claimed_at'];
+            $dataVoucher[$key]['date'] = MyHelper::dateFormatInd($value['claimed_at'], true, true, false);
+            $dataVoucher[$key]['date_v2'] = MyHelper::indonesian_date_v2($value['claimed_at'], 'd F Y H:i');
             $dataVoucher[$key]['outlet'] = 'Tukar Voucher';
             $dataVoucher[$key]['amount'] = number_format($value['voucher_price_cash'] - $value['balance_nominal'], 0, ',', '.');
         }
@@ -899,7 +900,7 @@ class ApiHistoryController extends Controller
                 ->where(function ($query) use ($post) {
                     if (!is_null($post['online_order'])) {
                         $query->orWhere(function ($queryLog) {
-                            $queryLog->whereIn('source', ['Transaction', 'Transaction Failed', 'Rejected Order', 'Rejected Order Midtrans', 'Rejected Order Point', 'Rejected Order Ovo', 'Reversal'])
+                            $queryLog->whereIn('source', ['Online Transaction', 'Transaction', 'Transaction Failed', 'Rejected Order', 'Rejected Order Midtrans', 'Rejected Order Point', 'Rejected Order Ovo', 'Reversal'])
                                 ->where('trasaction_type', '!=', 'Offline');
                         });
                     }
@@ -997,12 +998,18 @@ class ApiHistoryController extends Controller
                     $dataList['amount'] = '- ' . ltrim(number_format($value['balance'], 0, ',', '.'), '-');
                 }
             } elseif ($value['source'] == 'Subscription Reversal') {
+                if($post['voucher'] != 1){
+                    unset($log[$key]);
+                }
                 $dataList['type']   = 'profile';
                 $dataList['id']      = $value['id_log_balance'];
                 $dataList['date']    = date('d M Y H:i', strtotime($value['created_at']));
                 $dataList['outlet'] = 'Reversal';
                 $dataList['amount'] = number_format($value['balance'], 0, ',', '.');
             } elseif ($value['source'] == 'Deals Reversal' || $value['source'] == 'Claim Deals Failed') {
+                if($post['voucher'] != 1){
+                    unset($log[$key]);
+                }
                 $dataList['type']   = 'profile';
                 $dataList['id']      = $value['id_log_balance'];
                 $dataList['date']    = date('d M Y H:i', strtotime($value['created_at']));
