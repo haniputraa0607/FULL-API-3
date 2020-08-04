@@ -125,7 +125,7 @@ class ApiDealsVoucherWebviewController extends Controller
             'is_used'               => $data['is_used'],
             'btn_used'              => 'Gunakan Nanti',
             'is_online'             => $data['deals_voucher']['deal']['is_online'],
-            'btn_online'            => 'Gunakan Voucher',
+            'btn_online'            => 'Gunakan',
             'is_offline'            => $data['deals_voucher']['deal']['is_offline'],
             'btn_offline'           => 'Redeem to Cashier',
             'header_online_voucher' => 'Online Transaction',
