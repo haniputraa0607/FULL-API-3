@@ -97,4 +97,23 @@ class DealsUser extends Model
 	function deals_payment_ipay88() {
 		return $this->hasOne(\Modules\IPay88\Entities\DealsPaymentIpay88::class, 'id_deals_user', 'id_deals_user');
 	}
+
+	function getGetTransactionAttribute() {
+
+        if( $this->paid_status != "Cancelled" )
+        {
+        	$this->load([
+        		'dealVoucher.transaction_voucher' => function($q) {
+    				$q->where('status','=','success');
+    			},
+    			'dealVoucher.transaction_voucher.transaction' => function($q) {
+				$q->select(
+					'id_transaction',
+					'transaction_receipt_number',
+					'trasaction_type',
+					'transaction_grandtotal'
+				);
+			}]);
+        }
+    }
 }
