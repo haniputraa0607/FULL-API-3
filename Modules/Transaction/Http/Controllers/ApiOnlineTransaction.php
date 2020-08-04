@@ -2072,6 +2072,7 @@ class ApiOnlineTransaction extends Controller
                 $tree[$product['id_brand']] = Brand::select('name_brand','id_brand')->find($product['id_brand'])->toArray();
             }
             $product['product_price_total'] = ($product['qty'] * ($product['product_price']+$mod_price));
+            $product['product_price_raw'] = $product['product_price']+$mod_price;
             $product['product_price'] = MyHelper::requestNumber($product['product_price']+$mod_price, '_CURRENCY');
             $tree[$product['id_brand']]['products'][]=$product;
             $subtotal += $product['product_price_total'];
