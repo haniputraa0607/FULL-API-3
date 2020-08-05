@@ -31,7 +31,6 @@ use App\Lib\Midtrans;
 use App\Lib\Ovo;
 use App\Lib\MyHelper;
 use App\Lib\PushNotificationHelper;
-use App\Jobs\DisburseJob;
 use DB;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -935,7 +934,6 @@ class ApiOutletApp extends Controller
             }
 
             AchievementCheck::dispatch(['id_transaction' => $order->id_transaction])->onConnection('achievement');
-            DisburseJob::dispatch(['id_transaction' => $order->id_transaction])->onConnection('disbursequeue');
 
             DB::commit();
         }

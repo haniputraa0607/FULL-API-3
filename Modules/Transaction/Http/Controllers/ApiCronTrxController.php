@@ -40,7 +40,6 @@ use Modules\IPay88\Entities\TransactionPaymentIpay88;
 use Modules\OutletApp\Jobs\AchievementCheck;
 use Modules\SettingFraud\Entities\FraudDetectionLogTransactionDay;
 use Modules\SettingFraud\Entities\FraudDetectionLogTransactionWeek;
-use App\Jobs\DisburseJob;
 
 class ApiCronTrxController extends Controller
 {
@@ -425,7 +424,6 @@ class ApiCronTrxController extends Controller
                                         ->update(['taken_by_system_at' => date('Y-m-d 00:00:00')]);
 
             AchievementCheck::dispatch(['id_transaction' => $idTrx])->onConnection('achievement');
-            DisburseJob::dispatch(['id_transaction' => $idTrx])->onConnection('disbursequeue');
 
             $log->success('success');
             return response()->json(['status' => 'success']);
