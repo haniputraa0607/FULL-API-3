@@ -470,10 +470,17 @@ class ApiOutletAppReport extends Controller
     		$result = $data['product'];
     		foreach ($result as $key => $value) {
 
+				/*
 				$mod_key = array_search($value['id_brand'], array_column($data['modifier'], 'id_brand'));
 
 				if($mod_key !== false){
 					$result[$mod_key]['modifier'] = $data['modifier'][$mod_key]['modifier'];
+				}
+				*/
+				foreach ($data['modifier'] as $key2 => $value2) {
+					if ($value['id_brand'] == $value2['id_brand']) {
+							$result[$key]['modifier'] = $value2['modifier'];	
+					}
 				}
 			}
     	}
