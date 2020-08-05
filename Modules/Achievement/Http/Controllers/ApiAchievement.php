@@ -1412,8 +1412,8 @@ class ApiAchievement extends Controller
             }
         }
 
-        $result['progress']     = $catProgress;
-        $result['end_progress'] = $catEndProgress;
+        $result['progress']     = $totalProgress;
+        $result['end_progress'] = $totalEndProgress;
         return response()->json(MyHelper::checkGet($result));
     }
 }
