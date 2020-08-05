@@ -416,7 +416,7 @@ class ApiCategoryController extends Controller
         // grouping by id
         $result = [];
         foreach ($products as $product) {
-            $product['product_price_raw'] = $product['product_price'];
+            $product['product_price_raw'] = (int) $product['product_price'];
             $product->append('photo');
             $product = $product->toArray();
             $pivots = $product['brand_category'];
