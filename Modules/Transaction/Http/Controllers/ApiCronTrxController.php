@@ -424,7 +424,7 @@ class ApiCronTrxController extends Controller
             $dataTrx = TransactionPickup::whereIn('id_transaction', $idTrx)
                                         ->update(['taken_by_system_at' => date('Y-m-d 00:00:00')]);
 
-            AchievementCheck::dispatch(['id_transaction' => $idTrx])->onConnection('achievement');
+            AchievementCheck::dispatch(['id_transaction' => $idTrx, 'phone' => $newTrx->user->phone])->onConnection('achievement');
             DisburseJob::dispatch(['id_transaction' => $idTrx])->onConnection('disbursequeue');
 
             $log->success('success');
