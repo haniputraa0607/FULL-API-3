@@ -102,7 +102,9 @@ class ApiOutletAppReport extends Controller
                     (select count(DISTINCT transactions.id_transaction)) as trx_count,
                     (select AVG(transaction_grandtotal)) as trx_average,
                     (select SUM(trans_p.trx_total_item)) as trx_total_item,
-                    (select DATE(transaction_date)) as trx_date
+                    (select DATE(transaction_date)) as trx_date,
+                    (select SUM(disburse_outlet_transactions.income_outlet)) as trx_net_sale,
+                    (select SUM(transactions.transaction_shipment_go_send)) as trx_shipment_go_send
                     FROM transactions
                     LEFT JOIN (
                     	select 
@@ -112,6 +114,7 @@ class ApiOutletAppReport extends Controller
 	                ) trans_p
                     	ON (transactions.id_transaction = trans_p.id_transaction) 
                     LEFT JOIN transaction_pickups ON transaction_pickups.id_transaction = transactions.id_transaction
+                    LEFT JOIN disburse_outlet_transactions ON disburse_outlet_transactions.id_transaction = transactions.id_transaction
                     WHERE transaction_date BETWEEN "'. date('Y-m-d', strtotime($post['date'])) .' 00:00:00"
                     AND "'. date('Y-m-d', strtotime($post['date'])) .' 23:59:59"
                     AND transactions.id_outlet = "'.$post['id_outlet'].'"
@@ -269,12 +272,16 @@ class ApiOutletAppReport extends Controller
 	    	$data['trx_grand']		= number_format($daily_trx['trx_grand'],0,",",".");
 	    	$data['trx_count']		= number_format($daily_trx['trx_count'],0,",",".");
 	    	$data['trx_total_item']	= number_format($daily_trx['trx_total_item'],0,",",".");
+            $data['trx_net_sale']	= number_format($daily_trx['trx_net_sale'],0,",",".");
+            $data['trx_shipment_go_send']	= number_format($daily_trx['trx_shipment_go_send'],0,",",".");
     	}else{
 	    	$data['first_trx_time'] = "";
 	    	$data['last_trx_time'] 	= "";
 	    	$data['trx_grand']		= 0;
 	    	$data['trx_count']		= 0;
 	    	$data['trx_total_item']	= 0;
+            $data['trx_net_sale']		= 0;
+            $data['trx_shipment_go_send']	= 0;
     	}
     	$data['payment']		= $daily_payment;
 
@@ -470,10 +477,17 @@ class ApiOutletAppReport extends Controller
     		$result = $data['product'];
     		foreach ($result as $key => $value) {
 
+				/*
 				$mod_key = array_search($value['id_brand'], array_column($data['modifier'], 'id_brand'));
 
 				if($mod_key !== false){
 					$result[$mod_key]['modifier'] = $data['modifier'][$mod_key]['modifier'];
+				}
+				*/
+				foreach ($data['modifier'] as $key2 => $value2) {
+					if ($value['id_brand'] == $value2['id_brand']) {
+							$result[$key]['modifier'] = $value2['modifier'];	
+					}
 				}
 			}
     	}

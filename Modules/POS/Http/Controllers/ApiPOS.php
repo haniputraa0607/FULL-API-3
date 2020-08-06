@@ -2,6 +2,7 @@
 
 namespace Modules\POS\Http\Controllers;
 
+use App\Jobs\DisburseJob;
 use App\Jobs\FraudJob;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -1314,6 +1315,9 @@ class ApiPOS extends Controller
                             $dataTrx['membership_level']    = null;
                             $dataTrx['membership_promo_id'] = null;
                         }else{
+                            //insert to disburse job for calculation income outlet
+                            DisburseJob::dispatch(['id_transaction' => $trx['id_transaction']])->onConnection('disbursequeue');
+
                             if($config['fraud_use_queue'] == 1){
                                 FraudJob::dispatch($user, $trx, 'transaction')->onConnection('fraudqueue');
                             }else{

@@ -92,11 +92,16 @@ class ApiIrisController extends Controller
                     $getData = Transaction::join('disburse_outlet_transactions', 'disburse_outlet_transactions.id_transaction', 'transactions.id_transaction')
                         ->leftJoin('disburse_outlet', 'disburse_outlet.id_disburse_outlet', 'disburse_outlet_transactions.id_disburse_outlet')
                         ->join('outlets', 'outlets.id_outlet', 'transactions.id_outlet')
+                        ->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
                         ->leftJoin('bank_account_outlets', 'bank_account_outlets.id_outlet', 'outlets.id_outlet')
                         ->leftJoin('bank_accounts', 'bank_accounts.id_bank_account', 'bank_account_outlets.id_bank_account')
                         ->leftJoin('bank_name', 'bank_name.id_bank_name', 'bank_accounts.id_bank_name')
                         ->whereNull('disburse_outlet.id_disburse_outlet')
                         ->whereNotNull('bank_accounts.beneficiary_name')
+                        ->where(function ($q){
+                            $q->whereNotNull('transaction_pickups.taken_at')
+                                ->orWhereNotNull('transaction_pickups.taken_by_system_at');
+                        })
                         ->whereDate('transactions.transaction_date', '<', $dateForQuery)
                         ->select('disburse_outlet_transactions.*', 'transaction_shipment_go_send', 'transactions.transaction_date', 'transactions.id_outlet', 'transactions.id_transaction', 'transactions.transaction_subtotal',
                             'transactions.transaction_grandtotal', 'transactions.transaction_discount', 'transactions.id_promo_campaign_promo_code',
