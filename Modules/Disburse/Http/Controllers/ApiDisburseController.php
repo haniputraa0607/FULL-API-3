@@ -717,9 +717,10 @@ class ApiDisburseController extends Controller
                 ->leftJoin('disburse_outlet', 'disburse_outlet.id_disburse_outlet', 'disburse_outlet_transactions.id_disburse_outlet')
                 ->leftJoin('disburse', 'disburse.id_disburse', 'disburse_outlet.id_disburse')
                 ->select('disburse.disburse_status as 0', DB::raw("CONCAT (outlets.outlet_code, ' - ',outlets.outlet_name) as '1'"), DB::raw("DATE_FORMAT(disburse.created_at, '%d %b %Y %H:%i') as '2'"),
-                    DB::raw("DATE_FORMAT(transactions.transaction_date, '%d %b %Y %H:%i') as '3'"), 'transactions.transaction_receipt_number as 4',  DB::raw('FORMAT(disburse_outlet_transactions.income_central,2) as "5"'),
-                    DB::raw('FORMAT(disburse_outlet_transactions.expense_central,2) as "6"'),  DB::raw('FORMAT(disburse_outlet_transactions.income_outlet,2) as "7"'),  DB::raw('FORMAT(disburse_outlet_transactions.fee_item,2) as "8"'),  DB::raw('FORMAT(disburse_outlet_transactions.payment_charge,2) as "9"'),
-                    DB::raw('FORMAT(disburse_outlet_transactions.discount,2) as "10"'),  DB::raw('FORMAT(disburse_outlet_transactions.subscription,2) as "11"'),  DB::raw('transactions.transaction_shipment_go_send as "12"'))
+                    DB::raw("DATE_FORMAT(transactions.transaction_date, '%d %b %Y %H:%i') as '3'"), 'transactions.transaction_receipt_number as 4', DB::raw('FORMAT(transactions.transaction_subtotal,2) as "5"'), DB::raw('FORMAT(transactions.transaction_grandtotal,2) as "6"'),
+                    DB::raw('FORMAT(disburse_outlet_transactions.income_central,2) as "7"'), DB::raw('FORMAT(disburse_outlet_transactions.expense_central,2) as "8"'),  DB::raw('FORMAT(disburse_outlet_transactions.income_outlet,2) as "9"'),
+                    DB::raw('FORMAT(disburse_outlet_transactions.fee_item,2) as "10"'),  DB::raw('FORMAT(disburse_outlet_transactions.payment_charge,2) as "11"'), DB::raw('FORMAT(disburse_outlet_transactions.discount,2) as "12"'),
+                    DB::raw('FORMAT(disburse_outlet_transactions.subscription,2) as "13"'),  DB::raw('transactions.transaction_shipment_go_send as "14"'))
                 ->orderBy('transactions.transaction_date','desc');
 
         if(isset($post['fitler_date']) &&  $post['fitler_date']== 'today'){
