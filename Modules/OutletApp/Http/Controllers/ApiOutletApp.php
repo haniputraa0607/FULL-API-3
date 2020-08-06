@@ -933,7 +933,8 @@ class ApiOutletApp extends Controller
                 ]);
             }
 
-            AchievementCheck::dispatch(['id_transaction' => $order->id_transaction])->onConnection('achievement');
+            AchievementCheck::dispatch(['id_transaction' => $order->id_transaction, 'phone' => $user['phone']])->onConnection('achievement');
+
 
             DB::commit();
         }

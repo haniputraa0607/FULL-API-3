@@ -14,7 +14,7 @@ class AddIdUserFranchiseSeedSeedToUserFranchisesTable extends Migration
     public function up()
     {
         Schema::table('user_franchises', function (Blueprint $table) {
-            $table->integer('id_user_franchisee_seed')->after('id_user_franchisee');
+            $table->integer('id_user_franchisee_seed')->after('id_user_franchise');
         });
     }
 
