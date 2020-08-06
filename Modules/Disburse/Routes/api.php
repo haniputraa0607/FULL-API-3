@@ -44,6 +44,7 @@ Route::group(['prefix' => 'disburse'], function () {
         Route::post('list/trx', 'ApiDisburseController@listTrx');
         Route::post('list/fail-action', 'ApiDisburseController@listDisburseFailAction');
         Route::post('list/{status}', 'ApiDisburseController@listDisburse');
+        Route::post('list-datatable/calculation', 'ApiDisburseController@listCalculationDataTable');
         Route::post('list-datatable/{status}', 'ApiDisburseController@listDisburseDataTable');
         Route::post('detail/{id}', 'ApiDisburseController@detailDisburse');
 
@@ -75,6 +76,7 @@ Route::group(['prefix' => 'disburse'], function () {
         //disburse
         Route::post('user-franchise/list/trx', 'ApiDisburseController@listTrx');
         Route::post('user-franchise/list/{status}', 'ApiDisburseController@listDisburse');
+        Route::post('user-franchise/list-datatable/calculation', 'ApiDisburseController@listCalculationDataTable');
         Route::post('user-franchise/list-datatable/{status}', 'ApiDisburseController@listDisburseDataTable');
         Route::post('user-franchise/detail/{id}', 'ApiDisburseController@detailDisburse');
     });

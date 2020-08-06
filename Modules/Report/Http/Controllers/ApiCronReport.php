@@ -534,9 +534,12 @@ class ApiCronReport extends Controller
                     (select count(transactions.id_transaction)) as trx_count, 
                     (select AVG(transaction_grandtotal)) as trx_average, 
                     (select SUM(trans_p.trx_total_item)) as trx_total_item,
-                    (select DATE(transaction_date)) as trx_date
+                    (select DATE(transaction_date)) as trx_date,
+                    (select SUM(disburse_outlet_transactions.income_outlet)) as trx_net_sale,
+                    (select SUM(transactions.transaction_shipment_go_send)) as trx_shipment_go_send
                     FROM transactions 
                     LEFT JOIN users ON users.id = transactions.id_user 
+                    LEFT JOIN disburse_outlet_transactions ON disburse_outlet_transactions.id_transaction = transactions.id_transaction
                     LEFT JOIN transaction_pickups ON transaction_pickups.id_transaction = transactions.id_transaction 
                     LEFT JOIN (
                     	select 
@@ -570,6 +573,8 @@ class ApiCronReport extends Controller
 			$sum['trx_count'] = 0;
 			$sum['trx_total_item'] = 0;
 			$sum['trx_average'] = 0;
+            $sum['trx_net_sale'] = 0;
+            $sum['trx_shipment_go_send'] = 0;
 			$sum['cust_male'] = 0;
 			$sum['cust_female'] = 0;
 			$sum['cust_android'] = 0;
@@ -617,7 +622,9 @@ class ApiCronReport extends Controller
 				$sum['cust_young_adult'] += $value['cust_young_adult'];
 				$sum['cust_adult'] += $value['cust_adult'];
 				$sum['cust_old'] += $value['cust_old'];
-					
+                $sum['trx_net_sale'] += $value['trx_net_sale'];
+                $sum['trx_shipment_go_send'] += $value['trx_shipment_go_send'];
+
                 $save = DailyReportTrx::updateOrCreate([
                     'trx_date'  => date('Y-m-d', strtotime($value['trx_date'])),
                     'id_outlet' => $value['id_outlet']
