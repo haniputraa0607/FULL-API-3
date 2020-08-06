@@ -400,7 +400,7 @@ class SendCampaignJob implements ShouldQueue
                         $inbox['inboxes_id_reference'] = 0;
                     }
 
-                    if($campaign['campaign_inbox_clickto'] == 'No Action' || !empty($campaign['campaign_inbox_clickto'])){
+                    if($campaign['campaign_inbox_clickto'] == 'No Action' || empty($campaign['campaign_inbox_clickto'])){
                         $inbox['inboxes_clickto'] = 'Default';
                     }
 

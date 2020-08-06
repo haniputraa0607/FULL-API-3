@@ -1226,7 +1226,7 @@ class ApiAchievement extends Controller
                             foreach($dataTrx['product_transaction'] as $product){
                                 if($product['id_product'] <= $achievement['id_product']){
                                     if($product['id_product'] == $achievement['id_product']){
-                                        $total += $product['transaction_product_qty '];
+                                        $total += $product['transaction_product_qty'];
                                     }
                                 }else{
                                     break;
