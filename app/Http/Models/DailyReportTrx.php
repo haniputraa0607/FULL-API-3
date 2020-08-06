@@ -30,6 +30,8 @@ class DailyReportTrx extends Model
         'trx_discount',
         'trx_subtotal',
         'trx_grand',
+        'trx_shipment_go_send',
+        'trx_net_sale',
         'trx_cashback_earned',
         'trx_point_earned',
         'trx_max',

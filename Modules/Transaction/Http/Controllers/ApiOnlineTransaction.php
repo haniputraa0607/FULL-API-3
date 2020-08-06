@@ -3,6 +3,7 @@
 namespace Modules\Transaction\Http\Controllers;
 
 use App\Http\Models\DailyTransactions;
+use App\Jobs\DisburseJob;
 use App\Jobs\FraudJob;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -1439,6 +1440,9 @@ class ApiOnlineTransaction extends Controller
                         $settingTime = Setting::where('key', 'processing_time')->first();
                         $updatePickup = TransactionPickup::where('id_transaction', $insertTransaction['id_transaction'])->update(['pickup_at' => date('Y-m-d H:i:s', strtotime('+ '.$settingTime['value'].'minutes'))]);
                     }
+
+                    //insert to disburse job for calculation income outlet
+                    DisburseJob::dispatch(['id_transaction' => $insertTransaction['id_transaction']])->onConnection('disbursequeue');
                 }
 
                 if ($save['type'] == 'no_topup') {
