@@ -1835,7 +1835,9 @@ class ApiOutletController extends Controller
                     'phone'=>'',
                     'email'=>'',
                     'latitude'=>'',
-                    'longitude'=>''
+                    'longitude'=>'',
+                    'status_franchise' => '',
+                    'delivery' => ''
                 ];
             }
 
