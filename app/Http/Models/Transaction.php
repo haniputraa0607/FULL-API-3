@@ -152,7 +152,7 @@ class Transaction extends Model
 
     public function productTransaction() 
     {
-    	return $this->hasMany(TransactionProduct::class, 'id_transaction', 'id_transaction');
+    	return $this->hasMany(TransactionProduct::class, 'id_transaction', 'id_transaction')->orderBy('id_product');
 	}
 
     public function product_detail()
