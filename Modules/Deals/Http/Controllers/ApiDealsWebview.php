@@ -145,7 +145,7 @@ class ApiDealsWebview extends Controller
         $result['deals_content'][$i]['brand_logo'] = $deals['brand']['logo_brand'];
 
         if ($deals['custom_outlet_text'] != null) {
-            $result['deals_content'][$i]['detail_available'] = $deals['custom_outlet_text'];
+            $result['deals_content'][$i]['detail'][] = $deals['custom_outlet_text'];
         } else {
             foreach ($deals['outlet_by_city'] as $keyCity => $valueCity) {
                 if (isset($valueCity['city_name'])) {
@@ -240,11 +240,11 @@ class ApiDealsWebview extends Controller
         $result = [
             'id_deals_user'             => $dealsUser['id_deals_user'],
             'header_title'              => 'Horayy!',
-            'header_sub_title'          => 'Thank you for claiming',
+            'header_sub_title'          => 'Terima kasih telah membeli',
             'deals_title'               => $dealsUser['deal_voucher']['deal']['deals_title'],
             'deals_second_title'        => $dealsUser['deal_voucher']['deal']['deals_second_title'],
             'deals_image'               => $dealsUser['deal_voucher']['deal']['url_deals_image'],
-            'voucher_expired_at'        => 'Valid until ' . date('d F Y', strtotime($dealsUser['voucher_expired_at'])),
+            'voucher_expired_at'        => 'Kedaluwarsa ' . MyHelper::dateFormatInd($dealsUser['voucher_expired_at'], false, false),
             'claimed_at'                => date('d M Y H:i', strtotime($dealsUser['claimed_at'])),
             'transaction_id'            => strtotime($dealsUser['claimed_at']) . $dealsUser['id_deals_user'],
             'balance'                   => number_format($dealsUser['balance_nominal'], 0, ",", ".") . ' points',
@@ -262,7 +262,7 @@ class ApiDealsWebview extends Controller
         } elseif ($dealsUser['voucher_price_cash'] != null) {
             $result['price'] = number_format($dealsUser['voucher_price_cash'], 0, ",", ".");
         } else {
-            $result['price'] = 'Free';
+            $result['price'] = 'Gratis';
         }
 
         return response()->json(MyHelper::checkGet($result));
