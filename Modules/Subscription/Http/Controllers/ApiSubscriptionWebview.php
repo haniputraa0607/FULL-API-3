@@ -82,7 +82,7 @@ class ApiSubscriptionWebview extends Controller
             $payment_message = Setting::where('key', 'subscription_payment_messages')->pluck('value_text')->first()??'Kamu yakin ingin membeli subscription ini?';
             $payment_message = MyHelper::simpleReplace($payment_message,['subscription_title'=>$subs['subscription_title']]);
         }elseif($subs['subscription_price_type']=='point'){
-            $payment_message = Setting::where('key', 'subscription_payment_messages_point')->pluck('value_text')->first()??'Anda akan menukarkan %point% points anda dengan subscription %subscription_title%?';
+            $payment_message = Setting::where('key', 'subscription_payment_messages_point')->pluck('value_text')->first()??'Anda akan menukarkan %point% poin anda dengan subscription %subscription_title%?';
             $payment_message = MyHelper::simpleReplace($payment_message,['point'=>$subs['subscription_price_point'],'subscription_title'=>$subs['subscription_title']]);
         }else{
             $payment_message = Setting::where('key', 'subscription_payment_messages_cash')->pluck('value_text')->first()??'Kamu yakin ingin membeli subscription %subscription_title% dengan harga %cash% ?';

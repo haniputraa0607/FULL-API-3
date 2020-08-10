@@ -2790,7 +2790,8 @@ class ApiTransaction extends Controller
         $select = [];
         $data   = LogBalance::where('id_log_balance', $id)->first();
         // dd($data);
-        if ($data['source'] == 'Transaction' || $data['source'] == 'Online Transaction' || $data['source'] == 'Rejected Order Point' || $data['source'] == 'Rejected Order') {
+        $statusTrx = ['Online Transaction', 'Transaction', 'Transaction Failed', 'Rejected Order', 'Rejected Order Midtrans', 'Rejected Order Point', 'Rejected Order Ovo', 'Reversal'];
+        if (in_array($data['source'], $statusTrx)) {
             $select = Transaction::select(DB::raw('transactions.*,sum(transaction_products.transaction_product_qty) item_total'))->leftJoin('transaction_products','transactions.id_transaction','=','transaction_products.id_transaction')->with('outlet')->where('transactions.id_transaction', $data['id_reference'])->groupBy('transactions.id_transaction')->first();
 
             $data['date'] = $select['transaction_date'];

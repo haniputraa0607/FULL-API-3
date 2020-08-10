@@ -1184,7 +1184,8 @@ class ApiAchievement extends Controller
                 ->whereNotIn('id_achievement_detail',function($query) use($getUser){
                     $query->select('id_achievement_detail')->from('achievement_users')
                     ->where('id_user', $getUser->id);
-                    })
+                })
+                ->orderBy('id_achievement_detail')
                 ->orderBy('id_achievement_group')
                 ->orderBy('trx_nominal')
                 ->orderBy('trx_total')
@@ -1318,7 +1319,7 @@ class ApiAchievement extends Controller
                             'id_user' => $getUser->id,
                             'progress' => $totalProgress,
                             'end_progress' => $rule,
-                        ]);
+                        ]);                 
                     }
     
                     //insert to achievement user when get new badge
