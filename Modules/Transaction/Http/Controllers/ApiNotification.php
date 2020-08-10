@@ -892,6 +892,9 @@ Detail: ".$link['short'],
                     return false;
                 }
 
+                //insert to disburse job for calculation income outlet
+                DisburseJob::dispatch(['id_transaction' => $trx->id_transaction])->onConnection('disbursequeue');
+
                 $fraud = $this->checkFraud($trx);
                 if (!$fraud) {
                     return false;
