@@ -130,6 +130,10 @@ class Kernel extends ConsoleKernel
             $schedule->call('Modules\Disburse\Http\Controllers\ApiIrisController@disburse')->dailyAt(env('TIME_CRON_DISBURSE'));
         }
 
+        /**
+         * To send email report trx
+         */
+        $schedule->call('Modules\Disburse\Http\Controllers\ApiDisburseController@cronSendEmailDisburse')->dailyAt('01:30');
     }
 
     /**

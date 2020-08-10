@@ -79,6 +79,7 @@ use Hash;
 use DB;
 use Mail;
 use Image;
+use Illuminate\Support\Facades\Log;
 
 class ApiTransaction extends Controller
 {
@@ -1546,7 +1547,7 @@ class ApiTransaction extends Controller
         return response()->json($result);
     }
 
-    public function exportTransaction($filter) {
+    public function exportTransaction($filter, $statusReturn = null) {
         $post = $filter;
 
         $delivery = false;
@@ -1567,13 +1568,14 @@ class ApiTransaction extends Controller
         $settingMDRAll = [];
         if(isset($post['detail']) && $post['detail'] == 1){
             $settingMDRAll = MDR::get()->toArray();
-            $query->join('transaction_products','transaction_products.id_transaction','=','transactions.id_transaction')
+            $query->leftJoin('disburse_outlet_transactions', 'disburse_outlet_transactions.id_transaction', 'transactions.id_transaction')
+                ->join('transaction_products','transaction_products.id_transaction','=','transactions.id_transaction')
                 ->join('products', 'products.id_product', 'transaction_products.id_product')
                 ->join('brands', 'brands.id_brand', 'transaction_products.id_brand')
                 ->leftJoin('product_categories','products.id_product_category','=','product_categories.id_product_category')
                 ->join('cities', 'cities.id_city', 'outlets.id_city')
                 ->join('provinces', 'cities.id_province', 'provinces.id_province')
-                ->addSelect('transaction_pickups.*', 'transaction_products.*', 'products.product_code', 'products.product_name', 'product_categories.product_category_name',
+                ->addSelect('disburse_outlet_transactions.payment_charge', 'transaction_pickups.*', 'transaction_products.*', 'products.product_code', 'products.product_name', 'product_categories.product_category_name',
                     'brands.name_brand', 'cities.city_name', 'provinces.province_name');
         }
 
@@ -1706,7 +1708,115 @@ class ApiTransaction extends Controller
             }
         }
 
+        Log::debug('in1');
+        if($statusReturn == 1){
+            $query->whereNull('reject_at');
+
+            $forCheck = '';
+            $dataTrxDetail = [];
+            foreach ($query->cursor() as $val) {
+                $payment = '';
+                if($val['trasaction_payment_type'] == 'Balance'){
+                    $payment .= 'Jiwa Point'.(!empty($val['payment_type']) ? ', '.$val['payment_type'] : '').(!empty($val['payment_method']) ? ', '.$val['payment_method'] : '');
+                }else{
+                    $payment .= (!empty($val['payment_type']) ? $val['payment_type'] : '').(!empty($val['payment_method']) ? $val['payment_method'] : '');
+                }
+
+                if(isset($post['detail']) && $post['detail'] == 1){
+
+                    $mod = TransactionProductModifier::join('product_modifiers', 'product_modifiers.id_product_modifier', 'transaction_product_modifiers.id_product_modifier')
+                        ->where('transaction_product_modifiers.id_transaction_product', $val['id_transaction_product'])
+                        ->select('product_modifiers.text')->get()->toArray();
+
+                    if($forCheck != $val['transaction_receipt_number']){
+                        $dt = [
+                            'Name' => $val['name'],
+                            'Phone' => $val['phone'],
+                            'Date of birth' => ($val['birthday'] == null ? '' : date('d M Y', strtotime($val['birthday']))),
+                            'Outlet Code' => $val['outlet_code'],
+                            'Outlet Name' => $val['outlet_name'],
+                            'Province' => $val['province_name'],
+                            'City' => $val['city_name'],
+                            'Receipt number' => $val['transaction_receipt_number'],
+                            'Transaction Date' => date('d M Y', strtotime($val['transaction_date'])),
+                            'Transaction Time' => date('H:i:s', strtotime($val['transaction_date'])),
+                            'Category' => $val['product_category_name'],
+                            'Brand' => $val['name_brand'],
+                            'Items' => $val['product_code'].'-'.$val['product_name'],
+                            'Modifier' => implode(",", array_column($mod, 'text')),
+                            'Gross Sales' => $val['transaction_grandtotal'],
+                            'Net Sales' => $val['transaction_product_subtotal'],
+                            'Discounts' => $val['transaction_product_discount'],
+                            'Sales Type' => (!empty($val['transaction_shipment_go_send']) ? 'Delivery' : $val['trasaction_type']),
+                            'Received Time' =>  ($val['receive_at'] == null ? '' : date('d M Y H:i:s', strtotime($val['receive_at']))),
+                            'Ready Time' =>  ($val['ready_at'] == null ? '' : date('d M Y H:i:s', strtotime($val['ready_at']))),
+                            'Taken Time' =>  ($val['taken_at'] == null ? '' : date('d M Y H:i:s', strtotime($val['taken_at']))),
+                            'Arrived Time' =>  ($val['arrived_at'] == null ? '' : date('d M Y H:i:s', strtotime($val['arrived_at']))),
+                            'Delivery Fee' => $val['transaction_shipment_go_send']??'0',
+                            'Payments' => $payment,
+                            'Fee Payment Gateway' =>($val['payment_charge'] == null ? 'Not yet calculated' : $val['payment_charge'])
+                        ];
+                        $dataTrxDetail[] = $dt;
+                    }else{
+                        $dt = [
+                            'Name' => '',
+                            'Phone' => '',
+                            'Date of birth' => '',
+                            'Outlet Code' => '',
+                            'Outlet Name' => '',
+                            'Province' => '',
+                            'City' => '',
+                            'Receipt number' => '',
+                            'Transaction Date' => '',
+                            'Transaction Time' => '',
+                            'Category' => $val['product_category_name'],
+                            'Brand' => $val['name_brand'],
+                            'Items' => $val['product_code'].'-'.$val['product_name'],
+                            'Modifier' => implode(",", array_column($mod, 'text')),
+                            'Gross Sales' => '',
+                            'Net Sales' => $val['transaction_product_subtotal'],
+                            'Discounts' => $val['transaction_product_discount'],
+                            'Sales Type' => '',
+                            'Ready Time' =>  '',
+                            'Received Time' =>  '',
+                            'Taken Time' =>  '',
+                            'Arrived Time' =>  '',
+                            'Delivery Fee' => '',
+                            'Payments' => '',
+                            'Fee Payment Gateway' => ''
+                        ];
+                        $dataTrxDetail[] = $dt;
+                    }
+                    $forCheck = $val['transaction_receipt_number'];
+                }else{
+                    $dt = [
+                        'Name' => $val['name'],
+                        'Phone' => $val['phone'],
+                        'Email' => $val['email'],
+                        'Transaction Date' => date('d M Y', strtotime($val['transaction_date'])),
+                        'Transaction Time' => date('H:i', strtotime($val['transaction_date'])),
+                        'Outlet Code' => $val['outlet_code'],
+                        'Outlet Name' => $val['outlet_name'],
+                        'Grand Total' => number_format($val['transaction_grandtotal']),
+                        'Receipt number' => $val['transaction_receipt_number'],
+                        'Point Received' => number_format($val['transaction_cashback_earned']),
+                        'Payments' => $payment,
+                        'Transaction Type' => (!empty($val['transaction_shipment_go_send']) ? 'Delivery' : $val['trasaction_type']),
+                        'Delivery Fee' => number_format($val['transaction_shipment_go_send'])??'-'
+                    ];
+                }
+            }
+            return $dataTrxDetail;
+        }else{
+            return $query;
+        }
+    }
+
+    function returnExportYield($filter){
+        $query = $this->exportTransaction($filter);
+        $post = $filter;
         $forCheck = '';
+
         foreach ($query->cursor() as $val) {
             $payment = '';
             if($val['trasaction_payment_type'] == 'Balance'){
@@ -1716,38 +1826,10 @@ class ApiTransaction extends Controller
             }
 
             if(isset($post['detail']) && $post['detail'] == 1){
-                $totalFeePG = 0;
-                if($val['gross_amount'] > 0 ){
-                    $keyMidtrans = array_search(strtoupper($val['payment_type']), array_column($settingMDRAll, 'payment_name'));
-                    if($keyMidtrans !== false){
-                        $feePGCentral = $settingMDRAll[$keyMidtrans]['mdr_central'];
-                        $feePG = $settingMDRAll[$keyMidtrans]['mdr'];
-                        $feePGType = $settingMDRAll[$keyMidtrans]['percent_type'];
 
-                        if($feePGType == 'Percent'){
-                            $totalFeePG = $val['gross_amount'] * (($feePGCentral + $feePG) / 100);
-                        }else{
-                            $totalFeePG = $feePGCentral + $feePG;
-                        }
-                    }
-                }
-                if($val['amount'] > 0 ){
-                    $keyipay88 = array_search(strtoupper($val['payment_method']), array_column($settingMDRAll, 'payment_name'));
-                    if($keyipay88 !== false){
-                        $feePGCentral = $settingMDRAll[$keyipay88]['mdr_central'];
-                        $feePG = $settingMDRAll[$keyipay88]['mdr'];
-                        $feePGType = $settingMDRAll[$keyipay88]['percent_type'];
-                        $amountMDR = $val['amount'] /100;
-                        if($feePGType == 'Percent'){
-                            $totalFeePG = $amountMDR * (($feePGCentral + $feePG) / 100);
-                        }else{
-                            $totalFeePG = $feePGCentral + $feePG;
-                        }
-                    }
-                }
                 $mod = TransactionProductModifier::join('product_modifiers', 'product_modifiers.id_product_modifier', 'transaction_product_modifiers.id_product_modifier')
-                        ->where('transaction_product_modifiers.id_transaction_product', $val['id_transaction_product'])
-                        ->select('product_modifiers.text')->get()->toArray();
+                    ->where('transaction_product_modifiers.id_transaction_product', $val['id_transaction_product'])
+                    ->select('product_modifiers.text')->get()->toArray();
 
                 if($forCheck != $val['transaction_receipt_number']){
                     $dt = [
@@ -1769,13 +1851,13 @@ class ApiTransaction extends Controller
                         'Net Sales' => $val['transaction_product_subtotal'],
                         'Discounts' => $val['transaction_product_discount'],
                         'Sales Type' => (!empty($val['transaction_shipment_go_send']) ? 'Delivery' : $val['trasaction_type']),
+                        'Received Time' =>  ($val['receive_at'] == null ? '' : date('d M Y H:i:s', strtotime($val['receive_at']))),
                         'Ready Time' =>  ($val['ready_at'] == null ? '' : date('d M Y H:i:s', strtotime($val['ready_at']))),
-                        'Received Time' =>  ($val['received_at'] == null ? '' : date('d M Y H:i:s', strtotime($val['received_at']))),
                         'Taken Time' =>  ($val['taken_at'] == null ? '' : date('d M Y H:i:s', strtotime($val['taken_at']))),
                         'Arrived Time' =>  ($val['arrived_at'] == null ? '' : date('d M Y H:i:s', strtotime($val['arrived_at']))),
                         'Delivery Fee' => $val['transaction_shipment_go_send']??'0',
                         'Payments' => $payment,
-                        'Fee Payment Gateway' => $totalFeePG
+                        'Fee Payment Gateway' =>($val['payment_charge'] == null ? 'Not yet calculated' : $val['payment_charge'])
                     ];
                 }else{
                     $dt = [
@@ -2708,7 +2790,8 @@ class ApiTransaction extends Controller
         $select = [];
         $data   = LogBalance::where('id_log_balance', $id)->first();
         // dd($data);
-        if ($data['source'] == 'Transaction' || $data['source'] == 'Online Transaction' || $data['source'] == 'Rejected Order Point' || $data['source'] == 'Rejected Order') {
+        $statusTrx = ['Online Transaction', 'Transaction', 'Transaction Failed', 'Rejected Order', 'Rejected Order Midtrans', 'Rejected Order Point', 'Rejected Order Ovo', 'Reversal'];
+        if (in_array($data['source'], $statusTrx)) {
             $select = Transaction::select(DB::raw('transactions.*,sum(transaction_products.transaction_product_qty) item_total'))->leftJoin('transaction_products','transactions.id_transaction','=','transaction_products.id_transaction')->with('outlet')->where('transactions.id_transaction', $data['id_reference'])->groupBy('transactions.id_transaction')->first();
 
             $data['date'] = $select['transaction_date'];

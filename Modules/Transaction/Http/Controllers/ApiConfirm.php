@@ -3,6 +3,7 @@
 namespace Modules\Transaction\Http\Controllers;
 
 use App\Http\Models\Configs;
+use App\Jobs\DisburseJob;
 use App\Jobs\FraudJob;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -654,6 +655,9 @@ class ApiConfirm extends Controller
                                 $updatePaymentStatus = Transaction::where('id_transaction', $trx['id_transaction'])->update(['transaction_payment_status' => 'Completed']);
                                 if($updatePaymentStatus){
                                     $userData = User::where('id', $trx['id_user'])->first();
+                                    //insert to disburse job for calculation income outlet
+                                    DisburseJob::dispatch(['id_transaction' => $trx['id_transaction']])->onConnection('disbursequeue');
+
                                     $config_fraud_use_queue = Configs::where('config_name', 'fraud use queue')->first()->is_active;
 
                                     if($config_fraud_use_queue == 1){

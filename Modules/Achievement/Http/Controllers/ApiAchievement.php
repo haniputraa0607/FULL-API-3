@@ -17,9 +17,11 @@ use Modules\Achievement\Entities\AchievementCategory;
 use Modules\Achievement\Entities\AchievementDetail;
 use Modules\Achievement\Entities\AchievementGroup;
 use Modules\Achievement\Entities\AchievementOutletLog;
+use Modules\Achievement\Entities\AchievementOutletDifferentLog;
 use Modules\Achievement\Entities\AchievementProductLog;
 use Modules\Achievement\Entities\AchievementProgress;
 use Modules\Achievement\Entities\AchievementProvinceLog;
+use Modules\Achievement\Entities\AchievementProvinceDifferentLog;
 use Modules\Achievement\Entities\AchievementUser;
 use Modules\Achievement\Entities\AchievementUserLog;
 
@@ -1154,6 +1156,258 @@ class ApiAchievement extends Controller
         return ['status' => 'success'];
     }
 
+    //count achievement for 1 transaction
+    public function checkAchievementV2($idTrx)
+    {
+        //get detail transaction
+        $dataTrx = Transaction::where('id_transaction', $idTrx)
+                                ->with(['productTransaction'])
+                                ->join('outlets', 'transactions.id_outlet', 'outlets.id_outlet')
+                                ->join('cities', 'outlets.id_city', 'cities.id_city')
+                                ->first();
+        if($dataTrx){
+            $dataTrx = $dataTrx->toArray();
+
+            $getUser = User::where('id', $dataTrx['id_user'])->first();
+    
+            //achievement calculation is only for users who have completed profile
+            if ($getUser && $getUser->complete_profile != 0) {
+
+                //get list active achievement
+                $getAchievement = AchievementDetail::select('achievement_details.*', 'achievement_groups.order_by')
+                ->join('achievement_groups', 'achievement_details.id_achievement_group', 'achievement_groups.id_achievement_group')
+                ->where('achievement_groups.date_start', '<=', $dataTrx['transaction_date'])
+                ->where( function($q) {
+                    $q->where('achievement_groups.date_end', '>=', date('Y-m-d H:i:s'))
+                        ->orWhereNull('achievement_groups.date_end');
+                })
+                ->whereNotIn('id_achievement_detail',function($query) use($getUser){
+                    $query->select('id_achievement_detail')->from('achievement_users')
+                    ->where('id_user', $getUser->id);
+                })
+                ->orderBy('id_achievement_detail')
+                ->orderBy('id_achievement_group')
+                ->orderBy('trx_nominal')
+                ->orderBy('trx_total')
+                ->orderBy('different_outlet')
+                ->orderBy('different_province')
+                ->get()->toArray();
+
+                $idGroup = 0;
+                foreach ($getAchievement as $achievement) {
+                    if($idGroup != $achievement['id_achievement_group']){
+                        $idGroup = $achievement['id_achievement_group'];
+                    }else{
+                        continue;
+                    }
+                    $getNewBadge = false;
+                    if($achievement['order_by'] == "nominal_transaction") {
+                        $checkRule = $this->checkDetailRule($dataTrx, $achievement);
+                        // if detail rule passed, update achievement progress
+                        if($checkRule){
+                            $total = $dataTrx['transaction_subtotal'];
+                            $rule = $achievement['trx_nominal'];
+                        } else{
+                            continue;
+                        }
+                    }elseif($achievement['order_by'] == "total_transaction") {
+                            $checkRule = $this->checkDetailRule($dataTrx, $achievement);
+                            // if detail rule passed, update achievement progress
+                            if($checkRule){
+                                $total = 1;
+                                $rule = $achievement['trx_total'];
+                            } else{
+                                continue;
+                            }
+                    }elseif($achievement['order_by'] == "total_product") {
+                        $checkRule = $this->checkDetailRule($dataTrx, $achievement);
+                        // if detail rule passed, update achievement progress
+                        if($checkRule){
+                            $total = 0;
+                            foreach($dataTrx['product_transaction'] as $product){
+                                if($product['id_product'] <= $achievement['id_product']){
+                                    if($product['id_product'] == $achievement['id_product']){
+                                        $total += $product['transaction_product_qty'];
+                                    }
+                                }else{
+                                    break;
+                                }
+                            }
+                            $rule = $achievement['product_total'];
+                        } else{
+                            continue;
+                        }
+                    }elseif($achievement['order_by'] == "total_outlet") {
+                        $checkRule = $this->checkDetailRule($dataTrx, $achievement);
+                        // if detail rule passed, update achievement progress
+                        if($checkRule){
+                            $isFound = AchievementOutletDifferentLog::where('id_user', $getUser->id)
+                                                                        ->where('id_achievement_group', $achievement['id_achievement_group'])
+                                                                        ->where('id_outlet', $dataTrx['id_outlet'])
+                                                                        ->first();
+                            //check if new outlet 
+                            if(!$isFound){
+                                $total = 1;
+                                $rule = $achievement['different_outlet'];
+
+                                //insert new record in achievement outlet different log
+                                AchievementOutletDifferentLog::create([
+                                    'id_user' => $getUser->id,
+                                    'id_achievement_group' => $achievement['id_achievement_group'],
+                                    'id_outlet' => $dataTrx['id_outlet']
+                                ]);
+                            }else{
+                                continue;
+                            }
+                        } else{
+                            continue;
+                        }
+                    }elseif($achievement['order_by'] == "total_province") {
+                        $checkRule = $this->checkDetailRule($dataTrx, $achievement);
+                        
+                        // if detail rule passed, update achievement progress
+                        if($checkRule){
+                            $isFound = AchievementProvinceDifferentLog::where('id_user', $getUser->id)
+                                                                        ->where('id_achievement_group', $achievement['id_achievement_group'])
+                                                                        ->where('id_province', $dataTrx['id_province'])
+                                                                        ->first();
+                            //check if new province 
+                            if(!$isFound){
+                                $total = 1;
+                                $rule = $achievement['different_province'];
+
+                                //insert new record in achievement province different log
+                                AchievementProvinceDifferentLog::create([
+                                    'id_user' => $getUser->id,
+                                    'id_achievement_group' => $achievement['id_achievement_group'],
+                                    'id_province' => $dataTrx['id_province']
+                                ]);
+                            }else{
+                                continue;
+                            }
+                        }else{
+                            continue;
+                        }
+                    }
+
+                    $achievementProgress = AchievementProgress::where('id_achievement_detail', $achievement['id_achievement_detail'])
+                    ->where('id_user', $getUser->id)->first();
+                    if($achievementProgress){
+                        //update achievement progress 
+                        $totalProgress = $achievementProgress->progress + $total;
+                        if($totalProgress > $rule){
+                            $totalProgress = $rule;
+                            $getNewBadge = true;
+                        }
+                        AchievementProgress::where('id_achievement_progress', $achievementProgress->id_achievement_progress)->update([
+                            'progress' => $totalProgress
+                        ]);
+                    }else{
+                        //get total progress form all achievement group
+                        $achievementProgress = AchievementProgress::join('achievement_details', 'achievement_details.id_achievement_detail', 'achievement_progress.id_achievement_detail')
+                                                                    ->where('id_achievement_group', $achievement['id_achievement_group'])
+                                                                    ->where('id_user', $getUser->id)->sum('progress');
+                        
+                        $totalProgress = $achievementProgress + $total;
+                        if($totalProgress > $rule){
+                            $totalProgress = $rule;
+                            $getNewBadge = true;
+                        }
+
+                        $achievementProgress =  AchievementProgress::create([
+                            'id_achievement_detail' => $achievement['id_achievement_detail'],
+                            'id_user' => $getUser->id,
+                            'progress' => $totalProgress,
+                            'end_progress' => $rule,
+                        ]);                 
+                    }
+    
+                    //insert to achievement user when get new badge
+                    if ($getNewBadge) {
+                        AchievementUser::Create([
+                            'id_achievement_detail' => $achievement['id_achievement_detail'],
+                            'id_user' => $getUser->id,
+                            'json_rule' => json_encode([
+                                'id_product' => $achievement['id_product'],
+                                'product_total' => $achievement['product_total'],
+                                'trx_nominal' => $achievement['trx_nominal'],
+                                'trx_total' => $achievement['trx_total'],
+                                'id_outlet' => $achievement['id_outlet'],
+                                'different_outlet' => $achievement['different_outlet'],
+                                'id_province' => $achievement['id_province'],
+                                'different_province' => $achievement['different_province'],
+                            ]),
+                            'json_rule_enc' => MyHelper::encrypt2019(json_encode([
+                                'id_product' => $achievement['id_product'],
+                                'product_total' => $achievement['product_total'],
+                                'trx_nominal' => $achievement['trx_nominal'],
+                                'trx_total' => $achievement['trx_total'],
+                                'id_outlet' => $achievement['id_outlet'],
+                                'different_outlet' => $achievement['different_outlet'],
+                                'id_province' => $achievement['id_province'],
+                                'different_province' => $achievement['different_province'],
+                            ])),
+                            'date' => date('Y-m-d H:i:s'),
+                        ]);
+                    } 
+                }
+            }
+        }
+        return ['status' => 'success'];
+
+    }
+
+    public function checkDetailRule($dataTrx, $achievement){
+        //check for trx_nominal
+        if (!is_null($achievement['trx_nominal']) && $achievement['order_by'] != 'nominal_transaction') {
+            if($dataTrx['transaction_subtotal'] < $achievement['trx_nominal']){
+                return false;
+            }
+        }
+        //check for product
+        if (!is_null($achievement['id_product'])) {
+
+            $seacrhProduct = array_search($achievement['id_product'], array_column($dataTrx['product_transaction'], 'id_product'));
+            if(!is_int($seacrhProduct)){
+                return false;
+            }
+
+            //check if using product total
+            if (!is_null($achievement['product_total']) && $achievement['order_by'] != 'total_product') {
+                $totalQty = 0;
+                foreach($dataTrx['product_transaction'] as $product){
+                    if($product['id_product'] <= $achievement['id_product']){
+                        if($product['id_product'] == $achievement['id_product']){
+                            $totalQty += $product['transaction_product_qty'];
+                        }
+                    }else{
+                        break;
+                    }
+                }
+                //compare the quantity of products with the achievements needed
+                if($achievement['product_total'] < $totalQty){
+                    return false;
+                }
+            }
+        }
+
+        //check for outlet
+        if (!is_null($achievement['id_outlet'])) {
+            if($dataTrx['id_outlet'] != $achievement['id_outlet']){
+                return false;
+            }
+        }
+
+        //check for province
+        if (!is_null($achievement['id_province'])) {
+            if($dataTrx['id_province'] != $achievement['id_province']){
+                return false;
+            }
+        }
+
+        return true;
+    
+    }
     /**
      * Store a newly created resource in storage.
      * @param Request $request

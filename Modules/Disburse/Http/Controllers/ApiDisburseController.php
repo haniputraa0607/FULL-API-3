@@ -14,10 +14,25 @@ use Modules\Disburse\Entities\BankName;
 use Modules\Disburse\Entities\Disburse;
 
 use DB;
+use Modules\Disburse\Entities\DisburseOutletTransaction;
 use Modules\Disburse\Entities\UserFranchise;
+use function Clue\StreamFilter\fun;
+
+use App\Http\Models\Setting;
+use Modules\Disburse\Entities\BankAccount;
+use Modules\Disburse\Entities\DisburseOutlet;
+use Rap2hpoutre\FastExcel\FastExcel;
+use Rap2hpoutre\FastExcel\SheetCollection;
+use Illuminate\Support\Facades\Storage;
+use File;
+use Mail;
 
 class ApiDisburseController extends Controller
 {
+    function __construct() {
+        $this->trx="Modules\Transaction\Http\Controllers\ApiTransaction";
+    }
+
     public function dashboard(Request $request){
         $post = $request->json()->all();
         $nominal = Disburse::join('disburse_outlet', 'disburse.id_disburse', 'disburse_outlet.id_disburse')->where('disburse.disburse_status', 'Success');
@@ -704,6 +719,63 @@ class ApiDisburseController extends Controller
         return response()->json($result);
     }
 
+    function listCalculationDataTable(Request $request){
+        $post = $request->json()->all();
+
+        $start = $post['start'];
+        $length = $post['length'];
+
+        $data = DisburseOutletTransaction::join('transactions', 'transactions.id_transaction', 'disburse_outlet_transactions.id_transaction')
+                ->join('outlets', 'outlets.id_outlet', 'transactions.id_outlet')
+                ->leftJoin('disburse_outlet', 'disburse_outlet.id_disburse_outlet', 'disburse_outlet_transactions.id_disburse_outlet')
+                ->leftJoin('disburse', 'disburse.id_disburse', 'disburse_outlet.id_disburse')
+                ->select('disburse.disburse_status as 0', DB::raw("CONCAT (outlets.outlet_code, ' - ',outlets.outlet_name) as '1'"), DB::raw("DATE_FORMAT(disburse.created_at, '%d %b %Y %H:%i') as '2'"),
+                    DB::raw("DATE_FORMAT(transactions.transaction_date, '%d %b %Y %H:%i') as '3'"), 'transactions.transaction_receipt_number as 4', DB::raw('FORMAT(transactions.transaction_subtotal,2) as "5"'), DB::raw('FORMAT(transactions.transaction_grandtotal,2) as "6"'),
+                    DB::raw('FORMAT(disburse_outlet_transactions.income_central,2) as "7"'), DB::raw('FORMAT(disburse_outlet_transactions.expense_central,2) as "8"'),  DB::raw('FORMAT(disburse_outlet_transactions.income_outlet,2) as "9"'),
+                    DB::raw('FORMAT(disburse_outlet_transactions.fee_item,2) as "10"'),  DB::raw('FORMAT(disburse_outlet_transactions.payment_charge,2) as "11"'), DB::raw('FORMAT(disburse_outlet_transactions.discount,2) as "12"'),
+                    DB::raw('FORMAT(disburse_outlet_transactions.subscription,2) as "13"'),  DB::raw('transactions.transaction_shipment_go_send as "14"'))
+                ->orderBy('transactions.transaction_date','desc');
+
+        if(isset($post['fitler_date']) &&  $post['fitler_date']== 'today'){
+            $data->where(function ($q){
+                $q->whereDate('disburse.created_at', date('Y-m-d'))
+                    ->orWhereDate('transactions.transaction_date', date('Y-m-d'));
+            });
+        }elseif(isset($post['fitler_date']) &&  $post['fitler_date'] == 'specific_date'){
+            if(isset($post['start_date']) && !empty($post['start_date']) &&
+                isset($post['end_date']) && !empty($post['end_date'])){
+                $start_date = date('Y-m-d', strtotime($post['start_date']));
+                $end_date = date('Y-m-d', strtotime($post['end_date']));
+
+                $data->where(function ($qu) use($start_date,$end_date){
+                    $qu->where(function ($q) use($start_date,$end_date){
+                        $q->whereDate('disburse.created_at', '>=', $start_date)
+                            ->whereDate('disburse.created_at', '<=', $end_date);
+                    });
+
+                    $qu->orWhere(function ($q) use($start_date,$end_date){
+                        $q->whereDate('transactions.transaction_date', '>=', $start_date)
+                            ->whereDate('transactions.transaction_date', '<=', $end_date);
+                    });
+                });
+            }
+        }
+
+        if(isset($post['id_outlet']) && !empty($post['id_outlet']) && $post['id_outlet'] != 'all'){
+            $data->where('transactions.id_outlet', $post['id_outlet']);
+        }
+
+        $total = $data->count();
+        $data = $data->skip($start)->take($length)->get()->toArray();
+        $result = [
+            'status' => 'success',
+            'result' => $data,
+            'total' => $total
+        ];
+
+        return response()->json($result);
+    }
+
     function syncListBank(){
         $getListBank = MyHelper::connectIris('Banks', 'GET','api/v1/beneficiary_banks',[]);
 
@@ -765,5 +837,145 @@ class ApiDisburseController extends Controller
         $update = Disburse::where('id_disburse', $post['id'])->update(['disburse_status' => $post['disburse_status']]);
 
         return response()->json(MyHelper::checkUpdate($update));
+    }
+
+    public function cronSendEmailDisburse(){
+        $log = MyHelper::logCron('Disburse Send Email');
+        try {
+            $currentDate = date('Y-m-d');
+            $yesterday = date('Y-m-d',strtotime($currentDate . "-1 days"));
+
+            $getOultets = Transaction::join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+                ->where('transaction_payment_status', 'Completed')->whereNull('reject_at')
+                ->whereDate('transaction_date', $yesterday)
+                ->groupBy('transactions.id_outlet')->pluck('id_outlet');
+            $getEmail = BankAccount::whereHas('bank_account_outlet',function($query) use ($getOultets){
+                $query->whereIn('bank_account_outlets.id_outlet',$getOultets);
+            })->with(['bank_account_outlet' => function($q) use($getOultets){
+                $q->whereIn('bank_account_outlets.id_outlet', $getOultets);
+            }])->get()->toArray();
+
+            if(!empty($getEmail)){
+                foreach ($getEmail as $e){
+                    if(empty($e['bank_account_outlet'])) continue;
+
+                    $tmpPath = [];
+                    $tmpOutlet = [];
+                    foreach ($e['bank_account_outlet'] as $outlet){
+                        $filter['date_start'] = $yesterday;
+                        $filter['date_end'] = $yesterday;
+                        $filter['detail'] = 1;
+                        $filter['key'] = 'all';
+                        $filter['rule'] = 'and';
+                        $filter['conditions'] = [
+                            [
+                                'subject' => 'id_outlet',
+                                'operator' => $outlet['id_outlet'],
+                                'parameter' => null
+                            ],
+                            [
+                                'subject' => 'status',
+                                'operator' => 'Completed',
+                                'parameter' => null
+                            ]
+                        ];
+
+                        $generateTrx = app($this->trx)->exportTransaction($filter, 1);
+                        $dataDisburse = Transaction::join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+                            ->join('disburse_outlet_transactions as dot', 'dot.id_transaction', 'transactions.id_transaction')
+                            ->leftJoin('transaction_payment_balances', 'transaction_payment_balances.id_transaction', 'transactions.id_transaction')
+                            ->where('transaction_payment_status', 'Completed')
+                            ->whereNull('reject_at')
+                            ->where('transactions.id_outlet', $outlet['id_outlet'])
+                            ->whereDate('transactions.transaction_date', $yesterday)
+                            ->select('transactions.transaction_receipt_number as Recipient Number',
+                                DB::raw('DATE_FORMAT(transactions.transaction_date, "%d %M %Y %H:%i:%s") as "Transaction Date"'),
+                                'dot.income_outlet as Income Outlet', 'transactions.transaction_subtotal as Sub Total', 'transactions.transaction_grandtotal as Grand Total',
+                                'dot.fee_item as Fee Item', 'dot.fee_item as Discount Charge', 'dot.payment_charge as Payment Charge', 'dot.point_use_expense as Point Use Charge',
+                                'dot.subscription as Subcriptions Charge', 'dot.subscription as Delivery')
+                            ->get()->toArray();
+
+                        $sheets = new SheetCollection([
+                            $generateTrx,
+                            $dataDisburse
+                        ]);
+                        $excelFile = 'Transaction_['.$yesterday.']_['.$outlet['outlet_code'].'].xlsx';
+                        if(!file_exists( public_path().'/excel_email')){
+                            File::makeDirectory('excel_email');
+                        }
+
+                        $store = (new FastExcel($sheets))->export(public_path().'/excel_email/'.$excelFile);
+                        if($store){
+                            $tmpPath[] = $excelFile;
+                            $tmpOutlet[] = $outlet['outlet_code'].' - '.$outlet['outlet_name'];
+                        }
+                    }
+
+                    if(!empty($tmpPath)){
+                        $getSetting = Setting::where('key', 'LIKE', 'email%')->get()->toArray();
+                        $setting = array();
+                        foreach ($getSetting as $key => $value) {
+                            if($value['key'] == 'email_setting_url'){
+                                $setting[$value['key']]  = (array)json_decode($value['value_text']);
+                            }else{
+                                $setting[$value['key']] = $value['value'];
+                            }
+                        }
+
+                        $data = array(
+                            'customer' => '',
+                            'html_message' => 'Report Transaksi tanggal '.date('d M Y', strtotime($yesterday)).'.<br><br> List Outlet : <br>'.implode('<br>',$tmpOutlet),
+                            'setting' => $setting
+                        );
+
+                        $to = $e['beneficiary_email'];
+                        $subject = 'Report Transaksi ['.date('d M Y', strtotime($yesterday)).']';
+                        $name =  $e['beneficiary_name'];
+                        $variables['attachment'] = $tmpPath;
+
+                        try{
+                            Mail::send('emails.test', $data, function($message) use ($to,$subject,$name,$setting,$variables)
+                            {
+                                $message->to($to, $name)->subject($subject);
+                                if(!empty($setting['email_from']) && !empty($setting['email_sender'])){
+                                    $message->from($setting['email_sender'], $setting['email_from']);
+                                }else if(!empty($setting['email_sender'])){
+                                    $message->from($setting['email_sender']);
+                                }
+
+                                if(!empty($setting['email_reply_to'])){
+                                    $message->replyTo($setting['email_reply_to'], $setting['email_reply_to_name']);
+                                }
+
+                                if(!empty($setting['email_cc']) && !empty($setting['email_cc_name'])){
+                                    $message->cc($setting['email_cc'], $setting['email_cc_name']);
+                                }
+
+                                if(!empty($setting['email_bcc']) && !empty($setting['email_bcc_name'])){
+                                    $message->bcc($setting['email_bcc'], $setting['email_bcc_name']);
+                                }
+
+                                // attachment
+                                if(isset($variables['attachment']) && !empty($variables['attachment'])){
+                                    foreach($variables['attachment'] as $attach){
+                                        $message->attach(public_path().'/excel_email/'.$attach);
+                                    }
+                                }
+                            });
+                        }catch(\Exception $e){
+                        }
+
+                        foreach ($tmpPath as $t){
+                            File::delete(public_path().'/excel_email/'.$t);
+                        }
+                    }
+                }
+            }
+
+            $log->success();
+            return 'succes';
+        }catch (\Exception $e) {
+            $log->fail($e->getMessage());
+        };
     }
 }
