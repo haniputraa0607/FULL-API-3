@@ -343,7 +343,12 @@ class ApiIrisController extends Controller
         };
     }
 
-    public function calculationTransaction($id_transaction = 263){
+    public function calculationTransaction($id_transaction){
+        $check = DisburseOutletTransaction::where('id_transaction', $id_transaction)->first();
+        if($check){
+            return false;
+        }
+
         $settingGlobalFee = Setting::where('key', 'global_setting_fee')->first()->value_text;
         $settingGlobalFee = json_decode($settingGlobalFee);
         $settingGlobalFeePoint = Setting::where('key', 'global_setting_point_charged')->first()->value_text;
