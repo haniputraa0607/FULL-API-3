@@ -116,7 +116,7 @@ class ApiDealsWebview extends Controller
             $result['deals_price'] = MyHelper::requestNumber($deals['deals_voucher_price_cash'], '_CURRENCY');
             $result['payment_message'] = 'Anda yakin ingin membeli kupon ini dengan Cash?';
         } elseif ($deals['deals_voucher_price_point']) {
-            $result['deals_price'] = MyHelper::requestNumber($deals['deals_voucher_price_point'], '_POINT') . " points";
+            $result['deals_price'] = MyHelper::requestNumber($deals['deals_voucher_price_point'], '_POINT') . " poin";
             $result['payment_message'] = 'Anda yakin ingin membeli kupon ini dengan Jiwa Poin?';
         } else {
             $result['deals_price'] = "Free";
@@ -239,15 +239,15 @@ class ApiDealsWebview extends Controller
 
         $result = [
             'id_deals_user'             => $dealsUser['id_deals_user'],
-            'header_title'              => 'Horayy!',
+            'header_title'              => 'Pembelian Kupon Berhasil',
             'header_sub_title'          => 'Terima kasih telah membeli',
             'deals_title'               => $dealsUser['deal_voucher']['deal']['deals_title'],
             'deals_second_title'        => $dealsUser['deal_voucher']['deal']['deals_second_title'],
             'deals_image'               => $dealsUser['deal_voucher']['deal']['url_deals_image'],
             'voucher_expired_at'        => 'Kedaluwarsa ' . MyHelper::dateFormatInd($dealsUser['voucher_expired_at'], false, false),
-            'claimed_at'                => date('d M Y H:i', strtotime($dealsUser['claimed_at'])),
+            'claimed_at'                => MyHelper::dateFormatInd($dealsUser['claimed_at'], false),
             'transaction_id'            => strtotime($dealsUser['claimed_at']) . $dealsUser['id_deals_user'],
-            'balance'                   => number_format($dealsUser['balance_nominal'], 0, ",", ".") . ' points',
+            'balance'                   => number_format($dealsUser['balance_nominal'], 0, ",", ".") . ' poin',
             'use_point'                 => (!is_null($dealsUser['balance_nominal'])) ? 1 : 0 ,
             'voucher_expired_at_indo'   => MyHelper::dateFormatInd($dealsUser['voucher_expired_at'], false, false),
             'voucher_expired_at_time_indo' => 'pukul '.date('H:i', strtotime($dealsUser['voucher_expired_at'])),
@@ -256,13 +256,13 @@ class ApiDealsWebview extends Controller
         ];
 
         if ($dealsUser['voucher_price_point'] != null) {
-            $result['price']        = number_format($dealsUser['voucher_price_point'], 0, ",", ".") . ' points';
-            $result['balance']      = number_format($dealsUser['voucher_price_point'], 0, ",", ".") . ' points';
+            $result['price']        = number_format($dealsUser['voucher_price_point'], 0, ",", ".") . ' poin';
+            $result['balance']      = number_format($dealsUser['voucher_price_point'], 0, ",", ".") . ' poin';
             $result['use_point']    = 1;
         } elseif ($dealsUser['voucher_price_cash'] != null) {
             $result['price'] = number_format($dealsUser['voucher_price_cash'], 0, ",", ".");
         } else {
-            $result['price'] = 'Gratis';
+            $result['price'] = 'GRATIS';
         }
 
         return response()->json(MyHelper::checkGet($result));
