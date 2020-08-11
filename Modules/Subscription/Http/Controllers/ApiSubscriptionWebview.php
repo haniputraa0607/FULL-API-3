@@ -102,7 +102,7 @@ class ApiSubscriptionWebview extends Controller
             if($subs['subscription_price_type']=='point'){
                 $result['button_status']= $subs['subscription_price_point']<=$curBalance?1:0;
                 if($subs['subscription_price_point']>$curBalance){
-                    $result['payment_fail_message'] = Setting::where('key', 'payment_fail_messages')->pluck('value_text')->first()??'Mohon maaf, point anda tidak cukup';
+                    $result['payment_fail_message'] = Setting::where('key', 'payment_fail_messages')->pluck('value_text')->first()??'Mohon maaf, poin anda tidak cukup';
                 }
             }else{
                 $result['button_text'] = 'Beli';
@@ -328,7 +328,7 @@ class ApiSubscriptionWebview extends Controller
         ];
 
         if ($subs['subscription_price_cash'] == 'Free') {
-            $result['subscription_price']   = 'Free';
+            $result['subscription_price']   = 'Gratis';
         } else {
             if ($subs['subscription_price_cash'] > 0) {
                 $result['subscription_price']   = $subs['subscription_price_cash'];
