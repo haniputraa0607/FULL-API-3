@@ -321,6 +321,7 @@ class ApiSubscriptionWebview extends Controller
             'bought_at_time_indo'               => 'pukul '.date('H:i', strtotime($subs['bought_at'])),
             'subscription_user_receipt_number'  => $subs['subscription_user_receipt_number'],
             'balance_nominal'                   => $subs['balance_nominal'],
+            'use_point'                         => (!is_null($subs['balance_nominal'])) ? 1 : 0 ,
             'expired_at'                        => date('Y-m-d H:i:s', strtotime($subs['subscription_expired_at'])),
             'expired_at_indo'                   => MyHelper::dateFormatInd($subs['subscription_expired_at'], false, false),
             'expired_at_time_indo'              => 'pukul '.date('H:i', strtotime($subs['subscription_expired_at'])),
@@ -332,6 +333,7 @@ class ApiSubscriptionWebview extends Controller
             if ($subs['subscription_price_cash'] > 0) {
                 $result['subscription_price']   = $subs['subscription_price_cash'];
             } elseif ($subs['subscription_price_point'] > 0) {
+                $result['use_point']    = 0;
                 $result['subscription_price']   = $subs['subscription_price_cash'];
             }
         }
