@@ -1198,6 +1198,7 @@ class ApiAchievement extends Controller
                     if($idGroup != $achievement['id_achievement_group']){
                         $idGroup = $achievement['id_achievement_group'];
                     }else{
+                        //skip next level in the same achievement group
                         continue;
                     }
                     $getNewBadge = false;
@@ -1298,6 +1299,9 @@ class ApiAchievement extends Controller
                         if($totalProgress > $rule){
                             $totalProgress = $rule;
                             $getNewBadge = true;
+                            
+                            //for check next level in the same achievement group
+                            $idGroup = 0;
                         }
                         AchievementProgress::where('id_achievement_progress', $achievementProgress->id_achievement_progress)->update([
                             'progress' => $totalProgress
@@ -1312,6 +1316,9 @@ class ApiAchievement extends Controller
                         if($totalProgress > $rule){
                             $totalProgress = $rule;
                             $getNewBadge = true;
+
+                            //for check next level in the same achievement group
+                            $idGroup = 0;
                         }
 
                         $achievementProgress =  AchievementProgress::create([
