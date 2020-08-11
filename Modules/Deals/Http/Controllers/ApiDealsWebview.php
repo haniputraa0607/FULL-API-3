@@ -258,7 +258,7 @@ class ApiDealsWebview extends Controller
         if ($dealsUser['voucher_price_point'] != null) {
             $result['price']        = number_format($dealsUser['voucher_price_point'], 0, ",", ".") . ' poin';
             $result['balance']      = number_format($dealsUser['voucher_price_point'], 0, ",", ".") . ' poin';
-            $result['use_point']    = 1;
+            $result['use_point']    = 0;
         } elseif ($dealsUser['voucher_price_cash'] != null) {
             $result['price'] = number_format($dealsUser['voucher_price_cash'], 0, ",", ".");
         } else {
