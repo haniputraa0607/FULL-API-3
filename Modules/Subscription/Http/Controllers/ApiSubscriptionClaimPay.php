@@ -98,7 +98,7 @@ class ApiSubscriptionClaimPay extends Controller
                     if (app($this->claim)->checkUserLimit($dataSubs, $dataSubsUser)) {
 
                         // CEK IF USER SUBSCRIPTION IS EXPIRED OR NULL
-                        if (app($this->claim)->checkSubsUserExpired($dataSubsUser)) {
+                        if (app($this->claim)->checkSubsUserExpired($dataSubs, $dataSubsUser)) {
 
                             //check if type is point
                             if (!empty($dataSubs->subscription_price_point)) {
@@ -245,10 +245,21 @@ class ApiSubscriptionClaimPay extends Controller
 
                         }
                         else {
+                        	switch ($dataSubs->new_purchase_after) {
+				        		case 'Empty':
+				        			$msg = 'empty';
+				        			break;
+				        		case 'Empty Expired':
+				        			$msg = 'empty or expired';
+				        			break;
+				        		default:
+				        			$msg = 'expired';
+				        			break;
+				        	}
                             DB::rollback();
                             return response()->json([
                                 'status'   => 'fail',
-                                'messages' => ['You have participated, you can buy this subscription again after your previous subscription expired.']
+                                'messages' => ['You have participated, you can buy this subscription again after your previous subscription is '.$msg]
                             ]);
                         }
                     }
