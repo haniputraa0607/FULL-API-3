@@ -654,6 +654,11 @@ class ApiOnlineTransaction extends Controller
             $post['longitude'] = null;
         }
 
+        $distance = NULL;
+        if(isset($post['latitude']) &&  isset($post['longitude'])){
+            $distance = (float)app($this->outlet)->distance($post['latitude'], $post['longitude'], $outlet['outlet_latitude'], $outlet['outlet_longitude'], "K");
+        }
+
         if (!isset($post['notes'])) {
             $post['notes'] = null;
         }
@@ -722,6 +727,7 @@ class ApiOnlineTransaction extends Controller
             'membership_promo_id'         => $post['membership_promo_id'],
             'latitude'                    => $post['latitude'],
             'longitude'                   => $post['longitude'],
+            'distance_customer'           => $distance,
             'void_date'                   => null,
         ];
 
@@ -1440,9 +1446,6 @@ class ApiOnlineTransaction extends Controller
                         $settingTime = Setting::where('key', 'processing_time')->first();
                         $updatePickup = TransactionPickup::where('id_transaction', $insertTransaction['id_transaction'])->update(['pickup_at' => date('Y-m-d H:i:s', strtotime('+ '.$settingTime['value'].'minutes'))]);
                     }
-
-                    //insert to disburse job for calculation income outlet
-                    DisburseJob::dispatch(['id_transaction' => $insertTransaction['id_transaction']])->onConnection('disbursequeue');
                 }
 
                 if ($save['type'] == 'no_topup') {
@@ -1636,6 +1639,10 @@ class ApiOnlineTransaction extends Controller
         }
 
         DB::commit();
+
+        //insert to disburse job for calculation income outlet
+        DisburseJob::dispatch(['id_transaction' => $insertTransaction['id_transaction']])->onConnection('disbursequeue');
+
         $insertTransaction['cancel_message'] = 'Are you sure you want to cancel this transaction?';
         return response()->json([
             'status'   => 'success',

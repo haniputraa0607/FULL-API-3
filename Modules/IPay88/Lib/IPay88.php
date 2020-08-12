@@ -2,7 +2,6 @@
 namespace Modules\IPay88\Lib;
 
 use App\Http\Models\Configs;
-use App\Jobs\DisburseJob;
 use App\Jobs\FraudJob;
 use Illuminate\Support\Facades\Log;
 use DB;
@@ -326,8 +325,6 @@ class IPay88
 						$trx->load('productTransaction');
 
 						$userData = User::where('id', $trx['id_user'])->first();
-						//insert to disburse job for calculation income outlet
-						DisburseJob::dispatch(['id_transaction' => $trx['id_transaction']])->onConnection('disbursequeue');
 
 						$config_fraud_use_queue = Configs::where('config_name', 'fraud use queue')->first()->is_active;
 
