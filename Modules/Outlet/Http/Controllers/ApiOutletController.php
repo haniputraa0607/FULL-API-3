@@ -1773,6 +1773,7 @@ class ApiOutletController extends Controller
                 'outlets.outlet_email as email',
                 'outlets.outlet_latitude as latitude',
                 'outlets.outlet_longitude as longitude',
+                'outlets.outlet_status',
                 DB::raw('(CASE
                             WHEN status_franchise = 1 THEN "Franchise"
                             ELSE "Not Franchise"
@@ -1836,6 +1837,7 @@ class ApiOutletController extends Controller
                     'email'=>'',
                     'latitude'=>'',
                     'longitude'=>'',
+                    'status_outlet' => '',
                     'status_franchise' => '',
                     'delivery' => ''
                 ];
@@ -1903,6 +1905,10 @@ class ApiOutletController extends Controller
                             'deep_link_grab' => $value['deep_link_grab']??'',
                             'id_city' => $id_city[$search]??null
                         ];
+                        //insert status
+                        if(isset($value['outlet_status'])){
+                            $insert['outlet_status'] = $value['outlet_status'];
+                        }
                         if(!empty($insert['outlet_name'])){
                             $save = Outlet::updateOrCreate($code, $insert);
 
