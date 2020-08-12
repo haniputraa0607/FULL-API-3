@@ -1306,10 +1306,15 @@ class ApiAchievement extends Controller
                             $totalProgress = $rule;
                             $getNewBadge = true;
                             
-                             //for check next level in the same achievement group
-                            $isNext = true;
-                            //save last progress in same achievement group
-                            $lastProgress = $achievementProgress->progress;
+                            if($totalProgress > $rule){
+                                //for check next level within the same achievement group
+                                $isNext = true;
+                                //save last progress within the same achievement group
+                                $lastProgress = $achievementProgress->progress;
+                            }else{
+                                //stop check achievement within the same achievement group, move to next group
+                                $isNext = false;
+                            }
                         }else{
                             //move to next group
                             $isNext = false;
@@ -1321,7 +1326,7 @@ class ApiAchievement extends Controller
                         $achievementProgress = 0;
                         if($isNext == false){
                             //new achievement group
-                            //get progress from last achievement detail in same achievement group
+                            //get progress from last achievement detail within the same achievement group
                             $achievementProgress = AchievementProgress::join('achievement_details', 'achievement_details.id_achievement_detail', 'achievement_progress.id_achievement_detail')
                                                                         ->where('id_achievement_group', $achievement['id_achievement_group'])
                                                                         ->where('id_user', $getUser->id)
@@ -1338,15 +1343,20 @@ class ApiAchievement extends Controller
                             $achievementProgress += $lastProgress;
                         }                        
                         
-                        \Log::info($achievementProgress);
                         $totalProgress = $achievementProgress + $total;
                         if($totalProgress >= $rule){
                             $totalProgress = $rule;
                             $getNewBadge = true;
 
-                            //for check next level in the same achievement group
-                            $isNext = true;
-                            $lastProgress = $achievementProgress;
+                            if($totalProgress > $rule){
+                                //for check next level within the same achievement group
+                                $isNext = true;
+                                //save last progress within the same achievement group
+                                $lastProgress = $achievementProgress->progress;
+                            }else{
+                                //stop check achievement within the same achievement group, move to next group
+                                $isNext = false;
+                            }
                         }else{
                             //move to next group
                             $isNext = false;
