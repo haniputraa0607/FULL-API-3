@@ -240,6 +240,7 @@ class ApiSubscriptionWebview extends Controller
             'subscription_expired'      		 => date('Y-m-d H:i:s', strtotime($subs['subscription_expired_at'])),
             'subscription_expired_indo'     => MyHelper::dateFormatInd($subs['subscription_expired_at'], false, false),
             'subscription_expired_time_indo'     => 'pukul '.date('H:i', strtotime($subs['subscription_expired_at'])),
+            'is_used' => $subs['is_used']
         ];
         $result['time_server'] = date('Y-m-d H:i:s');
         $result['time_server_indo'] = MyHelper::dateFormatInd(date('Y-m-d H:i:s'), false, false).' pukul '.date('H:i');
@@ -299,6 +300,15 @@ class ApiSubscriptionWebview extends Controller
                 }
             }
         }
+
+        if ($subs['is_used']) {
+        	$result['label_text'] = 'Digunakan';
+	        $result['button_text'] = 'Gunakan Nanti';
+        }
+        else{
+	        $result['label_text'] = 'Tidak digunakan';
+	        $result['button_text'] = 'Gunakan';
+        }
         return response()->json(MyHelper::checkGet($result));
     }
 
@@ -309,7 +319,12 @@ class ApiSubscriptionWebview extends Controller
             return abort(404);
         }
 
-        $subs = SubscriptionUser::with('subscription')->where('id_subscription_user', $request->id_subscription_user)->first()->toArray();
+        $subs = SubscriptionUser::with('subscription')->where('id_subscription_user', $request->id_subscription_user)->first();
+
+        if (!$subs) {
+			return MyHelper::checkGet($subs);
+        }
+        $subs->toArray();
         
         $result = [
             'id_subscription_user'              => $subs['id_subscription_user'],
@@ -327,14 +342,14 @@ class ApiSubscriptionWebview extends Controller
             'expired_at_time_indo'              => 'pukul '.date('H:i', strtotime($subs['subscription_expired_at'])),
         ];
 
-        if ($subs['subscription_price_cash'] == 'Free') {
+        if($subs['paid_status'] == 'Free') {
             $result['subscription_price']   = 'Gratis';
         } else {
             if ($subs['subscription_price_cash'] > 0) {
                 $result['subscription_price']   = $subs['subscription_price_cash'];
             } elseif ($subs['subscription_price_point'] > 0) {
                 $result['use_point']    = 0;
-                $result['subscription_price']   = $subs['subscription_price_cash'];
+                $result['subscription_price']   = $subs['subscription_price_point'];
             }
         }
 

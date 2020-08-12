@@ -315,6 +315,7 @@ class ApiDealsClaimPay extends Controller
                                 'id_reference' => $voucher->id_deals_user,
                                 'payment_id' => $request->json('payment_id')?:''
                             ]),
+                            'redirect' => true,
                             'id_deals_user' => $voucher->id_deals_user,
                             'cancel_message' => 'Are you sure you want to cancel this transaction?'
                         ]
@@ -889,7 +890,13 @@ class ApiDealsClaimPay extends Controller
                     }elseif($paymentMethod == 'ovo'){
                         return $this->ovo($deals, $voucher, -$kurangBayar);
                     }elseif($paymentMethod == 'ipay88'){
-                        return $this->ipay88($deals, $voucher, -$kurangBayar,$post);
+                        $pay = $this->ipay88($deals, $voucher, -$kurangBayar,$post);
+                        $ipay88 = [
+                            'MERCHANT_TRANID'   => $pay['order_id'],
+                            'AMOUNT'            => $pay['amount'],
+                            'payment'           => 'ipay88'
+                        ];
+                        return $ipay88;
                     }
                 }
             }
