@@ -327,14 +327,14 @@ class ApiSubscriptionWebview extends Controller
             'expired_at_time_indo'              => 'pukul '.date('H:i', strtotime($subs['subscription_expired_at'])),
         ];
 
-        if ($subs['subscription_price_cash'] == 'Free') {
+        if($subs['paid_status'] == 'Free') {
             $result['subscription_price']   = 'Gratis';
         } else {
             if ($subs['subscription_price_cash'] > 0) {
                 $result['subscription_price']   = $subs['subscription_price_cash'];
             } elseif ($subs['subscription_price_point'] > 0) {
                 $result['use_point']    = 0;
-                $result['subscription_price']   = $subs['subscription_price_cash'];
+                $result['subscription_price']   = $subs['subscription_price_point'];
             }
         }
 
