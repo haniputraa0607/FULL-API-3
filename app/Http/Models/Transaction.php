@@ -87,6 +87,7 @@ class Transaction extends Model
 		'id_deals_voucher',
 		'latitude',
 		'longitude',
+        'distance_customer',
 		'membership_promo_id',
         'fraud_flag',
         'cashback_insert_status'
@@ -208,5 +209,10 @@ class Transaction extends Model
     {
         return $this->belongsTo(\Modules\PromoCampaign\Entities\PromoCampaignPromoCode::class, 'id_promo_campaign_promo_code', 'id_promo_campaign_promo_code')
             ->join('promo_campaigns', 'promo_campaigns.id_promo_campaign', 'promo_campaign_promo_codes.id_promo_campaign');
+    }
+
+    public function point_refund(){
+        return $this->belongsTo(LogBalance::class, 'id_transaction', 'id_reference')
+            ->where('source', 'like', 'Rejected%');
     }
 }
