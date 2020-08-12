@@ -273,7 +273,8 @@ class ApiMembershipWebview extends Controller
 			$membershipUser['progress_max_text']	= MyHelper::requestNumber($result['all_membership'][$indexNow]['min_value'],'_CURRENCY');
 			$membershipUser['progress_max']	= $result['all_membership'][$indexNow]['min_value'];
 			//for highest level progress now always end progress
-			$membershipUser['progress_now'] = $membershipUser['progress_max'];
+			$membershipUser['progress_now_text'] = $result['all_membership'][$indexNow]['min_value'];
+			$membershipUser['progress_now'] = $result['all_membership'][$indexNow]['min_value'];
 
 			//wording membership
 			$membershipUser['description'] = 'Selamat! Kamu sudah menjadi <b>'.$result['all_membership'][$indexNow]['membership_name'].'</b>. Silahkan nikmati berbagai keuntungannya ya!';
