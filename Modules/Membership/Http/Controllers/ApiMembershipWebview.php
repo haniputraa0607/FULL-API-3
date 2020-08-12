@@ -220,7 +220,10 @@ class ApiMembershipWebview extends Controller
 				->where('achievement_groups.status', 'Active')
 				->where('achievement_groups.is_calculate', 1)
 				->groupBy('achievement_groups.id_achievement_group')->get()->count();
-				$membershipUser['progress_now_text'] = $total_achievement;
+
+				//for achievement display balance now
+				$membershipUser['progress_now_text'] = MyHelper::requestNumber($result['user_membership']->user->balance, '_POINT');
+
 				$membershipUser['progress_now'] = (int) $total_achievement;
 				$membershipUser['progress_active'] = ($total_achievement / $nextTrx) * 100;
 				// $result['next_trx']		= $nextTrx - $total_balance;
@@ -251,7 +254,9 @@ class ApiMembershipWebview extends Controller
 				->where('achievement_groups.status', 'Active')
 				->where('achievement_groups.is_calculate', 1)
 				->groupBy('achievement_groups.id_achievement_group')->count();
-				$membershipUser['progress_now_text'] = $total_achievement;
+
+				//for achievement display balance now
+				$membershipUser['progress_now_text'] = MyHelper::requestNumber($result['user_membership']->user->balance, '_POINT');
 				$membershipUser['progress_now'] = (int) $total_achievement;
 			}
 		}
