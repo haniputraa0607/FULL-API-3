@@ -1161,6 +1161,7 @@ class ApiAchievement extends Controller
     {
         //get detail transaction
         $dataTrx = Transaction::where('id_transaction', $idTrx)
+                                //check 
                                 ->with(['productTransaction'])
                                 ->join('outlets', 'transactions.id_outlet', 'outlets.id_outlet')
                                 ->join('cities', 'outlets.id_city', 'cities.id_city')
@@ -1249,14 +1250,13 @@ class ApiAchievement extends Controller
                         // if detail rule passed, update achievement progress
                         if($checkRule){
                             $isFound = AchievementOutletDifferentLog::where('id_user', $getUser->id)
-                                                                        ->where('id_achievement_group', $achievement['id_achievement_group'])
-                                                                        ->where('id_outlet', $dataTrx['id_outlet'])
-                                                                        ->first();
+                            ->where('id_achievement_group', $achievement['id_achievement_group'])
+                            ->where('id_outlet', $dataTrx['id_outlet'])
+                            ->first();
                             //check if new outlet 
+                            $total = 1;
+                            $rule = $achievement['different_outlet'];
                             if(!$isFound){
-                                $total = 1;
-                                $rule = $achievement['different_outlet'];
-
                                 //insert new record in achievement outlet different log
                                 AchievementOutletDifferentLog::create([
                                     'id_user' => $getUser->id,
@@ -1264,7 +1264,9 @@ class ApiAchievement extends Controller
                                     'id_outlet' => $dataTrx['id_outlet']
                                 ]);
                             }else{
-                                continue;
+                                if($isNext == false){
+                                    continue;
+                                }
                             }
                         } else{
                             continue;
@@ -1306,15 +1308,10 @@ class ApiAchievement extends Controller
                             $totalProgress = $rule;
                             $getNewBadge = true;
                             
-                            if($totalProgress > $rule){
-                                //for check next level within the same achievement group
-                                $isNext = true;
-                                //save last progress within the same achievement group
-                                $lastProgress = $achievementProgress->progress;
-                            }else{
-                                //stop check achievement within the same achievement group, move to next group
-                                $isNext = false;
-                            }
+                            //for check next level within the same achievement group
+                            $isNext = true;
+                            //save last progress within the same achievement group
+                            $lastProgress = $achievementProgress->progress;
                         }else{
                             //move to next group
                             $isNext = false;
@@ -1340,7 +1337,7 @@ class ApiAchievement extends Controller
                                 $achievementProgress = $achievementProgress->progress;
                             }
                         }else{
-                            $achievementProgress += $lastProgress;
+                            $total += $lastProgress;
                         }                        
                         
                         $totalProgress = $achievementProgress + $total;
@@ -1348,15 +1345,10 @@ class ApiAchievement extends Controller
                             $totalProgress = $rule;
                             $getNewBadge = true;
 
-                            if($totalProgress > $rule){
-                                //for check next level within the same achievement group
-                                $isNext = true;
-                                //save last progress within the same achievement group
-                                $lastProgress = $achievementProgress->progress;
-                            }else{
-                                //stop check achievement within the same achievement group, move to next group
-                                $isNext = false;
-                            }
+                            //for check next level within the same achievement group
+                            $isNext = true;
+                            //save last progress within the same achievement group
+                            $lastProgress = $achievementProgress;
                         }else{
                             //move to next group
                             $isNext = false;
