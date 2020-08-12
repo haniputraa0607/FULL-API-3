@@ -263,10 +263,18 @@ class ApiMembershipWebview extends Controller
 			$membershipUser['progress_max']	= $result['all_membership'][$indexNow + 1]['min_value'];
 
 			//wording membership
-			$membershipUser['description']= 'Anda telah mengumpulkan '.$membershipUser['progress_now'].' badge, lengkapi '.$membershipUser['progress_max'].' badge lagi untuk menuju <b>'.strtoupper($result['all_membership'][$indexNow + 1]['membership_name']).'</b>';
+			//for 0 badge
+			if($membershipUser['progress_now'] == 0){
+				$membershipUser['description']= 'Anda belum mengumpulkan badge, ayo kumpulkan '.$membershipUser['progress_max'].' badge untuk menuju <b>'.strtoupper($result['all_membership'][$indexNow + 1]['membership_name']).'</b>';
+			}else{
+				$membershipUser['description']= 'Anda telah mengumpulkan '.$membershipUser['progress_now'].' badge, lengkapi '.($membershipUser['progress_max']-$membershipUser['progress_now']).' badge lagi untuk menuju <b>'.strtoupper($result['all_membership'][$indexNow + 1]['membership_name']).'</b>';
+			}
 		} else {
 			$membershipUser['progress_max_text']	= MyHelper::requestNumber($result['all_membership'][$indexNow]['min_value'],'_CURRENCY');
 			$membershipUser['progress_max']	= $result['all_membership'][$indexNow]['min_value'];
+			//for highest level progress now always end progress
+			$membershipUser['progress_now_text'] = $result['all_membership'][$indexNow]['min_value'];
+			$membershipUser['progress_now'] = $result['all_membership'][$indexNow]['min_value'];
 
 			//wording membership
 			$membershipUser['description'] = 'Selamat! Kamu sudah menjadi <b>'.$result['all_membership'][$indexNow]['membership_name'].'</b>. Silahkan nikmati berbagai keuntungannya ya!';
