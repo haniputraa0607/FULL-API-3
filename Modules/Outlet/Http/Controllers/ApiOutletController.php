@@ -471,6 +471,8 @@ class ApiOutletController extends Controller
             $outlet = Outlet::select('outlets.id_outlet','outlets.outlet_name');
         }elseif(($post['filter']??false) == 'different_price'){
             $outlet = Outlet::where('outlet_different_price','1')->select('id_outlet','outlet_name','outlet_code');
+        }elseif(\Request::route()->getName() == 'outlet_be'){
+            $outlet = Outlet::with(['today', 'brands', 'city'])->select('id_outlet','status_franchise','outlet_name','outlet_code', 'outlet_status');
         }else{
             $outlet = Outlet::with(['city', 'outlet_photos', 'outlet_schedules', 'today', 'user_outlets','brands']);
             if(!($post['id_outlet']??false)||!($post['id_outlet']??false)){
@@ -1751,7 +1753,7 @@ class ApiOutletController extends Controller
             }
         }
 
-        return response()->json(MyHelper::checkUpdate($update));
+        return response()->json(MyHelper::checkUpdate($updateHoliday));
     }
 
     function exportCity(Request $request) {
@@ -2144,7 +2146,7 @@ class ApiOutletController extends Controller
                 }
             }else{
                 $new = OutletSchedule::create([
-                    'id_outlet' => $id_outlet,
+                    'id_outlet' => $post['id_outlet'],
                     'day' => $value['day']
                 ]+$value);
                 if (!$new) {
