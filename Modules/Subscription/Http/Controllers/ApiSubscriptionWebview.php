@@ -240,6 +240,7 @@ class ApiSubscriptionWebview extends Controller
             'subscription_expired'      		 => date('Y-m-d H:i:s', strtotime($subs['subscription_expired_at'])),
             'subscription_expired_indo'     => MyHelper::dateFormatInd($subs['subscription_expired_at'], false, false),
             'subscription_expired_time_indo'     => 'pukul '.date('H:i', strtotime($subs['subscription_expired_at'])),
+            'is_used' => $subs['is_used']
         ];
         $result['time_server'] = date('Y-m-d H:i:s');
         $result['time_server_indo'] = MyHelper::dateFormatInd(date('Y-m-d H:i:s'), false, false).' pukul '.date('H:i');
@@ -298,6 +299,15 @@ class ApiSubscriptionWebview extends Controller
                     // $result['deals_content'][$i]['detail'] = implode('', $city);
                 }
             }
+        }
+
+        if ($subs['is_used']) {
+        	$result['label_text'] = 'Digunakan';
+	        $result['button_text'] = 'Gunakan Nanti';
+        }
+        else{
+	        $result['label_text'] = 'Tidak digunakan';
+	        $result['button_text'] = 'Gunakan';
         }
         return response()->json(MyHelper::checkGet($result));
     }
