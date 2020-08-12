@@ -309,7 +309,12 @@ class ApiSubscriptionWebview extends Controller
             return abort(404);
         }
 
-        $subs = SubscriptionUser::with('subscription')->where('id_subscription_user', $request->id_subscription_user)->first()->toArray();
+        $subs = SubscriptionUser::with('subscription')->where('id_subscription_user', $request->id_subscription_user)->first();
+
+        if (!$subs) {
+			return MyHelper::checkGet($subs);
+        }
+        $subs->toArray();
         
         $result = [
             'id_subscription_user'              => $subs['id_subscription_user'],

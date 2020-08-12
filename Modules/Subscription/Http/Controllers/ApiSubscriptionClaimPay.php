@@ -109,14 +109,15 @@ class ApiSubscriptionClaimPay extends Controller
                                         'messages' => ['Your point not enough.']
                                     ]);
                                 }
-                            } elseif ( $post['payment_method'] == 'balance' ) {
+                            } 
+                            // elseif ( $post['payment_method'] == 'balance' ) {
 
-                                DB::rollback();
-                                return response()->json([
-                                    'status'   => 'fail',
-                                    'messages' => ['You can\'t buy this subscription with point.']
-                                ]);
-                            }
+                            //     DB::rollback();
+                            //     return response()->json([
+                            //         'status'   => 'fail',
+                            //         'messages' => ['You can\'t buy this subscription with point.']
+                            //     ]);
+                            // }
 
                             //CEK IF BALANCE O
                             if(isset($post['balance']) && $post['balance'] == true){
