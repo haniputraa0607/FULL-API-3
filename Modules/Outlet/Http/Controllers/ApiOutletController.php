@@ -1901,8 +1901,8 @@ class ApiOutletController extends Controller
                             'outlet_email' => $value['email']??'',
                             'outlet_latitude' => $value['latitude']??'',
                             'outlet_longitude' => $value['longitude']??'',
-                            'status_franchise' => ($value['status_franchise'] == 'Franchise' ? 1 : 0),
-                            'delivery_order' => ($value['delivery'] == 'Active' ? 1 : 0),
+                            'status_franchise' => (isset($value['status_franchise']) && $value['status_franchise'] == 'Franchise' ? 1 : 0),
+                            'delivery_order' => (isset($value['delivery']) && $value['delivery'] == 'Active' ? 1 : 0),
                             'deep_link_gojek' => $value['deep_link_gojek']??'',
                             'deep_link_grab' => $value['deep_link_grab']??'',
                             'id_city' => $id_city[$search]??null
