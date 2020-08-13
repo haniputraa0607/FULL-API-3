@@ -2,6 +2,7 @@
 
 namespace Modules\Disburse\Http\Controllers;
 
+use App\Http\Models\Configs;
 use App\Http\Models\DailyReportTrx;
 use App\Http\Models\Outlet;
 use App\Http\Models\Transaction;
@@ -378,10 +379,10 @@ class ApiDisburseController extends Controller
         }
 
         if(isset($post['export']) && $post['export'] == 1){
-            $data = $data->selectRaw('DATE_FORMAT(disburse.created_at, "%d %M %Y %H:%i") as "Date", CONCAT(outlets.outlet_code, " - ", outlets.outlet_name) as "Outlet", disburse_outlet.disburse_nominal as "Nominal",
-                total_fee_item as "Total Fee Item", total_omset as "Total Grand Total", total_discount as "Total Discount Charge", total_payment_charge as "Total Payment Charge",
-                total_point_use_expense as "Total Point Use Charge", total_subscription as "Total Subscription Charge", total_delivery_price as "Total Delivery",
-                bank_name.bank_name as "Bank Name", CONCAT(" ",disburse.beneficiary_account_number) as "Account Number", disburse.beneficiary_name as "Recipient Name "')
+            $data = $data->selectRaw('disburse_status as "Disburse Status", bank_name.bank_name as "Bank Name", CONCAT(" ",disburse.beneficiary_account_number) as "Account Number", disburse.beneficiary_name as "Recipient Name", DATE_FORMAT(disburse.created_at, "%d %M %Y %H:%i") as "Date", CONCAT(outlets.outlet_code, " - ", outlets.outlet_name) as "Outlet", disburse_outlet.disburse_nominal as "Nominal Disburse",
+                total_omset as "Total Gross Sales", total_discount as "Total Discount", total_delivery_price as "Total Delivery", 
+                total_fee_item as "Total Fee Item", total_payment_charge as "Total Fee Payment", total_promo_charged as "Total Fee Promo",
+                total_point_use_expense as "Total Fee Point Use", total_subscription as "Total Fee Subscription"')
                 ->get()->toArray();
 
         }else{
@@ -654,7 +655,9 @@ class ApiDisburseController extends Controller
             ->where('disburse_outlet_transactions.id_disburse_outlet', $id)
             ->select('disburse_outlet_transactions.*', 'transactions.*', 'transaction_payment_balances.balance_nominal');
 
+        $config = [];
         if(isset($post['export']) && $post['export'] == 1){
+            $config = Configs::where('config_name', 'show or hide info calculation disburse')->first();
             $data = $data->get()->toArray();
         }else{
             $data = $data->paginate(25);
@@ -664,7 +667,8 @@ class ApiDisburseController extends Controller
             'status' => 'success',
             'result' => [
                 'data_disburse' => $disburse,
-                'list_trx' => $data
+                'list_trx' => $data,
+                'config' => $config
             ]
         ];
         return response()->json($result);
@@ -730,10 +734,11 @@ class ApiDisburseController extends Controller
                 ->leftJoin('disburse_outlet', 'disburse_outlet.id_disburse_outlet', 'disburse_outlet_transactions.id_disburse_outlet')
                 ->leftJoin('disburse', 'disburse.id_disburse', 'disburse_outlet.id_disburse')
                 ->select('disburse.disburse_status as 0', DB::raw("CONCAT (outlets.outlet_code, ' - ',outlets.outlet_name) as '1'"), DB::raw("DATE_FORMAT(disburse.created_at, '%d %b %Y %H:%i') as '2'"),
-                    DB::raw("DATE_FORMAT(transactions.transaction_date, '%d %b %Y %H:%i') as '3'"), 'transactions.transaction_receipt_number as 4', DB::raw('FORMAT(transactions.transaction_subtotal,2) as "5"'), DB::raw('FORMAT(transactions.transaction_grandtotal,2) as "6"'),
-                    DB::raw('FORMAT(disburse_outlet_transactions.income_central,2) as "7"'), DB::raw('FORMAT(disburse_outlet_transactions.expense_central,2) as "8"'),  DB::raw('FORMAT(disburse_outlet_transactions.income_outlet,2) as "9"'),
-                    DB::raw('FORMAT(disburse_outlet_transactions.fee_item,2) as "10"'),  DB::raw('FORMAT(disburse_outlet_transactions.payment_charge,2) as "11"'), DB::raw('FORMAT(disburse_outlet_transactions.discount,2) as "12"'),
-                    DB::raw('FORMAT(disburse_outlet_transactions.subscription,2) as "13"'),  DB::raw('transactions.transaction_shipment_go_send as "14"'))
+                    DB::raw("DATE_FORMAT(transactions.transaction_date, '%d %b %Y %H:%i') as '3'"), 'transactions.transaction_receipt_number as 4',
+                    DB::raw('FORMAT(transactions.transaction_grandtotal,2) as "5"'), DB::raw('FORMAT(transactions.transaction_discount,2) as "6"'), DB::raw('transactions.transaction_shipment_go_send as "7"'),
+                    DB::raw('FORMAT(transactions.transaction_subtotal,2) as "8"'), DB::raw('FORMAT(disburse_outlet_transactions.fee_item,2) as "9"'), DB::raw('FORMAT(disburse_outlet_transactions.payment_charge,2) as "10"'),
+                    DB::raw('FORMAT(disburse_outlet_transactions.discount,2) as "11"'), DB::raw('FORMAT(disburse_outlet_transactions.subscription,2) as "12"'), DB::raw('FORMAT(disburse_outlet_transactions.point_use_expense,2) as "13"'),
+                    DB::raw('FORMAT(disburse_outlet_transactions.income_outlet,2) as "14"'), DB::raw('FORMAT(disburse_outlet_transactions.income_central,2) as "15"'), DB::raw('FORMAT(disburse_outlet_transactions.expense_central,2) as "16"'))
                 ->orderBy('transactions.transaction_date','desc');
 
         if(isset($post['fitler_date']) &&  $post['fitler_date']== 'today'){
@@ -849,19 +854,20 @@ class ApiDisburseController extends Controller
                 ->where('transaction_payment_status', 'Completed')->whereNull('reject_at')
                 ->whereDate('transaction_date', $yesterday)
                 ->groupBy('transactions.id_outlet')->pluck('id_outlet');
-            $getEmail = BankAccount::whereHas('bank_account_outlet',function($query) use ($getOultets){
-                $query->whereIn('bank_account_outlets.id_outlet',$getOultets);
-            })->with(['bank_account_outlet' => function($q) use($getOultets){
-                $q->whereIn('bank_account_outlets.id_outlet', $getOultets);
-            }])->get()->toArray();
+            $getEmail = Outlet::whereIn('id_outlet', $getOultets)
+                        ->whereNotNull('outlet_email')
+                        ->groupBy('outlet_email')
+                        ->pluck('outlet_email');
 
             if(!empty($getEmail)){
                 foreach ($getEmail as $e){
-                    if(empty($e['bank_account_outlet'])) continue;
-
                     $tmpPath = [];
                     $tmpOutlet = [];
-                    foreach ($e['bank_account_outlet'] as $outlet){
+                    $outlets = Outlet::where('outlet_email', $e)->select('id_outlet', 'outlet_code', 'outlet_name', 'outlet_email')->get()->toArray();
+                    foreach ($outlets as $outlet){
+                        if(empty($outlet['outlet_email'])){
+                            continue 2;
+                        }
                         $filter['date_start'] = $yesterday;
                         $filter['date_end'] = $yesterday;
                         $filter['detail'] = 1;
@@ -889,15 +895,17 @@ class ApiDisburseController extends Controller
                             ->where('transactions.id_outlet', $outlet['id_outlet'])
                             ->whereDate('transactions.transaction_date', $yesterday)
                             ->select('transactions.transaction_receipt_number as Recipient Number',
-                                DB::raw('DATE_FORMAT(transactions.transaction_date, "%d %M %Y %H:%i:%s") as "Transaction Date"'),
-                                'dot.income_outlet as Income Outlet', 'transactions.transaction_subtotal as Sub Total', 'transactions.transaction_grandtotal as Grand Total',
-                                'dot.fee_item as Fee Item', 'dot.fee_item as Discount Charge', 'dot.payment_charge as Payment Charge', 'dot.point_use_expense as Point Use Charge',
-                                'dot.subscription as Subcriptions Charge', 'dot.subscription as Delivery')
+                                    DB::raw('DATE_FORMAT(transactions.transaction_date, "%d %M %Y %H:%i:%s") as "Transaction Date"'),
+                                    'transactions.transaction_grandtotal as Gross Sales',
+                                    DB::raw('ABS(transactions.transaction_discount) as "Discount"'),
+                                    'dot.subscription as Delivery', 'transactions.transaction_subtotal as Sub Total', 'dot.fee_item as Fee Item',
+                                    'dot.payment_charge as Fee Payment', 'dot.fee_item as Fee Promo', 'dot.subscription as Fee Subcription',
+                                    'dot.point_use_expense as Fee Point Use', 'dot.income_outlet as Net Sales (Income Outlet)')
                             ->get()->toArray();
 
                         $sheets = new SheetCollection([
-                            $generateTrx,
-                            $dataDisburse
+                            "Detail Transaction" => $generateTrx,
+                            "Calculation Fee" => $dataDisburse
                         ]);
                         $excelFile = 'Transaction_['.$yesterday.']_['.$outlet['outlet_code'].'].xlsx';
                         if(!file_exists( public_path().'/excel_email')){
@@ -928,9 +936,9 @@ class ApiDisburseController extends Controller
                             'setting' => $setting
                         );
 
-                        $to = $e['beneficiary_email'];
+                        $to = $outlets[0]['outlet_email'];
                         $subject = 'Report Transaksi ['.date('d M Y', strtotime($yesterday)).']';
-                        $name =  $e['beneficiary_name'];
+                        $name =  $outlets[0]['outlet_name'];
                         $variables['attachment'] = $tmpPath;
 
                         try{

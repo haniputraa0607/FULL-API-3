@@ -183,7 +183,9 @@ class ApiIrisController extends Controller
                                             'total_expense_central' => $expenseCentral,
                                             'total_fee_item' => $feeItemForCentral,
                                             'total_omset' => $grandTotal,
-                                            'total_discount' => $totalChargedPromo,
+                                            'total_promo_charged' => $totalChargedPromo,
+                                            'total_discount' => abs($data['transaction_discount']),
+                                            'total_subtotal' => $data['transaction_subtotal'],
                                             'total_delivery_price' => $transactionShipment,
                                             'total_payment_charge' => $totalFee,
                                             'total_point_use_expense' => $nominalBalance,
@@ -196,7 +198,9 @@ class ApiIrisController extends Controller
                                         $arrTmp[$checkOultet]['total_expense_central'] = $arrTmp[$checkOultet]['total_expense_central'] + $expenseCentral;
                                         $arrTmp[$checkOultet]['total_fee_item'] = $arrTmp[$checkOultet]['total_fee_item'] + $feeItemForCentral;
                                         $arrTmp[$checkOultet]['total_omset'] = $arrTmp[$checkOultet]['total_omset'] + $grandTotal;
-                                        $arrTmp[$checkOultet]['total_discount'] = $arrTmp[$checkOultet]['total_discount'] + $totalChargedPromo;
+                                        $arrTmp[$checkOultet]['total_promo_charged'] = $arrTmp[$checkOultet]['total_promo_charged'] + $totalChargedPromo;
+                                        $arrTmp[$checkOultet]['total_subtotal'] = $arrTmp[$checkOultet]['total_subtotal'] +  $data['transaction_subtotal'];
+                                        $arrTmp[$checkOultet]['total_discount'] = $arrTmp[$checkOultet]['total_discount'] + abs($data['transaction_discount']);
                                         $arrTmp[$checkOultet]['total_delivery_price'] = $arrTmp[$checkOultet]['total_delivery_price'] + $transactionShipment;
                                         $arrTmp[$checkOultet]['total_payment_charge'] = $arrTmp[$checkOultet]['total_payment_charge'] + $totalFee;
                                         $arrTmp[$checkOultet]['total_point_use_expense'] = $arrTmp[$checkOultet]['total_point_use_expense'] + $nominalBalance;
@@ -244,6 +248,8 @@ class ApiIrisController extends Controller
                                         'total_expense_central' => $val['total_expense_central'],
                                         'total_fee_item' => $val['total_fee_item'],
                                         'total_omset' => $val['total_omset'],
+                                        'total_subtotal' => $val['total_subtotal'],
+                                        'total_promo_charged' => $val['total_promo_charged'],
                                         'total_discount' => $val['total_discount'],
                                         'total_delivery_price' => $val['total_delivery_price'],
                                         'total_payment_charge' => $val['total_payment_charge'],
@@ -349,201 +355,240 @@ class ApiIrisController extends Controller
             return false;
         }
 
-        $settingGlobalFee = Setting::where('key', 'global_setting_fee')->first()->value_text;
-        $settingGlobalFee = json_decode($settingGlobalFee);
-        $settingGlobalFeePoint = Setting::where('key', 'global_setting_point_charged')->first()->value_text;
-        $settingGlobalFeePoint = json_decode($settingGlobalFeePoint);
-        $settingMDRAll = MDR::get()->toArray();
-
         $data = Transaction::where('id_transaction', $id_transaction)
             ->join('outlets', 'outlets.id_outlet', 'transactions.id_outlet')
             ->with(['transaction_multiple_payment', 'vouchers', 'promo_campaign', 'transaction_payment_subscription'])
             ->first();
-        $subTotal = $data['transaction_subtotal'];
-        $grandTotal = $data['transaction_grandtotal'];
-        $nominalFeeToCentral = $subTotal;
-        $feePGCentral = 0;
-        $feePG = 0;
-        $feePGType = 'Percent';
-        $feePointCentral = 0;
-        $feePointOutlet = 0;
-        $feePromoCentral = 0;
-        $feeSubcriptionCentral = 0;
-        $feeSubcriptionOutlet = 0;
-        $feePromoOutlet = 0;
-        $balanceNominal = 0;
-        $nominalBalance = 0;
-        $nominalBalanceCentral = 0;
-        $totalFeeForCentral = 0;
-        $amount = 0;
-        $amountMDR = 0 ;
-        $transactionShipment = 0;
-        if(!empty($data['transaction_shipment_go_send'])){
-            $transactionShipment = $data['transaction_shipment_go_send'];
-        }
 
-        $charged = NULL;
-
-        if(!empty($data['transaction_multiple_payment'])){
-            foreach ($data['transaction_multiple_payment'] as $payments){
-
-                if(strtolower($payments['type']) == 'midtrans'){
-                    $midtrans = TransactionPaymentMidtran::where('id_transaction', $data['id_transaction'])->first();
-                    $payment = $midtrans['payment_type'];
-                    $amountMDR = $midtrans['gross_amount'];
-                    $keyMidtrans = array_search(strtoupper($payment), array_column($settingMDRAll, 'payment_name'));
-                    if($keyMidtrans !== false){
-                        $feePGCentral = $settingMDRAll[$keyMidtrans]['mdr_central'];
-                        $feePG = $settingMDRAll[$keyMidtrans]['mdr'];
-                        $feePGType = $settingMDRAll[$keyMidtrans]['percent_type'];
-                        $charged = $settingMDRAll[$keyMidtrans]['charged'];
-                    }else{
-                        continue;
-                    }
-
-                }elseif (strtolower($payments['type']) == 'balance'){
-                    $balanceNominal = TransactionPaymentBalance::where('id_transaction', $data['id_transaction'])->first()->balance_nominal;
-                    $feePointCentral = ($settingGlobalFeePoint->central == '' ? 0 : $settingGlobalFeePoint->central);
-                    $feePointOutlet = ($settingGlobalFeePoint->outlet == '' ? 0 : $settingGlobalFeePoint->outlet);
-
-                    if((int)$feePointCentral !== 100){
-                        //calculate charged point to outlet
-                        $nominalBalance = $balanceNominal * (floatval($feePointOutlet) / 100);
-
-                        //calculate charged point to central
-                        $nominalBalanceCentral = $balanceNominal * (floatval($feePointCentral) / 100);
-                    }else{
-                        //calculate charged point to central
-                        $nominalBalanceCentral = $balanceNominal;
-                    }
-                }elseif(strtolower($payments['type']) == 'ipay88'){
-                    $ipay88 = TransactionPaymentIpay88::where('id_transaction', $data['id_transaction'])->first();
-                    $amountMDR = $ipay88['amount']/100;
-                    $method =  $ipay88['payment_method'];
-                    $keyipay88 = array_search(strtoupper($method), array_column($settingMDRAll, 'payment_name'));
-                    if($keyipay88 !== false){
-                        $feePGCentral = $settingMDRAll[$keyipay88]['mdr_central'];
-                        $feePG = $settingMDRAll[$keyipay88]['mdr'];
-                        $feePGType = $settingMDRAll[$keyipay88]['percent_type'];
-                        $charged = $settingMDRAll[$keyipay88]['charged'];
-                    }else{
-                        continue;
-                    }
-                }elseif (strtolower($payments['type']) == 'ovo'){
-                    $ovo = TransactionPaymentIpay88::where('id_transaction', $data['id_transaction'])->first();
-                    $amountMDR = $ovo['amount']/100;
-                    $keyipayOvo = array_search('OVO', array_column($settingMDRAll, 'payment_name'));
-                    if($keyipayOvo !== false){
-                        $feePGCentral = $settingMDRAll[$keyipayOvo]['mdr_central'];
-                        $feePG = $settingMDRAll[$keyipayOvo]['mdr'];
-                        $feePGType = $settingMDRAll[$keyipayOvo]['percent_type'];
-                        $charged = $settingMDRAll[$keyipayOvo]['charged'];
-                    }else{
-                        continue;
-                    }
-                }
+        if(!empty($data)){
+            $settingGlobalFee = Setting::where('key', 'global_setting_fee')->first()->value_text;
+            $settingGlobalFee = json_decode($settingGlobalFee);
+            $settingMDRAll = MDR::get()->toArray();
+            $subTotal = $data['transaction_subtotal'];
+            $grandTotal = $data['transaction_grandtotal'];
+            $nominalFeeToCentral = $subTotal;
+            $feePGCentral = 0;
+            $feePG = 0;
+            $feePGType = 'Percent';
+            $feePointCentral = 0;
+            $feePointOutlet = 0;
+            $feePromoCentral = 0;
+            $feeSubcriptionCentral = 0;
+            $feeSubcriptionOutlet = 0;
+            $feePromoOutlet = 0;
+            $balanceNominal = 0;
+            $nominalBalance = 0;
+            $nominalBalanceCentral = 0;
+            $totalFeeForCentral = 0;
+            $amount = 0;
+            $amountMDR = 0 ;
+            $transactionShipment = 0;
+            if(!empty($data['transaction_shipment_go_send'])){
+                $transactionShipment = $data['transaction_shipment_go_send'];
             }
 
-            $totalChargedPromo = 0;
-            $totalChargedPromoCentral = 0;
-            $totalChargedSubcriptionOutlet = 0;
-            $totalChargedSubcriptionCentral = 0;
-            if(!empty($data['transaction_payment_subscription'])){
-                $getSubcription = SubscriptionUserVoucher::join('subscription_users', 'subscription_users.id_subscription_user','subscription_user_vouchers.id_subscription_user')
-                    ->join('subscriptions', 'subscriptions.id_subscription', 'subscription_users.id_subscription')
-                    ->where('subscription_user_vouchers.id_subscription_user_voucher', $data['transaction_payment_subscription']['id_subscription_user_voucher'])
-                    ->groupBy('subscriptions.id_subscription')->select('subscriptions.*')->first();
-                if($getSubcription){
-                    $nominalFeeToCentral = $subTotal - abs($data['transaction_payment_subscription']['subscription_nominal']);
-                    $feeSubcriptionCentral = $getSubcription['charged_central'];
-                    $feeSubcriptionOutlet = $getSubcription['charged_outlet'];
-                    if((int) $feeSubcriptionCentral !== 100){
-                        $totalChargedSubcriptionOutlet = (abs($data['transaction_payment_subscription']['subscription_nominal']) * ($feeSubcriptionOutlet / 100));
-                        $totalChargedSubcriptionCentral = (abs($data['transaction_payment_subscription']['subscription_nominal']) * ($feeSubcriptionCentral / 100));
-                    }else{
-                        $totalChargedSubcriptionCentral = $data['transaction_payment_subscription']['subscription_nominal'];
+            $charged = NULL;
+
+            if(!empty($data['transaction_multiple_payment'])){
+
+                // ===== Calculate Fee Subscription ====== //
+                $totalChargedSubcriptionOutlet = 0;
+                $totalChargedSubcriptionCentral = 0;
+                $nominalSubscription = 0;
+                if(!empty($data['transaction_payment_subscription'])){
+                    $getSubcription = SubscriptionUserVoucher::join('subscription_users', 'subscription_users.id_subscription_user','subscription_user_vouchers.id_subscription_user')
+                        ->join('subscriptions', 'subscriptions.id_subscription', 'subscription_users.id_subscription')
+                        ->where('subscription_user_vouchers.id_subscription_user_voucher', $data['transaction_payment_subscription']['id_subscription_user_voucher'])
+                        ->groupBy('subscriptions.id_subscription')->select('subscriptions.*')->first();
+                    if($getSubcription){
+                        $nominalSubscription = abs($data['transaction_payment_subscription']['subscription_nominal']);
+                        $nominalFeeToCentral = $subTotal - abs($data['transaction_payment_subscription']['subscription_nominal']);
+                        $feeSubcriptionCentral = $getSubcription['charged_central'];
+                        $feeSubcriptionOutlet = $getSubcription['charged_outlet'];
+                        if((int) $feeSubcriptionCentral !== 100){
+                            $totalChargedSubcriptionOutlet = (abs($data['transaction_payment_subscription']['subscription_nominal']) * ($feeSubcriptionOutlet / 100));
+                            $totalChargedSubcriptionCentral = (abs($data['transaction_payment_subscription']['subscription_nominal']) * ($feeSubcriptionCentral / 100));
+                        }else{
+                            $totalChargedSubcriptionCentral = $data['transaction_payment_subscription']['subscription_nominal'];
+                        }
                     }
                 }
-            }elseif(count($data['vouchers']) > 0){
-                $getDeal = Deal::where('id_deals', $data['vouchers'][0]['id_deals'])->first();
-                $feePromoCentral = $getDeal['charged_central'];
-                $feePromoOutlet = $getDeal['charged_outlet'];
-                $nominalFeeToCentral = $subTotal - abs($data['transaction_discount']);
-                if((int) $feePromoCentral !== 100){
-                    $totalChargedPromo = (abs($data['transaction_discount']) * ($feePromoOutlet / 100));
-                    $totalChargedPromoCentral = (abs($data['transaction_discount']) * ($feePromoCentral / 100));
-                }else{
-                    $totalChargedPromoCentral = $data['transaction_discount'];
-                }
-            }elseif (!empty($data['promo_campaign'])){
-                $nominalFeeToCentral = $subTotal - abs($data['transaction_discount']);
-                $feePromoCentral = $data['promo_campaign']['charged_central'];
-                $feePromoOutlet = $data['promo_campaign']['charged_outlet'];
-                if((int) $feePromoCentral !== 100){
-                    $totalChargedPromo = (abs($data['transaction_discount']) * ($feePromoOutlet / 100));
-                    $totalChargedPromoCentral = (abs($data['transaction_discount']) * ($feePromoCentral / 100));
-                }else{
-                    $totalChargedPromoCentral = $data['transaction_discount'];
-                }
-            }
 
-            if($feePGType == 'Percent'){
-                $totalFee = $amountMDR * (($feePGCentral + $feePG) / 100);
-                $totalFeeForCentral = $amountMDR * ($feePGCentral/100);
+                $statusSplitPayment = 0;//for flag if transaction user split payment with balance (point)
+                if(count($data['transaction_multiple_payment']) > 1){
+                    $statusSplitPayment = 1;
+                }
+
+                foreach ($data['transaction_multiple_payment'] as $payments){
+
+                    if(strtolower($payments['type']) == 'midtrans'){
+                        $midtrans = TransactionPaymentMidtran::where('id_transaction', $data['id_transaction'])->first();
+                        $payment = $midtrans['payment_type'];
+                        if($statusSplitPayment == 1){
+                            $amountMDR = $grandTotal - $nominalSubscription;
+                        }else{
+                            $amountMDR = $midtrans['gross_amount'];
+                        }
+
+                        $keyMidtrans = array_search(strtoupper($payment), array_column($settingMDRAll, 'payment_name'));
+                        if($keyMidtrans !== false){
+                            $feePGCentral = $settingMDRAll[$keyMidtrans]['mdr_central'];
+                            $feePG = $settingMDRAll[$keyMidtrans]['mdr'];
+                            $feePGType = $settingMDRAll[$keyMidtrans]['percent_type'];
+                            $charged = $settingMDRAll[$keyMidtrans]['charged'];
+                        }else{
+                            continue;
+                        }
+
+                    }elseif (strtolower($payments['type']) == 'balance' && $statusSplitPayment == 0){
+                        $balanceNominal = TransactionPaymentBalance::where('id_transaction', $data['id_transaction'])->first()->balance_nominal;
+                        $balanceMdr = array_search(strtoupper('FULL POINT'), array_column($settingMDRAll, 'payment_name'));
+                        if($balanceMdr !== false){
+                            $feePGCentral = $settingMDRAll[$balanceMdr]['mdr_central'];
+                            $feePG = $settingMDRAll[$balanceMdr]['mdr'];
+                            $feePGType = $settingMDRAll[$balanceMdr]['percent_type'];
+                            $charged = $settingMDRAll[$balanceMdr]['charged'];
+
+                            $feePointOutlet = (float)$settingMDRAll[$balanceMdr]['mdr'];
+                            $feePointCentral = 100 - $feePointOutlet;
+
+                            if((int)$feePointOutlet === 0){
+                                //calculate charged point to central
+                                $nominalBalanceCentral = $balanceNominal;
+                            }else{
+                                //calculate charged point to outlet
+                                $nominalBalance = $balanceNominal * (floatval($feePointOutlet) / 100);
+
+                                //calculate charged point to central
+                                $nominalBalanceCentral = $balanceNominal * (floatval($feePointCentral) / 100);
+                            }
+                        }else{
+                            continue;
+                        }
+                    }elseif(strtolower($payments['type']) == 'ipay88'){
+                        $ipay88 = TransactionPaymentIpay88::where('id_transaction', $data['id_transaction'])->first();
+                        if($statusSplitPayment == 1){
+                            $amountMDR = $grandTotal - $nominalSubscription;
+                        }else{
+                            $amountMDR = $ipay88['amount']/100;
+                        }
+
+                        $method =  $ipay88['payment_method'];
+                        $keyipay88 = array_search(strtoupper($method), array_column($settingMDRAll, 'payment_name'));
+                        if($keyipay88 !== false){
+                            $feePGCentral = $settingMDRAll[$keyipay88]['mdr_central'];
+                            $feePG = $settingMDRAll[$keyipay88]['mdr'];
+                            $feePGType = $settingMDRAll[$keyipay88]['percent_type'];
+                            $charged = $settingMDRAll[$keyipay88]['charged'];
+                        }else{
+                            continue;
+                        }
+                    }elseif (strtolower($payments['type']) == 'ovo'){
+                        $ovo = TransactionPaymentIpay88::where('id_transaction', $data['id_transaction'])->first();
+
+                        if($statusSplitPayment == 1){
+                            $amountMDR = $grandTotal - $nominalSubscription;
+                        }else{
+                            $amountMDR = $ovo['amount']/100;
+                        }
+
+                        $keyipayOvo = array_search('OVO', array_column($settingMDRAll, 'payment_name'));
+                        if($keyipayOvo !== false){
+                            $feePGCentral = $settingMDRAll[$keyipayOvo]['mdr_central'];
+                            $feePG = $settingMDRAll[$keyipayOvo]['mdr'];
+                            $feePGType = $settingMDRAll[$keyipayOvo]['percent_type'];
+                            $charged = $settingMDRAll[$keyipayOvo]['charged'];
+                        }else{
+                            continue;
+                        }
+                    }
+                }
+
+                $totalChargedPromo = 0;
+                $totalChargedPromoCentral = 0;
+                if(count($data['vouchers']) > 0){
+                    $getDeal = Deal::where('id_deals', $data['vouchers'][0]['id_deals'])->first();
+                    $feePromoCentral = $getDeal['charged_central'];
+                    $feePromoOutlet = $getDeal['charged_outlet'];
+                    $nominalFeeToCentral = $subTotal - abs($data['transaction_discount']);
+                    if((int) $feePromoCentral !== 100){
+                        $totalChargedPromo = (abs($data['transaction_discount']) * ($feePromoOutlet / 100));
+                        $totalChargedPromoCentral = (abs($data['transaction_discount']) * ($feePromoCentral / 100));
+                    }else{
+                        $totalChargedPromoCentral = $data['transaction_discount'];
+                    }
+                }elseif (!empty($data['promo_campaign'])){
+                    $nominalFeeToCentral = $subTotal - abs($data['transaction_discount']);
+                    $feePromoCentral = $data['promo_campaign']['charged_central'];
+                    $feePromoOutlet = $data['promo_campaign']['charged_outlet'];
+                    if((int) $feePromoCentral !== 100){
+                        $totalChargedPromo = (abs($data['transaction_discount']) * ($feePromoOutlet / 100));
+                        $totalChargedPromoCentral = (abs($data['transaction_discount']) * ($feePromoCentral / 100));
+                    }else{
+                        $totalChargedPromoCentral = $data['transaction_discount'];
+                    }
+                }
+
+                //fee payment gateway
+                if($feePGType == 'Percent'){
+                    $totalFee = $amountMDR * (($feePGCentral + $feePG) / 100);
+                    $totalFeeForCentral = $amountMDR * ($feePGCentral/100);
+                }else{
+                    $totalFee = $feePGCentral + $feePG;
+                    $totalFeeForCentral = $feePGCentral;
+                }
+
+                $percentFee = 0;
+                if($data['outlet_special_status'] == 1){
+                    $percentFee = $data['outlet_special_fee'];
+                }else{
+                    if($data['status_franchise'] == 1){
+                        $percentFee = ($settingGlobalFee->fee_outlet == '' ? 0 : $settingGlobalFee->fee_outlet);
+                    }else{
+                        $percentFee = ($settingGlobalFee->fee_central == '' ? 0 : $settingGlobalFee->fee_central);
+                    }
+                }
+
+                if($nominalFeeToCentral == 0){
+                    $nominalFeeToCentral = $subTotal;
+                }
+
+                $feeItemForCentral = (floatval($percentFee) / 100) * $nominalFeeToCentral;
+
+                $amount = round($subTotal - ((floatval($percentFee) / 100) * $nominalFeeToCentral) - $totalFee - $nominalBalance - $totalChargedPromo - $totalChargedSubcriptionOutlet, 2);
+                $incomeCentral = round(((floatval($percentFee) / 100) * $nominalFeeToCentral) + $totalFeeForCentral, 2);
+                $expenseCentral = round($nominalBalanceCentral + $totalChargedPromoCentral + $totalChargedSubcriptionCentral, 2);
+
+                $dataInsert = [
+                    'id_transaction' => $data['id_transaction'],
+                    'income_outlet'=> $amount,
+                    'income_central'=> $incomeCentral,
+                    'expense_central'=> $expenseCentral,
+                    'fee_item' => $feeItemForCentral,
+                    'discount' => $totalChargedPromo,
+                    'payment_charge' => $totalFee,
+                    'point_use_expense' => $nominalBalance,
+                    'subscription' => $totalChargedSubcriptionOutlet,
+                    'fee' => $percentFee,
+                    'mdr' => $feePG,
+                    'mdr_central' => $feePGCentral,
+                    'mdr_charged' => $charged,
+                    'mdr_type' => $feePGType,
+                    'charged_point_central' => $feePointCentral,
+                    'charged_point_outlet' => $feePointOutlet,
+                    'charged_promo_central' => $feePromoCentral,
+                    'charged_promo_outlet' => $feePromoOutlet,
+                    'charged_subscription_central' => $feeSubcriptionCentral,
+                    'charged_subscription_outlet' => $feeSubcriptionOutlet,
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s')
+                ];
+                $insert = DisburseOutletTransaction::insert($dataInsert);
+
+                return $insert;
             }else{
-                $totalFee = $feePGCentral + $feePG;
-                $totalFeeForCentral = $feePGCentral;
+                return false;
             }
-
-            $percentFee = 0;
-            if($data['outlet_special_status'] == 1){
-                $percentFee = $data['outlet_special_fee'];
-            }else{
-                if($data['status_franchise'] == 1){
-                    $percentFee = ($settingGlobalFee->fee_outlet == '' ? 0 : $settingGlobalFee->fee_outlet);
-                }else{
-                    $percentFee = ($settingGlobalFee->fee_central == '' ? 0 : $settingGlobalFee->fee_central);
-                }
-            }
-
-            if($nominalFeeToCentral == 0){
-                $nominalFeeToCentral = $subTotal;
-            }
-
-            $feeItemForCentral = (floatval($percentFee) / 100) * $nominalFeeToCentral;
-
-            $amount = round($subTotal - ((floatval($percentFee) / 100) * $nominalFeeToCentral) - $totalFee - $nominalBalance - $totalChargedPromo - $totalChargedSubcriptionOutlet, 2);
-            $incomeCentral = round(((floatval($percentFee) / 100) * $nominalFeeToCentral) + $totalFeeForCentral, 2);
-            $expenseCentral = round($nominalBalanceCentral + $totalChargedPromoCentral + $totalChargedSubcriptionCentral, 2);
-
-            $dataInsert = [
-                'id_transaction' => $data['id_transaction'],
-                'income_outlet'=> $amount,
-                'income_central'=> $incomeCentral,
-                'expense_central'=> $expenseCentral,
-                'fee_item' => $feeItemForCentral,
-                'discount' => $totalChargedPromo,
-                'payment_charge' => $totalFee,
-                'point_use_expense' => $nominalBalance,
-                'subscription' => $totalChargedSubcriptionOutlet,
-                'fee' => $percentFee,
-                'mdr' => $feePG,
-                'mdr_central' => $feePGCentral,
-                'mdr_charged' => $charged,
-                'mdr_type' => $feePGType,
-                'charged_point_central' => $feePointCentral,
-                'charged_point_outlet' => $feePointOutlet,
-                'charged_promo_central' => $feePromoCentral,
-                'charged_promo_outlet' => $feePromoOutlet,
-                'charged_subscription_central' => $feeSubcriptionCentral,
-                'charged_subscription_outlet' => $feeSubcriptionOutlet,
-                'created_at' => date('Y-m-d H:i:s'),
-                'updated_at' => date('Y-m-d H:i:s')
-            ];
-
-            $insert = DisburseOutletTransaction::insert($dataInsert);
-
-            return $insert;
         }else{
             return false;
         }
