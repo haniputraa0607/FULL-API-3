@@ -1756,7 +1756,7 @@ class ApiTransaction extends Controller
 
                     $pointRefund = '';
                     if(isset($val['point_refund']) && !empty($val['point_refund'])){
-                        $pointRefund = $pointRefund['point_refund']['balance'];
+                        $pointRefund = $val['point_refund']['balance'];
                     }
                   
                     $paymentRefund = '';
@@ -1872,7 +1872,7 @@ class ApiTransaction extends Controller
 
                 $pointRefund = '';
                 if(isset($val['point_refund']) && !empty($val['point_refund'])){
-                    $pointRefund = $pointRefund['point_refund']['balance'];
+                    $pointRefund = $val['point_refund']['balance'];
                 }
                 $paymentRefund = '';
                 if($val['reject_type'] == 'payment'){
