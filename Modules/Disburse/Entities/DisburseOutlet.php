@@ -17,6 +17,8 @@ class DisburseOutlet extends Model
         'total_expense_central',
         'total_fee_item',
         'total_omset',
+        'total_promo_charged',
+        'total_subtotal',
         'total_discount',
         'total_delivery_price',
         'total_payment_charge',
