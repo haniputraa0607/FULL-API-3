@@ -2,6 +2,7 @@
 
 namespace Modules\Transaction\Http\Controllers;
 
+use App\Http\Models\Deal;
 use App\Http\Models\TransactionProductModifier;
 use Illuminate\Pagination\Paginator;
 use App\Http\Models\Transaction;
@@ -1378,6 +1379,8 @@ class ApiTransaction extends Controller
                         $var = 'products.'.$con['subject'];
                     } elseif ($con['subject'] == 'product_category') {
                         $var = 'product_categories.product_category_name';
+                    } elseif ($con['subject'] == 'order_id') {
+                        $var = 'transaction_pickups.order_id';
                     }
 
                     if (in_array($con['subject'], ['outlet_code', 'outlet_name'])) {
@@ -1396,7 +1399,7 @@ class ApiTransaction extends Controller
                             }
                         }
                     }
-                    if (in_array($con['subject'], ['receipt', 'name', 'phone', 'email', 'product_name', 'product_code', 'product_category'])) {
+                    if (in_array($con['subject'], ['receipt', 'name', 'phone', 'email', 'product_name', 'product_code', 'product_category', 'order_id'])) {
                         if ($post['rule'] == 'and') {
                             if ($con['operator'] == 'like') {
                                 $query = $query->where($var, 'like', '%'.$con['parameter'].'%');
@@ -1570,13 +1573,18 @@ class ApiTransaction extends Controller
             $settingMDRAll = MDR::get()->toArray();
             $query->leftJoin('disburse_outlet_transactions', 'disburse_outlet_transactions.id_transaction', 'transactions.id_transaction')
                 ->join('transaction_products','transaction_products.id_transaction','=','transactions.id_transaction')
+                ->leftJoin('transaction_balances','transaction_balances.id_transaction','=','transactions.id_transaction')
                 ->join('products', 'products.id_product', 'transaction_products.id_product')
                 ->join('brands', 'brands.id_brand', 'transaction_products.id_brand')
                 ->leftJoin('product_categories','products.id_product_category','=','product_categories.id_product_category')
                 ->join('cities', 'cities.id_city', 'outlets.id_city')
+                ->leftJoin('cities as c', 'c.id_city', 'users.id_city')
                 ->join('provinces', 'cities.id_province', 'provinces.id_province')
-                ->addSelect('disburse_outlet_transactions.payment_charge', 'transaction_pickups.*', 'transaction_products.*', 'products.product_code', 'products.product_name', 'product_categories.product_category_name',
-                    'brands.name_brand', 'cities.city_name', 'provinces.province_name');
+                ->with(['transaction_payment_subscription', 'vouchers', 'promo_campaign', 'point_refund'])
+                ->addSelect('transaction_balances.nominal as point_use', 'transaction_pickups.*', 'transaction_products.*', 'products.product_code', 'products.product_name', 'product_categories.product_category_name',
+                    'brands.name_brand', 'cities.city_name', 'c.city_name as user_city', 'provinces.province_name',
+                    'disburse_outlet_transactions.fee_item', 'disburse_outlet_transactions.payment_charge', 'disburse_outlet_transactions.discount', 'disburse_outlet_transactions.subscription',
+                    'disburse_outlet_transactions.income_outlet');
         }
 
         if(isset($post['date_start']) && !empty($post['date_start'])
@@ -1708,7 +1716,6 @@ class ApiTransaction extends Controller
             }
         }
 
-        Log::debug('in1');
         if($statusReturn == 1){
             $query->whereNull('reject_at');
 
@@ -1728,66 +1735,79 @@ class ApiTransaction extends Controller
                         ->where('transaction_product_modifiers.id_transaction_product', $val['id_transaction_product'])
                         ->select('product_modifiers.text')->get()->toArray();
 
-                    if($forCheck != $val['transaction_receipt_number']){
-                        $dt = [
-                            'Name' => $val['name'],
-                            'Phone' => $val['phone'],
-                            'Date of birth' => ($val['birthday'] == null ? '' : date('d M Y', strtotime($val['birthday']))),
-                            'Outlet Code' => $val['outlet_code'],
-                            'Outlet Name' => $val['outlet_name'],
-                            'Province' => $val['province_name'],
-                            'City' => $val['city_name'],
-                            'Receipt number' => $val['transaction_receipt_number'],
-                            'Transaction Date' => date('d M Y', strtotime($val['transaction_date'])),
-                            'Transaction Time' => date('H:i:s', strtotime($val['transaction_date'])),
-                            'Category' => $val['product_category_name'],
-                            'Brand' => $val['name_brand'],
-                            'Items' => $val['product_code'].'-'.$val['product_name'],
-                            'Modifier' => implode(",", array_column($mod, 'text')),
-                            'Gross Sales' => $val['transaction_grandtotal'],
-                            'Net Sales' => $val['transaction_product_subtotal'],
-                            'Discounts' => $val['transaction_product_discount'],
-                            'Sales Type' => (!empty($val['transaction_shipment_go_send']) ? 'Delivery' : $val['trasaction_type']),
-                            'Received Time' =>  ($val['receive_at'] == null ? '' : date('d M Y H:i:s', strtotime($val['receive_at']))),
-                            'Ready Time' =>  ($val['ready_at'] == null ? '' : date('d M Y H:i:s', strtotime($val['ready_at']))),
-                            'Taken Time' =>  ($val['taken_at'] == null ? '' : date('d M Y H:i:s', strtotime($val['taken_at']))),
-                            'Arrived Time' =>  ($val['arrived_at'] == null ? '' : date('d M Y H:i:s', strtotime($val['arrived_at']))),
-                            'Delivery Fee' => $val['transaction_shipment_go_send']??'0',
-                            'Payments' => $payment,
-                            'Fee Payment Gateway' =>($val['payment_charge'] == null ? 'Not yet calculated' : $val['payment_charge'])
-                        ];
-                        $dataTrxDetail[] = $dt;
-                    }else{
-                        $dt = [
-                            'Name' => '',
-                            'Phone' => '',
-                            'Date of birth' => '',
-                            'Outlet Code' => '',
-                            'Outlet Name' => '',
-                            'Province' => '',
-                            'City' => '',
-                            'Receipt number' => '',
-                            'Transaction Date' => '',
-                            'Transaction Time' => '',
-                            'Category' => $val['product_category_name'],
-                            'Brand' => $val['name_brand'],
-                            'Items' => $val['product_code'].'-'.$val['product_name'],
-                            'Modifier' => implode(",", array_column($mod, 'text')),
-                            'Gross Sales' => '',
-                            'Net Sales' => $val['transaction_product_subtotal'],
-                            'Discounts' => $val['transaction_product_discount'],
-                            'Sales Type' => '',
-                            'Ready Time' =>  '',
-                            'Received Time' =>  '',
-                            'Taken Time' =>  '',
-                            'Arrived Time' =>  '',
-                            'Delivery Fee' => '',
-                            'Payments' => '',
-                            'Fee Payment Gateway' => ''
-                        ];
-                        $dataTrxDetail[] = $dt;
+                    $promoName = '';
+                    $promoType = '';
+                    $promoCode = '';
+                    if(count($val['vouchers']) > 0){
+                        $getDeal = Deal::where('id_deals', $val['vouchers'][0]['id_deals'])->first();
+                        $promoName = $getDeal['deals_title'];
+                        $promoType = 'Deals';
+                        $promoCode = $val['vouchers'][0]['voucher_code'];
+                    }elseif (!empty($val['promo_campaign'])){
+                        $promoName = $val['promo_campaign']['promo_title'];
+                        $promoType = 'Promo Campaign';
+                        $promoCode = $val['promo_campaign']['promo_code'];
                     }
-                    $forCheck = $val['transaction_receipt_number'];
+
+                    $status = $val['transaction_payment_status'];
+                    if(!is_null($val['reject_at'])){
+                        $status = 'Reject';
+                    }
+
+                    $pointRefund = '';
+                    if(isset($val['point_refund']) && !empty($val['point_refund'])){
+                        $pointRefund = $pointRefund['point_refund']['balance'];
+                    }
+                  
+                    $paymentRefund = '';
+                    if($val['reject_type'] == 'payment'){
+                        $paymentRefund = $val['amount']??$val['gross_amount'];
+                    }
+
+                    $dt = [
+                        'Name' => $val['name'],
+                        'Phone' => $val['phone'],
+                        'Gender' => $val['gender'],
+                        'Date of birth' => ($val['birthday'] == null ? '' : date('d M Y', strtotime($val['birthday']))),
+                        'Customer City' => $val['user_city'],
+                        'Outlet Code' => $val['outlet_code'],
+                        'Outlet Name' => $val['outlet_name'],
+                        'Province' => $val['province_name'],
+                        'City' => $val['city_name'],
+                        'Receipt number' => $val['transaction_receipt_number'],
+                        'Transaction Status' => $status,
+                        'Transaction Date' => date('d M Y', strtotime($val['transaction_date'])),
+                        'Transaction Time' => date('H:i:s', strtotime($val['transaction_date'])),
+                        'Customer latitude' =>$val['latitude'],
+                        'Customer longitude' =>$val['longitude'],
+                        'Customer distance' => $val['distance_customer'],
+                        'Brand' => $val['name_brand'],
+                        'Category' => $val['product_category_name'],
+                        'Items' => $val['product_code'].'-'.$val['product_name'],
+                        'Modifier' => implode(",", array_column($mod, 'text')),
+                        'Qty' => $val['transaction_product_qty'],
+                        'Promo Type' => $promoType,
+                        'Promo Name' => $promoName,
+                        'Promo Code' => $promoCode,
+                        'Gross Sales' => $val['transaction_grandtotal'],
+                        'Discounts' => $val['transaction_product_discount'],
+                        'Delivery Fee' => $val['transaction_shipment_go_send']??'0',
+                        'Subscription' => abs($val['transaction_payment_subscription']['subscription_nominal']??0),
+                        'Total Fee (fee item+fee payment+fee promo+fee subscription) ' => ($val['payment_charge'] == null ? '' : (float)($val['fee_item'] + $val['payment_charge'] + $val['discount'] + $val['subscription'])),
+                        'Fee Payment Gateway' =>($val['payment_charge'] == null ? '' : (float)$val['payment_charge']),
+                        'Net Sales (income outlet)' => (float)$val['income_outlet'],
+                        'Payment' => $payment,
+                        'Point Use' => $val['point_use'],
+                        'Point Cashback' => $val['transaction_cashback_earned'],
+                        'Point Refund' => $pointRefund,
+                        'Refund' => $paymentRefund,
+                        'Sales Type' => (!empty($val['transaction_shipment_go_send']) ? 'Delivery' : $val['trasaction_type']),
+                        'Received Time' =>  ($val['receive_at'] == null ? '' : date('d M Y H:i:s', strtotime($val['receive_at']))),
+                        'Ready Time' =>  ($val['ready_at'] == null ? '' : date('d M Y H:i:s', strtotime($val['ready_at']))),
+                        'Taken Time' =>  ($val['taken_at'] == null ? '' : date('d M Y H:i:s', strtotime($val['taken_at']))),
+                        'Arrived Time' =>  ($val['arrived_at'] == null ? '' : date('d M Y H:i:s', strtotime($val['arrived_at'])))
+                    ];
+                    $dataTrxDetail[] = $dt;
                 }else{
                     $dt = [
                         'Name' => $val['name'],
@@ -1797,7 +1817,7 @@ class ApiTransaction extends Controller
                         'Transaction Time' => date('H:i', strtotime($val['transaction_date'])),
                         'Outlet Code' => $val['outlet_code'],
                         'Outlet Name' => $val['outlet_name'],
-                        'Grand Total' => number_format($val['transaction_grandtotal']),
+                        'Gross Sales' => number_format($val['transaction_grandtotal']),
                         'Receipt number' => $val['transaction_receipt_number'],
                         'Point Received' => number_format($val['transaction_cashback_earned']),
                         'Payments' => $payment,
@@ -1831,64 +1851,77 @@ class ApiTransaction extends Controller
                     ->where('transaction_product_modifiers.id_transaction_product', $val['id_transaction_product'])
                     ->select('product_modifiers.text')->get()->toArray();
 
-                if($forCheck != $val['transaction_receipt_number']){
-                    $dt = [
-                        'Name' => $val['name'],
-                        'Phone' => $val['phone'],
-                        'Date of birth' => ($val['birthday'] == null ? '' : date('d M Y', strtotime($val['birthday']))),
-                        'Outlet Code' => $val['outlet_code'],
-                        'Outlet Name' => $val['outlet_name'],
-                        'Province' => $val['province_name'],
-                        'City' => $val['city_name'],
-                        'Receipt number' => $val['transaction_receipt_number'],
-                        'Transaction Date' => date('d M Y', strtotime($val['transaction_date'])),
-                        'Transaction Time' => date('H:i:s', strtotime($val['transaction_date'])),
-                        'Category' => $val['product_category_name'],
-                        'Brand' => $val['name_brand'],
-                        'Items' => $val['product_code'].'-'.$val['product_name'],
-                        'Modifier' => implode(",", array_column($mod, 'text')),
-                        'Gross Sales' => $val['transaction_grandtotal'],
-                        'Net Sales' => $val['transaction_product_subtotal'],
-                        'Discounts' => $val['transaction_product_discount'],
-                        'Sales Type' => (!empty($val['transaction_shipment_go_send']) ? 'Delivery' : $val['trasaction_type']),
-                        'Received Time' =>  ($val['receive_at'] == null ? '' : date('d M Y H:i:s', strtotime($val['receive_at']))),
-                        'Ready Time' =>  ($val['ready_at'] == null ? '' : date('d M Y H:i:s', strtotime($val['ready_at']))),
-                        'Taken Time' =>  ($val['taken_at'] == null ? '' : date('d M Y H:i:s', strtotime($val['taken_at']))),
-                        'Arrived Time' =>  ($val['arrived_at'] == null ? '' : date('d M Y H:i:s', strtotime($val['arrived_at']))),
-                        'Delivery Fee' => $val['transaction_shipment_go_send']??'0',
-                        'Payments' => $payment,
-                        'Fee Payment Gateway' =>($val['payment_charge'] == null ? 'Not yet calculated' : $val['payment_charge'])
-                    ];
-                }else{
-                    $dt = [
-                        'Name' => '',
-                        'Phone' => '',
-                        'Date of birth' => '',
-                        'Outlet Code' => '',
-                        'Outlet Name' => '',
-                        'Province' => '',
-                        'City' => '',
-                        'Receipt number' => '',
-                        'Transaction Date' => '',
-                        'Transaction Time' => '',
-                        'Category' => $val['product_category_name'],
-                        'Brand' => $val['name_brand'],
-                        'Items' => $val['product_code'].'-'.$val['product_name'],
-                        'Modifier' => implode(",", array_column($mod, 'text')),
-                        'Gross Sales' => '',
-                        'Net Sales' => $val['transaction_product_subtotal'],
-                        'Discounts' => $val['transaction_product_discount'],
-                        'Sales Type' => '',
-                        'Ready Time' =>  '',
-                        'Received Time' =>  '',
-                        'Taken Time' =>  '',
-                        'Arrived Time' =>  '',
-                        'Delivery Fee' => '',
-                        'Payments' => '',
-                        'Fee Payment Gateway' => ''
-                    ];
+                $promoName = '';
+                $promoType = '';
+                $promoCode = '';
+                if(count($val['vouchers']) > 0){
+                    $getDeal = Deal::where('id_deals', $val['vouchers'][0]['id_deals'])->first();
+                    $promoName = $getDeal['deals_title'];
+                    $promoType = 'Deals';
+                    $promoCode = $val['vouchers'][0]['voucher_code'];
+                }elseif (!empty($val['promo_campaign'])){
+                    $promoName = $val['promo_campaign']['promo_title'];
+                    $promoType = 'Promo Campaign';
+                    $promoCode = $val['promo_campaign']['promo_code'];
                 }
-                $forCheck = $val['transaction_receipt_number'];
+
+                $status = $val['transaction_payment_status'];
+                if(!is_null($val['reject_at'])){
+                    $status = 'Reject';
+                }
+
+                $pointRefund = '';
+                if(isset($val['point_refund']) && !empty($val['point_refund'])){
+                    $pointRefund = $pointRefund['point_refund']['balance'];
+                }
+                $paymentRefund = '';
+                if($val['reject_type'] == 'payment'){
+                    $paymentRefund = $val['amount']??$val['gross_amount'];
+                }
+
+                $dt = [
+                    'Name' => $val['name'],
+                    'Phone' => $val['phone'],
+                    'Gender' => $val['gender'],
+                    'Date of birth' => ($val['birthday'] == null ? '' : date('d M Y', strtotime($val['birthday']))),
+                    'Customer City' => $val['user_city'],
+                    'Outlet Code' => $val['outlet_code'],
+                    'Outlet Name' => $val['outlet_name'],
+                    'Province' => $val['province_name'],
+                    'City' => $val['city_name'],
+                    'Receipt number' => $val['transaction_receipt_number'],
+                    'Transaction Status' => $status,
+                    'Transaction Date' => date('d M Y', strtotime($val['transaction_date'])),
+                    'Transaction Time' => date('H:i:s', strtotime($val['transaction_date'])),
+                    'Customer latitude' =>$val['latitude'],
+                    'Customer longitude' =>$val['longitude'],
+                    'Customer distance' => $val['distance_customer'],
+                    'Brand' => $val['name_brand'],
+                    'Category' => $val['product_category_name'],
+                    'Items' => $val['product_code'].'-'.$val['product_name'],
+                    'Modifier' => implode(",", array_column($mod, 'text')),
+                    'Qty' => $val['transaction_product_qty'],
+                    'Promo Type' => $promoType,
+                    'Promo Name' => $promoName,
+                    'Promo Code' => $promoCode,
+                    'Gross Sales' => $val['transaction_grandtotal'],
+                    'Discounts' => $val['transaction_product_discount'],
+                    'Delivery Fee' => $val['transaction_shipment_go_send']??'0',
+                    'Subscription' => abs($val['transaction_payment_subscription']['subscription_nominal']??0),
+                    'Total Fee (fee item+fee payment+fee promo+fee subscription) ' => ($val['payment_charge'] == null ? '' : (float)($val['fee_item'] + $val['payment_charge'] + $val['discount'] + $val['subscription'])),
+                    'Fee Payment Gateway' =>($val['payment_charge'] == null ? '' : (float)$val['payment_charge']),
+                    'Net Sales (income outlet)' => (float)$val['income_outlet'],
+                    'Payment' => $payment,
+                    'Point Use' => $val['point_use'],
+                    'Point Cashback' => $val['transaction_cashback_earned'],
+                    'Point Refund' => $pointRefund,
+                    'Refund' => $paymentRefund,
+                    'Sales Type' => (!empty($val['transaction_shipment_go_send']) ? 'Delivery' : $val['trasaction_type']),
+                    'Received Time' =>  ($val['receive_at'] == null ? '' : date('d M Y H:i:s', strtotime($val['receive_at']))),
+                    'Ready Time' =>  ($val['ready_at'] == null ? '' : date('d M Y H:i:s', strtotime($val['ready_at']))),
+                    'Taken Time' =>  ($val['taken_at'] == null ? '' : date('d M Y H:i:s', strtotime($val['taken_at']))),
+                    'Arrived Time' =>  ($val['arrived_at'] == null ? '' : date('d M Y H:i:s', strtotime($val['arrived_at'])))
+                ];
             }else{
                 $dt = [
                     'Name' => $val['name'],
@@ -1898,7 +1931,7 @@ class ApiTransaction extends Controller
                     'Transaction Time' => date('H:i', strtotime($val['transaction_date'])),
                     'Outlet Code' => $val['outlet_code'],
                     'Outlet Name' => $val['outlet_name'],
-                    'Grand Total' => number_format($val['transaction_grandtotal']),
+                    'Gross Sales' => number_format($val['transaction_grandtotal']),
                     'Receipt number' => $val['transaction_receipt_number'],
                     'Point Received' => number_format($val['transaction_cashback_earned']),
                     'Payments' => $payment,

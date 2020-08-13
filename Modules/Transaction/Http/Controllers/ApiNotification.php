@@ -6,7 +6,6 @@ use App\Http\Models\Configs;
 use App\Http\Models\Transaction;
 use App\Http\Models\TransactionPaymentManual;
 use App\Http\Models\TransactionPaymentOffline;
-use App\Jobs\DisburseJob;
 use App\Jobs\FraudJob;
 use Modules\IPay88\Entities\TransactionPaymentIpay88;
 use App\Http\Models\TransactionPaymentMidtran;
@@ -686,9 +685,6 @@ Detail: ".$link['short'],
                         if (!$upTrx) {
                             return false;
                         }
-
-                        //insert to disburse job for calculation income outlet
-                        DisburseJob::dispatch(['id_transaction' => $trx['id_transaction']])->onConnection('disbursequeue');
 
                         $fraud = $this->checkFraud($trx);
                         if ($fraud == false) {

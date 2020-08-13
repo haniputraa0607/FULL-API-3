@@ -65,7 +65,7 @@ use Modules\Outlet\Http\Requests\Holiday\HolidayUpdate;
 use Modules\Outlet\Http\Requests\Holiday\HolidayDelete;
 
 use Modules\PromoCampaign\Entities\PromoCampaignPromoCode;
-
+use Modules\PromoCampaign\Lib\PromoCampaignTools;
 use App\Http\Models\Transaction;
 
 class ApiOutletController extends Controller
@@ -471,6 +471,8 @@ class ApiOutletController extends Controller
             $outlet = Outlet::select('outlets.id_outlet','outlets.outlet_name');
         }elseif(($post['filter']??false) == 'different_price'){
             $outlet = Outlet::where('outlet_different_price','1')->select('id_outlet','outlet_name','outlet_code');
+        }elseif(\Request::route()->getName() == 'outlet_be'){
+            $outlet = Outlet::with(['today', 'brands', 'city'])->select('id_outlet','status_franchise','outlet_name','outlet_code', 'outlet_status');
         }else{
             $outlet = Outlet::with(['city', 'outlet_photos', 'outlet_schedules', 'today', 'user_outlets','brands']);
             if(!($post['id_outlet']??false)||!($post['id_outlet']??false)){
@@ -1751,7 +1753,7 @@ class ApiOutletController extends Controller
             }
         }
 
-        return response()->json(MyHelper::checkUpdate($update));
+        return response()->json(MyHelper::checkUpdate($updateHoliday));
     }
 
     function exportCity(Request $request) {
@@ -1773,6 +1775,7 @@ class ApiOutletController extends Controller
                 'outlets.outlet_email as email',
                 'outlets.outlet_latitude as latitude',
                 'outlets.outlet_longitude as longitude',
+                'outlets.outlet_status',
                 DB::raw('(CASE
                             WHEN status_franchise = 1 THEN "Franchise"
                             ELSE "Not Franchise"
@@ -1836,6 +1839,7 @@ class ApiOutletController extends Controller
                     'email'=>'',
                     'latitude'=>'',
                     'longitude'=>'',
+                    'status_outlet' => '',
                     'status_franchise' => '',
                     'delivery' => ''
                 ];
@@ -1903,6 +1907,10 @@ class ApiOutletController extends Controller
                             'deep_link_grab' => $value['deep_link_grab']??'',
                             'id_city' => $id_city[$search]??null
                         ];
+                        //insert status
+                        if(isset($value['outlet_status'])){
+                            $insert['outlet_status'] = $value['outlet_status'];
+                        }
                         if(!empty($insert['outlet_name'])){
                             $save = Outlet::updateOrCreate($code, $insert);
 
@@ -2138,7 +2146,7 @@ class ApiOutletController extends Controller
                 }
             }else{
                 $new = OutletSchedule::create([
-                    'id_outlet' => $id_outlet,
+                    'id_outlet' => $post['id_outlet'],
                     'day' => $value['day']
                 ]+$value);
                 if (!$new) {
@@ -2487,7 +2495,6 @@ class ApiOutletController extends Controller
         		$code = app($this->subscription_use)->checkSubscription($post['id_subscription_user'], 1);
         		$source = 'subscription';
         	}
-
 	        if(!$code){
 	        	$promo_error = 'Promo not valid';
 	        	return false;
@@ -2500,27 +2507,19 @@ class ApiOutletController extends Controller
 
 	        	// if valid give flag is_promo = 1
 	        	$code = $code->toArray();
-        		if ($code['promo_campaign']['is_all_outlet']??$code['subscription_user']['subscription']['is_all_outlet']??$code['deal_voucher']['deals']['is_all_outlet']??false) {
-        			foreach ($outlet as $key => $value) {
-        			    if(isset($code['deal_voucher']['deals']['id_brand'])){
-        			        $checkAvailableOutletByBrand = array_search($code['deal_voucher']['deals']['id_brand'], array_column($outlet[$key]['brands'], 'id_brand'));
-                            if($checkAvailableOutletByBrand !== false){
-                                $outlet[$key]['is_promo'] = 1;
-                            }
-                        }else{
-                            $outlet[$key]['is_promo'] = 1;
-                        }
-    				}
-        		}else{
-		        	foreach ( ($code['promo_campaign']['promo_campaign_outlets']??$code['deal_voucher']['deals']['outlets_active']??$code['subscription_user']['subscription']['outlets_active']) as $key => $value) {
-	        			foreach ($outlet as $key2 => $value2) {
-	        				if ( $value2['id_outlet'] == $value['id_outlet'] ) {
-	    						$outlet[$key2]['is_promo'] = 1;
-	    						break;
-	    					}
-	        			}
-		        	}
-        		}
+	        	$pct = new PromoCampaignTools;
+
+				$all_outlet = $code['promo_campaign']['is_all_outlet']??$code['subscription_user']['subscription']['is_all_outlet']??$code['deal_voucher']['deals']['is_all_outlet']??0;
+				$id_brand 	= $code['promo_campaign']['id_brand']??$code['subscription_user']['subscription']['id_brand']??$code['deal_voucher']['deals']['id_brand']??null;
+				$promo_outlet 	= $code['promo_campaign']['promo_campaign_outlets']??$code['deal_voucher']['deals']['outlets_active']??$code['subscription_user']['subscription']['outlets_active']??[];
+
+				foreach ($outlet as $key => $value) {
+					$check_outlet = $pct->checkOutletRule($value['id_outlet'], $all_outlet, $promo_outlet, $id_brand);
+					if ($check_outlet) {
+						$outlet[$key]['is_promo'] = 1;
+					}
+
+				}
 	        }
 	    }elseif (
         	(!empty($post['promo_code']) && !empty($post['id_deals_user'])) ||
