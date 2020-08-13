@@ -1758,6 +1758,7 @@ class ApiTransaction extends Controller
                     if(isset($val['point_refund']) && !empty($val['point_refund'])){
                         $pointRefund = $pointRefund['point_refund']['balance'];
                     }
+                  
                     $paymentRefund = '';
                     if($val['reject_type'] == 'payment'){
                         $paymentRefund = $val['amount']??$val['gross_amount'];
