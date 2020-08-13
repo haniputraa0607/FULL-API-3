@@ -1379,6 +1379,8 @@ class ApiTransaction extends Controller
                         $var = 'products.'.$con['subject'];
                     } elseif ($con['subject'] == 'product_category') {
                         $var = 'product_categories.product_category_name';
+                    } elseif ($con['subject'] == 'order_id') {
+                        $var = 'transaction_pickups.order_id';
                     }
 
                     if (in_array($con['subject'], ['outlet_code', 'outlet_name'])) {
@@ -1397,7 +1399,7 @@ class ApiTransaction extends Controller
                             }
                         }
                     }
-                    if (in_array($con['subject'], ['receipt', 'name', 'phone', 'email', 'product_name', 'product_code', 'product_category'])) {
+                    if (in_array($con['subject'], ['receipt', 'name', 'phone', 'email', 'product_name', 'product_code', 'product_category', 'order_id'])) {
                         if ($post['rule'] == 'and') {
                             if ($con['operator'] == 'like') {
                                 $query = $query->where($var, 'like', '%'.$con['parameter'].'%');
@@ -1756,6 +1758,7 @@ class ApiTransaction extends Controller
                     if(isset($val['point_refund']) && !empty($val['point_refund'])){
                         $pointRefund = $pointRefund['point_refund']['balance'];
                     }
+                  
                     $paymentRefund = '';
                     if($val['reject_type'] == 'payment'){
                         $paymentRefund = $val['amount']??$val['gross_amount'];

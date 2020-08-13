@@ -343,7 +343,7 @@ class ApiSubscriptionWebview extends Controller
         ];
 
         if($subs['paid_status'] == 'Free') {
-            $result['subscription_price']   = 'Gratis';
+            $result['subscription_price']   = 'GRATIS';
         } else {
             if ($subs['subscription_price_cash'] > 0) {
                 $result['subscription_price']   = $subs['subscription_price_cash'];
