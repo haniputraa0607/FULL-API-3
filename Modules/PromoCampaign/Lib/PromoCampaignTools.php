@@ -74,7 +74,7 @@ class PromoCampaignTools{
 			return false;
 		}
 
-		$outlet = $this->checkOutletRule($id_outlet, $promo->is_all_outlet??0, $promo_outlet);
+		$outlet = $this->checkOutletRule($id_outlet, $promo->is_all_outlet??0, $promo_outlet, $promo->id_brand);
 
 		if(!$outlet){
 			$errors[]='Promo cannot be used at this outlet';
