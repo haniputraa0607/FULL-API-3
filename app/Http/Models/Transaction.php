@@ -215,4 +215,10 @@ class Transaction extends Model
         return $this->belongsTo(LogBalance::class, 'id_transaction', 'id_reference')
             ->where('source', 'like', 'Rejected%');
     }
+
+    public function point_use(){
+        return $this->belongsTo(LogBalance::class, 'id_transaction', 'id_reference')
+            ->where('balance', '<', 0)
+            ->whereIn('source', ['Online Transaction', 'Transaction']);
+    }
 }

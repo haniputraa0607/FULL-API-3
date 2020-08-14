@@ -1536,6 +1536,9 @@ class ApiOnlineTransaction extends Controller
                     }
 
                     DB::commit();
+                    //insert to disburse job for calculation income outlet
+                    DisburseJob::dispatch(['id_transaction' => $insertTransaction['id_transaction']])->onConnection('disbursequeue');
+
                     return response()->json([
                         'status'     => 'success',
                         'redirect'   => false,

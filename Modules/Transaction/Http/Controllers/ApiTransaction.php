@@ -1580,10 +1580,11 @@ class ApiTransaction extends Controller
                 ->join('cities', 'cities.id_city', 'outlets.id_city')
                 ->leftJoin('cities as c', 'c.id_city', 'users.id_city')
                 ->join('provinces', 'cities.id_province', 'provinces.id_province')
-                ->with(['transaction_payment_subscription', 'vouchers', 'promo_campaign', 'point_refund'])
-                ->addSelect('transaction_balances.nominal as point_use', 'transaction_pickups.*', 'transaction_products.*', 'products.product_code', 'products.product_name', 'product_categories.product_category_name',
+                ->with(['transaction_payment_subscription', 'vouchers', 'promo_campaign', 'point_refund', 'point_use'])
+                ->addSelect('transaction_pickups.*', 'transaction_products.*', 'products.product_code', 'products.product_name', 'product_categories.product_category_name',
                     'brands.name_brand', 'cities.city_name', 'c.city_name as user_city', 'provinces.province_name',
                     'disburse_outlet_transactions.fee_item', 'disburse_outlet_transactions.payment_charge', 'disburse_outlet_transactions.discount', 'disburse_outlet_transactions.subscription',
+                    'disburse_outlet_transactions.point_use_expense',
                     'disburse_outlet_transactions.income_outlet');
         }
 
@@ -1723,11 +1724,7 @@ class ApiTransaction extends Controller
             $dataTrxDetail = [];
             foreach ($query->cursor() as $val) {
                 $payment = '';
-                if($val['trasaction_payment_type'] == 'Balance'){
-                    $payment .= 'Jiwa Point'.(!empty($val['payment_type']) ? ', '.$val['payment_type'] : '').(!empty($val['payment_method']) ? ', '.$val['payment_method'] : '');
-                }else{
-                    $payment .= (!empty($val['payment_type']) ? $val['payment_type'] : '').(!empty($val['payment_method']) ? $val['payment_method'] : '');
-                }
+                $payment .= (!empty($val['payment_type']) ? ', '.$val['payment_type'] : '').(!empty($val['payment_method']) ? ', '.$val['payment_method'] : '');
 
                 if(isset($post['detail']) && $post['detail'] == 1){
 
@@ -1754,6 +1751,11 @@ class ApiTransaction extends Controller
                         $status = 'Reject';
                     }
 
+                    $poinUse = '';
+                    if(isset($val['point_use']) && !empty($val['point_use'])){
+                        $poinUse = $val['point_use']['balance'];
+                    }
+
                     $pointRefund = '';
                     if(isset($val['point_refund']) && !empty($val['point_refund'])){
                         $pointRefund = $val['point_refund']['balance'];
@@ -1762,6 +1764,15 @@ class ApiTransaction extends Controller
                     $paymentRefund = '';
                     if($val['reject_type'] == 'payment'){
                         $paymentRefund = $val['amount']??$val['gross_amount'];
+                    }
+
+                    $paymentCharge = 0;
+                    if((int)$val['point_use_expense'] > 0){
+                        $paymentCharge = $val['point_use_expense'];
+                    }
+
+                    if((int)$val['payment_charge'] > 0){
+                        $paymentCharge = $val['payment_charge'];
                     }
 
                     $dt = [
@@ -1786,6 +1797,7 @@ class ApiTransaction extends Controller
                         'Items' => $val['product_code'].'-'.$val['product_name'],
                         'Modifier' => implode(",", array_column($mod, 'text')),
                         'Qty' => $val['transaction_product_qty'],
+                        'Notes' => $val['transaction_product_note'],
                         'Promo Type' => $promoType,
                         'Promo Name' => $promoName,
                         'Promo Code' => $promoCode,
@@ -1793,11 +1805,11 @@ class ApiTransaction extends Controller
                         'Discounts' => $val['transaction_product_discount'],
                         'Delivery Fee' => $val['transaction_shipment_go_send']??'0',
                         'Subscription' => abs($val['transaction_payment_subscription']['subscription_nominal']??0),
-                        'Total Fee (fee item+fee payment+fee promo+fee subscription) ' => ($val['payment_charge'] == null ? '' : (float)($val['fee_item'] + $val['payment_charge'] + $val['discount'] + $val['subscription'])),
-                        'Fee Payment Gateway' =>($val['payment_charge'] == null ? '' : (float)$val['payment_charge']),
+                        'Total Fee (fee item+fee payment+fee promo+fee subscription) ' => ($paymentCharge == 0? '' : (float)($val['fee_item'] + $paymentCharge + $val['discount'] + $val['subscription'])),
+                        'Fee Payment Gateway' =>(float)$paymentCharge,
                         'Net Sales (income outlet)' => (float)$val['income_outlet'],
                         'Payment' => $payment,
-                        'Point Use' => $val['point_use'],
+                        'Point Use' => $poinUse,
                         'Point Cashback' => $val['transaction_cashback_earned'],
                         'Point Refund' => $pointRefund,
                         'Refund' => $paymentRefund,
@@ -1839,11 +1851,7 @@ class ApiTransaction extends Controller
 
         foreach ($query->cursor() as $val) {
             $payment = '';
-            if($val['trasaction_payment_type'] == 'Balance'){
-                $payment .= 'Jiwa Point'.(!empty($val['payment_type']) ? ', '.$val['payment_type'] : '').(!empty($val['payment_method']) ? ', '.$val['payment_method'] : '');
-            }else{
-                $payment .= (!empty($val['payment_type']) ? $val['payment_type'] : '').(!empty($val['payment_method']) ? $val['payment_method'] : '');
-            }
+            $payment .= (!empty($val['payment_type']) ? $val['payment_type'] : '').(!empty($val['payment_method']) ? $val['payment_method'] : '');
 
             if(isset($post['detail']) && $post['detail'] == 1){
 
@@ -1870,6 +1878,11 @@ class ApiTransaction extends Controller
                     $status = 'Reject';
                 }
 
+                $poinUse = '';
+                if(isset($val['point_use']) && !empty($val['point_use'])){
+                    $poinUse = $val['point_use']['balance'];
+                }
+
                 $pointRefund = '';
                 if(isset($val['point_refund']) && !empty($val['point_refund'])){
                     $pointRefund = $val['point_refund']['balance'];
@@ -1877,6 +1890,15 @@ class ApiTransaction extends Controller
                 $paymentRefund = '';
                 if($val['reject_type'] == 'payment'){
                     $paymentRefund = $val['amount']??$val['gross_amount'];
+                }
+
+                $paymentCharge = 0;
+                if((int)$val['point_use_expense'] > 0){
+                    $paymentCharge = $val['point_use_expense'];
+                }
+
+                if((int)$val['payment_charge'] > 0){
+                    $paymentCharge = $val['payment_charge'];
                 }
 
                 $dt = [
@@ -1901,6 +1923,7 @@ class ApiTransaction extends Controller
                     'Items' => $val['product_code'].'-'.$val['product_name'],
                     'Modifier' => implode(",", array_column($mod, 'text')),
                     'Qty' => $val['transaction_product_qty'],
+                    'Notes' => $val['transaction_product_note'],
                     'Promo Type' => $promoType,
                     'Promo Name' => $promoName,
                     'Promo Code' => $promoCode,
@@ -1908,11 +1931,11 @@ class ApiTransaction extends Controller
                     'Discounts' => $val['transaction_product_discount'],
                     'Delivery Fee' => $val['transaction_shipment_go_send']??'0',
                     'Subscription' => abs($val['transaction_payment_subscription']['subscription_nominal']??0),
-                    'Total Fee (fee item+fee payment+fee promo+fee subscription) ' => ($val['payment_charge'] == null ? '' : (float)($val['fee_item'] + $val['payment_charge'] + $val['discount'] + $val['subscription'])),
-                    'Fee Payment Gateway' =>($val['payment_charge'] == null ? '' : (float)$val['payment_charge']),
+                    'Total Fee (fee item+fee payment+fee promo+fee subscription) ' => ($paymentCharge == 0? '' : (float)($val['fee_item'] + $paymentCharge + $val['discount'] + $val['subscription'])),
+                    'Fee Payment Gateway' =>(float)$paymentCharge,
                     'Net Sales (income outlet)' => (float)$val['income_outlet'],
                     'Payment' => $payment,
-                    'Point Use' => $val['point_use'],
+                    'Point Use' => $poinUse,
                     'Point Cashback' => $val['transaction_cashback_earned'],
                     'Point Refund' => $pointRefund,
                     'Refund' => $paymentRefund,
