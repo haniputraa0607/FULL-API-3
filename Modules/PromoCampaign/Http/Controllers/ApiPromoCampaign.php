@@ -83,6 +83,11 @@ class ApiPromoCampaign extends Controller
             $query = PromoCampaign::with([
                         'user'
                     ])
+                    ->where(function($query){
+                        $query
+                              ->where('promo_type', '!=', 'Referral')
+                              ->orWhereNull('promo_type');
+                    })
                     ->OrderBy('promo_campaigns.id_promo_campaign', 'DESC');
             $count = (new PromoCampaign)->newQuery();
 
