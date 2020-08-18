@@ -32,6 +32,7 @@ use Modules\Subscription\Entities\SubscriptionUser;
 use Modules\Subscription\Entities\SubscriptionUserVoucher;
 
 use DOMDocument;
+use Illuminate\Support\Facades\Log;
 class ApiIrisController extends Controller
 {
     public function notification(Request $request){
@@ -370,7 +371,7 @@ class ApiIrisController extends Controller
             $feePGCentral = 0;
             $feePG = 0;
             $feePGType = 'Percent';
-            $feePointCentral = 0;
+            $feePointCentral = 100;
             $feePointOutlet = 0;
             $feePromoCentral = 0;
             $feeSubcriptionCentral = 0;
@@ -440,30 +441,36 @@ class ApiIrisController extends Controller
                             continue;
                         }
 
-                    }elseif (strtolower($payments['type']) == 'balance' && $statusSplitPayment == 0){
+                    }elseif (strtolower($payments['type']) == 'balance'){
                         $balanceNominal = TransactionPaymentBalance::where('id_transaction', $data['id_transaction'])->first()->balance_nominal;
-                        $balanceMdr = array_search(strtoupper('FULL POINT'), array_column($settingMDRAll, 'payment_name'));
-                        if($balanceMdr !== false){
-                            $feePGCentral = $settingMDRAll[$balanceMdr]['mdr_central'];
-                            $feePG = $settingMDRAll[$balanceMdr]['mdr'];
-                            $feePGType = $settingMDRAll[$balanceMdr]['percent_type'];
-                            $charged = $settingMDRAll[$balanceMdr]['charged'];
 
-                            $feePointOutlet = (float)$settingMDRAll[$balanceMdr]['mdr'];
-                            $feePointCentral = 100 - $feePointOutlet;
+                        if($statusSplitPayment == 0){
+                            $balanceMdr = array_search(strtoupper('FULL POINT'), array_column($settingMDRAll, 'payment_name'));
+                            if($balanceMdr !== false){
+                                $feePGCentral = $settingMDRAll[$balanceMdr]['mdr_central'];
+                                $feePG = $settingMDRAll[$balanceMdr]['mdr'];
+                                $feePGType = $settingMDRAll[$balanceMdr]['percent_type'];
+                                $charged = $settingMDRAll[$balanceMdr]['charged'];
 
-                            if((int)$feePointOutlet === 0){
-                                //calculate charged point to central
-                                $nominalBalanceCentral = $balanceNominal;
+                                $feePointOutlet = (float)$settingMDRAll[$balanceMdr]['mdr'];
+                                $feePointCentral = 100 - $feePointOutlet;
+
+                                if((int)$feePointOutlet === 0){
+                                    //calculate charged point to central
+                                    $nominalBalanceCentral = $balanceNominal;
+                                }else{
+                                    //calculate charged point to outlet
+                                    $nominalBalance = $balanceNominal * (floatval($feePointOutlet) / 100);
+
+                                    //calculate charged point to central
+                                    $nominalBalanceCentral = $balanceNominal * (floatval($feePointCentral) / 100);
+                                }
                             }else{
-                                //calculate charged point to outlet
-                                $nominalBalance = $balanceNominal * (floatval($feePointOutlet) / 100);
-
-                                //calculate charged point to central
-                                $nominalBalanceCentral = $balanceNominal * (floatval($feePointCentral) / 100);
+                                continue;
                             }
                         }else{
-                            continue;
+                            $feePointCentral = 100;
+                            $nominalBalanceCentral = $balanceNominal;
                         }
                     }elseif(strtolower($payments['type']) == 'ipay88'){
                         $ipay88 = TransactionPaymentIpay88::where('id_transaction', $data['id_transaction'])->first();
@@ -549,10 +556,6 @@ class ApiIrisController extends Controller
                     }
                 }
 
-                if($nominalFeeToCentral == 0){
-                    $nominalFeeToCentral = $subTotal;
-                }
-
                 $feeItemForCentral = (floatval($percentFee) / 100) * $nominalFeeToCentral;
 
                 $amount = round($subTotal - ((floatval($percentFee) / 100) * $nominalFeeToCentral) - $totalFee - $nominalBalance - $totalChargedPromo - $totalChargedSubcriptionOutlet, 2);
@@ -583,6 +586,7 @@ class ApiIrisController extends Controller
                     'created_at' => date('Y-m-d H:i:s'),
                     'updated_at' => date('Y-m-d H:i:s')
                 ];
+                Log::info(json_encode($dataInsert));
                 $insert = DisburseOutletTransaction::insert($dataInsert);
 
                 return $insert;
