@@ -714,6 +714,9 @@ class IPay88
      */
     public function checkCancellable($last_url)
     {
+    	if(!$last_url) {
+    		return true;
+    	}
     	// last_url = https://sandbox.ipay88.co.id:8462/PG/PaymentResponse/BacktoMerchant?
     	$last_url = str_replace(['http://', 'https://'], '', $last_url); // sandbox.ipay88.co.id:8462/PG/PaymentResponse/BacktoMerchant?
     	$to_check = explode('/', $last_url); // ['sandbox.ipay88.co.id:8462', 'PG', 'PaymentResponse', 'BacktoMerchant?']
@@ -739,7 +742,8 @@ class IPay88
     	if (
     		(preg_match('/^api\/ipay88\/pay/', $to_match)) // https://sapi.jiwa.app/api/ipay88/pay?type=trx&id_reference=623&payment_id=CREDIT_CARD
     		|| (($to_check2[0]??false) == 'epayment' && ($to_check2[1]??false) == 'entry.asp') // https://sandbox.ipay88.co.id/epayment/entry.asp
-    		|| (($to_check2[0]??false) == 'PG' && count($to_check2) == 2)
+    		|| (($to_check2[0]??false) == 'PG' && count($to_check2) == 2) // https://sandbox.ipay88.co.id/PG/F46D26EF401F85BB8DFD8481BFA1350D569BBD591EF4C22634AC1130FFAF9E48
+    		|| (preg_match('/^api[\/]+webview\/default/', $to_match)) // https://project/api//webview/default
     	) {
     		return true;
     	}
