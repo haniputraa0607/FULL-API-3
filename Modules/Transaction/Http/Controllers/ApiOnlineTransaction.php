@@ -731,6 +731,10 @@ class ApiOnlineTransaction extends Controller
             'void_date'                   => null,
         ];
 
+        if($transaction['transaction_grandtotal'] == 0){
+            $transaction['transaction_payment_status'] = 'Completed';
+        }
+
         $newTopupController = new NewTopupController();
         $checkHashBefore = $newTopupController->checkHash('log_balances', $id);
         if (!$checkHashBefore) {
@@ -829,7 +833,16 @@ class ApiOnlineTransaction extends Controller
                     'status'    => 'fail',
                     'messages'  => ['Insert Transaction Failed']
                 ]);
-	        }
+            }
+
+            //update when total = 0
+            if(($transaction['transaction_grandtotal'] - $subscription_total) == 0){
+                $updateTrx = Transaction::where('id_transaction', $insertTransaction['id_transaction'])->update([
+                    'transaction_payment_status' => 'Completed'
+                ]);
+                $insertTransaction['transaction_payment_status'] = 'Completed'; 
+                $insertTransaction['transaction_grandtotal'] = 0;
+            }
         }
 
         // add promo campaign report
@@ -1412,17 +1425,23 @@ class ApiOnlineTransaction extends Controller
 
         if (isset($post['payment_type'])) {
 
-            if ($post['payment_type'] == 'Balance') {
-                $save = app($this->balance)->topUp($insertTransaction['id_user'], ($subscription['grandtotal']??$insertTransaction['transaction_grandtotal']), $insertTransaction['id_transaction']);
+            if ($post['payment_type'] == 'Balance' || $insertTransaction['transaction_grandtotal'] == 0) {
 
-                if (!isset($save['status'])) {
-                    DB::rollback();
-                    return response()->json(['status' => 'fail', 'messages' => ['Transaction failed']]);
-                }
-
-                if ($save['status'] == 'fail') {
-                    DB::rollback();
-                    return response()->json($save);
+                if($insertTransaction['transaction_grandtotal'] > 0){
+                    $save = app($this->balance)->topUp($insertTransaction['id_user'], ($subscription['grandtotal']??$insertTransaction['transaction_grandtotal']), $insertTransaction['id_transaction']);
+    
+                    if (!isset($save['status'])) {
+                        DB::rollback();
+                        return response()->json(['status' => 'fail', 'messages' => ['Transaction failed']]);
+                    }
+    
+                    if ($save['status'] == 'fail') {
+                        DB::rollback();
+                        return response()->json($save);
+                    }
+                }else{
+                    $save['status'] = 'success'; 
+                    $save['type'] = 'no_topup';
                 }
 
                 if($save['status'] == 'success'){
@@ -1538,6 +1557,11 @@ class ApiOnlineTransaction extends Controller
                     DB::commit();
                     //insert to disburse job for calculation income outlet
                     DisburseJob::dispatch(['id_transaction' => $insertTransaction['id_transaction']])->onConnection('disbursequeue');
+
+                    //remove for result
+                    unset($insertTransaction['user']);
+                    unset($insertTransaction['outlet']);
+                    unset($insertTransaction['product_transaction']);
 
                     return response()->json([
                         'status'     => 'success',
