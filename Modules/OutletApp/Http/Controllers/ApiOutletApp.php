@@ -1421,17 +1421,29 @@ class ApiOutletApp extends Controller
                             }
                         }
                     } elseif (strtolower($pay['type']) == 'ipay88') {
+                        $point = 0;
                         $payIpay = TransactionPaymentIpay88::find($pay['id_payment']);
                         if ($payIpay) {
-                            $refund = app($this->balance)->addLogBalance($order['id_user'], $point = ($payIpay['amount']/100), $order['id_transaction'], 'Rejected Order', $order['transaction_grandtotal']);
-                            if ($refund == false) {
-                                DB::rollback();
-                                return response()->json([
-                                    'status'   => 'fail',
-                                    'messages' => ['Insert Cashback Failed'],
-                                ]);
+                            if(strtolower($payIpay['payment_method']) == 'ovo' && MyHelper::setting('refund_ipay88')){
+                                $refund = \Modules\IPay88\Lib\IPay88::create()->void($payIpay);
+                                if (!$refund) {
+                                    DB::rollback();
+                                    return response()->json([
+                                        'status'   => 'fail',
+                                        'messages' => ['Refund Payment Failed'],
+                                    ]);
+                                }
+                            }else{
+                                $refund = app($this->balance)->addLogBalance($order['id_user'], $point = ($payIpay['amount']/100), $order['id_transaction'], 'Rejected Order', $order['transaction_grandtotal']);
+                                if ($refund == false) {
+                                    DB::rollback();
+                                    return response()->json([
+                                        'status'   => 'fail',
+                                        'messages' => ['Insert Cashback Failed'],
+                                    ]);
+                                }
+                                $rejectBalance = true;
                             }
-                            $rejectBalance = true;
                         }
                     } else {
                         $point = 0;
@@ -1516,6 +1528,27 @@ class ApiOutletApp extends Controller
                         $rejectBalance = true;
                     }
                 } elseif ($payIpay) {
+                    $point = 0;
+                    if(strtolower($payIpay['payment_method']) == 'ovo' && MyHelper::setting('refund_ipay88')){
+                        $refund = \Modules\IPay88\Lib\IPay88::create()->void($payIpay);
+                        if (!$refund) {
+                            DB::rollback();
+                            return response()->json([
+                                'status'   => 'fail',
+                                'messages' => ['Refund Payment Failed'],
+                            ]);
+                        }
+                    }else{
+                        $refund = app($this->balance)->addLogBalance($order['id_user'], $point = ($payIpay['amount']/100), $order['id_transaction'], 'Rejected Order', $order['transaction_grandtotal']);
+                        if ($refund == false) {
+                            DB::rollback();
+                            return response()->json([
+                                'status'   => 'fail',
+                                'messages' => ['Insert Cashback Failed'],
+                            ]);
+                        }
+                        $rejectBalance = true;
+                    }
                     $refund = app($this->balance)->addLogBalance($order['id_user'], $point = ($payIpay['amount']/100), $order['id_transaction'], 'Rejected Order', $order['transaction_grandtotal']);
                     if ($refund == false) {
                         DB::rollback();
