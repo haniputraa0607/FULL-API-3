@@ -882,7 +882,9 @@ Detail: ".$link['short'],
         }
 
         if (isset($midtrans['status_code']) && $midtrans['status_code'] == 200) {
-            if ($midtrans['transaction_status'] == 'capture' || $midtrans['transaction_status'] == 'settlement') {
+            if ($midtrans['transaction_status'] == 'refund' ) {
+                return true;
+            }elseif ($midtrans['transaction_status'] == 'capture' || $midtrans['transaction_status'] == 'settlement') {
                 $check = Transaction::where('id_transaction', $trx->id_transaction)->update(['transaction_payment_status' => 'Completed']);
                 if (!$check) {
                     return false;
