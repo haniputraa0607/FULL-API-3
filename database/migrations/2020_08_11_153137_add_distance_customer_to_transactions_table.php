@@ -4,7 +4,7 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Migrations\Migration;
 
-class AddIdUserFranchiseSeedSeedToUserFranchisesTable extends Migration
+class AddDistanceCustomerToTransactionsTable extends Migration
 {
     /**
      * Run the migrations.
@@ -13,8 +13,8 @@ class AddIdUserFranchiseSeedSeedToUserFranchisesTable extends Migration
      */
     public function up()
     {
-        Schema::table('user_franchises', function (Blueprint $table) {
-            $table->integer('id_user_franchisee_seed')->after('id_user_franchise');
+        Schema::table('transactions', function (Blueprint $table) {
+            $table->decimal('distance_customer', 11,4)->nullable()->after('longitude');
         });
     }
 
@@ -25,8 +25,8 @@ class AddIdUserFranchiseSeedSeedToUserFranchisesTable extends Migration
      */
     public function down()
     {
-        Schema::table('user_franchises', function (Blueprint $table) {
-
+        Schema::table('transactions', function (Blueprint $table) {
+            $table->dropColumn('distance_customer');
         });
     }
 }

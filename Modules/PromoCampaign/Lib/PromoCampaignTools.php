@@ -74,7 +74,7 @@ class PromoCampaignTools{
 			return false;
 		}
 
-		$outlet = $this->checkOutletRule($id_outlet, $promo->is_all_outlet??0, $promo_outlet);
+		$outlet = $this->checkOutletRule($id_outlet, $promo->is_all_outlet??0, $promo_outlet, $promo->id_brand);
 
 		if(!$outlet){
 			$errors[]='Promo cannot be used at this outlet';
@@ -954,38 +954,43 @@ class PromoCampaignTools{
     	return true;
     }
 
-    function checkOutletRule($id_outlet, $rule, $outlet = null, $id_brand = null)
+    function checkOutletRule($id_outlet, $all_outlet, $outlet = [], $id_brand = null, $brand=[])
     {
     	if (isset($id_brand)) {
-    		$outlet_list = Outlet::where('id_outlet',$id_outlet)
-    						->whereHas('brands', function($q) use ($id_brand){
-    							$q->where('brand_outlet.id_brand', $id_brand);
-    						})
-    						->first();
-
-    		if (!$outlet_list) {
-    			return false;
+    		if (!empty($brand)) {
+    			$check_brand = array_search($id_brand, array_column($brand, 'id_brand'));
+                if($check_brand === false){
+	    			return false;
+                }
+    		}
+    		else{
+	    		$check_brand = Outlet::where('id_outlet',$id_outlet)
+	    						->whereHas('brands', function($q) use ($id_brand){
+	    							$q->where('brand_outlet.id_brand', $id_brand);
+	    						})
+	    						->first();
+	    		if (!$check_brand) {
+	    			return false;
+	    		}
     		}
 
+
     	}
-        if ($rule == '1') 
+        if ($all_outlet == '1') 
         {
             return true;
         } 
-        elseif ($rule == '0') 
+        else 
         {
             foreach ($outlet as $value) 
             {
                 if ( $value['id_outlet'] == $id_outlet ) 
                 {
+                	dd($outlet);
                     return true;
                 } 
             }
 
-            return false;
-        } 
-        else 
-        {
             return false;
         }
     }

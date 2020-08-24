@@ -82,7 +82,7 @@ class ApiSubscriptionWebview extends Controller
             $payment_message = Setting::where('key', 'subscription_payment_messages')->pluck('value_text')->first()??'Kamu yakin ingin membeli subscription ini?';
             $payment_message = MyHelper::simpleReplace($payment_message,['subscription_title'=>$subs['subscription_title']]);
         }elseif($subs['subscription_price_type']=='point'){
-            $payment_message = Setting::where('key', 'subscription_payment_messages_point')->pluck('value_text')->first()??'Anda akan menukarkan %point% points anda dengan subscription %subscription_title%?';
+            $payment_message = Setting::where('key', 'subscription_payment_messages_point')->pluck('value_text')->first()??'Anda akan menukarkan %point% poin anda dengan subscription %subscription_title%?';
             $payment_message = MyHelper::simpleReplace($payment_message,['point'=>$subs['subscription_price_point'],'subscription_title'=>$subs['subscription_title']]);
         }else{
             $payment_message = Setting::where('key', 'subscription_payment_messages_cash')->pluck('value_text')->first()??'Kamu yakin ingin membeli subscription %subscription_title% dengan harga %cash% ?';
@@ -102,7 +102,7 @@ class ApiSubscriptionWebview extends Controller
             if($subs['subscription_price_type']=='point'){
                 $result['button_status']= $subs['subscription_price_point']<=$curBalance?1:0;
                 if($subs['subscription_price_point']>$curBalance){
-                    $result['payment_fail_message'] = Setting::where('key', 'payment_fail_messages')->pluck('value_text')->first()??'Mohon maaf, point anda tidak cukup';
+                    $result['payment_fail_message'] = Setting::where('key', 'payment_fail_messages')->pluck('value_text')->first()??'Mohon maaf, poin anda tidak cukup';
                 }
             }else{
                 $result['button_text'] = 'Beli';
@@ -240,6 +240,7 @@ class ApiSubscriptionWebview extends Controller
             'subscription_expired'      		 => date('Y-m-d H:i:s', strtotime($subs['subscription_expired_at'])),
             'subscription_expired_indo'     => MyHelper::dateFormatInd($subs['subscription_expired_at'], false, false),
             'subscription_expired_time_indo'     => 'pukul '.date('H:i', strtotime($subs['subscription_expired_at'])),
+            'is_used' => $subs['is_used']
         ];
         $result['time_server'] = date('Y-m-d H:i:s');
         $result['time_server_indo'] = MyHelper::dateFormatInd(date('Y-m-d H:i:s'), false, false).' pukul '.date('H:i');
@@ -299,6 +300,15 @@ class ApiSubscriptionWebview extends Controller
                 }
             }
         }
+
+        if ($subs['is_used']) {
+        	$result['label_text'] = 'Digunakan';
+	        $result['button_text'] = 'Gunakan Nanti';
+        }
+        else{
+	        $result['label_text'] = 'Tidak digunakan';
+	        $result['button_text'] = 'Gunakan';
+        }
         return response()->json(MyHelper::checkGet($result));
     }
 
@@ -309,7 +319,12 @@ class ApiSubscriptionWebview extends Controller
             return abort(404);
         }
 
-        $subs = SubscriptionUser::with('subscription')->where('id_subscription_user', $request->id_subscription_user)->first()->toArray();
+        $subs = SubscriptionUser::with('subscription')->where('id_subscription_user', $request->id_subscription_user)->first();
+
+        if (!$subs) {
+			return MyHelper::checkGet($subs);
+        }
+        $subs->toArray();
         
         $result = [
             'id_subscription_user'              => $subs['id_subscription_user'],
@@ -321,18 +336,20 @@ class ApiSubscriptionWebview extends Controller
             'bought_at_time_indo'               => 'pukul '.date('H:i', strtotime($subs['bought_at'])),
             'subscription_user_receipt_number'  => $subs['subscription_user_receipt_number'],
             'balance_nominal'                   => $subs['balance_nominal'],
+            'use_point'                         => (!is_null($subs['balance_nominal'])) ? 1 : 0 ,
             'expired_at'                        => date('Y-m-d H:i:s', strtotime($subs['subscription_expired_at'])),
             'expired_at_indo'                   => MyHelper::dateFormatInd($subs['subscription_expired_at'], false, false),
             'expired_at_time_indo'              => 'pukul '.date('H:i', strtotime($subs['subscription_expired_at'])),
         ];
 
-        if ($subs['subscription_price_cash'] == 'Free') {
-            $result['subscription_price']   = 'Free';
+        if($subs['paid_status'] == 'Free') {
+            $result['subscription_price']   = 'GRATIS';
         } else {
             if ($subs['subscription_price_cash'] > 0) {
                 $result['subscription_price']   = $subs['subscription_price_cash'];
             } elseif ($subs['subscription_price_point'] > 0) {
-                $result['subscription_price']   = $subs['subscription_price_cash'];
+                $result['use_point']    = 0;
+                $result['subscription_price']   = $subs['subscription_price_point'];
             }
         }
 

@@ -3,6 +3,7 @@
 namespace Modules\Transaction\Http\Controllers;
 
 use App\Http\Models\DailyTransactions;
+use App\Jobs\DisburseJob;
 use App\Jobs\FraudJob;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -653,6 +654,11 @@ class ApiOnlineTransaction extends Controller
             $post['longitude'] = null;
         }
 
+        $distance = NULL;
+        if(isset($post['latitude']) &&  isset($post['longitude'])){
+            $distance = (float)app($this->outlet)->distance($post['latitude'], $post['longitude'], $outlet['outlet_latitude'], $outlet['outlet_longitude'], "K");
+        }
+
         if (!isset($post['notes'])) {
             $post['notes'] = null;
         }
@@ -721,8 +727,13 @@ class ApiOnlineTransaction extends Controller
             'membership_promo_id'         => $post['membership_promo_id'],
             'latitude'                    => $post['latitude'],
             'longitude'                   => $post['longitude'],
+            'distance_customer'           => $distance,
             'void_date'                   => null,
         ];
+
+        if($transaction['transaction_grandtotal'] == 0){
+            $transaction['transaction_payment_status'] = 'Completed';
+        }
 
         $newTopupController = new NewTopupController();
         $checkHashBefore = $newTopupController->checkHash('log_balances', $id);
@@ -822,7 +833,16 @@ class ApiOnlineTransaction extends Controller
                     'status'    => 'fail',
                     'messages'  => ['Insert Transaction Failed']
                 ]);
-	        }
+            }
+
+            //update when total = 0
+            if(($transaction['transaction_grandtotal'] - $subscription_total) == 0){
+                $updateTrx = Transaction::where('id_transaction', $insertTransaction['id_transaction'])->update([
+                    'transaction_payment_status' => 'Completed'
+                ]);
+                $insertTransaction['transaction_payment_status'] = 'Completed'; 
+                $insertTransaction['transaction_grandtotal'] = 0;
+            }
         }
 
         // add promo campaign report
@@ -1405,17 +1425,23 @@ class ApiOnlineTransaction extends Controller
 
         if (isset($post['payment_type'])) {
 
-            if ($post['payment_type'] == 'Balance') {
-                $save = app($this->balance)->topUp($insertTransaction['id_user'], ($subscription['grandtotal']??$insertTransaction['transaction_grandtotal']), $insertTransaction['id_transaction']);
+            if ($post['payment_type'] == 'Balance' || $insertTransaction['transaction_grandtotal'] == 0) {
 
-                if (!isset($save['status'])) {
-                    DB::rollback();
-                    return response()->json(['status' => 'fail', 'messages' => ['Transaction failed']]);
-                }
-
-                if ($save['status'] == 'fail') {
-                    DB::rollback();
-                    return response()->json($save);
+                if($insertTransaction['transaction_grandtotal'] > 0){
+                    $save = app($this->balance)->topUp($insertTransaction['id_user'], ($subscription['grandtotal']??$insertTransaction['transaction_grandtotal']), $insertTransaction['id_transaction']);
+    
+                    if (!isset($save['status'])) {
+                        DB::rollback();
+                        return response()->json(['status' => 'fail', 'messages' => ['Transaction failed']]);
+                    }
+    
+                    if ($save['status'] == 'fail') {
+                        DB::rollback();
+                        return response()->json($save);
+                    }
+                }else{
+                    $save['status'] = 'success'; 
+                    $save['type'] = 'no_topup';
                 }
 
                 if($save['status'] == 'success'){
@@ -1529,6 +1555,14 @@ class ApiOnlineTransaction extends Controller
                     }
 
                     DB::commit();
+                    //insert to disburse job for calculation income outlet
+                    DisburseJob::dispatch(['id_transaction' => $insertTransaction['id_transaction']])->onConnection('disbursequeue');
+
+                    //remove for result
+                    unset($insertTransaction['user']);
+                    unset($insertTransaction['outlet']);
+                    unset($insertTransaction['product_transaction']);
+
                     return response()->json([
                         'status'     => 'success',
                         'redirect'   => false,
@@ -1632,6 +1666,10 @@ class ApiOnlineTransaction extends Controller
         }
 
         DB::commit();
+
+        //insert to disburse job for calculation income outlet
+        DisburseJob::dispatch(['id_transaction' => $insertTransaction['id_transaction']])->onConnection('disbursequeue');
+
         $insertTransaction['cancel_message'] = 'Are you sure you want to cancel this transaction?';
         return response()->json([
             'status'   => 'success',
@@ -2072,7 +2110,8 @@ class ApiOnlineTransaction extends Controller
                 $tree[$product['id_brand']] = Brand::select('name_brand','id_brand')->find($product['id_brand'])->toArray();
             }
             $product['product_price_total'] = ($product['qty'] * ($product['product_price']+$mod_price));
-            $product['product_price_raw'] = $product['product_price']+$mod_price;
+            $product['product_price_raw'] = (int) $product['product_price'];
+            $product['product_price_raw_total'] = (int) $product['product_price']+$mod_price;
             $product['product_price'] = MyHelper::requestNumber($product['product_price']+$mod_price, '_CURRENCY');
             $tree[$product['id_brand']]['products'][]=$product;
             $subtotal += $product['product_price_total'];
@@ -2605,7 +2644,9 @@ class ApiOnlineTransaction extends Controller
             return MyHelper::checkGet([],'Transaction cannot be canceled');
         }
         $errors = '';
-        $cancel = \Modules\IPay88\Lib\IPay88::create()->cancel('trx',$trx,$errors);
+
+        $cancel = \Modules\IPay88\Lib\IPay88::create()->cancel('trx',$trx,$errors, $request->last_url);
+
         if($cancel){
             return ['status'=>'success'];
         }

@@ -4,7 +4,7 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Migrations\Migration;
 
-class AddIdUserFranchiseSeedSeedToUserFranchisesTable extends Migration
+class UpdateRefNoLengthToTransactionPaymentIpay88sTable extends Migration
 {
     /**
      * Run the migrations.
@@ -13,8 +13,8 @@ class AddIdUserFranchiseSeedSeedToUserFranchisesTable extends Migration
      */
     public function up()
     {
-        Schema::table('user_franchises', function (Blueprint $table) {
-            $table->integer('id_user_franchisee_seed')->after('id_user_franchise');
+        Schema::table('transaction_payment_ipay88s', function (Blueprint $table) {
+            $table->string('ref_no')->change();
         });
     }
 
@@ -25,8 +25,8 @@ class AddIdUserFranchiseSeedSeedToUserFranchisesTable extends Migration
      */
     public function down()
     {
-        Schema::table('user_franchises', function (Blueprint $table) {
-
+        Schema::table('transaction_payment_ipay88s', function (Blueprint $table) {
+            $table->string('ref_no',20)->change();
         });
     }
 }

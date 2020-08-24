@@ -40,7 +40,6 @@ use Modules\IPay88\Entities\TransactionPaymentIpay88;
 use Modules\OutletApp\Jobs\AchievementCheck;
 use Modules\SettingFraud\Entities\FraudDetectionLogTransactionDay;
 use Modules\SettingFraud\Entities\FraudDetectionLogTransactionWeek;
-use App\Jobs\DisburseJob;
 
 class ApiCronTrxController extends Controller
 {
@@ -419,13 +418,14 @@ class ApiCronTrxController extends Controller
                     }
                 }
                 $newTrx->update(['cashback_insert_status' => 1]);
+
+                //check achievement
+                AchievementCheck::dispatch(['id_transaction' => $newTrx->id_transaction, 'phone' => $newTrx->user->phone])->onConnection('achievement');
+            
             }
             //update taken_by_sistem_at
             $dataTrx = TransactionPickup::whereIn('id_transaction', $idTrx)
                                         ->update(['taken_by_system_at' => date('Y-m-d 00:00:00')]);
-
-            AchievementCheck::dispatch(['id_transaction' => $idTrx])->onConnection('achievement');
-            DisburseJob::dispatch(['id_transaction' => $idTrx])->onConnection('disbursequeue');
 
             $log->success('success');
             return response()->json(['status' => 'success']);
@@ -563,15 +563,29 @@ class ApiCronTrxController extends Controller
                                 }
                             }
                         } elseif (strtolower($pay['type']) == 'ipay88') {
+                            $point = 0;
                             $payIpay = TransactionPaymentIpay88::find($pay['id_payment']);
                             if ($payIpay) {
-                                $refund = app($this->balance)->addLogBalance($order['id_user'], $point = ($payIpay['amount']/100), $order['id_transaction'], 'Rejected Order', $order['transaction_grandtotal']);
-                                if ($refund == false) {
-                                    DB::rollback();
-                                    $result['error']++;
-                                    continue 2;
+                                if(strtolower($payIpay['payment_method']) == 'ovo' && MyHelper::setting('refund_ipay88')){
+                                    $refund = \Modules\IPay88\Lib\IPay88::create()->void($payIpay);
+                                    if (!$refund) {
+                                        DB::rollback();
+                                        return response()->json([
+                                            'status'   => 'fail',
+                                            'messages' => ['Refund Payment Failed'],
+                                        ]);
+                                    }
+                                }else{
+                                    $refund = app($this->balance)->addLogBalance($order['id_user'], $point = ($payIpay['amount']/100), $order['id_transaction'], 'Rejected Order', $order['transaction_grandtotal']);
+                                    if ($refund == false) {
+                                        DB::rollback();
+                                        return response()->json([
+                                            'status'   => 'fail',
+                                            'messages' => ['Insert Cashback Failed'],
+                                        ]);
+                                    }
+                                    $rejectBalance = true;
                                 }
-                                $rejectBalance = true;
                             }
                         } else {
                             $point = 0;
@@ -644,13 +658,26 @@ class ApiCronTrxController extends Controller
                             $rejectBalance = true;
                         }
                     } elseif ($payIpay) {
-                        $refund = app($this->balance)->addLogBalance($order['id_user'], $point = ($payIpay['amount']/100), $order['id_transaction'], 'Rejected Order', $order['transaction_grandtotal']);
-                        if ($refund == false) {
-                            DB::rollback();
-                            $result['error']++;
-                            continue;
+                        if(strtolower($payIpay['payment_method']) == 'ovo' && MyHelper::setting('refund_ipay88')){
+                            $refund = \Modules\IPay88\Lib\IPay88::create()->void($payIpay);
+                            if (!$refund) {
+                                DB::rollback();
+                                return response()->json([
+                                    'status'   => 'fail',
+                                    'messages' => ['Refund Payment Failed'],
+                                ]);
+                            }
+                        }else{
+                            $refund = app($this->balance)->addLogBalance($order['id_user'], $point = ($payIpay['amount']/100), $order['id_transaction'], 'Rejected Order', $order['transaction_grandtotal']);
+                            if ($refund == false) {
+                                DB::rollback();
+                                return response()->json([
+                                    'status'   => 'fail',
+                                    'messages' => ['Insert Cashback Failed'],
+                                ]);
+                            }
+                            $rejectBalance = true;
                         }
-                        $rejectBalance = true;
                     } else {
                         $payBalance = TransactionPaymentBalance::where('id_transaction', $order['id_transaction'])->first();
                         if ($payBalance) {

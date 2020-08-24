@@ -496,7 +496,9 @@ class ApiMembership extends Controller
 					->where('id_user', $check['id'])
 					->where('achievement_groups.status', 'Active')
 						->where('achievement_groups.is_calculate', 1)
-						->groupBy('achievement_groups.id_achievement_group')->count();
+						->groupBy('achievement_groups.id_achievement_group')->select('id_achievement_user')->select('id_achievement_user')->get();
+
+					$total_achievement = count($total_achievement);
 
 					//update user count & subtotal transaction
 					$user = User::where('users.phone', $phone)->update(['subtotal_transaction'=> $trx_value, 'count_transaction' => $trx_count]);
@@ -658,7 +660,9 @@ class ApiMembership extends Controller
 					->where('id_user', $check['id'])
 					->where('achievement_groups.status', 'Active')
 						->where('achievement_groups.is_calculate', 1)
-						->groupBy('achievement_groups.id_achievement_group')->count();
+						->groupBy('achievement_groups.id_achievement_group')->select('id_achievement_user')->get();
+					
+					$total_achievement = count($total_achievement);
 
 					//update user count & subtotal transaction
 					$user = User::where('users.phone', $phone)->update(['subtotal_transaction'=> $trx_value, 'count_transaction' => $trx_count]);
@@ -708,7 +712,6 @@ class ApiMembership extends Controller
 			} else {
 				//belum pernah punya membership
 				//bisa langsung lompat membership
-
 				$trx_count = Transaction::where('id_user',$check['id'])
 											->where('transaction_payment_status', 'Completed')
                                             ->whereNull('fraud_flag')
@@ -729,7 +732,9 @@ class ApiMembership extends Controller
 				->where('id_user', $check['id'])
 				->where('achievement_groups.status', 'Active')
 					->where('achievement_groups.is_calculate', 1)
-					->groupBy('achievement_groups.id_achievement_group')->count();
+					->groupBy('achievement_groups.id_achievement_group')->select('id_achievement_user')->get();
+					
+				$total_achievement = count($total_achievement);
 
 				//update user count & subtotal transaction
 				$user = User::where('users.phone', $phone)->update(['subtotal_transaction'=> $trx_value, 'count_transaction' => $trx_count]);
@@ -768,7 +773,6 @@ class ApiMembership extends Controller
 					}
 				}
 			}
-
 			if($membership_baru != null){
 				$date_end = date("Y-m-d", strtotime(date('Y-m-d').' +'.$membership_baru['retain_days'].' days'));
 
@@ -877,7 +881,9 @@ class ApiMembership extends Controller
 						->where('id_user',$datauser->id)
 						->where('achievement_groups.status', 'Active')
 						->where('achievement_groups.is_calculate', 1)
-						->groupBy('achievement_groups.id_achievement_group')->count();
+						->groupBy('achievement_groups.id_achievement_group')->select('id_achievement_user')->get();
+
+						$total_achievement = count($total_achievement);
 						
 						if($total_achievement >= $all['min_total_achievement']){
 							//level up

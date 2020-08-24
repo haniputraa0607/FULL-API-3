@@ -439,10 +439,6 @@ class ApiDealsVoucher extends Controller
                         $voucher[$index]['deal_voucher']['voucher_code'] = str_replace("https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=",'',  $voucherHash);
                     }
 
-                    $useragent = $_SERVER['HTTP_USER_AGENT'];
-                    if(stristr($useragent,'okhttp')){
-                        $voucher[$index]['voucher_expired_at'] = date('d/m/Y H:i',strtotime($voucher[$index]['voucher_expired_at']));
-                    }
                 // }
                 // else{
                 //     unset($voucher[$index]);
@@ -881,11 +877,6 @@ class ApiDealsVoucher extends Controller
                 else {
                     $voucherHash = $datavoucher['voucher_hash'];
                     $voucher[$index]['deal_voucher']['voucher_code'] = str_replace("https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=",'',  $voucherHash);
-                }
-
-                $useragent = $_SERVER['HTTP_USER_AGENT'];
-                if(stristr($useragent,'okhttp')){
-                    $voucher[$index]['voucher_expired_at'] = date('d/m/Y H:i',strtotime($voucher[$index]['voucher_expired_at']));
                 }
 
             }
