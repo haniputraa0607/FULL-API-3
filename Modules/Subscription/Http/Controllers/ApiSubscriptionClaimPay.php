@@ -55,7 +55,7 @@ class ApiSubscriptionClaimPay extends Controller
             return MyHelper::checkGet([],'Paid subscription cannot be canceled');
         }
         $errors = '';
-        $cancel = \Modules\IPay88\Lib\IPay88::create()->cancel('subscription',$subscription_user,$errors);
+        $cancel = \Modules\IPay88\Lib\IPay88::create()->cancel('subscription',$subscription_user,$errors, $request->last_url);
         if($cancel){
             return ['status'=>'success'];
         }
