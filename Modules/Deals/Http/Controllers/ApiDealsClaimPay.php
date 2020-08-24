@@ -68,7 +68,7 @@ class ApiDealsClaimPay extends Controller
             return MyHelper::checkGet([],'Paid deals cannot be canceled');
         }
         $errors = '';
-        $cancel = \Modules\IPay88\Lib\IPay88::create()->cancel('deals',$deals_user,$errors);
+        $cancel = \Modules\IPay88\Lib\IPay88::create()->cancel('deals',$deals_user,$errors, $request->last_url);
         if($cancel){
             return ['status'=>'success'];
         }
