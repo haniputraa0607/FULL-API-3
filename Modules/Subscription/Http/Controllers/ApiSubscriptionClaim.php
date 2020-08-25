@@ -289,7 +289,7 @@ class ApiSubscriptionClaim extends Controller
     function checkSubsUserExpired($subs, $subsUser) {
         $now = date('Y-m-d H:i:s');
 
-        if (empty($subsUser) || (isset($subs->new_purchase_after) && $subs->new_purchase_after == 'No Limit')) {
+        if (empty($subsUser[0]) || (isset($subs->new_purchase_after) && $subs->new_purchase_after == 'No Limit')) {
             return true;
         }
         elseif ( isset($subs->new_purchase_after) ) {

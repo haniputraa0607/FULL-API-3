@@ -2293,7 +2293,7 @@ class ApiOutletApp extends Controller
                                 $payment['name']    = 'OVO';
                                 $list['payment'][] = $payment;
                                 break;
-                            case 'Ipay88':
+                            case 'IPay88':
                                 $PayIpay = TransactionPaymentIpay88::find($mp['id_payment']);
                                 $payment['name']    = $PayIpay->payment_method;
                                 $payment['amount']    = $PayIpay->amount / 100;
@@ -2374,7 +2374,7 @@ class ApiOutletApp extends Controller
                 }
                 $list['payment'] = $payment;
                 break;
-            case 'Ipay88':
+            case 'IPay88':
                 $multiPayment = TransactionMultiplePayment::where('id_transaction', $list['id_transaction'])->get();
                 $payment = [];
                 foreach($multiPayment as $dataKey => $dataPay){
@@ -2402,10 +2402,7 @@ class ApiOutletApp extends Controller
                 }
                 break;
             default:
-                $list['payment'][] = [
-                    'name'      => null,
-                    'amount'    => null
-                ];
+                $list['payment'] = [];
                 break;
         }
 
