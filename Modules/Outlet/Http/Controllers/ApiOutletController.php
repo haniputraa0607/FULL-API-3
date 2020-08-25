@@ -216,6 +216,17 @@ class ApiOutletController extends Controller
         }
 
         DB::commit();
+
+        // sent pin to outlet
+        if (isset($request->outlet_email)) {
+        	$variable = $save->toArray();
+	        $send 	= app($this->autocrm)->SendAutoCRM('Outlet Pin Sent', $request->outlet_email, [
+		                'pin' 			=> $request->outlet_pin,
+		                'date_sent' 	=> date('Y-m-d H:i:s'),
+		                'outlet_name' 	=> $request->outlet_name,
+		            ]+$variable, null, false, false, 'outlet');
+        }
+
         return response()->json(MyHelper::checkCreate($save));
     }
 
@@ -442,7 +453,15 @@ class ApiOutletController extends Controller
         $del = OauthAccessToken::join('oauth_access_token_providers', 'oauth_access_tokens.id', 'oauth_access_token_providers.oauth_access_token_id')
                                     ->where('oauth_access_tokens.user_id', $post['id_outlet'])->where('oauth_access_token_providers.provider', 'outlet-app')->delete();
 
-
+        // sent pin to outlet
+        if (isset($outlet->outlet_email)) {
+        	$variable = $outlet->toArray();
+	        $send 	= app($this->autocrm)->SendAutoCRM('Outlet Pin Sent', $outlet->outlet_email, [
+		                'pin' 			=> $request->outlet_pin,
+		                'date_sent' 	=> date('Y-m-d H:i:s'),
+		            ]+$variable, null, false, false, 'outlet');
+        }
+        
         return response()->json(MyHelper::checkUpdate($outlet));
     }
     /**
@@ -1922,6 +1941,16 @@ class ApiOutletController extends Controller
                                     $pin = MyHelper::createRandomPIN(6, 'angka');
                                     $outlet->update(['outlet_pin' => \Hash::make($pin)]);
                                     $data_pin[] = ['id_outlet' => $outlet->id_outlet, 'data' => $pin];
+
+                                    // sent pin to outlet
+							        if (isset($outlet['outlet_email'])) {
+							        	$variable = $outlet->toArray();
+								        $send 	= app($this->autocrm)->SendAutoCRM('Outlet Pin Sent', $outlet['outlet_email'], [
+									                'pin' 			=> $pin,
+									                'date_sent' 	=> date('Y-m-d H:i:s'),
+									                'outlet_name' 	=> $outlet['outlet_name'],
+									            ]+$variable, null, false, false, 'outlet');
+							        }
                                 }
                                 $day = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
 
