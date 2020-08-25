@@ -836,7 +836,7 @@ class IPay88
     			$update = $this->update($model->subscription_payment_ipay88,[
     				'type' =>'subscription',
     				'Status' => '0',
-    				'requery_response' => $requery['response']
+    				'requery_response' => $requery['response']??''
     			],false,false);
     			if(!$update){
     				$errors = ['Failed update subscription'];
