@@ -1724,7 +1724,7 @@ class ApiTransaction extends Controller
             $dataTrxDetail = [];
             foreach ($query->cursor() as $val) {
                 $payment = '';
-                $payment .= (!empty($val['payment_type']) ? ', '.$val['payment_type'] : '').(!empty($val['payment_method']) ? ', '.$val['payment_method'] : '');
+                $payment .= (!empty($val['payment_type']) ? $val['payment_type'] : '').(!empty($val['payment_method']) ? $val['payment_method'] : '');
 
                 if(isset($post['detail']) && $post['detail'] == 1){
 
