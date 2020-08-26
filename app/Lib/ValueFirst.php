@@ -66,7 +66,7 @@ class ValueFirst
                 'USER' => [
                     '@USERNAME'      => $this->json_username,
                     '@PASSWORD'      => $this->json_password,
-                    '@UNIXTIMESTAMP' => (string) time(),
+                    '@UNIXTIMESTAMP' => '',
                 ],
                 'DLR'  => [
                     '@URL' => urlencode($data['dir-url']),
@@ -75,12 +75,12 @@ class ValueFirst
                     [
                         '@UDH'      => '0',
                         '@CODING'   => '1',
-                        '@TEXT'     => urlencode($data['text']),
+                        '@TEXT'     => $data['text'],
                         '@PROPERTY' => '0',
-                        '@ID'       => time() . rand(1000, 9999),
+                        '@ID'       => '1',
                         'ADDRESS'   => [
                             [
-                                '@FROM' => urlencode($data['from']),
+                                '@FROM' => $data['from'],
                                 '@TO'   => $data['to'],
                                 '@SEQ'  => $this->getSEQ(),
                             ],
