@@ -903,19 +903,21 @@ class ApiDisburseController extends Controller
                                     'dot.point_use_expense as Fee Point Use', 'dot.income_outlet as Net Sales (Income Outlet)')
                             ->get()->toArray();
 
-                        $sheets = new SheetCollection([
-                            "Detail Transaction" => $generateTrx,
-                            "Calculation Fee" => $dataDisburse
-                        ]);
-                        $excelFile = 'Transaction_['.$yesterday.']_['.$outlet['outlet_code'].'].xlsx';
-                        if(!file_exists( public_path().'/excel_email')){
-                            File::makeDirectory('excel_email');
-                        }
+                        if($generateTrx && $dataDisburse){
+                            $sheets = new SheetCollection([
+                                "Detail Transaction" => $generateTrx,
+                                "Calculation Fee" => $dataDisburse
+                            ]);
+                            $excelFile = 'Transaction_['.$yesterday.']_['.$outlet['outlet_code'].'].xlsx';
+                            if(!file_exists( public_path().'/excel_email')){
+                                mkdir(public_path().'/excel_email', 0777, true);
+                            }
 
-                        $store = (new FastExcel($sheets))->export(public_path().'/excel_email/'.$excelFile);
-                        if($store){
-                            $tmpPath[] = $excelFile;
-                            $tmpOutlet[] = $outlet['outlet_code'].' - '.$outlet['outlet_name'];
+                            $store = (new FastExcel($sheets))->export(public_path().'/excel_email/'.$excelFile);
+                            if($store){
+                                $tmpPath[] = $excelFile;
+                                $tmpOutlet[] = $outlet['outlet_code'].' - '.$outlet['outlet_name'];
+                            }
                         }
                     }
 
