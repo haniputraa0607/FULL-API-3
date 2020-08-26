@@ -1882,7 +1882,7 @@ Message :
                 'autocrm_forward_email' => NULL,
                 'autocrm_forward_email_subject' => NULL,
                 'autocrm_forward_email_content' => NULL,
-                'custom_text_replace'=>'%pin%;%date_sent%;',
+                'custom_text_replace'=>'%pin%;%date_sent%;%outlet_name%;%outlet_code%;',
                 'created_at' => date('Y-m-d H:i:s'),
                 'updated_at' => date('Y-m-d H:i:s'),
             ),

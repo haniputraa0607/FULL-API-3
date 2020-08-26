@@ -224,6 +224,7 @@ class ApiOutletController extends Controller
 		                'pin' 			=> $request->outlet_pin,
 		                'date_sent' 	=> date('Y-m-d H:i:s'),
 		                'outlet_name' 	=> $request->outlet_name,
+		                'outlet_code' 	=> $post['outlet_code'],
 		            ]+$variable, null, false, false, 'outlet');
         }
 
@@ -1949,6 +1950,7 @@ class ApiOutletController extends Controller
 									                'pin' 			=> $pin,
 									                'date_sent' 	=> date('Y-m-d H:i:s'),
 									                'outlet_name' 	=> $outlet['outlet_name'],
+									                'outlet_code' 	=> $value['code'],
 									            ]+$variable, null, false, false, 'outlet');
 							        }
                                 }
