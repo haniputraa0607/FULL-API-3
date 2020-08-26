@@ -1112,7 +1112,7 @@ class ApiDeals extends Controller
     /* UPDATE REQUEST */
     function updateReq(Update $request)
     {
-return $update;
+// return $update;
         DB::beginTransaction();
         if ($request->json('id_deals')) {
         	$save = $this->update($request->json('id_deals'), $request->json()->all());
