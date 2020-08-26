@@ -38,8 +38,13 @@ class ApiSubscriptionWebview extends Controller
         			'subscription_content.subscription_content_details',
         			'brand'
         		])
-        		->find($request->get('id_subscription'))
-        		->append(
+        		->find($request->get('id_subscription'));
+
+        if (empty($subs)) {
+        	return MyHelper::checkGet($subs);
+        }
+
+        $subs = $subs->append(
 					'subscription_voucher_benefit_pretty',
 					'subscription_voucher_max_benefit_pretty',
 					'subscription_minimal_transaction_pretty'
@@ -211,6 +216,11 @@ class ApiSubscriptionWebview extends Controller
 					])
         			->where('id_subscription_user', $request->id_subscription_user)
         			->first();
+
+        if (empty($subs)) {
+        	return MyHelper::checkGet($subs);
+        }
+
         $subs->subscription = $subs->subscription->append(
 								'subscription_voucher_benefit_pretty',
 								'subscription_voucher_max_benefit_pretty',

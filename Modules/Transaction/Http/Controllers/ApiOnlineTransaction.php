@@ -1423,7 +1423,7 @@ class ApiOnlineTransaction extends Controller
             }
         }
 
-        if (isset($post['payment_type'])) {
+        if (isset($post['payment_type']) || $insertTransaction['transaction_grandtotal'] == 0) {
 
             if ($post['payment_type'] == 'Balance' || $insertTransaction['transaction_grandtotal'] == 0) {
 
@@ -1450,7 +1450,7 @@ class ApiOnlineTransaction extends Controller
                         return response()->json($checkFraudPoint);
                     }
                 }
-
+                
                 if ($post['transaction_payment_status'] == 'Completed' || $save['type'] == 'no_topup') {
 
                     if($config_fraud_use_queue == 1){

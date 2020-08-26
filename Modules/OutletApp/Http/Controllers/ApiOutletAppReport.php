@@ -638,7 +638,7 @@ class ApiOutletAppReport extends Controller
 	    				->where('transactions.transaction_payment_status','=','Completed')
 	    				->whereNull('transaction_pickups.reject_at')
 	    				->select(
-	    					DB::raw('(select SUM(transaction_product_modifiers.qty)) as total_qty')
+	    					DB::raw('(select SUM(transaction_product_modifiers.qty * transaction_products.transaction_product_qty)) as total_qty')
 	    				)
 	    				->Join('transactions','transaction_products.id_transaction', '=', 'transactions.id_transaction')
 	    				->Join('transaction_product_modifiers','transaction_product_modifiers.id_transaction_product', '=', 'transaction_products.id_transaction_product')
@@ -656,7 +656,7 @@ class ApiOutletAppReport extends Controller
 	    					DB::raw('(select transactions.id_outlet) as id_outlet'),
 	    					DB::raw('(select transaction_products.id_brand) as id_brand'),
 	    					DB::raw('(select product_modifiers.text) as text'),
-	    					DB::raw('(select SUM(transaction_product_modifiers.qty)) as total_qty'),
+	    					DB::raw('(select SUM(transaction_product_modifiers.qty * transaction_products.transaction_product_qty)) as total_qty'),
 	    					DB::raw('(select SUM(transaction_product_modifiers.transaction_product_modifier_price)) as total_nominal'),
 	    					DB::raw('(select count(transaction_product_modifiers.id_product_modifier)) as total_rec')
 	    				)
