@@ -442,6 +442,10 @@ class ApiOutletController extends Controller
             ]);
         }
 
+        if ($request->generate_pin_outlet) {
+        	$post['outlet_pin'] = MyHelper::createRandomPIN(6, 'angka');
+        }
+
         $pin = bcrypt($post['outlet_pin']);
         $outlet->outlet_pin = $pin;
         $outlet->save();
@@ -458,7 +462,7 @@ class ApiOutletController extends Controller
         if (isset($outlet->outlet_email)) {
         	$variable = $outlet->toArray();
 	        $send 	= app($this->autocrm)->SendAutoCRM('Outlet Pin Sent', $outlet->outlet_email, [
-		                'pin' 			=> $request->outlet_pin,
+		                'pin' 			=> $post['outlet_pin'],
 		                'date_sent' 	=> date('Y-m-d H:i:s'),
 		            ]+$variable, null, false, false, 'outlet');
         }
