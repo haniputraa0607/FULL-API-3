@@ -92,7 +92,7 @@ class ApiCronReport extends Controller
             // else {
                 // DATE START
                 $dateStart = $this->firstTrx();
-                // $dateStart = "2020-06-09";
+                // $dateStart = "2020-08-24";
 
                 if ($dateStart) {
                     // UP TO YESTERDAY
@@ -1281,7 +1281,7 @@ class ApiCronReport extends Controller
         foreach ($outletAll as $outlet) {
              $modifier = DB::select(DB::raw('
                         SELECT transaction_product_modifiers.id_product_modifier, transaction_products.id_brand, transactions.id_outlet, 
-                        (select SUM(transaction_product_modifiers.qty)) as total_qty, 
+                        (select SUM(transaction_product_modifiers.qty * transaction_products.transaction_product_qty)) as total_qty, 
                         (select SUM(transaction_product_modifiers.transaction_product_modifier_price)) as total_nominal, 
                         (select count(transaction_product_modifiers.id_product_modifier)) as total_rec, 
                         (select DATE(transactions.transaction_date)) as trx_date,
@@ -2081,7 +2081,7 @@ class ApiCronReport extends Controller
         foreach ($outletAll as $outlet) {
             $modifier = DB::select(DB::raw('
                         SELECT transaction_product_modifiers.id_product_modifier, transaction_products.id_brand, transactions.id_outlet, 
-                        (select SUM(transaction_product_modifiers.qty)) as total_qty, 
+                        (select SUM(transaction_product_modifiers.qty * transaction_products.transaction_product_qty)) as total_qty, 
                         (select SUM(transaction_product_modifiers.transaction_product_modifier_price)) as total_nominal, 
                         (select count(transaction_product_modifiers.id_product_modifier)) as total_rec, 
                         (select MONTH(transaction_date)) as trx_month,
@@ -2138,7 +2138,7 @@ class ApiCronReport extends Controller
         // update global trx modifier
         $modifier = DB::select(DB::raw('
                     SELECT transaction_product_modifiers.id_product_modifier, 
-                    (select SUM(transaction_product_modifiers.qty)) as total_qty, 
+                    (select SUM(transaction_product_modifiers.qty * transaction_products.transaction_product_qty)) as total_qty, 
                     (select SUM(transaction_product_modifiers.transaction_product_modifier_price)) as total_nominal, 
                     (select count(transaction_product_modifiers.id_product_modifier)) as total_rec, 
                     (select MONTH(transaction_date)) as trx_month,
