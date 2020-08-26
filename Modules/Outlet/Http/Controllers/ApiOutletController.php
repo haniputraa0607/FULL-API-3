@@ -68,6 +68,8 @@ use Modules\PromoCampaign\Entities\PromoCampaignPromoCode;
 use Modules\PromoCampaign\Lib\PromoCampaignTools;
 use App\Http\Models\Transaction;
 
+use App\Jobs\SendOutletJob;
+
 class ApiOutletController extends Controller
 {
     public $saveImage = "img/outlet/";
@@ -1955,12 +1957,12 @@ class ApiOutletController extends Controller
                                     // sent pin to outlet
 							        if (isset($outlet['outlet_email'])) {
 							        	$variable = $outlet->toArray();
-								        $send 	= app($this->autocrm)->SendAutoCRM('Outlet Pin Sent', $outlet['outlet_email'], [
-									                'pin' 			=> $pin,
-									                'date_sent' 	=> date('Y-m-d H:i:s'),
-									                'outlet_name' 	=> $outlet['outlet_name'],
-									                'outlet_code' 	=> $value['code'],
-									            ]+$variable, null, false, false, 'outlet');
+							        	$queue_data[] = [
+							        		'pin' 			=> $pin,
+							                'date_sent' 	=> date('Y-m-d H:i:s'),
+							                'outlet_name' 	=> $outlet['outlet_name'],
+							                'outlet_code' 	=> $value['code'],
+							        	]+$variable;
 							        }
                                 }
                                 $day = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
@@ -1995,6 +1997,9 @@ class ApiOutletController extends Controller
                 }
             }
             MyHelper::updateOutletFile($data_pin);
+            if (isset($queue_data)) {
+            	SendOutletJob::dispatch($queue_data)->allOnConnection('database');
+            }
             DB::commit();
 
             if(count($failedImport) > 0){
