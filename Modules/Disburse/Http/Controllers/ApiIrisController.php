@@ -10,6 +10,7 @@ use App\Http\Models\Transaction;
 use App\Http\Models\TransactionBalance;
 use App\Http\Models\TransactionPaymentBalance;
 use App\Http\Models\TransactionPaymentMidtran;
+use App\Jobs\DisburseJob;
 use Cassandra\Exception\ExecutionException;
 use Illuminate\Auth\Events\Failed;
 use Illuminate\Http\Request;
@@ -438,7 +439,8 @@ class ApiIrisController extends Controller
                             $feePGType = $settingMDRAll[$keyMidtrans]['percent_type'];
                             $charged = $settingMDRAll[$keyMidtrans]['charged'];
                         }else{
-                            continue;
+                            DisburseJob::dispatch(['id_transaction' => $id_transaction])->onConnection('disbursequeue');
+                            return true;
                         }
 
                     }elseif (strtolower($payments['type']) == 'balance'){
@@ -466,7 +468,8 @@ class ApiIrisController extends Controller
                                     $nominalBalanceCentral = $balanceNominal * (floatval($feePointCentral) / 100);
                                 }
                             }else{
-                                continue;
+                                DisburseJob::dispatch(['id_transaction' => $id_transaction])->onConnection('disbursequeue');
+                                return true;
                             }
                         }else{
                             $feePointCentral = 100;
@@ -488,7 +491,8 @@ class ApiIrisController extends Controller
                             $feePGType = $settingMDRAll[$keyipay88]['percent_type'];
                             $charged = $settingMDRAll[$keyipay88]['charged'];
                         }else{
-                            continue;
+                            DisburseJob::dispatch(['id_transaction' => $id_transaction])->onConnection('disbursequeue');
+                            return true;
                         }
                     }elseif (strtolower($payments['type']) == 'ovo'){
                         $ovo = TransactionPaymentIpay88::where('id_transaction', $data['id_transaction'])->first();
@@ -506,7 +510,8 @@ class ApiIrisController extends Controller
                             $feePGType = $settingMDRAll[$keyipayOvo]['percent_type'];
                             $charged = $settingMDRAll[$keyipayOvo]['charged'];
                         }else{
-                            continue;
+                            DisburseJob::dispatch(['id_transaction' => $id_transaction])->onConnection('disbursequeue');
+                            return true;
                         }
                     }
                 }
