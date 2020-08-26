@@ -179,6 +179,11 @@ class ApiOutletController extends Controller
             }while($code != null);
         }
 
+        if(!isset($post['outlet_pin'])){
+	        $request->outlet_pin = MyHelper::createRandomPIN(6, 'angka');
+	        $post['outlet_pin'] = bcrypt($request->outlet_pin);
+        }
+
         DB::beginTransaction();
         $save = Outlet::create($post);
         if (!$save) {
