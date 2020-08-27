@@ -2624,7 +2624,7 @@ class MyHelper{
     	return Setting::select($column)->where('key',$key)->pluck($column)->first()??$default;
     }
 
-    public static function checkRuleForRequestOTP($data_user){
+    public static function checkRuleForRequestOTP($data_user, $check = 0){
         //get setting rule for request otp
         $setting = Setting::where('key', 'otp_rule_request')->first();
         /*
@@ -2664,11 +2664,18 @@ class MyHelper{
             $currentTime = date('Y-m-d H:i:s');
             $count = $content->count_request + 1;
 
+            $different = strtotime($content->available_request_time) - strtotime($currentTime);
+            $different = (int)date('s', $different);
+
+            if($different > $holdTime){
+                $different = -1;
+            }
+
             if(strtotime($currentTime) < strtotime($content->available_request_time)){
                 return [
-                    'status'=>'fail',
+                    'status'=>'success',
                     'otp_check'=> 1,
-                    'messages'=> ["Can't request OTP, please request again after ".floor($holdTime/60)." minutes"]
+                    'otp_timer' => $different
                 ];
             } elseif($count > $maxValueRequest){
                 $updateFlag = User::where('id', $data_user[0]['id'])->update(['otp_request_status' => 'Can Not Request']);
@@ -2678,7 +2685,7 @@ class MyHelper{
                     'otp_check'=> 1,
                     'messages'=> ["OTP request has passed the limit, please contact our customer service at ".config('configs.EMAIL_ADDRESS_ADMIN')]
                 ];
-            } else{
+            } elseif($check == 0){
                 $availebleTime = date('Y-m-d H:i:s',strtotime('+'.$holdTime.' seconds',strtotime(date('Y-m-d H:i:s'))));
                 $contentFile = [
                     'available_request_time' => $availebleTime,
@@ -2687,7 +2694,7 @@ class MyHelper{
                 $createFile = MyHelper::createFile($contentFile, 'json', 'otp/', $data_user[0]['id']);
                 return true;
             }
-        }else{
+        }elseif($check == 0){
             $availebleTime = date('Y-m-d H:i:s',strtotime('+'.$holdTime.' seconds',strtotime(date('Y-m-d H:i:s'))));
             $contentFile = [
                 'available_request_time' => $availebleTime,
