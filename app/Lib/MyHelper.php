@@ -714,6 +714,10 @@ class MyHelper{
 			// kalo ada foto
 			$decoded = base64_decode($foto);
 
+			if (!file_exists($path)) {
+			    mkdir($path, 0777, true);
+			}
+
 			// cek extension
 			$ext = MyHelper::checkExtensionImageBase64($decoded);
 

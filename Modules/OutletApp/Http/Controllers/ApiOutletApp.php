@@ -992,6 +992,50 @@ class ApiOutletApp extends Controller
                 ]);
             }
             $updated += $found->update(['product_detail_stock_status' => 'Sold Out']);
+
+            //create detail product
+            $newDetail = ProductDetail::where('id_outlet', $outlet['id_outlet'])
+                ->whereIn('id_product', $post['sold_out'])->select('id_product')->get();
+
+            if(count($newDetail) > 0){
+                $newDetail = $newDetail->pluck('id_product')->toArray();
+                $diff = array_diff($post['sold_out'], $newDetail);
+            }else{
+                //all product need to be created in product_detail
+                $diff = $post['sold_out'];
+            }
+            if(count($diff) > 0){
+                $insert = [];
+                $insertStatus = [];
+                foreach($diff as $idProd){
+                    if($idProd != 0){
+                        $insert[] = [
+                            'id_product' => $idProd,
+                            'id_outlet'  => $outlet['id_outlet'],
+                            'product_detail_stock_status' => 'Sold Out',
+                            'product_detail_visibility' => 'Visible',
+                            'product_detail_status' => 'Active',
+                            'created_at' => $date_time,
+                            'updated_at' => $date_time
+                        ];
+                        $insertStatus[] = [
+                            'id_product'        => $idProd,
+                            'id_user'           => $user_outlet['id_user'],
+                            'user_type'         => $user_outlet['user_type'],
+                            'user_name'         => $user_outlet['name'],
+                            'user_email'        => $user_outlet['email'],
+                            'id_outlet'         => $outlet->id_outlet,
+                            'date_time'         => $date_time,
+                            'new_status'        => 'Sold Out',
+                            'id_outlet_app_otp' => null,
+                        ];
+                    }
+                }
+                $createDetail = ProductDetail::insert($insert);
+                $createStatus = ProductStockStatusUpdate::insert($insertStatus);
+                $updated += $createDetail;
+            }
+
         }
         if ($post['available']) {
             $found = ProductDetail::where('id_outlet', $outlet['id_outlet'])
@@ -1012,6 +1056,51 @@ class ApiOutletApp extends Controller
                 ]);
             }
             $updated += $found->update(['product_detail_stock_status' => 'Available']);
+
+            //create detail product
+            $newDetail = ProductDetail::where('id_outlet', $outlet['id_outlet'])
+                ->whereIn('id_product', $post['available'])->select('id_product')->get();
+
+            if(count($newDetail) > 0){
+                $newDetail = $newDetail->pluck('id_product')->toArray();
+                $diff = array_diff($post['available'], $newDetail);
+            }else{
+                //all product need to be created in product_detail
+                $diff = $post['available'];
+            }
+
+            if(count($diff) > 0){
+                $insert = [];
+                $insertStatus = [];
+                foreach($diff as $idProd){
+                    if($idProd != 0){
+                        $insert[] = [
+                            'id_product' => $idProd,
+                            'id_outlet'  => $outlet['id_outlet'],
+                            'product_detail_stock_status' => 'Available',
+                            'product_detail_visibility' => 'Visible',
+                            'product_detail_status' => 'Active',
+                            'created_at' => $date_time,
+                            'updated_at' => $date_time
+                        ];
+    
+                        $insertStatus = [
+                            'id_product'        => $idProd,
+                            'id_user'           => $user_outlet['id_user'],
+                            'user_type'         => $user_outlet['user_type'],
+                            'user_name'         => $user_outlet['name'],
+                            'user_email'        => $user_outlet['email'],
+                            'id_outlet'         => $outlet->id_outlet,
+                            'date_time'         => $date_time,
+                            'new_status'        => 'Available',
+                            'id_outlet_app_otp' => null,
+                        ];
+                    }
+                }
+                $createDetail = ProductDetail::insert($insert);                
+                $createStatus = ProductStockStatusUpdate::insert($insertStatus);
+                $updated += $createDetail;
+            }
         }
         return [
             'status' => 'success',
@@ -1034,7 +1123,7 @@ class ApiOutletApp extends Controller
                     ->groupBy('products.id_product');
             })
         // product availbale in outlet
-            ->join('product_detail', function($join) use ($outlet) {
+            ->leftjoin('product_detail', function($join) use ($outlet) {
                 $join->on('product_detail.id_product', '=', 'products.id_product')
                     ->where('product_detail.id_outlet', '=', $outlet['id_outlet']);
             })
@@ -1045,11 +1134,14 @@ class ApiOutletApp extends Controller
                             ->where('products.product_visibility', 'Visible');
                     });
             })
-            ->where('product_detail.product_detail_status', '=', 'Active')
+            ->where(function ($query) {
+                $query->where('product_detail.product_detail_status', '=', 'Active')
+                    ->orWhereNull('product_detail.product_detail_status');
+            })
         // brand produk ada di outlet
-            ->join('brand_outlet', function($join) {
+            ->join('brand_outlet', function($join)  use ($outlet) {
                 $join->on('brand_outlet.id_brand', '=', 'brand_product.id_brand')
-                    ->whereColumn('brand_outlet.id_outlet', '=', 'product_detail.id_outlet');
+                    ->where('brand_outlet.id_outlet', '=', $outlet['id_outlet']);
             });
         if ($outlet['outlet_different_price']) {
             $data->join('product_special_price', function($join) use ($outlet) {
@@ -1091,7 +1183,9 @@ class ApiOutletApp extends Controller
         $post              = $request->json()->all();
         $post['id_outlet'] = $outlet['id_outlet'];
         $products          = Product::select([
-            'products.id_product', 'products.product_code', 'products.product_name', 'product_detail.product_detail_stock_status as product_stock_status',
+            'products.id_product', 'products.product_code', 'products.product_name', 
+            DB::raw('(CASE WHEN product_detail.product_detail_stock_status is NULL THEN "Available" ELSE product_detail.product_detail_stock_status END) AS product_stock_status'),
+            // 'product_detail.product_detail_stock_status as product_stock_status',
         ])
 
         // join brand product
@@ -1108,7 +1202,7 @@ class ApiOutletApp extends Controller
             })
 
         // product available (active & visible)
-            ->join('product_detail', function($join) use ($post) {
+            ->leftJoin('product_detail', function($join) use ($post) {
                 $join->on('product_detail.id_product', '=', 'products.id_product')
                     ->where('product_detail.id_outlet', '=', $post['id_outlet']);
             })
@@ -1119,7 +1213,10 @@ class ApiOutletApp extends Controller
                             ->where('products.product_visibility', 'Visible');
                     });
             })
-            ->where('product_detail.product_detail_status', '=', 'Active');
+            ->where(function ($query) {
+                $query->where('product_detail.product_detail_status', '=', 'Active')
+                    ->orWhereNull('product_detail.product_detail_status');
+            });
 
         // has product price
         if ($outlet->outlet_different_price) {
@@ -2293,7 +2390,7 @@ class ApiOutletApp extends Controller
                                 $payment['name']    = 'OVO';
                                 $list['payment'][] = $payment;
                                 break;
-                            case 'Ipay88':
+                            case 'IPay88':
                                 $PayIpay = TransactionPaymentIpay88::find($mp['id_payment']);
                                 $payment['name']    = $PayIpay->payment_method;
                                 $payment['amount']    = $PayIpay->amount / 100;
@@ -2374,7 +2471,7 @@ class ApiOutletApp extends Controller
                 }
                 $list['payment'] = $payment;
                 break;
-            case 'Ipay88':
+            case 'IPay88':
                 $multiPayment = TransactionMultiplePayment::where('id_transaction', $list['id_transaction'])->get();
                 $payment = [];
                 foreach($multiPayment as $dataKey => $dataPay){
@@ -2402,10 +2499,7 @@ class ApiOutletApp extends Controller
                 }
                 break;
             default:
-                $list['payment'][] = [
-                    'name'      => null,
-                    'amount'    => null
-                ];
+                $list['payment'] = [];
                 break;
         }
 
