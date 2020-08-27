@@ -867,7 +867,7 @@ class ApiOnlineTransaction extends Controller
         }
 
         //update receipt
-        $receipt = 'TRX-'.MyHelper::createrandom(6,'Angka').time().MyHelper::createrandom(3,'Angka').$insertTransaction['id_outlet'].MyHelper::createrandom(3,'Angka');
+        $receipt = 'JIWA+'.MyHelper::createrandom(4,'Angka').time().MyHelper::createrandom(10,'Angka').$insertTransaction['id_outlet'];
         $updateReceiptNumber = Transaction::where('id_transaction', $insertTransaction['id_transaction'])->update([
             'transaction_receipt_number' => $receipt
         ]);
