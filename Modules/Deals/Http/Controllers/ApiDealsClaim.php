@@ -382,6 +382,10 @@ class ApiDealsClaim extends Controller
             else {
                 $data['voucher_expired_at'] = $dataDeals->deals_voucher_expired;
             }
+
+            if (!empty($dataDeals->deals_voucher_start)) {
+            	$data['voucher_active_at'] = $dataDeals->deals_voucher_start;
+            }
         }
 
         // CHECK PAYMENT = FREE / NOT
