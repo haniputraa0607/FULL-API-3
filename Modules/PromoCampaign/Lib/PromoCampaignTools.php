@@ -238,6 +238,11 @@ class PromoCampaignTools{
 						continue;
 					}
 
+					// check product brand
+					if ($promo->id_brand != $trx['id_brand']) {
+						continue;
+					}
+
 					$modifier = 0;
 					foreach ($trx['modifiers'] as $key2 => $value2) 
 					{
@@ -335,6 +340,11 @@ class PromoCampaignTools{
 				//get cart's product to apply promo
 				$product=null;
 				foreach ($trxs as &$trx) {
+
+					// check product brand
+					if ($promo->id_brand != $trx['id_brand']) {
+						continue;
+					}
 					//is this the cart product we looking for?
 					if($trx['id_product']==$promo_product->id_product){
 						//set reference to this cart product
@@ -437,7 +447,7 @@ class PromoCampaignTools{
 						$max_qty=$rule->max_qty_requirement;
 					}
 				}
-// dd($promo_rules, $min_qty, $max_qty);
+
 				// promo product not available in cart?
 				if(!in_array($promo_product->id_product, array_column($trxs, 'id_product'))){
 					$minmax=$min_qty!=$max_qty?"$min_qty - $max_qty":$min_qty;
@@ -451,6 +461,11 @@ class PromoCampaignTools{
 				//get cart's product to get benefit
 				$product=null;
 				foreach ($trxs as &$trx) {
+
+					// check product brand
+					if ($promo->id_brand != $trx['id_brand']) {
+						continue;
+					}
 					//is this the cart product we looking for?
 					if($trx['id_product']==$promo_product->id_product){
 						//set reference to this cart product
@@ -986,7 +1001,6 @@ class PromoCampaignTools{
             {
                 if ( $value['id_outlet'] == $id_outlet ) 
                 {
-                	dd($outlet);
                     return true;
                 } 
             }
