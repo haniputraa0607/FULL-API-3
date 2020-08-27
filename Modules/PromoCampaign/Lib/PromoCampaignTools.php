@@ -1087,25 +1087,41 @@ class PromoCampaignTools{
 
     function getAllModifier($array_modifier, $id_outlet)
     {
-    	$mod = ProductModifier::select('product_modifiers.id_product_modifier','text','product_modifier_stock_status','product_modifier_price')
-                // produk modifier yang tersedia di outlet
-                ->join('product_modifier_prices','product_modifiers.id_product_modifier','=','product_modifier_prices.id_product_modifier')
-                ->leftJoin('product_modifier_details','product_modifiers.id_product_modifier','=','product_modifier_details.id_product_modifier')
-                ->where('product_modifier_prices.id_outlet',$id_outlet)
-                // produk aktif
-                ->where('product_modifier_status','Active')
-                // product visible
-                ->where(function($query){
-                    $query->where('product_modifier_details.product_modifier_visibility','=','Visible')
-                    ->orWhere(function($q){
-                        $q->whereNull('product_modifier_details.product_modifier_visibility')
-                        ->where('product_modifiers.product_modifier_visibility', 'Visible');
-                    });
-                })
-                ->whereIn('product_modifiers.id_product_modifier',$array_modifier)
-                ->groupBy('product_modifiers.id_product_modifier')
-                // product modifier dengan id
-                ->get();
+    	$different_price = Outlet::select('outlet_different_price')->where('id_outlet',$id_outlet)->pluck('outlet_different_price')->first();
+
+        $mod = ProductModifier::select('product_modifiers.id_product_modifier','text','product_modifier_stock_status','product_modifier_price')
+            ->whereIn('product_modifiers.id_product_modifier',$array_modifier)
+            ->leftJoin('product_modifier_details', function($join) use ($id_outlet) {
+                $join->on('product_modifier_details.id_product_modifier','=','product_modifiers.id_product_modifier')
+                    ->where('product_modifier_details.id_outlet',$id_outlet);
+            })
+            ->where(function($q){
+                $q->where('product_modifier_stock_status','Available')->orWhereNull('product_modifier_stock_status');
+            })
+            ->where(function($q){
+                $q->where('product_modifier_status','Active')->orWhereNull('product_modifier_status');
+            })
+            ->where(function($query){
+                $query->where('product_modifier_details.product_modifier_visibility','=','Visible')
+                        ->orWhere(function($q){
+                            $q->whereNull('product_modifier_details.product_modifier_visibility')
+                            ->where('product_modifiers.product_modifier_visibility', 'Visible');
+                        });
+            });
+
+        if($different_price){
+            $mod->join('product_modifier_prices',function($join) use ($id_outlet){
+                $join->on('product_modifier_prices.id_product_modifier','=','product_modifiers.id_product_modifier');
+                $join->where('product_modifier_prices.id_outlet',$id_outlet);
+            });
+
+        }else{
+            $mod->join('product_modifier_global_prices',function($join) use ($id_outlet){
+                $join->on('product_modifier_global_prices.id_product_modifier','=','product_modifiers.id_product_modifier');
+            });
+        }
+
+        $mod = $mod->get();
         if ($mod) {
         	return $mod;
         }else{
