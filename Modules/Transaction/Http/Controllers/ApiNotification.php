@@ -77,7 +77,7 @@ class ApiNotification extends Controller {
         DB::beginTransaction();
 
         // CHECK ORDER ID
-        if (stristr($midtrans['order_id'], "TRX")) {
+        if (stristr($midtrans['order_id'], "JIWA+")) {
             // TRANSACTION
             $transac = Transaction::with('user.memberships', 'logTopup')->where('transaction_receipt_number', $midtrans['order_id'])->first();
 

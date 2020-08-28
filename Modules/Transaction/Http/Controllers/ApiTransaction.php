@@ -48,6 +48,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
 
+use Modules\Subscription\Entities\SubscriptionUserVoucher;
 use Modules\Transaction\Http\Requests\RuleUpdate;
 
 use Modules\Transaction\Http\Requests\TransactionDetail;
@@ -1744,6 +1745,17 @@ class ApiTransaction extends Controller
                         $promoName = $val['promo_campaign']['promo_title'];
                         $promoType = 'Promo Campaign';
                         $promoCode = $val['promo_campaign']['promo_code'];
+                    }elseif(!empty($val['transaction_payment_subscription'])) {
+                        $getSubcription = SubscriptionUserVoucher::join('subscription_users', 'subscription_users.id_subscription_user', 'subscription_user_vouchers.id_subscription_user')
+                            ->join('subscriptions', 'subscriptions.id_subscription', 'subscription_users.id_subscription')
+                            ->where('subscription_user_vouchers.id_subscription_user_voucher', $val['transaction_payment_subscription']['id_subscription_user_voucher'])
+                            ->groupBy('subscriptions.id_subscription')->select('subscriptions.*', 'subscription_user_vouchers.voucher_code')->first();
+
+                        if($getSubcription){
+                            $promoName = $getSubcription['subscription_title'];
+                            $promoType = 'Subscription';
+                            $promoCode = $getSubcription['voucher_code'];
+                        }
                     }
 
                     $status = $val['transaction_payment_status'];
@@ -1776,11 +1788,6 @@ class ApiTransaction extends Controller
                     }
 
                     $dt = [
-                        'Name' => $val['name'],
-                        'Phone' => $val['phone'],
-                        'Gender' => $val['gender'],
-                        'Date of birth' => ($val['birthday'] == null ? '' : date('d M Y', strtotime($val['birthday']))),
-                        'Customer City' => $val['user_city'],
                         'Outlet Code' => $val['outlet_code'],
                         'Outlet Name' => $val['outlet_name'],
                         'Province' => $val['province_name'],
@@ -1789,9 +1796,6 @@ class ApiTransaction extends Controller
                         'Transaction Status' => $status,
                         'Transaction Date' => date('d M Y', strtotime($val['transaction_date'])),
                         'Transaction Time' => date('H:i:s', strtotime($val['transaction_date'])),
-                        'Customer latitude' =>$val['latitude'],
-                        'Customer longitude' =>$val['longitude'],
-                        'Customer distance' => $val['distance_customer'],
                         'Brand' => $val['name_brand'],
                         'Category' => $val['product_category_name'],
                         'Items' => $val['product_code'].'-'.$val['product_name'],
@@ -1805,6 +1809,7 @@ class ApiTransaction extends Controller
                         'Discounts' => $val['transaction_product_discount'],
                         'Delivery Fee' => $val['transaction_shipment_go_send']??'0',
                         'Subscription' => abs($val['transaction_payment_subscription']['subscription_nominal']??0),
+                        'Subscription Fee' => (float)($val['subscription'])??0,
                         'Total Fee (fee item+fee payment+fee promo+fee subscription) ' => ($paymentCharge == 0? '' : (float)($val['fee_item'] + $paymentCharge + $val['discount'] + $val['subscription'])),
                         'Fee Payment Gateway' =>(float)$paymentCharge,
                         'Net Sales (income outlet)' => (float)$val['income_outlet'],
