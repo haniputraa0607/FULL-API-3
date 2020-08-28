@@ -903,7 +903,7 @@ class ApiDisburseController extends Controller
                                     'dot.point_use_expense as Fee Point Use', 'dot.income_outlet as Net Sales (Income Outlet)')
                             ->get()->toArray();
 
-                        if($generateTrx && $dataDisburse){
+                        if($generateTrx || $dataDisburse){
                             $sheets = new SheetCollection([
                                 "Detail Transaction" => $generateTrx,
                                 "Calculation Fee" => $dataDisburse
