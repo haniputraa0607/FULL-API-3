@@ -80,7 +80,7 @@ class ApiCronDealsController extends Controller
                 // revert back deals data
                 $deals = Deal::where('id_deals', $singleTrx->id_deals)->first();
                 if ($deals) {
-                    $up1 = $deals->update(['deals_total_claimed' => $deals->deals_total_claimed - 1]);
+                    $up1 = $deals->update(['deals_total_claimed' => $deals->deals_total_claimed - 1, 'deals_total_voucher' => $deals->deals_total_voucher + 1]);
                     if (!$up1) {
                         DB::rollBack();
                         continue;
