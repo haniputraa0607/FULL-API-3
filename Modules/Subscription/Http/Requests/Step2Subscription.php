@@ -24,7 +24,7 @@ class Step2Subscription extends FormRequest
             'id_outlet'                         => 'sometimes|array',
             'subscription_total_type'                => '',
             'subscription_total'                => '',
-            'user_limit'                        => 'required',
+            'user_limit'                        => 'nullable',
             'subscription_voucher_start'        => '',
             'subscription_voucher_expired'      => '',
             'subscription_voucher_duration'     => '',
