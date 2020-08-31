@@ -1668,7 +1668,7 @@ class ApiUser extends Controller
                         }
                     }
 
-                    $update = User::where('id', '=', $data[0]['id'])->update(['phone_verified' => '1']);
+                    $update = User::where('id', '=', $data[0]['id'])->update(['phone_verified' => '1', 'otp_valid_time' => NULL]);
                     if ($update) {
                         $profile = User::select('phone', 'email', 'name', 'id_city', 'gender', 'phone_verified', 'email_verified')
                             ->where('phone', '=', $phone)
@@ -1729,15 +1729,6 @@ class ApiUser extends Controller
             ->toArray();
         if ($data) {
             if (Auth::attempt(['phone' => $phone, 'password' => $request->json('pin_old')])) {
-                /*first if --> check if otp have expired and the current time exceeds the expiration time
-                  second if --> when the current time does not exceed the expired time, then update otp_valid_time to NULL
-                */
-                if(!is_null($data[0]['otp_valid_time']) && strtotime(date('Y-m-d H:i:s')) > strtotime($data[0]['otp_valid_time'])){
-                    return response()->json(['status' => 'fail', 'otp_check'=> 1, 'messages' => ['This OTP is expired, please re-request OTP from apps']]);
-                }elseif(!is_null($data[0]['otp_valid_time'])){
-                    User::where('phone', $phone)->update(['otp_valid_time' => NULL]);
-                }
-
                 $pin     = bcrypt($request->json('pin_new'));
                 $update = User::where('id', '=', $data[0]['id'])->update(['password' => $pin, 'phone_verified' => '1', 'pin_changed' => '1']);
                 if (\Module::collections()->has('Autocrm')) {
