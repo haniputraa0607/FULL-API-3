@@ -2,10 +2,13 @@
 
 namespace Modules\Disburse\Http\Controllers;
 
+use App\Exports\SummaryCalculationFeeBladeExport;
 use App\Http\Models\Configs;
 use App\Http\Models\DailyReportTrx;
 use App\Http\Models\Outlet;
 use App\Http\Models\Transaction;
+use App\Http\Models\TransactionProduct;
+use App\Http\Models\TransactionProductModifier;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
@@ -886,6 +889,7 @@ class ApiDisburseController extends Controller
                             ]
                         ];
 
+                        $summary = $this->summaryCalculationFee($yesterday, $outlet['id_outlet']);
                         $generateTrx = app($this->trx)->exportTransaction($filter, 1);
                         $dataDisburse = Transaction::join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
                             ->join('disburse_outlet_transactions as dot', 'dot.id_transaction', 'transactions.id_transaction')
@@ -903,8 +907,9 @@ class ApiDisburseController extends Controller
                                     'dot.point_use_expense as Fee Point Use', 'dot.income_outlet as Net Sales (Income Outlet)')
                             ->get()->toArray();
 
-                        if($generateTrx || $dataDisburse){
+                        if($generateTrx){
                             $sheets = new SheetCollection([
+                                "Summary" => new SummaryCalculationFeeBladeExport($summary),
                                 "Detail Transaction" => $generateTrx,
                                 "Calculation Fee" => $dataDisburse
                             ]);
@@ -987,5 +992,37 @@ class ApiDisburseController extends Controller
         }catch (\Exception $e) {
             $log->fail($e->getMessage());
         };
+    }
+
+    function summaryCalculationFee($date, $id_outlet = null){
+        $summaryFee = [];
+//        $summaryFee = DisburseOutletTransaction::join('transactions', 'transactions.id_transaction', 'disburse_outlet_transactions.transaction_id')
+//                    ->whereDate('transaction_date', $date)
+//                    ->selectRaw('SUM(transactions.transaction_grandtotal) as total_gross_sales, SUM(transactions.transaction_subtotal) as total_sub_total,
+//                                SUM(transactions.transaction_shipment_go_send) as total_delivery, SUM(transactions.transaction_discount) as total_discount,');
+//
+//        if($id_outlet){
+//            $summaryFee = $summaryFee->where('id_outlet', $id_outlet);
+//        }
+
+        $summaryFee = $summaryFee->get()->toArray();
+        $config = Configs::where('config_name', 'show or hide info calculation disburse')->first();
+
+        $summary_product = TransactionProduct::join('transactions', 'transactions.id_transaction', 'transaction_products.transaction_id')
+                            ->join('products as p', 'p.id_product', 'transaction_products.id_product')
+                            ->whereDate('transaction_date', $date)
+                            ->selectRaw("p.product_name as name, 'Product' as type, SUM(transaction_products.transaction_product_qty) as total_qty");
+        $summary_modifier = TransactionProductModifier::join('transactions', 'transactions.id_transaction', 'disburse_outlet_transactions.transaction_id')
+            ->join('product_modifiers as pm', 'pm.id_product_modifier', 'transaction_product_modifiers.id_product_modifier')
+            ->whereDate('transaction_date', $date)
+            ->groupBy('transaction_product_modifiers.id_product_modifier')
+            ->selectRaw("pm.text as name, 'Modifier' as type, SUM(transaction_product_modifiers.qty) as total_qty");
+
+        $summary = $summary_product->unionAll($summary_modifier)->get()->toArray();
+        return [
+            'summary_product' => $summary,
+            'summary_fee' => $summaryFee,
+            'config' => $config
+        ];
     }
 }
