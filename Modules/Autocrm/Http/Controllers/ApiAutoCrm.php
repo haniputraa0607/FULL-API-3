@@ -322,7 +322,8 @@ class ApiAutoCrm extends Controller
 									$crm['autocrm_sms_content'] = '<#> '.$crm['autocrm_sms_content'].' '.ENV('HASH_KEY_'.ENV('HASH_KEY_TYPE'));
 								}
 							}
-
+							
+							$content 	= $this->TextReplace($crm['autocrm_sms_content'], $user['phone'], $variables);
 							array_push($senddata['datapacket'],array(
 									'number' => trim($user['phone']),
 									'message' => urlencode(stripslashes(utf8_encode($content))),
