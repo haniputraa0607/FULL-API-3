@@ -44,7 +44,7 @@
                             <tbody>
                                <tr style="height: 120px">
                                    @if(isset($setting) && $setting['email_logo'] != null)
-                                       <td id="logoheader_center" style="border-collapse:collapse;border-spacing:0;color:#000;font-family:'Arial',sans-serif;line-height:1.5;margin:0;padding-top:40px;text-align:center" width="33%">
+                                       <td id="logoheader_center" style="border-collapse:collapse;border-spacing:0;color:#000;font-family:'Arial',sans-serif;line-height:1.5;margin:0;padding-top:40px;text-align:center;padding-left: 40px" width="33%">
                                            @if($setting['email_logo_position'] == 'left')
                                                <img class="CToWUd" id="detail_logo_center" @if(stristr($setting['email_logo'], 'http')) src="{{$setting['email_logo']}}" @else src="{{config('url.storage_url_api')}}{{$setting['email_logo']}}" @endif style="border:0 none;line-height:100%;outline:none;text-decoration:none;margin-bottom: -60px;height: 85px;margin-top: 5px;" alt="" height="75px">
                                            @endif
@@ -54,7 +54,7 @@
                                                <img class="CToWUd" id="detail_logo_center" @if(stristr($setting['email_logo'], 'http')) src="{{$setting['email_logo']}}" @else src="{{config('url.storage_url_api')}}{{$setting['email_logo']}}" @endif style="border:0 none;line-height:100%;outline:none;text-decoration:none;margin-bottom: -60px;height: 85px;margin-top: 5px;" alt="" height="75px">
                                            @endif
                                        </td>
-                                       <td id="logoheader_center" style="border-collapse:collapse;border-spacing:0;color:#000;font-family:'Arial',sans-serif;line-height:1.5;margin:0;padding-top:40px;text-align:center" width="33%">
+                                       <td id="logoheader_center" style="border-collapse:collapse;border-spacing:0;color:#000;font-family:'Arial',sans-serif;line-height:1.5;margin:0;padding-top:40px;text-align:center;padding-right: 40px" width="33%">
                                            @if($setting['email_logo_position'] == 'right')
                                                <img class="CToWUd" id="detail_logo_center" @if(stristr($setting['email_logo'], 'http')) src="{{$setting['email_logo']}}" @else src="{{config('url.storage_url_api')}}{{$setting['email_logo']}}" @endif style="border:0 none;line-height:100%;outline:none;text-decoration:none;margin-bottom: -60px;height: 85px;margin-top: 5px;" alt="" height="75px">
                                            @endif
