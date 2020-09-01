@@ -189,6 +189,7 @@ class ApiEnquiries extends Controller
 				unset($data['enquiry_file']);
         	}
 			// send CRM
+			$data['brand'] = $brand;
 			$goCrm = $this->sendCrm($data);
 			$data['id_enquiry'] = $save->id_enquiry;
 		}
@@ -522,10 +523,12 @@ class ApiEnquiries extends Controller
     /* SEND CRM */
     function sendCrm($data) {
 		$outlet_name = "";
+		$outlet_code = "";
 		if($data['id_outlet']){
 			$outlet = Outlet::find($data['id_outlet']);
 			if(isset($outlet['outlet_name'])){
 				$outlet_name = $outlet['outlet_name'];
+				$outlet_code = $outlet['outlet_code'];
 			}
 		}
         $send = app($this->autocrm)->SendAutoCRM('Enquiry '.$data['enquiry_subject'], $data['enquiry_phone'], [
@@ -535,6 +538,8 @@ class ApiEnquiries extends Controller
                                                                 'enquiry_name'    => $data['enquiry_name'],
 																'enquiry_email'   => $data['enquiry_email'],
 																'outlet_name'     => $outlet_name,
+																'outlet_code'     => $outlet_code,
+																'brand'     	  => $data['brand']['name_brand'],
 																'visiting_time'   => isset($data['visiting_time'])?$data['visiting_time']:"",
 																'position'   	  => isset($data['position'])?$data['position']:"",
 																'attachment' 	  => $data['attachment']
