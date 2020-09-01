@@ -2093,4 +2093,41 @@ class ApiSubscription extends Controller
 		
 		return MyHelper::checkGet($text_replace);
     }
+
+    function transactionReport(Request $request)
+    {
+    	$list 	= SubscriptionUserVoucher::orderBy('updated_at', 'Desc')
+    			->with([
+    				'transaction' => function($q) {
+    					$q->select('id_transaction', 'id_outlet', 'transaction_receipt_number', 'transaction_grandtotal');
+    				},
+    				'transaction.disburse_outlet_transaction' => function($q) {
+    					$q->select('id_disburse_transaction','id_transaction', 'subscription');
+    				},
+    				'transaction.transaction_payment_subscription' => function($q) {
+    					$q->select('id_transaction','subscription_nominal');
+    				},
+    				'transaction.outlet' => function($q) {
+    					$q->select('id_outlet', 'outlet_code', 'outlet_name');
+    				},
+    				'subscription_user' => function($q) {
+    					$q->select('id_subscription_user', 'id_subscription', 'id_user', 'bought_at', 'subscription_expired_at', 'subscription_price_point', 'subscription_price_cash');
+    				},
+    				'subscription_user.subscription' => function($q) {
+    					$q->select('id_subscription', 'subscription_title');
+    				},
+    				'subscription_user.user' => function($q) {
+    					$q->select('id', 'name', 'phone');
+    				},
+    			]);
+    			// ->where('id_transaction','184');
+
+    	if ($request->json('rule')){
+             $this->filterList($deals,$request->json('rule'),$request->json('operator')??'and');
+        }
+
+    	$list 	= $list->paginate(10);
+
+    	return MyHelper::checkGet($list);
+    }
 }
