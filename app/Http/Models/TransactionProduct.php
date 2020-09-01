@@ -51,7 +51,9 @@ class TransactionProduct extends Model
 		'transaction_product_price_tax',
 		'transaction_product_subtotal',
 		'transaction_product_note',
-		'transaction_product_discount'
+		'transaction_product_discount',
+		'transaction_product_base_discount',
+		'transaction_product_qty_discount'
 	];
 	
 	public function modifiers()
