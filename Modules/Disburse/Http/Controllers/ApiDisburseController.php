@@ -2,7 +2,8 @@
 
 namespace Modules\Disburse\Http\Controllers;
 
-use App\Exports\SummaryCalculationFeeBladeExport;
+use App\Exports\MultipleSheetExport;
+use App\Exports\SummaryTrxBladeExport;
 use App\Http\Models\Configs;
 use App\Http\Models\DailyReportTrx;
 use App\Http\Models\Outlet;
@@ -30,6 +31,7 @@ use Rap2hpoutre\FastExcel\SheetCollection;
 use Illuminate\Support\Facades\Storage;
 use File;
 use Mail;
+use Maatwebsite\Excel\Excel;
 
 class ApiDisburseController extends Controller
 {
@@ -898,29 +900,29 @@ class ApiDisburseController extends Controller
                             ->whereNull('reject_at')
                             ->where('transactions.id_outlet', $outlet['id_outlet'])
                             ->whereDate('transactions.transaction_date', $yesterday)
-                            ->select('transactions.transaction_receipt_number as Recipient Number',
-                                    DB::raw('DATE_FORMAT(transactions.transaction_date, "%d %M %Y %H:%i:%s") as "Transaction Date"'),
-                                    'transactions.transaction_grandtotal as Gross Sales',
-                                    DB::raw('ABS(transactions.transaction_discount) as "Discount"'),
-                                    'dot.subscription as Delivery', 'transactions.transaction_subtotal as Sub Total', 'dot.fee_item as Fee Item',
-                                    'dot.payment_charge as Fee Payment', 'dot.fee_item as Fee Promo', 'dot.subscription as Fee Subcription',
-                                    'dot.point_use_expense as Fee Point Use', 'dot.income_outlet as Net Sales (Income Outlet)')
+                            ->with(['transaction_payment_subscription'=> function($q){
+                                $q->join('subscription_user_vouchers', 'subscription_user_vouchers.id_subscription_user_voucher', 'transaction_payment_subscriptions.id_subscription_user_voucher')
+                                    ->join('subscription_users', 'subscription_users.id_subscription_user', 'subscription_user_vouchers.id_subscription_user')
+                                    ->join('subscriptions', 'subscriptions.id_subscription', 'subscription_users.id_subscription');
+                            }, 'vouchers'=> function($q){
+                                $q->join('deals', 'deals.id_deals', 'deals_vouchers.id_deals');
+                            }, 'promo_campaign'])
+                            ->select('dot.*', 'transactions.transaction_receipt_number',
+                                    'transactions.transaction_date', 'transactions.transaction_shipment_go_send',
+                                    'transactions.transaction_grandtotal',
+                                    'transactions.transaction_discount', 'transactions.transaction_subtotal')
                             ->get()->toArray();
 
-                        if($generateTrx){
-                            $sheets = new SheetCollection([
-                                "Summary" => new SummaryCalculationFeeBladeExport($summary),
-                                "Detail Transaction" => $generateTrx,
-                                "Calculation Fee" => $dataDisburse
-                            ]);
+                        if(!empty($generateTrx)){
                             $excelFile = 'Transaction_['.$yesterday.']_['.$outlet['outlet_code'].'].xlsx';
-                            if(!file_exists( public_path().'/excel_email')){
-                                mkdir(public_path().'/excel_email', 0777, true);
-                            }
+                            $store  = (new MultipleSheetExport([
+                                "Summary" => $summary,
+                                "Calculation Fee" => $dataDisburse,
+                                "Detail Transaction" => $generateTrx
+                            ]))->store('excel_email/'.$excelFile);
 
-                            $store = (new FastExcel($sheets))->export(public_path().'/excel_email/'.$excelFile);
                             if($store){
-                                $tmpPath[] = $excelFile;
+                                $tmpPath[] = storage_path('app/excel_email/'.$excelFile);
                                 $tmpOutlet[] = $outlet['outlet_code'].' - '.$outlet['outlet_name'];
                             }
                         }
@@ -973,7 +975,7 @@ class ApiDisburseController extends Controller
                                 // attachment
                                 if(isset($variables['attachment']) && !empty($variables['attachment'])){
                                     foreach($variables['attachment'] as $attach){
-                                        $message->attach(public_path().'/excel_email/'.$attach);
+                                        $message->attach($attach);
                                     }
                                 }
                             });
@@ -981,7 +983,7 @@ class ApiDisburseController extends Controller
                         }
 
                         foreach ($tmpPath as $t){
-                            File::delete(public_path().'/excel_email/'.$t);
+                            File::delete($t);
                         }
                     }
                 }
@@ -996,29 +998,35 @@ class ApiDisburseController extends Controller
 
     function summaryCalculationFee($date, $id_outlet = null){
         $summaryFee = [];
-//        $summaryFee = DisburseOutletTransaction::join('transactions', 'transactions.id_transaction', 'disburse_outlet_transactions.transaction_id')
-//                    ->whereDate('transaction_date', $date)
-//                    ->selectRaw('SUM(transactions.transaction_grandtotal) as total_gross_sales, SUM(transactions.transaction_subtotal) as total_sub_total,
-//                                SUM(transactions.transaction_shipment_go_send) as total_delivery, SUM(transactions.transaction_discount) as total_discount,');
-//
-//        if($id_outlet){
-//            $summaryFee = $summaryFee->where('id_outlet', $id_outlet);
-//        }
+        $summaryFee = DisburseOutletTransaction::join('transactions', 'transactions.id_transaction', 'disburse_outlet_transactions.id_transaction')
+            ->whereDate('transaction_date', $date)
+            ->selectRaw('COUNT(transactions.id_transaction) total_trx, SUM(transactions.transaction_grandtotal) as total_gross_sales, 
+                        SUM(transactions.transaction_subtotal) as total_sub_total, SUM(transactions.transaction_discount) as total_discount,
+                        SUM(transactions.transaction_shipment_go_send) as total_delivery, SUM(transactions.transaction_discount) as total_discount, 
+                        SUM(fee_item) total_fee_item, SUM(payment_charge) total_fee_pg, SUM(income_outlet) total_income_outlet,
+                        SUM(discount_central) total_income_promo, SUM(subscription_central) total_income_subscription');
 
-        $summaryFee = $summaryFee->get()->toArray();
+        if($id_outlet){
+            $summaryFee = $summaryFee->where('id_outlet', $id_outlet);
+        }
+
+        $summaryFee = $summaryFee->first()->toArray();
+
         $config = Configs::where('config_name', 'show or hide info calculation disburse')->first();
 
-        $summary_product = TransactionProduct::join('transactions', 'transactions.id_transaction', 'transaction_products.transaction_id')
+        $summaryProduct = TransactionProduct::join('transactions', 'transactions.id_transaction', 'transaction_products.id_transaction')
                             ->join('products as p', 'p.id_product', 'transaction_products.id_product')
                             ->whereDate('transaction_date', $date)
+                            ->where('transactions.id_outlet', $id_outlet)
                             ->selectRaw("p.product_name as name, 'Product' as type, SUM(transaction_products.transaction_product_qty) as total_qty");
-        $summary_modifier = TransactionProductModifier::join('transactions', 'transactions.id_transaction', 'disburse_outlet_transactions.transaction_id')
+        $summaryModifier = TransactionProductModifier::join('transactions', 'transactions.id_transaction', 'transaction_product_modifiers.id_transaction')
             ->join('product_modifiers as pm', 'pm.id_product_modifier', 'transaction_product_modifiers.id_product_modifier')
             ->whereDate('transaction_date', $date)
+           ->where('transactions.id_outlet', $id_outlet)
             ->groupBy('transaction_product_modifiers.id_product_modifier')
             ->selectRaw("pm.text as name, 'Modifier' as type, SUM(transaction_product_modifiers.qty) as total_qty");
 
-        $summary = $summary_product->unionAll($summary_modifier)->get()->toArray();
+        $summary = $summaryProduct->unionAll($summaryModifier)->get()->toArray();
         return [
             'summary_product' => $summary,
             'summary_fee' => $summaryFee,
