@@ -1517,17 +1517,59 @@ class ApiOutletController extends Controller
     // unset outlet yang tutup dan libur
     function setAvailableOutlet($outlet, $processing){
         $outlet['today']['status'] = 'open';
+        $outlet['today']['status_detail'] = '';
 
         if($outlet['today']['open'] == null || $outlet['today']['close'] == null){
             $outlet['today']['status'] = 'closed';
         }else{
+        	$outlet['today']['status_detail'] = 'Hari ini sampai pukul '.$outlet['today']['close'];
             if($outlet['today']['is_closed'] == '1'){
+                $schedule = OutletSchedule::where('id_outlet', $outlet['id_outlet'])->get()->toArray();
+	            $new_days = $this->reorderDays($schedule, $outlet['today']['day']);
+	            $i = 0;
+	            $found = 0;
+	            foreach ($new_days as $key => $value) {
+	            	if ($value['is_closed'] != 1) {
+	            		$outlet['today']['day'] 	= $value['day'];
+	            		$outlet['today']['open'] 	= $value['open'];
+	            		$outlet['today']['close'] 	= $value['close'];
+	            		$found = 1;
+	            		break;
+	            	}
+	            	$i++;
+	            }
                 $outlet['today']['status'] = 'closed';
+                if($i===0) {
+                	$outlet['today']['status_detail'] = 'Besok buka pada '.$outlet['today']['open'];
+                }elseif($found===0) {
+                	$outlet['today']['status_detail'] = 'Tutup sementara';
+                }else{
+                	$outlet['today']['status_detail'] = $outlet['today']['day'].' buka pada '.$outlet['today']['open'];
+                }
             }else{
                 if($outlet['today']['open'] && date('H:i:01') < date('H:i', strtotime($outlet['today']['open']))){
                     $outlet['today']['status'] = 'closed';
+                    $outlet['today']['status_detail'] = 'Hari ini buka pada '.$outlet['today']['open'];
                 }elseif($outlet['today']['close'] && date('H:i') > date('H:i', strtotime('-'.$processing.' minutes', strtotime($outlet['today']['close'])))){
-                    $outlet['today']['status'] = 'closed';
+                	$schedule = OutletSchedule::where('id_outlet', $outlet['id_outlet'])->get()->toArray();
+		            $new_days = $this->reorderDays($schedule, $outlet['today']['day']);
+		            $i = 0;
+		            foreach ($new_days as $key => $value) {
+		            	if ($value['is_closed'] != 1) {
+		            		$outlet['today']['day'] 	= $value['day'];
+		            		$outlet['today']['open'] 	= $value['open'];
+		            		$outlet['today']['close'] 	= $value['close'];
+		            		break;
+		            	}
+		            	$i++;
+		            }
+	                $outlet['today']['status'] = 'closed';
+	                if ($i===0) {
+                		$outlet['today']['status_detail'] = 'Besok buka pada '.$outlet['today']['open'];
+	                }
+	                else{
+	                	$outlet['today']['status_detail'] = $outlet['today']['day'].' buka pada '.$outlet['today']['open'];
+	                }
                 }
             }
         }
@@ -2832,6 +2874,24 @@ class ApiOutletController extends Controller
             ];
         }
         return MyHelper::checkGet($outlets);
+    }
+
+    function reorderDays($days, $now)
+    {	
+    	$temp_days 	= [];
+    	$new_days	= [];
+		foreach ($days as $key => $value) {
+			$temp_days[] = $value;
+			if ($value['day'] == $now) {
+				$new_days = array_slice($days, $key+1);
+				break;
+			}
+		}
+		if (!empty($new_days)) {
+			$days = array_merge($new_days, $temp_days);
+		}
+
+		return $days;
     }
 
     function checkOutletHoliday()
