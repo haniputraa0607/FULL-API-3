@@ -2390,7 +2390,8 @@ class ApiOutletController extends Controller
         }
 
         $outlet = $this->setAvailableOutlet($outlet, $processing);
-        $outlet['status'] = $this->checkOutletStatus($outlet);
+        $outlet['status'] = $outlet['today']['status'];
+        // $outlet['status'] = $this->checkOutletStatus($outlet);
         return MyHelper::checkGet($outlet);
     }
 
