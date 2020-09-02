@@ -2377,6 +2377,19 @@ class ApiOutletController extends Controller
             return MyHelper::checkGet([]);
         }
         $outlet = $outlet->toArray();
+        $processing = '0';
+        $settingTime = Setting::where('key', 'processing_time')->first();
+        if($settingTime && $settingTime->value){
+            $processing = $settingTime->value;
+        }
+        
+        $check_holiday = $this->checkOutletHoliday();
+        
+        if ($check_holiday['status'] && in_array($outlet['id_outlet'], $check_holiday['list_outlet'])) {
+        	$outlet['today']['is_closed'] = 1;
+        }
+
+        $outlet = $this->setAvailableOutlet($outlet, $processing);
         $outlet['status'] = $this->checkOutletStatus($outlet);
         return MyHelper::checkGet($outlet);
     }
