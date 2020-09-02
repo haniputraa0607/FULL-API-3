@@ -62,7 +62,8 @@ Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scop
     Route::post('text-replace', ['middleware' => 'feature_control:174', 'uses' => 'ApiSubscription@textReplace']);
 
     /* Transaction report*/
-    Route::post('transaction-report', ['middleware' => 'feature_control:174', 'uses' => 'ApiSubscription@transactionReport']);
+    Route::post('transaction-report', ['middleware' => 'feature_control:174', 'uses' => 'ApiSubscriptionReport@transactionReport']);
+    Route::any('be/list-started', ['middleware' => 'feature_control:173', 'uses' => 'ApiSubscriptionReport@liststartedSubscription']);
 
 });
 
