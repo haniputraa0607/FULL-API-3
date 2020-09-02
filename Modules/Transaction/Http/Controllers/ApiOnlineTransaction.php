@@ -944,9 +944,11 @@ class ApiOnlineTransaction extends Controller
                 'id_user'                      => $insertTransaction['id_user'],
                 'transaction_product_qty'      => $valueProduct['qty'],
                 'transaction_product_price'    => $productPrice,
-                'transaction_product_price_base'    => NULL,
-                'transaction_product_price_tax'    => NULL,
+                'transaction_product_price_base' => NULL,
+                'transaction_product_price_tax'  => NULL,
                 'transaction_product_discount'   => $this_discount,
+                'transaction_product_base_discount' => $valueProduct['base_discount'] ?? 0,
+                'transaction_product_qty_discount'  => $valueProduct['qty_discount'] ?? 0,
                 // remove discount from subtotal
                 // 'transaction_product_subtotal' => ($valueProduct['qty'] * $checkPriceProduct['product_price'])-$this_discount,
                 'transaction_product_subtotal' => ($valueProduct['qty'] * $productPrice),
