@@ -576,6 +576,9 @@ class ApiHome extends Controller
 
     public function membership(Request $request){
         $user = $request->user();
+        if ($request->json('device_id') && $request->json('device_token') && $request->json('device_type')) {
+            $this->updateDeviceUser($user, $request->json('device_id'), $request->json('device_token'), $request->json('device_type'));
+        }
         if($user->first_login===0){
             $send = app($this->autocrm)->SendAutoCRM('Login First Time', $user['phone']);
             if (!$send) {
