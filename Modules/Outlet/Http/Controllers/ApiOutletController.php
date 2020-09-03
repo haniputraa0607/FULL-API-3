@@ -2068,7 +2068,7 @@ class ApiOutletController extends Controller
             }
             MyHelper::updateOutletFile($data_pin);
             if (isset($queue_data)) {
-            	SendOutletJob::dispatch($queue_data)->allOnConnection('database');
+            	SendOutletJob::dispatch($queue_data)->allOnConnection('outletqueue');
             }
             DB::commit();
 
