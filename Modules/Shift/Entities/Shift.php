@@ -21,6 +21,6 @@ class Shift extends Model
     }
 
     public function user_outletapp(){
-        return $this->belongsTo(Modules\Shift\Entities\UserOutletApp::class, 'id_user_outletapp');
+        return $this->belongsTo('App\Http\Models\UserOutletApp', 'id_user_outletapp');
     }
 }

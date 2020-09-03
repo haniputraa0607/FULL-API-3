@@ -15,7 +15,12 @@ class ShiftController extends Controller
     public function index(Request $request){
         $post = $request->json()->all();
 
-        $data_shift = Shift::with(['outlet' => function($query){$query->select('id_outlet','outlet_code', 'outlet_name');}]);
+        $data_shift = Shift::with([
+                'outlet' => function($query){
+                    $query->select('id_outlet','outlet_code', 'outlet_name');
+                },
+                'user_outletapp'
+            ]);
   
         if(!empty($post)){
             /* Jika user melakukan filter data Shift */
@@ -39,6 +44,11 @@ class ShiftController extends Controller
             if (isset($post['id_outlet'])) {
                 $data_shift = $data_shift->where('id_outlet', '=', $post['id_outlet']);
             }
+
+            if (isset($post['id_user_outletapp'])) {
+                $data_shift = $data_shift->where('id_user_outletapp', '=', $post['id_user_outletapp']);
+            }
+
 
             if(isset($post['difference_status'])){
                 if($post['difference_status'] == 0){

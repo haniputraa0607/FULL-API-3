@@ -2950,8 +2950,8 @@ class ApiOutletApp extends Controller
         ]);
 
         $post = $request->all();
-        $user = $request->user(); // later change to user outletapp, instead of outlet
-
+        $user = $request->user();
+        
         /* Check if operational time is set true */
         $is_operational = $this->isOperational($user['id_outlet']);
         if(!$is_operational['status']){
@@ -2959,7 +2959,6 @@ class ApiOutletApp extends Controller
         }
 
         // find existing shift outlet today
-        // later change to id_user_outletapp, instead of id_outlet
         $outlet_shift = Shift::where('id_outlet', $user['id_outlet'])->whereDate('created_at', date('Y-m-d'));
         $is_outlet_shift_exist_on_curdate = (clone $outlet_shift )->first();
         $is_outlet_shift_closed = (clone $outlet_shift )->whereNotNull('close_time')->first();
@@ -2972,6 +2971,7 @@ class ApiOutletApp extends Controller
 
             //save shift
             $save = Shift::create([
+                'id_user_outletapp' => $user['id_user_outletapp'], // open by
                 'id_outlet' => $user['id_outlet'],
                 'open_time' => $open_time,
                 'cash_start' => $cash_start
@@ -3001,7 +3001,7 @@ class ApiOutletApp extends Controller
         $cash_end = $post['cash_end'];
         $id_shift = $post['id_shift'];
 
-        $user = $request->user(); // later change to user outletapp, instead of outlet
+        $user = $request->user();
 
         /* Check if operational time is set true */
         $is_operational = $this->isOperational($user['id_outlet']);
@@ -3010,7 +3010,6 @@ class ApiOutletApp extends Controller
         }
  
         // search for id shift which running today
-        // later change to id_user_outletapp, instead of id_outlet
         $shift = Shift::where('id_shift', $id_shift);
 
         $is_outlet_shift_opened_by_this_user_outlet = (clone $shift)->where('id_outlet', $user['id_outlet'])->first();
@@ -3029,14 +3028,25 @@ class ApiOutletApp extends Controller
                     $close_time = date('Y-m-d H:i:s');
                     $cash_start = $shift->first()['cash_start'];
                     $cash_difference = $cash_end - $cash_start;
-        
+
                     $update = Shift::where('id_shift', $id_shift)->update([
                         'cash_end' => $cash_end,
                         'close_time' => $close_time,
-                        'cash_difference' => $cash_difference 
+                        'cash_difference' => $cash_difference,
+                        'id_user_outletapp' => $user['id_user_outletapp'], //close by 
                     ]);
-        
+
                     if($update){
+                        // Give warning if there is difference in total of transaction offline using CASH & today's cash difference
+                        $is_different = $this->check_total_difference_offline_transaction($id_shift);
+
+                        if(isset($is_different['status']) && $is_different['status'] == 'different'){
+                            if(\Module::collections()->has('Autocrm')) {
+                                $username = $request->user()->username;
+                                $autocrm = app($this->autocrm)->SendAutoCRM('Difference in Total Transaction Offline', $username, null, null, false, true);
+                            }
+                        }
+                        
                         return response()->json(['status' => 'success', 'message' => 'Shift ended at '.$close_time]);
                     }
                     return response()->json(['status' => 'fail', 'message' => 'Failed to update current shift']);
@@ -3046,6 +3056,57 @@ class ApiOutletApp extends Controller
             return response()->json(['status' => 'fail', 'message' => 'Shift is not yet started by this user outlet']);
         }
         return response()->json(['status' => 'fail', 'message' => 'Shift is not owned by this user outlet']);
+    }
+
+    public function check_total_difference_offline_transaction($id_shift){
+        // Get current data shift
+        $shift = Shift::where('id_shift',$id_shift)->first();
+
+        /* Used variables :
+
+            $shift->cash_difference;
+            $shift->id_outlet;
+            $shift->open_time;
+            $shift->close_time;
+        */
+
+        /* Conditions :
+
+            Get transaction payment offline where id outlet = this shift id_outlet 
+            where transasction date between this shift open time & this shift close time
+            where transaction is completed
+            where transasciton payment offline - payment method = CASH
+        */
+
+        $payment = TransactionPaymentOffline::with(
+            [
+                'transaction' => function($query) use($shift){
+                    $open_time = date($shift['open_time']);
+                    $close_time = date($shift['close_time']);
+
+                    $query->where('transactions.id_outlet', $shift['id_outlet'])->whereBetween('transactions.transaction_date', [$open_time, $close_time])->where('transactions.transaction_payment_status', 'Completed');
+                },
+
+                'payment_method' => function($query){
+                    $query->where('payment_methods.payment_method_name', 'Cash');
+                }
+            ]
+        )->get()->toArray();
+
+        $payment = array_filter($payment, function($item){
+            return $item['transaction'] != null && $item['payment_method'] != null;
+        });
+
+        $total = 0;
+        foreach($payment as $item){
+            $total += $item['payment_amount'];
+        }
+
+        if($shift['cash_difference'] != $total){
+            return ['status' => 'different', 'difference' => abs($shift['cash_difference'] - $total)];
+        }
+
+        return ['status' => 'not different', 'difference' => abs($shift['cash_difference'] - $total)];
     }
 
     public function listPaymentMethod(Request $request){

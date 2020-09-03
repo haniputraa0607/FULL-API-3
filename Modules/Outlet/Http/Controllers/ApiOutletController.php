@@ -10,6 +10,7 @@ use App\Http\Models\Outlet;
 use App\Http\Models\OutletDoctor;
 use App\Http\Models\OutletDoctorSchedule;
 use App\Http\Models\OutletHoliday;
+use App\Http\Models\UserOutletApp;
 use App\Http\Models\Holiday;
 use App\Http\Models\DateHoliday;
 use App\Http\Models\OutletPhoto;
@@ -2741,5 +2742,10 @@ class ApiOutletController extends Controller
             ];
         }
         return MyHelper::checkGet($outlets);
+    }
+
+    public function listUserOutletApp(){
+        $user_outletapps = UserOutletApp::all();
+        return MyHelper::checkGet($user_outletapps);
     }
 }

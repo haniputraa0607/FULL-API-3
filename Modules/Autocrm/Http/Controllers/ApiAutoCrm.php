@@ -21,6 +21,7 @@ use App\Http\Models\News;
 use App\Http\Models\UsersMembership;
 use App\Http\Models\OauthAccessToken;
 use App\Http\Models\UserOutlet;
+use App\Http\Models\UserOutletApp;
 
 use App\Lib\MyHelper;
 use App\Lib\PushNotificationHelper;
@@ -53,6 +54,8 @@ class ApiAutoCrm extends Controller
 			$users = User::where('phone','=',$receipient)->get()->toArray();
 		}else{
 			$users = UserOutlet::select('id_user_outlet as id', 'user_outlets.*')->where('phone','=',$receipient)->get()->toArray();
+			if(empty($users))
+				$users = UserOutletApp::select('id_user_outletapp as id', 'user_outletapps.*')->where('username', '=', $receipient)->get()->toArray();
 		}
 		if(empty($users)){
 			return true;

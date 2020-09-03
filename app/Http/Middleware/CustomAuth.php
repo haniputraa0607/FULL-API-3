@@ -44,7 +44,7 @@ class CustomAuth extends AddCustomProvider
                     return response()->json(['error' => 'Unauthenticated: the device is too far from the outlet.'], 401);   
             }
             
-            $request->merge(['provider' => 'outlet-app']);
+            $request->merge(['provider' => env('','outlet-app')]);
         }elseif($request->get('user-franchise')){
             $request->merge(['provider' => 'user-franchise']);
         }elseif($request->get('quinos')){
