@@ -1721,9 +1721,12 @@ class ApiTransaction extends Controller
         if($statusReturn == 1){
             $query->whereNull('reject_at');
 
-            $forCheck = '';
-            $dataTrxDetail = [];
-            foreach ($query->cursor() as $val) {
+            $dataTrxDetail = '';
+            $cek = '';
+            $get = $query->get()->toArray();
+            $count = count($get);
+            $sum = [];
+            foreach ($get as $key=>$val) {
                 $payment = '';
                 $payment .= (!empty($val['payment_type']) ? $val['payment_type'] : '').(!empty($val['payment_method']) ? $val['payment_method'] : '');
 
@@ -1731,7 +1734,7 @@ class ApiTransaction extends Controller
 
                     $mod = TransactionProductModifier::join('product_modifiers', 'product_modifiers.id_product_modifier', 'transaction_product_modifiers.id_product_modifier')
                         ->where('transaction_product_modifiers.id_transaction_product', $val['id_transaction_product'])
-                        ->select('product_modifiers.text')->get()->toArray();
+                        ->select('product_modifiers.text', 'transaction_product_modifiers.transaction_product_modifier_price')->get()->toArray();
 
                     $promoName = '';
                     $promoType = '';
@@ -1745,17 +1748,6 @@ class ApiTransaction extends Controller
                         $promoName = $val['promo_campaign']['promo_title'];
                         $promoType = 'Promo Campaign';
                         $promoCode = $val['promo_campaign']['promo_code'];
-                    }elseif(!empty($val['transaction_payment_subscription'])) {
-                        $getSubcription = SubscriptionUserVoucher::join('subscription_users', 'subscription_users.id_subscription_user', 'subscription_user_vouchers.id_subscription_user')
-                            ->join('subscriptions', 'subscriptions.id_subscription', 'subscription_users.id_subscription')
-                            ->where('subscription_user_vouchers.id_subscription_user_voucher', $val['transaction_payment_subscription']['id_subscription_user_voucher'])
-                            ->groupBy('subscriptions.id_subscription')->select('subscriptions.*', 'subscription_user_vouchers.voucher_code')->first();
-
-                        if($getSubcription){
-                            $promoName = $getSubcription['subscription_title'];
-                            $promoType = 'Subscription';
-                            $promoCode = $getSubcription['voucher_code'];
-                        }
                     }
 
                     $status = $val['transaction_payment_status'];
@@ -1787,61 +1779,143 @@ class ApiTransaction extends Controller
                         $paymentCharge = $val['payment_charge'];
                     }
 
-                    $dt = [
-                        'Outlet Code' => $val['outlet_code'],
-                        'Outlet Name' => $val['outlet_name'],
-                        'Province' => $val['province_name'],
-                        'City' => $val['city_name'],
-                        'Receipt number' => $val['transaction_receipt_number'],
-                        'Transaction Status' => $status,
-                        'Transaction Date' => date('d M Y', strtotime($val['transaction_date'])),
-                        'Transaction Time' => date('H:i:s', strtotime($val['transaction_date'])),
-                        'Brand' => $val['name_brand'],
-                        'Category' => $val['product_category_name'],
-                        'Items' => $val['product_code'].'-'.$val['product_name'],
-                        'Modifier' => implode(",", array_column($mod, 'text')),
-                        'Qty' => $val['transaction_product_qty'],
-                        'Notes' => $val['transaction_product_note'],
-                        'Promo Type' => $promoType,
-                        'Promo Name' => $promoName,
-                        'Promo Code' => $promoCode,
-                        'Gross Sales' => $val['transaction_grandtotal'],
-                        'Discounts' => $val['transaction_product_discount'],
-                        'Delivery Fee' => $val['transaction_shipment_go_send']??'0',
-                        'Subscription' => abs($val['transaction_payment_subscription']['subscription_nominal']??0),
-                        'Subscription Fee' => (float)($val['subscription'])??0,
-                        'Total Fee (fee item+fee payment+fee promo+fee subscription) ' => ($paymentCharge == 0? '' : (float)($val['fee_item'] + $paymentCharge + $val['discount'] + $val['subscription'])),
-                        'Fee Payment Gateway' =>(float)$paymentCharge,
-                        'Net Sales (income outlet)' => (float)$val['income_outlet'],
-                        'Payment' => $payment,
-                        'Point Use' => $poinUse,
-                        'Point Cashback' => $val['transaction_cashback_earned'],
-                        'Point Refund' => $pointRefund,
-                        'Refund' => $paymentRefund,
-                        'Sales Type' => (!empty($val['transaction_shipment_go_send']) ? 'Delivery' : $val['trasaction_type']),
-                        'Received Time' =>  ($val['receive_at'] == null ? '' : date('d M Y H:i:s', strtotime($val['receive_at']))),
-                        'Ready Time' =>  ($val['ready_at'] == null ? '' : date('d M Y H:i:s', strtotime($val['ready_at']))),
-                        'Taken Time' =>  ($val['taken_at'] == null ? '' : date('d M Y H:i:s', strtotime($val['taken_at']))),
-                        'Arrived Time' =>  ($val['arrived_at'] == null ? '' : date('d M Y H:i:s', strtotime($val['arrived_at'])))
-                    ];
-                    $dataTrxDetail[] = $dt;
-                }else{
-                    $dt = [
-                        'Name' => $val['name'],
-                        'Phone' => $val['phone'],
-                        'Email' => $val['email'],
-                        'Transaction Date' => date('d M Y', strtotime($val['transaction_date'])),
-                        'Transaction Time' => date('H:i', strtotime($val['transaction_date'])),
-                        'Outlet Code' => $val['outlet_code'],
-                        'Outlet Name' => $val['outlet_name'],
-                        'Gross Sales' => number_format($val['transaction_grandtotal']),
-                        'Receipt number' => $val['transaction_receipt_number'],
-                        'Point Received' => number_format($val['transaction_cashback_earned']),
-                        'Payments' => $payment,
-                        'Transaction Type' => (!empty($val['transaction_shipment_go_send']) ? 'Delivery' : $val['trasaction_type']),
-                        'Delivery Fee' => number_format($val['transaction_shipment_go_send'])??'-'
-                    ];
+                    $html = '';
+                    $sameData = '';
+                    $sameData .= '<td>'.$val['outlet_code'].'</td>';
+                    $sameData .= '<td>'.$val['outlet_name'].'</td>';
+                    $sameData .= '<td>'.$val['province_name'].'</td>';
+                    $sameData .= '<td>'.$val['city_name'].'</td>';
+                    $sameData .= '<td>'.$val['transaction_receipt_number'].'</td>';
+                    $sameData .= '<td>'.$status.'</td>';
+                    $sameData .= '<td>'.date('d M Y', strtotime($val['transaction_date'])).'</td>';
+                    $sameData .= '<td>'.date('H:i:s', strtotime($val['transaction_date'])).'</td>';
+
+                    for($j=0;$j<$val['transaction_product_qty'];$j++){
+                        $priceMod = 0;
+                        $textMod = '';
+                        if(!empty($mod)){
+                            $priceMod = $mod[0]['transaction_product_modifier_price'];
+                            $textMod = $mod[0]['text'];
+                        }
+                        $sum [] = ($val['transaction_product_price']+$priceMod);
+                        $html .= '<tr>';
+                        $html .= $sameData;
+                        $html .= '<td>'.$val['name_brand'].'</td>';
+                        $html .= '<td>'.$val['product_category_name'].'</td>';
+                        $html .= '<td>'.$val['product_code'].'-'.$val['product_name'].'</td>';
+                        $html .= '<td>'.$textMod.'</td>';
+                        $html .= '<td>'.$val['transaction_product_price'].'</td>';
+                        $html .= '<td>'.$priceMod.'</td>';
+                        $html .= '<td>'.$val['transaction_product_note'].'</td>';
+                        $html .= '<td>'.$promoType.'</td>';
+                        $html .= '<td>'.$promoName.'</td>';
+                        $html .= '<td>'.$promoCode.'</td>';
+                        $html .= '<td>'.($val['transaction_product_price']+$priceMod??0).'</td>';
+                        if($val['transaction_product_qty_discount'] < $j){
+                            $html .= '<td>'.$val['transaction_product_base_discount'].'</td>';
+                            $html .= '<td>'.(($val['transaction_product_price']+$priceMod)-$val['transaction_product_base_discount']).'</td>';
+                        }else{
+                            $html .= '<td>'.$val['transaction_product_base_discount'].'</td>';
+                            $html .= '<td>'.($val['transaction_product_price']+$priceMod).'</td>';
+                        }
+
+                        $html .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
+                        $html .= '</tr>';
+
+                        $totalMod = count($mod);
+                        if($totalMod > 1){
+                            for($i=1;$i<$totalMod;$i++){
+                                $sum [] = $mod[$i]['transaction_product_modifier_price']??0;
+                                $html .= '<tr>';
+                                $html .= $sameData;
+                                $html .= '<td></td>';
+                                $html .= '<td></td>';
+                                $html .= '<td></td>';
+                                $html .= '<td>'.$mod[$i]['text']??''.'</td>';
+                                $html .= '<td>'.$val['transaction_product_price'].'</td>';
+                                $html .= '<td>'.$mod[$i]['transaction_product_modifier_price']??(int)'0'.'</td>';
+                                $html .= '<td></td>';
+                                $html .= '<td></td>';
+                                $html .= '<td></td>';
+                                $html .= '<td></td>';
+                                $html .= '<td>'.($mod[$i]['transaction_product_modifier_price']??0).'</td>';
+                                $html .= '<td>'.$val['transaction_product_base_discount'].'</td>';
+                                $html .= '<td>'.($val['transaction_product_subtotal']-$val['transaction_product_base_discount']).'</td>';
+                                $html .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
+                                $html .= '</tr>';
+                            }
+                        }
+                    }
+
+                    if($key == ($count-1) || (isset($get[$key+1]['transaction_receipt_number']) && $val['transaction_receipt_number'] != $get[$key+1]['transaction_receipt_number'])){
+                        if(!empty($val['transaction_payment_subscription'])) {
+                            $getSubcription = SubscriptionUserVoucher::join('subscription_users', 'subscription_users.id_subscription_user', 'subscription_user_vouchers.id_subscription_user')
+                                ->join('subscriptions', 'subscriptions.id_subscription', 'subscription_users.id_subscription')
+                                ->where('subscription_user_vouchers.id_subscription_user_voucher', $val['transaction_payment_subscription']['id_subscription_user_voucher'])
+                                ->groupBy('subscriptions.id_subscription')->select('subscriptions.*', 'subscription_user_vouchers.voucher_code')->first();
+
+                            if($getSubcription){
+                                $sum []  = -$val['transaction_payment_subscription']['subscription_nominal']??0;
+                                $html .= '<tr>';
+                                $html .= $sameData;
+                                $html .= '<td></td>';
+                                $html .= '<td></td>';
+                                $html .= '<td>'.$getSubcription['subscription_title'].'(subscription)</td>';
+                                $html .= '<td></td>';
+                                $html .= '<td></td>';
+                                $html .= '<td></td>';
+                                $html .= '<td></td>';
+                                $html .= '<td></td>';
+                                $html .= '<td></td>';
+                                $html .= '<td></td>';
+                                $html .= '<td></td>';
+                                $html .= '<td>'.abs($val['transaction_payment_subscription']['subscription_nominal']??0).'</td>';
+                                $html .= '<td>'.(-$val['transaction_payment_subscription']['subscription_nominal']??0).'</td>';
+                                $html .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
+                                $html .= '</tr>';
+                            }
+                        }
+
+                        if(!empty($val['transaction_shipment_go_send'])) {
+                            $sum []  = $val['transaction_shipment_go_send'];
+                            $html .= '<tr>';
+                            $html .= $sameData;
+                            $html .= '<td></td>';
+                            $html .= '<td></td>';
+                            $html .= '<td>Delivery</td>';
+                            $html .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
+                            $html .= '<td>'.($val['transaction_shipment_go_send']??0).'</td>';
+                            $html .= '<td>0</td>';
+                            $html .= '<td>'.($val['transaction_shipment_go_send']??0).'</td>';
+                            $html .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
+                            $html .= '</tr>';
+                        }
+
+                        $html .= '<tr>';
+                        $html .= $sameData;
+                        $html .= '<td></td>';
+                        $html .= '<td></td>';
+                        $html .= '<td>Fee</td>';
+                        $html .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
+                        $html .= '<td>'.array_sum($sum).'</td>';
+                        $html .= '<td>'.(float)($val['fee_item'] + $val['discount'] + $val['subscription']).'</td>';
+                        $html .= '<td>'.(float)$paymentCharge.'</td>';
+                        $html .= '<td>'.(float)$val['income_outlet'].'</td>';
+                        $html .= '<td>'.$payment.'</td>';
+                        $html .= '<td>'.abs($poinUse).'</td>';
+                        $html .= '<td>'.$val['transaction_cashback_earned'].'</td>';
+                        $html .= '<td>'.$pointRefund.'</td>';
+                        $html .= '<td>'.$paymentRefund.'</td>';
+                        $html .= '<td>'.(!empty($val['transaction_shipment_go_send']) ? 'Delivery' : $val['trasaction_type']).'</td>';
+                        $html .= '<td>'.($val['receive_at'] == null ? '' : date('d M Y H:i:s', strtotime($val['receive_at']))).'</td>';
+                        $html .= '<td>'.($val['ready_at'] == null ? '' : date('d M Y H:i:s', strtotime($val['ready_at']))).'</td>';
+                        $html .= '<td>'.($val['taken_at'] == null ? '' : date('d M Y H:i:s', strtotime($val['taken_at']))).'</td>';
+                        $html .= '<td>'.($val['arrived_at'] == null ? '' : date('d M Y H:i:s', strtotime($val['arrived_at']))).'</td>';
+                        $html .= '</tr>';
+                        $sum = [];
+                    }
                 }
+                $dataTrxDetail .= $html;
             }
             return $dataTrxDetail;
         }else{
