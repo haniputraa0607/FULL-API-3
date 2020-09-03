@@ -45,6 +45,10 @@ return [
             'driver' => 'passport',
             'provider' => 'users',
         ],
+        // 'outlet-app' => [
+        //     'driver' => 'passport',
+        //     'provider' => 'outlet-app'
+        // ],
         'outlet-app' => [
             'driver' => 'passport',
             'provider' => 'outlet-app'
@@ -91,10 +95,16 @@ return [
         //     'table' => 'users',
         // ],
 
+        // 'outlet-app' => [
+        //     'driver' => 'eloquent',
+        //     'model' => App\Http\Models\Outlet::class
+        // ],
+
         'outlet-app' => [
             'driver' => 'eloquent',
-            'model' => App\Http\Models\Outlet::class
+            'model' => App\Http\Models\UserOutletApp::class
         ],
+
         'quinos' => [
             'driver' => 'eloquent',
             'model' => App\Http\Models\QuinosUser::class

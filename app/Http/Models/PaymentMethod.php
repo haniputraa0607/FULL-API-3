@@ -22,4 +22,8 @@ class PaymentMethod extends Model
         return $this->hasMany(\App\Http\Models\PaymentMethodOutlet::class, 'id_payment_method');
     }
 
+    public function transaction_payment_offlines(){
+		return $this->hasMany(\App\Http\Models\TransactionPaymentOffline::class, 'id_payment_method');
+	}
+
 }
