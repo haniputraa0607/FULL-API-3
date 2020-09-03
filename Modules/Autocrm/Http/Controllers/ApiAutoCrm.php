@@ -229,7 +229,7 @@ class ApiAutoCrm extends Controller
 							'setting' => $setting
 						);
 						try{
-							Mail::send('emails.test', $data, function($message) use ($to,$subject,$name,$setting, $autocrm_title,$variables)
+							Mail::send('emails.test', $data, function($message) use ($to,$subject,$name,$setting, $autocrm_title,$variables,$crm)
 							{
 								$message->to($to, $name)->subject($subject);
 								if(!empty($setting['email_from']) && !empty($setting['email_sender'])){
@@ -951,8 +951,9 @@ class ApiAutoCrm extends Controller
 
 	public function listAutoCrm(Request $request){
 		$query = Autocrm::with('whatsapp_content');
-		if($request->autocrm_title){
-			$query = $query->where('autocrm_title',$request->autocrm_title)->first();
+		$post = $request->json()->all();
+		if(isset($post['autocrm_title'])){
+			$query = $query->where('autocrm_title',$post['autocrm_title'])->first();
 		}else{
 			$query = $query->get()->toArray();
 		}
