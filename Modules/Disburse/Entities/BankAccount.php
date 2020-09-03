@@ -14,7 +14,8 @@ class BankAccount extends Model
 		'beneficiary_name',
         'beneficiary_account',
         'beneficiary_alias',
-        'beneficiary_email'
+        'beneficiary_email',
+        'send_email_to'
 	];
 
     public function bank_account_outlet()
