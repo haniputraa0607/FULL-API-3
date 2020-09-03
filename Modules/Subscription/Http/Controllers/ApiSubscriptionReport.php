@@ -42,38 +42,47 @@ class ApiSubscriptionReport extends Controller
 
     function transactionReport(Request $request)
     {
-    	$list 	= SubscriptionUserVoucher::orderBy('updated_at', 'Desc')
-    			->with([
-    				'transaction' => function($q) {
-    					$q->select('id_transaction', 'id_outlet', 'transaction_receipt_number', 'transaction_grandtotal');
-    				},
-    				'transaction.disburse_outlet_transaction' => function($q) {
-    					$q->select('id_disburse_transaction','id_transaction', 'subscription');
-    				},
-    				'transaction.transaction_payment_subscription' => function($q) {
-    					$q->select('id_transaction','subscription_nominal');
-    				},
-    				'transaction.outlet' => function($q) {
-    					$q->select('id_outlet', 'outlet_code', 'outlet_name');
-    				},
-    				'subscription_user' => function($q) {
-    					$q->select('id_subscription_user', 'id_subscription', 'id_user', 'bought_at', 'subscription_expired_at', 'subscription_price_point', 'subscription_price_cash');
-    				},
-    				'subscription_user.subscription' => function($q) {
-    					$q->select('id_subscription', 'subscription_title', 'subscription_type');
-    				},
-    				'subscription_user.user' => function($q) {
-    					$q->select('id', 'name', 'phone');
-    				},
-    			]);
-    			// ->where('id_transaction','184');
+    	$list 	= DB::table('subscription_user_vouchers')
+    			->orderBy('subscription_user_vouchers.updated_at', 'Desc')
+    			->select(
+    				'subscription_user_vouchers.voucher_code', 
+    				'subscription_user_vouchers.used_at', 
+    				'subscription_user_vouchers.created_at', 
+    				'subscription_users.bought_at', 
+    				'subscription_users.id_subscription', 
+    				'subscription_users.subscription_expired_at', 
+    				'subscription_users.subscription_price_cash', 
+    				'subscription_users.subscription_price_point',
+    				'users.name', 
+    				'users.phone', 
+    				DB::raw("CONCAT(users.name,'-',users.phone) as user"),
+    				'transactions.id_transaction', 
+    				'transactions.id_outlet', 
+    				'transactions.transaction_receipt_number', 
+    				'transactions.transaction_grandtotal', 
+    				'outlets.outlet_code', 
+ 	   				'outlets.outlet_name', 
+    				DB::raw("CONCAT(outlets.outlet_code,'-',outlets.outlet_name) as outlet"),
+    				'subscriptions.subscription_title', 
+    				'subscriptions.subscription_type', 
+    				'transaction_payment_subscriptions.subscription_nominal',
+    				'disburse_outlet_transactions.subscription as charged_outlet',
+    				'disburse_outlet_transactions.subscription_central as charged_central'
+    				// DB::raw("(transaction_payment_subscriptions.subscription_nominal - charged_outlet) as charged_central")
+    			)
+    			->leftJoin('subscription_users','subscription_user_vouchers.id_subscription_user','=','subscription_users.id_subscription_user')
+    			->leftJoin('users','users.id','=','subscription_users.id_user')
+    			->leftJoin('transactions', 'transactions.id_transaction', '=', 'subscription_user_vouchers.id_transaction')
+    			->leftJoin('outlets', 'outlets.id_outlet', '=', 'transactions.id_outlet')
+    			->leftJoin('subscriptions', 'subscriptions.id_subscription', '=', 'subscription_users.id_subscription')
+    			->leftJoin('transaction_payment_subscriptions', 'transaction_payment_subscriptions.id_transaction', '=', 'transactions.id_transaction')
+    			->leftJoin('disburse_outlet_transactions', 'disburse_outlet_transactions.id_transaction', '=', 'transactions.id_transaction')
+    			->groupBy('subscription_user_vouchers.id_subscription_user_voucher');
 
-// return [$request['rule'][0]['parameter']];
     	if ($request->json('rule')){
-             $a = $this->filterReport($list,$request);
-             // return $a;
+             $this->filterReport($list, $request);
         }
-// return $request;
+
     	$list 	= $list->paginate(10);
 
     	return MyHelper::checkGet($list);
@@ -91,8 +100,8 @@ class ApiSubscriptionReport extends Controller
     {
         $allowed = [
             'operator' 	=> ['=', 'like', '<', '>', '<=', '>='],
-            'subject' 	=> ['name', 'phone', 'subscription', 'bought_at', 'expired_at', 'used_at', 'outlet', 'transaction_receipt_number', 'subscription_price', 'voucher_code', 'subscription_nominal', 'transaction_grandtotal', 'charged_outlet', 'charged_central'],
-            'mainSubject' => ['subscription_user_receipt_number','paid_status','bought_at']
+            'subject' 	=> ['name', 'phone', 'subscription', 'bought_at', 'subscription_expired_at', 'used_at', 'outlet', 'transaction_receipt_number', 'subscription_price_cash', 'subscription_price_point', 'voucher_code', 'subscription_nominal', 'transaction_grandtotal', 'charged_outlet', 'charged_central'],
+            'mainSubject' => ['name', 'phone', 'bought_at', 'subscription_expired_at', 'used_at', 'transaction_receipt_number', 'subscription_price_cash', 'subscription_price_point', 'voucher_code', 'subscription_nominal', 'transaction_grandtotal', 'charged_outlet', 'charged_central']
         ];
         $return 	= [];
         $where 		= $request->json('operator') == 'or' ? 'orWhere' : 'where';
@@ -104,6 +113,7 @@ class ApiSubscriptionReport extends Controller
             $foreign=array();
             $outletCount=0;
             $userCount=0;
+
             foreach ($rule??[] as $value) {
                 if (!in_array($value['subject'], $allowed['subject'])) {
                     continue;
@@ -115,23 +125,31 @@ class ApiSubscriptionReport extends Controller
                     $value['parameter'] = '%' . $value['parameter'] . '%';
                 }
 
-                if ($value['subject'] == 'name' || $value['subject'] == 'phone') {
-                	$queryx->$whereHas('subscription_user.user', function($q) use ( $where, $value){
-                		$q->where($value['subject'], $value['operator'], $value['parameter']);
-                	});
+                if ($value['subject'] != 'subscription' && $value['subject'] != 'outlet') {
+                	if ($value['subject'] == 'charged_outlet') {
+                    	$queryx->$where('disburse_outlet_transactions.subscription', $value['operator'], $value['parameter']);
+                    }
+                    elseif($value['subject'] == 'charged_central'){
+                    	$queryx->$where('disburse_outlet_transactions.subscription_central', $value['operator'], $value['parameter']);
+                	}
+                	elseif($value['subject'] == 'subscription_price_cash'){
+                    	$queryx->$where('subscription_users.subscription_price_cash', $value['operator'], $value['parameter']);
+                	}
+                	elseif($value['subject'] == 'subscription_price_point'){
+                    	$queryx->$where('subscription_users.subscription_price_point', $value['operator'], $value['parameter']);
+                	}
+                	else{
+                    	$queryx->$where($value['subject'], $value['operator'], $value['parameter']);
+                	}
+                		
+                } else {
+                	if($value['subject'] == 'subscription'){
+                		$queryx->$whereIn('subscription_users.id_subscription', $value['parameter']);
+                	}
+                	elseif($value['subject'] == 'outlet'){
+                		$queryx->$whereIn('transactions.id_outlet', $value['parameter']);
+                	}
                 }
-                elseif ($value['subject'] == 'subscription') {
-                	$queryx->$whereHas('subscription_user.subscription', function($q) use ( $whereIn, $value){
-                		$q->whereIn('id_subscription', $value['parameter']);
-                	});
-                }
-                /*
-                elseif ($value['subject'] == 'bought_at' || $value['subject'] == 'expired_at') {
-                	$queryx->$whereHas('subscription_user', function($q) use ( $where, $value){
-                		$q->where('id_subscription', $value['parameter']);
-                	});
-                }*/
-
 
                 $return[] = $value;
             }
