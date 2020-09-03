@@ -42,48 +42,8 @@ class ApiSubscriptionReport extends Controller
 
     function transactionReport(Request $request)
     {
-    	$list 	= DB::table('subscription_user_vouchers')
-    			->orderBy('subscription_user_vouchers.updated_at', 'Desc')
-    			->select(
-    				'subscription_user_vouchers.voucher_code', 
-    				'subscription_user_vouchers.used_at', 
-    				'subscription_user_vouchers.created_at', 
-    				'subscription_users.bought_at', 
-    				'subscription_users.id_subscription', 
-    				'subscription_users.subscription_expired_at', 
-    				'subscription_users.subscription_price_cash', 
-    				'subscription_users.subscription_price_point',
-    				'users.name', 
-    				'users.phone', 
-    				DB::raw("CONCAT(users.name,'-',users.phone) as user"),
-    				'transactions.id_transaction', 
-    				'transactions.id_outlet', 
-    				'transactions.transaction_receipt_number', 
-    				'transactions.transaction_grandtotal', 
-    				'outlets.outlet_code', 
- 	   				'outlets.outlet_name', 
-    				DB::raw("CONCAT(outlets.outlet_code,'-',outlets.outlet_name) as outlet"),
-    				'subscriptions.subscription_title', 
-    				'subscriptions.subscription_type', 
-    				'transaction_payment_subscriptions.subscription_nominal',
-    				'disburse_outlet_transactions.subscription as charged_outlet',
-    				'disburse_outlet_transactions.subscription_central as charged_central'
-    				// DB::raw("(transaction_payment_subscriptions.subscription_nominal - charged_outlet) as charged_central")
-    			)
-    			->leftJoin('subscription_users','subscription_user_vouchers.id_subscription_user','=','subscription_users.id_subscription_user')
-    			->leftJoin('users','users.id','=','subscription_users.id_user')
-    			->leftJoin('transactions', 'transactions.id_transaction', '=', 'subscription_user_vouchers.id_transaction')
-    			->leftJoin('outlets', 'outlets.id_outlet', '=', 'transactions.id_outlet')
-    			->leftJoin('subscriptions', 'subscriptions.id_subscription', '=', 'subscription_users.id_subscription')
-    			->leftJoin('transaction_payment_subscriptions', 'transaction_payment_subscriptions.id_transaction', '=', 'transactions.id_transaction')
-    			->leftJoin('disburse_outlet_transactions', 'disburse_outlet_transactions.id_transaction', '=', 'transactions.id_transaction')
-    			->groupBy('subscription_user_vouchers.id_subscription_user_voucher');
-
-    	if ($request->json('rule')){
-             $this->filterReport($list, $request);
-        }
-
-    	$list 	= $list->paginate(10);
+    	$list = $this->getSubscriptionTrxReport($request);
+    	$list = $list->paginate(10);
 
     	return MyHelper::checkGet($list);
     }
@@ -104,17 +64,20 @@ class ApiSubscriptionReport extends Controller
             'mainSubject' => ['name', 'phone', 'bought_at', 'subscription_expired_at', 'used_at', 'transaction_receipt_number', 'subscription_price_cash', 'subscription_price_point', 'voucher_code', 'subscription_nominal', 'transaction_grandtotal', 'charged_outlet', 'charged_central']
         ];
         $return 	= [];
-        $where 		= $request->json('operator') == 'or' ? 'orWhere' : 'where';
-        $whereDate 	= $request->json('operator') == 'or' ? 'orWhereDate' : 'whereDate';
-        $whereHas 	= $request->json('operator') == 'or' ? 'orWhereHas' : 'whereHas';
-        $whereIn 	= $request->json('operator') == 'or' ? 'orWhereIn' : 'whereIn';
-        $rule 		= $request->json('rule');
+        $where 		= $request['operator'] == 'or' ? 'orWhere' : 'where';
+        $whereDate 	= $request['operator'] == 'or' ? 'orWhereDate' : 'whereDate';
+        $whereHas 	= $request['operator'] == 'or' ? 'orWhereHas' : 'whereHas';
+        $whereIn 	= $request['operator'] == 'or' ? 'orWhereIn' : 'whereIn';
+        $rule 		= $request['rule'];
         $query->where(function($queryx) use ($rule,$allowed,$where,$query,$request, $whereDate, $whereHas, $whereIn){
             $foreign=array();
             $outletCount=0;
             $userCount=0;
 
-            foreach ($rule??[] as $value) {
+            foreach ($rule ?? [] as $value) {
+            	if(is_object($value)){
+                    $value = (array)$value;
+                }
                 if (!in_array($value['subject'], $allowed['subject'])) {
                     continue;
                 }
@@ -154,6 +117,61 @@ class ApiSubscriptionReport extends Controller
                 $return[] = $value;
             }
         });
-        return ['filter' => $return, 'filter_operator' => $request->json('operator')];
+        return ['filter' => $return, 'filter_operator' => $request['operator']];
+    }
+
+    function getSubscriptionTrxReport($request)
+    {
+    	$query 	= DB::table('subscription_user_vouchers')
+	    			->orderBy('subscription_user_vouchers.updated_at', 'Desc')
+	    			->select(
+	    				'subscription_user_vouchers.voucher_code', 
+	    				'subscription_user_vouchers.used_at', 
+	    				'subscription_user_vouchers.created_at', 
+	    				'subscription_users.bought_at', 
+	    				'subscription_users.id_subscription', 
+	    				'subscription_users.subscription_expired_at', 
+	    				'subscription_users.subscription_price_cash', 
+	    				'subscription_users.subscription_price_point',
+	    				'users.name', 
+	    				'users.phone', 
+	    				DB::raw("CONCAT(users.name,'-',users.phone) as user"),
+	    				'transactions.id_transaction', 
+	    				'transactions.id_outlet', 
+	    				'transactions.transaction_receipt_number', 
+	    				'transactions.transaction_grandtotal', 
+	    				'outlets.outlet_code', 
+	 	   				'outlets.outlet_name', 
+	    				DB::raw("CONCAT(outlets.outlet_code,'-',outlets.outlet_name) as outlet"),
+	    				'subscriptions.subscription_title', 
+	    				'subscriptions.subscription_type', 
+	    				'transaction_payment_subscriptions.subscription_nominal',
+	    				'disburse_outlet_transactions.subscription as charged_outlet',
+	    				'disburse_outlet_transactions.subscription_central as charged_central'
+	    				// DB::raw("(transaction_payment_subscriptions.subscription_nominal - charged_outlet) as charged_central")
+	    			)
+	    			->leftJoin('subscription_users','subscription_user_vouchers.id_subscription_user','=','subscription_users.id_subscription_user')
+	    			->leftJoin('users','users.id','=','subscription_users.id_user')
+	    			->leftJoin('transactions', 'transactions.id_transaction', '=', 'subscription_user_vouchers.id_transaction')
+	    			->leftJoin('outlets', 'outlets.id_outlet', '=', 'transactions.id_outlet')
+	    			->leftJoin('subscriptions', 'subscriptions.id_subscription', '=', 'subscription_users.id_subscription')
+	    			->leftJoin('transaction_payment_subscriptions', 'transaction_payment_subscriptions.id_transaction', '=', 'transactions.id_transaction')
+	    			->leftJoin('disburse_outlet_transactions', 'disburse_outlet_transactions.id_transaction', '=', 'transactions.id_transaction')
+	    			->groupBy('subscription_user_vouchers.id_subscription_user_voucher');
+
+    	if (isset($request['rule'])){
+             $this->filterReport($query, $request);
+        }
+
+        return $query;
+    }
+
+    public function exportExcel($filter){
+        $data = $this->getSubscriptionTrxReport($filter);
+
+        foreach ($data->cursor() as $val) {
+
+            yield $val;
+        }
     }
 }
