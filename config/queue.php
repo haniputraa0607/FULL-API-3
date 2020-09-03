@@ -65,7 +65,7 @@ return [
         'outletqueue' => [
             'driver' => 'database',
             'table' => 'outlet_queue',
-            'queue' => 'SendOutletQueue',
+            'queue' => 'outletqueue',
             'retry_after' => 90,
         ],
 
