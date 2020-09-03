@@ -11,6 +11,7 @@ use App\Http\Models\TransactionBalance;
 use App\Http\Models\TransactionPaymentBalance;
 use App\Http\Models\TransactionPaymentMidtran;
 use App\Jobs\DisburseJob;
+use App\Jobs\SendEmailDisburseJob;
 use Cassandra\Exception\ExecutionException;
 use Illuminate\Auth\Events\Failed;
 use Illuminate\Http\Request;
@@ -59,6 +60,9 @@ class ApiIrisController extends Controller
         ];
 
         if($data){
+            if($status == 'completed'){
+                SendEmailDisburseJob::dispatch(['reference_no' => $reference_no])->onConnection('disbursequeue');
+            }
             $dataLog['response'] = json_encode(['status' => 'success']);
             LogIRIS::create($dataLog);
             return response()->json(['status' => 'success']);
@@ -74,8 +78,10 @@ class ApiIrisController extends Controller
         $log = MyHelper::logCron('Disburse');
         try {
             $getSettingGlobalTimeToSent = Setting::where('key', 'disburse_global_setting_time_to_sent')->first();
+            $getSettingFeeDisburse = Setting::where('key', 'disburse_setting_fee_transfer')->first();
 
-            if($getSettingGlobalTimeToSent && $getSettingGlobalTimeToSent['value'] !== ""){
+            if($getSettingGlobalTimeToSent && $getSettingGlobalTimeToSent['value'] !== "" &&
+                $getSettingFeeDisburse && $getSettingFeeDisburse['value'] !== ""){
                 /*
                  -first check current date is holiday or not
                  -today is holiday when return false
@@ -90,6 +96,7 @@ class ApiIrisController extends Controller
                     $time = $getSettingGlobalTimeToSent['value'];
                     $getDateForQuery = $this->getDateForQuery($time, $getHoliday);
                     $dateForQuery = $getDateForQuery;
+                    $feeDisburse = (int)$getSettingFeeDisburse['value'];
 
                     $getData = Transaction::join('disburse_outlet_transactions', 'disburse_outlet_transactions.id_transaction', 'transactions.id_transaction')
                         ->leftJoin('disburse_outlet', 'disburse_outlet.id_disburse_outlet', 'disburse_outlet_transactions.id_disburse_outlet')
@@ -216,28 +223,33 @@ class ApiIrisController extends Controller
                             $dataToInsert = [];
 
                             foreach ($arrTmpDisburse as $value){
-                                $toSend = [
-                                    'beneficiary_name' => $value['beneficiary_name'],
-                                    'beneficiary_account' => $value['beneficiary_account'],
-                                    'beneficiary_bank' => $value['beneficiary_bank'],
-                                    'beneficiary_email' => $value['beneficiary_email'],
-                                    'amount' => $value['total_amount'],
-                                    'notes' => 'Payment from apps '.date('d M Y'),
-                                ];
+                                $amount = $value['total_amount']-$feeDisburse;
+                                if($amount > 0){
+                                    $toSend = [
+                                        'beneficiary_name' => $value['beneficiary_name'],
+                                        'beneficiary_account' => $value['beneficiary_account'],
+                                        'beneficiary_bank' => $value['beneficiary_bank'],
+                                        'beneficiary_email' => $value['beneficiary_email'],
+                                        'amount' => $amount,
+                                        'notes' => 'Payment from apps '.date('d M Y'),
+                                    ];
 
-                                $dataToSend[] = $toSend;
+                                    $dataToSend[] = $toSend;
 
-                                $dataToInsert[] = [
-                                    'disburse_nominal' => $value['total_amount'],
-                                    'id_bank_account' => $value['id_bank_account'],
-                                    'beneficiary_name' => $value['beneficiary_name'],
-                                    'beneficiary_bank_name' => $value['beneficiary_bank'],
-                                    'beneficiary_account_number' => $value['beneficiary_account'],
-                                    'beneficiary_email' => $value['beneficiary_email'],
-                                    'beneficiary_alias' => $value['beneficiary_alias'],
-                                    'notes' => 'Payment from apps '.date('d M Y'),
-                                    'request' => json_encode($toSend)
-                                ];
+                                    $dataToInsert[] = [
+                                        'disburse_nominal' => $amount,
+                                        'total_income_outlet' => $value['total_amount'],
+                                        'disburse_fee' => $feeDisburse,
+                                        'id_bank_account' => $value['id_bank_account'],
+                                        'beneficiary_name' => $value['beneficiary_name'],
+                                        'beneficiary_bank_name' => $value['beneficiary_bank'],
+                                        'beneficiary_account_number' => $value['beneficiary_account'],
+                                        'beneficiary_email' => $value['beneficiary_email'],
+                                        'beneficiary_alias' => $value['beneficiary_alias'],
+                                        'notes' => 'Payment from apps '.date('d M Y'),
+                                        'request' => json_encode($toSend)
+                                    ];
+                                }
                             }
 
                             foreach ($arrTmp as $val){
@@ -262,32 +274,34 @@ class ApiIrisController extends Controller
                                 }
                             }
 
-                            $sendToIris = MyHelper::connectIris('Payouts', 'POST','api/v1/payouts', ['payouts' => $dataToSend]);
+                            if($dataToSend){
+                                $sendToIris = MyHelper::connectIris('Payouts', 'POST','api/v1/payouts', ['payouts' => $dataToSend]);
 
-                            if(isset($sendToIris['status']) && $sendToIris['status'] == 'success'){
-                                if(isset($sendToIris['response']['payouts']) && !empty($sendToIris['response']['payouts'])){
-                                    $j = 0;
-                                    foreach ($sendToIris['response']['payouts'] as $val){
-                                        $dataToInsert[$j]['response'] = json_encode($val);
-                                        $dataToInsert[$j]['reference_no'] = $val['reference_no'];
-                                        $dataToInsert[$j]['disburse_status'] = $arrStatus[$val['status']];
+                                if(isset($sendToIris['status']) && $sendToIris['status'] == 'success'){
+                                    if(isset($sendToIris['response']['payouts']) && !empty($sendToIris['response']['payouts'])){
+                                        $j = 0;
+                                        foreach ($sendToIris['response']['payouts'] as $val){
+                                            $dataToInsert[$j]['response'] = json_encode($val);
+                                            $dataToInsert[$j]['reference_no'] = $val['reference_no'];
+                                            $dataToInsert[$j]['disburse_status'] = $arrStatus[$val['status']];
 
-                                        $insertToDisburseOutlet = $dataToInsert[$j]['disburse_outlet'];
-                                        unset($dataToInsert[$j]['disburse_outlet']);
+                                            $insertToDisburseOutlet = $dataToInsert[$j]['disburse_outlet'];
+                                            unset($dataToInsert[$j]['disburse_outlet']);
 
-                                        $insert = Disburse::create($dataToInsert[$j]);
+                                            $insert = Disburse::create($dataToInsert[$j]);
 
-                                        if($insert){
-                                            foreach ($insertToDisburseOutlet as $do){
-                                                $do['id_disburse'] = $insert['id_disburse'];
-                                                $disburseOutlet = DisburseOutlet::create($do);
-                                                if($disburseOutlet){
-                                                    DisburseOutletTransaction::whereIn('id_disburse_transaction', $do['transactions'])
+                                            if($insert){
+                                                foreach ($insertToDisburseOutlet as $do){
+                                                    $do['id_disburse'] = $insert['id_disburse'];
+                                                    $disburseOutlet = DisburseOutlet::create($do);
+                                                    if($disburseOutlet){
+                                                        DisburseOutletTransaction::whereIn('id_disburse_transaction', $do['transactions'])
                                                             ->update(['id_disburse_outlet' => $disburseOutlet['id_disburse_outlet'], 'updated_at' => date('Y-m-d H:i:s')]);
+                                                    }
                                                 }
                                             }
+                                            $j++;
                                         }
-                                        $j++;
                                     }
                                 }
                             }
@@ -348,7 +362,7 @@ class ApiIrisController extends Controller
             return 'succes';
         } catch (\Exception $e) {
             $log->fail($e->getMessage());
-        };
+        }
     }
 
     public function calculationTransaction($id_transaction){
