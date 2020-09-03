@@ -801,11 +801,13 @@ class PromoCampaignTools{
 			$product_price=$trx['new_price']/$trx['qty'];
 		}
 		if($promo_rules->discount_type=='Nominal' || $promo_rules->discount_type=='nominal'){
-			$discount=$promo_rules->discount_value*$discount_qty;
+			$discount = $promo_rules->discount_value*$discount_qty;
 
-			$trx['discount']	= ($trx['discount']??0)+$discount;
-			$trx['new_price']	= ($product_price*$trx['qty'])-$trx['discount'];
-			$trx['is_promo']	= 1;
+			$trx['discount']		= ($trx['discount']??0)+$discount;
+			$trx['new_price']		= ($product_price*$trx['qty'])-$trx['discount'];
+			$trx['is_promo']		= 1;
+			$trx['base_discount']	= $promo_rules->discount_value;
+			$trx['qty_discount']	= $discount_qty;
 		}else{
 			// percent
 			$discount_per_product = ($promo_rules->discount_value/100)*$product_price;
@@ -813,15 +815,19 @@ class PromoCampaignTools{
 				$discount_per_product = $promo_rules->max_percent_discount;
 			}
 			$discount=(int)($discount_per_product*$discount_qty);
-			$trx['discount']=($trx['discount']??0)+$discount;
-			$trx['new_price']=($product_price*$trx['qty'])-$trx['discount'];
-			$trx['is_promo']=1;
+			$trx['discount']		= ($trx['discount']??0)+$discount;
+			$trx['new_price']		= ($product_price*$trx['qty'])-$trx['discount'];
+			$trx['is_promo']		= 1;
+			$trx['base_discount']	= $discount_per_product;
+			$trx['qty_discount']	= $discount_qty;
 		}
 		if($trx['new_price']<0){
-			$trx['is_promo']=1;
-			$trx['new_price']=0;
-			$trx['discount']=$product_price*$discount_qty;
-			$discount=$trx['discount']-$old;
+			$trx['is_promo']		= 1;
+			$trx['new_price']		= 0;
+			$trx['discount']		= $product_price*$discount_qty;
+			$trx['base_discount']	= $product_price;
+			$trx['qty_discount']	= $discount_qty;
+			$discount 				= $trx['discount']-$old;
 		}
 		return $discount;
 	}
