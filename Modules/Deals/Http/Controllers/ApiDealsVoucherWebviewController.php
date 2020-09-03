@@ -48,8 +48,22 @@ class ApiDealsVoucherWebviewController extends Controller
         $post['used'] = 0;
 
         // $action = MyHelper::postCURLWithBearer('api/voucher/me?log_save=0', $post, $bearer);
-        $voucher = DealsUser::with(['deals_voucher', 'deals_voucher.deal', 'deals_voucher.deal.brand', 'deals_voucher.deal.deals_content', 'deals_voucher.deal.deals_content.deals_content_details', 'deals_voucher.deal.outlets' => function($q) {$q->where('outlet_status', 'Active');}, 'deals_voucher.deal.outlets.city'])
-        ->where('id_deals_user', $request->id_deals_user)->get()->toArray()[0];
+        $voucher = DealsUser::with([
+        			'deals_voucher', 
+        			'deals_voucher.deal', 
+        			'deals_voucher.deal.brand', 
+        			'deals_voucher.deal.deals_content' => function($q) {
+        				$q->where('is_active',1);
+        			}, 
+        			'deals_voucher.deal.deals_content.deals_content_details', 
+        			'deals_voucher.deal.outlets' => function($q) {
+        				$q->where('outlet_status', 'Active');
+        			}, 
+        			'deals_voucher.deal.outlets.city'
+        		])
+        		->where('id_deals_user', $request->id_deals_user)
+        		->get()
+        		->toArray()[0];
 
         if($voucher['deals_voucher']['deal']['is_all_outlet'] == 1){
             $outlets = Outlet::join('brand_outlet', 'outlets.id_outlet', '=', 'brand_outlet.id_outlet')
@@ -111,7 +125,7 @@ class ApiDealsVoucherWebviewController extends Controller
             'is_used'               => $data['is_used'],
             'btn_used'              => 'Gunakan Nanti',
             'is_online'             => $data['deals_voucher']['deal']['is_online'],
-            'btn_online'            => 'Gunakan Voucher',
+            'btn_online'            => 'Gunakan',
             'is_offline'            => $data['deals_voucher']['deal']['is_offline'],
             'btn_offline'           => 'Redeem to Cashier',
             'header_online_voucher' => 'Online Transaction',
@@ -141,13 +155,14 @@ class ApiDealsVoucherWebviewController extends Controller
             }
         }
 
+        $i = !empty($keyContent) ? $keyContent+1 : $i;
         $result['deals_content'][$i]['is_outlet'] = 1;
-        $result['deals_content'][$i]['title'] = 'Berlaku di';
+        $result['deals_content'][$i]['title'] = 'Tempat Penukaran';
         $result['deals_content'][$i]['brand'] = $data['deals_voucher']['deal']['brand']['name_brand'];
         $result['deals_content'][$i]['brand_logo'] = $data['deals_voucher']['deal']['brand']['logo_brand'];
 
         if($data['deals_voucher']['deal']['custom_outlet_text'] != null){
-            $result['deals_content'][$i]['detail_available'] = $data['deals_voucher']['deal']['custom_outlet_text'];
+            $result['deals_content'][$i]['detail'][] = $data['deals_voucher']['deal']['custom_outlet_text'];
         }else{
             foreach ($data['deals_voucher']['deal']['outlet_by_city'] as $keyCity => $valueCity) {
                 if (isset($valueCity['city_name'])) {

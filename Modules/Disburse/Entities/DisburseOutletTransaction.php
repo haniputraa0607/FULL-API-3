@@ -14,12 +14,19 @@ class DisburseOutletTransaction extends Model
         'id_transaction',
         'income_central',
         'income_outlet',
-        'expense_central',
-        'fee',
+        'expense_central',//total expenses for central
+        'fee_item',//charged for outlet
+        'discount',//charged for outlet
+        'discount_central',
+        'payment_charge',//charged for outlet
+        'point_use_expense',//charged for outlet
+        'subscription',//charged for outlet
+        'subscription_central',
+        'fee', //percent fee of fee item
         'mdr_charged',
-        'mdr',
-        'mdr_central',
-        'mdr_type',
+        'mdr',//percent fee of payment gateway
+        'mdr_central',//income fee from payment gateway for central
+        'mdr_type',//percent or nominal
         'charged_point_central',
         'charged_point_outlet',
         'charged_promo_central',

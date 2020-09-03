@@ -99,6 +99,7 @@ class ApiMembershipWebview extends Controller
 		if(count($allMembership) > 0){
 			if($result['user_membership']){
 				$result['user_membership']['membership_image'] = config('url.storage_url_api') . $result['user_membership']['membership_image'];
+				$result['user_membership']['membership_card'] = config('url.storage_url_api') . $result['user_membership']['membership_card'];
 				foreach($allMembership as $index => $dataMembership){
 					$allMembership[$index]['benefit_text']=json_decode($dataMembership['benefit_text'],true)[0]??"";
 					switch ($dataMembership['membership_type']) {
@@ -168,6 +169,7 @@ class ApiMembershipWebview extends Controller
 					unset($allMembership[$index]['updated_at']);
 					
 					$allMembership[$index]['membership_image'] = config('url.storage_url_api').$allMembership[$index]['membership_image'];
+					$allMembership[$index]['membership_card'] = config('url.storage_url_api').$allMembership[$index]['membership_card'];
 					// $allMembership[$index]['membership_bg_image'] = config('url.storage_url_api').$allMembership[$index]['membership_bg_image'];
 					$allMembership[$index]['membership_next_image'] = $allMembership[$index]['membership_next_image']?config('url.storage_url_api').$allMembership[$index]['membership_next_image']:null;
 					$allMembership[$index]['benefit_cashback_multiplier'] = $allMembership[$index]['benefit_cashback_multiplier'] * $settingCashback->value;
@@ -186,6 +188,7 @@ class ApiMembershipWebview extends Controller
 				}
 				foreach($allMembership as $j => $dataMember){
 					$allMembership[$j]['membership_image'] = config('url.storage_url_api').$allMembership[$j]['membership_image'];
+					$allMembership[$j]['membership_card'] = config('url.storage_url_api').$allMembership[$j]['membership_card'];
 					$allMembership[$j]['benefit_cashback_multiplier'] = $allMembership[$j]['benefit_cashback_multiplier'] * $settingCashback->value;
 				}
 			}
@@ -217,7 +220,10 @@ class ApiMembershipWebview extends Controller
 				->where('achievement_groups.status', 'Active')
 				->where('achievement_groups.is_calculate', 1)
 				->groupBy('achievement_groups.id_achievement_group')->get()->count();
-				$membershipUser['progress_now_text'] = $total_achievement;
+
+				//for achievement display balance now
+				$membershipUser['progress_now_text'] = MyHelper::requestNumber($result['user_membership']->user->balance, '_POINT');
+
 				$membershipUser['progress_now'] = (int) $total_achievement;
 				$membershipUser['progress_active'] = ($total_achievement / $nextTrx) * 100;
 				// $result['next_trx']		= $nextTrx - $total_balance;
@@ -248,7 +254,9 @@ class ApiMembershipWebview extends Controller
 				->where('achievement_groups.status', 'Active')
 				->where('achievement_groups.is_calculate', 1)
 				->groupBy('achievement_groups.id_achievement_group')->count();
-				$membershipUser['progress_now_text'] = $total_achievement;
+
+				//for achievement display balance now
+				$membershipUser['progress_now_text'] = MyHelper::requestNumber($result['user_membership']->user->balance, '_POINT');
 				$membershipUser['progress_now'] = (int) $total_achievement;
 			}
 		}
@@ -260,10 +268,18 @@ class ApiMembershipWebview extends Controller
 			$membershipUser['progress_max']	= $result['all_membership'][$indexNow + 1]['min_value'];
 
 			//wording membership
-			$membershipUser['description']= 'Lakukan transaksi Anda untuk menjadi <b>'.strtoupper($result['all_membership'][$indexNow + 1]['membership_name']).'</b>';
+			//for 0 badge
+			if($membershipUser['progress_now'] == 0){
+				$membershipUser['description']= 'Anda belum mengumpulkan badge, ayo kumpulkan '.$membershipUser['progress_max'].' badge untuk menuju <b>'.strtoupper($result['all_membership'][$indexNow + 1]['membership_name']).'</b>';
+			}else{
+				$membershipUser['description']= 'Anda telah mengumpulkan '.$membershipUser['progress_now'].' badge, lengkapi '.($membershipUser['progress_max']-$membershipUser['progress_now']).' badge lagi untuk menuju <b>'.strtoupper($result['all_membership'][$indexNow + 1]['membership_name']).'</b>';
+			}
 		} else {
 			$membershipUser['progress_max_text']	= MyHelper::requestNumber($result['all_membership'][$indexNow]['min_value'],'_CURRENCY');
 			$membershipUser['progress_max']	= $result['all_membership'][$indexNow]['min_value'];
+			//for highest level progress now always end progress
+			$membershipUser['progress_now_text'] = $result['all_membership'][$indexNow]['min_value'];
+			$membershipUser['progress_now'] = $result['all_membership'][$indexNow]['min_value'];
 
 			//wording membership
 			$membershipUser['description'] = 'Selamat! Kamu sudah menjadi <b>'.$result['all_membership'][$indexNow]['membership_name'].'</b>. Silahkan nikmati berbagai keuntungannya ya!';

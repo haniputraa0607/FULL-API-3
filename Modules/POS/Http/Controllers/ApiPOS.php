@@ -2,6 +2,7 @@
 
 namespace Modules\POS\Http\Controllers;
 
+use App\Jobs\DisburseJob;
 use App\Jobs\FraudJob;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -219,7 +220,8 @@ class ApiPOS extends Controller
                 "outlet_name" => $outlet['outlet_name'],
                 "id_reference" => $check['transaction_receipt_number'] . ',' . $outlet['id_outlet'],
                 'id_transaction' => $check['id_transaction'],
-                "transaction_date" => $check['transaction_date']
+                "transaction_date" => $check['transaction_date'],
+                'order_id'         => $trxPickup->order_id??'',
             ]);
 
             return response()->json(['status' => 'success', 'result' => $transactions]);
@@ -1313,6 +1315,9 @@ class ApiPOS extends Controller
                             $dataTrx['membership_level']    = null;
                             $dataTrx['membership_promo_id'] = null;
                         }else{
+                            //insert to disburse job for calculation income outlet
+                            DisburseJob::dispatch(['id_transaction' => $trx['id_transaction']])->onConnection('disbursequeue');
+
                             if($config['fraud_use_queue'] == 1){
                                 FraudJob::dispatch($user, $trx, 'transaction')->onConnection('fraudqueue');
                             }else{
@@ -1641,13 +1646,15 @@ class ApiPOS extends Controller
                                     ];
                                 }
                                 $usere= User::where('id',$createTrx['id_user'])->first();
+                                $order_id = TransactionPickup::select('order_id')->where('id_transaction', $createTrx['id_transaction'])->pluck('order_id')->first();
                                 $send = app($this->autocrm)->SendAutoCRM('Transaction Point Achievement', $usere->phone,
                                     [
                                         "outlet_name"       => $outlet['outlet_name'],
                                         "transaction_date"  => $createTrx['transaction_date'],
                                         'id_transaction'    => $createTrx['id_transaction'],
                                         'receipt_number'    => $createTrx['transaction_receipt_number'],
-                                        'received_point'    => (string) $createTrx['transaction_cashback_earned']
+                                        'received_point'    => (string) $createTrx['transaction_cashback_earned'],
+                                        'order_id'          => $order_id??'',
                                     ]
                                 );
                                 if($send != true){
@@ -2169,52 +2176,59 @@ class ApiPOS extends Controller
 
     public function syncOutletMenuCron(Request $request)
     {
-        $syncDatetime = date('d F Y h:i');
-        $getRequest = SyncMenuRequest::get()->first();
-        // is $getRequest null
-        if(!$getRequest){
-            return '';
-        }
-        $getRequest = $getRequest->toArray();
-        $getRequest['request'] = json_decode($getRequest['request'], true);
-        $syncMenu = $this->syncMenuProcess($getRequest['request'], 'bulk');
-        if ($syncMenu['status'] == 'success') {
-            SyncMenuResult::create(['result' => json_encode($syncMenu['result'])]);
-        } else {
-            SyncMenuResult::create(['result' => json_encode($syncMenu['messages'])]);
-        }
-        if ($getRequest['is_end'] == 1) {
-            $getResult = SyncMenuResult::pluck('result');
-            $totalReject    = 0;
-            $totalFailed    = 0;
-            $listFailed     = [];
-            $listRejected     = [];
-            foreach ($getResult as $value) {
-                $data[] = json_decode($value, true);
-                if (isset(json_decode($value, true)[0])) {
-                    $result['fail'][] = json_decode($value, true)[0];
-                }
-                if (isset(json_decode($value, true)['rejected_product'])) {
-                    $totalReject    = $totalReject + count(json_decode($value, true)['rejected_product']['list_product']);
-                    foreach (json_decode($value, true)['rejected_product']['list_product'] as $valueRejected) {
-                        array_push($listRejected, $valueRejected);
-                    }
-                }
-                if (isset(json_decode($value, true)['failed_product'])) {
-                    $totalFailed    = $totalFailed + count(json_decode($value, true)['failed_product']['list_product']);
-                    foreach (json_decode($value, true)['failed_product']['list_product'] as $valueFailed) {
-                        array_push($listFailed, $valueFailed);
-                    }
-                }
+        $log = MyHelper::logCron('Sync Outlet Menu');
+        try {
+            $syncDatetime = date('d F Y h:i');
+            $getRequest = SyncMenuRequest::get()->first();
+            // is $getRequest null
+            if(!$getRequest){
+                $log->success('empty synch menu request');
+                return '';
             }
+            $getRequest = $getRequest->toArray();
+            $getRequest['request'] = json_decode($getRequest['request'], true);
+            $syncMenu = $this->syncMenuProcess($getRequest['request'], 'bulk');
+            if ($syncMenu['status'] == 'success') {
+                SyncMenuResult::create(['result' => json_encode($syncMenu['result'])]);
+            } else {
+                SyncMenuResult::create(['result' => json_encode($syncMenu['messages'])]);
+            }
+            if ($getRequest['is_end'] == 1) {
+                $getResult = SyncMenuResult::pluck('result');
+                $totalReject    = 0;
+                $totalFailed    = 0;
+                $listFailed     = [];
+                $listRejected     = [];
+                foreach ($getResult as $value) {
+                    $data[] = json_decode($value, true);
+                    if (isset(json_decode($value, true)[0])) {
+                        $result['fail'][] = json_decode($value, true)[0];
+                    }
+                    if (isset(json_decode($value, true)['rejected_product'])) {
+                        $totalReject    = $totalReject + count(json_decode($value, true)['rejected_product']['list_product']);
+                        foreach (json_decode($value, true)['rejected_product']['list_product'] as $valueRejected) {
+                            array_push($listRejected, $valueRejected);
+                        }
+                    }
+                    if (isset(json_decode($value, true)['failed_product'])) {
+                        $totalFailed    = $totalFailed + count(json_decode($value, true)['failed_product']['list_product']);
+                        foreach (json_decode($value, true)['failed_product']['list_product'] as $valueFailed) {
+                            array_push($listFailed, $valueFailed);
+                        }
+                    }
+                }
 
-            // if (count($listRejected) > 0) {
-            //     $this->syncSendEmail($syncDatetime, $outlet->outlet_code, $outlet->outlet_name, $rejectedProduct, null);
-            // }
-            // if (count($listFailed) > 0) {
-            //     $this->syncSendEmail($syncDatetime, $outlet->outlet_code, $outlet->outlet_name, null, $failedProduct);
-            // }
+                // if (count($listRejected) > 0) {
+                //     $this->syncSendEmail($syncDatetime, $outlet->outlet_code, $outlet->outlet_name, $rejectedProduct, null);
+                // }
+                // if (count($listFailed) > 0) {
+                //     $this->syncSendEmail($syncDatetime, $outlet->outlet_code, $outlet->outlet_name, null, $failedProduct);
+                // }
+            }
+            SyncMenuRequest::where('id', $getRequest['id'])->delete();
+            $log->success();
+        } catch (\Exception $e) {
+            $log->fail($e->getMessage());
         }
-        SyncMenuRequest::where('id', $getRequest['id'])->delete();
     }
 }

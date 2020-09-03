@@ -69,7 +69,7 @@ class ApiSubscriptionClaim extends Controller
                         if ($this->checkUserLimit($dataSubs, $dataSubsUser)) {
 
                             // CEK IF USER SUBSCRIPTION IS EXPIRED OR NULL
-                            if ($this->checkSubsUserExpired($dataSubsUser)) {
+                            if ($this->checkSubsUserExpired($dataSubs, $dataSubsUser)) {
 
                                 $id_subscription = $dataSubs->id_subscription;
 
@@ -199,10 +199,21 @@ class ApiSubscriptionClaim extends Controller
                                 return response()->json(MyHelper::checkCreate($return));
                                 }
                             else {
+                            	switch ($dataSubs->new_purchase_after) {
+					        		case 'Empty':
+					        			$msg = 'empty';
+					        			break;
+					        		case 'Empty Expired':
+					        			$msg = 'empty or expired';
+					        			break;
+					        		default:
+					        			$msg = 'expired';
+					        			break;
+					        	}
                                 DB::rollback();
                                 return response()->json([
                                     'status'   => 'fail',
-                                    'messages' => ['You have participated, you can buy this subscription again after your previous subscription expired.']
+                                    'messages' => ['You have participated, you can buy this subscription again after your previous subscription is '.$msg]
                                 ]);
                             }
                         }
@@ -241,7 +252,7 @@ class ApiSubscriptionClaim extends Controller
         ->where('id_user', '=', $id_user)
         ->where('subscription_users.id_subscription', '=', $subs->id_subscription)
         ->where('paid_status', '<>', 'Cancelled')
-        ->orderBy('subscription_expired_at', 'DESC')
+        ->orderBy('bought_at', 'DESC')
         ->groupBy('subscription_user_vouchers.id_subscription_user')
         ->get();
 
@@ -275,11 +286,35 @@ class ApiSubscriptionClaim extends Controller
     }
 
     // check last subscription user expired date
-    function checkSubsUserExpired($subsUser) {
+    function checkSubsUserExpired($subs, $subsUser) {
         $now = date('Y-m-d H:i:s');
 
-        if (empty($subsUser) || empty($subsUser[0])) {
+        if (empty($subsUser[0]) || (isset($subs->new_purchase_after) && $subs->new_purchase_after == 'No Limit')) {
             return true;
+        }
+        elseif ( isset($subs->new_purchase_after) ) {
+        	switch ($subs->new_purchase_after) {
+        		case 'Empty':
+        			$available = SubscriptionUserVoucher::where('id_subscription_user', $subsUser[0]->id_subscription_user)->whereNotNull('used_at')->count();
+        			if ($available <= 0) return true;
+        			break;
+        		case 'Expired':
+        			if (isset($subsUser[0]['subscription_expired_at']) && strtotime($subsUser[0]['subscription_expired_at']) <= strtotime($now)){
+			            return true;
+			        }
+        			break;
+        		case 'Empty Expired':
+        			$available = SubscriptionUserVoucher::where('id_subscription_user', $subsUser[0]->id_subscription_user)->whereNotNull('used_at')->count();
+        			if ($available <= 0) return true;
+        			if (isset($subsUser[0]['subscription_expired_at']) && strtotime($subsUser[0]['subscription_expired_at']) <= strtotime($now)){
+			            return true;
+			        }
+        			break;
+        		default:
+        			return true;
+        			break;
+        	}
+        	return false;
         }
         elseif ( isset($subsUser[0]['subscription_expired_at']) && strtotime($subsUser[0]['subscription_expired_at']) <= strtotime($now) ){
             return true;

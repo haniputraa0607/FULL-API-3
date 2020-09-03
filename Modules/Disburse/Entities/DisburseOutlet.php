@@ -14,6 +14,15 @@ class DisburseOutlet extends Model
 	    'id_outlet',
         'disburse_nominal',
         'total_income_central',
-        'total_expense_central'
+        'total_expense_central',
+        'total_fee_item',
+        'total_omset',
+        'total_promo_charged',
+        'total_subtotal',
+        'total_discount',
+        'total_delivery_price',
+        'total_payment_charge',
+        'total_point_use_expense',
+        'total_subscription'
 	];
 }

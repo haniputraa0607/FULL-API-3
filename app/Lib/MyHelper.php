@@ -714,6 +714,10 @@ class MyHelper{
 			// kalo ada foto
 			$decoded = base64_decode($foto);
 
+			if (!file_exists($path)) {
+			    mkdir($path, 0777, true);
+			}
+
 			// cek extension
 			$ext = MyHelper::checkExtensionImageBase64($decoded);
 
@@ -1190,8 +1194,8 @@ class MyHelper{
         return $result;
     }
 
-    public static function deleteFile($path, $type = 'storage') {
-        if($type == 'storage'){
+    public static function deleteFile($path) {
+        if(config('configs.STORAGE')){
             if(Storage::disk(config('configs.STORAGE'))->exists($path)) {
                 if(Storage::disk(config('configs.STORAGE'))->delete($path)){
                     return true;
@@ -1208,7 +1212,7 @@ class MyHelper{
                 return true;
             }
             else {
-                return true;
+                return false;
             }
         }
 
@@ -2620,7 +2624,7 @@ class MyHelper{
     	return Setting::select($column)->where('key',$key)->pluck($column)->first()??$default;
     }
 
-    public static function checkRuleForRequestOTP($data_user){
+    public static function checkRuleForRequestOTP($data_user, $check = 0){
         //get setting rule for request otp
         $setting = Setting::where('key', 'otp_rule_request')->first();
         /*
@@ -2660,11 +2664,18 @@ class MyHelper{
             $currentTime = date('Y-m-d H:i:s');
             $count = $content->count_request + 1;
 
+            $different = strtotime($content->available_request_time) - strtotime($currentTime);
+            $different = (int)date('s', $different);
+
+            if($different > $holdTime){
+                $different = -1;
+            }
+
             if(strtotime($currentTime) < strtotime($content->available_request_time)){
                 return [
-                    'status'=>'fail',
+                    'status'=>'success',
                     'otp_check'=> 1,
-                    'messages'=> ["Can't request OTP, please request again after ".floor($holdTime/60)." minutes"]
+                    'otp_timer' => $different
                 ];
             } elseif($count > $maxValueRequest){
                 $updateFlag = User::where('id', $data_user[0]['id'])->update(['otp_request_status' => 'Can Not Request']);
@@ -2674,7 +2685,7 @@ class MyHelper{
                     'otp_check'=> 1,
                     'messages'=> ["OTP request has passed the limit, please contact our customer service at ".config('configs.EMAIL_ADDRESS_ADMIN')]
                 ];
-            } else{
+            } elseif($check == 0){
                 $availebleTime = date('Y-m-d H:i:s',strtotime('+'.$holdTime.' seconds',strtotime(date('Y-m-d H:i:s'))));
                 $contentFile = [
                     'available_request_time' => $availebleTime,
@@ -2683,7 +2694,7 @@ class MyHelper{
                 $createFile = MyHelper::createFile($contentFile, 'json', 'otp/', $data_user[0]['id']);
                 return true;
             }
-        }else{
+        }elseif($check == 0){
             $availebleTime = date('Y-m-d H:i:s',strtotime('+'.$holdTime.' seconds',strtotime(date('Y-m-d H:i:s'))));
             $contentFile = [
                 'available_request_time' => $availebleTime,
@@ -2842,7 +2853,7 @@ class MyHelper{
 	 */
 	public static function updateOutletFile($data)
 	{
-		$filename = 'data_outlet.json';
+		$filename = storage_path('data_outlet.json');
         if (is_file($filename)) {
             $filecontent = file_get_contents($filename);
             $data_outlet = json_decode($filecontent,true)?:[];
@@ -2866,7 +2877,7 @@ class MyHelper{
 	 */
 	public static function getOutletFile($id_outlet = null)
 	{
-		$filename = 'data_outlet.json';
+		$filename = storage_path('data_outlet.json');
         if (is_file($filename)) {
             $filecontent = file_get_contents($filename);
             $data_outlet = json_decode($filecontent,true)?:[];
@@ -2882,5 +2893,21 @@ class MyHelper{
         return array_map(function ($data) {
         	return self::decrypt2019($data);
         }, $data_outlet);
+	}
+
+	/**
+	 * Create cron's log
+	 * @param  string Cron Name cron name
+	 * @return Model           LogCron Eloquent Model
+	 */
+	public static function logCron($cronName)
+	{
+		$log = new \App\Http\Models\LogCron;
+		$log->cron = $cronName;
+		$log->status = 'onprocess';
+		$log->start_date = date('Y-m-d H:i:s');
+		$log->save();
+
+		return $log;
 	}
 }

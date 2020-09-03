@@ -43,6 +43,8 @@ use Modules\Report\Entities\GlobalMonthlyReportTrxModifier;
 use App\Http\Models\DailyCustomerReportRegistration;
 use App\Http\Models\MonthlyCustomerReportRegistration;
 
+use Modules\Subscription\Entities\TransactionPaymentSubscription;
+
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
@@ -70,58 +72,66 @@ class ApiCronReport extends Controller
     /* CRON */
     function transactionCron(Request $request) 
     {
-        DB::beginTransaction();
-        // CHECK TABLES
-        // if ($this->checkReportTable()) {
-        //     $date = date('Y-m-d', strtotime("-1 days"));
+        $log = MyHelper::logCron('Daily Transaction Report');
+        try {
+            DB::beginTransaction();
+            // CHECK TABLES
+            // if ($this->checkReportTable()) {
+            //     $date = date('Y-m-d', strtotime("-1 days"));
 
-        //     // CALCULATION
-        //     $calculation = $this->calculation($date);
+            //     // CALCULATION
+            //     $calculation = $this->calculation($date);
 
-        //     if (!$calculation) {
-        //         return response()->json([
-        //             'status'   => 'fail',
-        //             'messages' => 'Failed to update data.'
-        //         ]);
-        //     }
-        // }
-        // else {
-            // DATE START
-            $dateStart = $this->firstTrx();
-            // $dateStart = "2020-06-09";
+            //     if (!$calculation) {
+            //         return response()->json([
+            //             'status'   => 'fail',
+            //             'messages' => 'Failed to update data.'
+            //         ]);
+            //     }
+            // }
+            // else {
+                // DATE START
+                $dateStart = $this->firstTrx();
+                // $dateStart = "2020-08-24";
 
-            if ($dateStart) {
-                // UP TO YESTERDAY
-                while (strtotime($dateStart) < strtotime(date('Y-m-d'))) {
-                    // CALCULATION
-                    $calculation = $this->calculation($dateStart);
+                if ($dateStart) {
+                    // UP TO YESTERDAY
+                    while (strtotime($dateStart) < strtotime(date('Y-m-d'))) {
+                        // CALCULATION
+                        $calculation = $this->calculation($dateStart);
 
-                    if (!$calculation) {
-                        DB::rollback();
-                        return response()->json([
-                            'status'   => 'fail',
-                            'messages' => 'Failed to update data.'
-                        ]);
+                        if (!$calculation) {
+                            DB::rollback();
+                            $log->fail('Failed update data');
+                            return response()->json([
+                                'status'   => 'fail',
+                                'messages' => 'Failed to update data.'
+                            ]);
+                        }
+
+                        // INCREMENT
+                        $dateStart = date('Y-m-d', strtotime("+1 days", strtotime($dateStart)));
                     }
-
-                    // INCREMENT
-                    $dateStart = date('Y-m-d', strtotime("+1 days", strtotime($dateStart)));
                 }
-            }
-            else {
-                DB::rollback();
-                return response()->json([
-                    'status'   => 'fail',
-                    'messages' => 'Data transaction is empty.'
-                ]);
-            }
-        // }
+                else {
+                    DB::rollback();
+                    $log->success('Data transaction is empty');
+                    return response()->json([
+                        'status'   => 'fail',
+                        'messages' => 'Data transaction is empty.'
+                    ]);
+                }
+            // }
 
-        DB::commit();
-        // RETURN SUCCESS
-        return response()->json([
-            'status' => 'success'
-        ]);
+            DB::commit();
+            // RETURN SUCCESS
+            $log->success('success');
+            return response()->json([
+                'status' => 'success'
+            ]);
+        } catch (\Exception $e) {
+            $log->fail($e->getMessage());
+        }
     }
 
     /* CHECK TABLES */
@@ -524,9 +534,12 @@ class ApiCronReport extends Controller
                     (select count(transactions.id_transaction)) as trx_count, 
                     (select AVG(transaction_grandtotal)) as trx_average, 
                     (select SUM(trans_p.trx_total_item)) as trx_total_item,
-                    (select DATE(transaction_date)) as trx_date
+                    (select DATE(transaction_date)) as trx_date,
+                    (select SUM(disburse_outlet_transactions.income_outlet)) as trx_net_sale,
+                    (select SUM(transactions.transaction_shipment_go_send)) as trx_shipment_go_send
                     FROM transactions 
                     LEFT JOIN users ON users.id = transactions.id_user 
+                    LEFT JOIN disburse_outlet_transactions ON disburse_outlet_transactions.id_transaction = transactions.id_transaction
                     LEFT JOIN transaction_pickups ON transaction_pickups.id_transaction = transactions.id_transaction 
                     LEFT JOIN (
                     	select 
@@ -560,6 +573,8 @@ class ApiCronReport extends Controller
 			$sum['trx_count'] = 0;
 			$sum['trx_total_item'] = 0;
 			$sum['trx_average'] = 0;
+            $sum['trx_net_sale'] = 0;
+            $sum['trx_shipment_go_send'] = 0;
 			$sum['cust_male'] = 0;
 			$sum['cust_female'] = 0;
 			$sum['cust_android'] = 0;
@@ -607,7 +622,9 @@ class ApiCronReport extends Controller
 				$sum['cust_young_adult'] += $value['cust_young_adult'];
 				$sum['cust_adult'] += $value['cust_adult'];
 				$sum['cust_old'] += $value['cust_old'];
-					
+                $sum['trx_net_sale'] += $value['trx_net_sale'];
+                $sum['trx_shipment_go_send'] += $value['trx_shipment_go_send'];
+
                 $save = DailyReportTrx::updateOrCreate([
                     'trx_date'  => date('Y-m-d', strtotime($value['trx_date'])),
                     'id_outlet' => $value['id_outlet']
@@ -905,6 +922,7 @@ class ApiCronReport extends Controller
 			->select(
 				'transactions.id_outlet', 
 				DB::raw('DATE(transactions.transaction_date) as trx_date'),
+                DB::raw('0 as refund_with_point'),
                 DB::raw('"Midtrans" as payment_type'),
 				DB::raw('COUNT(transactions.id_transaction) as trx_payment_count'), 
 				DB::raw('SUM(transaction_payment_midtrans.gross_amount) as trx_payment_nominal'), 
@@ -912,7 +930,8 @@ class ApiCronReport extends Controller
 			)
 			->whereDate('transactions.transaction_date', $date)
 			->where('transactions.transaction_payment_status', 'Completed')
-			->whereNull('transaction_pickups.reject_at')
+            ->whereNull('transaction_pickups.reject_at')
+            ->whereNull('transaction_pickups.reject_type')
 			->groupBy('transactions.id_outlet', 'trx_payment')
 			->get()->toArray();
 
@@ -920,6 +939,28 @@ class ApiCronReport extends Controller
 				//insert daily
 				$insertDaily = DailyReportPayment::insert($dataPayment);
 			}
+
+            $dataPaymentRejectToPoint = TransactionPaymentMidtran::join('transactions', 'transactions.id_transaction', 'transaction_payment_midtrans.id_transaction')
+                ->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+                ->select(
+                    'transactions.id_outlet',
+                    DB::raw('DATE(transactions.transaction_date) as trx_date'),
+                    DB::raw('1 as refund_with_point'),
+                    DB::raw('"Midtrans" as payment_type'),
+                    DB::raw('COUNT(transactions.id_transaction) as trx_payment_count'),
+                    DB::raw('SUM(transaction_payment_midtrans.gross_amount) as trx_payment_nominal'),
+                    DB::raw("CONCAT_WS(' ', transaction_payment_midtrans.payment_type, transaction_payment_midtrans.bank) AS trx_payment")
+                )
+                ->whereDate('transactions.transaction_date', $date)
+                ->where('transactions.transaction_payment_status', 'Completed')
+                ->where('transaction_pickups.reject_type', 'point')
+                ->groupBy('transactions.id_outlet', 'trx_payment')
+                ->get()->toArray();
+
+            if($dataPaymentRejectToPoint){
+                //insert daily
+                $insertDailyPaymentRejectToPoint = DailyReportPayment::insert($dataPaymentRejectToPoint);
+            }
 
 			$dataPaymentGlobal = TransactionPaymentMidtran::join('transactions', 'transactions.id_transaction', 'transaction_payment_midtrans.id_transaction')
 			->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
@@ -946,14 +987,16 @@ class ApiCronReport extends Controller
 			->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
 			->select(
 				'transactions.id_outlet', 
-				DB::raw('DATE(transactions.transaction_date) as trx_date'), 
+				DB::raw('DATE(transactions.transaction_date) as trx_date'),
+                DB::raw('0 as refund_with_point'),
 				DB::raw('COUNT(transactions.id_transaction) as trx_payment_count'), 
 				DB::raw('SUM(transaction_payment_ovos.amount) as trx_payment_nominal'), 
 				DB::raw("'OVO' as 'trx_payment'")
 			)
 			->whereDate('transactions.transaction_date', $date)
 			->where('transactions.transaction_payment_status', 'Completed')
-			->whereNull('transaction_pickups.reject_at')
+            ->whereNull('transaction_pickups.reject_at')
+            ->whereNull('transaction_pickups.reject_type')
 			->groupBy('transactions.id_outlet', 'trx_payment')
 			->get()->toArray();
 
@@ -961,6 +1004,27 @@ class ApiCronReport extends Controller
 				//insert daily
 				$insertDaily = DailyReportPayment::insert($dataPayment);
 			}
+
+            $dataPaymentRejectToPoint = TransactionPaymentOvo::join('transactions', 'transactions.id_transaction', 'transaction_payment_ovos.id_transaction')
+                ->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+                ->select(
+                    'transactions.id_outlet',
+                    DB::raw('DATE(transactions.transaction_date) as trx_date'),
+                    DB::raw('1 as refund_with_point'),
+                    DB::raw('COUNT(transactions.id_transaction) as trx_payment_count'),
+                    DB::raw('SUM(transaction_payment_ovos.amount) as trx_payment_nominal'),
+                    DB::raw("'OVO' as 'trx_payment'")
+                )
+                ->whereDate('transactions.transaction_date', $date)
+                ->where('transactions.transaction_payment_status', 'Completed')
+                ->where('transaction_pickups.reject_type', 'point')
+                ->groupBy('transactions.id_outlet', 'trx_payment')
+                ->get()->toArray();
+
+            if($dataPaymentRejectToPoint){
+                //insert daily
+                $insertDailyPaymentRejectToPoint = DailyReportPayment::insert($dataPaymentRejectToPoint);
+            }
 
 			$dataPaymentGlobal = TransactionPaymentOvo::join('transactions', 'transactions.id_transaction', 'transaction_payment_ovos.id_transaction')
 			->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
@@ -1024,6 +1088,7 @@ class ApiCronReport extends Controller
 			->select(
 				'transactions.id_outlet', 
 				DB::raw('DATE(transactions.transaction_date) as trx_date'),
+                DB::raw('0 as refund_with_point'),
                 DB::raw('"Ipay88" as payment_type'),
 				DB::raw('COUNT(transactions.id_transaction) as trx_payment_count'), 
 				DB::raw('SUM(transaction_payment_ipay88s.amount / 100) as trx_payment_nominal'), 
@@ -1031,7 +1096,8 @@ class ApiCronReport extends Controller
 			)
 			->whereDate('transactions.transaction_date', $date)
 			->where('transactions.transaction_payment_status', 'Completed')
-			->whereNull('transaction_pickups.reject_at')
+            ->whereNull('transaction_pickups.reject_at')
+            ->whereNull('transaction_pickups.reject_type')
 			->groupBy('transactions.id_outlet', 'trx_payment')
 			->get()->toArray();
 
@@ -1039,6 +1105,28 @@ class ApiCronReport extends Controller
 				//insert daily
 				$insertDaily = DailyReportPayment::insert($dataPayment);
 			}
+
+            $dataPaymentRejectToPoint = TransactionPaymentIpay88::join('transactions', 'transactions.id_transaction', 'transaction_payment_ipay88s.id_transaction')
+                ->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+                ->select(
+                    'transactions.id_outlet',
+                    DB::raw('DATE(transactions.transaction_date) as trx_date'),
+                    DB::raw('1 as refund_with_point'),
+                    DB::raw('"Ipay88" as payment_type'),
+                    DB::raw('COUNT(transactions.id_transaction) as trx_payment_count'),
+                    DB::raw('SUM(transaction_payment_ipay88s.amount / 100) as trx_payment_nominal'),
+                    DB::raw("transaction_payment_ipay88s.payment_method AS trx_payment")
+                )
+                ->whereDate('transactions.transaction_date', $date)
+                ->where('transactions.transaction_payment_status', 'Completed')
+                ->where('transaction_pickups.reject_type', 'point')
+                ->groupBy('transactions.id_outlet', 'trx_payment')
+                ->get()->toArray();
+
+            if($dataPaymentRejectToPoint){
+                //insert daily
+                $insertDaily = DailyReportPayment::insert($dataPaymentRejectToPoint);
+            }
 
 			$dataPaymentGlobal = TransactionPaymentIpay88::join('transactions', 'transactions.id_transaction', 'transaction_payment_ipay88s.id_transaction')
 			->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
@@ -1142,6 +1230,48 @@ class ApiCronReport extends Controller
 			}
 		//end offline
 
+		/*
+		//subscription
+			$dataPayment = TransactionPaymentSubscription::join('transactions', 'transactions.id_transaction', 'transaction_payment_subscriptions.id_transaction')
+			->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+			->select(
+				'transactions.id_outlet', 
+				DB::raw('DATE(transactions.transaction_date) as trx_date'), 
+				DB::raw('COUNT(transactions.id_transaction) as trx_payment_count'), 
+				DB::raw('SUM(transaction_payment_subscriptions.subscription_nominal) as trx_payment_nominal'), 
+				DB::raw("'Subscription' AS trx_payment")
+			)
+			->whereDate('transactions.transaction_date', $date)
+			->where('transactions.transaction_payment_status', 'Completed')
+			->whereNull('transaction_pickups.reject_at')
+			->groupBy('transactions.id_outlet', 'trx_payment')
+			->get()->toArray();
+
+			if($dataPayment){
+				//insert daily
+				$insertDaily = DailyReportPayment::insert($dataPayment);
+			}
+
+			$dataPaymentGlobal = TransactionPaymentSubscription::join('transactions', 'transactions.id_transaction', 'transaction_payment_subscriptions.id_transaction')
+			->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+			->select(
+				DB::raw('DATE(transactions.transaction_date) as trx_date'), 
+				DB::raw('COUNT(transactions.id_transaction) as trx_payment_count'), 
+				DB::raw('SUM(transaction_payment_subscriptions.subscription_nominal) as trx_payment_nominal'), 
+				DB::raw("'Subscription' AS trx_payment")
+			)
+			->whereDate('transactions.transaction_date', $date)
+			->where('transactions.transaction_payment_status', 'Completed')
+			->whereNull('transaction_pickups.reject_at')
+			->groupBy('trx_payment')
+			->get()->toArray();
+
+			if($dataPaymentGlobal){
+				//insert global
+				$insertGlobal = GlobalDailyReportPayment::insert($dataPaymentGlobal);
+			}
+		//end subscription
+		*/
         return true;
     }
 
@@ -1151,7 +1281,7 @@ class ApiCronReport extends Controller
         foreach ($outletAll as $outlet) {
              $modifier = DB::select(DB::raw('
                         SELECT transaction_product_modifiers.id_product_modifier, transaction_products.id_brand, transactions.id_outlet, 
-                        (select SUM(transaction_product_modifiers.qty)) as total_qty, 
+                        (select SUM(transaction_product_modifiers.qty * transaction_products.transaction_product_qty)) as total_qty, 
                         (select SUM(transaction_product_modifiers.transaction_product_modifier_price)) as total_nominal, 
                         (select count(transaction_product_modifiers.id_product_modifier)) as total_rec, 
                         (select DATE(transactions.transaction_date)) as trx_date,
@@ -1892,6 +2022,52 @@ class ApiCronReport extends Controller
 			}
 		//end offline
 
+		/*
+		//subscription
+			$dataPayment = TransactionPaymentSubscription::join('transactions', 'transactions.id_transaction', 'transaction_payment_subscriptions.id_transaction')
+			->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+			->select(
+				'transactions.id_outlet', 
+				DB::raw('"'.$month.'" as trx_month'), 
+				DB::raw('"'.$year.'" as trx_year'), 
+				DB::raw('COUNT(transactions.id_transaction) as trx_payment_count'), 
+				DB::raw('SUM(transaction_payment_subscriptions.subscription_nominal) as trx_payment_nominal'), 
+				DB::raw("'Subscription' AS trx_payment")
+			)
+			->whereMonth('transactions.transaction_date', $month)
+			->whereYear('transactions.transaction_date', $year)
+			->where('transactions.transaction_payment_status', 'Completed')
+			->whereNull('transaction_pickups.reject_at')
+			->groupBy('transactions.id_outlet', 'trx_payment', 'trx_month', 'trx_year')
+			->get()->toArray();
+
+			if($dataPayment){
+				//insert daily
+				$insertDaily = MonthlyReportPayment::insert($dataPayment);
+			}
+
+			$dataPaymentGlobal = TransactionPaymentSubscription::join('transactions', 'transactions.id_transaction', 'transaction_payment_subscriptions.id_transaction')
+			->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+			->select(
+				DB::raw('"'.$month.'" as trx_month'), 
+				DB::raw('"'.$year.'" as trx_year'), 
+				DB::raw('COUNT(transactions.id_transaction) as trx_payment_count'), 
+				DB::raw('SUM(transaction_payment_subscriptions.subscription_nominal) as trx_payment_nominal'), 
+				DB::raw("'Subscription' AS trx_payment")
+			)
+			->whereMonth('transactions.transaction_date', $month)
+			->whereYear('transactions.transaction_date', $year)
+			->where('transactions.transaction_payment_status', 'Completed')
+			->whereNull('transaction_pickups.reject_at')
+			->groupBy('trx_payment', 'trx_month', 'trx_year')
+			->get()->toArray();
+
+			if($dataPaymentGlobal){
+				//insert global
+				$insertGlobal = GlobalMonthlyReportPayment::insert($dataPaymentGlobal);
+			}
+		//end subscription
+		*/
         return true;
     }
     
@@ -1905,7 +2081,7 @@ class ApiCronReport extends Controller
         foreach ($outletAll as $outlet) {
             $modifier = DB::select(DB::raw('
                         SELECT transaction_product_modifiers.id_product_modifier, transaction_products.id_brand, transactions.id_outlet, 
-                        (select SUM(transaction_product_modifiers.qty)) as total_qty, 
+                        (select SUM(transaction_product_modifiers.qty * transaction_products.transaction_product_qty)) as total_qty, 
                         (select SUM(transaction_product_modifiers.transaction_product_modifier_price)) as total_nominal, 
                         (select count(transaction_product_modifiers.id_product_modifier)) as total_rec, 
                         (select MONTH(transaction_date)) as trx_month,
@@ -1962,7 +2138,7 @@ class ApiCronReport extends Controller
         // update global trx modifier
         $modifier = DB::select(DB::raw('
                     SELECT transaction_product_modifiers.id_product_modifier, 
-                    (select SUM(transaction_product_modifiers.qty)) as total_qty, 
+                    (select SUM(transaction_product_modifiers.qty * transaction_products.transaction_product_qty)) as total_qty, 
                     (select SUM(transaction_product_modifiers.transaction_product_modifier_price)) as total_nominal, 
                     (select count(transaction_product_modifiers.id_product_modifier)) as total_rec, 
                     (select MONTH(transaction_date)) as trx_month,

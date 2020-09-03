@@ -67,6 +67,7 @@ class ApiNotification extends Controller {
         $this->oauth_secret  = env('OUTLET_OAUTH_SECRET');
         $this->voucher  = "Modules\Deals\Http\Controllers\ApiDealsVoucher";
         $this->promo_campaign	= "Modules\PromoCampaign\Http\Controllers\ApiPromoCampaign";
+        $this->subscription  = "Modules\Subscription\Http\Controllers\ApiSubscriptionVoucher";
     }
 
     /* RECEIVE NOTIFICATION */
@@ -76,7 +77,7 @@ class ApiNotification extends Controller {
         DB::beginTransaction();
 
         // CHECK ORDER ID
-        if (stristr($midtrans['order_id'], "TRX")) {
+        if (stristr($midtrans['order_id'], "J+")) {
             // TRANSACTION
             $transac = Transaction::with('user.memberships', 'logTopup')->where('transaction_receipt_number', $midtrans['order_id'])->first();
 
@@ -255,7 +256,8 @@ class ApiNotification extends Controller {
                                         "transaction_date"  => $newTrx['transaction_date'],
                                         'id_transaction'    => $newTrx['id_transaction'],
                                         'receipt_number'    => $newTrx['transaction_receipt_number'],
-                                        'received_point'    => (string) $checkBalance['balance_nominal']
+                                        'received_point'    => (string) $checkBalance['balance_nominal'],
+                                        'order_id'          => $newTrx['detail']['order_id'] ?? '',
                                     ]
                                 );
                                 if($send != true){
@@ -880,7 +882,9 @@ Detail: ".$link['short'],
         }
 
         if (isset($midtrans['status_code']) && $midtrans['status_code'] == 200) {
-            if ($midtrans['transaction_status'] == 'capture' || $midtrans['transaction_status'] == 'settlement') {
+            if ($midtrans['transaction_status'] == 'refund' ) {
+                return true;
+            }elseif ($midtrans['transaction_status'] == 'capture' || $midtrans['transaction_status'] == 'settlement') {
                 $check = Transaction::where('id_transaction', $trx->id_transaction)->update(['transaction_payment_status' => 'Completed']);
                 if (!$check) {
                     return false;
@@ -916,6 +920,10 @@ Detail: ".$link['short'],
             if (!$update_voucher) {
             	return false;
             }
+
+            // return subscription
+            $update_subscription = app($this->subscription)->returnSubscription($trx->id_transaction);
+
         }
 
         return true;

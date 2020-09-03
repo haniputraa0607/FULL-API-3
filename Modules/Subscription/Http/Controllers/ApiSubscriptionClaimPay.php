@@ -55,7 +55,7 @@ class ApiSubscriptionClaimPay extends Controller
             return MyHelper::checkGet([],'Paid subscription cannot be canceled');
         }
         $errors = '';
-        $cancel = \Modules\IPay88\Lib\IPay88::create()->cancel('subscription',$subscription_user,$errors);
+        $cancel = \Modules\IPay88\Lib\IPay88::create()->cancel('subscription',$subscription_user,$errors, $request->last_url);
         if($cancel){
             return ['status'=>'success'];
         }
@@ -98,7 +98,7 @@ class ApiSubscriptionClaimPay extends Controller
                     if (app($this->claim)->checkUserLimit($dataSubs, $dataSubsUser)) {
 
                         // CEK IF USER SUBSCRIPTION IS EXPIRED OR NULL
-                        if (app($this->claim)->checkSubsUserExpired($dataSubsUser)) {
+                        if (app($this->claim)->checkSubsUserExpired($dataSubs, $dataSubsUser)) {
 
                             //check if type is point
                             if (!empty($dataSubs->subscription_price_point)) {
@@ -109,14 +109,15 @@ class ApiSubscriptionClaimPay extends Controller
                                         'messages' => ['Your point not enough.']
                                     ]);
                                 }
-                            } elseif ( $post['payment_method'] == 'balance' ) {
+                            } 
+                            // elseif ( $post['payment_method'] == 'balance' ) {
 
-                                DB::rollback();
-                                return response()->json([
-                                    'status'   => 'fail',
-                                    'messages' => ['You can\'t buy this subscription with point.']
-                                ]);
-                            }
+                            //     DB::rollback();
+                            //     return response()->json([
+                            //         'status'   => 'fail',
+                            //         'messages' => ['You can\'t buy this subscription with point.']
+                            //     ]);
+                            // }
 
                             //CEK IF BALANCE O
                             if(isset($post['balance']) && $post['balance'] == true){
@@ -245,10 +246,21 @@ class ApiSubscriptionClaimPay extends Controller
 
                         }
                         else {
+                        	switch ($dataSubs->new_purchase_after) {
+				        		case 'Empty':
+				        			$msg = 'empty';
+				        			break;
+				        		case 'Empty Expired':
+				        			$msg = 'empty or expired';
+				        			break;
+				        		default:
+				        			$msg = 'expired';
+				        			break;
+				        	}
                             DB::rollback();
                             return response()->json([
                                 'status'   => 'fail',
-                                'messages' => ['You have participated, you can buy this subscription again after your previous subscription expired.']
+                                'messages' => ['You have participated, you can buy this subscription again after your previous subscription is '.$msg]
                             ]);
                         }
                     }
@@ -295,11 +307,8 @@ class ApiSubscriptionClaimPay extends Controller
 
             if ($voucher) {
                 $pay = $this->paymentMethod($dataSubs, $voucher, $request);
-            }
-
-            if ($pay) {
-                DB::commit();
-                if(strtolower($request->payment_method) == 'ipay88'){
+                if (($pay['payment']??false) == 'ipay88'){
+                    DB::commit();
                     return [
                         'status'    => 'success',
                         'result'    => [
@@ -308,11 +317,16 @@ class ApiSubscriptionClaimPay extends Controller
                                 'id_reference' => $voucher->id_subscription_user,
                                 'payment_id' => $request->json('payment_id')?:''
                             ]),
+                            'redirect' => true,
                             'id_subscription_user' => $voucher->id_subscription_user,
                             'cancel_message' => 'Are you sure you want to cancel this transaction?'
                         ]
                     ];
                 }
+            }
+
+            if ($pay) {
+                DB::commit();
                 $pay['cancel_message'] = 'Are you sure you want to cancel this transaction?';
                 $return = MyHelper::checkCreate($pay);
                 if(isset($return['status']) && $return['status'] == 'success'){
@@ -394,6 +408,12 @@ class ApiSubscriptionClaimPay extends Controller
            /* IPay88 */
             if ($request->get('payment_method') && strtolower($request->get('payment_method')) == "ipay88") {
                 $pay = $this->ipay88($dataSubs, $voucher, null, $request->json()->all());
+                $ipay88 = [
+                    'MERCHANT_TRANID'   => $pay['order_id'],
+                    'AMOUNT'            => $pay['amount'],
+                    'payment'           => 'ipay88'
+                ];
+                return $ipay88;
             }
 
         }
@@ -493,7 +513,13 @@ class ApiSubscriptionClaimPay extends Controller
                         return $this->midtrans($subs, $voucher, $dataSubsUserUpdate['balance_nominal']);
                     }
                     if(strtolower($paymentMethod) == 'ipay88'){
-                        return $this->ipay88($subs, $voucher, $dataSubsUserUpdate['balance_nominal'], $post);
+                        $pay = $this->ipay88($subs, $voucher, $dataSubsUserUpdate['balance_nominal'], $post);
+                        $ipay88 = [
+                            'MERCHANT_TRANID'   => $pay['order_id'],
+                            'AMOUNT'            => $pay['amount'],
+                            'payment'           => 'ipay88'
+                        ];
+                        return $ipay88;
                     }
                 }
             }

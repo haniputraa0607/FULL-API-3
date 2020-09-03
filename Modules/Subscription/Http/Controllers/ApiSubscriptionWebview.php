@@ -35,9 +35,20 @@ class ApiSubscriptionWebview extends Controller
         			'subscription_content' => function($q){
         				$q->where('is_active',1);
         			},
-        			'subscription_content.subscription_content_details'
+        			'subscription_content.subscription_content_details',
+        			'brand'
         		])
-        		->find($request->get('id_subscription'))
+        		->find($request->get('id_subscription'));
+
+        if (empty($subs)) {
+        	return MyHelper::checkGet($subs);
+        }
+
+        $subs = $subs->append(
+					'subscription_voucher_benefit_pretty',
+					'subscription_voucher_max_benefit_pretty',
+					'subscription_minimal_transaction_pretty'
+				)
         		->toArray();
 
         $subs = $this->renderOutletCity($subs);
@@ -76,7 +87,7 @@ class ApiSubscriptionWebview extends Controller
             $payment_message = Setting::where('key', 'subscription_payment_messages')->pluck('value_text')->first()??'Kamu yakin ingin membeli subscription ini?';
             $payment_message = MyHelper::simpleReplace($payment_message,['subscription_title'=>$subs['subscription_title']]);
         }elseif($subs['subscription_price_type']=='point'){
-            $payment_message = Setting::where('key', 'subscription_payment_messages_point')->pluck('value_text')->first()??'Anda akan menukarkan %point% points anda dengan subscription %subscription_title%?';
+            $payment_message = Setting::where('key', 'subscription_payment_messages_point')->pluck('value_text')->first()??'Anda akan menukarkan %point% poin anda dengan subscription %subscription_title%?';
             $payment_message = MyHelper::simpleReplace($payment_message,['point'=>$subs['subscription_price_point'],'subscription_title'=>$subs['subscription_title']]);
         }else{
             $payment_message = Setting::where('key', 'subscription_payment_messages_cash')->pluck('value_text')->first()??'Kamu yakin ingin membeli subscription %subscription_title% dengan harga %cash% ?';
@@ -96,7 +107,7 @@ class ApiSubscriptionWebview extends Controller
             if($subs['subscription_price_type']=='point'){
                 $result['button_status']= $subs['subscription_price_point']<=$curBalance?1:0;
                 if($subs['subscription_price_point']>$curBalance){
-                    $result['payment_fail_message'] = Setting::where('key', 'payment_fail_messages')->pluck('value_text')->first()??'Mohon maaf, point anda tidak cukup';
+                    $result['payment_fail_message'] = Setting::where('key', 'payment_fail_messages')->pluck('value_text')->first()??'Mohon maaf, poin anda tidak cukup';
                 }
             }else{
                 $result['button_text'] = 'Beli';
@@ -107,11 +118,13 @@ class ApiSubscriptionWebview extends Controller
         }
 
         $i = 0;
+        $content_key = $this->replaceText($subs);
         foreach ($subs['subscription_content'] as $keyContent => $valueContent) {
             if (!empty($valueContent['subscription_content_details'])) {
                 $result['subscription_content'][$keyContent]['title'] = $valueContent['title'];
                 foreach ($valueContent['subscription_content_details'] as $key => $value) {
-                    $result['subscription_content'][$keyContent]['detail'][$key] = $value['content'];
+                	$content = MyHelper::simpleReplace($value['content'],$content_key);
+                    $result['subscription_content'][$keyContent]['detail'][$key] = $content;
                     // $content[$key] = '<li>'.$value['content'].'</li>';
                 }
                 // $result['deals_content'][$keyContent]['detail'] = '<ul style="color:#707070;">'.implode('', $content).'</ul>';
@@ -119,8 +132,9 @@ class ApiSubscriptionWebview extends Controller
             }
         }
 
+        $i = !empty($keyContent) ? $keyContent+1 : $i;
         $result['subscription_content'][$i]['is_outlet']    = 1;
-        $result['subscription_content'][$i]['title']        = 'Berlaku di';
+        $result['subscription_content'][$i]['title']        = 'Tempat Penukaran';
 
         if ($subs['is_all_outlet'] == true) {
             $result['subscription_content'][$i]['detail'][] = 'Berlaku untuk semua outlet';
@@ -188,8 +202,32 @@ class ApiSubscriptionWebview extends Controller
             return abort(404);
         }
 
-        $subs = SubscriptionUser::with(['subscription.outlets' => function($q) {$q->where('outlet_status', 'Active');}, 'subscription.outlets.city', 'subscription_user_vouchers', 'subscription.subscription_content.subscription_content_details'])->where('id_subscription_user', $request->id_subscription_user)->first()->toArray();
-        
+        $subs = SubscriptionUser::with([
+						'subscription.outlets' => function($q) {
+							$q->where('outlet_status', 'Active');
+						}, 
+						'subscription.outlets.city', 
+						'subscription.brand', 
+						'subscription_user_vouchers', 
+						'subscription.subscription_content' => function($q){
+	        				$q->where('is_active',1);
+	        			},
+						'subscription.subscription_content.subscription_content_details',
+					])
+        			->where('id_subscription_user', $request->id_subscription_user)
+        			->first();
+
+        if (empty($subs)) {
+        	return MyHelper::checkGet($subs);
+        }
+
+        $subs->subscription = $subs->subscription->append(
+								'subscription_voucher_benefit_pretty',
+								'subscription_voucher_max_benefit_pretty',
+								'subscription_minimal_transaction_pretty'
+							);
+        $subs = $subs->toArray();
+
         $subs_outlet = $this->renderOutletCity($subs['subscription']);
         $subs['subscription']['outlet_by_city'] = $subs_outlet['outlet_by_city']??[];
 
@@ -212,6 +250,7 @@ class ApiSubscriptionWebview extends Controller
             'subscription_expired'      		 => date('Y-m-d H:i:s', strtotime($subs['subscription_expired_at'])),
             'subscription_expired_indo'     => MyHelper::dateFormatInd($subs['subscription_expired_at'], false, false),
             'subscription_expired_time_indo'     => 'pukul '.date('H:i', strtotime($subs['subscription_expired_at'])),
+            'is_used' => $subs['is_used']
         ];
         $result['time_server'] = date('Y-m-d H:i:s');
         $result['time_server_indo'] = MyHelper::dateFormatInd(date('Y-m-d H:i:s'), false, false).' pukul '.date('H:i');
@@ -222,6 +261,8 @@ class ApiSubscriptionWebview extends Controller
             if (!is_null($value['used_at'])) {
                 $getTrx = Transaction::select(DB::raw('transactions.*,sum(transaction_products.transaction_product_qty) item_total'))->leftJoin('transaction_products','transactions.id_transaction','=','transaction_products.id_transaction')->with('outlet')->where('transactions.id_transaction', $value['id_transaction'])->groupBy('transactions.id_transaction')->first();
                 $voucher[$key]['used_at']    = $value['used_at'];
+                $voucher[$key]['used_at_indo']    = MyHelper::dateFormatInd($value['used_at'], false, false);
+                $voucher[$key]['used_at_indo_time']    = 'pukul '.date('H:i', strtotime($value['used_at']));
                 if (is_null($getTrx->outlet)) {
                     $voucher[$key]['outlet']     = '-';
                     $voucher[$key]['item']       = '-';
@@ -236,11 +277,13 @@ class ApiSubscriptionWebview extends Controller
         $result['subscription_content'][$i]['title']            = 'Voucher';
         $result['subscription_content'][$i]['detail_voucher']   = $voucher;
         $i++;
+        $content_key = $this->replaceText($subs['subscription']);
         foreach ($subs['subscription']['subscription_content'] as $keyContent => $valueContent) {
             if (!empty($valueContent['subscription_content_details'])) {
                 $result['subscription_content'][$i]['title'] = $valueContent['title'];
                 foreach ($valueContent['subscription_content_details'] as $key => $value) {
-                    $result['subscription_content'][$i]['detail'][$key] = $value['content'];
+                	$content = MyHelper::simpleReplace($value['content'],$content_key);
+                    $result['subscription_content'][$i]['detail'][$key] = $content;
                     // $content[$key] = '<li>'.$value['content'].'</li>';
                 }
                 // $result['deals_content'][$keyContent]['detail'] = '<ul style="color:#707070;">'.implode('', $content).'</ul>';
@@ -248,8 +291,9 @@ class ApiSubscriptionWebview extends Controller
             }
         }
 
+        $i = !empty($keyContent) ? $keyContent+1 : $i;
         $result['subscription_content'][$i]['is_outlet']    = 1;
-        $result['subscription_content'][$i]['title']        = 'Berlaku di';
+        $result['subscription_content'][$i]['title']        = 'Tempat Penukaran';
 
         if ($subs['subscription']['is_all_outlet'] == true) {
             $result['subscription_content'][$i]['detail'][] = 'Berlaku untuk semua outlet';
@@ -266,6 +310,15 @@ class ApiSubscriptionWebview extends Controller
                 }
             }
         }
+
+        if ($subs['is_used']) {
+        	$result['label_text'] = 'Digunakan';
+	        $result['button_text'] = 'Gunakan Nanti';
+        }
+        else{
+	        $result['label_text'] = 'Tidak digunakan';
+	        $result['button_text'] = 'Gunakan';
+        }
         return response()->json(MyHelper::checkGet($result));
     }
 
@@ -276,7 +329,12 @@ class ApiSubscriptionWebview extends Controller
             return abort(404);
         }
 
-        $subs = SubscriptionUser::with('subscription')->where('id_subscription_user', $request->id_subscription_user)->first()->toArray();
+        $subs = SubscriptionUser::with('subscription')->where('id_subscription_user', $request->id_subscription_user)->first();
+
+        if (!$subs) {
+			return MyHelper::checkGet($subs);
+        }
+        $subs->toArray();
         
         $result = [
             'id_subscription_user'              => $subs['id_subscription_user'],
@@ -288,18 +346,20 @@ class ApiSubscriptionWebview extends Controller
             'bought_at_time_indo'               => 'pukul '.date('H:i', strtotime($subs['bought_at'])),
             'subscription_user_receipt_number'  => $subs['subscription_user_receipt_number'],
             'balance_nominal'                   => $subs['balance_nominal'],
+            'use_point'                         => (!is_null($subs['balance_nominal'])) ? 1 : 0 ,
             'expired_at'                        => date('Y-m-d H:i:s', strtotime($subs['subscription_expired_at'])),
             'expired_at_indo'                   => MyHelper::dateFormatInd($subs['subscription_expired_at'], false, false),
             'expired_at_time_indo'              => 'pukul '.date('H:i', strtotime($subs['subscription_expired_at'])),
         ];
 
-        if ($subs['subscription_price_cash'] == 'Free') {
-            $result['subscription_price']   = 'Free';
+        if($subs['paid_status'] == 'Free') {
+            $result['subscription_price']   = 'GRATIS';
         } else {
             if ($subs['subscription_price_cash'] > 0) {
                 $result['subscription_price']   = $subs['subscription_price_cash'];
             } elseif ($subs['subscription_price_point'] > 0) {
-                $result['subscription_price']   = $subs['subscription_price_cash'];
+                $result['use_point']    = 0;
+                $result['subscription_price']   = $subs['subscription_price_point'];
             }
         }
 
@@ -366,6 +426,23 @@ class ApiSubscriptionWebview extends Controller
         }
 
         return $subs;
+    }
+
+
+    function replaceText($subs)
+    {
+    	$text = [
+    		'title' => $subs['subscription_title']??null,
+    		'price' => $subs['subscription_price_pretty']??null,
+    		'brand' => $subs['brand']['name_brand']??null,
+    		'benefit' => $subs['subscription_voucher_benefit_pretty']??null,
+    		'max_benefit' => $subs['subscription_voucher_max_benefit_pretty']??null,
+    		'min_transaction' => $subs['subscription_minimal_transaction_pretty']??null,
+    		'voucher_expired' => !empty($subs['subscription_voucher_expired']) ? MyHelper::dateFormatInd($subs['subscription_voucher_expired'], false, false).' pukul '.date('H:i', strtotime($subs['subscription_voucher_expired'])) : null,
+    		'daily_usage_limit' => $subs['daily_usage_limit']??null
+    	];
+
+    	return $text;
     }
     
 }

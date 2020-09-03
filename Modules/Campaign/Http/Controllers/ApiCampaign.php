@@ -466,23 +466,28 @@ class ApiCampaign extends Controller
 	}
 
 	public function insertQueue(){
-		$now = date('Y-m-d H:i:00');
-		$now2 = date('Y-m-d H:i:00', strtotime('-5 minutes'));
+        $log = MyHelper::logCron('Insert Queue');
+        try {
+			$now = date('Y-m-d H:i:00');
+			$now2 = date('Y-m-d H:i:00', strtotime('-5 minutes'));
 
-		$campaigns = Campaign::where('campaign_send_at', '>=', $now2)->where('campaign_send_at', '<=', $now)->where('campaign_is_sent', 'No')->where('campaign_complete', '1')->get();
-		foreach ($campaigns as $i => $campaign) {
-			if($campaign->campaign_generate_receipient=='Send At Time'){
-				$post=['id_campaign'=>$campaign->id_campaign];
-				GenerateCampaignRecipient::dispatch($post)->allOnConnection('database');
+			$campaigns = Campaign::where('campaign_send_at', '>=', $now2)->where('campaign_send_at', '<=', $now)->where('campaign_is_sent', 'No')->where('campaign_complete', '1')->get();
+			foreach ($campaigns as $i => $campaign) {
+				if($campaign->campaign_generate_receipient=='Send At Time'){
+					$post=['id_campaign'=>$campaign->id_campaign];
+					GenerateCampaignRecipient::dispatch($post)->allOnConnection('database');
+				}
+				$this->sendCampaignInternal($campaign->toArray());
 			}
-			$this->sendCampaignInternal($campaign->toArray());
+
+			$log->success(count($campaigns).' campaign has been insert to queue');
+			return response()->json([
+				'status' => 'success',
+				'result' => count($campaigns).' campaign has been insert to queue'
+			]);
+		} catch (\Exception $e) {
+			$log->fail($e->getMessage());
 		}
-
-		return response()->json([
-			'status' => 'success',
-			'result' => count($campaigns).' campaign has been insert to queue'
-		]);
-
 	}
 
 	public function sendCampaignInternal($campaign){

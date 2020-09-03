@@ -2641,9 +2641,79 @@ class FeaturesTableSeeder extends Seeder
                     'created_at' => '2018-05-10 08:00:00',
                     'updated_at' => '2018-05-10 08:00:00',
                 ),
-            260 =>
+            263 =>
                 array(
-                    'id_feature' => 261,
+                    'id_feature' => 264,
+                    'feature_type' => 'List',
+                    'feature_module' => 'Welcome Subscription',
+                    'show_hide' => 1,
+                    'order' => 110,
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00'),
+                ),
+            264 =>
+                array(
+                    'id_feature' => 265,
+                    'feature_type' => 'Detail',
+                    'feature_module' => 'Welcome Subscription',
+                    'show_hide' => 1,
+                    'order' => 110,
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00'),
+                ),
+            265 =>
+                array(
+                    'id_feature' => 266,
+                    'feature_type' => 'Create',
+                    'feature_module' => 'Welcome Subscription',
+                    'show_hide' => 1,
+                    'order' => 110,
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00'),
+                ),
+            266 =>
+                array(
+                    'id_feature' => 267,
+                    'feature_type' => 'Update',
+                    'feature_module' => 'Welcome Subscription',
+                    'show_hide' => 1,
+                    'order' => 110,
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00'),
+                ),
+            267 =>
+                array(
+                    'id_feature' => 268,
+                    'feature_type' => 'Delete',
+                    'feature_module' => 'Welcome Subscription',
+                    'show_hide' => 1,
+                    'order' => 110,
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00'),
+                ),
+            268 =>
+                array(
+                    'id_feature' => 269,
+                    'feature_type' => 'Update',
+                    'feature_module' => 'Start Deals',
+                    'show_hide' => 1,
+                    'order' => 111,
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00'),
+                ),
+            269 =>
+                array(
+                    'id_feature' => 270,
+                    'feature_type' => 'Update',
+                    'feature_module' => 'Start Subscription',
+                    'show_hide' => 1,
+                    'order' => 112,
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00'),
+                ),
+            270 =>
+                array(
+                    'id_feature' => 271,
                     'feature_type' => 'Report',
                     'feature_module' => 'Report Shift',
                     'show_hide' => 1,

@@ -58,7 +58,8 @@ class Outlet extends Authenticatable
 	protected $hidden = ['outlet_pin'];
 
 	protected $casts = [
-		'id_city' => 'int'
+		'id_city' => 'int',
+		'delivery_order' => 'int'
 	];
 
 	// protected $dates = [
@@ -81,7 +82,7 @@ class Outlet extends Authenticatable
 		'outlet_status',
 		'deep_link_gojek',
 		'deep_link_grab',
-		'big_order',
+		'delivery_order',
 		// 'outlet_open_hours',
 		// 'outlet_close_hours'
 		'status_franchise',

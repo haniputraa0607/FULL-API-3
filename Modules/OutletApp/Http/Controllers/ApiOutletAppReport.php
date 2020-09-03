@@ -34,6 +34,7 @@ use App\Http\Models\TransactionPaymentBalance;
 use Modules\IPay88\Entities\TransactionPaymentIpay88;
 use App\Http\Models\TransactionPaymentOvo;
 use App\Http\Models\TransactionPaymentOffline;
+use Modules\Subscription\Entities\TransactionPaymentSubscription;
 
 use Modules\Brand\Entities\Brand;
 
@@ -67,6 +68,7 @@ class ApiOutletAppReport extends Controller
 							DB::raw('FORMAT(trx_payment_nominal, 0, "de_DE") as trx_payment_nominal'), 
 							DB::raw('trx_payment')
 						)
+                        ->where('refund_with_point', '=', 0)
 						->where('id_outlet', '=', $post['id_outlet'])
 	    				->get();
 
@@ -100,7 +102,9 @@ class ApiOutletAppReport extends Controller
                     (select count(DISTINCT transactions.id_transaction)) as trx_count,
                     (select AVG(transaction_grandtotal)) as trx_average,
                     (select SUM(trans_p.trx_total_item)) as trx_total_item,
-                    (select DATE(transaction_date)) as trx_date
+                    (select DATE(transaction_date)) as trx_date,
+                    (select SUM(disburse_outlet_transactions.income_outlet)) as trx_net_sale,
+                    (select SUM(transactions.transaction_shipment_go_send)) as trx_shipment_go_send
                     FROM transactions
                     LEFT JOIN (
                     	select 
@@ -110,6 +114,7 @@ class ApiOutletAppReport extends Controller
 	                ) trans_p
                     	ON (transactions.id_transaction = trans_p.id_transaction) 
                     LEFT JOIN transaction_pickups ON transaction_pickups.id_transaction = transactions.id_transaction
+                    LEFT JOIN disburse_outlet_transactions ON disburse_outlet_transactions.id_transaction = transactions.id_transaction
                     WHERE transaction_date BETWEEN "'. date('Y-m-d', strtotime($post['date'])) .' 00:00:00"
                     AND "'. date('Y-m-d', strtotime($post['date'])) .' 23:59:59"
                     AND transactions.id_outlet = "'.$post['id_outlet'].'"
@@ -219,7 +224,28 @@ class ApiOutletAppReport extends Controller
 				$daily_payment = array_merge($daily_payment, $dataPaymentOffline);
 	
 			//end offline
-			
+
+			/*
+			//subscription
+				$dataPaymentSubscription = TransactionPaymentSubscription::join('transactions', 'transactions.id_transaction', 'transaction_payment_subscriptions.id_transaction')
+				->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+				->select(
+					DB::raw('FORMAT(COUNT(transactions.id_transaction), 0, "de_DE") as trx_payment_count'), 
+					DB::raw('FORMAT(SUM(transaction_payment_subscriptions.subscription_nominal), 0, "de_DE") as trx_payment_nominal'), 
+					DB::raw("'Subscription' AS trx_payment")
+				)
+				->where('transactions.id_outlet', $post['id_outlet'])
+				->whereDate('transactions.transaction_date', $date)
+				->where('transactions.transaction_payment_status', 'Completed')
+				->whereNull('transaction_pickups.reject_at')
+				->groupBy('transactions.id_outlet', 'trx_payment')
+				->get()->toArray();
+				
+				// merge from midtrans, ovo, ipay
+				$daily_payment = array_merge($daily_payment, $dataPaymentSubscription);
+	
+			//end subscription
+			*/
 
 	        if ( empty($outlet) ) {
     			return response()->json(MyHelper::checkGet(null));
@@ -237,7 +263,7 @@ class ApiOutletAppReport extends Controller
 
     	$data['outlet_name'] 	= $daily_trx['outlet']['outlet_name']??$outlet['outlet_name'];
     	$data['outlet_address'] = $daily_trx['outlet']['outlet_address']??$outlet['outlet_address'];
-	    $data['transaction_date'] = date("d F Y", strtotime($post['date']));
+	    $data['transaction_date'] = MyHelper::dateFormatInd($post['date'], true, false);
 	    $data['time_server'] 	= date("H:i");
 
     	if ($daily_trx) {
@@ -246,12 +272,16 @@ class ApiOutletAppReport extends Controller
 	    	$data['trx_grand']		= number_format($daily_trx['trx_grand'],0,",",".");
 	    	$data['trx_count']		= number_format($daily_trx['trx_count'],0,",",".");
 	    	$data['trx_total_item']	= number_format($daily_trx['trx_total_item'],0,",",".");
+            $data['trx_net_sale']	= number_format($daily_trx['trx_net_sale'],0,",",".");
+            $data['trx_shipment_go_send']	= number_format($daily_trx['trx_shipment_go_send'],0,",",".");
     	}else{
 	    	$data['first_trx_time'] = "";
 	    	$data['last_trx_time'] 	= "";
 	    	$data['trx_grand']		= 0;
 	    	$data['trx_count']		= 0;
 	    	$data['trx_total_item']	= 0;
+            $data['trx_net_sale']		= 0;
+            $data['trx_shipment_go_send']	= 0;
     	}
     	$data['payment']		= $daily_payment;
 
@@ -447,10 +477,17 @@ class ApiOutletAppReport extends Controller
     		$result = $data['product'];
     		foreach ($result as $key => $value) {
 
+				/*
 				$mod_key = array_search($value['id_brand'], array_column($data['modifier'], 'id_brand'));
 
 				if($mod_key !== false){
 					$result[$mod_key]['modifier'] = $data['modifier'][$mod_key]['modifier'];
+				}
+				*/
+				foreach ($data['modifier'] as $key2 => $value2) {
+					if ($value['id_brand'] == $value2['id_brand']) {
+							$result[$key]['modifier'] = $value2['modifier'];	
+					}
 				}
 			}
     	}
@@ -601,7 +638,7 @@ class ApiOutletAppReport extends Controller
 	    				->where('transactions.transaction_payment_status','=','Completed')
 	    				->whereNull('transaction_pickups.reject_at')
 	    				->select(
-	    					DB::raw('(select SUM(transaction_product_modifiers.qty)) as total_qty')
+	    					DB::raw('(select SUM(transaction_product_modifiers.qty * transaction_products.transaction_product_qty)) as total_qty')
 	    				)
 	    				->Join('transactions','transaction_products.id_transaction', '=', 'transactions.id_transaction')
 	    				->Join('transaction_product_modifiers','transaction_product_modifiers.id_transaction_product', '=', 'transaction_products.id_transaction_product')
@@ -619,7 +656,7 @@ class ApiOutletAppReport extends Controller
 	    					DB::raw('(select transactions.id_outlet) as id_outlet'),
 	    					DB::raw('(select transaction_products.id_brand) as id_brand'),
 	    					DB::raw('(select product_modifiers.text) as text'),
-	    					DB::raw('(select SUM(transaction_product_modifiers.qty)) as total_qty'),
+	    					DB::raw('(select SUM(transaction_product_modifiers.qty * transaction_products.transaction_product_qty)) as total_qty'),
 	    					DB::raw('(select SUM(transaction_product_modifiers.transaction_product_modifier_price)) as total_nominal'),
 	    					DB::raw('(select count(transaction_product_modifiers.id_product_modifier)) as total_rec')
 	    				)

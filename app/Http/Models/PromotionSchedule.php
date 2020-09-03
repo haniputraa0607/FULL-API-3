@@ -26,6 +26,8 @@ class PromotionSchedule extends Model
 		'schedule_day_every_week',
 		'schedule_week_in_month',
 		'schedule_everyday',
+		'date_start',
+		'date_end',
 		'created_at',
 		'updated_at',
 	];

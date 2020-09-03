@@ -65,6 +65,7 @@ class ApiUser extends Controller
         $this->inbox  = "Modules\InboxGlobal\Http\Controllers\ApiInbox";
         $this->setting_fraud = "Modules\SettingFraud\Http\Controllers\ApiFraud";
         $this->deals = "Modules\Deals\Http\Controllers\ApiDeals";
+        $this->welcome_subscription = "Modules\Subscription\Http\Controllers\ApiWelcomeSubscription";
     }
 
     function LogActivityFilter($rule = 'and', $conditions = null, $order_field = 'id', $order_method = 'asc', $skip = 0, $take = 999999999999)
@@ -887,6 +888,14 @@ class ApiUser extends Controller
 
         $data = User::with('city')->where('phone', '=', $phone)->get()->toArray();
 
+        if($data){
+            //First check rule for request otp
+            $checkRuleRequest = MyHelper::checkRuleForRequestOTP($data, 1);
+            if(isset($checkRuleRequest['otp_timer'])){
+                $holdTime = $checkRuleRequest['otp_timer'];
+            }
+        }
+
         if (isset($data[0]['is_suspended']) && $data[0]['is_suspended'] == '1') {
             return response()->json([
                 'status' => 'success',
@@ -908,7 +917,7 @@ class ApiUser extends Controller
                     'status' => 'success',
                     'result' => $data,
                     'otp_timer' => $holdTime,
-                    'confirmation_message' => 'Anda akan mendaftar menggunakan nomor '.$phone.'. Apakah nomor telepon yang Anda masukkan sudah benar?',
+                    'confirmation_message' => 'Anda akan mendaftar menggunakan nomor <b>'.$phone.'</b>. Apakah nomor telepon yang Anda masukkan sudah benar?',
                     'messages' => null
                 ]);
             }else{
@@ -923,7 +932,7 @@ class ApiUser extends Controller
             return response()->json([
                 'status' => 'fail',
                 'otp_timer' => $holdTime,
-                'confirmation_message' => 'Anda akan mendaftar menggunakan nomor '.$phone.'. Apakah nomor telepon yang Anda masukkan sudah benar?',
+                'confirmation_message' => 'Anda akan mendaftar menggunakan nomor <b>'.$phone.'</b>. Apakah nomor telepon yang Anda masukkan sudah benar?',
                 'messages' => ['empty!']
             ]);
         }
@@ -994,6 +1003,11 @@ class ApiUser extends Controller
             ]);
 
             if ($create) {
+                $checkRuleRequest = MyHelper::checkRuleForRequestOTP([$create]);
+                if(isset($checkRuleRequest['status']) && $checkRuleRequest['status'] == 'fail'){
+                    return response()->json($checkRuleRequest);
+                }
+
                 if ($request->json('device_id') && $request->json('device_token') && $request->json('device_type')) {
                     app($this->home)->updateDeviceUser($create, $request->json('device_id'), $request->json('device_token'), $request->json('device_type'));
                 }
@@ -1343,9 +1357,19 @@ class ApiUser extends Controller
 
         $checkPhoneFormat = MyHelper::phoneCheckFormat($phone);
 
+        //get setting rule otp
+        $setting = Setting::where('key', 'otp_rule_request')->first();
+
+        $holdTime = 30;//set default hold time if setting not exist. hold time in second
+        if($setting && isset($setting['value_text'])){
+            $setting = json_decode($setting['value_text']);
+            $holdTime = (int)$setting->hold_time;
+        }
+
         if (isset($checkPhoneFormat['status']) && $checkPhoneFormat['status'] == 'fail') {
             return response()->json([
                 'status' => 'fail',
+                'otp_timer' => $holdTime,
                 'messages' => [$checkPhoneFormat['messages']]
             ]);
         } elseif (isset($checkPhoneFormat['status']) && $checkPhoneFormat['status'] == 'success') {
@@ -1363,52 +1387,57 @@ class ApiUser extends Controller
                 return response()->json($checkRuleRequest);
             }
 
-            $pinnya = rand(100000, 999999);
-            $pin = bcrypt($pinnya);
-            /*if($data[0]['phone_verified'] == 0){*/
+            if($checkRuleRequest == true && !isset($checkRuleRequest['otp_timer'])){
+                $pinnya = rand(100000, 999999);
+                $pin = bcrypt($pinnya);
+                /*if($data[0]['phone_verified'] == 0){*/
 
-            //get setting to set expired time for otp, if setting not exist expired default is 30 minutes
-            $getSettingTimeExpired = Setting::where('key', 'setting_expired_otp')->first();
-            if($getSettingTimeExpired){
-                $dateOtpTimeExpired = date("Y-m-d H:i:s", strtotime("+".$getSettingTimeExpired['value']." minutes"));
-            }else{
-                $dateOtpTimeExpired = date("Y-m-d H:i:s", strtotime("+30 minutes"));
-            }
+                //get setting to set expired time for otp, if setting not exist expired default is 30 minutes
+                $getSettingTimeExpired = Setting::where('key', 'setting_expired_otp')->first();
+                if($getSettingTimeExpired){
+                    $dateOtpTimeExpired = date("Y-m-d H:i:s", strtotime("+".$getSettingTimeExpired['value']." minutes"));
+                }else{
+                    $dateOtpTimeExpired = date("Y-m-d H:i:s", strtotime("+30 minutes"));
+                }
 
-            $update = User::where('phone', '=', $phone)->update(['password' => $pin, 'otp_valid_time' => $dateOtpTimeExpired]);
+                $update = User::where('phone', '=', $phone)->update(['password' => $pin, 'otp_valid_time' => $dateOtpTimeExpired]);
 
-            $useragent = $_SERVER['HTTP_USER_AGENT'];
-            if (stristr($_SERVER['HTTP_USER_AGENT'], 'iOS')) $useragent = 'iOS';
-            if (stristr($_SERVER['HTTP_USER_AGENT'], 'okhttp')) $useragent = 'Android';
-            if (stristr($_SERVER['HTTP_USER_AGENT'], 'GuzzleHttp')) $useragent = 'Browser';
+                $useragent = $_SERVER['HTTP_USER_AGENT'];
+                if (stristr($_SERVER['HTTP_USER_AGENT'], 'iOS')) $useragent = 'iOS';
+                if (stristr($_SERVER['HTTP_USER_AGENT'], 'okhttp')) $useragent = 'Android';
+                if (stristr($_SERVER['HTTP_USER_AGENT'], 'GuzzleHttp')) $useragent = 'Browser';
 
-
-            if (\Module::collections()->has('Autocrm')) {
-                $autocrm = app($this->autocrm)->SendAutoCRM(
-                    'Pin Sent',
-                    $phone,
-                    [
-                        'pin' => $pinnya,
-                        'useragent' => $useragent,
-                        'now' => date('Y-m-d H:i:s'),
-                        'date_sent' => date('d-m-y H:i:s'),
-                        'expired_time' => (string) MyHelper::setting('setting_expired_otp','value', 30),
-                    ],
-                    $useragent
-                );
+                if (\Module::collections()->has('Autocrm')) {
+                    $autocrm = app($this->autocrm)->SendAutoCRM(
+                        'Pin Sent',
+                        $phone,
+                        [
+                            'pin' => $pinnya,
+                            'useragent' => $useragent,
+                            'now' => date('Y-m-d H:i:s'),
+                            'date_sent' => date('d-m-y H:i:s'),
+                            'expired_time' => (string) MyHelper::setting('setting_expired_otp','value', 30),
+                        ],
+                        $useragent
+                    );
+                }
+            }elseif(isset($checkRuleRequest['otp_timer']) && $checkRuleRequest['otp_timer'] !== false){
+                $holdTime = $checkRuleRequest['otp_timer'];
             }
 
             if (env('APP_ENV') == 'production') {
                 $result = [
                     'status'    => 'success',
+                    'otp_timer' => $holdTime,
                     'result'    => ['phone'    =>    $data[0]['phone'],]
                 ];
             } else {
                 $result = [
                     'status'    => 'success',
+                    'otp_timer' => $holdTime,
                     'result'    => [
                         'phone'    =>    $data[0]['phone'],
-                        'pin'    =>    MyHelper::encPIN($pinnya)
+                        'pin'    =>    ''
                     ]
                 ];
             }
@@ -1421,6 +1450,7 @@ class ApiUser extends Controller
         } else {
             $result = [
                 'status'    => 'fail',
+                'otp_timer' => $holdTime,
                 'messages'    => ['This phone number isn\'t registered']
             ];
         }
@@ -1435,9 +1465,19 @@ class ApiUser extends Controller
 
         $checkPhoneFormat = MyHelper::phoneCheckFormat($phone);
 
+        //get setting rule otp
+        $setting = Setting::where('key', 'otp_rule_request')->first();
+
+        $holdTime = 30;//set default hold time if setting not exist. hold time in second
+        if($setting && isset($setting['value_text'])){
+            $setting = json_decode($setting['value_text']);
+            $holdTime = (int)$setting->hold_time;
+        }
+
         if (isset($checkPhoneFormat['status']) && $checkPhoneFormat['status'] == 'fail') {
             return response()->json([
                 'status' => 'fail',
+                'otp_timer' => $holdTime,
                 'messages' => [$checkPhoneFormat['messages']]
             ]);
         } elseif (isset($checkPhoneFormat['status']) && $checkPhoneFormat['status'] == 'success') {
@@ -1449,6 +1489,7 @@ class ApiUser extends Controller
         if (!$user) {
             $result = [
                 'status'    => 'fail',
+                'otp_timer' => $holdTime,
                 'messages'    => ['User not found.']
             ];
             return response()->json($result);
@@ -1457,6 +1498,7 @@ class ApiUser extends Controller
         if ($user['email'] == null) {
             $result = [
                 'status'    => 'fail',
+                'otp_timer' => $holdTime,
                 'messages'    => ['User email is empty.']
             ];
             return response()->json($result);
@@ -1474,53 +1516,59 @@ class ApiUser extends Controller
                 return response()->json($checkRuleRequest);
             }
 
-            $pin = MyHelper::createRandomPIN(6, 'angka');
-            $password = bcrypt($pin);
+            if(!isset($checkRuleRequest['otp_timer']) && $checkRuleRequest == true){
+                $pin = MyHelper::createRandomPIN(6, 'angka');
+                $password = bcrypt($pin);
 
-            //get setting to set expired time for otp, if setting not exist expired default is 30 minutes
-            $getSettingTimeExpired = Setting::where('key', 'setting_expired_otp')->first();
-            if($getSettingTimeExpired){
-                $dateOtpTimeExpired = date("Y-m-d H:i:s", strtotime("+".$getSettingTimeExpired['value']." minutes"));
-            }else{
-                $dateOtpTimeExpired = date("Y-m-d H:i:s", strtotime("+30 minutes"));
+                //get setting to set expired time for otp, if setting not exist expired default is 30 minutes
+                $getSettingTimeExpired = Setting::where('key', 'setting_expired_otp')->first();
+                if($getSettingTimeExpired){
+                    $dateOtpTimeExpired = date("Y-m-d H:i:s", strtotime("+".$getSettingTimeExpired['value']." minutes"));
+                }else{
+                    $dateOtpTimeExpired = date("Y-m-d H:i:s", strtotime("+30 minutes"));
+                }
+
+                $update = User::where('id', '=', $data[0]['id'])->update(['password' => $password, 'phone_verified' => '0', 'otp_valid_time' => $dateOtpTimeExpired]);
+
+                if (!empty($request->header('user-agent-view'))) {
+                    $useragent = $request->header('user-agent-view');
+                } else {
+                    $useragent = $_SERVER['HTTP_USER_AGENT'];
+                }
+
+                if (stristr($useragent, 'iOS')) $useragent = 'iOS';
+                if (stristr($useragent, 'okhttp')) $useragent = 'Android';
+                if (stristr($useragent, 'GuzzleHttp')) $useragent = 'Browser';
+
+                $autocrm = app($this->autocrm)->SendAutoCRM(
+                    'Pin Forgot',
+                    $phone,
+                    [
+                        'pin' => $pin,
+                        'useragent' => $useragent,
+                        'now' => date('Y-m-d H:i:s'),
+                        'date_sent' => date('d-m-y H:i:s'),
+                        'expired_time' => (string) MyHelper::setting('setting_expired_otp','value', 30),
+                    ],
+                    $useragent
+                );
+            }elseif(isset($checkRuleRequest['otp_timer']) && $checkRuleRequest['otp_timer'] !== false){
+                $holdTime = $checkRuleRequest['otp_timer'];
             }
-
-            $update = User::where('id', '=', $data[0]['id'])->update(['password' => $password, 'phone_verified' => '0', 'otp_valid_time' => $dateOtpTimeExpired]);
-
-            if (!empty($request->header('user-agent-view'))) {
-                $useragent = $request->header('user-agent-view');
-            } else {
-                $useragent = $_SERVER['HTTP_USER_AGENT'];
-            }
-
-            if (stristr($useragent, 'iOS')) $useragent = 'iOS';
-            if (stristr($useragent, 'okhttp')) $useragent = 'Android';
-            if (stristr($useragent, 'GuzzleHttp')) $useragent = 'Browser';
-
-            $autocrm = app($this->autocrm)->SendAutoCRM(
-                'Pin Forgot',
-                $phone,
-                [
-                    'pin' => $pin,
-                    'useragent' => $useragent,
-                    'now' => date('Y-m-d H:i:s'),
-                    'date_sent' => date('d-m-y H:i:s'),
-                    'expired_time' => (string) MyHelper::setting('setting_expired_otp','value', 30),
-                ],
-                $useragent
-            );
 
             if (env('APP_ENV') == 'production') {
                 $result = [
                     'status'    => 'success',
+                    'otp_timer' => $holdTime,
                     'result'    => ['phone'    =>    $phone]
                 ];
             } else {
                 $result = [
                     'status'    => 'success',
+                    'otp_timer' => $holdTime,
                     'result'    => [
                         'phone'    =>    $phone,
-                        'pin'        =>    MyHelper::encPIN($pin)
+                        'pin'        =>  ''
                     ]
                 ];
             }
@@ -1528,6 +1576,7 @@ class ApiUser extends Controller
         } else {
             $result = [
                 'status'    => 'fail',
+                'otp_timer' => $holdTime,
                 'messages'    => ['Email yang kamu masukkan kurang tepat']
             ];
             return response()->json($result);
@@ -1619,7 +1668,7 @@ class ApiUser extends Controller
                         }
                     }
 
-                    $update = User::where('id', '=', $data[0]['id'])->update(['phone_verified' => '1']);
+                    $update = User::where('id', '=', $data[0]['id'])->update(['phone_verified' => '1', 'otp_valid_time' => NULL]);
                     if ($update) {
                         $profile = User::select('phone', 'email', 'name', 'id_city', 'gender', 'phone_verified', 'email_verified')
                             ->where('phone', '=', $phone)
@@ -1680,15 +1729,6 @@ class ApiUser extends Controller
             ->toArray();
         if ($data) {
             if (Auth::attempt(['phone' => $phone, 'password' => $request->json('pin_old')])) {
-                /*first if --> check if otp have expired and the current time exceeds the expiration time
-                  second if --> when the current time does not exceed the expired time, then update otp_valid_time to NULL
-                */
-                if(!is_null($data[0]['otp_valid_time']) && strtotime(date('Y-m-d H:i:s')) > strtotime($data[0]['otp_valid_time'])){
-                    return response()->json(['status' => 'fail', 'otp_check'=> 1, 'messages' => ['This OTP is expired, please re-request OTP from apps']]);
-                }elseif(!is_null($data[0]['otp_valid_time'])){
-                    User::where('phone', $phone)->update(['otp_valid_time' => NULL]);
-                }
-
                 $pin     = bcrypt($request->json('pin_new'));
                 $update = User::where('id', '=', $data[0]['id'])->update(['password' => $pin, 'phone_verified' => '1', 'pin_changed' => '1']);
                 if (\Module::collections()->has('Autocrm')) {
@@ -1834,9 +1874,16 @@ class ApiUser extends Controller
             // $pin_x = MyHelper::decryptkhususpassword($data[0]['pin_k'], md5($data[0]['id_user'], true));
             if($request->json('email') != "" && $request->json('name') != "" &&
                 empty($data[0]['email']) && empty($data[0]['name'])){
-                $setting = Setting::where('key','welcome_voucher_setting')->first()->value;
-                if($setting == 1){
+                $get_setting = Setting::whereIn('key',['welcome_voucher_setting', 'welcome_subscription_setting'])->get();
+				$setting = [];
+				foreach ($get_setting as $key => $value) {
+					$setting[$value['key']] = $value['value'];
+				}
+                if($setting['welcome_voucher_setting'] == 1){
                     $injectVoucher = app($this->deals)->injectWelcomeVoucher(['id' => $data[0]['id']], $data[0]['phone']);
+                }
+                if($setting['welcome_subscription_setting'] == 1){
+                    $inject_subscription = app($this->welcome_subscription)->injectWelcomeSubscription(['id' => $data[0]['id']], $data[0]['phone']);
                 }
             }
 
@@ -1925,7 +1972,9 @@ class ApiUser extends Controller
 
                 //cek complete profile ?
                 if ($datauser[0]['complete_profile'] != "1") {
-                    if ($datauser[0]['name'] != "" && $datauser[0]['email'] != "" && $datauser[0]['gender'] != "" && $datauser[0]['birthday'] != "" && $datauser[0]['id_city'] != "" && $datauser[0]['job'] != "" && $datauser[0]['id_card_image'] != "") {
+                    if ($datauser[0]['name'] != "" && $datauser[0]['email'] != "" && $datauser[0]['gender'] != "" && $datauser[0]['birthday'] != "" && $datauser[0]['id_city'] != "" && $datauser[0]['job'] != "" 
+                        // && $datauser[0]['id_card_image'] != ""
+                    ) {
                         //get point
 
                         $complete_profile_cashback = 0;
@@ -1961,16 +2010,18 @@ class ApiUser extends Controller
                         /* add cashback */
                         $balance_nominal = $complete_profile_cashback;
                         // add log balance & update user balance
-                        $balanceController = new BalanceController();
-                        $addLogBalance = $balanceController->addLogBalance($datauser[0]['id'], $balance_nominal, null, "Welcome Point", 0);
-
-                        if (!$addLogBalance) {
-                            DB::rollback();
-                            return [
-                                'status' => 'fail',
-                                'messages' => 'Failed to save data'
-                            ];
+                        if ($balance_nominal != 0) {
+	                        $balanceController = new BalanceController();
+	                        $addLogBalance = $balanceController->addLogBalance($datauser[0]['id'], $balance_nominal, null, "Welcome Point", 0);
+	                        if (!$addLogBalance) {
+	                            DB::rollback();
+	                            return [
+	                                'status' => 'fail',
+	                                'messages' => 'Failed to save data'
+	                            ];
+	                        }
                         }
+
                         if ($balance_nominal ?? false) {
                             $send   = app($this->autocrm)->SendAutoCRM(
                                 'Complete User Profile Point Bonus',

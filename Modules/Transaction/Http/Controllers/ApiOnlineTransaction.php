@@ -3,6 +3,7 @@
 namespace Modules\Transaction\Http\Controllers;
 
 use App\Http\Models\DailyTransactions;
+use App\Jobs\DisburseJob;
 use App\Jobs\FraudJob;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -129,6 +130,14 @@ class ApiOnlineTransaction extends Controller
             }
         }else{
             $outlet = optional();
+        }
+
+        if($post['type'] != 'Pickup Order' && !$outlet->delivery_order) {
+            DB::rollback();
+            return response()->json([
+                'status'    => 'fail',
+                'messages'  => ['Maaf, Outlet ini tidak support untuk delivery order']
+                ]);
         }
 
         $issetDate = false;
@@ -645,6 +654,11 @@ class ApiOnlineTransaction extends Controller
             $post['longitude'] = null;
         }
 
+        $distance = NULL;
+        if(isset($post['latitude']) &&  isset($post['longitude'])){
+            $distance = (float)app($this->outlet)->distance($post['latitude'], $post['longitude'], $outlet['outlet_latitude'], $outlet['outlet_longitude'], "K");
+        }
+
         if (!isset($post['notes'])) {
             $post['notes'] = null;
         }
@@ -713,8 +727,13 @@ class ApiOnlineTransaction extends Controller
             'membership_promo_id'         => $post['membership_promo_id'],
             'latitude'                    => $post['latitude'],
             'longitude'                   => $post['longitude'],
+            'distance_customer'           => $distance,
             'void_date'                   => null,
         ];
+
+        if($transaction['transaction_grandtotal'] == 0){
+            $transaction['transaction_payment_status'] = 'Completed';
+        }
 
         $newTopupController = new NewTopupController();
         $checkHashBefore = $newTopupController->checkHash('log_balances', $id);
@@ -786,7 +805,7 @@ class ApiOnlineTransaction extends Controller
         // add payment subscription
         if ( $request->json('id_subscription_user') )
         {
-        	$subscription_total = app($this->subscription_use)->calculate($request->id_subscription_user, $insertTransaction['transaction_grandtotal'], $insertTransaction['transaction_subtotal'], $post['item'], $post['id_outlet'], $subs_error, $errorProduct, $subs_product, $subs_applied_product);
+        	$subscription_total = app($this->subscription_use)->calculate($request->id_subscription_user, $insertTransaction['transaction_subtotal'], $insertTransaction['transaction_subtotal'], $post['item'], $post['id_outlet'], $subs_error, $errorProduct, $subs_product, $subs_applied_product);
 
 	        if (!empty($subs_error)) {
 	        	DB::rollback();
@@ -814,7 +833,16 @@ class ApiOnlineTransaction extends Controller
                     'status'    => 'fail',
                     'messages'  => ['Insert Transaction Failed']
                 ]);
-	        }
+            }
+
+            //update when total = 0
+            if(($transaction['transaction_grandtotal'] - $subscription_total) == 0){
+                $updateTrx = Transaction::where('id_transaction', $insertTransaction['id_transaction'])->update([
+                    'transaction_payment_status' => 'Completed'
+                ]);
+                $insertTransaction['transaction_payment_status'] = 'Completed'; 
+                $insertTransaction['transaction_grandtotal'] = 0;
+            }
         }
 
         // add promo campaign report
@@ -839,7 +867,7 @@ class ApiOnlineTransaction extends Controller
         }
 
         //update receipt
-        $receipt = 'TRX-'.MyHelper::createrandom(6,'Angka').time().MyHelper::createrandom(3,'Angka').$insertTransaction['id_outlet'].MyHelper::createrandom(3,'Angka');
+        $receipt = 'J+'.MyHelper::createrandom(4,'Angka').time().substr($insertTransaction['id_outlet'], 0, 4);
         $updateReceiptNumber = Transaction::where('id_transaction', $insertTransaction['id_transaction'])->update([
             'transaction_receipt_number' => $receipt
         ]);
@@ -916,9 +944,11 @@ class ApiOnlineTransaction extends Controller
                 'id_user'                      => $insertTransaction['id_user'],
                 'transaction_product_qty'      => $valueProduct['qty'],
                 'transaction_product_price'    => $productPrice,
-                'transaction_product_price_base'    => NULL,
-                'transaction_product_price_tax'    => NULL,
+                'transaction_product_price_base' => NULL,
+                'transaction_product_price_tax'  => NULL,
                 'transaction_product_discount'   => $this_discount,
+                'transaction_product_base_discount' => $valueProduct['base_discount'] ?? 0,
+                'transaction_product_qty_discount'  => $valueProduct['qty_discount'] ?? 0,
                 // remove discount from subtotal
                 // 'transaction_product_subtotal' => ($valueProduct['qty'] * $checkPriceProduct['product_price'])-$this_discount,
                 'transaction_product_subtotal' => ($valueProduct['qty'] * $productPrice),
@@ -1395,19 +1425,25 @@ class ApiOnlineTransaction extends Controller
             }
         }
 
-        if (isset($post['payment_type'])) {
+        if (isset($post['payment_type']) || $insertTransaction['transaction_grandtotal'] == 0) {
 
-            if ($post['payment_type'] == 'Balance') {
-                $save = app($this->balance)->topUp($insertTransaction['id_user'], ($subscription['grandtotal']??$insertTransaction['transaction_grandtotal']), $insertTransaction['id_transaction']);
+            if ($post['payment_type'] == 'Balance' || $insertTransaction['transaction_grandtotal'] == 0) {
 
-                if (!isset($save['status'])) {
-                    DB::rollback();
-                    return response()->json(['status' => 'fail', 'messages' => ['Transaction failed']]);
-                }
-
-                if ($save['status'] == 'fail') {
-                    DB::rollback();
-                    return response()->json($save);
+                if($insertTransaction['transaction_grandtotal'] > 0){
+                    $save = app($this->balance)->topUp($insertTransaction['id_user'], ($subscription['grandtotal']??$insertTransaction['transaction_grandtotal']), $insertTransaction['id_transaction']);
+    
+                    if (!isset($save['status'])) {
+                        DB::rollback();
+                        return response()->json(['status' => 'fail', 'messages' => ['Transaction failed']]);
+                    }
+    
+                    if ($save['status'] == 'fail') {
+                        DB::rollback();
+                        return response()->json($save);
+                    }
+                }else{
+                    $save['status'] = 'success'; 
+                    $save['type'] = 'no_topup';
                 }
 
                 if($save['status'] == 'success'){
@@ -1416,7 +1452,7 @@ class ApiOnlineTransaction extends Controller
                         return response()->json($checkFraudPoint);
                     }
                 }
-
+                
                 if ($post['transaction_payment_status'] == 'Completed' || $save['type'] == 'no_topup') {
 
                     if($config_fraud_use_queue == 1){
@@ -1521,6 +1557,14 @@ class ApiOnlineTransaction extends Controller
                     }
 
                     DB::commit();
+                    //insert to disburse job for calculation income outlet
+                    DisburseJob::dispatch(['id_transaction' => $insertTransaction['id_transaction']])->onConnection('disbursequeue');
+
+                    //remove for result
+                    unset($insertTransaction['user']);
+                    unset($insertTransaction['outlet']);
+                    unset($insertTransaction['product_transaction']);
+
                     return response()->json([
                         'status'     => 'success',
                         'redirect'   => false,
@@ -1624,6 +1668,10 @@ class ApiOnlineTransaction extends Controller
         }
 
         DB::commit();
+
+        //insert to disburse job for calculation income outlet
+        DisburseJob::dispatch(['id_transaction' => $insertTransaction['id_transaction']])->onConnection('disbursequeue');
+
         $insertTransaction['cancel_message'] = 'Are you sure you want to cancel this transaction?';
         return response()->json([
             'status'   => 'success',
@@ -1744,6 +1792,10 @@ class ApiOnlineTransaction extends Controller
         $shippingGoSend = 0;
 
         $error_msg=[];
+
+        if($post['type'] != 'Pickup Order' && !$outlet->delivery_order) {
+            $error_msg[] = 'Maaf, Outlet ini tidak support untuk delivery order';
+        }
 
         if(($post['type']??null) == 'GO-SEND'){
             if(!($outlet['outlet_latitude']&&$outlet['outlet_longitude']&&$outlet['outlet_phone']&&$outlet['outlet_address'])){
@@ -2060,6 +2112,8 @@ class ApiOnlineTransaction extends Controller
                 $tree[$product['id_brand']] = Brand::select('name_brand','id_brand')->find($product['id_brand'])->toArray();
             }
             $product['product_price_total'] = ($product['qty'] * ($product['product_price']+$mod_price));
+            $product['product_price_raw'] = (int) $product['product_price'];
+            $product['product_price_raw_total'] = (int) $product['product_price']+$mod_price;
             $product['product_price'] = MyHelper::requestNumber($product['product_price']+$mod_price, '_CURRENCY');
             $tree[$product['id_brand']]['products'][]=$product;
             $subtotal += $product['product_price_total'];
@@ -2139,6 +2193,7 @@ class ApiOnlineTransaction extends Controller
             'outlet_code' => $outlet['outlet_code'],
             'outlet_name' => $outlet['outlet_name'],
             'outlet_address' => $outlet['outlet_address'],
+            'delivery_order' => $outlet['delivery_order'],
             'today' => $outlet['today']
         ];
         $result['item'] = array_values($tree);
@@ -2157,7 +2212,7 @@ class ApiOnlineTransaction extends Controller
         if ($request->id_subscription_user && !$request->promo_code && !$request->id_deals_user)
         {
         	$promo_source = 'subscription';
-	        $result['subscription'] = app($this->subscription_use)->calculate($request->id_subscription_user, $result['grandtotal'], $result['subtotal'], $post['item'], $post['id_outlet'], $subs_error, $errorProduct, $subs_product, $subs_applied_product);
+	        $result['subscription'] = app($this->subscription_use)->calculate($request->id_subscription_user, $result['subtotal'], $result['subtotal'], $post['item'], $post['id_outlet'], $subs_error, $errorProduct, $subs_product, $subs_applied_product);
 	        if (!empty($subs_error)) {
 	        	$error = $subs_error;
 	        	$promo_error = app($this->promo_campaign)->promoError('transaction', $error, null, $errorProduct);
@@ -2591,7 +2646,9 @@ class ApiOnlineTransaction extends Controller
             return MyHelper::checkGet([],'Transaction cannot be canceled');
         }
         $errors = '';
-        $cancel = \Modules\IPay88\Lib\IPay88::create()->cancel('trx',$trx,$errors);
+
+        $cancel = \Modules\IPay88\Lib\IPay88::create()->cancel('trx',$trx,$errors, $request->last_url);
+
         if($cancel){
             return ['status'=>'success'];
         }

@@ -21,8 +21,7 @@ use App\Http\Models\News;
 use App\Http\Models\UsersMembership;
 use App\Http\Models\OauthAccessToken;
 use App\Http\Models\UserOutlet;
-use App\Http\Models\UserOutletApp;
-
+use App\Http\Models\Outlet;
 use App\Lib\MyHelper;
 use App\Lib\PushNotificationHelper;
 use App\Lib\classTexterSMS;
@@ -48,14 +47,28 @@ class ApiAutoCrm extends Controller
 		$this->apiwha = new apiwha();
     }
 
-	function SendAutoCRM($autocrm_title, $receipient, $variables = null, $useragent = null, $forward_only = false, $outlet = false){
+	function SendAutoCRM($autocrm_title, $receipient, $variables = null, $useragent = null, $forward_only = false, $outlet = false, $recipient_type = null){
+
 		$query = Autocrm::where('autocrm_title','=',$autocrm_title)->with('whatsapp_content')->get()->toArray();
-		if(!$outlet){
-			$users = User::where('phone','=',$receipient)->get()->toArray();
-		}else{
-			$users = UserOutlet::select('id_user_outlet as id', 'user_outlets.*')->where('phone','=',$receipient)->get()->toArray();
-			if(empty($users))
-				$users = UserOutletApp::select('id_user_outletapp as id', 'user_outletapps.*')->where('username', '=', $receipient)->get()->toArray();
+
+		if (!isset($recipient_type)) {
+			if(!$outlet){
+				$users = User::where('phone','=',$receipient)->get()->toArray();
+			}else{
+				$users = UserOutlet::select('id_user_outlet as id', 'user_outlets.*')->where('phone','=',$receipient)->get()->toArray();
+			}
+		}
+		else{
+			if($recipient_type == 'outlet'){
+				// auto response for outlet is email only, therefore recipient is email
+				$users = [[
+					'email' => $receipient, 
+					'name'	=> ""
+				]];
+
+				$query[0]['autocrm_email_subject'] = MyHelper::simpleReplace($query[0]['autocrm_email_subject'] ,$variables);
+				$query[0]['autocrm_email_content'] = MyHelper::simpleReplace($query[0]['autocrm_email_content'] ,$variables);
+			}
 		}
 		if(empty($users)){
 			return true;
@@ -174,13 +187,15 @@ class ApiAutoCrm extends Controller
 
 					}
 
-					$logData = [];
-					$logData['id_user'] = $user['id'];
-					$logData['email_log_to'] = $user['email'];
-					$logData['email_log_subject'] = $subject;
-					$logData['email_log_message'] = $content;
+					if ($recipient_type != 'outlet') {
+						$logData = [];
+						$logData['id_user'] = $user['id'];
+						$logData['email_log_to'] = $user['email'];
+						$logData['email_log_subject'] = $subject;
+						$logData['email_log_message'] = $content;
 
-					$logs = AutocrmEmailLog::create($logData);
+						$logs = AutocrmEmailLog::create($logData);
+					}
 				}
 			}
 
@@ -213,7 +228,7 @@ class ApiAutoCrm extends Controller
 							'setting' => $setting
 						);
 						try{
-							Mail::send('emails.test', $data, function($message) use ($to,$subject,$name,$setting, $autocrm_title,$variables)
+							Mail::send('emails.test', $data, function($message) use ($to,$subject,$name,$setting, $autocrm_title,$variables,$crm)
 							{
 								$message->to($to, $name)->subject($subject);
 								if(!empty($setting['email_from']) && !empty($setting['email_sender'])){
@@ -306,7 +321,8 @@ class ApiAutoCrm extends Controller
 									$crm['autocrm_sms_content'] = '<#> '.$crm['autocrm_sms_content'].' '.ENV('HASH_KEY_'.ENV('HASH_KEY_TYPE'));
 								}
 							}
-
+							
+							$content 	= $this->TextReplace($crm['autocrm_sms_content'], $user['phone'], $variables);
 							array_push($senddata['datapacket'],array(
 									'number' => trim($user['phone']),
 									'message' => urlencode(stripslashes(utf8_encode($content))),
@@ -934,8 +950,9 @@ class ApiAutoCrm extends Controller
 
 	public function listAutoCrm(Request $request){
 		$query = Autocrm::with('whatsapp_content');
-		if($request->autocrm_title){
-			$query = $query->where('autocrm_title',$request->autocrm_title)->first();
+		$post = $request->json()->all();
+		if(isset($post['autocrm_title'])){
+			$query = $query->where('autocrm_title',$post['autocrm_title'])->first();
 		}else{
 			$query = $query->get()->toArray();
 		}

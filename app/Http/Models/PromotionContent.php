@@ -61,6 +61,7 @@ class PromotionContent extends Model
 		'promotion_count_voucher_give',
 		'promotion_count_voucher_used',
 		'promotion_sum_transaction',
+		'send_deals_expired',
 		'created_at',
 		'updated_at',
 	];

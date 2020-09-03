@@ -527,7 +527,8 @@ use App\Lib\MyHelper;
             </div>
         </div>
     </div>
-
+    
+    @if(isset($data['transaction_payment']))
     <div class="kotak-biasa" style="background-color: #FFFFFF;box-shadow: 0 0.7px 3.3px #eeeeee;">
         <div class="container" style="padding: 10px;margin-top: 10px;">
             <div class="row space-bottom">
@@ -548,6 +549,7 @@ use App\Lib\MyHelper;
             </div>
         </div>
     </div>
+    @endif
 
     @if ($data['trasaction_type'] != 'Offline')
         <div class="kotak-biasa" style="background-color: #FFFFFF;box-shadow: 0 0.7px 3.3px #eeeeee;">
