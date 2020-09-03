@@ -30,11 +30,13 @@ class TransactionPaymentOffline extends Model
 
 	protected $casts = [
 		'id_transaction' => 'int',
+		'id_payment_method' => 'int',
 		'payment_amount' => 'int'
 	];
 
 	protected $fillable = [
 		'id_transaction',
+		'id_payment_method',
 		'payment_type',
 		'payment_bank',
 		'payment_amount'
@@ -44,4 +46,9 @@ class TransactionPaymentOffline extends Model
 	{
 		return $this->belongsTo(\App\Http\Models\Transaction::class, 'id_transaction');
 	}
+	
+	public function payment_method(){
+        return $this->belongsTo(\App\Http\Models\PaymentMethod::class, 'id_payment_method');
+    }
+
 }
