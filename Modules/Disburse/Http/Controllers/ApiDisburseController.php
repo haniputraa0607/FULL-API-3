@@ -97,8 +97,8 @@ class ApiDisburseController extends Controller
         $post = $request->json()->all();
 
         $outlet = Outlet::leftJoin('bank_account_outlets', 'bank_account_outlets.id_outlet', 'outlets.id_outlet')
-                ->leftJoin('bank_accounts', 'bank_accounts.id_bank_account', 'bank_account_outlets.id_bank_account')
-                ->leftJoin('bank_name', 'bank_name.id_bank_name', 'bank_accounts.id_bank_name');
+            ->leftJoin('bank_accounts', 'bank_accounts.id_bank_account', 'bank_account_outlets.id_bank_account')
+            ->leftJoin('bank_name', 'bank_name.id_bank_name', 'bank_accounts.id_bank_name');
 
         if(isset($post['for'])){
             $outlet->select('outlets.id_outlet', 'outlets.outlet_code', 'outlets.outlet_name');
@@ -392,8 +392,8 @@ class ApiDisburseController extends Controller
 
         }else{
             $data = $data->select('disburse_outlet.id_disburse_outlet', 'outlets.outlet_name', 'outlets.outlet_code', 'disburse.id_disburse', 'disburse_outlet.disburse_nominal', 'disburse.disburse_status', 'disburse.beneficiary_account_number',
-                    'disburse.beneficiary_name', 'disburse.created_at', 'disburse.updated_at', 'bank_name.bank_code', 'bank_name.bank_name', 'disburse.count_retry', 'disburse.error_message')->orderBy('disburse.created_at','desc')
-                    ->paginate(25);
+                'disburse.beneficiary_name', 'disburse.created_at', 'disburse.updated_at', 'bank_name.bank_code', 'bank_name.bank_name', 'disburse.count_retry', 'disburse.error_message')->orderBy('disburse.created_at','desc')
+                ->paginate(25);
         }
 
         return response()->json(MyHelper::checkGet($data));
@@ -567,12 +567,12 @@ class ApiDisburseController extends Controller
         $post = $request->json()->all();
 
         $data = Transaction::join('outlets', 'outlets.id_outlet', 'transactions.id_outlet')
-                ->leftJoin('disburse_outlet_transactions', 'transactions.id_transaction', 'disburse_outlet_transactions.id_transaction')
-                ->leftJoin('disburse_outlet', 'disburse_outlet.id_disburse_outlet', 'disburse_outlet_transactions.id_disburse_outlet')
-                ->leftJoin('disburse', 'disburse.id_disburse', 'disburse_outlet.id_disburse')
-                ->where('transactions.transaction_payment_status', 'Completed')
-                ->where('transactions.trasaction_type', '!=', 'Offline')
-                ->select('disburse.disburse_status', 'transactions.*', 'outlets.outlet_name', 'outlets.outlet_code');
+            ->leftJoin('disburse_outlet_transactions', 'transactions.id_transaction', 'disburse_outlet_transactions.id_transaction')
+            ->leftJoin('disburse_outlet', 'disburse_outlet.id_disburse_outlet', 'disburse_outlet_transactions.id_disburse_outlet')
+            ->leftJoin('disburse', 'disburse.id_disburse', 'disburse_outlet.id_disburse')
+            ->where('transactions.transaction_payment_status', 'Completed')
+            ->where('transactions.trasaction_type', '!=', 'Offline')
+            ->select('disburse.disburse_status', 'transactions.*', 'outlets.outlet_name', 'outlets.outlet_code');
 
         if(isset($post['date_start']) && !empty($post['date_start']) &&
             isset($post['date_end']) && !empty($post['date_end'])){
@@ -735,16 +735,16 @@ class ApiDisburseController extends Controller
         $length = $post['length'];
 
         $data = DisburseOutletTransaction::join('transactions', 'transactions.id_transaction', 'disburse_outlet_transactions.id_transaction')
-                ->join('outlets', 'outlets.id_outlet', 'transactions.id_outlet')
-                ->leftJoin('disburse_outlet', 'disburse_outlet.id_disburse_outlet', 'disburse_outlet_transactions.id_disburse_outlet')
-                ->leftJoin('disburse', 'disburse.id_disburse', 'disburse_outlet.id_disburse')
-                ->select('disburse.disburse_status as 0', DB::raw("CONCAT (outlets.outlet_code, ' - ',outlets.outlet_name) as '1'"), DB::raw("DATE_FORMAT(disburse.created_at, '%d %b %Y %H:%i') as '2'"),
-                    DB::raw("DATE_FORMAT(transactions.transaction_date, '%d %b %Y %H:%i') as '3'"), 'transactions.transaction_receipt_number as 4',
-                    DB::raw('FORMAT(transactions.transaction_grandtotal,2) as "5"'), DB::raw('FORMAT(transactions.transaction_discount,2) as "6"'), DB::raw('transactions.transaction_shipment_go_send as "7"'),
-                    DB::raw('FORMAT(transactions.transaction_subtotal,2) as "8"'), DB::raw('FORMAT(disburse_outlet_transactions.fee_item,2) as "9"'), DB::raw('FORMAT(disburse_outlet_transactions.payment_charge,2) as "10"'),
-                    DB::raw('FORMAT(disburse_outlet_transactions.discount,2) as "11"'), DB::raw('FORMAT(disburse_outlet_transactions.subscription,2) as "12"'), DB::raw('FORMAT(disburse_outlet_transactions.point_use_expense,2) as "13"'),
-                    DB::raw('FORMAT(disburse_outlet_transactions.income_outlet,2) as "14"'), DB::raw('FORMAT(disburse_outlet_transactions.income_central,2) as "15"'), DB::raw('FORMAT(disburse_outlet_transactions.expense_central,2) as "16"'))
-                ->orderBy('transactions.transaction_date','desc');
+            ->join('outlets', 'outlets.id_outlet', 'transactions.id_outlet')
+            ->leftJoin('disburse_outlet', 'disburse_outlet.id_disburse_outlet', 'disburse_outlet_transactions.id_disburse_outlet')
+            ->leftJoin('disburse', 'disburse.id_disburse', 'disburse_outlet.id_disburse')
+            ->select('disburse.disburse_status as 0', DB::raw("CONCAT (outlets.outlet_code, ' - ',outlets.outlet_name) as '1'"), DB::raw("DATE_FORMAT(disburse.created_at, '%d %b %Y %H:%i') as '2'"),
+                DB::raw("DATE_FORMAT(transactions.transaction_date, '%d %b %Y %H:%i') as '3'"), 'transactions.transaction_receipt_number as 4',
+                DB::raw('FORMAT(transactions.transaction_grandtotal,2) as "5"'), DB::raw('FORMAT(transactions.transaction_discount,2) as "6"'), DB::raw('transactions.transaction_shipment_go_send as "7"'),
+                DB::raw('FORMAT(transactions.transaction_subtotal,2) as "8"'), DB::raw('FORMAT(disburse_outlet_transactions.fee_item,2) as "9"'), DB::raw('FORMAT(disburse_outlet_transactions.payment_charge,2) as "10"'),
+                DB::raw('FORMAT(disburse_outlet_transactions.discount,2) as "11"'), DB::raw('FORMAT(disburse_outlet_transactions.subscription,2) as "12"'), DB::raw('FORMAT(disburse_outlet_transactions.point_use_expense,2) as "13"'),
+                DB::raw('FORMAT(disburse_outlet_transactions.income_outlet,2) as "14"'), DB::raw('FORMAT(disburse_outlet_transactions.income_central,2) as "15"'), DB::raw('FORMAT(disburse_outlet_transactions.expense_central,2) as "16"'))
+            ->orderBy('transactions.transaction_date','desc');
 
         if(isset($post['fitler_date']) &&  $post['fitler_date']== 'today'){
             $data->where(function ($q){
@@ -860,9 +860,9 @@ class ApiDisburseController extends Controller
                 ->whereDate('transaction_date', $yesterday)
                 ->groupBy('transactions.id_outlet')->pluck('id_outlet');
             $getEmail = Outlet::whereIn('id_outlet', $getOultets)
-                        ->whereNotNull('outlet_email')
-                        ->groupBy('outlet_email')
-                        ->pluck('outlet_email');
+                ->whereNotNull('outlet_email')
+                ->groupBy('outlet_email')
+                ->pluck('outlet_email');
 
             if(!empty($getEmail)){
                 foreach ($getEmail as $e){
@@ -904,13 +904,11 @@ class ApiDisburseController extends Controller
                                 $q->join('subscription_user_vouchers', 'subscription_user_vouchers.id_subscription_user_voucher', 'transaction_payment_subscriptions.id_subscription_user_voucher')
                                     ->join('subscription_users', 'subscription_users.id_subscription_user', 'subscription_user_vouchers.id_subscription_user')
                                     ->join('subscriptions', 'subscriptions.id_subscription', 'subscription_users.id_subscription');
-                            }, 'vouchers'=> function($q){
-                                $q->join('deals', 'deals.id_deals', 'deals_vouchers.id_deals');
-                            }, 'promo_campaign'])
+                            }, 'vouchers.deal', 'promo_campaign'])
                             ->select('dot.*', 'transactions.transaction_receipt_number',
-                                    'transactions.transaction_date', 'transactions.transaction_shipment_go_send',
-                                    'transactions.transaction_grandtotal',
-                                    'transactions.transaction_discount', 'transactions.transaction_subtotal')
+                                'transactions.transaction_date', 'transactions.transaction_shipment_go_send',
+                                'transactions.transaction_grandtotal',
+                                'transactions.transaction_discount', 'transactions.transaction_subtotal')
                             ->get()->toArray();
 
                         if(!empty($generateTrx)){
@@ -999,9 +997,14 @@ class ApiDisburseController extends Controller
     function summaryCalculationFee($date, $id_outlet = null){
         $summaryFee = [];
         $summaryFee = DisburseOutletTransaction::join('transactions', 'transactions.id_transaction', 'disburse_outlet_transactions.id_transaction')
-            ->whereDate('transaction_date', $date)
-            ->selectRaw('COUNT(transactions.id_transaction) total_trx, SUM(transactions.transaction_grandtotal) as total_gross_sales, 
-                        SUM(transactions.transaction_subtotal) as total_sub_total, SUM(transactions.transaction_discount) as total_discount,
+            ->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+            ->leftJoin('transaction_payment_subscriptions as tps', 'tps.id_transaction', 'transactions.id_transaction')
+            ->whereDate('transactions.transaction_date', $date)
+            ->where('transactions.transaction_payment_status', 'Completed')
+            ->whereNull('transaction_pickups.reject_at')
+            ->selectRaw('COUNT(transactions.id_transaction) total_trx, SUM(transactions.transaction_grandtotal) as total_gross_sales,
+                        SUM(tps.subscription_nominal) as total_subscription, 
+                        SUM(transactions.transaction_subtotal) as total_sub_total, 
                         SUM(transactions.transaction_shipment_go_send) as total_delivery, SUM(transactions.transaction_discount) as total_discount, 
                         SUM(fee_item) total_fee_item, SUM(payment_charge) total_fee_pg, SUM(income_outlet) total_income_outlet,
                         SUM(discount_central) total_income_promo, SUM(subscription_central) total_income_subscription');
@@ -1015,14 +1018,14 @@ class ApiDisburseController extends Controller
         $config = Configs::where('config_name', 'show or hide info calculation disburse')->first();
 
         $summaryProduct = TransactionProduct::join('transactions', 'transactions.id_transaction', 'transaction_products.id_transaction')
-                            ->join('products as p', 'p.id_product', 'transaction_products.id_product')
-                            ->whereDate('transaction_date', $date)
-                            ->where('transactions.id_outlet', $id_outlet)
-                            ->selectRaw("p.product_name as name, 'Product' as type, SUM(transaction_products.transaction_product_qty) as total_qty");
+            ->join('products as p', 'p.id_product', 'transaction_products.id_product')
+            ->whereDate('transaction_date', $date)
+            ->where('transactions.id_outlet', $id_outlet)
+            ->selectRaw("p.product_name as name, 'Product' as type, SUM(transaction_products.transaction_product_qty) as total_qty");
         $summaryModifier = TransactionProductModifier::join('transactions', 'transactions.id_transaction', 'transaction_product_modifiers.id_transaction')
             ->join('product_modifiers as pm', 'pm.id_product_modifier', 'transaction_product_modifiers.id_product_modifier')
             ->whereDate('transaction_date', $date)
-           ->where('transactions.id_outlet', $id_outlet)
+            ->where('transactions.id_outlet', $id_outlet)
             ->groupBy('transaction_product_modifiers.id_product_modifier')
             ->selectRaw("pm.text as name, 'Modifier' as type, SUM(transaction_product_modifiers.qty) as total_qty");
 

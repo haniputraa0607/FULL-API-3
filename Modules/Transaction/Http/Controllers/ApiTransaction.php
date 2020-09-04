@@ -1126,13 +1126,13 @@ class ApiTransaction extends Controller
         $start = date('Y-m-d', strtotime($post['date_start']));
         $end = date('Y-m-d', strtotime($post['date_end']));
         $query = LogPoint::select('log_points.*',
-                              'users.*')
-                    ->leftJoin('users','log_points.id_user','=','users.id')
-                    ->where('log_points.created_at', '>=', $start)
-                    ->where('log_points.created_at', '<=', $end)
-                    ->orderBy('log_points.id_log_point', 'DESC')
-                    ->groupBy('log_points.id_log_point');
-                    // ->orderBy('transactions.id_transaction', 'DESC');
+            'users.*')
+            ->leftJoin('users','log_points.id_user','=','users.id')
+            ->where('log_points.created_at', '>=', $start)
+            ->where('log_points.created_at', '<=', $end)
+            ->orderBy('log_points.id_log_point', 'DESC')
+            ->groupBy('log_points.id_log_point');
+        // ->orderBy('transactions.id_transaction', 'DESC');
 
         // return response()->json($query->get());
         if (isset($post['conditions'])) {
@@ -1196,16 +1196,16 @@ class ApiTransaction extends Controller
         $start = date('Y-m-d', strtotime($post['date_start']));
         $end = date('Y-m-d', strtotime($post['date_end']));
         $query = LogBalance::select(
-        				'log_balances.*',
-                        'users.name',
-                        'users.phone'
-                    )
-                    ->leftJoin('users','log_balances.id_user','=','users.id')
-                    ->where('log_balances.created_at', '>=', $start)
-                    ->where('log_balances.created_at', '<=', $end)
-                    ->orderBy('log_balances.id_log_balance', 'DESC')
-                    ->groupBy('log_balances.id_log_balance');
-                    // ->orderBy('transactions.id_transaction', 'DESC');
+            'log_balances.*',
+            'users.name',
+            'users.phone'
+        )
+            ->leftJoin('users','log_balances.id_user','=','users.id')
+            ->where('log_balances.created_at', '>=', $start)
+            ->where('log_balances.created_at', '<=', $end)
+            ->orderBy('log_balances.id_log_balance', 'DESC')
+            ->groupBy('log_balances.id_log_balance');
+        // ->orderBy('transactions.id_transaction', 'DESC');
 
         // return response()->json($query->get());
         if (isset($post['conditions'])) {
@@ -1243,13 +1243,13 @@ class ApiTransaction extends Controller
 
         if ($akhir) {
 
-        	 $akhir['data'] = $query->paginate(10)
-			        				->each(function($q){
-									    $q->setAppends([
-									        'get_reference'
-									    ]);
-									})
-				        			->toArray();
+            $akhir['data'] = $query->paginate(10)
+                ->each(function($q){
+                    $q->setAppends([
+                        'get_reference'
+                    ]);
+                })
+                ->toArray();
 
             $result = [
                 'status'     => 'success',
@@ -1276,20 +1276,20 @@ class ApiTransaction extends Controller
     public function balanceUser(Request $request) {
 
         $balance = LogBalance::with('user')
-        			->orderBy('id_log_balance', 'desc')
-        			->paginate(10)
-        			->toArray();
+            ->orderBy('id_log_balance', 'desc')
+            ->paginate(10)
+            ->toArray();
 
         if ($balance) {
-	        $balance['data'] = LogBalance::with('user')
-			        			->orderBy('id_log_balance', 'desc')
-			        			->paginate(10)
-			        			->each(function($q){
-								    $q->setAppends([
-								        'get_reference'
-								    ]);
-								})
-			        			->toArray();
+            $balance['data'] = LogBalance::with('user')
+                ->orderBy('id_log_balance', 'desc')
+                ->paginate(10)
+                ->each(function($q){
+                    $q->setAppends([
+                        'get_reference'
+                    ]);
+                })
+                ->toArray();
         }
 
         return response()->json(MyHelper::checkGet($balance));
@@ -1319,7 +1319,7 @@ class ApiTransaction extends Controller
                 $list->where('pickup_by','<>','Customer');
             }else{
                 $list->where('pickup_by','Customer');
-            }            
+            }
         }
         $list = $list->paginate(10);
 
@@ -1341,25 +1341,25 @@ class ApiTransaction extends Controller
             $delivery = true;
         }
         $query = Transaction::join('transaction_pickups','transaction_pickups.id_transaction','=','transactions.id_transaction')->select('transactions.*',
-                              'transaction_pickups.*',
-                              'transaction_pickup_go_sends.*',
-                              'transaction_products.*',
-                              'users.*',
-                              'products.*',
-                              'product_categories.*',
-                              'outlets.outlet_code', 'outlets.outlet_name')
-                    ->leftJoin('outlets','outlets.id_outlet','=','transactions.id_outlet')
-                    ->leftJoin('transaction_pickup_go_sends','transaction_pickups.id_transaction_pickup','=','transaction_pickup_go_sends.id_transaction_pickup')
-                    ->leftJoin('transaction_products','transactions.id_transaction','=','transaction_products.id_transaction')
-                    ->leftJoin('users','transactions.id_user','=','users.id')
-                    ->leftJoin('products','products.id_product','=','transaction_products.id_product')
-                    ->leftJoin('product_categories','products.id_product_category','=','product_categories.id_product_category')
-                    ->whereDate('transactions.transaction_date', '>=', $start)
-                    ->whereDate('transactions.transaction_date', '<=', $end)
-                    ->with('user')
-                    ->orderBy('transactions.id_transaction', 'DESC')
-                    ->groupBy('transactions.id_transaction');
-                    // ->orderBy('transactions.id_transaction', 'DESC');
+            'transaction_pickups.*',
+            'transaction_pickup_go_sends.*',
+            'transaction_products.*',
+            'users.*',
+            'products.*',
+            'product_categories.*',
+            'outlets.outlet_code', 'outlets.outlet_name')
+            ->leftJoin('outlets','outlets.id_outlet','=','transactions.id_outlet')
+            ->leftJoin('transaction_pickup_go_sends','transaction_pickups.id_transaction_pickup','=','transaction_pickup_go_sends.id_transaction_pickup')
+            ->leftJoin('transaction_products','transactions.id_transaction','=','transaction_products.id_transaction')
+            ->leftJoin('users','transactions.id_user','=','users.id')
+            ->leftJoin('products','products.id_product','=','transaction_products.id_product')
+            ->leftJoin('product_categories','products.id_product_category','=','product_categories.id_product_category')
+            ->whereDate('transactions.transaction_date', '>=', $start)
+            ->whereDate('transactions.transaction_date', '<=', $end)
+            ->with('user')
+            ->orderBy('transactions.id_transaction', 'DESC')
+            ->groupBy('transactions.id_transaction');
+        // ->orderBy('transactions.id_transaction', 'DESC');
         if (strtolower($post['key']) !== 'all') {
             $query->where('trasaction_type', $post['key']);
             if($delivery){
@@ -1564,7 +1564,7 @@ class ApiTransaction extends Controller
             ->select('transactions.*','users.*','outlets.outlet_code', 'outlets.outlet_name', 'payment_type', 'payment_method', 'transaction_payment_midtrans.gross_amount', 'transaction_payment_ipay88s.amount')
             ->leftJoin('outlets','outlets.id_outlet','=','transactions.id_outlet')
             ->leftJoin('users','transactions.id_user','=','users.id')
-            ->orderBy('transactions.id_transaction', 'DESC');
+            ->orderBy('transactions.transaction_date', 'asc');
 
         $query = $query->leftJoin('transaction_payment_midtrans', 'transactions.id_transaction', '=', 'transaction_payment_midtrans.id_transaction')
             ->leftJoin('transaction_payment_ipay88s', 'transactions.id_transaction', '=', 'transaction_payment_ipay88s.id_transaction');
@@ -1586,7 +1586,7 @@ class ApiTransaction extends Controller
                     'brands.name_brand', 'cities.city_name', 'c.city_name as user_city', 'provinces.province_name',
                     'disburse_outlet_transactions.fee_item', 'disburse_outlet_transactions.payment_charge', 'disburse_outlet_transactions.discount', 'disburse_outlet_transactions.subscription',
                     'disburse_outlet_transactions.point_use_expense',
-                    'disburse_outlet_transactions.income_outlet');
+                    'disburse_outlet_transactions.income_outlet', 'disburse_outlet_transactions.discount_central', 'disburse_outlet_transactions.subscription_central');
         }
 
         if(isset($post['date_start']) && !empty($post['date_start'])
@@ -1599,7 +1599,7 @@ class ApiTransaction extends Controller
         }
 
         $query = $query->whereDate('transactions.transaction_date', '>=', $start)
-                ->whereDate('transactions.transaction_date', '<=', $end);
+            ->whereDate('transactions.transaction_date', '<=', $end);
 
         if (strtolower($post['key']) !== 'all') {
             $query->where('trasaction_type', $post['key']);
@@ -1725,7 +1725,6 @@ class ApiTransaction extends Controller
             $cek = '';
             $get = $query->get()->toArray();
             $count = count($get);
-            $sum = [];
             foreach ($get as $key=>$val) {
                 $payment = '';
                 $payment .= (!empty($val['payment_type']) ? $val['payment_type'] : '').(!empty($val['payment_method']) ? $val['payment_method'] : '');
@@ -1764,7 +1763,7 @@ class ApiTransaction extends Controller
                     if(isset($val['point_refund']) && !empty($val['point_refund'])){
                         $pointRefund = $val['point_refund']['balance'];
                     }
-                  
+
                     $paymentRefund = '';
                     if($val['reject_type'] == 'payment'){
                         $paymentRefund = $val['amount']??$val['gross_amount'];
@@ -1797,7 +1796,6 @@ class ApiTransaction extends Controller
                             $priceMod = $mod[0]['transaction_product_modifier_price'];
                             $textMod = $mod[0]['text'];
                         }
-                        $sum [] = ($val['transaction_product_price']+$priceMod);
                         $html .= '<tr>';
                         $html .= $sameData;
                         $html .= '<td>'.$val['name_brand'].'</td>';
@@ -1807,46 +1805,50 @@ class ApiTransaction extends Controller
                         $html .= '<td>'.$val['transaction_product_price'].'</td>';
                         $html .= '<td>'.$priceMod.'</td>';
                         $html .= '<td>'.$val['transaction_product_note'].'</td>';
-                        $html .= '<td>'.$promoType.'</td>';
-                        $html .= '<td>'.$promoName.'</td>';
-                        $html .= '<td>'.$promoCode.'</td>';
-                        $html .= '<td>'.($val['transaction_product_price']+$priceMod??0).'</td>';
-                        if($val['transaction_product_qty_discount'] < $j){
+                        if(!empty($val['transaction_product_qty_discount'])&& $val['transaction_product_qty_discount'] > $j){
+                            $html .= '<td>'.$promoType.'</td>';
+                            $html .= '<td>'.$promoName.'</td>';
+                            $html .= '<td>'.$promoCode.'</td>';
+                            $html .= '<td>'.($val['transaction_product_price']+$priceMod).'</td>';
                             $html .= '<td>'.$val['transaction_product_base_discount'].'</td>';
                             $html .= '<td>'.(($val['transaction_product_price']+$priceMod)-$val['transaction_product_base_discount']).'</td>';
                         }else{
-                            $html .= '<td>'.$val['transaction_product_base_discount'].'</td>';
+                            $html .= '<td></td>';
+                            $html .= '<td></td>';
+                            $html .= '<td></td>';
+                            $html .= '<td>'.($val['transaction_product_price']+$priceMod).'</td>';
+                            $html .= '<td>0</td>';
                             $html .= '<td>'.($val['transaction_product_price']+$priceMod).'</td>';
                         }
 
-                        $html .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
+                        $html .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
                         $html .= '</tr>';
 
                         $totalMod = count($mod);
                         if($totalMod > 1){
                             for($i=1;$i<$totalMod;$i++){
-                                $sum [] = $mod[$i]['transaction_product_modifier_price']??0;
                                 $html .= '<tr>';
                                 $html .= $sameData;
                                 $html .= '<td></td>';
                                 $html .= '<td></td>';
                                 $html .= '<td></td>';
                                 $html .= '<td>'.$mod[$i]['text']??''.'</td>';
-                                $html .= '<td>'.$val['transaction_product_price'].'</td>';
+                                $html .= '<td></td>';
                                 $html .= '<td>'.$mod[$i]['transaction_product_modifier_price']??(int)'0'.'</td>';
                                 $html .= '<td></td>';
                                 $html .= '<td></td>';
                                 $html .= '<td></td>';
                                 $html .= '<td></td>';
                                 $html .= '<td>'.($mod[$i]['transaction_product_modifier_price']??0).'</td>';
-                                $html .= '<td>'.$val['transaction_product_base_discount'].'</td>';
-                                $html .= '<td>'.($val['transaction_product_subtotal']-$val['transaction_product_base_discount']).'</td>';
-                                $html .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
+                                $html .= '<td>0</td>';
+                                $html .= '<td>'.$mod[$i]['transaction_product_modifier_price'].'</td>';
+                                $html .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
                                 $html .= '</tr>';
                             }
                         }
                     }
 
+                    $sub = 0;
                     if($key == ($count-1) || (isset($get[$key+1]['transaction_receipt_number']) && $val['transaction_receipt_number'] != $get[$key+1]['transaction_receipt_number'])){
                         if(!empty($val['transaction_payment_subscription'])) {
                             $getSubcription = SubscriptionUserVoucher::join('subscription_users', 'subscription_users.id_subscription_user', 'subscription_user_vouchers.id_subscription_user')
@@ -1855,7 +1857,7 @@ class ApiTransaction extends Controller
                                 ->groupBy('subscriptions.id_subscription')->select('subscriptions.*', 'subscription_user_vouchers.voucher_code')->first();
 
                             if($getSubcription){
-                                $sum []  = -$val['transaction_payment_subscription']['subscription_nominal']??0;
+                                $sub  = $val['transaction_payment_subscription']['subscription_nominal']??0;
                                 $html .= '<tr>';
                                 $html .= $sameData;
                                 $html .= '<td></td>';
@@ -1871,13 +1873,12 @@ class ApiTransaction extends Controller
                                 $html .= '<td></td>';
                                 $html .= '<td>'.abs($val['transaction_payment_subscription']['subscription_nominal']??0).'</td>';
                                 $html .= '<td>'.(-$val['transaction_payment_subscription']['subscription_nominal']??0).'</td>';
-                                $html .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
+                                $html .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
                                 $html .= '</tr>';
                             }
                         }
 
                         if(!empty($val['transaction_shipment_go_send'])) {
-                            $sum []  = $val['transaction_shipment_go_send'];
                             $html .= '<tr>';
                             $html .= $sameData;
                             $html .= '<td></td>';
@@ -1887,7 +1888,7 @@ class ApiTransaction extends Controller
                             $html .= '<td>'.($val['transaction_shipment_go_send']??0).'</td>';
                             $html .= '<td>0</td>';
                             $html .= '<td>'.($val['transaction_shipment_go_send']??0).'</td>';
-                            $html .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
+                            $html .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
                             $html .= '</tr>';
                         }
 
@@ -1897,9 +1898,11 @@ class ApiTransaction extends Controller
                         $html .= '<td></td>';
                         $html .= '<td>Fee</td>';
                         $html .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
-                        $html .= '<td>'.array_sum($sum).'</td>';
-                        $html .= '<td>'.(float)($val['fee_item'] + $val['discount'] + $val['subscription']).'</td>';
+                        $html .= '<td>'.($val['transaction_grandtotal']-$sub).'</td>';
+                        $html .= '<td>'.(float)$val['fee_item'].'</td>';
                         $html .= '<td>'.(float)$paymentCharge.'</td>';
+                        $html .= '<td>'.(float)$val['discount_central'].'</td>';
+                        $html .= '<td>'.(float)$val['subscription_central'].'</td>';
                         $html .= '<td>'.(float)$val['income_outlet'].'</td>';
                         $html .= '<td>'.$payment.'</td>';
                         $html .= '<td>'.abs($poinUse).'</td>';
@@ -1912,7 +1915,6 @@ class ApiTransaction extends Controller
                         $html .= '<td>'.($val['taken_at'] == null ? '' : date('d M Y H:i:s', strtotime($val['taken_at']))).'</td>';
                         $html .= '<td>'.($val['arrived_at'] == null ? '' : date('d M Y H:i:s', strtotime($val['arrived_at']))).'</td>';
                         $html .= '</tr>';
-                        $sum = [];
                     }
                 }
                 $dataTrxDetail .= $html;
@@ -2052,7 +2054,7 @@ class ApiTransaction extends Controller
         } else {
             $id = $request->json('id_transaction');
         }
-        
+
         $type = $request->json('type');
 
         if ($type == 'trx') {
@@ -2061,8 +2063,8 @@ class ApiTransaction extends Controller
             }else{
                 $list = Transaction::where(['transactions.id_transaction' => $id, 'id_user' => $request->user()->id]);
             }
-                $list = $list->leftJoin('transaction_pickups','transaction_pickups.id_transaction','=','transactions.id_transaction')->with(
-                // 'user.city.province',
+            $list = $list->leftJoin('transaction_pickups','transaction_pickups.id_transaction','=','transactions.id_transaction')->with(
+            // 'user.city.province',
                 'productTransaction.product.product_category',
                 'productTransaction.modifiers',
                 'productTransaction.product.product_photos',
@@ -2372,11 +2374,11 @@ class ApiTransaction extends Controller
 
             if ($list['trasaction_payment_type'] != 'Offline') {
                 $result['detail'] = [
-                        'order_id_qrcode'   => $list['detail']['order_id_qrcode'],
-                        'order_id'          => $list['detail']['order_id'],
-                        'pickup_type'       => $list['detail']['pickup_type'],
-                        'pickup_date'       => date('d F Y', strtotime($list['detail']['pickup_at'])),
-                        'pickup_time'       => ($list['detail']['pickup_type'] == 'right now') ? 'RIGHT NOW' : date('H : i', strtotime($list['detail']['pickup_at'])),
+                    'order_id_qrcode'   => $list['detail']['order_id_qrcode'],
+                    'order_id'          => $list['detail']['order_id'],
+                    'pickup_type'       => $list['detail']['pickup_type'],
+                    'pickup_date'       => date('d F Y', strtotime($list['detail']['pickup_at'])),
+                    'pickup_time'       => ($list['detail']['pickup_type'] == 'right now') ? 'RIGHT NOW' : date('H : i', strtotime($list['detail']['pickup_at'])),
                 ];
                 if (isset($list['transaction_payment_status']) && $list['transaction_payment_status'] == 'Cancelled') {
                     unset($result['detail']['order_id_qrcode']);
@@ -2567,12 +2569,12 @@ class ApiTransaction extends Controller
                 ];
             }
 
-			if (!empty($list['transaction_payment_subscription'])) {
-	            $list['payment'][] = [
-	                'name'      => 'Subscription',
-	                'amount'    => $list['transaction_payment_subscription']['subscription_nominal']
-	            ];
-	        }
+            if (!empty($list['transaction_payment_subscription'])) {
+                $list['payment'][] = [
+                    'name'      => 'Subscription',
+                    'amount'    => $list['transaction_payment_subscription']['subscription_nominal']
+                ];
+            }
 
             $result['promo']['discount'] = $discount;
             $result['promo']['discount'] = MyHelper::requestNumber($discount,'_CURRENCY');
@@ -2580,40 +2582,40 @@ class ApiTransaction extends Controller
             if ($list['trasaction_payment_type'] != 'Offline') {
                 if ($list['transaction_payment_status'] == 'Cancelled') {
                     $statusOrder[] = [
-                    'text'  => 'Pesanan telah dibatalkan karena pembayaran gagal',
-                    'date'  => $list['void_date']
-                ];
-                } 
+                        'text'  => 'Pesanan telah dibatalkan karena pembayaran gagal',
+                        'date'  => $list['void_date']
+                    ];
+                }
                 elseif ($list['transaction_payment_status'] == 'Pending') {
                     $statusOrder[] = [
-                    'text'  => 'Menunggu konfirmasi pembayaran',
-                    'date'  => $list['transaction_date']
-                ];
+                        'text'  => 'Menunggu konfirmasi pembayaran',
+                        'date'  => $list['transaction_date']
+                    ];
                 } else {
                     if ($list['detail']['reject_at'] != null) {
                         $statusOrder[] = [
-                        'text'  => 'Order rejected',
-                        'date'  => $list['detail']['reject_at'],
-                        'reason'=> $list['detail']['reject_reason']
-                    ];
+                            'text'  => 'Order rejected',
+                            'date'  => $list['detail']['reject_at'],
+                            'reason'=> $list['detail']['reject_reason']
+                        ];
                     }
                     if ($list['detail']['taken_by_system_at'] != null) {
                         $statusOrder[] = [
-                        'text'  => 'Pesanan Anda sudah selesai',
-                        'date'  => $list['detail']['taken_by_system_at']
-                    ];
+                            'text'  => 'Pesanan Anda sudah selesai',
+                            'date'  => $list['detail']['taken_by_system_at']
+                        ];
                     }
                     if ($list['detail']['taken_at'] != null) {
                         $statusOrder[] = [
-                        'text'  => 'Pesanan telah diambil',
-                        'date'  => $list['detail']['taken_at']
-                    ];
+                            'text'  => 'Pesanan telah diambil',
+                            'date'  => $list['detail']['taken_at']
+                        ];
                     }
                     if ($list['detail']['ready_at'] != null) {
                         $statusOrder[] = [
-                        'text'  => 'Pesanan sudah siap diambil',
-                        'date'  => $list['detail']['ready_at']
-                    ];
+                            'text'  => 'Pesanan sudah siap diambil',
+                            'date'  => $list['detail']['ready_at']
+                        ];
                     }
                     if ($list['transaction_pickup_go_send']) {
                         foreach ($list['transaction_pickup_go_send']['transaction_pickup_update'] as $valueGosend) {
@@ -2671,16 +2673,16 @@ class ApiTransaction extends Controller
                     }
                     if ($list['detail']['receive_at'] != null) {
                         $statusOrder[] = [
-                        'text'  => 'Pesanan diterima. Order sedang dipersiapkan',
-                        'date'  => $list['detail']['receive_at']
-                    ];
+                            'text'  => 'Pesanan diterima. Order sedang dipersiapkan',
+                            'date'  => $list['detail']['receive_at']
+                        ];
                     }
                     $statusOrder[] = [
                         'text'  => 'Pesanan masuk. Menunggu jilid untuk menerima order',
                         'date'  => $list['transaction_date']
                     ];
                 }
-                
+
                 usort($statusOrder, function($a1, $a2) {
                     $v1 = strtotime($a1['date']);
                     $v2 = strtotime($a2['date']);
@@ -2783,11 +2785,11 @@ class ApiTransaction extends Controller
         $trid = $request->json('id_transaction');
         $rn = $request->json('request_number');
         $trx = Transaction::join('transaction_pickups', 'transaction_pickups.id_transaction', '=', 'transactions.id_transaction')
-        ->join('outlets', 'outlets.id_outlet', '=', 'transactions.id_outlet')
-        ->select('transactions.id_transaction', 'transactions.id_user', 'transactions.id_outlet', 'outlets.outlet_code', 'pickup_by', 'pickup_type', 'pickup_at', 'id_transaction_pickup')->where([
-            'transactions.id_transaction' => $trid,
-            'id_user' => $request->user()->id
-        ])->first();
+            ->join('outlets', 'outlets.id_outlet', '=', 'transactions.id_outlet')
+            ->select('transactions.id_transaction', 'transactions.id_user', 'transactions.id_outlet', 'outlets.outlet_code', 'pickup_by', 'pickup_type', 'pickup_at', 'id_transaction_pickup')->where([
+                'transactions.id_transaction' => $trid,
+                'id_user' => $request->user()->id
+            ])->first();
         if(!$trx){
             return [
                 'status'=>'fail',
@@ -2809,12 +2811,12 @@ class ApiTransaction extends Controller
             transaction_products.transaction_product_note as note,
             transaction_products.transaction_product_price
             '))
-        ->join('products','products.id_product','=','transaction_products.id_product')
-        ->join('outlets','outlets.id_outlet','=','transaction_products.id_outlet')
-        ->where(['id_transaction'=>$id_transaction])
-        ->with(['modifiers'=>function($query){
-                    $query->select('id_transaction_product','product_modifiers.code','transaction_product_modifiers.id_product_modifier','qty','product_modifiers.text', 'transaction_product_modifier_price')->join('product_modifiers','product_modifiers.id_product_modifier','=','transaction_product_modifiers.id_product_modifier');
-                }])->get()->toArray();
+            ->join('products','products.id_product','=','transaction_products.id_product')
+            ->join('outlets','outlets.id_outlet','=','transaction_products.id_outlet')
+            ->where(['id_transaction'=>$id_transaction])
+            ->with(['modifiers'=>function($query){
+                $query->select('id_transaction_product','product_modifiers.code','transaction_product_modifiers.id_product_modifier','qty','product_modifiers.text', 'transaction_product_modifier_price')->join('product_modifiers','product_modifiers.id_product_modifier','=','transaction_product_modifiers.id_product_modifier');
+            }])->get()->toArray();
         if(!$pts){
             return MyHelper::checkGet($pts);
         }
@@ -2999,13 +3001,13 @@ class ApiTransaction extends Controller
     }
 
     public function transactionHistory(TransactionHistory $request) {
-		if($request->json('phone') == "") {
-			$data = $request->user();
-			$id   = $data['id'];
-		} else {
-			$user = User::where('phone', $request->json('phone'))->get->first();
-			$id = $user['id'];
-		}
+        if($request->json('phone') == "") {
+            $data = $request->user();
+            $id   = $data['id'];
+        } else {
+            $user = User::where('phone', $request->json('phone'))->get->first();
+            $id = $user['id'];
+        }
 
         $transaction = Transaction::where('id_user', $id)->with('user', 'productTransaction', 'user.city', 'user.city.province', 'productTransaction.product', 'productTransaction.product.category', 'productTransaction.product.photos', 'productTransaction.product.discount')->get()->toArray();
 

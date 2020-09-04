@@ -1879,9 +1879,9 @@ class ApiOutletController extends Controller
                 'outlets.outlet_longitude as longitude',
                 'outlets.outlet_status',
                 DB::raw('(CASE
-                            WHEN status_franchise = 1 THEN "Franchise"
-                            ELSE "Not Franchise"
-                        END) as "status_franchise"'),
+                            WHEN status_franchise = 1 THEN "Mitra"
+                            ELSE "Pusat"
+                        END) as "status_mitra"'),
                 DB::raw('(CASE
                             WHEN delivery_order = 1 THEN "Active"
                             ELSE "Inactive"
@@ -1942,7 +1942,7 @@ class ApiOutletController extends Controller
                     'latitude'=>'',
                     'longitude'=>'',
                     'status_outlet' => '',
-                    'status_franchise' => '',
+                    'status_mitra' => '',
                     'delivery' => ''
                 ];
             }
@@ -2003,7 +2003,7 @@ class ApiOutletController extends Controller
                             'outlet_email' => $value['email']??'',
                             'outlet_latitude' => $value['latitude']??'',
                             'outlet_longitude' => $value['longitude']??'',
-                            'status_franchise' => (isset($value['status_franchise']) && $value['status_franchise'] == 'Franchise' ? 1 : 0),
+                            'status_franchise' => (isset($value['status_mitra']) && $value['status_mitra'] == 'Mitra' ? 1 : 0),
                             'delivery_order' => (isset($value['delivery']) && $value['delivery'] == 'Active' ? 1 : 0),
                             'deep_link_gojek' => $value['deep_link_gojek']??'',
                             'deep_link_grab' => $value['deep_link_grab']??'',
