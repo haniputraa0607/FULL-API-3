@@ -22,7 +22,6 @@ use App\Http\Models\UsersMembership;
 use App\Http\Models\OauthAccessToken;
 use App\Http\Models\UserOutlet;
 use App\Http\Models\Outlet;
-
 use App\Lib\MyHelper;
 use App\Lib\PushNotificationHelper;
 use App\Lib\classTexterSMS;

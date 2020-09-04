@@ -69,6 +69,7 @@ class ApiDisburseSettingController extends Controller
             */
             DB::beginTransaction();
 
+            $dt['send_email_to'] = $post['send_email_to'];
             $bankAccount = BankAccount::where('beneficiary_account', $dt['beneficiary_account'])->first();//check account number is already exist or not
             if(!$bankAccount){
                 $bankAccount = BankAccount::create($dt);
@@ -147,6 +148,8 @@ class ApiDisburseSettingController extends Controller
                 return response()->json(['status' => 'fail', 'message' => 'bank account already exist']);
             }else{
                 $getOldBankAccount = BankAccount::where('beneficiary_account', $post['beneficiary_account_number'])->first();
+
+                $dt['send_email_to'] = $post['send_email_to'];
                 $bankAccount = BankAccount::where('beneficiary_account', $post['beneficiary_account_number'])->update($dt);
                 if($bankAccount){
 
@@ -204,7 +207,8 @@ class ApiDisburseSettingController extends Controller
                         'beneficiary_name' => $val['beneficiary_name'],
                         'beneficiary_alias' => $val['beneficiary_alias'],
                         'beneficiary_account' => $val['beneficiary_account'],
-                        'beneficiary_email' => $val['beneficiary_email']
+                        'beneficiary_email' => $val['beneficiary_email'],
+                        'send_email_to' => 'Email Bank'
                     ];
 
                     $check = BankAccount::where('beneficiary_account', $val['beneficiary_account'])->first();//check account number is already exist or not
@@ -420,12 +424,23 @@ class ApiDisburseSettingController extends Controller
         }
     }
 
+    function settingFeeDisburse(Request $request){
+        $post = $request->json()->all();
+        if($post){
+            $update = Setting::where('key', 'disburse_setting_fee_transfer')->update($post);
+            return response()->json(MyHelper::checkUpdate($update));
+        }else{
+            $setting = Setting::where('key', 'disburse_setting_fee_transfer')->first();
+            return response()->json(MyHelper::checkGet($setting));
+        }
+    }
+
     function listBankAccount(Request $request){
         $post = $request->json()->all();
 
         $outlet = BankAccount::leftJoin('bank_name', 'bank_name.id_bank_name', 'bank_accounts.id_bank_name')
             ->select('bank_accounts.id_bank_account', 'bank_accounts.id_bank_name', 'bank_accounts.beneficiary_name', 'bank_accounts.beneficiary_alias', 'bank_accounts.beneficiary_account', 'bank_accounts.beneficiary_email',
-                'bank_name.bank_name', 'bank_name.bank_code')->with(['bank_account_outlet']);
+                'bank_name.bank_name', 'bank_name.bank_code', 'bank_accounts.send_email_to')->with(['bank_account_outlet']);
 
         if(isset($post['conditions']) && !empty($post['conditions'])){
             $rule = 'and';

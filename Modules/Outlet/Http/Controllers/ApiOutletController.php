@@ -10,6 +10,7 @@ use App\Http\Models\Outlet;
 use App\Http\Models\OutletDoctor;
 use App\Http\Models\OutletDoctorSchedule;
 use App\Http\Models\OutletHoliday;
+use App\Http\Models\UserOutletApp;
 use App\Http\Models\Holiday;
 use App\Http\Models\DateHoliday;
 use App\Http\Models\OutletPhoto;
@@ -2068,7 +2069,7 @@ class ApiOutletController extends Controller
             }
             MyHelper::updateOutletFile($data_pin);
             if (isset($queue_data)) {
-            	SendOutletJob::dispatch($queue_data)->allOnConnection('database');
+            	SendOutletJob::dispatch($queue_data)->allOnConnection('outletqueue');
             }
             DB::commit();
 
