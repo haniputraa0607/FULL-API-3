@@ -102,7 +102,7 @@ return [
 
         'outlet-app' => [
             'driver' => 'eloquent',
-            'model' => App\Http\Models\UserOutletApp::class
+            'model' => App\Http\Models\Outlet::class
         ],
 
         'quinos' => [

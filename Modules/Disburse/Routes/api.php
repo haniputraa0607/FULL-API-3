@@ -62,6 +62,9 @@ Route::group(['prefix' => 'disburse'], function () {
         //time to sent disburse
         Route::any('setting/time-to-sent', 'ApiDisburseSettingController@settingTimeToSent');
 
+        //fee disburse
+        Route::any('setting/fee-disburse', 'ApiDisburseSettingController@settingFeeDisburse');
+
         Route::any('update-status', 'ApiDisburseController@updateStatusDisburse');
     });
 
