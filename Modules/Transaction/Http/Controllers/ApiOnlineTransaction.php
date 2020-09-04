@@ -95,6 +95,7 @@ class ApiOnlineTransaction extends Controller
         $this->subscription_use     = "Modules\Subscription\Http\Controllers\ApiSubscriptionUse";
         $this->promo       = "Modules\PromoCampaign\Http\Controllers\ApiPromo";
         $this->outlet       = "Modules\Outlet\Http\Controllers\ApiOutletController";
+        $this->plastic       = "Modules\Plastic\Http\Controllers\PlasticController";
     }
 
     public function newTransaction(NewTransaction $request) {
