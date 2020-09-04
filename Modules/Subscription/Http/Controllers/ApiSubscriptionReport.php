@@ -170,8 +170,29 @@ class ApiSubscriptionReport extends Controller
         $data = $this->getSubscriptionTrxReport($filter);
 
         foreach ($data->cursor() as $val) {
+        	$val = (array) $val;
+        	$bought_at 	= ( !empty($val['bought_at']) ? date('d M Y H:i', strtotime($val['bought_at'])) : null );
+        	$expired_at = ( !empty($val['subscription_expired_at']) ? date('d M Y H:i', strtotime($val['subscription_expired_at'])) : null );
+        	$used_at 	= ( !empty($val['used_at']) ? date('d M Y H:i', strtotime($val['used_at'])) : null );
 
-            yield $val;
+            yield [
+	            'Subscription Name' 		=> $val['subscription_title'],
+	            'Voucher Code' 				=> $val['voucher_code'],
+	            'User Name' 				=> $val['name'],
+	            'User Phone' 				=> $val['phone'],
+	            'Subscription Price Cash' 	=> (float) $val['subscription_price_cash'],
+	            'Subscription Price Point' 	=> (float) $val['subscription_price_point'],
+	            'Bought at' 				=> $bought_at,
+	            'Expired at' 				=> $expired_at,
+	            'Used at' 					=> $used_at,
+	            'Receipt Number' 			=> $val['transaction_receipt_number'],
+	            'Transaction Grandtotal'	=> (float) $val['transaction_grandtotal'],
+	            'Outlet Code' 				=> $val['outlet_code'],
+	            'Outlet Name' 				=> $val['outlet_name'],
+	            'Subscription Nominal' 		=> (float) $val['subscription_nominal'],
+	            'Charged Central' 			=> (float) $val['charged_outlet'],
+	            'Charged Outlet' 			=> (float) $val['charged_central']
+            ];
         }
     }
 }
