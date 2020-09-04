@@ -9,19 +9,18 @@
     </tr>
     <tr>
         <td width="30"><b>Total Gross Sales</b></td>
-        <td>: {{(float)$summary_fee['total_gross_sales']}}</td>
+        <td>: {{(float)$summary_fee['total_sub_total']}}</td>
     </tr>
     <tr>
         <td width="30"><b>Total Discount</b></td>
-        <td>: {{(float)$summary_fee['total_discount']}}</td>
-    </tr>
+        <td>: {{abs($summary_fee['total_discount'])+$summary_fee['total_subscription']}}</td>    </tr>
     <tr>
         <td width="30"><b>Total Delivery</b></td>
         <td>: {{(float)$summary_fee['total_delivery']}}</td>
     </tr>
     <tr>
         <td width="30"><b>Total Sub Total</b></td>
-        <td>: {{(float)$summary_fee['total_sub_total']}}</td>
+        <td>: {{(float)$summary_fee['total_gross_sales']-$summary_fee['total_subscription']}}</td>
     </tr>
     <tr>
         <td width="30"><b>Total Fee Item</b></td>
