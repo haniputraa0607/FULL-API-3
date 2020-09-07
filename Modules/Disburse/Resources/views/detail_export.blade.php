@@ -19,7 +19,7 @@
         <td>: {{(float)$summary_fee['total_delivery']}}</td>
     </tr>
     <tr>
-        <td width="30"><b>Total Sub Total</b></td>
+        <td width="30"><b>Sub Total (Gross Sales + delivery - discount)</b></td>
         <td>: {{(float)$summary_fee['total_gross_sales']-$summary_fee['total_subscription']}}</td>
     </tr>
     <tr>

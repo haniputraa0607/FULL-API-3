@@ -1800,20 +1800,18 @@ class ApiTransaction extends Controller
                         $html .= $sameData;
                         $html .= '<td>'.$val['name_brand'].'</td>';
                         $html .= '<td>'.$val['product_category_name'].'</td>';
-                        $html .= '<td>'.$val['product_code'].'-'.$val['product_name'].'</td>';
+                        $html .= '<td>'.$val['product_name'].'</td>';
                         $html .= '<td>'.$textMod.'</td>';
                         $html .= '<td>'.$val['transaction_product_price'].'</td>';
                         $html .= '<td>'.$priceMod.'</td>';
                         $html .= '<td>'.$val['transaction_product_note'].'</td>';
                         if(!empty($val['transaction_product_qty_discount'])&& $val['transaction_product_qty_discount'] > $j){
-                            $html .= '<td>'.$promoType.'</td>';
                             $html .= '<td>'.$promoName.'</td>';
                             $html .= '<td>'.$promoCode.'</td>';
                             $html .= '<td>'.($val['transaction_product_price']+$priceMod).'</td>';
                             $html .= '<td>'.$val['transaction_product_base_discount'].'</td>';
                             $html .= '<td>'.(($val['transaction_product_price']+$priceMod)-$val['transaction_product_base_discount']).'</td>';
                         }else{
-                            $html .= '<td></td>';
                             $html .= '<td></td>';
                             $html .= '<td></td>';
                             $html .= '<td>'.($val['transaction_product_price']+$priceMod).'</td>';
@@ -1835,7 +1833,6 @@ class ApiTransaction extends Controller
                                 $html .= '<td>'.$mod[$i]['text']??''.'</td>';
                                 $html .= '<td></td>';
                                 $html .= '<td>'.$mod[$i]['transaction_product_modifier_price']??(int)'0'.'</td>';
-                                $html .= '<td></td>';
                                 $html .= '<td></td>';
                                 $html .= '<td></td>';
                                 $html .= '<td></td>';
@@ -1870,7 +1867,6 @@ class ApiTransaction extends Controller
                                 $html .= '<td></td>';
                                 $html .= '<td></td>';
                                 $html .= '<td></td>';
-                                $html .= '<td></td>';
                                 $html .= '<td>'.abs($val['transaction_payment_subscription']['subscription_nominal']??0).'</td>';
                                 $html .= '<td>'.(-$val['transaction_payment_subscription']['subscription_nominal']??0).'</td>';
                                 $html .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
@@ -1884,7 +1880,7 @@ class ApiTransaction extends Controller
                             $html .= '<td></td>';
                             $html .= '<td></td>';
                             $html .= '<td>Delivery</td>';
-                            $html .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
+                            $html .= '<td></td><td></td><td></td><td></td><td></td><td></td>';
                             $html .= '<td>'.($val['transaction_shipment_go_send']??0).'</td>';
                             $html .= '<td>0</td>';
                             $html .= '<td>'.($val['transaction_shipment_go_send']??0).'</td>';
@@ -1897,7 +1893,7 @@ class ApiTransaction extends Controller
                         $html .= '<td></td>';
                         $html .= '<td></td>';
                         $html .= '<td>Fee</td>';
-                        $html .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
+                        $html .= '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
                         $html .= '<td>'.($val['transaction_grandtotal']-$sub).'</td>';
                         $html .= '<td>'.(float)$val['fee_item'].'</td>';
                         $html .= '<td>'.(float)$paymentCharge.'</td>';
