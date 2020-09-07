@@ -116,21 +116,31 @@ class ApiWelcomeSubscription extends Controller
     }
 
     function injectWelcomeSubscription($user, $phone){
+    	$now = date("Y-m-d H:i:s");
         $getSubs = SubscriptionWelcome::join('subscriptions', 'subscriptions.id_subscription', '=', 'subscription_welcomes.id_subscription')
-            ->select('subscriptions.*')->get();
+            		->select('subscriptions.*')
+            		->where('subscription_start', "<", $now)
+            		->where('subscription_end', ">", $now)
+            		->get();
+
         $count = 0;
         foreach ($getSubs as $val){
-            $generateUser = app($this->subscription_voucher)->autoClaimedAssign($val, $user);
-            $count++;
-            $dataSubs = Subscription::where('id_subscription', $val['id_subscription'])->first(); // get newest update of total claimed subscription
-            app($this->subscription_claim)->updateSubs($dataSubs);
+        	if ( $val['subscription_total'] > $val['subscription_bought'] ) {
+	            $generateUser = app($this->subscription_voucher)->autoClaimedAssign($val, $user);
+	            $count++;
+	            $dataSubs = Subscription::where('id_subscription', $val['id_subscription'])->first(); // get newest update of total claimed subscription
+	            app($this->subscription_claim)->updateSubs($dataSubs);
+        	}
         }
 
-        $autocrm = app($this->autocrm)->SendAutoCRM('Receive Welcome Subscription', $phone,
-            [
-                'count_subscription'      => (string)$count
-            ]
-        );
+        if (!empty($count)) {
+	        $autocrm = app($this->autocrm)->SendAutoCRM('Receive Welcome Subscription', $phone,
+	            [
+	                'count_subscription'      => (string)$count
+	            ]
+        	);
+        }
+
         return true;
     }
 }

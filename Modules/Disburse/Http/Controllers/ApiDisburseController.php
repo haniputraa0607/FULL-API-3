@@ -903,7 +903,7 @@ class ApiDisburseController extends Controller
                             ->with(['transaction_payment_subscription'=> function($q){
                                 $q->join('subscription_user_vouchers', 'subscription_user_vouchers.id_subscription_user_voucher', 'transaction_payment_subscriptions.id_subscription_user_voucher')
                                     ->join('subscription_users', 'subscription_users.id_subscription_user', 'subscription_user_vouchers.id_subscription_user')
-                                    ->join('subscriptions', 'subscriptions.id_subscription', 'subscription_users.id_subscription');
+                                    ->leftJoin('subscriptions', 'subscriptions.id_subscription', 'subscription_users.id_subscription');
                             }, 'vouchers.deal', 'promo_campaign'])
                             ->select('dot.*', 'transactions.transaction_receipt_number',
                                 'transactions.transaction_date', 'transactions.transaction_shipment_go_send',

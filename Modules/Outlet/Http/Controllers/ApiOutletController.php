@@ -2947,4 +2947,31 @@ class ApiOutletController extends Controller
 
 		return $result;
     }
+
+    function sendPin(Request $request)
+    {
+		$pin = MyHelper::getOutletFile();
+        $outlets = Outlet::select('id_outlet', 'outlet_code', 'outlet_name', 'outlet_email')->whereNotNull('outlet_pin')->whereIn('id_outlet',array_keys($pin))->get()->toArray();
+        $count = 0;
+
+        foreach ($outlets as $key => &$outlet) {
+            $outlet['pin'] = $pin[$outlet['id_outlet']];
+	        if (isset($outlet['outlet_email'])) {
+	        	$queue_data[] = [
+	        		'pin' 			=> $outlet['pin'],
+	                'date_sent' 	=> date('Y-m-d H:i:s'),
+	                'outlet_name' 	=> $outlet['outlet_name'],
+	                'outlet_code' 	=> $outlet['outlet_code'],
+	        	]+$outlet;
+
+	        	$count++;
+	        }
+        }
+
+        if (isset($queue_data)) {
+        	SendOutletJob::dispatch($queue_data)->allOnConnection('outletqueue');
+        }
+
+        return MyHelper::checkGet($count.' pin has been sent');
+    }
 }

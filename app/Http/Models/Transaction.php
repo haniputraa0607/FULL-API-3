@@ -221,4 +221,8 @@ class Transaction extends Model
             ->where('balance', '<', 0)
             ->whereIn('source', ['Online Transaction', 'Transaction']);
     }
+
+    public function disburse_outlet_transaction(){
+        return $this->hasOne(\Modules\Disburse\Entities\DisburseOutletTransaction::class, 'id_transaction');
+    }
 }
