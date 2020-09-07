@@ -44,7 +44,13 @@
                     }elseif (!empty($val['promo_campaign'])){
                         $promoName = $val['promo_campaign']['promo_title'];
                     }elseif(!empty($val['transaction_payment_subscription'])) {
-                        $promoName = $val['transaction_payment_subscription']['subscription_title'];
+                        if(empty($val['transaction_payment_subscription']['subscription_title'])){
+                            $promoName = 'Unknown Promo';
+                        }else{
+                            $promoName = $val['transaction_payment_subscription']['subscription_title'];
+                        }
+                    }elseif($val['discount_central'] > 0){
+                        $promoName = 'Unknown Promo';
                     }
 
                     echo $promoName;

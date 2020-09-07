@@ -20,7 +20,6 @@
         <th style="background-color: #dcdcdc;" width="10"> Item Price </th>
         <th style="background-color: #dcdcdc;" width="10"> Modifier Price </th>
         <th style="background-color: #dcdcdc;" width="10"> Notes </th>
-        <th style="background-color: #dcdcdc;" width="10"> Promo Type </th>
         <th style="background-color: #dcdcdc;" width="10"> Promo Name </th>
         <th style="background-color: #dcdcdc;" width="10"> Promo Code </th>
         <th style="background-color: #dcdcdc;" width="10"> Sub Total </th>

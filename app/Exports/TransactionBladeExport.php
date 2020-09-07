@@ -18,7 +18,7 @@ class TransactionBladeExport implements FromView, WithTitle
 
     public function view(): View
     {
-        return view('disburse::detail_transaction', [
+        return view('transaction::detail_transaction', [
             'data' => $this->data
         ]);
     }
