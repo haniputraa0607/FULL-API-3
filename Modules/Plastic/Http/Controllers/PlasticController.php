@@ -33,15 +33,21 @@ class PlasticController extends Controller
         return $object1->product_capacity > $object2->product_capacity;
     }
 
-    public function getTotalPrice(PlasticTotalPrice $request)
+    public function check($post)
     {
         /* Request
             item : array:[id_product, qty]
             id outlet : integer:[0..9]
         */
 
-        $post = $request->json()->all();
+        if(!isset($post['id_outlet'])){
+            return ['status' => 'fail', 'id_outlet is empty'];
+        }
 
+        if(!isset($post['item'])){
+            return ['status' => 'fail', 'item is empty'];
+        }
+        
         $id_outlet = $post['id_outlet'];
         $item = $post['item'];
 
@@ -128,14 +134,14 @@ class PlasticController extends Controller
             $total_plastic_price = 0;
             foreach($sorted_plastic_max as $key => $value){
                 $product_price = ProductPrice::where('id_outlet', $id_outlet)->where('id_product', $value['id_product'])->first()['product_price'];
-                $sorted_plastic_max[$key]['subtotal_price'] = $value['total_used'] * $product_price; 
-                $total_plastic_price += $sorted_plastic_max[$key]['subtotal_price'];
+                $sorted_plastic_max[$key]['plastic_price_raw'] = $value['total_used'] * $product_price; 
+                $total_plastic_price += $sorted_plastic_max[$key]['plastic_price_raw'];
             }
 
-            return response()->json(['status' => 'success', 'item' => array_values($sorted_plastic_max), 'total_price' => $total_plastic_price], 200);
+            return ['status' => 'success', 'result' => ['item' => array_values($sorted_plastic_max), 'plastic_price_total' => $total_plastic_price]];
         }
         
-        return response()->json(['status' => 'fail', 'message' => 'Item Plastic is Empty'], 200);
+        return ['status' => 'fail', 'message' => 'Item Plastic is Empty'];
 
     }
 

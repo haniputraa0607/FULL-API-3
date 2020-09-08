@@ -5,7 +5,7 @@ namespace Modules\Plastic\Http\Controllers;
 class Plastic
 {
 
-    public $id_product, $product_name, $product_capacity, $product_type, $total_used, $total_price;
+    public $id_product, $product_name, $product_capacity, $product_type, $total_used;
 
     function __construct($data){
         $this->id_product = $data['id_product'];
@@ -13,6 +13,5 @@ class Plastic
         $this->product_capacity = $data['product_capacity'];
         $this->product_type = $data['product_type'];
         $this->total_used = 0;
-        $this->total_price = 0;
     }
 }

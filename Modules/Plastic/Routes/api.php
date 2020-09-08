@@ -17,6 +17,4 @@ Route::middleware('auth:api')->get('/plastic', function (Request $request) {
     return $request->user();
 });
 
-
-// test function
-Route::post('/plastic/total-price', 'PlasticController@getTotalPrice');
+// Route::post('/plastic/total-price', 'PlasticController@getTotalPrice')->middleware('auth:api');
