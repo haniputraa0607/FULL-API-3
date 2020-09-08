@@ -33,6 +33,8 @@ use Modules\Promotion\Entities\DealsPromotionTierDiscountRule;
 use Modules\Promotion\Entities\DealsPromotionBuyxgetyProductRequirement;
 use Modules\Promotion\Entities\DealsPromotionBuyxgetyRule;
 
+use Modules\Subscription\Entities\SubscriptionUserVoucher;
+
 use App\Http\Models\User;
 use App\Http\Models\Campaign;
 use App\Http\Models\Outlet;
@@ -57,6 +59,7 @@ use DB;
 use Hash;
 use Modules\SettingFraud\Entities\DailyCheckPromoCode;
 use Modules\SettingFraud\Entities\LogCheckPromoCode;
+use Illuminate\Support\Facades\Auth;
 
 class ApiPromoCampaign extends Controller
 {
@@ -2016,6 +2019,17 @@ class ApiPromoCampaign extends Controller
 	            ];
         	}
 
+        	if ( $subs->subscription_user->subscription->daily_usage_limit ) {
+				$subs_voucher_today = SubscriptionUserVoucher::where('id_subscription_user', '=', $subs->id_subscription_user)
+										->whereDate('used_at', date('Y-m-d'))
+										->count();
+				if ( $subs_voucher_today >= $subs->subscription_user->subscription->daily_usage_limit ) {
+					return [
+		                'status'=>'fail',
+		                'messages'=>['Subscription daily usage limit has been exceeded.']
+		            ];
+				}
+	    	}
         	$subs = $subs->toArray();
 	    	$query = $subs['subscription_user'];
 	    	$id_brand = $subs['subscription_user']['subscription']['id_brand'];
