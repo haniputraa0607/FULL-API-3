@@ -772,6 +772,7 @@ class ApiConfirm extends Controller
                     // return subscription
                     $update_subscription = app($this->subscription)->returnSubscription($trx['id_transaction']);
 
+                    $usere= User::where('id',$trx['id_user'])->first();
                     //return balance
                     $payBalance = TransactionMultiplePayment::where('id_transaction', $trx['id_transaction'])->where('type', 'Balance')->first();
                     if (!empty($payBalance)) {
@@ -785,7 +786,7 @@ class ApiConfirm extends Controller
                                     'messages'  => ['Insert Cashback Failed']
                                 ]);
                             }
-                            $usere= User::where('id',$trx['id_user'])->first();
+                            
                             $send = app($this->autocrm)->SendAutoCRM('Transaction Failed Point Refund', $usere->phone,
                                 [
                                     "outlet_name"       => $trx['outlet_name']['outlet_name']??'',
@@ -805,6 +806,21 @@ class ApiConfirm extends Controller
                             }
                         }
                     }
+
+                    //send autocrm transaction fail
+                    $dataPickup = TransactionPickup::where('id_transaction', $dataTrx['id_transaction'])->first();
+                    $send = app($this->autocrm)->SendAutoCRM('Transaction Expired', $usere->phone, [
+                        'notif_type' => 'trx',
+                        'header_label' => 'Gagal',
+                        'id_transaction' => $trx['id_transaction'],
+                        'date' => $trx['transaction_date'],
+                        'status' => $trx['transaction_payment_status'],
+                        'name'  => $usere->name,
+                        'id' => $dataPickup['order_id'],
+                        'order_id' => $dataPickup['order_id'],
+                        'outlet_name' => $trx['outlet_name']['outlet_name']??'',
+                        'id_reference' => $dataPickup['order_id'].','.$trx['id_outlet']
+                    ]);
 
                     DB::commit();
                     //request reversal
