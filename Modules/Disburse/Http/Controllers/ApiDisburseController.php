@@ -853,7 +853,7 @@ class ApiDisburseController extends Controller
         $log = MyHelper::logCron('Disburse Send Email');
         try {
             $currentDate = date('Y-m-d');
-            $yesterday = "2020-09-08";//date('Y-m-d',strtotime($currentDate . "-1 days"));
+            $yesterday = date('Y-m-d',strtotime($currentDate . "-1 days"));
 
             $getOultets = Transaction::join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
                 ->where('transaction_payment_status', 'Completed')->whereNull('reject_at')
