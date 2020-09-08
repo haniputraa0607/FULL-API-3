@@ -731,6 +731,12 @@ class ApiOnlineTransaction extends Controller
             'void_date'                   => null,
         ];
 
+        if($request->user()->complete_profile == 1){
+            $transaction['calculate_achievement'] = 'not yet';
+        }else{
+            $transaction['calculate_achievement'] = 'no';
+        }
+
         if($transaction['transaction_grandtotal'] == 0){
             $transaction['transaction_payment_status'] = 'Completed';
         }
