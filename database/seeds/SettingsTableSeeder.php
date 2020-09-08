@@ -876,6 +876,15 @@ class SettingsTableSeeder extends Seeder
                     'created_at' => date('Y-m-d H:i:s'),
                     'updated_at' => date('Y-m-d H:i:s'),
                 ),
+            97 =>
+                array(
+                    'id_setting' => 98,
+                    'key' => 'disburse_setting_email_send_to',
+                    'value' => NULL,
+                    'value_text' => '{"outlet_franchise":null,"outlet_central":null}',
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                )
         ));
     }
 }
