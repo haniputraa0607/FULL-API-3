@@ -27,6 +27,7 @@ use Modules\Subscription\Http\Requests\DetailSubscription;
 
 use Modules\PromoCampaign\Lib\PromoCampaignTools;
 use DB;
+use Illuminate\Support\Facades\Auth;
 
 class ApiSubscriptionUse extends Controller
 {
@@ -49,7 +50,8 @@ class ApiSubscriptionUse extends Controller
 
     	$subs = $subs->join( 'subscription_users', 'subscription_users.id_subscription_user', '=', 'subscription_user_vouchers.id_subscription_user' )
     			->whereIn('subscription_users.paid_status', ['Free', 'Completed'])
-    			->whereNull('subscription_user_vouchers.used_at');
+    			->whereNull('subscription_user_vouchers.used_at')
+    			->where('id_user', Auth::id());
 
     	if (!empty($outlet)) {
     		$subs = $subs->with(

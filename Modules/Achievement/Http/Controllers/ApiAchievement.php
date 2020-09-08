@@ -1395,7 +1395,7 @@ class ApiAchievement extends Controller
                 }
 
                 //update status calculate achievement
-                Transaction::where('id_transaction', $idTrx)->update(['calculate_achievement', 'done']);
+                Transaction::where('id_transaction', $idTrx)->update(['calculate_achievement' => 'done']);
             }
         }
         return ['status' => 'success'];
