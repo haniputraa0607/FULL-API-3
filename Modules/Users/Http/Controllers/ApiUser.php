@@ -1485,6 +1485,8 @@ class ApiUser extends Controller
         }
 
         $user = User::where('phone', '=', $phone)->first();
+        $user->sms_increment = 0;
+        $user->save();
 
         if (!$user) {
             $result = [
