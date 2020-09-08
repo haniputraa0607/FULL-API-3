@@ -35,6 +35,8 @@ Route::group(['prefix' => 'api/outlet', 'middleware' => ['log_activities', 'auth
 Route::group(['prefix' => 'api/outlet', 'middleware' => ['log_activities', 'auth:api','user_agent', 'scopes:be'], 'namespace' => 'Modules\Outlet\Http\Controllers'], function()
 {
     Route::any('be/list', ['middleware' => 'feature_control:24', 'uses' =>'ApiOutletController@listOutlet'])->name('outlet_be');
+    Route::any('be/list/product-detail', ['middleware' => 'feature_control:24', 'uses' =>'ApiOutletController@listOutletProductDetail']);
+    Route::any('be/list/product-special-price', ['middleware' => 'feature_control:24', 'uses' =>'ApiOutletController@listOutletProductSpecialPrice']);
     Route::any('be/filter', ['middleware' => 'feature_control:24', 'uses' =>'ApiOutletController@filter']);
     Route::any('list/code', ['middleware' => 'feature_control:24', 'uses' =>'ApiOutletController@getAllCodeOutlet']);
     Route::any('ajax_handler','ApiOutletController@ajaxHandler');
