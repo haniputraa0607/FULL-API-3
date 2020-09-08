@@ -2139,7 +2139,7 @@ class ApiPromoCampaign extends Controller
     		}
     		elseif( !empty($query['subscription_products']) )
     		{
-    			$applied_product = $query['subscription_products'];
+    			$applied_product = null;
 	        	$product = 'product tertentu';
     		}
     		else
@@ -2414,11 +2414,13 @@ class ApiPromoCampaign extends Controller
 
 	    	if ($errorProduct == 1) 
 	    	{
-	        	$result['button_ok'] = $data['promo_error_ok_button']??'Tambah item';
+	        	$result['button_ok'] 	= $data['promo_error_ok_button']??'Tambah item';
+	        	$result['product_at'] 	= true;
 	    	}
 	    	else
 	    	{
 	        	$result['button_ok'] = $data['promo_error_ok_button_v2']??'Ok';
+	        	$result['product_at'] 	= false;
 	    	}
 	    	$result['title'] = $data['promo_error_title']??'Promo tidak berlaku';
 	        $result['button_cancel'] = $data['promo_error_cancel_button']??'Hapus promo';
