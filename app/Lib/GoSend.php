@@ -275,17 +275,18 @@ class GoSend
                 'delivered'             => 'Pesananmu sudah sampai! Selamat menikmati',
                 'no_driver'             => 'Belum berhasil menemukan driver',
             ];
-
-            $autocrm = app("Modules\Autocrm\Http\Controllers\ApiAutoCrm")->SendAutoCRM('Delivery Status Update', $phone,
-                [
-                    'id_reference'    => $dataUpdate['id_transaction'],
-                    'receipt_number'  => $trx->transaction_receipt_number,
-                    'outlet_code'     => $outlet->outlet_code,
-                    'outlet_name'     => $outlet->outlet_name,
-                    'delivery_status' => $replacer[$delivery_status] ?? $delivery_status,
-                    'order_id'        => $trx_pickup->order_id,
-                ]
-            );
+            if($replacer[$delivery_status] ?? false) {
+                $autocrm = app("Modules\Autocrm\Http\Controllers\ApiAutoCrm")->SendAutoCRM('Delivery Status Update', $phone,
+                    [
+                        'id_reference'    => $dataUpdate['id_transaction'],
+                        'receipt_number'  => $trx->transaction_receipt_number,
+                        'outlet_code'     => $outlet->outlet_code,
+                        'outlet_name'     => $outlet->outlet_name,
+                        'delivery_status' => $replacer[$delivery_status] ?? $delivery_status,
+                        'order_id'        => $trx_pickup->order_id,
+                    ]
+                );                
+            }
             TransactionPickupGoSendUpdate::create($dataUpdate);
         }
     }
