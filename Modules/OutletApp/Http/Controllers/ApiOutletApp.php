@@ -1240,7 +1240,7 @@ class ApiOutletApp extends Controller
 
         // build response
         if ($request->page) {
-            $data = $products->paginate()->toArray();
+            $data = $products->paginate(30)->toArray();
             if (empty($data['data'])) {
                 return MyHelper::checkGet($data['data']);
             }

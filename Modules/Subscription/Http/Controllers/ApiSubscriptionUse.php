@@ -27,6 +27,7 @@ use Modules\Subscription\Http\Requests\DetailSubscription;
 
 use Modules\PromoCampaign\Lib\PromoCampaignTools;
 use DB;
+use Illuminate\Support\Facades\Auth;
 
 class ApiSubscriptionUse extends Controller
 {
@@ -49,7 +50,8 @@ class ApiSubscriptionUse extends Controller
 
     	$subs = $subs->join( 'subscription_users', 'subscription_users.id_subscription_user', '=', 'subscription_user_vouchers.id_subscription_user' )
     			->whereIn('subscription_users.paid_status', ['Free', 'Completed'])
-    			->whereNull('subscription_user_vouchers.used_at');
+    			->whereNull('subscription_user_vouchers.used_at')
+    			->where('id_user', Auth::id());
 
     	if (!empty($outlet)) {
     		$subs = $subs->with(
@@ -172,7 +174,7 @@ class ApiSubscriptionUse extends Controller
 				$message = MyHelper::simpleReplace($message,['product'=>'product bertanda khusus']);
     			$errors[] = $message;
     			
-				$getProduct  = app($this->promo_campaign)->getProduct('subscription',$subs['subscription_user']['subscription']);
+				$getProduct  = app($this->promo_campaign)->getProduct('subscription',$subs['subscription_user']['subscription'], $id_outlet);
     			$product = $getProduct['product']??'';
     			$applied_product = $getProduct['applied_product'][0]??'';
     			$errorProduct = 1;

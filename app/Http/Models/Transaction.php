@@ -90,7 +90,8 @@ class Transaction extends Model
         'distance_customer',
 		'membership_promo_id',
         'fraud_flag',
-        'cashback_insert_status'
+		'cashback_insert_status',
+		'calculate_achievement'
 	];
 
 	public function user()
