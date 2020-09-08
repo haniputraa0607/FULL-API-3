@@ -20,6 +20,7 @@ class IPay88ServiceProvider extends ServiceProvider
         $this->registerFactories();
         $this->loadMigrationsFrom(__DIR__ . '/../Database/Migrations');
         $router->aliasMiddleware('log_notif_ipay88', \Modules\IPay88\Http\Middleware\LogNotifIpay88::class);
+        $router->aliasMiddleware('validate_ipay88_signature', \Modules\IPay88\Http\Middleware\ValidateSignature::class);
     }
 
     /**
