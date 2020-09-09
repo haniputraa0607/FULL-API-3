@@ -607,7 +607,6 @@ class ApiIrisController extends Controller
                     'created_at' => date('Y-m-d H:i:s'),
                     'updated_at' => date('Y-m-d H:i:s')
                 ];
-                Log::info(json_encode($dataInsert));
                 $insert = DisburseOutletTransaction::insert($dataInsert);
 
                 return $insert;

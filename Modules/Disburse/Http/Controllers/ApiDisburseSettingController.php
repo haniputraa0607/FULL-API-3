@@ -450,6 +450,7 @@ class ApiDisburseSettingController extends Controller
                 'bank_name.bank_name', 'bank_name.bank_code')->with(['bank_account_outlet']);
 
         if(isset($post['conditions']) && !empty($post['conditions'])){
+            $check = array_search('outlet_dont_have_account', array_column($post['conditions'], 'subject'));
             $rule = 'and';
             if(isset($post['rule'])){
                 $rule = $post['rule'];
@@ -611,6 +612,18 @@ class ApiDisburseSettingController extends Controller
             $outlet = $outlet->get()->toArray();
         }
 
-        return response()->json(MyHelper::checkGet($outlet));
+        $getOutletDontHaveAccount = [];
+        if(isset($check) && $check !== false){
+            $getOutletDontHaveAccount = Outlet::leftJoin('bank_account_outlets as bao', 'bao.id_outlet', 'outlets.id_outlet')
+                                        ->whereNull('id_bank_account_outlet')
+                                        ->select('outlets.outlet_code', 'outlets.outlet_name')->get()->toArray();
+        }
+
+        $datas = [
+            'list_bank' =>$outlet,
+            'list_outlet_dont_have_account' => $getOutletDontHaveAccount
+        ];
+
+        return response()->json(MyHelper::checkGet($datas));
     }
 }

@@ -1553,7 +1553,7 @@ class ApiOutletApp extends Controller
                         $payMidtrans = TransactionPaymentMidtran::find($pay['id_payment']);
                         if ($payMidtrans) {
                             if(MyHelper::setting('refund_midtrans')){
-                                $refund = Midtrans::refund($order['transaction_receipt_number'],['reason' => $post['reason']??'']);
+                                $refund = Midtrans::refund($payMidtrans['vt_transaction_id'],['reason' => $post['reason']??'']);
                                 TransactionPickup::where('id_transaction', $order->id_transaction)->update([
                                     'reject_type'   => 'refund',
                                 ]);
@@ -1583,7 +1583,7 @@ class ApiOutletApp extends Controller
                 if ($payMidtrans) {
                     $point = 0;
                     if(MyHelper::setting('refund_midtrans')){
-                        $refund = Midtrans::refund($order['transaction_receipt_number'],['reason' => $post['reason']??'']);
+                        $refund = Midtrans::refund($payMidtrans['vt_transaction_id'],['reason' => $post['reason']??'']);
                         TransactionPickup::where('id_transaction', $order->id_transaction)->update([
                             'reject_type'   => 'refund',
                         ]);
