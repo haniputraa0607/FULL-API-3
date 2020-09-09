@@ -350,7 +350,7 @@ class ApiUserFeedbackController extends Controller
         $result['outlet'] = [
             'outlet_name'=>$transaction->outlet->outlet_name
         ];
-        $result['ratings'] = RatingItem::select('id_rating_item','image','image_selected','text')->orderBy('order')->get();
+        $result['ratings'] = RatingItem::select('id_rating_item','image','image_selected',\DB::raw('"" as text'))->orderBy('order')->get();
         return MyHelper::checkGet($result);
     }
     public function report(Request $request) {
