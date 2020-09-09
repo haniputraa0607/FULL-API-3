@@ -978,6 +978,7 @@ class ApiOutletApp extends Controller
         $updated     = 0;
         $date_time   = date('Y-m-d H:i:s');
         if ($post['sold_out']) {
+            $post['sold_out'] = array_unique($post['sold_out']);
             $found = ProductDetail::where('id_outlet', $outlet['id_outlet'])
                 ->whereIn('id_product', $post['sold_out'])
                 ->where('product_detail_stock_status', '<>', 'Sold Out');
@@ -1042,6 +1043,7 @@ class ApiOutletApp extends Controller
 
         }
         if ($post['available']) {
+            $post['available'] = array_unique($post['available']);
             $found = ProductDetail::where('id_outlet', $outlet['id_outlet'])
                 ->whereIn('id_product', $post['available'])
                 ->where('product_detail_stock_status', '<>', 'Available');
