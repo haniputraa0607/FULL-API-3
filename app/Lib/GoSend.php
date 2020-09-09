@@ -47,7 +47,7 @@ class GoSend
 
         $post['routes'][0]['originName']         = "";
         $post['routes'][0]['originNote']         = $origin['note'];
-        $post['routes'][0]['originContactName']  = $origin['name'];
+        $post['routes'][0]['originContactName']  = 'Sistem JIWA+';
         $post['routes'][0]['originContactPhone'] = $origin['phone'];
         $post['routes'][0]['originLatLong']      = $origin['latitude'] . ',' . $origin['longitude'];
         $post['routes'][0]['originAddress']      = $origin['address'] . '. ' . $origin['note'];
