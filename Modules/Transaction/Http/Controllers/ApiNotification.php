@@ -905,7 +905,7 @@ Detail: ".$link['short'],
                 }
             }
         } elseif (isset($midtrans['status_code']) && $midtrans['status_code'] == 202) {
-            $check = Transaction::where('id_transaction', $trx->id_transaction)->update(['transaction_payment_status' => 'Cancelled']);
+            $check = Transaction::where('id_transaction', $trx->id_transaction)->update(['transaction_payment_status' => 'Cancelled', 'void_date' => date('Y-m-d H:i:s')]);
 
             if (!$check) {
                 return false;

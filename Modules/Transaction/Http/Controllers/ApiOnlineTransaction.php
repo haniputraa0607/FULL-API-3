@@ -1353,6 +1353,10 @@ class ApiOnlineTransaction extends Controller
             }
             //insert pickup go-send
             if($post['type'] == 'GO-SEND'){
+                if (!($post['destination']['short_address']??false)) {
+                    $post['destination']['short_address'] = $post['destination']['address'];
+                }
+
                 $dataGoSend['id_transaction_pickup'] = $insertPickup['id_transaction_pickup'];
                 $dataGoSend['origin_name']           = $outlet['outlet_name'];
                 $dataGoSend['origin_phone']          = $outlet['outlet_phone'];
