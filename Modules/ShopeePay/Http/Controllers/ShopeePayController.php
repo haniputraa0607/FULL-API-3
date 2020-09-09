@@ -19,6 +19,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
 use Modules\ShopeePay\Entities\DealsPaymentShopeePay;
+use Modules\ShopeePay\Entities\SubscriptionPaymentShopeePay;
 use Modules\ShopeePay\Entities\LogShopeePay;
 use Modules\ShopeePay\Entities\ShopeePayMerchant;
 use Modules\ShopeePay\Entities\TransactionPaymentShopeePay;
@@ -90,6 +91,7 @@ class ShopeePayController extends Controller
         $post           = $request->post();
         $header         = $request->header();
         $validSignature = $this->createSignature($post);
+        $update = 0;
         if (($request->header('X-Airpay-Req-H')) != $validSignature) {
             $status_code = 401;
             $response    = [
@@ -101,7 +103,7 @@ class ShopeePayController extends Controller
 
         DB::beginTransaction();
         // CHECK ORDER ID
-        if (stristr($post['payment_reference_id'], "TRX")) {
+        if (stristr($post['payment_reference_id'], 'J+')) {
             $trx = Transaction::where('transaction_receipt_number', $post['payment_reference_id'])->join('transaction_payment_shopee_pays', 'transactions.id_transaction', '=', 'transaction_payment_shopee_pays.id_transaction')->first();
             if (!$trx) {
                 $status_code = 404;
@@ -166,6 +168,51 @@ class ShopeePayController extends Controller
             ];
             $send = app($this->notif)->notification($mid, $trx);
 
+            $status_code = 200;
+            $response    = ['status' => 'success'];
+        } elseif (stristr($post['payment_reference_id'], 'SUBS')) {
+            $subs_payment = SubscriptionPaymentShopeePay::where('order_id', $post['payment_reference_id'])->join('subscriptions', 'subscriptions.id_subscription', '=', 'subscription_payment_shopee_pays.id_subscription')->first();
+
+            if (!$subs_payment) {
+                $status_code = 404;
+                $response    = ['status' => 'fail', 'messages' => ['Subscription not found']];
+                goto end;
+            }
+            if ($subs_payment->amount != $post['amount']) {
+                $status_code = 401;
+                $response    = ['status' => 'fail', 'messages' => ['Invalid amount']];
+                goto end;
+            }
+            if ($post['payment_status'] == '1') {
+                $update = SubscriptionUser::where('id_subscription_user', $subs_payment->id_subscription_user)->update(['paid_status' => 'Completed']);
+            }
+            if (!$update) {
+                DB::rollBack();
+                $status_code = 500;
+                $response    = [
+                    'status'   => 'fail',
+                    'messages' => ['Failed update payment status'],
+                ];
+                goto end;
+            }
+
+            $subs_payment->update([
+                'transaction_sn' => $post['transaction_sn'] ?? null,
+                'payment_status' => $post['payment_status'] ?? null,
+                'user_id_hash'   => $post['user_id_hash'] ?? null,
+                'terminal_id'    => $post['terminal_id'] ?? null,
+            ]);
+            DB::commit();
+
+            $userPhone = User::select('phone')->where('id', $subs_payment->id_user)->pluck('phone')->first();
+            $send      = app($this->autocrm)->SendAutoCRM(
+                'Buy Paid Subscription Success',
+                $userPhone,
+                [
+                    'subscription_title'   => $subs_payment->title,
+                    'id_subscription_user' => $subs_payment->id_subscription_user,
+                ]
+            );
             $status_code = 200;
             $response    = ['status' => 'success'];
         } else {
@@ -512,6 +559,123 @@ class ShopeePayController extends Controller
     }
 
     /**
+     * Cron set subscription user payment status cancel
+     * @param  [type] $params [description]
+     * @return [type]         [description]
+     */
+    public function cronCancelSubscription()
+    {
+        $log = MyHelper::logCron('Cancel Subscription Shopeepay');
+        try {
+            $now     = date('Y-m-d H:i:s');
+            $expired = date('Y-m-d H:i:s', time() - $this->validity_period);
+            $limit_check = $this->limit_check ?: 60;
+            $check_success = $this->validity_period > $limit_check ? date('Y-m-d H:i:s', time() - $limit_check) : $expired;
+
+            // ambil semua transaksi yang perlu di cek
+            $getTrx = SubscriptionUser::where('paid_status', 'Pending')
+                ->join('subscription_payment_shopee_pays', 'subscription_users.id_subscription_user', '=', 'subscription_payment_shopee_pays.id_subscription_user')
+                ->where('payment_method', 'Shopeepay')
+                // ->where('claimed_at', '<=', $expired)
+                ->where('claimed_at', '<=', $check_success)
+                ->get();
+
+            if (empty($getTrx)) {
+                $log->success('empty');
+                return response()->json(['empty']);
+            }
+            $count = 0;
+            foreach ($getTrx as $key => $singleTrx) {
+
+                $user = User::where('id', $singleTrx->id_user)->first();
+                if (empty($user)) {
+                    continue;
+                }
+
+                // get status from shopeepay
+                $status = $this->checkStatus($singleTrx->id_subscription_user, 'subscription', $errors);
+                if (!$status) {
+                    \Log::error('Failed get shopeepay status subscription user ' . $singleTrx->id_subscription_user . ': ', $errors);
+                    continue;
+                }
+                DB::begintransaction();
+                // is transaction success?
+                if (($status['response']['payment_status'] ?? false) == '1') {
+                    if (($status['response']['transaction_list'][0]['amount'] ?? false) != $singleTrx->amount) {
+                        // void transaction
+                        $void_reference_id = null;
+                        $void              = $this->void($singleTrx, 'subscription', $errors, $void_reference_id);
+                        if (!$void) {
+                            \Log::error('Failed void transaction ' . $singleTrx->id_subscription_user . ': ', $errors);
+                            continue;
+                        }
+                        DB::begintransaction();
+                        if (($void['response']['errcode'] ?? 123) == 0) {
+                            $up = SubscriptionPaymentShopeePay::where('id_subscription_user', $singleTrx->id_subscription_user)->update(['void_reference_id' => $void_reference_id, 'errcode' => 0, 'err_reason' => 'invalid payment amount']);
+                        }
+                        DB::commit();
+                        goto cancel;
+                    }
+                    $update = SubscriptionUser::where('id_subscription_user', $singleTrx->id_subscription_user)->update(['paid_status' => 'Completed']);
+                    DB::commit();
+                    continue;
+                }
+
+                // hanya cancel yang sudah expired
+                if ($singleTrx['claimed_at'] > $expired) {
+                    continue;
+                }
+
+                cancel:
+                $singleTrx->paid_status = 'Cancelled';
+                $singleTrx->void_date = date('Y-m-d H:i:s');
+                $singleTrx->save();
+
+                if (!$singleTrx) {
+                    DB::rollBack();
+                    continue;
+                }
+
+                // revert back subscription data
+                $subscription = Subscription::where('id_subscription', $singleTrx->id_subscription)->first();
+                if ($subscription) {
+                    $up1 = $subscription->update(['subscription_bought' => $subscription->subscription_bought - 1]);
+                    if (!$up1) {
+                        DB::rollBack();
+                        continue;
+                    }
+                }
+
+                //reversal balance
+                if ($singleTrx->balance_nominal) {
+                    $reversal = app($this->balance)->addLogBalance($singleTrx->id_user, $singleTrx->balance_nominal, $singleTrx->id_subscription_user, 'Claim Subscription Failed', $singleTrx->subscription_price_point ?: $singleTrx->subscription_price_cash);
+                    if (!$reversal) {
+                        DB::rollBack();
+                        continue;
+                    }
+                    // $usere= User::where('id',$singleTrx->id_user)->first();
+                    // $send = app($this->autocrm)->SendAutoCRM('Transaction Failed Point Refund', $usere->phone,
+                    //     [
+                    //         "outlet_name"       => $singleTrx->outlet_name->outlet_name,
+                    //         "transaction_date"  => $singleTrx->transaction_date,
+                    //         'id_transaction'    => $singleTrx->id_transaction,
+                    //         'receipt_number'    => $singleTrx->transaction_receipt_number,
+                    //         'received_point'    => (string) abs($logB['balance'])
+                    //     ]
+                    // );
+                }
+
+                $count++;
+                DB::commit();
+            }
+            $log->success();
+            return response()->json([$count]);
+        } catch (\Exception $e) {
+            $log->fail($e->getMessage());
+        }
+    }
+
+    /**
      * The signature is a hash-based message authentication code (HMAC) using the SHA256
      * cryptographic function and the aforementioned secret key, operated on the request JSON.
      * @param  [type] $data [description]
@@ -592,6 +756,7 @@ class ShopeePayController extends Controller
                 $data['amount']               = $reference->amount;
                 break;
 
+            case 'subscription':
             case 'deals':
                 $data['payment_reference_id'] = $reference->order_id;
                 $data['amount']               = $reference->amount;
@@ -657,6 +822,22 @@ class ShopeePayController extends Controller
                     $reference = DealsPaymentShopeePay::where('id_deals_user', $reference)->first();
                     if (!$reference) {
                         $errors = ['Transaction not found'];
+                        return false;
+                    }
+                } else {
+                    if (!($reference['order_id'] ?? false)) {
+                        $errors = ['Invalid reference'];
+                        return false;
+                    }
+                }
+                $data['payment_reference_id'] = $reference['order_id'];
+                break;
+
+            case 'subscription':
+                if (is_numeric($reference)) {
+                    $reference = SubscriptionPaymentShopeePay::where('id_subscription_user', $reference)->first();
+                    if (!$reference) {
+                        $errors = ['Subscription not found'];
                         return false;
                     }
                 } else {
@@ -765,6 +946,22 @@ class ShopeePayController extends Controller
                     $reference = DealsPaymentShopeePay::where('id_deals_user', $reference)->first();
                     if (!$reference) {
                         $errors = ['Transaction not found'];
+                        return false;
+                    }
+                } else {
+                    if (!($reference['order_id'] ?? false)) {
+                        $errors = ['Invalid reference'];
+                        return false;
+                    }
+                }
+                $data['payment_reference_id'] = $reference['order_id'];
+                break;
+
+            case 'subscription':
+                if (is_numeric($reference)) {
+                    $reference = SubscriptionPaymentShopeePay::where('id_subscription_user', $reference)->first();
+                    if (!$reference) {
+                        $errors = ['Subscription not found'];
                         return false;
                     }
                 } else {
@@ -886,6 +1083,22 @@ class ShopeePayController extends Controller
                     $reference = DealsPaymentShopeePay::where('id_deals_user', $reference)->first();
                     if (!$reference) {
                         $errors = ['Transaction not found'];
+                        return false;
+                    }
+                } else {
+                    if (!($reference['order_id'] ?? false)) {
+                        $errors = ['Invalid reference'];
+                        return false;
+                    }
+                }
+                $data['payment_reference_id'] = $reference['order_id'];
+                break;
+
+            case 'subscription':
+                if (is_numeric($reference)) {
+                    $reference = SubscriptionPaymentShopeePay::where('id_subscription_user', $reference)->first();
+                    if (!$reference) {
+                        $errors = ['Subscription not found'];
                         return false;
                     }
                 } else {
