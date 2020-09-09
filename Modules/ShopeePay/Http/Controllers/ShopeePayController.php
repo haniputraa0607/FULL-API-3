@@ -168,7 +168,6 @@ class ShopeePayController extends Controller
 
             $status_code = 200;
             $response    = ['status' => 'success'];
-            $sendPOS     = \App\Lib\ConnectPOS::create()->sendTransaction([$trx['id_transaction']]);
         } else {
             $deals_payment = DealsPaymentShopeePay::where('order_id', $post['payment_reference_id'])->join('deals', 'deals.id_deals', '=', 'deals_payment_shopee_pays.id_deals')->first();
 
@@ -314,7 +313,6 @@ class ShopeePayController extends Controller
                     ];
                     $send = app($this->notif)->notification($mid, $singleTrx);
 
-                    $sendPOS     = \App\Lib\ConnectPOS::create()->sendTransaction([$singleTrx['id_transaction']]);
                     continue;
                 }
 
