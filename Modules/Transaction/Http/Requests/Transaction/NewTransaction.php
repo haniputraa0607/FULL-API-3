@@ -26,7 +26,6 @@ class NewTransaction extends FormRequest
             
             // 'destination.name'         => 'required_if:type,GO-SEND',
             // 'destination.phone'        => 'required_if:type,GO-SEND',
-            'destination.short_address'=> 'required_if:type,GO-SEND',
             'destination.address'      => 'required_if:type,GO-SEND',
             'destination.latitude'     => 'required_if:type,GO-SEND',
             'destination.longitude'    => 'required_if:type,GO-SEND',
