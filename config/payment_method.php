@@ -39,7 +39,7 @@ return [
     'shopeepay'      => [
         'payment_gateway' => 'Shopeepay',
         'payment_method'  => 'Shopeepay',
-        'status'          => 0,
+        'status'          => 1,
         'logo'            => env('STORAGE_URL_API').'default_image/payment_method/ic_shopee_pay.png',
         'text'            => 'ShopeePay'
     ],

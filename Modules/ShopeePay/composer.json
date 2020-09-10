@@ -1,0 +1,25 @@
+{
+    "name": "nwidart/shopeepay",
+    "description": "",
+    "authors": [
+        {
+            "name": "Nicolas Widart",
+            "email": "n.widart@gmail.com"
+        }
+    ],
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Modules\\ShopeePay\\Providers\\ShopeePayServiceProvider"
+            ],
+            "aliases": {
+                
+            }
+        }
+    },
+    "autoload": {
+        "psr-4": {
+            "Modules\\ShopeePay\\": ""
+        }
+    }
+}

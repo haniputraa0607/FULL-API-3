@@ -412,6 +412,7 @@ class ApiNotification extends Controller {
             'id_transaction' => $trx['id_transaction'],
             'name'  => $trx->user->name,
             'id' => $mid['order_id'],
+            'order_id' => $mid['order_id'],
             'outlet_name' => $outlet,
             'detail' => $detail,
             'payment' => $payment,
@@ -455,6 +456,7 @@ class ApiNotification extends Controller {
             'status' => $trx['transaction_payment_status'],
             'name'  => $trx->user->name,
             'id' => $mid['order_id'],
+            'order_id' => $mid['order_id'],
             'outlet_name' => $outlet,
             'detail' => $detail,
             'id_reference' => $mid['order_id'].','.$trx['id_outlet']
@@ -497,6 +499,7 @@ class ApiNotification extends Controller {
             'status' => $trx['transaction_payment_status'],
             'name'  => $trx->user->name,
             'id' => $mid['order_id'],
+            'order_id' => $mid['order_id'],
             'outlet_name' => $outlet,
             'detail' => $detail,
             'id_reference' => $mid['order_id'].','.$trx['id_outlet']
@@ -902,7 +905,7 @@ Detail: ".$link['short'],
                 }
             }
         } elseif (isset($midtrans['status_code']) && $midtrans['status_code'] == 202) {
-            $check = Transaction::where('id_transaction', $trx->id_transaction)->update(['transaction_payment_status' => 'Cancelled']);
+            $check = Transaction::where('id_transaction', $trx->id_transaction)->update(['transaction_payment_status' => 'Cancelled', 'void_date' => date('Y-m-d H:i:s')]);
 
             if (!$check) {
                 return false;

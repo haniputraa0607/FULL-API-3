@@ -1485,6 +1485,8 @@ class ApiUser extends Controller
         }
 
         $user = User::where('phone', '=', $phone)->first();
+        $user->sms_increment = 0;
+        $user->save();
 
         if (!$user) {
             $result = [
@@ -2038,7 +2040,7 @@ class ApiUser extends Controller
                                 ]);
                             }
                         }
-                        $update = User::where('id', '=', $data[0]['id'])->update(['complete_profile' => '1']);
+                        $update = User::where('id', '=', $data[0]['id'])->update(['complete_profile' => '1', 'complete_profile_date' => date('Y-m-d H:i:s')]);
 
                         $checkMembership = app($this->membership)->calculateMembership($datauser[0]['phone']);
                     }

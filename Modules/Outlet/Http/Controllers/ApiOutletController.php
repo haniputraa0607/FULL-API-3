@@ -477,6 +477,39 @@ class ApiOutletController extends Controller
         
         return response()->json(MyHelper::checkUpdate($outlet));
     }
+
+    function listOutletProductDetail(OutletList $request) {
+        $post = $request->json()->all();
+
+        $outlet = Outlet::with(['user_outlets','city','today', 'outlet_schedules'])->select('*');
+        if(isset($post['id_product'])){
+            $outlet = $outlet->with(['product_detail'=> function($q) use ($post){
+                $q->where('id_product', $post['id_product']);
+            }]);
+        }else{
+            $outlet = $outlet->with(['product_detail']);
+        }
+
+        $outlet = $outlet->paginate(20);
+        return response()->json(MyHelper::checkGet($outlet));
+    }
+
+    function listOutletProductSpecialPrice(OutletList $request) {
+        $post = $request->json()->all();
+
+        $outlet = Outlet::with(['user_outlets','city','today', 'outlet_schedules'])
+            ->where('outlet_different_price', 1)
+            ->select('*');
+        if(isset($post['id_product'])){
+            $outlet = $outlet->with(['product_special_price'=> function($q) use ($post){
+                        $q->where('id_product', $post['id_product']);
+                    }]);
+        }else{
+            $outlet = $outlet->with(['product_special_price']);
+        }
+
+        return response()->json(MyHelper::checkGet($outlet->paginate(20)));
+    }
     /**
      * list
      */

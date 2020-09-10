@@ -144,7 +144,7 @@ class Midtrans {
     {
         // $url    = env('BASE_MIDTRANS_PRO').'/v2/'.$order_id.'/expire';
         $url    = env('BASE_MIDTRANS_SANDBOX').'/v2/'.$order_id.'/refund';
-        $trx = Transaction::join('transaction_payment_midtrans','transaction_payment_midtrans.id_transaction', '=', 'transactions.id_transaction')->where('transaction_receipt_number',$order_id)->first();
+        $trx = Transaction::join('transaction_payment_midtrans','transaction_payment_midtrans.id_transaction', '=', 'transactions.id_transaction')->where('vt_transaction_id',$order_id)->first();
         if (!$trx) {
             return ['status'=>'fail','messages'=>'Midtrans payment not found'];
         }

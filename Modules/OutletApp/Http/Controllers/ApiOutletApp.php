@@ -978,6 +978,7 @@ class ApiOutletApp extends Controller
         $updated     = 0;
         $date_time   = date('Y-m-d H:i:s');
         if ($post['sold_out']) {
+            $post['sold_out'] = array_unique($post['sold_out']);
             $found = ProductDetail::where('id_outlet', $outlet['id_outlet'])
                 ->whereIn('id_product', $post['sold_out'])
                 ->where('product_detail_stock_status', '<>', 'Sold Out');
@@ -1042,6 +1043,7 @@ class ApiOutletApp extends Controller
 
         }
         if ($post['available']) {
+            $post['available'] = array_unique($post['available']);
             $found = ProductDetail::where('id_outlet', $outlet['id_outlet'])
                 ->whereIn('id_product', $post['available'])
                 ->where('product_detail_stock_status', '<>', 'Available');
@@ -1240,7 +1242,7 @@ class ApiOutletApp extends Controller
 
         // build response
         if ($request->page) {
-            $data = $products->paginate()->toArray();
+            $data = $products->paginate(30)->toArray();
             if (empty($data['data'])) {
                 return MyHelper::checkGet($data['data']);
             }
@@ -1551,7 +1553,7 @@ class ApiOutletApp extends Controller
                         $payMidtrans = TransactionPaymentMidtran::find($pay['id_payment']);
                         if ($payMidtrans) {
                             if(MyHelper::setting('refund_midtrans')){
-                                $refund = Midtrans::refund($order['transaction_receipt_number'],['reason' => $post['reason']??'']);
+                                $refund = Midtrans::refund($payMidtrans['vt_transaction_id'],['reason' => $post['reason']??'']);
                                 TransactionPickup::where('id_transaction', $order->id_transaction)->update([
                                     'reject_type'   => 'refund',
                                 ]);
@@ -1581,7 +1583,7 @@ class ApiOutletApp extends Controller
                 if ($payMidtrans) {
                     $point = 0;
                     if(MyHelper::setting('refund_midtrans')){
-                        $refund = Midtrans::refund($order['transaction_receipt_number'],['reason' => $post['reason']??'']);
+                        $refund = Midtrans::refund($payMidtrans['vt_transaction_id'],['reason' => $post['reason']??'']);
                         TransactionPickup::where('id_transaction', $order->id_transaction)->update([
                             'reject_type'   => 'refund',
                         ]);

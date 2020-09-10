@@ -1018,16 +1018,24 @@ class ApiDisburseController extends Controller
         $config = Configs::where('config_name', 'show or hide info calculation disburse')->first();
 
         $summaryProduct = TransactionProduct::join('transactions', 'transactions.id_transaction', 'transaction_products.id_transaction')
+            ->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
             ->join('products as p', 'p.id_product', 'transaction_products.id_product')
+            ->where('transaction_payment_status', 'Completed')
+            ->whereNull('reject_at')
             ->whereDate('transaction_date', $date)
             ->where('transactions.id_outlet', $id_outlet)
+            ->groupBy('transaction_products.id_product')
             ->selectRaw("p.product_name as name, 'Product' as type, SUM(transaction_products.transaction_product_qty) as total_qty");
         $summaryModifier = TransactionProductModifier::join('transactions', 'transactions.id_transaction', 'transaction_product_modifiers.id_transaction')
+            ->join('transaction_products as tp', 'tp.id_transaction_product', 'transaction_product_modifiers.id_transaction_product')
+            ->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
             ->join('product_modifiers as pm', 'pm.id_product_modifier', 'transaction_product_modifiers.id_product_modifier')
+            ->where('transaction_payment_status', 'Completed')
+            ->whereNull('reject_at')
             ->whereDate('transaction_date', $date)
             ->where('transactions.id_outlet', $id_outlet)
             ->groupBy('transaction_product_modifiers.id_product_modifier')
-            ->selectRaw("pm.text as name, 'Modifier' as type, SUM(transaction_product_modifiers.qty) as total_qty");
+            ->selectRaw("pm.text as name, 'Modifier' as type, SUM(transaction_product_modifiers.qty * tp.transaction_product_qty) as total_qty");
 
         $summary = $summaryProduct->unionAll($summaryModifier)->get()->toArray();
         return [

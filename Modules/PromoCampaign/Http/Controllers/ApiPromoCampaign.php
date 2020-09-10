@@ -33,6 +33,10 @@ use Modules\Promotion\Entities\DealsPromotionTierDiscountRule;
 use Modules\Promotion\Entities\DealsPromotionBuyxgetyProductRequirement;
 use Modules\Promotion\Entities\DealsPromotionBuyxgetyRule;
 
+use Modules\Subscription\Entities\SubscriptionUserVoucher;
+
+use Modules\Brand\Entities\BrandProduct;
+
 use App\Http\Models\User;
 use App\Http\Models\Campaign;
 use App\Http\Models\Outlet;
@@ -57,6 +61,7 @@ use DB;
 use Hash;
 use Modules\SettingFraud\Entities\DailyCheckPromoCode;
 use Modules\SettingFraud\Entities\LogCheckPromoCode;
+use Illuminate\Support\Facades\Auth;
 
 class ApiPromoCampaign extends Controller
 {
@@ -2016,6 +2021,17 @@ class ApiPromoCampaign extends Controller
 	            ];
         	}
 
+        	if ( $subs->subscription_user->subscription->daily_usage_limit ) {
+				$subs_voucher_today = SubscriptionUserVoucher::where('id_subscription_user', '=', $subs->id_subscription_user)
+										->whereDate('used_at', date('Y-m-d'))
+										->count();
+				if ( $subs_voucher_today >= $subs->subscription_user->subscription->daily_usage_limit ) {
+					return [
+		                'status'=>'fail',
+		                'messages'=>['Subscription daily usage limit has been exceeded.']
+		            ];
+				}
+	    	}
         	$subs = $subs->toArray();
 	    	$query = $subs['subscription_user'];
 	    	$id_brand = $subs['subscription_user']['subscription']['id_brand'];
@@ -2122,7 +2138,7 @@ class ApiPromoCampaign extends Controller
 		return $result;
     }
 
-    public function getProduct($source, $query)
+    public function getProduct($source, $query, $id_outlet=null)
     {
     	// return $query;
     	if ($source == 'subscription') 
@@ -2133,7 +2149,17 @@ class ApiPromoCampaign extends Controller
     		}
     		elseif( !empty($query['subscription_products']) )
     		{
+    			if (!$query['id_brand']) {
+    				$brand = BrandProduct::join('brand_outlet','brand_product.id_brand','=','brand_outlet.id_brand')
+    						->where('brand_outlet.id_outlet',$id_outlet)
+    						->where('brand_product.id_product',$query['subscription_products'][0]['id_product'])
+    						->whereNotNull('brand_product.id_product_category')
+    						->first();
+    			}
+
     			$applied_product = $query['subscription_products'];
+    			$applied_product[0]['id_brand'] = $query['id_brand'] ?? $brand['id_brand'];
+    			$applied_product[0]['product_code'] = $applied_product[0]['product']['product_code'];
 	        	$product = 'product tertentu';
     		}
     		else

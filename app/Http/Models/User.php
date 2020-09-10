@@ -70,6 +70,7 @@ class User extends Authenticatable
 		'count_complete_profile',
 		'last_complete_profile',
 		'complete_profile',
+		'complete_profile_date',
 		'android_device',
 		'ios_device',
 		'ios_apps_version',

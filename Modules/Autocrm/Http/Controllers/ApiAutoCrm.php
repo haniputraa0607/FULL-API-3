@@ -281,7 +281,15 @@ class ApiAutoCrm extends Controller
 
 			if($crm['autocrm_sms_toogle'] == 1 && !$forward_only){
 				if(!empty($user['phone'])){
-					switch (env('SMS_GATEWAY')) {
+					$gateway = env('SMS_GATEWAY');
+					if (in_array($autocrm_title, ['Pin Sent', 'Pin Forgot'])) {
+						// if user not 0 and even, send using alternative
+						if ($user['sms_increment'] && !($user['sms_increment'] % 2)) {
+							$gateway = env('SMS_GATEWAY_ALT');
+						}
+						User::where('id', $user['id'])->update(['sms_increment' => $user['sms_increment']+1]);
+					}
+					switch ($gateway) {
 						case 'Jatis':
 							$senddata = [
 								'userid'	=> env('SMS_USER'),
