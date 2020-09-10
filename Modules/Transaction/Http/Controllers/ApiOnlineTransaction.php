@@ -1683,6 +1683,8 @@ class ApiOnlineTransaction extends Controller
         DisburseJob::dispatch(['id_transaction' => $insertTransaction['id_transaction']])->onConnection('disbursequeue');
 
         $insertTransaction['cancel_message'] = 'Are you sure you want to cancel this transaction?';
+        $insertTransaction['timer_shopeepay'] = (int) MyHelper::setting('shopeepay_validity_period','value', 300);
+        $insertTransaction['message_timeout_shopeepay'] = "Sorry, your payment has expired";
         return response()->json([
             'status'   => 'success',
             'redirect' => true,
