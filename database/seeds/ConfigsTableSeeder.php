@@ -1071,9 +1071,19 @@ class ConfigsTableSeeder extends Seeder
                     'created_at' => date('Y-m-d H:i:s'),
                     'updated_at' => date('Y-m-d H:i:s'),
                 ),
-            109 =>
+
+            118 =>
                 array (
-                    'id_config' => 110,
+                    'id_config' => 119,
+                    'config_name' => 'redirect complex',
+                    'description' => '',
+                    'is_active' => 1,
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
+            119 =>
+                array (
+                    'id_config' => 120,
                     'config_name' => 'shopeepay',
                     'description' => '',
                     'is_active' => 1,
