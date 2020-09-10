@@ -81,7 +81,8 @@ class ApiRedirectComplex extends Controller
 			'promo_type'		=> !empty($request->promo) ? 'promo_campaign' : null,
 			'promo_reference'	=> !empty($request->promo) ? $request->promo : null,
 			'payment_method'	=> !empty($request->payment) && !empty($request->use_product) && !empty($request->product) ? $request->payment : null,
-			'use_product'		=> !empty($request->use_product) && !empty($request->product) ? $request->use_product : 0
+			'use_product'		=> !empty($request->use_product) && !empty($request->product) ? $request->use_product : 0,
+			'transaction_type'	=> !empty($request->transaction_type) && !empty($request->use_product) && !empty($request->product) ? $request->transaction_type : null
     	];
 
     	DB::beginTransaction();
@@ -209,7 +210,8 @@ class ApiRedirectComplex extends Controller
 			'promo_type'		=> !empty($request->promo) ? 'promo_campaign' : null,
 			'promo_reference'	=> !empty($request->promo) ? $request->promo : null,
 			'payment_method'	=> !empty($request->payment) && !empty($request->use_product) && !empty($request->product) ? $request->payment : null,
-			'use_product'		=> !empty($request->use_product) && !empty($request->product) ? $request->use_product : 0
+			'use_product'		=> !empty($request->use_product) && !empty($request->product) ? $request->use_product : 0,
+			'transaction_type'	=> !empty($request->transaction_type) && !empty($request->use_product) && !empty($request->product) ? $request->transaction_type : null
     	];
 
     	DB::beginTransaction();
@@ -293,7 +295,8 @@ class ApiRedirectComplex extends Controller
     		'outlet' 	=> null,
     		'item' 		=> null,
     		'promo'		=> null,
-    		'payment' 	=> null
+    		'payment' 	=> null,
+    		'transaction_type' => null
     	];
 
     	$reference 	= RedirectComplexReference::where('id_redirect_complex_reference', $request->id_reference)
@@ -391,6 +394,8 @@ class ApiRedirectComplex extends Controller
 		if ($data['item']) {
 			$payment = $this->getPayment($reference->payment_method);
 			$data['payment'] = $payment;
+
+			$data['transaction_type'] = $reference->transaction_type;
 		}
 
 		// trigger check used promo if promo valid

@@ -16,11 +16,17 @@ class CreateRequest extends FormRequest
     public function rules()
     {
         return [
-            'name'		=>'required',
-            'outlet'	=>'nullable',
-            'product'	=>'nullable',
-            'promo'		=>'nullable',
-            'outlet_type'	=>'nullable',
+            'name' 				=>'required',
+            'outlet' 			=>'nullable',
+            'product' 			=>'nullable',
+            'promo'				=>'nullable',
+            'outlet_type' 		=>'nullable',
+            'type' 				=>'nullable',
+            'promo_type' 		=>'nullable',
+            'promo_reference' 	=>'nullable',
+            'payment_method' 	=>'nullable',
+            'use_product' 		=>'nullable',
+            'transaction_type' 	=>'nullable'
         ];
     }
 
