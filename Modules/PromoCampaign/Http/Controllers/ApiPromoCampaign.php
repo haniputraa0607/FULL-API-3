@@ -2065,7 +2065,15 @@ class ApiPromoCampaign extends Controller
 	        }
 	        $post = $request->json()->all();
 	        $post['log_save'] = 1;
-	        $trx = MyHelper::postCURLWithBearer('api/transaction/check', $post, $bearer);
+	        $custom_request = new \Modules\Transaction\Http\Requests\CheckTransaction;
+			$custom_request = $custom_request
+							->setJson(new \Symfony\Component\HttpFoundation\ParameterBag($post))
+							->merge($post)
+							->setUserResolver(function () use ($request) {
+								return $request->user();
+							});
+			$trx =  app($this->online_transaction)->checkTransaction($custom_request);
+	        // $trx = MyHelper::postCURLWithBearer('api/transaction/check', $post, $bearer);
 	        
 	        foreach ($trx['result'] as $key => $value) {
 	        	$result['result'][$key] = $value;
