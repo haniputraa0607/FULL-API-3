@@ -12,7 +12,7 @@ class ListProduct extends FormRequest
     {
         return [
             'id_product_category'     => 'required|exists:product_categories,id_product_category',
-            'id_brand'                => 'required|exists:brands,id_brand',
+            'id_brand'                => 'required',
         ];
     }
 
