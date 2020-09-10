@@ -2721,6 +2721,14 @@ class FeaturesTableSeeder extends Seeder
                     'created_at' => '2018-05-10 08:00:00',
                     'updated_at' => '2018-05-10 08:00:00',
                 ),
+            271 =>
+                array (
+                    'id_feature' => 272,
+                    'feature_type' => 'Update',
+                    'feature_module' => 'Setting Timer ShopeePay',
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00'),
+                ),
         ));
     }
 }

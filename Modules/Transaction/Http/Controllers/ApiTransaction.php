@@ -35,10 +35,12 @@ use App\Http\Models\LogBalance;
 use App\Http\Models\TransactionShipment;
 use App\Http\Models\TransactionPickup;
 use App\Http\Models\TransactionPaymentMidtran;
+use Modules\ShopeePay\Entities\TransactionPaymentShopeePay;
 use App\Http\Models\DealsUser;
 use App\Http\Models\DealsPaymentMidtran;
 use App\Http\Models\DealsPaymentManual;
 use Modules\IPay88\Entities\DealsPaymentIpay88;
+use Modules\ShopeePay\Entities\DealsPaymentShopeePay;
 use App\Http\Models\UserTrxProduct;
 use Modules\Brand\Entities\Brand;
 use Modules\Product\Entities\ProductGlobalPrice;
@@ -2300,6 +2302,13 @@ class ApiTransaction extends Controller
                                     $payment['amount']    = $PayIpay->amount / 100;
                                     $list['payment'][] = $payment;
                                     break;
+                                case 'Shopeepay':
+                                    $shopeePay = TransactionPaymentShopeePay::find($mp['id_payment']);
+                                    $payment['name']    = 'Shopee Pay';
+                                    $payment['amount']  = $shopeePay->amount / 100;
+                                    $payment['reject']  = $shopeePay->err_reason?:'payment expired';
+                                    $list['payment'][]  = $payment;
+                                    break;
                                 case 'Offline':
                                     $payment = TransactionPaymentOffline::where('id_transaction', $list['id_transaction'])->get();
                                     foreach ($payment as $key => $value) {
@@ -2385,6 +2394,25 @@ class ApiTransaction extends Controller
                             $list['balance'] = $dataPay['balance_nominal'];
                             $payment[$dataKey]['name']          = 'Balance';
                             $payment[$dataKey]['amount']        = $dataPay['balance_nominal'];
+                        }
+                    }
+                    $list['payment'] = $payment;
+                    break;
+                case 'Shopeepay':
+                    $multiPayment = TransactionMultiplePayment::where('id_transaction', $list['id_transaction'])->get();
+                    $payment = [];
+                    foreach($multiPayment as $dataKey => $dataPay){
+                        if($dataPay['type'] == 'Shopeepay'){
+                            $payShopee = TransactionPaymentShopeePay::find($dataPay['id_payment']);
+                            $payment[$dataKey]['name']      = 'Shopee Pay';
+                            $payment[$dataKey]['amount']    = $payShopee->amount / 100;
+                            $payment[$dataKey]['reject']    = $payShopee->err_reason?:'payment expired';
+                        }else{
+                            $dataPay = TransactionPaymentBalance::find($dataPay['id_payment']);
+                            $payment[$dataKey]              = $dataPay;
+                            $list['balance']                = $dataPay['balance_nominal'];
+                            $payment[$dataKey]['name']      = 'Balance';
+                            $payment[$dataKey]['amount']    = $dataPay['balance_nominal'];
                         }
                     }
                     $list['payment'] = $payment;
@@ -2886,6 +2914,13 @@ class ApiTransaction extends Controller
                         'amount'    =>  MyHelper::requestNumber($payment->amount / 100,'_CURRENCY')
                     ];
                     break;
+                case 'Shopeepay':
+                    $payment = DealsPaymentShopeePay::where('id_deals_user', $id)->first();
+                    $result['payment'][] = [
+                        'name'      => 'Shopee Pay',
+                        'amount'    =>  MyHelper::requestNumber($payment->amount,'_CURRENCY')
+                    ];
+                    break;
             }
 
             return response()->json(MyHelper::checkGet($result));
@@ -3034,6 +3069,7 @@ class ApiTransaction extends Controller
         $id     = $request->json('id');
         $select = [];
         $data   = LogBalance::where('id_log_balance', $id)->first();
+        \Log::debug($data);
         // dd($data);
         $statusTrx = ['Online Transaction', 'Transaction', 'Transaction Failed', 'Rejected Order', 'Rejected Order Midtrans', 'Rejected Order Point', 'Rejected Order Ovo', 'Reversal'];
         if (in_array($data['source'], $statusTrx)) {

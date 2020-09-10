@@ -16,6 +16,7 @@ use Modules\Subscription\Entities\SubscriptionOutlet;
 use Modules\Subscription\Entities\SubscriptionUser;
 use Modules\Subscription\Entities\SubscriptionUserVoucher;
 use Modules\IPay88\Entities\SubscriptionPaymentIpay88;
+use Modules\ShopeePay\Entities\SubscriptionPaymentShopeePay;
 use App\Http\Models\Outlet;
 use App\Http\Models\LogPoint;
 use App\Http\Models\LogBalance;
@@ -44,6 +45,7 @@ class ApiSubscriptionClaimPay extends Controller
         if(\Module::collections()->has('Autocrm')) {
             $this->autocrm  = "Modules\Autocrm\Http\Controllers\ApiAutoCrm";
         }
+        $this->shopeepay      = "Modules\ShopeePay\Http\Controllers\ShopeePayController";
     }
 
     public $saveImage = "img/receipt_deals/";
@@ -322,6 +324,14 @@ class ApiSubscriptionClaimPay extends Controller
                             'cancel_message' => 'Are you sure you want to cancel this transaction?'
                         ]
                     ];
+                }elseif (($pay['payment']??false) == 'shopeepay'){
+                    DB::commit();
+                    $pay['message_timeout_shopeepay'] = "Sorry, your payment has expired";
+                    $pay['timer_shopeepay'] = (int) MyHelper::setting('shopeepay_validity_period','value', 300);
+                    return [
+                        'status'    => 'success',
+                        'result'    => $pay
+                    ];
                 }
             }
 
@@ -416,6 +426,10 @@ class ApiSubscriptionClaimPay extends Controller
                 return $ipay88;
             }
 
+           /* ShopeePay */
+            if ($request->json('payment_method') && $request->json('payment_method') == "shopeepay") {
+                $pay = $this->shopeepay($dataSubs, $voucher, null,$request->json('phone'));
+            }
         }
 
         if(!isset($pay)){
@@ -488,6 +502,49 @@ class ApiSubscriptionClaimPay extends Controller
         }
         $create = SubscriptionPaymentIpay88::create($data);
         return $create;
+    }
+
+    /* ShopeePay */
+    function shopeepay($subscription, $voucher, $grossAmount=null)
+    {
+        $paymentShopeepay = SubscriptionPaymentShopeePay::where('id_subscription_user', $voucher['id_subscription_user'])->first();
+        $trx_shopeepay    = null;
+        if (is_null($grossAmount)) {
+            if (!$this->updateInfoDealUsers($voucher->id_subscription_user, ['payment_method' => 'Shopeepay'])) {
+                 return false;
+            }
+        }
+        $grossAmount = $grossAmount??($voucher->subscription_price_cash);
+        if (!$paymentShopeepay) {
+            $paymentShopeepay                       = new SubscriptionPaymentShopeePay;
+            $paymentShopeepay->id_subscription_user        = $voucher['id_subscription_user'];
+            $paymentShopeepay->id_subscription             = $subscription['id_subscription'];
+            $paymentShopeepay->amount               = $grossAmount * 100;
+            $paymentShopeepay->order_id = time().sprintf("%05d", $voucher->id_subscription_user);
+            $paymentShopeepay->save();
+            $trx_shopeepay = app($this->shopeepay)->order($paymentShopeepay, 'subscription', $errors);
+        } elseif (!($paymentShopeepay->redirect_url_app && $paymentShopeepay->redirect_url_http)) {
+            $trx_shopeepay = app($this->shopeepay)->order($paymentShopeepay, 'subscription', $errors);
+        }
+        if (!$trx_shopeepay || !(($trx_shopeepay['status_code'] ?? 0) == 200 && ($trx_shopeepay['response']['debug_msg'] ?? '') == 'success' && ($trx_shopeepay['response']['errcode'] ?? 0) == 0)) {
+            if ($paymentShopeepay->redirect_url_app && $paymentShopeepay->redirect_url_http) {
+                return [
+                    'redirect_url_app'  => $paymentShopeepay->redirect_url_app,
+                    'redirect_url_http' => $paymentShopeepay->redirect_url_http,
+                ];
+            }
+            return false;
+        }
+        $paymentShopeepay->redirect_url_app  = $trx_shopeepay['response']['redirect_url_app'];
+        $paymentShopeepay->redirect_url_http = $trx_shopeepay['response']['redirect_url_http'];
+        $paymentShopeepay->save();
+        return [
+            'redirect' => 'true',
+            'payment' => 'shopeepay',
+            'id_subscription_user' => $voucher->id_subscription_user,
+            'redirect_url_app'  => $paymentShopeepay->redirect_url_app,
+            'redirect_url_http' => $paymentShopeepay->redirect_url_http
+        ];
     }
 
     /* BALANCE */
