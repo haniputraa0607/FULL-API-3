@@ -355,7 +355,7 @@ class SendCampaignJob implements ShouldQueue
                     $subject = app($autocrm)->TextReplace($campaign['campaign_push_subject'], $receipient);
                     $content = app($autocrm)->TextReplace($campaign['campaign_push_content'], $receipient);
                     $deviceToken = PushNotificationHelper::searchDeviceToken("phone", $receipient);
-
+print_r([$deviceToken['token'], $subject, $content, $image, $dataOptional]);
                     if (!empty($deviceToken)) {
                         if (isset($deviceToken['token']) && !empty($deviceToken['token'])) {
                             $push = PushNotificationHelper::sendPush($deviceToken['token'], $subject, $content, $image, $dataOptional);

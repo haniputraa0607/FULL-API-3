@@ -12,6 +12,7 @@ use App\Http\Models\OutletSchedule;
 use App\Http\Models\OutletToken;
 use App\Http\Models\Product;
 use App\Http\Models\ProductCategory;
+use App\Http\Models\ProductModifier;
 use App\Http\Models\ProductPrice;
 use App\Http\Models\Setting;
 use App\Http\Models\Transaction;
@@ -48,7 +49,9 @@ use Modules\OutletApp\Http\Requests\UpdateToken;
 use Modules\Outlet\Entities\OutletScheduleUpdate;
 use Modules\OutletApp\Jobs\AchievementCheck;
 use Modules\Product\Entities\ProductDetail;
+use App\Http\Models\ProductModifierDetail;
 use Modules\Product\Entities\ProductStockStatusUpdate;
+use Modules\Product\Entities\ProductModifierStockStatusUpdate;
 use Modules\SettingFraud\Entities\FraudDetectionLogTransactionDay;
 use Modules\SettingFraud\Entities\FraudDetectionLogTransactionWeek;
 use Modules\Shift\Entities\Shift;
@@ -975,143 +978,295 @@ class ApiOutletApp extends Controller
         $outlet      = $request->user();
         $user_outlet = $request->user_outlet;
         $otp         = $request->outlet_app_otps;
-        $updated     = 0;
-        $date_time   = date('Y-m-d H:i:s');
-        if ($post['sold_out']) {
-            $post['sold_out'] = array_unique($post['sold_out']);
-            $found = ProductDetail::where('id_outlet', $outlet['id_outlet'])
-                ->whereIn('id_product', $post['sold_out'])
-                ->where('product_detail_stock_status', '<>', 'Sold Out');
-            $x = $found->get()->toArray();
-            foreach ($x as $product) {
-                $create = ProductStockStatusUpdate::create([
-                    'id_product'        => $product['id_product'],
-                    'id_user'           => $user_outlet['id_user'],
-                    'user_type'         => $user_outlet['user_type'],
-                    'user_name'         => $user_outlet['name'],
-                    'user_email'        => $user_outlet['email'],
-                    'id_outlet'         => $outlet->id_outlet,
-                    'date_time'         => $date_time,
-                    'new_status'        => 'Sold Out',
-                    'id_outlet_app_otp' => null,
-                ]);
-            }
-            $updated += $found->update(['product_detail_stock_status' => 'Sold Out']);
 
-            //create detail product
-            $newDetail = ProductDetail::where('id_outlet', $outlet['id_outlet'])
-                ->whereIn('id_product', $post['sold_out'])->select('id_product')->get();
-
-            if(count($newDetail) > 0){
-                $newDetail = $newDetail->pluck('id_product')->toArray();
-                $diff = array_diff($post['sold_out'], $newDetail);
-            }else{
-                //all product need to be created in product_detail
-                $diff = $post['sold_out'];
-            }
-            if(count($diff) > 0){
-                $insert = [];
-                $insertStatus = [];
-                foreach($diff as $idProd){
-                    if($idProd != 0){
-                        $insert[] = [
-                            'id_product' => $idProd,
-                            'id_outlet'  => $outlet['id_outlet'],
-                            'product_detail_stock_status' => 'Sold Out',
-                            'product_detail_visibility' => 'Visible',
-                            'product_detail_status' => 'Active',
-                            'created_at' => $date_time,
-                            'updated_at' => $date_time
-                        ];
-                        $insertStatus[] = [
-                            'id_product'        => $idProd,
-                            'id_user'           => $user_outlet['id_user'],
-                            'user_type'         => $user_outlet['user_type'],
-                            'user_name'         => $user_outlet['name'],
-                            'user_email'        => $user_outlet['email'],
-                            'id_outlet'         => $outlet->id_outlet,
-                            'date_time'         => $date_time,
-                            'new_status'        => 'Sold Out',
-                            'id_outlet_app_otp' => null,
-                        ];
-                    }
-                }
-                $createDetail = ProductDetail::insert($insert);
-                $createStatus = ProductStockStatusUpdate::insert($insertStatus);
-                $updated += $createDetail;
-            }
-
-        }
-        if ($post['available']) {
-            $post['available'] = array_unique($post['available']);
-            $found = ProductDetail::where('id_outlet', $outlet['id_outlet'])
-                ->whereIn('id_product', $post['available'])
-                ->where('product_detail_stock_status', '<>', 'Available');
-            $x = $found->get()->toArray();
-            foreach ($x as $product) {
-                $create = ProductStockStatusUpdate::create([
-                    'id_product'        => $product['id_product'],
-                    'id_user'           => $user_outlet['id_user'],
-                    'user_type'         => $user_outlet['user_type'],
-                    'user_name'         => $user_outlet['name'],
-                    'user_email'        => $user_outlet['email'],
-                    'id_outlet'         => $outlet->id_outlet,
-                    'date_time'         => $date_time,
-                    'new_status'        => 'Available',
-                    'id_outlet_app_otp' => null,
-                ]);
-            }
-            $updated += $found->update(['product_detail_stock_status' => 'Available']);
-
-            //create detail product
-            $newDetail = ProductDetail::where('id_outlet', $outlet['id_outlet'])
-                ->whereIn('id_product', $post['available'])->select('id_product')->get();
-
-            if(count($newDetail) > 0){
-                $newDetail = $newDetail->pluck('id_product')->toArray();
-                $diff = array_diff($post['available'], $newDetail);
-            }else{
-                //all product need to be created in product_detail
-                $diff = $post['available'];
-            }
-
-            if(count($diff) > 0){
-                $insert = [];
-                $insertStatus = [];
-                foreach($diff as $idProd){
-                    if($idProd != 0){
-                        $insert[] = [
-                            'id_product' => $idProd,
-                            'id_outlet'  => $outlet['id_outlet'],
-                            'product_detail_stock_status' => 'Available',
-                            'product_detail_visibility' => 'Visible',
-                            'product_detail_status' => 'Active',
-                            'created_at' => $date_time,
-                            'updated_at' => $date_time
-                        ];
-    
-                        $insertStatus = [
-                            'id_product'        => $idProd,
-                            'id_user'           => $user_outlet['id_user'],
-                            'user_type'         => $user_outlet['user_type'],
-                            'user_name'         => $user_outlet['name'],
-                            'user_email'        => $user_outlet['email'],
-                            'id_outlet'         => $outlet->id_outlet,
-                            'date_time'         => $date_time,
-                            'new_status'        => 'Available',
-                            'id_outlet_app_otp' => null,
-                        ];
-                    }
-                }
-                $createDetail = ProductDetail::insert($insert);                
-                $createStatus = ProductStockStatusUpdate::insert($insertStatus);
-                $updated += $createDetail;
+        $is_modifier = true;
+        // product_id = product id or modifier_id 1000
+        $list_id = array_merge($request->available ?? [], $request->sold_out ?? []);
+        foreach ($list_id as $id) {
+            if ($id % 1000) {
+                $is_modifier = false;
+                break;
             }
         }
-        return [
-            'status' => 'success',
-            'result' => ['updated' => $updated],
-        ];
+
+        if (!$is_modifier) {
+            $updated     = 0;
+            $date_time   = date('Y-m-d H:i:s');
+            if ($post['sold_out']) {
+                $post['sold_out'] = array_unique($post['sold_out']);
+                $found = ProductDetail::where('id_outlet', $outlet['id_outlet'])
+                    ->whereIn('id_product', $post['sold_out'])
+                    ->where('product_detail_stock_status', '<>', 'Sold Out');
+                $x = $found->get()->toArray();
+                foreach ($x as $product) {
+                    $create = ProductStockStatusUpdate::create([
+                        'id_product'        => $product['id_product'],
+                        'id_user'           => $user_outlet['id_user'],
+                        'user_type'         => $user_outlet['user_type'],
+                        'user_name'         => $user_outlet['name'],
+                        'user_email'        => $user_outlet['email'],
+                        'id_outlet'         => $outlet->id_outlet,
+                        'date_time'         => $date_time,
+                        'new_status'        => 'Sold Out',
+                        'id_outlet_app_otp' => null,
+                    ]);
+                }
+                $updated += $found->update(['product_detail_stock_status' => 'Sold Out']);
+
+                //create detail product
+                $newDetail = ProductDetail::where('id_outlet', $outlet['id_outlet'])
+                    ->whereIn('id_product', $post['sold_out'])->select('id_product')->get();
+
+                if(count($newDetail) > 0){
+                    $newDetail = $newDetail->pluck('id_product')->toArray();
+                    $diff = array_diff($post['sold_out'], $newDetail);
+                }else{
+                    //all product need to be created in product_detail
+                    $diff = $post['sold_out'];
+                }
+                if(count($diff) > 0){
+                    $insert = [];
+                    $insertStatus = [];
+                    foreach($diff as $idProd){
+                        if($idProd != 0){
+                            $insert[] = [
+                                'id_product' => $idProd,
+                                'id_outlet'  => $outlet['id_outlet'],
+                                'product_detail_stock_status' => 'Sold Out',
+                                'product_detail_visibility' => 'Visible',
+                                'product_detail_status' => 'Active',
+                                'created_at' => $date_time,
+                                'updated_at' => $date_time
+                            ];
+                            $insertStatus[] = [
+                                'id_product'        => $idProd,
+                                'id_user'           => $user_outlet['id_user'],
+                                'user_type'         => $user_outlet['user_type'],
+                                'user_name'         => $user_outlet['name'],
+                                'user_email'        => $user_outlet['email'],
+                                'id_outlet'         => $outlet->id_outlet,
+                                'date_time'         => $date_time,
+                                'new_status'        => 'Sold Out',
+                                'id_outlet_app_otp' => null,
+                            ];
+                        }
+                    }
+                    $createDetail = ProductDetail::insert($insert);
+                    $createStatus = ProductStockStatusUpdate::insert($insertStatus);
+                    $updated += $createDetail;
+                }
+
+            }
+            if ($post['available']) {
+                $post['available'] = array_unique($post['available']);
+                $found = ProductDetail::where('id_outlet', $outlet['id_outlet'])
+                    ->whereIn('id_product', $post['available'])
+                    ->where('product_detail_stock_status', '<>', 'Available');
+                $x = $found->get()->toArray();
+                foreach ($x as $product) {
+                    $create = ProductStockStatusUpdate::create([
+                        'id_product'        => $product['id_product'],
+                        'id_user'           => $user_outlet['id_user'],
+                        'user_type'         => $user_outlet['user_type'],
+                        'user_name'         => $user_outlet['name'],
+                        'user_email'        => $user_outlet['email'],
+                        'id_outlet'         => $outlet->id_outlet,
+                        'date_time'         => $date_time,
+                        'new_status'        => 'Available',
+                        'id_outlet_app_otp' => null,
+                    ]);
+                }
+                $updated += $found->update(['product_detail_stock_status' => 'Available']);
+
+                //create detail product
+                $newDetail = ProductDetail::where('id_outlet', $outlet['id_outlet'])
+                    ->whereIn('id_product', $post['available'])->select('id_product')->get();
+
+                if(count($newDetail) > 0){
+                    $newDetail = $newDetail->pluck('id_product')->toArray();
+                    $diff = array_diff($post['available'], $newDetail);
+                }else{
+                    //all product need to be created in product_detail
+                    $diff = $post['available'];
+                }
+
+                if(count($diff) > 0){
+                    $insert = [];
+                    $insertStatus = [];
+                    foreach($diff as $idProd){
+                        if($idProd != 0){
+                            $insert[] = [
+                                'id_product' => $idProd,
+                                'id_outlet'  => $outlet['id_outlet'],
+                                'product_detail_stock_status' => 'Available',
+                                'product_detail_visibility' => 'Visible',
+                                'product_detail_status' => 'Active',
+                                'created_at' => $date_time,
+                                'updated_at' => $date_time
+                            ];
+        
+                            $insertStatus = [
+                                'id_product'        => $idProd,
+                                'id_user'           => $user_outlet['id_user'],
+                                'user_type'         => $user_outlet['user_type'],
+                                'user_name'         => $user_outlet['name'],
+                                'user_email'        => $user_outlet['email'],
+                                'id_outlet'         => $outlet->id_outlet,
+                                'date_time'         => $date_time,
+                                'new_status'        => 'Available',
+                                'id_outlet_app_otp' => null,
+                            ];
+                        }
+                    }
+                    $createDetail = ProductDetail::insert($insert);                
+                    $createStatus = ProductStockStatusUpdate::insert($insertStatus);
+                    $updated += $createDetail;
+                }
+            }
+            return [
+                'status' => 'success',
+                'result' => ['updated' => $updated],
+            ];
+        } else {
+            $updated     = 0;
+            $date_time   = date('Y-m-d H:i:s');
+            if ($post['sold_out']) {
+                // modifier id = product_id / 1000
+                $post['sold_out'] = array_map(function($val){return $val/1000;},array_unique($post['sold_out']));
+                $found = ProductModifierDetail::where('id_outlet', $outlet['id_outlet'])
+                    ->whereIn('id_product_modifier', $post['sold_out'])
+                    ->where('product_modifier_stock_status', '<>', 'Sold Out');
+                $x = $found->get()->toArray();
+                foreach ($x as $product) {
+                    $create = ProductModifierStockStatusUpdate::create([
+                        'id_product_modifier' => $product['id_product_modifier'],
+                        'id_user'           => $user_outlet['id_user'],
+                        'user_type'         => $user_outlet['user_type'],
+                        'user_name'         => $user_outlet['name'],
+                        'user_email'        => $user_outlet['email'],
+                        'id_outlet'         => $outlet->id_outlet,
+                        'date_time'         => $date_time,
+                        'new_status'        => 'Sold Out',
+                        'id_outlet_app_otp' => null,
+                    ]);
+                }
+                $updated += $found->update(['product_modifier_stock_status' => 'Sold Out']);
+
+                //create detail product
+                $newDetail = ProductModifierDetail::where('id_outlet', $outlet['id_outlet'])
+                    ->whereIn('id_product_modifier', $post['sold_out'])->select('id_product_modifier')->get();
+
+                if(count($newDetail) > 0){
+                    $newDetail = $newDetail->pluck('id_product_modifier')->toArray();
+                    $diff = array_diff($post['sold_out'], $newDetail);
+                }else{
+                    //all product need to be created in product_detail
+                    $diff = $post['sold_out'];
+                }
+                if(count($diff) > 0){
+                    $insert = [];
+                    $insertStatus = [];
+                    foreach($diff as $idProd){
+                        if($idProd != 0){
+                            $insert[] = [
+                                'id_product_modifier' => $idProd,
+                                'id_outlet'  => $outlet['id_outlet'],
+                                'product_modifier_stock_status' => 'Sold Out',
+                                'product_modifier_visibility' => 'Visible',
+                                'product_modifier_status' => 'Active',
+                                'created_at' => $date_time,
+                                'updated_at' => $date_time
+                            ];
+                            $insertStatus[] = [
+                                'id_product_modifier'        => $idProd,
+                                'id_user'           => $user_outlet['id_user'],
+                                'user_type'         => $user_outlet['user_type'],
+                                'user_name'         => $user_outlet['name'],
+                                'user_email'        => $user_outlet['email'],
+                                'id_outlet'         => $outlet->id_outlet,
+                                'date_time'         => $date_time,
+                                'new_status'        => 'Sold Out',
+                                'id_outlet_app_otp' => null,
+                            ];
+                        }
+                    }
+                    $createDetail = ProductModifierDetail::insert($insert);
+                    $createStatus = ProductModifierStockStatusUpdate::insert($insertStatus);
+                    $updated += $createDetail;
+                }
+
+            }
+            if ($post['available']) {
+                $post['available'] = array_map(function($val){return $val/1000;},array_unique($post['available']));
+                $found = ProductModifierDetail::where('id_outlet', $outlet['id_outlet'])
+                    ->whereIn('id_product_modifier', $post['available'])
+                    ->where('product_modifier_stock_status', '<>', 'Available');
+                $x = $found->get()->toArray();
+                foreach ($x as $product) {
+                    $create = ProductModifierStockStatusUpdate::create([
+                        'id_product_modifier'        => $product['id_product_modifier'],
+                        'id_user'           => $user_outlet['id_user'],
+                        'user_type'         => $user_outlet['user_type'],
+                        'user_name'         => $user_outlet['name'],
+                        'user_email'        => $user_outlet['email'],
+                        'id_outlet'         => $outlet->id_outlet,
+                        'date_time'         => $date_time,
+                        'new_status'        => 'Available',
+                        'id_outlet_app_otp' => null,
+                    ]);
+                }
+                $updated += $found->update(['product_modifier_stock_status' => 'Available']);
+
+                //create detail product
+                $newDetail = ProductModifierDetail::where('id_outlet', $outlet['id_outlet'])
+                    ->whereIn('id_product_modifier', $post['available'])->select('id_product_modifier')->get();
+
+                if(count($newDetail) > 0){
+                    $newDetail = $newDetail->pluck('id_product_modifier')->toArray();
+                    $diff = array_diff($post['available'], $newDetail);
+                }else{
+                    //all product need to be created in product_detail
+                    $diff = $post['available'];
+                }
+
+                if(count($diff) > 0){
+                    $insert = [];
+                    $insertStatus = [];
+                    foreach($diff as $idProd){
+                        if($idProd != 0){
+                            $insert[] = [
+                                'id_product_modifier' => $idProd,
+                                'id_outlet'  => $outlet['id_outlet'],
+                                'product_modifier_stock_status' => 'Available',
+                                'product_modifier_visibility' => 'Visible',
+                                'product_modifier_status' => 'Active',
+                                'created_at' => $date_time,
+                                'updated_at' => $date_time
+                            ];
+        
+                            $insertStatus = [
+                                'id_product_modifier'        => $idProd,
+                                'id_user'           => $user_outlet['id_user'],
+                                'user_type'         => $user_outlet['user_type'],
+                                'user_name'         => $user_outlet['name'],
+                                'user_email'        => $user_outlet['email'],
+                                'id_outlet'         => $outlet->id_outlet,
+                                'date_time'         => $date_time,
+                                'new_status'        => 'Available',
+                                'id_outlet_app_otp' => null,
+                            ];
+                        }
+                    }
+                    $createDetail = ProductModifierDetail::insert($insert);                
+                    $createStatus = ProductModifierStockStatusUpdate::insert($insertStatus);
+                    $updated += $createDetail;
+                }
+            }
+            return [
+                'status' => 'success',
+                'result' => ['updated' => $updated],
+            ];
+        }
     }
     /**
      * return list category group by brand
@@ -1177,6 +1332,26 @@ class ApiOutletApp extends Controller
         usort($result, function ($a, $b) {
             return $a['order_brand'] <=> $b['order_brand'];
         });
+        $modifiers = ProductModifier::select(\DB::raw('0 as id_brand, min(product_modifiers.id_product_modifier) as id_product_category, type as product_category_name, count(product_modifiers.id_product_modifier) as total_product, 0 as total_sold_out'));
+
+        if ($outlet['outlet_different_price']) {
+            $modifiers->join('product_modifier_price', function($join) use ($outlet) {
+                $join->on('product_modifier_price.id_product_modifier', '=', 'product_modifiers.id_product_modifier')
+                    ->where('product_modifier_price.id_outlet', $outlet['id_outlet']);
+            })->whereNotNull('product_modifier_price.product_modifier_price');
+        } else {
+            $modifiers->join('product_modifier_global_prices', 'product_modifier_global_prices.id_product_modifier', '=', 'product_modifier_global_prices.id_product_modifier')
+                ->whereNotNull('product_modifier_global_prices.product_modifier_price');
+        }
+
+        $modifiers = $modifiers->get();
+
+        $result[] = [
+            'id_brand' => 0,
+            'name_brand' => 'Topping',
+            'order_brand' => 999,
+            'categories' => $modifiers
+        ];
         return MyHelper::checkGet(array_values($result));
     }
     /**
@@ -1186,69 +1361,101 @@ class ApiOutletApp extends Controller
     public function productList(ListProduct $request)
     {
         $outlet            = $request->user();
-        $post              = $request->json()->all();
-        $post['id_outlet'] = $outlet['id_outlet'];
-        $products          = Product::select([
-            'products.id_product', 'products.product_code', 'products.product_name', 
-            DB::raw('(CASE WHEN product_detail.product_detail_stock_status is NULL THEN "Available" ELSE product_detail.product_detail_stock_status END) AS product_stock_status'),
-            // 'product_detail.product_detail_stock_status as product_stock_status',
-        ])
+        if ($request->id_brand) {
+            // product
+            $post              = $request->json()->all();
+            $post['id_outlet'] = $outlet['id_outlet'];
+            $products          = Product::select([
+                'products.id_product', 'products.product_code', 'products.product_name', 
+                DB::raw('(CASE WHEN product_detail.product_detail_stock_status is NULL THEN "Available" ELSE product_detail.product_detail_stock_status END) AS product_stock_status'),
+                // 'product_detail.product_detail_stock_status as product_stock_status',
+            ])
 
-        // join brand product
-            ->join('brand_product', function($join) use ($post) {
-                $join->on('brand_product.id_product', '=', 'products.id_product')
-                    ->where('brand_product.id_brand', '=', $post['id_brand'])
-                    ->where('brand_product.id_product_category', '=', $post['id_product_category']);
-            })
+            // join brand product
+                ->join('brand_product', function($join) use ($post) {
+                    $join->on('brand_product.id_product', '=', 'products.id_product')
+                        ->where('brand_product.id_brand', '=', $post['id_brand'])
+                        ->where('brand_product.id_product_category', '=', $post['id_product_category']);
+                })
 
-        // brand produk ada di outlet
-            ->join('brand_outlet', function($join) use ($post) {
-                $join->on('brand_outlet.id_brand', '=', 'brand_product.id_brand')
-                    ->where('brand_outlet.id_outlet', '=', $post['id_outlet']);
-            })
+            // brand produk ada di outlet
+                ->join('brand_outlet', function($join) use ($post) {
+                    $join->on('brand_outlet.id_brand', '=', 'brand_product.id_brand')
+                        ->where('brand_outlet.id_outlet', '=', $post['id_outlet']);
+                })
 
-        // product available (active & visible)
-            ->leftJoin('product_detail', function($join) use ($post) {
-                $join->on('product_detail.id_product', '=', 'products.id_product')
-                    ->where('product_detail.id_outlet', '=', $post['id_outlet']);
-            })
-            ->where(function ($query) {
-                $query->where('product_detail.product_detail_visibility', '=', 'Visible')
-                    ->orWhere(function ($q) {
-                        $q->whereNull('product_detail.product_detail_visibility')
-                            ->where('products.product_visibility', 'Visible');
-                    });
-            })
-            ->where(function ($query) {
-                $query->where('product_detail.product_detail_status', '=', 'Active')
-                    ->orWhereNull('product_detail.product_detail_status');
-            });
+            // product available (active & visible)
+                ->leftJoin('product_detail', function($join) use ($post) {
+                    $join->on('product_detail.id_product', '=', 'products.id_product')
+                        ->where('product_detail.id_outlet', '=', $post['id_outlet']);
+                })
+                ->where(function ($query) {
+                    $query->where('product_detail.product_detail_visibility', '=', 'Visible')
+                        ->orWhere(function ($q) {
+                            $q->whereNull('product_detail.product_detail_visibility')
+                                ->where('products.product_visibility', 'Visible');
+                        });
+                })
+                ->where(function ($query) {
+                    $query->where('product_detail.product_detail_status', '=', 'Active')
+                        ->orWhereNull('product_detail.product_detail_status');
+                });
 
-        // has product price
-        if ($outlet->outlet_different_price) {
-            $products->join('product_special_price', function($join) use ($post) {
-                $join->on('product_special_price.id_product', '=', 'products.id_product')
-                    ->where('product_special_price.id_outlet', '=', $post['id_outlet']);
-            })->whereNotNull('product_special_price.product_special_price');
-        } else{
-            $products->join('product_global_price', 'products.id_product', '=', 'product_global_price.id_product')
-                ->whereNotNull('product_global_price.product_global_price');
-        }
-
-        // group by and order
-        $products->groupBy('products.id_product')
-            ->orderBy('products.position')
-            ->orderBy('products.id_product');
-
-        // build response
-        if ($request->page) {
-            $data = $products->paginate(30)->toArray();
-            if (empty($data['data'])) {
-                return MyHelper::checkGet($data['data']);
+            // has product price
+            if ($outlet->outlet_different_price) {
+                $products->join('product_special_price', function($join) use ($post) {
+                    $join->on('product_special_price.id_product', '=', 'products.id_product')
+                        ->where('product_special_price.id_outlet', '=', $post['id_outlet']);
+                })->whereNotNull('product_special_price.product_special_price');
+            } else{
+                $products->join('product_global_price', 'products.id_product', '=', 'product_global_price.id_product')
+                    ->whereNotNull('product_global_price.product_global_price');
             }
-            return MyHelper::checkGet($data);
+
+            // group by and order
+            $products->groupBy('products.id_product')
+                ->orderBy('products.position')
+                ->orderBy('products.id_product');
+
+            // build response
+            if ($request->page) {
+                $data = $products->paginate(30)->toArray();
+                if (empty($data['data'])) {
+                    return MyHelper::checkGet($data['data']);
+                }
+                return MyHelper::checkGet($data);
+            } else {
+                return MyHelper::checkGet($products->get()->toArray());
+            }
         } else {
-            return MyHelper::checkGet($products->get()->toArray());
+            // modifiers
+            $modifiers = ProductModifier::select(\DB::raw('product_modifiers.id_product_modifier * 1000 as id_product, code as product_code, text as product_name, CASE WHEN product_modifier_stock_status IS NULL THEN "Available" ELSE product_modifier_stock_status END as product_stock_status'))
+            ->leftJoin('product_modifier_details', function($join) use ($outlet) {
+                $join->on('product_modifier_details.id_product_modifier','=','product_modifiers.id_product_modifier')
+                    ->where('product_modifier_details.id_outlet', $outlet['id_outlet']);
+            })
+            ->where(function($q){
+                $q->where('product_modifier_status','Active')->orWhereNull('product_modifier_status');
+            })
+            ->where(function($query){
+                $query->where('product_modifier_details.product_modifier_visibility','=','Visible')
+                        ->orWhere(function($q){
+                            $q->whereNull('product_modifier_details.product_modifier_visibility')
+                            ->where('product_modifiers.product_modifier_visibility', 'Visible');
+                        });
+            });
+            $modifiers = $modifiers->orderBy('text');
+
+            // build response
+            if ($request->page) {
+                $data = $modifiers->paginate(30)->toArray();
+                if (empty($data['data'])) {
+                    return MyHelper::checkGet($data['data']);
+                }
+                return MyHelper::checkGet($data);
+            } else {
+                return MyHelper::checkGet($modifiers->get()->toArray());
+            }
         }
     }
 
@@ -1920,6 +2127,37 @@ class ApiOutletApp extends Controller
                     ];}, $var),
             ];
         }
+
+        $modifier_raws = ProductModifierStockStatusUpdate::distinct()->select(\DB::raw('id_product_modifier_stock_status_update,CONCAT(COALESCE(user_type,""),",",COALESCE(id_user,""),",",COALESCE(user_name,"")) as user,DATE_FORMAT(date_time, "%H:%i") as time,text as product_name,new_status as old_status,new_status,new_status as to_available'))
+            ->join('product_modifiers', 'product_modifiers.id_product_modifier', '=', 'product_modifier_stock_status_updates.id_product_modifier')
+            ->where('id_outlet', $outlet->id_outlet)
+            ->whereDate('date_time', $date)
+            ->orderBy('date_time', 'desc')
+            ->get();
+        $grouped = [];
+        foreach ($modifier_raws as $value) {
+            $grouped[$value->user . '#' . $value->time][] = $value;
+        }
+
+        if ($grouped) {
+            $result['0']['name_brand'] = 'Topping';
+        }
+
+        foreach ($grouped as $key => $var) {
+            [$name, $time] = explode('#', $key);
+            $result['0']['updates'][] = [
+                'name'    => $name?:$outlet['outlet_name'],
+                'time'    => $time,
+                'summary' => array_map(function ($vrb) {
+                    return [
+                        'product_name' => $vrb['product_name'],
+                        'old_status'   => $vrb['old_status'],
+                        'new_status'   => $vrb['new_status'],
+                        'to_available' => $vrb['to_available'],
+                    ];}, $var),
+            ];
+        }
+
         return MyHelper::checkGet(array_values($result));
     }
 
