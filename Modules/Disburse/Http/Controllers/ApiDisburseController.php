@@ -292,6 +292,11 @@ class ApiDisburseController extends Controller
             if($rule == 'and'){
                 foreach ($post['conditions'] as $row){
                     if(isset($row['subject'])){
+                        if($row['subject'] == 'error_status'){
+                            $data->where('disburse.error_code', $row['operator'])
+                                ->where('disburse.disburse_status', 'Fail');
+                        }
+
                         if($row['subject'] == 'bank_name'){
                             $data->where('bank_name.id_bank_name', $row['operator']);
                         }
@@ -338,6 +343,13 @@ class ApiDisburseController extends Controller
                 $data->where(function ($subquery) use ($post){
                     foreach ($post['conditions'] as $row){
                         if(isset($row['subject'])){
+                            if($row['subject'] == 'error_status'){
+                                $subquery->orWhere(function ($q) use($row){
+                                    $q->where('disburse.error_code', $row['operator'])
+                                        ->where('disburse.disburse_status', 'Fail');
+                                });
+                            }
+
                             if($row['subject'] == 'bank_name'){
                                 $subquery->orWhere('bank_name.id_bank_name', $row['operator']);
                             }
@@ -391,7 +403,7 @@ class ApiDisburseController extends Controller
                 ->get()->toArray();
 
         }else{
-            $data = $data->select('disburse_outlet.id_disburse_outlet', 'outlets.outlet_name', 'outlets.outlet_code', 'disburse.id_disburse', 'disburse_outlet.disburse_nominal', 'disburse.disburse_status', 'disburse.beneficiary_account_number',
+            $data = $data->select('disburse.error_code', 'disburse.error_message', 'disburse_outlet.id_disburse_outlet', 'outlets.outlet_name', 'outlets.outlet_code', 'disburse.id_disburse', 'disburse_outlet.disburse_nominal', 'disburse.disburse_status', 'disburse.beneficiary_account_number',
                 'disburse.beneficiary_name', 'disburse.created_at', 'disburse.updated_at', 'bank_name.bank_code', 'bank_name.bank_name', 'disburse.count_retry', 'disburse.error_message')->orderBy('disburse.created_at','desc')
                 ->paginate(25);
         }
@@ -405,14 +417,14 @@ class ApiDisburseController extends Controller
         $data = Disburse::leftJoin('bank_name', 'bank_name.bank_code', 'disburse.beneficiary_bank_name')
             ->with(['disburse_outlet'])
             ->where('disburse.disburse_status', 'Fail')
-            ->select('disburse.id_disburse', 'disburse.disburse_nominal', 'disburse.disburse_status', 'disburse.beneficiary_account_number',
+            ->select('disburse.error_code', 'disburse.id_disburse', 'disburse.disburse_nominal', 'disburse.disburse_status', 'disburse.beneficiary_account_number',
                 'disburse.beneficiary_name', 'disburse.created_at', 'disburse.updated_at', 'bank_name.bank_code', 'bank_name.bank_name', 'disburse.count_retry', 'disburse.error_message')->orderBy('disburse.created_at','desc');
 
         if(isset($post['id_user_franchise']) && !empty($post['id_user_franchise'])){
             $data->whereIn('disburse.id_disburse', function ($query) use ($post){
-                $query->select('disburse_outlets.id_disburse')
-                    ->from('disburse_outlets')
-                    ->join('outlets', 'disburse_outlets.id_outlet', 'outlets.id_outlet')
+                $query->select('disburse_outlet.id_disburse')
+                    ->from('disburse_outlet')
+                    ->join('outlets', 'disburse_outlet.id_outlet', 'outlets.id_outlet')
                     ->join('user_franchise_outlet', 'user_franchise_outlet.id_outlet', 'disburse_outlet.id_outlet')
                     ->where('user_franchise_outlet.id_user_franchise', $post['id_user_franchise']);
             });
@@ -436,6 +448,10 @@ class ApiDisburseController extends Controller
             if($rule == 'and'){
                 foreach ($post['conditions'] as $row){
                     if(isset($row['subject'])){
+                        if($row['subject'] == 'error_status'){
+                            $data->where('disburse.error_code', $row['operator']);
+                        }
+
                         if($row['subject'] == 'bank_name'){
                             $data->where('bank_name.id_bank_name', $row['operator']);
                         }
@@ -443,16 +459,16 @@ class ApiDisburseController extends Controller
                         if($row['subject'] == 'outlet_code'){
                             if($row['operator'] == '='){
                                 $data->whereIn('disburse.id_disburse', function ($query) use ($row){
-                                    $query->select('disburse_outlets.id_disburse')
-                                        ->from('disburse_outlets')
-                                        ->join('outlets', 'disburse_outlets.id_outlet', 'outlets.id_outlet')
+                                    $query->select('disburse_outlet.id_disburse')
+                                        ->from('disburse_outlet')
+                                        ->join('outlets', 'disburse_outlet.id_outlet', 'outlets.id_outlet')
                                         ->where('outlets.outlet_code',$row['parameter']);
                                 });
                             }else{
                                 $data->whereIn('disburse.id_disburse', function ($query) use ($row){
-                                    $query->select('disburse_outlets.id_disburse')
-                                        ->from('disburse_outlets')
-                                        ->join('outlets', 'disburse_outlets.id_outlet', 'outlets.id_outlet')
+                                    $query->select('disburse_outlet.id_disburse')
+                                        ->from('disburse_outlet')
+                                        ->join('outlets', 'disburse_outlet.id_outlet', 'outlets.id_outlet')
                                         ->where('outlets.outlet_code', 'like', '%'.$row['parameter'].'%');
                                 });
                             }
@@ -461,16 +477,16 @@ class ApiDisburseController extends Controller
                         if($row['subject'] == 'outlet_name'){
                             if($row['operator'] == '='){
                                 $data->whereIn('disburse.id_disburse', function ($query) use ($row){
-                                    $query->select('disburse_outlets.id_disburse')
-                                        ->from('disburse_outlets')
-                                        ->join('outlets', 'disburse_outlets.id_outlet', 'outlets.id_outlet')
+                                    $query->select('disburse_outlet.id_disburse')
+                                        ->from('disburse_outlet')
+                                        ->join('outlets', 'disburse_outlet.id_outlet', 'outlets.id_outlet')
                                         ->where('outlets.outlet_name',$row['parameter']);
                                 });
                             }else{
                                 $data->whereIn('disburse.id_disburse', function ($query) use ($row){
-                                    $query->select('disburse_outlets.id_disburse')
-                                        ->from('disburse_outlets')
-                                        ->join('outlets', 'disburse_outlets.id_outlet', 'outlets.id_outlet')
+                                    $query->select('disburse_outlet.id_disburse')
+                                        ->from('disburse_outlet')
+                                        ->join('outlets', 'disburse_outlet.id_outlet', 'outlets.id_outlet')
                                         ->where('outlets.outlet_name', 'like', '%'.$row['parameter'].'%');
                                 });
                             }
@@ -498,6 +514,10 @@ class ApiDisburseController extends Controller
                 $data->where(function ($subquery) use ($post){
                     foreach ($post['conditions'] as $row){
                         if(isset($row['subject'])){
+                            if($row['subject'] == 'error_status'){
+                                $subquery->orWhere('disburse.error_code', $row['operator']);
+                            }
+
                             if($row['subject'] == 'bank_name'){
                                 $subquery->orWhere('bank_name.id_bank_name', $row['operator']);
                             }
@@ -505,16 +525,16 @@ class ApiDisburseController extends Controller
                             if($row['subject'] == 'outlet_code'){
                                 if($row['operator'] == '='){
                                     $subquery->orWhereIn('disburse.id_disburse', function ($query) use ($row){
-                                        $query->select('disburse_outlets.id_disburse')
-                                            ->from('disburse_outlets')
-                                            ->join('outlets', 'disburse_outlets.id_outlet', 'outlets.id_outlet')
+                                        $query->select('disburse_outlet.id_disburse')
+                                            ->from('disburse_outlet')
+                                            ->join('outlets', 'disburse_outlet.id_outlet', 'outlets.id_outlet')
                                             ->where('outlets.outlet_code',$row['parameter']);
                                     });
                                 }else{
                                     $subquery->orWhereIn('disburse.id_disburse', function ($query) use ($row){
-                                        $query->select('disburse_outlets.id_disburse')
-                                            ->from('disburse_outlets')
-                                            ->join('outlets', 'disburse_outlets.id_outlet', 'outlets.id_outlet')
+                                        $query->select('disburse_outlet.id_disburse')
+                                            ->from('disburse_outlet')
+                                            ->join('outlets', 'disburse_outlet.id_outlet', 'outlets.id_outlet')
                                             ->where('outlets.outlet_code', 'like', '%'.$row['parameter'].'%');
                                     });
                                 }
@@ -523,16 +543,16 @@ class ApiDisburseController extends Controller
                             if($row['subject'] == 'outlet_name'){
                                 if($row['operator'] == '='){
                                     $subquery->orWhereIn('disburse.id_disburse', function ($query) use ($row){
-                                        $query->select('disburse_outlets.id_disburse')
-                                            ->from('disburse_outlets')
-                                            ->join('outlets', 'disburse_outlets.id_outlet', 'outlets.id_outlet')
+                                        $query->select('disburse_outlet.id_disburse')
+                                            ->from('disburse_outlet')
+                                            ->join('outlets', 'disburse_outlet.id_outlet', 'outlets.id_outlet')
                                             ->where('outlets.outlet_name',$row['parameter']);
                                     });
                                 }else{
                                     $subquery->orWhereIn('disburse.id_disburse', function ($query) use ($row){
-                                        $query->select('disburse_outlets.id_disburse')
-                                            ->from('disburse_outlets')
-                                            ->join('outlets', 'disburse_outlets.id_outlet', 'outlets.id_outlet')
+                                        $query->select('disburse_outlet.id_disburse')
+                                            ->from('disburse_outlet')
+                                            ->join('outlets', 'disburse_outlet.id_outlet', 'outlets.id_outlet')
                                             ->where('outlets.outlet_name', 'like', '%'.$row['parameter'].'%');
                                     });
                                 }
@@ -844,7 +864,12 @@ class ApiDisburseController extends Controller
 
     function updateStatusDisburse(Request $request){
         $post = $request->json()->all();
-        $update = Disburse::where('id_disburse', $post['id'])->update(['disburse_status' => $post['disburse_status']]);
+        $checkFirst = Disburse::where('id_disburse', $post['id'])->first();
+        if(strpos($checkFirst['error_message'],"Partner does not have sufficient balance for the payout") !== false){
+            $update = Disburse::where('id_disburse', $post['id'])->update(['disburse_status' => 'Queued']);
+        }else{
+            $update = Disburse::where('id_disburse', $post['id'])->update(['disburse_status' => $post['disburse_status']]);
+        }
 
         return response()->json(MyHelper::checkUpdate($update));
     }
