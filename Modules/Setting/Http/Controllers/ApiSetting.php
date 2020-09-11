@@ -1623,4 +1623,56 @@ class ApiSetting extends Controller
         return response()->json(MyHelper::checkUpdate($update));
     }
     /* ============== End Time Expired Setting ============== */
+
+    function splashScreenOutletApps(Request $request){
+        $post = $request->json()->all();
+
+        if(empty($post)){
+            $image = Setting::where('key', 'default_splash_screen_outlet_apps')->first();
+            $duration = Setting::where('key', 'default_splash_screen_outlet_apps_duration')->first();
+
+            $data = [
+                'default_splash_screen_outlet_apps' => NULL,
+                'default_splash_screen_outlet_apps_duration' => NULL
+            ];
+            if(isset($image['value'])){
+                $data['default_splash_screen_outlet_apps'] = $this->endPoint.$image['value'];
+            }
+
+            if(isset($duration['value'])){
+                $data['default_splash_screen_outlet_apps_duration'] = $duration['value'];
+            }
+
+            return response()->json(MyHelper::checkGet($data));
+        }else{
+            if (isset($post['default_splash_screen_outlet_apps'])) {
+                $image = Setting::where('key', 'default_splash_screen_outlet_apps')->first();
+
+                if(isset($image['value']) && file_exists($image['value'])){
+                    unlink($image['value']);
+                }
+                // base64 image,path,h,w,name,ext
+                $upload = MyHelper::uploadPhotoStrict($post['default_splash_screen_outlet_apps'], $this->saveImage, 1080, 1920,'splash');
+
+                if (isset($upload['status']) && $upload['status'] == "success") {
+                    $save = Setting::where('key', 'default_splash_screen_outlet_apps')->update(['value'=>$upload['path']]);
+                }
+                else {
+                    $result = [
+                        'error'    => 1,
+                        'status'   => 'fail',
+                        'messages' => ['fail upload image']
+                    ];
+
+                    return $result;
+                }
+            }
+
+            if(isset($post['default_splash_screen_outlet_apps_duration'])){
+                $save = Setting::where('key', 'default_splash_screen_outlet_apps_duration')->update(['value'=>$post['default_splash_screen_outlet_apps_duration']]);
+            }
+
+            return response()->json(MyHelper::checkUpdate($save));
+        }
+    }
 }
