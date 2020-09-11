@@ -3573,4 +3573,23 @@ class ApiOutletApp extends Controller
 
         return MyHelper::checkGet($payment_method);
     }
+
+    /**
+     * Update outlet phone number
+     * @param  Request $request 
+     * @return Response
+     */
+    public function updatePhone(Request $request)
+    {
+        $outlet = $request->user();
+        if (!$request->phone) {
+            return [
+                'status'   => 'fail',
+                'messages' => ['The phone field is required']
+            ];
+        }
+
+        $update = $outlet->update(['outlet_phone' => $request->phone]);
+        return MyHelper::checkUpdate($update);
+    }
 }
