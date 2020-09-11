@@ -745,6 +745,7 @@ class ShopeePayController extends Controller
             'validity_period'      => $this->validity_period,
             'additional_info'      => '{}',
         ];
+        $order_id = '';
         switch ($type) {
             case 'trx':
                 $trx = Transaction::where('id_transaction', $reference->id_transaction)->first();
@@ -754,18 +755,21 @@ class ShopeePayController extends Controller
                 }
                 $data['payment_reference_id'] = $trx->transaction_receipt_number;
                 $data['amount']               = $reference->amount;
+                $order_id                     = $trx->transaction_receipt_number;
                 break;
 
             case 'subscription':
             case 'deals':
                 $data['payment_reference_id'] = $reference->order_id;
                 $data['amount']               = $reference->amount;
+                $order_id                     = $reference->order_id;
                 break;
 
             default:
                 # code...
                 break;
         }
+        $data['return_url']           = $this->return_url.'?type='.$type.'&order_id='.urlencode($order_id);
         $reference->update($data);
         return $data;
     }
