@@ -1332,7 +1332,7 @@ class ApiOutletApp extends Controller
         usort($result, function ($a, $b) {
             return $a['order_brand'] <=> $b['order_brand'];
         });
-        $modifiers = ProductModifier::select(\DB::raw('0 as id_brand, min(product_modifiers.id_product_modifier) as id_product_category, type as product_category_name, count(product_modifiers.id_product_modifier) as total_product, 0 as total_sold_out'));
+        $modifiers = ProductModifier::select(\DB::raw('0 as id_brand, min(product_modifiers.id_product_modifier) as id_product_category, type as product_category_name, count(distinct(product_modifiers.id_product_modifier)) as total_product, 0 as total_sold_out'));
 
         if ($outlet['outlet_different_price']) {
             $modifiers->join('product_modifier_price', function($join) use ($outlet) {
