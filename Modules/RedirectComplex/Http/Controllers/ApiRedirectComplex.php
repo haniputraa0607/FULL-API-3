@@ -682,17 +682,18 @@ class ApiRedirectComplex extends Controller
         		// return $post;
         		switch ($post['type']) {
         			case 'promo_campaign':
-        				$data = PromoCampaign::select('promo_campaigns.id_promo_campaign as id_promo', DB::raw('CONCAT(promo_code, " - ", campaign_name) AS promo'))
+        				// $data = PromoCampaign::select('promo_campaigns.id_promo_campaign as id_promo', DB::raw('CONCAT(promo_promo_code, " - ", campaign_name) AS promo'), 'promo_campaigns.date_start')
+        				$data = PromoCampaign::select(
+        							'promo_campaigns.id_promo_campaign as id_promo', 
+        							'promo_code',
+        							'campaign_name', 
+        							'promo_campaigns.date_start'
+        						)
         						->where('code_type','Single')
         						->join('promo_campaign_promo_codes', 'promo_campaigns.id_promo_campaign', '=', 'promo_campaign_promo_codes.id_promo_campaign')
-        						->where('date_start', '<', $now)
+        						// ->where('date_start', '<', $now) get promo that hasn't ended only
         						->where('date_end', '>', $now)
-        						->where('step_complete','=',1)
-					            ->where( function($q){
-					            	$q->whereColumn('usage','<','limitation_usage')
-					            		->orWhere('code_type','Single')
-					            		->orWhere('limitation_usage',0);
-					            });
+        						->where('step_complete','=',1);
 					    // check outlet
 					    if (isset($post['outlet'])) {
 					    	$data = $data->where(function($q) use ($post) {
@@ -706,6 +707,7 @@ class ApiRedirectComplex extends Controller
 			            		});
 			            	});
 					    }
+
 					   	// check brand
 					   	/* commented because promo campaign doesnt have brand column
 					   	if (isset($post['brand'])) {
@@ -713,6 +715,14 @@ class ApiRedirectComplex extends Controller
 					   	}
 					   	*/
 					   	$data = $data->get()->toArray();
+
+					   	if (!empty($data)) {
+					   		foreach ($data as $key => $value) {
+					   			$status = null;
+					   			$status = $value['date_start'] < $now ? 'started' : 'not started';
+					   			$data[$key]['promo'] = $status.' - '.$value['promo_code'].' - '.$value['campaign_name'];
+					   		}
+					   	}
         				break;
         			
         			default:
@@ -735,6 +745,37 @@ class ApiRedirectComplex extends Controller
 				}
 
 				$data = $data->get()->toArray();
+
+				break;
+
+			case 'promo-detail':
+
+				$data = PromoCampaign::select('*')
+						->where('promo_campaigns.id_promo_campaign',$post['id_promo'])
+						->join('promo_campaign_promo_codes','promo_campaign_promo_codes.id_promo_campaign','=','promo_campaigns.id_promo_campaign')
+						->first();
+
+				if (!empty($data)) {
+					$data = $data->append('get_all_rules');
+					$promo_periode 	= date("d F Y H:i", strtotime($data['date_start'])).' - '.date("d F Y H:i", strtotime($data['date_end']));
+					$promo_outlet 	= $data['is_all_outlet'] ? 'All Outlet' : 'Specific Outlet';
+					$promo_total_coupon = $data['total_coupon'] ? $data['total_coupon'] : 'Unlimited';
+
+					$result = [
+						'promo_name' 	=> $data['campaign_name'],
+						'promo_code' 	=> $data['promo_code'],
+						'promo_type' 	=> $data['promo_type'],
+						'promo_outlet' 	=> $promo_outlet,
+						'promo_id'		=> $data['id_promo_campaign'],
+						'promo_date_end'=> date("d F Y H:i", strtotime($data['date_end'])),
+						'promo_date_start' 	=> date("d F Y H:i", strtotime($data['date_start'])),
+						'promo_created' 	=> $data['created_at'],
+						'promo_used_coupon' => $data['used_code'],
+						'promo_total_coupon'=> $promo_total_coupon
+					];
+
+					$data = $result;
+				}
 
 				break;
 
