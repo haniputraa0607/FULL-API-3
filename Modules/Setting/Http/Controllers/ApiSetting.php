@@ -1652,7 +1652,7 @@ class ApiSetting extends Controller
                     unlink($image['value']);
                 }
                 // base64 image,path,h,w,name,ext
-                $upload = MyHelper::uploadPhotoStrict($post['default_splash_screen_outlet_apps'], $this->saveImage, 1080, 1920,'splash');
+                $upload = MyHelper::uploadPhotoStrict($post['default_splash_screen_outlet_apps'], $this->saveImage, 1080, 1920,'splash_outletapp');
 
                 if (isset($upload['status']) && $upload['status'] == "success") {
                     $save = Setting::where('key', 'default_splash_screen_outlet_apps')->update(['value'=>$upload['path']]);
