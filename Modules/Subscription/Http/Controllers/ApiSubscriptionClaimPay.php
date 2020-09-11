@@ -520,7 +520,7 @@ class ApiSubscriptionClaimPay extends Controller
             $paymentShopeepay->id_subscription_user        = $voucher['id_subscription_user'];
             $paymentShopeepay->id_subscription             = $subscription['id_subscription'];
             $paymentShopeepay->amount               = $grossAmount * 100;
-            $paymentShopeepay->order_id = time().sprintf("%05d", $voucher->id_subscription_user);
+            $paymentShopeepay->order_id = $voucher->subscription_user_receipt_number;
             $paymentShopeepay->save();
             $trx_shopeepay = app($this->shopeepay)->order($paymentShopeepay, 'subscription', $errors);
         } elseif (!($paymentShopeepay->redirect_url_app && $paymentShopeepay->redirect_url_http)) {
