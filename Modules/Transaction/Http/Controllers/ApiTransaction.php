@@ -1443,24 +1443,31 @@ class ApiTransaction extends Controller
 
                     if ($con['subject'] == 'transaction_status') {
                         if ($post['rule'] == 'and') {
-                            if($con['operator'] == 'taken_by_driver'){
+                            if($con['operator'] == 'pending'){
+                                $query = $query->whereNull('transaction_pickups.receive_at');
+                            }elseif($con['operator'] == 'taken_by_driver'){
                                 $query = $query->whereNotNull('transaction_pickups.taken_at')
                                     ->whereNotIn('transaction_pickups.pickup_by', ['Customer']);
                             }elseif ($con['operator'] == 'taken_by_customer'){
                                 $query = $query->whereNotNull('transaction_pickups.taken_at')
                                     ->where('transaction_pickups.pickup_by', 'Customer');
+                            }elseif ($con['operator'] == 'taken_by_system'){
+                                $query = $query->whereNotNull('transaction_pickups.ready_at')
+                                    ->whereNotNull('transaction_pickups.taken_by_system_at');
                             }elseif($con['operator'] == 'receive_at'){
                                 $query = $query->whereNotNull('transaction_pickups.receive_at')
-                                    ->whereNull('transaction_pickups.ready_at')
-                                    ->whereNull('transaction_pickups.taken_at');
+                                    ->whereNull('transaction_pickups.ready_at');
                             }elseif($con['operator'] == 'ready_at'){
                                 $query = $query->whereNotNull('transaction_pickups.ready_at')
-                                    ->whereNull('transaction_pickups.taken_at');
+                                    ->whereNull('transaction_pickups.taken_at')
+                                    ->whereNull('transaction_pickups.taken_by_system_at');
                             }else{
                                 $query = $query->whereNotNull('transaction_pickups.'.$con['operator']);
                             }
                         } else {
-                            if($con['operator'] == 'taken_by_driver'){
+                            if($con['operator'] == 'pending'){
+                                $query = $query->orWhereNotNull('transaction_pickups.receive_at');
+                            }elseif($con['operator'] == 'taken_by_driver'){
                                 $query = $query->orWhere(function ($q){
                                     $q->whereNotNull('transaction_pickups.taken_at')
                                         ->whereNotIn('transaction_pickups.pickup_by', ['Customer']);
@@ -1470,16 +1477,22 @@ class ApiTransaction extends Controller
                                     $q->whereNotNull('transaction_pickups.taken_at')
                                         ->where('transaction_pickups.pickup_by', 'Customer');
                                 });
+                            }elseif ($con['operator'] == 'taken_by_system'){
+                                $query = $query->orWhere(function ($q){
+                                    $q->whereNotNull('transaction_pickups.ready_at')
+                                        ->whereNotNull('transaction_pickups.taken_by_system_at');
+                                });
+                                $query = $query->orWhereNotNull('transaction_pickups.taken_by_system_at');
                             }elseif($con['operator'] == 'receive_at'){
                                 $query = $query->orWhere(function ($q){
                                     $q->whereNotNull('transaction_pickups.receive_at')
-                                        ->whereNull('transaction_pickups.ready_at')
-                                        ->whereNull('transaction_pickups.taken_at');
+                                        ->whereNull('transaction_pickups.ready_at');
                                 });
                             }elseif($con['operator'] == 'ready_at'){
                                 $query = $query->orWhere(function ($q) {
                                     $q->whereNotNull('transaction_pickups.ready_at')
-                                        ->whereNull('transaction_pickups.taken_at');
+                                        ->whereNull('transaction_pickups.taken_at')
+                                        ->whereNull('transaction_pickups.taken_by_system_at');
                                 });
                             }else{
                                 $query = $query->orWhereNotNull('transaction_pickups.'.$con['operator']);
@@ -1563,7 +1576,7 @@ class ApiTransaction extends Controller
         }
 
         $query = Transaction::join('transaction_pickups','transaction_pickups.id_transaction','=','transactions.id_transaction')
-            ->select('transactions.*','users.*','outlets.outlet_code', 'outlets.outlet_name', 'payment_type', 'payment_method', 'transaction_payment_midtrans.gross_amount', 'transaction_payment_ipay88s.amount')
+            ->select('transaction_pickups.*','transactions.*','users.*','outlets.outlet_code', 'outlets.outlet_name', 'payment_type', 'payment_method', 'transaction_payment_midtrans.gross_amount', 'transaction_payment_ipay88s.amount')
             ->leftJoin('outlets','outlets.id_outlet','=','transactions.id_outlet')
             ->leftJoin('users','transactions.id_user','=','users.id')
             ->orderBy('transactions.transaction_date', 'asc');
@@ -1584,7 +1597,7 @@ class ApiTransaction extends Controller
                 ->leftJoin('cities as c', 'c.id_city', 'users.id_city')
                 ->join('provinces', 'cities.id_province', 'provinces.id_province')
                 ->with(['transaction_payment_subscription', 'vouchers', 'promo_campaign', 'point_refund', 'point_use'])
-                ->addSelect('transaction_pickups.*', 'transaction_products.*', 'products.product_code', 'products.product_name', 'product_categories.product_category_name',
+                ->addSelect('transaction_products.*', 'products.product_code', 'products.product_name', 'product_categories.product_category_name',
                     'brands.name_brand', 'cities.city_name', 'c.city_name as user_city', 'provinces.province_name',
                     'disburse_outlet_transactions.fee_item', 'disburse_outlet_transactions.payment_charge', 'disburse_outlet_transactions.discount', 'disburse_outlet_transactions.subscription',
                     'disburse_outlet_transactions.point_use_expense',
@@ -1680,6 +1693,65 @@ class ApiTransaction extends Controller
                             $query = $query->where($var, $con['operator'], $con['parameter']);
                         } else {
                             $query = $query->orWhere($var, $con['operator'], $con['parameter']);
+                        }
+                    }
+
+                    if ($con['subject'] == 'transaction_status') {
+                        if ($post['rule'] == 'and') {
+                            if($con['operator'] == 'pending'){
+                                $query = $query->whereNull('transaction_pickups.receive_at');
+                            }elseif($con['operator'] == 'taken_by_driver'){
+                                $query = $query->whereNotNull('transaction_pickups.taken_at')
+                                    ->whereNotIn('transaction_pickups.pickup_by', ['Customer']);
+                            }elseif ($con['operator'] == 'taken_by_customer'){
+                                $query = $query->whereNotNull('transaction_pickups.taken_at')
+                                    ->where('transaction_pickups.pickup_by', 'Customer');
+                            }elseif ($con['operator'] == 'taken_by_system'){
+                                $query = $query->whereNotNull('transaction_pickups.ready_at')
+                                    ->whereNotNull('transaction_pickups.taken_by_system_at');
+                            }elseif($con['operator'] == 'receive_at'){
+                                $query = $query->whereNotNull('transaction_pickups.receive_at')
+                                    ->whereNull('transaction_pickups.ready_at');
+                            }elseif($con['operator'] == 'ready_at'){
+                                $query = $query->whereNotNull('transaction_pickups.ready_at')
+                                    ->whereNull('transaction_pickups.taken_at')
+                                    ->whereNull('transaction_pickups.taken_by_system_at');
+                            }else{
+                                $query = $query->whereNotNull('transaction_pickups.'.$con['operator']);
+                            }
+                        } else {
+                            if($con['operator'] == 'pending'){
+                                $query = $query->orWhereNotNull('transaction_pickups.receive_at');
+                            }elseif($con['operator'] == 'taken_by_driver'){
+                                $query = $query->orWhere(function ($q){
+                                    $q->whereNotNull('transaction_pickups.taken_at')
+                                        ->whereNotIn('transaction_pickups.pickup_by', ['Customer']);
+                                });
+                            }elseif ($con['operator'] == 'taken_by_customer'){
+                                $query = $query->orWhere(function ($q){
+                                    $q->whereNotNull('transaction_pickups.taken_at')
+                                        ->where('transaction_pickups.pickup_by', 'Customer');
+                                });
+                            }elseif ($con['operator'] == 'taken_by_system'){
+                                $query = $query->orWhere(function ($q){
+                                    $q->whereNotNull('transaction_pickups.ready_at')
+                                        ->whereNotNull('transaction_pickups.taken_by_system_at');
+                                });
+                                $query = $query->orWhereNotNull('transaction_pickups.taken_by_system_at');
+                            }elseif($con['operator'] == 'receive_at'){
+                                $query = $query->orWhere(function ($q){
+                                    $q->whereNotNull('transaction_pickups.receive_at')
+                                        ->whereNull('transaction_pickups.ready_at');
+                                });
+                            }elseif($con['operator'] == 'ready_at'){
+                                $query = $query->orWhere(function ($q) {
+                                    $q->whereNotNull('transaction_pickups.ready_at')
+                                        ->whereNull('transaction_pickups.taken_at')
+                                        ->whereNull('transaction_pickups.taken_by_system_at');
+                                });
+                            }else{
+                                $query = $query->orWhereNotNull('transaction_pickups.'.$con['operator']);
+                            }
                         }
                     }
 
@@ -1783,7 +1855,7 @@ class ApiTransaction extends Controller
                     $html = '';
                     $sameData = '';
                     $sameData .= '<td>'.$val['outlet_code'].'</td>';
-                    $sameData .= '<td>'.$val['outlet_name'].'</td>';
+                    $sameData .= '<td>'.htmlspecialchars($val['outlet_name']).'</td>';
                     $sameData .= '<td>'.$val['province_name'].'</td>';
                     $sameData .= '<td>'.$val['city_name'].'</td>';
                     $sameData .= '<td>'.$val['transaction_receipt_number'].'</td>';
@@ -1952,8 +2024,21 @@ class ApiTransaction extends Controller
                     $promoCode = $val['promo_campaign']['promo_code'];
                 }
 
-                $status = $val['transaction_payment_status'];
-                if(!is_null($val['reject_at'])){
+                $paymentStatus = $val['transaction_payment_status'];
+                $status = '';
+                if(empty($val['receive_at'])){
+                    $status = 'Pending';
+                }elseif(!empty($val['receive_at']) && empty($val['ready_at'])){
+                    $status = 'Received';
+                }elseif(!empty($val['ready_at']) && empty($val['taken_at']) && empty($val['taken_by_system_at'])){
+                    $status = 'Ready';
+                }elseif(!empty($val['taken_at']) && $val['pickup_by'] == 'Customer'){
+                    $status = 'Taken by Customer';
+                }elseif(!empty($val['taken_at']) && $val['pickup_by'] != 'Customer'){
+                    $status = 'Taken by Driver';
+                }elseif(!empty($val['taken_by_system_at'])){
+                    $status = 'Taken by System';
+                }elseif(!empty($val['reject_at'])){
                     $status = 'Reject';
                 }
 
@@ -1979,6 +2064,12 @@ class ApiTransaction extends Controller
                 if((int)$val['payment_charge'] > 0){
                     $paymentCharge = $val['payment_charge'];
                 }
+                $taken = '';
+                if(!empty($val['ready_at'])){
+                    $taken = date('d M Y H:i', strtotime($val['ready_at']));
+                }elseif(!empty($val['taken_by_system_at'])){
+                    $taken = date('d M Y H:i', strtotime($val['taken_by_system_at']));
+                }
 
                 $dt = [
                     'Name' => $val['name'],
@@ -1987,10 +2078,11 @@ class ApiTransaction extends Controller
                     'Date of birth' => ($val['birthday'] == null ? '' : date('d M Y', strtotime($val['birthday']))),
                     'Customer City' => $val['user_city'],
                     'Outlet Code' => $val['outlet_code'],
-                    'Outlet Name' => $val['outlet_name'],
+                    'Outlet Name' => htmlspecialchars($val['outlet_name']),
                     'Province' => $val['province_name'],
                     'City' => $val['city_name'],
                     'Receipt number' => $val['transaction_receipt_number'],
+                    'Payment Status' => $paymentStatus,
                     'Transaction Status' => $status,
                     'Transaction Date' => date('d M Y', strtotime($val['transaction_date'])),
                     'Transaction Time' => date('H:i:s', strtotime($val['transaction_date'])),
@@ -2021,18 +2113,38 @@ class ApiTransaction extends Controller
                     'Sales Type' => (!empty($val['transaction_shipment_go_send']) ? 'Delivery' : $val['trasaction_type']),
                     'Received Time' =>  ($val['receive_at'] == null ? '' : date('d M Y H:i:s', strtotime($val['receive_at']))),
                     'Ready Time' =>  ($val['ready_at'] == null ? '' : date('d M Y H:i:s', strtotime($val['ready_at']))),
-                    'Taken Time' =>  ($val['taken_at'] == null ? '' : date('d M Y H:i:s', strtotime($val['taken_at']))),
+                    'Taken Time' =>  $taken,
                     'Arrived Time' =>  ($val['arrived_at'] == null ? '' : date('d M Y H:i:s', strtotime($val['arrived_at'])))
                 ];
             }else{
+                $paymentStatus = $val['transaction_payment_status'];
+                $status = '';
+                if(empty($val['receive_at'])){
+                    $status = 'Pending';
+                }elseif(!empty($val['receive_at']) && empty($val['ready_at'])){
+                    $status = 'Received';
+                }elseif(!empty($val['ready_at']) && empty($val['taken_at']) && empty($val['taken_by_system_at'])){
+                    $status = 'Ready';
+                }elseif(!empty($val['taken_at']) && $val['pickup_by'] == 'Customer'){
+                    $status = 'Taken by Customer';
+                }elseif(!empty($val['taken_at']) && $val['pickup_by'] != 'Customer') {
+                    $status = 'Taken by Driver';
+                }elseif(!empty($val['taken_by_system_at'])){
+                    $status = 'Taken by System';
+                }elseif(!empty($val['reject_at'])){
+                    $status = 'Reject';
+                }
+
                 $dt = [
                     'Name' => $val['name'],
                     'Phone' => $val['phone'],
                     'Email' => $val['email'],
                     'Transaction Date' => date('d M Y', strtotime($val['transaction_date'])),
                     'Transaction Time' => date('H:i', strtotime($val['transaction_date'])),
+                    'Payment Status' => $paymentStatus,
+                    'Transaction Status' => $status,
                     'Outlet Code' => $val['outlet_code'],
-                    'Outlet Name' => $val['outlet_name'],
+                    'Outlet Name' => htmlspecialchars($val['outlet_name']),
                     'Gross Sales' => number_format($val['transaction_grandtotal']),
                     'Receipt number' => $val['transaction_receipt_number'],
                     'Point Received' => number_format($val['transaction_cashback_earned']),
@@ -2425,10 +2537,10 @@ class ApiTransaction extends Controller
                 } elseif($list['detail']['taken_by_system_at'] != null) {
                     $result['transaction_status'] = 1;
                     $result['transaction_status_text'] = 'ORDER SELESAI';
-                } elseif($list['detail']['taken_at'] != null) {
+                } elseif($list['detail']['taken_at'] != null && $list['trasaction_type'] != 'Delivery') {
                     $result['transaction_status'] = 2;
                     $result['transaction_status_text'] = 'PESANAN TELAH DIAMBIL';
-                } elseif($list['detail']['ready_at'] != null) {
+                } elseif($list['detail']['ready_at'] != null && $list['trasaction_type'] != 'Delivery') {
                     $result['transaction_status'] = 3;
                     $result['transaction_status_text'] = 'PESANAN SUDAH SIAP DIAMBIL';
                 } elseif($list['detail']['receive_at'] != null) {
@@ -2607,7 +2719,7 @@ class ApiTransaction extends Controller
                 if ($list['transaction_payment_status'] == 'Cancelled') {
                     $statusOrder[] = [
                         'text'  => 'Pesanan telah dibatalkan karena pembayaran gagal',
-                        'date'  => $list['void_date']
+                        'date'  => $list['void_date']??$list['transaction_date']
                     ];
                 }
                 elseif ($list['transaction_payment_status'] == 'Pending') {
@@ -2629,13 +2741,13 @@ class ApiTransaction extends Controller
                             'date'  => $list['detail']['taken_by_system_at']
                         ];
                     }
-                    if ($list['detail']['taken_at'] != null) {
+                    if ($list['detail']['taken_at'] != null && empty($list['transaction_shipment_go_send'])) {
                         $statusOrder[] = [
                             'text'  => 'Pesanan telah diambil',
                             'date'  => $list['detail']['taken_at']
                         ];
                     }
-                    if ($list['detail']['ready_at'] != null) {
+                    if ($list['detail']['ready_at'] != null && empty($list['transaction_shipment_go_send'])) {
                         $statusOrder[] = [
                             'text'  => 'Pesanan sudah siap diambil',
                             'date'  => $list['detail']['ready_at']
@@ -2719,7 +2831,12 @@ class ApiTransaction extends Controller
                         'date'  => MyHelper::dateFormatInd($status['date'])
                     ];
                     if ($status['text'] == 'Order rejected') {
-                        $result['detail']['detail_status'][$keyStatus]['text'] = 'Pesanan telah ditolak karena '.strtolower($list['detail']['reject_reason']);
+                        if(strpos($list['detail']['reject_reason'], 'auto reject order by system') !== false){
+                            $result['detail']['detail_status'][$keyStatus]['text'] = 'Maaf Pesanan Telah Ditolak, Mohon untuk Melakukan Pemesanannya Kembali';
+                        }else{
+                            $result['detail']['detail_status'][$keyStatus]['text'] = 'Pesanan telah ditolak karena '.strtolower($list['detail']['reject_reason']);
+                        }
+
                         $result['detail']['detail_status'][$keyStatus]['reason'] = $list['detail']['reject_reason'];
                     }
                 }

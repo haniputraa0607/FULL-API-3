@@ -35,6 +35,8 @@ use Modules\Promotion\Entities\DealsPromotionBuyxgetyRule;
 
 use Modules\Subscription\Entities\SubscriptionUserVoucher;
 
+use Modules\Brand\Entities\BrandProduct;
+
 use App\Http\Models\User;
 use App\Http\Models\Campaign;
 use App\Http\Models\Outlet;
@@ -2079,7 +2081,15 @@ class ApiPromoCampaign extends Controller
 	        }
 	        $post = $request->json()->all();
 	        $post['log_save'] = 1;
-	        $trx = MyHelper::postCURLWithBearer('api/transaction/check', $post, $bearer);
+	        $custom_request = new \Modules\Transaction\Http\Requests\CheckTransaction;
+			$custom_request = $custom_request
+							->setJson(new \Symfony\Component\HttpFoundation\ParameterBag($post))
+							->merge($post)
+							->setUserResolver(function () use ($request) {
+								return $request->user();
+							});
+			$trx =  app($this->online_transaction)->checkTransaction($custom_request);
+	        // $trx = MyHelper::postCURLWithBearer('api/transaction/check', $post, $bearer);
 	        
 	        foreach ($trx['result'] as $key => $value) {
 	        	$result['result'][$key] = $value;
@@ -2128,7 +2138,7 @@ class ApiPromoCampaign extends Controller
 		return $result;
     }
 
-    public function getProduct($source, $query)
+    public function getProduct($source, $query, $id_outlet=null)
     {
     	// return $query;
     	if ($source == 'subscription') 
@@ -2139,7 +2149,17 @@ class ApiPromoCampaign extends Controller
     		}
     		elseif( !empty($query['subscription_products']) )
     		{
-    			$applied_product = null;
+    			if (!$query['id_brand']) {
+    				$brand = BrandProduct::join('brand_outlet','brand_product.id_brand','=','brand_outlet.id_brand')
+    						->where('brand_outlet.id_outlet',$id_outlet)
+    						->where('brand_product.id_product',$query['subscription_products'][0]['id_product'])
+    						->whereNotNull('brand_product.id_product_category')
+    						->first();
+    			}
+
+    			$applied_product = $query['subscription_products'];
+    			$applied_product[0]['id_brand'] = $query['id_brand'] ?? $brand['id_brand'];
+    			$applied_product[0]['product_code'] = $applied_product[0]['product']['product_code'];
 	        	$product = 'product tertentu';
     		}
     		else
@@ -2414,13 +2434,11 @@ class ApiPromoCampaign extends Controller
 
 	    	if ($errorProduct == 1) 
 	    	{
-	        	$result['button_ok'] 	= $data['promo_error_ok_button']??'Tambah item';
-	        	$result['product_at'] 	= true;
+	        	$result['button_ok'] = $data['promo_error_ok_button']??'Tambah item';
 	    	}
 	    	else
 	    	{
 	        	$result['button_ok'] = $data['promo_error_ok_button_v2']??'Ok';
-	        	$result['product_at'] 	= false;
 	    	}
 	    	$result['title'] = $data['promo_error_title']??'Promo tidak berlaku';
 	        $result['button_cancel'] = $data['promo_error_cancel_button']??'Hapus promo';

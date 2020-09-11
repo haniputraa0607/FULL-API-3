@@ -174,7 +174,7 @@ class ApiSubscriptionUse extends Controller
 				$message = MyHelper::simpleReplace($message,['product'=>'product bertanda khusus']);
     			$errors[] = $message;
     			
-				$getProduct  = app($this->promo_campaign)->getProduct('subscription',$subs['subscription_user']['subscription']);
+				$getProduct  = app($this->promo_campaign)->getProduct('subscription',$subs['subscription_user']['subscription'], $id_outlet);
     			$product = $getProduct['product']??'';
     			$applied_product = $getProduct['applied_product'][0]??'';
     			$errorProduct = 1;
