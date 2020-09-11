@@ -756,7 +756,8 @@ class ApiRedirectComplex extends Controller
 						->first();
 
 				if (!empty($data)) {
-					$data = $data->append('get_all_rules');
+					// commented because no need to check all rules
+					// $data = $data->append('get_all_rules'); 
 					$promo_periode 	= date("d F Y H:i", strtotime($data['date_start'])).' - '.date("d F Y H:i", strtotime($data['date_end']));
 					$promo_outlet 	= $data['is_all_outlet'] ? 'All Outlet' : 'Specific Outlet';
 					$promo_total_coupon = $data['total_coupon'] ? $data['total_coupon'] : 'Unlimited';
