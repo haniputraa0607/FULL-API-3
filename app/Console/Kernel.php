@@ -139,9 +139,13 @@ class Kernel extends ConsoleKernel
          */
         $schedule->call('Modules\ShopeePay\Http\Controllers\ShopeePayController@cronCancel')->cron('*/1 * * * *');
         /**
-         * Void failed transaction shopeepay
+         * Void failed transaction deals shopeepay
          */
         $schedule->call('Modules\ShopeePay\Http\Controllers\ShopeePayController@cronCancelDeals')->cron('*/1 * * * *');
+        /**
+         * Void failed transaction subscription shopeepay
+         */
+        $schedule->call('Modules\ShopeePay\Http\Controllers\ShopeePayController@cronCancelSubscription')->cron('*/1 * * * *');
 
     }
 
