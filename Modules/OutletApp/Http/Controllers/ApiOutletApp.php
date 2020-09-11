@@ -72,6 +72,7 @@ class ApiOutletApp extends Controller
         $this->promo_campaign   = "Modules\PromoCampaign\Http\Controllers\ApiPromoCampaign";
         $this->voucher          = "Modules\Deals\Http\Controllers\ApiDealsVoucher";
         $this->subscription     = "Modules\Subscription\Http\Controllers\ApiSubscriptionVoucher";
+        $this->endPoint  = config('url.storage_url_api');
     }
 
     public function deleteToken(DeleteToken $request)
@@ -3591,5 +3592,26 @@ class ApiOutletApp extends Controller
 
         $update = $outlet->update(['outlet_phone' => $request->phone]);
         return MyHelper::checkUpdate($update);
+    }
+
+    public function splash(Request $request){
+        $splash = Setting::where('key', '=', 'default_splash_screen_outlet_apps')->first();
+        $duration = Setting::where('key', '=', 'default_splash_screen_outlet_apps_duration')->pluck('value')->first();
+
+        if(!empty($splash)){
+            $splash = $this->endPoint.$splash['value'];
+        } else {
+            $splash = null;
+        }
+        $ext=explode('.', $splash);
+        $result = [
+            'status' => 'success',
+            'result' => [
+                'splash_screen_url' => $splash."?update=".time(),
+                'splash_screen_duration' => $duration??5,
+                'splash_screen_ext' => '.'.end($ext)
+            ]
+        ];
+        return $result;
     }
 }
