@@ -639,4 +639,15 @@ class ApiSubscriptionClaimPay extends Controller
         return $update;
     }
 
+    /* CEK STATUS */
+    public function status(Request $request) {
+        $voucher = SubscriptionUser::select('id_subscription_user','paid_status')->where('id_subscription_user',$request->json('id_subscription_user'))->first()->toArray();
+        if($voucher['paid_status'] == 'Completed'){
+            $voucher['message'] = Setting::where('key', 'payment_success_messages')->pluck('value_text')->first()??'Apakah kamu ingin menggunakan Voucher sekarang?';
+        }elseif($voucher['paid_status'] == 'Cancelled'){
+            $voucher['message'] = Setting::where('key', 'payment_ovo_fail_messages')->pluck('value_text')->first()??'Transaksi Gagal';
+        }
+
+        return MyHelper::checkGet($voucher);
+    }
 }
