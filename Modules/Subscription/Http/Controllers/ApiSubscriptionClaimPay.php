@@ -520,7 +520,7 @@ class ApiSubscriptionClaimPay extends Controller
             $paymentShopeepay->id_subscription_user        = $voucher['id_subscription_user'];
             $paymentShopeepay->id_subscription             = $subscription['id_subscription'];
             $paymentShopeepay->amount               = $grossAmount * 100;
-            $paymentShopeepay->order_id = time().sprintf("%05d", $voucher->id_subscription_user);
+            $paymentShopeepay->order_id = $voucher->subscription_user_receipt_number;
             $paymentShopeepay->save();
             $trx_shopeepay = app($this->shopeepay)->order($paymentShopeepay, 'subscription', $errors);
         } elseif (!($paymentShopeepay->redirect_url_app && $paymentShopeepay->redirect_url_http)) {
@@ -639,4 +639,15 @@ class ApiSubscriptionClaimPay extends Controller
         return $update;
     }
 
+    /* CEK STATUS */
+    public function status(Request $request) {
+        $voucher = SubscriptionUser::select('id_subscription_user','paid_status')->where('id_subscription_user',$request->json('id_subscription_user'))->first()->toArray();
+        if($voucher['paid_status'] == 'Completed'){
+            $voucher['message'] = Setting::where('key', 'payment_success_messages')->pluck('value_text')->first()??'Apakah kamu ingin menggunakan Voucher sekarang?';
+        }elseif($voucher['paid_status'] == 'Cancelled'){
+            $voucher['message'] = Setting::where('key', 'payment_ovo_fail_messages')->pluck('value_text')->first()??'Transaksi Gagal';
+        }
+
+        return MyHelper::checkGet($voucher);
+    }
 }
