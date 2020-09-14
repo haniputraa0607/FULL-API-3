@@ -80,7 +80,7 @@ class Midtrans {
         }else{
             $dataMidtrans['gopay'] = [
                 'enable_callback' => true,
-                'callback_url' => env('MIDTRANS_CALLBACK').'?order_id='.$receipt,
+                'callback_url' => env('MIDTRANS_CALLBACK').'?order_id='.urlencode($receipt),
             ];
         }
 
