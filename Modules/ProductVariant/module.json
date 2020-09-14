@@ -1,0 +1,13 @@
+{
+    "name": "ProductVariant",
+    "alias": "productvariant",
+    "description": "",
+    "keywords": [],
+    "order": 0,
+    "providers": [
+        "Modules\\ProductVariant\\Providers\\ProductVariantServiceProvider"
+    ],
+    "aliases": {},
+    "files": [],
+    "requires": []
+}
