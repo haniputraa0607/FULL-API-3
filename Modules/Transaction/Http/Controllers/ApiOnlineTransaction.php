@@ -285,6 +285,7 @@ class ApiOnlineTransaction extends Controller
         $discount_promo = [];
         $promo_discount = 0;
         $promo_source = null;
+        $promo_valid = false;
 
         if($request->json('promo_code') || $request->json('id_deals_user') || $request->json('id_subscription_user')){
         	$removePromo = UserPromo::where('id_user',$request->user()->id)->delete();
@@ -320,6 +321,7 @@ class ApiOnlineTransaction extends Controller
                 }
 
                 $promo_source = 'promo_code';
+                $promo_valid = true;
                 $promo_discount=$discount_promo['discount'];
             }
             else
@@ -347,6 +349,7 @@ class ApiOnlineTransaction extends Controller
 	            }
 
 	            $promo_source = 'voucher_online';
+	            $promo_valid = true;
 	            $promo_discount=$discount_promo['discount'];
 	        }
 	        else
@@ -571,6 +574,18 @@ class ApiOnlineTransaction extends Controller
             'service'  => $post['service'],
             'discount' => $post['discount'],
         ];
+
+        if ($promo_valid) {
+        	// check minimum subtotal
+        	$check_promo = app($this->promo)->checkMinBasketSize($promo_source, $code??$deals, $post['subtotal']);
+        	if (!$check_promo) {
+				DB::rollback();
+                return [
+                    'status'=>'fail',
+                    'messages'=>['Promo is not valid']
+                ];
+        	}
+        }
 
         // return $detailPayment;
         $post['grandTotal'] = (int)$post['subtotal'] + (int)$post['discount'] + (int)$post['service'] + (int)$post['tax'] + (int)$post['shipping'];

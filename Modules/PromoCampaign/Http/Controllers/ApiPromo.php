@@ -313,7 +313,7 @@ class ApiPromo extends Controller
     			break;
     	}
 
-    	if (!empty($min_basket_size) && $subtotal >= $min_basket_size) {
+    	if (empty($min_basket_size) || $subtotal >= $min_basket_size) {
     		$check = true;
     	}
     	
