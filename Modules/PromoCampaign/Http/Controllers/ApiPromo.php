@@ -294,4 +294,29 @@ class ApiPromo extends Controller
 
 		return ($available_deals+$available_subs);
     }
+
+    public function checkMinBasketSize($promo_source, $query, $subtotal)
+    {
+    	$check = false;
+    	$min_basket_size = 0;
+    	switch ($promo_source) {
+    		case 'promo_code':
+    			$min_basket_size = $query->min_basket_size;
+    			break;
+    		
+    		case 'voucher_online':
+    			$min_basket_size = $query->dealVoucher->deals->min_basket_size;
+    			break;
+    		
+    		default:
+    			# code...
+    			break;
+    	}
+
+    	if (!empty($min_basket_size) && $subtotal >= $min_basket_size) {
+    		$check = true;
+    	}
+    	
+    	return $check;
+    }
 }
