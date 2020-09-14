@@ -1738,6 +1738,7 @@ class ApiOutletApp extends Controller
                                 $refund = \Modules\IPay88\Lib\IPay88::create()->void($payIpay);
                                 if (!$refund) {
                                     DB::rollback();
+                                    $reject_type = 'refund';
                                     return response()->json([
                                         'status'   => 'fail',
                                         'messages' => ['Refund Payment Failed'],
@@ -1841,6 +1842,7 @@ class ApiOutletApp extends Controller
                     $point = 0;
                     if(strtolower($payIpay['payment_method']) == 'ovo' && MyHelper::setting('refund_ipay88')){
                         $refund = \Modules\IPay88\Lib\IPay88::create()->void($payIpay);
+                        $reject_type = 'refund';
                         if (!$refund) {
                             DB::rollback();
                             return response()->json([
