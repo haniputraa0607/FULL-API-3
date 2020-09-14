@@ -1,0 +1,14 @@
+{
+    "name": "RedirectComplex",
+    "alias": "redirectcomplex",
+    "description": "",
+    "keywords": [],
+    "active": 1,
+    "order": 0,
+    "providers": [
+        "Modules\\RedirectComplex\\Providers\\RedirectComplexServiceProvider"
+    ],
+    "aliases": {},
+    "files": [],
+    "requires": []
+}
