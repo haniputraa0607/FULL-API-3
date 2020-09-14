@@ -8,16 +8,6 @@ use Illuminate\Database\Eloquent\Factory;
 class ProductVariantServiceProvider extends ServiceProvider
 {
     /**
-     * @var string $moduleName
-     */
-    protected $moduleName = 'ProductVariant';
-
-    /**
-     * @var string $moduleNameLower
-     */
-    protected $moduleNameLower = 'productvariant';
-
-    /**
      * Boot the application events.
      *
      * @return void
@@ -28,7 +18,7 @@ class ProductVariantServiceProvider extends ServiceProvider
         $this->registerConfig();
         $this->registerViews();
         $this->registerFactories();
-        $this->loadMigrationsFrom(module_path($this->moduleName, 'Database/Migrations'));
+        $this->loadMigrationsFrom(__DIR__ . '/../Database/Migrations');
     }
 
     /**
@@ -49,10 +39,10 @@ class ProductVariantServiceProvider extends ServiceProvider
     protected function registerConfig()
     {
         $this->publishes([
-            module_path($this->moduleName, 'Config/config.php') => config_path($this->moduleNameLower . '.php'),
+            __DIR__.'/../Config/config.php' => config_path('productvariant.php'),
         ], 'config');
         $this->mergeConfigFrom(
-            module_path($this->moduleName, 'Config/config.php'), $this->moduleNameLower
+            __DIR__.'/../Config/config.php', 'productvariant'
         );
     }
 
@@ -63,15 +53,17 @@ class ProductVariantServiceProvider extends ServiceProvider
      */
     public function registerViews()
     {
-        $viewPath = resource_path('views/modules/' . $this->moduleNameLower);
+        $viewPath = resource_path('views/modules/productvariant');
 
-        $sourcePath = module_path($this->moduleName, 'Resources/views');
+        $sourcePath = __DIR__.'/../Resources/views';
 
         $this->publishes([
             $sourcePath => $viewPath
-        ], ['views', $this->moduleNameLower . '-module-views']);
+        ],'views');
 
-        $this->loadViewsFrom(array_merge($this->getPublishableViewPaths(), [$sourcePath]), $this->moduleNameLower);
+        $this->loadViewsFrom(array_merge(array_map(function ($path) {
+            return $path . '/modules/productvariant';
+        }, \Config::get('view.paths')), [$sourcePath]), 'productvariant');
     }
 
     /**
@@ -81,12 +73,12 @@ class ProductVariantServiceProvider extends ServiceProvider
      */
     public function registerTranslations()
     {
-        $langPath = resource_path('lang/modules/' . $this->moduleNameLower);
+        $langPath = resource_path('lang/modules/productvariant');
 
         if (is_dir($langPath)) {
-            $this->loadTranslationsFrom($langPath, $this->moduleNameLower);
+            $this->loadTranslationsFrom($langPath, 'productvariant');
         } else {
-            $this->loadTranslationsFrom(module_path($this->moduleName, 'Resources/lang'), $this->moduleNameLower);
+            $this->loadTranslationsFrom(__DIR__ .'/../Resources/lang', 'productvariant');
         }
     }
 
@@ -98,7 +90,7 @@ class ProductVariantServiceProvider extends ServiceProvider
     public function registerFactories()
     {
         if (! app()->environment('production') && $this->app->runningInConsole()) {
-            app(Factory::class)->load(module_path($this->moduleName, 'Database/factories'));
+            app(Factory::class)->load(__DIR__ . '/../Database/factories');
         }
     }
 
@@ -110,16 +102,5 @@ class ProductVariantServiceProvider extends ServiceProvider
     public function provides()
     {
         return [];
-    }
-
-    private function getPublishableViewPaths(): array
-    {
-        $paths = [];
-        foreach (\Config::get('view.paths') as $path) {
-            if (is_dir($path . '/modules/' . $this->moduleNameLower)) {
-                $paths[] = $path . '/modules/' . $this->moduleNameLower;
-            }
-        }
-        return $paths;
     }
 }
