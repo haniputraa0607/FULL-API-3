@@ -2763,14 +2763,14 @@ class ApiTransaction extends Controller
                                         'date'  => $valueGosend['created_at']
                                     ];
                                     break;
-                                case 'driver allocated':
-                                case 'allocated':
-                                    $statusOrder[] = [
-                                        'text'  => 'Pesanan sudah di pick up oleh driver dan sedang menuju lokasi #temansejiwa',
-                                        'date'  => $valueGosend['created_at']
-                                    ];
-                                    break;
-                                case 'enroute pickup':
+                                // case 'driver allocated':
+                                // case 'allocated':
+                                //     $statusOrder[] = [
+                                //         'text'  => 'Driver ditemukan',
+                                //         'date'  => $valueGosend['created_at']
+                                //     ];
+                                //     break;
+                                // case 'enroute pickup':
                                 case 'out_for_pickup':
                                     $statusOrder[] = [
                                         'text'  => 'Driver dalam perjalanan menuju Outlet',
@@ -2780,7 +2780,7 @@ class ApiTransaction extends Controller
                                 case 'enroute drop':
                                 case 'out_for_delivery':
                                     $statusOrder[] = [
-                                        'text'  => 'Driver mengantarkan pesanan',
+                                        'text'  => 'Pesanan sudah di pick up oleh driver dan sedang menuju lokasi #temansejiwa',
                                         'date'  => $valueGosend['created_at']
                                     ];
                                     break;
