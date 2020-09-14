@@ -7,12 +7,10 @@ use Illuminate\Database\Eloquent\Model;
 
 class ProductVariantGroup extends \App\Http\Models\BaseModel
 {
-    protected $table = 'product_variant_group';
-
-    protected $primaryKey = 'product_variant_group_id';
+    protected $primaryKey = 'id_product_variant_group';
 
     protected $fillable = [
-        'product_id',
+        'id_product',
         'product_variant_group_code',
         'product_variant_group_name',
         'product_variant_group_visibility'
@@ -20,12 +18,12 @@ class ProductVariantGroup extends \App\Http\Models\BaseModel
 
     public function product_variant_pivot()
     {
-        return $this->hasMany(ProductVariantPivot::class, 'product_variant_group_id', 'product_variant_group_id')
-            ->join('product_variant', 'product_variant.product_variant_id', 'product_variant_pivot.product_variant_id');
+        return $this->hasMany(ProductVariantPivot::class, 'id_product_variant_group', 'id_product_variant_group')
+            ->join('product_variant', 'product_variant.id_product_variant', 'product_variant_pivot.id_product_variant');
     }
 
-    public function product_variant_ids()
+    public function id_product_variants()
     {
-        return $this->hasMany(ProductVariantPivot::class, 'product_variant_group_id', 'product_variant_group_id')->select('product_variant_group_id','product_variant_id');
+        return $this->hasMany(ProductVariantPivot::class, 'id_product_variant_group', 'id_product_variant_group')->select('id_product_variant_group','id_product_variant');
     }
 }

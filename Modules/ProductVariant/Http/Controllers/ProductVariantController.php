@@ -71,14 +71,14 @@ class ProductVariantController extends Controller
 
             if($store){
                 if(isset($data_request['child'])){
-                    $id = $store['product_variant_id'];
+                    $id = $store['id_product_variant'];
                     foreach ($data_request['child'] as $key=>$child){
-                        $parent_id = NULL;
+                        $id_parent = NULL;
 
                         if($child['parent'] == 0){
-                            $parent_id = $id;
+                            $id_parent = $id;
                         }elseif(isset($data_request['child'][(int)$child['parent']]['id'])){
-                            $parent_id = $data_request['child'][(int)$child['parent']]['id'];
+                            $id_parent = $data_request['child'][(int)$child['parent']]['id'];
                         }
 
                         $visible = 'Hidden';
@@ -89,10 +89,10 @@ class ProductVariantController extends Controller
                         $store = ProductVariant::create([
                             'product_variant_name' => $child['product_variant_name'],
                             'product_variant_visibility' => $visible,
-                            'parent_id' => $parent_id]);
+                            'id_parent' => $id_parent]);
 
                         if($store){
-                            $data_request['child'][$key]['id'] = $store['product_variant_id'];
+                            $data_request['child'][$key]['id'] = $store['id_product_variant'];
                         }else{
                             DB::rollback();
                             return response()->json(['status' => 'fail', 'messages' => ['Failed add product variant']]);
@@ -130,12 +130,12 @@ class ProductVariantController extends Controller
     {
         $post = $request->all();
 
-        if(isset($post['product_variant_id']) && !empty($post['product_variant_id'])){
+        if(isset($post['id_product_variant']) && !empty($post['id_product_variant'])){
             $get_all_parent = ProductVariant::where(function ($q){
-                $q->whereNull('parent_id')->orWhere('parent_id', 0);
+                $q->whereNull('id_parent')->orWhere('id_parent', 0);
             })->get()->toArray();
 
-            $product_variant = ProductVariant::where('product_variant_id', $post['product_variant_id'])->with(['product_variant_parent', 'product_variant_child'])->first();
+            $product_variant = ProductVariant::where('id_product_variant', $post['id_product_variant'])->with(['product_variant_parent', 'product_variant_child'])->first();
 
             return response()->json(['status' => 'success', 'result' => [
                 'all_parent' => $get_all_parent,
@@ -156,26 +156,26 @@ class ProductVariantController extends Controller
     {
         $post = $request->all();
 
-        if(isset($post['product_variant_id']) && !empty($post['product_variant_id'])){
+        if(isset($post['id_product_variant']) && !empty($post['id_product_variant'])){
             DB::beginTransaction();
             if(isset($post['product_variant_name'])){
                 $data_update['product_variant_name'] = $post['product_variant_name'];
             }
 
-            if(isset($post['parent_id'])){
-                $data_update['parent_id'] = $post['parent_id'];
+            if(isset($post['id_parent'])){
+                $data_update['id_parent'] = $post['id_parent'];
             }
 
             if(isset($post['product_variant_visibility'])){
                 $data_update['product_variant_visibility'] = $post['product_variant_visibility'];
             }
 
-            $update = ProductVariant::where('product_variant_id', $post['product_variant_id'])->update($data_update);
+            $update = ProductVariant::where('id_product_variant', $post['id_product_variant'])->update($data_update);
 
             if($update){
                 if(isset($post['child']) && !empty($post['child'])){
                     foreach ($post['child'] as $child){
-                        $data_update_child['parent_id'] = $post['product_variant_id'];
+                        $data_update_child['id_parent'] = $post['id_product_variant'];
                         if(isset($child['product_variant_name'])){
                             $data_update_child['product_variant_name'] = $child['product_variant_name'];
                         }
@@ -186,7 +186,7 @@ class ProductVariantController extends Controller
                             $data_update_child['product_variant_visibility'] = 'Hidden';
                         }
 
-                        $update = ProductVariant::updateOrCreate(['product_variant_id' => $child['product_variant_id']], $data_update_child);
+                        $update = ProductVariant::updateOrCreate(['id_product_variant' => $child['id_product_variant']], $data_update_child);
 
                         if(!$update){
                             DB::rollback();
@@ -221,12 +221,12 @@ class ProductVariantController extends Controller
 
         if(empty($post)){
             $data = ProductVariant::orderBy('product_variant_order', 'asc')->where(function ($q){
-                $q->whereNull('parent_id')->orWhere('parent_id', 0);
+                $q->whereNull('id_parent')->orWhere('id_parent', 0);
             })->with('product_variant_child')->get()->toArray();
             return MyHelper::checkGet($data);
         }else{
-            foreach ($request->position as $position => $product_variant_id) {
-                ProductVariant::where('product_variant_id', $product_variant_id)->update(['product_variant_order' => $position]);
+            foreach ($request->position as $position => $id_product_variant) {
+                ProductVariant::where('id_product_variant', $id_product_variant)->update(['product_variant_order' => $position]);
             }
             return MyHelper::checkUpdate(true);
         }

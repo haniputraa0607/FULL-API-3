@@ -569,6 +569,7 @@ class ApiCronTrxController extends Controller
                                 if(strtolower($payIpay['payment_method']) == 'ovo' && MyHelper::setting('refund_ipay88')){
                                     $refund = \Modules\IPay88\Lib\IPay88::create()->void($payIpay);
                                     if (!$refund) {
+                                        $reject_type = 'refund';
                                         DB::rollback();
                                         return response()->json([
                                             'status'   => 'fail',

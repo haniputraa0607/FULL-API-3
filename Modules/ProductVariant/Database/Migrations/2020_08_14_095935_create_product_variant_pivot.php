@@ -14,9 +14,9 @@ class CreateProductVariantPivot extends Migration
     public function up()
     {
         Schema::create('product_variant_pivot', function (Blueprint $table) {
-            $table->bigIncrements('product_variant_pivot_id');
-            $table->bigInteger('product_variant_id');
-            $table->bigInteger('product_variant_group_id');
+            $table->bigIncrements('id_product_variant_pivot');
+            $table->bigInteger('id_product_variant');
+            $table->bigInteger('id_product_variant_group');
         });
     }
 

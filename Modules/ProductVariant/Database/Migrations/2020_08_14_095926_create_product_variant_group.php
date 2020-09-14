@@ -13,9 +13,9 @@ class CreateProductVariantGroup extends Migration
      */
     public function up()
     {
-        Schema::create('product_variant_group', function (Blueprint $table) {
-            $table->bigIncrements('product_variant_group_id');
-            $table->bigInteger('product_id');
+        Schema::create('product_variant_groups', function (Blueprint $table) {
+            $table->bigIncrements('id_product_variant_group');
+            $table->bigInteger('id_product');
             $table->string('product_variant_group_code')->unique();
             $table->text('product_variant_group_name');
             $table->enum('product_variant_group_visibility', ['Visible', 'Hidden'])->default('Visible');
@@ -30,6 +30,6 @@ class CreateProductVariantGroup extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('product_variant_group');
+        Schema::dropIfExists('product_variant_groups');
     }
 }
