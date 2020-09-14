@@ -63,9 +63,10 @@ class ApiIrisController extends Controller
         ];
 
         if($data){
-            if($status == 'completed'){
+            if($status == 'completed' || $status == 'failed'){
                 SendEmailDisburseJob::dispatch(['reference_no' => $reference_no])->onConnection('disbursequeue');
             }
+
             $dataLog['response'] = json_encode(['status' => 'success']);
             LogIRIS::create($dataLog);
             return response()->json(['status' => 'success']);
@@ -215,7 +216,7 @@ class ApiIrisController extends Controller
 
                             foreach ($arrTmpDisburse as $value){
                                 $amount = $value['total_amount']-$feeDisburse;
-                                if($amount > 0){
+                                if($amount > 10000){
                                     $toSend = [
                                         'beneficiary_name' => $value['beneficiary_name'],
                                         'beneficiary_account' => $value['beneficiary_account'],
@@ -340,6 +341,7 @@ class ApiIrisController extends Controller
                         }
                     }
 
+                    $arrSuccess = [];
                     //proses approve if setting approver by sistem
                     $settingApprover = Setting::where('key', 'disburse_auto_approve_setting')->first();
                     if($settingApprover && $settingApprover['value'] == 1){
@@ -357,14 +359,10 @@ class ApiIrisController extends Controller
                                 $sendApprover = MyHelper::connectIris('Approver', 'POST','api/v1/payouts/approve', ['reference_nos' => $sendAppr], 1);
 
                                 if(isset($sendApprover['status']) && $sendApprover['status'] == 'fail'){
-                                    /*if send approver return "does not have sufficient balance",
-                                    then the process send approver out one by one
-                                    */
-                                    $checkError = in_array("Partner does not have sufficient balance for the payout", $sendApprover['response']['errors']);
-                                    if($checkError !== false){
-                                        $loopNotAll = 1;
-                                        break;
-                                    }
+                                    $loopNotAll = 1;
+                                    break;
+                                }elseif(isset($sendApprover['status']) && $sendApprover['status'] == 'success'){
+                                    $arrSuccess[] = $chunkApprover;
                                 }
                             }
 
@@ -379,83 +377,57 @@ class ApiIrisController extends Controller
 
                                     if(isset($sendApprov['status']) && $sendApprov['status'] == 'fail'){
                                         $checkError = in_array("Partner does not have sufficient balance for the payout", $sendApprover['response']['errors']);
+                                        $arrReferenceNoFailed[] = $dtApprove;
                                         if($checkError !== false){
-                                            $arrReferenceNoFailed[] = $dtApprove;
                                             $getDataToApprove = Disburse::where('reference_no', $dtApprove)->update(['disburse_status' => 'Fail', 'error_code' => '009', 'error_message' => implode(',',$sendApprover['response']['errors'])]);
                                         }else{
                                             $getDataToApprove = Disburse::where('reference_no', $dtApprove)->update(['disburse_status' => 'Fail', 'error_message' => implode(',',$sendApprover['response']['errors'])]);
                                         }
+                                    }elseif(isset($sendApprover['status']) && $sendApprover['status'] == 'success'){
+                                        $arrSuccess[] = $dtApprove;
                                     }
                                 }
                             }
 
                             //send email to admin when balance is not enough
                             if($arrReferenceNoFailed){
-                                $getListOutlet = DisburseOutlet::join('disburse', 'disburse.id_disburse', 'disburse_outlet.id_disburse')
-                                                ->join('outlets', 'outlets.id_outlet', 'disburse_outlet.id_outlet')
-                                                ->selectRaw('CONCAT(outlets.outlet_code, " - ", outlets.outlet_name) as "name"')
-                                                ->whereIn('disburse.reference_no', $arrReferenceNoFailed)
-                                                ->get()->toArray();
+                                $getListOutlet = Disburse::whereIn('disburse.reference_no', $arrReferenceNoFailed)
+                                    ->with(['disburse_outlet'])
+                                    ->get()->toArray();
 
-                                $crm = Autocrm::where('autocrm_title','=','Disburse Balance Is Not Enough')->with('whatsapp_content')->first();
-                                if (!empty($crm)) {
-                                    if(!empty($crm['autocrm_forward_email'])){
-                                        $exparr = explode(';',str_replace(',',';',$crm['autocrm_forward_email']));
-                                        foreach($exparr as $email){
-                                            $n   = explode('@',$email);
-                                            $name = $n[0];
-
-                                            $to      = $email;
-
-                                            $res = array_column($getListOutlet, 'name');
-                                            $content = str_replace('%list_outlet%', implode('<br>', $res), $crm['autocrm_forward_email_content']);
-                                            // return response()->json($this->html($result));
-                                            // get setting email
-                                            $getSetting = Setting::where('key', 'LIKE', 'email%')->get()->toArray();
-                                            $setting = array();
-                                            foreach ($getSetting as $key => $value) {
-                                                $setting[$value['key']] = $value['value'];
-                                            }
-
-                                            $subject = $crm['autocrm_forward_email_subject'];
-
-                                            $data = array(
-                                                'customer'     => $name,
-                                                'html_message' => $content,
-                                                'setting'      => $setting
-                                            );
-
-                                            Mail::send('emails.test', $data, function($message) use ($to,$subject,$name,$setting)
-                                            {
-                                                $message->to($to, $name)->subject($subject);
-                                                if(!empty($setting['email_from']) && !empty($setting['email_sender'])){
-                                                    $message->from($setting['email_sender'], $setting['email_from']);
-                                                }else if(!empty($setting['email_sender'])){
-                                                    $message->from($setting['email_sender']);
-                                                }
-
-                                                if(!empty($setting['email_reply_to'])){
-                                                    $message->replyTo($setting['email_reply_to'], $setting['email_reply_to_name']);
-                                                }
-
-                                                if(!empty($setting['email_cc']) && !empty($setting['email_cc_name'])){
-                                                    $message->cc($setting['email_cc'], $setting['email_cc_name']);
-                                                }
-
-                                                if(!empty($setting['email_bcc']) && !empty($setting['email_bcc_name'])){
-                                                    $message->bcc($setting['email_bcc'], $setting['email_bcc_name']);
-                                                }
-                                            });
+                                $table = '';
+                                if($getListOutlet){
+                                    $table .= '<table style="border-collapse: collapse;width: 100%;">';
+                                    $table .= '<thead>';
+                                    $table .= '<th style="border:1px solid">Reference No</th>';
+                                    $table .= '<th style="border:1px solid">Error Message</th>';
+                                    $table .= '<th style="border:1px solid">Outlet Name</th>';
+                                    $table .= '</thead>';
+                                    $table .= '<tbody>';
+                                    foreach($getListOutlet as $dt){
+                                        $outlet = '<ul>';
+                                        foreach ($dt['disburse_outlet'] as $o){
+                                            $outlet .= '<li>'.$o['outlet_code'].'-'.$o['outlet_name'].'</li>';
                                         }
+                                        $outlet .= '</ul>';
+
+                                        $table .= '<tr>';
+                                        $table .= '<td style="border:1px solid">'.$dt['reference_no'].'</td>';
+                                        $table .= '<td style="border:1px solid">'.$dt['error_message'].'</td>';
+                                        $table .= '<td style="border:1px solid">'.$outlet.'</td>';
+                                        $table .= '</tr>';
                                     }
+                                    $table .= '</tbody>';
+                                    $table .= '</table>';
                                 }
+                                $this->sendForwardEmailDisburse('Failed Send Disburse',['list_outlet' => $table]);
                             }
                         }
                     }
                 }
             }
 
-            $log->success();
+            $log->success($arrSuccess);
             return 'succes';
         } catch (\Exception $e) {
             $log->fail($e->getMessage());
@@ -764,5 +736,57 @@ class ApiIrisController extends Controller
         }
 
         return $date;
+    }
+
+    public function sendForwardEmailDisburse($title, $additionalContent = []){
+
+        $crm = Autocrm::where('autocrm_title','=',$title)->with('whatsapp_content')->first();
+        if (!empty($crm)) {
+            if(!empty($crm['autocrm_forward_email'])){
+                $exparr = explode(';',str_replace(',',';',$crm['autocrm_forward_email']));
+                $to     = $exparr;
+                $content = $crm['autocrm_forward_email_content'];
+
+                foreach ($additionalContent as $key=>$c){
+                    $content = str_replace('%'.$key.'%', $c, $content);
+                }
+
+                // get setting email
+                $getSetting = Setting::where('key', 'LIKE', 'email%')->get()->toArray();
+                $setting = array();
+                foreach ($getSetting as $key => $value) {
+                    $setting[$value['key']] = $value['value'];
+                }
+
+                $subject = $crm['autocrm_forward_email_subject'];
+
+                $data = array(
+                    'html_message' => $content,
+                    'setting'      => $setting
+                );
+
+                Mail::send('emails.test', $data, function($message) use ($to,$subject,$setting)
+                {
+                    $message->to($to)->subject($subject);
+                    if(!empty($setting['email_from']) && !empty($setting['email_sender'])){
+                        $message->from($setting['email_sender'], $setting['email_from']);
+                    }else if(!empty($setting['email_sender'])){
+                        $message->from($setting['email_sender']);
+                    }
+
+                    if(!empty($setting['email_reply_to'])){
+                        $message->replyTo($setting['email_reply_to'], $setting['email_reply_to_name']);
+                    }
+
+                    if(!empty($setting['email_cc']) && !empty($setting['email_cc_name'])){
+                        $message->cc($setting['email_cc'], $setting['email_cc_name']);
+                    }
+
+                    if(!empty($setting['email_bcc']) && !empty($setting['email_bcc_name'])){
+                        $message->bcc($setting['email_bcc'], $setting['email_bcc_name']);
+                    }
+                });
+            }
+        }
     }
 }

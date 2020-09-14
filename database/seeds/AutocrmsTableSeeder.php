@@ -1892,7 +1892,7 @@ Message :
                     'autocrm_type' => 'Response',
                     'autocrm_trigger' => 'Daily',
                     'autocrm_cron_reference' => NULL,
-                    'autocrm_title' => 'Disburse Balance Is Not Enough',
+                    'autocrm_title' => 'Failed Send Disburse',
                     'autocrm_email_toogle' => '0',
                     'autocrm_sms_toogle' => '0',
                     'autocrm_push_toogle' => '0',
