@@ -703,7 +703,7 @@ class ApiCategoryController extends Controller
                 $source = 'deals';
                 $id_brand = $code->dealVoucher->deals->id_brand;
             } elseif (!empty($post['id_subscription_user'])) {
-                $code = app($this->subscription_use)->checkSubscription($post['id_subscription_user'], null, 1);
+                $code = app($this->subscription_use)->checkSubscription($post['id_subscription_user'], null, 1, 1);
                 $source = 'subscription';
                 $id_brand = $code->subscription_user->subscription->id_brand;
             }
