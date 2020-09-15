@@ -428,7 +428,7 @@ class ApiSubscriptionClaimPay extends Controller
 
            /* ShopeePay */
             if ($request->json('payment_method') && $request->json('payment_method') == "shopeepay") {
-                $pay = $this->shopeepay($dataSubs, $voucher, null,$request->json('phone'));
+                $pay = $this->shopeepay($dataSubs, $voucher, null);
             }
         }
 
@@ -577,6 +577,9 @@ class ApiSubscriptionClaimPay extends Controller
                             'payment'           => 'ipay88'
                         ];
                         return $ipay88;
+                    }
+                    if($paymentMethod == 'shopeepay'){
+                        return $this->shopeepay($subs, $voucher, $dataSubsUserUpdate['balance_nominal']);
                     }
                 }
             }
