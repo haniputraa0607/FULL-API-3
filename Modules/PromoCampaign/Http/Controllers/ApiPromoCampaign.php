@@ -1998,7 +1998,7 @@ class ApiPromoCampaign extends Controller
         }
         elseif (!$request->promo_code && !$request->id_deals_user && $request->id_subscription_user) 
         {
-        	$subs = app($this->subscription)->checkSubscription($request->id_subscription_user, 1, 1, null, null, null, 1);
+        	$subs = app($this->subscription)->checkSubscription($request->id_subscription_user, 1, 1, 1, null, null, 1);
 
         	if(!$subs){
 	            return [
