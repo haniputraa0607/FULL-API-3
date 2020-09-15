@@ -80,8 +80,7 @@ class PromoCampaign extends Eloquent
 		'limitation_usage',
 		'step_complete',
         'charged_central',
-        'charged_outlet',
-        'min_basket_size'
+        'charged_outlet'
 	];
 
 	public function user()
