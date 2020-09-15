@@ -189,4 +189,9 @@ class PromoCampaign extends Eloquent
 			'brand'
 		]);
 	}
+
+	public function promo_campaign_discount_bill_rules()
+	{
+		return $this->hasOne(\Modules\PromoCampaign\Entities\PromoCampaignDiscountBillRule::class, 'id_promo_campaign');
+	}
 }

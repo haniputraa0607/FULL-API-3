@@ -46,6 +46,13 @@ class Step2PromoCampaignRequest extends FormRequest
 	                'promo_rule.*.discount_percent'           => 'nullable|numeric|min:1|max:100',
 	                'promo_rule.*.discount_nominal'           => 'nullable|numeric'
 	            ];
+	    	}
+	    	elseif ($this->json('promo_type')=='Discount Bill') {
+	            $rules=[
+	                'discount_type'     	=> 'required',
+	                'discount_value'    	=> 'required',
+	                'max_percent_discount'	=> 'nullable'
+	            ];
 	        }
     	}
 

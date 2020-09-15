@@ -18,6 +18,7 @@ use Modules\PromoCampaign\Entities\PromoCampaignHaveTag;
 use Modules\PromoCampaign\Entities\PromoCampaignTag;
 use Modules\PromoCampaign\Entities\PromoCampaignReport;
 use Modules\PromoCampaign\Entities\UserReferralCode;
+use Modules\PromoCampaign\Entities\PromoCampaignDiscountBillRule;
 
 use Modules\Deals\Entities\DealsProductDiscount;
 use Modules\Deals\Entities\DealsProductDiscountRule;
@@ -296,6 +297,7 @@ class ApiPromoCampaign extends Controller
             'promo_campaign_have_tags.promo_campaign_tag',
             'outlets',
             'promo_campaign_product_discount_rules',
+            'promo_campaign_discount_bill_rules',
             'promo_campaign_product_discount.product.category',
             'promo_campaign_tier_discount_rules',
             'promo_campaign_tier_discount_product.product',
@@ -1053,6 +1055,17 @@ class ApiPromoCampaign extends Controller
                 DB::rollBack();
                 return response()->json($createFilterProduct);
             }
+        } elseif ($post['promo_type'] == 'Discount bill') {
+            try {
+                $createFilterProduct = $this->createDiscountBill($id_post, $post['discount_type'], $post['discount_value'], $post['max_percent_discount'], $source, $table, $id_table);
+            } catch (Exception $e) {
+                $createFilterProduct = [
+                    'status'  => 'fail',
+                    'messages' => 'Create Promo Type Failed'
+                ];
+                DB::rollBack();
+                return response()->json($createFilterProduct);
+            }
         }else {
         	$createFilterProduct = $this->deleteAllProductRule($source, $id_post);
         	if ($createFilterProduct) {
@@ -1185,6 +1198,7 @@ class ApiPromoCampaign extends Controller
 		        PromoCampaignProductDiscountRule::where('id_promo_campaign', '=', $id_post)->delete();
 		        PromoCampaignTierDiscountRule::where('id_promo_campaign', '=', $id_post)->delete();
 		        PromoCampaignBuyxgetyRule::where('id_promo_campaign', '=', $id_post)->delete();
+		        PromoCampaignDiscountBillRule::where('id_promo_campaign', '=', $id_post)->delete();
 
 		        PromoCampaignTierDiscountProduct::where('id_promo_campaign', '=', $id_post)->delete();
 		        PromoCampaignProductDiscount::where('id_promo_campaign', '=', $id_post)->delete();
@@ -1511,6 +1525,63 @@ class ApiPromoCampaign extends Controller
         return $result;
     }
 
+    public function createDiscountBill($id_post, $discount_type, $discount_value, $max_percent_discount, $source, $table, $id_table)
+    {
+
+    	$delete_rule = $this->deleteAllProductRule($source, $id_post);
+
+    	if (!$delete_rule) {
+    		$result = [
+                'status'  => 'fail',
+                'message' => 'Create Filter Product Failed'
+            ];
+            DB::rollBack();
+            return response()->json($result);
+    	}
+
+    	if ($source == 'promo_campaign') 
+    	{
+	        $table_discount_bill_rule = new PromoCampaignDiscountBillRule;
+    	}
+    	elseif ($source == 'deals') 
+    	{
+	        $table_discount_bill_rule = new DealsDiscountBillRule;
+    	}
+    	elseif ($source == 'deals_promotion')
+    	{
+    		$table_discount_bill_rule = new DealsPromotionDiscountBillRule;
+	        $id_table = 'id_deals';
+    	}
+
+    	if ($discount_type == 'Nominal') {
+        	$max_percent_discount = NULL;
+        }
+
+        $data = [
+
+            $id_table 				=> $id_post,
+            'discount_type'     	=> $discount_type,
+            'discount_value'    	=> $discount_value,
+            'max_percent_discount'  => $max_percent_discount,
+            'created_at'        	=> date('Y-m-d H:i:s'),
+            'updated_at'        	=> date('Y-m-d H:i:s')
+        ];
+
+        try {
+            $table_discount_bill_rule::insert($data);
+            $result = ['status'  => 'success'];
+        } catch (\Exception $e) {
+            $result = [
+                'status'  => 'fail',
+                'message' => 'Create Discount Failed'
+            ];
+            DB::rollBack();
+            return response()->json($result);
+        }
+        
+        return $result;
+    }
+
     function generateDate($date)
     {
     	if (!isset($date)) {
@@ -1717,6 +1788,7 @@ class ApiPromoCampaign extends Controller
                             'promo_campaign_buyxgety_rules',
                             'outlets',
                             'brand',
+                            'promo_campaign_discount_bill_rules',
                             'promo_campaign_reports' => function($q) {
                             	$q->first();
                             }
