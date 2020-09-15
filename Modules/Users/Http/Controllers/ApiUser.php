@@ -1890,7 +1890,8 @@ class ApiUser extends Controller
             }
 
             if ($request->json('email') != "") {
-                if (!filter_var($request->json('email'), FILTER_VALIDATE_EMAIL)) {
+                $domain = substr($request->json('email'), strpos($request->json('email'), "@") + 1);
+                if (!filter_var($request->json('email'), FILTER_VALIDATE_EMAIL) ||  checkdnsrr($domain, 'MX') === false) {
                     $result = [
                         'status'    => 'fail',
                         'messages'    => ['The email must be a valid email address.']

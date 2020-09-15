@@ -1665,11 +1665,11 @@ class ApiOutletController extends Controller
 
     /* Penghitung jarak */
     function distance($lat1, $lon1, $lat2, $lon2, $unit) {
-        $theta = $lon1 - $lon2;
         $lat1=floatval($lat1);
         $lat2=floatval($lat2);
         $lon1=floatval($lon1);
         $lon2=floatval($lon2);
+        $theta = $lon1 - $lon2;
         $dist  = sin(deg2rad($lat1)) * sin(deg2rad($lat2)) +  cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * cos(deg2rad($theta));
         $dist  = acos($dist);
         $dist  = rad2deg($dist);
