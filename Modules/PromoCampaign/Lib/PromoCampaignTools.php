@@ -590,6 +590,7 @@ class PromoCampaignTools{
 					break;
 				}
 				break;
+			
 			case 'Referral':
 				$promo->load('promo_campaign_referral');
 				$promo_rules=$promo->promo_campaign_referral;
@@ -629,6 +630,32 @@ class PromoCampaignTools{
 						'discount'=>0
 					];
 				}
+				break;
+
+			case 'Discount bill':
+				// load required relationship
+				$promo->load('promo_campaign_discount_bill_rules');
+				$promo_rules = $promo->promo_campaign_discount_bill_rules;
+				// get jumlah harga
+				$total_price=0;
+				foreach ($trxs as  $id_trx => &$trx) {
+					$product = $this->getProductPrice($id_outlet, $trx['id_product']);
+					$price = $trx['qty'] * $product['product_price']??0;
+					$total_price += $price;
+				}
+				if($promo_rules->discount_type == 'Percent'){
+					$discount += ($total_price * $promo_rules->discount_value)/100;
+					if(!empty($promo_rules->max_percent_discount) && $discount > $promo_rules->max_percent_discount){
+						$discount = $promo_rules->max_percent_discount;
+					}
+				}else{
+					if($promo_rules->discount_value < $total_price){
+						$discount += $promo_rules->discount_value;
+					}else{
+						$discount += $total_price;
+					}
+				}
+				break;
 		}
 		// discount?
 		// if($discount<=0){
