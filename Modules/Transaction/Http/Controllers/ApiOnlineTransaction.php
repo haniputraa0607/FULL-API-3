@@ -243,6 +243,19 @@ class ApiOnlineTransaction extends Controller
             ]);
         }
 
+        //check validation email
+        if(isset($user['email'])){
+            $domain = substr($user['email'], strpos($user['email'], "@") + 1);
+            if(!filter_var($user['email'], FILTER_VALIDATE_EMAIL) ||
+                checkdnsrr($domain, 'MX') === false){
+                DB::rollback();
+                return response()->json([
+                    'status'    => 'fail',
+                    'messages'  => ['Alamat email anda tidak valid, silahkan gunakan alamat email yang valid.']
+                ]);
+            }
+        }
+
         $config_fraud_use_queue = Configs::where('config_name', 'fraud use queue')->first()->is_active;
 
         if (count($user['memberships']) > 0) {
