@@ -27,6 +27,7 @@ class Disburse extends Model
         'notes',
         'reference_no',
         'old_reference_no',
+        'total_outlet',
         'count_retry',
         'send_email_status'
 	];

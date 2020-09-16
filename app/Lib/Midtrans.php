@@ -26,6 +26,7 @@ use LaravelFCM\Message\PayloadDataBuilder;
 use LaravelFCM\Message\PayloadNotificationBuilder;
 use FCM;
 use App\Lib\MyHelper;
+use App\Http\Models\LogMidtrans;
 
 class Midtrans {
 
@@ -85,6 +86,20 @@ class Midtrans {
         }
 
         $token = MyHelper::post($url, Self::bearer(), $dataMidtrans);
+
+        try {
+            LogMidtrans::create([
+                'type'                 => 'request_token',
+                'id_reference'         => $receipt,
+                'request'              => json_encode($dataMidtrans),
+                'request_url'          => $url,
+                'request_header'       => json_encode(['Authorization' => Self::bearer()]),
+                'response'             => json_encode($token),
+                'response_status_code' => $token['status_code']??null,
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Failed write log to LogMidtrans: ' . $e->getMessage());
+        }
 
         return $token;
     }
@@ -157,6 +172,19 @@ class Midtrans {
             $param = [];
         }
         $status = MyHelper::post($url, Self::bearer(), $param);
+        try {
+            LogMidtrans::create([
+                'type'                 => 'refund',
+                'id_reference'         => $trx->id_transaction,
+                'request'              => json_encode($param),
+                'request_url'          => $url,
+                'request_header'       => json_encode(['Authorization' => Self::bearer()]),
+                'response'             => json_encode($status),
+                'response_status_code' => $status['status_code']??null,
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Failed write log to LogMidtrans: ' . $e->getMessage());
+        }
         return [
             'status' => ($status['status_code']??false)==200?'success':'fail',
             'messages' => [$status['status_message']??'Something went wrong','Refund failed']
