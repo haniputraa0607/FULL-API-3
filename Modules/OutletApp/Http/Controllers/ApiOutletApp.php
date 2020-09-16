@@ -250,11 +250,8 @@ class ApiOutletApp extends Controller
         $result['completed']['count'] = count($listCompleted);
         $result['completed']['data']  = $listCompleted;
 
-        $result['unpaid']['count'] = Transaction::join('transaction_pickups','transaction_pickups.id_transaction','=','transactions.id_transaction')
+        $result['unpaid']['count'] = Transaction::where('id_outlet',$request->user()->id_outlet)
             ->where('transaction_payment_status', 'Pending')
-            ->whereNull('taken_at')
-            ->whereNull('taken_by_system_at')
-            ->whereNull('reject_at')
             ->whereDate('transaction_date',date('Y-m-d'))
             ->count();
 
