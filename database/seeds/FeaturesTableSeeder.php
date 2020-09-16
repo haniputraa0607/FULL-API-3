@@ -2744,17 +2744,17 @@ class FeaturesTableSeeder extends Seeder
             273 =>
                 array(
                     'id_feature' => 274,
-                    'feature_type' => 'Update',
-                    'feature_module' => 'Transaction',
+                    'feature_type' => 'Create',
+                    'feature_module' => 'Flag Invalid Transaction',
                     'show_hide' => 1,
-                    'order' => 25,
+                    'order' => 110,
                     'created_at' => '2018-05-10 08:00:00',
                     'updated_at' => '2018-05-10 08:00:00',
                 ),
             274 =>
                 array(
                     'id_feature' => 275,
-                    'feature_type' => 'List',
+                    'feature_type' => 'Update',
                     'feature_module' => 'Log Invalid Transaction',
                     'show_hide' => 1,
                     'order' => 110,
@@ -2764,7 +2764,7 @@ class FeaturesTableSeeder extends Seeder
             275 =>
                 array(
                     'id_feature' => 276,
-                    'feature_type' => 'Detail',
+                    'feature_type' => 'Report',
                     'feature_module' => 'Log Invalid Transaction',
                     'show_hide' => 1,
                     'order' => 110,
