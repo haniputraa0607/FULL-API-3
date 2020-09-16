@@ -172,36 +172,37 @@ class Product extends Model
         return $this->belongsToMany(\Modules\Product\Entities\ProductPromoCategory::class,'product_product_promo_categories', 'id_product','id_product_promo_category')->withPivot('id_product','id_product_promo_category','position');
     }
  
+
     /**
      * Generate fresh product variant tree
-     * @param  integer  $product_id     id of product
-     * @param  boolean $with_index      result should use product_variant_id as index or not
+     * @param  integer  $id_product     id of product
+     * @param  boolean $with_index      result should use id_product_variant as index or not
      * @return array                    array of product variant [tree]
      */
-    public static function refreshVariantTree($product_id, $with_index = false)
+    public static function refreshVariantTree($id_product, $with_index = false)
     {
-        Cache::forget('product_get_variant_tree_'.$product_id.($with_index ? 'true' : 'false'));
-        return self::getVariantTree($product_id, $with_index);
+        Cache::forget('product_get_variant_tree_'.$id_product.($with_index ? 'true' : 'false'));
+        return self::getVariantTree($id_product, $with_index);
     }
 
     /**
      * Generate product variant tree
-     * @param  integer  $product_id     id of product
-     * @param  boolean $with_index      result should use product_variant_id as index or not
+     * @param  integer  $id_product     id of product
+     * @param  boolean $with_index      result should use id_product_variant as index or not
      * @return array                    array of product variant [tree]
      */
-    public static function getVariantTree($product_id, $with_index = false)
+    public static function getVariantTree($id_product, $with_index = false)
     {
         // retrieve from cache if available
-        if (Cache::has('product_get_variant_tree_'.$product_id.($with_index ? 'true' : 'false'))) {
-            return Cache::get('product_get_variant_tree_'.$product_id.($with_index ? 'true' : 'false'));
+        if (Cache::has('product_get_variant_tree_'.$id_product.($with_index ? 'true' : 'false'))) {
+            return Cache::get('product_get_variant_tree_'.$id_product.($with_index ? 'true' : 'false'));
         }
         // get list variants available in products
-        $list_variants = ProductVariant::select('product_variant.product_variant_id')
-            ->join('product_variant_pivot', 'product_variant_pivot.product_variant_id', '=', 'product_variant.product_variant_id')
-            ->join('product_variant_group', 'product_variant_group.product_variant_group_id', '=', 'product_variant_pivot.product_variant_group_id')
-            ->where('product_id', $product_id)
-            ->distinct()->pluck('product_variant_id');
+        $list_variants = ProductVariant::select('product_variant.id_product_variant')
+            ->join('product_variant_pivot', 'product_variant_pivot.id_product_variant', '=', 'product_variant.id_product_variant')
+            ->join('product_variant_group', 'product_variant_group.id_product_variant_group', '=', 'product_variant_pivot.id_product_variant_group')
+            ->where('id_product', $id_product)
+            ->distinct()->pluck('id_product_variant');
 
         // get variant tree from $list_variants
         $variants = ProductVariant::getVariantTree($list_variants);
@@ -212,13 +213,13 @@ class Product extends Model
         }
 
         // get all product variant groups assigned to this product
-        $variant_group_raws = ProductVariantGroup::select('product_variant_group_id', 'product_variant_group_price')->where('product_id', $product_id)->with(['product_variant_ids'])->get()->toArray();
+        $variant_group_raws = ProductVariantGroup::select('id_product_variant_group', 'product_variant_group_price')->where('id_product', $id_product)->with(['id_product_variants'])->get()->toArray();
 
-        // create [product_variant_group_id => ProductVariantGroup,...] array
+        // create [id_product_variant_group => ProductVariantGroup,...] array
         $variant_groups = [];
         foreach ($variant_group_raws as $variant_group) {
-            $variant_ids = array_column($variant_group['product_variant_ids'], 'product_variant_id');
-            $slug = MyHelper::slugMaker($variant_ids); // '2.5.7'
+            $id_variants = array_column($variant_group['id_product_variants'], 'id_product_variant');
+            $slug = MyHelper::slugMaker($id_variants); // '2.5.7'
 
             $variant_groups[$slug] = $variant_group;
         }
@@ -236,7 +237,7 @@ class Product extends Model
             'variants_tree' => $variants,
         ];
         // save to cache
-        Cache::forever('product_get_variant_tree_'.$product_id.($with_index ? 'true' : 'false'), $result);
+        Cache::forever('product_get_variant_tree_'.$id_product.($with_index ? 'true' : 'false'), $result);
         // return the result
         return $result;
     }
@@ -246,7 +247,7 @@ class Product extends Model
      * @param  array  &$variants       available variant tree
      * @param  array  $variant_groups  available product variant groups
      * @param  array   $last           list of last parent id
-     * @param  boolean $with_index     result should use product_variant_id as index or not
+     * @param  boolean $with_index     result should use id_product_variant as index or not
      * @return array                   generated product variant tree
      */
     protected static function recursiveCheck(&$variants, $variant_groups, $last = [], $with_index = false)
@@ -258,8 +259,8 @@ class Product extends Model
         // looping through childs of variant
         foreach ($variants['childs'] as $key => &$variant) {
             // list of parent id and current id
-            if (!$variant['variant'] || ($variant['variant']['childs'][0]['parent_id']??false) !== $variant['product_variant_id']) {
-                $current = array_merge($last, [$variant['product_variant_id']]);
+            if (!$variant['variant'] || ($variant['variant']['childs'][0]['id_parent']??false) !== $variant['id_product_variant']) {
+                $current = array_merge($last, [$variant['id_product_variant']]);
             } else{
                 $current = $last;
             }
@@ -287,8 +288,8 @@ class Product extends Model
 
             // product has this variant combination (product variant group)?
             if ($variant_group = ($variant_groups[$slug] ?? false)) { // it has
-                // assigning product_variant_group_price and product_variant_group_id to this variant
-                $variant['product_variant_group_id']    = $variant_group['product_variant_group_id'];
+                // assigning product_variant_group_price and id_product_variant_group to this variant
+                $variant['id_product_variant_group']    = $variant_group['id_product_variant_group'];
                 $variant['product_variant_group_price'] = (double) $variant_group['product_variant_group_price'];
 
                 // set this level lowest price to parent variant detail
@@ -307,13 +308,13 @@ class Product extends Model
 
             // sorting key
             $new_order = [
-                'product_variant_id'    => $variant['product_variant_id'],
+                'id_product_variant'    => $variant['id_product_variant'],
                 'product_variant_name'  => $variant['product_variant_name'],
                 'product_variant_price' => $variant['product_variant_price'],
             ];
 
-            if ($variant['product_variant_group_id'] ?? false) {
-                $new_order['product_variant_group_id']    = $variant['product_variant_group_id'];
+            if ($variant['id_product_variant_group'] ?? false) {
+                $new_order['id_product_variant_group']    = $variant['id_product_variant_group'];
                 $new_order['product_variant_group_price'] = $variant['product_variant_group_price'];
             }
             $new_order['variant'] = $variant['variant'];
@@ -323,7 +324,7 @@ class Product extends Model
 
             // add index if necessary
             if ($with_index) {
-                $new_variants[$variant['product_variant_id']] = &$variant;
+                $new_variants[$variant['id_product_variant']] = &$variant;
             }
         }
 
@@ -339,7 +340,7 @@ class Product extends Model
         }
         // sorting key,
         $new_order = [
-            'product_variant_id'          => $variants['product_variant_id'],
+            'id_product_variant'          => $variants['id_product_variant'],
             'product_variant_name'        => $variants['product_variant_name'],
             'childs'                      => $variants['childs'],
             'product_variant_group_price' => $variants['product_variant_group_price'], // do not remove or rename this
@@ -349,14 +350,51 @@ class Product extends Model
         // end sorting key
     }
 
-    public static function getVariantPrice($variant, $product_variant_id, $last_price = 0) 
+    /**
+     * get list variant price of given product variant group
+     * @param  ProductVariantGroup  $product_variant_group eloquent model
+     * @param  Array                $variant               Variant tree
+     * @param  array                $variants              Temporary variant id and price list
+     * @param  integer              $last_price            last price (sum of parent price)
+     * @return boolean              true / false
+     */
+    public static function getVariantPrice($product_variant_group,$variant = null, $variants = [], $last_price = 0) 
     {
-        foreach ($variant['childs'] as $child) {
-            if($child['variant']) {
-                self::getVariantPrice($child['variant']);
-            } else {
-                $last_price += $variant['product_variant_price'];
+        if (is_numeric($product_variant_group)) {
+            $product_variant_group = ProductVariantGroup::where('id_product_variant_group', $product_variant_group)->first();
+            if (!$product_variant_group) {
+                return false;
             }
         }
-    }   
+
+        if (!$variant) {
+            $variant = self::getVariantTree($product_variant_group->id_product)['variants_tree'];
+            if(!$variant) {
+                return false;
+            }
+        }
+
+        foreach ($variant['childs'] as $child) {
+            $next_variants = $variants;
+            if($child['variant']) {
+                // check child or parent
+                if ($child['id_product_variant'] != $child['variant']['id_product_variant']) { //child
+                    $next_variants[$child['id_product_variant']] = $last_price + $child['product_variant_price'];
+                    $next_last_price = 0;
+                } else { //parent
+                    $next_variants = $variants;
+                    $next_last_price = $last_price + $child['product_variant_price'];
+                }
+                if ($result = self::getVariantPrice($product_variant_group, $child['variant'], $next_variants, $next_last_price)) {
+                    return $result;
+                }
+            } else {
+                if ($child['id_product_variant_group'] == $product_variant_group->id_product_variant_group) {
+                    $variants[$child['id_product_variant']] = $last_price + $child['product_variant_price'];
+                    return $variants;
+                }
+            }
+        }
+        return false;
+    }
 }
