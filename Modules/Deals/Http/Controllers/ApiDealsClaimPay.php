@@ -450,7 +450,7 @@ class ApiDealsClaimPay extends Controller
 
            /* ShopeePay */
             if ($request->json('payment_deals') && $request->json('payment_deals') == "shopeepay") {
-                $pay = $this->shopeepay($dataDeals, $voucher, null,$request->json('phone'));
+                $pay = $this->shopeepay($dataDeals, $voucher, null);
             }
 
             /* MANUAL */
@@ -956,7 +956,7 @@ class ApiDealsClaimPay extends Controller
                         ];
                         return $ipay88;
                     }elseif($paymentMethod == 'shopeepay'){
-                        return $this->ipay88($deals, $voucher, -$kurangBayar,$post);
+                        return $this->shopeepay($deals, $voucher, -$kurangBayar);
                     }
                 }
             }

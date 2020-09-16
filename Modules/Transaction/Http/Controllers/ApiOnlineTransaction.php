@@ -50,6 +50,7 @@ use Modules\PromoCampaign\Entities\PromoCampaignReferralTransaction;
 use Modules\PromoCampaign\Entities\UserReferralCode;
 use Modules\PromoCampaign\Entities\UserPromo;
 use Modules\Subscription\Entities\TransactionPaymentSubscription;
+use Modules\Subscription\Entities\SubscriptionUser;
 use Modules\Subscription\Entities\SubscriptionUserVoucher;
 use Modules\PromoCampaign\Entities\PromoCampaignReport;
 
@@ -243,6 +244,19 @@ class ApiOnlineTransaction extends Controller
             ]);
         }
 
+        //check validation email
+        if(isset($user['email'])){
+            $domain = substr($user['email'], strpos($user['email'], "@") + 1);
+            if(!filter_var($user['email'], FILTER_VALIDATE_EMAIL) ||
+                checkdnsrr($domain, 'MX') === false){
+                DB::rollback();
+                return response()->json([
+                    'status'    => 'fail',
+                    'messages'  => ['Alamat email anda tidak valid, silahkan gunakan alamat email yang valid.']
+                ]);
+            }
+        }
+
         $config_fraud_use_queue = Configs::where('config_name', 'fraud use queue')->first()->is_active;
 
         if (count($user['memberships']) > 0) {
@@ -287,7 +301,10 @@ class ApiOnlineTransaction extends Controller
         $promo_source = null;
 
         if($request->json('promo_code') || $request->json('id_deals_user') || $request->json('id_subscription_user')){
-        	$removePromo = UserPromo::where('id_user',$request->user()->id)->delete();
+        	// change is used flag to 0
+			$update_deals 	= DealsUser::where('id_user','=',$request->user()->id)->where('is_used','=',1)->update(['is_used' => 0]);
+			$update_subs 	= SubscriptionUser::where('id_user','=',$request->user()->id)->where('is_used','=',1)->update(['is_used' => 0]);
+        	$removePromo 	= UserPromo::where('id_user',$request->user()->id)->delete();
         }
 
         if($request->json('promo_code') && !$request->json('id_deals_user')){

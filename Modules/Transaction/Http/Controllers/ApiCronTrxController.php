@@ -663,6 +663,7 @@ class ApiCronTrxController extends Controller
                             $refund = \Modules\IPay88\Lib\IPay88::create()->void($payIpay);
                             if (!$refund) {
                                 DB::rollback();
+                                $reject_type = 'refund';
                                 return response()->json([
                                     'status'   => 'fail',
                                     'messages' => ['Refund Payment Failed'],

@@ -43,12 +43,28 @@ class ApiDisburseController extends Controller
         $post = $request->json()->all();
         $nominal = Disburse::join('disburse_outlet', 'disburse.id_disburse', 'disburse_outlet.id_disburse')->where('disburse.disburse_status', 'Success');
         $nominal_fail = Disburse::join('disburse_outlet', 'disburse.id_disburse', 'disburse_outlet.id_disburse')->where('disburse.disburse_status', 'Fail');
-        $income_central = Disburse::join('disburse_outlet', 'disburse.id_disburse', 'disburse_outlet.id_disburse')->where('disburse.disburse_status', 'Success')->orderBy('disburse.created_at');
+        $income_central = Disburse::join('disburse_outlet', 'disburse.id_disburse', 'disburse_outlet.id_disburse')->where('disburse.disburse_status', 'Success');
+        $total_disburse = DisburseOutletTransaction::join('transactions', 'transactions.id_transaction', 'disburse_outlet_transactions.id_transaction')
+                            ->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+                            ->where(function ($q){
+                                $q->whereNotNull('transaction_pickups.taken_at')
+                                    ->orWhereNotNull('transaction_pickups.taken_by_system_at');
+                            })
+                            ->where(function ($q){
+                                $q->orWhereNull('id_disburse_outlet')
+                                    ->orWhereIn('id_disburse_outlet', function($query){
+                                    $query->select('id_disburse_outlet')
+                                        ->from('disburse')
+                                        ->join('disburse_outlet', 'disburse.id_disburse', 'disburse_outlet.id_disburse')
+                                        ->where('disburse.disburse_status', 'Queued');
+                                });
+                            });
 
         if(isset($post['id_outlet']) && !empty($post['id_outlet']) && $post['id_outlet'] != 'all'){
             $nominal->where('disburse_outlet.id_outlet', $post['id_outlet']);
             $nominal_fail->where('disburse_outlet.id_outlet', $post['id_outlet']);
             $income_central->where('disburse_outlet.id_outlet', $post['id_outlet']);
+            $total_disburse->where('transactions.id_outlet', $post['id_outlet']);
         }
 
         if(isset($post['fitler_date']) && $post['fitler_date'] == 'today'){
@@ -56,6 +72,7 @@ class ApiDisburseController extends Controller
             $nominal->whereDate('disburse.created_at', date('Y-m-d'));
             $nominal_fail->whereDate('disburse.created_at', date('Y-m-d'));
             $income_central->where('disburse.created_at', date('Y-m-d'));
+            $total_disburse->where('transactions.transaction_date', date('Y-m-d'));
 
         }elseif(isset($post['fitler_date']) && $post['fitler_date'] == 'specific_date'){
             if(isset($post['start_date']) && !empty($post['start_date']) &&
@@ -69,6 +86,8 @@ class ApiDisburseController extends Controller
                     ->whereDate('disburse.created_at', '<=', $end_date);
                 $income_central->whereDate('disburse.created_at', '>=', $start_date)
                     ->whereDate('disburse.created_at', '<=', $end_date);
+                $total_disburse->whereDate('transactions.transaction_date', '>=', $start_date)
+                    ->whereDate('transactions.transaction_date', '<=', $end_date);
             }
         }
 
@@ -79,15 +98,18 @@ class ApiDisburseController extends Controller
                 ->where('user_franchise_outlet.id_user_franchise', $post['id_user_franchise']);
         }
 
-        $nominal = $nominal->selectRaw('SUM(disburse_outlet.disburse_nominal) as "nom_success", SUM(disburse_outlet.total_fee_item) as "nom_item", SUM(disburse_outlet.total_omset) as "nom_grandtotal", SUM(disburse_outlet.total_expense_central) as "nom_expense_central", SUM(disburse_outlet.total_delivery_price) as "nom_delivery"')->first();
-        $nominal_fail = $nominal_fail->sum('disburse_outlet.disburse_nominal');
+        $nominal = $nominal->selectRaw('SUM(disburse_outlet.disburse_nominal-(disburse.disburse_fee / disburse.total_outlet)) as "nom_success", SUM(disburse_outlet.total_fee_item) as "nom_item", SUM(disburse_outlet.total_omset) as "nom_grandtotal", SUM(disburse_outlet.total_expense_central) as "nom_expense_central", SUM(disburse_outlet.total_delivery_price) as "nom_delivery"')->first();
+        $nominal_fail = $nominal_fail->selectRaw('SUM(disburse_outlet.disburse_nominal-(disburse.disburse_fee / disburse.total_outlet)) as "disburse_nominal"')->first();
         $income_central = $income_central->sum('total_income_central');
+        $total_disburse = $total_disburse->sum('disburse_outlet_transactions.income_outlet');
+
         $result = [
             'status' => 'success',
             'result' => [
                 'nominal' => $nominal,
                 'nominal_fail' => $nominal_fail,
-                'income_central' => $income_central
+                'income_central' => $income_central,
+                'total_disburse' => $total_disburse
             ]
         ];
         return response()->json($result);
@@ -416,7 +438,7 @@ class ApiDisburseController extends Controller
 
         $data = Disburse::leftJoin('bank_name', 'bank_name.bank_code', 'disburse.beneficiary_bank_name')
             ->with(['disburse_outlet'])
-            ->where('disburse.disburse_status', 'Fail')
+            ->whereIn('disburse.disburse_status', ['Fail', 'Failed Create Payouts'])
             ->select('disburse.error_code', 'disburse.id_disburse', 'disburse.disburse_nominal', 'disburse.disburse_status', 'disburse.beneficiary_account_number',
                 'disburse.beneficiary_name', 'disburse.created_at', 'disburse.updated_at', 'bank_name.bank_code', 'bank_name.bank_name', 'disburse.count_retry', 'disburse.error_message')->orderBy('disburse.created_at','desc');
 
@@ -865,7 +887,9 @@ class ApiDisburseController extends Controller
     function updateStatusDisburse(Request $request){
         $post = $request->json()->all();
         $checkFirst = Disburse::where('id_disburse', $post['id'])->first();
-        if(strpos($checkFirst['error_message'],"Partner does not have sufficient balance for the payout") !== false){
+        if($checkFirst['disburse_status'] == 'Failed Create Payouts'){
+            $update = Disburse::where('id_disburse', $post['id'])->update(['disburse_status' => 'Retry From Failed Payouts']);
+        }elseif(strpos($checkFirst['error_message'],"Partner does not have sufficient balance for the payout") !== false){
             $update = Disburse::where('id_disburse', $post['id'])->update(['disburse_status' => 'Queued']);
         }else{
             $update = Disburse::where('id_disburse', $post['id'])->update(['disburse_status' => $post['disburse_status']]);
