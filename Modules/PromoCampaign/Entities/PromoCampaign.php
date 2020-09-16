@@ -193,4 +193,9 @@ class PromoCampaign extends Eloquent
 	{
 		return $this->hasOne(\Modules\PromoCampaign\Entities\PromoCampaignDiscountBillRule::class, 'id_promo_campaign');
 	}
+
+	public function promo_campaign_discount_delivery_rules()
+	{
+		return $this->hasOne(\Modules\PromoCampaign\Entities\PromoCampaignDiscountDeliveryRule::class, 'id_promo_campaign');
+	}
 }

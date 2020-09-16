@@ -54,6 +54,13 @@ class Step2PromoCampaignRequest extends FormRequest
 	                'max_percent_discount'	=> 'nullable'
 	            ];
 	        }
+	        elseif ($this->json('promo_type')=='Discount delivery') {
+	            $rules=[
+	                'discount_type'     	=> 'required',
+	                'discount_value'    	=> 'required',
+	                'max_percent_discount'	=> 'nullable'
+	            ];
+	        }
     	}
 
         if (!$this->json('id_deals')){
