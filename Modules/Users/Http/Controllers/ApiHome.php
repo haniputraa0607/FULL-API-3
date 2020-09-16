@@ -695,8 +695,10 @@ class ApiHome extends Controller
 
         $retUser=$user->toArray();
 
-        if($retUser['birthday']??false){
+        if($retUser['birthday']){
             $retUser['birthday']=date("d F Y", strtotime($retUser['birthday']));
+        }else{
+            $retUser['birthday'] = '';
         }
 
         if($retUser['id_card_image']??false){
