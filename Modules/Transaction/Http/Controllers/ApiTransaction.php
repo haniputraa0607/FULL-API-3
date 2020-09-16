@@ -51,6 +51,7 @@ use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
 
 use Modules\Subscription\Entities\SubscriptionUserVoucher;
+use Modules\Transaction\Entities\LogInvalidTransaction;
 use Modules\Transaction\Http\Requests\RuleUpdate;
 
 use Modules\Transaction\Http\Requests\TransactionDetail;
@@ -3901,5 +3902,125 @@ class ApiTransaction extends Controller
             ]);
         }
 
+    }
+
+    public function updateStatusInvalidTrx(Request $request){
+        $post = $request->json()->all();
+        $update = Transaction::where('id_transaction', $request['id_transaction'])->update(['transaction_flag_invalid' => $request['transaction_flag_invalid']]);
+
+        if($request->user()->id){
+            $insertLog = [
+                'id_transaction' => $request['id_transaction'],
+                'tansaction_flag' => $request['transaction_flag_invalid'],
+                'updated_by' => $request->user()->id,
+                'updated_date' => date('Y-m-d H:i:s')
+            ];
+
+            LogInvalidTransaction::create($insertLog);
+        }
+
+        return MyHelper::checkUpdate($update);
+    }
+
+    public function logInvalidFlag(Request $request){
+        $post = $request->json()->all();
+
+        $list = LogInvalidTransaction::join('transactions', 'transactions.id_transaction', 'log_invalid_transactions.id_transaction')
+                ->join('users', 'users.id', 'log_invalid_transactions.updated_by')
+                ->groupBy('log_invalid_transactions.id_transaction');
+
+        if(isset($post['conditions']) && !empty($post['conditions'])){
+            $rule = 'and';
+            if(isset($post['rule'])){
+                $rule = $post['rule'];
+            }
+
+            if($rule == 'and'){
+                foreach ($post['conditions'] as $row){
+                    if(isset($row['subject'])){
+                        if($row['subject'] == 'status'){
+                            $list->where('transactions.transaction_flag_invalid', $row['operator']);
+                        }
+
+                        if($row['subject'] == 'receipt_number'){
+                            if($row['operator'] == '='){
+                                $list->where('transactions.transaction_receipt_number', $row['parameter']);
+                            }else{
+                                $list->where('transactions.transaction_receipt_number', '%'.$row['parameter'].'%');
+                            }
+                        }
+
+                        if($row['subject'] == 'updated_by'){
+                            if($row['operator'] == '='){
+                                $list->whereIn('id_log_invalid_transaction', function ($q) use($row){
+                                    $q->select('l.id_log_invalid_transaction')
+                                        ->from('log_invalid_transactions as l')
+                                        ->join('users', 'users.id', 'l.updated_by')
+                                        ->where('users.name', $row['parameter']);
+                                });
+                            }else{
+                                $list->whereIn('id_log_invalid_transaction', function ($q) use($row){
+                                    $q->select('l.id_log_invalid_transaction')
+                                        ->from('log_invalid_transactions as l')
+                                        ->join('users', 'users.id', 'l.updated_by')
+                                        ->where('users.name', 'like', '%'.$row['parameter'].'%');
+                                });
+                            }
+                        }
+                    }
+                }
+            }else{
+                $list->where(function ($subquery) use ($post){
+                    foreach ($post['conditions'] as $row){
+                        if(isset($row['subject'])){
+                            if($row['subject'] == 'status'){
+                                $subquery->orWhere('transactions.transaction_flag_invalid', $row['operator']);
+                            }
+
+                            if($row['subject'] == 'receipt_number'){
+                                if($row['operator'] == '='){
+                                    $subquery->orWhere('transactions.transaction_receipt_number', $row['parameter']);
+                                }else{
+                                    $subquery->orWhere('transactions.transaction_receipt_number', '%'.$row['parameter'].'%');
+                                }
+                            }
+
+                            if($row['subject'] == 'updated_by'){
+                                if($row['operator'] == '='){
+                                    $subquery->orWhereIn('id_log_invalid_transaction', function ($q) use($row){
+                                        $q->select('l.id_log_invalid_transaction')
+                                            ->from('log_invalid_transactions as l')
+                                            ->join('users', 'users.id', 'l.updated_by')
+                                            ->where('users.name', $row['parameter']);
+                                    });
+                                }else{
+                                    $subquery->orWhereIn('id_log_invalid_transaction', function ($q) use($row){
+                                        $q->select('l.id_log_invalid_transaction')
+                                            ->from('log_invalid_transactions as l')
+                                            ->join('users', 'users.id', 'l.updated_by')
+                                            ->where('users.name', 'like', '%'.$row['parameter'].'%');
+                                    });
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        $list = $list->paginate(30);
+
+        return MyHelper::checkGet($list);
+    }
+
+    public function detailInvalidFlag(Request $request){
+        $post = $request->json()->all();
+        $list = LogInvalidTransaction::join('transactions', 'transactions.id_transaction', 'log_invalid_transactions.id_transaction')
+            ->join('users', 'users.id', 'log_invalid_transactions.updated_by')
+            ->where('log_invalid_transactions.id_transaction', $request['id_transaction'])
+            ->select(DB::raw('DATE_FORMAT(log_invalid_transactions.updated_date, "%d %M %Y %H:%i") as updated_date'), 'users.name', 'log_invalid_transactions.tansaction_flag', 'transactions.transaction_receipt_number')
+            ->get()->toArray();
+
+        return MyHelper::checkGet($list);
     }
 }

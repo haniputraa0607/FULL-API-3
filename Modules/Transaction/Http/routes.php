@@ -49,6 +49,10 @@ Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scop
     });
     Route::post('/be/new', 'ApiOnlineTransaction@newTransaction');
     Route::get('be/{key}', 'ApiTransaction@transactionList');
+
+    Route::post('update-invalid-flag', 'ApiTransaction@updateStatusInvalidTrx');
+    Route::any('log-invalid-flag/list', 'ApiTransaction@logInvalidFlag');
+    Route::any('log-invalid-flag/detail', 'ApiTransaction@detailInvalidFlag');
 });
 
 Route::group(['middleware' => ['auth:api', 'log_activities', 'user_agent', 'scopes:apps'], 'prefix' => 'api/transaction', 'namespace' => 'Modules\Transaction\Http\Controllers'], function () {
