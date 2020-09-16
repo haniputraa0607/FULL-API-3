@@ -1336,10 +1336,10 @@ class ApiOutletApp extends Controller
         $modifiers = ProductModifier::select(\DB::raw('0 as id_brand, min(product_modifiers.id_product_modifier) as id_product_category, type as product_category_name, count(distinct(product_modifiers.id_product_modifier)) as total_product, 0 as total_sold_out'));
 
         if ($outlet['outlet_different_price']) {
-            $modifiers->join('product_modifier_price', function($join) use ($outlet) {
-                $join->on('product_modifier_price.id_product_modifier', '=', 'product_modifiers.id_product_modifier')
-                    ->where('product_modifier_price.id_outlet', $outlet['id_outlet']);
-            })->whereNotNull('product_modifier_price.product_modifier_price');
+            $modifiers->join('product_modifier_prices', function($join) use ($outlet) {
+                $join->on('product_modifier_prices.id_product_modifier', '=', 'product_modifiers.id_product_modifier')
+                    ->where('product_modifier_prices.id_outlet', $outlet['id_outlet']);
+            })->whereNotNull('product_modifier_prices.product_modifier_price');
         } else {
             $modifiers->join('product_modifier_global_prices', 'product_modifier_global_prices.id_product_modifier', '=', 'product_modifier_global_prices.id_product_modifier')
                 ->whereNotNull('product_modifier_global_prices.product_modifier_price');
@@ -2718,7 +2718,7 @@ class ApiOutletApp extends Controller
                 }
                 $list['payment'] = $payment;
                 break;
-            case 'IPay88':
+            case 'Ipay88':
                 $multiPayment = TransactionMultiplePayment::where('id_transaction', $list['id_transaction'])->get();
                 $payment = [];
                 foreach($multiPayment as $dataKey => $dataPay){
