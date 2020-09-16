@@ -158,7 +158,8 @@ class ApiPromotionDeals extends Controller
 	                'deals_promotion_content.deals_promotion_content_details',
 	                'created_by_user',
 	                'promotion_contents.deals',
-	                'brand'
+	                'brand',
+	                'deals_promotion_discount_bill_rules'
 	            ])
 	            ->first();
 	    $outlet = explode(',',$deals->deals_list_outlet);
