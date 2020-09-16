@@ -539,7 +539,7 @@ class IPay88
 	                        'Buy Paid Subscription Success',
 	                        $subscription_user['user']['phone'],
 	                        [
-	                            'subscription_title'       => $subscription->title,
+	                            'subscription_title'       => $subscription->subscription_title,
 	                            'id_subscription_users'     => $model->id_subscription_user
 	                        ]
 	                    );

@@ -150,7 +150,7 @@ class ApiIrisController extends Controller
                                     $totalChargedPromo = $data['discount'];
                                     $totalFee = $data['payment_charge'];
                                     $nominalBalance = $data['subscription'];
-                                    $totalChargedSubcriptionOutlet =
+                                    $totalChargedSubcriptionOutlet = 0;
 
                                     $transactionShipment = 0;
                                     if(!empty($data['transaction_shipment_go_send'])){
@@ -280,6 +280,7 @@ class ApiIrisController extends Controller
                                                 $dataToInsert[$send[$j]['beneficiary_account']]['disburse_status'] = $arrStatus[$val['status']];
 
                                                 $insertToDisburseOutlet = $dataToInsert[$send[$j]['beneficiary_account']]['disburse_outlet'];
+                                                $dataToInsert[$send[$j]['beneficiary_account']]['total_outlet'] = count($insertToDisburseOutlet);
                                                 unset($dataToInsert[$send[$j]['beneficiary_account']]['disburse_outlet']);
 
                                                 $insert = Disburse::create($dataToInsert[$send[$j]['beneficiary_account']]);
@@ -306,6 +307,7 @@ class ApiIrisController extends Controller
                                                 $dataToInsert[$send[$key]['beneficiary_account']]['error_message'] = implode(',', $err);
 
                                                 $insertToDisburseOutlet = $dataToInsert[$send[$key]['beneficiary_account']]['disburse_outlet'];
+                                                $dataToInsert[$send[$key]['beneficiary_account']]['total_outlet'] = count($insertToDisburseOutlet);
                                                 unset($dataToInsert[$send[$key]['beneficiary_account']]['disburse_outlet']);
                                                 $insert = Disburse::create($dataToInsert[$send[$key]['beneficiary_account']]);
 
@@ -324,6 +326,7 @@ class ApiIrisController extends Controller
                                             }
 
                                             //resend data that is not error
+                                            $send = array_values($send);
                                             $sendAgainToIris = MyHelper::connectIris('Payouts', 'POST','api/v1/payouts', ['payouts' => $send]);
                                             if(isset($sendAgainToIris['status']) && $sendAgainToIris['status'] == 'success') {
                                                 if (isset($sendAgainToIris['response']['payouts']) && !empty($sendAgainToIris['response']['payouts'])) {
@@ -334,8 +337,8 @@ class ApiIrisController extends Controller
                                                         $dataToInsert[$send[$k]['beneficiary_account']]['disburse_status'] = $arrStatus[$val['status']];
 
                                                         $insertToDisburseOutlet = $dataToInsert[$send[$k]['beneficiary_account']]['disburse_outlet'];
+                                                        $dataToInsert[$send[$k]['beneficiary_account']]['total_outlet'] = count($insertToDisburseOutlet);
                                                         unset($dataToInsert[$send[$k]['beneficiary_account']]['disburse_outlet']);
-
                                                         $insert = Disburse::create($dataToInsert[$send[$k]['beneficiary_account']]);
 
                                                         if ($insert) {
@@ -359,6 +362,7 @@ class ApiIrisController extends Controller
                             DB::commit();
                         }catch (\Exception $e){
                             DB::rollback();
+                            \Log::error($e);
                             return 'fail';
                         }
                     }
@@ -493,6 +497,7 @@ class ApiIrisController extends Controller
             $log->success($arrSuccess);
             return 'succes';
         } catch (\Exception $e) {
+            \Log::error($e);
             $log->fail($e->getMessage());
         }
     }
