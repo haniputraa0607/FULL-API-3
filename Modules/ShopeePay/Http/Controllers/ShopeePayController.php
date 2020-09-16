@@ -210,7 +210,7 @@ class ShopeePayController extends Controller
                 'Buy Paid Subscription Success',
                 $userPhone,
                 [
-                    'subscription_title'   => $subs_payment->title,
+                    'subscription_title'   => $subs_payment->subscription_title,
                     'id_subscription_user' => $subs_payment->id_subscription_user,
                 ]
             );
