@@ -250,4 +250,9 @@ class Deal extends Model
     {
         return $this->belongsTo(\App\Http\Models\User::class, 'created_by');
     }
+
+    public function deals_discount_bill_rules()
+	{
+		return $this->hasOne(\Modules\Deals\Entities\DealsDiscountBillRule::class, 'id_deals');
+	}
 }
