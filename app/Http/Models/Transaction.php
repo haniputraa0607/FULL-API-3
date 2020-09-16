@@ -62,6 +62,7 @@ class Transaction extends Model
 		'id_user',
 		'id_outlet',
 		'id_promo_campaign_promo_code',
+		'id_subscription_user_voucher',
 		'transaction_receipt_number',
 		'transaction_notes',
 		'transaction_subtotal',
