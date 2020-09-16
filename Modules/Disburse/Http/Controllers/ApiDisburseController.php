@@ -98,8 +98,8 @@ class ApiDisburseController extends Controller
                 ->where('user_franchise_outlet.id_user_franchise', $post['id_user_franchise']);
         }
 
-        $nominal = $nominal->selectRaw('SUM(disburse_outlet.disburse_nominal) as "nom_success", SUM(disburse_outlet.total_fee_item) as "nom_item", SUM(disburse_outlet.total_omset) as "nom_grandtotal", SUM(disburse_outlet.total_expense_central) as "nom_expense_central", SUM(disburse_outlet.total_delivery_price) as "nom_delivery"')->first();
-        $nominal_fail = $nominal_fail->sum('disburse_outlet.disburse_nominal');
+        $nominal = $nominal->selectRaw('SUM(disburse_outlet.disburse_nominal-(disburse.disburse_fee / disburse.total_outlet)) as "nom_success", SUM(disburse_outlet.total_fee_item) as "nom_item", SUM(disburse_outlet.total_omset) as "nom_grandtotal", SUM(disburse_outlet.total_expense_central) as "nom_expense_central", SUM(disburse_outlet.total_delivery_price) as "nom_delivery"')->first();
+        $nominal_fail = $nominal_fail->selectRaw('SUM(disburse_outlet.disburse_nominal-(disburse.disburse_fee / disburse.total_outlet)) as "disburse_nominal"')->first();
         $income_central = $income_central->sum('total_income_central');
         $total_disburse = $total_disburse->sum('disburse_outlet_transactions.income_outlet');
 
