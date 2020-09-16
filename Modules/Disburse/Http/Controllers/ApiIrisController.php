@@ -361,6 +361,7 @@ class ApiIrisController extends Controller
                             DB::commit();
                         }catch (\Exception $e){
                             DB::rollback();
+                            \Log::error($e);
                             return 'fail';
                         }
                     }
@@ -495,6 +496,7 @@ class ApiIrisController extends Controller
             $log->success($arrSuccess);
             return 'succes';
         } catch (\Exception $e) {
+            \Log::error($e);
             $log->fail($e->getMessage());
         }
     }
