@@ -828,6 +828,7 @@ class ApiOnlineTransaction extends Controller
         // add payment subscription
         if ( $request->json('id_subscription_user') )
         {
+        	$subs_discount 		= 0;
         	$subscription_total = app($this->subscription_use)->calculate($request->id_subscription_user, $insertTransaction['transaction_subtotal'], $insertTransaction['transaction_subtotal'], $post['item'], $post['id_outlet'], $subs_error, $errorProduct, $subs_product, $subs_applied_product);
 
 	        if (!empty($subs_error)) {
@@ -840,20 +841,44 @@ class ApiOnlineTransaction extends Controller
 
 	        $subscription['grandtotal'] = $insertTransaction['transaction_grandtotal'] - $subscription_total;
 	        $data_subs = app($this->subscription_use)->checkSubscription( $request->json('id_subscription_user') );
-	        $insert_subs_data['id_transaction'] = $insertTransaction['id_transaction'];
-	        $insert_subs_data['id_subscription_user_voucher'] = $data_subs->id_subscription_user_voucher;
-	        $insert_subs_data['subscription_nominal'] = $subscription_total;
+	        $data_subs_detail = $data_subs->load(['subscription_user.subscription' => function($q){
+						        	$q->select('id_subscription', 'subscription_discount_type');
+						        }]); 
+	        $subs_discount_type = $data_subs_detail->subscription_user->subscription->subscription_discount_type ?? null;
 
-	        $insert_subs_trx = TransactionPaymentSubscription::create($insert_subs_data);
+
+			if ($subs_discount_type == 'payment_method') {
+
+		        $insert_subs_data['id_transaction'] = $insertTransaction['id_transaction'];
+		        $insert_subs_data['id_subscription_user_voucher'] = $data_subs->id_subscription_user_voucher;
+		        $insert_subs_data['subscription_nominal'] = $subscription_total;
+	        	$insert_subs_trx = TransactionPaymentSubscription::create($insert_subs_data);
+
+	        	if (!$insert_subs_trx) {
+		        	DB::rollback();
+	                return response()->json([
+	                    'status'    => 'fail',
+	                    'messages'  => ['Insert Transaction Failed']
+	                ]);
+	            }
+			}
+			else{
+				$subs_discount = -1 * abs($subscription_total); /* get absolute negative number */
+			}
+
 	        $update_trx = Transaction::where('id_transaction', $insertTransaction['id_transaction'])->update([
-							            'id_subscription_user_voucher' => $data_subs->id_subscription_user_voucher
-							        ]);
+				            'id_subscription_user_voucher' => $data_subs->id_subscription_user_voucher,
+				            'transaction_discount' => $subs_discount,
+				            'transaction_grandtotal' => $subscription['grandtotal']
+				        ]);
+
 	        $update_subs_voucher = SubscriptionUserVoucher::where('id_subscription_user_voucher','=',$data_subs->id_subscription_user_voucher)
 	        						->update([
 	        							'used_at' => date('Y-m-d H:i:s'),
 	        							'id_transaction' => $insertTransaction['id_transaction']
 	        						]);
-			if (!$insert_subs_trx || !$update_subs_voucher) {
+
+			if (!$update_subs_voucher) {
 	        	DB::rollback();
                 return response()->json([
                     'status'    => 'fail',
