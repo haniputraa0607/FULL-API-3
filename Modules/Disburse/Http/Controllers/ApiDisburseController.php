@@ -42,7 +42,7 @@ class ApiDisburseController extends Controller
     public function dashboard(Request $request){
         $post = $request->json()->all();
         $nominal = Disburse::join('disburse_outlet', 'disburse.id_disburse', 'disburse_outlet.id_disburse')->where('disburse.disburse_status', 'Success');
-        $nominal_fail = Disburse::join('disburse_outlet', 'disburse.id_disburse', 'disburse_outlet.id_disburse')->where('disburse.disburse_status', 'Fail');
+        $nominal_fail = Disburse::join('disburse_outlet', 'disburse.id_disburse', 'disburse_outlet.id_disburse')->whereIn('disburse.disburse_status', ['Fail', 'Failed Create Payouts']);
         $income_central = Disburse::join('disburse_outlet', 'disburse.id_disburse', 'disburse_outlet.id_disburse')->where('disburse.disburse_status', 'Success');
         $total_disburse = DisburseOutletTransaction::join('transactions', 'transactions.id_transaction', 'disburse_outlet_transactions.id_transaction')
                             ->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
@@ -98,8 +98,8 @@ class ApiDisburseController extends Controller
                 ->where('user_franchise_outlet.id_user_franchise', $post['id_user_franchise']);
         }
 
-        $nominal = $nominal->selectRaw('SUM(disburse_outlet.disburse_nominal) as "nom_success", SUM(disburse_outlet.total_fee_item) as "nom_item", SUM(disburse_outlet.total_omset) as "nom_grandtotal", SUM(disburse_outlet.total_expense_central) as "nom_expense_central", SUM(disburse_outlet.total_delivery_price) as "nom_delivery"')->first();
-        $nominal_fail = $nominal_fail->sum('disburse_outlet.disburse_nominal');
+        $nominal = $nominal->selectRaw('SUM(disburse_outlet.disburse_nominal-(disburse.disburse_fee / disburse.total_outlet)) as "nom_success", SUM(disburse_outlet.total_fee_item) as "nom_item", SUM(disburse_outlet.total_omset) as "nom_grandtotal", SUM(disburse_outlet.total_expense_central) as "nom_expense_central", SUM(disburse_outlet.total_delivery_price) as "nom_delivery"')->first();
+        $nominal_fail = $nominal_fail->selectRaw('SUM(disburse_outlet.disburse_nominal-(disburse.disburse_fee / disburse.total_outlet)) as "disburse_nominal"')->first();
         $income_central = $income_central->sum('total_income_central');
         $total_disburse = $total_disburse->sum('disburse_outlet_transactions.income_outlet');
 
@@ -438,7 +438,7 @@ class ApiDisburseController extends Controller
 
         $data = Disburse::leftJoin('bank_name', 'bank_name.bank_code', 'disburse.beneficiary_bank_name')
             ->with(['disburse_outlet'])
-            ->where('disburse.disburse_status', 'Fail')
+            ->whereIn('disburse.disburse_status', ['Fail', 'Failed Create Payouts'])
             ->select('disburse.error_code', 'disburse.id_disburse', 'disburse.disburse_nominal', 'disburse.disburse_status', 'disburse.beneficiary_account_number',
                 'disburse.beneficiary_name', 'disburse.created_at', 'disburse.updated_at', 'bank_name.bank_code', 'bank_name.bank_name', 'disburse.count_retry', 'disburse.error_message')->orderBy('disburse.created_at','desc');
 
@@ -887,7 +887,9 @@ class ApiDisburseController extends Controller
     function updateStatusDisburse(Request $request){
         $post = $request->json()->all();
         $checkFirst = Disburse::where('id_disburse', $post['id'])->first();
-        if(strpos($checkFirst['error_message'],"Partner does not have sufficient balance for the payout") !== false){
+        if($checkFirst['disburse_status'] == 'Failed Create Payouts'){
+            $update = Disburse::where('id_disburse', $post['id'])->update(['disburse_status' => 'Retry From Failed Payouts']);
+        }elseif(strpos($checkFirst['error_message'],"Partner does not have sufficient balance for the payout") !== false){
             $update = Disburse::where('id_disburse', $post['id'])->update(['disburse_status' => 'Queued']);
         }else{
             $update = Disburse::where('id_disburse', $post['id'])->update(['disburse_status' => $post['disburse_status']]);

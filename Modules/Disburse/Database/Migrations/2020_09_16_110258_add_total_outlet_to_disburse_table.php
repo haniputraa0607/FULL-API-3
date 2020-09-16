@@ -4,7 +4,7 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Migrations\Migration;
 
-class AddMinBasketSizeColumnToPromoCampaignsTable extends Migration
+class AddTotalOutletToDisburseTable extends Migration
 {
     /**
      * Run the migrations.
@@ -13,8 +13,8 @@ class AddMinBasketSizeColumnToPromoCampaignsTable extends Migration
      */
     public function up()
     {
-        Schema::table('promo_campaigns', function (Blueprint $table) {
-        	$table->integer('min_basket_size')->nullable()->after('charged_central');
+        Schema::table('disburse', function (Blueprint $table) {
+            $table->smallInteger('total_outlet')->after('id_disburse');
         });
     }
 
@@ -25,8 +25,8 @@ class AddMinBasketSizeColumnToPromoCampaignsTable extends Migration
      */
     public function down()
     {
-        Schema::table('promo_campaigns', function (Blueprint $table) {
-        	$table->dropColumn('min_basket_size');
+        Schema::table('disburse', function (Blueprint $table) {
+            $table->dropColumn('total_outlet');
         });
     }
 }

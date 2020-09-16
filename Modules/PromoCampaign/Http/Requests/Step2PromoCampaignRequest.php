@@ -61,8 +61,6 @@ class Step2PromoCampaignRequest extends FormRequest
         	$rules['filter_outlet'] = 'required';
         }
 
-        $rules['min_basket_size'] = 'nullable';
-
         return $rules;
     }
 

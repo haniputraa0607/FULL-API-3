@@ -149,7 +149,7 @@ class ApiIrisController extends Controller
                                     $totalChargedPromo = $data['discount'];
                                     $totalFee = $data['payment_charge'];
                                     $nominalBalance = $data['subscription'];
-                                    $totalChargedSubcriptionOutlet =
+                                    $totalChargedSubcriptionOutlet = 0;
 
                                     $transactionShipment = 0;
                                     if(!empty($data['transaction_shipment_go_send'])){
@@ -228,7 +228,7 @@ class ApiIrisController extends Controller
 
                                     $dataToSend[] = $toSend;
 
-                                    $dataToInsert[] = [
+                                    $dataToInsert[$value['beneficiary_account']] = [
                                         'disburse_nominal' => $amount,
                                         'total_income_outlet' => $value['total_amount'],
                                         'disburse_fee' => $feeDisburse,
@@ -245,27 +245,25 @@ class ApiIrisController extends Controller
                             }
 
                             foreach ($arrTmp as $val){
-                                $checkAccount = array_search($val['beneficiary_account'], array_column($dataToInsert, 'beneficiary_account_number'));
-                                if($checkAccount !== false){
-                                    $dataToInsert[$checkAccount]['disburse_outlet'][] = [
-                                        'id_outlet' => $val['id_outlet'],
-                                        'disburse_nominal' => $val['total_amount'],
-                                        'total_income_central' => $val['total_income_central'],
-                                        'total_expense_central' => $val['total_expense_central'],
-                                        'total_fee_item' => $val['total_fee_item'],
-                                        'total_omset' => $val['total_omset'],
-                                        'total_subtotal' => $val['total_subtotal'],
-                                        'total_promo_charged' => $val['total_promo_charged'],
-                                        'total_discount' => $val['total_discount'],
-                                        'total_delivery_price' => $val['total_delivery_price'],
-                                        'total_payment_charge' => $val['total_payment_charge'],
-                                        'total_point_use_expense' => $val['total_point_use_expense'],
-                                        'total_subscription' => $val['total_subscription'],
-                                        'transactions' => $val['transactions']
-                                    ];
-                                }
+                                $dataToInsert[$val['beneficiary_account']]['disburse_outlet'][] = [
+                                    'id_outlet' => $val['id_outlet'],
+                                    'disburse_nominal' => $val['total_amount'],
+                                    'total_income_central' => $val['total_income_central'],
+                                    'total_expense_central' => $val['total_expense_central'],
+                                    'total_fee_item' => $val['total_fee_item'],
+                                    'total_omset' => $val['total_omset'],
+                                    'total_subtotal' => $val['total_subtotal'],
+                                    'total_promo_charged' => $val['total_promo_charged'],
+                                    'total_discount' => $val['total_discount'],
+                                    'total_delivery_price' => $val['total_delivery_price'],
+                                    'total_payment_charge' => $val['total_payment_charge'],
+                                    'total_point_use_expense' => $val['total_point_use_expense'],
+                                    'total_subscription' => $val['total_subscription'],
+                                    'transactions' => $val['transactions']
+                                ];
                             }
 
+                            $arrFailedPayouts = [];
                             if($dataToSend){
                                 $chunk = array_chunk($dataToSend, 100);
 
@@ -276,14 +274,15 @@ class ApiIrisController extends Controller
                                         if(isset($sendToIris['response']['payouts']) && !empty($sendToIris['response']['payouts'])){
                                             $j = 0;
                                             foreach ($sendToIris['response']['payouts'] as $val){
-                                                $dataToInsert[$j]['response'] = json_encode($val);
-                                                $dataToInsert[$j]['reference_no'] = $val['reference_no'];
-                                                $dataToInsert[$j]['disburse_status'] = $arrStatus[$val['status']];
+                                                $dataToInsert[$send[$j]['beneficiary_account']]['response'] = json_encode($val);
+                                                $dataToInsert[$send[$j]['beneficiary_account']]['reference_no'] = $val['reference_no'];
+                                                $dataToInsert[$send[$j]['beneficiary_account']]['disburse_status'] = $arrStatus[$val['status']];
 
-                                                $insertToDisburseOutlet = $dataToInsert[$j]['disburse_outlet'];
-                                                unset($dataToInsert[$j]['disburse_outlet']);
+                                                $insertToDisburseOutlet = $dataToInsert[$send[$j]['beneficiary_account']]['disburse_outlet'];
+                                                $dataToInsert[$send[$j]['beneficiary_account']]['total_outlet'] = count($insertToDisburseOutlet);
+                                                unset($dataToInsert[$send[$j]['beneficiary_account']]['disburse_outlet']);
 
-                                                $insert = Disburse::create($dataToInsert[$j]);
+                                                $insert = Disburse::create($dataToInsert[$send[$j]['beneficiary_account']]);
 
                                                 if($insert){
                                                     foreach ($insertToDisburseOutlet as $do){
@@ -298,12 +297,71 @@ class ApiIrisController extends Controller
                                                 $j++;
                                             }
                                         }
+                                    }else{
+                                        if(isset($sendToIris['response']['errors']) && !empty($sendToIris['response']['errors'])){
+                                            //save data failed to table disburse
+                                            foreach ($sendToIris['response']['errors'] as $key=>$err){
+                                                $dataToInsert[$send[$key]['beneficiary_account']]['response'] = json_encode($val);
+                                                $dataToInsert[$send[$key]['beneficiary_account']]['disburse_status'] = 'Failed Create Payouts';
+                                                $dataToInsert[$send[$key]['beneficiary_account']]['error_message'] = implode(',', $err);
+
+                                                $insertToDisburseOutlet = $dataToInsert[$send[$key]['beneficiary_account']]['disburse_outlet'];
+                                                $dataToInsert[$send[$key]['beneficiary_account']]['total_outlet'] = count($insertToDisburseOutlet);
+                                                unset($dataToInsert[$send[$key]['beneficiary_account']]['disburse_outlet']);
+                                                $insert = Disburse::create($dataToInsert[$send[$key]['beneficiary_account']]);
+
+                                                if ($insert) {
+                                                    $arrFailedPayouts[] = $insert['id_disburse'];
+                                                    foreach ($insertToDisburseOutlet as $do) {
+                                                        $do['id_disburse'] = $insert['id_disburse'];
+                                                        $disburseOutlet = DisburseOutlet::create($do);
+                                                        if ($disburseOutlet) {
+                                                            DisburseOutletTransaction::whereIn('id_disburse_transaction', $do['transactions'])
+                                                                ->update(['id_disburse_outlet' => $disburseOutlet['id_disburse_outlet'], 'updated_at' => date('Y-m-d H:i:s')]);
+                                                        }
+                                                    }
+                                                }
+                                                unset($send[$key]);
+                                            }
+
+                                            //resend data that is not error
+                                            $send = array_values($send);
+                                            $sendAgainToIris = MyHelper::connectIris('Payouts', 'POST','api/v1/payouts', ['payouts' => $send]);
+                                            if(isset($sendAgainToIris['status']) && $sendAgainToIris['status'] == 'success') {
+                                                if (isset($sendAgainToIris['response']['payouts']) && !empty($sendAgainToIris['response']['payouts'])) {
+                                                    $k = 0;
+                                                    foreach ($sendAgainToIris['response']['payouts'] as $val) {
+                                                        $dataToInsert[$send[$k]['beneficiary_account']]['response'] = json_encode($val);
+                                                        $dataToInsert[$send[$k]['beneficiary_account']]['reference_no'] = $val['reference_no'];
+                                                        $dataToInsert[$send[$k]['beneficiary_account']]['disburse_status'] = $arrStatus[$val['status']];
+
+                                                        $insertToDisburseOutlet = $dataToInsert[$send[$k]['beneficiary_account']]['disburse_outlet'];
+                                                        $dataToInsert[$send[$k]['beneficiary_account']]['total_outlet'] = count($insertToDisburseOutlet);
+                                                        unset($dataToInsert[$send[$k]['beneficiary_account']]['disburse_outlet']);
+                                                        $insert = Disburse::create($dataToInsert[$send[$k]['beneficiary_account']]);
+
+                                                        if ($insert) {
+                                                            foreach ($insertToDisburseOutlet as $do) {
+                                                                $do['id_disburse'] = $insert['id_disburse'];
+                                                                $disburseOutlet = DisburseOutlet::create($do);
+                                                                if ($disburseOutlet) {
+                                                                    DisburseOutletTransaction::whereIn('id_disburse_transaction', $do['transactions'])
+                                                                        ->update(['id_disburse_outlet' => $disburseOutlet['id_disburse_outlet'], 'updated_at' => date('Y-m-d H:i:s')]);
+                                                                }
+                                                            }
+                                                        }
+                                                        $k++;
+                                                    }
+                                                }
+                                            }
+                                        }
                                     }
                                 }
                             }
                             DB::commit();
                         }catch (\Exception $e){
                             DB::rollback();
+                            \Log::error($e);
                             return 'fail';
                         }
                     }
@@ -311,7 +369,7 @@ class ApiIrisController extends Controller
                     //proses retry failed disburse
                     $dataRetry = Disburse::join('bank_accounts', 'bank_accounts.id_bank_account', 'disburse.id_bank_account')
                         ->leftJoin('bank_name', 'bank_name.id_bank_name', 'bank_accounts.id_bank_name')
-                        ->where('disburse_status', 'Retry From Failed')
+                        ->whereIn('disburse_status', ['Retry From Failed', 'Retry From Failed Payouts'])
                         ->select('bank_accounts.beneficiary_name', 'bank_accounts.beneficiary_account', 'bank_name.bank_code as beneficiary_bank', 'bank_accounts.beneficiary_email',
                             'disburse_nominal as amount', 'notes', 'reference_no as ref')
                         ->get()->toArray();
@@ -342,6 +400,7 @@ class ApiIrisController extends Controller
                     }
 
                     $arrSuccess = [];
+                    $arrReferenceNoFailed = [];
                     //proses approve if setting approver by sistem
                     $settingApprover = Setting::where('key', 'disburse_auto_approve_setting')->first();
                     if($settingApprover && $settingApprover['value'] == 1){
@@ -367,7 +426,6 @@ class ApiIrisController extends Controller
                             }
 
                             /*Process send approver out one by one*/
-                            $arrReferenceNoFailed = [];
                             if($loopNotAll === 1){
                                 $start = ($countData > 100 ? (($number * 100) - 1) : 0);
                                 $dataNotYetToSend = array_slice($getDataToApprove, $start,$countData);
@@ -388,41 +446,49 @@ class ApiIrisController extends Controller
                                     }
                                 }
                             }
-
-                            //send email to admin when balance is not enough
-                            if($arrReferenceNoFailed){
-                                $getListOutlet = Disburse::whereIn('disburse.reference_no', $arrReferenceNoFailed)
-                                    ->with(['disburse_outlet'])
-                                    ->get()->toArray();
-
-                                $table = '';
-                                if($getListOutlet){
-                                    $table .= '<table style="border-collapse: collapse;width: 100%;">';
-                                    $table .= '<thead>';
-                                    $table .= '<th style="border:1px solid">Reference No</th>';
-                                    $table .= '<th style="border:1px solid">Error Message</th>';
-                                    $table .= '<th style="border:1px solid">Outlet Name</th>';
-                                    $table .= '</thead>';
-                                    $table .= '<tbody>';
-                                    foreach($getListOutlet as $dt){
-                                        $outlet = '<ul>';
-                                        foreach ($dt['disburse_outlet'] as $o){
-                                            $outlet .= '<li>'.$o['outlet_code'].'-'.$o['outlet_name'].'</li>';
-                                        }
-                                        $outlet .= '</ul>';
-
-                                        $table .= '<tr>';
-                                        $table .= '<td style="border:1px solid">'.$dt['reference_no'].'</td>';
-                                        $table .= '<td style="border:1px solid">'.$dt['error_message'].'</td>';
-                                        $table .= '<td style="border:1px solid">'.$outlet.'</td>';
-                                        $table .= '</tr>';
-                                    }
-                                    $table .= '</tbody>';
-                                    $table .= '</table>';
-                                }
-                                $this->sendForwardEmailDisburse('Failed Send Disburse',['list_outlet' => $table]);
-                            }
                         }
+                    }
+
+                    //send email to admin when balance is not enough
+                    if($arrReferenceNoFailed || $arrFailedPayouts){
+                        $getListOutlet = Disburse::with(['disburse_outlet']);
+
+                        if(!empty($arrFailedPayouts)){
+                            $getListOutlet = $getListOutlet->orWhereIn('id_disburse', $arrFailedPayouts);
+                        }
+
+                        if(!empty($arrReferenceNoFailed)){
+                            $getListOutlet = $getListOutlet->orWhereIn('disburse.reference_no', $arrReferenceNoFailed);
+                        }
+
+                        $getListOutlet = $getListOutlet->get()->toArray();
+
+                        $table = '';
+                        if($getListOutlet){
+                            $table .= '<table style="border-collapse: collapse;width: 100%;">';
+                            $table .= '<thead>';
+                            $table .= '<th style="border:1px solid">Reference No</th>';
+                            $table .= '<th style="border:1px solid">Error Message</th>';
+                            $table .= '<th style="border:1px solid">Outlet Name</th>';
+                            $table .= '</thead>';
+                            $table .= '<tbody>';
+                            foreach($getListOutlet as $dt){
+                                $outlet = '<ul>';
+                                foreach ($dt['disburse_outlet'] as $o){
+                                    $outlet .= '<li>'.$o['outlet_code'].'-'.$o['outlet_name'].'</li>';
+                                }
+                                $outlet .= '</ul>';
+
+                                $table .= '<tr>';
+                                $table .= '<td style="border:1px solid">'.$dt['reference_no'].'</td>';
+                                $table .= '<td style="border:1px solid">'.$dt['error_message'].'</td>';
+                                $table .= '<td style="border:1px solid">'.$outlet.'</td>';
+                                $table .= '</tr>';
+                            }
+                            $table .= '</tbody>';
+                            $table .= '</table>';
+                        }
+                        $this->sendForwardEmailDisburse('Failed Send Disburse',['list_outlet' => $table]);
                     }
                 }
             }
@@ -430,6 +496,7 @@ class ApiIrisController extends Controller
             $log->success($arrSuccess);
             return 'succes';
         } catch (\Exception $e) {
+            \Log::error($e);
             $log->fail($e->getMessage());
         }
     }

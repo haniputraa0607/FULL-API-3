@@ -23,6 +23,7 @@ use Modules\ShopeePay\Entities\SubscriptionPaymentShopeePay;
 use Modules\ShopeePay\Entities\LogShopeePay;
 use Modules\ShopeePay\Entities\ShopeePayMerchant;
 use Modules\ShopeePay\Entities\TransactionPaymentShopeePay;
+use Modules\Subscription\Entities\SubscriptionUser;
 
 class ShopeePayController extends Controller
 {
@@ -209,7 +210,7 @@ class ShopeePayController extends Controller
                 'Buy Paid Subscription Success',
                 $userPhone,
                 [
-                    'subscription_title'   => $subs_payment->title,
+                    'subscription_title'   => $subs_payment->subscription_title,
                     'id_subscription_user' => $subs_payment->id_subscription_user,
                 ]
             );
@@ -577,7 +578,7 @@ class ShopeePayController extends Controller
                 ->join('subscription_payment_shopee_pays', 'subscription_users.id_subscription_user', '=', 'subscription_payment_shopee_pays.id_subscription_user')
                 ->where('payment_method', 'Shopeepay')
                 // ->where('claimed_at', '<=', $expired)
-                ->where('claimed_at', '<=', $check_success)
+                ->where('bought_at', '<=', $check_success)
                 ->get();
 
             if (empty($getTrx)) {

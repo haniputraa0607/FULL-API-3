@@ -26,6 +26,7 @@ use LaravelFCM\Message\PayloadDataBuilder;
 use LaravelFCM\Message\PayloadNotificationBuilder;
 use FCM;
 use App\Lib\MyHelper;
+use App\Http\Models\LogMidtrans;
 
 class Midtrans {
 
@@ -86,6 +87,20 @@ class Midtrans {
 
         $token = MyHelper::post($url, Self::bearer(), $dataMidtrans);
 
+        try {
+            LogMidtrans::create([
+                'type'                 => 'request_token',
+                'id_reference'         => $receipt,
+                'request'              => json_encode($dataMidtrans),
+                'request_url'          => $url,
+                'request_header'       => json_encode(['Authorization' => Self::bearer()]),
+                'response'             => json_encode($token),
+                'response_status_code' => $token['status_code']??null,
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Failed write log to LogMidtrans: ' . $e->getMessage());
+        }
+
         return $token;
     }
 
@@ -143,7 +158,7 @@ class Midtrans {
     static function refund($order_id,$param = null)
     {
         // $url    = env('BASE_MIDTRANS_PRO').'/v2/'.$order_id.'/expire';
-        $url    = env('BASE_MIDTRANS_SANDBOX').'/v2/'.$order_id.'/refund';
+        $url    = env('BASE_MIDTRANS_SANDBOX').'/v2/'.$order_id.'/refund/online/direct';
         $trx = Transaction::join('transaction_payment_midtrans','transaction_payment_midtrans.id_transaction', '=', 'transactions.id_transaction')->where('vt_transaction_id',$order_id)->first();
         if (!$trx) {
             return ['status'=>'fail','messages'=>'Midtrans payment not found'];
@@ -157,6 +172,19 @@ class Midtrans {
             $param = [];
         }
         $status = MyHelper::post($url, Self::bearer(), $param);
+        try {
+            LogMidtrans::create([
+                'type'                 => 'refund',
+                'id_reference'         => $trx->id_transaction,
+                'request'              => json_encode($param),
+                'request_url'          => $url,
+                'request_header'       => json_encode(['Authorization' => Self::bearer()]),
+                'response'             => json_encode($status),
+                'response_status_code' => $status['status_code']??null,
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Failed write log to LogMidtrans: ' . $e->getMessage());
+        }
         return [
             'status' => ($status['status_code']??false)==200?'success':'fail',
             'messages' => [$status['status_message']??'Something went wrong','Refund failed']
