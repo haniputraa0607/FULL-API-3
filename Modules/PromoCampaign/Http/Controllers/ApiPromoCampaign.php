@@ -26,6 +26,7 @@ use Modules\Deals\Entities\DealsTierDiscountProduct;
 use Modules\Deals\Entities\DealsTierDiscountRule;
 use Modules\Deals\Entities\DealsBuyxgetyProductRequirement;
 use Modules\Deals\Entities\DealsBuyxgetyRule;
+use Modules\Deals\Entities\DealsDiscountBillRule;
 
 use Modules\Promotion\Entities\DealsPromotionProductDiscount;
 use Modules\Promotion\Entities\DealsPromotionProductDiscountRule;
@@ -33,6 +34,7 @@ use Modules\Promotion\Entities\DealsPromotionTierDiscountProduct;
 use Modules\Promotion\Entities\DealsPromotionTierDiscountRule;
 use Modules\Promotion\Entities\DealsPromotionBuyxgetyProductRequirement;
 use Modules\Promotion\Entities\DealsPromotionBuyxgetyRule;
+use Modules\Promotion\Entities\DealsPromotionDiscountBillRule;
 
 use Modules\Subscription\Entities\SubscriptionUserVoucher;
 
@@ -1016,7 +1018,7 @@ class ApiPromoCampaign extends Controller
 
         $update = $table::where($id_table, $id_post)->update($dataPromoCampaign);
 
-        if ($post['promo_type'] == 'Product Discount') {
+        if ($post['promo_type'] == 'Product discount') {
 
             if ($post['filter_product'] == 'All Product') {
                 $createFilterProduct = $this->createProductFilter('all_product', 1, $id_post, null, $post['discount_type'], $post['discount_value'], $post['max_product'], $post['max_percent_discount'], $source, $table, $id_table);
@@ -1210,6 +1212,7 @@ class ApiPromoCampaign extends Controller
 	    		DealsProductDiscountRule::where('id_deals', '=', $id_post)->delete();
 		        DealsTierDiscountRule::where('id_deals', '=', $id_post)->delete();
 		        DealsBuyxgetyRule::where('id_deals', '=', $id_post)->delete();
+		        DealsDiscountBillRule::where('id_deals', '=', $id_post)->delete();
 
 		        DealsTierDiscountProduct::where('id_deals', '=', $id_post)->delete();
 		        DealsProductDiscount::where('id_deals', '=', $id_post)->delete();
@@ -1221,6 +1224,7 @@ class ApiPromoCampaign extends Controller
 	    		DealsPromotionProductDiscountRule::where('id_deals', '=', $id_post)->delete();
 		        DealsPromotionTierDiscountRule::where('id_deals', '=', $id_post)->delete();
 		        DealsPromotionBuyxgetyRule::where('id_deals', '=', $id_post)->delete();
+		        DealsPromotionDiscountBillRule::where('id_deals', '=', $id_post)->delete();
 
 		        DealsPromotionTierDiscountProduct::where('id_deals', '=', $id_post)->delete();
 		        DealsPromotionProductDiscount::where('id_deals', '=', $id_post)->delete();
