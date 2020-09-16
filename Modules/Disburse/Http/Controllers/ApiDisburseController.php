@@ -42,7 +42,7 @@ class ApiDisburseController extends Controller
     public function dashboard(Request $request){
         $post = $request->json()->all();
         $nominal = Disburse::join('disburse_outlet', 'disburse.id_disburse', 'disburse_outlet.id_disburse')->where('disburse.disburse_status', 'Success');
-        $nominal_fail = Disburse::join('disburse_outlet', 'disburse.id_disburse', 'disburse_outlet.id_disburse')->where('disburse.disburse_status', 'Fail');
+        $nominal_fail = Disburse::join('disburse_outlet', 'disburse.id_disburse', 'disburse_outlet.id_disburse')->whereIn('disburse.disburse_status', ['Fail', 'Failed Create Payouts']);
         $income_central = Disburse::join('disburse_outlet', 'disburse.id_disburse', 'disburse_outlet.id_disburse')->where('disburse.disburse_status', 'Success');
         $total_disburse = DisburseOutletTransaction::join('transactions', 'transactions.id_transaction', 'disburse_outlet_transactions.id_transaction')
                             ->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
