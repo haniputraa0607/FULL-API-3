@@ -227,4 +227,9 @@ class Transaction extends Model
     public function disburse_outlet_transaction(){
         return $this->hasOne(\Modules\Disburse\Entities\DisburseOutletTransaction::class, 'id_transaction');
     }
+
+    public function subscription_user_voucher()
+	{
+		return $this->belongsTo(\Modules\Subscription\Entities\SubscriptionUserVoucher::class, 'id_subscription_user_voucher');
+	}
 }
