@@ -978,6 +978,7 @@ class ApiPromoCampaign extends Controller
 	        $dataPromoCampaign['last_updated_by'] = $user['id'];
 	        $dataPromoCampaign['user_type'] = $post['filter_user'];
 	        $dataPromoCampaign['specific_user'] = $post['specific_user']??null;
+	        $dataPromoCampaign['min_basket_size'] = $post['min_basket_size']??null;
 
 	        if ($post['filter_outlet'] == 'All Outlet')
 	        {
@@ -1004,6 +1005,7 @@ class ApiPromoCampaign extends Controller
         	$dataPromoCampaign['deals_promo_id']		= $dataPromoCampaign['deals_promo_id_type'] == 'nominal' ? $post['deals_promo_id_nominal'] : ($post['deals_promo_id_promoid']??null);
         	$dataPromoCampaign['last_updated_by'] 		= auth()->user()->id;
         	$dataPromoCampaign['step_complete']			= 0;
+        	$dataPromoCampaign['min_basket_size'] 		= $post['min_basket_size']??null;
         }
 
 		$image = $table::where($id_table, $id_post)->first();

@@ -299,6 +299,7 @@ class ApiOnlineTransaction extends Controller
         $discount_promo = [];
         $promo_discount = 0;
         $promo_source = null;
+        $promo_valid = false;
 
         if($request->json('promo_code') || $request->json('id_deals_user') || $request->json('id_subscription_user')){
         	// change is used flag to 0
@@ -337,6 +338,7 @@ class ApiOnlineTransaction extends Controller
                 }
 
                 $promo_source = 'promo_code';
+                $promo_valid = true;
                 $promo_discount=$discount_promo['discount'];
             }
             else
@@ -364,6 +366,7 @@ class ApiOnlineTransaction extends Controller
 	            }
 
 	            $promo_source = 'voucher_online';
+	            $promo_valid = true;
 	            $promo_discount=$discount_promo['discount'];
 	        }
 	        else
@@ -588,6 +591,18 @@ class ApiOnlineTransaction extends Controller
             'service'  => $post['service'],
             'discount' => $post['discount'],
         ];
+
+        if ($promo_valid) {
+        	// check minimum subtotal
+        	$check_promo = app($this->promo)->checkMinBasketSize($promo_source, $code??$deals, $post['subtotal']);
+        	if (!$check_promo) {
+				DB::rollback();
+                return [
+                    'status'=>'fail',
+                    'messages'=>['Promo is not valid']
+                ];
+        	}
+        }
 
         // return $detailPayment;
         $post['grandTotal'] = (int)$post['subtotal'] + (int)$post['discount'] + (int)$post['service'] + (int)$post['tax'] + (int)$post['shipping'];
@@ -1919,6 +1934,7 @@ class ApiOnlineTransaction extends Controller
         // check promo code & voucher
         $promo_error=null;
         $promo_source = null;
+        $promo_valid = false;
         if($request->promo_code && !$request->id_subscription_user && !$request->id_deals_user){
         	$code = app($this->promo_campaign)->checkPromoCode($request->promo_code, 1, 1);
 
@@ -1943,6 +1959,9 @@ class ApiOnlineTransaction extends Controller
 						    }
 						    $promo_source = null;
 			            }
+					    else{
+					    	$promo_valid = true;
+					    }
 			            $promo_discount=$discount_promo['discount'];
 		            }
 		            else
@@ -1975,6 +1994,9 @@ class ApiOnlineTransaction extends Controller
 	            	}
 	            	$promo_source = null;
 	            }
+	            else{
+			    	$promo_valid = true;
+			    }
 	            $promo_discount=$discount_promo['discount'];
 	        }
 	        else
@@ -1991,6 +2013,10 @@ class ApiOnlineTransaction extends Controller
         $missing_product = 0;
         // return [$discount_promo['item'],$errors];
         $is_advance = 0;
+
+        $tree_promo = []; 
+        $subtotal_promo = 0;
+
         $global_max_order = Outlet::select('max_order')->where('id_outlet',$post['id_outlet'])->pluck('max_order')->first();
         if($global_max_order == null){
             $global_max_order = Setting::select('value')->where('key','max_order')->pluck('value')->first();
@@ -2089,9 +2115,9 @@ class ApiOnlineTransaction extends Controller
             $product['id_custom'] = $item['id_custom']??null;
             $product['qty'] = $item['qty'];
             $product['note'] = $item['note']??'';
-            $product['promo_discount'] = $item['discount']??0;
+            $product['promo_discount'] = 0;
             isset($item['new_price']) ? $product['new_price']=$item['new_price'] : '';
-            $product['is_promo'] = $item['is_promo']??0;
+            $product['is_promo'] = 0;
             $product['is_free'] = $item['is_free']??0;
             $product['bonus'] = $item['bonus']??0;
             // get modifier
@@ -2162,16 +2188,42 @@ class ApiOnlineTransaction extends Controller
                 );
             }
             if(!isset($tree[$product['id_brand']]['name_brand'])){
-                $tree[$product['id_brand']] = Brand::select('name_brand','id_brand')->find($product['id_brand'])->toArray();
+            	$brand = Brand::select('name_brand','id_brand')->find($product['id_brand'])->toArray();
+            	if (!$product['bonus']) {
+                	$tree[$product['id_brand']] = $brand;
+            	}
+                $tree_promo[$product['id_brand']] = $brand;
             }
             $product['product_price_total'] = ($product['qty'] * ($product['product_price']+$mod_price));
             $product['product_price_raw'] = (int) $product['product_price'];
             $product['product_price_raw_total'] = (int) $product['product_price']+$mod_price;
             $product['product_price'] = MyHelper::requestNumber($product['product_price']+$mod_price, '_CURRENCY');
-            $tree[$product['id_brand']]['products'][]=$product;
-            $subtotal += $product['product_price_total'];
+
+            if (!$product['bonus']) {
+            	$tree[$product['id_brand']]['products'][]=$product;
+            	$subtotal += $product['product_price_total'];
+            }
+
+            $product['is_promo'] 		= $item['is_promo']??0;
+            $product['promo_discount'] 	= $item['discount']??0;
+            $tree_promo[$product['id_brand']]['products'][] = $product;
+            $subtotal_promo += $product['product_price_total'];
+
             // return $product;
         }
+
+        if ($promo_valid) {
+        	$check_promo = app($this->promo)->checkMinBasketSize($promo_source, $code??$deals, $subtotal);
+        	if ($check_promo) {
+        		$tree = $tree_promo;
+        		$subtotal = $subtotal_promo;
+        	}
+        	else{
+        		$promo_discount = 0;
+        		$promo_source = null;
+        	}
+        }
+
         // return $tree;
         if($missing_product){
             $error_msg[] = MyHelper::simpleReplace(
