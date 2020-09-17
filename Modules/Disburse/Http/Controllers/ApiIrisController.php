@@ -789,8 +789,8 @@ class ApiIrisController extends Controller
                 $q->whereNull('disburse_outlet_transactions.id_disburse_outlet');
                 $q->orWhereNull('disburse.disburse_status', '!=', 'Success');
             })
-            ->whereDate('transactions.transaction_date', '>=', $date_start)
-            ->whereDate('transactions.transaction_date', '<=', $date_end)
+            ->where('transactions.transaction_date', '>=', $date_start)
+            ->where('transactions.transaction_date', '<=', $date_end)
             ->select('transactions.*', 'disburse_outlet_transactions.id_disburse_transaction', 'disburse.disburse_status', 'outlets.*')
             ->with(['transaction_multiple_payment', 'vouchers', 'promo_campaign', 'transaction_payment_subscription'])
             ->get()->toArray();
