@@ -5,6 +5,7 @@ namespace Modules\PointInjection\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\Auth;
 
 use App\Http\Models\User;
 use Modules\PointInjection\Entities\PointInjection;
@@ -14,6 +15,7 @@ use Modules\PointInjection\Jobs\UserPointInjection;
 use App\Http\Models\Outlet;
 use App\Http\Models\News;
 use App\Http\Models\OauthAccessToken;
+use App\Http\Models\LogBackendError;
 
 use App\Lib\MyHelper;
 use App\Lib\PushNotificationHelper;
@@ -226,7 +228,6 @@ class ApiPointInjectionController extends Controller
                 'list_user' => 'required'
             ]);
 
-            $post['created_by'] = $user['id'];
         }
 
         foreach ($post as $key => $value) {
@@ -284,7 +285,7 @@ class ApiPointInjectionController extends Controller
                 'total_point'   => $post['duration_day'] * $post['point']
             ];
         }
-        
+
         if (isset($post['point_injection_media'])) {
             foreach ($post['point_injection_media'] as $key => $value) {
                 if ($value == 'Push Notification') {
@@ -344,7 +345,35 @@ class ApiPointInjectionController extends Controller
                 $postMedia['point_injection_push_image'] = $getMasterData['point_injection_push_image'];
             }
             try {
-                PointInjection::where('id_point_injection', $post['id_point_injection'])->update($postPointInjection);
+                PointInjection::where('id_point_injection', $post['id_point_injection'])->updateWithUserstamps($postPointInjection);
+
+                $subject = 'Update Point Injection';
+                $content = '<table id="table-content">';
+                $content .= '<tr>';
+                $content .= '<td colspan="4">Info</td>';
+                $content .= '</tr>';
+                $content .= '<tr>';
+                $content .= '<td>Point Injection Title</td>';
+                $content .= '<td>'.$post['title'].'</td>';
+                $content .= '</tr>';
+                $content .= '<tr>';
+                $content .= '<td>Point Injection Type Send</td>';
+                $content .= '<td>'.$post['send_type'].'</td>';
+                $content .= '</tr>';
+                $content .= '<tr>';
+                $content .= '<td>Date Time to Send</td>';
+                if(isset($post['point_injection_send_at'])){
+                    $content .= '<td>'.$post['point_injection_send_at'].' '.$post['point_injection_send_time'].'</td>';
+                }else{
+                    $content .= '<td>'.$post['point_injection_one_time_send_at'].'</td>';
+                }
+                $content .= '</tr>';
+                $content .= '<tr>';
+                $content .= '<td>Total Point</td>';
+                $content .= '<td>'.number_format($post['total_point']??$post['point']).'</td>';
+                $content .= '</tr>';
+                $content .= '</table>';
+                $send = app($this->autocrm)->sendForwardEmail('Point Injection', $subject, $content);
                 $result = ['status'  => 'success'];
             } catch (\Exception $e) {
                 $result = [
@@ -419,10 +448,37 @@ class ApiPointInjectionController extends Controller
             if (!isset($post['point_injection_push_image'])) {
                 $postMedia['point_injection_push_image'] = null;
             }
-            $postPointInjection['created_by'] = $post['created_by'];
             try {
                 $insertPointInjection = PointInjection::create($postPointInjection);
                 $postPointInjection['id_point_injection'] = $insertPointInjection['id_point_injection'];
+
+                $subject = 'Create Point Injection';
+                $content = '<table id="table-content">';
+                $content .= '<tr>';
+                $content .= '<td colspan="4">Info</td>';
+                $content .= '</tr>';
+                $content .= '<tr>';
+                $content .= '<td>Point Injection Title</td>';
+                $content .= '<td>'.$post['title'].'</td>';
+                $content .= '</tr>';
+                $content .= '<tr>';
+                $content .= '<td>Point Injection Type Send</td>';
+                $content .= '<td>'.$post['send_type'].'</td>';
+                $content .= '</tr>';
+                $content .= '<tr>';
+                $content .= '<td>Date Time to Send</td>';
+                if(isset($post['point_injection_send_at'])){
+                    $content .= '<td>'.$post['point_injection_send_at'].' '.$post['point_injection_send_time'].'</td>';
+                }else{
+                    $content .= '<td>'.$post['point_injection_one_time_send_at'].'</td>';
+                }
+                $content .= '</tr>';
+                $content .= '<tr>';
+                $content .= '<td>Total Point</td>';
+                $content .= '<td>'.number_format($post['total_point']??$post['point']).'</td>';
+                $content .= '</tr>';
+                $content .= '</table>';
+                $send = app($this->autocrm)->sendForwardEmail('Point Injection', $subject, $content);
                 $result = ['status'  => 'success'];
             } catch (\Exception $e) {
                 $result = [
@@ -432,7 +488,7 @@ class ApiPointInjectionController extends Controller
                 DB::rollBack();
                 return response()->json($result);
             }
-            
+
             if ($post['list_user'] == 'Upload CSV' || $post['list_user'] == "Filter Phone") {
                 $request->validate([
                     'phone_number'  => 'required'
@@ -444,21 +500,31 @@ class ApiPointInjectionController extends Controller
                     if (count($value) < 1) {
                         unset($userData[$key]);
                     } else {
-                        $userData[$key] = ['id_point_injection' => $postPointInjection['id_point_injection'], 'id_user' => $value[0]['id'], 'created_at' => date('Y-m-d H:i:s'), 'updated_at' => date('Y-m-d H:i:s')];
+                        $userData[$key] = [
+                        	'id_point_injection' => $postPointInjection['id_point_injection'], 
+                        	'id_user' => $value[0]['id'], 
+                        	'created_at' => date('Y-m-d H:i:s'), 
+                        	'updated_at' => date('Y-m-d H:i:s')
+                        ];
                     }
                 }
             } elseif ($post['list_user'] == 'Filter User') {
                 $users = app($this->user)->UserFilter($post['conditions']);
                 if ($users['status'] == 'success') {
                     foreach ($users['result'] as $key => $value) {
-                        $userData[$key] = ['id_point_injection' => $postPointInjection['id_point_injection'], 'id_user' => $value['id'], 'created_at' => date('Y-m-d H:i:s'), 'updated_at' => date('Y-m-d H:i:s')];
+                        $userData[$key] = [
+                        	'id_point_injection' => $postPointInjection['id_point_injection'], 
+                        	'id_user' => $value['id'], 
+                        	'created_at' => date('Y-m-d H:i:s'), 
+                        	'updated_at' => date('Y-m-d H:i:s')
+                        ];
                     }
                 }
                 $postRules = MyHelper::insertCondition('point_injection', $postPointInjection['id_point_injection'], $post['conditions']);
                 $result = ['point_injection_rules' => $postRules['data']];
                 $postPointInjection = array_merge($postPointInjection, $result);
             }
-            
+
             if (!isset($userData) || $userData == null) {
                 $result = [
                     'status'  => 'fail',
@@ -574,22 +640,23 @@ class ApiPointInjectionController extends Controller
      */
     public function getPointInjection()
     {
-        $log = MyHelper::logCron('Get Point Injection');
-        try {
+        $log = MyHelper::logCron('Point Injection');
+        try{
             $dateNow = date('Y-m-d H:00:00');
-
+            $arrTmp = [];
+            $countSuccess = 0;
+            $countFail = 0;
             $pointInjection = PivotPointInjection::where('send_time', '<=', $dateNow)
                 ->get()->toArray();
-            
+
             if ($pointInjection == null) {
                 $result = [
                     'status'  => 'fail',
                     'message'  => ['No data']
                 ];
-                $log->success('No data');
+                $log->success(['No data']);
                 return response()->json($result);
             }
-
             foreach ($pointInjection as $valueUser) {
                 //add to table report first
                 $createReport = [
@@ -603,11 +670,50 @@ class ApiPointInjectionController extends Controller
                 PointInjectionReport::insert($createReport);
 
                 DB::beginTransaction();
+                $insertDataLogCash = app($this->balance)->addLogBalance($valueUser['id_user'], $valueUser['point'], $valueUser['id_point_injection'], 'Point Injection', 0);
 
-                $insertPoint = app($this->balance)->addLogBalance($valueUser['id_user'], $valueUser['point'], $valueUser['id_point_injection'], 'Point Injection', 0);
+                if($insertDataLogCash == false){
+                    DB::rollback();
+                    $countFail++;
+                    continue;
+                }
 
-                $insertDataLogCash[] = $insertPoint;
-                $addTotalPoint[] = PointInjectionUser::where('id_user', $valueUser['id_user'])->where('id_point_injection', $valueUser['id_point_injection'])->increment('total_point', $valueUser['point']);
+                $addTotalPoint = PointInjectionUser::where('id_user', $valueUser['id_user'])->where('id_point_injection', $valueUser['id_point_injection'])->increment('total_point', $valueUser['point']);
+                if(!$addTotalPoint){
+                    DB::rollback();
+                    $countFail++;
+                    continue;
+                }
+
+                $check = array_search($valueUser['id_point_injection'], array_column($arrTmp, 'id_point_injection'));
+                if($check === false){
+                    $getInfo = PointInjection::where('id_point_injection', $valueUser['id_point_injection'])->first();
+                    $arrTmp[] = [
+                        'id_point_injection' => $valueUser['id_point_injection'],
+                        'title' => $getInfo['title'],
+                        'send_type' => $getInfo['send_type'],
+                        'send_time' => date('d M Y', strtotime($getInfo['start_date'])).' '.date('H:i', strtotime($getInfo['send_time'])),
+                        'total_point' => $getInfo['total_point'],
+                        'users_count' => 1
+                    ];
+                }else{
+                    $arrTmp[$check]['users_count'] = $arrTmp[$check]['users_count'] + 1;
+                }
+                //update status report to success
+                PointInjectionReport::where('id_user', $valueUser['id_user'])->where('id_point_injection', $valueUser['id_point_injection'])
+                    ->update(['status' => 'Success']);
+
+                $delPointInjection = PivotPointInjection::where('id', $valueUser['id'])->delete();
+
+                if(!$delPointInjection){
+                    DB::rollback();
+                    $countFail++;
+                    continue;
+                }
+
+                DB::commit();
+                $countSuccess++;
+
                 if ($valueUser['point_injection_media_push'] == 1) {
                     $dataOptional          = [];
                     $image = null;
@@ -642,7 +748,7 @@ class ApiPointInjectionController extends Controller
                         if ($news) {
                             $dataOptional['news_title'] = $news->news_title;
                         }
-                        $dataOptional['url'] = config('url.app_url') . 'news/webview/' . $valueUser['point_injection_push_id_reference'];
+                        $dataOptional['url'] = env('APP_URL') . 'news/webview/' . $valueUser['point_injection_push_id_reference'];
                     }
 
                     if ($valueUser['point_injection_push_clickto'] == 'Order' && $valueUser['point_injection_push_id_reference'] != null) {
@@ -673,21 +779,51 @@ class ApiPointInjectionController extends Controller
                         }
                     }
                 }
-
-                if($insertPoint != false){
-                    //update status report to success
-                    PointInjectionReport::where('id_user', $valueUser['id_user'])->where('id_point_injection', $valueUser['id_point_injection'])
-                        ->update(['status' => 'Success']);
-                }
             }
 
-            $pointInjection = PivotPointInjection::where('send_time', '<=', $dateNow)->delete();
+            //proccess send email to admin
+            foreach ($arrTmp as $val){
+                $subject = 'Send Point Injection To User';
+                $content = '<table id="table-content">';
+                $content .= '<tr>';
+                $content .= '<td colspan="4">Info</td>';
+                $content .= '</tr>';
+                $content .= '<tr>';
+                $content .= '<td>Point Injection Title</td>';
+                $content .= '<td>'.$val['title'].'</td>';
+                $content .= '</tr>';
+                $content .= '<tr>';
+                $content .= '<td>Point Injection Type Send</td>';
+                $content .= '<td>'.$val['send_type'].'</td>';
+                $content .= '</tr>';
+                $content .= '<tr>';
+                $content .= '<td>Date Time to Send</td>';
+                $content .= '<td>'.$val['send_time'].'</td>';
+                $content .= '</tr>';
+                $content .= '<tr>';
+                $content .= '<td>Total Point</td>';
+                $content .= '<td>'.number_format($val['total_point']).'</td>';
+                $content .= '</tr>';
+                $content .= '<tr>';
+                $content .= '<td>Count User to Send</td>';
+                $content .= '<td>'.number_format($val['users_count']).'</td>';
+                $content .= '</tr>';
+                $content .= '</table>';
+                $send = app($this->autocrm)->sendForwardEmail('Point Injection', $subject, $content);
+            }
 
-            DB::commit();
-            $log->success($insertDataLogCash);
-            return response()->json($insertDataLogCash);
+            $log->success([
+                'success' => $countSuccess,
+                'fail'    => $countFail
+            ]);
+            return response()->json([
+                'success' => $countSuccess,
+                'fail'    => $countFail
+            ]);
         } catch (\Exception $e) {
+            DB::rollBack();
             $log->fail($e->getMessage());
+            LogBackendError::logExceptionMessage("ApiPointInjection=>" . $e->getMessage(), $e);
         }
     }
 
