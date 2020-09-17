@@ -2,6 +2,9 @@
 
 namespace App\Lib;
 
+use GuzzleHttp\Client;
+use Modules\Disburse\Entities\LogIRIS;
+
 class classMaskingJson {
 	protected $data;
 	protected $smsserverip;
@@ -100,4 +103,59 @@ class classMaskingJson {
 		}
 		return $hasil;
 	}
+
+    public function sendSMS() {
+	    if(env('SMS_OTP_TYPE') == 'MISSCALL'){
+            ob_start();
+
+            $phone = null;
+            if(isset($this->data['datapacket'][0]['number'])){
+                if(substr($this->data['datapacket'][0]['number'], 0, 2) == '62'){
+                    $phone = '0'.substr($this->data['datapacket'][0]['number'],2);
+                }else{
+                    $phone = $this->data['datapacket'][0]['number'];
+                }
+            }
+
+            // setting
+            $urlendpoint = 'http://sms114.xyz/sms/api_misscall_otp_send_json.php'; // url endpoint api
+            $apikey      = env('SMS114_API_KEY'); // api key
+            $callbackurl = env('SMS141_URL_CALLBACK'); // url callback get status sms
+            $number      = $phone; // destinationnumber
+            $message     = $this->data['datapacket'][0]['otp']; // misscall number code otp
+
+            // sending
+            $senddata = array(
+                'apikey' => $apikey,
+                'callbackurl' => $callbackurl,
+                'number' => $number,
+                'message' => $message
+            );
+
+            // sending
+            $data=json_encode($senddata);
+            $curlHandle = curl_init($urlendpoint);
+            curl_setopt($curlHandle, CURLOPT_CUSTOMREQUEST, "POST");
+            curl_setopt($curlHandle, CURLOPT_POSTFIELDS, $data);
+            curl_setopt($curlHandle, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($curlHandle, CURLOPT_HTTPHEADER, array(
+                    'Content-Type: application/json',
+                    'Content-Length: ' . strlen($data))
+            );
+            curl_setopt($curlHandle, CURLOPT_TIMEOUT, 30);
+            curl_setopt($curlHandle, CURLOPT_CONNECTTIMEOUT, 30);
+            $respon = curl_exec($curlHandle);
+            curl_close($curlHandle);
+            header('Content-Type: application/json');
+
+            $log=[
+                'request_body'=>$this->data,
+                'request_url'=>$urlendpoint,
+                'response'=>$respon,
+                'phone'=>$phone
+            ];
+            MyHelper::logApiSMS($log);
+            return $respon;
+        }
+    }
 }
