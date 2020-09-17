@@ -544,7 +544,7 @@ class ApiIrisController extends Controller
 
             $charged = NULL;
 
-            if(!empty($data['transaction_multiple_payment'])){
+            if(!empty($data['transaction_multiple_payment']) || !empty($data['transaction_payment_subscription'])){
 
                 // ===== Calculate Fee Subscription ====== //
                 $totalChargedSubcriptionOutlet = 0;
@@ -781,7 +781,7 @@ class ApiIrisController extends Controller
         $date_start = $post['date_start'];
         $date_end = $post['date_end'];
 
-        $datas = Transaction::join('disburse_outlet_transactions', 'disburse_outlet_transactions.id_transaction', 'transactions.id_transaction')
+        $datas = Transaction::leftJoin('disburse_outlet_transactions', 'disburse_outlet_transactions.id_transaction', 'transactions.id_transaction')
             ->leftJoin('disburse_outlet', 'disburse_outlet.id_disburse_outlet', 'disburse_outlet_transactions.id_disburse_outlet')
             ->leftJoin('disburse', 'disburse.id_disburse', 'disburse_outlet.id_disburse')
             ->join('outlets', 'outlets.id_outlet', 'transactions.id_outlet')
@@ -825,8 +825,7 @@ class ApiIrisController extends Controller
 
                 $charged = NULL;
 
-                if(!empty($data['transaction_multiple_payment'])){
-
+                if(!empty($data['transaction_multiple_payment']) || !empty($data['transaction_payment_subscription'])){
                     // ===== Calculate Fee Subscription ====== //
                     $totalChargedSubcriptionOutlet = 0;
                     $totalChargedSubcriptionCentral = 0;
@@ -1030,7 +1029,12 @@ class ApiIrisController extends Controller
                         'charged_subscription_outlet' => $feeSubcriptionOutlet,
                         'updated_at' => date('Y-m-d H:i:s')
                     ];
-                    $insert = DisburseOutletTransaction::where('id_disburse_transaction', $data['id_disburse_transaction'])->update($dataInsert);
+
+                    if(!empty($data['id_disburse_transaction'])){
+                        $insert = DisburseOutletTransaction::where('id_disburse_transaction', $data['id_disburse_transaction'])->update($dataInsert);
+                    }else{
+                        $insert = DisburseOutletTransaction::create($dataInsert);
+                    }
 
                 }
             }
