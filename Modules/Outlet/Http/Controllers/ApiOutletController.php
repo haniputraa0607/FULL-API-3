@@ -2300,10 +2300,7 @@ class ApiOutletController extends Controller
                     return response()->json(['status' => 'fail']);
                 }
             }else{
-                $new = OutletSchedule::create([
-                    'id_outlet' => $post['id_outlet'],
-                    'day' => $value['day']
-                ]+$value);
+                $new = OutletSchedule::create($data);
                 if (!$new) {
                     DB::rollBack();
                     return response()->json(['status' => 'fail']);
