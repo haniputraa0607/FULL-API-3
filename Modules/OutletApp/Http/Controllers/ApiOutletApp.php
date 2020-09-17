@@ -291,6 +291,7 @@ class ApiOutletApp extends Controller
         $list = Transaction::join('transaction_pickups', 'transactions.id_transaction', 'transaction_pickups.id_transaction')
             ->where('order_id', $post['order_id'])
             ->whereDate('transaction_date', date('Y-m-d'))
+            ->where('transactions.id_outlet', $request->user()->id_outlet)
             ->with('user.city.province', 'productTransaction.product.product_category', 'productTransaction.product.product_discounts', 'outlet')->first();
 
         $qr = $list['order_id'];
@@ -2550,7 +2551,9 @@ class ApiOutletApp extends Controller
             'promo_campaign_promo_code.promo_campaign',
             'transaction_payment_subscription.subscription_user_voucher.subscription_user.subscription',
             'transaction_pickup_go_send',
-            'outlet.city')->first();
+            'outlet.city')
+            ->where('transactions.id_outlet', $request->user()->id_outlet)
+            ->first();
         if (!$list) {
             return MyHelper::checkGet([], 'empty');
         }
