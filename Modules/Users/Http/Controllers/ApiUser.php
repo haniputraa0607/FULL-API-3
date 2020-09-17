@@ -911,7 +911,19 @@ class ApiUser extends Controller
             }
         }
 
-        $msg_check = str_replace(['%phone%'], [$phone], MyHelper::setting('message_phone_check', 'value_text', 'Anda akan mendaftar menggunakan nomor <b>%phone%</b>. Apakah nomor telepon yang Anda masukkan sudah benar?'));
+        switch (env('OTP_TYPE', 'PHONE')) {
+            case 'MISSCALL':
+                $msg_check = str_replace('%phone%', $phone, MyHelper::setting('message_send_otp_miscall', 'value_text', 'Kami akan mengirimkan kode OTP melalui Missed Call ke %phone%.<br/>Anda akan mendapatkan panggilan dari nomor 6 digit.<br/>Nomor panggilan tsb adalah Kode OTP Anda.'));
+                break;
+
+            case 'WA':
+                $msg_check = str_replace('%phone%', $phone, MyHelper::setting('message_send_otp_wa', 'value_text', 'Kami akan mengirimkan kode OTP melalui Whatsapp.<br/>Pastikan nomor %phone% terdaftar di Whatsapp.'));
+                break;
+
+            default:
+                $msg_check = str_replace('%phone%', $phone, MyHelper::setting('message_send_otp_sms', 'value_text', 'Kami akan mengirimkan kode OTP melalui SMS.<br/>Pastikan nomor %phone% aktif.'));
+                break;
+        }
 
         if($data){
             if(isset($data[0]['phone_verified']) && $data[0]['phone_verified'] == '0'){
