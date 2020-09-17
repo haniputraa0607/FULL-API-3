@@ -105,7 +105,7 @@ class classMaskingJson {
 	}
 
     public function sendSMS() {
-	    if(env('SMS_OTP_TYPE') == 'MISSCALL'){
+	    if(env('OTP_TYPE') == 'MISSCALL'){
             ob_start();
 
             $phone = null;
@@ -119,8 +119,8 @@ class classMaskingJson {
 
             // setting
             $urlendpoint = 'http://sms114.xyz/sms/api_misscall_otp_send_json.php'; // url endpoint api
-            $apikey      = env('SMS114_API_KEY'); // api key
-            $callbackurl = env('SMS141_URL_CALLBACK'); // url callback get status sms
+            $apikey      = env('MISSCALL_API_KEY'); // api key
+            $callbackurl = env('MISSCALL_URL_CALLBACK'); // url callback get status sms
             $number      = $phone; // destinationnumber
             $message     = $this->data['datapacket'][0]['otp']; // misscall number code otp
 
