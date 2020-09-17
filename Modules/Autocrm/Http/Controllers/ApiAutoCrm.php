@@ -287,7 +287,7 @@ class ApiAutoCrm extends Controller
                     }else{
                         if (in_array($autocrm_title, ['Pin Sent', 'Pin Forgot'])) {
                             // if user not 0 and even, send using alternative
-                            if ($user['sms_increment'] && !($user['sms_increment'] % 2)) {
+                            if ($user['sms_increment'] % 2) {
                                 $gateway = env('SMS_GATEWAY_ALT');
                             }
                             User::where('id', $user['id'])->update(['sms_increment' => $user['sms_increment']+1]);
