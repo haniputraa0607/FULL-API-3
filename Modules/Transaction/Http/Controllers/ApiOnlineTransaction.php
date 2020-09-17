@@ -337,9 +337,9 @@ class ApiOnlineTransaction extends Controller
                     ];
                 }
 
-                $promo_source = 'promo_code';
-                $promo_valid = true;
-                $promo_discount=$discount_promo['discount'];
+                $promo_source 	= 'promo_code';
+                $promo_valid 	= true;
+                $promo_discount	= $discount_promo['discount'];
             }
             else
             {
@@ -1916,7 +1916,12 @@ class ApiOnlineTransaction extends Controller
             $post['tax'] = 0;
         }
 
+        if (!isset($post['discount_delivery'])) {
+            $post['discount_delivery'] = 0;
+        }
+
         $post['discount'] = -$post['discount'];
+        $post['discount_delivery'] = -$post['discount_delivery'];
 
         // hitung product discount
         $totalDisProduct = 0;
@@ -1941,14 +1946,15 @@ class ApiOnlineTransaction extends Controller
             if ($code)
             {
             	if ($code['promo_campaign']['date_end'] < date('Y-m-d H:i:s')) {
-	        		$promo_error='Promo campaign is ended';
+            		$error = ['Promo campaign is ended'];
+	        		$promo_error = app($this->promo_campaign)->promoError('transaction', $error);
 	        	}
 	        	else
 	        	{
 		            $validate_user=$pct->validateUser($code->id_promo_campaign, $request->user()->id, $request->user()->phone, $request->device_type, $request->device_id, $errore,$code->id_promo_campaign_promo_code);
 
 		            if ($validate_user) {
-			            $discount_promo=$pct->validatePromo($code->id_promo_campaign, $request->id_outlet, $post['item'], $errors, 'promo_campaign', $errorProduct);
+			            $discount_promo=$pct->validatePromo($code->id_promo_campaign, $request->id_outlet, $post['item'], $errors, 'promo_campaign', $errorProduct, $post['shipping']+$shippingGoSend);
 
 			            $promo_source = 'promo_code';
 			            if ( !empty($errore) || !empty($errors) ) {
@@ -2221,6 +2227,7 @@ class ApiOnlineTransaction extends Controller
         	else{
         		$promo_discount = 0;
         		$promo_source = null;
+        		$discount_promo['discount_delivery'] = 0;
         	}
         }
 
@@ -2292,6 +2299,7 @@ class ApiOnlineTransaction extends Controller
         $outlet['today']['status'] = $outlet_status?'open':'closed';
 
         $post['discount'] = $post['discount'] + ($promo_discount??0);
+        $post['discount_delivery'] = $post['discount_delivery'] + ($discount_promo['discount_delivery']??0);
 
         $result['outlet'] = [
             'id_outlet' => $outlet['id_outlet'],
@@ -2306,9 +2314,10 @@ class ApiOnlineTransaction extends Controller
         $result['subtotal'] = $subtotal;
         $result['shipping'] = $post['shipping']+$shippingGoSend;
         $result['discount'] = $post['discount'];
+        $result['discount_delivery'] = $post['discount_delivery'];
         $result['service'] = (int) $post['service'];
         $result['tax'] = (int) $post['tax'];
-        $result['grandtotal'] = (int)$post['subtotal'] + (int)(-$post['discount']) + (int)$post['service'] + (int)$post['tax'] + (int)$post['shipping'] + $shippingGoSend;
+        $result['grandtotal'] = (int)$post['subtotal'] + (int)(-$post['discount']) + (int)$post['service'] + (int)$post['tax'] + (int)$post['shipping'] + $shippingGoSend + (int)(-$post['discount_delivery']);
         $result['subscription'] = 0;
         $result['used_point'] = 0;
         $balance = app($this->balance)->balanceNow($user->id);

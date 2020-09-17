@@ -2017,6 +2017,7 @@ class ApiPromoCampaign extends Controller
         $ip 			= $request->ip();
     	$pct 			= new PromoCampaignTools();
 
+    	// get data
         if ($request->promo_code && !$request->id_deals_user && !$request->id_subscription_user) 
         {
 	        /* Check promo code*/
@@ -2222,6 +2223,7 @@ class ApiPromoCampaign extends Controller
 		$result['id_subscription_user']	= $request->id_subscription_user;
 
 		$result = MyHelper::checkGet($result);
+
 		// check item
 		if (!empty($request->item)) {
         	$bearer = $request->header('Authorization');
@@ -2251,6 +2253,7 @@ class ApiPromoCampaign extends Controller
 	        $result['promo_error'] = $trx['promo_error'];
         }
 
+        // save used promo
         if ($source == 'deals') 
         {
         	$change_used_voucher = app($this->promo)->usePromo($source, $request->id_deals_user);
