@@ -1292,6 +1292,11 @@ class ApiUser extends Controller
                             }
                         }
                     }
+                }else{
+                    return response()->json([
+                        'status' => 'fail',
+                        'messages' => ['Gagal Masuk']
+                    ]);
                 }
 
                 if (\Module::collections()->has('Autocrm')) {
@@ -1693,6 +1698,11 @@ class ApiUser extends Controller
                                 }
                             }
                         }
+                    }else{
+                        return response()->json([
+                            'status' => 'fail',
+                            'messages' => ['Gagal Mendaftar']
+                        ]);
                     }
 
                     $update = User::where('id', '=', $data[0]['id'])->update(['phone_verified' => '1', 'otp_valid_time' => NULL]);
