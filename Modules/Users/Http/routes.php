@@ -26,6 +26,7 @@ Route::group(['prefix' => 'api', 'middleware' => ['log_activities', 'user_agent'
     Route::group(['middleware' => ['auth_client','log_activities', 'user_agent', 'scopes:be'], 'prefix' => 'users', 'namespace' => 'Modules\Users\Http\Controllers'], function()
     {
         Route::post('pin/check-backend', 'ApiUser@checkPinBackend');
+        Route::post('remove-user-device', 'ApiUser@removeUserDevice');
     });
     Route::group(['middleware' => ['auth:api', 'user_agent', 'scopes:apps'], 'prefix' => 'home', 'namespace' => 'Modules\Users\Http\Controllers'], function()
     {
