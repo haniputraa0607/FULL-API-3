@@ -3432,4 +3432,17 @@ class ApiUser extends Controller
             return view('users::verify_email', $data);
         }
     }
+
+    public function removeUserDevice(Request $request)
+    {
+    	$post = $request->json()->all();
+    	$get_user = User::where('phone',$request->phone)->first();
+
+    	$del = UserDevice::Where('id_user', $get_user->id)->delete();
+    	$del = UsersDeviceLogin::Where('id_user', $get_user->id)->delete();
+
+
+    	return ['status' => 'success'];
+    	// return MyHelper::checkDelete($del);
+    }
 }
