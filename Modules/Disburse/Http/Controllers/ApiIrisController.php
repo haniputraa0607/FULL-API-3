@@ -1032,14 +1032,11 @@ class ApiIrisController extends Controller
                     ];
                     $insert = DisburseOutletTransaction::where('id_disburse_transaction', $data['id_disburse_transaction'])->update($dataInsert);
 
-                    return $insert;
-                }else{
-                    return false;
                 }
             }
-        }else{
-            return false;
         }
+
+        return 'success';
     }
 
     public function getHoliday(){
