@@ -1445,6 +1445,11 @@ class ApiUser extends Controller
 
                 if (\Module::collections()->has('Autocrm')) {
                     $autocrm = app($this->autocrm)->SendAutoCRM(
+                        'Pin Create',
+                        $phone,
+                        []
+                    );
+                    $autocrm = app($this->autocrm)->SendAutoCRM(
                         'Pin Sent',
                         $phone,
                         [
