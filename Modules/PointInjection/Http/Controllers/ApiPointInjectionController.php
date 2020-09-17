@@ -228,7 +228,6 @@ class ApiPointInjectionController extends Controller
                 'list_user' => 'required'
             ]);
 
-            $post['created_by'] = $user['id'];
         }
 
         foreach ($post as $key => $value) {
@@ -449,7 +448,6 @@ class ApiPointInjectionController extends Controller
             if (!isset($post['point_injection_push_image'])) {
                 $postMedia['point_injection_push_image'] = null;
             }
-            $postPointInjection['created_by'] = $post['created_by'];
             try {
                 $insertPointInjection = PointInjection::create($postPointInjection);
                 $postPointInjection['id_point_injection'] = $insertPointInjection['id_point_injection'];
@@ -506,9 +504,7 @@ class ApiPointInjectionController extends Controller
                         	'id_point_injection' => $postPointInjection['id_point_injection'], 
                         	'id_user' => $value[0]['id'], 
                         	'created_at' => date('Y-m-d H:i:s'), 
-                        	'updated_at' => date('Y-m-d H:i:s'),
-				            'created_by' => Auth::id(),
-				            'updated_by' => Auth::id()
+                        	'updated_at' => date('Y-m-d H:i:s')
                         ];
                     }
                 }
@@ -520,9 +516,7 @@ class ApiPointInjectionController extends Controller
                         	'id_point_injection' => $postPointInjection['id_point_injection'], 
                         	'id_user' => $value['id'], 
                         	'created_at' => date('Y-m-d H:i:s'), 
-                        	'updated_at' => date('Y-m-d H:i:s'),
-				            'created_by' => Auth::id(),
-				            'updated_by' => Auth::id()
+                        	'updated_at' => date('Y-m-d H:i:s')
                         ];
                     }
                 }
