@@ -15,6 +15,7 @@ use Illuminate\Http\Request;
 Route::group(['prefix' => 'disburse'], function () {
 
     Route::group(['middleware' => ['auth:api', 'user_agent', 'scopes:be']], function () {
+        Route::any('sycnFeeTransaction', 'ApiIrisController@sycnFeeTransaction');
         Route::any('dashboard', 'ApiDisburseController@dashboard');
         Route::any('outlets', 'ApiDisburseController@getOutlets');
         Route::any('user-franchise', 'ApiDisburseController@userFranchise');
