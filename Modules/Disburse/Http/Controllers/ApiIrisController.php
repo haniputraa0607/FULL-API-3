@@ -794,7 +794,7 @@ class ApiIrisController extends Controller
             ->select('transactions.*', 'disburse_outlet_transactions.id_disburse_transaction', 'disburse.disburse_status', 'outlets.*')
             ->with(['transaction_multiple_payment', 'vouchers', 'promo_campaign', 'transaction_payment_subscription'])
             ->get()->toArray();
-       
+
         if(!empty($datas)){
             foreach ($datas as $data){
                 $settingGlobalFee = Setting::where('key', 'global_setting_fee')->first()->value_text;
