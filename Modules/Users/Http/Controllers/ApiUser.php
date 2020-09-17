@@ -1052,21 +1052,20 @@ class ApiUser extends Controller
                 ]);
             }
 
-            switch (env('SMS_OTP_TYPE', 'PHONE')) {
+            switch (env('OTP_TYPE', 'PHONE')) {
                 case 'MISSCALL':
-                    $otp_type = 'misscall';
+                    $msg_otp = str_replace('%phone%', $create->phone, MyHelper::setting('message_send_otp_miscall', 'value_text', 'Kami akan mengirimkan kode OTP melalui Missed Call ke %phone%.<br/>Anda akan mendapatkan panggilan dari nomor 6 digit.<br/>Nomor panggilan tsb adalah Kode OTP Anda.'));
                     break;
 
                 case 'WA':
-                    $otp_type = 'Whatsapp';
+                    $msg_otp = str_replace('%phone%', $create->phone, MyHelper::setting('message_send_otp_wa', 'value_text', 'Kami akan mengirimkan kode OTP melalui Whatsapp.<br/>Pastikan nomor %phone% terdaftar di Whatsapp.'));
                     break;
 
                 default:
-                    $otp_type = 'sms';
+                    $msg_otp = str_replace('%phone%', $create->phone, MyHelper::setting('message_send_otp_sms', 'value_text', 'Kami akan mengirimkan kode OTP melalui SMS.<br/>Pastikan nomor %phone% aktif.'));
                     break;
             }
 
-            $msg_otp = str_replace(['%type%', '%phone%'], [$otp_type, $create->phone], MyHelper::setting('message_send_otp', 'value_text', 'Kami akan mengirimkan kode OTP melalui %type%, Anda akan mendapatkan panggilan dari nomor 6 digit.<br/>Nomor panggilan tsb adalah Kode OTP Anda'));
 
             if (env('APP_ENV') == 'production') {
                 $result = [
