@@ -50,6 +50,7 @@ use Modules\PromoCampaign\Entities\PromoCampaignReferralTransaction;
 use Modules\PromoCampaign\Entities\UserReferralCode;
 use Modules\PromoCampaign\Entities\UserPromo;
 use Modules\Subscription\Entities\TransactionPaymentSubscription;
+use Modules\Subscription\Entities\SubscriptionUser;
 use Modules\Subscription\Entities\SubscriptionUserVoucher;
 use Modules\PromoCampaign\Entities\PromoCampaignReport;
 
@@ -243,6 +244,19 @@ class ApiOnlineTransaction extends Controller
             ]);
         }
 
+        //check validation email
+        if(isset($user['email'])){
+            $domain = substr($user['email'], strpos($user['email'], "@") + 1);
+            if(!filter_var($user['email'], FILTER_VALIDATE_EMAIL) ||
+                checkdnsrr($domain, 'MX') === false){
+                DB::rollback();
+                return response()->json([
+                    'status'    => 'fail',
+                    'messages'  => ['Alamat email anda tidak valid, silahkan gunakan alamat email yang valid.']
+                ]);
+            }
+        }
+
         $config_fraud_use_queue = Configs::where('config_name', 'fraud use queue')->first()->is_active;
 
         if (count($user['memberships']) > 0) {
@@ -287,7 +301,10 @@ class ApiOnlineTransaction extends Controller
         $promo_source = null;
 
         if($request->json('promo_code') || $request->json('id_deals_user') || $request->json('id_subscription_user')){
-        	$removePromo = UserPromo::where('id_user',$request->user()->id)->delete();
+        	// change is used flag to 0
+			$update_deals 	= DealsUser::where('id_user','=',$request->user()->id)->where('is_used','=',1)->update(['is_used' => 0]);
+			$update_subs 	= SubscriptionUser::where('id_user','=',$request->user()->id)->where('is_used','=',1)->update(['is_used' => 0]);
+        	$removePromo 	= UserPromo::where('id_user',$request->user()->id)->delete();
         }
 
         if($request->json('promo_code') && !$request->json('id_deals_user')){
@@ -730,6 +747,12 @@ class ApiOnlineTransaction extends Controller
             'distance_customer'           => $distance,
             'void_date'                   => null,
         ];
+
+        if($request->user()->complete_profile == 1){
+            $transaction['calculate_achievement'] = 'not yet';
+        }else{
+            $transaction['calculate_achievement'] = 'no';
+        }
 
         if($transaction['transaction_grandtotal'] == 0){
             $transaction['transaction_payment_status'] = 'Completed';
@@ -1347,13 +1370,17 @@ class ApiOnlineTransaction extends Controller
             }
             //insert pickup go-send
             if($post['type'] == 'GO-SEND'){
+                if (!($post['destination']['short_address']??false)) {
+                    $post['destination']['short_address'] = $post['destination']['address'];
+                }
+
                 $dataGoSend['id_transaction_pickup'] = $insertPickup['id_transaction_pickup'];
                 $dataGoSend['origin_name']           = $outlet['outlet_name'];
                 $dataGoSend['origin_phone']          = $outlet['outlet_phone'];
                 $dataGoSend['origin_address']        = $outlet['outlet_address'];
                 $dataGoSend['origin_latitude']       = $outlet['outlet_latitude'];
                 $dataGoSend['origin_longitude']      = $outlet['outlet_longitude'];
-                $dataGoSend['origin_note']           = "NOTE: mohon hubungi penerima terlebih dahulu untuk informasi \nPickup Code $order_id";
+                $dataGoSend['origin_note']           = "NOTE: bila ada pertanyaan, mohon hubungi penerima terlebih dahulu untuk informasi. \nPickup Code $order_id";
                 $dataGoSend['destination_name']      = $user['name'];
                 $dataGoSend['destination_phone']     = $user['phone'];
                 $dataGoSend['destination_address']   = $post['destination']['address'];
@@ -1673,6 +1700,8 @@ class ApiOnlineTransaction extends Controller
         DisburseJob::dispatch(['id_transaction' => $insertTransaction['id_transaction']])->onConnection('disbursequeue');
 
         $insertTransaction['cancel_message'] = 'Are you sure you want to cancel this transaction?';
+        $insertTransaction['timer_shopeepay'] = (int) MyHelper::setting('shopeepay_validity_period','value', 300);
+        $insertTransaction['message_timeout_shopeepay'] = "Sorry, your payment has expired";
         return response()->json([
             'status'   => 'success',
             'redirect' => true,

@@ -10,6 +10,7 @@ use App\Http\Models\Outlet;
 use App\Http\Models\OutletDoctor;
 use App\Http\Models\OutletDoctorSchedule;
 use App\Http\Models\OutletHoliday;
+use App\Http\Models\UserOutletApp;
 use App\Http\Models\Holiday;
 use App\Http\Models\DateHoliday;
 use App\Http\Models\OutletPhoto;
@@ -476,6 +477,39 @@ class ApiOutletController extends Controller
         
         return response()->json(MyHelper::checkUpdate($outlet));
     }
+
+    function listOutletProductDetail(OutletList $request) {
+        $post = $request->json()->all();
+
+        $outlet = Outlet::with(['user_outlets','city','today', 'outlet_schedules'])->select('*');
+        if(isset($post['id_product'])){
+            $outlet = $outlet->with(['product_detail'=> function($q) use ($post){
+                $q->where('id_product', $post['id_product']);
+            }]);
+        }else{
+            $outlet = $outlet->with(['product_detail']);
+        }
+
+        $outlet = $outlet->paginate(20);
+        return response()->json(MyHelper::checkGet($outlet));
+    }
+
+    function listOutletProductSpecialPrice(OutletList $request) {
+        $post = $request->json()->all();
+
+        $outlet = Outlet::with(['user_outlets','city','today', 'outlet_schedules'])
+            ->where('outlet_different_price', 1)
+            ->select('*');
+        if(isset($post['id_product'])){
+            $outlet = $outlet->with(['product_special_price'=> function($q) use ($post){
+                        $q->where('id_product', $post['id_product']);
+                    }]);
+        }else{
+            $outlet = $outlet->with(['product_special_price']);
+        }
+
+        return response()->json(MyHelper::checkGet($outlet->paginate(20)));
+    }
     /**
      * list
      */
@@ -728,7 +762,10 @@ class ApiOutletController extends Controller
         // outlet
         $outlet = Outlet::select('outlets.id_outlet','outlets.outlet_name','outlets.outlet_phone','outlets.outlet_code','outlets.outlet_status','outlets.outlet_address','outlets.id_city','outlet_latitude','outlet_longitude')->with(['today','brands'=>function($query){$query->select('brands.id_brand','name_brand','logo_brand');}])->where('outlet_status', 'Active')->whereNotNull('id_city')->orderBy('outlet_name','asc');
         if($request->json('search') && $request->json('search') != ""){
-            $outlet = $outlet->where('outlet_name', 'LIKE', '%'.$request->json('search').'%');
+            $outlet = $outlet->where(function($query) use ($request) {
+                $query->where('outlet_name', 'LIKE', '%'.$request->json('search').'%')
+                    ->orWhere('outlet_address', 'LIKE', '%'.$request->json('search').'%');
+            });
         }
         $outlet->whereHas('brands',function($query){
             $query->where('brand_active','1');
@@ -1254,7 +1291,10 @@ class ApiOutletController extends Controller
         }
 
         if($request->json('search') && $request->json('search') != ""){
-            $outlet = $outlet->where('outlet_name', 'LIKE', '%'.$request->json('search').'%');
+            $outlet->where(function($query) use ($request) {
+                $query->where('outlet_name', 'LIKE', '%'.$request->json('search').'%')
+                    ->orWhere('outlet_address', 'LIKE', '%'.$request->json('search').'%');
+            });
         }
 
         if ($gofood) {
@@ -1625,11 +1665,11 @@ class ApiOutletController extends Controller
 
     /* Penghitung jarak */
     function distance($lat1, $lon1, $lat2, $lon2, $unit) {
-        $theta = $lon1 - $lon2;
         $lat1=floatval($lat1);
         $lat2=floatval($lat2);
         $lon1=floatval($lon1);
         $lon2=floatval($lon2);
+        $theta = $lon1 - $lon2;
         $dist  = sin(deg2rad($lat1)) * sin(deg2rad($lat2)) +  cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * cos(deg2rad($theta));
         $dist  = acos($dist);
         $dist  = rad2deg($dist);
@@ -1878,9 +1918,9 @@ class ApiOutletController extends Controller
                 'outlets.outlet_longitude as longitude',
                 'outlets.outlet_status',
                 DB::raw('(CASE
-                            WHEN status_franchise = 1 THEN "Franchise"
-                            ELSE "Not Franchise"
-                        END) as "status_franchise"'),
+                            WHEN status_franchise = 1 THEN "Mitra"
+                            ELSE "Pusat"
+                        END) as "status_mitra"'),
                 DB::raw('(CASE
                             WHEN delivery_order = 1 THEN "Active"
                             ELSE "Inactive"
@@ -1941,7 +1981,7 @@ class ApiOutletController extends Controller
                     'latitude'=>'',
                     'longitude'=>'',
                     'status_outlet' => '',
-                    'status_franchise' => '',
+                    'status_mitra' => '',
                     'delivery' => ''
                 ];
             }
@@ -2002,7 +2042,7 @@ class ApiOutletController extends Controller
                             'outlet_email' => $value['email']??'',
                             'outlet_latitude' => $value['latitude']??'',
                             'outlet_longitude' => $value['longitude']??'',
-                            'status_franchise' => (isset($value['status_franchise']) && $value['status_franchise'] == 'Franchise' ? 1 : 0),
+                            'status_franchise' => (isset($value['status_mitra']) && $value['status_mitra'] == 'Mitra' ? 1 : 0),
                             'delivery_order' => (isset($value['delivery']) && $value['delivery'] == 'Active' ? 1 : 0),
                             'deep_link_gojek' => $value['deep_link_gojek']??'',
                             'deep_link_grab' => $value['deep_link_grab']??'',
@@ -2068,7 +2108,7 @@ class ApiOutletController extends Controller
             }
             MyHelper::updateOutletFile($data_pin);
             if (isset($queue_data)) {
-            	SendOutletJob::dispatch($queue_data)->allOnConnection('database');
+            	SendOutletJob::dispatch($queue_data)->allOnConnection('outletqueue');
             }
             DB::commit();
 
@@ -2390,7 +2430,8 @@ class ApiOutletController extends Controller
         }
 
         $outlet = $this->setAvailableOutlet($outlet, $processing);
-        $outlet['status'] = $this->checkOutletStatus($outlet);
+        $outlet['status'] = $outlet['today']['status'];
+        // $outlet['status'] = $this->checkOutletStatus($outlet);
         return MyHelper::checkGet($outlet);
     }
 
@@ -2944,5 +2985,32 @@ class ApiOutletController extends Controller
 		}
 
 		return $result;
+    }
+
+    function sendPin(Request $request)
+    {
+		$pin = MyHelper::getOutletFile();
+        $outlets = Outlet::select('id_outlet', 'outlet_code', 'outlet_name', 'outlet_email')->whereNotNull('outlet_pin')->whereIn('id_outlet',array_keys($pin))->get()->toArray();
+        $count = 0;
+
+        foreach ($outlets as $key => &$outlet) {
+            $outlet['pin'] = $pin[$outlet['id_outlet']];
+	        if (isset($outlet['outlet_email'])) {
+	        	$queue_data[] = [
+	        		'pin' 			=> $outlet['pin'],
+	                'date_sent' 	=> date('Y-m-d H:i:s'),
+	                'outlet_name' 	=> $outlet['outlet_name'],
+	                'outlet_code' 	=> $outlet['outlet_code'],
+	        	]+$outlet;
+
+	        	$count++;
+	        }
+        }
+
+        if (isset($queue_data)) {
+        	SendOutletJob::dispatch($queue_data)->allOnConnection('outletqueue');
+        }
+
+        return MyHelper::checkGet($count.' pin has been sent');
     }
 }

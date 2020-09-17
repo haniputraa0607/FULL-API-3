@@ -62,6 +62,13 @@ return [
             'retry_after' => 90,
         ],
 
+        'outletqueue' => [
+            'driver' => 'database',
+            'table' => 'outlet_queue',
+            'queue' => 'outletqueue',
+            'retry_after' => 90,
+        ],
+
         'beanstalkd' => [
             'driver' => 'beanstalkd',
             'host' => 'localhost',

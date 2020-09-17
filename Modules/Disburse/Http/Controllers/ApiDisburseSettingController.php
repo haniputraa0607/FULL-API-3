@@ -57,6 +57,19 @@ class ApiDisburseSettingController extends Controller
             'beneficiary_account' => $post['beneficiary_account'],
             'beneficiary_email' => $post['beneficiary_email']
         ];
+
+        if(!empty($dt['beneficiary_email'])){
+            $domain = substr($dt['beneficiary_email'], strpos($dt['beneficiary_email'], "@") + 1);
+            if(!filter_var($dt['beneficiary_email'], FILTER_VALIDATE_EMAIL) ||
+                checkdnsrr($domain, 'MX') === false){
+                return response()->json(['status' => 'fail', 'message' => 'invalid email address']);
+            }
+        }
+
+        if(preg_match('/[^A-Za-z0-9 ]/', $dt['beneficiary_name']) > 0){
+            return response()->json(['status' => 'fail', 'message' => 'Beneficiary name only allows space, alphanumeric, non-latin letter, non-latin numeric']);
+        }
+
         $bankCode = BankName::where('id_bank_name', $post['id_bank_name'])->first()->bank_code;
 
         $validationAccount = MyHelper::connectIris('Account Validation' ,'GET','api/v1/account_validation?bank='.$bankCode.'&account='.$post['beneficiary_account'], [], []);
@@ -137,6 +150,18 @@ class ApiDisburseSettingController extends Controller
             'beneficiary_account' => $post['beneficiary_account'],
             'beneficiary_email' => $post['beneficiary_email']
         ];
+
+        if(!empty($dt['beneficiary_email'])){
+            $domain = substr($dt['beneficiary_email'], strpos($dt['beneficiary_email'], "@") + 1);
+            if(!filter_var($dt['beneficiary_email'], FILTER_VALIDATE_EMAIL) ||
+                checkdnsrr($domain, 'MX') === false){
+                return response()->json(['status' => 'fail', 'message' => 'invalid email address']);
+            }
+        }
+
+        if(preg_match('/[^A-Za-z0-9 ]/', $dt['beneficiary_name']) > 0){
+            return response()->json(['status' => 'fail', 'message' => 'Beneficiary name only allows space, alphanumeric, non-latin letter, non-latin numeric']);
+        }
         $bankCode = BankName::where('id_bank_name', $post['id_bank_name'])->first()->bank_code;
 
         $validationAccount = MyHelper::connectIris('Account Validation' ,'GET','api/v1/account_validation?bank='.$bankCode.'&account='.$post['beneficiary_account'], [], []);
@@ -179,7 +204,7 @@ class ApiDisburseSettingController extends Controller
                         return response()->json(['status' => 'fail', 'message' => 'failed delete bank account outlet']);
                     }
                 }else{
-                    response()->json(['status' => 'fail', 'message' => 'failed insert data']);
+                    return response()->json(['status' => 'fail', 'message' => 'failed insert data']);
                 }
             }
         }else{
@@ -198,7 +223,22 @@ class ApiDisburseSettingController extends Controller
                 $val = (array)$val;
                 $searchBankCode = array_search($val['bank_code'], array_column($listBank, 'bank_code'));
                 $val['beneficiary_account'] = preg_replace("/[^0-9]/", "",$val['beneficiary_account']);
+
                 if($searchBankCode !== false){
+                    if(!empty($val['beneficiary_email'])){
+                        $domain = substr($val['beneficiary_email'], strpos($val['beneficiary_email'], "@") + 1);
+                        if(!filter_var($val['beneficiary_email'], FILTER_VALIDATE_EMAIL) ||
+                            checkdnsrr($domain, 'MX') === false){
+                            $arrFailed[] = $val['outlet_code'].' : '.'Please use invalid email';
+                            continue;
+                        }
+                    }
+
+                    if(preg_match('/[^A-Za-z0-9 ]/', $val['beneficiary_name']) > 0){
+                        $arrFailed[] = $val['outlet_code'].' : '.'Beneficiary name can not use latin numeric and latin letter';
+                        continue;
+                    }
+
                     $dt = [
                         'id_bank_name' => $listBank[$searchBankCode]['id_bank_name'],
                         'beneficiary_name' => $val['beneficiary_name'],
@@ -231,12 +271,12 @@ class ApiDisburseSettingController extends Controller
                     }
 
                     if(!$update){
-                        $arrFailed[] = $val['outlet_code'].'-'.$val['outlet_name'];
+                        $arrFailed[] = $val['outlet_code'].' : Failed submit data';
                     }else{
                         $arrSuccess[] = $val['outlet_code'].'-'.$val['outlet_name'];
                     }
                 }else{
-                    $arrFailed[] = $val['outlet_code'].'-'.$val['outlet_name'];
+                    $arrFailed[] = $val['outlet_code'].' : Please use existing bank code';
                 }
             }
 
@@ -420,6 +460,28 @@ class ApiDisburseSettingController extends Controller
         }
     }
 
+    function settingFeeDisburse(Request $request){
+        $post = $request->json()->all();
+        if($post){
+            $update = Setting::where('key', 'disburse_setting_fee_transfer')->update($post);
+            return response()->json(MyHelper::checkUpdate($update));
+        }else{
+            $setting = Setting::where('key', 'disburse_setting_fee_transfer')->first();
+            return response()->json(MyHelper::checkGet($setting));
+        }
+    }
+
+    function settingSendEmailTo(Request $request){
+        $post = $request->json()->all();
+        if($post){
+            $update = Setting::where('key', 'disburse_setting_email_send_to')->update($post);
+            return response()->json(MyHelper::checkUpdate($update));
+        }else{
+            $setting = Setting::where('key', 'disburse_setting_email_send_to')->first();
+            return response()->json(MyHelper::checkGet($setting));
+        }
+    }
+
     function listBankAccount(Request $request){
         $post = $request->json()->all();
 
@@ -428,6 +490,7 @@ class ApiDisburseSettingController extends Controller
                 'bank_name.bank_name', 'bank_name.bank_code')->with(['bank_account_outlet']);
 
         if(isset($post['conditions']) && !empty($post['conditions'])){
+            $check = array_search('outlet_dont_have_account', array_column($post['conditions'], 'subject'));
             $rule = 'and';
             if(isset($post['rule'])){
                 $rule = $post['rule'];
@@ -589,6 +652,18 @@ class ApiDisburseSettingController extends Controller
             $outlet = $outlet->get()->toArray();
         }
 
-        return response()->json(MyHelper::checkGet($outlet));
+        $getOutletDontHaveAccount = [];
+        if(isset($check) && $check !== false){
+            $getOutletDontHaveAccount = Outlet::leftJoin('bank_account_outlets as bao', 'bao.id_outlet', 'outlets.id_outlet')
+                                        ->whereNull('id_bank_account_outlet')
+                                        ->select('outlets.outlet_code', 'outlets.outlet_name')->get()->toArray();
+        }
+
+        $datas = [
+            'list_bank' =>$outlet,
+            'list_outlet_dont_have_account' => $getOutletDontHaveAccount
+        ];
+
+        return response()->json(MyHelper::checkGet($datas));
     }
 }

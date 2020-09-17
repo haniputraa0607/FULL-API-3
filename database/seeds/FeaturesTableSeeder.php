@@ -2711,6 +2711,36 @@ class FeaturesTableSeeder extends Seeder
                     'created_at' => date('Y-m-d H:00:00'),
                     'updated_at' => date('Y-m-d H:00:00'),
                 ),
+            270 =>
+                array(
+                    'id_feature' => 271,
+                    'feature_type' => 'Report',
+                    'feature_module' => 'Report Shift',
+                    'show_hide' => 1,
+                    'order' => 107,
+                    'created_at' => '2018-05-10 08:00:00',
+                    'updated_at' => '2018-05-10 08:00:00',
+                ),
+            271 =>
+                array (
+                    'id_feature' => 272,
+                    'feature_type' => 'Update',
+                    'feature_module' => 'Setting Timer ShopeePay',
+                    'show_hide' => 1,
+                    'order' => 108,
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00'),
+                ),
+            272 =>
+                array (
+                    'id_feature' => 273,
+                    'feature_type' => 'Update',
+                    'feature_module' => 'Setting Splash Screen Outlet Apps',
+                    'show_hide' => 1,
+                    'order' => 109,
+                    'created_at' => date('Y-m-d H:00:00'),
+                    'updated_at' => date('Y-m-d H:00:00'),
+                ),
         ));
     }
 }

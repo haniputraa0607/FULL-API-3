@@ -2257,7 +2257,7 @@ class MyHelper{
 		$replace = array ( 'Sen','Sel','Rab','Kam','Jum','Sab','Min',
 			'Senin','Selasa','Rabu','Kamis','Jumat','Sabtu','Minggu',
 			'Jan','Feb','Mar','Apr','Mei','Jun','Jul','Ags','Sep','Okt','Nov','Des',
-			'Januari','Februari','Maret','April','Juni','Juli','Agustus','Sepember',
+			'Januari','Februari','Maret','April','Juni','Juli','Agustus','September',
 			'Oktober','November','Desember',
 		);
 		$date = date ($date_format, $timestamp);
@@ -2778,7 +2778,6 @@ class MyHelper{
             return true;
         }
     }
-
     /**
      * update flag transaction online (flag ini digunakan untuk menandai user pernah transaksi online atau belum (digunakan di referral))
      * @param  array/model 	$trx 	 	  	Transacction model

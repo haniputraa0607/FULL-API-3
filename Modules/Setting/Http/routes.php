@@ -37,6 +37,7 @@ Route::group(['middleware' => ['auth_client', 'log_activities', 'user_agent'], '
 	Route::get('/navigation-logo', 'ApiSetting@NavigationLogo');
 	Route::get('/navigation-sidebar', 'ApiSetting@NavigationSidebar');
     Route::get('/navigation-navbar', 'ApiSetting@NavigationNavbar');
+    Route::any('outletapp/splash-screen', 'ApiSetting@splashScreenOutletApps');
 });
 
 Route::group(['middleware' => ['auth_client', 'log_activities', 'user_agent'], 'prefix' => 'api/version', 'namespace' => 'Modules\Setting\Http\Controllers'], function()

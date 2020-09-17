@@ -90,7 +90,8 @@ class Transaction extends Model
         'distance_customer',
 		'membership_promo_id',
         'fraud_flag',
-        'cashback_insert_status'
+		'cashback_insert_status',
+		'calculate_achievement'
 	];
 
 	public function user()
@@ -220,5 +221,9 @@ class Transaction extends Model
         return $this->belongsTo(LogBalance::class, 'id_transaction', 'id_reference')
             ->where('balance', '<', 0)
             ->whereIn('source', ['Online Transaction', 'Transaction']);
+    }
+
+    public function disburse_outlet_transaction(){
+        return $this->hasOne(\Modules\Disburse\Entities\DisburseOutletTransaction::class, 'id_transaction');
     }
 }

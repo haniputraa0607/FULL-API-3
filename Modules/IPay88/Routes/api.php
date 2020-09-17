@@ -15,7 +15,7 @@ use Illuminate\Http\Request;
 // form for customer
 Route::middleware(['auth:api', 'scopes:apps','log_activities'])->any('/ipay88/pay', 'IPay88Controller@requestView');
 // response from Ipay88
-Route::group(['prefix'=>'ipay88','middleware'=>['log_notif_ipay88']],function(){
+Route::group(['prefix'=>'ipay88','middleware'=>['log_notif_ipay88', 'validate_ipay88_signature']],function(){
 	Route::post('detail/{type}', 'IPay88Controller@notifUser');
 	Route::post('notif/{type}', 'IPay88Controller@notifIpay');
 });

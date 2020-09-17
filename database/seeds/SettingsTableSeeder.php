@@ -867,6 +867,42 @@ class SettingsTableSeeder extends Seeder
                     'created_at' => date('Y-m-d H:i:s'),
                     'updated_at' => date('Y-m-d H:i:s'),
                 ),
+            96 =>
+                array(
+                    'id_setting' => 97,
+                    'key' => 'disburse_setting_fee_transfer',
+                    'value' => NULL,
+                    'value_text' => NULL,
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
+            97 =>
+                array(
+                    'id_setting' => 98,
+                    'key' => 'disburse_setting_email_send_to',
+                    'value' => NULL,
+                    'value_text' => '{"outlet_franchise":null,"outlet_central":null}',
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
+            98 =>
+                array(
+                    'id_setting' => 99,
+                    'key' => 'default_splash_screen_outlet_apps',
+                    'value' => NULL,
+                    'value_text' => NULL,
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ),
+            99 =>
+                array(
+                    'id_setting' => 100,
+                    'key' => 'default_splash_screen_outlet_apps_duration',
+                    'value' => NULL,
+                    'value_text' => NULL,
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                )
         ));
     }
 }

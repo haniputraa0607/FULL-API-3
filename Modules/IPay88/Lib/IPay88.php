@@ -195,6 +195,11 @@ class IPay88
 	 */
 	public function reQuery($data,$status)
 	{
+		// ignore requery
+		return [
+			'valid' => true,
+			'response' => ''
+		];
 		$submitted = [
 			'MerchantCode' => $data['MerchantCode'],
 			'RefNo' => $data['RefNo'],
@@ -481,7 +486,7 @@ class IPay88
 	                    $update = $deals_user->update(['paid_status'=>'Cancelled']);
 			            // revert back deals data
 			            if ($deals) {
-			                $up1 = $deals->update(['deals_total_claimed' => $deals->deals_total_claimed - 1, 'deals_total_voucher' => $deals->deals_total_voucher + 1]);
+			                $up1 = $deals->update(['deals_total_claimed' => $deals->deals_total_claimed - 1]);
 			                if (!$up1) {
 			                    DB::rollBack();
 		                        return [
@@ -534,7 +539,7 @@ class IPay88
 	                        'Buy Paid Subscription Success',
 	                        $subscription_user['user']['phone'],
 	                        [
-	                            'subscription_title'       => $subscription->title,
+	                            'subscription_title'       => $subscription->subscription_title,
 	                            'id_subscription_users'     => $model->id_subscription_user
 	                        ]
 	                    );

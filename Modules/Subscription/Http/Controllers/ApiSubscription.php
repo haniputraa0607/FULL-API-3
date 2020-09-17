@@ -149,10 +149,6 @@ class ApiSubscription extends Controller
             $data['subscription_total'] = $post['subscription_total'];
         }
 
-        if (isset($post['user_limit'])) {
-            $data['user_limit'] = $post['user_limit'];
-        }
-
         if (isset($post['subscription_voucher_start'])) {
             $data['subscription_voucher_start'] = date('Y-m-d H:i:s', strtotime($post['subscription_voucher_start']));
         }
@@ -213,9 +209,6 @@ class ApiSubscription extends Controller
             $data['deals_short_description'] = $post['deals_short_description'];
         }
 
-
-
-
         if (isset($post['deals_total_claimed'])) {
             $data['deals_total_claimed'] = $post['deals_total_claimed'];
         }
@@ -240,6 +233,9 @@ class ApiSubscription extends Controller
             $data['charged_outlet'] = $post['charged_outlet'];
         }
 
+    	if ( ($data['subscription_type']??false) == 'welcome') {
+        	$data['user_limit'] = 1;
+        }
         $data['subscription_step_complete'] = 0;
         return $data;
     }

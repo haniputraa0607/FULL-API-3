@@ -102,7 +102,7 @@ class Product extends Model
 
     public function product_detail()
     {
-        return $this->hasMany(\Modules\Product\Entities\ProductDetail::class, 'id_product');
+        return $this->hasMany(\Modules\Product\Entities\ProductDetail::class, 'id_product')->where('product_detail_visibility', 'Visible');
     }
 
 	public function prices()
