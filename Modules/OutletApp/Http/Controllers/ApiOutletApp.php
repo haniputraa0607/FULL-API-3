@@ -58,6 +58,7 @@ use Modules\Shift\Entities\Shift;
 use Modules\Shift\Entities\UserOutletApp;
 use Modules\Transaction\Http\Requests\TransactionDetail;
 use Carbon\Carbon;
+use Modules\ShopeePay\Entities\TransactionPaymentShopeePay;
 
 class ApiOutletApp extends Controller
 {
@@ -73,6 +74,7 @@ class ApiOutletApp extends Controller
         $this->voucher          = "Modules\Deals\Http\Controllers\ApiDealsVoucher";
         $this->subscription     = "Modules\Subscription\Http\Controllers\ApiSubscriptionVoucher";
         $this->endPoint  = config('url.storage_url_api');
+        $this->shopeepay      = "Modules\ShopeePay\Http\Controllers\ShopeePayController";
     }
 
     public function deleteToken(DeleteToken $request)
@@ -289,6 +291,7 @@ class ApiOutletApp extends Controller
         $list = Transaction::join('transaction_pickups', 'transactions.id_transaction', 'transaction_pickups.id_transaction')
             ->where('order_id', $post['order_id'])
             ->whereDate('transaction_date', date('Y-m-d'))
+            ->where('transactions.id_outlet', $request->user()->id_outlet)
             ->with('user.city.province', 'productTransaction.product.product_category', 'productTransaction.product.product_discounts', 'outlet')->first();
 
         $qr = $list['order_id'];
@@ -1754,6 +1757,32 @@ class ApiOutletApp extends Controller
                                 $rejectBalance = true;
                             }
                         }
+                    } elseif (strtolower($pay['type']) == 'shopeepay') {
+                        $point = 0;
+                        $payShopeepay = TransactionPaymentShopeePay::find($pay['id_payment']);
+                        if ($payShopeepay) {
+                            if(MyHelper::setting('refund_shopeepay')) {
+                                $refund = app($this->shopeepay)->void($payShopeepay['id_transaction'], 'trx', $errors);
+                                if (!(($refund['response']['errcode']??123) == 0)) {
+                                    DB::rollback();
+                                    $reject_type = 'refund';
+                                    return response()->json([
+                                        'status'   => 'fail',
+                                        'messages' => ['Refund Payment Failed'],
+                                    ]);
+                                }
+                            }else{
+                                $refund = app($this->balance)->addLogBalance($order['id_user'], $point = ($payShopeepay['amount']/100), $order['id_transaction'], 'Rejected Order', $order['transaction_grandtotal']);
+                                if ($refund == false) {
+                                    DB::rollback();
+                                    return response()->json([
+                                        'status'   => 'fail',
+                                        'messages' => ['Insert Cashback Failed'],
+                                    ]);
+                                }
+                                $rejectBalance = true;
+                            }
+                        }
                     } else {
                         $point = 0;
                         $payMidtrans = TransactionPaymentMidtran::find($pay['id_payment']);
@@ -2522,7 +2551,9 @@ class ApiOutletApp extends Controller
             'promo_campaign_promo_code.promo_campaign',
             'transaction_payment_subscription.subscription_user_voucher.subscription_user.subscription',
             'transaction_pickup_go_send',
-            'outlet.city')->first();
+            'outlet.city')
+            ->where('transactions.id_outlet', $request->user()->id_outlet)
+            ->first();
         if (!$list) {
             return MyHelper::checkGet([], 'empty');
         }
