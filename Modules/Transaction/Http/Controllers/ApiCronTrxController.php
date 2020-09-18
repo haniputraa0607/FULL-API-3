@@ -595,7 +595,7 @@ class ApiCronTrxController extends Controller
                             if ($payShopeepay) {
                                 if(MyHelper::setting('refund_shopeepay')) {
                                     $refund = app($this->shopeepay)->void($payShopeepay['id_transaction'], 'trx', $errors);
-                                    if (!(($refund['response']['errcode']??123) == 0)) {
+                                    if (!$refund) {
                                         DB::rollback();
                                         $reject_type = 'refund';
                                         return response()->json([

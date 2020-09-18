@@ -1169,7 +1169,10 @@ class ShopeePayController extends Controller
          *     }
          * }
          */
-        return $response;
+        
+        // check status after void
+        $status = $this->checkStatus($reference, $type);
+        return ($status['response']['payment_status'] == '4');
     }
 
     /**
