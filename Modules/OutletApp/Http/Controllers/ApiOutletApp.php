@@ -1763,7 +1763,7 @@ class ApiOutletApp extends Controller
                         if ($payShopeepay) {
                             if(MyHelper::setting('refund_shopeepay')) {
                                 $refund = app($this->shopeepay)->void($payShopeepay['id_transaction'], 'trx', $errors);
-                                if ($refund) {
+                                if (!$refund) {
                                     DB::rollback();
                                     $reject_type = 'refund';
                                     return response()->json([
