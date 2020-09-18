@@ -204,11 +204,11 @@ class Outlet extends Authenticatable
 
     public function getOutletLatitudeAttribute($value)
     {
-    	return str_replace(',', '', $value);
+    	return preg_replace('/[^0-9.]/', '', $value);
     }
 
     public function getOutletLongitudeAttribute($value)
     {
-    	return str_replace(',', '', $value);
+    	return preg_replace('/[^0-9.]/', '', $value);
     }
 }
