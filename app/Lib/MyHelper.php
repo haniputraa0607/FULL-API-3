@@ -312,7 +312,7 @@ class MyHelper{
 			{
 				if($mode == "angka")
 				{
-					$chars = "1234567890";
+					$chars = "123456789";
 				}
 				elseif($mode == "huruf")
 				{
