@@ -76,7 +76,7 @@ class Midtrans {
         if(!is_null($type) && !is_null($id)){
             $dataMidtrans['gopay'] = [
                 'enable_callback' => true,
-                'callback_url' => env('MIDTRANS_CALLBACK').'?type='.$type.'&order_id='.$id,
+                'callback_url' => env('MIDTRANS_CALLBACK').'?type='.$type.'&order_id='.urlencode($id),
             ];
         }else{
             $dataMidtrans['gopay'] = [
@@ -199,5 +199,36 @@ class Midtrans {
 
     //     return $status;
     // }
+    
+    /**
+     * Get status payment midtrans
+     * @param  integer $id_transaction Transaction id
+     * @return Array           array response
+     */
+    static function status($order_id)
+    {
+        $trx = Transaction::join('transaction_payment_midtrans','transaction_payment_midtrans.id_transaction', '=', 'transactions.id_transaction')->where('transactions.id_transaction',$order_id)->first();
+
+        if (!$trx) {
+            return ['status'=>'fail','messages'=>'Midtrans payment not found'];
+        }
+
+        $url    = env('BASE_MIDTRANS_SANDBOX').'/v2/'. $trx->transaction_receipt_number .'/status';
+        $result = MyHelper::get($url, Self::bearer());
+        try {
+            LogMidtrans::create([
+                'type'                 => 'check_status',
+                'id_reference'         => $trx->id_transaction,
+                'request'              => null,
+                'request_url'          => $url,
+                'request_header'       => json_encode(['Authorization' => Self::bearer()]),
+                'response'             => json_encode($result),
+                'response_status_code' => $result['status_code']??null,
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Failed write log to LogMidtrans: ' . $e->getMessage());
+        }
+        return $result;
+    }
 }
 ?>

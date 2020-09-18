@@ -58,7 +58,7 @@ class Kernel extends ConsoleKernel
          * cancel all pending transaction that have been more than 15 minutes
          * run every hour
          */
-        $schedule->call('Modules\Transaction\Http\Controllers\ApiCronTrxController@cron')->cron('*/15 * * * *');
+        $schedule->call('Modules\Transaction\Http\Controllers\ApiCronTrxController@cron')->cron('*/2 * * * *');
 
         /**
          * reject all transactions that outlets do not receive within a certain timeframe
