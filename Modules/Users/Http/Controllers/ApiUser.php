@@ -1094,7 +1094,6 @@ class ApiUser extends Controller
                     'result'    => [
                         'phone'    =>    $create->phone,
                         'autocrm'    =>    $autocrm,
-                        'pin'    =>    MyHelper::encPIN($pin),
                         'message'  =>    $msg_otp
                     ]
                 ];
