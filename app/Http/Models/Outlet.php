@@ -201,4 +201,14 @@ class Outlet extends Authenticatable
 	public function payment_method_outlet(){
         return $this->hasMany(\App\Http\Models\PaymentMethodOutlet::class, 'id_outlet');
     }
+
+    public function getOutletLatitudeAttribute($value)
+    {
+    	return preg_replace('/[^0-9.]/', '', $value);
+    }
+
+    public function getOutletLongitudeAttribute($value)
+    {
+    	return preg_replace('/[^0-9.]/', '', $value);
+    }
 }

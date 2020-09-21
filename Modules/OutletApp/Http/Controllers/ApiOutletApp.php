@@ -2964,12 +2964,16 @@ class ApiOutletApp extends Controller
                         break;
                     case 'completed':
                     case 'delivered':
-                        if($list['detail']['taken_at'] == null){
+                        if($list['detail']['ready_at'] == null){
+                            $result['transaction_status'] = 4;
+                            $result['transaction_status_text'] = 'ORDER SEDANG DIPROSES';
+                        }elseif($list['detail']['taken_at'] == null){
                             $result['transaction_status'] = 3;
+                            $result['transaction_status_text'] = 'ORDER SUDAH SIAP';
                         }else{
+                            $result['transaction_status_text'] = 'ORDER SUDAH DIAMBIL';
                             $result['transaction_status'] = 2;
                         }
-                        $result['transaction_status_text']          = 'ORDER SUDAH DIAMBIL';
                         $result['delivery_info']['delivery_status'] = 'Pesanan sudah diterima Customer';
                         $result['delivery_info']['driver']          = [
                             'driver_id'      => $list['transaction_pickup_go_send']['driver_id']?:'',

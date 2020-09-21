@@ -75,7 +75,7 @@ class ValueFirst
                     [
                         '@UDH'      => '0',
                         '@CODING'   => '1',
-                        '@TEXT'     => $data['text'],
+                        '@TEXT'     => urlencode(str_replace(['\r', '\n'],["\r", "\n"],$data['text'])),
                         '@PROPERTY' => '0',
                         '@ID'       => '1',
                         'ADDRESS'   => [
