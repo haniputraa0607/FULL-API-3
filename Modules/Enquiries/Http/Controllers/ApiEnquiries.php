@@ -165,12 +165,16 @@ class ApiEnquiries extends Controller
 		}
 
 		//cek brand
-		$brand = Brand::find($data['id_brand']);
-		if(!$brand){
-			// return response()->json([
-			// 	'status' => 'fail',
-			// 	'messages' => ['Brand not found']
-			// ]);
+		if(isset($data['brand'])){
+			$brand = Brand::find($data['id_brand']);
+			if(!$brand){
+				// return response()->json([
+				// 	'status' => 'fail',
+				// 	'messages' => ['Brand not found']
+				// ]);
+				$brand = null;
+			}
+		}else{
 			$brand = null;
 		}
 
