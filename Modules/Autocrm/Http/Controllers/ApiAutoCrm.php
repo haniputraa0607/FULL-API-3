@@ -282,17 +282,6 @@ class ApiAutoCrm extends Controller
 			if($crm['autocrm_sms_toogle'] == 1 && !$forward_only){
 				if(!empty($user['phone'])){
 					//input env to log
-					\Log::info([
-						'SMS_GATEWAY' => env('SMS_GATEWAY'),
-						'SMS_GATEWAY_ALT' => env('SMS_GATEWAY_ALT'),
-						'OTP_TYPE' => env('OTP_TYPE'),
-						'SMS_KEY' => env('SMS_KEY'),
-						'SMS_URL' => env('SMS_URL'),
-						'VALUEFIRST_SEND_METHOD' => env('VALUEFIRST_SEND_METHOD'),
-						'VALUEFIRST_MASKING_NUMBER' => env('VALUEFIRST_MASKING_NUMBER'),
-						'VALUEFIRST_JSON_USERNAME' => env('VALUEFIRST_JSON_USERNAME'),
-						'VALUEFIRST_JSON_PASSWORD' => env('VALUEFIRST_JSON_PASSWORD'),
-					]);
 					$gateway = env('SMS_GATEWAY');
 
 					if(env('OTP_TYPE') == 'MISSCALL'){

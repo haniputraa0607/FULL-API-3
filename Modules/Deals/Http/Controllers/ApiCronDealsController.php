@@ -32,7 +32,7 @@ class ApiCronDealsController extends Controller
         $log = MyHelper::logCron('Cancel Deals');
         try {
             $now     = date('Y-m-d H:i:s');
-            $expired = date('Y-m-d H:i:s', strtotime('- 15minutes'));
+            $expired = date('Y-m-d H:i:s', strtotime('- 5minutes'));
 
             $getTrx = DealsUser::join('deals_vouchers', 'deals_vouchers.id_deals_voucher', '=', 'deals_users.id_deals_voucher')->where('paid_status', 'Pending')->where('claimed_at', '<=', $expired)->get();
 
@@ -50,10 +50,20 @@ class ApiCronDealsController extends Controller
                 if ($singleTrx->payment_method == 'Midtrans') {
                     $trx_mid = DealsPaymentMidtran::where('id_deals_user', $singleTrx->id_deals_user)->first();
                     if ($trx_mid) {
-                        $connectMidtrans = Midtrans::expire($trx_mid->order_id);
+                        $midtransStatus = Midtrans::status($trx_mid->order_id, 'deals');
+                        if (in_array(($midtransStatus['response']['transaction_status'] ?? false), ['deny', 'cancel', 'expire', 'failure']) || $midtransStatus['status_code'] == '404') {
+                            $connectMidtrans = Midtrans::expire($trx_mid->order_id);
+                        } else {
+                            continue;
+                        }
                     }
                 } elseif ($singleTrx->payment_method == 'Ipay88') {
                     $trx_ipay = DealsPaymentIpay88::where('id_deals_user', $singleTrx->id_deals_user)->first();
+
+                    if (strtolower($trx_ipay->payment_method) == 'credit card' && $singleTrx->claimed_at > date('Y-m-d H:i:s', strtotime('- 15minutes'))) {
+                        continue;
+                    }
+
                     $update   = \Modules\IPay88\Lib\IPay88::create()->update($trx_ipay ?: $singleTrx->id_deals_user, [
                         'type'             => 'deals',
                         'Status'           => '0',
