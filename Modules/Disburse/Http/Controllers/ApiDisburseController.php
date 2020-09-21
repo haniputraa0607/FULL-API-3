@@ -1093,4 +1093,137 @@ class ApiDisburseController extends Controller
             'config' => $config
         ];
     }
+
+    public function dashboardV2(Request $request)
+    {
+    	$pending 	= $this->getDisburseDashboardData($request, 'pending');
+    	$processed 	= $this->getDisburseDashboardData($request, 'processed');
+
+    	$result	= [
+    		'pending'	=> $pending,
+    		'processed'	=> $processed
+    	];
+
+    	return MyHelper::checkGet($result);
+    }
+
+    public function getDisburseDashboardData($request, $status){
+        $post = $request->json()->all();
+
+        if ($status == 'pending') {
+        	$operator = '!=';
+        }
+        else{
+        	$operator = '=';
+        }
+
+        $nominal = Disburse::join('disburse_outlet', 'disburse.id_disburse', 'disburse_outlet.id_disburse');
+        $income_central = Disburse::join('disburse_outlet', 'disburse.id_disburse', 'disburse_outlet.id_disburse');
+
+        if ($status == 'processed') {
+        	$nominal = $nominal->whereIn('disburse.disburse_status', ['Success']);
+	        $income_central = $income_central->whereIn('disburse.disburse_status', ['Success']);
+
+        	$nominal_fail = Disburse::join('disburse_outlet', 'disburse.id_disburse', 'disburse_outlet.id_disburse')->whereIn('disburse.disburse_status', ['Fail', 'Failed Create Payouts']);
+        }
+
+        if ($status == 'pending') {
+        	$nominal = $nominal->whereNotIn('disburse.disburse_status', ['Fail', 'Failed Create Payouts', 'Success']);
+	        $income_central = $income_central->whereNotIn('disburse.disburse_status', ['Fail', 'Failed Create Payouts', 'Success']);
+
+	        $total_disburse = DisburseOutletTransaction::join('transactions', 'transactions.id_transaction', 'disburse_outlet_transactions.id_transaction')
+	                            ->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+	                            ->where(function ($q){
+	                                $q->whereNotNull('transaction_pickups.taken_at')
+	                                    ->orWhereNotNull('transaction_pickups.taken_by_system_at');
+	                            })
+	                            ->where(function ($q){
+	                                $q->orWhereNull('id_disburse_outlet')
+	                                    ->orWhereIn('id_disburse_outlet', function($query){
+	                                    $query->select('id_disburse_outlet')
+	                                        ->from('disburse')
+	                                        ->join('disburse_outlet', 'disburse.id_disburse', 'disburse_outlet.id_disburse')
+	                                        ->where('disburse.disburse_status', 'Queued');
+	                                });
+	                            });
+        }
+
+        if(isset($post['id_outlet']) && !empty($post['id_outlet']) && $post['id_outlet'] != 'all'){
+            $nominal->where('disburse_outlet.id_outlet', $post['id_outlet']);
+            $income_central->where('disburse_outlet.id_outlet', $post['id_outlet']);
+            if ($status == 'processed') {
+	            $nominal_fail->where('disburse_outlet.id_outlet', $post['id_outlet']);
+	        }
+	        if ($status == 'pending') {
+	            $total_disburse->where('transactions.id_outlet', $post['id_outlet']);
+	        }
+        }
+
+        if(isset($post['fitler_date']) && $post['fitler_date'] == 'today'){
+
+            $nominal->whereDate('disburse.created_at', date('Y-m-d'));
+            $income_central->where('disburse.created_at', date('Y-m-d'));
+            if ($status == 'processed') {
+            	$nominal_fail->whereDate('disburse.created_at', date('Y-m-d'));
+            }
+            if ($status == 'pending') {
+            	$total_disburse->where('transactions.transaction_date', date('Y-m-d'));
+            }
+
+        }elseif(isset($post['fitler_date']) && $post['fitler_date'] == 'specific_date'){
+            if(isset($post['start_date']) && !empty($post['start_date']) &&
+                isset($post['end_date']) && !empty($post['end_date'])){
+                $start_date = date('Y-m-d', strtotime($post['start_date']));
+                $end_date = date('Y-m-d', strtotime($post['end_date']));
+
+                $nominal->whereDate('disburse.created_at', '>=', $start_date)
+                    ->whereDate('disburse.created_at', '<=', $end_date);
+                $income_central->whereDate('disburse.created_at', '>=', $start_date)
+                    ->whereDate('disburse.created_at', '<=', $end_date);
+                if ($status == 'processed') {
+	                $nominal_fail->whereDate('disburse.created_at', '>=', $start_date)
+	                    ->whereDate('disburse.created_at', '<=', $end_date);
+	            }
+	            if ($status == 'pending') {
+	                $total_disburse->whereDate('transactions.transaction_date', '>=', $start_date)
+	                    ->whereDate('transactions.transaction_date', '<=', $end_date);
+	            }
+            }
+        }
+
+        if(isset($post['id_user_franchise']) && !empty($post['id_user_franchise'])){
+            $nominal->join('user_franchise_outlet', 'user_franchise_outlet.id_outlet', 'disburse_outlet.id_outlet')
+                ->where('user_franchise_outlet.id_user_franchise', $post['id_user_franchise']);
+
+            if ($status == 'processed') {
+            	$nominal_fail->join('user_franchise_outlet', 'user_franchise_outlet.id_outlet', 'disburse_outlet.id_outlet')
+                	->where('user_franchise_outlet.id_user_franchise', $post['id_user_franchise']);
+            }
+        }
+
+        $nominal = $nominal->selectRaw(
+        	'SUM(disburse_outlet.disburse_nominal-(disburse.disburse_fee / disburse.total_outlet)) as "nom_success", 
+        	SUM(disburse_outlet.total_fee_item) as "nom_item", 
+        	SUM(disburse_outlet.total_omset) as "nom_grandtotal", 
+        	SUM(disburse_outlet.total_expense_central) as "nom_expense_central", 
+        	SUM(disburse_outlet.total_delivery_price) as "nom_delivery"'
+        )->first();
+
+        $income_central = $income_central->sum('total_income_central');
+        if ($status == 'processed') {
+        	$nominal_fail = $nominal_fail->selectRaw('SUM(disburse_outlet.disburse_nominal-(disburse.disburse_fee / disburse.total_outlet)) as "disburse_nominal"')->first();
+        }
+        if ($status == 'pending') {
+        	$total_disburse = $total_disburse->sum('disburse_outlet_transactions.income_outlet');
+        }
+
+        $result = [
+            'nominal' => $nominal,
+            'nominal_fail' => $nominal_fail??0,
+            'income_central' => $income_central,
+            'total_disburse' => $total_disburse??0
+        ];
+        return $result;
+        // return response()->json($result);
+    }
 }
