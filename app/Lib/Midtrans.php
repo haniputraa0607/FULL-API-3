@@ -248,7 +248,7 @@ class Midtrans {
         try {
             LogMidtrans::create([
                 'type'                 => 'check_status',
-                'id_reference'         => $trx->id_transaction,
+                'id_reference'         => $transaction_id,
                 'request'              => null,
                 'request_url'          => $url,
                 'request_header'       => json_encode(['Authorization' => Self::bearer()]),
