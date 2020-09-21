@@ -123,6 +123,7 @@ class ApiWelcomeSubscription extends Controller
             		->select('subscriptions.*')
             		->where('subscription_start', "<", $now)
             		->where('subscription_end', ">", $now)
+            		->where('subscription_step_complete','=','1')
             		->whereColumn('subscription_bought','<','subscription_total')
             		->get();
 

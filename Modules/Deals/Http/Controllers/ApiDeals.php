@@ -49,6 +49,8 @@ use Illuminate\Support\Facades\Schema;
 
 use Image;
 
+use App\Jobs\SendDealsJob;
+
 class ApiDeals extends Controller
 {
 
@@ -1363,23 +1365,24 @@ class ApiDeals extends Controller
     }
 
     function injectWelcomeVoucher($user, $phone){
+    	$now = date("Y-m-d H:i:s");
         $getDeals = DealTotal::join('deals', 'deals.id_deals', '=', 'deals_total.id_deals')
-            ->select('deals.*','deals_total.deals_total')->get();
-        $count = 0;
-        foreach ($getDeals as $val){
-            for($i=0;$i<$val['deals_total'];$i++){
-                $generateVoucher = app($this->hidden_deals)->autoClaimedAssign($val, $user, $val['deals_total']);
-                $count++;
-            }
-            $dataDeals = Deal::where('id_deals', $val['id_deals'])->first();
-            app($this->deals_claim)->updateDeals($dataDeals);
+        			->where('deals_start', "<", $now)
+            		->where('deals_end', ">", $now)
+            		->where('step_complete','=','1')
+            		->whereColumn('deals_total_claimed','<','deals_total_voucher')
+            		->select('deals.*','deals_total.deals_total')->get();
+
+        if (!$getDeals->isEmpty()) {
+        	$getDeals = $getDeals->toArray();
+        	$data = [
+        		'deals' => $getDeals,
+        		'user'	=> $user,
+        		'phone' => $phone
+        	];
+        	SendDealsJob::dispatch($data)->allOnConnection('dealsqueue');
         }
 
-        $autocrm = app($this->autocrm)->SendAutoCRM('Receive Welcome Voucher', $phone,
-            [
-                'count_voucher'      => (string)$count
-            ]
-        );
         return true;
     }
 
