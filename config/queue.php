@@ -69,6 +69,13 @@ return [
             'retry_after' => 90,
         ],
 
+        'subscriptionqueue' => [
+            'driver' => 'database',
+            'table' => 'subscription_queue',
+            'queue' => 'subscriptionqueue',
+            'retry_after' => 90,
+        ],
+
         'beanstalkd' => [
             'driver' => 'beanstalkd',
             'host' => 'localhost',
