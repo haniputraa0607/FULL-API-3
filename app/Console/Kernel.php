@@ -135,6 +135,10 @@ class Kernel extends ConsoleKernel
          */
         $schedule->call('Modules\Disburse\Http\Controllers\ApiDisburseController@cronSendEmailDisburse')->dailyAt('01:30');
         /**
+         * To send
+         */
+        $schedule->call('Modules\Disburse\Http\Controllers\ApiDisburseController@shortcutRecap')->dailyAt('02:00');
+        /**
          * Void failed transaction shopeepay
          */
         $schedule->call('Modules\ShopeePay\Http\Controllers\ShopeePayController@cronCancel')->cron('*/1 * * * *');
