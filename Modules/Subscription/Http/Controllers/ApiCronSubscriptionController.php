@@ -49,7 +49,7 @@ class ApiCronSubscriptionController extends Controller
                 if ($singleTrx->payment_method == 'Midtrans') {
                     $trx_mid = SubscriptionPaymentMidtran::where('id_subscription_user', $singleTrx->id_subscription_user)->first();
                     if ($trx_mid) {
-                        $midtransStatus = Midtrans::status($trx_mid->order_id);
+                        $midtransStatus = Midtrans::status($trx_mid->order_id, 'subscription');
                         if (in_array(($midtransStatus['response']['transaction_status'] ?? false), ['deny', 'cancel', 'expire', 'failure']) || $midtransStatus['status_code'] == '404') {
                             $connectMidtrans = Midtrans::expire($trx_mid->order_id);
                         } else {

@@ -50,7 +50,7 @@ class ApiCronDealsController extends Controller
                 if ($singleTrx->payment_method == 'Midtrans') {
                     $trx_mid = DealsPaymentMidtran::where('id_deals_user', $singleTrx->id_deals_user)->first();
                     if ($trx_mid) {
-                        $midtransStatus = Midtrans::status($trx_mid->order_id);
+                        $midtransStatus = Midtrans::status($trx_mid->order_id, 'deals');
                         if (in_array(($midtransStatus['response']['transaction_status'] ?? false), ['deny', 'cancel', 'expire', 'failure']) || $midtransStatus['status_code'] == '404') {
                             $connectMidtrans = Midtrans::expire($trx_mid->order_id);
                         } else {

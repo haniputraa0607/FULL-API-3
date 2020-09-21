@@ -10,6 +10,8 @@ use App\Http\Models\User;
 use App\Http\Models\Transaction;
 use App\Http\Models\ProductVariant;
 use App\Http\Models\LogPoint;
+use App\Http\Models\DealsUser;
+use App\Http\Models\SubscriptionUser;
 
 use App\Http\Requests;
 use Illuminate\Http\JsonResponse;
@@ -210,8 +212,7 @@ class Midtrans {
         if (is_numeric($order_id)) {
             switch ($type) {
                 case 'deals':
-                    $trx = DealsUser::join('deals_payment_midtrans', 'deals_payment_midtrans.id_deals_user', '=', 'deals_users.id_deals_user')->where('deals_users.id_deals_user', $order_id)->first();
-
+                    $trx = DealsUser::join('deals_payment_midtrans', 'deals_payment_midtrans.id_deals_user', '=', 'deals_users.id_deals_user')->where('deals_users.id_deals_user', $order_id)->orWhere('order_id', $order_id)->first();
                     if (!$trx) {
                         return ['status'=>'fail','messages'=>'Deals payment not found'];
                     }
