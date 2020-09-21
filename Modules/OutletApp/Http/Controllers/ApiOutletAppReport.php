@@ -225,7 +225,7 @@ class ApiOutletAppReport extends Controller
 	
 			//end offline
 
-			/*
+			
 			//subscription
 				$dataPaymentSubscription = TransactionPaymentSubscription::join('transactions', 'transactions.id_transaction', 'transaction_payment_subscriptions.id_transaction')
 				->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
@@ -245,7 +245,7 @@ class ApiOutletAppReport extends Controller
 				$daily_payment = array_merge($daily_payment, $dataPaymentSubscription);
 	
 			//end subscription
-			*/
+			
 
 	        if ( empty($outlet) ) {
     			return response()->json(MyHelper::checkGet(null));
