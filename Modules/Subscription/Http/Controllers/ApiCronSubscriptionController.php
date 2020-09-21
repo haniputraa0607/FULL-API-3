@@ -31,7 +31,7 @@ class ApiCronSubscriptionController extends Controller
         $log = MyHelper::logCron('Cancel Subscription');
         try {
             $now     = date('Y-m-d H:i:s');
-            $expired = date('Y-m-d H:i:s', strtotime('- 15minutes'));
+            $expired = date('Y-m-d H:i:s', strtotime('- 5minutes'));
 
             $getTrx = SubscriptionUser::where('paid_status', 'Pending')->where('bought_at', '<=', $expired)->get();
 
@@ -49,10 +49,20 @@ class ApiCronSubscriptionController extends Controller
                 if ($singleTrx->payment_method == 'Midtrans') {
                     $trx_mid = SubscriptionPaymentMidtran::where('id_subscription_user', $singleTrx->id_subscription_user)->first();
                     if ($trx_mid) {
-                        $connectMidtrans = Midtrans::expire($trx_mid->order_id);
+                        $midtransStatus = Midtrans::status($trx_mid->order_id, 'subscription');
+                        if (in_array(($midtransStatus['response']['transaction_status'] ?? false), ['deny', 'cancel', 'expire', 'failure']) || $midtransStatus['status_code'] == '404') {
+                            $connectMidtrans = Midtrans::expire($trx_mid->order_id);
+                        } else {
+                            continue;
+                        }
                     }
                 } elseif ($singleTrx->payment_method == 'Ipay88') {
                     $trx_ipay = SubscriptionPaymentIpay88::where('id_subscription_user', $singleTrx->id_subscription_user)->first();
+
+                    if (strtolower($trx_ipay->payment_method) == 'credit card' && $singleTrx->bought_at > date('Y-m-d H:i:s', strtotime('- 15minutes'))) {
+                        continue;
+                    }
+
                     $update   = \Modules\IPay88\Lib\IPay88::create()->update($trx_ipay ?: $singleTrx->id_subscription_user, [
                         'type'             => 'subscription',
                         'Status'           => '0',

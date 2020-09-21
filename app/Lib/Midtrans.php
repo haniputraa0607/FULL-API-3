@@ -10,6 +10,8 @@ use App\Http\Models\User;
 use App\Http\Models\Transaction;
 use App\Http\Models\ProductVariant;
 use App\Http\Models\LogPoint;
+use App\Http\Models\DealsUser;
+use App\Http\Models\SubscriptionUser;
 
 use App\Http\Requests;
 use Illuminate\Http\JsonResponse;
@@ -76,7 +78,7 @@ class Midtrans {
         if(!is_null($type) && !is_null($id)){
             $dataMidtrans['gopay'] = [
                 'enable_callback' => true,
-                'callback_url' => env('MIDTRANS_CALLBACK').'?type='.$type.'&order_id='.$id,
+                'callback_url' => env('MIDTRANS_CALLBACK').'?type='.$type.'&order_id='.urlencode($id),
             ];
         }else{
             $dataMidtrans['gopay'] = [
@@ -199,5 +201,64 @@ class Midtrans {
 
     //     return $status;
     // }
+    
+    /**
+     * Get status payment midtrans
+     * @param  integer $id_transaction Transaction id
+     * @return Array           array response
+     */
+    static function status($order_id, $type = 'trx')
+    {
+        if (is_numeric($order_id)) {
+            switch ($type) {
+                case 'deals':
+                    $trx = DealsUser::join('deals_payment_midtrans', 'deals_payment_midtrans.id_deals_user', '=', 'deals_users.id_deals_user')->where('deals_users.id_deals_user', $order_id)->orWhere('order_id', $order_id)->first();
+                    if (!$trx) {
+                        return ['status'=>'fail','messages'=>'Deals payment not found'];
+                    }
+
+                    $transaction_id = $trx->order_id;
+                    break;
+
+                case 'subscription':
+                    $trx = SubscriptionUser::join('subscription_payment_midtrans', 'subscription_payment_midtrans.id_subscription_user', '=', 'subscription_users.id_subscription_user')->where('subscription_users.id_subscription_user', $order_id)->first();
+                    $transaction_id = $trx->order_id;
+
+                    if (!$trx) {
+                        return ['status'=>'fail','messages'=>'Subscription payment not found'];
+                    }
+
+                    break;
+
+                default:
+                    $trx = Transaction::join('transaction_payment_midtrans','transaction_payment_midtrans.id_transaction', '=', 'transactions.id_transaction')->where('transactions.id_transaction',$order_id)->first();
+
+                    if (!$trx) {
+                        return ['status'=>'fail','messages'=>'Midtrans payment not found'];
+                    }
+                    $transaction_id = $trx->transaction_receipt_number;
+                    break;
+            }
+        } else {
+            $transaction_id = $order_id;
+        }
+
+        $url    = env('BASE_MIDTRANS_SANDBOX').'/v2/'. $transaction_id .'/status';
+        $result = MyHelper::get($url, Self::bearer());
+        try {
+            LogMidtrans::create([
+                'type'                 => 'check_status',
+                'id_reference'         => $transaction_id,
+                'request'              => null,
+                'request_url'          => $url,
+                'request_header'       => json_encode(['Authorization' => Self::bearer()]),
+                'response'             => json_encode($result),
+                'response_status_code' => $result['status_code']??null,
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Failed write log to LogMidtrans: ' . $e->getMessage());
+        }
+        return $result;
+    }
 }
 ?>
