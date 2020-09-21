@@ -112,6 +112,8 @@ class ApiIrisController extends Controller
                         ->leftJoin('bank_name', 'bank_name.id_bank_name', 'bank_accounts.id_bank_name')
                         ->whereNull('disburse_outlet.id_disburse_outlet')
                         ->whereNotNull('bank_accounts.beneficiary_name')
+                        ->whereNull('transaction_pickups.reject_at')
+                        ->where('transactions.transaction_payment_status', 'Completed')
                         ->where(function ($q){
                             $q->whereNotNull('transaction_pickups.taken_at')
                                 ->orWhereNotNull('transaction_pickups.taken_by_system_at');
