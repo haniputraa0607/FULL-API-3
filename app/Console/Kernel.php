@@ -55,8 +55,8 @@ class Kernel extends ConsoleKernel
         $schedule->call('Modules\Transaction\Http\Controllers\ApiCronTrxController@checkSchedule')->dailyAt('02:00');
 
         /**
-         * cancel all pending transaction that have been more than 2 minutes
-         * run every hour
+         * cancel all pending transaction that have been more than 5 minutes
+         * run every 2 minute
          */
         $schedule->call('Modules\Transaction\Http\Controllers\ApiCronTrxController@cron')->cron('*/2 * * * *');
 
@@ -67,14 +67,14 @@ class Kernel extends ConsoleKernel
         $schedule->call('Modules\Transaction\Http\Controllers\ApiCronTrxController@autoReject')->cron('* * * * *');
 
         /**
-         * cancel all pending deals that have been more than 2 minutes
-         * run every hour
+         * cancel all pending deals that have been more than 5 minutes
+         * run every 2 minute
          */
         $schedule->call('Modules\Deals\Http\Controllers\ApiCronDealsController@cancel')->cron('*/2 * * * *');
 
         /**
-         * cancel all pending subscription that have been more than 2 minutes
-         * run every hour
+         * cancel all pending subscription that have been more than 5 minutes
+         * run every 2 minute
          */
         $schedule->call('Modules\Subscription\Http\Controllers\ApiCronSubscriptionController@cancel')->cron('*/2 * * * *');
 

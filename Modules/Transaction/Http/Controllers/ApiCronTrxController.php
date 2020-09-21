@@ -89,7 +89,7 @@ class ApiCronTrxController extends Controller
                 }
                 if($singleTrx->trasaction_payment_type == 'Midtrans') {
                     $midtransStatus = Midtrans::status($singleTrx->id_transaction);
-                    if (!$midtransStatus || in_array(($midtransStatus['transaction_status'] ?? false), ['deny', 'cancel', 'expire', 'failure']) || $midtransStatus['status_code'] == '404') {
+                    if (in_array(($midtransStatus['response']['transaction_status'] ?? false), ['deny', 'cancel', 'expire', 'failure']) || $midtransStatus['status_code'] == '404') {
                         $connectMidtrans = Midtrans::expire($singleTrx->transaction_receipt_number);
                     } else {
                         continue;
