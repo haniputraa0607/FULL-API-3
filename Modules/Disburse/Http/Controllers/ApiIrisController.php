@@ -21,6 +21,7 @@ use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
 
 use App\Lib\MyHelper;
+use Modules\Disburse\Entities\BankAccount;
 use Modules\Disburse\Entities\BankName;
 use Modules\Disburse\Entities\Disburse;
 
@@ -386,11 +387,16 @@ class ApiIrisController extends Controller
                                     $return = $sendToIris['response']['payouts'];
                                     foreach ($dataRetry as $val){
                                         $getData = Disburse::where('reference_no', $val['ref'])->first();
+                                        $bank = BankAccount::where('id_bank_account', $getData['id_bank_account'])->first();
                                         $oldRefNo = $getData['old_reference_no'].','.$getData['reference_no'];
                                         $oldRefNo = ltrim($oldRefNo,",");
                                         $count = $getData['count_retry'] + 1;
                                         $update = Disburse::where('id_disburse', $getData['id_disburse'])
-                                            ->update(['old_reference_no' => $oldRefNo, 'reference_no' => $return[$a]['reference_no'],
+                                            ->update(['beneficiary_name' => $bank['beneficiary_name'],
+                                                'beneficiary_account_number' => $bank['beneficiary_account'],
+                                                'beneficiary_alias' => $bank['beneficiary_alias'],
+                                                'beneficiary_email' => $bank['beneficiary_email'],
+                                                'old_reference_no' => $oldRefNo, 'reference_no' => $return[$a]['reference_no'],
                                                 'count_retry' => $count, 'disburse_status' => $arrStatus[ $return[$a]['status']]]);
                                         $a++;
                                     }
@@ -586,15 +592,17 @@ class ApiIrisController extends Controller
                             $amountMDR = $midtrans['gross_amount'];
                         }
 
+                        if(empty($payment)){
+                            DisburseJob::dispatch(['id_transaction' => $id_transaction])->onConnection('disbursequeue');
+                            return true;
+                        }
+
                         $keyMidtrans = array_search(strtoupper($payment), array_column($settingMDRAll, 'payment_name'));
                         if($keyMidtrans !== false){
                             $feePGCentral = $settingMDRAll[$keyMidtrans]['mdr_central'];
                             $feePG = $settingMDRAll[$keyMidtrans]['mdr'];
                             $feePGType = $settingMDRAll[$keyMidtrans]['percent_type'];
                             $charged = $settingMDRAll[$keyMidtrans]['charged'];
-                        }else{
-                            DisburseJob::dispatch(['id_transaction' => $id_transaction])->onConnection('disbursequeue');
-                            return true;
                         }
 
                     }elseif (strtolower($payments['type']) == 'balance'){
@@ -638,15 +646,16 @@ class ApiIrisController extends Controller
                         }
 
                         $method =  $ipay88['payment_method'];
+                        if(empty($method)){
+                            DisburseJob::dispatch(['id_transaction' => $id_transaction])->onConnection('disbursequeue');
+                            return true;
+                        }
                         $keyipay88 = array_search(strtoupper($method), array_column($settingMDRAll, 'payment_name'));
                         if($keyipay88 !== false){
                             $feePGCentral = $settingMDRAll[$keyipay88]['mdr_central'];
                             $feePG = $settingMDRAll[$keyipay88]['mdr'];
                             $feePGType = $settingMDRAll[$keyipay88]['percent_type'];
                             $charged = $settingMDRAll[$keyipay88]['charged'];
-                        }else{
-                            DisburseJob::dispatch(['id_transaction' => $id_transaction])->onConnection('disbursequeue');
-                            return true;
                         }
                     }elseif (strtolower($payments['type']) == 'ovo'){
                         $ovo = TransactionPaymentOvo::where('id_transaction', $data['id_transaction'])->first();
