@@ -285,16 +285,13 @@ class ApiAutoCrm extends Controller
 					$gateway = env('SMS_GATEWAY');
 					if(env('OTP_TYPE') == 'MISSCALL'){
                         $gateway = env('MISSCALL_GATEWAY');
-                        if (in_array($autocrm_title, ['Pin Sent', 'Pin Forgot'])) {
-                            User::where('id', $user['id'])->update(['otp_increment' => $user['otp_increment']+1]);
-                        }
                     }else{
                         if (in_array($autocrm_title, ['Pin Sent', 'Pin Forgot'])) {
                             // if user not 0 and even, send using alternative
                             if ($user['sms_increment'] % 2) {
                                 $gateway = env('SMS_GATEWAY_ALT');
                             }
-                            User::where('id', $user['id'])->update(['sms_increment' => $user['sms_increment']+1, 'otp_increment' => $user['otp_increment']+1]);
+                            User::where('id', $user['id'])->update(['sms_increment' => $user['sms_increment']+1]);
                         }
                     }
 
