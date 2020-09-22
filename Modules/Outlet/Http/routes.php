@@ -86,4 +86,6 @@ Route::group(['prefix' => 'api/outlet', 'middleware' => ['log_activities', 'auth
     Route::any('list/user-franchise', 'ApiOutletController@listUserFranchise');
     Route::any('detail/user-franchise', 'ApiOutletController@detailUserFranchise');
     Route::post('user-franchise/set-password-default', 'ApiOutletController@setPasswordDefaultUserFranchise');
+
+    Route::post('schedule/restore', 'ApiOutletController@restoreSchedule');
 });
