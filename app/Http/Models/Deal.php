@@ -255,4 +255,9 @@ class Deal extends Model
 	{
 		return $this->hasOne(\Modules\Deals\Entities\DealsDiscountBillRule::class, 'id_deals');
 	}
+
+	public function deals_discount_delivery_rules()
+	{
+		return $this->hasOne(\Modules\Deals\Entities\DealsDiscountDeliveryRule::class, 'id_deals');
+	}
 }

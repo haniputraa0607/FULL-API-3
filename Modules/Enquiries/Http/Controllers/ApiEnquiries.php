@@ -165,12 +165,17 @@ class ApiEnquiries extends Controller
 		}
 
 		//cek brand
-		$brand = Brand::find($data['id_brand']);
-		if(!$brand){
-			return response()->json([
-				'status' => 'fail',
-				'messages' => ['Brand not found']
-			]);
+		if(isset($data['brand'])){
+			$brand = Brand::find($data['id_brand']);
+			if(!$brand){
+				// return response()->json([
+				// 	'status' => 'fail',
+				// 	'messages' => ['Brand not found']
+				// ]);
+				$brand = null;
+			}
+		}else{
+			$brand = null;
 		}
 
 		$save = Enquiry::create($data);
@@ -530,6 +535,9 @@ class ApiEnquiries extends Controller
 				$outlet_name = $outlet['outlet_name'];
 				$outlet_code = $outlet['outlet_code'];
 			}
+		}
+		if(!isset($data['brand']['name_brand'])){
+			$data['brand']['name_brand']="";
 		}
         $send = app($this->autocrm)->SendAutoCRM('Enquiry '.$data['enquiry_subject'], $data['enquiry_phone'], [
                                                                 'enquiry_subject' => $data['enquiry_subject'],

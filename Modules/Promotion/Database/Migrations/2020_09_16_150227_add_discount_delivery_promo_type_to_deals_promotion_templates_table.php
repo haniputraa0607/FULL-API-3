@@ -13,9 +13,7 @@ class AddDiscountDeliveryPromoTypeToDealsPromotionTemplatesTable extends Migrati
      */
     public function up()
     {
-        Schema::table('deals_promotion_templates', function (Blueprint $table) {
-
-        });
+        \DB::statement("ALTER TABLE `deals_promotion_templates` CHANGE COLUMN `promo_type` `promo_type` ENUM('Product discount', 'Tier discount', 'Buy X Get Y', 'Discount bill', 'Discount delivery')");
     }
 
     /**
@@ -25,8 +23,6 @@ class AddDiscountDeliveryPromoTypeToDealsPromotionTemplatesTable extends Migrati
      */
     public function down()
     {
-        Schema::table('deals_promotion_templates', function (Blueprint $table) {
-
-        });
+        \DB::statement("ALTER TABLE `deals_promotion_templates` CHANGE COLUMN `promo_type` `promo_type` ENUM('Product discount', 'Tier discount', 'Buy X Get Y', 'Discount bill')");
     }
 }

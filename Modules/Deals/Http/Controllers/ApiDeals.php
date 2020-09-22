@@ -1441,6 +1441,7 @@ class ApiDeals extends Controller
                 $table.'_buyxgety_product_requirement.product', 
                 $table.'_buyxgety_rules.product',
                 $table.'_discount_bill_rules',
+                $table.'_discount_delivery_rules',
                 'brand'
             ]);
         }
@@ -1727,8 +1728,12 @@ class ApiDeals extends Controller
     	$deals = $deals->toArray();
     	if ( $deals['is_online'] == 1)
     	{
-	    	if ( empty($deals['deals_product_discount_rules']) && empty($deals['deals_tier_discount_rules']) && empty($deals['deals_buyxgety_rules']) )
-	    	{
+	    	if ( empty($deals['deals_product_discount_rules']) 
+	    		&& empty($deals['deals_tier_discount_rules']) 
+	    		&& empty($deals['deals_buyxgety_rules']) 
+	    		&& empty($deals['deals_discount_bill_rules']) 
+	    		&& empty($deals['deals_discount_delivery_rules'])
+	    	){
 	    		$step = 2;
 	    		$errors = 'Deals not complete';
 	    		return false;

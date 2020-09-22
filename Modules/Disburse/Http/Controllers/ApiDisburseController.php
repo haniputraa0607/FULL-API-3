@@ -943,8 +943,11 @@ class ApiDisburseController extends Controller
                         $summary = $this->summaryCalculationFee($yesterday, $outlet['id_outlet']);
                         $generateTrx = app($this->trx)->exportTransaction($filter, 1);
                         $dataDisburse = Transaction::join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+                            ->join('outlets', 'outlets.id_outlet', 'transactions.id_outlet')
                             ->join('disburse_outlet_transactions as dot', 'dot.id_transaction', 'transactions.id_transaction')
                             ->leftJoin('transaction_payment_balances', 'transaction_payment_balances.id_transaction', 'transactions.id_transaction')
+                            ->leftJoin('transaction_payment_midtrans', 'transactions.id_transaction', '=', 'transaction_payment_midtrans.id_transaction')
+                            ->leftJoin('transaction_payment_ipay88s', 'transactions.id_transaction', '=', 'transaction_payment_ipay88s.id_transaction')
                             ->where('transaction_payment_status', 'Completed')
                             ->whereNull('reject_at')
                             ->where('transactions.id_outlet', $outlet['id_outlet'])
@@ -954,7 +957,7 @@ class ApiDisburseController extends Controller
                                     ->join('subscription_users', 'subscription_users.id_subscription_user', 'subscription_user_vouchers.id_subscription_user')
                                     ->leftJoin('subscriptions', 'subscriptions.id_subscription', 'subscription_users.id_subscription');
                             }, 'vouchers.deal', 'promo_campaign'])
-                            ->select('dot.*', 'transactions.transaction_receipt_number',
+                            ->select('payment_type', 'payment_method', 'dot.*', 'outlets.outlet_name', 'outlets.outlet_code', 'transactions.transaction_receipt_number',
                                 'transactions.transaction_date', 'transactions.transaction_shipment_go_send',
                                 'transactions.transaction_grandtotal',
                                 'transactions.transaction_discount', 'transactions.transaction_subtotal')
@@ -1092,5 +1095,251 @@ class ApiDisburseController extends Controller
             'summary_fee' => $summaryFee,
             'config' => $config
         ];
+    }
+
+    public function dashboardV2(Request $request)
+    {
+    	$pending 	= $this->getDisburseDashboardData($request, 'pending');
+    	$processed 	= $this->getDisburseDashboardData($request, 'processed');
+
+    	$result	= [
+    		'pending'	=> $pending,
+    		'processed'	=> $processed
+    	];
+
+    	return MyHelper::checkGet($result);
+    }
+
+    public function getDisburseDashboardData($request, $status){
+        $post = $request->json()->all();
+
+        if ($status == 'pending') {
+        	$operator = '!=';
+        }
+        else{
+        	$operator = '=';
+        }
+
+        $nominal = Disburse::join('disburse_outlet', 'disburse.id_disburse', 'disburse_outlet.id_disburse');
+        $income_central = Disburse::join('disburse_outlet', 'disburse.id_disburse', 'disburse_outlet.id_disburse');
+
+        if ($status == 'processed') {
+        	$nominal = $nominal->whereIn('disburse.disburse_status', ['Success']);
+	        $income_central = $income_central->whereIn('disburse.disburse_status', ['Success']);
+
+        	$nominal_fail = Disburse::join('disburse_outlet', 'disburse.id_disburse', 'disburse_outlet.id_disburse')->whereIn('disburse.disburse_status', ['Fail', 'Failed Create Payouts']);
+        }
+
+        if ($status == 'pending') {
+        	$nominal = $nominal->whereNotIn('disburse.disburse_status', ['Fail', 'Failed Create Payouts', 'Success']);
+	        $income_central = $income_central->whereNotIn('disburse.disburse_status', ['Fail', 'Failed Create Payouts', 'Success']);
+
+	        $total_disburse = DisburseOutletTransaction::join('transactions', 'transactions.id_transaction', 'disburse_outlet_transactions.id_transaction')
+	                            ->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+	                            ->where(function ($q){
+	                                $q->whereNotNull('transaction_pickups.taken_at')
+	                                    ->orWhereNotNull('transaction_pickups.taken_by_system_at');
+	                            })
+	                            ->where(function ($q){
+	                                $q->orWhereNull('id_disburse_outlet')
+	                                    ->orWhereIn('id_disburse_outlet', function($query){
+	                                    $query->select('id_disburse_outlet')
+	                                        ->from('disburse')
+	                                        ->join('disburse_outlet', 'disburse.id_disburse', 'disburse_outlet.id_disburse')
+	                                        ->where('disburse.disburse_status', 'Queued');
+	                                });
+	                            });
+        }
+
+        if(isset($post['id_outlet']) && !empty($post['id_outlet']) && $post['id_outlet'] != 'all'){
+            $nominal->where('disburse_outlet.id_outlet', $post['id_outlet']);
+            $income_central->where('disburse_outlet.id_outlet', $post['id_outlet']);
+            if ($status == 'processed') {
+	            $nominal_fail->where('disburse_outlet.id_outlet', $post['id_outlet']);
+	        }
+	        if ($status == 'pending') {
+	            $total_disburse->where('transactions.id_outlet', $post['id_outlet']);
+	        }
+        }
+
+        if(isset($post['fitler_date']) && $post['fitler_date'] == 'today'){
+
+            $nominal->whereDate('disburse.created_at', date('Y-m-d'));
+            $income_central->where('disburse.created_at', date('Y-m-d'));
+            if ($status == 'processed') {
+            	$nominal_fail->whereDate('disburse.created_at', date('Y-m-d'));
+            }
+            if ($status == 'pending') {
+            	$total_disburse->where('transactions.transaction_date', date('Y-m-d'));
+            }
+
+        }elseif(isset($post['fitler_date']) && $post['fitler_date'] == 'specific_date'){
+            if(isset($post['start_date']) && !empty($post['start_date']) &&
+                isset($post['end_date']) && !empty($post['end_date'])){
+                $start_date = date('Y-m-d', strtotime($post['start_date']));
+                $end_date = date('Y-m-d', strtotime($post['end_date']));
+
+                $nominal->whereDate('disburse.created_at', '>=', $start_date)
+                    ->whereDate('disburse.created_at', '<=', $end_date);
+                $income_central->whereDate('disburse.created_at', '>=', $start_date)
+                    ->whereDate('disburse.created_at', '<=', $end_date);
+                if ($status == 'processed') {
+	                $nominal_fail->whereDate('disburse.created_at', '>=', $start_date)
+	                    ->whereDate('disburse.created_at', '<=', $end_date);
+	            }
+	            if ($status == 'pending') {
+	                $total_disburse->whereDate('transactions.transaction_date', '>=', $start_date)
+	                    ->whereDate('transactions.transaction_date', '<=', $end_date);
+	            }
+            }
+        }
+
+        if(isset($post['id_user_franchise']) && !empty($post['id_user_franchise'])){
+            $nominal->join('user_franchise_outlet', 'user_franchise_outlet.id_outlet', 'disburse_outlet.id_outlet')
+                ->where('user_franchise_outlet.id_user_franchise', $post['id_user_franchise']);
+
+            if ($status == 'processed') {
+            	$nominal_fail->join('user_franchise_outlet', 'user_franchise_outlet.id_outlet', 'disburse_outlet.id_outlet')
+                	->where('user_franchise_outlet.id_user_franchise', $post['id_user_franchise']);
+            }
+        }
+
+        $nominal = $nominal->selectRaw(
+        	'SUM(disburse_outlet.disburse_nominal-(disburse.disburse_fee / disburse.total_outlet)) as "nom_success", 
+        	SUM(disburse_outlet.total_fee_item) as "nom_item", 
+        	SUM(disburse_outlet.total_omset) as "nom_grandtotal", 
+        	SUM(disburse_outlet.total_expense_central) as "nom_expense_central", 
+        	SUM(disburse_outlet.total_delivery_price) as "nom_delivery"'
+        )->first();
+
+        $income_central = $income_central->sum('total_income_central');
+        if ($status == 'processed') {
+        	$nominal_fail = $nominal_fail->selectRaw('SUM(disburse_outlet.disburse_nominal-(disburse.disburse_fee / disburse.total_outlet)) as "disburse_nominal"')->first();
+        }
+        if ($status == 'pending') {
+        	$total_disburse = $total_disburse->sum('disburse_outlet_transactions.income_outlet');
+        }
+
+        $result = [
+            'nominal' => $nominal,
+            'nominal_fail' => $nominal_fail??0,
+            'income_central' => $income_central,
+            'total_disburse' => $total_disburse??0
+        ];
+        return $result;
+        // return response()->json($result);
+    }
+
+    public function sendRecap(Request $request){
+        $post = $request->json()->all();
+        $this->shortcutRecap($post['date']);
+
+        return 'Success';
+    }
+
+    public function shortcutRecap($date = null){
+        $currentDate = date('Y-m-d');
+        $yesterday = date('Y-m-d',strtotime($currentDate . "-1 days"));
+        if(!empty($date)){
+            $yesterday =  date('Y-m-d', strtotime($date));
+        }
+
+        $dataDisburse = Transaction::join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+            ->join('outlets', 'outlets.id_outlet', 'transactions.id_outlet')
+            ->join('disburse_outlet_transactions as dot', 'dot.id_transaction', 'transactions.id_transaction')
+            ->leftJoin('transaction_payment_balances', 'transaction_payment_balances.id_transaction', 'transactions.id_transaction')
+            ->leftJoin('transaction_payment_midtrans', 'transactions.id_transaction', '=', 'transaction_payment_midtrans.id_transaction')
+            ->leftJoin('transaction_payment_ipay88s', 'transactions.id_transaction', '=', 'transaction_payment_ipay88s.id_transaction')
+            ->where('transaction_payment_status', 'Completed')
+            ->whereNull('reject_at')
+            ->whereDate('transactions.transaction_date', $yesterday)
+            ->with(['transaction_payment_subscription'=> function($q){
+                $q->join('subscription_user_vouchers', 'subscription_user_vouchers.id_subscription_user_voucher', 'transaction_payment_subscriptions.id_subscription_user_voucher')
+                    ->join('subscription_users', 'subscription_users.id_subscription_user', 'subscription_user_vouchers.id_subscription_user')
+                    ->leftJoin('subscriptions', 'subscriptions.id_subscription', 'subscription_users.id_subscription');
+            }, 'vouchers.deal', 'promo_campaign'])
+            ->select('payment_type', 'payment_method', 'dot.*', 'outlets.outlet_name', 'outlets.outlet_code', 'transactions.transaction_receipt_number',
+                'transactions.transaction_date', 'transactions.transaction_shipment_go_send',
+                'transactions.transaction_grandtotal',
+                'transactions.transaction_discount', 'transactions.transaction_subtotal')
+            ->orderBy('outlets.outlet_code', 'asc')
+            ->get()->toArray();
+
+        $getEmailTo = Setting::where('key', 'email_to_send_recap_transaction')->first();
+
+        if(!empty($dataDisburse) && !empty($getEmailTo['value'])){
+            $excelFile = 'Transaction_['.$yesterday.'].xlsx';
+            $summary = $this->summaryCalculationFee($yesterday);
+            $store  = (new MultipleSheetExport([
+                "Summary" => $summary,
+                "Calculation Fee" => $dataDisburse
+            ]))->store('excel_email/'.$excelFile);
+
+            if($store){
+                $tmpPath[] = storage_path('app/excel_email/'.$excelFile);
+            }
+
+            if(!empty($tmpPath)){
+                $getSetting = Setting::where('key', 'LIKE', 'email%')->get()->toArray();
+
+                $setting = array();
+                foreach ($getSetting as $key => $value) {
+                    if($value['key'] == 'email_setting_url'){
+                        $setting[$value['key']]  = (array)json_decode($value['value_text']);
+                    }else{
+                        $setting[$value['key']] = $value['value'];
+                    }
+                }
+
+                $data = array(
+                    'customer' => '',
+                    'html_message' => 'Report Transaksi tanggal '.date('d M Y', strtotime($yesterday)),
+                    'setting' => $setting
+                );
+
+                $to = $getEmailTo['value'];
+                $subject = 'Report Transaksi ['.date('d M Y', strtotime($yesterday)).']';
+                $name =  '';
+                $variables['attachment'] = $tmpPath;
+
+                try{
+                    Mail::send('emails.test', $data, function($message) use ($to,$subject,$name,$setting,$variables)
+                    {
+                        $message->to($to, $name)->subject($subject);
+                        if(!empty($setting['email_from']) && !empty($setting['email_sender'])){
+                            $message->from($setting['email_sender'], $setting['email_from']);
+                        }else if(!empty($setting['email_sender'])){
+                            $message->from($setting['email_sender']);
+                        }
+
+                        if(!empty($setting['email_reply_to'])){
+                            $message->replyTo($setting['email_reply_to'], $setting['email_reply_to_name']);
+                        }
+
+                        if(!empty($setting['email_cc']) && !empty($setting['email_cc_name'])){
+                            $message->cc($setting['email_cc'], $setting['email_cc_name']);
+                        }
+
+                        if(!empty($setting['email_bcc']) && !empty($setting['email_bcc_name'])){
+                            $message->bcc($setting['email_bcc'], $setting['email_bcc_name']);
+                        }
+
+                        // attachment
+                        if(isset($variables['attachment']) && !empty($variables['attachment'])){
+                            foreach($variables['attachment'] as $attach){
+                                $message->attach($attach);
+                            }
+                        }
+                    });
+                }catch(\Exception $e){
+                }
+
+                foreach ($tmpPath as $t){
+                    File::delete($t);
+                }
+            }
+
+        }
+        return 'succes';
     }
 }

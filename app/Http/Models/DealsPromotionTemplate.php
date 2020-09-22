@@ -154,4 +154,9 @@ class DealsPromotionTemplate extends Model
 	{
 		return $this->hasOne(\Modules\Promotion\Entities\DealsPromotionDiscountBillRule::class, 'id_deals');
 	}
+
+	public function deals_promotion_discount_delivery_rules()
+	{
+		return $this->hasOne(\Modules\Promotion\Entities\DealsPromotionDiscountDeliveryRule::class, 'id_deals');
+	}
 }

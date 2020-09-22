@@ -75,7 +75,7 @@ class ValueFirst
                     [
                         '@UDH'      => '0',
                         '@CODING'   => '1',
-                        '@TEXT'     => $data['text'],
+                        '@TEXT'     => urlencode(str_replace(['\r', '\n'],["\r", "\n"],$data['text'])),
                         '@PROPERTY' => '0',
                         '@ID'       => '1',
                         'ADDRESS'   => [
@@ -139,4 +139,18 @@ class ValueFirst
         $data['udh']     = 0;
         return true;
     }
+
+    public function sendBulk($data)
+    {
+        $x = array_column(MyHelper::csvToArray($data['file'],true), 0);
+        foreach ($x as $phone) {
+            if (!$phone) {
+                continue;
+            }
+            print "Sending to $phone...";
+            $result = $this->send(['to' => $phone, 'text' => 'Sistem SMS OTP telah kembali normal, mohon maaf atas ketidaknyamanannya. Silakan coba register kembali.']);
+            print " ".$result?"SUCCESS\n":"FAIL\n";
+        }
+    }
+
 }

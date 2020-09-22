@@ -15,7 +15,9 @@ use Illuminate\Http\Request;
 Route::group(['prefix' => 'disburse'], function () {
 
     Route::group(['middleware' => ['auth:api', 'user_agent', 'scopes:be']], function () {
-        Route::any('dashboard', 'ApiDisburseController@dashboard');
+        Route::any('sycnFeeTransaction', 'ApiIrisController@sycnFeeTransaction');
+        Route::post('sendRecap', 'ApiDisburseController@sendRecap');
+        Route::any('dashboard', 'ApiDisburseController@dashboardV2');
         Route::any('outlets', 'ApiDisburseController@getOutlets');
         Route::any('user-franchise', 'ApiDisburseController@userFranchise');
 
@@ -73,7 +75,7 @@ Route::group(['prefix' => 'disburse'], function () {
 
     Route::group(['middleware' => ['auth:user-franchise', 'scopes:be']], function () {
         Route::any('user-franchise/detail', 'ApiDisburseController@userFranchise');
-        Route::any('user-franchise/dashboard', 'ApiDisburseController@dashboard');
+        Route::any('user-franchise/dashboard', 'ApiDisburseController@dashboardV2');
         Route::any('user-franchise/outlets', 'ApiDisburseController@getOutlets');
         Route::any('user-franchise/user-franchise', 'ApiDisburseController@userFranchise');
         Route::any('user-franchise/bank', 'ApiDisburseSettingController@getBank');

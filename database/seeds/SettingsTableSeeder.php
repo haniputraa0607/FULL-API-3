@@ -902,6 +902,15 @@ class SettingsTableSeeder extends Seeder
                     'value_text' => NULL,
                     'created_at' => date('Y-m-d H:i:s'),
                     'updated_at' => date('Y-m-d H:i:s'),
+                ),
+            100 =>
+                array(
+                    'id_setting' => 101,
+                    'key' => 'email_to_send_recap_transaction',
+                    'value' => NULL,
+                    'value_text' => NULL,
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
                 )
         ));
     }

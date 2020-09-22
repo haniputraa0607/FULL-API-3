@@ -638,8 +638,8 @@ class PromoCampaignTools{
 
 			case 'Discount bill':
 				// load required relationship
-				$promo->load('promo_campaign_discount_bill_rules');
-				$promo_rules = $promo->promo_campaign_discount_bill_rules;
+				$promo->load($source.'_discount_bill_rules');
+				$promo_rules = $promo[$source.'_discount_bill_rules'];
 				// get jumlah harga
 				$total_price=0;
 				foreach ($trxs as  $id_trx => &$trx) {
@@ -663,8 +663,8 @@ class PromoCampaignTools{
 
 			case 'Discount delivery':
 				// load required relationship
-				$promo->load('promo_campaign_discount_delivery_rules');
-				$promo_rules = $promo->promo_campaign_discount_delivery_rules;
+				$promo->load($source.'_discount_delivery_rules');
+				$promo_rules = $promo[$source.'_discount_delivery_rules'];
 
 				if ($promo_rules) {
 					$discount_delivery = $this->discountDelivery(

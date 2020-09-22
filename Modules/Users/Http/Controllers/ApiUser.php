@@ -897,11 +897,12 @@ class ApiUser extends Controller
         }
 
         if (isset($data[0]['is_suspended']) && $data[0]['is_suspended'] == '1') {
+            $emailSender = Setting::where('key', 'email_sender')->first();
             return response()->json([
                 'status' => 'success',
                 'result' => $data,
                 'otp_timer' => $holdTime,
-                'messages' => ['Akun Anda telah diblokir karena menunjukkan aktivitas mencurigakan. Untuk informasi lebih lanjut harap hubungi customer service kami di '.config('configs.EMAIL_ADDRESS_ADMIN')]
+                'messages' => ['Akun Anda telah diblokir karena menunjukkan aktivitas mencurigakan. Untuk informasi lebih lanjut harap hubungi customer service kami di '.$emailSender['value']??'']
             ]);
         }
 
@@ -911,13 +912,27 @@ class ApiUser extends Controller
             }
         }
 
+        switch (env('OTP_TYPE', 'PHONE')) {
+            case 'MISSCALL':
+                $msg_check = str_replace('%phone%', $phone, MyHelper::setting('message_send_otp_miscall', 'value_text', 'Kami akan mengirimkan kode OTP melalui Missed Call ke %phone%.<br/>Anda akan mendapatkan panggilan dari nomor 6 digit.<br/>Nomor panggilan tsb adalah Kode OTP Anda.'));
+                break;
+
+            case 'WA':
+                $msg_check = str_replace('%phone%', $phone, MyHelper::setting('message_send_otp_wa', 'value_text', 'Kami akan mengirimkan kode OTP melalui Whatsapp.<br/>Pastikan nomor %phone% terdaftar di Whatsapp.'));
+                break;
+
+            default:
+                $msg_check = str_replace('%phone%', $phone, MyHelper::setting('message_send_otp_sms', 'value_text', 'Kami akan mengirimkan kode OTP melalui SMS.<br/>Pastikan nomor %phone% aktif.'));
+                break;
+        }
+
         if($data){
             if(isset($data[0]['phone_verified']) && $data[0]['phone_verified'] == '0'){
                 return response()->json([
                     'status' => 'success',
                     'result' => $data,
                     'otp_timer' => $holdTime,
-                    'confirmation_message' => 'Anda akan mendaftar menggunakan nomor <b>'.$phone.'</b>. Apakah nomor telepon yang Anda masukkan sudah benar?',
+                    'confirmation_message' => $msg_check,
                     'messages' => null
                 ]);
             }else{
@@ -932,7 +947,7 @@ class ApiUser extends Controller
             return response()->json([
                 'status' => 'fail',
                 'otp_timer' => $holdTime,
-                'confirmation_message' => 'Anda akan mendaftar menggunakan nomor <b>'.$phone.'</b>. Apakah nomor telepon yang Anda masukkan sudah benar?',
+                'confirmation_message' => $msg_check,
                 'messages' => ['empty!']
             ]);
         }
@@ -1020,6 +1035,11 @@ class ApiUser extends Controller
 
             if (\Module::collections()->has('Autocrm')) {
                 $autocrm = app($this->autocrm)->SendAutoCRM(
+                    'Pin Create',
+                    $phone,
+                    []
+                );
+                $autocrm = app($this->autocrm)->SendAutoCRM(
                     'Pin Sent',
                     $phone,
                     [
@@ -1045,12 +1065,28 @@ class ApiUser extends Controller
                 ]);
             }
 
+            switch (env('OTP_TYPE', 'PHONE')) {
+                case 'MISSCALL':
+                    $msg_otp = str_replace('%phone%', $phone, MyHelper::setting('message_sent_otp_miscall', 'value_text', 'Kami telah mengirimkan PIN ke nomor %phone% melalui Missed Call.'));
+                    break;
+
+                case 'WA':
+                    $msg_otp = str_replace('%phone%', $phone, MyHelper::setting('message_sent_otp_wa', 'value_text', 'Kami telah mengirimkan PIN ke nomor %phone% melalui Whatsapp.'));
+                    break;
+
+                default:
+                    $msg_otp = str_replace('%phone%', $phone, MyHelper::setting('message_sent_otp_sms', 'value_text', 'Kami telah mengirimkan PIN ke nomor %phone% melalui SMS.'));
+                    break;
+            }
+
+
             if (env('APP_ENV') == 'production') {
                 $result = [
                     'status'    => 'success',
                     'result'    => [
                         'phone'    =>    $create->phone,
-                        'autocrm'    =>    $autocrm
+                        'autocrm'  =>    $autocrm,
+                        'message'  =>    $msg_otp
                     ]
                 ];
             } else {
@@ -1059,7 +1095,7 @@ class ApiUser extends Controller
                     'result'    => [
                         'phone'    =>    $create->phone,
                         'autocrm'    =>    $autocrm,
-                        'pin'    =>    MyHelper::encPIN($pin)
+                        'message'  =>    $msg_otp
                     ]
                 ];
             }
@@ -1251,18 +1287,19 @@ class ApiUser extends Controller
                         $check = array_column($check, 'id_user');
 
                         if ($deviceCus && count($deviceCus) > (int) $fraud['parameter_detail'] && array_search($datauser[0]['id'], $check) !== false) {
+                            $emailSender = Setting::where('key', 'email_sender')->first();
                             $sendFraud = app($this->setting_fraud)->checkFraud($fraud, $datauser[0], ['device_id' => $device_id, 'device_type' => $request->json('device_type')], 0, 0, null, 0);
                             $data = User::with('city')->where('phone', '=', $datauser[0]['phone'])->get()->toArray();
 
                             if ($data[0]['is_suspended'] == 1) {
                                 return response()->json([
                                     'status' => 'fail',
-                                    'messages' => ['Akun Anda telah diblokir karena menunjukkan aktivitas mencurigakan. Untuk informasi lebih lanjut harap hubungi customer service kami di '.config('configs.EMAIL_ADDRESS_ADMIN')]
+                                    'messages' => ['Akun Anda telah diblokir karena menunjukkan aktivitas mencurigakan. Untuk informasi lebih lanjut harap hubungi customer service kami di '.$emailSender['value']??'']
                                 ]);
                             } else {
                                 return response()->json([
                                     'status' => 'fail',
-                                    'messages' => ['Akun Anda tidak dapat login di device ini karena menunjukkan aktivitas mencurigakan. Untuk informasi lebih lanjut harap hubungi customer service kami di '.config('configs.EMAIL_ADDRESS_ADMIN')]
+                                    'messages' => ['Akun Anda tidak dapat login di device ini karena menunjukkan aktivitas mencurigakan. Untuk informasi lebih lanjut harap hubungi customer service kami di '.$emailSender['value']??'']
                                 ]);
                             }
                         }
@@ -1409,6 +1446,11 @@ class ApiUser extends Controller
 
                 if (\Module::collections()->has('Autocrm')) {
                     $autocrm = app($this->autocrm)->SendAutoCRM(
+                        'Pin Create',
+                        $phone,
+                        []
+                    );
+                    $autocrm = app($this->autocrm)->SendAutoCRM(
                         'Pin Sent',
                         $phone,
                         [
@@ -1425,11 +1467,28 @@ class ApiUser extends Controller
                 $holdTime = $checkRuleRequest['otp_timer'];
             }
 
+            switch (env('OTP_TYPE', 'PHONE')) {
+                case 'MISSCALL':
+                    $msg_otp = str_replace('%phone%', $phone, MyHelper::setting('message_sent_otp_miscall', 'value_text', 'Kami telah mengirimkan PIN ke nomor %phone% melalui Missed Call.'));
+                    break;
+
+                case 'WA':
+                    $msg_otp = str_replace('%phone%', $phone, MyHelper::setting('message_sent_otp_wa', 'value_text', 'Kami telah mengirimkan PIN ke nomor %phone% melalui Whatsapp.'));
+                    break;
+
+                default:
+                    $msg_otp = str_replace('%phone%', $phone, MyHelper::setting('message_sent_otp_sms', 'value_text', 'Kami telah mengirimkan PIN ke nomor %phone% melalui SMS.'));
+                    break;
+            }
+
             if (env('APP_ENV') == 'production') {
                 $result = [
                     'status'    => 'success',
                     'otp_timer' => $holdTime,
-                    'result'    => ['phone'    =>    $data[0]['phone'],]
+                    'result'    => [
+                        'phone'    =>    $data[0]['phone'],
+                        'message'  =>    $msg_otp
+                    ]
                 ];
             } else {
                 $result = [
@@ -1437,7 +1496,8 @@ class ApiUser extends Controller
                     'otp_timer' => $holdTime,
                     'result'    => [
                         'phone'    =>    $data[0]['phone'],
-                        'pin'    =>    ''
+                        'pin'    =>    '',
+                        'message' => $msg_otp
                     ]
                 ];
             }
@@ -1558,11 +1618,28 @@ class ApiUser extends Controller
                 $holdTime = $checkRuleRequest['otp_timer'];
             }
 
+            switch (env('OTP_TYPE', 'PHONE')) {
+                case 'MISSCALL':
+                    $msg_otp = str_replace('%phone%', $phone, MyHelper::setting('message_sent_otp_miscall', 'value_text', 'Kami telah mengirimkan PIN ke nomor %phone% melalui Missed Call.'));
+                    break;
+
+                case 'WA':
+                    $msg_otp = str_replace('%phone%', $phone, MyHelper::setting('message_sent_otp_wa', 'value_text', 'Kami telah mengirimkan PIN ke nomor %phone% melalui Whatsapp.'));
+                    break;
+
+                default:
+                    $msg_otp = str_replace('%phone%', $phone, MyHelper::setting('message_sent_otp_sms', 'value_text', 'Kami telah mengirimkan PIN ke nomor %phone% melalui SMS.'));
+                    break;
+            }
+
             if (env('APP_ENV') == 'production') {
                 $result = [
                     'status'    => 'success',
                     'otp_timer' => $holdTime,
-                    'result'    => ['phone'    =>    $phone]
+                    'result'    => [
+                        'phone'    =>    $phone,
+                        'message'  => $msg_otp
+                    ]
                 ];
             } else {
                 $result = [
@@ -1570,7 +1647,8 @@ class ApiUser extends Controller
                     'otp_timer' => $holdTime,
                     'result'    => [
                         'phone'    =>    $phone,
-                        'pin'        =>  ''
+                        'pin'        =>  '', 
+                        'message' => $msg_otp
                     ]
                 ];
             }
@@ -1652,18 +1730,19 @@ class ApiUser extends Controller
                             $check = array_column($check, 'id_user');
 
                             if ($deviceCus && count($deviceCus) > (int) $fraud['parameter_detail'] && array_search($data[0]['id'], $check) !== false) {
+                                $emailSender = Setting::where('key', 'email_sender')->first();
                                 $sendFraud = app($this->setting_fraud)->checkFraud($fraud, $data[0], ['device_id' => $device_id, 'device_type' => $request->json('device_type')], 0, 0, null, 0);
                                 $data = User::with('city')->where('phone', '=', $phone)->get()->toArray();
 
                                 if ($data[0]['is_suspended'] == 1) {
                                     return response()->json([
                                         'status' => 'fail',
-                                        'messages' => ['Akun Anda telah diblokir karena menunjukkan aktivitas mencurigakan. Untuk informasi lebih lanjut harap hubungi customer service kami di '.config('configs.EMAIL_ADDRESS_ADMIN')]
+                                        'messages' => ['Akun Anda telah diblokir karena menunjukkan aktivitas mencurigakan. Untuk informasi lebih lanjut harap hubungi customer service kami di '.$emailSender['value']??'']
                                     ]);
                                 } else {
                                     return response()->json([
                                         'status' => 'fail',
-                                        'messages' => ['Akun Anda tidak dapat di daftarkan karena menunjukkan aktivitas mencurigakan. Untuk informasi lebih lanjut harap hubungi customer service kami di '.config('configs.EMAIL_ADDRESS_ADMIN')]
+                                        'messages' => ['Akun Anda tidak dapat di daftarkan karena menunjukkan aktivitas mencurigakan. Untuk informasi lebih lanjut harap hubungi customer service kami di '.$emailSender['value']??'']
                                     ]);
                                 }
                             }
@@ -2685,6 +2764,14 @@ class ApiUser extends Controller
             }
         }
 
+        if(isset($post['update']['otp_request_status'])){
+            $old = $user[0]['otp_request_status'];
+            $current = $post['update']['otp_request_status'];
+            if($old == 'Can Not Request' && $current == 'Can Request'){
+                $post['update']['otp_increment'] = 0;
+            }
+        }
+
         $update = User::where('phone', $post['phone'])->update($post['update']);
 
         return MyHelper::checkUpdate($update);
@@ -3359,5 +3446,18 @@ class ApiUser extends Controller
             $data = ['status_verify' => 'fail', 'message' => 'Failed to verify your email, something went wrong', 'settings' => $setting];
             return view('users::verify_email', $data);
         }
+    }
+
+    public function removeUserDevice(Request $request)
+    {
+    	$post = $request->json()->all();
+    	$get_user = User::where('phone',$request->phone)->first();
+
+    	$del = UserDevice::Where('id_user', $get_user->id)->delete();
+    	$del = UsersDeviceLogin::Where('id_user', $get_user->id)->delete();
+
+
+    	return ['status' => 'success'];
+    	// return MyHelper::checkDelete($del);
     }
 }
