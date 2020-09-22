@@ -898,11 +898,21 @@ class ApiDisburseController extends Controller
         return response()->json(MyHelper::checkUpdate($update));
     }
 
-    public function cronSendEmailDisburse(){
+    function sendRecapTransactionOultet(Request $request){
+        $post = $request->json()->all();
+        $this->cronSendEmailDisburse($post['date']);
+
+        return 'Success';
+    }
+
+    public function cronSendEmailDisburse($date = null){
         $log = MyHelper::logCron('Disburse Send Email');
         try {
             $currentDate = date('Y-m-d');
             $yesterday = date('Y-m-d',strtotime($currentDate . "-1 days"));
+            if(!empty($date)){
+                $yesterday =  date('Y-m-d', strtotime($date));
+            }
 
             $getOultets = Transaction::join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
                 ->where('transaction_payment_status', 'Completed')->whereNull('reject_at')
