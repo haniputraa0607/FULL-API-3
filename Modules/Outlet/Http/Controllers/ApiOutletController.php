@@ -3023,7 +3023,7 @@ class ApiOutletController extends Controller
             return response()->json([
                 'status' => 'fail',
                 'messages' => [
-                    'time_verify should after last 5 minutes. Current time '.time(),
+                    'time_verify should after last 5 minutes. Current time '.time().'. '.url('/'),
                 ]
             ], 403);
         }
