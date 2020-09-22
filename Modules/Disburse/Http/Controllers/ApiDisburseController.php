@@ -1230,9 +1230,19 @@ class ApiDisburseController extends Controller
         // return response()->json($result);
     }
 
-    public function shortcutRecap(){
+    public function sendRecap(Request $request){
+        $post = $request->json()->all();
+        $this->shortcutRecap($post['date']);
+
+        return 'Success';
+    }
+
+    public function shortcutRecap($date = null){
         $currentDate = date('Y-m-d');
         $yesterday = date('Y-m-d',strtotime($currentDate . "-1 days"));
+        if(!empty($date)){
+            $yesterday =  date('Y-m-d', strtotime($date));
+        }
 
         $dataDisburse = Transaction::join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
             ->join('outlets', 'outlets.id_outlet', 'transactions.id_outlet')
