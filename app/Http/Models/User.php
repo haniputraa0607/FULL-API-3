@@ -91,8 +91,6 @@ class User extends Authenticatable
         'email_verify_request_status',
         'otp_request_status',
         'otp_valid_time',
-        'otp_available_time_request',
-        'otp_increment',
         'transaction_online',
         'transaction_online_status'
 	];
