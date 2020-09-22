@@ -376,7 +376,7 @@ class ApiCategoryController extends Controller
             ->whereRaw('products.id_product in (CASE
                         WHEN (select product_detail.id_product from product_detail  where product_detail.id_product = products.id_product AND product_detail.id_outlet = ' . $post['id_outlet'] . '  order by id_product_detail desc limit 1)
                         is NULL AND products.product_visibility = "Visible" THEN products.id_product
-                        WHEN (select product_detail.id_product from product_detail  where product_detail.product_detail_visibility = "" AND product_detail.id_product = products.id_product AND product_detail.id_outlet = ' . $post['id_outlet'] . '  order by id_product_detail desc limit 1)
+                        WHEN (select product_detail.id_product from product_detail  where (product_detail.product_detail_visibility = "" OR product_detail.product_detail_visibility is NULL) AND product_detail.id_product = products.id_product AND product_detail.id_outlet = ' . $post['id_outlet'] . '  order by id_product_detail desc limit 1)
                         is NOT NULL AND products.product_visibility = "Visible" THEN products.id_product
                         ELSE (select product_detail.id_product from product_detail  where product_detail.product_detail_visibility = "Visible" AND product_detail.id_product = products.id_product AND product_detail.id_outlet = ' . $post['id_outlet'] . '  order by id_product_detail desc limit 1)
                     END)')
@@ -525,7 +525,7 @@ class ApiCategoryController extends Controller
             ->whereRaw('products.id_product in (CASE
                         WHEN (select product_detail.id_product from product_detail  where product_detail.id_product = products.id_product AND product_detail.id_outlet = ' . $post['id_outlet'] . ' )
                         is NULL AND products.product_visibility = "Visible" THEN products.id_product
-                        WHEN (select product_detail.id_product from product_detail  where product_detail.product_detail_visibility = "" AND product_detail.id_product = products.id_product AND product_detail.id_outlet = ' . $post['id_outlet'] . ' )
+                        WHEN (select product_detail.id_product from product_detail  where (product_detail.product_detail_visibility = "" OR product_detail.product_detail_visibility is NULL) AND product_detail.id_product = products.id_product AND product_detail.id_outlet = ' . $post['id_outlet'] . ' )
                         is NOT NULL AND products.product_visibility = "Visible" THEN products.id_product
                         ELSE (select product_detail.id_product from product_detail  where product_detail.product_detail_visibility = "Visible" AND product_detail.id_product = products.id_product AND product_detail.id_outlet = ' . $post['id_outlet'] . ' )
                     END)')
