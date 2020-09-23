@@ -5,6 +5,7 @@ namespace App\Http\Models;
 use App\Lib\MyHelper;
 use Illuminate\Database\Eloquent\Model;
 use Symfony\Component\HttpFoundation\File\Exception\UploadException;
+use Modules\Subscription\Entities\Subscription;
 
 class Banner extends Model
 {
@@ -12,7 +13,7 @@ class Banner extends Model
 	
 	protected $fillable   = [
 		'image',
-		'id_news',
+		'id_reference',
 		'url',
 		'position',
 		'type',
@@ -24,7 +25,7 @@ class Banner extends Model
 
 	public function news()
 	{
-		return $this->belongsTo(News::class, 'id_news', 'id_news');
+		return $this->belongsTo(News::class, 'id_reference', 'id_news');
 	}
 
 
@@ -59,5 +60,34 @@ class Banner extends Model
             $this->attributes['url'] = config('url.app_url').'outlet/webview/gofood/list';;
         }
         $this->attributes['type'] = $type;
+	}
+
+	public function getReferenceTitleAttribute($value)
+	{
+		if ($this->id_reference) {
+			switch ($this->type) {
+				case 'deals_detail':
+					return Deal::where('id_deals', $this->id_reference)->value('deals_title');
+					break;
+				case 'subscription_detail':
+					return Subscription::where('id_subscription', $this->id_reference)->value('subscription_title');
+					break;
+				default:
+					return News::where('id_news', $this->id_reference)->value('news_title');
+			}
+		}
+		return $value;
+	}
+
+	public function getTypeAttribute($value)
+	{
+		if ($value == 'general') {
+			if ($this->id_reference) {
+				return 'news';
+			} else {
+				return 'none';
+			}
+		}
+		return $value;
 	}
 }
