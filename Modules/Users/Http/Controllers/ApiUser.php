@@ -2053,7 +2053,7 @@ class ApiUser extends Controller
                     	&& $datauser[0]['birthday'] != "" 
                     	&& $datauser[0]['id_city'] != "" 
                     	&& $datauser[0]['job'] != "" 
-                    	&& $datauser[0]['phone_verified'] != "" 
+                    	&& $datauser[0]['phone_verified'] == "1"
                         // && $datauser[0]['id_card_image'] != ""
                     ) {
                         //get point
