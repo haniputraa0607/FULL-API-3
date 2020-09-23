@@ -772,7 +772,7 @@ class ApiCronTrxController extends Controller
                 }
 
                 //send notif point refund
-                if($rejectBalance = true){
+                if($rejectBalance == true){
                     $send = app($this->autocrm)->SendAutoCRM('Rejected Order Point Refund', $user['phone'],
                     [
                         "outlet_name"      => $outlet['outlet_name'],

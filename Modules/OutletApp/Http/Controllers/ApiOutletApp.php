@@ -1685,6 +1685,7 @@ class ApiOutletApp extends Controller
             //refund ke balance
             // if($order['trasaction_payment_type'] == "Midtrans"){
             $multiple = TransactionMultiplePayment::where('id_transaction', $order->id_transaction)->get()->toArray();
+            $point = 0;
             if ($multiple) {
                 foreach ($multiple as $pay) {
                     if ($pay['type'] == 'Balance') {
@@ -1888,15 +1889,6 @@ class ApiOutletApp extends Controller
                         }
                         $rejectBalance = true;
                     }
-                    $refund = app($this->balance)->addLogBalance($order['id_user'], $point = ($payIpay['amount']/100), $order['id_transaction'], 'Rejected Order', $order['transaction_grandtotal']);
-                    if ($refund == false) {
-                        DB::rollback();
-                        return response()->json([
-                            'status'   => 'fail',
-                            'messages' => ['Insert Cashback Failed'],
-                        ]);
-                    }
-                    $rejectBalance = true;
                 } else {
                     $payBalance = TransactionPaymentBalance::where('id_transaction', $order['id_transaction'])->first();
                     if ($payBalance) {
@@ -1942,7 +1934,7 @@ class ApiOutletApp extends Controller
             }
 
             //send notif point refund
-            if($rejectBalance = true){
+            if($rejectBalance == true){
                 $send = app($this->autocrm)->SendAutoCRM('Rejected Order Point Refund', $user['phone'],
                 [
                     "outlet_name"      => $outlet['outlet_name'],
