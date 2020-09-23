@@ -2028,7 +2028,7 @@ class ApiPromoCampaign extends Controller
 				if ( $subs_voucher_today >= $subs->subscription_user->subscription->daily_usage_limit ) {
 					return [
 		                'status'=>'fail',
-		                'messages'=>['Subscription daily usage limit has been exceeded.']
+		                'messages'=>['Penggunaan subscription telah melampaui batas harian']
 		            ];
 				}
 	    	}
