@@ -63,13 +63,25 @@ class ApiWelcomeSubscription extends Controller
             $getSubs = Subscription::leftjoin('brands', 'brands.id_brand', 'subscriptions.id_brand')
 		                ->where('subscription_type','welcome')
 		                ->where('subscription_step_complete',1)
-		                ->select('subscriptions.*','brands.name_brand')
-		                ->get()->toArray();
+		                ->select('subscriptions.*','brands.name_brand');
         }else{
             $getSubs = Subscription::where('subscription_type','welcome')
-		                ->select('subscriptions.*')
-		                ->get()->toArray();
+		                ->select('subscriptions.*');
         }
+
+        if ($request->active) {
+        	$now = date("Y-m-d H:i:s");
+        	$getSubs = $getSubs->where('subscription_step_complete','1')
+        				// ->where('subscription_start', "<", $now)
+	            		->where('subscription_end', ">", $now)
+	            		// ->whereColumn('subscription_bought','<','subscription_total');
+	            		->where(function($q){
+	            			$q->where('subscription_total','=','0')
+	            			->orWhereColumn('subscription_bought','<','subscription_total');
+	            		});
+        }
+
+        $getSubs = $getSubs->get()->toArray();
 
         $result = [
             'status' => 'success',
@@ -123,7 +135,12 @@ class ApiWelcomeSubscription extends Controller
             		->select('subscriptions.*')
             		->where('subscription_start', "<", $now)
             		->where('subscription_end', ">", $now)
-            		->whereColumn('subscription_bought','<','subscription_total')
+            		->where(function($q){
+            			$q->where('subscription_total','=','0')
+            			->orWhereColumn('subscription_bought','<','subscription_total');
+            		})
+            		->where('subscription_step_complete','=','1')
+
             		->get();
 
         if (!$getSubs->isEmpty()) {
