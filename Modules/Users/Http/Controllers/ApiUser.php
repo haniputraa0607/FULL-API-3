@@ -1944,13 +1944,13 @@ class ApiUser extends Controller
             $phone = $checkPhoneFormat['phone'];
         }
 
-        DB::beginTransaction();
 
         $data = User::where('phone', '=', $phone)
             ->get()
             ->toArray();
 
         if ($data) {
+        	DB::beginTransaction();
             // $pin_x = MyHelper::decryptkhususpassword($data[0]['pin_k'], md5($data[0]['id_user'], true));
             if($request->json('email') != "" && $request->json('name') != "" &&
                 empty($data[0]['email']) && empty($data[0]['name'])){
@@ -2153,6 +2153,17 @@ class ApiUser extends Controller
                 //         'messages'	=> ['Current PIN doesn\'t match']
                 //     ];
                 // }
+		        if ($welcome_promo ?? false) {
+		        	if($setting['welcome_voucher_setting'] == 1){
+		                $injectVoucher = app($this->deals)->injectWelcomeVoucher(['id' => $data[0]['id']], $data[0]['phone']);
+		            }
+
+		            if($setting['welcome_subscription_setting'] == 1){
+		                $inject_subscription = app($this->welcome_subscription)->injectWelcomeSubscription(['id' => $data[0]['id']], $data[0]['phone']);
+		            }
+		        }
+
+		        DB::commit();
             } else {
                 $result = [
                     'status'    => 'fail',
@@ -2165,18 +2176,6 @@ class ApiUser extends Controller
                 'messages'    => ['This phone number isn\'t registered']
             ];
         }
-
-        if ($welcome_promo ?? false) {
-        	if($setting['welcome_voucher_setting'] == 1){
-                $injectVoucher = app($this->deals)->injectWelcomeVoucher(['id' => $data[0]['id']], $data[0]['phone']);
-            }
-
-            if($setting['welcome_subscription_setting'] == 1){
-                $inject_subscription = app($this->welcome_subscription)->injectWelcomeSubscription(['id' => $data[0]['id']], $data[0]['phone']);
-            }
-        }
-
-        DB::commit();
 
         return response()->json($result);
     }
