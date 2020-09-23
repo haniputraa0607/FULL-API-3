@@ -2085,15 +2085,18 @@ class ApiOutletController extends Controller
                                         'is_closed' => 0,
                                         'id_outlet' => $save['id_outlet']
                                     ];
-                                    $save = OutletSchedule::updateOrCreate(['id_outlet' => $save['id_outlet'], 'day' => $val], $data);
-                                    if (!$save) {
-                                        DB::rollBack();
-                                        return response()->json([
-                                            'status'    => 'fail',
-                                            'messages'      => [
-                                                'Add shedule failed.'
-                                            ]
-                                        ]);
+                                    $check = OutletSchedule::where('id_outlet', $save['id_outlet'])->where('day', $val)->select('day')->first();
+                                    if(!$check){
+                                        $save = OutletSchedule::updateOrCreate(['id_outlet' => $save['id_outlet'], 'day' => $val], $data);
+                                        if (!$save) {
+                                            DB::rollBack();
+                                            return response()->json([
+                                                'status'    => 'fail',
+                                                'messages'      => [
+                                                    'Add shedule failed.'
+                                                ]
+                                            ]);
+                                        }
                                     }
                                 }
                                 $countImport++;
@@ -3012,5 +3015,48 @@ class ApiOutletController extends Controller
         }
 
         return MyHelper::checkGet($count.' pin has been sent');
+    }
+
+    public function restoreSchedule(Request $request)
+    {
+        if ($request->time_verify < time() - 300) {
+            return response()->json([
+                'status' => 'fail',
+                'messages' => [
+                    'time_verify should after last 5 minutes. Current time '.time().'. '.url('/'),
+                ]
+            ], 403);
+        }
+        // 'open'      => '10:00:00',
+        // 'close'     => '21:30:00',
+
+        // get outlets with default schedule
+        $outlets = Outlet::select('outlets.id_outlet', 'outlets.outlet_code')->join('outlet_schedules', 'outlet_schedules.id_outlet', '=', 'outlets.id_outlet')
+            ->where([
+                'outlet_schedules.open' => '10:00:00',
+                'outlet_schedules.close' => '21:30:00',
+            ])->groupBy('outlets.id_outlet');
+        $updated = [];
+        foreach ($outlets->cursor() as $outlet) {
+            $updated[$outlet->outlet_code] = [];
+
+            $schedules = OutletScheduleUpdate::where('id_outlet', $outlet->id_outlet)->orderBy('id_outlet_schedule_update', 'desc')->take(7)->get();
+
+            foreach ($schedules as $schedule) {
+                $to_restore = json_decode($schedule->new_data, true);
+                $r = OutletSchedule::updateOrCreate([
+                    'id_outlet' => $to_restore['id_outlet'], 
+                    'day' => $to_restore['day']
+                ], [
+                    'open' => $to_restore['open'],
+                    'close' => $to_restore['close'],
+                    'is_closed' => $to_restore['is_closed'],
+                ]);
+                if ($request->show_result) {
+                    $updated[$outlet->outlet_code][] = $r;
+                }
+            }
+        }
+        return MyHelper::checkGet(['updated' => $updated]);
     }
 }

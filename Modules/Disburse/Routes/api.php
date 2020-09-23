@@ -16,6 +16,8 @@ Route::group(['prefix' => 'disburse'], function () {
 
     Route::group(['middleware' => ['auth:api', 'user_agent', 'scopes:be']], function () {
         Route::any('sycnFeeTransaction', 'ApiIrisController@sycnFeeTransaction');
+        Route::post('sendRecap', 'ApiDisburseController@sendRecap');
+        Route::post('sendRecapTransactionOultet', 'ApiDisburseController@sendRecapTransactionOultet');
         Route::any('dashboard', 'ApiDisburseController@dashboardV2');
         Route::any('outlets', 'ApiDisburseController@getOutlets');
         Route::any('user-franchise', 'ApiDisburseController@userFranchise');
