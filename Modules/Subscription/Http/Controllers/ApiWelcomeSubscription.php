@@ -139,6 +139,8 @@ class ApiWelcomeSubscription extends Controller
             			$q->where('subscription_total','=','0')
             			->orWhereColumn('subscription_bought','<','subscription_total');
             		})
+            		->where('subscription_step_complete','=','1')
+
             		->get();
 
         if (!$getSubs->isEmpty()) {
