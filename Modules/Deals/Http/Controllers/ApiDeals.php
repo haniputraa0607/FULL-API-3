@@ -1370,7 +1370,10 @@ class ApiDeals extends Controller
         			->where('deals_start', "<", $now)
             		->where('deals_end', ">", $now)
             		->where('step_complete','=','1')
-            		->whereColumn('deals_total_claimed','<','deals_total_voucher')
+            		->where(function($q){
+            			$q->where('deals_total_voucher','0')
+            			->orWhereColumn('deals_total_claimed','<','deals_total_voucher');
+            		})
             		->select('deals.*','deals_total.deals_total')->get();
 
         if (!$getDeals->isEmpty()) {

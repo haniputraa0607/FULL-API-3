@@ -44,7 +44,7 @@ class SendDealsJob implements ShouldQueue
         	$total_claimed = $data_deals['deals_total_claimed'];
 
 	        for($i=0;$i<$val['deals_total'];$i++){
-       			if ($total_voucher > $total_claimed) {
+       			if ($total_voucher > $total_claimed || $total_voucher === 0) {
 	                $generateVoucher = app($this->hidden_deals)->autoClaimedAssign($data_deals, $data['user']);
 	                $count++;
 	            	app($this->deals_claim)->updateDeals($data_deals);
