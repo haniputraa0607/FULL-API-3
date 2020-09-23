@@ -590,10 +590,6 @@ class ApiHome extends Controller
             $user->save();
         }
         $user->load(['city','city.province']);
-        $birthday = "";
-        if ($user->birthday != "") {
-            $birthday = date("d F Y", strtotime($user->birthday));
-        }
 
         if ($request->json('time')) {
             $time = $request->json('time');
@@ -698,8 +694,12 @@ class ApiHome extends Controller
         if($retUser['birthday']){
             $retUser['birthday']=date("d F Y", strtotime($retUser['birthday']));
         }else{
-            $retUser['birthday'] = '';
+            $retUser['birthday'] = "";
         }
+
+        $retUser['job'] = $retUser['job']??'';
+        $retUser['gender'] = $retUser['gender']??'';
+        $retUser['id_city'] = $retUser['id_city']??'';
 
         if($retUser['id_card_image']??false){
             $retUser['id_card_image'] = config('url.storage_url_api').$retUser['id_card_image'];

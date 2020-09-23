@@ -911,13 +911,27 @@ class ApiUser extends Controller
             }
         }
 
+        switch (env('OTP_TYPE', 'PHONE')) {
+            case 'MISSCALL':
+                $msg_check = str_replace('%phone%', $phone, MyHelper::setting('message_send_otp_miscall', 'value_text', 'Kami akan mengirimkan kode OTP melalui Missed Call ke %phone%.<br/>Anda akan mendapatkan panggilan dari nomor 6 digit.<br/>Nomor panggilan tsb adalah Kode OTP Anda.'));
+                break;
+
+            case 'WA':
+                $msg_check = str_replace('%phone%', $phone, MyHelper::setting('message_send_otp_wa', 'value_text', 'Kami akan mengirimkan kode OTP melalui Whatsapp.<br/>Pastikan nomor %phone% terdaftar di Whatsapp.'));
+                break;
+
+            default:
+                $msg_check = str_replace('%phone%', $phone, MyHelper::setting('message_send_otp_sms', 'value_text', 'Kami akan mengirimkan kode OTP melalui SMS.<br/>Pastikan nomor %phone% aktif.'));
+                break;
+        }
+
         if($data){
             if(isset($data[0]['phone_verified']) && $data[0]['phone_verified'] == '0'){
                 return response()->json([
                     'status' => 'success',
                     'result' => $data,
                     'otp_timer' => $holdTime,
-                    'confirmation_message' => 'Anda akan mendaftar menggunakan nomor <b>'.$phone.'</b>. Apakah nomor telepon yang Anda masukkan sudah benar?',
+                    'confirmation_message' => $msg_check,
                     'messages' => null
                 ]);
             }else{
@@ -932,7 +946,7 @@ class ApiUser extends Controller
             return response()->json([
                 'status' => 'fail',
                 'otp_timer' => $holdTime,
-                'confirmation_message' => 'Anda akan mendaftar menggunakan nomor <b>'.$phone.'</b>. Apakah nomor telepon yang Anda masukkan sudah benar?',
+                'confirmation_message' => $msg_check,
                 'messages' => ['empty!']
             ]);
         }
@@ -1020,6 +1034,11 @@ class ApiUser extends Controller
 
             if (\Module::collections()->has('Autocrm')) {
                 $autocrm = app($this->autocrm)->SendAutoCRM(
+                    'Pin Create',
+                    $phone,
+                    []
+                );
+                $autocrm = app($this->autocrm)->SendAutoCRM(
                     'Pin Sent',
                     $phone,
                     [
@@ -1045,12 +1064,28 @@ class ApiUser extends Controller
                 ]);
             }
 
+            switch (env('OTP_TYPE', 'PHONE')) {
+                case 'MISSCALL':
+                    $msg_otp = str_replace('%phone%', $phone, MyHelper::setting('message_sent_otp_miscall', 'value_text', 'Kami telah mengirimkan PIN ke nomor %phone% melalui Missed Call.'));
+                    break;
+
+                case 'WA':
+                    $msg_otp = str_replace('%phone%', $phone, MyHelper::setting('message_sent_otp_wa', 'value_text', 'Kami telah mengirimkan PIN ke nomor %phone% melalui Whatsapp.'));
+                    break;
+
+                default:
+                    $msg_otp = str_replace('%phone%', $phone, MyHelper::setting('message_sent_otp_sms', 'value_text', 'Kami telah mengirimkan PIN ke nomor %phone% melalui SMS.'));
+                    break;
+            }
+
+
             if (env('APP_ENV') == 'production') {
                 $result = [
                     'status'    => 'success',
                     'result'    => [
                         'phone'    =>    $create->phone,
-                        'autocrm'    =>    $autocrm
+                        'autocrm'  =>    $autocrm,
+                        'message'  =>    $msg_otp
                     ]
                 ];
             } else {
@@ -1059,7 +1094,7 @@ class ApiUser extends Controller
                     'result'    => [
                         'phone'    =>    $create->phone,
                         'autocrm'    =>    $autocrm,
-                        'pin'    =>    MyHelper::encPIN($pin)
+                        'message'  =>    $msg_otp
                     ]
                 ];
             }
@@ -1409,6 +1444,11 @@ class ApiUser extends Controller
 
                 if (\Module::collections()->has('Autocrm')) {
                     $autocrm = app($this->autocrm)->SendAutoCRM(
+                        'Pin Create',
+                        $phone,
+                        []
+                    );
+                    $autocrm = app($this->autocrm)->SendAutoCRM(
                         'Pin Sent',
                         $phone,
                         [
@@ -1425,11 +1465,28 @@ class ApiUser extends Controller
                 $holdTime = $checkRuleRequest['otp_timer'];
             }
 
+            switch (env('OTP_TYPE', 'PHONE')) {
+                case 'MISSCALL':
+                    $msg_otp = str_replace('%phone%', $phone, MyHelper::setting('message_sent_otp_miscall', 'value_text', 'Kami telah mengirimkan PIN ke nomor %phone% melalui Missed Call.'));
+                    break;
+
+                case 'WA':
+                    $msg_otp = str_replace('%phone%', $phone, MyHelper::setting('message_sent_otp_wa', 'value_text', 'Kami telah mengirimkan PIN ke nomor %phone% melalui Whatsapp.'));
+                    break;
+
+                default:
+                    $msg_otp = str_replace('%phone%', $phone, MyHelper::setting('message_sent_otp_sms', 'value_text', 'Kami telah mengirimkan PIN ke nomor %phone% melalui SMS.'));
+                    break;
+            }
+
             if (env('APP_ENV') == 'production') {
                 $result = [
                     'status'    => 'success',
                     'otp_timer' => $holdTime,
-                    'result'    => ['phone'    =>    $data[0]['phone'],]
+                    'result'    => [
+                        'phone'    =>    $data[0]['phone'],
+                        'message'  =>    $msg_otp
+                    ]
                 ];
             } else {
                 $result = [
@@ -1437,7 +1494,8 @@ class ApiUser extends Controller
                     'otp_timer' => $holdTime,
                     'result'    => [
                         'phone'    =>    $data[0]['phone'],
-                        'pin'    =>    ''
+                        'pin'    =>    '',
+                        'message' => $msg_otp
                     ]
                 ];
             }
@@ -1558,11 +1616,28 @@ class ApiUser extends Controller
                 $holdTime = $checkRuleRequest['otp_timer'];
             }
 
+            switch (env('OTP_TYPE', 'PHONE')) {
+                case 'MISSCALL':
+                    $msg_otp = str_replace('%phone%', $phone, MyHelper::setting('message_sent_otp_miscall', 'value_text', 'Kami telah mengirimkan PIN ke nomor %phone% melalui Missed Call.'));
+                    break;
+
+                case 'WA':
+                    $msg_otp = str_replace('%phone%', $phone, MyHelper::setting('message_sent_otp_wa', 'value_text', 'Kami telah mengirimkan PIN ke nomor %phone% melalui Whatsapp.'));
+                    break;
+
+                default:
+                    $msg_otp = str_replace('%phone%', $phone, MyHelper::setting('message_sent_otp_sms', 'value_text', 'Kami telah mengirimkan PIN ke nomor %phone% melalui SMS.'));
+                    break;
+            }
+
             if (env('APP_ENV') == 'production') {
                 $result = [
                     'status'    => 'success',
                     'otp_timer' => $holdTime,
-                    'result'    => ['phone'    =>    $phone]
+                    'result'    => [
+                        'phone'    =>    $phone,
+                        'message'  => $msg_otp
+                    ]
                 ];
             } else {
                 $result = [
@@ -1570,7 +1645,8 @@ class ApiUser extends Controller
                     'otp_timer' => $holdTime,
                     'result'    => [
                         'phone'    =>    $phone,
-                        'pin'        =>  ''
+                        'pin'        =>  '', 
+                        'message' => $msg_otp
                     ]
                 ];
             }
@@ -3359,5 +3435,18 @@ class ApiUser extends Controller
             $data = ['status_verify' => 'fail', 'message' => 'Failed to verify your email, something went wrong', 'settings' => $setting];
             return view('users::verify_email', $data);
         }
+    }
+
+    public function removeUserDevice(Request $request)
+    {
+    	$post = $request->json()->all();
+    	$get_user = User::where('phone',$request->phone)->first();
+
+    	$del = UserDevice::Where('id_user', $get_user->id)->delete();
+    	$del = UsersDeviceLogin::Where('id_user', $get_user->id)->delete();
+
+
+    	return ['status' => 'success'];
+    	// return MyHelper::checkDelete($del);
     }
 }

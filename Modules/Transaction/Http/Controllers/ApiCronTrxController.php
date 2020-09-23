@@ -40,6 +40,7 @@ use Modules\IPay88\Entities\TransactionPaymentIpay88;
 use Modules\OutletApp\Jobs\AchievementCheck;
 use Modules\SettingFraud\Entities\FraudDetectionLogTransactionDay;
 use Modules\SettingFraud\Entities\FraudDetectionLogTransactionWeek;
+use Modules\ShopeePay\Entities\TransactionPaymentShopeePay;
 
 class ApiCronTrxController extends Controller
 {
@@ -65,7 +66,7 @@ class ApiCronTrxController extends Controller
             $crossLine = date('Y-m-d H:i:s', strtotime('- 3days'));
             $dateLine  = date('Y-m-d H:i:s', strtotime('- 1days'));
             $now       = date('Y-m-d H:i:s');
-            $expired   = date('Y-m-d H:i:s',strtotime('- 15minutes'));
+            $expired   = date('Y-m-d H:i:s',strtotime('- 5minutes'));
 
             $getTrx = Transaction::where('transaction_payment_status', 'Pending')->where('transaction_date', '<=', $expired)->get();
 
@@ -88,9 +89,19 @@ class ApiCronTrxController extends Controller
                     continue;
                 }
                 if($singleTrx->trasaction_payment_type == 'Midtrans') {
-                    $connectMidtrans = Midtrans::expire($singleTrx->transaction_receipt_number);
+                    $midtransStatus = Midtrans::status($singleTrx->id_transaction);
+                    if (in_array(($midtransStatus['response']['transaction_status'] ?? false), ['deny', 'cancel', 'expire', 'failure']) || $midtransStatus['status_code'] == '404') {
+                        $connectMidtrans = Midtrans::expire($singleTrx->transaction_receipt_number);
+                    } else {
+                        continue;
+                    }
                 }elseif($singleTrx->trasaction_payment_type == 'Ipay88') {
                     $trx_ipay = TransactionPaymentIpay88::where('id_transaction',$singleTrx->id_transaction)->first();
+
+                    if (strtolower($trx_ipay->payment_method) == 'credit card' && $singleTrx->transaction_date > date('Y-m-d H:i:s', strtotime('- 15minutes'))) {
+                        continue;
+                    }
+
                     $update = \Modules\IPay88\Lib\IPay88::create()->update($trx_ipay?:$singleTrx->id_transaction,[
                         'type' =>'trx',
                         'Status' => '0',
@@ -588,6 +599,32 @@ class ApiCronTrxController extends Controller
                                     $rejectBalance = true;
                                 }
                             }
+                        } elseif (strtolower($pay['type']) == 'shopeepay') {
+                            $point = 0;
+                            $payShopeepay = TransactionPaymentShopeePay::find($pay['id_payment']);
+                            if ($payShopeepay) {
+                                if(MyHelper::setting('refund_shopeepay')) {
+                                    $refund = app($this->shopeepay)->void($payShopeepay['id_transaction'], 'trx', $errors);
+                                    if (!$refund) {
+                                        DB::rollback();
+                                        $reject_type = 'refund';
+                                        return response()->json([
+                                            'status'   => 'fail',
+                                            'messages' => ['Refund Payment Failed'],
+                                        ]);
+                                    }
+                                }else{
+                                    $refund = app($this->balance)->addLogBalance($order['id_user'], $point = ($payShopeepay['amount']/100), $order['id_transaction'], 'Rejected Order', $order['transaction_grandtotal']);
+                                    if ($refund == false) {
+                                        DB::rollback();
+                                        return response()->json([
+                                            'status'   => 'fail',
+                                            'messages' => ['Insert Cashback Failed'],
+                                        ]);
+                                    }
+                                    $rejectBalance = true;
+                                }
+                            }
                         } else {
                             $point = 0;
                             $payMidtrans = TransactionPaymentMidtran::find($pay['id_payment']);
@@ -611,7 +648,6 @@ class ApiCronTrxController extends Controller
                                 }
                             }
                         }
-
                     }
                 } else {
                     $payMidtrans = TransactionPaymentMidtran::where('id_transaction', $order['id_transaction'])->first();
@@ -736,7 +772,7 @@ class ApiCronTrxController extends Controller
                 }
 
                 //send notif point refund
-                if($rejectBalance = true){
+                if($rejectBalance == true){
                     $send = app($this->autocrm)->SendAutoCRM('Rejected Order Point Refund', $user['phone'],
                     [
                         "outlet_name"      => $outlet['outlet_name'],
