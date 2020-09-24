@@ -10,6 +10,7 @@ use App\Http\Models\Outlet;
 use App\Http\Models\Transaction;
 use App\Http\Models\TransactionProduct;
 use App\Http\Models\TransactionProductModifier;
+use App\Jobs\SendRecapManualy;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
@@ -900,8 +901,7 @@ class ApiDisburseController extends Controller
 
     function sendRecapTransactionOultet(Request $request){
         $post = $request->json()->all();
-        $this->cronSendEmailDisburse($post['date']);
-
+        SendRecapManualy::dispatch(['date' => $post['date'], 'type' => 'recap_transaction_to_outlet'])->onConnection('disbursequeue');
         return 'Success';
     }
 
@@ -1242,7 +1242,7 @@ class ApiDisburseController extends Controller
 
     public function sendRecap(Request $request){
         $post = $request->json()->all();
-        $this->shortcutRecap($post['date']);
+        SendRecapManualy::dispatch(['date' => $post['date'], 'type' => 'recap_disburse'])->onConnection('disbursequeue');
 
         return 'Success';
     }
@@ -1254,6 +1254,20 @@ class ApiDisburseController extends Controller
             $yesterday =  date('Y-m-d', strtotime($date));
         }
 
+        $filter['date_start'] = $yesterday;
+        $filter['date_end'] = $yesterday;
+        $filter['detail'] = 1;
+        $filter['key'] = 'all';
+        $filter['rule'] = 'and';
+        $filter['conditions'] = [
+            [
+                'subject' => 'status',
+                'operator' => 'Completed',
+                'parameter' => null
+            ]
+        ];
+
+        $generateTrx = app($this->trx)->exportTransaction($filter, 1);
         $dataDisburse = Transaction::join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
             ->join('outlets', 'outlets.id_outlet', 'transactions.id_outlet')
             ->join('disburse_outlet_transactions as dot', 'dot.id_transaction', 'transactions.id_transaction')
@@ -1277,12 +1291,13 @@ class ApiDisburseController extends Controller
 
         $getEmailTo = Setting::where('key', 'email_to_send_recap_transaction')->first();
 
-        if(!empty($dataDisburse) && !empty($getEmailTo['value'])){
+        if(!empty($dataDisburse) && !empty($generateTrx) && !empty($getEmailTo['value'])){
             $excelFile = 'Transaction_['.$yesterday.'].xlsx';
             $summary = $this->summaryCalculationFee($yesterday);
             $store  = (new MultipleSheetExport([
                 "Summary" => $summary,
-                "Calculation Fee" => $dataDisburse
+                "Calculation Fee" => $dataDisburse,
+                "Detail Transaction" => $generateTrx
             ]))->store('excel_email/'.$excelFile);
 
             if($store){
