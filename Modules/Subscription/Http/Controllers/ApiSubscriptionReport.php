@@ -150,13 +150,13 @@ class ApiSubscriptionReport extends Controller
 	    				'disburse_outlet_transactions.subscription_central as charged_central'
 	    				// DB::raw("(transaction_payment_subscriptions.subscription_nominal - charged_outlet) as charged_central")
 	    			)
-	    			->leftJoin('subscription_users','subscription_user_vouchers.id_subscription_user','=','subscription_users.id_subscription_user')
-	    			->leftJoin('users','users.id','=','subscription_users.id_user')
-	    			->leftJoin('transactions', 'transactions.id_transaction', '=', 'subscription_user_vouchers.id_transaction')
-	    			->leftJoin('outlets', 'outlets.id_outlet', '=', 'transactions.id_outlet')
-	    			->leftJoin('subscriptions', 'subscriptions.id_subscription', '=', 'subscription_users.id_subscription')
-	    			->leftJoin('transaction_payment_subscriptions', 'transaction_payment_subscriptions.id_transaction', '=', 'transactions.id_transaction')
-	    			->leftJoin('disburse_outlet_transactions', 'disburse_outlet_transactions.id_transaction', '=', 'transactions.id_transaction')
+	    			->join('subscription_users','subscription_user_vouchers.id_subscription_user','=','subscription_users.id_subscription_user')
+	    			->join('users','users.id','=','subscription_users.id_user')
+	    			->join('transactions', 'transactions.id_transaction', '=', 'subscription_user_vouchers.id_transaction')
+	    			->join('outlets', 'outlets.id_outlet', '=', 'transactions.id_outlet')
+	    			->join('subscriptions', 'subscriptions.id_subscription', '=', 'subscription_users.id_subscription')
+	    			->join('transaction_payment_subscriptions', 'transaction_payment_subscriptions.id_transaction', '=', 'transactions.id_transaction')
+	    			->join('disburse_outlet_transactions', 'disburse_outlet_transactions.id_transaction', '=', 'transactions.id_transaction')
 	    			->groupBy('subscription_user_vouchers.id_subscription_user_voucher');
 
     	if (isset($request['rule'])){

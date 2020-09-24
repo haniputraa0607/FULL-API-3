@@ -1944,11 +1944,13 @@ class ApiUser extends Controller
             $phone = $checkPhoneFormat['phone'];
         }
 
+
         $data = User::where('phone', '=', $phone)
             ->get()
             ->toArray();
 
         if ($data) {
+        	DB::beginTransaction();
             // $pin_x = MyHelper::decryptkhususpassword($data[0]['pin_k'], md5($data[0]['id_user'], true));
             if($request->json('email') != "" && $request->json('name') != "" &&
                 empty($data[0]['email']) && empty($data[0]['name'])){
@@ -1957,12 +1959,8 @@ class ApiUser extends Controller
 				foreach ($get_setting as $key => $value) {
 					$setting[$value['key']] = $value['value'];
 				}
-                if($setting['welcome_voucher_setting'] == 1){
-                    $injectVoucher = app($this->deals)->injectWelcomeVoucher(['id' => $data[0]['id']], $data[0]['phone']);
-                }
-                if($setting['welcome_subscription_setting'] == 1){
-                    $inject_subscription = app($this->welcome_subscription)->injectWelcomeSubscription(['id' => $data[0]['id']], $data[0]['phone']);
-                }
+
+				$welcome_promo = 1;
             }
 
             if ($request->json('email') != "") {
@@ -2033,8 +2031,6 @@ class ApiUser extends Controller
                     }
                 }
 
-                DB::beginTransaction();
-
                 $referral = \Modules\PromoCampaign\Lib\PromoCampaignTools::createReferralCode($data[0]['id']);
 
                 if (!$referral) {
@@ -2051,7 +2047,13 @@ class ApiUser extends Controller
 
                 //cek complete profile ?
                 if ($datauser[0]['complete_profile'] != "1") {
-                    if ($datauser[0]['name'] != "" && $datauser[0]['email'] != "" && $datauser[0]['gender'] != "" && $datauser[0]['birthday'] != "" && $datauser[0]['id_city'] != "" && $datauser[0]['job'] != "" 
+                    if ($datauser[0]['name'] != "" 
+                    	&& $datauser[0]['email'] != "" 
+                    	&& $datauser[0]['gender'] != "" 
+                    	&& $datauser[0]['birthday'] != "" 
+                    	&& $datauser[0]['id_city'] != "" 
+                    	&& $datauser[0]['job'] != "" 
+                    	&& $datauser[0]['phone_verified'] == "1"
                         // && $datauser[0]['id_card_image'] != ""
                     ) {
                         //get point
@@ -2127,7 +2129,7 @@ class ApiUser extends Controller
                 if (!empty($datauser[0]['id_card_image']) && !is_null($datauser[0]['id_card_image'])) {
                     $urlIdCard = config('url.storage_url_api') . $datauser[0]['id_card_image'];
                 }
-                DB::commit();
+                
                 $result = [
                     'status'    => 'success',
                     'result'    => [
@@ -2151,6 +2153,17 @@ class ApiUser extends Controller
                 //         'messages'	=> ['Current PIN doesn\'t match']
                 //     ];
                 // }
+		        if ($welcome_promo ?? false) {
+		        	if($setting['welcome_voucher_setting'] == 1){
+		                $injectVoucher = app($this->deals)->injectWelcomeVoucher(['id' => $data[0]['id']], $data[0]['phone']);
+		            }
+
+		            if($setting['welcome_subscription_setting'] == 1){
+		                $inject_subscription = app($this->welcome_subscription)->injectWelcomeSubscription(['id' => $data[0]['id']], $data[0]['phone']);
+		            }
+		        }
+
+		        DB::commit();
             } else {
                 $result = [
                     'status'    => 'fail',
@@ -2163,6 +2176,7 @@ class ApiUser extends Controller
                 'messages'    => ['This phone number isn\'t registered']
             ];
         }
+
         return response()->json($result);
     }
 

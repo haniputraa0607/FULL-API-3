@@ -151,6 +151,12 @@ class Kernel extends ConsoleKernel
          */
         $schedule->call('Modules\ShopeePay\Http\Controllers\ShopeePayController@cronCancelSubscription')->cron('*/1 * * * *');
 
+        /**
+         * Check the status of Gosend which is not updated after 5 minutes
+         * run every 5 minutes
+         */
+        $schedule->call('Modules\Transaction\Http\Controllers\ApiGosendController@cronCheckStatus')->cron('*/5 * * * *');
+
     }
 
     /**
