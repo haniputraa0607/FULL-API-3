@@ -175,6 +175,14 @@ class ApiOutletController extends Controller
      */
     function create(Create $request) {
         $post = $this->checkInputOutlet($request->json()->all());
+        if (!empty($post['outlet_latitude']) && strpos($post['outlet_latitude'], ',') !== false) {
+            return response()->json(['status' => 'fail', 'messages' => ['Please input invalid latitude']]);
+        }
+
+        if (!empty($post['outlet_longitude']) && strpos($post['outlet_longitude'], ',') !== false) {
+            return response()->json(['status' => 'fail', 'messages' => ['Please input invalid longitude']]);
+        }
+
         if(!isset($post['outlet_code'])){
             do{
                 $post['outlet_code'] = MyHelper::createRandomPIN(3);
@@ -244,6 +252,14 @@ class ApiOutletController extends Controller
      */
     function update(Update $request) {
         $post = $this->checkInputOutlet($request->json()->all());
+
+        if (!empty($post['outlet_latitude']) && strpos($post['outlet_latitude'], ',') !== false) {
+            return response()->json(['status' => 'fail', 'messages' => ['Please input invalid latitude']]);
+        }
+
+        if (!empty($post['outlet_longitude']) && strpos($post['outlet_longitude'], ',') !== false) {
+            return response()->json(['status' => 'fail', 'messages' => ['Please input invalid longitude']]);
+        }
 
         DB::beginTransaction();
         if(is_array($brands=$post['outlet_brands']??false)){
@@ -2026,6 +2042,18 @@ class ApiOutletController extends Controller
                         if(!empty($value['close_hours'])){
                             $value['close_hours'] = date('H:i:s', strtotime($value['close_hours']));
                         }
+
+                        $value['latitude'] = str_replace(" ","",$value['latitude']);
+                        $value['longitude'] = str_replace(" ","",$value['longitude']);
+
+                        if(!empty($value['latitude']) && strpos($value['latitude'], ',') !== false){
+                            $failedImport[] = $value['code'].': Invalid latitude please use "." and remove ","';
+                        }
+
+                        if(!empty($value['longitude']) && strpos($value['longitude'], ',') !== false){
+                            $failedImport[] = $value['code'].': Invalid longitude please use "." and remove ","';
+                        }
+
                         if(empty($value['code'])){
                             do{
                                 $value['code'] = MyHelper::createRandomPIN(3);
@@ -2033,6 +2061,7 @@ class ApiOutletController extends Controller
                             }while($code != null);
                         }
                         $code = ['outlet_code' => $value['code']];
+
                         $insert = [
                             'outlet_code' => $value['code']??'',
                             'outlet_name' => $value['name']??'',
