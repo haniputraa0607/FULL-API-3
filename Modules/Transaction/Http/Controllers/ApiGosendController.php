@@ -280,7 +280,7 @@ class ApiGosendController extends Controller
                 // update status
                 app('Modules\OutletApp\Http\Controllers\ApiOutletApp')->refreshDeliveryStatus(new Request(['id_transaction' => $gosend->id_transaction, 'type' => 'gosend']));
             }
-            $log->success('success');
+            $log->success(['checked' => count($gosends)]);
             return response()->json(['success']);
         } catch (\Exception $e) {
             $log->fail($e->getMessage());
