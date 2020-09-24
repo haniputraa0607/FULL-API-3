@@ -1460,8 +1460,7 @@ class ApiTransaction extends Controller
                                     ->whereNull('transaction_pickups.ready_at');
                             }elseif($con['operator'] == 'ready_at'){
                                 $query = $query->whereNotNull('transaction_pickups.ready_at')
-                                    ->whereNull('transaction_pickups.taken_at')
-                                    ->whereNull('transaction_pickups.taken_by_system_at');
+                                    ->whereNull('transaction_pickups.taken_at');
                             }else{
                                 $query = $query->whereNotNull('transaction_pickups.'.$con['operator']);
                             }
@@ -1483,7 +1482,6 @@ class ApiTransaction extends Controller
                                     $q->whereNotNull('transaction_pickups.ready_at')
                                         ->whereNotNull('transaction_pickups.taken_by_system_at');
                                 });
-                                $query = $query->orWhereNotNull('transaction_pickups.taken_by_system_at');
                             }elseif($con['operator'] == 'receive_at'){
                                 $query = $query->orWhere(function ($q){
                                     $q->whereNotNull('transaction_pickups.receive_at')
@@ -1492,8 +1490,7 @@ class ApiTransaction extends Controller
                             }elseif($con['operator'] == 'ready_at'){
                                 $query = $query->orWhere(function ($q) {
                                     $q->whereNotNull('transaction_pickups.ready_at')
-                                        ->whereNull('transaction_pickups.taken_at')
-                                        ->whereNull('transaction_pickups.taken_by_system_at');
+                                        ->whereNull('transaction_pickups.taken_at');
                                 });
                             }else{
                                 $query = $query->orWhereNotNull('transaction_pickups.'.$con['operator']);
@@ -1715,8 +1712,7 @@ class ApiTransaction extends Controller
                                     ->whereNull('transaction_pickups.ready_at');
                             }elseif($con['operator'] == 'ready_at'){
                                 $query = $query->whereNotNull('transaction_pickups.ready_at')
-                                    ->whereNull('transaction_pickups.taken_at')
-                                    ->whereNull('transaction_pickups.taken_by_system_at');
+                                    ->whereNull('transaction_pickups.taken_at');
                             }else{
                                 $query = $query->whereNotNull('transaction_pickups.'.$con['operator']);
                             }
@@ -1738,7 +1734,6 @@ class ApiTransaction extends Controller
                                     $q->whereNotNull('transaction_pickups.ready_at')
                                         ->whereNotNull('transaction_pickups.taken_by_system_at');
                                 });
-                                $query = $query->orWhereNotNull('transaction_pickups.taken_by_system_at');
                             }elseif($con['operator'] == 'receive_at'){
                                 $query = $query->orWhere(function ($q){
                                     $q->whereNotNull('transaction_pickups.receive_at')
@@ -1747,8 +1742,7 @@ class ApiTransaction extends Controller
                             }elseif($con['operator'] == 'ready_at'){
                                 $query = $query->orWhere(function ($q) {
                                     $q->whereNotNull('transaction_pickups.ready_at')
-                                        ->whereNull('transaction_pickups.taken_at')
-                                        ->whereNull('transaction_pickups.taken_by_system_at');
+                                        ->whereNull('transaction_pickups.taken_at');
                                 });
                             }else{
                                 $query = $query->orWhereNotNull('transaction_pickups.'.$con['operator']);
@@ -2031,7 +2025,7 @@ class ApiTransaction extends Controller
                     $status = 'Pending';
                 }elseif(!empty($val['receive_at']) && empty($val['ready_at'])){
                     $status = 'Received';
-                }elseif(!empty($val['ready_at']) && empty($val['taken_at']) && empty($val['taken_by_system_at'])){
+                }elseif(!empty($val['ready_at']) && empty($val['taken_at'])){
                     $status = 'Ready';
                 }elseif(!empty($val['taken_at']) && $val['pickup_by'] == 'Customer'){
                     $status = 'Taken by Customer';
@@ -2124,7 +2118,7 @@ class ApiTransaction extends Controller
                     $status = 'Pending';
                 }elseif(!empty($val['receive_at']) && empty($val['ready_at'])){
                     $status = 'Received';
-                }elseif(!empty($val['ready_at']) && empty($val['taken_at']) && empty($val['taken_by_system_at'])){
+                }elseif(!empty($val['ready_at']) && empty($val['taken_at'])){
                     $status = 'Ready';
                 }elseif(!empty($val['taken_at']) && $val['pickup_by'] == 'Customer'){
                     $status = 'Taken by Customer';

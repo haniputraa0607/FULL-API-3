@@ -2345,7 +2345,10 @@ class ApiOutletApp extends Controller
 
     public function refreshDeliveryStatus(Request $request)
     {
-        $trx = Transaction::where('transactions.id_transaction', $request->id_transaction)->join('transaction_pickups', 'transaction_pickups.id_transaction', '=', 'transactions.id_transaction')->where('pickup_by', 'GO-SEND')->first();
+        $trx = Transaction::where('transactions.id_transaction', $request->id_transaction)->join('transaction_pickups', 'transaction_pickups.id_transaction', '=', 'transactions.id_transaction')->with(['outlet' => function($q) {
+            $q->select('id_outlet', 'outlet_name');
+        }])->where('pickup_by', 'GO-SEND')->first();
+        $outlet = $trx->outlet;
         if (!$trx) {
             return MyHelper::checkGet($trx, 'Transaction Not Found');
         }
