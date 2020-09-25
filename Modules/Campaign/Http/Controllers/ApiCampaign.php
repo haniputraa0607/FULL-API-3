@@ -348,7 +348,7 @@ class ApiCampaign extends Controller
 		$user = $request->user();
 
 		$campaign = Campaign::where('id_campaign','=',$post['id_campaign'])->first();
-return $campaign;
+
 		if($campaign){
             DB::beginTransaction();
 			if($campaign['campaign_is_sent'] == 'Yes'){
