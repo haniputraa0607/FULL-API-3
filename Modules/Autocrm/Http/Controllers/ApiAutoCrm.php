@@ -182,7 +182,7 @@ class ApiAutoCrm extends Controller
 										$message->attach($variables['attachment']);
 									}
 								}
-							});
+							}, $autocrm_title == 'Email Verify' ? 'email_priority' : 'email_default');
 					    }catch(\Exception $e){
                         }
 

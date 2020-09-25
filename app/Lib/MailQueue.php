@@ -13,6 +13,6 @@ class MailQueue{
 			$callback($mail);
 		}
 
-		SendMail::dispatch($mail)->onQueue($queue);
+		SendMail::dispatch($mail)->onQueue($queue)->allOnConnection('email');
 	}
 }
