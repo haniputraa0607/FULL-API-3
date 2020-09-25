@@ -580,14 +580,13 @@ class ApiHome extends Controller
             $this->updateDeviceUser($user, $request->json('device_id'), $request->json('device_token'), $request->json('device_type'));
         }
         if($user->first_login===0){
+            $user->first_login=1;
+            $user->save();
             $send = app($this->autocrm)->SendAutoCRM('Login First Time', $user['phone']);
             if (!$send) {
                 DB::rollback();
                 return response()->json(['status' => 'fail', 'messages' => ['Send notification failed']]);
             }
-
-            $user->first_login=1;
-            $user->save();
         }
         $user->load(['city','city.province']);
 
@@ -697,9 +696,9 @@ class ApiHome extends Controller
             $retUser['birthday'] = "";
         }
 
-        $retUser['job'] = $retUser['job']??'';
-        $retUser['gender'] = $retUser['gender']??'';
-        $retUser['id_city'] = $retUser['id_city']??'';
+        $retUser['job'] = ($retUser['job'] === NULL ? '' : $retUser['job']);
+        $retUser['gender'] = ($retUser['gender'] === NULL ? '' : $retUser['gender']);
+        $retUser['id_city'] = ($retUser['id_city'] === NULL ? '' : $retUser['id_city']);
 
         if($retUser['id_card_image']??false){
             $retUser['id_card_image'] = config('url.storage_url_api').$retUser['id_card_image'];

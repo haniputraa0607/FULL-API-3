@@ -30,6 +30,7 @@ use Modules\Disburse\Entities\DisburseOutlet;
 use Modules\Disburse\Entities\DisburseOutletTransaction;
 use Modules\Disburse\Entities\DisburseTransaction;
 use Modules\Disburse\Entities\LogIRIS;
+use Modules\Disburse\Entities\LogTopupIris;
 use Modules\Disburse\Entities\MDR;
 use Modules\Disburse\Entities\UserFranchisee;
 use Modules\IPay88\Entities\TransactionPaymentIpay88;
@@ -43,39 +44,44 @@ class ApiIrisController extends Controller
 {
     public function notification(Request $request){
         $post = $request->json()->all();
-        $reference_no = $post['reference_no'];
         $status = $post['status'];
 
-        $arrStatus = [
-            'queued' => 'Queued',
-            'processed' => 'Processed',
-            'completed' => 'Success',
-            'failed' => 'Fail',
-            'rejected' => 'Rejected',
-            'approved' => 'Approved'
-        ];
-        $data = Disburse::where('reference_no', $reference_no)->update(['disburse_status' => $arrStatus[$status]??NULL,
-            'error_code' => $post['error_code']??null, 'error_message' => $post['error_message']??null]);
-
-        $dataLog = [
-            'subject' => 'Callback IRIS',
-            'id_reference' => $post['reference_no']??null,
-            'request'=> json_encode($post)
-        ];
-
-        if($data){
-            if($status == 'completed' || $status == 'failed'){
-                SendEmailDisburseJob::dispatch(['reference_no' => $reference_no])->onConnection('disbursequeue');
-            }
-
-            $dataLog['response'] = json_encode(['status' => 'success']);
-            LogIRIS::create($dataLog);
+        if($status == 'topup'){
+            LogTopupIris::create(['response' => json_encode($post)]);
             return response()->json(['status' => 'success']);
         }else{
-            $dataLog['response'] = json_encode(['status' => 'fail', 'messages' => ['Failed Update status']]);
-            LogIRIS::create($dataLog);
-            return response()->json(['status' => 'fail',
-                'messages' => ['Failed Update status']]);
+            $reference_no = $post['reference_no'];
+            $arrStatus = [
+                'queued' => 'Queued',
+                'processed' => 'Processed',
+                'completed' => 'Success',
+                'failed' => 'Fail',
+                'rejected' => 'Rejected',
+                'approved' => 'Approved'
+            ];
+            $data = Disburse::where('reference_no', $reference_no)->update(['disburse_status' => $arrStatus[$status]??NULL,
+                'error_code' => $post['error_code']??null, 'error_message' => $post['error_message']??null]);
+
+            $dataLog = [
+                'subject' => 'Callback IRIS',
+                'id_reference' => $post['reference_no']??null,
+                'request'=> json_encode($post)
+            ];
+
+            if($data){
+                if($status == 'completed' || $status == 'failed'){
+                    SendEmailDisburseJob::dispatch(['reference_no' => $reference_no])->onConnection('disbursequeue');
+                }
+
+                $dataLog['response'] = json_encode(['status' => 'success']);
+                LogIRIS::create($dataLog);
+                return response()->json(['status' => 'success']);
+            }else{
+                $dataLog['response'] = json_encode(['status' => 'fail', 'messages' => ['Failed Update status']]);
+                LogIRIS::create($dataLog);
+                return response()->json(['status' => 'fail',
+                    'messages' => ['Failed Update status']]);
+            }
         }
     }
 
