@@ -124,4 +124,14 @@ return [
         'table' => 'failed_jobs',
     ],
 
+    'rateLimits' => [
+         'email_default' => [ // queue name
+            'allows' => 23, // 23 job
+            'every' => 1 // per 1 seconds
+         ],
+         'email_priority' => [ // queue name
+            'allows' => 27, // 27 job
+            'every' => 1 // per 1 seconds
+         ]
+    ]
 ];
