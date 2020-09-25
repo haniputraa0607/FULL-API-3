@@ -17,7 +17,7 @@ use App\Lib\apiwha;
 use Validator;
 use Hash;
 use DB;
-use Mail;
+use App\Lib\MailQueue as Mail;
 
 use App\Jobs\CronBalance;
 

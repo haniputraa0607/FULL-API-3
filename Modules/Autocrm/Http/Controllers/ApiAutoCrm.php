@@ -33,7 +33,7 @@ use Validator;
 use Hash;
 use DB;
 use App\Lib\MailQueue as Mail;
-// use Mail;
+// use App\Lib\MailQueue as Mail;
 
 class ApiAutoCrm extends Controller
 {

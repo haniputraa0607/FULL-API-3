@@ -23,7 +23,7 @@ use App\Lib\MyHelper;
 use Validator;
 use Hash;
 use DB;
-use Mail;
+use App\Lib\MailQueue as Mail;
 
 
 class ApiReportDua extends Controller

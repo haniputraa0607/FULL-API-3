@@ -41,7 +41,7 @@ use App\Lib\apiwha;
 use Validator;
 use Hash;
 use DB;
-use Mail;
+use App\Lib\MailQueue as Mail;
 
 class ApiCampaign extends Controller
 {
