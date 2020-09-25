@@ -227,11 +227,12 @@ class ApiPromotion extends Controller
 			else{
 				// filter user
 				if(count($promotion->promotion_rule_parents) >0){
-					$cond = Promotion::with(['user', 'promotion_rule_parents', 'promotion_rule_parents.rules'])->where('id_promotion','=',$post['id_promotion'])->get()->first();
-					$users = app($this->user)->UserFilter($cond['promotion_rule_parents']);
+					// $cond = Promotion::with(['user', 'promotion_rule_parents', 'promotion_rule_parents.rules'])->where('id_promotion','=',$post['id_promotion'])->get()->first();
+					// $users = app($this->user)->UserFilter($cond['promotion_rule_parents']);
 
 					$promotion = Promotion::where('id_promotion','=',$post['id_promotion'])->with(['user', 'promotion_rule_parents', 'promotion_rule_parents.rules', 'schedules', 'contents', 'contents.deals','contents.deals.outlets','contents.deals.deals_vouchers', 'contents.whatsapp_content'])->first();
-					if($users['status'] == 'success'){
+
+					/*if($users['status'] == 'success'){
 						// exclude user in queue
 						if(count($promotion->contents) > 0){
 							$exUserQueue = PromotionQueue::where('id_promotion_content', $promotion->contents[0]['id_promotion_content'])->select('id_user')->distinct()->get();
@@ -241,25 +242,25 @@ class ApiPromotion extends Controller
 						}else{
 							$promotion['users'] = $users['result'];
 						}
-
 					}
 					else{
 						$promotion['users'] = [];
-					}
+					}*/
 				// get All user
 				}else{
 					$promotion = Promotion::where('id_promotion','=',$post['id_promotion'])->with(['user', 'promotion_rule_parents', 'promotion_rule_parents.rules', 'schedules', 'contents', 'contents.deals','contents.deals.outlets','contents.deals.deals_vouchers', 'contents.whatsapp_content'])->first();
 
 					// exclude user in queue
-					if(count($promotion->contents) > 0){
+					/*if(count($promotion->contents) > 0){
 						$exUserQueue = PromotionQueue::where('id_promotion_content', $promotion->contents[0]['id_promotion_content'])->select('id_user')->distinct()->get();
 						$users = User::leftJoin('cities','cities.id_city','=','users.id_city')->whereNotIn('id', array_pluck($exUserQueue, 'id_user'))->get();
 						$promotion['users'] = $users;
 					}else{
 						$promotion['users'] = User::leftJoin('cities','cities.id_city','=','users.id_city')->get();
-					}
+					}*/
 				}
 
+				/*commented because step2 & 3 doesn't need recipient data
 				if($promotion['promotion_user_limit'] == '1' && count($promotion->contents) > 0){
 					$exUser = PromotionSent::where('id_promotion_content', $promotion->contents[0]['id_promotion_content'])->select('id_user')->distinct()->get();
 					$exUserQueue = PromotionQueue::where('id_promotion_content', $promotion->contents[0]['id_promotion_content'])->select('id_user')->distinct()->get();
@@ -268,7 +269,7 @@ class ApiPromotion extends Controller
 					$idUsers = array_diff($idUsers, array_pluck($exUserQueue, 'id_user'));
 
 					$promotion['users'] = User::join('cities', 'cities.id_city', 'users.id_city')->whereIn('id', $idUsers)->get();
-				}
+				}*/
 			}
 
 			$result = [
