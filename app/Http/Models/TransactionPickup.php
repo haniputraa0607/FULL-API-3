@@ -29,7 +29,8 @@ class TransactionPickup extends Model
 		'id_admin_outlet_receive',
 		'id_admin_outlet_taken',
 		'created_at',
-		'updated_at'
+		'updated_at',
+		'show_confirm'
 	];
 
 	public function transaction()

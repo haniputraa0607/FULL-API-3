@@ -921,7 +921,11 @@ class ApiOutletApp extends Controller
         DB::beginTransaction();
 
         $pickup = TransactionPickup::where('id_transaction', $order->id_transaction)->update(['taken_at' => date('Y-m-d H:i:s')]);
-        $order->show_rate_popup = 1;
+
+        if ($order->taken_by == 'Customer') {
+            $order->show_rate_popup = 1;
+        }
+
         $order->save();
         if ($pickup) {
             //send notif to customer
