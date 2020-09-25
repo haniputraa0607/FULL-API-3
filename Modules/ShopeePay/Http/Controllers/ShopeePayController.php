@@ -38,6 +38,7 @@ class ShopeePayController extends Controller
         $this->voucher             = "Modules\Deals\Http\Controllers\ApiDealsVoucher";
         $this->promo_campaign      = "Modules\PromoCampaign\Http\Controllers\ApiPromoCampaign";
         $this->deals_claim         = "Modules\Deals\Http\Controllers\ApiDealsClaim";
+        $this->subscription        = "Modules\Subscription\Http\Controllers\ApiSubscriptionVoucher";
         $this->errcode             = [
             '-2'  => 'a server dropped the connection',
             '-1'  => 'a server error occurred',
@@ -416,6 +417,10 @@ class ShopeePayController extends Controller
                     DB::rollBack();
                     continue;
                 }
+
+                // return subscription
+                $update_subscription = app($this->subscription)->returnSubscription($singleTrx->id_transaction);
+
                 $count++;
                 DB::commit();
 
