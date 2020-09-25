@@ -2,6 +2,7 @@
 namespace Modules\IPay88\Lib;
 
 use App\Http\Models\Configs;
+use App\Jobs\DisburseJob;
 use App\Jobs\FraudJob;
 use Illuminate\Support\Facades\Log;
 use DB;
@@ -314,6 +315,7 @@ class IPay88
 	                            'messages' => ['Failed update payment status']
 	                        ];
 	                    }
+						DisburseJob::dispatch(['id_transaction' => $id_transaction])->onConnection('disbursequeue');
 
 	                    //inset pickup_at when pickup_type = right now
 						if($trx['trasaction_type'] == 'Pickup Order'){

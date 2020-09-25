@@ -3,7 +3,7 @@
 namespace App\Jobs;
 
 use App\Http\Models\Configs;
-use App\Http\Models\FraudSetting;
+use Modules\SettingFraud\Entities\FraudSetting;
 use App\Http\Models\LogPoint;
 use App\Http\Models\Outlet;
 use App\Http\Models\Setting;
