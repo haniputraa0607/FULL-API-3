@@ -519,11 +519,6 @@ class ApiIrisController extends Controller
     /* !!!! please add new condition in "process calculation payment gateway" if you added new payment gateway !!!! */
     /* !!!! after update function please restart queue !!!! */
     public function calculationTransaction($id_transaction){
-        $check = DisburseOutletTransaction::where('id_transaction', $id_transaction)->first();
-        if($check){
-            return false;
-        }
-
         $data = Transaction::where('id_transaction', $id_transaction)
             ->join('outlets', 'outlets.id_outlet', 'transactions.id_outlet')
             ->with(['transaction_multiple_payment', 'vouchers', 'promo_campaign', 'transaction_payment_subscription'])
@@ -782,8 +777,7 @@ class ApiIrisController extends Controller
                     'created_at' => date('Y-m-d H:i:s'),
                     'updated_at' => date('Y-m-d H:i:s')
                 ];
-                $insert = DisburseOutletTransaction::insert($dataInsert);
-
+                $insert = DisburseOutletTransaction::updateOrCreate(['id_transaction' => $data['id_transaction']], $dataInsert);
                 return $insert;
             }else{
                 return false;
