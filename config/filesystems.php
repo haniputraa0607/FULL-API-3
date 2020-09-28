@@ -91,7 +91,7 @@ return [
             'cdnDomain'     => '', // if is CName is true, getUrl will determine whether cdn Domain is set to determine the returned URL，If cdnDomain is not set，Then use endpoint to generate url，Otherwise use cdn
             'ssl'           => true, // true to use 'https://' and false to use 'http://'. default is false,
             'isCName'       => false, // Whether to use a custom domain name,true: Then Storage.url()Will use custom CDN or domain name to generate file url， false: Then use an external node to generate the url
-            'debug'         => true
+            'debug'         => false
         ],
 
         'gcs' => [
