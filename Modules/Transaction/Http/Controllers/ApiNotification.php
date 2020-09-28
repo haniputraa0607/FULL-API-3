@@ -51,7 +51,7 @@ use App\Lib\GoSend;
 use Validator;
 use Hash;
 use DB;
-use App\Lib\MailQueue as Mail;
+use Mail;
 use DateTime;
 
 class ApiNotification extends Controller {
