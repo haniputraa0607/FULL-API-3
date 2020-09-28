@@ -484,6 +484,7 @@ class ApiCampaign extends Controller
 					$post=['id_campaign'=>$campaign->id_campaign];
 					GenerateCampaignRecipient::dispatch($post)->allOnConnection('database');
 				}
+                $update = Campaign::where('id_campaign','=',$campaign->id_campaign)->update(['campaign_is_sent' => 'Yes']);
 				$this->sendCampaignInternal($campaign->toArray());
 			}
 
