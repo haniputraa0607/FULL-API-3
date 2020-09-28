@@ -48,7 +48,7 @@ use App\Lib\MyHelper;
 use Validator;
 use Hash;
 use DB;
-use App\Lib\MailQueue as Mail;
+use Mail;
 use Auth;
 
 class ApiUser extends Controller

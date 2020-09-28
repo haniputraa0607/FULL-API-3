@@ -4,7 +4,7 @@ namespace App\Backup;
 
 use App\Http\Models\Setting;
 use Spatie\Backup\Notifications\Notifiable;
-use App\Lib\MailQueue as Mail;
+use Mail;
 
 class NotificationBackupHasFailed extends Notifiable
 {
