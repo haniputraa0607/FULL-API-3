@@ -7,13 +7,13 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
-use App\Lib\MailQueue as Mail;
+use Mail;
 
 class SendMail implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
     protected $mail;
-    public $tries = 10; // 10x retry max
+    public $tries = 3; // 3x retry max
     public $retryAfter = 60; // retry after 1 minutes
 
     /**
@@ -35,4 +35,8 @@ class SendMail implements ShouldQueue
     {
         Mail::send($this->mail);
     }
+
+    // public function failed(\Exception $e)
+    // {
+    // }
 }

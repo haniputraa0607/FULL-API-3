@@ -49,7 +49,9 @@ return [
         ],
 
         'email' => [
-            'driver' => 'file',
+            'driver' => 'database',
+            'table' => 'email_jobs',
+            'retry_after' => 60,
             'queue' => 'email_default',
         ],
 
