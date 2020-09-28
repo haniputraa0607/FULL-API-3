@@ -28,7 +28,7 @@ class Kernel extends ConsoleKernel
          * sending the campaign schedule
          * run every 5 minute
          */
-        $schedule->call('Modules\Campaign\Http\Controllers\ApiCampaign@insertQueue')->everyFiveMinutes();
+        $schedule->call('Modules\Campaign\Http\Controllers\ApiCampaign@insertQueue')->cron('*/10 * * * *');
 
         /**
          * insert the promotion data that must be sent to the promotion_queue table
