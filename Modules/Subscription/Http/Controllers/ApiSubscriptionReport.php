@@ -42,7 +42,13 @@ class ApiSubscriptionReport extends Controller
 
     function transactionReport(Request $request)
     {
-    	$list = $this->getSubscriptionTrxReport($request);
+    	if ($request->report_type == 'claim') {
+    		$list = $this->getSubscriptionClaimReport($request);
+    	}
+    	else{
+    		$list = $this->getSubscriptionTrxReport($request);
+    	}
+
     	$list = $list->paginate(10);
 
     	return MyHelper::checkGet($list);
@@ -145,9 +151,9 @@ class ApiSubscriptionReport extends Controller
 	    				DB::raw("CONCAT(outlets.outlet_code,'-',outlets.outlet_name) as outlet"),
 	    				'subscriptions.subscription_title', 
 	    				'subscriptions.subscription_type', 
-	    				'transaction_payment_subscriptions.subscription_nominal',
-	    				'disburse_outlet_transactions.subscription as charged_outlet',
-	    				'disburse_outlet_transactions.subscription_central as charged_central'
+	    				'transaction_payment_subscriptions.subscription_nominal'
+	    				// 'disburse_outlet_transactions.subscription as charged_outlet',
+	    				// 'disburse_outlet_transactions.subscription_central as charged_central'
 	    				// DB::raw("(transaction_payment_subscriptions.subscription_nominal - charged_outlet) as charged_central")
 	    			)
 	    			->join('subscription_users','subscription_user_vouchers.id_subscription_user','=','subscription_users.id_subscription_user')
@@ -156,7 +162,7 @@ class ApiSubscriptionReport extends Controller
 	    			->join('outlets', 'outlets.id_outlet', '=', 'transactions.id_outlet')
 	    			->join('subscriptions', 'subscriptions.id_subscription', '=', 'subscription_users.id_subscription')
 	    			->join('transaction_payment_subscriptions', 'transaction_payment_subscriptions.id_transaction', '=', 'transactions.id_transaction')
-	    			->join('disburse_outlet_transactions', 'disburse_outlet_transactions.id_transaction', '=', 'transactions.id_transaction')
+	    			// ->leftJoin('disburse_outlet_transactions', 'disburse_outlet_transactions.id_transaction', '=', 'transactions.id_transaction')
 	    			->groupBy('subscription_user_vouchers.id_subscription_user_voucher');
 
     	if (isset($request['rule'])){
@@ -166,33 +172,83 @@ class ApiSubscriptionReport extends Controller
         return $query;
     }
 
+    function getSubscriptionClaimReport($request)
+    {
+    	$query 	= DB::table('subscription_user_vouchers')
+	    			->orderBy('subscription_users.bought_at', 'Desc')
+	    			->select(
+	    				'subscription_user_vouchers.voucher_code', 
+	    				'subscription_user_vouchers.used_at', 
+	    				'subscription_user_vouchers.created_at', 
+	    				'subscription_users.bought_at', 
+	    				'subscription_users.id_subscription', 
+	    				'subscription_users.subscription_expired_at', 
+	    				'subscription_users.subscription_price_cash', 
+	    				'subscription_users.subscription_price_point',
+	    				'users.name', 
+	    				'users.phone', 
+	    				DB::raw("CONCAT(users.name,'-',users.phone) as user"),
+	    				'subscriptions.subscription_title', 
+	    				'subscriptions.subscription_type'
+	    			)
+	    			->join('subscription_users','subscription_user_vouchers.id_subscription_user','=','subscription_users.id_subscription_user')
+	    			->join('users','users.id','=','subscription_users.id_user')
+	    			->join('subscriptions', 'subscriptions.id_subscription', '=', 'subscription_users.id_subscription')
+	    			->groupBy('subscription_users.id_subscription_user');
+
+    	if (isset($request['rule'])){
+             $this->filterReport($query, $request);
+        }
+
+        return $query;
+    }
+
     public function exportExcel($filter){
-        $data = $this->getSubscriptionTrxReport($filter);
+    	if ( ($filter['type']??false) == 'claim' ) {
+    		$data = $this->getSubscriptionClaimReport($filter);
+    	}
+    	else{
+        	$data = $this->getSubscriptionTrxReport($filter);
+    	}
 
         foreach ($data->cursor() as $val) {
         	$val = (array) $val;
         	$bought_at 	= ( !empty($val['bought_at']) ? date('d M Y H:i', strtotime($val['bought_at'])) : null );
         	$expired_at = ( !empty($val['subscription_expired_at']) ? date('d M Y H:i', strtotime($val['subscription_expired_at'])) : null );
-        	$used_at 	= ( !empty($val['used_at']) ? date('d M Y H:i', strtotime($val['used_at'])) : null );
 
-            yield [
-	            'Subscription Name' 		=> $val['subscription_title'],
-	            'Voucher Code' 				=> $val['voucher_code'],
-	            'User Name' 				=> $val['name'],
-	            'User Phone' 				=> $val['phone'],
-	            'Subscription Price Cash' 	=> (float) $val['subscription_price_cash'],
-	            'Subscription Price Point' 	=> (float) $val['subscription_price_point'],
-	            'Bought at' 				=> $bought_at,
-	            'Expired at' 				=> $expired_at,
-	            'Used at' 					=> $used_at,
-	            'Receipt Number' 			=> $val['transaction_receipt_number'],
-	            'Transaction Grandtotal'	=> (float) $val['transaction_grandtotal'],
-	            'Outlet Code' 				=> $val['outlet_code'],
-	            'Outlet Name' 				=> $val['outlet_name'],
-	            'Subscription Nominal' 		=> (float) $val['subscription_nominal'],
-	            'Charged Central' 			=> (float) $val['charged_outlet'],
-	            'Charged Outlet' 			=> (float) $val['charged_central']
-            ];
+        	if ( ($filter['type']??false) == 'claim' ) {
+        		yield [
+		            'Subscription Name' 		=> $val['subscription_title'],
+		            'Voucher Code' 				=> $val['voucher_code'],
+		            'User Name' 				=> $val['name'],
+		            'User Phone' 				=> $val['phone'],
+		            'Subscription Price Cash' 	=> (float) $val['subscription_price_cash'],
+		            'Subscription Price Point' 	=> (float) $val['subscription_price_point'],
+		            'Bought at' 				=> $bought_at,
+		            'Expired at' 				=> $expired_at
+	            ];
+        	}
+        	else {
+	        	$used_at 	= ( !empty($val['used_at']) ? date('d M Y H:i', strtotime($val['used_at'])) : null );
+	            yield [
+		            'Subscription Name' 		=> $val['subscription_title'],
+		            'Voucher Code' 				=> $val['voucher_code'],
+		            'User Name' 				=> $val['name'],
+		            'User Phone' 				=> $val['phone'],
+		            'Subscription Price Cash' 	=> (float) $val['subscription_price_cash'],
+		            'Subscription Price Point' 	=> (float) $val['subscription_price_point'],
+		            'Bought at' 				=> $bought_at,
+		            'Expired at' 				=> $expired_at,
+		            'Used at' 					=> $used_at,
+		            'Receipt Number' 			=> $val['transaction_receipt_number'],
+		            'Transaction Grandtotal'	=> (float) $val['transaction_grandtotal'],
+		            'Outlet Code' 				=> $val['outlet_code'],
+		            'Outlet Name' 				=> $val['outlet_name'],
+		            'Subscription Nominal' 		=> (float) $val['subscription_nominal']
+		            // 'Charged Central' 			=> (float) $val['charged_outlet'],
+		            // 'Charged Outlet' 			=> (float) $val['charged_central']
+	            ];
+        	}
         }
     }
 }

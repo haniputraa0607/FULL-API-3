@@ -48,6 +48,13 @@ return [
             'retry_after' => 90,
         ],
 
+        'email' => [
+            'driver' => 'database',
+            'table' => 'email_jobs',
+            'retry_after' => 60,
+            'queue' => 'email_default',
+        ],
+
         'fraudqueue' => [
             'driver' => 'database',
             'table' => 'fraud_queue',
@@ -124,4 +131,14 @@ return [
         'table' => 'failed_jobs',
     ],
 
+    'rateLimits' => [
+         'email_default' => [ // queue name
+            'allows' => 23, // 23 job
+            'every' => 1 // per 1 seconds
+         ],
+         'email_priority' => [ // queue name
+            'allows' => 27, // 27 job
+            'every' => 1 // per 1 seconds
+         ]
+    ]
 ];

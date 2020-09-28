@@ -888,12 +888,22 @@ class ApiDisburseController extends Controller
     function updateStatusDisburse(Request $request){
         $post = $request->json()->all();
         $checkFirst = Disburse::where('id_disburse', $post['id'])->first();
+        $getBank = DisburseOutlet::join('bank_account_outlets', 'bank_account_outlets.id_outlet', 'disburse_outlet.id_outlet')
+                    ->join('bank_accounts', 'bank_accounts.id_bank_account', 'bank_account_outlets.id_bank_account')
+                    ->orderBy('bank_accounts.id_bank_account', 'desc')->select('bank_accounts.*')
+                    ->where('id_disburse', $post['id'])
+                    ->first();
+        $dataUpdate['id_bank_account'] = $getBank['id_bank_account'];
+
         if($checkFirst['disburse_status'] == 'Failed Create Payouts'){
-            $update = Disburse::where('id_disburse', $post['id'])->update(['disburse_status' => 'Retry From Failed Payouts']);
+            $dataUpdate['disburse_status'] = 'Retry From Failed Payouts';
+            $update = Disburse::where('id_disburse', $post['id'])->update($dataUpdate);
         }elseif(strpos($checkFirst['error_message'],"Partner does not have sufficient balance for the payout") !== false){
-            $update = Disburse::where('id_disburse', $post['id'])->update(['disburse_status' => 'Queued']);
+            $dataUpdate['disburse_status'] = 'Queued';
+            $update = Disburse::where('id_disburse', $post['id'])->update($dataUpdate);
         }else{
-            $update = Disburse::where('id_disburse', $post['id'])->update(['disburse_status' => $post['disburse_status']]);
+            $dataUpdate['disburse_status'] = $post['disburse_status'];
+            $update = Disburse::where('id_disburse', $post['id'])->update($dataUpdate);
         }
 
         return response()->json(MyHelper::checkUpdate($update));
