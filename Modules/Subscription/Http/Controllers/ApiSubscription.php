@@ -1554,7 +1554,19 @@ class ApiSubscription extends Controller
     public static function  checkGet($data, $message = null){
             if($data && !empty($data)) return ['status' => 'success', 'result' => $data];
             else if(empty($data)) {
-                if($message == null){
+            	$empty_text = Setting::where('key','=','message_mysubscription_empty_header')
+	                ->orWhere('key','=','message_mysubscription_empty_content')
+	                ->orderBy('id_setting')
+	                ->get();
+	            $text['header'] = $empty_text[0]['value']??'Anda belum memiliki Paket.';
+	            $text['content'] = $empty_text[1]['value']??'Banyak keuntungan dengan berlangganan.';
+	            return [
+	                'status'   => 'fail',
+	                'messages' => ['My Subscription is empty'],
+	                'empty'    => $text,
+	            ];
+
+                /*if($message == null){
                     $message = 'Maaf, halaman ini tidak tersedia';
                 }
                 return [
@@ -1564,7 +1576,7 @@ class ApiSubscription extends Controller
                         'header'    => "",
                         'content'   => ""
                     ]
-                ];
+                ];*/
             }
             else return ['status' => 'fail', 'messages' => ['failed to retrieve data']];
     }
