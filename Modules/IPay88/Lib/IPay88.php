@@ -196,11 +196,6 @@ class IPay88
 	 */
 	public function reQuery($data,$status)
 	{
-		// ignore requery
-		return [
-			'valid' => true,
-			'response' => ''
-		];
 		$submitted = [
 			'MerchantCode' => $data['MerchantCode'],
 			'RefNo' => $data['RefNo'],
