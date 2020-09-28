@@ -60,7 +60,7 @@ class ExportJob implements ShouldQueue
                 }
             }elseif($val['report_type'] == 'Subscription'){
                 $generateExcel = app($this->subscription)->exportExcel($filter);
-                $fileName = 'Report_'.str_replace(" ","", $val['report_type']);
+                $fileName = 'Report_'.str_replace(" ","", $val['report_type']).'_'.$filter['type'];
             }
 
             if($generateExcel){
