@@ -18,7 +18,7 @@ use App\Lib\ValueFirst;
 use Hash;
 use App\Lib\PushNotificationHelper;
 use DB;
-use Mail;
+use App\Lib\MailQueue as Mail;
 use File;
 
 use Modules\Enquiries\Http\Requests\Create;

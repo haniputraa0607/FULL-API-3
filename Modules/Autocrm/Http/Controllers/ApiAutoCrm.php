@@ -32,7 +32,8 @@ use App\Lib\ValueFirst;
 use Validator;
 use Hash;
 use DB;
-use Mail;
+use App\Lib\MailQueue as Mail;
+// use App\Lib\MailQueue as Mail;
 
 class ApiAutoCrm extends Controller
 {
@@ -181,7 +182,7 @@ class ApiAutoCrm extends Controller
 										$message->attach($variables['attachment']);
 									}
 								}
-							});
+							}, $autocrm_title == 'Email Verify' ? 'email_priority' : 'email_default');
 					    }catch(\Exception $e){
                         }
 

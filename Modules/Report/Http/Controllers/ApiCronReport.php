@@ -57,7 +57,7 @@ use Validator;
 use DateTime;
 use Hash;
 use DB;
-use Mail;
+use App\Lib\MailQueue as Mail;
 
 
 class ApiCronReport extends Controller

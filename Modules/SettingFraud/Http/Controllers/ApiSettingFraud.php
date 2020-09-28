@@ -26,7 +26,7 @@ use App\Lib\MyHelper;
 use App\Lib\classMaskingJson;
 use App\Lib\apiwha;
 use DateTime;
-use Mail;
+use App\Lib\MailQueue as Mail;
 use function GuzzleHttp\Psr7\str;
 
 class ApiSettingFraud extends Controller

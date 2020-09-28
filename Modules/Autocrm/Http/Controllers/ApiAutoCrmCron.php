@@ -17,7 +17,7 @@ use Modules\Autocrm\Http\Requests\UpdateCron;
 use App\Lib\MyHelper;
 use Validator;
 use DB;
-use Mail;
+use App\Lib\MailQueue as Mail;
 
 class ApiAutoCrmCron extends Controller
 {
