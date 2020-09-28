@@ -718,6 +718,12 @@ class ApiOnlineTransaction extends Controller
             $isFree = 0;
         }
 
+        if ($post['grandTotal'] < 0 || $post['subtotal'] < 0) {
+            return [
+                'status' => 'fail',
+                'messages' => ['Invalid transaction']
+            ];
+        }
         DB::beginTransaction();
         UserFeedbackLog::where('id_user',$request->user()->id)->delete();
         $transaction = [

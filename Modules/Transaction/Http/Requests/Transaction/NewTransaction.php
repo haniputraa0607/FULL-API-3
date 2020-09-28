@@ -12,6 +12,8 @@ class NewTransaction extends FormRequest
     {
         return [
             'item'                     => 'required|array',
+            'item.*.qty'               => 'required|numeric|min:1',
+            'item.*.modifiers.*.qty'   => 'sometimes|numeric|min:1',
             'id_outlet'                => 'required_unless:type,Advance Order|integer',
             'type'                     => 'required|in:Delivery,Pickup Order,GO-SEND,Advance Order',
             'notes'                    => 'nullable|string',
