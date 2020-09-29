@@ -30,6 +30,7 @@ Route::group(['prefix' => 'disburse'], function () {
         //settings bank
         Route::any('setting/bank-account', 'ApiDisburseSettingController@addBankAccount');
         Route::any('setting/edit-bank-account', 'ApiDisburseSettingController@editBankAccount');
+        Route::any('setting/delete-bank-account', 'ApiDisburseSettingController@deleteBankAccount');
         Route::any('setting/import-bank-account-outlet', 'ApiDisburseSettingController@importBankAccount');
         Route::any('bank', 'ApiDisburseSettingController@getBank');
         Route::any('setting/list-bank-account', 'ApiDisburseSettingController@listBankAccount');

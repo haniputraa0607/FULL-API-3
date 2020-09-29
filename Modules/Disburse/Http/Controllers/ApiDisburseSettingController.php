@@ -212,6 +212,22 @@ class ApiDisburseSettingController extends Controller
         }
     }
 
+    function deleteBankAccount(Request $request){
+        $post = $request->json()->all();
+
+        if(isset($post['id_bank_account']) && !empty($post['id_bank_account'])){
+            $check = BankAccountOutlet::where('id_bank_account', $post['id_bank_account'])->pluck('id_outlet')->toArray();
+            if($check){
+                $del = BankAccount::where('id_bank_account', $post['id_bank_account'])->delete();
+                return response()->json(MyHelper::checkDelete($del));
+            }else{
+                return response()->json(['status' => 'fail', 'message' => 'Can not delete bank account']);
+            }
+        }else{
+            return response()->json(['status' => 'fail', 'message' => 'Incomplete Data']);
+        }
+    }
+
     function importBankAccount(Request $request){
         $post = $request->json()->all();
 
