@@ -30,6 +30,7 @@ use Modules\Disburse\Entities\DisburseOutlet;
 use Modules\Disburse\Entities\DisburseOutletTransaction;
 use Modules\Disburse\Entities\DisburseTransaction;
 use Modules\Disburse\Entities\LogIRIS;
+use Modules\Disburse\Entities\LogTopupIris;
 use Modules\Disburse\Entities\MDR;
 use Modules\Disburse\Entities\UserFranchisee;
 use Modules\IPay88\Entities\TransactionPaymentIpay88;
@@ -43,39 +44,44 @@ class ApiIrisController extends Controller
 {
     public function notification(Request $request){
         $post = $request->json()->all();
-        $reference_no = $post['reference_no'];
         $status = $post['status'];
 
-        $arrStatus = [
-            'queued' => 'Queued',
-            'processed' => 'Processed',
-            'completed' => 'Success',
-            'failed' => 'Fail',
-            'rejected' => 'Rejected',
-            'approved' => 'Approved'
-        ];
-        $data = Disburse::where('reference_no', $reference_no)->update(['disburse_status' => $arrStatus[$status]??NULL,
-            'error_code' => $post['error_code']??null, 'error_message' => $post['error_message']??null]);
-
-        $dataLog = [
-            'subject' => 'Callback IRIS',
-            'id_reference' => $post['reference_no']??null,
-            'request'=> json_encode($post)
-        ];
-
-        if($data){
-            if($status == 'completed' || $status == 'failed'){
-                SendEmailDisburseJob::dispatch(['reference_no' => $reference_no])->onConnection('disbursequeue');
-            }
-
-            $dataLog['response'] = json_encode(['status' => 'success']);
-            LogIRIS::create($dataLog);
+        if($status == 'topup'){
+            LogTopupIris::create(['response' => json_encode($post)]);
             return response()->json(['status' => 'success']);
         }else{
-            $dataLog['response'] = json_encode(['status' => 'fail', 'messages' => ['Failed Update status']]);
-            LogIRIS::create($dataLog);
-            return response()->json(['status' => 'fail',
-                'messages' => ['Failed Update status']]);
+            $reference_no = $post['reference_no'];
+            $arrStatus = [
+                'queued' => 'Queued',
+                'processed' => 'Processed',
+                'completed' => 'Success',
+                'failed' => 'Fail',
+                'rejected' => 'Rejected',
+                'approved' => 'Approved'
+            ];
+            $data = Disburse::where('reference_no', $reference_no)->update(['disburse_status' => $arrStatus[$status]??NULL,
+                'error_code' => $post['error_code']??null, 'error_message' => $post['error_message']??null]);
+
+            $dataLog = [
+                'subject' => 'Callback IRIS',
+                'id_reference' => $post['reference_no']??null,
+                'request'=> json_encode($post)
+            ];
+
+            if($data){
+                if($status == 'completed' || $status == 'failed'){
+                    SendEmailDisburseJob::dispatch(['reference_no' => $reference_no])->onConnection('disbursequeue');
+                }
+
+                $dataLog['response'] = json_encode(['status' => 'success']);
+                LogIRIS::create($dataLog);
+                return response()->json(['status' => 'success']);
+            }else{
+                $dataLog['response'] = json_encode(['status' => 'fail', 'messages' => ['Failed Update status']]);
+                LogIRIS::create($dataLog);
+                return response()->json(['status' => 'fail',
+                    'messages' => ['Failed Update status']]);
+            }
         }
     }
 
@@ -513,11 +519,6 @@ class ApiIrisController extends Controller
     /* !!!! please add new condition in "process calculation payment gateway" if you added new payment gateway !!!! */
     /* !!!! after update function please restart queue !!!! */
     public function calculationTransaction($id_transaction){
-        $check = DisburseOutletTransaction::where('id_transaction', $id_transaction)->first();
-        if($check){
-            return false;
-        }
-
         $data = Transaction::where('id_transaction', $id_transaction)
             ->join('outlets', 'outlets.id_outlet', 'transactions.id_outlet')
             ->with(['transaction_multiple_payment', 'vouchers', 'promo_campaign', 'transaction_payment_subscription'])
@@ -776,8 +777,7 @@ class ApiIrisController extends Controller
                     'created_at' => date('Y-m-d H:i:s'),
                     'updated_at' => date('Y-m-d H:i:s')
                 ];
-                $insert = DisburseOutletTransaction::insert($dataInsert);
-
+                $insert = DisburseOutletTransaction::updateOrCreate(['id_transaction' => $data['id_transaction']], $dataInsert);
                 return $insert;
             }else{
                 return false;

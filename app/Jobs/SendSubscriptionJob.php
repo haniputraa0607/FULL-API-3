@@ -41,7 +41,7 @@ class SendSubscriptionJob implements ShouldQueue
         foreach ($data['subs'] as $val){
         	$data_subs = Subscription::where('id_subscription', $val['id_subscription'])->first();
 
-        	if ( $data_subs['subscription_total'] > $data_subs['subscription_bought'] ) {
+        	if ( $data_subs['subscription_total'] > $data_subs['subscription_bought'] || $data_subs['subscription_total'] == 0) {
 	            $generateUser = app($this->subscription_voucher)->autoClaimedAssign($data_subs, $data['user']);
 	            $count++;
 	            $dataSubs = Subscription::where('id_subscription', $data_subs['id_subscription'])->first(); // get newest update of total claimed subscription
