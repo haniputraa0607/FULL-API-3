@@ -111,12 +111,16 @@ class ApiIrisController extends Controller
 
                     $getData = Transaction::join('disburse_outlet_transactions', 'disburse_outlet_transactions.id_transaction', 'transactions.id_transaction')
                         ->leftJoin('disburse_outlet', 'disburse_outlet.id_disburse_outlet', 'disburse_outlet_transactions.id_disburse_outlet')
+                        ->leftJoin('disburse', 'disburse.id_disburse', 'disburse_outlet.id_disburse')
                         ->join('outlets', 'outlets.id_outlet', 'transactions.id_outlet')
                         ->join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
                         ->leftJoin('bank_account_outlets', 'bank_account_outlets.id_outlet', 'outlets.id_outlet')
                         ->leftJoin('bank_accounts', 'bank_accounts.id_bank_account', 'bank_account_outlets.id_bank_account')
                         ->leftJoin('bank_name', 'bank_name.id_bank_name', 'bank_accounts.id_bank_name')
-                        ->whereNull('disburse_outlet.id_disburse_outlet')
+                        ->where(function ($q){
+                            $q->whereNull('disburse_outlet.id_disburse_outlet')
+                                ->orWhereIn('disburse_status', ['Retry From Failed', 'Retry From Failed Payouts']);
+                        })
                         ->whereNotNull('bank_accounts.beneficiary_name')
                         ->whereNull('transaction_pickups.reject_at')
                         ->where('transactions.transaction_payment_status', 'Completed')
@@ -372,44 +376,6 @@ class ApiIrisController extends Controller
                             DB::rollback();
                             \Log::error($e);
                             return 'fail';
-                        }
-                    }
-
-                    //proses retry failed disburse
-                    $dataRetry = Disburse::join('bank_accounts', 'bank_accounts.id_bank_account', 'disburse.id_bank_account')
-                        ->leftJoin('bank_name', 'bank_name.id_bank_name', 'bank_accounts.id_bank_name')
-                        ->whereIn('disburse_status', ['Retry From Failed', 'Retry From Failed Payouts'])
-                        ->select('bank_accounts.beneficiary_name', 'bank_accounts.beneficiary_account', 'bank_name.bank_code as beneficiary_bank', 'bank_accounts.beneficiary_email',
-                            'disburse_nominal as amount', 'notes', 'reference_no as ref')
-                        ->get()->toArray();
-
-                    if(!empty($dataRetry)){
-                        $chunkRetry = array_chunk($dataRetry, 100);
-
-                        foreach ($chunkRetry as $sendRetry){
-                            $sendToIris = MyHelper::connectIris('Payouts', 'POST','api/v1/payouts', ['payouts' => $sendRetry]);
-
-                            if(isset($sendToIris['status']) && $sendToIris['status'] == 'success'){
-                                if(isset($sendToIris['response']['payouts']) && !empty($sendToIris['response']['payouts'])){
-                                    $a=0;
-                                    $return = $sendToIris['response']['payouts'];
-                                    foreach ($dataRetry as $val){
-                                        $getData = Disburse::where('reference_no', $val['ref'])->first();
-                                        $bank = BankAccount::where('id_bank_account', $getData['id_bank_account'])->first();
-                                        $oldRefNo = $getData['old_reference_no'].','.$getData['reference_no'];
-                                        $oldRefNo = ltrim($oldRefNo,",");
-                                        $count = $getData['count_retry'] + 1;
-                                        $update = Disburse::where('id_disburse', $getData['id_disburse'])
-                                            ->update(['beneficiary_name' => $bank['beneficiary_name'],
-                                                'beneficiary_account_number' => $bank['beneficiary_account'],
-                                                'beneficiary_alias' => $bank['beneficiary_alias'],
-                                                'beneficiary_email' => $bank['beneficiary_email'],
-                                                'old_reference_no' => $oldRefNo, 'reference_no' => $return[$a]['reference_no'],
-                                                'count_retry' => $count, 'disburse_status' => $arrStatus[ $return[$a]['status']]]);
-                                        $a++;
-                                    }
-                                }
-                            }
                         }
                     }
 
