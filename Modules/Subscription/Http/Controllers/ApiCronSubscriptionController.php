@@ -77,7 +77,7 @@ class ApiCronSubscriptionController extends Controller
                 //     continue;
                 // }
 
-                DB::begintransaction();
+                DB::beginTransaction();
 
                 $singleTrx->paid_status = 'Cancelled';
                 $singleTrx->void_date   = date('Y-m-d H:i:s');
