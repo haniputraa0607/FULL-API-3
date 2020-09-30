@@ -3415,7 +3415,14 @@ class ApiUser extends Controller
 
     function verifyEmail(Request $request, $slug)
     {
-        $setting = Setting::where('key', 'LIKE', 'email_copyright')->first();
+        $getsetting = Setting::whereIn('key', ['email_copyright', 'email_logo'])->get()->toArray();
+
+        foreach ($getsetting as $s){
+            $setting[$s['key']] = [
+                'value' => $s['value'],
+                'value_text' => $s['value_text']
+            ];
+        }
 
         try {
             $decrypt = MyHelper::decrypt2019($slug);
@@ -3429,35 +3436,35 @@ class ApiUser extends Controller
                     $user = User::where('phone', $phone)->where('email', $email)->first();
                     if (!empty($user)) {
                         if ($user['email_verified'] == 1) {
-                            $data = ['status_verify' => 'already', 'message' => 'This page is expired, your email is already verified', 'settings' => $setting];
+                            $data = ['status_verify' => 'already', 'message' => 'This page is expired, your email is already verified', 'email' => $email, 'settings' => $setting];
                             return view('users::verify_email', $data);
                         } elseif (strtotime(date('Y-m-d H:i:s')) > strtotime($user['email_verified_valid_time'])) {
-                            $data = ['status_verify' => 'expired', 'message' => 'This page is expired, please re-request verify email from apps', 'settings' => $setting];
+                            $data = ['status_verify' => 'expired', 'message' => 'This page is expired, please re-request verify email from apps', 'email' => $email, 'settings' => $setting];
                             return view('users::verify_email', $data);
                         } else {
                             $udpate = User::where('phone', $phone)->where('email', $email)->update(['email_verified' => 1]);
                             if ($udpate) {
-                                $data = ['status_verify' => 'success', 'message' => 'Successfully verified your email ', 'settings' => $setting];
+                                $data = ['status_verify' => 'success', 'message' => 'Successfully verified your email ', 'email' => $email, 'settings' => $setting];
                                 return view('users::verify_email', $data);
                             } else {
-                                $data = ['status_verify' => 'fail', 'message' => 'Failed verify your email, something went wrong', 'settings' => $setting];
+                                $data = ['status_verify' => 'fail', 'message' => 'Failed verify your email, something went wrong', 'email' => $email, 'settings' => $setting];
                                 return view('users::verify_email', $data);
                             }
                         }
                     } else {
-                        $data = ['status_verify' => 'fail', 'message' => 'Failed verify your email, user not found', 'settings' => $setting];
+                        $data = ['status_verify' => 'fail', 'message' => 'Failed verify your email, user not found', 'email' => $email, 'settings' => $setting];
                         return view('users::verify_email', $data);
                     }
                 } else {
-                    $data = ['status_verify' => 'fail', 'message' => 'Failed to verify your email, something went wrong', 'settings' => $setting];
+                    $data = ['status_verify' => 'fail', 'message' => 'Failed to verify your email, something went wrong', 'email' => '', 'settings' => $setting];
                     return view('users::verify_email', $data);
                 }
             } else {
-                $data = ['status_verify' => 'fail', 'message' => 'Failed to verify your email, something went wrong', 'settings' => $setting];
+                $data = ['status_verify' => 'fail', 'message' => 'Failed to verify your email, something went wrong', 'email' => '', 'settings' => $setting];
                 return view('users::verify_email', $data);
             }
         } catch (\Exception $e) {
-            $data = ['status_verify' => 'fail', 'message' => 'Failed to verify your email, something went wrong', 'settings' => $setting];
+            $data = ['status_verify' => 'fail', 'message' => 'Failed to verify your email, something went wrong', 'email' => '', 'settings' => $setting];
             return view('users::verify_email', $data);
         }
     }
