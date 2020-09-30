@@ -280,8 +280,8 @@ class ApiSetting extends Controller
                     $attachments[] = Excel::download(new DefaultExport($userData), 'point.xlsx')->getFile();
                 }
 
-                DB::commit();
             }
+            DB::commit();
 
             //point reset
             $setting = Setting::where('key', 'balance_reset')->get();
@@ -344,6 +344,7 @@ class ApiSetting extends Controller
                 'status' => 'success'
             ]);
         } catch (\Exception $e) {
+            DB::rollBack();
             $log->fail($e->getMessage());
         }        
     }

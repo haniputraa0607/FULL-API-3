@@ -130,6 +130,7 @@ class ApiCronReport extends Controller
                 'status' => 'success'
             ]);
         } catch (\Exception $e) {
+            DB::rollBack();
             $log->fail($e->getMessage());
         }
     }

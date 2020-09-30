@@ -176,6 +176,7 @@ class ApiCronTrxController extends Controller
             $log->success('success');
             return response()->json(['success']);
         } catch (\Exception $e) {
+            DB::rollBack();
             $log->fail($e->getMessage());
         }
     }
@@ -792,6 +793,7 @@ class ApiCronTrxController extends Controller
             }
             $log->success($result);
         } catch (\Exception $e) {
+            DB::rollBack();
             $log->fail($e->getMessage());
         }
     }
