@@ -302,7 +302,7 @@ class IPay88
             			if ($trx->transaction_payment_status == 'Completed') {
             				break;
             			}
-	                    $update = $trx->update(['transaction_payment_status'=>'Completed','completed_at'=>date('Y-m-d H:i:s')]);
+	                    $update = $trx->update(['transaction_payment_status'=>'Completed']);
 	                    if(!$update){
 		                    DB::rollBack();
 	                        return [
