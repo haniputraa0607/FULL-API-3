@@ -227,11 +227,6 @@ class User extends Authenticatable
     public function getChallengeKeyAttribute()
     {
     	$password = md5($this->password);
-    	$challengeKey = '';
-    	$index = [5,6,2,1,13,21,25,23];
-    	foreach ($index as $key) {
-    		$challengeKey .= substr($password, $key, 1);
-    	}
-    	return $challengeKey;
+    	return $password.'15F1AB77951B5JAO';
     }
 }

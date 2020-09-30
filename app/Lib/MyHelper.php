@@ -2917,13 +2917,8 @@ class MyHelper{
 		if (!$user) {
 			return false;
 		}
-		$challengeKey = $user->challenge_key;
-		try {
-			$newEncrypter = new \Illuminate\Encryption\Encrypter( $challengeKey, config( 'app.cipher' ) );
-			$decrypted = $newEncrypter->decrypt( $encrypted );
-			return $decrypted;
-		} catch (\Exceprion $e) {
-			return false;
-		}
+		$challengeKey = substr($user->challenge_key,0,32);
+		$iv = substr($user->challenge_key,32,16);
+		return openssl_decrypt(base64_decode($encrypted), 'AES-256-CBC', $challengeKey, OPENSSL_RAW_DATA, $iv);
 	}
 }

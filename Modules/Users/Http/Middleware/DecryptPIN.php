@@ -19,11 +19,11 @@ class DecryptPIN
     {
         if ($request->{$colname.'_encrypt'}) {
             $jsonRequest = $request->json()->all();
-            $decrypted = MyHelper::decryptPIN($colname.'_encrypt');
+            $decrypted = MyHelper::decryptPIN($request->{$colname.'_encrypt'}, $request->phone);
             if (!$decrypted) {
                 return response()->json([
                     'status' => 'fail',
-                    'messages' => 'Invalid PIN'
+                    'messages' => ['Invalid PIN']
                 ]);
             }
             $jsonRequest[$colname] = $decrypted;
