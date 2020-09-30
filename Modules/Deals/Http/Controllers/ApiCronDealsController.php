@@ -78,7 +78,7 @@ class ApiCronDealsController extends Controller
                 //     continue;
                 // }
 
-                DB::begintransaction();
+                DB::beginTransaction();
 
                 $singleTrx->paid_status = 'Cancelled';
                 $singleTrx->save();
