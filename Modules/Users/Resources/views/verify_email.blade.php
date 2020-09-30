@@ -59,9 +59,9 @@
 
 <body style="background-color: #f2f2f2;text-align: center">
 <div class="logo">
-    <img src="{{config('url.storage_url_view')}}{{('images/logo.png')}}" alt="" style="height: 100px;margin: 20px;" />
+    <img src="{{config('url.storage_url_api')}}{{$settings['email_logo']['value']??''}}" alt="" style="height: 100px;margin: 20px;" />
 </div>
-<h4 style="padding-bottom: 30px;">User Verify Email</h4>
+<h4 style="padding-bottom: 30px;">{{$email??''}}</h4>
 @if($status_verify == 'success')
     <div class="box-success">
         <p style="font-size: 16px;color: #256434">{{$message}}</p>
@@ -76,7 +76,7 @@
     </div>
 @endif
 
-<div class="copyright" style="color: #000000">{{$settings['value']}}</div>
+<div class="copyright" style="color: #000000">{{$settings['email_copyright']['value']??''}}</div>
 </body>
 
 </html>
