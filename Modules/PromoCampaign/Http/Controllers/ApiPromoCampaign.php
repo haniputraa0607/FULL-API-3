@@ -57,11 +57,13 @@ use Modules\PromoCampaign\Http\Requests\ValidateCode;
 use Modules\PromoCampaign\Lib\PromoCampaignTools;
 use App\Lib\MyHelper;
 use App\Jobs\GeneratePromoCode;
+use App\Jobs\ExportPromoCodeJob;
 use DB;
 use Hash;
 use Modules\SettingFraud\Entities\DailyCheckPromoCode;
 use Modules\SettingFraud\Entities\LogCheckPromoCode;
 use Illuminate\Support\Facades\Auth;
+use File;
 
 class ApiPromoCampaign extends Controller
 {
@@ -2500,7 +2502,8 @@ class ApiPromoCampaign extends Controller
     		return false;
     	}
 
-    	$update = PromoCampaignPromoCode::where('id_promo_campaign_promo_code', $id_promo_campaign_promo_code)->update(['usage' => 1]);
+    	$usage_code = PromoCampaignReport::where('id_promo_campaign_promo_code', $id_promo_campaign_promo_code)->count();
+    	$update = PromoCampaignPromoCode::where('id_promo_campaign_promo_code', $id_promo_campaign_promo_code)->update(['usage' => $usage_code]);
 
 		if (!$update) {
     		return false;
@@ -2524,11 +2527,20 @@ class ApiPromoCampaign extends Controller
 
 	    	if ($delete)
 	    	{
-	    		$update = PromoCampaign::where('id_promo_campaign', '=', $getReport['id_promo_campaign'])->update(['used_code' => $getReport->promo_campaign->used_code-1]);
+	    		$get_code = PromoCampaignPromoCode::where('id_promo_campaign_promo_code', $id_promo_campaign_promo_code)->first();
+	    		$update = PromoCampaignPromoCode::where('id_promo_campaign_promo_code', $id_promo_campaign_promo_code)->update(['usage' => $get_code->usage-1]);
 
-	    		if ($update)
-	    		{
-		    		return true;
+	    		if ($update) {
+	    			$update = PromoCampaign::where('id_promo_campaign', '=', $getReport['id_promo_campaign'])->update(['used_code' => $getReport->promo_campaign->used_code-1]);
+
+		    		if ($update)
+		    		{
+			    		return true;
+		    		}
+		    		else
+		    		{
+		    			return false;
+		    		}	
 	    		}
 	    		else
 	    		{
@@ -2542,5 +2554,86 @@ class ApiPromoCampaign extends Controller
         }
 
         return true;
+    }
+
+    public function exportCreate(Request $request)
+    {
+    	$post 	= $request->json()->all();
+    	$now 	= date("Y-m-d H:i:s");
+    	$post['export_date'] = $now;
+    	$data 	= [
+    		'id_promo_campaign' => $post['id_promo_campaign']
+    	];
+
+    	$update = PromoCampaign::where('id_promo_campaign', $post['id_promo_campaign'])
+    			->update([
+    				'export_status'	=> 'Running',
+    				'export_date' 	=> $now
+    			]);
+
+        if($update){
+    		ExportPromoCodeJob::dispatch($data)->allOnConnection('database');
+        }
+
+        return response()->json(MyHelper::checkUpdate($update));
+    }
+
+    public function exportPromoCode($filter)
+    {
+    	$code = $this->getPromoCode($filter['id_promo_campaign'], $filter['status']);
+
+    	foreach ($code->cursor() as $value) {
+
+    		$data['promo_code'] = $value['promo_code'];
+
+    		if ($filter['status'] == 'used') {
+    			$data['usage'] = $value['usage'];
+    		}
+
+    		yield $data;
+    	}
+    }
+
+    public function getPromoCode($id_promo_campaign, $status)
+    {
+    	$code = PromoCampaignPromoCode::where('id_promo_campaign', $id_promo_campaign);
+
+    	if ($status == 'used') {
+    		$code->where('usage','!=','0');
+    	}elseif($status == 'unused'){
+    		$code->where('usage','=','0');
+    	}
+
+    	return $code;
+    }
+
+    function actionExport(Request $request){
+        $post = $request->json()->all();
+        $action = $post['action'];
+        $id_promo_campaign = $post['id_promo_campaign'];
+
+        if($action == 'download'){
+            $data = PromoCampaign::where('id_promo_campaign', $id_promo_campaign)->first();
+            if(!empty($data)){
+                $data['export_url'] = config('url.storage_url_api').$data['export_url'];
+            }
+            return response()->json(MyHelper::checkGet($data));
+        }elseif($action == 'deleted'){
+            $data = PromoCampaign::where('id_promo_campaign', $id_promo_campaign)->first();
+            $file = public_path().'/'.$data['export_url'];
+            if(config('configs.STORAGE') == 'local'){
+                $delete = File::delete($file);
+            }else{
+                $delete = MyHelper::deleteFile($file);
+            }
+
+            if($delete){
+                $update = PromoCampaign::where('id_promo_campaign', $id_promo_campaign)->update(['export_status' => 'Deleted']);
+                return response()->json(MyHelper::checkUpdate($update));
+            }else{
+                return response()->json(['status' => 'fail', 'messages' => ['failed to delete file']]);
+            }
+
+        }
     }
 }
