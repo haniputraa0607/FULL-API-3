@@ -45,6 +45,7 @@ use LaravelFCM\Message\OptionsBuilder;
 use LaravelFCM\Message\PayloadDataBuilder;
 use LaravelFCM\Message\PayloadNotificationBuilder;
 use FCM;
+use Illuminate\Support\Facades\Crypt;
 
 class MyHelper{
 	public static function  checkGet($data, $message = null){
@@ -2908,5 +2909,21 @@ class MyHelper{
 		$log->save();
 
 		return $log;
+	}
+
+	public static function decryptPIN($encrypted, $phone)
+	{
+		$user = User::select('password',\DB::raw('0 as challenge_key'))->where('phone', $phone)->first();
+		if (!$user) {
+			return false;
+		}
+		$challengeKey = $user->challenge_key;
+		try {
+			$newEncrypter = new \Illuminate\Encryption\Encrypter( $challengeKey, config( 'app.cipher' ) );
+			$decrypted = $newEncrypter->decrypt( $encrypted );
+			return $decrypted;
+		} catch (\Exceprion $e) {
+			return false;
+		}
 	}
 }
