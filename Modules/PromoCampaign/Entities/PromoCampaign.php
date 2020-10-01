@@ -80,7 +80,10 @@ class PromoCampaign extends Eloquent
 		'limitation_usage',
 		'step_complete',
         'charged_central',
-        'charged_outlet'
+        'charged_outlet',
+        'export_date',
+        'export_url',
+        'export_status'
 	];
 
 	public function user()
