@@ -1647,6 +1647,8 @@ class ApiUser extends Controller
                     break;
             }
 
+            $user = User::select('password',\DB::raw('0 as challenge_key'))->where('phone', $phone)->first();
+
             if (env('APP_ENV') == 'production') {
                 $result = [
                     'status'    => 'success',
@@ -1654,7 +1656,7 @@ class ApiUser extends Controller
                     'result'    => [
                         'phone'    =>    $phone,
                         'message'  => $msg_otp,
-                        'challenge_key' => $data[0]['challenge_key']
+                        'challenge_key' => $user->challenge_key
                     ]
                 ];
             } else {
@@ -1665,7 +1667,7 @@ class ApiUser extends Controller
                         'phone'    =>    $phone,
                         'pin'        =>  '', 
                         'message' => $msg_otp,
-                        'challenge_key' => $data[0]['challenge_key']
+                        'challenge_key' => $user->challenge_key
                     ]
                 ];
             }
