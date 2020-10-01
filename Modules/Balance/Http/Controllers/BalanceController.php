@@ -2,6 +2,7 @@
 
 namespace Modules\Balance\Http\Controllers;
 
+use App\Jobs\DisburseJob;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
@@ -239,6 +240,7 @@ class BalanceController extends Controller
                             'messages' => ['fail to create transaction']
                         ];
                     }
+                    DisburseJob::dispatch(['id_transaction' => $dataTrx['id_transaction']])->onConnection('disbursequeue');
 
                     $dataCheck = Transaction::where('id_transaction', $idTrx)->first();
 

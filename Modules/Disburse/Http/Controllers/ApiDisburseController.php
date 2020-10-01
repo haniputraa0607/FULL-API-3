@@ -888,12 +888,22 @@ class ApiDisburseController extends Controller
     function updateStatusDisburse(Request $request){
         $post = $request->json()->all();
         $checkFirst = Disburse::where('id_disburse', $post['id'])->first();
+        $getBank = DisburseOutlet::join('bank_account_outlets', 'bank_account_outlets.id_outlet', 'disburse_outlet.id_outlet')
+                    ->join('bank_accounts', 'bank_accounts.id_bank_account', 'bank_account_outlets.id_bank_account')
+                    ->orderBy('bank_accounts.id_bank_account', 'desc')->select('bank_accounts.*')
+                    ->where('id_disburse', $post['id'])
+                    ->first();
+        $dataUpdate['id_bank_account'] = $getBank['id_bank_account'];
+
         if($checkFirst['disburse_status'] == 'Failed Create Payouts'){
-            $update = Disburse::where('id_disburse', $post['id'])->update(['disburse_status' => 'Retry From Failed Payouts']);
+            $dataUpdate['disburse_status'] = 'Retry From Failed Payouts';
+            $update = Disburse::where('id_disburse', $post['id'])->update($dataUpdate);
         }elseif(strpos($checkFirst['error_message'],"Partner does not have sufficient balance for the payout") !== false){
-            $update = Disburse::where('id_disburse', $post['id'])->update(['disburse_status' => 'Queued']);
+            $dataUpdate['disburse_status'] = 'Queued';
+            $update = Disburse::where('id_disburse', $post['id'])->update($dataUpdate);
         }else{
-            $update = Disburse::where('id_disburse', $post['id'])->update(['disburse_status' => $post['disburse_status']]);
+            $dataUpdate['disburse_status'] = $post['disburse_status'];
+            $update = Disburse::where('id_disburse', $post['id'])->update($dataUpdate);
         }
 
         return response()->json(MyHelper::checkUpdate($update));
@@ -906,7 +916,7 @@ class ApiDisburseController extends Controller
     }
 
     public function cronSendEmailDisburse($date = null){
-        $log = MyHelper::logCron('Disburse Send Email');
+        $log = MyHelper::logCron('Send Email Recap To Outlet');
         try {
             $currentDate = date('Y-m-d');
             $yesterday = date('Y-m-d',strtotime($currentDate . "-1 days"));
@@ -1248,123 +1258,130 @@ class ApiDisburseController extends Controller
     }
 
     public function shortcutRecap($date = null){
-        $currentDate = date('Y-m-d');
-        $yesterday = date('Y-m-d',strtotime($currentDate . "-1 days"));
-        if(!empty($date)){
-            $yesterday =  date('Y-m-d', strtotime($date));
-        }
-
-        $filter['date_start'] = $yesterday;
-        $filter['date_end'] = $yesterday;
-        $filter['detail'] = 1;
-        $filter['key'] = 'all';
-        $filter['rule'] = 'and';
-        $filter['conditions'] = [
-            [
-                'subject' => 'status',
-                'operator' => 'Completed',
-                'parameter' => null
-            ]
-        ];
-
-        $generateTrx = app($this->trx)->exportTransaction($filter, 1);
-        $dataDisburse = Transaction::join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
-            ->join('outlets', 'outlets.id_outlet', 'transactions.id_outlet')
-            ->join('disburse_outlet_transactions as dot', 'dot.id_transaction', 'transactions.id_transaction')
-            ->leftJoin('transaction_payment_balances', 'transaction_payment_balances.id_transaction', 'transactions.id_transaction')
-            ->leftJoin('transaction_payment_midtrans', 'transactions.id_transaction', '=', 'transaction_payment_midtrans.id_transaction')
-            ->leftJoin('transaction_payment_ipay88s', 'transactions.id_transaction', '=', 'transaction_payment_ipay88s.id_transaction')
-            ->where('transaction_payment_status', 'Completed')
-            ->whereNull('reject_at')
-            ->whereDate('transactions.transaction_date', $yesterday)
-            ->with(['transaction_payment_subscription'=> function($q){
-                $q->join('subscription_user_vouchers', 'subscription_user_vouchers.id_subscription_user_voucher', 'transaction_payment_subscriptions.id_subscription_user_voucher')
-                    ->join('subscription_users', 'subscription_users.id_subscription_user', 'subscription_user_vouchers.id_subscription_user')
-                    ->leftJoin('subscriptions', 'subscriptions.id_subscription', 'subscription_users.id_subscription');
-            }, 'vouchers.deal', 'promo_campaign'])
-            ->select('payment_type', 'payment_method', 'dot.*', 'outlets.outlet_name', 'outlets.outlet_code', 'transactions.transaction_receipt_number',
-                'transactions.transaction_date', 'transactions.transaction_shipment_go_send',
-                'transactions.transaction_grandtotal',
-                'transactions.transaction_discount', 'transactions.transaction_subtotal')
-            ->orderBy('outlets.outlet_code', 'asc')
-            ->get()->toArray();
-
-        $getEmailTo = Setting::where('key', 'email_to_send_recap_transaction')->first();
-
-        if(!empty($dataDisburse) && !empty($generateTrx) && !empty($getEmailTo['value'])){
-            $excelFile = 'Transaction_['.$yesterday.'].xlsx';
-            $summary = $this->summaryCalculationFee($yesterday);
-            $store  = (new MultipleSheetExport([
-                "Summary" => $summary,
-                "Calculation Fee" => $dataDisburse,
-                "Detail Transaction" => $generateTrx
-            ]))->store('excel_email/'.$excelFile);
-
-            if($store){
-                $tmpPath[] = storage_path('app/excel_email/'.$excelFile);
+        $log = MyHelper::logCron('Send Recap Disburse');
+        try {
+            $currentDate = date('Y-m-d');
+            $yesterday = date('Y-m-d',strtotime($currentDate . "-1 days"));
+            if(!empty($date)){
+                $yesterday =  date('Y-m-d', strtotime($date));
             }
 
-            if(!empty($tmpPath)){
-                $getSetting = Setting::where('key', 'LIKE', 'email%')->get()->toArray();
+            $filter['date_start'] = $yesterday;
+            $filter['date_end'] = $yesterday;
+            $filter['detail'] = 1;
+            $filter['key'] = 'all';
+            $filter['rule'] = 'and';
+            $filter['conditions'] = [
+                [
+                    'subject' => 'status',
+                    'operator' => 'Completed',
+                    'parameter' => null
+                ]
+            ];
 
-                $setting = array();
-                foreach ($getSetting as $key => $value) {
-                    if($value['key'] == 'email_setting_url'){
-                        $setting[$value['key']]  = (array)json_decode($value['value_text']);
-                    }else{
-                        $setting[$value['key']] = $value['value'];
+            $generateTrx = app($this->trx)->exportTransaction($filter, 1);
+            $dataDisburse = Transaction::join('transaction_pickups', 'transaction_pickups.id_transaction', 'transactions.id_transaction')
+                ->join('outlets', 'outlets.id_outlet', 'transactions.id_outlet')
+                ->join('disburse_outlet_transactions as dot', 'dot.id_transaction', 'transactions.id_transaction')
+                ->leftJoin('transaction_payment_balances', 'transaction_payment_balances.id_transaction', 'transactions.id_transaction')
+                ->leftJoin('transaction_payment_midtrans', 'transactions.id_transaction', '=', 'transaction_payment_midtrans.id_transaction')
+                ->leftJoin('transaction_payment_ipay88s', 'transactions.id_transaction', '=', 'transaction_payment_ipay88s.id_transaction')
+                ->where('transaction_payment_status', 'Completed')
+                ->whereNull('reject_at')
+                ->whereDate('transactions.transaction_date', $yesterday)
+                ->with(['transaction_payment_subscription'=> function($q){
+                    $q->join('subscription_user_vouchers', 'subscription_user_vouchers.id_subscription_user_voucher', 'transaction_payment_subscriptions.id_subscription_user_voucher')
+                        ->join('subscription_users', 'subscription_users.id_subscription_user', 'subscription_user_vouchers.id_subscription_user')
+                        ->leftJoin('subscriptions', 'subscriptions.id_subscription', 'subscription_users.id_subscription');
+                }, 'vouchers.deal', 'promo_campaign'])
+                ->select('payment_type', 'payment_method', 'dot.*', 'outlets.outlet_name', 'outlets.outlet_code', 'transactions.transaction_receipt_number',
+                    'transactions.transaction_date', 'transactions.transaction_shipment_go_send',
+                    'transactions.transaction_grandtotal',
+                    'transactions.transaction_discount', 'transactions.transaction_subtotal')
+                ->orderBy('outlets.outlet_code', 'asc')
+                ->get()->toArray();
+
+            $getEmailTo = Setting::where('key', 'email_to_send_recap_transaction')->first();
+
+            if(!empty($dataDisburse) && !empty($generateTrx) && !empty($getEmailTo['value'])){
+                $excelFile = 'Transaction_['.$yesterday.'].xlsx';
+                $summary = $this->summaryCalculationFee($yesterday);
+                $store  = (new MultipleSheetExport([
+                    "Summary" => $summary,
+                    "Calculation Fee" => $dataDisburse,
+                    "Detail Transaction" => $generateTrx
+                ]))->store('excel_email/'.$excelFile);
+
+                if($store){
+                    $tmpPath[] = storage_path('app/excel_email/'.$excelFile);
+                }
+
+                if(!empty($tmpPath)){
+                    $getSetting = Setting::where('key', 'LIKE', 'email%')->get()->toArray();
+
+                    $setting = array();
+                    foreach ($getSetting as $key => $value) {
+                        if($value['key'] == 'email_setting_url'){
+                            $setting[$value['key']]  = (array)json_decode($value['value_text']);
+                        }else{
+                            $setting[$value['key']] = $value['value'];
+                        }
+                    }
+
+                    $data = array(
+                        'customer' => '',
+                        'html_message' => 'Report Transaksi tanggal '.date('d M Y', strtotime($yesterday)),
+                        'setting' => $setting
+                    );
+
+                    $to = $getEmailTo['value'];
+                    $subject = 'Report Transaksi ['.date('d M Y', strtotime($yesterday)).']';
+                    $name =  '';
+                    $variables['attachment'] = $tmpPath;
+
+                    try{
+                        Mail::send('emails.test', $data, function($message) use ($to,$subject,$name,$setting,$variables)
+                        {
+                            $message->to($to, $name)->subject($subject);
+                            if(!empty($setting['email_from']) && !empty($setting['email_sender'])){
+                                $message->from($setting['email_sender'], $setting['email_from']);
+                            }else if(!empty($setting['email_sender'])){
+                                $message->from($setting['email_sender']);
+                            }
+
+                            if(!empty($setting['email_reply_to'])){
+                                $message->replyTo($setting['email_reply_to'], $setting['email_reply_to_name']);
+                            }
+
+                            if(!empty($setting['email_cc']) && !empty($setting['email_cc_name'])){
+                                $message->cc($setting['email_cc'], $setting['email_cc_name']);
+                            }
+
+                            if(!empty($setting['email_bcc']) && !empty($setting['email_bcc_name'])){
+                                $message->bcc($setting['email_bcc'], $setting['email_bcc_name']);
+                            }
+
+                            // attachment
+                            if(isset($variables['attachment']) && !empty($variables['attachment'])){
+                                foreach($variables['attachment'] as $attach){
+                                    $message->attach($attach);
+                                }
+                            }
+                        });
+                    }catch(\Exception $e){
+                    }
+
+                    foreach ($tmpPath as $t){
+                        File::delete($t);
                     }
                 }
 
-                $data = array(
-                    'customer' => '',
-                    'html_message' => 'Report Transaksi tanggal '.date('d M Y', strtotime($yesterday)),
-                    'setting' => $setting
-                );
-
-                $to = $getEmailTo['value'];
-                $subject = 'Report Transaksi ['.date('d M Y', strtotime($yesterday)).']';
-                $name =  '';
-                $variables['attachment'] = $tmpPath;
-
-                try{
-                    Mail::send('emails.test', $data, function($message) use ($to,$subject,$name,$setting,$variables)
-                    {
-                        $message->to($to, $name)->subject($subject);
-                        if(!empty($setting['email_from']) && !empty($setting['email_sender'])){
-                            $message->from($setting['email_sender'], $setting['email_from']);
-                        }else if(!empty($setting['email_sender'])){
-                            $message->from($setting['email_sender']);
-                        }
-
-                        if(!empty($setting['email_reply_to'])){
-                            $message->replyTo($setting['email_reply_to'], $setting['email_reply_to_name']);
-                        }
-
-                        if(!empty($setting['email_cc']) && !empty($setting['email_cc_name'])){
-                            $message->cc($setting['email_cc'], $setting['email_cc_name']);
-                        }
-
-                        if(!empty($setting['email_bcc']) && !empty($setting['email_bcc_name'])){
-                            $message->bcc($setting['email_bcc'], $setting['email_bcc_name']);
-                        }
-
-                        // attachment
-                        if(isset($variables['attachment']) && !empty($variables['attachment'])){
-                            foreach($variables['attachment'] as $attach){
-                                $message->attach($attach);
-                            }
-                        }
-                    });
-                }catch(\Exception $e){
-                }
-
-                foreach ($tmpPath as $t){
-                    File::delete($t);
-                }
             }
 
-        }
-        return 'succes';
+            $log->success();
+            return 'succes';
+        }catch (\Exception $e) {
+            $log->fail($e->getMessage());
+        };
     }
 }

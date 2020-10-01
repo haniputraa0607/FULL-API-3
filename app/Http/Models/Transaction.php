@@ -92,7 +92,8 @@ class Transaction extends Model
         'transaction_flag_invalid',
         'fraud_flag',
 		'cashback_insert_status',
-		'calculate_achievement'
+		'calculate_achievement',
+		'show_rate_popup'
 	];
 
 	public function user()

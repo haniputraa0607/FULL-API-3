@@ -168,6 +168,7 @@ class ApiUser extends Controller
     {
         $prevResult = [];
         $finalResult = [];
+        $status_all_user = 0;
 
         if ($conditions != null) {
             $key = 0;
@@ -200,6 +201,10 @@ class ApiUser extends Controller
                     $arr_tmp_product = [];
                     $arr_tmp_outlet = [];
                     foreach ($cond as $i => $condition) {
+                        if($condition['subject'] == 'all_user'){
+                            $status_all_user = 1;
+                            break 2;
+                        }
                         if (stristr($condition['subject'], 'trx')) $scanTrx = true;
                         if (stristr($condition['subject'], 'trx_product')) $scanProd = true;
                         if (stristr($condition['subject'], 'trx_product_tag')) $scanTag = true;
@@ -346,6 +351,12 @@ class ApiUser extends Controller
                 'provinces.*',
                 DB::raw('YEAR(CURDATE()) - YEAR(users.birthday) AS age')
             );
+        }
+
+        if($status_all_user == 1){
+            $finalResult = User::leftJoin('cities', 'cities.id_city', '=', 'users.id_city')
+                ->leftJoin('provinces', 'provinces.id_province', '=', 'cities.id_province')
+                ->orderBy($order_field, $order_method);
         }
 
         $resultCount = $finalResult->count(); // get total result
@@ -886,7 +897,7 @@ class ApiUser extends Controller
             $phone = $checkPhoneFormat['phone'];
         }
 
-        $data = User::with('city')->where('phone', '=', $phone)->get()->toArray();
+        $data = User::select('*',\DB::raw('0 as challenge_key'))->with('city')->where('phone', '=', $phone)->get()->toArray();
 
         if($data){
             //First check rule for request otp
@@ -932,14 +943,16 @@ class ApiUser extends Controller
                     'result' => $data,
                     'otp_timer' => $holdTime,
                     'confirmation_message' => $msg_check,
-                    'messages' => null
+                    'messages' => null,
+                    'challenge_key' => $data[0]['challenge_key']
                 ]);
             }else{
                 return response()->json([
                     'status' => 'success',
                     'result' => $data,
                     'otp_timer' => $holdTime,
-                    'messages' => null
+                    'messages' => null,
+                    'challenge_key' => $data[0]['challenge_key']
                 ]);
             }
         }else{
@@ -1085,7 +1098,8 @@ class ApiUser extends Controller
                     'result'    => [
                         'phone'    =>    $create->phone,
                         'autocrm'  =>    $autocrm,
-                        'message'  =>    $msg_otp
+                        'message'  =>    $msg_otp,
+                        'challenge_key' => $create->getChallengeKeyAttribute()
                     ]
                 ];
             } else {
@@ -1094,7 +1108,8 @@ class ApiUser extends Controller
                     'result'    => [
                         'phone'    =>    $create->phone,
                         'autocrm'    =>    $autocrm,
-                        'message'  =>    $msg_otp
+                        'message'  =>    $msg_otp,
+                        'challenge_key' => $create->getChallengeKeyAttribute()
                     ]
                 ];
             }
@@ -1411,7 +1426,7 @@ class ApiUser extends Controller
             $phone = $checkPhoneFormat['phone'];
         }
 
-        $data = User::where('phone', '=', $phone)
+        $data = User::select('*', \DB::raw('0 as challenge_key'))->where('phone', '=', $phone)
             ->get()
             ->toArray();
 
@@ -1485,7 +1500,8 @@ class ApiUser extends Controller
                     'otp_timer' => $holdTime,
                     'result'    => [
                         'phone'    =>    $data[0]['phone'],
-                        'message'  =>    $msg_otp
+                        'message'  =>    $msg_otp,
+                        'challenge_key' => $data[0]['challenge_key']
                     ]
                 ];
             } else {
@@ -1495,7 +1511,8 @@ class ApiUser extends Controller
                     'result'    => [
                         'phone'    =>    $data[0]['phone'],
                         'pin'    =>    '',
-                        'message' => $msg_otp
+                        'message' => $msg_otp,
+                        'challenge_key' => $data[0]['challenge_key']
                     ]
                 ];
             }
@@ -1564,7 +1581,7 @@ class ApiUser extends Controller
             return response()->json($result);
         }
 
-        $data = User::where('phone', '=', $phone)
+        $data = User::select('*',\DB::raw('0 as challenge_key'))->where('phone', '=', $phone)
             ->where('email', '=', $request->json('email'))
             ->get()
             ->toArray();
@@ -1636,7 +1653,8 @@ class ApiUser extends Controller
                     'otp_timer' => $holdTime,
                     'result'    => [
                         'phone'    =>    $phone,
-                        'message'  => $msg_otp
+                        'message'  => $msg_otp,
+                        'challenge_key' => $data[0]['challenge_key']
                     ]
                 ];
             } else {
@@ -1646,7 +1664,8 @@ class ApiUser extends Controller
                     'result'    => [
                         'phone'    =>    $phone,
                         'pin'        =>  '', 
-                        'message' => $msg_otp
+                        'message' => $msg_otp,
+                        'challenge_key' => $data[0]['challenge_key']
                     ]
                 ];
             }
@@ -3404,7 +3423,14 @@ class ApiUser extends Controller
 
     function verifyEmail(Request $request, $slug)
     {
-        $setting = Setting::where('key', 'LIKE', 'email_copyright')->first();
+        $getsetting = Setting::whereIn('key', ['email_copyright', 'email_logo'])->get()->toArray();
+
+        foreach ($getsetting as $s){
+            $setting[$s['key']] = [
+                'value' => $s['value'],
+                'value_text' => $s['value_text']
+            ];
+        }
 
         try {
             $decrypt = MyHelper::decrypt2019($slug);
@@ -3418,35 +3444,35 @@ class ApiUser extends Controller
                     $user = User::where('phone', $phone)->where('email', $email)->first();
                     if (!empty($user)) {
                         if ($user['email_verified'] == 1) {
-                            $data = ['status_verify' => 'already', 'message' => 'This page is expired, your email is already verified', 'settings' => $setting];
+                            $data = ['status_verify' => 'already', 'message' => 'This page is expired, your email is already verified', 'email' => $email, 'settings' => $setting];
                             return view('users::verify_email', $data);
                         } elseif (strtotime(date('Y-m-d H:i:s')) > strtotime($user['email_verified_valid_time'])) {
-                            $data = ['status_verify' => 'expired', 'message' => 'This page is expired, please re-request verify email from apps', 'settings' => $setting];
+                            $data = ['status_verify' => 'expired', 'message' => 'This page is expired, please re-request verify email from apps', 'email' => $email, 'settings' => $setting];
                             return view('users::verify_email', $data);
                         } else {
                             $udpate = User::where('phone', $phone)->where('email', $email)->update(['email_verified' => 1]);
                             if ($udpate) {
-                                $data = ['status_verify' => 'success', 'message' => 'Successfully verified your email ', 'settings' => $setting];
+                                $data = ['status_verify' => 'success', 'message' => 'Successfully verified your email ', 'email' => $email, 'settings' => $setting];
                                 return view('users::verify_email', $data);
                             } else {
-                                $data = ['status_verify' => 'fail', 'message' => 'Failed verify your email, something went wrong', 'settings' => $setting];
+                                $data = ['status_verify' => 'fail', 'message' => 'Failed verify your email, something went wrong', 'email' => $email, 'settings' => $setting];
                                 return view('users::verify_email', $data);
                             }
                         }
                     } else {
-                        $data = ['status_verify' => 'fail', 'message' => 'Failed verify your email, user not found', 'settings' => $setting];
+                        $data = ['status_verify' => 'fail', 'message' => 'Failed verify your email, user not found', 'email' => $email, 'settings' => $setting];
                         return view('users::verify_email', $data);
                     }
                 } else {
-                    $data = ['status_verify' => 'fail', 'message' => 'Failed to verify your email, something went wrong', 'settings' => $setting];
+                    $data = ['status_verify' => 'fail', 'message' => 'Failed to verify your email, something went wrong', 'email' => '', 'settings' => $setting];
                     return view('users::verify_email', $data);
                 }
             } else {
-                $data = ['status_verify' => 'fail', 'message' => 'Failed to verify your email, something went wrong', 'settings' => $setting];
+                $data = ['status_verify' => 'fail', 'message' => 'Failed to verify your email, something went wrong', 'email' => '', 'settings' => $setting];
                 return view('users::verify_email', $data);
             }
         } catch (\Exception $e) {
-            $data = ['status_verify' => 'fail', 'message' => 'Failed to verify your email, something went wrong', 'settings' => $setting];
+            $data = ['status_verify' => 'fail', 'message' => 'Failed to verify your email, something went wrong', 'email' => '', 'settings' => $setting];
             return view('users::verify_email', $data);
         }
     }

@@ -116,7 +116,7 @@ class ApiCronTrxController extends Controller
                 //     continue;
                 // }
 
-                DB::begintransaction();
+                DB::beginTransaction();
 
                 MyHelper::updateFlagTransactionOnline($singleTrx, 'cancel', $user);
 
