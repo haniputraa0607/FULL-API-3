@@ -360,7 +360,7 @@ class ShopeePayController extends Controller
                         'order_id'     => $singleTrx['transaction_receipt_number'],
                         'gross_amount' => ($singleTrx['amount'] / 100),
                     ];
-                    $send = app($this->notif)->notification($mid, $singleTrx);
+                    // $send = app($this->notif)->notification($mid, $singleTrx);
 
                     continue;
                 }
