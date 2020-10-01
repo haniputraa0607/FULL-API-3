@@ -565,16 +565,11 @@ class ApiHome extends Controller
 								->where('device_type', $device_type)
 								->count();
 
-        if ($checkDevice == 0) {
-            $update                = UserDevice::updateOrCreate(['device_id' => $device_id], [
-                'id_user'           => $user->id,
-                'device_token'		=> $device_token,
-                'device_type'		=> $device_type
-            ]);
-        }
-        else {
-            $update = UserDevice::where('id_user','=',$user->id)->update($dataUpdate);
-        }
+        $update                = UserDevice::updateOrCreate(['device_id' => $device_id], [
+            'id_user'           => $user->id,
+            'device_token'		=> $device_token,
+            'device_type'		=> $device_type
+        ]);
 
         if ($update) {
 			if($device_type == 'Android')
