@@ -117,6 +117,7 @@ class ApiCronDealsController extends Controller
             $log->success($count);
             return [$count];
         } catch (\Exception $e) {
+            DB::rollBack();
             $log->fail($e->getMessage());
         }
     }
